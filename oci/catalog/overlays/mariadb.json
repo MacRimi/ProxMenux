@@ -1,0 +1,26 @@
+{
+  "catalog_ui": {
+    "launch": {
+      "port": null
+    }
+  },
+  "first_run": {
+    "endpoints": []
+  },
+  "proxmox": {
+    "installer_profile": {
+      "completion_notes": [
+        "MariaDB has no web interface: applications and clients connect to port 3306 of this container.",
+        "The root password is asked for when connecting from another machine. Inside the container, the mariadb command opens as root without a password."
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

@@ -11,6 +11,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/../dist"
 APPIMAGE_ROOT="$SCRIPT_DIR/.."
 
+# Native Python dependencies are selected explicitly for the two Python ABIs
+# used by supported Proxmox VE hosts.  GitHub Actions currently builds on
+# Ubuntu 22.04 (CPython 3.10), while PVE 8 and PVE 9 execute the AppImage with
+# the host's CPython 3.11 and 3.13 respectively.  Installing gevent with the
+# builder's interpreter therefore creates an AppImage that cannot import its
+# C extensions on either supported host (issue #331).
+GEVENT_VERSION="26.8.0"
+GREENLET_VERSION="3.5.5"
+ZOPE_INTERFACE_VERSION="8.6"
+ZOPE_EVENT_VERSION="6.2"
+GEVENT_WEBSOCKET_VERSION="0.10.1"
+
 VERSION=$(node -p "require('$APPIMAGE_ROOT/package.json').version")
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
@@ -58,6 +70,7 @@ fi
 # Create directory structure
 mkdir -p "$APP_DIR/usr/bin"
 mkdir -p "$APP_DIR/usr/lib/python3/dist-packages"
+mkdir -p "$APP_DIR/usr/lib/python3/vendor"
 mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "$APP_DIR/web"
@@ -113,6 +126,7 @@ cd "$SCRIPT_DIR"
 # Copy Flask server
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/zram_metrics.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_auth_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_auth_routes.py not found"
 cp "$SCRIPT_DIR/auth_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  auth_manager.py not found"
 cp "$SCRIPT_DIR/jwt_middleware.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  jwt_middleware.py not found"
@@ -123,21 +137,40 @@ cp "$SCRIPT_DIR/flask_proxmenux_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || ec
 cp "$SCRIPT_DIR/post_install_versions.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  post_install_versions.py not found"
 cp "$SCRIPT_DIR/mount_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  mount_monitor.py not found"
 cp "$SCRIPT_DIR/lxc_mount_points.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  lxc_mount_points.py not found"
+cp "$SCRIPT_DIR/oci_console_logs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_console_logs.py not found"
+cp "$SCRIPT_DIR/oci_instance_info.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_instance_info.py not found"
+cp "$SCRIPT_DIR/oci_operations.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_operations.py not found"
 cp "$SCRIPT_DIR/disk_temperature_history.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_temperature_history.py not found"
+cp "$SCRIPT_DIR/lvm_device_scope.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/smartctl_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  smartctl_resolver.py not found"
+cp "$SCRIPT_DIR/disk_identity.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_identity.py not found"
 cp "$SCRIPT_DIR/health_thresholds.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_thresholds.py not found"
 cp "$SCRIPT_DIR/managed_installs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  managed_installs.py not found"
+cp "$SCRIPT_DIR/lxc_update_observation.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/lxc_update_finalization.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/lxc_update_jobs.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/lxc_check_job.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/native_app_discovery.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/local_app_icons.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/docker_app_discovery.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_apps.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  lxc_apps.py not found"
+cp "$SCRIPT_DIR/oci_menu_bridge.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/custom_links.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  custom_links.py not found"
 cp "$SCRIPT_DIR/recreate_docker_container.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  recreate_docker_container.py not found"
 chmod +x "$APP_DIR/usr/bin/recreate_docker_container.py" 2>/dev/null || true
 cp "$SCRIPT_DIR/update_docker_engine.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  update_docker_engine.py not found"
 chmod +x "$APP_DIR/usr/bin/update_docker_engine.py" 2>/dev/null || true
 cp "$APPIMAGE_ROOT/../json/app_tracking_hints.json" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  app_tracking_hints.json not found"
+cp "$APPIMAGE_ROOT/../json/runtime_verified_overrides.json" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  runtime_verified_overrides.json not found"
 cp "$SCRIPT_DIR/flask_terminal_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_terminal_routes.py not found"
 cp "$SCRIPT_DIR/hardware_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  hardware_monitor.py not found"
 cp "$SCRIPT_DIR/temperature_sensor_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  temperature_sensor_resolver.py not found"
 cp "$SCRIPT_DIR/proxmox_storage_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  proxmox_storage_monitor.py not found"
+cp "$SCRIPT_DIR/pbs_manager.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/flask_pbs_routes.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/monitor_links.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/flask_monitor_links_routes.py" "$APP_DIR/usr/bin/"
+cp "$APPIMAGE_ROOT/../scripts/global/proxmox_platform.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_script_runner.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_script_runner.py not found"
 cp "$SCRIPT_DIR/security_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  security_manager.py not found"
 cp "$SCRIPT_DIR/flask_security_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_security_routes.py not found"
@@ -149,8 +182,27 @@ cp "$SCRIPT_DIR/proxmox_known_errors.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo
 cp "$SCRIPT_DIR/ai_context_enrichment.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  ai_context_enrichment.py not found"
 cp "$SCRIPT_DIR/startup_grace.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  startup_grace.py not found"
 cp "$SCRIPT_DIR/flask_notification_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_notification_routes.py not found"
+# Backend notification rendering reuses the canonical Monitor catalogs.
+# Keep every supported locale in the bundle so the runtime selector and its
+# fallback behavior exactly match the Monitor UI.
+for locale in en de es fr it pt sk sv; do
+    mkdir -p "$APP_DIR/usr/share/proxmenux/messages/$locale"
+    cp "$APPIMAGE_ROOT/messages/$locale/common.json" "$APP_DIR/usr/share/proxmenux/messages/$locale/common.json"
+done
 cp "$SCRIPT_DIR/oci_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_manager.py not found"
 cp "$SCRIPT_DIR/flask_oci_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_oci_routes.py not found"
+cp "$SCRIPT_DIR/flask_vm_backup_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_vm_backup_routes.py not found"
+cp "$SCRIPT_DIR/guest_backup_archives.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/flask_audit_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_audit_routes.py not found"
+cp "$SCRIPT_DIR/audit_store.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_store.py not found"
+cp "$SCRIPT_DIR/audit_checks.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_checks.py not found"
+cp "$SCRIPT_DIR/audit_profiles.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_profiles.py not found"
+cp "$SCRIPT_DIR/audit_policy.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_policy.py not found"
+cp "$SCRIPT_DIR/changes_journal.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  changes_journal.py not found"
+cp "$SCRIPT_DIR/audit_inventory.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_inventory.py not found"
+cp "$SCRIPT_DIR/audit_checks_pve.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_checks_pve.py not found"
+# Preserve the existing build version as assessment provenance; no version bump.
+cp "$APPIMAGE_ROOT/package.json" "$APP_DIR/package.json"
 cp "$SCRIPT_DIR/oci/description_templates.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  description_templates.py not found"
 
 # Copy AI providers module for notification enhancement
@@ -310,7 +362,8 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-de
     PyJWT \
     pyotp \
     segno \
-    beautifulsoup4
+    beautifulsoup4 \
+    defusedxml==0.7.1
 
 # WebSocket with modern h11 (no need for the legacy pin anymore)
 pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
@@ -319,11 +372,62 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
     simple-websocket>=0.10.0 \
     flask-sock>=0.6.0
 
-# Phase 3b: Install gevent for SSL+WebSocket support (WSS)
-pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
-    gevent>=24.2.1 \
-    gevent-websocket>=0.10.1 \
-    greenlet>=3.0.0
+# Phase 3b: Install the complete gevent/WSS runtime separately for every
+# supported host ABI.  Keeping each dependency tree isolated avoids mixing
+# CPython-specific modules from the build runner with those loaded by PVE.
+# The two --platform values allow gevent's manylinux_2_28 wheels and the
+# backwards-compatible manylinux2014 zope.interface wheels to be resolved in
+# one deterministic installation.
+install_gevent_runtime() {
+    local python_version="$1"
+    local abi="$2"
+    local target="$APP_DIR/usr/lib/python3/vendor/$abi"
+
+    echo "📦 Installing gevent runtime for ${abi} (Python ${python_version})..."
+    mkdir -p "$target"
+    python3 -m pip install \
+        --disable-pip-version-check \
+        --target "$target" \
+        --upgrade \
+        --only-binary=:all: \
+        --platform manylinux_2_28_x86_64 \
+        --platform manylinux_2_27_x86_64 \
+        --platform manylinux2014_x86_64 \
+        --implementation cp \
+        --python-version "$python_version" \
+        --abi "$abi" \
+        --no-deps \
+        "gevent==${GEVENT_VERSION}" \
+        "greenlet==${GREENLET_VERSION}" \
+        "zope.interface==${ZOPE_INTERFACE_VERSION}" \
+        "zope.event==${ZOPE_EVENT_VERSION}" \
+        "gevent-websocket==${GEVENT_WEBSOCKET_VERSION}" \
+        "Pillow==12.3.0"
+}
+
+install_gevent_runtime "3.11" "cp311"
+install_gevent_runtime "3.13" "cp313"
+
+echo "🔍 Verifying bundled Python ABI extensions..."
+for abi in cp311 cp313; do
+    abi_digits="${abi#cp}"
+    abi_dir="$APP_DIR/usr/lib/python3/vendor/$abi"
+    for extension in \
+        "gevent/_gevent_c_hub_local.cpython-${abi_digits}-*.so" \
+        "greenlet/_greenlet.cpython-${abi_digits}-*.so" \
+        "zope/interface/_zope_interface_coptimizations.cpython-${abi_digits}-*.so" \
+        "PIL/_imaging.cpython-${abi_digits}-*.so"; do
+        if ! compgen -G "$abi_dir/$extension" >/dev/null; then
+            echo "❌ Missing ${abi} extension: ${extension}" >&2
+            exit 1
+        fi
+    done
+    if [ ! -f "$abi_dir/geventwebsocket/__init__.py" ]; then
+        echo "❌ Missing gevent-websocket runtime for ${abi}" >&2
+        exit 1
+    fi
+    echo "  ✅ ${abi} runtime complete"
+done
 
 # Phase 3c: Apprise notification hub (issue #207). One library handles
 # ~80 notification services behind a single URL scheme (`tgram://`,

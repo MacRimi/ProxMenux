@@ -1,0 +1,149 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Duplicati web interface (password only)",
+        "type": "configured-or-installer-generated",
+        "username": "Not required (password only)",
+        "password": null,
+        "password_environment": "DUPLICATI__WEBSERVICE_PASSWORD",
+        "change_required": false,
+        "source": "linuxserver-readme-parameters",
+        "retrieval": null
+      }
+    ]
+  },
+  "container_contract": {
+    "environment": [
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "Etc/UTC",
+        "required": true,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "SETTINGS_ENCRYPTION_KEY",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "CLI_ARGS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "linuxserver-compose"
+      },
+      {
+        "name": "DUPLICATI__WEBSERVICE_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the Duplicati web interface",
+        "source": "linuxserver-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/duplicati/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/backups",
+        "compose_source_example": "/path/to/backups",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/source",
+        "compose_source_example": "/path/to/source",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "SETTINGS_ENCRYPTION_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": false
+        },
+        "DUPLICATI__WEBSERVICE_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/backups",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/source",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

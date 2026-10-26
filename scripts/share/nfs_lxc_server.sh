@@ -551,7 +551,7 @@ uninstall_nfs() {
             pct exec "$CTID" -- groupdel sharedfiles 2>/dev/null || true
             msg_ok "$(translate "Removed sharedfiles group.")"
         else
-            msg_warn "$(translate "Kept sharedfiles group (has regular users assigned).")"
+            msg_warn "$(translate "Kept sharedfiles group (it still has members that are not remapped users).")"
         fi
     fi
 

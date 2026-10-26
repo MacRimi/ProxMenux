@@ -149,96 +149,6 @@ export default async function GpuVmPassthroughPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("howRuns.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("howRuns.body")}</p>
 
-      <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto text-sm my-4 border border-gray-200 leading-snug">
-{`┌─────────────────────────────────────────────┐
-│  PHASE 1 — Gather info, validate, confirm   │
-│  (nothing touched yet)                      │
-└──────────────────┬──────────────────────────┘
-                   ▼
-      ┌────────────┴────────────┐
-      ▼                         ▼
-  lspci detects             IOMMU enabled?
-  GPUs (Intel/AMD/           ├─ No → offer to add
-  NVIDIA)                    │      intel_iommu=on /
-      │                      │      amd_iommu=on
-      ▼                      └─ Yes → continue
-  User selects GPU
-      │
-      ▼
-  Pre-flight checks
-  ├─ Not in SR-IOV
-  ├─ Not D3cold (AMD)
-  ├─ Has FLR or equivalent reset
-  ├─ Not on the block-list (Intel Arc, Apollo Lake)
-  ├─ Warn if single-GPU host
-  └─ Resolve IOMMU group
-      │
-      ▼
-  User selects VM
-      │
-      ▼
-  VM is q35? ── No → abort
-      │
-     Yes
-      ▼
-  GPU already assigned elsewhere?
-      │
-      ├─ To LXC     → menu: keep + disable onboot
-      │               OR remove GPU lines + keep onboot
-      ├─ To other VM (running) → abort
-      ├─ To other VM (stopped) → menu: keep + disable onboot
-      │               OR remove GPU lines + keep onboot
-      │               (fast-path: already vfio-pci → no
-      │                host reconfig, no reboot needed)
-      └─ Free        → continue
-      │
-      ▼
-  Audio companion
-      ├─ Has .1 sibling?  (dGPU: NVIDIA/AMD HDMI)
-      │      → auto-include (never used by host)
-      └─ No .1 sibling?   (Intel iGPU, split audio)
-             → checklist of host audio controllers,
-               default = none (user opts in)
-      │
-      ▼
-  Show confirmation summary
-  (GPU + IOMMU siblings + audio + target VM)
-                   │
-     ┌─────── Cancel   OR   Confirm ────┐
-     ▼                                  ▼
- exit, nothing            ┌─────────────┴──────────────┐
- was changed              │  PHASE 2 — Apply changes   │
-                          └─────────────┬──────────────┘
-                                        ▼
-                          Host:
-                          ├─ /etc/modules (vfio_*)
-                          ├─ /etc/modprobe.d/vfio.conf (ids=... disable_vga=1)
-                          ├─ /etc/modprobe.d/blacklist.conf (vendor drivers only)
-                          ├─ kernel cmdline (IOMMU if missing)
-                          ├─ NVIDIA: per-BDF udev rule at
-                          │          10-proxmenux-vfio-bind.rules
-                          │          + BDF state at vfio-bind.bdfs
-                          │          (blacklist nvidia only when
-                          │           every NVIDIA GPU is in VFIO)
-                          ├─ AMD: dump ROM → vbios_<vendor>_<device>.bin
-                          └─ update-initramfs -u -k all
-                             + proxmox-boot-tool refresh
-
-                          VM config (qm set <vmid>):
-                          ├─ hostpci0 = GPU (x-vga=1 unless Intel iGPU)
-                          ├─ hostpci1..n = IOMMU group siblings
-                          ├─ hostpci<last> = audio function(s)
-                          ├─ vga = std
-                          └─ NVIDIA: cpu=host,hidden=1
-                                     args=... hv_vendor_id=NV43FIX
-                                        │
-                                        ▼
-                        ┌───────────────┴───────────────┐
-                        │  PHASE 3 — Summary + reboot   │
-                        └───────────────────────────────┘
-                        Show what changed. If host config
-                        touched → prompt reboot.`}
-      </pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("walkthrough.heading")}</h2>
 
@@ -288,7 +198,7 @@ export default async function GpuVmPassthroughPage({
           <p className="mb-3 text-gray-800">{t("walkthrough.switchMode.intro")}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-800 mb-3">
             {switchModeItems.map((_, idx) => (
-              <li key={idx}>{t.rich(`walkthrough.switchMode.items.${idx}`, { strong, code })}</li>
+              <li key={idx}>{t.rich(`walkthrough.switchMode.items.${idx}`, { strong, code, em })}</li>
             ))}
           </ul>
           <Image
@@ -333,7 +243,7 @@ export default async function GpuVmPassthroughPage({
           <p className="mb-3 text-gray-800">{t("walkthrough.hostApply.intro")}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-800 mb-3">
             {hostApplyItems.map((_, idx) => (
-              <li key={idx}>{t.rich(`walkthrough.hostApply.items.${idx}`, { strong, code })}</li>
+              <li key={idx}>{t.rich(`walkthrough.hostApply.items.${idx}`, { strong, code, em })}</li>
             ))}
           </ul>
         </Steps.Step>
@@ -394,18 +304,17 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'`}
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("verification.heading")}</h2>
 
       <CopyableCode
-        code={`# After reboot, confirm the GPU is bound to vfio-pci (not to the vendor driver)
-lspci -nnk -d <vendor:device>
-# Expect: "Kernel driver in use: vfio-pci"
+        code={`# Replace PCI_ADDRESS and VMID with the actual values.
+# Verify the exact PCI address, especially with identical GPU models.
+lspci -nnk -s PCI_ADDRESS
+# Expected driver: vfio-pci
 
-# Start the VM and watch for successful binding
-qm start <vmid>
-journalctl -u qemu-server@<vmid>.service -f
-
-# Inside the guest, drivers install normally and the GPU works as if it were physical.
-# NVIDIA: verify with nvidia-smi inside the VM.
-# AMD:    verify with Windows Device Manager / DXDiag.
-# Intel:  verify display output / intel_gpu_top inside the VM.`}
+qm config VMID
+qm start VMID
+qm status VMID
+# Inspect the start task in Proxmox Tasks if startup fails.
+# Inside the guest, install a compatible GPU driver and test the application.
+# NVIDIA: nvidia-smi; AMD/Intel: the guest driver and application diagnostics.`}
         className="my-4"
       />
 
@@ -428,17 +337,14 @@ journalctl -u qemu-server@<vmid>.service -f
       </Callout>
 
       <CopyableCode
-        code={`# Rescue — remove passthrough
-# Remove hostpciN lines from the VM config
-sed -i '/^hostpci[0-9]*:/d' /etc/pve/qemu-server/<vmid>.conf
-
-# Unblacklist the host driver
-rm -f /etc/modprobe.d/blacklist.conf /etc/modprobe.d/vfio.conf
-# (if NVIDIA was involved)
-mv /etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled /etc/udev/rules.d/70-nvidia.rules 2>/dev/null
-
-update-initramfs -u -k all
-reboot`}
+        code={`# Inspect from a recovered Proxmox host; replace the placeholders.
+qm config VMID
+lspci -nnk -s PCI_ADDRESS
+cat /etc/proxmenux/vfio-bind.bdfs 2>/dev/null
+# Review the affected PCI assignments and driver-binding configuration.
+# Do not remove entire shared blacklist.conf or vfio.conf files.
+# Use ProxMenux Switch GPU Mode to return a GPU to the host driver.
+# Review its affected guests and follow the indicated reboot procedure.`}
         className="my-4"
       />
 
@@ -449,26 +355,13 @@ reboot`}
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("revert.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("revert.intro")}</p>
       <CopyableCode
-        code={`# Remove hostpci lines from the VM
-qm set <vmid> --delete hostpci0
-# (repeat for hostpci1, hostpci2, ... if multiple were added)
-
-# ─── OPTIONAL — not required ──────────────────────────────────────
-# The steps above already free the VM from the GPU. The lines below
-# are only needed if you also want the host to use the GPU again
-# (e.g. for LXC sharing or host-side transcoding). Skip this block
-# if you simply want to stop passing the GPU to the VM.
-# ──────────────────────────────────────────────────────────────────
-
-# Release the GPU back to the host driver:
-rm -f /etc/modprobe.d/vfio.conf
-rm -f /etc/modprobe.d/blacklist.conf         # careful — this file may have other blacklists
-# NVIDIA only — re-enable the udev rule + drop the all-NVIDIA-in-VFIO blacklist (if present)
-mv /etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled /etc/udev/rules.d/70-nvidia.rules 2>/dev/null
-rm -f /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf
-
-update-initramfs -u -k all
-reboot`}
+        code={`# Replace VMID. Inspect the actual assignment index first.
+qm config VMID
+# With the VM stopped, remove ONLY the intended entry (hostpci0 is an example).
+qm set VMID --delete hostpci0
+qm config VMID
+# Repeat only for the associated PCI entries you intend to remove.
+# This does not change the host's VFIO/native-driver binding.`}
         className="my-4"
       />
 

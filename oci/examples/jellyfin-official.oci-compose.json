@@ -1,0 +1,234 @@
+{
+  "kind": "proxmenux.oci-template",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Jellyfin Official"
+    },
+    "tagline": {
+      "en_US": "Official Jellyfin image with optional VA-API or NVIDIA acceleration."
+    },
+    "description": {
+      "en_US": "Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media."
+    },
+    "category": "media",
+    "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/jellyfin-icon.png",
+    "website": "https://jellyfin.org/",
+    "documentation": "https://jellyfin.org/docs/general/installation/container/",
+    "repository": "https://github.com/jellyfin/jellyfin-packaging"
+  },
+  "container_contract": {
+    "service_name": "jellyfin",
+    "container_name": "jellyfin",
+    "image": {
+      "reference": "jellyfin/jellyfin:latest"
+    },
+    "ports": [
+      {
+        "container_port": 8096
+      },
+      {
+        "container_port": 7359,
+        "protocol": "udp",
+        "required": false
+      }
+    ],
+    "environment": [
+      {
+        "name": "JELLYFIN_PublishedServerUrl",
+        "required": false,
+        "prompt": "Optional published URL for Jellyfin"
+      }
+    ],
+    "volumes": [
+      {
+        "container_path": "/config"
+      },
+      {
+        "container_path": "/cache"
+      },
+      {
+        "container_path": "/media",
+        "default": "host-bind",
+        "managed_volume": {
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "restart": "unless-stopped"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Jellyfin WebUI",
+        "scheme": "http",
+        "port": 8096,
+        "path": "/",
+        "source": "official-container-documentation"
+      }
+    ]
+  },
+  "proxmox": {
+    "defaults": {
+      "memory_mb": 2048
+    },
+    "installer_profile": {
+      "hardware_acceleration": {
+        "prompt": "Hardware acceleration for Jellyfin",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No acceleration (CPU)",
+            "device_requests": []
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (VA-API)",
+            "device_requests": [
+              {
+                "id": "vaapi-render",
+                "kind": "character-device",
+                "purpose": "vaapi",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "environment": [
+                  {
+                    "name": "LIBVA_DRIVER_NAME",
+                    "prompt": "VA-API driver",
+                    "choices": [
+                      "auto",
+                      "radeonsi",
+                      "iHD",
+                      "i965"
+                    ],
+                    "default": "auto",
+                    "omit_values": [
+                      "auto"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "post_start_configurations": [
+              {
+                "id": "jellyfin-vaapi-hdr-tone-mapping",
+                "type": "jellyfin-encoding-xml",
+                "enable_prompt": "Enable VA-API transcoding and HDR10/Dolby Vision to SDR tone mapping",
+                "enabled_default": true,
+                "required": true,
+                "timeout_seconds": 120,
+                "candidate_paths": [
+                  "/config/encoding.xml",
+                  "/config/config/encoding.xml"
+                ],
+                "settings": {
+                  "HardwareAccelerationType": "vaapi",
+                  "VaapiDevice": {
+                    "device_path_from": "vaapi-render"
+                  },
+                  "EnableDecodingColorDepth10Hevc": "true",
+                  "EnableHardwareEncoding": "true",
+                  "EnableTonemapping": "true",
+                  "EnableVppTonemapping": "false",
+                  "TonemappingAlgorithm": "bt2390",
+                  "TonemappingMode": "auto",
+                  "TonemappingRange": "auto"
+                },
+                "lists": {
+                  "HardwareDecodingCodecs": [
+                    "h264",
+                    "hevc",
+                    "vc1"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (NVENC/NVDEC)",
+            "device_requests": [
+              {
+                "id": "nvidia-runtime",
+                "kind": "nvidia-runtime",
+                "purpose": "nvidia-cuda-nvenc-nvdec",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              }
+            ],
+            "post_start_configurations": [
+              {
+                "id": "jellyfin-nvidia-hdr-tone-mapping",
+                "type": "jellyfin-encoding-xml",
+                "enable_prompt": "Enable NVIDIA transcoding and HDR10/Dolby Vision to SDR tone mapping",
+                "enabled_default": true,
+                "required": true,
+                "timeout_seconds": 120,
+                "candidate_paths": [
+                  "/config/encoding.xml",
+                  "/config/config/encoding.xml"
+                ],
+                "settings": {
+                  "HardwareAccelerationType": "nvenc",
+                  "EnableDecodingColorDepth10Hevc": "true",
+                  "EnableEnhancedNvdecDecoder": "true",
+                  "EnableHardwareEncoding": "true",
+                  "EnableTonemapping": "true",
+                  "EnableVppTonemapping": "false",
+                  "TonemappingAlgorithm": "bt2390",
+                  "TonemappingMode": "auto",
+                  "TonemappingRange": "auto"
+                },
+                "lists": {
+                  "HardwareDecodingCodecs": [
+                    "h264",
+                    "hevc",
+                    "vc1"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 8096,
+        "path": "/System/Info/Public",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/cache",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/media",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

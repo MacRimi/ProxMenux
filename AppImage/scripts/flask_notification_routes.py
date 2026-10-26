@@ -12,7 +12,7 @@ from collections import deque
 from flask import Blueprint, jsonify, request
 from notification_manager import notification_manager, SENSITIVE_PLACEHOLDER, validate_external_url
 from notification_channels import CHANNEL_TYPES as _NOTIF_CHANNEL_TYPES
-from jwt_middleware import require_auth
+from jwt_middleware import require_auth, require_admin_scope
 
 
 def _resolve_masked_api_key(provider, api_key):
@@ -314,15 +314,21 @@ def save_notification_settings():
 
 
 @notification_bp.route('/api/notifications/reveal-secret', methods=['POST'])
-@require_auth
+@require_admin_scope
 def reveal_notification_secret():
     """Return one sensitive config value in cleartext.
 
     Backs the "eye" toggle in the Settings UI. The settings GET masks
     every entry in SENSITIVE_KEYS with `'************'` so the secret
     never leaves the server just because someone loaded the page; this
-    endpoint lets an authenticated operator explicitly request the
-    real value for a single key when they need to inspect it.
+    endpoint lets an operator explicitly request the real value for a
+    single key when they need to inspect it.
+
+    Requires `full_admin` scope: this is the one route that hands back a
+    stored credential in cleartext, so a read-only API token — which is
+    handed out precisely because it cannot reach credentials — must not
+    reach it. Session logins carry full_admin implicitly, so the eye
+    toggle in the UI is unaffected.
 
     Body schema (one of):
         {"ai_provider": "groq" | "anthropic" | …}
@@ -508,13 +514,10 @@ def get_provider_models():
                     'message': f'Found {len(models)} local models'
                 })
         
-        # Handle Anthropic - no models list API, return verified models directly
+        # Handle Anthropic - return verified models directly
         if provider == 'anthropic':
-            models = list(verified_models) if verified_models else [
-                'claude-3-5-haiku-latest',
-                'claude-3-5-sonnet-latest',
-                'claude-3-opus-latest',
-            ]
+            from ai_providers.anthropic_provider import AnthropicProvider
+            models = list(verified_models) if verified_models else list(AnthropicProvider.KNOWN_MODELS)
             return jsonify({
                 'success': True,
                 'models': sorted(models),
@@ -859,114 +862,48 @@ _PVE_OUR_HEADERS = {
 }
 
 
-def _ssl_cert_hostname(cert_path: str) -> str:
-    """Pull the most useful hostname out of an x509 cert.
-
-    Preference order: first DNS SAN → CN. Returns '' on any failure.
-    Used to build a webhook URL that won't fail PVE's TLS verification
-    (issue #239 — PVE has no `--insecure` flag and the user's ACME cert
-    is bound to a hostname, not to `127.0.0.1`).
-    """
-    try:
-        import subprocess
-        out = subprocess.run(
-            ['openssl', 'x509', '-in', cert_path, '-noout',
-             '-ext', 'subjectAltName', '-subject'],
-            capture_output=True, text=True, timeout=5,
-        )
-        if out.returncode != 0:
-            return ''
-        text = out.stdout or ''
-        # SAN line example: "    DNS:pve.example.com, DNS:pve, IP Address:..."
-        import re
-        for line in text.splitlines():
-            m = re.search(r'DNS:([A-Za-z0-9.\-]+)', line)
-            if m:
-                return m.group(1)
-        # CN fallback. "subject= CN = pve.example.com" or "...CN=pve.example.com"
-        m = re.search(r'CN\s*=\s*([A-Za-z0-9.\-]+)', text)
-        if m:
-            return m.group(1)
-    except Exception:
-        pass
-    return ''
-
-
-def _hostname_resolves_locally(hostname: str) -> bool:
-    """True when `hostname` resolves to one of this host's own IPs.
-
-    Anti-misconfig: refuse to build a webhook URL that points
-    elsewhere (a stale DNS entry pointing at the previous host, a CN
-    that names a different node in the cluster, etc.). PVE delivers
-    webhooks from the same node, so the URL has to round-trip to
-    ourselves.
-    """
-    try:
-        import socket
-        import ipaddress
-        target_ips = set()
-        for info in socket.getaddrinfo(hostname, None):
-            ip = info[4][0]
-            target_ips.add(ipaddress.ip_address(ip).compressed)
-        # Collect our own IPs from /proc/net/fib_trie isn't portable; use
-        # psutil if available, otherwise fall back to socket on the
-        # hostname itself.
-        local_ips = {'127.0.0.1', '::1'}
-        try:
-            import psutil
-            for _iface, addrs in psutil.net_if_addrs().items():
-                for a in addrs:
-                    if a.family in (socket.AF_INET, socket.AF_INET6):
-                        local_ips.add(ipaddress.ip_address(a.address.split('%')[0]).compressed)
-        except Exception:
-            pass
-        return bool(target_ips & local_ips)
-    except Exception:
-        return False
+# With HTTPS enabled, PVE delivers its notifications to a plain-HTTP listener
+# the Monitor opens on loopback only for this route (see flask_server). PVE's
+# webhook client validates certificates against the system CA store, which
+# does not hold a self-signed, ACME-staging or PVE-CA-signed Monitor
+# certificate, so an https target fails with "unable to get local issuer
+# certificate" on every notification.
+WEBHOOK_LOOPBACK_PORT = 8009
 
 
 def _pve_webhook_url() -> str:
-    """Return the URL we register with PVE as our webhook target.
-
-    Three branches:
-      1. SSL off → http://127.0.0.1:8008 (always works, no cert).
-      2. SSL on + cert hostname extractable and resolves locally →
-         https://<cert-hostname>:8008. This is what PVE's TLS layer
-         actually validates against. Without this, PVE rejects the
-         self/ACME cert with "IP address mismatch" (issue #239).
-      3. SSL on but hostname extraction/check failed → fall back to
-         https://127.0.0.1:8008 and accept that the user may still
-         hit the cert-mismatch error. We log so the operator can
-         diagnose. Better than silently emitting a wrong URL.
-    """
+    """Return the URL we register with PVE as our webhook target: the
+    Monitor itself over HTTP when SSL is off, and its loopback-only HTTP
+    listener when SSL is on. Both stay on 127.0.0.1, so nothing crosses
+    the network and no certificate is involved."""
     try:
         from auth_manager import load_ssl_config
         cfg = load_ssl_config() or {}
-        if not cfg.get('enabled'):
-            return 'http://127.0.0.1:8008/api/notifications/webhook'
-
-        cert_path = cfg.get('cert_path') or ''
-        if cert_path:
-            host = _ssl_cert_hostname(cert_path)
-            if host and _hostname_resolves_locally(host):
-                return f'https://{host}:8008/api/notifications/webhook'
-            if host:
-                print(
-                    f"[ProxMenux] webhook URL fallback to 127.0.0.1: "
-                    f"cert hostname '{host}' does not resolve to a local "
-                    f"IP — PVE will likely report a TLS verification "
-                    f"error. Fix by ensuring the FQDN resolves on this "
-                    f"host (e.g. /etc/hosts entry)."
-                )
-        return 'https://127.0.0.1:8008/api/notifications/webhook'
+        if cfg.get('enabled'):
+            return f'http://127.0.0.1:{WEBHOOK_LOOPBACK_PORT}/api/notifications/webhook'
     except Exception:
-        return 'http://127.0.0.1:8008/api/notifications/webhook'
+        pass
+    return 'http://127.0.0.1:8008/api/notifications/webhook'
 
 
 # Backward-compat alias for callers that read this at import time. Most
 # call sites now use `_pve_webhook_url()` to pick up SSL state at write
 # time. This constant reflects the state at module-load only.
 _PVE_WEBHOOK_URL = _pve_webhook_url()
+
+
+_PVE_NOT_MOUNTED = 'The Proxmox cluster filesystem (/etc/pve) is not mounted'
+
+
+def _pve_cluster_fs_mounted() -> bool:
+    """Whether /etc/pve is the Proxmox cluster filesystem.
+
+    While its service is stopped or restarting, /etc/pve is an empty
+    directory of the root disk. A file written there is not a configuration
+    file: it keeps the service from mounting the filesystem again.
+    """
+    import os
+    return os.path.ismount(os.path.dirname(_PVE_NOTIFICATIONS_CFG))
 
 
 def _pve_read_file(path):
@@ -982,15 +919,101 @@ def _pve_read_file(path):
         return None, str(e)
 
 
+_PVE_BACKUPS_KEPT = 3
+# Copies of Proxmox's notification settings, taken before changing them. They
+# are kept with ProxMenux, not next to the files: /etc/pve belongs to Proxmox
+# and is replicated to every node of a cluster.
+_PVE_BACKUP_DIR = '/usr/local/share/proxmenux/backups/pve-notifications'
+_PVE_BACKUP_MARK = '.proxmenux_backup_'
+
+
+def _pve_backup_prefix(path):
+    """Name the copies of a file are kept under. The private file carries
+    its own name, as both are called notifications.cfg."""
+    import os
+    name = os.path.basename(path)
+    return ('priv-' if path == _PVE_PRIV_CFG else '') + name + _PVE_BACKUP_MARK
+
+
+def _pve_backups(path):
+    """The copies kept of a file, newest first."""
+    import os
+    prefix = _pve_backup_prefix(path)
+    try:
+        names = os.listdir(_PVE_BACKUP_DIR)
+    except OSError:
+        return []
+    found = [os.path.join(_PVE_BACKUP_DIR, name) for name in names if name.startswith(prefix)]
+    return sorted(found, key=os.path.getmtime, reverse=True)
+
+
 def _pve_backup_file(path):
-    """Create timestamped backup if file exists. Never fails fatally."""
+    """Keep a timestamped copy of the file if it exists. Never fails fatally.
+
+    A copy identical to the newest one is not written again and only the
+    newest few are kept. Restore uses the newest.
+    """
     import os, shutil
     from datetime import datetime
     try:
-        if os.path.exists(path):
+        if not os.path.exists(path):
+            return
+        os.makedirs(_PVE_BACKUP_DIR, mode=0o700, exist_ok=True)
+        os.chmod(_PVE_BACKUP_DIR, 0o700)
+        existing = _pve_backups(path)
+        with open(path, 'rb') as f:
+            current = f.read()
+        newest_matches = False
+        if existing:
+            try:
+                with open(existing[0], 'rb') as f:
+                    newest_matches = f.read() == current
+            except OSError:
+                pass
+        if not newest_matches:
             ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup = f"{path}.proxmenux_backup_{ts}"
-            shutil.copy2(path, backup)
+            destination = os.path.join(_PVE_BACKUP_DIR, _pve_backup_prefix(path) + ts)
+            shutil.copy2(path, destination)
+            # The private file holds the secrets of every notification target.
+            os.chmod(destination, 0o600)
+        _pve_prune_backups(path)
+    except Exception:
+        pass
+
+
+def _pve_prune_backups(path):
+    """Keep only the newest copies of a file."""
+    import os
+    for stale in _pve_backups(path)[_PVE_BACKUPS_KEPT:]:
+        try:
+            os.remove(stale)
+        except OSError:
+            pass
+
+
+def _pve_collect_legacy_backups(path):
+    """Earlier versions left the copies next to the file, inside /etc/pve.
+    The newest ones are moved with the rest and none is left there."""
+    import os, shutil
+    try:
+        directory, name = os.path.split(path)
+        legacy = sorted(
+            (os.path.join(directory, f) for f in os.listdir(directory) if f.startswith(name + _PVE_BACKUP_MARK)),
+            key=os.path.getmtime, reverse=True,
+        )
+        if not legacy:
+            return
+        os.makedirs(_PVE_BACKUP_DIR, mode=0o700, exist_ok=True)
+        os.chmod(_PVE_BACKUP_DIR, 0o700)
+        for position, source in enumerate(legacy):
+            if position < _PVE_BACKUPS_KEPT:
+                stamp = os.path.basename(source)[len(name + _PVE_BACKUP_MARK):]
+                destination = os.path.join(_PVE_BACKUP_DIR, _pve_backup_prefix(path) + stamp)
+                if not os.path.exists(destination):
+                    shutil.copy2(source, destination)
+                    os.chmod(destination, 0o600)
+            os.remove(source)
+        _pve_prune_backups(path)
     except Exception:
         pass
 
@@ -1130,8 +1153,21 @@ def setup_pve_webhook_core() -> dict:
         'fallback_commands': [],
         'error': None,
     }
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        result['not_applicable'] = True
+        return result
     
     try:
+        if not _pve_cluster_fs_mounted():
+            result['error'] = _PVE_NOT_MOUNTED
+            result['waiting'] = True
+            return result
+
         # ── Step 1: Ensure webhook secret exists (for our own internal use) ──
         secret = notification_manager.get_webhook_secret()
         if not secret:
@@ -1150,11 +1186,10 @@ def setup_pve_webhook_core() -> dict:
         if err:
             priv_text = None
         
-        # ── Step 4: Create backups before ANY modification ──
-        _pve_backup_file(_PVE_NOTIFICATIONS_CFG)
-        if priv_text is not None:
-            _pve_backup_file(_PVE_PRIV_CFG)
-        
+        # ── Step 4: Backups are taken below, only of a file about to change ──
+        _pve_collect_legacy_backups(_PVE_NOTIFICATIONS_CFG)
+        _pve_collect_legacy_backups(_PVE_PRIV_CFG)
+
         # ── Step 5: Remove any previous proxmenux blocks from BOTH files ──
         cleaned_cfg = _pve_remove_our_blocks(cfg_text, _PVE_OUR_HEADERS)
         
@@ -1202,10 +1237,12 @@ def setup_pve_webhook_core() -> dict:
         
         new_cfg = cleaned_cfg + endpoint_block + '\n' + matcher_block
         
-        # ── Step 8: Write main config ──
+        # ── Step 8: Write main config, when it is not already as wanted ──
         try:
-            with open(_PVE_NOTIFICATIONS_CFG, 'w') as f:
-                f.write(new_cfg)
+            if new_cfg != cfg_text:
+                _pve_backup_file(_PVE_NOTIFICATIONS_CFG)
+                with open(_PVE_NOTIFICATIONS_CFG, 'w') as f:
+                    f.write(new_cfg)
         except PermissionError:
             result['error'] = f'Permission denied writing {_PVE_NOTIFICATIONS_CFG}'
             result['fallback_commands'] = _build_webhook_fallback()
@@ -1255,8 +1292,11 @@ def setup_pve_webhook_core() -> dict:
             new_priv = priv_block
         
         try:
-            with open(_PVE_PRIV_CFG, 'w') as f:
-                f.write(new_priv)
+            if new_priv != priv_text:
+                if priv_text is not None:
+                    _pve_backup_file(_PVE_PRIV_CFG)
+                with open(_PVE_PRIV_CFG, 'w') as f:
+                    f.write(new_priv)
         except PermissionError:
             result['error'] = f'Permission denied writing {_PVE_PRIV_CFG}'
             result['fallback_commands'] = _build_webhook_fallback()
@@ -1279,6 +1319,17 @@ def setup_pve_webhook_core() -> dict:
         return result
 
 
+def setup_pve_webhook_when_mounted(timeout=900, interval=5) -> dict:
+    """Configure the webhook once /etc/pve is mounted. For the Monitor that
+    starts while the cluster service is still starting or being restarted."""
+    deadline = time.monotonic() + timeout
+    while not _pve_cluster_fs_mounted():
+        if time.monotonic() >= deadline:
+            return {'configured': False, 'error': _PVE_NOT_MOUNTED, 'waiting': True}
+        time.sleep(interval)
+    return setup_pve_webhook_core()
+
+
 @notification_bp.route('/api/notifications/proxmox/setup-webhook', methods=['POST'])
 @require_auth
 def setup_proxmox_webhook():
@@ -1293,8 +1344,19 @@ def cleanup_pve_webhook_core() -> dict:
     Only removes blocks named 'proxmenux-webhook' / 'proxmenux-default'.
     """
     result = {'cleaned': False, 'error': None}
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        return {'cleaned': True, 'error': None, 'not_applicable': True}
     
     try:
+        if not _pve_cluster_fs_mounted():
+            result['error'] = _PVE_NOT_MOUNTED
+            return result
+
         # Read both files
         cfg_text, err = _pve_read_file(_PVE_NOTIFICATIONS_CFG)
         if err:
@@ -1377,10 +1439,6 @@ def read_pve_notification_cfg():
         'priv_cfg': '/etc/pve/priv/notifications.cfg',
     }
     
-    # Also look for any backups we created
-    backup_dir = '/etc/pve'
-    priv_backup_dir = '/etc/pve/priv'
-    
     result = {}
     for key, path in files.items():
         try:
@@ -1398,24 +1456,18 @@ def read_pve_notification_cfg():
         except Exception as e:
             result[key] = {'path': path, 'content': None, 'size': 0, 'error': str(e)}
     
-    # Find backups
+    # The copies kept of both files
     backups = []
-    for d in [backup_dir, priv_backup_dir]:
+    for fpath in _pve_backups(_PVE_NOTIFICATIONS_CFG) + _pve_backups(_PVE_PRIV_CFG):
         try:
-            for fname in sorted(os.listdir(d)):
-                if 'proxmenux_backup' in fname:
-                    fpath = os.path.join(d, fname)
-                    try:
-                        with open(fpath, 'r') as f:
-                            backups.append({
-                                'path': fpath,
-                                'content': f.read(),
-                                'size': os.path.getsize(fpath),
-                            })
-                    except Exception:
-                        backups.append({'path': fpath, 'content': None, 'error': 'read_failed'})
+            with open(fpath, 'r') as f:
+                backups.append({
+                    'path': fpath,
+                    'content': f.read(),
+                    'size': os.path.getsize(fpath),
+                })
         except Exception:
-            pass
+            backups.append({'path': fpath, 'content': None, 'error': 'read_failed'})
     
     result['backups'] = backups
     return jsonify(result), 200
@@ -1432,35 +1484,26 @@ def restore_pve_notification_cfg():
     import os
     import shutil
     
-    files_to_restore = {
-        '/etc/pve': '/etc/pve/notifications.cfg',
-        '/etc/pve/priv': '/etc/pve/priv/notifications.cfg',
-    }
-    
     restored = []
     errors = []
-    
-    for search_dir, target_path in files_to_restore.items():
-        try:
-            # Pick the most recent backup by mtime, not lexicographic name.
-            # An attacker (or accidental rename) with a write primitive
-            # could craft `notifications.cfg.proxmenux_backup_99999999_999999`
-            # and have it sort first, hijacking the restore. mtime tracks
-            # the actual file age so renamed/touched files don't fool us.
-            # Audit Tier 3.1 — restore-cfg sort lexicográfico.
-            candidates = [
-                f for f in os.listdir(search_dir)
-                if 'proxmenux_backup' in f and f.startswith('notifications.cfg')
-            ]
 
+    if not _pve_cluster_fs_mounted():
+        return jsonify({'restored': [], 'errors': [{'target': '/etc/pve', 'error': _PVE_NOT_MOUNTED}],
+                        'success': False}), 200
+
+    for target_path in (_PVE_NOTIFICATIONS_CFG, _PVE_PRIV_CFG):
+        try:
+            _pve_collect_legacy_backups(target_path)
+            # The newest by modification time: a name can be crafted to sort
+            # first, a file's age cannot.
+            candidates = _pve_backups(target_path)
             if candidates:
-                candidates.sort(
-                    key=lambda f: os.path.getmtime(os.path.join(search_dir, f)),
-                    reverse=True,
-                )
-                backup_path = os.path.join(search_dir, candidates[0])
-                shutil.copy2(backup_path, target_path)
-                restored.append({'target': target_path, 'from_backup': backup_path})
+                # Content only: the cluster filesystem sets its own permissions.
+                with open(candidates[0], 'rb') as source:
+                    content = source.read()
+                with open(target_path, 'wb') as target:
+                    target.write(content)
+                restored.append({'target': target_path, 'from_backup': candidates[0]})
             else:
                 errors.append({'target': target_path, 'error': 'no_backup_found'})
         except Exception as e:
@@ -1661,6 +1704,56 @@ def internal_shutdown_event():
             entity_id='',
         )
         
+        return jsonify({'success': True, 'event_type': event_type}), 200
+    except Exception as e:
+        return jsonify({'error': 'internal_error', 'detail': str(e)}), 500
+
+
+# ─── Internal OCI Event Endpoint ─────────────────────────────────
+
+_OCI_EVENTS = {
+    'oci_update_completed': 'INFO', 'oci_update_failed': 'WARNING',
+    'oci_recreate_completed': 'INFO', 'oci_recreate_failed': 'WARNING',
+    'oci_modify_completed': 'INFO', 'oci_modify_failed': 'WARNING',
+    'oci_watchdog_restarted': 'WARNING', 'oci_watchdog_failed': 'CRITICAL',
+}
+
+
+@notification_bp.route('/api/internal/oci-event', methods=['POST'])
+def internal_oci_event():
+    """Called by the OCI engine when an operation ends or the watchdog acts, with its
+    result. Only accepts requests from this host."""
+    remote_addr = request.remote_addr or ''
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(remote_addr.split('%')[0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        is_loopback = addr.is_loopback
+    except (ValueError, TypeError):
+        is_loopback = remote_addr in ('127.0.0.1', '::1', 'localhost')
+    if not is_loopback:
+        return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
+    try:
+        data = request.get_json(silent=True) or {}
+        event_type = str(data.get('event') or '')
+        if event_type not in _OCI_EVENTS:
+            return jsonify({'error': 'invalid_event_type'}), 400
+        vmid = str(data.get('vmid') or '')
+        notification_manager.emit_event(
+            event_type=event_type,
+            severity=_OCI_EVENTS[event_type],
+            data={
+                'hostname': str(data.get('hostname') or 'unknown'),
+                'app_name': str(data.get('app_name') or f'CT {vmid}')[:120],
+                'vmid': vmid,
+                'containers': str(data.get('containers') or '')[:400],
+                'reason': str(data.get('reason') or '')[:600],
+            },
+            source='proxmenux',
+            entity='ct',
+            entity_id=vmid,
+        )
         return jsonify({'success': True, 'event_type': event_type}), 200
     except Exception as e:
         return jsonify({'error': 'internal_error', 'detail': str(e)}), 500

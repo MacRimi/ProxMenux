@@ -52,6 +52,10 @@ if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
 
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -130,16 +134,18 @@ pre_install_prompt() {
 # ============================================================
 
 ensure_apex_group_and_udev() {
+  pmx_journal_context "ensure_apex_group_and_udev" "2.0" "install_coral.sh"
   msg_info "$(translate 'Ensuring apex group and udev rules...')"
 
   if ! getent group apex >/dev/null; then
-    groupadd --system apex || true
+    pmx_apply_setting "group:apex" "getent group apex 2>/dev/null || true" \
+      groupadd --system apex || true
     msg_ok "$(translate 'System group apex created.')"
   else
     msg_ok "$(translate 'System group apex already exists.')"
   fi
 
-  cat >/etc/udev/rules.d/99-coral-apex.rules <<'EOF'
+  pmx_write_file /etc/udev/rules.d/99-coral-apex.rules <<'EOF'
 # Coral / Google APEX TPU (M.2 / PCIe)
 # Assign group "apex" and safe permissions to device nodes
 KERNEL=="apex_*", GROUP="apex", MODE="0660"
@@ -147,11 +153,14 @@ SUBSYSTEM=="apex", GROUP="apex", MODE="0660"
 EOF
 
   if [[ -f /usr/lib/udev/rules.d/60-gasket-dkms.rules ]]; then
-    sed -i 's/GROUP="[^"]*"/GROUP="apex"/g' /usr/lib/udev/rules.d/60-gasket-dkms.rules || true
+    pmx_edit_file /usr/lib/udev/rules.d/60-gasket-dkms.rules \
+      's/GROUP="[^"]*"/GROUP="apex"/g' || true
   fi
 
   udevadm control --reload-rules
+  pmx_record_execution "Reload Coral APEX udev rules" "udevadm control --reload-rules"
   udevadm trigger --subsystem-match=apex || true
+  pmx_record_execution "Trigger Coral APEX udev rules" "udevadm trigger --subsystem-match=apex"
 
   msg_ok "$(translate 'apex group and udev rules are in place.')"
 
@@ -163,6 +172,7 @@ EOF
 }
 
 cleanup_broken_gasket_dkms() {
+  pmx_journal_context "cleanup_broken_gasket_dkms" "2.0" "install_coral.sh"
   # Recover from a broken gasket-dkms .deb state (half-configured, unpacked,
   # half-installed). This is a common failure mode on PVE 9 kernel upgrades:
   # dkms autoinstall tries to rebuild against the new kernel, fails, and
@@ -175,15 +185,21 @@ cleanup_broken_gasket_dkms() {
   case "$pkg_state" in
     ii|rc)
       msg_info "$(translate 'Removing any pre-existing gasket-dkms package...')"
-      dpkg -r gasket-dkms >>"$LOG_FILE" 2>&1 || true
+      if dpkg -r gasket-dkms >>"$LOG_FILE" 2>&1; then
+        pmx_record_uninstall "gasket-dkms" "2.0"
+      fi
       dkms remove gasket/1.0 --all >>"$LOG_FILE" 2>&1 || true
+      pmx_record_execution "Remove gasket DKMS entry" "dkms remove gasket/1.0 --all"
       msg_ok "$(translate 'Pre-existing gasket-dkms package removed.')"
       ;;
     *)
       msg_warn "$(translate 'Detected broken gasket-dkms package state:') ${pkg_state}. $(translate 'Forcing removal...')"
-      dpkg --remove --force-remove-reinstreq gasket-dkms >>"$LOG_FILE" 2>&1 || true
+      if dpkg --remove --force-remove-reinstreq gasket-dkms >>"$LOG_FILE" 2>&1; then
+        pmx_record_uninstall "gasket-dkms" "2.0"
+      fi
       dpkg --purge --force-all gasket-dkms >>"$LOG_FILE" 2>&1 || true
       dkms remove gasket/1.0 --all >>"$LOG_FILE" 2>&1 || true
+      pmx_record_execution "Remove broken gasket DKMS entry" "dkms remove gasket/1.0 --all"
       apt-get install -f -y >>"$LOG_FILE" 2>&1 || true
       msg_ok "$(translate 'Broken gasket-dkms package state recovered.')"
       ;;
@@ -244,6 +260,7 @@ detect_orphan_gasket_dkms() {
 }
 
 cleanup_orphan_gasket_dkms() {
+  pmx_journal_context "cleanup_orphan_gasket_dkms" "2.0" "install_coral.sh"
   # Return codes:
   #   0 cleanup completed and every final verification passed
   #   1 operator cancelled before any change was made
@@ -285,6 +302,9 @@ cleanup_orphan_gasket_dkms() {
     dpkg --remove --force-remove-reinstreq gasket-dkms >>"$LOG_FILE" 2>&1 || true
     dpkg --purge --force-all gasket-dkms >>"$LOG_FILE" 2>&1 || true
   fi
+  if ! dpkg-query -W gasket-dkms >/dev/null 2>&1; then
+    pmx_record_uninstall "gasket-dkms" "2.0"
+  fi
 
   # A host can retain more than the historical gasket/1.0 entry. Read
   # every version known by DKMS and also include stale version trees
@@ -309,6 +329,7 @@ cleanup_orphan_gasket_dkms() {
         if ! dkms remove -m gasket -v "$version" --all >>"$LOG_FILE" 2>&1; then
           dkms_remove_failed=1
         fi
+        pmx_record_execution "Remove orphan gasket DKMS entry" "dkms remove -m gasket -v $version --all"
       done <<<"$versions"
 
       if [[ "$dkms_remove_failed" -eq 0 ]]; then
@@ -383,7 +404,7 @@ cleanup_orphan_gasket_dkms() {
     if declare -f update_component_status >/dev/null 2>&1; then
       update_component_status "coral_driver" "removed" "" "gpu" '{}' >/dev/null 2>&1 || true
     fi
-    rm -f /var/lib/proxmenux/coral_gasket_version 2>/dev/null || true
+    pmx_remove_file /var/lib/proxmenux/coral_gasket_version || true
   fi
 
   if [[ "$repair_failed" -ne 0 ]]; then
@@ -450,6 +471,7 @@ show_dkms_build_failure() {
 }
 
 install_gasket_apex_dkms() {
+  pmx_journal_context "install_gasket_apex_dkms" "2.0" "install_coral.sh"
   # Detect running kernel — used both to pull matching headers and to apply
   # kernel-version-specific patches if we fall back to google/gasket-driver.
   local KVER KMAJ KMIN
@@ -461,7 +483,7 @@ install_gasket_apex_dkms() {
 
   msg_info "$(translate 'Installing build dependencies...')"
   apt-get update -qq >>"$LOG_FILE" 2>&1
-  if ! apt-get install -y git dkms build-essential "proxmox-headers-${KVER}" >>"$LOG_FILE" 2>&1; then
+  if ! pmx_install_pkg git dkms build-essential "proxmox-headers-${KVER}"; then
     msg_error "$(translate 'Error installing build dependencies. Check') ${LOG_FILE}"
     exit 1
   fi
@@ -478,13 +500,13 @@ install_gasket_apex_dkms() {
 
     # no_llseek was removed in kernel 6.5 — replace with noop_llseek
     if [[ "$KMAJ" -gt 6 ]] || [[ "$KMAJ" -eq 6 && "$KMIN" -ge 5 ]]; then
-      sed -i 's/\.llseek = no_llseek/\.llseek = noop_llseek/' src/gasket_core.c
+      sed --in-place 's/\.llseek = no_llseek/\.llseek = noop_llseek/' src/gasket_core.c
     fi
 
     # MODULE_IMPORT_NS syntax changed to string-literal in 6.13.
     # Applying this patch on kernel <6.13 causes a compile error.
     if [[ "$KMAJ" -gt 6 ]] || [[ "$KMAJ" -eq 6 && "$KMIN" -ge 13 ]]; then
-      sed -i 's/^MODULE_IMPORT_NS(DMA_BUF);/MODULE_IMPORT_NS("DMA_BUF");/' src/gasket_page_table.c
+      sed --in-place 's/^MODULE_IMPORT_NS(DMA_BUF);/MODULE_IMPORT_NS("DMA_BUF");/' src/gasket_page_table.c
     fi
 
     msg_ok "$(translate 'Source patched successfully.') (kernel ${KVER})"
@@ -506,11 +528,13 @@ install_gasket_apex_dkms() {
 
   msg_info "$(translate 'Removing previous DKMS source tree...')"
   dkms remove gasket/1.0 --all >>"$LOG_FILE" 2>&1 || true
+  pmx_record_execution "Remove previous gasket DKMS entry" "dkms remove gasket/1.0 --all"
   if [[ -d "$GASKET_SRC" ]]; then
     if ! rm -rf "$GASKET_SRC" 2>>"$LOG_FILE"; then
       msg_error "$(translate 'Could not remove previous DKMS tree at') ${GASKET_SRC}. $(translate 'Check') ${LOG_FILE}"
       exit 1
     fi
+    pmx_record_execution "Remove previous gasket DKMS source tree" "rm -rf $GASKET_SRC"
   fi
   msg_ok "$(translate 'Previous DKMS tree cleared.')"
 
@@ -523,6 +547,7 @@ install_gasket_apex_dkms() {
     msg_error "$(translate 'Failed to copy sources into') ${GASKET_SRC}. $(translate 'Check') ${LOG_FILE}"
     exit 1
   fi
+  pmx_record_execution "Copy gasket DKMS source tree" "cp -a /tmp/gasket-driver/src/. ${GASKET_SRC}/"
   if [[ ! -f "$GASKET_SRC/Makefile" ]]; then
     msg_error "$(translate 'Makefile missing in') ${GASKET_SRC} $(translate 'after copy; source tree is incomplete.')"
     exit 1
@@ -535,7 +560,7 @@ install_gasket_apex_dkms() {
   # MAKE[0] passes ${kernelver} to the Makefile so multi-kernel rebuilds
   # (PVE's autoinstall on new kernel installs) target the right headers.
   msg_info "$(translate 'Generating dkms.conf...')"
-  cat > "$GASKET_SRC/dkms.conf" <<'EOF'
+  pmx_write_file "$GASKET_SRC/dkms.conf" <<'EOF'
 PACKAGE_NAME="gasket"
 PACKAGE_VERSION="1.0"
 BUILT_MODULE_NAME[0]="gasket"
@@ -557,6 +582,7 @@ EOF
     msg_error "$(translate 'DKMS add failed. Check') ${LOG_FILE}"
     exit 1
   fi
+  pmx_record_execution "Register gasket DKMS module" "dkms add $GASKET_SRC"
   msg_ok "$(translate 'DKMS module registered.')"
 
   msg_info "$(translate 'Compiling Coral TPU drivers for current kernel...')"
@@ -565,11 +591,13 @@ EOF
     msg_error "$(translate 'DKMS build failed.')"
     exit 1
   fi
+  pmx_record_execution "Build gasket DKMS module" "dkms build gasket/1.0 -k $KVER"
   if ! dkms install gasket/1.0 -k "$KVER" >>"$LOG_FILE" 2>&1; then
     show_dkms_build_failure
     msg_error "$(translate 'DKMS install failed.')"
     exit 1
   fi
+  pmx_record_execution "Install gasket DKMS module" "dkms install gasket/1.0 -k $KVER"
   msg_ok "$(translate 'Drivers compiled and installed via DKMS.') (source: ${GASKET_SOURCE_USED})"
 
   # Track which feranick release was just installed. Without this, the
@@ -594,7 +622,7 @@ EOF
       | sed -E 's/.*"([^"]+)"$/\1/')
     if [[ -n "$FERANICK_LATEST" ]]; then
       mkdir -p "$CORAL_MARKER_DIR" >>"$LOG_FILE" 2>&1 || true
-      echo "$FERANICK_LATEST" > "$CORAL_MARKER_FILE" 2>>"$LOG_FILE" || true
+      printf '%s\n' "$FERANICK_LATEST" | pmx_write_file "$CORAL_MARKER_FILE" || true
       echo "[install_coral] Recorded installed gasket-dkms version: $FERANICK_LATEST" >>"$LOG_FILE" 2>&1
     else
       echo "[install_coral] Could not resolve feranick latest tag — marker not written." >>"$LOG_FILE" 2>&1
@@ -622,6 +650,7 @@ EOF
 # ============================================================
 
 install_libedgetpu_runtime() {
+  pmx_journal_context "install_libedgetpu_runtime" "2.0" "install_coral.sh"
   local KEYRING=/etc/apt/keyrings/coral-edgetpu.gpg
   local LIST_FILE=/etc/apt/sources.list.d/coral-edgetpu.list
 
@@ -631,15 +660,24 @@ install_libedgetpu_runtime() {
   mkdir -p /etc/apt/keyrings
 
   if [[ ! -s "$KEYRING" ]]; then
-    if ! curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-        | gpg --dearmor -o "$KEYRING" 2>>"$LOG_FILE"; then
+    local keyring_tmp
+    local keyring_ready=true
+    keyring_tmp=$(mktemp /tmp/coral-edgetpu-keyring.XXXXXX)
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+      | gpg --dearmor >"$keyring_tmp" 2>>"$LOG_FILE" || keyring_ready=false
+    if $keyring_ready; then
+      pmx_write_file "$KEYRING" <"$keyring_tmp" || keyring_ready=false
+    fi
+    if ! $keyring_ready; then
+      rm -f "$keyring_tmp"
       msg_error "$(translate 'Failed to fetch the Google Coral GPG key. Check') ${LOG_FILE}"
       exit 1
     fi
+    rm -f "$keyring_tmp"
     chmod 0644 "$KEYRING"
   fi
 
-  cat > "$LIST_FILE" <<EOF
+  pmx_write_file "$LIST_FILE" <<EOF
 deb [signed-by=${KEYRING}] https://packages.cloud.google.com/apt coral-edgetpu-stable main
 EOF
 
@@ -652,7 +690,7 @@ EOF
   # (more heat). We default to -std; users who explicitly want -max can install
   # it manually. Either way the udev rules come with the package.
   msg_info "$(translate 'Installing Edge TPU runtime (libedgetpu1-std)...')"
-  if ! apt-get install -y libedgetpu1-std >>"$LOG_FILE" 2>&1; then
+  if ! pmx_install_pkg libedgetpu1-std; then
     msg_error "$(translate 'Failed to install libedgetpu1-std. Check') ${LOG_FILE}"
     exit 1
   fi
@@ -661,7 +699,9 @@ EOF
   # Reload udev so the rules shipped with libedgetpu1-std apply to any USB
   # Coral already plugged in (otherwise they would only apply after replug).
   udevadm control --reload-rules >/dev/null 2>&1 || true
+  pmx_record_execution "Reload Coral USB udev rules" "udevadm control --reload-rules"
   udevadm trigger --subsystem-match=usb >/dev/null 2>&1 || true
+  pmx_record_execution "Trigger Coral USB udev rules" "udevadm trigger --subsystem-match=usb"
 }
 
 
@@ -775,6 +815,7 @@ show_coral_action_menu_if_installed() {
 # Idempotent: missing pieces are no-ops, never errors.
 # ============================================================
 complete_coral_uninstall() {
+  pmx_journal_context "complete_coral_uninstall" "2.0" "install_coral.sh"
   msg_info "$(translate 'Stopping Coral kernel modules...')"
   modprobe -r apex 2>>"$LOG_FILE" || true
   modprobe -r gasket 2>>"$LOG_FILE" || true
@@ -791,35 +832,43 @@ complete_coral_uninstall() {
       while IFS= read -r v; do
         [[ -z "$v" ]] && continue
         dkms remove -m gasket -v "$v" --all >>"$LOG_FILE" 2>&1 || true
+        pmx_record_execution "Remove gasket DKMS module" "dkms remove -m gasket -v $v --all"
       done <<<"$versions"
       msg_ok "$(translate 'gasket DKMS entries removed.')"
     fi
   fi
 
   msg_info "$(translate 'Removing Coral packages...')"
-  apt-get -y purge gasket-dkms libedgetpu1-std libedgetpu1-max \
-      >>"$LOG_FILE" 2>&1 || true
+  if apt-get -y purge gasket-dkms libedgetpu1-std libedgetpu1-max \
+      >>"$LOG_FILE" 2>&1; then
+    pmx_record_uninstall "gasket-dkms" "2.0"
+    pmx_record_uninstall "libedgetpu1-std" "2.0"
+    pmx_record_uninstall "libedgetpu1-max" "2.0"
+  fi
   apt-get -y autoremove --purge >>"$LOG_FILE" 2>&1 || true
   msg_ok "$(translate 'Coral packages purged.')"
 
   # udev rules created by our installer.
-  rm -f /etc/udev/rules.d/99-coral-apex.rules
+  pmx_remove_file /etc/udev/rules.d/99-coral-apex.rules
   # Restore the upstream udev rule group (set it back to its default
   # GROUP="plugdev") in case dkms-postinstall reinstalls gasket-dkms
   # later — apex group may not exist next time.
   if [[ -f /usr/lib/udev/rules.d/60-gasket-dkms.rules ]]; then
-    sed -i 's/GROUP="apex"/GROUP="plugdev"/g' \
-      /usr/lib/udev/rules.d/60-gasket-dkms.rules || true
+    pmx_edit_file /usr/lib/udev/rules.d/60-gasket-dkms.rules \
+      's/GROUP="apex"/GROUP="plugdev"/g' || true
   fi
   udevadm control --reload-rules
+  pmx_record_execution "Reload udev rules after Coral removal" "udevadm control --reload-rules"
   udevadm trigger --subsystem-match=apex >/dev/null 2>&1 || true
+  pmx_record_execution "Trigger udev rules after Coral removal" "udevadm trigger --subsystem-match=apex"
 
   # Apex system group: only remove if no one else is using it.
   if getent group apex >/dev/null 2>&1; then
     local apex_members
     apex_members=$(getent group apex | cut -d: -f4)
     if [[ -z "$apex_members" ]]; then
-      groupdel apex >>"$LOG_FILE" 2>&1 || true
+      pmx_apply_setting "group:apex" "getent group apex 2>/dev/null || true" \
+        groupdel apex || true
       msg_ok "$(translate 'apex group removed.')"
     else
       msg_warn "$(translate 'apex group still has members; left in place:') $apex_members"
@@ -827,16 +876,19 @@ complete_coral_uninstall() {
   fi
 
   # Google Coral APT repo + keyring (only added during USB install).
-  rm -f /etc/apt/sources.list.d/coral-edgetpu.list \
+  local coral_file
+  for coral_file in \
+        /etc/apt/sources.list.d/coral-edgetpu.list \
         /etc/apt/sources.list.d/coral-cloud.list \
         /usr/share/keyrings/coral-edgetpu-archive-keyring.gpg \
-        /etc/apt/trusted.gpg.d/coral-edgetpu-archive-keyring.gpg \
-        2>/dev/null || true
+        /etc/apt/trusted.gpg.d/coral-edgetpu-archive-keyring.gpg; do
+    pmx_remove_file "$coral_file" || true
+  done
 
   # Drop the gasket-dkms version marker written by the install path.
   # Leaving it around after a full uninstall would let the Monitor
   # claim a fictional driver version on the next reboot.
-  rm -f /var/lib/proxmenux/coral_gasket_version 2>/dev/null || true
+  pmx_remove_file /var/lib/proxmenux/coral_gasket_version || true
 
   # Update component status if utils.sh exposes the helper (older
   # ProxMenux releases didn't have it; uninstall must still work).

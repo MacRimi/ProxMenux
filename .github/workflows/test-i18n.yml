@@ -1,0 +1,79 @@
+name: Offline script regressions
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/test-i18n.yml'
+      - '.github/workflows/build-i18n-messages.yml'
+      - 'AppImage/messages/**'
+      - 'AppImage/lib/i18n/**'
+      - 'AppImage/components/terminal-panel.tsx'
+      - 'web/**'
+      - 'CONTRIBUTING.md'
+      # Scheduler consumers and the offline extractor's .sh/.func inputs.
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+      - 'scripts/**/*.py'
+      - 'lang/*.json'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
+      - 'oci/src/**/*.py'
+      - 'oci/catalog/**/*.json'
+      - 'oci/remote/**/*.sh'
+      - 'oci/remote/**/*.py'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/test-i18n.yml'
+      - '.github/workflows/build-i18n-messages.yml'
+      - 'AppImage/messages/**'
+      - 'AppImage/lib/i18n/**'
+      - 'AppImage/components/terminal-panel.tsx'
+      - 'web/**'
+      - 'CONTRIBUTING.md'
+      # Scheduler consumers and the offline extractor's .sh/.func inputs.
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+      - 'scripts/**/*.py'
+      - 'lang/*.json'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
+      - 'oci/src/**/*.py'
+      - 'oci/catalog/**/*.json'
+      - 'oci/remote/**/*.sh'
+      - 'oci/remote/**/*.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Preserve this check ID for existing branch protection rules. This suite
+  # includes menu, download and scheduler regressions as well as i18n tests.
+  offline-i18n:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Check scheduler test dependencies
+        run: |
+          test -x /bin/bash
+          test -x /usr/bin/jq
+      - name: Install OCI wording test dependencies
+        run: python3 -m pip install 'PyYAML>=6,<7' 'jsonschema==4.25.1'
+      - name: Run offline i18n and script regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s .github/scripts/tests -v

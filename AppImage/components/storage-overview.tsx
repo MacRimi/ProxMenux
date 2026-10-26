@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power, Moon, EyeOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -70,6 +70,8 @@ interface DiskInfo {
   // badge AND to suppress the (stale) temperature value, so the
   // operator understands the graph is frozen on purpose — issue #232.
   standby?: boolean
+  idle?: boolean
+  excluded?: boolean
   health: string
   power_on_hours?: number
   smart_status?: string
@@ -114,7 +116,6 @@ interface DiskObservation {
   occurrence_count: number
   raw_message: string
   severity: string
-  dismissed: boolean
   device_name: string
   serial: string
   model: string
@@ -230,7 +231,8 @@ function translateAtaError(raw: string, t: (key: string) => string): string | nu
   return out.length ? out.join('; ') : null
 }
 
-export function StorageOverview() {
+// `disksOnly` is the PBS Monitor: its disks and pools, without Proxmox VE storages.
+export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } = {}) {
   const t = useT()
 
   // User-configurable disk temperature thresholds (Settings → Health
@@ -283,7 +285,7 @@ export function StorageOverview() {
     try {
       const [data, proxmoxData, mountsData] = await Promise.all([
         fetchApi<StorageData>("/api/storage"),
-        fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
+        disksOnly ? Promise.resolve(null) : fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
         // Sprint 13 — host-level NFS/CIFS/SMB mounts. Wrapped in catch
         // so a failure here doesn't blank the whole storage tab.
         fetchApi<RemoteMountsData>("/api/mounts").catch(() => ({ mounts: [], available: false } as RemoteMountsData)),
@@ -434,7 +436,21 @@ export function StorageOverview() {
   // spun-down drive. Centralised here because the same pattern shows up
   // in 4 different disk-list views (system / data / pool / other) and we
   // want them all to behave identically — issue #232 fix.
-  const renderDiskTempOrStandby = (disk: DiskInfo) => {
+  // Why a disk shows no live temperature, when it doesn't: excluded by the
+  // user, parked, or idle and deliberately not read. Shared by every view
+  // that paints a disk's temperature, so they cannot disagree.
+  const renderNoReadingBadge = (disk: DiskInfo) => {
+    if (disk.excluded) {
+      return (
+        <Badge
+          className="bg-muted text-muted-foreground border-border gap-1"
+          title={t("storage.diskExcludedTitle")}
+        >
+          <EyeOff className="h-3 w-3" />
+          {t("storage.diskExcluded")}
+        </Badge>
+      )
+    }
     if (disk.standby) {
       return (
         <Badge
@@ -446,6 +462,23 @@ export function StorageOverview() {
         </Badge>
       )
     }
+    if (disk.idle) {
+      return (
+        <Badge
+          className="bg-muted text-muted-foreground border-border gap-1"
+          title={t("storage.idleTitle")}
+        >
+          <Moon className="h-3 w-3" />
+          {t("storage.idle")}
+        </Badge>
+      )
+    }
+    return null
+  }
+
+  const renderDiskTempOrStandby = (disk: DiskInfo) => {
+    const noReading = renderNoReadingBadge(disk)
+    if (noReading) return noReading
     if (disk.temperature > 0) {
       return (
         <div className="flex items-center gap-1">
@@ -533,14 +566,8 @@ export function StorageOverview() {
         {/* Header line 2: size + temperature/standby. */}
         <div className="flex items-center justify-between gap-3 mt-1">
           <span className="text-sm text-muted-foreground">{disk.size_formatted}</span>
-          {disk.standby ? (
-            <Badge
-              className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"
-              title={t("storage.standbyTitle")}
-            >
-              <Power className="h-3 w-3" />
-              {t("storage.standby")}
-            </Badge>
+          {renderNoReadingBadge(disk) ? (
+            renderNoReadingBadge(disk)
           ) : disk.temperature > 0 ? (
             <span
               className={`text-base font-semibold ${getTempColor(
@@ -938,37 +965,25 @@ export function StorageOverview() {
   }
 
   const getDiskHealthBreakdown = () => {
-    if (!storageData || !storageData.disks) {
-      return { normal: 0, warning: 0, critical: 0 }
+    if (!storageData || !Array.isArray(storageData.disks)) {
+      return { normal: 0, warning: 0, critical: 0, unavailable: 0 }
     }
 
     let normal = 0
     let warning = 0
     let critical = 0
+    let unavailable = 0
 
     storageData.disks.forEach((disk) => {
-      if (disk.temperature === 0) {
-        // No temperature reading available — count as normal so a
-        // missing sensor doesn't inflate the warning count.
-        normal++
+      // Match disk rows: policy-suppressed cached readings are not live temperatures.
+      if (disk.standby || disk.idle || disk.excluded || typeof disk.temperature !== "number" ||
+          !Number.isFinite(disk.temperature) || disk.temperature <= 0) {
+        unavailable++
         return
       }
 
-      // Reuse the exact threshold lookup that the per-disk badge
-      // (`getTempColor`) uses, so the green / amber / red colour in
-      // the disk card and the "X normal, Y warning, Z critical" tally
-      // at the top of the page always agree.
-      //
-      // Previously this breakdown carried its own hardcoded ladder
-      // (HDD ≤45 normal, ≤55 warning, …) which was far stricter than
-      // the configurable defaults from `useDiskTempThresholds`
-      // (HDD warn 60, hot 65). A disk at 48 °C therefore showed a
-      // green badge but was counted as "warning" in the summary —
-      // exactly the case the user reported. Driving both from the
-      // same source (`dtThresholds`) means the user-tunable values
-      // under Settings → Health Monitor Thresholds → Disk temperature
-      // now apply to the breakdown as well, and the displayed colour
-      // is always the source of truth.
+      // Only usable readings enter the existing configurable threshold lookup.
+      // Keep the resolver and defaults shared with the per-disk temperature badge.
       const diskType = getDiskType(disk.name, disk.rotation_rate)
       const cls: keyof DiskTempMap =
         diskType === "NVMe" ? "NVMe" : diskType === "SSD" ? "SSD" : "HDD"
@@ -978,11 +993,11 @@ export function StorageOverview() {
       else normal++
     })
 
-    return { normal, warning, critical }
+    return { normal, warning, critical, unavailable }
   }
 
   const getDiskTypesBreakdown = () => {
-    if (!storageData || !storageData.disks) {
+    if (!storageData || !Array.isArray(storageData.disks)) {
       return { nvme: 0, ssd: 0, hdd: 0, usb: 0 }
     }
 
@@ -1107,7 +1122,7 @@ export function StorageOverview() {
     )
   }
 
-  if (!storageData || storageData.error) {
+  if (!storageData || storageData.error || !Array.isArray(storageData.disks)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-red-500">
@@ -1120,7 +1135,7 @@ export function StorageOverview() {
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
+      {!disksOnly && <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         {/* ── Total Storage (preview restyle: headline + stacked bar Local·Remote·Free) ── */}
         {(() => {
           const totalGB = (totalLocalCapacity || 0) + (totalRemoteCapacity || 0)
@@ -1285,12 +1300,16 @@ export function StorageOverview() {
         {(() => {
           const total = Math.max(1, storageData.disk_count || 0)
           const seg = 100 / total
-          const allHealthy = diskHealthBreakdown.warning === 0 && diskHealthBreakdown.critical === 0
-          const healthBadge = allHealthy
-            ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">✓ {t("storage.allHealthy")}</Badge>
-            : diskHealthBreakdown.critical > 0
-              ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{t("storage.criticalCount", { count: diskHealthBreakdown.critical })}</Badge>
-              : <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{t("storage.warningCount", { count: diskHealthBreakdown.warning })}</Badge>
+          const allTemperaturesNormal = storageData.disks.length > 0 && diskHealthBreakdown.unavailable === 0 && diskHealthBreakdown.warning === 0 && diskHealthBreakdown.critical === 0
+          const healthBadge = storageData.disks.length === 0
+            ? <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{t("storage.temperatureNoDisks")}</Badge>
+            : allTemperaturesNormal
+              ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{t("storage.temperatureNormal")}</Badge>
+              : diskHealthBreakdown.critical > 0
+                ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{t("storage.temperatureCriticalCount", { count: diskHealthBreakdown.critical })}</Badge>
+                : diskHealthBreakdown.warning > 0
+                  ? <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{t("storage.temperatureHighCount", { count: diskHealthBreakdown.warning })}</Badge>
+                  : <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{t(diskHealthBreakdown.normal > 0 ? "storage.temperatureIncomplete" : "storage.temperatureUnavailable")}</Badge>
           const seg_purple = '#a855f7'
           const seg_cyan = '#06b6d4'
           const seg_blue = '#3b82f6'
@@ -1312,7 +1331,15 @@ export function StorageOverview() {
                     <span className="text-3xl font-bold leading-none">{storageData.disk_count}</span>
                     <span className="text-base font-medium ml-1 text-muted-foreground">{diskCountLabel(storageData.disk_count)}</span>
                   </div>
+                </div>
+                <div className="mb-3 flex flex-col items-start gap-1 [&>div]:max-w-full [&>div]:whitespace-normal [&>div]:break-words">
                   {healthBadge}
+                  {diskHealthBreakdown.critical > 0 && diskHealthBreakdown.warning > 0 && (
+                    <p className="text-xs text-yellow-500">{t("storage.temperatureHighCount", { count: diskHealthBreakdown.warning })}</p>
+                  )}
+                  {diskHealthBreakdown.unavailable > 0 && (
+                    <p className="text-xs text-muted-foreground">{t("storage.temperatureUnavailableCount", { count: diskHealthBreakdown.unavailable })}</p>
+                  )}
                 </div>
                 <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
                   {segments.map((s, i) => (
@@ -1329,9 +1356,9 @@ export function StorageOverview() {
             </Card>
           )
         })()}
-      </div>
+      </div>}
 
-      {proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
+      {!disksOnly && proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -2065,7 +2092,7 @@ export function StorageOverview() {
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
                       {t("storage.wearLifetime")}
                       {smartJsonData?.has_data && !wi && (
-                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">{t("storage.realTest")}</Badge>
+                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-1.5">{t("storage.savedSmartData")}</Badge>
                       )}
                     </h4>
                     <div className="flex gap-5 items-start">
@@ -2777,7 +2804,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   // Build recommendations
   const recommendations: string[] = []
   if (isHealthy) {
-    recommendations.push(`<div class="rec-item rec-ok"><div class="rec-icon">&#10003;</div><div><strong>${t("storage.smartReport.recommendations.healthyTitle")}</strong><p>${t("storage.smartReport.recommendations.healthyText")}</p></div></div>`)
+    recommendations.push(`<div class="rec-item rec-ok"><div class="rec-icon">&#10003;</div><div><strong>${t("storage.smartReport.recommendations.passedTitle")}</strong><p>${t("storage.smartReport.recommendations.passedText")}</p></div></div>`)
   } else {
     recommendations.push(`<div class="rec-item rec-critical"><div class="rec-icon">&#10007;</div><div><strong>${t("storage.smartReport.recommendations.criticalTitle")}</strong><p>${t("storage.smartReport.recommendations.criticalText")}</p></div></div>`)
   }
@@ -2860,7 +2887,6 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
         const severityLabel = severityText(obs.severity)
         const firstDate = obs.first_occurrence ? new Date(obs.first_occurrence).toLocaleString() : na
         const lastDate = obs.last_occurrence ? new Date(obs.last_occurrence).toLocaleString() : na
-        const dismissedBadge = obs.dismissed ? `<span style="background:#16a34a20;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:4px;">${t("storage.smartReport.dismissed")}</span>` : ''
         const errorTypeLabel = observationTypeText(type)
         
         obsItemsHtml += `
@@ -2870,7 +2896,6 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
             <span style="background:${severityBadgeColor}20;color:${severityBadgeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${severityLabel}</span>
             <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">ID: #${obs.id}</span>
             <span style="background:#64748b20;color:#475569;padding:2px 8px;border-radius:4px;font-size:11px;">${t("storage.smartReport.occurrences")}: <strong>${obs.occurrence_count}</strong></span>
-            ${dismissedBadge}
           </div>
           
           <div style="margin-bottom:10px;">
@@ -3068,8 +3093,6 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   }
   @media screen and (max-width: 640px) {
     body { padding: 16px; padding-top: 64px; }
-    .grid-4 { grid-template-columns: 1fr 1fr; }
-    .grid-3 { grid-template-columns: 1fr 1fr; }
     .rpt-header { flex-direction: column; gap: 12px; align-items: flex-start; }
     .rpt-header-right { text-align: left; }
     .exec-box { flex-wrap: wrap; }
@@ -3173,6 +3196,9 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  @media screen and (max-width: 640px) {
+    .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .card { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
   .card-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
   .card-value { font-size: 13px; font-weight: 600; color: #0f172a; }
@@ -3284,7 +3310,7 @@ function pmxPrint(){
       <h3>${t("storage.smartReport.healthAssessment")}</h3>
       <p>
         ${isHealthy 
-          ? t("storage.smartReport.healthyAssessment", { uptime: powerOnFormatted, temperature: disk.temperature > 0 ? disk.temperature + '°C' : na, sectors: (disk.reallocated_sectors ?? 0) === 0 ? t("storage.smartReport.noBadSectors") : t("storage.smartReport.reallocatedSectors", { count: disk.reallocated_sectors ?? 0 }) })
+          ? t("storage.smartReport.passedAssessment", { uptime: powerOnFormatted, temperature: disk.temperature > 0 ? disk.temperature + '°C' : na, sectors: (disk.reallocated_sectors ?? 0) === 0 ? t("storage.smartReport.noReallocatedSectorsReported") : t("storage.smartReport.reallocatedSectors", { count: disk.reallocated_sectors ?? 0 }) })
           : t("storage.smartReport.failedAssessment")
         }
       </p>
@@ -3294,11 +3320,11 @@ function pmxPrint(){
   <!-- Simple Explanation for Non-Technical Users -->
   <div style="background:${isHealthy ? '#dcfce7' : (hasCritical ? '#fee2e2' : '#fef3c7')};border:1px solid ${isHealthy ? '#86efac' : (hasCritical ? '#fca5a5' : '#fcd34d')};border-radius:8px;padding:16px;margin-top:12px;">
     <div style="font-weight:700;font-size:14px;color:${isHealthy ? '#166534' : (hasCritical ? '#991b1b' : '#92400e')};margin-bottom:8px;">
-      ${isHealthy ? t("storage.smartReport.healthyMeaningTitle") : (hasCritical ? t("storage.smartReport.attentionTitle") : t("storage.smartReport.monitorTitle"))}
+      ${isHealthy ? t("storage.smartReport.passedMeaningTitle") : (hasCritical ? t("storage.smartReport.attentionTitle") : t("storage.smartReport.monitorTitle"))}
     </div>
     <p style="color:${isHealthy ? '#166534' : (hasCritical ? '#991b1b' : '#92400e')};font-size:12px;margin:0 0 8px 0;">
       ${isHealthy 
-        ? t("storage.smartReport.healthyMeaning")
+        ? t("storage.smartReport.passedMeaning")
         : (hasCritical 
           ? t("storage.smartReport.criticalMeaning")
           : t("storage.smartReport.warningMeaning")

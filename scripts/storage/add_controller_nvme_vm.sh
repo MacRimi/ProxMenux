@@ -694,7 +694,14 @@ apply_assignment() {
   echo -e "${TAB}${BL}Log: ${LOG_FILE}${CL}"
 
   if [[ "$assigned_count" -gt 0 ]]; then
-    msg_ok "$(translate "Completed.") $assigned_count $(translate "device(s) added to VM") ${SELECTED_VMID}."
+    local completed_message
+    completed_message="$(translate "Completed. Devices added to VM {vmid}: {count}.")"
+    if [[ "$completed_message" != *'{vmid}'* || "$completed_message" != *'{count}'* ]]; then
+      completed_message="Completed. Devices added to VM {vmid}: {count}."
+    fi
+    completed_message="${completed_message//\{vmid\}/$SELECTED_VMID}"
+    completed_message="${completed_message//\{count\}/$assigned_count}"
+    msg_ok "$completed_message"
   else
     msg_warn "$(translate "No new Controller/NVMe entries were added.")"
   fi

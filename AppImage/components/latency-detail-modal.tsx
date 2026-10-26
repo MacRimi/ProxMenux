@@ -363,10 +363,12 @@ const generateLatencyReport = (report: ReportData, t: TFunction) => {
   .top-bar-title { font-weight: 600; }
   .top-bar-subtitle { font-size: 11px; color: #94a3b8; display: none; }
   .top-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 10px 20px; border-radius: 6px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #06b6d4; color: #fff; border: none; padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
   }
   .top-bar button:hover { background: #0891b2; }
+  .top-bar .btn-group { display: flex; gap: 8px; }
+  .top-bar button svg { width: 18px; height: 18px; display: block; }
   @media (min-width: 640px) {
     .top-bar { padding: 12px 24px; }
     .top-bar-subtitle { display: block; }
@@ -532,7 +534,10 @@ const generateLatencyReport = (report: ReportData, t: TFunction) => {
       <div class="top-bar-subtitle">${t("network.latency.report.topBarSubtitle")}</div>
     </div>
   </div>
-  <button onclick="window.print()">${t("network.latency.report.printSavePdf")}</button>
+  <div class="btn-group">
+    <button onclick="window.print()" title="Print" aria-label="Print"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+    <button onclick="window.print()" title="Save as PDF" aria-label="Save as PDF"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></button>
+  </div>
 </div>
 
 <!-- Header -->

@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Fail2Ban | Dokumentácia ProxMenux",
+    "description": "Nainštalujte Fail2Ban s tromi jails vyladenými pre Proxmox (SSH agresívny, Proxmox UI 8006, ProxMenux Monitor 8008). Zahŕňa opravu journald MaxLevelStore, vlastné protokolové služby pre spoľahlivosť, automaticky detekovaný backend nftables/iptables a zosilnenie SSH MaxAuthTries.",
+    "ogTitle": "Fail2Ban | Dokumentácia ProxMenux",
+    "ogDescription": "Ochrana pred hrubou silou pre SSH a webové rozhrania Proxmox s opravami journald a backendu špecifickými pre Proxmox."
+  },
+  "header": {
+    "title": "Fail2Ban",
+    "description": "Nainštaluje Fail2Ban pre Proxmox: tri jaily (agresívny SSH, rozhranie Proxmox na 8006, ProxMenux Monitor na 8008 a reverzný proxy), opravu úrovne journald na ukladanie udalostí SSH, dve služby kopírujúce denník do súborov na obídenie známeho problému backendu systemd, detekciu backendu firewallu a posilnenie SSH pomocou MaxAuthTries.",
+    "section": "Zabezpečenie"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Inštaluje Fail2Ban z repozitárov Debian a vytvorí konfiguráciu Proxmox, ktorá ihneď chráni SSH, rozhranie Proxmox a ProxMenux Monitor. Ak rozpozná existujúcu inštaláciu, ponúkne menu správy na preinštalovanie alebo odstránenie."
+  },
+  "firstLaunch": {
+    "heading": "Dialóg prvého spustenia",
+    "body": "Ak Fail2Ban nie je nainštalovaný, skript zobrazí potvrdenie so súhrnom plánovanej inštalácie a konfigurácie. Zrušenie ukončí postup bez zmien; potvrdenie spustí inštaláciu.",
+    "imageAlt": "Potvrdenie inštalácie Fail2Ban s tromi jailmi, opravou journald a posilnením SSH"
+  },
+  "jails": {
+    "heading": "Tri jails",
+    "headerJail": "Jail",
+    "headerProtects": "Chráni",
+    "headerRetries": "Pokusy / Časové okno",
+    "headerBan": "Trvanie blokovania",
+    "rows": [
+      {
+        "jail": "[sshd]",
+        "protects": "SSH (agresívny režim — zahŕňa ddos, mode, normal)",
+        "retries": "2 / 60 min",
+        "ban": "9 hodín"
+      },
+      {
+        "jail": "[proxmox]",
+        "protects": "Webové rozhranie Proxmox (port 8006)",
+        "retries": "3 / 10 min",
+        "ban": "1 hodina"
+      },
+      {
+        "jail": "[proxmenux]",
+        "protects": "ProxMenux Monitor (port 8008 + http/https reverzný proxy)",
+        "retries": "3 / 10 min",
+        "ban": "1 hodina"
+      }
+    ],
+    "outro": "Globálne predvolené hodnoty od <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>,<code> bantime = 86400</code> (24-hodinová rezerva pre jails ktoré to neprepíšu), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
+  },
+  "journald": {
+    "heading": "Prečo je oprava journald dôležitá",
+    "intro": "Proxmox dodáva <code>/etc/systemd/journald.conf</code> s <codeNw>MaxLevelStore=warning</codeNw>. journald pred uložením zahodí správy s úrovňou <em>nižšou</em> než warning. SSH a PAM hlásia chyby overovania na úrovniach <em>info</em> / <em>notice</em>, preto:",
+    "diagram": {
+      "sshLabel": "SSH / PAM",
+      "sshDetail": "chyba overovania\n(úroveň info / notice)",
+      "journaldLabel": "journald",
+      "journaldDetail": "MaxLevelStore=warning\n→ udalosť sa bez upozornenia zahodí",
+      "fail2banLabel": "Fail2Ban",
+      "fail2banDetail": "nevidí nič\n→ nikdy nič nezakazuje",
+      "arrowLabel": "predvolený Proxmox"
+    },
+    "afterDiagram": "Inštalátor to rozpozná a vytvorí doplnkový súbor <codeXs>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</codeXs>, ktorý nastaví <code>MaxLevelStore</code> aj <code>MaxLevelSyslog</code> na <code>info</code>:",
+    "code": "[Journal]\nMaxLevelStore=info\nMaxLevelSyslog=info",
+    "outro": "Potom reštartuje <code>systemd-journald</code>. Pri odinštalovaní sa doplnkový súbor odstráni a obnoví sa pôvodné nastavenie Proxmox."
+  },
+  "loggers": {
+    "heading": "Prečo dve vlastné logger služby",
+    "intro1": "Fail2Ban môže čítať priamo denník systemd (<code>backend = systemd</code>), ale tento backend má na Proxmoxe známe problémy s pracovnými procesmi <code>pvedaemon</code>: udalosti overovania sa objavia v denníku, ale nie vždy sa zachytia. Problém sa občas týka aj <code>sshd</code>.",
+    "intro2": "ProxMenux vytvorí dve malé služby systemd, ktoré sledujú príslušné jednotky pomocou <code>journalctl -f</code> a pridávajú každý riadok do súboru. Fail2Ban číta tieto súbory spoľahlivým <code>backend = auto</code> (súborový režim):",
+    "headerService": "Služba",
+    "headerSource": "Zdrojová jednotka",
+    "headerOutput": "Výstupný súbor",
+    "rows": [
+      {
+        "service": "proxmox-auth-logger.service",
+        "source": "pvedaemon.service",
+        "output": "/var/log/proxmox-auth.log"
+      },
+      {
+        "service": "ssh-auth-logger.service",
+        "source": "ssh.service",
+        "output": "/var/log/ssh-auth.log"
+      }
+    ],
+    "outro": "Obe služby sú deklarované ako <code>PartOf=fail2ban.service</code>, takže sa reštartujú s Fail2Ban a zastavia sa s ním. Režim 640, ktorý vlastní <code>root:adm</code> v súboroch denníka. Tretí protokol používaný <code>[proxmenux]</code> jail (<code>/var/log/proxmenux-auth.log</code>) je zapísaný priamo aplikáciou ProxMenux Monitor Flask – nie je potrebná žiadna služba zapisovača."
+  },
+  "backend": {
+    "heading": "Automatická detekcia backendu firewallu",
+    "intro": "Inštalátor sonduje hostiteľa: ak <code>nft list ruleset</code> funguje, vyberie <code>nftables</code> ako akciu zákazu. Inak sa vráti do <code>iptables-multiport</code> / <code>iptables-allports</code>. Voľba je napísaná do <code>jail.local</code>:",
+    "code": "# nftables host\nbanaction = nftables\nbanaction_allports = nftables[type=allports]\n\n# iptables host (fallback)\nbanaction = iptables-multiport\nbanaction_allports = iptables-allports"
+  },
+  "hardening": {
+    "heading": "Posilnenie SSH: MaxAuthTries",
+    "intro": "Kontrola Lynis <strong>SSH-7408</strong> odporúča <code>MaxAuthTries 3</code> v <code>sshd_config</code>. SSH jail používa <code>maxretry = 2</code> na blokovanie po opakovaných zlyhaniach; MaxAuthTries obmedzuje pokusy v rámci jedného spojenia. Toto nastavenie SSH pridáva ďalšiu vrstvu ochrany aj pri zastavení Fail2Ban počas údržby.",
+    "installerIntro": "Inštalátor:",
+    "items": [
+      "Číta aktuálnu hodnotu <code>MaxAuthTries</code> (alebo predvolené hodnoty 6 v prípade neprítomnosti).",
+      "Ukladá to na <code>/usr/local/share/proxmenux/sshd_maxauthtries_backup</code>.",
+      "Upraví <code>sshd_config</code> priamo: nahradí existujúci riadok, odkomentuje zakomentovaný alebo pridá nový.",
+      "Znova načíta <code>sshd</code> bez reštartu, aby existujúce relácie zostali aktívne."
+    ],
+    "outro": "Na odinštalovanie je uložená pôvodná hodnota obnovená a <code>sshd</code> je znovu načítaná."
+  },
+  "manage": {
+    "heading": "Spravovať existujúcu inštaláciu",
+    "intro": "Ak je Fail2Ban nainštalovaný už pri otvorení ponuky, skript ho detekuje a zobrazí riadiace menu namiesto opätovného spustenia inštalátora:",
+    "headerAction": "Akcia",
+    "headerWhat": "Čo to robí?",
+    "rows": [
+      {
+        "action": "Preinštalovať",
+        "what": "Znova spustí celý inštalátor a prepíše všetky jaily aktuálnymi predvolenými hodnotami ProxMenux. Použite to, keď aktualizácia zmení odporúčané hodnoty."
+      },
+      {
+        "action": "Odstrániť",
+        "what": "Zastaví fail2ban a dve loggerové služby, vyčistí balík apt, odstráni všetky jail / súbory filtrov, odstráni drop-in journald (obnoví predvolené nastavenie Proxmox) a obnoví pôvodný SSH MaxAuthTries."
+      }
+    ]
+  },
+  "verify": {
+    "heading": "Overte, či funguje.",
+    "intro": "Po inštalácii užitočné príkazy od hostiteľa:",
+    "code": "# Service status and version\nsystemctl status fail2ban\nfail2ban-client --version\n\n# All active jails\nfail2ban-client status\n\n# Detail on one jail\nfail2ban-client status sshd\nfail2ban-client status proxmox\nfail2ban-client status proxmenux\n\n# Currently banned IPs in a jail\nfail2ban-client status sshd | grep \"Banned IP\"\n\n# Manually unban an IP (use this if you ban yourself)\nfail2ban-client unban 192.0.2.10\n\n# Tail the auth logs Fail2Ban watches\ntail -f /var/log/ssh-auth.log\ntail -f /var/log/proxmox-auth.log\ntail -f /var/log/fail2ban.log"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "neverBansTitle": "Fail2Ban beží, ale nikdy nič nezakazuje",
+    "neverBansBody": "Overte, či <code>tail -f /var/log/ssh-auth.log</code> dostane záznam po pokuse o SSH prihlásenie s nesprávnym heslom z iného počítača. Ak zostane prázdny, skontrolujte <code>systemctl status ssh-auth-logger.service</code>. Ak služba beží, prezrite udalosti príkazom <code>journalctl -u ssh.service -n 50 --no-pager -p info</code> a overte, či doplnková konfigurácia journald povoľuje úroveň <em>info</em>.",
+    "monitorEmptyTitle": "ProxMenux Monitor jail nemá žiadne položky ani po neúspešnom prihlásení",
+    "monitorEmptyBody": "<code>[proxmenux]</code> jail číta <code>/var/log/proxmenux-auth.log</code>, ktorý je napísaný aplikáciou ProxMenux Monitor Flask – nie zapisovačom journald. Ak nespustíte Monitor, súbor zostane prázdny a jail sa nikdy nespustí. To sa očakáva; konfigurácia jail je neškodná. Ak spustíte Monitor a protokol je prázdny, skontrolujte konfiguráciu protokolovania Flask.",
+    "selfBanTitle": "Zakázal som sám seba.",
+    "selfBanIntro": "Z konzoly / IPMI / iKVM (alebo inej povolenej IP adresy):",
+    "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
+    "aptFailTitle": "apt-get zlyhá: ''Unable to locate package fail2ban''",
+    "aptFailBody": "Hostiteľovi chýbajú repozitáre Debian (bežné pri minimálnej inštalácii Proxmox). Inštalátor to rozpozná a pred opakovaním vytvorí <code>/etc/apt/sources.list.d/debian.sources</code> so správnym kódovým označením (<code>bookworm</code> / <code>trixie</code>). Ak chyba pretrváva, skontrolujte <code>VERSION_CODENAME</code> v <code>/etc/os-release</code> a dostupnosť URL repozitára.",
+    "lockoutTitle": "SSH ma po inštalácii zamkne",
+    "lockoutBody": "Inštalatér nastaví <code>MaxAuthTries=3</code>. Ak váš správca hesla / agent získa viac kľúčov, môžete to prekročiť pri jednom pokuse o pripojenie. Obmedzte ponúkané kľúče: <code>ssh -o IdentitiesOnly=yes -i ~/.ssh/specific_key user@host</code>. Alebo dočasne zvýšiť <code>MaxAuthTries</code> v <code>sshd_config</code>, zatiaľ čo vy ladíte."
+  },
+  "files": {
+    "heading": "Súbory napísané",
+    "code": "/etc/fail2ban/jail.local                              # global defaults + [sshd]\n/etc/fail2ban/jail.d/proxmox.conf                     # [proxmox]\n/etc/fail2ban/jail.d/proxmenux.conf                   # [proxmenux]\n/etc/fail2ban/filter.d/proxmox.conf                   # auth-failure regex for pvedaemon\n/etc/fail2ban/filter.d/proxmenux.conf                 # auth-failure regex for Monitor\n/etc/systemd/system/proxmox-auth-logger.service       # journal → file (pvedaemon)\n/etc/systemd/system/ssh-auth-logger.service           # journal → file (sshd)\n/etc/systemd/journald.conf.d/proxmenux-loglevel.conf  # MaxLevelStore=info\n/etc/ssh/sshd_config                                  # MaxAuthTries=3 (in-place edit)\n/var/log/proxmox-auth.log                             # written by logger service\n/var/log/ssh-auth.log                                 # written by logger service\n/var/log/proxmenux-auth.log                           # written by Monitor Flask app\n/usr/local/share/proxmenux/sshd_maxauthtries_backup   # for restore on uninstall"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "monitorLabel": "ProxMenux Monitor → Bezpečnostná karta",
+    "monitorTail": " — inštalácia z ovládacieho panela, aktuálny stav jailov, blokované IP adresy a nastavenie počtu pokusov a trvania blokovania pre každý jail v prehliadači.",
+    "lynisLabel": "Lynis",
+    "lynisTail": " — spustite bezpečnostný audit pred zmenou a po nej a overte splnenie kontroly SSH-7408.",
+    "securityLabel": "Prehľad bezpečnosti",
+    "securityTail": " — Späť na prehľad sekcie."
+  }
+}

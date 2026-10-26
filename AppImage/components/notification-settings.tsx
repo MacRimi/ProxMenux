@@ -1,5 +1,6 @@
 "use client"
 
+import { AppriseServiceHelp } from "./apprise-service-help"
 import { useState, useEffect, useCallback } from "react"
 import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
@@ -12,13 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useIsPbs } from "../lib/use-platform"
 import {
   Bell, BellOff, Send, CheckCircle2, XCircle, Loader2,
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
-  Trash2, ChevronDown, ChevronUp, ChevronRight, TestTube2, Mail, Webhook,
+  Trash2, ChevronRight, TestTube2, Mail, Webhook,
   Copy, Server, Shield, ExternalLink, RefreshCw, Download, Upload,
   Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb,
-  Moon, Newspaper
+  Moon, Newspaper, History, ChevronDown
 } from "lucide-react"
 
 interface ChannelConfig {
@@ -77,6 +79,7 @@ interface NotificationConfig {
   ai_api_keys: Record<string, string>  // Per-provider API keys
   ai_models: Record<string, string>    // Per-provider selected models
   ai_model: string                     // Current active model (for the selected provider)
+  notification_language: string
   ai_language: string
   ai_ollama_url: string
   ai_openai_base_url: string
@@ -108,7 +111,8 @@ interface HistoryEntry {
   title: string
   severity: string
   sent_at: string
-  success: boolean
+  success: boolean | number
+  message?: string | null
   error_message: string | null
 }
 
@@ -150,7 +154,9 @@ function validateGotifyUrl(url: string): { error?: string; warning?: string } {
   return {}
 }
 
-const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "other"].map(key => ({ key }))
+const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "hardware", "system", "other"].map(key => ({ key }))
+// Guests, vzdump backups and the cluster do not exist on Proxmox Backup Server.
+const PVE_ONLY_CATEGORIES = new Set(["vm_ct", "backup", "cluster"])
 
 const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "pushover", "apprise"] as const
 
@@ -198,6 +204,24 @@ const AI_PROVIDERS = [
     iconLight: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openrouter-dark.webp"
   },
 ]
+
+const NOTIFICATION_LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "de", label: "Deutsch" },
+  { value: "es", label: "Español" },
+  { value: "fr", label: "Français" },
+  { value: "it", label: "Italiano" },
+  { value: "pt", label: "Português" },
+  { value: "sk", label: "Slovenčina" },
+  { value: "sv", label: "Svenska" },
+]
+
+function normalizeNotificationLanguage(notificationLanguage?: string, legacyAiLanguage?: string): string {
+  const runtimeLanguages = new Set(NOTIFICATION_LANGUAGES.map(language => language.value))
+  if (notificationLanguage && runtimeLanguages.has(notificationLanguage)) return notificationLanguage
+  if (legacyAiLanguage && runtimeLanguages.has(legacyAiLanguage)) return legacyAiLanguage
+  return "en"
+}
 
 const AI_LANGUAGES = [
   { value: "en", label: "English" },
@@ -254,7 +278,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
   event_categories: {
     vm_ct: true, backup: true, resources: true, storage: true,
     network: true, security: true, cluster: true, services: true,
-    health: true, updates: true, other: true,
+    health: true, updates: true, hardware: true, system: true, other: true,
   },
   event_toggles: {},
   event_types_by_group: {},
@@ -284,6 +308,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     openrouter: "",
   },
   ai_model: "",
+  notification_language: "en",
   ai_language: "en",
   ai_ollama_url: "http://localhost:11434",
   ai_openai_base_url: "",
@@ -308,10 +333,12 @@ const DEFAULT_CONFIG: NotificationConfig = {
 
 export function NotificationSettings() {
   const t = useT()
+  const isPbs = useIsPbs()
   const { resolvedTheme } = useTheme()
   const [config, setConfig] = useState<NotificationConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<ServiceStatus | null>(null)
-  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null)
+  const [historyError, setHistoryError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -323,7 +350,6 @@ export function NotificationSettings() {
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ channel: string; success: boolean; message: string } | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
   // Cleartext secrets cached only while the eye toggle is "on" for
   // that field. Settings GET returns "************" for everything in
@@ -401,6 +427,10 @@ export function NotificationSettings() {
           ai_prompt_mode: data.config.ai_prompt_mode || "default",
           ai_custom_prompt: data.config.ai_custom_prompt || "",
           ai_allow_suggestions: data.config.ai_allow_suggestions || "false",
+          notification_language: normalizeNotificationLanguage(
+            data.config.notification_language,
+            data.config.ai_language,
+          ),
         }
         // If ai_model exists but ai_models doesn't have it, save it
         if (configWithDefaults.ai_model && !configWithDefaults.ai_models[configWithDefaults.ai_provider]) {
@@ -429,12 +459,12 @@ export function NotificationSettings() {
 
   const loadHistory = useCallback(async () => {
     try {
-      const data = await fetchApi<{ success: boolean; history: HistoryEntry[]; total: number }>("/api/notifications/history?limit=20")
-      if (data.success) {
-        setHistory(data.history || [])
-      }
+      const data = await fetchApi<{ history?: HistoryEntry[]; error?: string }>("/api/notifications/history?limit=20")
+      if (data.error || !Array.isArray(data.history)) throw new Error("history unavailable")
+      setHistory(data.history)
+      setHistoryError(false)
     } catch {
-      // Ignore
+      setHistoryError(true)
     }
   }, [])
 
@@ -484,13 +514,6 @@ export function NotificationSettings() {
   useEffect(() => {
     if (showHistory) loadHistory()
   }, [showHistory, loadHistory])
-
-  // Auto-expand AI section when AI is enabled
-  useEffect(() => {
-    if (config.ai_enabled) {
-      setShowAdvanced(true)
-    }
-  }, [config.ai_enabled])
 
   const updateConfig = (updater: (prev: NotificationConfig) => NotificationConfig) => {
     setConfig(prev => {
@@ -684,7 +707,7 @@ export function NotificationSettings() {
           <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.notificationCategories")}</Label>
         </div>
         <div className="space-y-2">
-          {EVENT_CATEGORIES.filter(cat => cat.key !== "other").map(cat => {
+          {EVENT_CATEGORIES.filter(cat => cat.key !== "other" && !(isPbs && PVE_ONLY_CATEGORIES.has(cat.key))).map(cat => {
             const isEnabled = overrides.categories[cat.key] ?? true
             const isExpanded = expandedCategories.has(`${chName}.${cat.key}`)
             // Hide the LXC update toggle when the user has disabled the
@@ -834,6 +857,7 @@ export function NotificationSettings() {
     ai_enabled: String(cfg.ai_enabled),
     ai_provider: cfg.ai_provider,
     ai_model: cfg.ai_model,
+    notification_language: normalizeNotificationLanguage(cfg.notification_language, cfg.ai_language),
     ai_language: cfg.ai_language,
     ai_ollama_url: cfg.ai_ollama_url,
     ai_openai_base_url: cfg.ai_openai_base_url,
@@ -894,15 +918,15 @@ export function NotificationSettings() {
     return flat
   }
 
-  const handleSave = async () => {
+  const saveConfig = async (nextConfig: NotificationConfig): Promise<boolean> => {
     setSaving(true)
     setSaveError(null)
     try {
       // If notifications are being disabled, clean up PVE webhook first
       const wasEnabled = originalConfig.enabled
-      const isNowDisabled = !config.enabled
+      const isNowDisabled = !nextConfig.enabled
 
-      if (wasEnabled && isNowDisabled) {
+      if (wasEnabled && isNowDisabled && !isPbs) {
         try {
           await fetchApi("/api/notifications/proxmox/cleanup-webhook", { method: "POST" })
         } catch {
@@ -910,24 +934,31 @@ export function NotificationSettings() {
         }
       }
 
-      const payload = flattenConfig(config)
+      const payload = flattenConfig(nextConfig)
       await fetchApi("/api/notifications/settings", {
         method: "POST",
         body: JSON.stringify(payload),
       })
-      setOriginalConfig(config)
+      setConfig(nextConfig)
+      setOriginalConfig(nextConfig)
       setHasChanges(false)
       setEditMode(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
       loadStatus()
+      return true
     } catch (err) {
       console.error("Failed to save notification settings:", err)
       const msg = err instanceof Error ? err.message : t("settings.notifications.errors.saveFailed")
       setSaveError(msg)
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSave = async () => {
+    await saveConfig(config)
   }
 
   const handleCancel = () => {
@@ -1073,15 +1104,6 @@ export function NotificationSettings() {
     }
   }
 
-  const handleClearHistory = async () => {
-    try {
-      await fetchApi("/api/notifications/history", { method: "DELETE" })
-      setHistory([])
-    } catch {
-      // Ignore
-    }
-  }
-
   // Maps each eye-button local key to the body shape the backend
   // expects for /api/notifications/reveal-secret. Centralised here so
   // the JSX call site stays a one-liner — `toggleSecret(key)`.
@@ -1199,8 +1221,10 @@ export function NotificationSettings() {
       setConfig(newConfig)
       setOriginalConfig(newConfig)
 
-      // 2) Auto-configure PVE webhook
-      try {
+      // 2) Auto-configure PVE webhook; PBS has no /etc/pve notifications
+      if (isPbs) {
+        setWebhookSetup({ status: "idle", fallback_commands: [], error: "" })
+      } else try {
         const setup = await fetchApi<{
           configured: boolean
           secret?: string
@@ -1506,7 +1530,7 @@ export function NotificationSettings() {
                           <Input
                             type={showSecrets["tg_token"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
-                            placeholder="7595377878:AAGE6Fb2cy... (with or without 'bot' prefix)"
+                            placeholder={t("settings.notifications.ui.botTokenPlaceholder")}
                             value={secretValue("tg_token", config.channels.telegram?.bot_token || "")}
                             onChange={e => updateChannel("telegram", "bot_token", e.target.value)}
                             disabled={!editMode}
@@ -1518,6 +1542,7 @@ export function NotificationSettings() {
                             {showSecrets["tg_token"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
                         </div>
+                        <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.botTokenHelp")}</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.chatId")}</Label>
@@ -2044,6 +2069,7 @@ export function NotificationSettings() {
                     Enable toggle + Test button pattern as the other
                     channels. */}
                 <TabsContent value="apprise" className="space-y-3 pt-2">
+                  <AppriseServiceHelp />
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Label className="text-xs font-medium">{t("settings.notifications.ui.enableApprise")}</Label>
@@ -2176,74 +2202,70 @@ export function NotificationSettings() {
               </p>
             </div>
 
-            {/* ── Advanced: AI Enhancement ── */}
-            <div>
-              <div className="flex items-center justify-between py-1">
-                <button
-                  className="flex items-center gap-2 text-sm text-foreground hover:bg-muted/60 rounded-md px-2 py-1.5 -mx-2 transition-colors"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                >
-                  {showAdvanced ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <Sparkles className="h-4 w-4 text-purple-400" />
-                  <span className="font-medium">{t("settings.notifications.ai.title")}</span>
-                  {config.ai_enabled ? (
-                    <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-400 ml-1">
-                      {t("status.active")}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground ml-1">
-                      {t("settings.notifications.ui.optional")}
-                    </Badge>
-                  )}
-                </button>
-                {showAdvanced && (
-                  <div className="flex items-center gap-2">
-                    {editMode ? (
-                      <>
-                        <button
-                          className="h-6 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
-                          onClick={handleCancel}
-                          disabled={saving}
-                        >
-                          {t("actions.cancel")}
-                        </button>
-                        <button
-                          className="h-6 px-2 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
-                          onClick={handleSave}
-                          disabled={saving || !hasChanges}
-                        >
-                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                          {t("actions.save")}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        className="h-6 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1"
-                        onClick={() => setEditMode(true)}
-                      >
-                        <Settings2 className="h-3 w-3" />
-                        {t("actions.edit")}
-                      </button>
-                    )}
-                  </div>
-                )}
+            {/* ── Runtime notification language (independent of AI) ── */}
+            <div className="space-y-2 pb-3 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-green-400" />
+                <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ui.notificationLanguage")}</Label>
               </div>
+              <Select
+                value={normalizeNotificationLanguage(config.notification_language, config.ai_language)}
+                onValueChange={value => updateConfig(previous => ({ ...previous, notification_language: value }))}
+                disabled={!editMode}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder={t("settings.notifications.ui.selectNotificationLanguage")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {NOTIFICATION_LANGUAGES.map(language => (
+                    <SelectItem key={language.value} value={language.value}>{language.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("settings.notifications.ui.notificationLanguageHint")}
+              </p>
+            </div>
 
-{showAdvanced && (
-                  <div className="space-y-4 mt-3 p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-start gap-3">
-                        <Sparkles className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
-                        <div>
-                          <span className="text-sm font-medium">{t("settings.notifications.ai.enhancedMessages")}</span>
-                          <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.ai.enhancedMessagesDescription")}</p>
-                        </div>
-                      </div>
+            {/* ── AI Enhancement ── */}
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-1">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-sm font-medium">{t("settings.notifications.ai.title")}</span>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.ai.enhancedMessagesDescription")}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  {editMode ? (
+                    <>
                       <button
+                        className="h-7 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
+                        onClick={handleCancel}
+                        disabled={saving}
+                      >
+                        {t("actions.cancel")}
+                      </button>
+                      <button
+                        className="h-7 px-2 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
+                        onClick={handleSave}
+                        disabled={saving || !hasChanges}
+                      >
+                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                        {t("actions.save")}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="h-7 px-2 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1"
+                      onClick={() => setEditMode(true)}
+                    >
+                      <Settings2 className="h-3 w-3" />
+                      {t("actions.edit")}
+                    </button>
+                  )}
+                  <button
                       className={`relative w-9 h-[18px] rounded-full transition-colors ${
                         config.ai_enabled ? "bg-purple-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
                       } ${!editMode ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
@@ -2255,10 +2277,12 @@ export function NotificationSettings() {
                       <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
                         config.ai_enabled ? "translate-x-[18px]" : "translate-x-0"
                       }`} />
-                    </button>
-                  </div>
+                  </button>
+                </div>
+              </div>
 
-                  {config.ai_enabled && (
+              {config.ai_enabled && (
+                <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
                     <>
                       {/* Provider + Info button */}
                       <div className="space-y-2">
@@ -2611,10 +2635,12 @@ export function NotificationSettings() {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
-                                          updateConfig(p => ({ ...p, ai_custom_prompt: customPromptDraft }))
-                                          setEditingCustomPrompt(false)
-                                          handleSave()
+                                        onClick={async () => {
+                                          const nextConfig = { ...config, ai_custom_prompt: customPromptDraft }
+                                          if (await saveConfig(nextConfig)) {
+                                            setEditingCustomPrompt(false)
+                                            setCustomPromptDraft("")
+                                          }
                                         }}
                                         className="h-7 px-2 text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
                                       >
@@ -2664,8 +2690,8 @@ export function NotificationSettings() {
                                     const file = (e.target as HTMLInputElement).files?.[0]
                                     if (file) {
                                       const text = await file.text()
-                                      updateConfig(p => ({ ...p, ai_custom_prompt: text }))
-                                      handleSave()
+                                      const nextConfig = { ...config, ai_custom_prompt: text }
+                                      await saveConfig(nextConfig)
                                     }
                                   }
                                   input.click()
@@ -2733,11 +2759,79 @@ export function NotificationSettings() {
                         )}
                       </div>
                     </>
-                  )}
                 </div>
               )}
             </div>
 
+            {/* ── Notification history ── */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                className="w-full flex items-start gap-3 py-1 text-left"
+                onClick={() => setShowHistory(open => !open)}
+                aria-expanded={showHistory}
+              >
+                <History className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium">{t("settings.notifications.history.title")}</span>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.history.description")}</p>
+                </div>
+                <ChevronDown className={`h-4 w-4 mt-1 shrink-0 text-muted-foreground transition-transform ${showHistory ? "rotate-180" : ""}`} />
+              </button>
+              {showHistory && (
+                historyError ? (
+                  <p className="text-xs sm:text-sm text-red-400">{t("settings.notifications.history.loadFailed")}</p>
+                ) : history === null ? (
+                  <div className="flex justify-center py-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+                ) : history.length === 0 ? (
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.history.empty")}</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+                    {history.map(entry => {
+                      const sent = Boolean(entry.success)
+                      const severity = (entry.severity || "").toLowerCase()
+                      const detail = !sent ? entry.error_message : entry.event_type === "digest" ? entry.message : null
+                      return (
+                        <div key={entry.id} className="flex items-start gap-2.5 p-2.5 rounded-md bg-muted/30 border border-border/50">
+                          {sent ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" aria-label={t("settings.notifications.history.sent")} />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" aria-label={t("settings.notifications.history.notSent")} />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs sm:text-sm font-medium block truncate">{entry.title || entry.event_type}</span>
+                            <span className="text-[11px] sm:text-xs text-muted-foreground">
+                              {entry.channel ? entry.channel.charAt(0).toUpperCase() + entry.channel.slice(1) : ""} · {new Date(entry.sent_at).toLocaleString()}
+                            </span>
+                            {detail && (
+                              <p className={`text-[11px] sm:text-xs mt-0.5 break-words ${sent ? "text-muted-foreground" : "text-red-400"}`}>{detail}</p>
+                            )}
+                          </div>
+                          {(severity === "critical" || severity === "warning" || severity === "info") && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] shrink-0 ${
+                                severity === "critical"
+                                  ? "border-red-500/30 text-red-400"
+                                  : severity === "warning"
+                                  ? "border-amber-500/30 text-amber-400"
+                                  : "border-blue-500/30 text-blue-400"
+                              }`}
+                            >
+                              {severity === "critical"
+                                ? t("settings.notifications.history.severityCritical")
+                                : severity === "warning"
+                                ? t("settings.notifications.history.severityWarning")
+                                : t("settings.notifications.history.severityInfo")}
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              )}
+            </div>
 
           </>
         )}

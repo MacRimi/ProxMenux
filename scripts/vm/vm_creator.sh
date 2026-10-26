@@ -179,8 +179,14 @@ function select_storage_target() {
     STORAGE="${STORAGE_MENU[0]}"
   else
     [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" >/dev/null 2>&1
+    local storage_prompt
+    case "$PURPOSE" in
+      EFI) storage_prompt=$(translate "Choose the storage for the EFI disk (4MB):") ;;
+      TPM) storage_prompt=$(translate "Choose the storage for the TPM disk (4MB):") ;;
+      *) storage_prompt=$(translate "Choose the storage volume for the $PURPOSE disk (4MB):") ;;
+    esac
     STORAGE=$(whiptail --backtitle "ProxMenux" --title "$(translate "$PURPOSE Disk Storage")" --radiolist \
-      "$(translate "Choose the storage volume for the $PURPOSE disk (4MB):\n\nUse Spacebar to select.")" 16 70 6 \
+      "$storage_prompt"$'\n\n'"$(translate "Use Spacebar to select.")" 16 70 6 \
       "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || {
         msg_warn "$(translate "$PURPOSE disk storage selection cancelled.")" >&2
         return 1
@@ -205,7 +211,7 @@ function configure_guest_agent() {
 
   msg_info "$(translate "Adding QEMU Guest Agent support...")"
 
-  # Habilitar el agente en la VM
+  # Enable the agent on the VM
   qm set "$VMID" -agent enabled=1 >/dev/null 2>&1
 
   # Añadir canal de comunicación virtio
@@ -228,7 +234,12 @@ function run_gpu_passthrough_wizard() {
   fi
 
   if [[ ! -f "$gpu_script" ]]; then
-    msg_warn "$(translate "GPU passthrough assistant not found. You can run it later from Hardware Graphics.")"
+    local gpu_notice
+    gpu_notice="$(translate "GPU passthrough assistant not found. Later, open {menu} → {action} from the main menu to try again.")"
+    [[ "$gpu_notice" == *'{menu}'* && "$gpu_notice" == *'{action}'* ]] || gpu_notice="GPU passthrough assistant not found. Later, open {menu} → {action} from the main menu to try again."
+    gpu_notice="${gpu_notice//\{menu\}/"$(translate "Hardware: GPUs and Coral-TPU")"}"
+    gpu_notice="${gpu_notice//\{action\}/"$(translate "Add GPU to VM    (Intel | AMD | NVIDIA)")"}"
+    msg_warn "$gpu_notice"
     return 0
   fi
 
@@ -248,6 +259,25 @@ function run_gpu_passthrough_wizard() {
 
 
 
+# Download beside the destination, publishing only a complete non-empty file.
+function download_vm_iso() {
+  local iso_url="$1" iso_path="$2"
+  local staging_dir download_status=1
+  local -a wget_options=(--no-verbose --show-progress)
+  [[ "$iso_url" == *"sourceforge.net"* ]] && wget_options+=(--content-disposition)
+
+  staging_dir=$(mktemp -d "${iso_path}.part.XXXXXX") || return 1
+  if wget "${wget_options[@]}" -O "$staging_dir/media.iso" "$iso_url" \
+    && [[ -s "$staging_dir/media.iso" ]] \
+    && { [[ ! -f "$iso_path" ]] || chmod --reference="$iso_path" "$staging_dir/media.iso"; } \
+    && mv -fT -- "$staging_dir/media.iso" "$iso_path"; then
+    download_status=0
+  fi
+  rm -f -- "$staging_dir/media.iso"
+  rmdir -- "$staging_dir" || return 1
+  return "$download_status"
+}
+
 # ==========================================================
 # Create VM
 # ==========================================================
@@ -258,18 +288,9 @@ function create_vm() {
   local ISO_DIR="/var/lib/vz/template/iso"
 
 
-  if [[ -n "$ISO_PATH" && -n "$ISO_URL" && ! -f "$ISO_PATH" ]]; then
+  if [[ -n "$ISO_PATH" && -n "$ISO_URL" ]] && [[ ! -f "$ISO_PATH" || ! -s "$ISO_PATH" ]]; then
   
-    if [[ "$ISO_URL" == *"sourceforge.net"* ]]; then
-   
-      wget --content-disposition --show-progress -O "$ISO_PATH" "$ISO_URL"
-    else
-  
-      wget --no-verbose --show-progress -O "$ISO_PATH" "$ISO_URL"
-    fi
-
-  
-    if [[ -f "$ISO_PATH" ]]; then
+    if download_vm_iso "$ISO_URL" "$ISO_PATH"; then
       ISO_VOLID="${ISO_VOLID:-local:iso/$(basename "$ISO_PATH")}"
       msg_ok "$(translate "ISO image downloaded")"
     else
@@ -651,21 +672,13 @@ fi
       case "$VIRTIO_OPTION" in
         1)
 
-          if [[ -f "$VIRTIO_DIR/virtio-win.iso" ]]; then
-            if whiptail --title "ProxMenux" --yesno "$(translate "A VirtIO ISO already exists. Do you want to overwrite it?")" 10 60; then
-              wget -q --show-progress -O "$VIRTIO_DIR/virtio-win.iso" "$VIRTIO_DOWNLOAD_URL"
-              if [[ -f "$VIRTIO_DIR/virtio-win.iso" ]]; then
-                msg_ok "$(translate "VirtIO driver ISO downloaded successfully.")"
-              else
-                msg_error "$(translate "Failed to download VirtIO driver ISO.")"
-              fi
-            fi
-          else
-            wget -q --show-progress -O "$VIRTIO_DIR/virtio-win.iso" "$VIRTIO_DOWNLOAD_URL"
-            if [[ -f "$VIRTIO_DIR/virtio-win.iso" ]]; then
+          if [[ ! -f "$VIRTIO_DIR/virtio-win.iso" || ! -s "$VIRTIO_DIR/virtio-win.iso" ]] \
+            || whiptail --title "ProxMenux" --yesno "$(translate "A VirtIO ISO already exists. Do you want to overwrite it?")" 10 60; then
+            if download_vm_iso "$VIRTIO_DOWNLOAD_URL" "$VIRTIO_DIR/virtio-win.iso"; then
               msg_ok "$(translate "VirtIO driver ISO downloaded successfully.")"
             else
               msg_error "$(translate "Failed to download VirtIO driver ISO.")"
+              continue
             fi
           fi
 

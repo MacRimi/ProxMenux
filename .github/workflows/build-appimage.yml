@@ -32,7 +32,11 @@ jobs:
       
     - name: Install Python dependencies
       run: |
-        sudo apt-get update
+        # Third-party apt repos on the runner (Google Chrome, Microsoft)
+        # sometimes serve a hash-mismatched index and abort the refresh.
+        # They are irrelevant here, so a failed refresh must not stop the
+        # build: python3 comes from the Ubuntu repos, which fetch fine.
+        sudo apt-get update || true
         sudo apt-get install -y python3 python3-pip python3-venv
         
     - name: Make build script executable
@@ -42,6 +46,26 @@ jobs:
     - name: Build AppImage
       working-directory: AppImage
       run: ./scripts/build_appimage.sh
+
+    - name: Set up Python 3.11 validation runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Verify bundled Python 3.11 runtime
+      env:
+        PYTHONPATH: /tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/vendor/cp311:/tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/dist-packages
+      run: python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from gevent import pywsgi; print(gevent.__version__)'
+
+    - name: Set up Python 3.13 validation runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Verify bundled Python 3.13 runtime
+      env:
+        PYTHONPATH: /tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/vendor/cp313:/tmp/proxmenux_build/ProxMenux.AppDir/usr/lib/python3/dist-packages
+      run: python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from gevent import pywsgi; print(gevent.__version__)'
       
     - name: Get version from package.json
       id: version

@@ -124,6 +124,24 @@ _sb_borg_resolve_password() {
   cat "$pf"
 }
 
+# Same lookup for the SSH key, which lives on the 3rd field of
+# `borg-targets.txt`. Job .env files carry the repository but not the
+# key, so a remote repo has to read it back from the destination here.
+_sb_borg_resolve_ssh_key() {
+  local repo="$1"
+  local cfg="${HB_STATE_DIR:-/usr/local/share/proxmenux}/borg-targets.txt"
+  [[ -f "$cfg" && -n "$repo" ]] || return 1
+  local name target_repo key
+  while IFS='|' read -r name target_repo key _; do
+    [[ -z "$name" || -z "$target_repo" ]] && continue
+    if [[ "$target_repo" == "$repo" ]]; then
+      [[ -n "$key" ]] && printf '%s\n' "$key"
+      return 0
+    fi
+  done < "$cfg"
+  return 1
+}
+
 _sb_run_borg() {
   local stage_root="$1"
   local archive_name="$2"
@@ -156,6 +174,21 @@ _sb_run_borg() {
   # an explicit re-export, child `borg` calls drop back to ssh defaults
   # and a remote repo silently auth-fails with no log trail.
   export BORG_PASSPHRASE="$passphrase"
+  # A remote repo needs the destination's SSH key. Without BORG_RSH ssh
+  # falls back to the default identities and a key-only server answers
+  # `Permission denied (publickey)`. borg appends `-p <port>` itself
+  # from the ssh:// URL, so the port does not belong here.
+  if [[ -z "${BORG_RSH:-}" && "$repo" == ssh://* ]]; then
+    local ssh_key
+    ssh_key=$(_sb_borg_resolve_ssh_key "$repo" 2>/dev/null || true)
+    if [[ -n "$ssh_key" && -r "$ssh_key" ]]; then
+      BORG_RSH="ssh -i $ssh_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+    elif [[ -n "$ssh_key" ]]; then
+      echo "SSH key ${ssh_key} saved on this destination is missing or unreadable."
+      echo "  → generate it again from the destination, or point it at an existing key."
+      return 1
+    fi
+  fi
   [[ -n "${BORG_RSH:-}" ]] && export BORG_RSH
   export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
   export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes

@@ -12,9 +12,14 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
+
+APT_ENV="env DEBIAN_FRONTEND=noninteractive LC_ALL=C LANG=C"
 
 ensure_tools_json() {
     [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
@@ -34,8 +39,16 @@ download_common_functions() {
 }
 
 update_pve8() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "update_pve8" "$FUNC_VERSION"
     local start_time=$(date +%s)
     local log_file="/var/log/proxmox-update-$(date +%Y%m%d-%H%M%S).log"
+    {
+        echo "=== ProxMenux — Proxmox VE update ==="
+        echo "Started: $(date -Iseconds)"
+        echo "Host:    $(hostname)"
+        echo "Running: $(pveversion 2>/dev/null | head -1)"
+    } > "$log_file"
     local changes_made=false
     local OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs)"
     
@@ -67,20 +80,20 @@ update_pve8() {
 
 
     if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
-        sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/pve-enterprise.list
+        pmx_edit_file /etc/apt/sources.list.d/pve-enterprise.list "s/^deb/#deb/g"
         msg_ok "$(translate "Enterprise Proxmox repository disabled")"
         changes_made=true
     fi
 
     if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
-        sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/ceph.list
+        pmx_edit_file /etc/apt/sources.list.d/ceph.list "s/^deb/#deb/g"
         msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
         changes_made=true
     fi
 
 
     if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
+        echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" | pmx_write_file /etc/apt/sources.list.d/pve-public-repo.list
         msg_ok "$(translate "Free public Proxmox repository enabled")"
         changes_made=true
     fi
@@ -90,14 +103,15 @@ update_pve8() {
     cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
 
     if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
-        sed -i '/^deb.*debian-security -security/d' "$sources_file"
-        sed -i '/^deb.*debian main$/d' "$sources_file"
-        sed -i '/^deb.*debian -updates/d' "$sources_file"
+        pmx_edit_file "$sources_file" \
+            -e '/^deb.*debian-security -security/d' \
+            -e '/^deb.*debian main$/d' \
+            -e '/^deb.*debian -updates/d'
         changes_made=true
         msg_ok "$(translate "Malformed repository entries cleaned")"
     fi
 
-    cat > "$sources_file" << EOF
+    pmx_write_file "$sources_file" << EOF
 # Debian $OS_CODENAME repositories
 deb http://deb.debian.org/debian $OS_CODENAME main contrib non-free non-free-firmware
 deb http://deb.debian.org/debian $OS_CODENAME-updates main contrib non-free non-free-firmware
@@ -108,13 +122,13 @@ EOF
 
     local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
     if [ ! -f "$firmware_conf" ]; then
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > "$firmware_conf"
+        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
     fi
 
     cleanup_duplicate_repos
 
     msg_info "$(translate "Updating package lists...")"
-    if apt-get update > "$log_file" 2>&1; then
+    if apt-get update >> "$log_file" 2>&1; then
         msg_ok "$(translate "Package lists updated successfully")"
     else
         msg_error "$(translate "Failed to update package lists. Check log: $log_file")"
@@ -123,8 +137,16 @@ EOF
 
     local current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
     local available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    local upgradable=$(apt list --upgradable 2>/dev/null | grep -c "upgradable")
-    local security_updates=$(apt list --upgradable 2>/dev/null | grep -c "security")
+    local upgradable_raw=$($APT_ENV apt list --upgradable 2>/dev/null | sed '1d' | sed '/^\s*$/d')
+    local upgradable=$(printf '%s' "$upgradable_raw" | grep -c . )
+    local security_updates=$(printf '%s\n' "$upgradable_raw" | grep -ci '\-security')
+    local upgradable_list=$(printf '%s\n' "$upgradable_raw" | pmx_format_upgradable)
+
+    {
+        echo
+        echo "--- Packages to upgrade ($upgradable) ---"
+        [ "$upgradable" -gt 0 ] && printf '%s\n' "$upgradable_list"
+    } >> "$log_file"
 
     show_update_menu() {
         local current_version="$1"
@@ -145,8 +167,12 @@ EOF
             whiptail --title "$(translate "Update Status")" --msgbox "$menu_text" 15 70
             return 2
         else
+            # The package list rides in the same dialog as the summary, so
+            # the decision is taken knowing what is about to be replaced.
+            # --scrolltext keeps the buttons reachable however long it is.
+            menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
             menu_text+="$(translate "Do you want to proceed with the system update?")"
-            if whiptail --title "$(translate "Proxmox Update")" --yesno "$menu_text" 18 70; then
+            if whiptail --title "$(translate "Proxmox Update")" --scrolltext --yesno "$menu_text" 24 78; then
                 return 0
             else
                 return 1
@@ -159,11 +185,15 @@ EOF
 
     if [[ $MENU_RESULT -eq 1 ]]; then
         msg_info2 "$(translate "Update cancelled by user")"
+        pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
         apt-get -y autoclean > /dev/null 2>&1 || true
-        return 0
+        # Not an error, but the system was not updated.
+        return 3
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
+        echo -e "\nSystem is already up to date." >> "$log_file"
+        pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
         apt-get -y autoclean > /dev/null 2>&1 || true
         return 0
@@ -173,6 +203,7 @@ EOF
     local conflicting_packages=$(dpkg -l 2>/dev/null | grep -E "^ii.*(ntp|openntpd|systemd-timesyncd)" | awk '{print $2}')
     if [ -n "$conflicting_packages" ]; then
         msg_info "$(translate "Removing conflicting utilities...")"
+        pmx_record_execution "Purge conflicting time services" "apt-get -y purge $conflicting_packages"
         DEBIAN_FRONTEND=noninteractive apt-get -y purge $conflicting_packages >> "$log_file" 2>&1
         msg_ok "$(translate "Conflicting utilities removed")"
     fi
@@ -185,7 +216,7 @@ EOF
     export DPKG_OPTIONS="--force-confdef --force-confold"  
 
     msg_info "$(translate "Performing packages upgrade...")"
-    apt-get install pv -y > /dev/null 2>&1
+    pmx_install_pkg pv
     total_packages=$(apt-get -s dist-upgrade | grep "^Inst" | wc -l)
     msg_ok "$(translate "Packages upgrade successfull")"
 
@@ -196,6 +227,13 @@ EOF
     tput civis  
     tput sc      
 
+    # dpkg's log is read back from here on, so the transaction can be
+    # reported package by package.
+    local dpkg_mark
+    dpkg_mark=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "\n--- apt-get dist-upgrade ---" >> "$log_file"
+
+    pmx_record_execution "Upgrade Proxmox VE 8 packages" "apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold dist-upgrade"
     (
         /usr/bin/env \
             DEBIAN_FRONTEND=noninteractive \
@@ -206,6 +244,7 @@ EOF
                 -o Dpkg::Options::="--force-confdef" \
                 -o Dpkg::Options::="--force-confold" \
                 dist-upgrade 2>&1 | \
+        tee -a "$log_file" | \
         while IFS= read -r line; do
             if [[ "$line" =~ ^(Setting\ up|Unpacking|Preparing\ to\ unpack|Processing\ triggers\ for) ]]; then
                 package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
@@ -230,11 +269,24 @@ EOF
         done
     )
 
-    if [ $? -eq 0 ]; then
+    local upgrade_exit_code=$?
+    {
+        echo
+        echo "--- Packages changed (exit $upgrade_exit_code) ---"
+        pmx_dpkg_changes_since "$dpkg_mark"
+    } >> "$log_file"
+
+    if [ $upgrade_exit_code -eq 0 ]; then
         tput rc
         tput ed
         tput cnorm
         msg_ok "$(translate "System upgrade completed")"
+    else
+        tput rc
+        tput ed
+        tput cnorm
+        msg_error "$(translate "Proxmox VE 8 package upgrade failed. Review the APT output before retrying.")"
+        return 1
     fi
 
 
@@ -250,7 +302,7 @@ EOF
 
     if [ ${#missing_packages[@]} -gt 0 ]; then
         msg_info "$(translate "Installing essential Proxmox packages...")"
-        DEBIAN_FRONTEND=noninteractive apt-get -y install "${missing_packages[@]}" >> "$log_file" 2>&1
+        pmx_install_pkg "${missing_packages[@]}"
         msg_ok "$(translate "Essential Proxmox packages installed")"
     fi
 
@@ -258,6 +310,7 @@ EOF
     cleanup_duplicate_repos
 
     msg_info "$(translate "Performing system cleanup...")"
+    pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
     apt-get -y autoremove > /dev/null 2>&1 || true
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
@@ -274,6 +327,12 @@ EOF
     echo -e "${TAB}${GN}🖥️  $(translate "Proxmox VE")${CL}: ${BL}$target_version (Debian $OS_CODENAME)${CL}"
 
 
+
+    {
+        echo
+        echo "Finished: $(date -Iseconds) — ${minutes}m ${seconds}s"
+        echo "Running: $(pveversion 2>/dev/null | head -1)"
+    } >> "$log_file"
 
     msg_ok "$(translate "Proxmox VE 8 system update completed successfully")"
 }

@@ -61,12 +61,36 @@ MONITOR_PORT=8008
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
 BACKTITLE="$(translate "$BACKTITLE")"
 
 # ==========================================================
+
+# Proxmox would keep sending every notification to a Monitor that is gone.
+# Its own interface removes the target and the rule that feeds it; the copies
+# of the settings that earlier versions left in /etc/pve are removed too.
+remove_monitor_notification_target() {
+    mountpoint -q /etc/pve || return 0
+    pvesh delete /cluster/notifications/matchers/proxmenux-default > /dev/null 2>&1 || true
+    pvesh delete /cluster/notifications/endpoints/webhook/proxmenux-webhook > /dev/null 2>&1 || true
+    rm -f /etc/pve/notifications.cfg.proxmenux_backup_* /etc/pve/priv/notifications.cfg.proxmenux_backup_*
+    echo " - Notification target removed from Proxmox"
+}
+
+# The logins to private image registries go with ProxMenux. /etc/pve is shared
+# by the cluster, so the other nodes lose them too.
+remove_registry_logins() {
+    mountpoint -q /etc/pve || return 0
+    [[ -f /etc/pve/priv/proxmenux/registry-auth.json ]] || return 0
+    pmx_record_execution "Remove private registry logins" "rm -f /etc/pve/priv/proxmenux/registry-auth.json"
+    rm -f /etc/pve/priv/proxmenux/registry-auth.json /etc/pve/priv/proxmenux/.registry-auth.json.proxmenux.lock
+    rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
+}
 
 uninstall_proxmenux_monitor() {
 
@@ -77,6 +101,8 @@ uninstall_proxmenux_monitor() {
     else
     echo " - Service is not running (ok)"
     fi
+
+    remove_monitor_notification_target
 
     # 2. Disable service if enabled
     if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then
@@ -210,7 +236,7 @@ normalize_stable_monitor_service() {
     cat > "$MONITOR_UNIT_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard
-After=network.target
+After=network.target pve-cluster.service
 
 [Service]
 Type=simple
@@ -597,8 +623,18 @@ show_config_menu() {
         menu_options+=("$option_num" "$(translate "Return to Main Menu")")
         option_actions[$option_num]="return_main"
         
+        # An action given as argument, as the menu search does, is opened
+        # first; the menu follows.
+        OPTION=""
+        if [[ -n "$PRESELECTED_OPTION" ]]; then
+            local index
+            for index in "${!option_actions[@]}"; do
+                [[ "${option_actions[$index]}" == "$PRESELECTED_OPTION" ]] && OPTION="$index"
+            done
+            PRESELECTED_OPTION=""
+        fi
         # Show menu
-        OPTION=$(dialog --clear --backtitle "$BACKTITLE" \
+        [[ -n "$OPTION" ]] || OPTION=$(dialog --clear --backtitle "$BACKTITLE" \
                         --title "$(translate "Configuration Menu")" \
                         --menu "$(translate "Select an option:")" 20 70 10 \
                         "${menu_options[@]}" 3>&1 1>&2 2>&3)
@@ -708,7 +744,7 @@ show_version_info() {
             fi
             local translated_status=$(translate "$status")
             case "$status" in
-                "installed"|"already_installed"|"created"|"already_exists"|"upgraded"|"updated")
+                "installed"|"already_installed"|"installed_from_github"|"created"|"already_exists"|"upgraded"|"updated")
                     info_message+="✓ $component: $translated_status\n"
                     ;;
                 *)
@@ -749,6 +785,8 @@ show_version_info() {
 
 # ==========================================================
 uninstall_proxmenu() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "uninstall_proxmenu" "$FUNC_VERSION"
     if ! dialog --clear --backtitle "$BACKTITLE" \
                 --title "Uninstall ProxMenux" \
                 --yesno "\n$(translate "Are you sure you want to uninstall ProxMenux?")" 8 60; then
@@ -773,35 +811,49 @@ uninstall_proxmenu() {
         # a pre-static-translations install. Cheap idempotent check.
         if [ -d "/opt/googletrans-env" ]; then
             echo "30" ; echo "Removing legacy googletrans virtualenv..."
+            pmx_record_execution "Remove legacy googletrans virtual environment" "rm -rf /opt/googletrans-env"
             rm -rf "/opt/googletrans-env"
         fi
 
         echo "50" ; echo "Removing ProxMenu files..."
-        rm -f "$INSTALL_DIR/$MENU_SCRIPT"
+        pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
+        pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
         rm -rf "$BASE_DIR"
+        remove_registry_logins
         
         # Remove selected dependencies
         if [ -n "$deps_to_remove" ]; then
             echo "70" ; echo "Removing selected dependencies..."
             read -r -a DEPS_ARRAY <<< "$(echo "$deps_to_remove" | tr -d '"')"
             for dep in "${DEPS_ARRAY[@]}"; do
+                pmx_record_execution "Mark ProxMenux dependency as automatic" "apt-mark auto $dep"
                 apt-mark auto "$dep" >/dev/null 2>&1
+                pmx_record_execution "Remove selected ProxMenux dependency" "apt-get -y --purge autoremove $dep"
                 apt-get -y --purge autoremove "$dep" >/dev/null 2>&1
             done
+            pmx_record_execution "Remove unused ProxMenux dependencies" "apt-get autoremove -y --purge"
             apt-get autoremove -y --purge >/dev/null 2>&1
         fi
 
         echo "80" ; echo "Removing ProxMenux Monitor..."
+        pmx_record_execution "Uninstall ProxMenux Monitor" "uninstall_proxmenux_monitor"
         uninstall_proxmenux_monitor
         
         echo "90" ; echo "Restoring system files..."
         # Restore .bashrc and motd
-        [ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc
-        if [ -f /etc/motd.bak ]; then
-            mv /etc/motd.bak /etc/motd
-        else
-            sed -i '/This system is optimised by: ProxMenux/d' /etc/motd
+        if [ -f /root/.bashrc.bak ]; then
+            pmx_write_file /root/.bashrc < /root/.bashrc.bak
+            pmx_remove_file /root/.bashrc.bak
         fi
+        if [ -f /etc/motd.bak ]; then
+            pmx_write_file /etc/motd < /etc/motd.bak
+            pmx_remove_file /etc/motd.bak
+        else
+            pmx_edit_file /etc/motd '/This system is optimised by: ProxMenux/d'
+        fi
+
+        # The change journal above writes under BASE_DIR again.
+        rm -rf "$BASE_DIR"
         
         echo "100" ; echo "Uninstallation complete!"
         sleep 1
@@ -826,4 +878,5 @@ uninstall_proxmenu() {
 
 # ==========================================================
 # Main execution
+PRESELECTED_OPTION="${1:-}"
 show_config_menu

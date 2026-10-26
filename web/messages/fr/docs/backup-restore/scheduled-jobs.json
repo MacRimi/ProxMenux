@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Tâches planifiées — temporisateurs, mode attach et rétention | ProxMenux",
+    "description": "Tâches de sauvegarde d’hôte ProxMenux programmées. Deux modes de création (minuteur systemd propre ou association à une tâche vzdump PVE existante), règles de rétention appliquées par tâche avec proxmox-backup-client, Borg ou le nettoyage local, fichiers sous /var/lib/proxmenux/backup-jobs et script d’exécution produisant les mêmes archives que le processus interactif.",
+    "ogTitle": "Sauvegarde ProxMenux — tâches programmées",
+    "ogDescription": "Sauvegardes d'hôte programmées non surveillées avec mode de fixation, conservation, et les mêmes trois destinations que le flux interactif.",
+    "twitterTitle": "Tâches planifiées | ProxMenux",
+    "twitterDescription": "Tâches programmées de sauvegarde d’hôte sans intervention, avec mode d’association et rétention."
+  },
+  "header": {
+    "title": "Tâches programmées",
+    "description": "Tâches de sauvegarde d’hôte sans intervention. Deux modèles de création : une nouvelle tâche indépendante avec son propre calendrier, ou une tâche associée à une tâche vzdump PVE existante, dont elle reprend le calendrier et la rétention. Les deux produisent les mêmes archives que le processus interactif.",
+    "section": "Sauvegarde et restauration"
+  },
+  "intro": {
+    "title": "Les deux modèles de tâches programmées",
+    "body": "Une tâche programmée peut être créé selon l'un des deux modèles suivants :",
+    "modelsList": [
+      "<strong>Nouveau travail indépendant</strong> — ProxMenux définit lui-même l'horaire de travail avec sa propre minuterie systemd, indépendamment de toute autre tâche sur l'hôte. Compatible avec les trois destinations : Local, PBS et Borg.",
+      "<strong>Associer à une tâche vzdump PVE existante</strong> — la tâche n’a pas de calendrier propre ; elle s’exécute automatiquement quand la tâche vzdump parente sauvegarde les VM et LXC de cet hôte. Elle reprend son calendrier et sa rétention. Compatible avec les destinations locale et PBS (Borg n’est pas pris en charge, car PVE n’a pas de planificateur natif pour Borg)."
+    ]
+  },
+  "attachBadge": {
+    "title": "Mode d’association — recommandé si une tâche vzdump PVE existe déjà",
+    "body": "Lorsqu’une tâche de sauvegarde vzdump PVE est déjà configurée pour les VM et LXC du nœud, l’association de la sauvegarde hôte la fait exécuter après celle des invités, dans le <strong>même cycle de sauvegarde</strong>. À la restauration, les configurations des invités viennent de la sauvegarde hôte (sous <code>/etc/pve</code>) et leurs disques des sauvegardes vzdump du même cycle. Cela facilite la récupération coordonnée du nœud, sans constituer un instantané atomique : des modifications pendant le cycle peuvent créer des écarts entre la configuration hôte et l’état des disques des invités."
+  },
+  "frequencyBadge": {
+    "title": "Fréquence recommandée",
+    "body": "Pour maximiser la compatibilité entre une sauvegarde hôte et sa future restauration, sauvegardez fréquemment l’hôte. Plus la copie est proche de son état actuel, moins la restauration doit réconcilier d’écarts de configuration, de paquets et de composants."
+  },
+  "modes": {
+    "heading": "Les deux modes",
+    "rows": [
+      {
+        "mode": "Nouveau travail planifié",
+        "backends": "Local, PBS, Borg",
+        "schedule": "Propre expression <code>OnCalendar</code> (syntaxe du calendrier systemd — par exemple <code>daily</code>, <code>Mon..Fri 03:00</code>).",
+        "retention": "Demandée séparément: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. Appliquée par le script d’exécution après chaque sauvegarde réussie."
+      },
+      {
+        "mode": "Associer à une tâche vzdump PVE",
+        "backends": "Local, PBS (Borg n'a pas de planificateur côté PVE)",
+        "schedule": "Hérité de la tâche PVE parente. Aucun minuteur systemd n’est installé côté ProxMenux.",
+        "retention": "Héritée de la configuration <code>prune-backups</code> de la tâche parente (associée une à une aux variables <code>KEEP_*</code> du script d’exécution via <code>hb_pve_prune_to_keep_env</code>)."
+      }
+    ]
+  },
+  "attachDetail": {
+    "heading": "Comment fonctionne le mode de fixation",
+    "intro": "PVE écrit les tâches <code>vzdump</code> dans <code>/etc/pve/jobs.cfg</code>, avec une section par tâche indiquant le stockage des sauvegardes VM et LXC. Le mode d’association exige un backend compris par ProxMenux (local ou PBS). La sauvegarde hôte s’exécute via le hook job-end après la fin de la tâche de sauvegarde des invités.",
+    "steps": [
+      {
+        "step": "1",
+        "detail": "Lors de la création de tâches, ProxMenux liste les tâches parent PVE compatibles via <code>hb_pve_list_vzdump_jobs_for_backend</code>. L'utilisateur en choisit un."
+      },
+      {
+        "step": "2",
+        "detail": "Le <code>.env</code> de l'emploi est écrit avec <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> et les valeurs de <code>KEEP_*</code> héritées; aucun minuteur systemd n'est créé."
+      },
+      {
+        "step": "3",
+        "detail": "<code>hb_install_vzdump_hook</code> enregistre un hook dans <code>/etc/vzdump.conf</code>. À la phase job-end de toute tâche vzdump, il compare le <code>$STOREID</code> reçu au <code>PVE_STORAGE</code> de chaque tâche associée activée et appelle le script d’exécution en cas de correspondance. L’association se fait par stockage, et non par identifiant de la tâche parente choisie."
+      },
+      {
+        "step": "4",
+        "detail": "L’archive est enregistrée dans le même stockage que les sauvegardes vzdump : <code>path/dump/</code> pour la destination locale ou le dépôt PBS configuré dans l’entrée de stockage PVE."
+      }
+    ],
+    "outroBody": "Le mode d’association n’a pas de minuteur propre. Désactiver ou supprimer la tâche PVE parente choisie arrête son déclenchement, mais une autre tâche vzdump utilisant le même stockage peut encore lancer la sauvegarde hôte. Désactivez ou supprimez la tâche ProxMenux elle-même pour l’empêcher. Lors d’une désactivation, son entrée reste sur disque pour permettre une réactivation ou une nouvelle association."
+  },
+  "storageLayout": {
+    "heading": "Fichiers qui constituent un travail",
+    "intro": "Chaque travail programmé est entièrement décrit par trois ou quatre fichiers sur disque. Les lire donne la configuration complète du travail sans compter sur l'interface.",
+    "rows": [
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.env",
+        "content": "Backend, identifiant de sauvegarde ou destination, calendrier (nouvelle tâche) ou tâche PVE parente (association), indicateur d’activation, valeurs de rétention <code>KEEP_*</code> et références aux identifiants."
+      },
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
+        "content": "Un chemin absolu par ligne : la sélection figée à partir du profil lors de la création de la tâche. Modifier le fichier utilise la nouvelle sélection à la prochaine exécution du minuteur."
+      },
+      {
+        "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
+        "content": "Nouveau mode seulement. Le service invoque <code>run_scheduled_backup.sh JOB_ID</code>. Le minuteur le planifie avec <code>Persistent=true</code> (exécutions manquées rattrapées au prochain démarrage) et un petit <code>RandomizedDelaySec=120</code> pour répartir la charge lorsque plusieurs tâches partagent la même expression OnCalendar."
+      },
+      {
+        "path": "/etc/vzdump.conf script-hook",
+        "content": "Mode d’association uniquement. Installé une fois par <code>hb_install_vzdump_hook</code> ; compare le <code>PVE_STORAGE</code> de chaque tâche associée au <code>$STOREID</code> transmis par PVE au hook."
+      }
+    ]
+  },
+  "runner": {
+    "heading": "Ce que fait une tâche à son déclenchement",
+    "intro": "Chaque travail — qu’il s’agisse d’une nouvelle tâche indépendante ou d’une tâche associée — comporte la même séquence en trois étapes:",
+    "steps": [
+      "<strong>Prépare la sauvegarde.</strong> Lit la configuration de travail (destination, profil, chemins) et assemble l'arborescence des archives exactement comme le flux interactif. Le résultat est la même archive qu'une sauvegarde manuelle avec ces paramètres produirait.",
+      "<strong>Écrire à la destination.</strong> Charge ou écrit l'archive vers la destination configurée — un fichier local <code>.tar.zst</code>, une sauvegarde PBS ou une archive Borg — en utilisant exactement les mêmes outils et identifiants qu’une sauvegarde manuelle vers la même destination.",
+      "<strong>Appliquer la rétention.</strong> Supprime les anciennes sauvegardes de la destination, en maintenant les nombres <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> configurés sur le travail. La purge est effectuée par la destination elle-même: PBS applique sa propre conservation, Borg exécute <code>borg prune</code>, et pour Local ProxMenux supprime les fichiers qui tombent en dehors de la fenêtre <code>keep-last</code>."
+    ]
+  },
+  "management": {
+    "heading": "Gestion des tâches",
+    "intro": "Le menu planificateur (Scripts TUI) et l'onglet Sauvegardes Monitor exposent les mêmes actions sur n'importe quel travail.",
+    "rows": [
+      {
+        "action": "Exécuter maintenant",
+        "detail": "Appelle immédiatement le script d’exécution, sans attendre le minuteur ou le hook vzdump. Utile pour vérifier la configuration sans attendre le prochain déclenchement."
+      },
+      {
+        "action": "Activer / Désactiver",
+        "detail": "Nouveau mode : <code>systemctl enable/disable --now</code> la minuterie. Attache le mode : retourne le drapeau <code>ENABLED</code> dans le travail env — le script hook l'honore au prochain déclenchement PVE."
+      },
+      {
+        "action": "Modifier",
+        "detail": "Rouvre les champs de destination, calendrier, profil et rétention et réécrit les fichiers de la tâche. Conserve son identifiant."
+      },
+      {
+        "action": "Supprimer",
+        "detail": "Supprime le fichier env, la liste des chemins et le minuteur et service systemd (nouvelle tâche), et désactive l’association au hook (mode d’association). Les archives déjà présentes à destination restent intactes."
+      },
+      {
+        "action": "Voir le journal",
+        "detail": "Affiche en continu <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> : un fichier journal par exécution. Le programme d'exécution émet également une ligne d'état compacte à journald sous le service systemd."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Notifications",
+    "body": "Chaque exécution programmée déclenche les mêmes événements <code>hb_notify_lifecycle</code> que le flux interactif (<code>start</code>, <code>complete</code>, <code>fail</code>). Si des canaux de notification sont configurés dans Monitor, les tâches sans surveillance présentent leurs résultats de la même manière que les sauvegardes manuelles : un utilisateur n’a pas besoin de consulter le journal pour savoir si une tâche a réussi."
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite?",
+    "items": [
+      {
+        "label": "Création de sauvegardes",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": "— le flux interactif qui partage le moteur avec le planificateur."
+      },
+      {
+        "label": "Destinations",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "— configuration par moteur utilisée à la fois par le flux interactif et le planificateur."
+      },
+      {
+        "label": "Restauration",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — le processus qui utilise les sauvegardes produites par les tâches."
+      }
+    ]
+  }
+}

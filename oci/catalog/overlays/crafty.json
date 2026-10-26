@@ -1,0 +1,60 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Crafty Controller default login",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "crafty-default-creds-file",
+        "retrieval": {
+          "method": "container-file",
+          "path": "/crafty/app/config/default-creds.txt",
+          "pattern": "\"password\"\\s*:\\s*\"([^\"]+)\"",
+          "timeout_seconds": 300
+        }
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 0
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/crafty/backups",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/crafty/logs",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/crafty/servers",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/crafty/app/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/crafty/import",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

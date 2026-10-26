@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { cancelButtonClass } from "../lib/utils"
 import { Trash2 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { getCategoryLabel } from "../lib/category-label"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -237,7 +239,7 @@ export function CustomLinkEditor({
                 <SelectContent>
                   <SelectItem value="__none__">{t("vmLxc.appEditor.portCategoryNone")}</SelectItem>
                   {categoryPresets.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>{getCategoryLabel(t, c)}</SelectItem>
                   ))}
                   <SelectItem value="__add__">{t("vmLxc.appEditor.portCategoryAddNew")}</SelectItem>
                 </SelectContent>
@@ -258,7 +260,7 @@ export function CustomLinkEditor({
                 <SelectItem value={UNBOUND_KEY}>{t("apps.customLinkBindingNone")}</SelectItem>
                 {sortedGuests.map((g) => (
                   <SelectItem key={`${g.type}:${g.vmid}`} value={`${g.type}:${g.vmid}`}>
-                    {g.type === "qemu" ? "VM" : "CT"} {g.vmid} · {g.name}
+                    {g.type === "qemu" ? "VM" : "LXC"} {g.vmid} · {g.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -288,7 +290,7 @@ export function CustomLinkEditor({
             </Button>
           ) : <div />}
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button variant="outline" className={cancelButtonClass} onClick={() => onOpenChange(false)} disabled={saving}>
               {t("apps.customLinkCancel")}
             </Button>
             <Button

@@ -96,7 +96,8 @@
       { "method": "docker label / docker exec", "use": "Reads an OCI version label or runs a version command inside a Docker container." },
       { "method": "python distribution", "use": "Uses importlib.metadata through the selected Python interpreter." },
       { "method": "command", "use": "Runs an advanced argv-style command without a shell and extracts the version from its output." },
-      { "method": "manual", "use": "Stores a version entered manually; it must be changed after upgrading the app." }
+      { "method": "manual", "use": "Stores a version entered manually; it must be changed after upgrading the app." },
+      { "method": "OCI image", "use": "For containers installed by OCI manager Apps. Reads the application and image versions from the installation record and compares the installed digest with the one the registry publishes; it needs no configuration." }
     ],
     "sourcesHeading": "Available-version sources",
     "sources": [

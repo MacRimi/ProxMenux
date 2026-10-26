@@ -139,6 +139,40 @@ msg_title() {
     echo -e "\n"
 }
 
+# apt output goes to a temporary file: shown only when the command fails, so
+# the reader sees why. Non-interactive, because a hidden prompt would hang.
+APT_ERROR_LOG=""
+run_apt() {
+    APT_ERROR_LOG=$(mktemp /tmp/proxmenux-apt.XXXXXX)
+    if DEBIAN_FRONTEND=noninteractive apt-get "$@" >"$APT_ERROR_LOG" 2>&1; then
+        rm -f "$APT_ERROR_LOG"
+        APT_ERROR_LOG=""
+        return 0
+    fi
+    return 1
+}
+
+show_apt_error() {
+    [ -n "$APT_ERROR_LOG" ] && [ -f "$APT_ERROR_LOG" ] || return 0
+    tail -n 15 "$APT_ERROR_LOG" | sed 's/^/    /'
+    rm -f "$APT_ERROR_LOG"
+    APT_ERROR_LOG=""
+}
+
+discard_apt_error() {
+    [ -n "$APT_ERROR_LOG" ] && rm -f "$APT_ERROR_LOG"
+    APT_ERROR_LOG=""
+}
+
+# A Proxmox host without a subscription is refused by the enterprise
+# repositories. Every other repository is refreshed, so that refresh is good.
+apt_only_enterprise_refused() {
+    [ -n "$APT_ERROR_LOG" ] && [ -f "$APT_ERROR_LOG" ] || return 1
+    local failures
+    failures=$(grep -E '^(E: |Err:|W: Failed to fetch)' "$APT_ERROR_LOG") || return 1
+    ! grep -qv 'enterprise\.proxmox\.com' <<<"$failures"
+}
+
 show_progress() {
     echo -e "\n${BOLD}${BL}${TAB}Installing ProxMenux Beta: Step ${1} of ${2}${CL}"
     echo
@@ -462,7 +496,7 @@ update_monitor_service() {
     cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard (Beta)
-After=network.target
+After=network.target pve-cluster.service
 Before=shutdown.target reboot.target halt.target
 Conflicts=shutdown.target reboot.target halt.target
 
@@ -501,7 +535,7 @@ create_monitor_service() {
         cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard (Beta)
-After=network.target
+After=network.target pve-cluster.service
 Before=shutdown.target reboot.target halt.target
 Conflicts=shutdown.target reboot.target halt.target
 
@@ -560,7 +594,8 @@ select_language() {
         "de" "German" \
         "it" "Italian" \
         "pt" "Portuguese" \
-        "sk" "Slovenčina" 3>&1 1>&2 2>&3)
+        "sk" "Slovenčina" \
+        "sv" "Svenska" 3>&1 1>&2 2>&3)
 
     if [ -z "$LANGUAGE" ]; then
         msg_error "No language selected. Exiting."
@@ -611,14 +646,22 @@ install_beta() {
     show_progress $current_step $total_steps "Installing system dependencies"
 
     msg_info "Refreshing apt cache..."
-    apt-get update -y > /dev/null 2>&1 || true
-    msg_ok "apt cache refreshed."
+    if run_apt update -y; then
+        msg_ok "apt cache refreshed."
+    elif apt_only_enterprise_refused; then
+        discard_apt_error
+        msg_ok "apt cache refreshed. The Proxmox enterprise repositories need a subscription and were skipped."
+    else
+        msg_warn "apt cache refresh failed; checking available packages."
+        show_apt_error
+    fi
 
     msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
+        if run_apt install -y jq && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
+            discard_apt_error
             local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq \
                && command -v jq > /dev/null 2>&1; then
@@ -640,10 +683,11 @@ install_beta() {
         # dpkg-query for the EXACT package name — `dpkg -l | grep -qw python3`
         # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
-            if apt-get install -y "$pkg" > /dev/null 2>&1; then
+            if run_apt install -y "$pkg"; then
                 update_config "$pkg" "installed"
             else
                 msg_error "Failed to install $pkg. Please install it manually."
+                show_apt_error
                 update_config "$pkg" "failed"
                 return 1
             fi
@@ -726,9 +770,28 @@ install_beta() {
     # also flag README.md, .json, .py etc. as executable for no reason.
     find "$BASE_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
 
+    # Register the base dependencies the installer put in place. They are
+    # installed in the dependency step, before this clone delivers
+    # pmx_journal.sh, so the journal cannot capture them as they happen —
+    # this records them once the engine is available. The recording side of
+    # pmx_journal.sh is pure bash and needs nothing else installed.
+    if [ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]; then
+        # shellcheck source=/dev/null
+        source "$BASE_DIR/scripts/global/pmx_journal.sh"
+        pmx_journal_context "install_proxmenux" "1.0" "install_proxmenux"
+        pmx_record_install "dialog jq curl git" "1.0"
+    fi
+
+    # The OCI engine is replaced on every install; instance records and
+    # addon state stored next to it in $BASE_DIR/oci are preserved.
     if [ -d "./oci" ]; then
-        mkdir -p "$BASE_DIR/oci"
-        cp -r "./oci/"* "$BASE_DIR/oci/" 2>/dev/null || true
+        rm -rf "$BASE_DIR/oci/engine"
+        mkdir -p "$BASE_DIR/oci/engine"
+        cp -r "./oci/"* "$BASE_DIR/oci/engine/"
+        find "$BASE_DIR/oci/engine" -type f -name '*.sh' -exec chmod +x {} +
+        # Multi-container applications already installed take the new start hook.
+        bash "$BASE_DIR/oci/engine/remote/stack_dependency_hook.sh" --refresh >/dev/null 2>&1 || true
+        systemctl try-restart proxmenux-oci-watchdog.service >/dev/null 2>&1 || true
     fi
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     [ -f "$BASE_DIR/install_proxmenux.sh" ]      && chmod +x "$BASE_DIR/install_proxmenux.sh"
@@ -798,7 +861,10 @@ else
     show_beta_welcome
     msg_title "Installing ProxMenux Beta — branch: develop"
 fi
-install_beta
+if ! install_beta; then
+    msg_error "Beta installation stopped before completion. Resolve the error above and rerun the installer."
+    exit 1
+fi
 
 # Load utils if available
 [ -f "$UTILS_FILE" ] && source "$UTILS_FILE"

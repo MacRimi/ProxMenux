@@ -9,6 +9,7 @@ import { ThemeAwareLogo } from "./lxc-app-panel"
 import { CustomLinkEditor, type CustomLink, type GuestOption } from "./custom-link-editor"
 import { Button } from "./ui/button"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
+import { getCategoryLabel } from "../lib/category-label"
 
 // ─── Local subset of /api/vms shape ─────────────────────────────
 // Kept narrow on purpose — this component only needs what feeds a
@@ -248,8 +249,8 @@ export function AppsDashboard() {
     return map
   }, [links, t])
   const sortedCategoryEntries = useMemo(
-    () => Array.from(categoryCounts.entries()).sort((a, b) => a[0].localeCompare(b[0])),
-    [categoryCounts],
+    () => Array.from(categoryCounts.entries()).sort((a, b) => getCategoryLabel(t, a[0]).localeCompare(getCategoryLabel(t, b[0]))),
+    [categoryCounts, t],
   )
 
   // ─── Controls state ────────────────────────────────────────────
@@ -327,7 +328,8 @@ export function AppsDashboard() {
         l.appName.toLowerCase().includes(q) ||
         (l.ctName || "").toLowerCase().includes(q) ||
         (l.vmid != null && String(l.vmid).includes(q)) ||
-        (l.category || "").toLowerCase().includes(q)
+        (l.category || "").toLowerCase().includes(q) ||
+        getCategoryLabel(t, l.category || "").toLowerCase().includes(q)
       )
     }
     const sorted = [...filtered]
@@ -344,7 +346,7 @@ export function AppsDashboard() {
       // category — grouped alphabetically, then by app name inside
       const catA = a.category || uncatKey
       const catB = b.category || uncatKey
-      const c = catA.localeCompare(catB)
+      const c = getCategoryLabel(t, catA).localeCompare(getCategoryLabel(t, catB))
       return c !== 0 ? c : a.appName.localeCompare(b.appName)
     })
     return sorted
@@ -432,7 +434,7 @@ export function AppsDashboard() {
         >
           <option value={ALL_CATEGORIES}>{t("apps.filterAll")}</option>
           {sortedCategoryEntries.map(([cat, n]) => (
-            <option key={cat} value={cat}>{`${cat} · ${n}`}</option>
+            <option key={cat} value={cat}>{`${getCategoryLabel(t, cat)} · ${n}`}</option>
           ))}
         </select>
 
@@ -532,6 +534,7 @@ function CardsGrid({
   editMode: boolean
   onEditCustom: (customId: string) => void
 }) {
+  const t = useT()
   if (!links.length) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -572,7 +575,7 @@ function CardsGrid({
       {groups.map(([cat, items]) => (
         <div key={`grp-${cat}`} className="contents">
           <h3 className="col-span-full uppercase text-xs tracking-wider text-muted-foreground font-semibold pt-3 pb-1.5 border-b border-border/60 flex items-center gap-2">
-            <span>{cat}</span>
+            <span>{getCategoryLabel(t, cat)}</span>
             <span className="font-mono tabular-nums text-[10px] px-1.5 py-0.5 rounded bg-card border border-border/60 font-normal">{items.length}</span>
           </h3>
           {items.map((link) => (
@@ -592,9 +595,9 @@ function CardsGrid({
 // `changeTab` switches the outer tab (dashboard-level) and
 // `openLxcAppModal` tells VirtualMachines which guest to open and on
 // which inner tab to land. Both fire in the same tick.
-function openLxcModalOnAppTab(vmid: number) {
+function openLxcModalOnAppTab(vmid: number, tab: "app" | "updates" = "app") {
   window.dispatchEvent(new CustomEvent("changeTab", { detail: { tab: "vms" } }))
-  window.dispatchEvent(new CustomEvent("openLxcAppModal", { detail: { vmid } }))
+  window.dispatchEvent(new CustomEvent("openLxcAppModal", { detail: { vmid, tab } }))
 }
 
 // Same pattern for a QEMU guest: land on the modal's Status tab
@@ -634,13 +637,22 @@ function AppCard({
     }
   }
 
+  // The update icon leads to where the update is applied: the Updates
+  // tab of the container.
+  const goToUpdates = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (link.vmid == null) return
+    openLxcModalOnAppTab(link.vmid, "updates")
+  }
+
   const goToEditor = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault()
     e.stopPropagation()
     if (link.customId) onEditCustom(link.customId)
   }
 
-  const guestPrefix = link.guestType === "qemu" ? "VM" : "CT"
+  const guestPrefix = link.guestType === "qemu" ? "VM" : "LXC"
   const hasBinding = link.vmid != null
 
   return (
@@ -679,7 +691,20 @@ function AppCard({
             <Pencil className="h-4 w-4" />
           </button>
         ) : link.updateAvailable && (
-          <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0 self-start mt-0.5" aria-hidden="true" />
+          link.vmid != null && link.guestType !== "qemu" ? (
+            <button
+              type="button"
+              onClick={goToUpdates}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") goToUpdates(e) }}
+              className="rounded-full flex-shrink-0 self-start mt-0.5 text-purple-400 hover:text-purple-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={t("apps.openUpdatesAria", { name: link.appName })}
+              title={t("apps.openUpdatesTitle")}
+            >
+              <ArrowUpCircle className="h-5 w-5" />
+            </button>
+          ) : (
+            <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0 self-start mt-0.5" aria-hidden="true" />
+          )
         )}
       </div>
 
@@ -715,9 +740,9 @@ function AppCard({
             <span
               style={categoryChipStyle(link.category, isLightTheme)}
               className="ml-auto px-1.5 py-0.5 border rounded text-[10px] font-medium flex-shrink-0 truncate max-w-[45%]"
-              title={link.category}
+              title={getCategoryLabel(t, link.category)}
             >
-              {link.category}
+              {getCategoryLabel(t, link.category)}
             </span>
           )}
         </div>

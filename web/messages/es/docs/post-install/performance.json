@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Post-instalación: Rendimiento | ProxMenux Documentation",
-    "description": "Opciones de rendimiento en el script post-instalación Customizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para backups y compresión más rápidos en hosts multinúcleo."
+    "title": "Post-instalación: Rendimiento | Documentación de ProxMenux",
+    "description": "Opciones de rendimiento en el script post-instalación Personalizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para backups y compresión más rápidos en hosts multinúcleo."
   },
   "header": {
     "title": "Post-instalación: Rendimiento",
-    "description": "Opciones de rendimiento dentro del script post-instalación Customizable. Por ahora esta categoría contiene una sola optimización: sustituir gzip por pigz para que los backups y la compresión usen todos los núcleos de la CPU en lugar de uno.",
-    "section": "Settings post-install Proxmox"
+    "description": "Opciones de rendimiento del script post-instalación Personalizable. Esta categoría contiene una sola optimización: sustituir gzip por pigz para que los backups y la compresión usen todos los núcleos de la CPU en lugar de uno.",
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -16,17 +16,18 @@
     "heading": "Usar pigz para compresión gzip más rápida",
     "intro": "El <code>gzip</code> estándar comprime datos usando <strong>un solo núcleo de CPU</strong>. En hosts Proxmox modernos con 8, 16 o 32 núcleos, eso es un cuello de botella enorme durante backups <code>vzdump</code> de VM/CT, rotación de logs y cualquier otra cosa que pase por <code>gzip</code>. <a>pigz</a> es un reemplazo paralelo drop-in: misma salida compatible con gzip, pero reparte el trabajo entre todos los núcleos.",
     "doesTitle": "Qué hace ProxMenux",
-    "doesIntro": "Cuatro pasos, todos idempotentes:",
+    "doesIntro": "Cinco pasos, todos idempotentes:",
     "doesItems": [
       "Establece <code>pigz: 1</code> en <code>/etc/vzdump.conf</code> para que la herramienta de backup de Proxmox use pigz de forma nativa.",
       "Instala el paquete apt <code>pigz</code> si no está presente.",
       "Escribe un script wrapper en <code>/bin/pigzwrapper</code> que reenvía todos los argumentos a <code>/usr/bin/pigz</code>.",
-      "Aparta el binario original <code>/bin/gzip</code> a <code>/bin/gzip.original</code> y sustituye <code>/bin/gzip</code> por el wrapper. A partir de ahí, <em>cualquier cosa</em> que llame a <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — usa pigz de forma transparente."
+      "Registra una desviación de dpkg para el binario <code>gzip</code> del sistema (<code>/usr/bin/gzip</code> en Proxmox VE 9, <code>/bin/gzip</code> en Proxmox VE 8): el binario real se conserva a su lado como <code>gzip.distrib</code> y el wrapper ocupa su lugar. A partir de ahí, <em>cualquier cosa</em> que llame a <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — usa pigz de forma transparente.",
+      "Comprueba que el fichero conservado como <code>gzip.distrib</code> es un gzip que funciona antes de colocar el wrapper, y reinstala primero el paquete <code>gzip</code> cuando no lo es. Un host que aún tiene el intercambio anterior con <code>/bin/gzip.original</code> pasa a la desviación al aplicar de nuevo la opción."
     ],
     "replacesTitle": "Esto sustituye un binario del sistema",
-    "replacesBody": "Sustituir <code>/bin/gzip</code> por un wrapper es inusual. Es seguro (el wrapper produce salida compatible con gzip), pero conviene saberlo: scripts que tengan paths hardcodeados, que se ejecuten dentro de chroots restrictivos o que verifiquen hashes de binarios pueden comportarse de forma distinta. El binario original se conserva como <code>/bin/gzip.original</code> para que siempre puedas dar marcha atrás.",
-    "revertTitle": "Reversible desde el menú Uninstall",
-    "revertBody": "Esta optimización está registrada. <link>Uninstall Optimizations</link> restaura <code>/bin/gzip.original</code> en su sitio, elimina el <code>pigzwrapper</code>, revierte las dos líneas añadidas a <code>/etc/vzdump.conf</code> y ejecuta <code>apt purge pigz</code>. Equivalente manual:",
+    "replacesBody": "Colocar un wrapper en el lugar de <code>gzip</code> es inusual. Es seguro (el wrapper produce salida compatible con gzip), pero conviene saberlo: scripts que tengan paths hardcodeados, que se ejecuten dentro de chroots restrictivos o que verifiquen hashes de binarios pueden comportarse de forma distinta. El binario real se conserva como <code>gzip.distrib</code> y, al ser una desviación de dpkg, una actualización del paquete <code>gzip</code> — o la actualización de Proxmox VE 8 a 9 — actualiza ese fichero y deja el wrapper en su sitio.",
+    "revertTitle": "Reversible desde el menú Desinstalar",
+    "revertBody": "Esta optimización está registrada. <link>Desinstalar optimizaciones</link> copia el binario real desde <code>gzip.distrib</code> sobre el wrapper, elimina la desviación y el <code>pigzwrapper</code>, comenta la línea <code>pigz</code> de <code>/etc/vzdump.conf</code> y ejecuta <code>apt purge pigz</code> tras verificar que gzip funciona. Equivalente manual en Proxmox VE 9:",
     "verifyTitle": "Verificación",
     "verifyBody": "Tras aplicar, <code>gzip --version</code> debería mencionar pigz. Un benchmark rápido también muestra la diferencia de velocidad en un host multinúcleo:",
     "whenTitle": "Cuándo importa más",
@@ -51,7 +52,7 @@
         "tail": " — tuning de descriptores de fichero y de memoria."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Post-instalación personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

@@ -26,6 +26,7 @@ TOOL_METADATA = {
     'system_limits':        {'name': 'System Limits Increase',                'function': 'increase_system_limits',       'version': '1.1'},
     # entropy removed — modern kernels 5.6+ have built-in entropy generation, haveged no longer needed
     'memory_settings':      {'name': 'Memory Settings Optimization',          'function': 'optimize_memory_settings',     'version': '1.1'},
+    'zram_swap':            {'name': 'ZRAM Swap Profile',                      'function': 'configure_zram_swap',         'version': '1.0'},
     'kernel_panic':         {'name': 'Kernel Panic Configuration',            'function': 'configure_kernel_panic',       'version': '1.0'},
     'apt_ipv4':             {'name': 'APT IPv4 Force',                        'function': 'force_apt_ipv4',               'version': '1.0'},
     'kexec':                {'name': 'kexec for quick reboots',               'function': 'enable_kexec',                 'version': '1.0'},
@@ -34,7 +35,7 @@ TOOL_METADATA = {
     'system_utils':         {'name': 'System Utilities',                       'function': 'install_system_utils',         'version': '1.0'},
     'network_optimization': {'name': 'Network Optimizations',                 'function': 'apply_network_optimizations',  'version': '1.0'},
     'bashrc_custom':        {'name': 'Bashrc Customization',                  'function': 'customize_bashrc',             'version': '1.0'},
-    'figurine':             {'name': 'Figurine',                              'function': 'configure_figurine',           'version': '1.0'},
+    'figurine':             {'name': 'Figurine',                              'function': 'configure_figurine',           'version': '1.2'},
     'fastfetch':            {'name': 'Fastfetch',                             'function': 'configure_fastfetch',          'version': '1.0'},
     'log2ram':              {'name': 'Log2ram (SSD Protection)',               'function': 'configure_log2ram',            'version': '1.0'},
     'zfs_autotrim':         {'name': 'ZFS Autotrim',                          'function': 'enable_zfs_autotrim',          'version': '1.0'},

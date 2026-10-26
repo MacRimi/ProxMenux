@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "title": "Mitwirkende | ProxMenux-Dokumentation",
+    "description": "Hinter jeder Version stehen Menschen, die ProxMenux entwickeln, prüfen, übersetzen und testen. Diese Seite dankt den heutigen Mitwirkenden ebenso wie denen, die das Projekt bei seinen ersten Schritten unterstützt haben.",
+    "ogTitle": "Mitwirkende | ProxMenux-Dokumentation",
+    "ogDescription": "Hinter jeder Version stehen Menschen, die ProxMenux entwickeln, prüfen, übersetzen und testen. Diese Seite dankt den heutigen Mitwirkenden ebenso wie denen, die das Projekt bei seinen ersten Schritten unterstützt haben."
+  },
+  "header": {
+    "title": "Mitwirkende",
+    "description": "Hinter jeder Version stehen Menschen, die ProxMenux entwickeln, prüfen, übersetzen und testen. Diese Seite dankt den heutigen Mitwirkenden ebenso wie denen, die das Projekt bei seinen ersten Schritten unterstützt haben.",
+    "section": "Über"
+  },
+  "active": {
+    "heading": "Entwicklung, Review und kontinuierliche Mitarbeit",
+    "intro": "Vaso73, f3rs3n und jcastro tragen regelmäßig Verbesserungen, Fehlerkorrekturen und Reviews bei. Ihre Arbeit geht über das Testen einer Version hinaus: Sie helfen auch, die nächsten Versionen zu entwickeln und Fehler zu beheben.",
+    "people": {
+      "Vaso73": "Verbesserungen und Fehlerkorrekturen im OCI manager und ProxMenux Monitor sowie slowakische Übersetzungen und Sprachprüfungen.",
+      "f3rs3n": "Fehlerkorrekturen und Überprüfung des Verhaltens von Skripten und Monitor sowie laufende Verbesserungen der italienischen Übersetzung.",
+      "jcastro": "Entwicklung und Fehlerbehebung bei OCI-, Backup- und Monitor-Funktionen sowie Dokumentationsprüfungen und Tests seit den Anfängen des Projekts."
+    }
+  },
+  "code": {
+    "heading": "Weitere Beiträge zum Code",
+    "intro": "Auch die folgenden Personen haben Codeänderungen beigetragen. Über die Links lässt sich ihre Arbeit nachvollziehen; der GitHub-Verlauf dokumentiert die Beiträge und zusammengeführten Pull Requests.",
+    "viewWork": "Beiträge ansehen",
+    "history": "Beitragsverlauf",
+    "merged": "Alle integrierten PRs ansehen"
+  },
+  "community": {
+    "heading": "Eine Community, die auch testet, übersetzt und dokumentiert",
+    "body": "Nicht jede Arbeit ist Code. Einen Fehler nachzustellen, hilfreiche Protokolle zu teilen, andere Hardware zu testen, eine Erklärung zu präzisieren oder eine Verbesserung vorzuschlagen, hilft ProxMenux ebenfalls.",
+    "languages": "Ein besonderer Dank gilt allen, die Texte in ihrer Muttersprache prüfen. Übersetzungen der Menüs, des Monitors und der Dokumentation machen das Projekt mehr Menschen zugänglich und erleichtern die Nutzung."
+  },
+  "testers": {
+    "heading": "Danke für die ersten Tests",
+    "intro": "Diese Anerkennung bleibt wichtig. Diese Personen halfen, frühe Versionen zu prüfen, testeten das Projekt auf ihren Geräten und teilten Fehler und Vorschläge, als ProxMenux zu wachsen begann.",
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Auch dein Beitrag ist willkommen",
+    "intro": "Eine kleine Korrektur, ein gezielter Test oder eine Textprüfung hilft bereits. Du musst keine vollständige Funktion entwickeln, um etwas beizutragen.",
+    "ways": {
+      "code": {
+        "title": "Code und Review",
+        "body": "Entwickle Funktionen, behebe Fehler oder prüfe eine PR. Der Beitragsleitfaden erklärt, wie du Änderungen vorbereitest und vorschlägst."
+      },
+      "testing": {
+        "title": "Tests und Diagnose",
+        "body": "Teste Betaversionen und teile Schritte zum Nachstellen sowie Protokolle, die beim Verstehen eines Problems helfen."
+      },
+      "translations": {
+        "title": "Übersetzungen",
+        "body": "Prüfe Meldungen in deiner Sprache und hilf, sie bei neuen Funktionen aktuell zu halten."
+      },
+      "docs": {
+        "title": "Dokumentation und Design",
+        "body": "Präzisiere eine Anleitung, ergänze einen Screenshot oder verbessere die Oberfläche, damit andere leichter folgen können."
+      }
+    },
+    "guide": "Beitragsleitfaden",
+    "discuss": "Mit der Community sprechen"
+  },
+  "thanks": {
+    "title": "Danke, dass ihr es möglich macht",
+    "body": "An alle hier Genannten und alle, die in einer Issue, einem Gespräch oder bei einem Test helfen: Danke für eure Zeit und euren Einsatz für ProxMenux."
+  }
+}

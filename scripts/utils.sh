@@ -34,6 +34,10 @@
 # ==========================================================
 
 # Repository and directory structure
+# Bound from the start so every `[ -n "$SPINNER_PID" ]` check is safe under
+# `set -u`, even in a script that sources this before starting a spinner.
+SPINNER_PID=""
+
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -122,6 +126,15 @@ stop_spinner() {
 # Display info message with spinner
 msg_info() {
     local msg="$1"
+    # Close any spinner still running from a previous msg_info that was never
+    # paired with a msg_ok. Without this its PID is lost when SPINNER_PID is
+    # overwritten below, leaving an orphan spinner on screen (e.g. behind a
+    # whiptail dialog).
+    if [ -n "${SPINNER_PID:-}" ] && ps -p "$SPINNER_PID" > /dev/null 2>&1; then
+        kill "$SPINNER_PID" > /dev/null 2>&1
+        wait "$SPINNER_PID" 2>/dev/null
+        printf "\r\033[K"
+    fi
     echo -ne "${TAB}${MG}${HOLD}${msg}"
     spinner &
     SPINNER_PID=$!
@@ -252,10 +265,23 @@ translate() {
     local lang_file="$LANG_DIR/${dest_lang}.json"
     if [ -s "$lang_file" ] && command -v jq >/dev/null 2>&1; then
         local cached
-        cached=$(jq -r --arg text "$text" '.[$text] // empty' "$lang_file" 2>/dev/null)
+        # A text written with \n in a script is stored with real line breaks.
+        cached=$(jq -r --arg text "$text" '.[$text] // .[($text | gsub("\\\\n"; "\n"))] // empty' "$lang_file" 2>/dev/null)
         if [ -n "$cached" ]; then
             echo "$cached"
             return
+        fi
+        # The catalog stores texts trimmed; keep the caller's surrounding spaces.
+        local lead="${text%%[![:space:]]*}"
+        local core="${text#"$lead"}"
+        local trail="${core##*[![:space:]]}"
+        core="${core%"$trail"}"
+        if [ -n "$core" ] && [ "$core" != "$text" ]; then
+            cached=$(jq -r --arg text "$core" '.[$text] // .[($text | gsub("\\\\n"; "\n"))] // empty' "$lang_file" 2>/dev/null)
+            if [ -n "$cached" ]; then
+                echo "${lead}${cached}${trail}"
+                return
+            fi
         fi
     fi
 
@@ -405,6 +431,13 @@ update_component_status() {
 # ============================================
 # Hybrid Dialog Functions (Web/Terminal)
 # ============================================
+
+# A container created from an OCI image declares its entrypoint (or cmd) in
+# its configuration. It has no package manager to install drivers with, and
+# OCI manager Apps is what changes its devices.
+pmx_lxc_is_oci() {
+    grep -qaE '^(entrypoint|cmd):' "/etc/pve/lxc/${1}.conf" 2>/dev/null
+}
 
 # Detect if running in web mode
 is_web_mode() {

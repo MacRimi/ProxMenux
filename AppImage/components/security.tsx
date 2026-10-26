@@ -21,6 +21,7 @@ import { useI18n } from "../lib/i18n/provider"
 interface ApiTokenEntry {
   id: string
   name: string
+  scope?: "read_only" | "full_admin"
   token_prefix: string
   created_at: string
   expires_at: string
@@ -65,7 +66,7 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
   return null
 }
 
-export function Security() {
+export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
   const { language, t } = useI18n()
   const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
   const interfaceTypeLabel = (type: string) =>
@@ -80,6 +81,12 @@ export function Security() {
     }
     if (normalized.includes("invalid 2fa code")) {
       return st("errors.invalid2faCode")
+    }
+    if (normalized.includes("2fa code required")) {
+      return st("errors.enter2faOrBackup")
+    }
+    if (normalized.includes("current password is incorrect")) {
+      return st("errors.invalidPassword")
     }
     if (normalized.includes("invalid password")) {
       return st("errors.invalidPassword")
@@ -103,6 +110,7 @@ export function Security() {
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [changePasswordTotpCode, setChangePasswordTotpCode] = useState("")
 
   const [show2FASetup, setShow2FASetup] = useState(false)
   const [show2FADisable, setShow2FADisable] = useState(false)
@@ -123,6 +131,10 @@ export function Security() {
   const [loadingTokens, setLoadingTokens] = useState(false)
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null)
   const [tokenName, setTokenName] = useState("")
+  // API tokens default to read-only (the safe choice for dashboards that
+  // only read metrics). full_admin is opt-in and carries a warning: it
+  // can do everything the logged-in user can (host power, updates, terminal).
+  const [tokenScope, setTokenScope] = useState<"read_only" | "full_admin">("read_only")
 
   // Proxmox Firewall state
   const [firewallLoading, setFirewallLoading] = useState(true)
@@ -280,9 +292,11 @@ export function Security() {
     checkAuthStatus()
     loadApiTokens()
     loadSslStatus()
-    loadFirewallStatus()
-    loadNetworkInterfaces()
-    loadSecurityTools()
+    if (hostType === "pve") {
+      loadFirewallStatus()
+      loadNetworkInterfaces()
+      loadSecurityTools()
+    }
   }, [])
 
   const loadFirewallStatus = async () => {
@@ -370,18 +384,19 @@ export function Security() {
     setSuccess("")
     setShowLynisUninstallConfirm(false)
     try {
-      const data = await fetchApi("/api/security/lynis/uninstall", {
+      const data = await fetchApi<{ success: boolean; partial?: boolean; outcome?: string }>("/api/security/lynis/uninstall", {
         method: "POST",
       })
-      if (data.success) {
+      if (data.success === true) {
         setSuccess(st("messages.lynisUninstalled"))
         loadSecurityTools()
         setLynisReport(null)
       } else {
-        setError(data.message || st("errors.lynisUninstallFailed"))
+        setError(data.outcome === "no_files" ? st("errors.lynisUninstallNoFiles") : data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : st("errors.lynisUninstallFailed"))
+      const body = err instanceof Error && "body" in err ? err.body as { partial?: boolean } | undefined : undefined
+      setError(body?.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
     } finally {
       setUninstallingLynis(false)
     }
@@ -976,6 +991,11 @@ export function Security() {
       return
     }
 
+    if (totpEnabled && !changePasswordTotpCode.trim()) {
+      setError(st("errors.enter2faOrBackup"))
+      return
+    }
+
     const pwError = validatePasswordStrength(newPassword, t)
     if (pwError) {
       setError(pwError)
@@ -992,8 +1012,9 @@ export function Security() {
           Authorization: `Bearer ${localStorage.getItem("proxmenux-auth-token")}`,
         },
         body: JSON.stringify({
-          current_password: currentPassword,
+          old_password: currentPassword,
           new_password: newPassword,
+          ...(totpEnabled ? { totp_code: changePasswordTotpCode.trim() } : {}),
         }),
       })
 
@@ -1012,6 +1033,7 @@ export function Security() {
       setCurrentPassword("")
       setNewPassword("")
       setConfirmNewPassword("")
+      setChangePasswordTotpCode("")
     } catch (err) {
       setError(err instanceof Error ? err.message : st("errors.changePasswordFailed"))
     } finally {
@@ -1138,6 +1160,7 @@ export function Security() {
           password: tokenPassword,
           totp_token: totpEnabled ? tokenTotpCode : undefined,
           token_name: tokenName || st("apiTokens.defaultName"),
+          scope: tokenScope,
         }),
       })
 
@@ -1156,6 +1179,7 @@ export function Security() {
       setTokenPassword("")
       setTokenTotpCode("")
       setTokenName("")
+      setTokenScope("read_only")
       loadApiTokens()
     } catch (err) {
       setError(err instanceof Error ? err.message : st("errors.generateTokenRetry"))
@@ -1332,10 +1356,12 @@ export function Security() {
   .top-bar-title { font-weight: 600; }
   .top-bar-subtitle { font-size: 11px; color: #94a3b8; display: none; }
   .top-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 10px 20px; border-radius: 6px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #06b6d4; color: #fff; border: none; padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
   }
   .top-bar button:hover { background: #0891b2; }
+  .top-bar .btn-group { display: flex; gap: 8px; }
+  .top-bar button svg { width: 18px; height: 18px; display: block; }
   .hide-mobile { }
   @media (min-width: 640px) {
     .top-bar { padding: 12px 24px; }
@@ -1390,6 +1416,9 @@ export function Security() {
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  @media screen and (max-width: 639px) {
+    .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .card { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
   .card-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
   .card-value { font-size: 13px; font-weight: 600; color: #0f172a; }
@@ -1458,7 +1487,10 @@ function pmxPrint(){
     <strong>${st("lynis.report.brandTitle")}</strong>
     <span id="pmx-print-hint" class="hide-mobile" style="font-size:11px;opacity:0.7;">${st("lynis.report.reviewHint")}</span>
   </div>
-  <button onclick="pmxPrint()">${st("lynis.printSavePdf")}</button>
+  <div class="btn-group">
+    <button onclick="pmxPrint()" title="Print" aria-label="Print"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+    <button onclick="pmxPrint()" title="Save as PDF" aria-label="Save as PDF"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></button>
+  </div>
 </div>
 
 <!-- Header -->
@@ -2012,6 +2044,22 @@ ${(report.sections && report.sections.length > 0) ? `
                     </div>
                   </div>
 
+                  {totpEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="change-password-totp">{st("twoFactor.codeOrBackup")}</Label>
+                      <Input
+                        id="change-password-totp"
+                        type="text"
+                        inputMode="text"
+                        autoComplete="one-time-code"
+                        placeholder={st("twoFactor.codeOrBackupPlaceholder")}
+                        value={changePasswordTotpCode}
+                        onChange={(e) => setChangePasswordTotpCode(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <Button
                       onClick={handleChangePassword}
@@ -2021,7 +2069,13 @@ ${(report.sections && report.sections.length > 0) ? `
                       {loading ? st("auth.changing") : st("auth.changePassword")}
                     </Button>
                     <Button
-                      onClick={() => setShowChangePassword(false)}
+                      onClick={() => {
+                        setShowChangePassword(false)
+                        setCurrentPassword("")
+                        setNewPassword("")
+                        setConfirmNewPassword("")
+                        setChangePasswordTotpCode("")
+                      }}
                       variant="outline"
                       className="flex-1"
                       disabled={loading}
@@ -2443,6 +2497,44 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
 
                 <div className="space-y-2">
+                  <Label>{st("apiTokens.scope.label")}</Label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setTokenScope("read_only")}
+                      disabled={generatingToken}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        tokenScope === "read_only"
+                          ? "border-blue-500 bg-blue-500/10"
+                          : "border-border hover:bg-muted/60"
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{st("apiTokens.scope.readOnly")}</span>
+                      <span className="block text-xs text-muted-foreground">{st("apiTokens.scope.readOnlyHint")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTokenScope("full_admin")}
+                      disabled={generatingToken}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        tokenScope === "full_admin"
+                          ? "border-amber-500 bg-amber-500/10"
+                          : "border-border hover:bg-muted/60"
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{st("apiTokens.scope.fullAdmin")}</span>
+                      <span className="block text-xs text-muted-foreground">{st("apiTokens.scope.fullAdminHint")}</span>
+                    </button>
+                  </div>
+                  {tokenScope === "full_admin" && (
+                    <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400">
+                      <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{st("apiTokens.scope.fullAdminWarning")}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="token-password">{st("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -2614,6 +2706,15 @@ ${(report.sections && report.sections.length > 0) ? `
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate">{token.name}</p>
+                            {token.scope === "read_only" ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-500 border border-blue-500/30 whitespace-nowrap">
+                                {st("apiTokens.scope.readOnly")}
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30 whitespace-nowrap">
+                                {st("apiTokens.scope.fullAdmin")}
+                              </span>
+                            )}
                             {isInvalid && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-500 border border-red-500/30 whitespace-nowrap">
                                 {st("apiTokens.invalidRegenerate")}
@@ -2679,6 +2780,7 @@ ${(report.sections && report.sections.length > 0) ? `
       )}
 
       {/* ── Proxmox VE Security Group ── */}
+      {hostType === "pve" && <>
       <div className="flex items-center gap-3 mt-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-orange-500">Proxmox VE</h2>
         <div className="flex-1 h-px bg-orange-500/20" />
@@ -3174,7 +3276,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   <span className="text-xs text-foreground font-mono font-medium">{rule.dport || "*"}</span>
                                   <span className={`text-[10px] px-1 py-0 rounded flex-shrink-0 ${
                                     rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
-                                  }`}>{rule.source_file}</span>
+                                  }`}>{rule.source_file === "cluster" ? st("firewall.cluster") : st("firewall.host")}</span>
                                 </div>
                                 {comment && (
                                   <p className="text-[10px] text-muted-foreground truncate mt-0.5">{comment}</p>
@@ -3192,7 +3294,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               <span className={`hidden sm:block text-[10px] px-1.5 py-0.5 rounded text-center ${
                                 rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
                               }`}>
-                                {rule.source_file}
+                                {rule.source_file === "cluster" ? st("firewall.cluster") : st("firewall.host")}
                               </span>
                               {/* Expand/Delete */}
                               <div className="flex items-center justify-end">
@@ -4279,14 +4381,25 @@ ${(report.sections && report.sections.length > 0) ? `
                           onClick={(e) => {
                             e.stopPropagation()
                             if (confirm(st("confirm.deleteAuditReport"))) {
-                              fetchApi("/api/security/lynis/report", { method: "DELETE" })
-                                .then(() => {
-                                  setLynisReport(null)
-                                  setLynisShowReport(false)
-                                  setSuccess(st("messages.reportDeleted"))
-                                  loadSecurityTools()
+                              setError("")
+                              setSuccess("")
+                              fetchApi<{ success: boolean; outcome?: string; partial?: boolean }>("/api/security/lynis/report", { method: "DELETE" })
+                                .then((data) => {
+                                  if (data.success === true) {
+                                    setLynisReport(null)
+                                    setLynisShowReport(false)
+                                    setSuccess(st("messages.reportDeleted"))
+                                    loadSecurityTools()
+                                  } else if (data.outcome === "no_files") {
+                                    setError(st("errors.deleteReportNoFiles"))
+                                  } else {
+                                    setError(data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
+                                  }
                                 })
-                                .catch(() => setError(st("errors.deleteReportFailed")))
+                                .catch((err) => {
+                                  const body = err instanceof Error && "body" in err ? err.body as { partial?: boolean } | undefined : undefined
+                                  setError(body?.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
+                                })
                             }
                           }}
                           className="h-7 px-2 text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10 ml-2 sm:ml-0"
@@ -4722,6 +4835,8 @@ ${(report.sections && report.sections.length > 0) ? `
           </div>
         </div>
       )}
+
+      </>}
 
       <TwoFactorSetup
         open={show2FASetup}

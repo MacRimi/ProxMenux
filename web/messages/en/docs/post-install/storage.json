@@ -15,7 +15,7 @@
   "trackedBody": "Each of these options registers a tool in <code>installed_tools.json</code>, so they appear in <link>Uninstall Optimizations</link>. Reverting <code>zfs_arc</code> removes <code>/etc/modprobe.d/99-zfsarc.conf</code> and rebuilds initramfs; <code>zfs_auto_snapshot</code> reverses the cron schedule and offers to purge the package; <code>zfs_autotrim</code> sets <code>autotrim=off</code> on the pools it enabled; <code>vzdump_speed</code> restores <code>/etc/vzdump.conf</code> from the <code>.bak</code> the install created.",
   "arc": {
     "heading": "Optimize ZFS ARC size",
-    "intro": "The <strong>Adaptive Replacement Cache (ARC)</strong> is ZFS's in-memory read cache. Without explicit tuning, ZFS happily grabs up to half the host RAM for itself, which is excessive on a Proxmox host that also needs memory for VMs and LXCs. This option caps ARC to a sane fraction of total RAM based on the size of the machine.",
+    "intro": "The <strong>Adaptive Replacement Cache (ARC)</strong> is ZFS’s in-memory read cache. Proxmox VE installations since 8.1 set a limit of 10% of RAM, capped at 16 GiB; older or upgraded hosts may differ. This option writes that same policy explicitly (RAM/10, capped at 16 GiB, with a 64 MiB floor) to its own file, which also covers older or upgraded hosts. Check existing settings and workload needs before changing it; a smaller cache is not always faster.",
     "sizingTitle": "Sizing rules",
     "headerRam": "Host RAM",
     "headerMax": "ARC cap",
@@ -41,7 +41,7 @@
         "max": "16 GiB (cap)"
       }
     ],
-    "after": "The file <code>/etc/modprobe.d/99-zfsarc.conf</code> contains a single directive — <code>options zfs zfs_arc_max=…</code>. Every other ZFS module parameter (<code>zfs_arc_min</code>, L2ARC prefetch/write throttle, TXG timeout) is left at its OpenZFS default. Before writing, a reconcile step scans any other <code>*.conf</code> in <code>/etc/modprobe.d/</code> that sets <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, backs them up to <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> with a manifest, and strips the conflicting lines so only ProxMenux's file is active. After writing the file, ProxMenux runs <code>update-initramfs -u -k all</code> and, when applicable, <code>proxmox-boot-tool refresh</code>, so the cap also lands in the initramfs used by ZFS-on-root setups.",
+    "after": "The file <code>/etc/modprobe.d/99-zfsarc.conf</code> contains a single directive — <code>options zfs zfs_arc_max=…</code>. This option does not tune other ZFS module parameters (<code>zfs_arc_min</code>, L2ARC prefetch/write throttle, TXG timeout). Before writing, a reconcile step scans other <code>*.conf</code> in <code>/etc/modprobe.d/</code> that set <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, backs them up to <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> with a manifest, and removes the conflicting <code>zfs_arc_min</code> / <code>zfs_arc_max</code> values (other options on those lines are kept), so only ProxMenux’s ARC file sets the limit. After writing, it runs <code>update-initramfs -u -k all</code> and, when applicable, <code>proxmox-boot-tool refresh</code>, so the limit also reaches the initramfs used by ZFS-on-root setups.",
     "rebootTitle": "Requires a reboot to take effect",
     "rebootBody": "ARC settings are read when the <code>zfs</code> kernel module loads. To make the cap take effect on ZFS-on-root hosts, ProxMenux regenerates the initramfs with <code>update-initramfs -u -k all</code> and, when applicable, refreshes the boot loader with <code>proxmox-boot-tool refresh</code>. A reboot is still required to pick up the new module parameter; the \"reboot required\" flag is set automatically.",
     "safeTitle": "Safe on non-ZFS hosts",
@@ -90,22 +90,22 @@
   },
   "autotrim": {
     "heading": "Enable ZFS autotrim (SSD/NVMe pools)",
-    "intro": "Enables the <code>autotrim</code> property on every ZFS pool that is backed exclusively by SSDs or NVMe drives with TRIM support. Pools that include a single HDD vdev are skipped automatically — TRIM on rotational drives is meaningless and ZFS will refuse it. Pools that were already set to <code>autotrim=on</code> are left as they are.",
+    "intro": "Enables the <code>autotrim</code> property on ZFS pools backed exclusively by SSDs or NVMe drives with TRIM support. The script conservatively skips pools containing a rotational device. Pools already set to <code>autotrim=on</code> are left unchanged.",
     "trimTitle": "What TRIM does, and why it matters on ZFS",
     "trimBody1": "SSDs / NVMe drives manage internal storage in fixed-size erase blocks that are much larger than the logical sectors the filesystem talks to. When a filesystem deletes a file, the drive doesn't know — it still thinks those sectors are in use, so its internal garbage collector keeps shuffling stale data around to free new erase blocks. <strong>TRIM</strong> is the standard command the OS uses to tell the drive \"these sectors are now free, you can erase them ahead of time\".",
     "trimBody2": "Without TRIM, SSD performance degrades over time as the drive runs out of pre-erased blocks and has to do erase-on-write, and write amplification increases — both shortening the drive's useful life. With TRIM enabled, the drive can keep a healthy pool of empty blocks ready to write into.",
-    "trimBody3": "On ZFS, <code>autotrim=on</code> is the modern equivalent of the periodic <code>zpool trim &lt;pool&gt;</code> command — instead of having to remember to run a trim manually (or schedule one), the pool issues TRIM commands automatically and continuously as blocks become free. It's low-overhead and the recommended setting for SSD-backed pools.",
+    "trimBody3": "With <code>autotrim=on</code>, ZFS trims recently freed space in the background, grouping ranges before issuing commands. A periodic <code>zpool trim &lt;pool&gt;</code> is another option. Autotrim avoids a separate schedule, but its performance impact depends on the devices; periodic manual trim may suit some lower-end drives better.",
     "practicalTitle": "Why is this practical to enable?",
     "practicalItems": [
-      "<strong>Sustained write performance.</strong> SSDs that never see TRIM commands slow down measurably over months. Autotrim keeps the controller's job easier.",
-      "<strong>Drive longevity.</strong> Lower write amplification means fewer total NAND writes for the same amount of data — measurable in years of useful life for the disk.",
+      "<strong>Sustained write performance.</strong> TRIM can help a drive reclaim unused blocks efficiently. The benefit and any latency impact depend on the device and workload.",
+      "<strong>Drive longevity.</strong> Avoiding unnecessary internal copying can reduce write amplification and NAND wear. It does not guarantee a specific increase in drive lifespan.",
       "<strong>No scheduled cron job to remember.</strong> Unlike a periodic <code>zpool trim</code>, autotrim is fire-and-forget — the pool handles it on its own."
     ],
     "whenTitle": "When is this necessary?",
-    "whenIntro1": "<strong>You should enable it</strong> on any ZFS pool whose vdevs are all SSD or NVMe with TRIM support — the typical Proxmox install on consumer or enterprise SSDs.",
+    "whenIntro1": "<strong>Consider enabling it</strong> on ZFS pools made entirely of TRIM-capable SSD or NVMe devices. Check device behaviour and workload latency; a scheduled manual trim can be preferable on some hardware.",
     "whenIntro2": "<strong>The script skips it automatically</strong> on:",
     "whenSkipItems": [
-      "Pools containing any HDD (rotational) vdev — TRIM is meaningless there.",
+      "Pools containing any HDD (rotational) vdev — a conservative hardware filter used by this script.",
       "Drives without <code>discard_granularity</code> exposed in sysfs — usually old SSDs without TRIM, or pass-through paths where the OS can't see the underlying device.",
       "Pools where ZFS itself reports the property unsupported (rare; very old pools).",
       "Pools already set to <code>autotrim=on</code> (no-op)."
@@ -117,11 +117,11 @@
     "manualIntro": "The full sequence the script runs against each pool is replicable by hand. This is what you would type if you wanted to do the same thing on a single pool without ProxMenux:",
     "verifyTitle": "Verification and manual rollback",
     "oneShotTitle": "Need a one-shot trim instead of continuous?",
-    "oneShotBody": "Some operators prefer a manual trim during off-peak hours rather than continuous trim activity. Disable autotrim and schedule a cron job that runs <code>zpool trim &lt;pool&gt;</code> — same end goal, different cadence."
+    "oneShotBody": "Some users prefer a manual trim during off-peak hours rather than continuous trim activity. Disable autotrim and schedule a cron job that runs <code>zpool trim &lt;pool&gt;</code> — same end goal, different cadence."
   },
   "vzdump": {
     "heading": "Increase vzdump backup speed",
-    "intro": "By default, Proxmox vzdump throttles backups to protect running VMs/CTs from IO starvation. On many setups that throttle is more conservative than needed. This option removes the bandwidth cap and lowers the I/O priority so vzdump can saturate the storage path during backup windows.",
+    "intro": "Writes bwlimit: 0 and ionice: 5 in the global vzdump configuration. Proxmox already defaults to no bandwidth limit, so this removes a cap only if one was configured. Compared with the default ionice: 7, the value 5 gives a higher best-effort I/O priority where the scheduler honours it. This can affect running guests and does not guarantee faster backups.",
     "changedTitle": "What gets changed in /etc/vzdump.conf",
     "backupTitle": "First run creates a .bak of vzdump.conf",
     "backupBody": "The first time this option runs, ProxMenux copies <code>/etc/vzdump.conf</code> to <code>/etc/vzdump.conf.bak</code> before touching it. Subsequent runs re-use that backup and won't overwrite it, so a hand-edited config from before the first apply stays recoverable. The changes to <code>bwlimit</code> and <code>ionice</code> are then made with <code>sed</code>, and any other options in the file (compress, pigz, tmpdir, exclude-path, etc.) are preserved.",
@@ -145,7 +145,7 @@
       {
         "label": "Backup and Restore commands",
         "href": "/docs/help-info/backup-commands",
-        "tail": " — vzdump CLI reference (now without the legacy bwlimit / ionice caps)."
+        "tail": " — vzdump CLI reference for bandwidth and I/O-priority settings."
       },
       {
         "label": "Uninstall Optimizations",

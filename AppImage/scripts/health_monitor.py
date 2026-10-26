@@ -51,6 +51,7 @@ DEBUG_PERF = False
 # ─── Startup Grace Period ────────────────────────────────────────────────────
 # Import centralized startup grace management for consistent behavior
 import startup_grace
+from pbs_manager import get_platform, PBS_SERVICES
 
 def _is_startup_health_grace() -> bool:
     """Check if we're within the startup health grace period (5 min).
@@ -153,36 +154,10 @@ def _hdd_in_standby(disk_name: str) -> bool:
     return parked
 
 
-def _lvm_device_args() -> list:
-    """`--devices` list scoping pvs/lvs/vgs off parked disks so they
-    aren't spun up by the LVM scan (issue #232). Empty when nothing is
-    parked, so the plain command runs unchanged. Each partition is
-    listed too — a whole-disk path alone doesn't cover a PV on a
-    partition."""
-    try:
-        r = subprocess.run(
-            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
-            capture_output=True, text=True, timeout=5)
-        if r.returncode != 0:
-            return []
-        nodes = []
-        for line in r.stdout.strip().split('\n'):
-            parts = line.split()
-            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
-                continue
-            name = parts[0]
-            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
-            nodes.append((name, base))
-        standby_bases = {
-            name for name, base in nodes
-            if name == base and _hdd_in_standby(name)
-        }
-        if not standby_bases:
-            return []
-        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
-        return ['--devices', ','.join(devices)] if devices else []
-    except Exception:
-        return []
+def _lvm_device_args():
+    """None means no automatic scan; [] permits LVM's normal scan."""
+    from lvm_device_scope import lvm_device_args
+    return lvm_device_args(_hdd_in_standby)
 
 
 def _is_disk_removable(disk_name: str) -> bool:
@@ -198,6 +173,16 @@ def _is_disk_removable(disk_name: str) -> bool:
 def _is_disk_usb(disk_name: str) -> bool:
     """True when sysfs places the disk behind a USB bus."""
     return resolver_is_usb_disk(disk_name)
+
+
+# smartd lines about its own configuration, not about a disk's health.
+_SMARTD_CONFIGURATION_NOTICES = (
+    'ignoring -n directive',
+    'not found in smartd database',
+    'is in standby mode',
+    'is in sleep mode',
+)
+
 
 class HealthMonitor:
     """
@@ -456,6 +441,7 @@ class HealthMonitor:
 
     def __init__(self):
         """Initialize health monitor with state tracking"""
+        self.platform_type = get_platform().get("product")
         self.state_history = defaultdict(list)
         self.last_check_times = {}
         self.cached_results = {}
@@ -909,9 +895,9 @@ class HealthMonitor:
         _perf_log("services", (time.time() - _t) * 1000)
         details['services'] = services_status
         if services_status['status'] == 'CRITICAL':
-            critical_issues.append(f"PVE Services: {services_status.get('reason', 'Service failure')}")
+            critical_issues.append(f"Proxmox Services: {services_status.get('reason', 'Service failure')}")
         elif services_status['status'] == 'WARNING':
-            warning_issues.append(f"PVE Services: {services_status.get('reason', 'Service issue')}")
+            warning_issues.append(f"Proxmox Services: {services_status.get('reason', 'Service issue')}")
         
         # Priority 1.5: Proxmox Storage Check (External Module)
         _t = time.time()
@@ -1493,10 +1479,10 @@ class HealthMonitor:
     
     def _check_cpu_temperature(self) -> Optional[Dict[str, Any]]:
         """
-        Check CPU temperature with temporal logic:
+        Check the maximum reported sensor temperature with temporal logic:
         - WARNING if temp >80°C sustained for >3 minutes
         - Auto-clears if temp ≤80°C for 30 seconds
-        - No dismiss button (non-dismissable)
+        - Recorded errors retain their current dismissable flag
         """
         cache_key = 'cpu_temp'
         current_time = time.time()
@@ -1564,15 +1550,23 @@ class HealthMonitor:
                     duration_str = f'{actual_minutes}m {actual_seconds}s' if actual_minutes > 0 else f'{actual_seconds}s'
                     
                     status = 'WARNING'
-                    reason = f'CPU temperature {max_temp}°C >80°C sustained for {duration_str}'
+                    shown_temp = round(max_temp, 1)  # as the widget shows it
+                    reason = f'Sensor temperature {shown_temp}°C >80°C; high samples span {duration_str}'
                     
-                    # Record non-dismissable error
+                    # Record the existing dismissable error contract
                     health_persistence.record_error(
                         error_key='cpu_temperature',
                         category='temperature',
                         severity='WARNING',
                         reason=reason,
-                        details={'temperature': max_temp, 'duration': actual_duration, 'dismissable': True}
+                        details={
+                            'temperature': shown_temp, 'duration': actual_duration,
+                            'dismissable': True, 'value': shown_temp, 'threshold': 80,
+                            'details': f'High samples span {duration_str}.',
+                            # Explicit provenance for render-time localization;
+                            # older/manual detail strings remain verbatim.
+                            'temperature_detail_kind': 'high_samples_span',
+                        }
                     )
                 elif len(recovery_samples) >= 3:
                     # Temperature has been ≤80°C for 30 seconds - clear the error
@@ -1585,7 +1579,7 @@ class HealthMonitor:
                     if health_persistence.is_error_active('cpu_temperature', category='temperature'):
                         # Keep the warning active
                         status = 'WARNING'
-                        reason = f'CPU temperature {max_temp}°C still elevated'
+                        reason = f'Sensor temperature {max_temp}°C still elevated'
                     else:
                         # No active warning yet
                         status = 'OK'
@@ -1643,7 +1637,7 @@ class HealthMonitor:
 
             mem_critical_samples = [
                 entry for entry in self.state_history[state_key]
-                if entry['mem_percent'] >= 90 and
+                if entry['mem_percent'] >= self.MEMORY_CRITICAL and
                 current_time - entry['time'] <= self.MEMORY_DURATION
             ]
 
@@ -1677,7 +1671,7 @@ class HealthMonitor:
                 oldest = min(s['time'] for s in mem_critical_samples)
                 actual_duration = int(current_time - oldest)
                 status = 'CRITICAL'
-                reason = f'RAM >90% sustained for {actual_duration}s'
+                reason = f'RAM >{self.MEMORY_CRITICAL}% sustained for {actual_duration}s'
             elif swap_critical >= 2:
                 status = 'CRITICAL'
                 reason = (f'Memory pressure: swap {swap_percent:.0f}% used '
@@ -1697,7 +1691,7 @@ class HealthMonitor:
             swap_total_gb = round(swap.total / (1024**3), 2)
 
             # Determine per-sub-check status
-            ram_status = 'CRITICAL' if mem_percent >= 90 and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
+            ram_status = 'CRITICAL' if mem_percent >= self.MEMORY_CRITICAL and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
             swap_status = 'CRITICAL' if swap_critical >= 2 else 'OK'
             
             result = {
@@ -2285,12 +2279,17 @@ class HealthMonitor:
 
             # `--devices` keeps lvs from scanning parked HDDs (issue #232).
             dev_args = _lvm_device_args()
+            if dev_args is None:
+                return {'status': 'INFO', 'skipped': True,
+                        'reason': 'Automatic LVM scan skipped by disk read policy or unavailable inventory'}
             result = subprocess.run(
                 ['lvs', *dev_args, '--noheadings', '--options', 'lv_name,vg_name,lv_attr'],
                 capture_output=True,
                 text=True,
                 timeout=3
             )
+            from lvm_device_scope import settle_scan_reads
+            settle_scan_reads()
             
             if result.returncode != 0:
                 return {'status': 'WARNING', 'reason': 'lvs command failed'}
@@ -2315,6 +2314,7 @@ class HealthMonitor:
                     text=True,
                     timeout=3
                 )
+                settle_scan_reads()
                 if vg_result.returncode == 0 and vg_result.stdout.strip():
                     return {'status': 'WARNING', 'reason': 'No active LVM volumes detected'}
                 else:
@@ -2329,6 +2329,8 @@ class HealthMonitor:
     # The new _check_proxmox_storage function handles this logic better.
     def _check_proxmox_storages(self) -> Dict[str, Any]:
         """Check Proxmox-specific storages (only report problems)"""
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return {'status': 'OK', 'reason': 'Not applicable on PBS', 'checks': {}, 'not_applicable': True}
         storages = {}
         
         try:
@@ -3140,6 +3142,20 @@ class HealthMonitor:
             print(f"[HealthMonitor] Disk/IO check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'Disk check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
     
+    @staticmethod
+    def _bridge_is_idle(interface: str, root: str = '/sys/class/net') -> bool:
+        """Whether a bridge is administratively up with no port attached.
+
+        Such a bridge reports no carrier, which is its normal state and not a
+        failure. A bridge that is set down, or one that has ports and still no
+        carrier, is not idle."""
+        try:
+            with open(f'{root}/{interface}/flags', encoding='ascii') as handle:
+                administratively_up = bool(int(handle.read().strip(), 16) & 0x1)
+            return administratively_up and not os.listdir(f'{root}/{interface}/brif')
+        except (OSError, ValueError):
+            return False
+
     def _check_network_optimized(self) -> Dict[str, Any]:
         """
         Optimized network check - only alerts for interfaces that are actually in use.
@@ -3188,6 +3204,18 @@ class HealthMonitor:
                     
                     # Check if it's a bridge interface (always important for VMs/LXCs)
                     if interface.startswith('vmbr'):
+                        if self._bridge_is_idle(interface):
+                            # A bridge with no port attached has no carrier: the
+                            # private network of an application whose containers
+                            # are stopped, during an update for example. Nothing
+                            # is down; nothing is connected to it.
+                            interface_details[interface] = {
+                                'status': 'OK',
+                                'reason': 'Bridge without attached ports',
+                                'is_up': False,
+                            }
+                            health_persistence.resolve_error(interface, 'Bridge without attached ports')
+                            continue
                         should_alert = True
                         alert_reason = 'Bridge interface DOWN (VMs/LXCs may be affected)'
                     
@@ -3471,6 +3499,8 @@ class HealthMonitor:
         Optimized VM/CT check - detects qmp failures and startup errors from logs.
         Improved detection of container and VM errors from journalctl.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return {'status': 'OK', 'reason': 'Not applicable on PBS', 'checks': {}, 'not_applicable': True}
         try:
             # First: auto-resolve any persisted VM/CT errors where the guest
             # is now running.  This clears stale "Failed to start" / QMP
@@ -3634,6 +3664,8 @@ class HealthMonitor:
         Check VMs/CTs with persistent error tracking.
         Errors persist until VM starts or 48h elapsed.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return {'status': 'OK', 'reason': 'Not applicable on PBS', 'checks': {}, 'not_applicable': True}
         try:
             issues = []
             vm_details = {}
@@ -3875,8 +3907,18 @@ class HealthMonitor:
         """
         try:
             # Build service list: base PVE services + corosync if clustered
-            services_to_check = list(self.PVE_SERVICES)
-            is_cluster = os.path.exists('/etc/corosync/corosync.conf')
+            pbs_host = getattr(self, "platform_type", "pve") == "pbs"
+            service_prefix = "pbs" if pbs_host else "pve"
+            product_name = "PBS" if pbs_host else "PVE"
+            services_to_check = list(PBS_SERVICES) if pbs_host else list(self.PVE_SERVICES)
+            if pbs_host:
+                # Old Monitor versions incorrectly treated absent PVE services
+                # as PBS failures; remove only those known inapplicable errors.
+                for service in self.PVE_SERVICES:
+                    old_key = f'pve_service_{service}'
+                    if health_persistence.is_error_active(old_key):
+                        health_persistence.clear_error(old_key)
+            is_cluster = not pbs_host and os.path.exists('/etc/corosync/corosync.conf')
             if is_cluster and 'corosync' not in services_to_check:
                 services_to_check.append('corosync')
             
@@ -3908,14 +3950,14 @@ class HealthMonitor:
             # cleanup loop). Audit Tier 5 — Health stack.
             for svc in services_to_check:
                 if svc not in failed_services:
-                    error_key = f'pve_service_{svc}'
+                    error_key = f'{service_prefix}_service_{svc}'
                     if health_persistence.is_error_active(error_key):
                         health_persistence.clear_error(error_key)
             
             # Build checks dict with status per service
             checks = {}
             for svc in services_to_check:
-                error_key = f'pve_service_{svc}'
+                error_key = f'{service_prefix}_service_{svc}'
                 if svc in failed_services:
                     state = service_details.get(svc, 'inactive')
                     checks[svc] = {
@@ -3943,12 +3985,12 @@ class HealthMonitor:
                 # Record each failed service in persistence, respecting dismiss
                 active_failed = []
                 for svc in failed_services:
-                    error_key = f'pve_service_{svc}'
+                    error_key = f'{service_prefix}_service_{svc}'
                     rec_result = health_persistence.record_error(
                         error_key=error_key,
                         category='pve_services',
                         severity='CRITICAL',
-                        reason=f'PVE service {svc} is {service_details.get(svc, "inactive")}',
+                        reason=f'{product_name} service {svc} is {service_details.get(svc, "inactive")}',
                         details={'service': svc, 'state': service_details.get(svc, 'inactive')}
                     )
                     if rec_result and rec_result.get('type') == 'skipped_acknowledged':
@@ -4146,7 +4188,8 @@ class HealthMonitor:
         New thresholds:
         - CASCADE: ≥15 errors (increased from 10)
         - SPIKE: ≥5 errors AND 4x increase (more restrictive)
-        - PERSISTENT: Same error in 3 consecutive checks
+        - PERSISTENT: the same pattern seen in at least 3 checks whose
+          occurrences span 15+ minutes, and still present in this check
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
@@ -4193,6 +4236,8 @@ class HealthMonitor:
                 
                 recent_patterns = defaultdict(int)
                 previous_patterns = defaultdict(int)
+                # Patterns present in this check; each counts one check once.
+                seen_this_check = set()
                 critical_errors_found = {} # To store unique critical error lines for persistence
                 
                 for line in recent_lines:
@@ -4363,10 +4408,15 @@ class HealthMonitor:
                     else:
                         self.persistent_log_patterns[pattern] = {
                             'count': 1,
+                            'checks': 0,
                             'first_seen': current_time,
                             'last_seen': current_time,
                             'sample': line.strip()[:200],  # Original line for display
                         }
+                    if pattern not in seen_this_check:
+                        seen_this_check.add(pattern)
+                        self.persistent_log_patterns[pattern]['checks'] = \
+                            self.persistent_log_patterns[pattern].get('checks', 0) + 1
                 
                 for line in previous_lines:
                     if not line.strip():
@@ -4409,10 +4459,23 @@ class HealthMonitor:
                         samples.append(clean[:120])
                     return samples
                 
+                # A pattern that stopped appearing is forgotten before the
+                # evaluation, and its own warning (if it had one) is closed.
+                patterns_to_remove = [
+                    p for p, data in self.persistent_log_patterns.items()
+                    if current_time - data['last_seen'] > 1800
+                ]
+                for pattern in patterns_to_remove:
+                    del self.persistent_log_patterns[pattern]
+
+                # Persistent means recurring: present in this check, seen in at
+                # least three checks, and with occurrences spanning 15 minutes.
+                # A burst that ended is not persistent however long ago it began.
                 persistent_errors = {}
                 for pattern, data in self.persistent_log_patterns.items():
-                    time_span = current_time - data['first_seen']
-                    if data['count'] >= 3 and time_span >= 900:  # 15 minutes
+                    span = data['last_seen'] - data['first_seen']
+                    if (pattern in seen_this_check and data.get('checks', 1) >= 3
+                            and data['count'] >= 3 and span >= 900):
                         persistent_errors[pattern] = data['count']
                         
                         # Record as warning if not already recorded
@@ -4437,12 +4500,14 @@ class HealthMonitor:
                                          'dismissable': True, 'occurrences': data['count']}
                             )
                 
-                patterns_to_remove = [
-                    p for p, data in self.persistent_log_patterns.items()
-                    if current_time - data['last_seen'] > 1800
-                ]
-                for pattern in patterns_to_remove:
-                    del self.persistent_log_patterns[pattern]
+                # Close the per-pattern warnings of patterns that are no
+                # longer persistent: the burst ended, or it was forgotten.
+                for pattern in list(self.persistent_log_patterns.keys()) + patterns_to_remove:
+                    if pattern in persistent_errors:
+                        continue
+                    stale_key = f'log_persistent_{hashlib.md5(pattern.encode()).hexdigest()[:8]}'
+                    if health_persistence.is_error_active(stale_key, category='logs'):
+                        health_persistence.clear_error(stale_key)
                 
                 # B5 fix: Cap size to prevent unbounded memory growth under high error load
                 MAX_LOG_PATTERNS = 500
@@ -5473,6 +5538,12 @@ class HealthMonitor:
                 if not line.strip():
                     continue
                 line_lower = line.lower()
+                # smartd reports its own configuration at the same priority as
+                # a failing disk: a USB bridge without ATA CHECK POWER STATUS
+                # makes it ignore -n, a disk it does not know is monitored with
+                # defaults. Those lines say nothing about the disk's health.
+                if 'smartd' in line_lower and any(text in line_lower for text in _SMARTD_CONFIGURATION_NOTICES):
+                    continue
                 
                 # Extract disk name -- multiple patterns for different log formats:
                 #   /dev/sdh, /dev/nvme0n1
@@ -5743,6 +5814,8 @@ class HealthMonitor:
         - No persistent errors are recorded
         This prevents false positives when NFS/PBS/remote storage is still mounting.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         if not PROXMOX_STORAGE_AVAILABLE:
             return None
         
@@ -6003,6 +6076,8 @@ class HealthMonitor:
             if status == 'stale':
                 checks[check_label] = {
                     'status': 'CRITICAL',
+                    'error_key': error_key,
+                    'dismissable': True,
                     'detail': f'{fstype} mount stale: {error or "unreachable"}',
                     'fstype': fstype,
                     'source': m.get('source', ''),
@@ -6032,6 +6107,8 @@ class HealthMonitor:
             elif status == 'readonly':
                 checks[check_label] = {
                     'status': 'WARNING',
+                    'error_key': error_key,
+                    'dismissable': True,
                     'detail': f'{fstype} mount unexpectedly read-only',
                     'fstype': fstype,
                     'source': m.get('source', ''),
@@ -6132,6 +6209,8 @@ class HealthMonitor:
         Notification cooldown is the standard 1h via the storage
         category, so a CT teetering at 96% won't spam the channel.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         # Cheap pre-check: bail out when there are no running LXCs. On
         # nodes without CTs, the previous version still paid ~860ms per
         # cycle for a `pvesh /cluster/resources` call that produced no
@@ -6149,6 +6228,7 @@ class HealthMonitor:
         try:
             import flask_server  # deferred — avoids circular import at module load
             resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+            local_node = flask_server.get_proxmox_node_name()
         except Exception as e:
             print(f"[HealthMonitor] LXC disk check failed: {e}")
             return None
@@ -6169,6 +6249,12 @@ class HealthMonitor:
 
         for r in resources:
             if r.get('type') != 'lxc':
+                continue
+            # `/cluster/resources` is cluster-wide. Capacity belongs to the
+            # node currently running the CT, so every Monitor must ignore
+            # guests owned by another node or the same condition is recorded
+            # and notified independently by every cluster member.
+            if r.get('node') != local_node:
                 continue
             if r.get('status') != 'running':
                 # Stopped CTs — `disk` reads as 0 from pvesh because the
@@ -6194,6 +6280,7 @@ class HealthMonitor:
                 'maxdisk_bytes': maxdisk,
                 'vmid': vmid,
                 'name': name,
+                'node': local_node,
             }
             error_key = f'lxc_disk_{vmid}'
 
@@ -6284,16 +6371,21 @@ class HealthMonitor:
         path, so a slow / dead guest agent can't stretch the health
         cycle.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         try:
             import flask_server  # deferred — avoids circular import
             resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+            local_node = flask_server.get_proxmox_node_name()
         except Exception as e:
             print(f"[HealthMonitor] VM disk check failed: {e}")
             return None
 
         # Cheap short-circuit: no running QEMU VMs on this node.
         if not any(
-            r.get('type') in ('qemu', 'vm') and r.get('status') == 'running'
+            r.get('type') in ('qemu', 'vm')
+            and r.get('node') == local_node
+            and r.get('status') == 'running'
             for r in resources
         ):
             return None
@@ -6307,6 +6399,8 @@ class HealthMonitor:
 
         for r in resources:
             if r.get('type') not in ('qemu', 'vm'):
+                continue
+            if r.get('node') != local_node:
                 continue
             if r.get('status') != 'running':
                 continue
@@ -6338,6 +6432,7 @@ class HealthMonitor:
                 'maxdisk_bytes': total,
                 'vmid': vmid_str,
                 'name': name,
+                'node': local_node,
             }
             error_key = f'vm_disk_{vmid_str}'
 
@@ -6437,6 +6532,8 @@ class HealthMonitor:
         check (already covered) because those are usually large data
         mounts whose fill rate is driven by user content, not log spam.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         if not MOUNT_MONITOR_AVAILABLE:
             return None
         try:
@@ -6540,6 +6637,8 @@ class HealthMonitor:
         check via _check_filesystem. Re-alerting on the same condition
         through two channels just clutters the inbox.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         if not PROXMOX_STORAGE_AVAILABLE:
             return None
         try:
@@ -6555,6 +6654,7 @@ class HealthMonitor:
 
         warn_pct, crit_pct = self._read_capacity_thresholds("pve_storage")
         available_storages = storage_status.get('available', []) or []
+        excluded_names = health_persistence.get_excluded_storage_names('health')
         checks: Dict[str, Dict[str, Any]] = {}
         critical_labels: list[str] = []
         warning_labels: list[str] = []
@@ -6570,8 +6670,11 @@ class HealthMonitor:
                 continue
             pct = (used / total) * 100
             name = st.get('name', 'unknown')
+            if name in excluded_names:
+                continue
             label = f'{name} ({stype})'
             entry = {
+                'detail': f'{pct:.1f}% used',
                 'usage_percent': round(pct, 1),
                 'storage_name': name,
                 'storage_type': stype,
@@ -6695,6 +6798,7 @@ class HealthMonitor:
             except ValueError:
                 continue
             entry = {
+                'detail': f'{pct}% used',
                 'usage_percent': pct,
                 'pool_name': name,
             }

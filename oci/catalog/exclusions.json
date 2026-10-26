@@ -1,0 +1,29 @@
+{
+  "schema_version": "0.1.0",
+  "imported_applications": [
+    {
+      "id": "jellyfin",
+      "reason": "same-image-hardware-profile-merged-into-linuxserver-jellyfin"
+    },
+    {
+      "id": "jellyfin-nvidia",
+      "reason": "same-image-hardware-profile-merged-into-linuxserver-jellyfin"
+    },
+    {
+      "id": "plex",
+      "reason": "same-image-hardware-profile-merged-into-linuxserver-plex"
+    },
+    {
+      "id": "plex-nvidia",
+      "reason": "same-image-hardware-profile-merged-into-linuxserver-plex"
+    },
+    {
+      "id": "ollama-nvidia",
+      "reason": "same-image-hardware-profile-merged-into-ollama"
+    },
+    {
+      "id": "index-tts-nvidia",
+      "reason": "same-image-hardware-profile-merged-into-index-tts"
+    }
+  ]
+}

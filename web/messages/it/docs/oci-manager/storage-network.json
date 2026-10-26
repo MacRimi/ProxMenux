@@ -1,0 +1,308 @@
+{
+  "meta": {
+    "title": "Dati, percorsi e rete | ProxMenux",
+    "description": "Come OCI manager Apps conserva i dati di un container OCI: dischi del container, directory dell’host, mount con rclone, indirizzi e reti private."
+  },
+  "header": {
+    "title": "Dati, percorsi e rete",
+    "description": "Cosa risiede nel rootfs, cosa viene conservato quando lo si sostituisce, come si condividono i dati tra container e come ciascuno ottiene il proprio indirizzo.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "La persistenza si decide prima di creare l’LXC",
+            "body": "I volumi dichiarati dall’immagine e dal suo file Compose vengono letti prima di creare il container. Ogni percorso da conservare dopo un aggiornamento diventa un punto di mount indipendente dal rootfs. In questo modo, il rootfs contiene solo ciò che appartiene all’immagine e può essere sostituito."
+          }
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Cosa chiede l’installer",
+      "intro": "Il modello fornisce i percorsi necessari all’applicazione. Ciascuno viene collocato su un disco del container o in una directory dell’host; prima del riepilogo si possono aggiungere altri percorsi.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Percorsi necessari",
+                "body": "Vengono elencati <code>/config</code>, <code>/data</code>, librerie, download e tutti i volumi dichiarati dall’applicazione."
+              },
+              {
+                "title": "Posizione",
+                "body": "Ogni percorso viene collocato su un disco del container o in una directory già esistente sull’host."
+              },
+              {
+                "title": "Storage e dimensione",
+                "body": "Viene creato un disco del container su uno storage Proxmox VE con la dimensione indicata. L’installazione predefinita chiede una sola volta lo storage del container e dei suoi dati quando il nodo ne ha più di uno; quella avanzata chiede lo storage di ogni percorso subito prima della dimensione e propone quello del rootfs. Il disco appare come <code>vm-VMID-disk-N</code> e viene collegato come <code>mpN</code>."
+              },
+              {
+                "title": "Directory dell’host",
+                "body": "La directory dell’host viene indicata tramite il suo percorso. Se non esiste, viene creata e assegnata all’utente dell’host a cui viene mappato quello del container."
+              },
+              {
+                "title": "Percorsi aggiuntivi",
+                "body": "Prima dell’installazione si possono aggiungere altre coppie formate da un percorso o volume dell’host e dal relativo percorso nel container."
+              },
+              {
+                "title": "Riepilogo",
+                "body": "La mappatura completa viene mostrata prima della creazione del CT e salvata nel contratto dell’istanza."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Le due posizioni persistenti",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Proprietà",
+              "Disco del container",
+              "Directory dell’host"
+            ],
+            "rows": [
+              [
+                "Nella configurazione",
+                "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>",
+                "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
+              ],
+              [
+                "Backup del container (vzdump)",
+                "Incluso con <code>backup=1</code>",
+                "Non incluso"
+              ],
+              [
+                "Dimensione",
+                "Fissa; si aumenta ridimensionando il punto di mount",
+                "Lo spazio libero del filesystem o del dataset dell’host"
+              ],
+              [
+                "Altri container",
+                "Montato solo dal container a cui appartiene",
+                "La stessa directory può essere montata in più container"
+              ],
+              [
+                "Snapshot e ripristino",
+                "Gestiti da Proxmox VE insieme al CT",
+                "Gestiti sullo storage dell’host"
+              ],
+              [
+                "Rimozione dell’applicazione",
+                "Eliminato con il container",
+                "Conservato con il suo contenuto"
+              ],
+              [
+                "Spostamento del CT su un altro nodo",
+                "Si sposta con il CT",
+                "Lo stesso percorso deve esistere sull’altro nodo"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Il rootfs è riservato ai binari e al contenuto dell’immagine. Un aggiornamento o una ricreazione lo sostituisce senza toccare nessuno dei due tipi di punto di mount."
+        },
+        {
+          "p": "Una directory dell’host viene montata con tutto ciò che l’host vi ha montato all’interno. Una directory come <code>/mnt/pve</code> mostra nel container le sue condivisioni di rete, i dischi e i dataset, e ciò che l’host vi monta o smonta in seguito compare o scompare senza riavviare il container. Una directory aggiunta in sola lettura è in sola lettura insieme a ciò che vi è montato all’avvio del container. Un filesystem che l’host monta successivamente arriva con i permessi con cui l’host lo monta e diventa anch’esso di sola lettura al riavvio del container."
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Esempio: un container con entrambe le posizioni",
+      "blocks": [
+        {
+          "code": {
+            "title": "Jellyfin installato come CT 151 su local-lvm (estratto)",
+            "code": "rootfs: local-lvm:vm-151-disk-0,size=8G\n# Container disk, part of the CT backup\nmp0: local-lvm:vm-151-disk-1,mp=/config,backup=1,size=16G\n\n# Host directory, outside the CT backup\nmp1: /mnt/oci-shared/media,mp=/data/media"
+          }
+        },
+        {
+          "p": "Un aggiornamento o una ricreazione sostituisce solo il rootfs: <code>mp0</code> conserva utenti, librerie e impostazioni, mentre <code>mp1</code> continua a mostrare gli stessi contenuti multimediali. Il ripristino del backup del CT recupera <code>/config</code>; se necessario, la directory dei contenuti multimediali viene ripristinata dal backup dello storage dell’host."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Contratto",
+                "detail": "/config"
+              },
+              {
+                "label": "Posizione",
+                "detail": "Disco del container\no directory dell’host"
+              },
+              {
+                "label": "LXC",
+                "detail": "Sempre /config\nper l’applicazione"
+              }
+            ],
+            "caption": "L’applicazione vede il percorso dichiarato dall’immagine; cambia solo dove viene memorizzato."
+          }
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "title": "Una directory dell’host, più container",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
+            "labels": {
+              "host": "Directory dell’host",
+              "config": "Configurazione propria"
+            }
+          }
+        },
+        {
+          "p": "Ogni container conserva la propria configurazione sul suo disco. La libreria o i download si trovano in un’unica directory dell’host, montata nello stesso percorso interno in tutti i container. Così il percorso in cui scrive un’applicazione è lo stesso da cui legge un’altra."
+        }
+      ]
+    },
+    {
+      "id": "rclone",
+      "title": "Storage cloud tramite l’applicazione rclone",
+      "intro": "Oltre all’installazione, la scheda di rclone nel catalogo offre <strong>Abilita un mount in un container OCI rclone esistente</strong>. Viene montato un remote già creato e autorizzato nell’interfaccia web di rclone, che viene poi reso disponibile sull’host. Gli altri container possono usarlo come una directory dell’host.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Container e remote",
+                "body": "Il VMID del container rclone, il nome esatto del remote e, facoltativamente, un percorso al suo interno."
+              },
+              {
+                "title": "Nome del mount e cache",
+                "body": "Il nome del mount e la modalità della cache VFS: <code>off</code>, <code>minimal</code>, <code>writes</code> o <code>full</code> (predefinita)."
+              },
+              {
+                "title": "Viste pubblicate",
+                "body": "Una radice comune, <code>/mnt/oci-shared</code> per impostazione predefinita, contiene una vista in lettura e scrittura in <code>/mnt/oci-shared/remotes/NAME</code> e una in sola lettura in <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+              },
+              {
+                "title": "Attivazione",
+                "body": "Dopo la conferma, il CT viene arrestato, vengono configurati il suo comando di avvio e un hookscript di Proxmox VE, quindi viene riavviato. L’operazione attende che entrambe le viste siano montate sull’host."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Se il mount non viene attivato",
+            "body": "Viene ripristinata la configurazione precedente del container, che viene quindi riavviato. In questo modo, se l’attivazione fallisce, rclone resta com’era."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Indirizzi e reti",
+      "intro": "Un’applicazione con un solo container ha bisogno di un indirizzo. Un’applicazione con più container richiede anche una rete stabile tra i suoi componenti.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "network",
+                "title": "Applicazione con un solo container",
+                "body": "Si sceglie il bridge di rete e si imposta DHCP oppure un indirizzo fisso in formato CIDR. L’LXC ha un proprio indirizzo e il riepilogo mostra gli URL completi dei servizi."
+              },
+              {
+                "icon": "waypoints",
+                "title": "Applicazione con più container",
+                "body": "Viene individuata una sottorete libera e creato un bridge privato persistente. Ogni componente — applicazione, database e cache — riceve un indirizzo fisso su quella rete."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "LAN",
+                "detail": "Indirizzo raggiungibile\nsolo per il servizio principale"
+              },
+              {
+                "label": "LXC principale",
+                "detail": "Web / API\nLAN + rete privata"
+              },
+              {
+                "label": "Rete privata",
+                "detail": "PostgreSQL · Valkey · ML\nindirizzi fissi"
+              }
+            ],
+            "caption": "Le dipendenze comunicano sulla rete privata e non hanno un indirizzo sulla LAN."
+          }
+        },
+        {
+          "p": "Il contratto dello stack conserva bridge, sottorete, indirizzi e relazioni tra i servizi. L’aggiornamento dell’applicazione riutilizza la stessa topologia per tutti i componenti. ProxMenux Monitor apre il container principale al suo indirizzo LAN, non a quello della rete privata."
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "title": "Proprietà di file e directory",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Le nuove directory vengono create con UID e GID a cui viene mappato l’LXC non privilegiato.",
+              "Il proprietario delle directory esistenti non viene modificato ricorsivamente.",
+              "Socket, file di sistema e percorsi sensibili non vengono proposti come directory generiche dell’host."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "title": "Cosa contiene un backup del container",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Nel backup vzdump del CT",
+              "Dove viene conservato"
+            ],
+            "rows": [
+              [
+                "Rootfs OCI",
+                "Sì",
+                "Nel backup del CT; può anche essere ricreato dall’immagine e dal contratto"
+              ],
+              [
+                "Disco del container con <code>backup=1</code>",
+                "Sì",
+                "Il backup del CT"
+              ],
+              [
+                "Directory dell’host",
+                "No",
+                "Il backup dello storage dell’host"
+              ],
+              [
+                "Contratto dell’istanza",
+                "Sì, la copia conservata nel CT",
+                "<code>/.proxmenux/oci-record.json</code> nel CT; le copie aggiuntive dell’host e del cluster sono conservate separatamente"
+              ],
+              [
+                "Applicazione con più container",
+                "Ogni componente nel proprio backup",
+                "I backup di tutti i componenti, più il contratto dello stack e il suo bridge di rete sull’host"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

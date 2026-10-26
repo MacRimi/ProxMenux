@@ -629,7 +629,7 @@ export default function Hardware() {
   const hasRealtimeData = (): boolean => {
     if (!realtimeGPUData) return false
 
-    // Esto permite mostrar datos incluso cuando la GPU está inactiva (valores en 0 o null)
+    // Show the data even while the GPU is idle, when values are 0 or null
     return realtimeGPUData.has_monitoring_tool === true
   }
 

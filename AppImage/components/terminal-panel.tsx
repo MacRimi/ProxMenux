@@ -639,7 +639,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   }
 
   const handleKeyButton = (key: string, e?: React.MouseEvent | React.TouchEvent) => {
-    // Prevenir comportamientos por defecto del navegador
+    // Stop the browser default for this key
     if (e) {
       e.preventDefault()
       e.stopPropagation()
@@ -1037,6 +1037,10 @@ const handleClose = () => {
               <DropdownMenuItem onSelect={() => sendSequence("\x03")}>
                 <span className="font-mono text-xs mr-2">Ctrl+C</span>
                 <span className="text-muted-foreground text-xs">{t("scriptTerminal.cancelInterrupt")}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => sendSequence("\x04")}>
+                <span className="font-mono text-xs mr-2">Ctrl+D</span>
+                <span className="text-muted-foreground text-xs">{t("scriptTerminal.endOfInput")}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => sendSequence("\x18")}>
                 <span className="font-mono text-xs mr-2">Ctrl+X</span>

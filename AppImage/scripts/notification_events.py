@@ -265,6 +265,22 @@ def capture_journal_context(keywords: list, lines: int = 30,
         return ""
 
 
+# Errors fstrim reports for a filesystem whose device cannot discard.
+_FSTRIM_UNSUPPORTED = ('remote i/o error', 'operation not supported', 'inappropriate ioctl for device')
+
+
+def _fstrim_failed_only_unsupported() -> bool:
+    """True when every filesystem the last fstrim run failed on cannot discard."""
+    try:
+        output = subprocess.run(
+            ['journalctl', '-u', 'fstrim.service', '--since', '-15min', '-o', 'cat', '--no-pager'],
+            capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    failures = [line.lower() for line in output.splitlines() if 'fitrim ioctl failed' in line.lower()]
+    return bool(failures) and all(any(text in line for text in _FSTRIM_UNSUPPORTED) for line in failures)
+
+
 # ─── smartd observation helper (shared by JournalWatcher & ProxmoxHookWatcher) ──
 #
 # Both watchers receive smartd messages — JournalWatcher via local journal,
@@ -513,6 +529,16 @@ class JournalWatcher:
         self._oom_lines = []
         self._oom_started_at = 0.0
 
+        # Keep the small amount of journal history that precedes a kernel
+        # diagnostic. `Call Trace:` is only a structural marker inside that
+        # diagnostic, never the cause itself. The old detector promoted the
+        # marker to an event and therefore sent an unactionable "Kernel call
+        # trace" every 24 h, sometimes followed by a second burst message for
+        # another line from the same incident.
+        from collections import deque as _deque
+        self._kernel_context = _deque(maxlen=40)
+        self._KERNEL_CONTEXT_WINDOW_SECS = 15
+
         # 24h anti-cascade for disk I/O + filesystem errors. The dict
         # key includes a tier suffix (`sdh:warning`, `sdh:critical`)
         # so a disk in WARNING cooldown can still escalate to CRITICAL
@@ -526,7 +552,6 @@ class JournalWatcher:
         # paper showed ~36% of failed drives gave no SMART warning.
         # Rate-based escalation catches the dying drives that SMART
         # would never flag until they were already bricked.
-        from collections import deque as _deque
         self._disk_error_window: Dict[str, "_deque[float]"] = {}
         self._DISK_ERROR_WINDOW_SECS = 86400  # 24h
         # Tiers calibrated for homelab/SMB Proxmox usage:
@@ -767,7 +792,7 @@ class JournalWatcher:
         
         self._check_auth_failure(msg, syslog_id, entry)
         self._check_fail2ban(msg, syslog_id)
-        self._check_kernel_critical(msg, syslog_id, priority)
+        self._check_kernel_critical(msg, syslog_id, priority, entry)
         self._check_service_failure(msg, unit)
         self._check_disk_io(msg, syslog_id, priority)
         self._check_cluster_events(msg, syslog_id)
@@ -849,13 +874,69 @@ class JournalWatcher:
                 'hostname': self._hostname,
             }, entity='user', entity_id=ip)
     
-    def _check_kernel_critical(self, msg: str, syslog_id: str, priority: int):
+    def _remember_kernel_context(self, msg: str, now: float) -> str:
+        """Record and return the recent journal excerpt for a kernel event."""
+        self._kernel_context.append((now, msg))
+        cutoff = now - self._KERNEL_CONTEXT_WINDOW_SECS
+        while self._kernel_context and self._kernel_context[0][0] < cutoff:
+            self._kernel_context.popleft()
+        return '\n'.join(line for _, line in self._kernel_context)[-4000:]
+
+    @staticmethod
+    def _kernel_diagnostic(msg: str) -> Optional[Tuple[str, str, str]]:
+        """Return (kind, process, component) for an attributable kernel event.
+
+        A bare ``Call Trace:`` intentionally has no match. It is analogous to
+        a heading in a diagnostic block and cannot establish that a new fault
+        occurred. The patterns below identify the line that explains why the
+        kernel printed the trace.
+        """
+        patterns = (
+            (r'\bWARNING:\s+CPU:', 'Kernel warning'),
+            (r'\bINFO:\s+task\s+.+?\s+blocked for more than\s+\d+', 'Blocked kernel task'),
+            (r'\btask\s+.+?\s+blocked for more than\s+\d+', 'Blocked kernel task'),
+            (r'\brcu(?:_preempt|_sched|):.*detected stalls?', 'RCU stall'),
+            (r'\bsoft lockup\b', 'CPU soft lockup'),
+            (r'\bhard LOCKUP\b', 'CPU hard lockup'),
+            (r'\bgeneral protection fault\b', 'General protection fault'),
+            (r'\bunable to handle kernel (?:NULL pointer dereference|paging request)', 'Kernel memory access fault'),
+            (r'\bOops:', 'Kernel oops'),
+            (r'\bUBSAN:', 'Undefined behaviour detected'),
+            (r'\bKASAN:', 'Kernel memory safety violation'),
+        )
+        kind = ''
+        for pattern, label in patterns:
+            if re.search(pattern, msg, re.IGNORECASE):
+                kind = label
+                break
+        if not kind:
+            return None
+
+        process = ''
+        process_match = re.search(r'\bPID:\s*(\d+)\s+Comm:\s*([^\s]+)', msg)
+        if process_match:
+            process = f'{process_match.group(2)} (PID {process_match.group(1)})'
+        else:
+            blocked_match = re.search(r'\btask\s+([^:\s]+)(?::\d+)?\s+blocked for more than', msg, re.IGNORECASE)
+            if blocked_match:
+                process = blocked_match.group(1)
+
+        component = ''
+        component_match = re.search(r'\bat\s+([^\s+]+)(?:\+0x[0-9a-f]+/0x[0-9a-f]+)?', msg, re.IGNORECASE)
+        if component_match:
+            component = component_match.group(1)
+
+        return kind, process, component
+
+    def _check_kernel_critical(self, msg: str, syslog_id: str, priority: int,
+                               entry: Optional[Dict] = None):
         """Detect kernel panics, OOM, segfaults, hardware errors."""
         # Only process messages from kernel or systemd (not app-level logs)
         if syslog_id and syslog_id not in ('kernel', 'systemd', 'systemd-coredump', ''):
             return
 
         now = time.time()
+        journal_context = self._remember_kernel_context(msg, now)
         if self._oom_lines and now - self._oom_started_at > 15:
             self._oom_lines = []
             self._oom_started_at = 0.0
@@ -918,6 +999,43 @@ class JournalWatcher:
         for noise in _KERNEL_NOISE:
             if re.search(noise, msg, re.IGNORECASE):
                 return
+
+        # A JSON journal entry lets us prove that the diagnostic came from the
+        # kernel transport. Plain-mode input remains supported for older
+        # journalctl fallbacks, but a systemd/application entry containing the
+        # words "WARNING: CPU" cannot masquerade as a kernel event.
+        transport = str((entry or {}).get('_TRANSPORT', '') or '')
+        is_kernel_source = entry is None or syslog_id == 'kernel' or transport == 'kernel'
+        diagnostic = self._kernel_diagnostic(msg) if is_kernel_source and not self._oom_lines else None
+        if diagnostic:
+            kind, process, component = diagnostic
+            observed_us = str((entry or {}).get('__REALTIME_TIMESTAMP', '') or '')
+            try:
+                observed_ts = int(observed_us) / 1_000_000 if observed_us else now
+            except (TypeError, ValueError):
+                observed_ts = now
+            observed_at = time.strftime('%Y-%m-%dT%H:%M:%S%z', time.localtime(observed_ts))
+            details = [f'Type: {kind}']
+            if process:
+                details.append(f'Process: {process}')
+            if component:
+                details.append(f'Component: {component}')
+            details.extend((f'Message: {msg[:500]}', f'Recorded: {observed_at}'))
+            identity = f'{kind}\x1f{component}\x1f{process}\x1f{msg[:300]}'
+            entity_id = f'kernel_{hashlib.sha256(identity.encode(errors="replace")).hexdigest()[:16]}'
+            self._emit(
+                'kernel_warning',
+                'WARNING',
+                {
+                    'hostname': self._hostname,
+                    'reason': f'{kind}\n{msg[:500]}',
+                    'kernel_details': '\n'.join(details),
+                    '_journal_context': journal_context,
+                },
+                entity='node',
+                entity_id=entity_id,
+            )
+            return
         
         # NOTE: Disk I/O errors (ATA, SCSI, blk_update_request) are NOT handled
         # here. They are detected exclusively by HealthMonitor._check_disks_optimized
@@ -932,7 +1050,6 @@ class JournalWatcher:
             r'Out of memory':      ('system_problem', 'CRITICAL', 'Out of memory killer activated'),
             r'segfault':           ('system_problem', 'WARNING',  'Segmentation fault detected'),
             r'BUG:':               ('system_problem', 'CRITICAL', 'Kernel BUG detected'),
-            r'Call Trace:':        ('system_problem', 'WARNING',  'Kernel call trace'),
             r'EXT4-fs error':      ('system_problem', 'CRITICAL', 'Filesystem error'),
             r'BTRFS error':        ('system_problem', 'CRITICAL', 'Filesystem error'),
             r'XFS.*error':         ('system_problem', 'CRITICAL', 'Filesystem error'),
@@ -1215,6 +1332,12 @@ class JournalWatcher:
         for noise in _NOISE_PATTERNS:
             if re.search(noise, msg) or re.search(noise, unit):
                 return
+
+        # fstrim exits non-zero when a mounted disk does not support discard,
+        # as a USB bridge or a remote share does, every time the timer runs.
+        # That is what the disk can do, not a failure to act on.
+        if ('fstrim.service' in msg or unit == 'fstrim.service') and _fstrim_failed_only_unsupported():
+            return
         
         service_patterns = [
             r'Failed to start (.+)',
@@ -1743,6 +1866,35 @@ class JournalWatcher:
             }, entity='cluster', entity_id=self._hostname)
             return
         
+        # Corosync membership change. This is what corosync really logs on
+        # the surviving nodes when a peer leaves or comes back:
+        #   [TOTEM ] A new membership (1.55) was formed. Members left: 2
+        #   [TOTEM ] A new membership (1.5a) was formed. Members joined: 2
+        # The line carries node IDs and no "node" keyword, so the generic
+        # match below never fired for a plain node loss in a quorate cluster.
+        if 'a new membership' in msg_lower and 'was formed' in msg_lower:
+            names = self._corosync_node_names()
+            local_name = socket.gethostname().split('.')[0]
+            for keyword, event_type, severity in (
+                    ('left', 'node_disconnect', 'CRITICAL'),
+                    ('joined', 'node_reconnect', 'INFO')):
+                id_match = re.search(r'\b%s:((?:\s+\d+)+)' % keyword, msg)
+                if not id_match:
+                    continue
+                for node_id in id_match.group(1).split():
+                    node_name = names.get(node_id, node_id)
+                    if node_name == local_name:
+                        continue  # our own corosync (re)starting
+                    if (event_type == 'node_reconnect'
+                            and startup_grace.is_real_system_boot()
+                            and _shared_state.is_startup_health_grace()):
+                        continue  # this host just booted: it is us joining them
+                    self._emit(event_type, severity, {
+                        'node_name': node_name,
+                        'hostname': self._hostname,
+                    }, entity='cluster', entity_id=node_name)
+            return
+
         # Node disconnect
         if (('quorum' in msg_lower and 'lost' in msg_lower) or
             ('node' in msg_lower and any(w in msg_lower for w in ['left', 'offline', 'lost']))):
@@ -1755,6 +1907,24 @@ class JournalWatcher:
                 'hostname': self._hostname,
             }, entity='cluster', entity_id=node_name)
     
+    def _corosync_node_names(self) -> Dict[str, str]:
+        """Map corosync node IDs to node names from corosync.conf."""
+        for path in ('/etc/pve/corosync.conf', '/etc/corosync/corosync.conf'):
+            try:
+                with open(path) as f:
+                    conf = f.read()
+            except OSError:
+                continue
+            names = {}
+            for block in re.findall(r'\bnode\s*\{([^}]*)\}', conf):
+                name = re.search(r'^\s*name:\s*(\S+)', block, re.M)
+                node_id = re.search(r'^\s*nodeid:\s*(\d+)', block, re.M)
+                if name and node_id:
+                    names[node_id.group(1)] = name.group(1)
+            if names:
+                return names
+        return {}
+
     def _check_system_shutdown(self, msg: str, syslog_id: str):
         """Detect full-node shutdown or reboot.
         
@@ -2253,6 +2423,18 @@ class TaskWatcher:
         # Get VM/CT name
         vmname = self._get_vm_name(vmid) if vmid else ''
         
+        # A destroyed guest frees its VMID. It has no notification of its
+        # own, but the cache listener must forget what belonged to it.
+        if task_type in ('vzdestroy', 'qmdestroy'):
+            if status == 'OK' and self._guest_lifecycle_callback:
+                guest_type = 'lxc' if task_type == 'vzdestroy' else 'qemu'
+                try:
+                    self._guest_lifecycle_callback(vmid, guest_type, 'destroy')
+                except Exception as exc:
+                    print(f'[TaskWatcher] guest lifecycle callback failed for '
+                          f'{guest_type} {vmid}: {exc}', flush=True)
+            return
+
         # Map to event type
         event_info = self.TASK_MAP.get(task_type)
         if not event_info:
@@ -2401,8 +2583,7 @@ class TaskWatcher:
         # Manual starts (onboot=0) within the grace period also bypass the
         # aggregator: a user manually starting a VM right after boot wants
         # the individual confirmation, not their action silently rolled into
-        # the autostart summary. Audit Tier 6 — `system_startup` aggregation
-        # puede tragar VM starts manuales del usuario durante grace period.
+        # the autostart summary.
         _STARTUP_EVENTS = {'vm_start', 'ct_start'}
         if event_type in _STARTUP_EVENTS and not is_error and not is_warning:
             if _shared_state.is_startup_period():
@@ -2586,6 +2767,11 @@ class PollingCollector:
         # once for each genuinely new available version. The persistent
         # history is stored in updates_available.json beside the scan.
         self._last_post_install_check = 0
+        # Re-open that announcement once per service start, so a host
+        # carrying optimizations it never applied surfaces them again
+        # after a ProxMenux update or a node reboot instead of staying
+        # silent forever. Consumed by the first check cycle.
+        self._post_install_startup_reset_pending = True
         # Sprint 14.7: fingerprint (item_id → latest_version) of the
         # last managed-installs update notification, across all types
         # in the registry. A new notification fires when the
@@ -2628,6 +2814,53 @@ class PollingCollector:
     @property
     def _hostname(self) -> str:
         return _hostname()
+
+    @staticmethod
+    def _guest_storage_error_is_now_foreign(error_key: str, old_meta: dict) -> bool:
+        """Return True when a disappearing guest-capacity error moved nodes.
+
+        Older versions recorded `lxc_disk_<vmid>` and `vm_disk_<vmid>` on
+        every cluster member because the health check consumed the unfiltered
+        cluster resource list. A normal `resolved_keys` transition would make
+        those foreign records produce one final, false recovery after the
+        ownership filter is installed. The same distinction matters during a
+        real migration: leaving the old node is not recovery.
+
+        Prefer the current cluster owner over the historical details, because
+        a legitimate local alert can subsequently migrate. The stored node is
+        only a fallback for a guest no longer present in the resource list.
+        """
+        match = re.fullmatch(r'(?:lxc|vm)_disk_(\d+)', str(error_key or ''))
+        if not match:
+            return False
+
+        try:
+            import flask_server  # deferred: flask_server imports this module
+            local_node = str(flask_server.get_proxmox_node_name() or '')
+            resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+            vmid = match.group(1)
+            for resource in resources:
+                if str(resource.get('vmid', '')) != vmid:
+                    continue
+                if resource.get('type') not in ('lxc', 'qemu', 'vm'):
+                    continue
+                owner = str(resource.get('node') or '')
+                if owner and local_node:
+                    return owner != local_node
+        except Exception:
+            local_node = ''
+
+        details = old_meta.get('details') if isinstance(old_meta, dict) else None
+        if isinstance(details, str):
+            try:
+                details = json.loads(details)
+            except (json.JSONDecodeError, TypeError):
+                details = None
+        if isinstance(details, dict):
+            owner = str(details.get('node') or '')
+            if owner and local_node:
+                return owner != local_node
+        return False
 
     def start(self):
         if self._running:
@@ -2982,6 +3215,15 @@ class PollingCollector:
             category = old_meta.get('category', '')
             reason = old_meta.get('reason', '')
             first_seen = old_meta.get('first_seen', '')
+
+            # A guest moving to another cluster node — or a legacy foreign
+            # record created by the old cluster-wide capacity scan — has not
+            # recovered. Drop only this node's tracking state and let the
+            # current owner report the condition if it is still present.
+            if self._guest_storage_error_is_now_foreign(key, old_meta):
+                self._last_notified.pop(key, None)
+                self._notified_severity.pop(key, None)
+                continue
 
             # Skip recovery for INFO/OK - they never triggered an alert
             if old_meta.get('severity', '') in ('INFO', 'OK'):
@@ -3355,7 +3597,9 @@ class PollingCollector:
                 'security_count': str(len(security_pkgs)),
                 'pve_count': str(len(pve_pkgs)),
                 'kernel_count': str(len(kernel_pkgs)),
-                'important_list': '\n'.join(f'  \u2022 {l}' for l in important_lines) if important_lines else 'none',
+                # An empty value is intentionally rendered later by the
+                # notification template as the selected locale's “none”.
+                'important_list': '\n'.join(f'  \u2022 {l}' for l in important_lines),
                 'package_list': ', '.join(important_lines[:6]) if important_lines else '',
             }
             
@@ -3511,6 +3755,22 @@ class PollingCollector:
 
     # ── Post-install function updates check (Sprint 12D) ────────────
 
+    def _reset_post_install_announcements(self):
+        """Re-open the optimization announcement after a service start.
+
+        ``post_install_update`` sits behind a second gate the other
+        update events don't have: a per-version history that keeps a
+        pending optimization from being announced twice. The manager's
+        ``_EVENT_TYPES_RESET_ON_START`` already clears the delivery
+        cooldown, so only that history has to be dropped here for the
+        first cycle to report whatever is still pending.
+        """
+        try:
+            import post_install_versions
+            post_install_versions.reset_notified_versions()
+        except Exception as e:
+            print(f"[PollingCollector] post-install history reset failed: {e}")
+
     def _check_post_install_updates(self):
         """Notify the operator when post-install functions have new versions.
 
@@ -3522,6 +3782,9 @@ class PollingCollector:
         shrinks the pending set and must not produce a second notification.
         """
         now = time.time()
+        if self._post_install_startup_reset_pending:
+            self._post_install_startup_reset_pending = False
+            self._reset_post_install_announcements()
         if now - self._last_post_install_check < self.UPDATE_CHECK_INTERVAL:
             return
         self._last_post_install_check = now
@@ -3600,6 +3863,13 @@ class PollingCollector:
         self._last_managed_check = now
 
         try:
+            from pbs_manager import is_pbs_host
+            if is_pbs_host():
+                return  # a Proxmox Backup Server has no guests or integrations to track
+        except Exception:
+            pass
+
+        try:
             import managed_installs
         except Exception:
             return  # registry module unavailable
@@ -3618,7 +3888,11 @@ class PollingCollector:
         # blocks the others.
         try:
             import lxc_apps
-            lxc_apps.refresh_all_apps(force=False)
+            # The automatic sweep builds one detailed summary after every app
+            # has been refreshed. Suppress the per-app emit here so the user
+            # does not receive the individual messages before that summary.
+            # Explicit UI checks keep the default notify=True behaviour.
+            lxc_apps.refresh_all_apps(force=False, notify=False)
             # Docker images have an independent lifecycle from both the OS
             # packages and the Docker engine.  Refresh their read-only
             # registry digest inventory on the same daily cadence; this never
@@ -3628,16 +3902,9 @@ class PollingCollector:
             # yesterday's cycle cannot postpone the next automatic scan by an
             # additional day. Normal UI reads remain cache-only for 24 hours.
             lxc_apps.refresh_docker_inventories(force=True)
-            # After the refresh, emit `app_update_available` for every
-            # sidecar entry currently flagged with a pending upstream
-            # release. `check_app(force=False)` short-circuits on a
-            # fresh `checked_at` and never reaches the emit path, so
-            # without this call the notification only ever fired on
-            # the exact tick where a new version was FIRST observed —
-            # missed forever if the user had the toggle off at that
-            # moment. `notification_manager` dedups by entity_id
-            # (vmid + app_id + latest_version) so repeated calls only
-            # deliver one notification per release.
+            # Emit one detailed registered-app summary for this sweep. A
+            # single pending app retains the existing individual wording;
+            # several apps are grouped by CT with every version pair intact.
             lxc_apps.emit_all_pending_docker_stacks()
             lxc_apps.emit_all_pending_updates()
         except Exception as e:
@@ -4088,6 +4355,47 @@ class ProxmoxHookWatcher:
     def _hostname(self) -> str:
         return _hostname()
 
+    @staticmethod
+    def _backup_outcome(severity: str, message: str) -> str:
+        """Distinguish explicit failure, complete guest logs and unknown results."""
+        text = str(message or '')
+        if severity in ('error', 'err', 'critical') or re.search(
+                r'(?im)^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?(?:ERROR:|TASK ERROR:|.*\bStatus\s+ERROR\b)', text):
+            return 'failed'
+        starts = re.findall(r'(?im)\bStarting Backup of VM (\d+)\s*\(', text)
+        finished = re.findall(r'(?im)\bFinished Backup of VM (\d+)\s*\(', text)
+        from notification_templates import _parse_vzdump_table
+        table = _parse_vzdump_table(text)
+        if table is not None and any(guest['status'].lower() == 'error' for guest in table['vms']):
+            return 'failed'
+        warnings = severity in ('warning', 'warn') or bool(re.search(
+                r'(?im)(?:^\s*(?:\d+:\s*)?(?:\d{4}-\d{2}-\d{2}\s+\S+\s+)?WARN(?:ING)?:|\bWARNINGS\s*:\s*[1-9]\d*)', text))
+        if severity not in ('info', 'ok', 'success', 'warning', 'warn'):
+            return 'unconfirmed'
+        completed = 'completed_with_warnings' if warnings else 'confirmed'
+        # A present table is authoritative: do not certify an incomplete table
+        # from a finished guest log, or reject a complete OK table merely
+        # because the extra diagnostic log was truncated before its finishes.
+        if table is not None:
+            return (completed if table['complete'] and
+                    all(guest['status'].lower() == 'ok' for guest in table['vms'])
+                    else 'unconfirmed')
+        if starts:
+            pending = {}
+            for match in re.finditer(r'(?im)\b(Starting|Finished) Backup of VM (\d+)\s*\(', text):
+                action, vmid = match.groups()
+                if action.lower() == 'starting':
+                    pending[vmid] = pending.get(vmid, 0) + 1
+                elif not pending.get(vmid):
+                    return 'unconfirmed'  # A finish before its start is not evidence.
+                else:
+                    pending[vmid] -= 1
+            return completed if not any(pending.values()) else 'unconfirmed'
+        if re.search(
+                r'(?im)^\s*(?:INFO:\s*)?TASK OK\s*$', text):
+            return completed
+        return 'unconfirmed'
+
     def process_webhook(self, payload: dict) -> dict:
         """Process an incoming Proxmox webhook payload.
         
@@ -4146,6 +4454,13 @@ class ProxmoxHookWatcher:
             'title': title or event_type,
             'job_id': pve_job_id,
         }
+        if event_type in ('backup_complete', 'backup_fail'):
+            # This is presentation metadata, not a new event/toggle/delivery path.
+            outcome = self._backup_outcome(severity_raw, message)
+            data['backup_outcome'] = (
+                'failed' if event_type == 'backup_fail' or outcome == 'failed' else
+                outcome if pve_type == 'vzdump' else 'unconfirmed'
+            )
 
         if pve_type == 'replication':
             replication = self._extract_replication_context(
@@ -4166,8 +4481,9 @@ class ProxmoxHookWatcher:
         # "🔵 constructor: Problema del sistema detectado" / "+1 problema
         # más del sistema (Problemas adicionales: - problema_del_sistema)"
         # messages the operator sees on Telegram. Preserve the PVE payload
-        # as `reason` so both surfaces have concrete text to render.
-        if event_type == 'system_problem':
+        # as `reason` so both surfaces have concrete text to render. A cluster
+        # event (fencing) renders it too: the message is what happened.
+        if event_type in ('system_problem', 'split_brain'):
             reason_text = (message or title or '').strip()
             if reason_text:
                 data['reason'] = reason_text[:500]
@@ -4238,10 +4554,17 @@ class ProxmoxHookWatcher:
             if vmids:
                 data['vmid'] = vmids[0]
                 entity_id = vmids[0]
-            # Try to extract VM name from the table line
-            name_m = re.search(r'(\d+)\s+(\S+)\s+(?:OK|ERROR|WARNINGS)', message)
-            if name_m:
-                data['vmname'] = name_m.group(2)
+            from notification_templates import _parse_vzdump_message
+            parsed = _parse_vzdump_message(message) or {}
+            guests = parsed.get('vms', [])
+            if data.get('backup_outcome') == 'failed':
+                guests = [guest for guest in guests if guest.get('status', '').lower() == 'error']
+            if len(guests) == 1:
+                data['vmid'] = guests[0]['vmid']
+                data['vmname'] = guests[0]['name']
+            else:
+                # Do not make one successful guest the subject of a batch failure.
+                data.pop('vmid', None)
             # Extract size from "Total size: X"
             size_m = re.search(r'Total size:\s*(.+?)(?:\n|$)', message)
             if size_m:

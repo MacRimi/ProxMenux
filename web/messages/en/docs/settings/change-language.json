@@ -1,22 +1,22 @@
 {
   "meta": {
     "title": "Change Language | ProxMenux Documentation",
-    "description": "Switch ProxMenux UI between English, Spanish, French, German, Italian or Portuguese. Translation install only — uses googletrans + a pre-cached translation table. The menu reloads automatically with the new language.",
+    "description": "Choose from eight ProxMenux interface languages. Every installation includes pre-generated JSON translation catalogs; no translation service or Python environment is needed on the host. The menu reloads automatically.",
     "ogTitle": "Change Language | ProxMenux Documentation",
-    "ogDescription": "Pick the ProxMenux interface language from the Settings menu. Six languages supported."
+    "ogDescription": "Pick one of eight ProxMenux interface languages from Settings. Available on every installation."
   },
   "header": {
     "title": "Change Language",
-    "description": "Switch the ProxMenux UI between six supported languages. Saves the choice to config.json and re-execs the menu with the new language. Only available on the Translation install type — the Normal (lightweight) install is English-only by design.",
+    "description": "Switch the ProxMenux interface between eight supported languages. The choice is saved to config.json and the menu is restarted in the new language. Every installation includes the translation catalogs.",
     "section": "Settings"
   },
   "intro": {
     "title": "What this is",
-    "body": "A dialog menu that lists the six supported languages. Pick one, ProxMenux saves it to <code>config.json</code> as <code>.language</code>, then re-execs <code>config_menu.sh</code> so the new language takes effect immediately."
+    "body": "A dialog lists the eight supported languages. ProxMenux saves your choice to <code>config.json</code> as <code>.language</code>, then restarts <code>config_menu.sh</code> so it takes effect immediately."
   },
   "warn": {
-    "title": "Translation install only",
-    "body": "This option only appears in Settings if both checks pass: <code>/opt/googletrans-env/bin/activate</code> exists (Python venv with googletrans), <em>and</em> <code>config.json</code> has a non-empty <code>.language</code>. On the Normal (English-only) install neither is present and the language picker is not shown."
+    "title": "Available on every installation",
+    "body": "Settings always shows Change Language. Translation catalogs are installed in <code>/usr/local/share/proxmenux/lang/</code>, <em>and</em> the selected language is stored in <code>config.json</code>. No legacy Python translation environment is required."
   },
   "supported": {
     "heading": "Supported languages",
@@ -32,39 +32,49 @@
       {
         "code": "es",
         "lang": "Spanish",
-        "notes": "Cached + auto-translated"
+        "notes": "Pre-generated JSON catalog"
       },
       {
         "code": "fr",
         "lang": "French",
-        "notes": "Cached + auto-translated"
+        "notes": "Pre-generated JSON catalog"
       },
       {
         "code": "de",
         "lang": "German",
-        "notes": "Cached + auto-translated"
+        "notes": "Pre-generated JSON catalog"
       },
       {
         "code": "it",
         "lang": "Italian",
-        "notes": "Cached + auto-translated"
+        "notes": "Pre-generated JSON catalog"
       },
       {
         "code": "pt",
         "lang": "Portuguese",
-        "notes": "Cached + auto-translated"
+        "notes": "Pre-generated JSON catalog"
+      },
+      {
+        "code": "sk",
+        "lang": "Slovak",
+        "notes": "Pre-generated JSON catalog"
+      },
+      {
+        "code": "sv",
+        "lang": "Swedish",
+        "notes": "Pre-generated JSON catalog"
       }
     ]
   },
   "englishTip": {
     "title": "English is the most accurate",
-    "body": "Non-English strings are produced by a pre-cached table seeded from googletrans. Edge-case strings (rarely triggered options, recent additions) may fall through to a live googletrans call or to the English original. If a translation feels off, English is always the source of truth."
+    "body": "Non-English text comes from pre-generated JSON catalogs included with ProxMenux. Missing translations fall back to English; there is no live translation call on the host. English remains the reference when a translation seems incorrect."
   },
   "underHood": {
     "heading": "How it works under the hood",
     "items": [
-      "Dialog menu lists the 6 codes; you pick one.",
-      "If <code>config.json</code> exists: <code>jq --arg lang \"$new_language\" '.language = $lang'</code> updates the field in place.",
+      "The dialog lists eight language codes; choose one.",
+      "If <code>config.json</code> exists: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> updates the field in place.",
       "If <code>config.json</code> doesn't exist: a fresh one is created with the language code in a single-field object.",
       "Confirmation dialog: <em>\"Language changed to [code]\"</em>.",
       "<code>exec bash config_menu.sh</code> reloads the Settings menu with the new language active."
@@ -76,7 +86,7 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "noOptionTitle": "Option doesn't appear in Settings",
-    "noOptionBody": "You're on the Normal (English-only) install. To get language support, reinstall ProxMenux choosing the Translation install option (it pulls Python venv + googletrans).",
+    "noOptionBody": "Change Language is always available in current releases. If it is missing, update ProxMenux using the official installer and open Settings again.",
     "stillEnglishTitle": "Language changed but UI still shows English",
     "stillEnglishBody": "The menu re-execs itself after the change. If you opened a fresh shell and started a different ProxMenux entrypoint, run <code>menu</code> again to pick up the new language. Confirm: <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
   },
@@ -86,7 +96,7 @@
       {
         "href": "/docs/settings/show-version-information",
         "label": "Show Version Information",
-        "tail": " — confirms install type and current language."
+        "tail": " — confirms the release channel, translation files and current language."
       },
       {
         "href": "/docs/settings",

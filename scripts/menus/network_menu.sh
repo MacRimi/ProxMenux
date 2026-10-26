@@ -41,6 +41,9 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -389,6 +392,8 @@ analyze_bridge_configuration() {
 
 
 guided_bridge_repair() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "guided_bridge_repair" "$FUNC_VERSION"
     local step=1
     local total_steps=5
 
@@ -482,7 +487,7 @@ guided_bridge_repair() {
             
             # Apply the change
             if [ "$new_ports" != "$current_ports" ]; then
-                sed -i "/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/" /etc/network/interfaces
+                pmx_edit_file /etc/network/interfaces "/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/"
             fi
         fi
     done
@@ -635,6 +640,8 @@ analyze_network_configuration() {
 }
 
 guided_configuration_cleanup() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "guided_configuration_cleanup" "$FUNC_VERSION"
     local step=1
     local total_steps=5
 
@@ -714,7 +721,7 @@ guided_configuration_cleanup() {
            --infobox "$(translate "Removing invalid configurations...")\n\n$(translate "This may take a few seconds...")" 8 50
     
     for iface in $interfaces_to_remove; do
-        sed -i "/^iface $iface/,/^$/d" /etc/network/interfaces
+        pmx_edit_file /etc/network/interfaces "/^iface $iface/,/^$/d"
     done
     ((step++))
     
@@ -1230,6 +1237,7 @@ show_menu() {
 
         declare -A script_commands
         local counter=1
+        local preselected=""
 
         for script in "${PROXMENUX_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
@@ -1239,6 +1247,7 @@ show_menu() {
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
             script_commands["$counter"]="$command"
+            [[ -n "$PRESELECTED_OPTION" && "$name" == "$PRESELECTED_OPTION" ]] && preselected="$counter"
             ((counter++))
         done
         
@@ -1254,6 +1263,7 @@ show_menu() {
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
             script_commands["$counter"]="$command"
+            [[ -n "$PRESELECTED_OPTION" && "$name" == "$PRESELECTED_OPTION" ]] && preselected="$counter"
             ((counter++))
         done
         
@@ -1262,15 +1272,23 @@ show_menu() {
         menu_items+=("0" "$(translate "Return to Main Menu")")
         
 
-        exec 3>&1
-        script_selection=$(dialog --clear --colors \
-                                 --backtitle "ProxMenux" \
-                                 --title "$(translate "Network Management")" \
-                                 --menu "\n$(translate "Select a network management option:")\n" \
-                                 28 82 19 \
-                                 "${menu_items[@]}" 2>&1 1>&3)
-        exit_status=$?
-        exec 3>&-
+        # An option given as argument, as the menu search does, is opened
+        # first; the menu follows.
+        if [[ -n "$preselected" ]]; then
+            script_selection="$preselected"
+            exit_status=0
+            PRESELECTED_OPTION=""
+        else
+            exec 3>&1
+            script_selection=$(dialog --clear --colors \
+                                     --backtitle "ProxMenux" \
+                                     --title "$(translate "Network Management")" \
+                                     --menu "\n$(translate "Select a network management option:")\n" \
+                                     28 82 19 \
+                                     "${menu_items[@]}" 2>&1 1>&3)
+            exit_status=$?
+            exec 3>&-
+        fi
         
 
         if [ $exit_status -ne 0 ] || [ "$script_selection" = "0" ]; then
@@ -1294,4 +1312,5 @@ show_menu() {
 
 # ==========================================================
 
+PRESELECTED_OPTION="${1:-}"
 show_menu

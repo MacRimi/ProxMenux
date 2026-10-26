@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "title": "AI asistent Proxmox — OpenAI, Claude, Gemini, Groq, Ollama | ProxMenux Monitor",
+    "description": "Voliteľný AI asistent prepisuje oznámenia Proxmox VE do zrozumiteľného jazyka. Šesť poskytovateľov: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter a Ollama. Rozhranie ponúka trinásť jazykov, tri úrovne detailov pre každý kanál, vlastné prompty s komunitnou knižnicou a kontext s dobou behu, opakovaním a údajmi SMART.",
+    "ogTitle": "AI asistent Proxmox — OpenAI, Claude, Gemini, Groq, Ollama",
+    "ogDescription": "Prepíšte oznámenia Proxmox VE do zrozumiteľného jazyka pomocou OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter alebo lokálneho Ollama.",
+    "twitterTitle": "AI asistent Proxmox | ProxMenux Monitor",
+    "twitterDescription": "Prepíšte oznámenia Proxmox VE do zrozumiteľného jazyka pomocou OpenAI, Anthropic, Gemini, Groq, OpenRouter alebo lokálneho Ollama."
+  },
+  "header": {
+    "title": "AI asistent",
+    "description": "Voliteľný prepis AI mení vhodné šablóny oznámení na zrozumiteľné správy s detailmi podľa kanála, trinástimi jazykmi rozhrania, vlastnými promptmi, verejnou komunitnou knižnicou a doplneným kontextom. Správy <code>backup_complete</code> a <code>backup_fail</code> AI úplne obchádzajú.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Predvolene vypnuté, zapnutie jedným prepínačom",
+    "body": "Prepis AI je predvolene vypnutý. Zapnite ho v <em>Nastavenia → Oznámenia → Pokročilé: vylepšenie AI</em>. Pri chybe doplnenia kontextu alebo prepisu odosielač pošle pôvodnú šablónu. Prepisy vo fronte odosielania udalostí majú časový limit 25 sekúnd; po jeho dosiahnutí sa namiesto čakania odošle šablóna."
+  },
+  "howItWorks": {
+    "heading": "Ako to funguje",
+    "intro": "Odosielané udalosti Monitora prechádzajú rovnakým postupom. Prepis AI je voliteľný krok medzi textom zo šablóny a odoslaním do kanála. Udalosť prejde štyrmi krokmi:",
+    "steps": [
+      "<strong>Udalosť + šablóna.</strong> Udalosť prichádza od jedného zo šiestich kolektorov a je vykreslená do štruktúrovaného tela s čistým textom pomocou <code>notification_templates.py</code>. Toto je telo, ktoré by kanál poslal, keby bolo prepisovanie AI vypnuté.",
+      "<strong>Doplnenie kontextu.</strong> Odosielací modul podľa udalosti pridá relevantné údaje: dobu behu systému pri kritických systémových chybách, frekvenciu udalostí, údaje SMART pri diskových udalostiach, zhody z databázy známych chýb a riadky denníka.",
+      "<strong>Zostavenie promptu.</strong> Systémový prompt tvorí šablóna a nastavenia kanála: jazyk, úroveň detailov, pravidlá emoji z <em>Formátovaných správ</em> a voliteľné návrhy AI. Vlastný prompt úplne nahradí systémový prompt. Používateľská správa obsahuje text šablóny a doplnené kontextové bloky.",
+      "<strong>Volanie poskytovateľa.</strong> Groq, OpenAI, Anthropic, Gemini, Ollama alebo OpenRouter vráti prepísaný názov a text. Odosielací modul spracuje odpoveď, nahradí tieto údaje pre daný kanál a odovzdá ich jeho adaptéru na doručenie."
+    ],
+    "notesIntro": "Tri detaily, ktoré stojí za to držať sa pred čítaním zvyšku tejto stránky:",
+    "notes": [
+      "<strong>AI nevytvára udalosti.</strong> Každá udalosť vychádza zo skutočného signálu, napríklad kontroly stavu, riadka denníka alebo webhooku PVE. Pred spracovaním AI ju šablóna prevedie na text. AI prekladá a upravuje formát; systém nesleduje.",
+      "<strong>AI pracuje pre každý kanál samostatne.</strong> Telegram a Discord môžu dostať stručný prepis a e-mail podrobnú správu: tá istá udalosť v rôznom formáte, s jedným volaním poskytovateľa pre každý kanál.",
+      "<strong>Pri chybe sa použije šablóna.</strong> Ak poskytovateľ vráti chybu 5xx, prekročí časový limit, vráti neplatný výstup alebo odmietne požiadavku, odosielací modul zaznamená chybu a odošle pôvodný text šablóny pre daný kanál."
+    ]
+  },
+  "enabling": {
+    "heading": "Zapnutie panela",
+    "intro": "Nastavenie AI je v dolnej časti panela Oznámenia na karte Nastavenia, v zbaliteľnom bloku <em>Pokročilé: vylepšenie AI</em>. Rozbaľte ho kliknutím na nadpis:",
+    "collapsedAlt": "Zbalený nadpis pokročilých nastavení AI s ikonou šípky",
+    "collapsedCaption": "Predvolene zbalené; jedno kliknutie panel rozbalí.",
+    "panelAlt": "Rozbalený panel AI s hlavným prepínačom, poskytovateľom Google Gemini, skrytým kľúčom API, modelom gemini-2.5-flash, predvoleným promptom, angličtinou, detailmi pre Telegram, Discord, Gotify a e-mail, návrhmi AI a testom spojenia",
+    "panelCaption": "Úplný panel AI Enhancement – každý ovládací prvok zdokumentovaný na tejto stránke mapuje na jedno z vyššie uvedených polí.",
+    "outro": "Zhora nadol: hlavný prepínač <em>Správy vylepšené AI</em>, poskytovateľ s informačným oknom, kľúč API alebo URL Ollama, modely načítané po zadaní kľúča, režim <em>Predvolený</em> / <em>Vlastný</em>, jazyk, detaily podľa kanála, <em>Návrhy AI</em> a tlačidlo <em>Otestovať spojenie</em>, ktoré odošle skúšobnú správu poskytovateľovi na overenie údajov."
+  },
+  "context": {
+    "heading": "Aký kontext dostáva AI",
+    "intro": "Pred zostavením promptu odosielací modul doplní kontext podľa toho, ktoré údaje sú pre udalosť relevantné. Cieľom je dať LLM dosť informácií na užitočnú správu bez zbytočného obsahu a nákladov. Do používateľskej správy možno pridať päť kontextových blokov:",
+    "headerBlock": "Blok",
+    "headerWhen": "Kedy sa pridáva",
+    "headerWhat": "Čo nesie",
+    "rows": [
+      {
+        "block": "Doba behu systému",
+        "when": "Iba pri kritických systémových chybách: <code>crash</code>, <code>panic</code>, <code>oom</code>, <code>kernel</code>, <code>split_brain</code>, <code>quorum_lost</code>, <code>node_offline</code>, <code>node_fail</code>, <code>system_fail</code>, <code>boot_fail</code>. Pri diskových chybách, upozorneniach a bežných operáciách sa vynechá, aby bol prompt stručný.",
+        "what": "Riadok ako <code>System uptime: 14 days (stable system)</code> umožní LLM odlíšiť problémy pri spúšťaní od chýb počas dlhšej prevádzky."
+      },
+      {
+        "block": "Frekvencia udalostí",
+        "when": "Vždy, keď Monitor už zaznamenal rovnaký identifikátor udalosti.",
+        "what": "Počet výskytov, čas prvého záznamu a voliteľný vzor: opakovaný, jednorazový alebo nárazový. LLM podľa toho rozlíši opakovaný problém od prvého výskytu."
+      },
+      {
+        "block": "Údaje SMART",
+        "when": "Len pre udalosti súvisiace s diskom (typ udalosti obsahuje <code>disk</code>, <code>smart</code>, <code>storage</code>, <code>io_error</code> alebo telo spomína <code>/dev/sd</code>, <code>ata</code>, <code>i/o error</code>).",
+        "what": "Výstup <code>smartctl</code> pre ovplyvnené zariadenie – celkový stav (PASSED / FAILED) plus príslušné atribúty pre režim zlyhania."
+      },
+      {
+        "block": "Databáza známych chýb",
+        "when": "Keď text alebo kontext denníka zodpovedá vzoru chyby Proxmox dodanému s Monitorom.",
+        "what": "Blok <code>KNOWN PROXMOX ERROR DETECTED</code> so zistenou príčinou a konkrétnym riešením. Prompt prikazuje verný preklad bez preformulovania odporúčanej opravy."
+      },
+      {
+        "block": "Denníky",
+        "when": "Keď pôvodný zberný modul zachytil riadky denníka pre udalosť, najmä sledovanie denníka a úloh.",
+        "what": "Pôvodné výňatky z <code>journalctl</code>. Prompt prikazuje LLM vybrať ID, časové údaje a náznaky hlavnej príčiny a ignorovať nesúvisiace záznamy."
+      }
+    ],
+    "afterBlocks": "Po pripojení týchto blokov má užívateľská správa odoslaná do LLM tento tvar:",
+    "calloutTitle": "Žiadna telemetria mimo samotnej udalosti",
+    "calloutBody": "Monitor posiela len údaje dostupné pre aktuálnu udalosť, nie celkovú telemetriu systému, historické časové rady metrík ani výpisy inventára. Päť blokov vyššie predstavuje hornú hranicu údajov odoslaných pri jednom prepise AI."
+  },
+  "tokens": {
+    "heading": "Tokeny – čo sú a ako sa spotrebúvajú",
+    "intro1": "Komerční poskytovatelia účtujú za <em>token</em>. Token zodpovedá približne štyrom znakom anglického textu alebo trom štvrtinám slova. Anglická veta <em>\"Backup completed on storage local-bak\"</em> má približne osem tokenov. Desať riadkov denníka môže podľa technického obsahu zabrať 200–400 tokenov.",
+    "intro2": "Pri každom hovore sú fakturované dve veci:",
+    "items": [
+      "<strong>Vstupné tokeny</strong> zahŕňajú systémový prompt a používateľskú správu: závažnosť, názov, text šablóny a doplnený kontext. Počet závisí od skutočného promptu a udalosti. Každý prepisovaný kanál môže spotrebovať vlastné vstupné tokeny; správy o dokončení alebo zlyhaní zálohy AI obchádzajú.",
+      "<strong>Výstupné tokeny</strong> – čo model odpíše. Monitor to uzatvára pomocou <code>max_tokens</code> (pozri tabuľku nižšie). Limit je <em>limit</em>, nie poplatok: ak model vyrába 250 tokeny s limitom 1500, zaplatíte za 250."
+    ],
+    "capsIntro": "Toto sú skutočné limity, ktoré používa dispečer, prevzaté priamo z <code>AI_DETAIL_TOKENS</code> v <code>notification_templates.py</code>:",
+    "headerLevel": "Úroveň podrobnosti",
+    "headerCap": "Limit výstupu (tokeny)",
+    "headerConsumption": "Typická skutočná spotreba",
+    "capRows": [
+      {
+        "level": "stručný",
+        "cap": "500",
+        "consumption": "50–200 výstupných tokenov pri krátkych udalostiach."
+      },
+      {
+        "level": "štandardná",
+        "cap": "1500",
+        "consumption": "200–700 výstupných tokenov pri bežných udalostiach s menším množstvom kontextu."
+      },
+      {
+        "level": "podrobné",
+        "cap": "3000",
+        "consumption": "500–2000 výstupných tokenov pri úplných e-mailových správach s denníkmi a tabuľkami SMART."
+      }
+    ],
+    "customNote": "Režim vlastného promptu má pevný limit 500 výstupných tokenov bez ohľadu na úroveň detailov. Prompt ovládate vy a limit bráni neprimerane dlhým odpovediam.",
+    "sizingTitle": "Praktická veľkosť",
+    "sizingBody": "Spotrebu odhadnite ako prepísané udalosti × kanály s AI × vstupné a výstupné tokeny na volanie. Napríklad 50 udalostí × jeden kanál × (2 000 vstupných + 300 výstupných) je asi 115 000 tokenov denne, pretože samotný predvolený systémový prompt má približne 1 500 tokenov. Skutočná spotreba a cena závisia od modelu, kontextu, cache a limitov poskytovateľa. Časť <link>Detaily podľa kanála</link> opisuje <code>brief</code> pre chat namiesto <code>standard</code> pri zachovaní podrobných e-mailových správ."
+  },
+  "providers": {
+    "heading": "Poskytovatelia AI",
+    "intro": "Monitor podporuje šesť poskytovateľov. Rozbaľovacia ponuka zobrazuje všetkých a informačné tlačidlo vedľa nej otvorí okno s krátkym opisom každého. Nižšie sú adresy na získanie kľúča API, opisy z rozhrania a poznámky zo zdrojového kódu.",
+    "imageAlt": "Informačné okno šiestich poskytovateľov AI: Groq, OpenAI, Anthropic Claude, Google Gemini, Ollama a OpenRouter, s ikonou, krátkym opisom a poznámkou o API kompatibilných s OpenAI",
+    "imageCaption": "Modál v aplikácii – šesť kariet, jedna na poskytovateľa, s rovnakými popismi zdokumentovanými nižšie.",
+    "groq": {
+      "heading": "Groq",
+      "tagline": "Veľmi rýchla, veľkorysá voľná úroveň (30 req/min). Ideálne začať.",
+      "items": [
+        "Kľúč API: <a>console.groq.com/keys</a>",
+        "Príklady z dodaného zoznamu modelov: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
+        "Dodané odporúčanie: <strong><code>openai/gpt-oss-20b</code></strong>. Dostupnosť pre svoj účet overte výberom poskytovateľa a testom spojenia."
+      ]
+    },
+    "openai": {
+      "heading": "OpenAI",
+      "tagline": "Priemyselná norma. Veľmi presné a široko používané.",
+      "items": [
+        "Kľúč API: <a>platform.openai.com/api-keys</a>",
+        "Príklady z dodaného zoznamu modelov: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
+        "Odporúčaný model v aplikácii: <strong><code>gpt-6-luna</code></strong>, aktuálne najúspornejší model. Všetky modely v dodanom zozname sú modely s uvažovaním; adaptér každému posiela iba parametre, ktoré podporuje."
+      ],
+      "baseUrlTitle": "Základné URL kompatibilné s OpenAI",
+      "baseUrlBody": "Poskytovateľ OpenAI prijíma vlastnú <em>Základnú URL</em> pre kompatibilné služby, napríklad <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong> a <strong>Fireworks AI</strong>, ktoré používajú formát <code>/v1/chat/completions</code>. URL nastavte na karte OpenAI vedľa kľúča API."
+    },
+    "anthropic": {
+      "heading": "Anthropic (Claude)",
+      "tagline": "Vynikajúce pre písanie a preklad. Rýchlo a hospodárne.",
+      "items": [
+        "Kľúč API: <a>console.anthropic.com/settings/keys</a>",
+        "Príklady z dodaného zoznamu modelov: <code>claude-haiku-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>.",
+        "Odporúčaný model v aplikácii: <strong><code>claude-haiku-5-5</code></strong>, aktuálne najúspornejší model Claude."
+      ]
+    },
+    "gemini": {
+      "heading": "Google Gemini",
+      "tagline": "K dispozícii je bezplatný plán s dobrým pomerom kvality a ceny.",
+      "items": [
+        "Kľúč API: <a>aistudio.google.com/app/apikey</a>",
+        "Príklady z dodaného zoznamu modelov: <code>gemini-2.5-flash-lite</code>, <code>gemini-2.5-flash</code>, <code>gemini-3-flash-preview</code>.",
+        "Odporúčané: <strong><code>gemini-2.5-flash-lite</code></strong>. Modely flash a flash-lite pravidelne prechádzajú overením. Varianty pro odmietajú nastavenie <code>thinkingBudget=0</code>, ktoré používa Monitor, a sú pre túto úlohu zbytočne náročné."
+      ]
+    },
+    "openrouter": {
+      "heading": "OpenRouter",
+      "tagline": "Agregácia s prístupom k modelom 100+ pomocou jediného kľúča API. Maximálna flexibilita.",
+      "items": [
+        "Kľúč API: <a>openrouter.ai/keys</a>",
+        "Príklady z dodaného zoznamu modelov: <code>meta-llama/llama-3.3-70b-instruct</code>, <code>meta-llama/llama-3.1-70b-instruct</code>, <code>meta-llama/llama-3.1-8b-instruct</code>, <code>anthropic/claude-haiku-4.5</code>, <code>google/gemini-2.5-flash-lite</code>, <code>openai/gpt-4o-mini</code>, <code>mistralai/mistral-medium-3</code>.",
+        "Odporúčané: <strong><code>meta-llama/llama-3.3-70b-instruct</code></strong>. Model je smerovaný cez OpenRouter, takže rovnaký kľúč sprístupní všetky uvedené modely."
+      ]
+    },
+    "ollama": {
+      "heading": "Ollama (miestne)",
+      "tagline": "Používa modely sprístupnené nastaveným serverom Ollama. Lokálne modely bežia na ňom; cloudové modely Ollama posielajú požiadavky cloudovému poskytovateľovi. Lokálna prevádzka nemá poplatok za hostované API, ale využíva vlastný hardvér a elektrinu.",
+      "items": [
+        "Kľúč API netreba. Pole <em>Ollama URL</em> nastavte na svoj server, predvolene <code>http://localhost:11434</code>, alebo na hostiteľa s vašou inštanciou Ollama.",
+        "Modely sa <strong>nefiltrujú.</strong> Monitor načíta modely stiahnuté pomocou <code>ollama pull &lt;model&gt;</code>. Ponuku naplní z <code>GET /api/tags</code> na serveri Ollama.",
+        "Inštalácia: <a>ollama.com/download</a> — Linux, macOS a Windows. Vyberte model, ktorý sa zmestí do RAM a má dostatočné kontextové okno pre bloky denníka pridávané odosielacím modulom."
+      ]
+    }
+  },
+  "models": {
+    "heading": "Prečo tieto špecifické modely",
+    "intro": "Výber komerčných modelov používa dodaný katalóg <code>verified_ai_models.json</code> a kontroly dostupnosti adaptérov. Tie prevedú internú požiadavku <code>system_prompt + user_message + max_tokens</code> do formátu API poskytovateľa. Katalóg obsahuje testované aj ručne pridané položky; nezaručuje aktuálny prístup účtu ani rovnaké overenie každej položky.",
+    "consequencesIntro": "Treba si uvedomiť dva dôsledky:",
+    "consequences": [
+      "<strong>Dodané odporúčanie</strong> je východiskový bod pre oznámenia. Jazykovú kvalitu, latenciu a cenu posúďte podľa vlastných udalostí a účtu; nejde o univerzálny rebríček modelov.",
+      "<strong>Môžete vybrať iný model zo zoznamu</strong> podľa kvóty alebo preferencií. Dostupnosť overte testom spojenia; uvedenie v zozname nezaručuje aktuálny prístup účtu."
+    ],
+    "ollamaTitle": "Ollama je výnimka",
+    "ollamaBody": "Ponuka Ollama sa nefiltruje komerčným katalógom; zobrazuje modely servera Ollama. Na lokálny beh vyberte lokálny model s dostatkom RAM a kontextu pre denníky. Cloudové modely zostávajú vzdialené aj pri prístupe cez lokálny server Ollama."
+  },
+  "defaultPrompt": {
+    "heading": "Predvolený prompt",
+    "intro": "V režime <em>Predvolený</em> používa Monitor systémový prompt nižšie. Pred volaním nahradí zástupné hodnoty: <code>'{'language'}'</code>, <code>'{'detail_level'}'</code>, <code>'{'emoji_instructions'}'</code>, <code>'{'suggestions_addon'}'</code>. Nasledujú varianty pre formátované a obyčajné kanály a doplnok návrhov AI.",
+    "showFullSummary": "Zobraziť kompletnú štandardnú systémovú výzvu",
+    "passagesIntro": "Dva varianty textu sa použijú podľa prepínača <em>Formátované správy</em> daného kanála:",
+    "passages": [
+      "<strong>Formátovanie zapnuté</strong> → pridá sa blok povolených emoji, pravidlo zachovania predpony názvu hostiteľa v nadpise a príklady: spustenie a dokončenie zálohy, aktualizácie, spustenie VM a zhoršenie stavu. Tak vznikajú správy s emoji na začiatku v Telegram a Discord.",
+      "<strong>Formátovanie vypnuté</strong> → krátky blok prikazuje používať iba obyčajné ASCII bez emoji a znakov Unicode. Hodí sa na e-mail a kanály, kde formátovanie zhoršuje pravidlá schránky alebo čitateľnosť."
+    ],
+    "suggestionsPlaceholder": "Zástupná hodnota <code>'{'suggestions_addon'}'</code> je prázdna, kým nezapnete návrhy AI. Potom sa pridá tento blok:",
+    "showAddonSummary": "Zobraziť doplnok návrhov AI"
+  },
+  "customPrompt": {
+    "heading": "Vlastný prompt",
+    "intro": "Režim <em>Vlastný</em> nahradí celý predvolený systémový prompt vaším textom. Uloží sa v nastaveniach SQLite a pri každom volaní AI sa odošle bez zmeny. Môžete tak zvoliť iný tón, štruktúru alebo zameranie.",
+    "imageAlt": "Vlastný prompt s textovým poľom na pravidlá prekladu, tlačidlami Exportovať a Importovať a odkazom na komunitné prompty",
+    "imageCaption": "Vlastný prompt vo veľkom textovom poli, tlačidlá <em>Exportovať</em>, <em>Importovať</em> a odkaz na komunitnú galériu na GitHub.",
+    "changesTitle": "Čo sa zmení vo vlastnom režime",
+    "changes": [
+      "<strong>Predvolený prompt sa úplne nahradí.</strong> Mapovanie Proxmox, pravidlá spracovania kontextu a pokyny pre emoji sa už nepridávajú. Ak ich chcete zachovať, vložte ich do vlastného promptu. Dodaný <code>EXAMPLE_CUSTOM_PROMPT</code> nižšie je východiskový príklad.",
+      "<strong>Výber jazyka sa ignoruje.</strong> Predvolený prompt má zástupnú hodnotu <code>'{'language'}'</code>, vlastný prompt nie. Jazyk uveďte priamo vo svojom texte, napríklad „Prelož do španielčiny“ alebo „Všetko napíš po francúzsky“.",
+      "<strong>Vlastný režim má pevný limit 500 tokenov</strong> bez ohľadu na uložené detaily kanála. Predvolený režim používa 500 / 1500 / 3000. Úprava promptu limit nezvýši; žiadajte kratšiu odpoveď alebo zvoľte vhodnú predvolenú úroveň.",
+      "<strong>Výstupné značky sú naďalej povinné.</strong> Do formátu odpovede zahrňte <code>[TITLE]</code> a <code>[BODY]</code>. Parser z nich vyberie obsah; ak značka chýba, vráti pôvodnú šablónu.",
+      "<strong>Pravidlá emoji formátovaných správ sa nepridávajú automaticky.</strong> Vo vlastnom prompte výslovne povoľte emoji alebo ich zakážte pre obyčajný text. Prepínač ovláda len predvolené bloky, nie váš text."
+    ],
+    "starterTitle": "Úvodný prompt",
+    "starterIntro": "Textové pole <em>Vlastný prompt</em> je predvyplnené jednoduchým príkladom, ktorý môžete upraviť:",
+    "showStarterSummary": "Zobraziť úvodný vlastný prompt",
+    "shareTitle": "Zdieľanie podnetov s komunitou",
+    "shareIntro": "Tlačidlo <em>Exportovať</em> uloží prompt do súboru (<code>.txt</code> / <code>.md</code>) na zálohovanie alebo zdieľanie. <em>Importovať</em> súbor načíta. Tretie tlačidlo otvorí verejnú komunitnú galériu na GitHub:",
+    "shareLinkLabel": "github.com/MacRimi/ProxMenux/discussions — Zdieľajte vlastné prompty pre oznámenia AI",
+    "shareOutro": "V diskusii nájdete prompty ďalších správcov: stručné upozornenia, podrobné technické správy aj jazykové varianty. Ak ste s úpravou spokojní, zdieľajte ju s krátkym odsekom o jej účele. Vítaná je aj spätná väzba o tom, čo funguje a čo nie."
+  },
+  "suggestions": {
+    "heading": "Návrhy AI (BETA)",
+    "intro": "Návrhy AI je voliteľný doplnok, ktorý umožňuje LLM pripojiť <strong>jeden</strong> krátky, použiteľný tip na koniec tela. Aktivuje sa iba vtedy, keď je režim výzvy <em>Predvolený</em>, hlavný prepínač AI je zapnutý a prepínač <em>Návrhy AI</em> je prehodený – a aj vtedy výzva dáva modelu pokyn, aby preskočil tip, ak príčina alebo riešenie nie je jasné.",
+    "formatIntro": "Pridaný tip má tento presný formát:",
+    "rulesIntro": "Pravidlá doplnku zobrazené v rozbaliteľnom bloku časti Predvolený prompt:",
+    "rules": [
+      "Tip sa pridá <em>iba</em> vtedy, keď denníky alebo databáza známych chýb jasne poukazujú na konkrétnu opravu.",
+      "Prompt žiada tip kratší než 100 znakov; parser túto dĺžku samostatne nekontroluje.",
+      "Prompt vyžaduje konkrétny príkaz alebo cestu a prikazuje vyhnúť sa všeobecným radám.",
+      "Ak známa chyba poskytuje riešenie, LLM musí použiť toto riešenie, nie vymyslieť nové.",
+      "Prompt prikazuje vynechať tip, ak vstup nepodporuje konkrétnu opravu."
+    ],
+    "betaTitle": "Prečo BETA",
+    "betaBody": "Kvalita tipov závisí od modelu a dostupného kontextu denníkov. Model ako Claude 3.5 Haiku, GPT-4.1 Mini alebo Llama 3.3 70B s údajmi smartctl a denníkmi môže poskytnúť užitočný tip. Malý lokálny model Ollama s jednoriadkovou udalosťou môže podať slabý výsledok alebo tip vynechať. Ak vám tipy prekážajú, vypnite ich a podľa potreby znova zapnite."
+  },
+  "detailLevel": {
+    "heading": "Úroveň detailov pre každý kanál",
+    "intro": "Telegram, Discord, Gotify a e-mail majú vlastnú ponuku úrovne detailov. Tri hodnoty určujú limit výstupných tokenov a pokyny predvoleného promptu:",
+    "headerLevel": "Úroveň",
+    "headerLabel": "Štítok UI",
+    "headerCap": "Výstupný strop",
+    "headerProduce": "Aký výstup prompt požaduje od LLM",
+    "rows": [
+      {
+        "level": "stručný",
+        "label": "2–3 riadky, iba podstatné",
+        "cap": "500 tokenov",
+        "produce": "\"Čo sa stalo + kde.\" Nič iné."
+      },
+      {
+        "level": "štandardná",
+        "label": "Stručne so základným kontextom",
+        "cap": "1500 tokenov",
+        "produce": "3–6 riadkov: čo, kde, príčina a dotknuté zariadenia."
+      },
+      {
+        "level": "podrobné",
+        "label": "Úplné technické údaje",
+        "cap": "3000 tokenov",
+        "produce": "Úplná správa: čo, kde, príčina, dotknuté zariadenia, denníky, údaje SMART a história."
+      }
+    ],
+    "defaultsIntro": "Predvolené hodnoty pri prvej inštalácii:",
+    "defaults": [
+      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>E-mail</strong> — <code>detailed</code>. E-mail je kanál, kde zvyčajne chcete úplný obraz pre archív."
+    ],
+    "emailTitle": "Podrobný e-mail pripája pôvodnú správu",
+    "emailBody": "Ak formátovač AI vráti výsledok pre e-mail s <code>detailed</code> a pôvodný text má viac než 50 znakov, pripojí ho za 40 pomlčiek a označenie <code>Original message:</code>. Údaje tak zostanú dostupné na neskoršie vyhľadávanie. Pri obídení alebo chybe AI sa môže odoslať len pôvodná šablóna."
+  },
+  "language": {
+    "heading": "Jazyk",
+    "intro": "Výber v rozhraní ponúka trinásť jazykov. Uloží <code>ai_language</code>, ktorý predvolený prompt používa v <em>\"translate alerts into '{'language'}'\"</em>. Zoznam:",
+    "list": "Angličtina (<code>en</code>), slovenčina (<code>sk</code>), španielčina (<code>es</code>), francúzština (<code>fr</code>), nemčina (<code>de</code>), portugalčina (<code>pt</code>), taliančina (<code>it</code>), ruština (<code>ru</code>), švédčina (<code>sv</code>), nórčina (<code>no</code>), japončina (<code>ja</code>), čínština (<code>zh</code>), holandčina (<code>nl</code>).",
+    "rulesIntro": "Dve dôležité pravidlá priamo z promptu:",
+    "rules": [
+      "<strong>Prekladať</strong>: označenia, opisy, stavové slová a jednotky, napríklad GB → Go vo francúzštine.",
+      "<strong>Neprekladať</strong>: názvy hostiteľov, adresy IP, cesty, VM/CT, názvy zariadení ako <code>/dev/sdX</code>, technické identifikátory. Tieto zostávajú doslovné bez ohľadu na jazyk."
+    ],
+    "customNote": "Vlastný prompt <strong>nepoužíva výber jazyka</strong>. Požadovaný jazyk výstupu uveďte priamo vo vlastnom prompte."
+  },
+  "templates": {
+    "heading": "Poznámka k šablónam",
+    "body1": "AI dostáva text vytvorený zo šablóny, nie surové údaje udalosti. Typy ako <code>vm_start</code>, <code>auth_fail</code> a <code>health_degraded</code> majú šablóny v <code>notification_templates.py</code>. AI prepisuje vhodné výstupy; <code>backup_complete</code> a <code>backup_fail</code> si ponechávajú deterministické správy bez AI.",
+    "body2": "Názvy hostiteľov a VMID vloží šablóna ešte pred prepisom; AI ich nemusí vymýšľať. Pri vypnutej AI sa odošle priamo text šablóny. Stránka <link>Oznámenia</link> opisuje celý postup odosielania a kroky pred touto vrstvou."
+  },
+  "privacy": {
+    "heading": "Súkromie a tok údajov",
+    "intro": "Pri zapnutom prepise AI posiela Monitor poskytovateľovi text oznámenia a doplnené kontextové bloky. Môžu obsahovať názvy hostiteľov, IP adresy, používateľské mená, cesty zariadení, riadky denníka a atribúty SMART dotknutého zariadenia. Či opustia hostiteľa, závisí od poskytovateľa:",
+    "headerProvider": "Poskytovateľ",
+    "headerDestination": "Miesto určenia údajov",
+    "rows": [
+      {
+        "provider": "Ollama",
+        "destination": "Lokálne modely bežia na nastavenom hostiteľovi Ollama. Ak je ním uzol Proxmox, požiadavky zostávajú na ňom. Cloudové modely Ollama posielajú požiadavky mimo hostiteľa aj cez lokálny server Ollama."
+      },
+      {
+        "provider": "OpenAI",
+        "destination": "Predvolene <code>api.openai.com</code> alebo nastavená vlastná základná URL. Platia pravidlá spracovania údajov skutočného prevádzkovateľa koncového bodu."
+      },
+      {
+        "provider": "Anthropic",
+        "destination": "<code>api.anthropic.com</code>."
+      },
+      {
+        "provider": "Google Gemini",
+        "destination": "<code>generativelanguage.googleapis.com</code>."
+      },
+      {
+        "provider": "Groq",
+        "destination": "<code>api.groq.com</code>."
+      },
+      {
+        "provider": "OpenRouter",
+        "destination": "<code>openrouter.ai</code> prepošle požiadavku poskytovateľovi modelu zvolenému v poli <code>model</code>. Dva kroky namiesto jedného."
+      }
+    ],
+    "calloutTitle": "Ak obsah udalostí nemôže opustiť sieť",
+    "calloutBody": "Použite lokálne hostovaný koncový bod s lokálnym modelom, napríklad Ollama alebo server kompatibilný s OpenAI, alebo AI vypnite. Cloudové modely Ollama nespracúvajú údaje lokálne. Odosielací modul neanonymizuje názvy hostiteľov ani IP adresy; prompt tvorí zo skutočného obsahu udalosti."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tail": " — postup odosielania, kanály, prepínače udalostí a integrácia webhooku PVE okolo tejto vrstvy."
+      },
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "– najväčší samostatný producent udalostí, ktoré AI nakoniec prepisuje, s vlastným trvaním potlačenia pre jednotlivé kategórie."
+      },
+      {
+        "label": "Architektúra",
+        "href": "/docs/monitor/architecture",
+        "tail": "— kde AI Enhancer zapadá do širšieho monitorovacieho procesu (je to modul, nie samostatná služba)."
+      }
+    ],
+    "communityLabel": "Komunitné prompty na GitHub",
+    "communityTail": " — Prechádzať, zdieľať, pýtať."
+  }
+}

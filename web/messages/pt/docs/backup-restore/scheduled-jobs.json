@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Trabalhos agendados — temporizadores, modo de anexação, retenção ProxMenux",
+    "description": "Trabalhos de backup programados do host ProxMenux. Dois modos de criação (horário systemd próprio ou anexar a um trabalho existente PVE vzdump), valores de retenção aplicados por trabalho via proxmox-backup-client/borg/local prune, layout de armazenamento sob /var/lib/proxmenux/backup-jobs, e o script de execução que produz arquivos idênticos ao fluxo interativo.",
+    "ogTitle": "Cópia de segurança ProxMenux — tarefas agendadas",
+    "ogDescription": "Backups de host agendados não vigiados com modo de anexação, retenção e os mesmos três destinos do fluxo interativo.",
+    "twitterTitle": "Trabalhos agendados | ProxMenux",
+    "twitterDescription": "Trabalhos de backup agendados sem acompanhamento com modo de anexação e retenção."
+  },
+  "header": {
+    "title": "Trabalhos agendados",
+    "description": "Trabalhos de backup da máquina não vigiados. Dois modelos de criação: um novo trabalho independente com sua própria programação, ou um trabalho anexado a uma tarefa existente PVE vzdump que herda o cronograma e retenção dessa tarefa. Ambos produzem arquivos idênticos ao fluxo interativo.",
+    "section": "Cópias de segurança e restauro"
+  },
+  "intro": {
+    "title": "Os dois modelos de trabalho programados",
+    "body": "Um trabalho programado pode ser criado seguindo um dos dois modelos:",
+    "modelsList": [
+      "<strong>Novo trabalho independente</strong> — ProxMenux define o horário de trabalho com seu próprio temporizador systemd, independente de qualquer outra tarefa no host. Compatível com os três destinos: Local, PBS e Borg.",
+      "<strong>Anexar a uma tarefa existente PVE vzdump</strong> — o trabalho não tem agendamento próprio; ele é executado automaticamente sempre que a tarefa pai PVE vzdump que já faz backup das VMs e LXCs nesta máquina dispara. Herda a programação e a retenção da tarefa dos pais. Compatível com Local e PBS (Borg não é suportado porque PVE não tem agendador nativo para Borg)."
+    ]
+  },
+  "attachBadge": {
+    "title": "Modo de anexação — recomendado quando já existe uma tarefa PVE vzdump",
+    "body": "Se já existe uma tarefa vzdump PVE para as VMs e LXCs do nó, anexar o backup do host faz com que ele seja executado depois do backup dos convidados, no <strong>mesmo ciclo de backup</strong>. Na restauração, as configurações dos convidados vêm do backup do host (em <code>/etc/pve</code>) e os discos vêm dos backups vzdump desse ciclo. Isso ajuda a coordenar a recuperação do nó inteiro, mas não é um snapshot atômico: alterações durante o ciclo podem deixar diferenças entre a configuração do host e o estado dos discos dos convidados."
+  },
+  "frequencyBadge": {
+    "title": "Frequência recomendada",
+    "body": "Para maximizar a compatibilidade entre um backup do host e sua restauração futura, faça backups frequentes. Quanto mais próxima a cópia estiver do estado atual do host, menos diferenças de configuração, pacotes e componentes a restauração precisará conciliar."
+  },
+  "modes": {
+    "heading": "Os dois modos",
+    "rows": [
+      {
+        "mode": "Novo trabalho agendado",
+        "backends": "Local, PBS, Borg",
+        "schedule": "Expressão <code>OnCalendar</code> própria (sintaxe de calendário systemd, por exemplo <code>daily</code> ou <code>Mon..Fri 03:00</code>).",
+        "retention": "Solicitado separadamente: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. Aplicado pelo script de execução após cada backup bem sucedido."
+      },
+      {
+        "mode": "Anexar a uma tarefa PVE vzdump",
+        "backends": "Local, PBS (Borg não tem agendador do lado PVE)",
+        "schedule": "Herdado da tarefa PVE principal. Nenhum temporizador systemd é instalado no lado do ProxMenux.",
+        "retention": "Herdada da configuração <code>prune-backups</code> da tarefa principal (mapeada um a um para as variáveis <code>KEEP_*</code> do script de execução via <code>hb_pve_prune_to_keep_env</code>)."
+      }
+    ]
+  },
+  "attachDetail": {
+    "heading": "Como funciona o modo de anexação",
+    "intro": "O PVE grava as tarefas <code>vzdump</code> em <code>/etc/pve/jobs.cfg</code>, com uma seção por tarefa indicando o armazenamento dos backups de VM e LXC. O modo de anexação exige um backend suportado pelo ProxMenux (Local ou PBS). O backup do host é executado pelo hook job-end após o fim da tarefa de backup dos convidados.",
+    "steps": [
+      {
+        "step": "1",
+        "detail": "Durante a criação do trabalho, ProxMenux lista tarefas PVE pai compatíveis via <code>hb_pve_list_vzdump_jobs_for_backend</code>. O utilizador escolhe uma."
+      },
+      {
+        "step": "2",
+        "detail": "O <code>.env</code> do trabalho é escrito com <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> e os valores herdados <code>KEEP_*</code>; nenhum temporizador systemd é criado."
+      },
+      {
+        "step": "3",
+        "detail": "<code>hb_install_vzdump_hook</code> registra um hook em <code>/etc/vzdump.conf</code>. Na fase job-end de qualquer tarefa vzdump, compara o <code>$STOREID</code> recebido com o <code>PVE_STORAGE</code> de cada trabalho anexado e habilitado, chamando o script de execução para as correspondências. A associação é feita pelo armazenamento, não pelo ID da tarefa principal selecionada."
+      },
+      {
+        "step": "4",
+        "detail": "O arquivo é salvo no mesmo armazenamento dos backups vzdump: <code>path/dump/</code> para Local ou o repositório PBS configurado na entrada de armazenamento PVE."
+      }
+    ],
+    "outroBody": "O modo de anexação não tem temporizador próprio. Desabilitar ou excluir a tarefa PVE principal selecionada interrompe esse disparo, mas outra tarefa vzdump usando o mesmo armazenamento ainda pode acionar o backup do host. Desabilite ou exclua o próprio trabalho ProxMenux para impedir isso. Ao ser desabilitada, a entrada permanece no disco e pode ser reativada ou anexada novamente."
+  },
+  "storageLayout": {
+    "heading": "Arquivos que compõem um trabalho",
+    "intro": "Cada trabalho agendado é totalmente descrito por três ou quatro arquivos no disco. Lendo-os dá a configuração completa do trabalho sem depender da interface.",
+    "rows": [
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.env",
+        "content": "Infraestrutura, ID de backup ou destino, agenda (novo modo) ou pai PVE (modo de Attach), sinalizador habilitado, valores de retenção <code>KEEP_*</code>, ponteiros de credenciais."
+      },
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
+        "content": "Um caminho absoluto por linha — a seleção congelada resolvido a partir do perfil no tempo de criação de emprego. A edição do ficheiro volta a executar o trabalho com a nova selecção no próximo temporizador."
+      },
+      {
+        "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
+        "content": "Apenas modo novo. O serviço invoca o <code>run_scheduled_backup.sh JOB_ID</code>. O timer agenda-o com <code>Persistent=true</code> (execuções perdidas recuperadas na próxima inicialização) e um pequeno <code>RandomizedDelaySec=120</code> para espalhar carga quando vários trabalhos compartilham a mesma expressão OnCalendar."
+      },
+      {
+        "path": "/etc/vzdump.conf script-hook",
+        "content": "Somente modo de anexação. Instalado uma vez por <code>hb_install_vzdump_hook</code>; compara <code>PVE_STORAGE</code> de cada trabalho anexado com <code>$STOREID</code>, passado pelo PVE ao hook."
+      }
+    ]
+  },
+  "runner": {
+    "heading": "O que um trabalho faz quando dispara",
+    "intro": "Cada trabalho — novo ou anexado — executa a mesma sequência de três passos:",
+    "steps": [
+      "<strong>Prepare o backup.</strong> Lê a configuração do trabalho (destino, perfil, caminhos) e monta a árvore de arquivos exatamente da mesma forma que o fluxo interativo faz. O resultado é o mesmo arquivo que um backup manual com essas configurações produziria.",
+      "<strong>Escreva o destino.</strong> Envia ou escreve o arquivo para o destino configurado — um arquivo <code>.tar.zst</code> local, um backup PBS, ou um arquivo Borg — usando exatamente as mesmas ferramentas e credenciais que um backup manual para o mesmo destino usaria.",
+      "<strong>Aplicar retenção.</strong> Remove backups antigos do destino, mantendo as contagens <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> configuradas no trabalho. A poda é realizada pelo próprio destino: PBS aplica sua própria retenção, Borg executa <code>borg prune</code>, e para ProxMenux Local apaga os arquivos que caem fora da janela <code>keep-last</code>."
+    ]
+  },
+  "management": {
+    "heading": "Gestão de tarefas",
+    "intro": "O menu de agendamento (Scripts TUI) e a aba Monitor Backups expõem as mesmas ações em qualquer trabalho.",
+    "rows": [
+      {
+        "action": "Executar agora",
+        "detail": "Chama imediatamente o script de execução, sem esperar o temporizador ou o hook vzdump. Útil para verificar a configuração sem aguardar a próxima execução agendada."
+      },
+      {
+        "action": "Activar / Desactivar",
+        "detail": "Novo modo: <code>systemctl enable/disable --now</code> o temporizador. Modo Anexar: altera o sinalizador <code>ENABLED</code> no env de trabalho — o script gancho honra-o na próxima execução PVE."
+      },
+      {
+        "action": "Editar",
+        "detail": "Abre novamente o destino, agenda, perfil e avisos de retenção e reescreve os arquivos de trabalho. Preserva a identificação do trabalho."
+      },
+      {
+        "action": "Excluir",
+        "detail": "Remove o env do trabalho, o arquivo de caminhos, o temporizador e o serviço systemd (modo novo) e desativa a associação ao hook (modo de anexação). Não altera os arquivos já existentes no destino."
+      },
+      {
+        "action": "Ver registo",
+        "detail": "Mostra em tempo real <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — um arquivo de log por execução. O executor também emite uma linha de status compacta para journald no serviço systemd."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Notificações",
+    "body": "Cada execução agendada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se houver canais de notificação configurados no Monitor, as tarefas não vigiadas comunicam os seus resultados da mesma forma que os backups manuais: um utilizador não precisa de consultar o registo para saber se uma tarefa foi bem-sucedida."
+  },
+  "whereNext": {
+    "heading": "Para onde ir a seguir",
+    "items": [
+      {
+        "label": "Criando backups",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": " — o fluxo interactivo que partilha a infra-estrutura com o agendador."
+      },
+      {
+        "label": "Destinos",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — a configuração por infra-estrutura utilizada tanto pelo fluxo interactivo como pelo agendador."
+      },
+      {
+        "label": "Restauração",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — o fluxo que utiliza os backups produzidos pelos trabalhos."
+      }
+    ]
+  }
+}

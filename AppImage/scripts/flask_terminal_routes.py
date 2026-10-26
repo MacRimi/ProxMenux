@@ -22,7 +22,7 @@ import json
 import tempfile
 import base64
 
-from jwt_middleware import require_auth
+from jwt_middleware import require_admin_scope
 
 # Allowed shape for interaction_id used as a file path component when writing
 # the response file. Bounded length, no separators, no path traversal. See
@@ -134,6 +134,72 @@ def _run_script_completion_hook(script_path, params, exit_code, duration_seconds
     except Exception as exc:
         print(f"[ProxMenux] script completion hook failed: {exc}", flush=True)
 
+
+@terminal_bp.route('/api/lxc-update-jobs', methods=['GET'])
+@require_admin_scope
+def lxc_update_jobs_status():
+    """Read-only recovery after login. This never creates or restarts a job."""
+    from lxc_update_jobs import list_jobs
+    return jsonify({'jobs': list_jobs()})
+
+
+@sock.route('/ws/lxc-update/<run_id>')
+def lxc_update_viewer(ws, run_id):
+    """An authenticated viewer, deliberately not the owner of the update."""
+    if not _ws_auth_check():
+        ws.close(reason=1008, message="Authentication required")
+        return
+    from lxc_update_jobs import get, start
+    try:
+        init = json.loads(ws.receive(timeout=10))
+        if not isinstance(init, dict) or type(init.get('resume')) is not bool:
+            raise ValueError("Invalid update job request")
+        offset = init.get('offset', 0)
+        if type(offset) is not int or offset < 0:
+            raise ValueError("Invalid update output cursor")
+        if init['resume']:
+            job = get(run_id, init.get('vmid'))
+        else:
+            job = start(run_id, init.get('script_path'), init.get('params'),
+                        _run_script_completion_hook)
+        revision = -1
+        while True:
+            view = job.read(offset)
+            if view['text'] or view['offset'] != offset:
+                ws.send(json.dumps({'type': 'job_output', 'text': view['text'],
+                                    'offset': view['offset'], 'truncated': view['truncated']}))
+                offset = view['offset']
+            if view['revision'] != revision:
+                revision = view['revision']
+                # A second viewer must also dismiss a question already
+                # answered elsewhere, or cleared when the job ends.
+                ws.send(json.dumps({'type': 'web_interaction',
+                                    'interaction': view['interaction']}))
+            if view['state'] == 'complete':
+                ws.send(json.dumps({'type': 'script_complete', 'exit_code': view['exit_code']}))
+                break
+            data = ws.receive(timeout=0.2)
+            if data is None:
+                continue
+            try:
+                message = json.loads(data)
+            except (TypeError, ValueError):
+                message = data
+            if isinstance(message, dict) and message.get('type') == 'ping':
+                ws.send('{"type":"pong"}')
+            else:
+                job.input(message if isinstance(message, dict) else data)
+    except (ValueError, KeyError, OSError, TypeError) as exc:
+        try:
+            ws.send(json.dumps({'type': 'job_unavailable', 'message': str(exc)}))
+        except Exception:
+            pass
+    except Exception:
+        # Viewer loss, including auth expiry/reload, has no job side effects.
+        pass
+    # No process termination, PTY close or completion callback here. The job's
+    # worker alone owns those, even while no viewer is authenticated/connected.
+
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
 def terminal_health():
     """Health check for terminal service"""
@@ -141,7 +207,7 @@ def terminal_health():
 
 
 @terminal_bp.route('/api/terminal/ticket', methods=['POST'])
-@require_auth
+@require_admin_scope
 def issue_terminal_ticket_route():
     """Issue a single-use, short-lived ticket for opening a terminal WebSocket.
 
@@ -199,7 +265,7 @@ def search_command():
                         'command': stripped
                     })
                     
-                    # Resetear descripciones para el siguiente comando
+                    # Reset the descriptions for the next command
                     current_description = []
             
             return jsonify({
@@ -647,9 +713,19 @@ def script_websocket(ws, session_id):
                     break
                 continue
             
+            # Keystrokes arrive as raw text. A lone number or word such as
+            # "4" or "true" is valid JSON too, so only an object is a
+            # control message.
             try:
                 msg = json.loads(data)
-                
+            except (json.JSONDecodeError, TypeError):
+                msg = None
+            if not isinstance(msg, dict):
+                try:
+                    os.write(master_fd, data.encode('utf-8'))
+                except OSError:
+                    break
+            else:
                 if msg.get('type') == 'interaction_response':
                     interaction_id = msg.get('id')
                     value = msg.get('value')
@@ -677,13 +753,6 @@ def script_websocket(ws, session_id):
                     rows = int(msg.get('rows', 30))
                     set_winsize(master_fd, rows, cols)
                     continue
-                    
-            except json.JSONDecodeError:
-                # Raw text input, send to script
-                try:
-                    os.write(master_fd, data.encode('utf-8'))
-                except OSError as e:
-                    break
             
             if script_process.poll() is not None:
                 # The output worker owns the final PTY drain and emits both

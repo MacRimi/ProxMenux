@@ -7,12 +7,12 @@
   },
   "header": {
     "title": "Customizable Post-Install Script",
-    "description": "Cherry-pick exactly which optimizations to apply to a Proxmox VE host. ProxMenux groups ~35 individual tools into 10 categories, each with its own checklist dialog. Same engine as Automated, but with full control over what gets applied.",
+    "description": "Cherry-pick exactly which optimizations to apply to a Proxmox VE host. ProxMenux groups ~35 individual tools into 10 categories in one checklist dialog. Same engine as Automated, but with full control over what gets applied.",
     "section": "Post-Install · Customizable"
   },
   "intro": {
     "title": "When to pick Customizable",
-    "body": "Choose this path when you already know which tweaks you want on the host — or which you definitely do not want. The script presents a checklist per category so you can pre-select, deselect or mix-and-match optimizations. Items can be applied again later, and reversible configuration changes are tracked for <link>Uninstall Optimizations</link>. Package upgrades are not presented as reversible."
+    "body": "Choose this path when you already know which tweaks you want on the host — or which you definitely do not want. The script presents a checklist grouped by category so you can pre-select, deselect or mix-and-match optimizations. Items can be applied again later, and reversible configuration changes are tracked for <link>Uninstall Optimizations</link>. Package upgrades are not presented as reversible."
   },
   "compare": {
     "heading": "How it compares to Automated",
@@ -20,7 +20,7 @@
   },
   "categoriesSection": {
     "heading": "The 10 categories",
-    "body": "The Customizable script groups optimizations into 10 categories. Each category has its own checklist dialog and its own documentation page — open one of the cards below for the per-option rationale, defaults and verification steps."
+    "body": "The Customizable script groups optimizations into 10 categories in one checklist dialog. Each category has its own documentation page — open one of the cards below for the per-option rationale, defaults and verification steps."
   },
   "categories": [
     {
@@ -33,7 +33,7 @@
     },
     {
       "name": "Virtualization",
-      "description": "Prepare the host for advanced virtualization. Auto-installs the guest agent on templates and enables IOMMU/VFIO for PCI passthrough of GPUs, controllers and TPUs."
+      "description": "Prepare the host for advanced virtualization. Installs a matching guest agent when Proxmox itself runs inside a supported VM, and enables IOMMU/VFIO for PCI passthrough of GPUs, controllers and TPUs."
     },
     {
       "name": "Network",
@@ -53,7 +53,7 @@
     },
     {
       "name": "Monitoring",
-      "description": "Integrate the host with OVH Real-Time Monitoring. Only appears when ProxMenux detects an OVH server."
+      "description": "Integrate the host with OVH Real-Time Monitoring. Installs RTM only when ProxMenux detects an OVH server; on other hosts the option makes no changes."
     },
     {
       "name": "Performance",
@@ -61,7 +61,7 @@
     },
     {
       "name": "Optional",
-      "description": "Niche pieces not every host needs: AMD CPU fixes, Fastfetch banner, Figurine 3D hostname, PVE Appliance Manager index refresh, Ceph repository, High Availability services and Log2RAM to reduce SSD wear."
+      "description": "Niche pieces not every host needs: AMD CPU fixes, Fastfetch banner, Figurine 3D hostname, PVE Appliance Manager index refresh, Ceph repository, High Availability services, Log2RAM to reduce SSD wear and a ZRAM swap profile."
     }
   ],
   "mixTip": {

@@ -29,6 +29,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 # Load shared functions
 SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
 if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
@@ -44,6 +48,8 @@ select_privileged_lxc
 
 
 install_nfs_client() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "install_nfs_client" "$FUNC_VERSION"
 
     if pct exec "$CTID" -- dpkg -s nfs-common &>/dev/null; then
         return 0
@@ -99,6 +105,9 @@ install_nfs_client() {
 
 
 discover_nfs_servers() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "discover_nfs_servers" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Mount NFS Client in LXC")"
     msg_info "$(translate "Scanning network for NFS servers...")"
@@ -110,7 +119,7 @@ discover_nfs_servers() {
     
 
     if ! which nmap >/dev/null 2>&1; then
-        apt-get install -y nmap &>/dev/null
+        pmx_install_pkg nmap
     fi
     
 
@@ -367,6 +376,7 @@ validate_export_exists() {
 
 
 mount_nfs_share() {
+    local FUNC_VERSION="1.0"
     # Step 0: Install NFS client first
     install_nfs_client || return
     
@@ -395,7 +405,7 @@ mount_nfs_share() {
     # Step 4: Configure mount options
     configure_mount_options || return
 
-
+    pmx_journal_context "mount_nfs_share" "$FUNC_VERSION"
     
     
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
@@ -432,9 +442,9 @@ mount_nfs_share() {
         
         # Add to fstab if permanent
         if [[ "$PERMANENT_MOUNT" == "true" ]]; then
-            pct exec "$CTID" -- sed -i "\|$MOUNT_POINT|d" /etc/fstab
+            pct exec "$CTID" -- sed --in-place "\|$MOUNT_POINT|d" /etc/fstab
             FSTAB_ENTRY="$NFS_PATH $MOUNT_POINT nfs ${MOUNT_OPTIONS},_netdev,x-systemd.automount,noauto 0 0"
-            pct exec "$CTID" -- bash -c "echo '$FSTAB_ENTRY' >> /etc/fstab"
+            pct exec "$CTID" -- bash -c "printf '%s\\n' '$FSTAB_ENTRY' | tee -a /etc/fstab >/dev/null"
             msg_ok "$(translate "Added to /etc/fstab for permanent mounting.")"
         fi
         
@@ -543,6 +553,9 @@ view_nfs_mounts() {
 
 
 unmount_nfs_share() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "unmount_nfs_share" "$FUNC_VERSION"
+
     # Get current NFS mounts
     MOUNTS=$(pct exec "$CTID" -- mount | grep -E "type nfs|:.*on.*nfs" | awk '{print $3}' | sort -u || true)
     FSTAB_MOUNTS=$(pct exec "$CTID" -- grep -E "nfs" /etc/fstab 2>/dev/null | grep -v "^#" | awk '{print $2}' | sort -u || true)
@@ -568,7 +581,7 @@ unmount_nfs_share() {
         msg_title "$(translate "Unmount NFS Share")"
         
         # Remove from fstab
-        pct exec "$CTID" -- sed -i "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
+        pct exec "$CTID" -- sed --in-place "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
         msg_ok "$(translate "Removed from /etc/fstab.")"
 
         # Actually unmount it now (the previous version only edited fstab,
@@ -598,6 +611,9 @@ unmount_nfs_share() {
 
 
 test_nfs_connectivity() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "test_nfs_connectivity" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Test NFS Connectivity")"
     
@@ -662,7 +678,7 @@ test_nfs_connectivity() {
                         if pct exec "$CTID" -- nc -z -w 2 "$server" 2049 2>/dev/null; then
                             echo -e "\033[1;92m$(translate "Open")\033[0m"
                         else
-                            echo -e "\033[1;91m$(translate "Closed")\033[0m"
+                            echo -e "\033[1;91m$(translate "Probe failed")\033[0m"
                         fi
                         
                         # Try to list exports

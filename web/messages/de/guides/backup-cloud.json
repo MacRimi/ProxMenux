@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Proxmox-Sicherungen in persönlichem Cloud-Speicher | ProxMenux",
+    "description": "Mit rclone einen persönlichen Cloud-Speicher wie Google Drive, Mega, Dropbox oder OneDrive als Verzeichnis auf dem Proxmox-VE-Host einhängen, als Sicherungsspeicher für vzdump registrieren und VMs sowie Container direkt in die Cloud sichern — ohne zusätzliches Sicherungsskript.",
+    "ogTitle": "Proxmox-Sicherungen in persönlichem Cloud-Speicher",
+    "ogDescription": "Mit rclone Cloud-Speicher auf dem Proxmox-VE-Host einhängen und als vzdump-Ziel für Sicherungen von VMs und Containern verwenden."
+  },
+  "header": {
+    "title": "Proxmox-Sicherungen in persönlichem Cloud-Speicher",
+    "description": "Mit rclone einen persönlichen Cloud-Speicher wie Google Drive, Mega, Dropbox oder OneDrive als Verzeichnis auf dem Proxmox-VE-Host einhängen, als Sicherungsspeicher für vzdump registrieren und VMs sowie Container direkt in die Cloud sichern — ohne zusätzliches Sicherungsskript.",
+    "section": "Leitfäden"
+  },
+  "intro": {
+    "pbsCalloutTitle": "Ziehen Sie zuerst Proxmox Backup Server in Betracht",
+    "pbsCalloutBody": "Auf einem zweiten Rechner, der die x86-64-Anforderungen erfüllt, bietet <pbsLink>Proxmox Backup Server</pbsLink> inkrementelle, deduplizierte Sicherungen mit optionaler clientseitiger Verschlüsselung. Er ist für VM-Sicherungen ausgelegt. Diese Anleitung beschreibt stattdessen das Einhängen von Cloud-Speicher wie Google Drive, Mega, OneDrive oder Dropbox als Sicherungsziel.",
+    "stepsTitle": "Was Sie einrichten",
+    "steps": [
+      "Ein Verzeichnis auf dem Proxmox-Host erstellen und als Speicher für vzdump-Sicherungen registrieren.",
+      "Installieren und konfigurieren Sie rclone für Ihren Cloud-Anbieter.",
+      "Montieren Sie den Cloud-Ordner in das Verzeichnis.",
+      "Den Cloud-Speicher bei jedem Systemstart mit einer systemd-Einheit einhängen."
+    ],
+    "vzdumpCalloutTitle": "Hinweis zu vzdump-Sicherungen in Proxmox",
+    "vzdumpCalloutBody": "Proxmox-vzdump-Archive sind <strong>Vollsicherungen, keine inkrementellen Sicherungen</strong>. Ihre tatsächliche Größe hängt von den enthaltenen Daten und der Komprimierung ab, nicht allein von der Kapazität des virtuellen Datenträgers. Belegt ein Archiv 30 GB, benötigen fünf aufbewahrte Archive ungefähr 150 GB. Legen Sie eine Aufbewahrungsrichtlinie fest, damit der Cloud-Speicher nicht vollläuft."
+  },
+  "createDir": {
+    "heading": "1. Verzeichnis auf dem Host erstellen und als Sicherungsspeicher registrieren",
+    "body": "Verbinden Sie sich per SSH mit dem Host oder öffnen Sie die Proxmox-Shell. Erstellen Sie unter <code>/mnt/</code> ein Verzeichnis als Einhängepunkt. Wählen Sie einen Namen, der den Anbieter erkennen lässt:",
+    "mkdirCode": "mkdir -p /mnt/gdrive",
+    "afterMkdir": "Im Proxmox Web UI: <strong>Datacenter → Storage → Add → Directory</strong>.",
+    "image1Alt": "Hinzufügen von neuem Speicher in Proxmox",
+    "configIntro": "Konfigurieren Sie es so:",
+    "configItems": [
+      "<strong>ID: </strong> <code>gdrive</code> (oder was auch immer Sie für den Verzeichnisnamen verwendet haben)",
+      "<strong>Verzeichnis:</strong> <code>/mnt/gdrive</code>",
+      "<strong>Inhalt:</strong> Wählen Sie <strong>VZDump-Sicherungsdatei</strong>."
+    ],
+    "image2Alt": "Konfiguration eines neuen Speichers in Proxmox",
+    "afterConfig": "Klicken Sie auf <strong>Hinzufügen</strong>:",
+    "image3Alt": "Neuer Speicher in Proxmox hinzugefügt",
+    "afterAdd": "Das Verzeichnis ist nun als Proxmox-Speicher registriert. Es ist noch leer, da der Cloud-Speicher bisher nicht eingehängt wurde."
+  },
+  "installRclone": {
+    "heading": "2. rclone installieren und konfigurieren",
+    "body": "<rcloneLink>rclone</rcloneLink> verbindet sich mit Cloud-Speicheranbietern. Installieren Sie es aus den Debian-Paketquellen:",
+    "installCode": "apt-get update\napt-get install -y rclone",
+    "newerCalloutTitle": "Wenn Sie ein neueres rclone benötigen",
+    "newerCalloutBody": "Wenn Sie eine neuere Version als die in Debian benötigen, verwenden Sie den offiziellen Installer:",
+    "newerCode": "curl https://rclone.org/install.sh | bash",
+    "tunnelHeading": "2.1 Browserbasierte Authentifizierung über SSH-Tunnel",
+    "tunnelBody": "Bei Anbietern mit Browser-Anmeldung fehlt auf dem Proxmox-Host meist ein Browser. Folgen Sie der <remoteSetupLink>rclone-Anleitung zur Ferneinrichtung</remoteSetupLink>: Nutzen Sie den Browser Ihres Laptops und leiten Sie dessen lokale Rückrufverbindung per SSH an rclone auf dem Host weiter.",
+    "tunnelFrom": "Auf Ihrem <strong>Laptop</strong>, wobei Sie <code>ip_proxmox</code> durch die Proxmox-IP ersetzen:",
+    "tunnelCode": "ssh -L localhost:53682:localhost:53682 root@ip_proxmox",
+    "tunnelAfter": "Diese SSH-Sitzung öffnet den lokalen Port 53682 auf Ihrem Laptop und leitet Verbindungen an denselben Port des Proxmox-Hosts weiter. Lassen Sie sie während der rclone-Konfiguration geöffnet.",
+    "runHeading": "2.2 rclone config ausführen",
+    "runBody": "Führen Sie in der gerade geöffneten SSH-Sitzung Folgendes aus:",
+    "runCode": "rclone config",
+    "runAfter": "Folgen Sie den Anweisungen zum Hinzufügen einer neuen Remote-Konfiguration. Die Antworten hängen vom Anbieter ab; beachten Sie die <providerDocsLink>rclone-Anbieterdokumentation</providerDocsLink> für Google Drive, Mega, Dropbox, OneDrive usw. Entscheidend ist die Frage zur Authentifizierung:",
+    "authPrompt": "Use web browser to automatically authenticate rclone with remote?\n * Say Y if the machine running rclone has a web browser you can use\n * Say N if running rclone on a (remote) machine without web browser access\nIf not sure try Y. If Y failed, try N.\ny) Yes\nn) No\ny/n> y",
+    "authAfter": "Antworten Sie mit <strong>Y</strong>. rclone zeigt eine lokale URL an. Öffnen Sie sie im <strong>Browser Ihres Laptops</strong>; der SSH-Tunnel leitet die Verbindung weiter. Erlauben Sie rclone den Zugriff beim Cloud-Anbieter, um die Konfiguration abzuschließen.",
+    "nameRemote": "Wählen Sie als Namen der Remote-Konfiguration einen zum Verzeichnis passenden Namen, etwa <code>gdrive</code>."
+  },
+  "mount": {
+    "heading": "3. Cloud-Ordner einhängen",
+    "body": "Erstellen Sie in Ihrem Cloud-Speicher einen Ordner für die Sicherungen, zum Beispiel <code>PBC</code> für Proxmox Backup Cloud.",
+    "mountIntro": "Hängen Sie ihn im Verzeichnis auf dem Host ein:",
+    "mountCode": "rclone mount gdrive:/PBC /mnt/gdrive --allow-other --allow-non-empty --vfs-cache-mode writes",
+    "mountItems": [
+      "<code>gdrive:/PBC</code> - der Ordner in Ihrer Cloud.",
+      "<code>/mnt/gdrive</code> - das Hostverzeichnis, das Sie als Datenspeicher registriert haben."
+    ],
+    "mountFootnote": "<strong>Dieser Befehl läuft im Vordergrund.</strong> Lassen Sie ihn zum Testen in einem Terminal laufen und erstellen Sie eine Sicherung. Für das automatische Einhängen bei jedem Systemstart richten Sie anschließend eine systemd-Einheit ein."
+  },
+  "systemd": {
+    "heading": "4. Automatisch bei jedem Systemstart einhängen (systemd)",
+    "body": "Eine systemd-Einheit bietet mehr Kontrolle als <code>crontab @reboot</code>: Sie kann den Netzwerkstart abwarten, bei Fehlern neu starten und Protokolle über <code>journalctl</code> bereitstellen.",
+    "createIntro": "Erstellen Sie die Unit-Datei:",
+    "createCode": "nano /etc/systemd/system/rclone-gdrive.service",
+    "pasteIntro": "Einfügen:",
+    "unitCode": "[Unit]\nDescription=rclone mount for Proxmox cloud backups\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=notify\nExecStart=/usr/bin/rclone mount \\\n    gdrive:/PBC /mnt/gdrive \\\n    --allow-other \\\n    --allow-non-empty \\\n    --vfs-cache-mode writes \\\n    --log-level INFO \\\n    --log-file /var/log/rclone-gdrive.log\nExecStop=/bin/fusermount -uz /mnt/gdrive\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target",
+    "adjust": "Passen Sie <code>gdrive:/PBC</code> und <code>/mnt/gdrive</code> an, falls Sie andere Namen verwenden. Speichern Sie, verlassen Sie den Editor mit <code>Ctrl+X</code> und aktivieren und starten Sie den Dienst:",
+    "enableCode": "systemctl daemon-reload\nsystemctl enable --now rclone-gdrive.service",
+    "verifyIntro": "Überprüfung:",
+    "verifyCode": "systemctl status rclone-gdrive.service\nmount | grep /mnt/gdrive",
+    "verifyAfter": "Die Unit fordert nach 10 Sekunden einen Neustart an, wenn der rclone-Prozess mit einem Fehler endet. Das repariert keine abgelaufenen Zugangsdaten und garantiert keine Behebung aller Netzwerk- oder Anbieterfehler. Prüfen Sie <code>/var/log/rclone-gdrive.log</code> und <code>journalctl -u rclone-gdrive.service -f</code>.",
+    "vfsCalloutTitle": "Warum --vfs-cache-mode writes?",
+    "vfsCalloutBody": "Mit Schreibcache landen Schreibzugriffe wie <code>fwrite</code> zunächst im lokalen Datenträgercache. rclone lädt eine Datei nach dem Schließen und Ablauf der Schreibverzögerung hoch. Halten Sie genügend lokalen Platz für laufende Sicherungen frei und prüfen Sie den abgeschlossenen Upload, bevor Sie die Cloud-Kopie als verfügbar ansehen."
+  },
+  "configureBackup": {
+    "heading": "5. Cloud-Speicher als Sicherungsziel einrichten",
+    "body": "Wählen Sie in Proxmox bei einer geplanten oder manuell gestarteten Sicherung den registrierten Speicher als <strong>Ziel</strong>:",
+    "image5Alt": "Backup-Ziel in Proxmox auswählen",
+    "after": "Warten Sie nach Abschluss von vzdump auf das Ende des rclone-Uploads im Hintergrund und prüfen Sie das Archiv in der Oberfläche des Cloud-Anbieters:",
+    "image6Alt": "Backup-Datei im Cloud Storage"
+  },
+  "retention": {
+    "heading": "6. Aufbewahrung — Cloud-Speicherplatz im Blick behalten",
+    "body": "Proxmox-vzdump-Archive sind <strong>Vollsicherungen, keine inkrementellen Sicherungen</strong>. Ihre tatsächliche Größe hängt von den enthaltenen Daten und der Komprimierung ab, nicht allein von der Kapazität des virtuellen Datenträgers. Belegt ein Archiv 30 GB, benötigen fünf aufbewahrte Archive ungefähr 150 GB. Legen Sie eine Aufbewahrungsrichtlinie fest, damit der Cloud-Speicher nicht vollläuft.",
+    "uiPath": "In der Proxmox-Oberfläche: <strong>Rechenzentrum → Sicherung → [Ihr Auftrag] → Aufbewahrung</strong>:",
+    "image7Alt": "Aufbewahrungseinstellungen für Sicherungen in Proxmox",
+    "starterIntro": "Mögliche Ausgangswerte für eine Heim- oder Testumgebung:",
+    "starterItems": [
+      "Die letzten 5 täglichen Sicherungen aufbewahren",
+      "Die letzten 4 wöchentlichen Sicherungen aufbewahren",
+      "Die letzten 6 monatlichen Sicherungen aufbewahren"
+    ],
+    "adjust": "Passen Sie die Werte an Ihr Cloud-Kontingent und die Änderungshäufigkeit der VMs an."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "items": [
+      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> Das Verzeichnis ist bereits eingehängt, möglicherweise durch eine andere rclone-Instanz. Prüfen Sie, dass keine Sicherung läuft, bevor Sie den alten Mount mit <code>fusermount -uz /mnt/gdrive</code> entfernen. Starten Sie danach die systemd-Einheit neu.",
+      "<strong>Die Sicherung ist sehr langsam:</strong> Prüfen Sie <code>--vfs-cache-mode writes</code> in der Zeile <code>ExecStart</code>, die Leistung des lokalen Caches, die Upload-Bandbreite und Anbieterlimits. Der Upload kann nach Abschluss von vzdump weiterlaufen.",
+      "<strong>Die Sicherung meldet No space left on device:</strong> Prüfen Sie lokalen Cache-Platz und Cloud-Kontingent. Der Cache liegt meist unter <code>~/.cache/rclone/</code>. Wählen Sie bei Platzmangel etwa <code>--cache-dir /var/cache/rclone</code> auf einem Dateisystem mit genügend Platz. Ein anderer Pfad auf demselben vollen Dateisystem hilft nicht.",
+      "<strong>Das rclone-Anmeldetoken ist abgelaufen:</strong> Verbinden Sie sich erneut per SSH mit dem Tunnel (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) und führen Sie <code>rclone config reconnect gdrive:</code> aus, um die Anmeldung zu erneuern.",
+      "<strong>Sicherungen sind in der Cloud vorhanden, lassen sich aber nicht korrekt wiederherstellen:</strong> Nutzen Sie Cloud-Speicher nicht als <strong>einziges</strong> Sicherungsziel. Ergänzen Sie ihn durch lokales PBS oder vzdump auf einem anderen Datenträger."
+    ]
+  }
+}

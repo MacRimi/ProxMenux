@@ -1,0 +1,168 @@
+{
+  "meta": {
+    "title": "Atualização do sistema Proxmox | Documentação ProxMenux",
+    "description": "Atualiza os pacotes dentro da versão principal atual do Proxmox com apt-get update e apt full-upgrade -y. Verifica o espaço em disco e os repositórios configurados, tenta recuperar chaves GPG, verifica e repara cabeçalhos PV LVM antigos, recompila os controladores DKMS geridos quando necessário, executa autoremove/autoclean e propõe reiniciar quando é preciso.",
+    "ogTitle": "Atualização do sistema Proxmox | Documentação ProxMenux",
+    "ogDescription": "apt full-upgrade com verificação de repositórios, autoremove/autoclean e pedido de reinício quando necessário."
+  },
+  "header": {
+    "title": "Atualização do sistema Proxmox",
+    "description": "Chama um único script de execução (<code>update-pve-safe.sh</code>) que deteta a versão principal do Proxmox. Os repositórios são lidos através da API Proxmox e preservados; um host sem subscrição que use apenas Enterprise tem de confirmar a mudança para no-subscription. O script atualiza pacotes e recompila os controladores DKMS geridos pelo ProxMenux para um kernel preparado para o próximo arranque. O script principal propõe reiniciar se existir o marcador de sistema ou se o kernel instalado mais recente diferir do que está em execução. Também pode ser iniciado em <em>Update Now</em>, no cabeçalho do ProxMenux Monitor, quando há atualizações pendentes.",
+    "section": "Utilitários"
+  },
+  "calloutWhat": {
+    "title": "O que isto faz",
+    "body": "Leva o host para o nível de patch mais recente de sua versão principal atual. <strong>não</strong> atualiza entre versões principais — para PVE 8 → PVE 9 consulte <link>Atualizar PVE 8 para PVE 9</link>."
+  },
+  "official": {
+    "heading": "A recomendação oficial da Proxmox",
+    "intro": "A própria orientação de atualização do Proxmox para um host em execução (na mesma versão principal) deve ser executada:",
+    "code": "apt update && apt full-upgrade -y",
+    "outro": "Esta linha é o comando oficial nas versões atuais do Proxmox. É igualmente necessário garantir que os repositórios estão corretos, que os adequados estão ativos e que o host fica num estado coerente após a atualização."
+  },
+  "onTop": {
+    "heading": "O que o ProxMenux acrescenta: verificado no script",
+    "intro": "Usa <strong>a mesma operação apt full-upgrade</strong>, com verificação dos repositórios, recompilação DKMS e limpeza final. Os passos seguintes correspondem a <code>scripts/utilities/proxmox_update.sh</code> e ao seu único script de execução <code>scripts/global/update-pve-safe.sh</code>:",
+    "items": [
+      "<strong>Deteta a versão principal do PVE</strong> no script de execução (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>). Um único script trata do PVE 8 e do PVE 9; os repositórios são preservados, salvo se um host sem subscrição aceitar a mudança proposta.",
+      "<strong>Mantém os repositórios configurados.</strong> <code>ensure_repositories</code> lê os repositórios e o estado da subscrição através da API Proxmox. Com uma subscrição ativa ou um repositório no-subscription ou test já utilizado, nada muda. Um host sem subscrição ativa que use apenas Enterprise tem de confirmar a mudança para no-subscription. Se recusar, a atualização termina sem alterar as fontes.",
+      "<strong>Executa a atualização sem interação</strong> com <code>DEBIAN_FRONTEND=noninteractive</code> e <code>--force-confdef --force-confold</code>. Para decisões sobre ficheiros de configuração dpkg, aceita a ação predefinida quando existe; caso contrário, mantém o ficheiro atual.",
+      "<strong>Não impõe utilitários opcionais.</strong> O script não força a instalação de <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> ou pacotes semelhantes. Se a instalação Proxmox optou por dispensar algum deles, essa escolha mantém-se. Os pacotes em falta são indicados nos processos de instalação superiores, não na atualização.",
+      "<strong>Verificação e reparação de metadados LVM.</strong> Deteta cabeçalhos PV antigos e executa vgck --updatemetadata e vgchange -ay nos grupos de volumes afetados. Pode alterar metadados LVM; não é uma verificação que apenas emite avisos.",
+      "<strong>Limpa depois:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
+      "<strong>Recompilação DKMS antes do pedido de reinício.</strong> O script de execução chama <code>pmx_rebuild_dkms_after_kernel</code> quando está preparado um kernel instalado mais recente. O script principal verifica <code>/var/run/reboot-required</code> e usa <code>dpkg-query</code> para comparar o kernel indicado por <code>uname -r</code> com o pacote <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code> instalado mais recente. O marcador pode não existir em hosts sem <code>needrestart</code>; a comparação dos kernels continua a funcionar."
+    ]
+  },
+  "calloutOneSentence": {
+    "title": "Em uma frase",
+    "body": "Atualiza os pacotes do host, preserva os repositórios salvo uma mudança aceite, verifica os metadados LVM, recompila os controladores DKMS geridos, limpa com autoremove/autoclean e propõe reiniciar quando necessário."
+  },
+  "confirm": {
+    "heading": "Janela de confirmação",
+    "intro": "A seleção da opção abre um resumo das ações previstas e exige uma confirmação explícita:",
+    "imageAlt": "Janela de confirmação da atualização Proxmox com verificação dos repositórios, atualização dos pacotes e limpeza"
+  },
+  "routes": {
+    "heading": "Como o script principal delega a execução",
+    "nodes": {
+      "source": {
+        "label": "proxmox_update.sh",
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
+      },
+      "bridge": {
+        "label": "Um único script de execução",
+        "detail": "update-pve-safe.sh\n(detecta PVE 8 / 9\ninternamente)"
+      },
+      "target": {
+        "label": "Após a atualização",
+        "detail": "apt-get autoremove\napt-get autoclean\nPedido de reinício se necessário"
+      }
+    }
+  },
+  "worker": {
+    "heading": "O que faz o script de execução",
+    "intro": "Um único script (<code>scripts/global/update-pve-safe.sh</code>) trata do PVE 8 (<code>bookworm</code>) e do PVE 9 (<code>trixie</code>). Deteta a versão principal e verifica os repositórios existentes sem reescrever as fontes base do Debian. As etapas são:",
+    "items": [
+      "<strong>Verificações prévias.</strong> Verifica se há pelo menos ~1 GB livre em <code>/var/cache/apt/archives</code>. Caso contrário, termina de imediato com uma mensagem clara para evitar falhar a meio de uma operação apt.",
+      "<strong>Verificação dos repositórios.</strong> <code>ensure_repositories</code> lê os repositórios e o estado da subscrição. Com um repositório Proxmox utilizável, nada muda. Num host sem subscrição ativa que use apenas Enterprise, pede confirmação antes de passar a no-subscription e interrompe a atualização em caso de recusa.",
+      "<strong>apt update com recuperação automática GPG.</strong> Perante <code>NO_PUBKEY</code> num repositório, incluindo de terceiros, o script importa a chave em falta e tenta novamente antes de apresentar uma falha.",
+      "<strong>Atualizações pendentes e de segurança.</strong> Indica quantos pacotes vão mudar e quantos provêm da suite de segurança, para apresentar números concretos na janela de confirmação.",
+      "<strong>Janela de confirmação.</strong> Depois de atualizar as listas de pacotes, o script exige um sim explícito antes de atualizar os pacotes.",
+      "<strong>apt full-upgrade.</strong> Usa <code>DEBIAN_FRONTEND=noninteractive</code> e <code>--force-confdef --force-confold</code>. O dpkg segue a ação predefinida para os ficheiros de configuração quando existe; caso contrário, conserva o ficheiro atual.",
+      "<strong>Verificação LVM.</strong> <code>lvm_repair_check</code> atualiza os metadados dos grupos de volumes quando discos atribuídos diretamente a VMs convidadas (DSM, TrueNAS ou appliances de armazenamento) regressam com cabeçalhos PV antigos.",
+      "<strong>Recompilação DKMS dos controladores geridos pelo ProxMenux.</strong> Quando há um kernel novo preparado, <code>pmx_rebuild_dkms_after_kernel</code> lê os controladores instalados pelo ProxMenux em <code>components_status.json</code> (atualmente <code>nvidia_driver</code> → módulo <code>nvidia</code> e <code>coral_driver</code> → módulo <code>gasket</code>), instala os cabeçalhos correspondentes (<code>proxmox-headers-&lt;newkver&gt;</code> quando disponível; caso contrário, <code>pve-headers-&lt;newkver&gt;</code>) e executa <code>dkms autoinstall -k &lt;newkver&gt;</code>. Se <code>dkms status</code> não mostrar os módulos compilados para o novo kernel, volta a executar cada instalador com <code>--auto-reinstall</code>. As falhas são registadas sem interromper a atualização, que chega na mesma ao pedido de reinício.",
+      "<strong>Limpeza final.</strong> <code>apt-get autoremove</code> + <code>apt-get autoclean</code> antes de devolver o controlo ao script principal."
+    ]
+  },
+  "post": {
+    "heading": "Limpeza e reinício após a atualização",
+    "intro": "Quando o script de execução termina, o script principal executa:",
+    "code": "apt-get autoremove -y    # drop unused dependencies pulled in by old packages\napt-get autoclean        # drop downloaded .deb files no longer in the index",
+    "afterCode": "O script principal também verifica se é preciso reiniciar. Qualquer um destes sinais faz aparecer o pedido:",
+    "items": [
+      "Existe <code>/var/run/reboot-required</code>: um pacote ou uma ferramenta do sistema marcou a necessidade de reiniciar o host.",
+      "O pacote de kernel Proxmox instalado mais recente difere do kernel em execução, segundo <code>dpkg-query</code> e uname -r."
+    ],
+    "outro": "Se alguma condição for verdadeira, uma janela whiptail pergunta <em>«Algumas alterações exigem um reinício. Pretende reiniciar agora?»</em>. Recuse para continuar com o kernel atual até reiniciar manualmente, por exemplo numa janela de manutenção planeada."
+  },
+  "end": {
+    "heading": "O que vês no fim",
+    "intro": "Quando o script de execução termina, o terminal apresenta o resultado da limpeza e, se necessário, o pedido de reinício:",
+    "imageAlt": "Resumo de conclusão da atualização do sistema Proxmox com saída de limpeza e prompt de reinicialização"
+  },
+  "calloutDeclineReboot": {
+    "title": "Adie o reinício apenas por um motivo concreto",
+    "body": "Instalar um novo pacote <code>proxmox-kernel-*</code> não substitui o kernel em execução até reiniciar. O novo kernel e os módulos correspondentes ficam ativos no próximo arranque. Planeie o reinício para uma janela de manutenção adequada e reveja antes os avisos de compilação DKMS."
+  },
+  "noSub": {
+    "heading": "Como o script trata o repositório Enterprise",
+    "intro": "O Proxmox ativa o repositório Enterprise por predefinição. Sem subscrição ativa, esse repositório devolve 401 em <code>apt-get update</code>. O script só altera os repositórios nesse caso e após confirmação, através da API Proxmox usada por <em>Node → Updates → Repositories</em>. Estes são os casos possíveis:",
+    "items": [
+      "Com uma <strong>subscrição ativa</strong>, os repositórios mantêm-se e o Enterprise fornece as atualizações.",
+      "Com o <strong>repositório no-subscription ou test já ativo</strong>, os repositórios mantêm-se, independentemente de outras fontes configuradas.",
+      "<strong>Sem subscrição ativa e apenas com o repositório Enterprise</strong>, uma janela propõe a mudança. Aceitar desativa Enterprise, ativa no-subscription e atualiza as listas de pacotes. A mudança é registada na vista <em>Changes</em> de Audit & Report. Recusar termina a atualização sem alterar as fontes.",
+      "As <strong>fontes Ceph Enterprise</strong> existentes são desativadas na mesma mudança, sem escolher outro canal Ceph. Um host que use Ceph configura o respetivo canal separadamente.",
+      "Se <strong>não houver um terminal para pedir confirmação</strong>, nenhuma fonte é alterada e a atualização termina com uma mensagem que remete para <em>Node → Updates → Repositories</em>."
+    ],
+    "outro": "As fontes Debian e todos os outros ficheiros de repositórios nunca são alterados por este processo. Uma entrada que misture Enterprise com outros componentes não é mudada: a atualização termina e pede para separar a entrada na vista de repositórios Proxmox."
+  },
+  "cluster": {
+    "heading": "Considerações para clusters",
+    "calloutTitle": "Em clusters: atualizar um nó de cada vez",
+    "calloutBody": "Num cluster Proxmox, execute esta opção em <strong>um nó de cada vez</strong> e espere pelo fim do reinício antes de passar ao seguinte. Migre primeiro os sistemas convidados para fora do nó, para evitar interrupções de serviço no cluster. Versões secundárias diferentes, como 8.4.1 e 8.4.5, podem coexistir durante algumas horas; kernels em execução diferentes podem causar comportamentos inesperados em sistemas convidados geridos por HA."
+  },
+  "doesnt": {
+    "heading": "O que não faz",
+    "items": [
+      "<strong>Atualização de versão principal.</strong> A passagem 8 → 9 é uma operação separada; consulte <link>Atualizar do PVE 8 para o PVE 9</link>.",
+      "<strong>Backup.</strong> Sem instantâneos, sem retrocesso. As operações Apt não são transacionais. Combine com sua disciplina de backup normal (PBS, vzdump, ZFS instantâneos).",
+      "<strong>Atualizações de contentores / VMs.</strong> Só o host é atualizado; os sistemas convidados mantêm-se.",
+      "<strong>Gravação dedicada de firmware.</strong> Esta ferramenta não serve para gravar BIOS ou firmware de dispositivos. Os pacotes de firmware ou microcódigo CPU já instalados podem receber atualizações através de apt."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Resolução de Problemas",
+    "items": [
+      {
+        "title": "apt update falha com 401 Unauthorized",
+        "body": "O repositório Enterprise está ativo, mas o host não tem subscrição ativa. Antes de <code>apt-get update</code>, o script propõe passar a no-subscription. Se recusou, repita a atualização e aceite, ou desative Enterprise em <em>Node → Updates → Repositories</em> e ative no-subscription."
+      },
+      {
+        "title": "dist-upgrade trava em \"Configuring grub-pc\"",
+        "body": "Se aparecer uma pergunta interativa do GRUB, pede os dispositivos onde instalar o gestor de arranque. A opção <code>--force-confold</code> aplica-se aos ficheiros de configuração, não à escolha dos dispositivos. Use <kbd>Tab</kbd> + <kbd>Space</kbd> para selecionar os discos de arranque adequados e depois OK. Pode configurar esta escolha antes com <code>dpkg-reconfigure grub-pc</code>."
+      },
+      {
+        "title": "O Kernel atualizou, mas faltam os novos módulos para um driver fora da árvore",
+        "body": "Para os controladores geridos (<code>nvidia_driver</code> e <code>coral_driver</code>), a função executa <code>dkms autoinstall -k &lt;newkver&gt;</code> e pode repetir os instaladores com <code>--auto-reinstall</code>. Verifique o resultado com <code>dkms status</code>. O comando autoinstall também pode recompilar outros módulos DKMS registados; os instaladores alternativos limitam-se às entradas geridas de <code>components_status.json</code>. Inspecione os módulos de terceiros ainda em falta e recompile-os se necessário com <code>dkms autoinstall</code>."
+      },
+      {
+        "title": "O prompt de reinicialização não apareceu, mas tenho certeza que o kernel mudou",
+        "body": "Os sinais são alternativos: <code>/var/run/reboot-required</code> ou uma diferença entre o kernel em execução e o kernel Proxmox instalado mais recente. O script principal não analisa entradas linux-image no registo apt. Verifique a versão em execução com <code>uname -r</code> e os pacotes de kernel instalados com <code>dpkg-query</code>. Planeie o reinício necessário ou execute <code>shutdown -r now</code> quando estiver pronto."
+      }
+    ]
+  },
+  "files": {
+    "heading": "Ficheiros envolvidos",
+    "code": "scripts/utilities/proxmox_update.sh              # this script (wrapper)\nscripts/global/update-pve-safe.sh                # single safe worker (PVE 8 + PVE 9)\nscripts/global/repository-functions.sh           # ensure_repositories\nscripts/global/repository_policy.py              # reads and switches repositories through the Proxmox API\nscripts/global/utils-install-functions.sh        # pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # ProxMenux-managed DKMS driver registry\n/etc/apt/sources.list.d/proxmox.sources          # no-subscription source, written by Proxmox when the switch is accepted\n/var/run/reboot-required                         # read to decide on reboot prompt\n# Reboot fallback when needrestart isn't installed:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Atualize PVE 8 para PVE 9",
+        "tail": " — para a actualização da versão principal (ferramenta diferente, modelo de segurança diferente)."
+      },
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Instalador de utilitários de sistema",
+        "tail": " — para instalar ferramentas CLI úteis durante as atualizações (htop / btop / ncdu)."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Visão geral dos utilitários",
+        "tail": " — voltar ao panorama da secção."
+      }
+    ]
+  }
+}

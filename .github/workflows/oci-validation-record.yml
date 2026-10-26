@@ -1,0 +1,86 @@
+name: Record OCI validation
+
+# When an OCI validation report is validated, the report's author is recorded
+# in oci/catalog/verification.json on develop and oci/VALIDATION.md is
+# regenerated. A report is validated by the "validated" label, which only users
+# with write access can add, or by a /validated comment from a user listed in
+# .github/oci-validation-reviewers, checked by the script. The issue body and
+# the comment are read from the event file, never interpolated into a shell.
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: oci-validation-record
+  cancel-in-progress: false
+
+jobs:
+  record:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'oci-validation') && (
+        (github.event_name == 'issues' && github.event.label.name == 'validated') ||
+        (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+         startsWith(github.event.comment.body, '/validated')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Record the report
+        id: record
+        run: |
+          set +e
+          python3 .github/scripts/oci_validation.py record --event "$GITHUB_EVENT_PATH" --message "$RUNNER_TEMP/reply.md"
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - name: Commit + push
+        if: steps.record.outputs.code == '0'
+        env:
+          APP: ${{ steps.record.outputs.app }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name  "ProxMenuxBot"
+          git config user.email "bot@proxmenux.local"
+          git add oci/catalog/verification.json oci/VALIDATION.md
+          git commit -m "chore(oci): record the validation of $APP (#$NUMBER)"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin develop
+            if git rebase origin/develop && git push origin HEAD:develop; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $(( attempt * 3 ))
+          done
+          echo "push failed after 5 attempts"
+          exit 1
+      - name: Reply and close
+        if: steps.record.outputs.code == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/reply.md"
+          gh issue close "$NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+      - name: Explain why it was not recorded
+        if: steps.record.outputs.code == '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/reply.md"
+          if [ "$GITHUB_EVENT_NAME" = issues ]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels/validated" --silent
+          fi
+      - name: Fail on an unexpected error
+        if: steps.record.outputs.code != '0' && steps.record.outputs.code != '2'
+        run: exit 1

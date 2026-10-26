@@ -1,0 +1,12 @@
+{
+  "environment_overrides": {
+    "CODE": {
+      "required": false,
+      "prompt": "Access password of the web interface (optional)"
+    },
+    "PROXY_URL": {
+      "required": false,
+      "prompt": "Proxy address to reach the API (optional)"
+    }
+  }
+}

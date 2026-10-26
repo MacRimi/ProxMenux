@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard: VMs & LXCs tab | ProxMenux Documentation",
-    "description": "The VMs & LXCs tab inventories every guest on the host with live CPU / memory / disk usage. Per-guest drill-in shows configuration, resources, backups, full guest logs, notes, and Start / Shutdown / Reboot / Stop controls."
+    "description": "The VMs & LXCs tab inventories every guest on the host with live CPU / memory / disk usage. Per-guest details show configuration, resources, backups, the console log of OCI containers, notes, and Start / Shutdown / Reboot / Force Stop controls."
   },
   "header": {
     "title": "Dashboard: VMs & LXCs tab",
-    "description": "The full inventory of guests on the node. Four headline metrics across the top, a sortable list of every VM and LXC below, and a drill-in per guest with config, resources, backups, logs and the four lifecycle controls (Start / Shutdown / Reboot / Stop).",
+    "description": "The full inventory of guests on the node. Four headline metrics across the top, a sortable list of every VM and LXC below, and a drill-in per guest with config, resources, backups, the console log of OCI containers and the four lifecycle controls (Start / Shutdown / Reboot / Force Stop).",
     "section": "ProxMenux Monitor · Dashboard"
   },
   "intro": {
     "title": "The control surface for guests",
-    "body": "Other tabs are read-only; this is the one you act from. Anything that changes guest state goes through <code>POST /api/vms/&lt;vmid&gt;/control</code> with an explicit confirmation and the response is reflected back in the guest's row. There is no force-shutdown without going through the dedicated Stop button."
+    "body": "Use this tab to control guest lifecycles. Lifecycle actions go through <code>POST /api/vms/&lt;vmid&gt;/control</code>; Reboot and Force Stop ask you to type the VMID to confirm, and the response is reflected back in the guest’s row. Force shutdown requires the dedicated Force Stop button."
   },
   "topRow": {
     "heading": "Top row: four stat cards",
@@ -52,7 +52,7 @@
   },
   "drillIn": {
     "heading": "Per-guest drill-in modal",
-    "intro": "The modal opens with the guest name, VMID, type, state and uptime. Its navigation adapts to the guest: <strong>Status</strong>, <strong>App</strong> and <strong>Updates</strong> for LXC application management, <strong>Mounts</strong> when an LXC has mount points, plus <strong>Backups</strong> and <strong>Firewall</strong>. The fixed action bar keeps the lifecycle controls and the LXC terminal available from every tab.",
+    "intro": "The modal opens with the guest name, VMID, type, state and uptime. Its navigation adapts to the guest: <strong>Status</strong>, <strong>App</strong> and <strong>Updates</strong> for LXC application management, <strong>Mounts</strong> when an LXC has mount points, <strong>Logs</strong> for containers installed by OCI manager Apps, plus <strong>Backups</strong> and <strong>Firewall</strong>. The fixed action bar keeps the lifecycle controls and the LXC terminal available from every tab.",
     "statusTitle": "Tab 1 — Status",
     "statusImageAlt": "Per-guest drill-in modal — Status tab with CPU / Memory / Disk live cards, Disk and Network I/O totals, the OS distro logo, and the Resources / IP Addresses block",
     "statusImageCaption": "Status tab — live CPU / Memory / Disk with progress bars at the top, accumulated I/O totals (disk read/write, network down/up) below, then the static Resources block with Notes and + Info expansions and the IP Addresses pill list.",
@@ -88,7 +88,7 @@
     "updatesLinkLabel": "dedicated Updates page",
     "updatesLinkTail": "for integrated and custom updaters, Docker recreation, bulk selection, safety options and scheduling.",
     "mountsTitle": "Tab 4 — Mounts (LXC only, when present)",
-    "mountsImageAlt": "LXC drill-in modal — Mounts tab listing every mount point the container is using: PVE volumes, host binds, binds from PVE storage and ad-hoc NFS/CIFS mounts the operator mounted from inside the CT. Each card carries a type badge, capacity bar, used/total bytes, mount options, and a colour-coded state dot (green healthy, amber readonly/divergent, red stale)",
+    "mountsImageAlt": "LXC drill-in modal — Mounts tab listing every mount point the container is using: PVE volumes, host binds, binds from PVE storage and ad-hoc NFS/CIFS mounts the user mounted from inside the CT. Each card carries a type badge, capacity bar, used/total bytes, mount options, and a colour-coded state dot (green healthy, amber readonly/divergent, red stale)",
     "mountsImageCaption": "Mounts tab — only renders for LXC containers, and only when at least one mount point or ad-hoc remote mount is present. A CT without mounts gets no tab.",
     "mountsIntro": "Proxmox's own UI shows the mount-point entries defined in the container config (<code>mpX</code>) but stops there — anything you mount from inside the CT later (<code>mount.cifs</code>, NFS via <code>autofs</code>, …) is invisible. This tab merges <strong>both views</strong>: the configured mounts <strong>and</strong> the runtime mounts ProxMenux probes from inside the container, with a per-mount health status and a capacity bar wherever the backend can resolve one.",
     "mountTypesTitle": "Types of mount detected",
@@ -106,7 +106,9 @@
     ],
     "mountsCalloutTitle": "What this gives you over the native UI",
     "mountsCalloutBody": "A truthful, capacity-aware view of every place the container reads or writes. NFS or CIFS shares mounted from inside the CT — invisible to the Proxmox web UI — appear here with the same look and the same health probe as any configured mount point. Stale remote mounts and zombie binds are flagged before they bite during a backup.",
-    "backupsTitle": "Tab 5 — Backups",
+    "logsTitle": "Tab 5 — Logs (OCI containers only)",
+    "logsBody": "Appears only for containers installed by OCI manager Apps. It shows the console output of the main process of the image, kept on the host in <code>/var/log/proxmenux/oci/VMID.console.log</code>: the last 100, 500 or 1000 lines, followed live while the container runs, with a filter and a download. It reads the file on every open, so it also works with the container stopped. The details are in <ociLink>OCI containers in ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Tab 6 — Backups",
     "backupsImageAlt": "Per-guest drill-in modal — Backups tab with the available backups list, destination tag, sizes and the Create Backup button",
     "backupsImageCaption": "Backups tab — every backup stored on configured Proxmox storages for this guest, sorted newest first. The tab header carries the count badge.",
     "backupsIntro": "Lists every backup stored across configured Proxmox storages for this guest, sorted newest first. The tab title carries a count badge so you see at a glance whether the guest is backed up. Per row:",
@@ -116,7 +118,7 @@
       "<strong>Size</strong> — final on-disk size of the backup."
     ],
     "backupsOutro": "The <strong>+ Create Backup</strong> button at the top right kicks off a new run on the storage marked as \"Backup target\" in the Proxmox storage config. Restore lives in the Proxmox web UI — the Monitor exposes the \"is this guest backed up recently?\" view, not the recovery flow.",
-    "firewallTitle": "Tab 6 — Firewall",
+    "firewallTitle": "Tab 7 — Firewall",
     "firewallIntro": "Reads the per-guest Proxmox firewall log straight from the host (no extra service, no polling). The tab is always present in the navigation strip; the panel decides what to render depending on whether the firewall is enabled for that guest and whether any rule is actually logging:",
     "firewallItems": [
       "<strong>Firewall disabled</strong> — an amber notice explains exactly where to enable it in the Proxmox UI (<em>&lt;Container|VM&gt; → Firewall → Options</em>) and reminds you that at least one rule needs <code>log: info</code> (or higher) before packets show up.",
@@ -184,9 +186,9 @@
         "source": "PVE RRD data (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) condensed to a chart-friendly shape."
       },
       {
-        "section": "Recent task logs (modal)",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "Tasks for that <code>vmid</code> from <code>/var/log/pve/tasks/index</code>."
+        "section": "OCI console log (Logs tab)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Console output of the image's main process, read from <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> on the host. Shown for OCI containers only."
       },
       {
         "section": "Backups available for guest",

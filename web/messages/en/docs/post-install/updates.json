@@ -14,7 +14,7 @@
   },
   "why": {
     "heading": "Why this exists",
-    "body": "Post-install optimizations occasionally get improvements — a better sysctl tuning, a stricter Logrotate limit, a new Log2RAM size heuristic, a fix for an edge case reported by a tester. Without an update path the operator had only two options: manually re-run the post-install script (which re-applies <em>every</em> optimization) or skip the improvement entirely. Apply Available Updates is the middle ground: a per-optimization, opt-in re-run that lifts only the versions that actually moved."
+    "body": "Post-install optimizations occasionally get improvements — a better sysctl tuning, a stricter Logrotate limit, a new Log2RAM size heuristic, a fix for an edge case reported by a tester. Without an update path the user had only two options: manually re-run the post-install script (which re-applies <em>every</em> optimization) or skip the improvement entirely. Apply Available Updates is the middle ground: a per-optimization, opt-in re-run that lifts only the versions that actually moved."
   },
   "detection": {
     "heading": "How updates are detected",
@@ -25,7 +25,7 @@
       },
       {
         "title": "Versioned registry on the host",
-        "body": "When the operator applied each optimization, the corresponding <code>register_tool</code> call wrote the active version into <code>/usr/local/share/proxmenux/installed_tools.json</code>. That file is the source of truth for \"what is active on this host right now\"."
+        "body": "When the user applied each optimization, the corresponding <code>register_tool</code> call wrote the active version into <code>/usr/local/share/proxmenux/installed_tools.json</code>. That file is the source of truth for \"what is active on this host right now\"."
       },
       {
         "title": "Monitor compares both sides",
@@ -48,9 +48,9 @@
   },
   "pathB": {
     "heading": "Path B — From the Monitor dashboard",
-    "intro": "The same updates appear in the Monitor under <link>Settings → ProxMenux Optimizations</link>. When pending updates are detected the card shows an \"Updates available\" banner with the count and an <strong>Apply</strong> action that opens the same per-optimization picker.",
-    "imageAlt": "ProxMenux Optimizations card on the Monitor dashboard with an Updates available banner at the top showing the count of pending updates and an Apply button that opens the per-optimization picker",
-    "imageCaption": "The Optimizations card in the Monitor — when at least one optimization has a newer version on disk, the banner surfaces it without requiring shell access."
+    "intro": "The same updates appear in the Monitor under <link>Settings → ProxMenux Optimizations</link>. When pending updates are detected, the card shows an <strong>updates count badge</strong> that opens the per-optimization picker. Individual tools also provide their own update action.",
+    "imageAlt": "ProxMenux Optimizations card in Monitor settings, with a pending-updates count badge that opens the per-optimization picker and update actions on individual tools",
+    "imageCaption": "The Optimizations card in the Monitor — when at least one optimization has a newer version on disk, its count badge makes the updates accessible without shell access."
   },
   "applying": {
     "heading": "What happens when you apply",
@@ -69,7 +69,7 @@
       },
       {
         "title": "Registry refresh sent to the Monitor",
-        "body": "Once the batch finishes, the menu POSTs to <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> to rebuild <code>/usr/local/share/proxmenux/updates_available.json</code>. That is what makes the Monitor's Optimizations card and the shell menu entry disappear immediately after the update, without waiting for the next scheduled scan."
+        "body": "Once the batch finishes, the menu POSTs to <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> to rebuild <code>/usr/local/share/proxmenux/updates_available.json</code>. After all pending updates are applied, the update badge in the Monitor’s Optimizations card and the conditional shell menu entry disappear without waiting for the next scheduled scan. The Optimizations card itself remains available."
       }
     ],
     "jqTitle": "jq is required",

@@ -1,0 +1,6 @@
+{
+  "catalog_ui": {
+    "hidden": true,
+    "hidden_reason": "The image publishes only architecture-specific tags, has not been updated since 2022 and does not survive its first start"
+  }
+}

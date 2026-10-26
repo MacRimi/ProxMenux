@@ -1,0 +1,15 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Grafana web interface",
+        "type": "static-default",
+        "username": "admin",
+        "password": "admin",
+        "change_required": true,
+        "source": "upstream-grafana-docs",
+        "retrieval": null
+      }
+    ]
+  }
+}

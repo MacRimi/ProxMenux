@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Ändringar | Granskning och rapporter",
+    "description": "Ändringslogg i Granskning och rapporter: vad ProxMenux ändrat på värden, tidigare tillstånd, skillnader och om ändringen kan ångras."
+  },
+  "header": {
+    "title": "Ändringar",
+    "description": "Logg över ProxMenux åtgärder på värden och, när det registrerats, tillståndet före och efter varje åtgärd.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Från körningen av skriptet till ändringen det gjorde",
+            "body": "En lång funktion kan ändra bara två rader. Loggen sparar varje konkret åtgärd med ansvarigt skript, funktion och version, berörd resurs, skillnad och om den kan ångras."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Skript",
+                "detail": "Funktion + version"
+              },
+              {
+                "label": "Registrering",
+                "detail": "innehåll före"
+              },
+              {
+                "label": "Åtgärd",
+                "detail": "fil · paket · service"
+              },
+              {
+                "label": "Logg",
+                "detail": "attribution + skillnad"
+              }
+            ],
+            "caption": "Registreringen görs när åtgärden körs och sammanställs när Monitor läser loggen."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Vyn Ändringar i Granskning och rapporter med poster grupperade efter efterinstallationsalternativ och skript",
+            "caption": "Förändringsvyn, med skillnaden i en fil redigerad av ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Typer av poster",
+      "intro": "Filtret på toppen skiljer posterna efter typ.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Vad den registrerar"
+            ],
+            "rows": [
+              [
+                "Konfiguration",
+                "ProxMenux skrev, redigerade eller tog bort en fil, ändrade en inställning eller ändrade en tjänst."
+              ],
+              [
+                "Installationer",
+                "ProxMenux lade till ett paket eller en komponent, och de paket som faktiskt visas registreras."
+              ],
+              [
+                "Körningar",
+                "ProxMenux körde ett kommando; ändringarna beror på kommandot självt."
+              ],
+              [
+                "Tillämpat",
+                "En funktion tillämpades innan loggen fanns; tidigare tillstånd registrerades inte."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Hur vyn är organiserad",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Avsnitt",
+              "Innehåll"
+            ],
+            "rows": [
+              [
+                "Optimeringar efter installation",
+                "Grupperas av post-install alternativet som användaren valt."
+              ],
+              [
+                "ProxMenux-skript",
+                "GPU, Coral, nätverk, lagring, säkerhet, verktyg och andra instrumenterade skript, inklusive ProxMenux installatör och ProxMenux Monitor."
+              ],
+              [
+                "Installerade paket och verktyg",
+                "Programvara som ProxMenux installerat på värden."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Efter funktion</strong> grupperar posterna i varje avsnitt under funktionen som skapade dem."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Vad varje post visar",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Ansvarigt skript, funktion och version.",
+              "Datumet och den berörda resursen.",
+              "Det kända tillståndet före och efter ändringen.",
+              "Raderna som lagts till och tagits bort.",
+              "De paket som faktiskt lades till.",
+              "En tjänsts tillståndsändring.",
+              "<strong>Ångra detta</strong>: <em>Återställer exakt tidigare tillstånd</em>, <em>Tar bort filen (den fanns inte tidigare)</em>, <em>Paketet kan avinstalleras</em>, delvis återställning eller <em>Kan inte ångras från loggen</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Vad tidigare tillstånd betyder",
+      "blocks": [
+        {
+          "p": "Tidigare tillstånd kan vara registrerat innehåll, en fil som skapats för första gången eller ett okänt tillstånd. Ändringar från tiden före loggen kan inte rekonstrueras; när funktionen körs igen registreras först tillståndet som finns då."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Loggens omfattning",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Manuella ändringar och ändringar som görs av annan programvara registreras inte.",
+              "Endast operationer som går igenom ProxMenux-revisionsprimitiva täcks.",
+              "Inspelningen blockerar aldrig den operation som den beskriver: om inträdet inte kan skrivas fortsätter operationen.",
+              "Successiva ändringar av en resurs visas som det kända ursprungstillståndet jämfört med det aktuella."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Lagrade bevis",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Element",
+              "Beteende"
+            ],
+            "rows": [
+              [
+                "Inlägg",
+                "Posterna sparas på värden; inget tas bort automatiskt från loggen."
+              ],
+              [
+                "Registrerat innehåll",
+                "Ett fångat objekt hålls medan en post hänvisar till det."
+              ],
+              [
+                "Storlek på en registrering",
+                "Innehåll över 1 MiB lagras inte hela; posten registrerar att fångsten hoppades på grund av dess storlek."
+              ],
+              [
+                "Läsning",
+                "Monitorn laddar inte lagrade objekt över 2 MiB."
+              ],
+              [
+                "Skillnad",
+                "Högst 400 rader visas; en längre skillnad markeras som avkortad."
+              ],
+              [
+                "Lista",
+                "API:t returnerar som standard 200 poster per begäran, högst 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Sparat innehåll innebär ingen automatisk återställning",
+            "body": "Tidigare innehåll kan granskas och återställas manuellt, men vyn Ändringar ångrar inga åtgärder. En körningspost registrerar kommandot utan att känna till alla effekter av verktyget som kördes."
+          }
+        }
+      ]
+    }
+  ]
+}

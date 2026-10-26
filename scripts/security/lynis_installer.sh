@@ -46,6 +46,10 @@ if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
   echo "{}" > "$COMPONENTS_STATUS_FILE"
 fi
@@ -80,6 +84,9 @@ detect_lynis() {
 # Installation
 # ==========================================================
 install_lynis() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "install_lynis" "$FUNC_VERSION"
+
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Installing latest Lynis security scan tool...")"
@@ -91,7 +98,7 @@ install_lynis() {
   if ! command -v git >/dev/null 2>&1; then
     msg_info "$(translate "Installing Git as a prerequisite...")"
     apt-get update -qq >/dev/null 2>&1
-    if apt-get install -y git >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+    if pmx_install_pkg git && command -v git >/dev/null 2>&1; then
       msg_ok "$(translate "Git installed")"
     else
       msg_error "$(translate "Could not install Git — Lynis cannot be cloned. Run 'apt-get install git' manually.")"
@@ -102,15 +109,17 @@ install_lynis() {
   # Remove old installation if present
   if [[ -d /opt/lynis ]]; then
     msg_info "$(translate "Removing previous Lynis installation...")"
+    pmx_record_execution "remove previous Lynis installation from /opt/lynis" "rm -rf /opt/lynis"
     rm -rf /opt/lynis >/dev/null 2>&1
     msg_ok "$(translate "Previous installation removed")"
   fi
 
   # Clone from GitHub
   msg_info "$(translate "Cloning Lynis from GitHub...")"
+  pmx_record_execution "install Lynis in /opt/lynis" "git clone https://github.com/CISOfy/lynis.git /opt/lynis"
   if git clone --quiet https://github.com/CISOfy/lynis.git /opt/lynis >/dev/null 2>&1; then
     # Create wrapper script
-    cat << 'EOF' > /usr/local/bin/lynis
+    pmx_write_file /usr/local/bin/lynis << 'EOF'
 #!/bin/bash
 cd /opt/lynis && ./lynis "$@"
 EOF
@@ -144,6 +153,9 @@ EOF
 # Update
 # ==========================================================
 update_lynis() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "update_lynis" "$FUNC_VERSION"
+
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Updating Lynis to the latest version...")"
@@ -151,6 +163,7 @@ update_lynis() {
   if [[ -d /opt/lynis/.git ]]; then
     cd /opt/lynis
     msg_info "$(translate "Pulling latest changes from GitHub...")"
+    pmx_record_execution "update Lynis installation in /opt/lynis" "git pull --quiet"
     if git pull --quiet >/dev/null 2>&1; then
       local version
       version=$(/usr/local/bin/lynis show version 2>/dev/null)
@@ -174,6 +187,9 @@ update_lynis() {
 # Run Audit
 # ==========================================================
 run_audit() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "run_audit" "$FUNC_VERSION"
+
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Running Lynis security audit...")"
@@ -185,6 +201,7 @@ run_audit() {
   fi
 
   # Run the audit
+  pmx_record_execution "run Lynis system audit" "$LYNIS_CMD audit system --no-colors"
   "$LYNIS_CMD" audit system --no-colors 2>&1
 
   echo ""
@@ -197,12 +214,16 @@ run_audit() {
 # Uninstall
 # ==========================================================
 uninstall_lynis() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "uninstall_lynis" "$FUNC_VERSION"
+
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Removing Lynis...")"
 
+  pmx_record_execution "remove Lynis installation from /opt/lynis" "rm -rf /opt/lynis"
   rm -rf /opt/lynis 2>/dev/null
-  rm -f /usr/local/bin/lynis 2>/dev/null
+  pmx_remove_file /usr/local/bin/lynis 2>/dev/null
 
   update_component_status "lynis" "removed" "" "security" '{}'
 

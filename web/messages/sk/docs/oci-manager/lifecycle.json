@@ -1,0 +1,500 @@
+{
+  "meta": {
+    "title": "Inštalácia, aktualizácia a úpravy | ProxMenux",
+    "description": "Kontrakt inštancie kontajnera OCI a operácie, ktoré ho používajú: aktualizácia, úprava, odstránenie, zotavenie z prerušenej operácie a obnovenie prevádzky po obnove zo zálohy na tomto alebo inom hostiteľovi."
+  },
+  "header": {
+    "title": "Inštalácia, aktualizácia a úpravy",
+    "description": "Každá inštancia uchováva reprodukovateľný kontrakt, takže jej rootfs možno nahradiť bez straty konfigurácie alebo trvalých dát.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "contract",
+      "title": "Kontrakt inštancie",
+      "blocks": [
+        {
+          "p": "Po inštalácii sa výsledná konfigurácia uloží do <code>/usr/local/share/proxmenux/oci/instances/VMID/oci-compose.json</code>. Nejde o kópiu pôvodného súboru Compose: je to reprodukovateľný kontrakt kontajnera LXC, ktorý existuje na tomto hostiteľovi."
+        },
+        {
+          "code": {
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
+          }
+        },
+        {
+          "p": "Kópia kontraktu sa nachádza v kontajneri v <code>/.proxmenux/oci-record.json</code> a môže ju čítať iba používateľ root kontajnera. Záloha kontajnera preto vždy obsahuje kontrakt platný v čase zálohovania. Druhá kópia je uložená v <code>/etc/pve/priv/proxmenux/oci</code>, ktorý zdieľajú všetky uzly klastra a môže ho čítať iba root hostiteľa. Obe kópie sa zapisujú po každej inštalácii, aktualizácii a zmene."
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Spravovať nainštalované aplikácie OCI",
+      "intro": "Táto možnosť na hlavnej obrazovke zobrazí registrované inštancie s ich aplikáciou a obrazom. Pred každou akciou sa každá inštancia porovná so svojím kontraktom; CT, ktorý už nezodpovedá svojmu záznamu, sa neupraví ani neodstráni. Rovnaká aktualizácia a rovnaký editor sú dostupné na karte Aktualizácie v <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Možnosť",
+              "Čo sa zmení?",
+              "Čo sa uchováva"
+            ],
+            "rows": [
+              [
+                "Aktualizovať obraz pomocou uloženej konfigurácie",
+                "Rootfs sa nahradí obrazom, ktorý uložený kanál aktuálne publikuje",
+                "Zmluva, kontajnerové disky, hostiteľské adresáre, siete a zariadenia"
+              ],
+              [
+                "Upraviť: upraviť zdroje, sieť, cesty a GPU",
+                "Editor sa otvorí s aktuálnym kontraktom; CT sa znova vytvorí so zmenami",
+                "Dáta kontajnerových diskov a hostiteľských adresárov"
+              ],
+              [
+                "Watchdog: reštartovať aplikáciu pri havárii",
+                "Určuje, či sa aplikácia znova spustí, keď sa sama zastaví. Nič sa nevytvára znova",
+                "Celá inštalácia; len voľba je uložená v zmluve"
+              ],
+              [
+                "Odstrániť: odstrániť aplikáciu a jej kontajnery",
+                "LXC alebo všetci členovia zostavy a ich kontrakty sa odstránia",
+                "Hostiteľské adresáre s obsahom"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Pre aplikáciu s viacerými kontajnermi menu ponúka <strong>Aktualizovať všetky kontajnery aplikácie</strong>, <strong>Upraviť ďalšie cesty a zariadenia</strong>, <strong>Znovu vytvoriť všetky kontajnery s uloženou konfiguráciou</strong>, watchdog a odstránenie. Úprava pridáva alebo odstraňuje ďalšie cesty a zariadenia aplikačného kontajnera bez opätovného vytvárania. V Immich tiež mení zariadenie, ktoré vykonáva rozpoznávanie. Opätovné vytvorenie zostaví každý kontajner z pôvodne nainštalovaného obrazu bez vyhľadávania novšieho."
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/manage-menu.png",
+            "alt": "Zoznam nainštalovaných aplikácií OCI s možnosťami aktualizácie, úpravy a odstránenia",
+            "caption": "Spravovať nainštalované aplikácie OCI."
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "title": "Ako prebieha aktualizácia a čo sa stane pri zlyhaní",
+      "blocks": [
+        {
+          "p": "Aktualizácia je transakčná: najprv sa pripraví a overí nový obraz, potom sa vytvorí záloha a nahradí súborový systém aplikácie. Nová verzia sa potvrdí až po úspešnej kontrole funkčnosti. Ak po zmene kontajnera nastane chyba, vykoná sa pokus o obnovu predchádzajúcej zálohy a overí sa výsledok."
+        },
+        {
+          "mermaid": {
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
+            "labels": {
+              "user": "Používateľ",
+              "registry": "Register obrazov OCI",
+              "update": "Aktualizovať aplikáciu",
+              "resolve": "Určiť novú verziu",
+              "image": "Stiahnuť nový obraz",
+              "verify": "Overiť obraz a požiadavky",
+              "backup": "Zastaviť kontajner a vytvoriť zálohu",
+              "import": "Nainštalovať nový súborový systém",
+              "reapply": "Použiť uloženú konfiguráciu",
+              "start": "Spustiť a skontrolovať aplikáciu",
+              "checked": "Výsledok kontroly funkčnosti",
+              "healthy": "Aplikácia funguje",
+              "failure": "Aktualizácia zlyhá",
+              "commit": "Uložiť novú verziu a konfiguráciu",
+              "updated": "Aktualizácia dokončená",
+              "rollback": "Obnoviť a skontrolovať predchádzajúcu zálohu",
+              "recovered": "Obnova je overená",
+              "restored": "Predchádzajúca verzia obnovená",
+              "restoreFailed": "Obnova nie je overená",
+              "manual": "Obnova čaká: skontrolujte chybu"
+            }
+          }
+        },
+        {
+          "p": "Ak príprava alebo predbežné kontroly zlyhajú, aktualizácia sa preruší ešte pred zastavením kontajnera. Obnova zálohy kontajnera nevracia súbory v zdieľaných adresároch hostiteľa do predchádzajúceho stavu."
+        },
+        {
+          "list": {
+            "items": [
+              "Ak register stále poskytuje nainštalovaný digest, nič sa nesťahuje a inštancia zostáva nezmenená.",
+              "Nový obraz sa overí vrstvu po vrstve ešte pred zastavením CT. Poškodené stiahnutie sa zopakuje druhýkrát; obraz už uložený vo vyrovnávacej pamäti, ktorý neprejde kontrolou, sa stiahne znova.",
+              "Nastavenia zmenené v Proxmox VE po inštalácii (pamäť, swap, jadrá, limit CPU, priorita CPU, spustenie spolu s uzlom) sa zachovajú a prenesú do nového kontraktu.",
+              "Rozhranie LAN, ktoré pridáva súprava Arr a aplikácie s viacerými kontajnermi (<code>net1</code>), aj poradie spúšťania (<code>startup</code>) sa bez zmeny prenesú do nového kontajnera.",
+              "Adresár hostiteľa sa rozpoznáva podľa svojej cesty a súborového systému, na ktorom sa nachádza, nie podľa názvu zariadenia, ktorý hostiteľ dáva jeho disku, takže disk USB alebo sieťový disk, ktorý sa vráti pod iným názvom, je stále ten istý adresár. Keď jeho disk nie je pripojený, aktualizácia sa zastaví pred zastavením CT a uvedie chýbajúci adresár.",
+              "Akýkoľvek iný rozdiel medzi CT a jeho zmluvou zastaví aktualizáciu pred zastavením CT."
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Pred",
+                "detail": "rootfs A\n/config mp0\n/media hostiteľský adresár"
+              },
+              {
+                "label": "Aktualizácia",
+                "detail": "nahradí iba\nrootfs"
+              },
+              {
+                "label": "Po",
+                "detail": "rootfs B\n/config mp0\n/media hostiteľský adresár"
+              }
+            ]
+          }
+        },
+        {
+          "p": "Pred zastavením čohokoľvek sa overí dostatok miesta pre zálohu: využité dáta na zálohovaných zväzkoch plus rezerva. Záloha sa zapisuje vedľa záznamu aplikácie na systémový disk hostiteľa. Ak tam nie je dosť miesta, ponuka vyžiada iné úložisko hostiteľa podporujúce zálohy. Záloha sa vytvorí tam a po skončení operácie sa odstráni. Výber sa zapamätá pre danú aplikáciu aj pre plánované aktualizácie. Ak žiadne úložisko nemá dosť miesta, operácia sa odmietne a aplikácia zostane nezmenená. Rovnako sa pred stiahnutím overí miesto pre nový obraz."
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Zotavenie z prerušenej operácie",
+      "intro": "Aktualizácia aj úprava používajú trvalo uloženú transakciu. Ak sa proces, terminál alebo uzol preruší po zastavení CT, operácia sa nepovažuje za dokončenú.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Značka nedokončenej operácie",
+                "body": "Keď sa otvorí správa nainštalovaných aplikácií OCI, uložený stav ukazuje, že výmena nebola nikdy zverejnená."
+              },
+              {
+                "title": "Zobraziť stav",
+                "body": "Zobrazí dosiahnutú fázu bez zmeny kontajnerov alebo dát."
+              },
+              {
+                "title": "Obnoviť predchádzajúcu inštaláciu",
+                "body": "Obnoví overenú natívnu zálohu vytvorenú pred výmenou aj predchádzajúci kontrakt."
+              },
+              {
+                "title": "Zostavy ako celok",
+                "body": "V prípade aplikácie s viacerými kontajnermi je každý člen obnovený z rovnakého transakčného bodu, nielen z vybraného."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Hostiteľské adresáre sú mimo návratu do pôvodného stavu",
+            "body": "Záloha zahŕňa rootfs a disky kontajnera, ktoré sú do nej zahrnuté. Hostiteľský adresár sa nevracia do predchádzajúceho stavu, pretože jeho dáta môžu používať iné kontajnery LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchdog",
+      "title": "Watchdog: reštartovanie aplikácie, ktorá sa zastaví",
+      "intro": "Proxmox nemá politiku reštartovania: keď sa proces aplikačného kontajnera skončí, kontajner zostane zastavený. Pri zapnutom watchdogu sa aplikácia, ktorá sa sama zastaví, znova spustí. Pre aplikáciu OCI zabezpečuje to, čo <code>restart: unless-stopped</code> v súbore Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Čo sa stane?",
+              "So zapnutým watchdogom"
+            ],
+            "rows": [
+              [
+                "Aplikácia havaruje alebo jej proces končí",
+                "Kontajner sa znova spustí do niekoľkých sekúnd"
+              ],
+              [
+                "Zastaví sa alebo vypne cez Proxmox, Monitor alebo pomocou <code>pct</code>",
+                "Zostane zastavený, kým ho niekto nespustí"
+              ],
+              [
+                "Pracuje na tom záloha, migrácia alebo operácia ProxMenux",
+                "Nič sa nerobí, kým to neskončí."
+              ],
+              [
+                "Bol už zastavený pri spustení hostiteľa",
+                "Zostane zastavený; rozhoduje o tom <strong>Spustiť s Proxmox</strong>"
+              ],
+              [
+                "Opakovane sa zastavuje hneď po spustení",
+                "Aplikácia, ktorá sa zastaví v priebehu niekoľkých sekúnd po spustení alebo sa nespustí vôbec, sa skúsi spustiť päťkrát s odstupmi 30 sekúnd, 1, 2 a 5 minút. Potom zostane zastavená a odošle sa oznámenie"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Inštalátor sa na túto možnosť pýta v oboch režimoch inštalácie a navrhuje hodnotu uvedenú v recepte aplikácie. Neskôr sa mení cez <strong>Spravovať nainštalované aplikácie OCI</strong> alebo prepínačom <strong>Watchdog</strong> kontajnera v <monitorLink>ProxMenux Monitor</monitorLink> a platí pre všetky kontajnery aplikácie. Jediná služba hostiteľa, <code>proxmenux-oci-watchdog.service</code>, sleduje všetky aplikácie, ktoré si to vyžiadali; jej inštalácia je uvedená na karte Zmeny v Audit & Report."
+        },
+        {
+          "calloutInfo": {
+            "title": "Čo hostiteľ nevie povedať",
+            "body": "Návratový kód aplikácie sa k hostiteľovi nedostane, takže riadne ukončenie a pád vyzerajú rovnako a v oboch prípadoch nasleduje reštart, podobne ako pri <code>always</code> a <code>unless-stopped</code> v Dockeri. Zastavenie vyžiadané mimo Proxmox pomocou <code>lxc-stop</code> alebo <code>systemctl</code> nevytvorí úlohu zastavenia a považuje sa za samovoľné zastavenie."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Zálohovanie, obnova a ďalší hostiteľ",
+      "intro": "Záloha vytvorená pomocou vzdump alebo Proxmox Backup Server obsahuje kontajner, disky kontajnera vybrané na zálohovanie a kópiu jeho kontraktu. To, čo inštalácia uchováva na hostiteľovi, do nej nepatrí. <strong>Spravovať nainštalované aplikácie OCI</strong> rozpozná kontajnery obnovené na hostiteľovi, ktorý nemá ich kontrakt, napríklad po novej inštalácii Proxmox alebo na inom hostiteľovi, a ponúkne ich opätovnú registráciu.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Obnoviť kontajnery v Proxmoxe",
+                "body": "Zo zálohovacieho úložiska, s pôvodným ID alebo ľubovoľným voľným ID. Aplikácia s viacerými kontajnermi potrebuje všetky svoje kontajnery."
+              },
+              {
+                "title": "Otvoriť Spravovať nainštalované aplikácie OCI",
+                "body": "Zobrazia sa obnovené kontajnery a ponúkne sa obnovenie. Tlačidlo <strong>Obnoviť</strong> na karte Aktualizácie <monitorLink>ProxMenux Monitor</monitorLink> otvorí rovnaké obnovenie."
+              },
+              {
+                "title": "Pred zmenou skontrolujte",
+                "body": "Obnova overí, či hostiteľ má všetko, čo každá aplikácia potrebuje. Aplikácia, ktorú nemožno obnoviť ako celok, zostane nezmenená a uvedie sa dôvod."
+              },
+              {
+                "title": "Registrácia a spustenie",
+                "body": "Kontrakt sa zaregistruje na tomto hostiteľovi a znova sa zapíše to, čo na ňom inštalácia uchovávala. Spustenie aplikácií je samostatná otázka, na ktorú treba odpovedať Nie, ak pôvodné kontajnery stále bežia na inom hostiteľovi."
+              }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Čo si hostiteľ nechal?",
+              "Po zotavení"
+            ],
+            "rows": [
+              [
+                "Kontrakt inštancie",
+                "Zaregistruje sa z kópie v kontajneri, ktorá sa porovná s konfiguráciou obnovenou systémom Proxmox"
+              ],
+              [
+                "Súkromná sieť multikontajnerovej aplikácie",
+                "Znova sa vytvorí s rovnakým mostom a podsieťou; pevné adresy kontajnerov sa nezmenia"
+              ],
+              [
+                "Poradie spúšťania aplikácie s viacerými kontajnermi",
+                "Hookscript závislostí a jeho kontrakt sa znova nainštalujú; ak žiadne úložisko nepodporuje snippets, povolia sa na úložisku <code>local</code>"
+              ],
+              [
+                "Sieťové sysctls a súbor host-monitor",
+                "Znova sa zapíšu do <code>/etc/pve/proxmenux</code>"
+              ],
+              [
+                "Runtime NVIDIA",
+                "Hook neprivilegovaného kontajnera sa znova nainštaluje. Privilegovaný kontajner dostane súbory ovládača tohto hostiteľa namiesto súborov pôvodného hostiteľa"
+              ],
+              [
+                "Pripojenie Rclone",
+                "Hookscript a programy, ktoré sprístupňujú pripojenie, sa znova zapíšu s rovnakými pohľadmi na hostiteľovi"
+              ],
+              [
+                "Pravidlo firewallu hostiteľa pre monitor hostiteľa",
+                "Znova sa vyžiada súhlas pre webový port a podsieť mosta na tomto hostiteľovi"
+              ],
+              [
+                "<code>lost+found</code> z každého obnoveného disku",
+                "Odstráni sa, ak je prázdny; obnova ho vytvorí a niektoré aplikácie sa nespustia, ak je medzi ich dátami"
+              ],
+              [
+                "Disky obnovené na inom úložisku",
+                "Kontrakt sa aktualizuje podľa úložiska, na ktorom sa teraz nachádzajú"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Kontajner obnovený s iným ID si zachová svoju aplikáciu. Kontrakt, záznam konzoly, sieťové nastavenia sysctl, hookscript pripojenia Rclone a poradie spúšťania viackontajnerovej aplikácie sa zaregistrujú s ID, ktoré majú kontajnery na tomto hostiteľovi."
+        },
+        {
+          "table": {
+            "headers": [
+              "Čo bráni obnove",
+              "Čo urobiť"
+            ],
+            "rows": [
+              [
+                "Chýba kontajner aplikácie s viacerými kontajnermi",
+                "Obnovte aj tento kontajner; aplikácia sa obnovuje ako celok"
+              ],
+              [
+                "Súkromná podsieť sa už používa na tomto hostiteľovi",
+                "Obnova sa zruší a nič sa nezmení: adresy kontajnerov sú pevné a nepresúvajú sa do inej podsiete"
+              ],
+              [
+                "Adresár hostiteľa neexistuje",
+                "Pripojiť alebo vytvoriť s jeho dátami; záloha kontajnera nezahŕňa adresáre hostiteľa"
+              ],
+              [
+                "Zariadenie neexistuje na tomto hostiteľovi",
+                "Pripojte ho alebo ho odstráňte z kontajnera v Proxmox"
+              ],
+              [
+                "Aplikácia s NVIDIA na hostiteľovi bez ovládača",
+                "Nainštalujte ovládač NVIDIA a Container Toolkit"
+              ],
+              [
+                "Záloha bola vytvorená skôr, než existovala kópia kontraktu",
+                "Kontajner zostáva ako bežný LXC a nie je opäť ponúkaný"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Kontajner, ktorý sa vráti",
+            "body": "Kontajner obnovený s pôvodným ID zo staršej zálohy, vrátený do snímky alebo presunutý späť z iného uzla nesie kontrakt svojho aktuálneho stavu. Ak sa pri výbere na operáciu jeho kontrakt líši od kontraktu na tomto hostiteľovi, operácia sa nespustí a ponúkne sa obnova kontajnera."
+          }
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Odstránenie aplikácie OCI",
+      "blocks": [
+        {
+          "p": "Pred potvrdením je zostavený súhrn zo skutočnej konfigurácie: kontajnery, ktoré sú odstránené, údaje s nimi vymazané, súkromná sieť, ktorá je uvoľnená a hostiteľské adresáre, ktoré sú uchovávané. Potvrdenie je predvolene <strong>Nie</strong>, pretože údaje z vymazaných diskov nie je možné následne obnoviť."
+        },
+        {
+          "table": {
+            "headers": [
+              "Prostriedok",
+              "Po odstránení",
+              "Dôvod"
+            ],
+            "rows": [
+              [
+                "rootfs a kontajnerové disky",
+                "Odstránia sa",
+                "Patria len do kontajnera."
+              ],
+              [
+                "Adresár hostiteľa",
+                "Zachová sa aj s obsahom",
+                "Iné aplikácie ho môžu používať"
+              ],
+              [
+                "Hostiteľské súbory kontajnera",
+                "Odstránia sa",
+                "Jeho záznam konzoly, sieťové parametre sysctl, hookscript pripojenia Rclone a registrácia na karte App v ProxMenux Monitor neslúžia žiadnemu inému kontajneru"
+              ],
+              [
+                "Súbory zdieľané viacerými inštaláciami",
+                "Vymazané s poslednou inštaláciou, ktorá ich používa",
+                "Súbor monitora hostiteľa a hookscript závislostí aplikácií s viacerými kontajnermi"
+              ],
+              [
+                "Kontrakt inštancie",
+                "Odstráni sa po úspešnom odstránení aplikácie",
+                "Už s ním nie je spojený žiadny CT"
+              ],
+              [
+                "Súkromný most zostavy",
+                "Uvoľní sa spolu so zostavou",
+                "Nemá žiadnych členov na pripojenie"
+              ],
+              [
+                "Sieť zdieľaná súpravou Arr",
+                "Uvoľní sa s poslednou aplikáciou súpravy",
+                "Každá aplikácia súpravy je nezávislá a odstraňuje sa samostatne"
+              ],
+              [
+                "Jeden člen zostavy",
+                "Neodstránené samostatne",
+                "Odstráni sa celá aplikácia, aby nezostala neúplná zostava"
+              ],
+              [
+                "Kontajner na inom uzle klastra",
+                "Neodstránené",
+                "Jeho záznam a súbory na hostiteľovi sú na uzle, kde bol nainštalovaný: odstráni sa tam po migrácii späť"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/remove-summary.png",
+            "alt": "Prehľad odstránenia s dotknutými kontajnermi, dátami a adresármi hostiteľa",
+            "caption": "Prehľad odstránenia, postavený z reálnej konfigurácie."
+          }
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Stiahnuté obrazy a miesto na hostiteľovi",
+      "blocks": [
+        {
+          "p": "Archív OCI slúži na vytvorenie rootfs; bežiaci CT ho nečíta. Po inštalácii alebo aktualizácii sa zobrazia archívy stiahnuté počas danej operácie aj s ich veľkosťou a ponúkne sa ich odstránenie. Odstránením sa uvoľní miesto bez vplyvu na kontajner alebo jeho dáta."
+        },
+        {
+          "calloutInfo": {
+            "title": "Aktualizácie nepotrebujú archív",
+            "body": "Bez archívu aktualizácia vyrieši uložený kanál a stiahne nový digest. S ním sa archív znova použije iba vtedy, keď sa jeho referencia a integrita zhodujú s požadovaným."
+          }
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "title": "Register a čistenie",
+      "blocks": [
+        {
+          "p": "Pri otvorení <strong>Spravovať nainštalované aplikácie OCI</strong> sa najskôr odstránia pozostatky kontajnerov, ktoré už neexistujú na žiadnom uzle klastra: uložený záznam kontajnera odstráneného cez rozhranie Proxmox, uchovávaný ako história, a súbory hostiteľa, ktoré zostali po odstránení. Záznam s nedokončenou operáciou sa zachová, pretože jeho záloha môže byť ešte potrebná. Zväzky ani adresáre hostiteľa sa nikdy neodstraňujú na základe domnienok."
+        }
+      ]
+    },
+    {
+      "id": "cluster",
+      "title": "V klastri: migrácia a vysoká dostupnosť",
+      "intro": "Kontajner OCI je bežný LXC Proxmox: možno ho migrovať alebo spravovať pomocou HA ako ostatné, s rovnakými obmedzeniami. Všetko potrebné na spustenie je uložené tam, kde to nájde každý uzol klastra.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Časť",
+              "Na inom uzle klastra"
+            ],
+            "rows": [
+              [
+                "Konzolový log",
+                "Kontajner pred spustením vytvorí <code>/var/log/proxmenux/oci</code> na uzle, ktorý ho spúšťa. Každý uzol uchováva záznam spustení, ktoré vykonal."
+              ],
+              [
+                "Sieťové parametre sysctl a monitor hostiteľa",
+                "Uchovávajú sa v <code>/etc/pve/proxmenux</code>, ktorý zdieľajú všetky uzly klastra, takže migrovaný kontajner ich nájde."
+              ],
+              [
+                "Kontajnerové disky",
+                "Proxmox ich presúva s kontajnerom. HA potrebuje mať ich dáta dostupné na cieľovom uzle cez zdieľané úložisko alebo podporovanú konfiguráciu replikácie."
+              ],
+              [
+                "Hostiteľské adresáre a zariadenia",
+                "Rovnaké pravidlá ako všetky LXC: hostiteľský adresár musí existovať na cieľovom uzle a musí byť označený ako zdieľaný a musí tam byť prítomný GPU, Coral alebo NPU."
+              ],
+              [
+                "Záznam ProxMenux",
+                "Kontrakt zostáva na uzle, kde bola aplikácia nainštalovaná, a každý uzol číta kópiu v <code>/etc/pve/priv/proxmenux/oci</code>. Migrovaná aplikácia s jedným kontajnerom sa zaregistruje na cieľovom uzle po otvorení <strong>Spravovať nainštalované aplikácie OCI</strong> alebo po spustení operácie pre danú aplikáciu. Aplikácia s viacerými kontajnermi sa tam ponúkne na obnovu, pretože jej súkromná sieť sa musí vytvoriť na tomto uzle."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Nie je určené pre vysokú dostupnosť",
+            "body": "Aplikácia s viacerými kontajnermi komunikuje so svojimi členmi cez súkromný most uzla, na ktorom bola nainštalovaná, preto jej členovia zostávajú na tomto uzle. Monitor hostiteľa, napríklad Glances v režime hostiteľa alebo Netdata, sleduje uzol, na ktorom beží; presunutím by sledoval iný uzol."
+          }
+        },
+        {
+          "p": "Pri obnove aplikácie dostane záloha obnovená mimo klastra súbory z <code>/etc/pve/proxmenux</code>, ktoré kontajner používa."
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "Priebežne aktualizovaná značka neznamená bezobslužnú aktualizáciu",
+      "blocks": [
+        {
+          "p": "Katalóg nainštaluje priebežne aktualizovanú značku, ktorú publikuje správca, ale skutočný digest sa zistí a zaznamená a zmení sa iba explicitnou aktualizáciou s predbežnou kontrolou a možnosťou návratu späť. <monitorLink>ProxMenux Monitor</monitorLink> porovná nainštalovaný digest s digestom publikovaným registrom a zobrazí aj odošle upozornenie, keď je dostupný nový obraz."
+        }
+      ]
+    }
+  ]
+}

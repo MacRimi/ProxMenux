@@ -33,6 +33,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 
 SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
 if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
@@ -49,6 +53,8 @@ select_privileged_lxc
 
 
 install_samba_client() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "install_samba_client" "$FUNC_VERSION"
 
     if pct exec "$CTID" -- dpkg -s cifs-utils &>/dev/null && pct exec "$CTID" -- dpkg -s smbclient &>/dev/null; then
         pct exec "$CTID" -- mkdir -p "$CREDENTIALS_DIR"
@@ -94,6 +100,9 @@ install_samba_client() {
 
 
 discover_samba_servers() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "discover_samba_servers" "$FUNC_VERSION"
+
     show_proxmenux_logo
     msg_title "$(translate "Samba LXC Manager")"
     msg_info "$(translate "Scanning network for Samba servers...")"
@@ -105,7 +114,7 @@ discover_samba_servers() {
 
     for pkg in nmap samba-common-bin; do
         if ! which ${pkg%%-*} >/dev/null 2>&1; then
-            apt-get install -y "$pkg" &>/dev/null
+            pmx_install_pkg "$pkg"
         fi
     done
 
@@ -209,7 +218,7 @@ validate_guest_access() {
     local server="$1"
     
     show_proxmenux_logo
-    msg_info "$(translate "Testing comprehensive guest access to server") $server..."
+    msg_info "$(translate "Testing guest listing and share access on server") $server..."
     
     GUEST_LIST_OUTPUT=$(smbclient -L "$server" -N 2>&1)
     GUEST_LIST_RESULT=$?
@@ -217,12 +226,12 @@ validate_guest_access() {
     if [[ $GUEST_LIST_RESULT -ne 0 ]]; then
         cleanup
         if echo "$GUEST_LIST_OUTPUT" | grep -qi "access denied\|logon failure"; then
-            whiptail --title "$(translate "Guest Access Denied")" \
-                   --msgbox "$(translate "Guest access is not allowed on this server.")\n\n$(translate "You need to use username and password authentication.")" \
+            whiptail --title "$(translate "Guest Listing Failed")" \
+                   --msgbox "$(translate "Guest share listing failed.")\n\n$(translate "Try username and password authentication.")" \
                    10 70
         else
-            whiptail --title "$(translate "Guest Access Error")" \
-                   --msgbox "$(translate "Guest access failed.")\n\n$(translate "Error details:")\n$(echo "$GUEST_LIST_OUTPUT" | head -3)" \
+            whiptail --title "$(translate "Guest Listing Failed")" \
+                   --msgbox "$(translate "Guest share listing failed.")\n\n$(translate "Error details:")\n$(echo "$GUEST_LIST_OUTPUT" | head -3)" \
                    12 70
         fi
         return 1
@@ -232,13 +241,13 @@ validate_guest_access() {
 
     GUEST_SHARES=$(echo "$GUEST_LIST_OUTPUT" | awk '/Disk/ && !/IPC\$/ && !/ADMIN\$/ && !/print\$/ {print $1}' | grep -v "^$")
     if [[ -z "$GUEST_SHARES" ]]; then
-        whiptail --title "$(translate "No Guest Shares")" \
-               --msgbox "$(translate "Guest access works for listing, but no shares are available.")\n\n$(translate "The server may require authentication for actual share access.")" \
-               10 70
+        whiptail --title "$(translate "No Shares to Test")" \
+               --msgbox "$(translate "No disk shares were selected from the guest listing.")\n\n$(translate "The server may require authentication for actual share access.")" \
+               12 70
         return 1
     fi
     
-    msg_ok "$(translate "Found guest-accessible shares:") $(echo "$GUEST_SHARES" | wc -l)"
+    msg_ok "$(translate "Shares selected from guest listing:") $(echo "$GUEST_SHARES" | wc -l)"
 
     msg_info "$(translate "Step 2: Testing actual share access with guest...")"
     ACCESSIBLE_SHARES=""
@@ -256,15 +265,15 @@ validate_guest_access() {
                 echo -e
                 ACCESSIBLE_SHARES="$ACCESSIBLE_SHARES$share\n"
             else
-                msg_error "$(translate "Guest access denied for share:") $share"
+                msg_error "$(translate "Guest access test failed for share:") $share"
                 FAILED_SHARES="$FAILED_SHARES$share\n"
                 
                 if echo "$SHARE_TEST_OUTPUT" | grep -qi "access denied\|logon failure\|authentication"; then
-                    msg_warn "  $(translate "Reason: Authentication required")"
+                    msg_warn "  $(translate "Test output mentions authentication or access denial.")"
                 elif echo "$SHARE_TEST_OUTPUT" | grep -qi "permission denied"; then
-                    msg_warn "  $(translate "Reason: Permission denied")"
+                    msg_warn "  $(translate "Test output reports permission denied.")"
                 else
-                    msg_warn "  $(translate "Reason: Access denied")"
+                    msg_warn "  $(translate "The guest access test did not succeed.")"
                 fi
             fi
         fi
@@ -278,7 +287,7 @@ validate_guest_access() {
     msg_info2 "$(translate "Guest Access Validation Results:")"
     echo -e "${TAB}${BGN}$(translate "Shares found:")${CL} ${BL}$(echo "$GUEST_SHARES" | wc -l)${CL}"
     echo -e "${TAB}${BGN}$(translate "Guest accessible:")${CL} ${GN}$ACCESSIBLE_COUNT${CL}"
-    echo -e "${TAB}${BGN}$(translate "Authentication required:")${CL} ${YW}$FAILED_COUNT${CL}"
+    echo -e "${TAB}${BGN}$(translate "Guest share access tests failed:")${CL} ${YW}$FAILED_COUNT${CL}"
     
     if [[ $ACCESSIBLE_COUNT -gt 0 ]]; then
         msg_ok "$(translate "Guest access validated successfully!")"
@@ -298,7 +307,7 @@ validate_guest_access() {
         msg_success "$(translate "Press Enter to continue...")"
         read -r
         whiptail --title "$(translate "Guest Access Failed")" \
-               --msgbox "$(translate "While the server allows guest listing, no shares are actually accessible without authentication.")\n\n$(translate "You need to use username and password authentication.")" \
+               --msgbox "$(translate "No share access test succeeded with guest authentication.")\n\n$(translate "Try username and password authentication.")" \
                12 70
         clear       
         return 1
@@ -313,7 +322,7 @@ validate_guest_access() {
 get_samba_credentials() {
     while true; do
         CHOICE=$(whiptail --title "$(translate "Samba Credentials")" \
-            --menu "$(translate "Select authentication mode:")" 13 60 2 \
+            --menu "$(translate "Select authentication mode:")" 0 0 2 \
             "1" "$(translate "Configure with username and password")" \
             "2" "$(translate "Configure as guest (no authentication)")" \
             3>&1 1>&2 2>&3)
@@ -471,7 +480,7 @@ EOF
         esac
         
 
-        if ! whiptail --yesno "$(translate "Authentication failed.")\n\n$(translate "Do you want to try different credentials or authentication method?")" 10 70 --title "$(translate "Try Again")"; then
+        if ! whiptail --yesno "$(translate "Samba access setup did not complete.")\n\n$(translate "Do you want to try different credentials or authentication method?")" 10 70 --title "$(translate "Try Again")"; then
             return 1
         fi
 
@@ -678,13 +687,16 @@ configure_mount_options() {
 }
 
 create_credentials_file() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "create_credentials_file" "$FUNC_VERSION"
+
     if [[ "$USE_GUEST" == "true" ]]; then
         return 0
     fi
     
 
     CRED_FILE="$CREDENTIALS_DIR/${SAMBA_SERVER}_${SAMBA_SHARE}.cred"
-    
+
 
     pct exec "$CTID" -- bash -c "cat > '$CRED_FILE' << EOF
 username=$USERNAME
@@ -729,6 +741,7 @@ EOF"
 }
 
 mount_samba_share() {
+    local FUNC_VERSION="1.0"
     # Step 0:
     install_samba_client || return
     
@@ -754,6 +767,8 @@ mount_samba_share() {
     
     # Step 5:
     configure_mount_options || return
+
+    pmx_journal_context "mount_samba_share" "$FUNC_VERSION"
     
     show_proxmenux_logo
     msg_title "$(translate "Installing Samba Client in LXC")"
@@ -803,11 +818,11 @@ mount_samba_share() {
         if [[ "$PERMANENT_MOUNT" == "true" ]]; then
    
 
-            pct exec "$CTID" -- sed -i "\|$MOUNT_POINT|d" /etc/fstab
+            pct exec "$CTID" -- sed --in-place "\|$MOUNT_POINT|d" /etc/fstab
             
 
             FSTAB_ENTRY="$UNC_PATH $MOUNT_POINT cifs ${FULL_OPTIONS},_netdev,x-systemd.automount,noauto 0 0"
-            pct exec "$CTID" -- bash -c "echo '$FSTAB_ENTRY' >> /etc/fstab"
+            pct exec "$CTID" -- bash -c "printf '%s\\n' '$FSTAB_ENTRY' | tee -a /etc/fstab >/dev/null"
             msg_ok "$(translate "Added to /etc/fstab for permanent mounting.")"
         fi
         
@@ -927,6 +942,8 @@ view_samba_mounts() {
 
 
 unmount_samba_share() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "unmount_samba_share" "$FUNC_VERSION"
 
     MOUNTS=$(pct exec "$CTID" -- mount -t cifs 2>/dev/null | awk '{print $3}' | sort -u || true)
 
@@ -955,7 +972,7 @@ unmount_samba_share() {
         msg_title "$(translate "Unmount Samba Share")"
 
         CRED_FILE=$(pct exec "$CTID" -- grep -E "\s+$SELECTED_MOUNT\s+" /etc/fstab 2>/dev/null | grep -o "credentials=[^, ]*" | cut -d= -f2 || true)
-        pct exec "$CTID" -- sed -i "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
+        pct exec "$CTID" -- sed --in-place "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
         msg_ok "$(translate "Removed from /etc/fstab.")"
         
         if [[ -n "$CRED_FILE" && "$CRED_FILE" != "guest" ]]; then
@@ -1027,7 +1044,7 @@ test_samba_connectivity() {
                         elif pct exec "$CTID" -- nc -z -w 2 "$server" 139 2>/dev/null; then
                             echo "  $(translate "NetBIOS port 139:"): ${GN}$(translate "Open")${CL}"
                         else
-                            echo "  $(translate "SMB ports:"): ${RD}$(translate "Closed")${CL}"
+                            echo "  $(translate "SMB ports:"): ${RD}$(translate "Probe failed")${CL}"
                         fi
                         
 

@@ -1,0 +1,8 @@
+{
+  "container_contract": {
+    "image": {
+      "reference": "ghcr.io/ggml-org/llama.cpp:server",
+      "tag": "server"
+    }
+  }
+}

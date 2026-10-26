@@ -1,0 +1,760 @@
+{
+  "meta": {
+    "title": "API Proxmox Monitor — Referenčná príručka integrácií | ProxMenux",
+    "description": "Koncové body HTTP ProxMenux Monitor pre Home Assistant, Homepage, Grafana, Prometheus, n8n a vlastné panely. Čítanie stavu a zdokumentované operácie: ovládanie VM, spustenie záloh, oznámenia a potvrdenie výstrah.",
+    "ogTitle": "API Proxmox Monitor — Príručka integrácií",
+    "ogDescription": "Koncové body ProxMenux Monitor pre Home Assistant, Homepage, Grafana, Prometheus, n8n a vlastné panely.",
+    "twitterTitle": "API monitora Proxmox | ProxMenux",
+    "twitterDescription": "Koncové body pre Home Assistant, Homepage, Grafana, Prometheus, n8n a vlastné panely."
+  },
+  "header": {
+    "title": "Referenčná príručka API",
+    "description": "Koncové body HTTP na čítanie stavu a zdokumentované akcie: senzory Home Assistant, karty Homepage, panely Grafana, zber Prometheus, toky n8n a vlastné skripty. Obsahuje kategórie, exportované metriky a príklady curl.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Na čo je táto stránka",
+    "body": "Táto stránka uvádza koncové body integrácií: čítanie údajov, spustenie záloh, vlastné oznámenia a potvrdenie výstrah. API beží v procese Flask panela na TCP <strong>8008</strong>. Adresu počúvania a TLS opisuje <link>Prístup a overenie</link>."
+  },
+  "headerEndpoint": "Koncový bod",
+  "headerMethod": "Metóda",
+  "headerUse": "Použitie",
+  "auth": {
+    "heading": "Prihlásenie",
+    "intro": "Pri zapnutom overovaní chránené koncové body očakávajú JWT Bearer token v hlavičke požiadavky:",
+    "tokensIntro": "Dva spôsoby získania tokenu:",
+    "items": [
+      "<strong>Tokeny API, odporúčané pre integrácie.</strong> Platia 365 dní a vytvárajú sa v <strong>Zabezpečenie → Tokeny API</strong>. Majú názov a možno ich jednotlivo odvolať. Na údaje použite read_only, full_admin iba na potrebné správcovské akcie.",
+      "<strong>Prihlásenie, JWT na 24 hodín.</strong> <code>POST /api/auth/login</code> s menom, heslom a TOTP, ak ho vyžaduje 2FA. JWT vyprší po 24 hodinách; skripty sa potom musia prihlásiť znova."
+    ],
+    "flowLink": "Prihlásenie, heslá, 2FA, audit a TLS opisuje <link>Prístup a overenie</link>.",
+    "rows": [
+      {
+        "endpoint": "/api/auth/login",
+        "method": "POST",
+        "use": "Polia tela (schéma): <code>'{'\"username\",\"password\",\"totp_token?\"'}'</code>. Vráti JWT na 24 hodín."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens",
+        "method": "GET",
+        "use": "Uveďte API tokeny (iba metadáta — mená, predpony, dátumy; nikdy nie skutočný tajný kód)."
+      },
+      {
+        "endpoint": "/api/auth/generate-api-token",
+        "method": "POST",
+        "use": "Vytvorí token API na 365 dní v overenej relácii. Polia: <code>password, token_name?, totp_token?, scope?</code>. Heslo a požadované TOTP sa overia znova. scope je predvolene read_only; full_admin treba zvoliť výslovne. Tajný token sa vráti iba raz."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens/<id>",
+        "method": "DELETE",
+        "use": "Zrušte špecifický API token jeho ID."
+      }
+    ]
+  },
+  "conventions": {
+    "heading": "Konvencie",
+    "items": [
+      "Väčšina používa JSON. Niektoré sťahovania vracajú obyčajný text; <code>/api/prometheus</code> používa textový formát Prometheus 0.0.4 namiesto OpenMetrics. Overte typ odpovede konkrétnej cesty.",
+      "Mnohé zápisy vracajú <code>'{'\"success\": true, ...'}'</code>. Chyby sa líšia; bežný formát je <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>. Kontrolujte stav HTTP aj polia: niektoré výzvy overenia používajú HTTP 200 so success false.",
+      "Parametre závisia od koncového bodu. <code>limit</code>, <code>offset</code>, <code>since</code> a filtre kategórií použite iba tam, kde sú podporované.",
+      "Časové formáty sa líšia: Unix čas, reťazce ISO-8601 aj dátumy systemd. Nepredpokladajte rovnakú jednotku ani výslovné časové pásmo vo všetkých poliach."
+    ]
+  },
+  "system": {
+    "heading": "Systém a hardvér",
+    "rows": [
+      {
+        "endpoint": "/api/system",
+        "method": "GET",
+        "use": "Aktuálne hodnoty CPU, pamäte, swapu, času prevádzky a záťaže."
+      },
+      {
+        "endpoint": "/api/info",
+        "method": "GET",
+        "use": "Statické informácie o hostiteľovi: meno hostiteľa, jadro, verzia PVE, model CPU, distro."
+      },
+      {
+        "endpoint": "/api/system-info",
+        "method": "GET",
+        "use": "Rozšírené systémové údaje pre hlavičku panela: celkové metriky a čas spustenia."
+      },
+      {
+        "endpoint": "/api/hardware",
+        "method": "GET",
+        "use": "Podrobný hardvérový inventár: zariadenia PCI, GPU a senzory."
+      },
+      {
+        "endpoint": "/api/hardware/live",
+        "method": "GET",
+        "use": "Aktuálne hodnoty rýchlo sa meniacich senzorov."
+      },
+      {
+        "endpoint": "/api/temperature/history",
+        "method": "GET",
+        "use": "Časové rady teplôt CPU a jeho puzdra."
+      },
+      {
+        "endpoint": "/api/gpu/<slot>/realtime",
+        "method": "GET",
+        "use": "Aktuálne metriky GPU NVIDIA, Intel a AMD podľa pozície PCI."
+      }
+    ]
+  },
+  "actions": {
+    "heading": "Systémové akcie",
+    "intro": "Tieto asynchrónne systémové akcie používajú dočasné jednotky systemd. Pri zapnutom overovaní ich zápisy vyžadujú <code>full_admin</code>; <code>read_only</code> môže čítať <code>.../status</code>. Prijatý štart vráti HTTP 202 a stav; priebeh sledujte cez <code>.../status</code>. Ovládanie hostí a zálohy majú iné odpovede, opísané nižšie.",
+    "shapeTitle": "Tvar bežnej odozvy",
+    "shapeIntro": "Asynchrónne systémové akcie používajú tento objekt stavu JSON. Ovládanie hostí a zálohy majú iné formáty:",
+    "shapeCode": "{\n  \"unit\": \"proxmenux-action-pve-update.service\",\n  \"state\": \"idle | running | success | failed | cancelled\",\n  \"started_at\": \"Sat 2026-08-01 11:01:32 CEST\",\n  \"finished_at\": null,\n  \"exit_code\": null,\n  \"result\": null\n}",
+    "concurrencyTitle": "Súbežnosť a zrušenie",
+    "concurrencyBody": "Ďalší štart tej istej aktívnej akcie vráti HTTP 409. Zrušenie je možné iba s dokumentovanou cestou DELETE, napríklad pri aktualizácii PVE. Stav prejde na <code>cancelled</code> a časy zostanú. Konečné stavy sú v pamäti procesu a po reštarte Monitora sa môžu stratiť.",
+    "rows": [
+      {
+        "endpoint": "/api/system/power/reboot",
+        "method": "POST",
+        "use": "Spustí reštart hostiteľa Proxmox. Spojenie HTTP sa môže prerušiť, keď systemd začne vypínanie."
+      },
+      {
+        "endpoint": "/api/system/power/reboot/status",
+        "method": "GET",
+        "use": "Stav aktuálneho alebo posledného reštartu."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown",
+        "method": "POST",
+        "use": "Vypne hostiteľa Proxmox, napríklad po signáli na vypnutie z UPS."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown/status",
+        "method": "GET",
+        "use": "Stav aktuálneho alebo posledného vypínania."
+      },
+      {
+        "endpoint": "/api/system/pve-update/run",
+        "method": "POST",
+        "use": "Spustí aktualizáciu PVE používanú voľbou Aktualizovať teraz v Health Monitor aj ponukou shellu; odovzdá ju update-pve-safe.sh."
+      },
+      {
+        "endpoint": "/api/system/pve-update/status",
+        "method": "GET",
+        "use": "Stav aktuálnej alebo poslednej aktualizácie PVE."
+      },
+      {
+        "endpoint": "/api/system/pve-update",
+        "method": "DELETE",
+        "use": "Zruší prebiehajúcu aktualizáciu PVE signálom SIGTERM."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/run",
+        "method": "POST",
+        "use": "Aktualizuje ProxMenux inštalátorom nastaveného stabilného alebo beta kanála. Vlastná jednotka systemd umožní pokračovať počas reštartu proxmenux-monitor vykonaného inštalátorom."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/status",
+        "method": "GET",
+        "use": "Stav aktuálnej alebo poslednej aktualizácie ProxMenux."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Odošle ovládací príkaz VM alebo LXC. Pole <code>action</code> prijíma <code>start</code>, <code>stop</code>, <code>shutdown</code> alebo <code>reboot</code>. Úspešná odpoveď vracia potvrdenú úlohu PVE, nie potvrdenie dokončenia. Výsledok sledujte cez koncový bod control-task hosťa."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Vytvorí zálohu vzdump VM alebo LXC. Polia tela, všetky voliteľné, ak predvolené hodnoty zodpovedajú rozloženiu úložiska: <code>storage</code> (úložisko PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> alebo <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> alebo <code>none</code>), <code>protected</code> (<code>true</code> alebo <code>false</code>), <code>notes</code> a <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> alebo <code>data</code>). Vráti UPID úlohy PVE."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "Zoznam predchádzajúcich záloh pre VM alebo LXC vo všetkých dosiahnuteľných úložiskách."
+      }
+    ],
+    "syncVsAsyncTitle": "Dva typy akcií",
+    "syncVsAsyncBody": "Napájanie a aktualizácie hostiteľa používajú dočasné jednotky systemd s <code>.../status</code>. Iba aktualizácia PVE tu má cestu <code>DELETE</code> na zrušenie. Ovládanie VM/LXC vráti úlohu na sledovanie; záloha UPID úlohy na pozadí. Prijatie neznamená dokončenie. Overovanie a oprávnenia závisia od cesty.",
+    "curlTitle": "Príklad curl",
+    "curlBody": "Spustí aktualizáciu PVE a sleduje ju do dokončenia, ako automatizácia Home Assistant či playbook Ansible.",
+    "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
+    "haTitle": "Príklad pre Home Assistant",
+    "haBody": "Senzor <code>rest</code> zisťuje stav a <code>rest_command</code> spustí aktualizáciu. Priraďte ich k tlačidlu panela a potrebným automatizáciám:",
+    "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Start VM 100 (works for LXC too — same endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup VM 100 to the 'pbs-main' storage\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
+  },
+  "health": {
+    "heading": "Monitor zdravia",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Ľahká kontrola vracajúca JSON s <code>status</code>, <code>timestamp</code> a <code>version</code>. Vhodná na kontrolu kľúčových slov Uptime Kuma; pri zapnutom overovaní klient posiela hlavičku Bearer."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Celkový stav: úroveň závažnosti a zhrnutie."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Všetkých desať kategórií so stavom a štruktúrovanými údajmi jednotlivých kontrol."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Úplné údaje: kategórie, aktívne chyby, potlačené výstrahy a nastavenia potlačenia. Používa výsledky na pozadí mladšie než šesť minút; inak alebo pri vynútenej obnove spustí novú kontrolu."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Aktívny zoznam, filtrovateľný <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Potlačené výstrahy so zostávajúcimi hodinami stíšenia."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET",
+        "use": "Nastavené trvanie potlačenia pre každú kategóriu."
+      },
+      {
+        "endpoint": "/api/health/remote-storages",
+        "method": "GET",
+        "use": "Inventár vzdialených úložísk definovaných Proxmoxom s online stavom."
+      },
+      {
+        "endpoint": "/api/health/interfaces",
+        "method": "GET",
+        "use": "Sieťové rozhrania s typom (most / agregácia / fyzické), IP a rýchlosťou spojenia."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Telo: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Potlačí výstrahu na čas nastavený pre jej kategóriu."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Ručne vyčistí chyby odstránených zariadení alebo VM. Opakované spustenie je neškodné."
+      }
+    ],
+    "outro": "Formáty odpovedí a kategórie opisuje <link>Health Monitor</link>."
+  },
+  "storage": {
+    "heading": "Úložisko",
+    "rows": [
+      {
+        "endpoint": "/api/storage",
+        "method": "GET",
+        "use": "Disky viditeľné pre hostiteľa: blokové zariadenia, fondy ZFS a LVM."
+      },
+      {
+        "endpoint": "/api/storage/summary",
+        "method": "GET",
+        "use": "Kompaktné zhrnutie pre karty panela."
+      },
+      {
+        "endpoint": "/api/proxmox-storage",
+        "method": "GET",
+        "use": "Proxmox-definované úložiská z <code>/etc/pve/storage.cfg</code> s online stavom a voľným priestorom."
+      },
+      {
+        "endpoint": "/api/storage/observations",
+        "method": "GET",
+        "use": "Trvalá história pozorovaní: výstrahy SMART, chyby I/O a udalosti ZFS. Zachová sa aj po automatickom vyriešení výstrahy."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>",
+        "method": "GET",
+        "use": "Aktuálne atribúty SMART pre jeden disk."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/latest",
+        "method": "GET",
+        "use": "Posledný autotest SMART pre disk."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "method": "GET",
+        "use": "Zoznam uložených správ SMART pre disk."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/history/<file>",
+        "method": "GET",
+        "use": "Prečítajte si konkrétny uložený SMART report."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/test",
+        "method": "POST",
+        "use": "Spustí autotest SMART. Schéma tela: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/storage/smart/schedules",
+        "method": "GET",
+        "use": "Zoznam aktuálne naplánovaných testov SMART."
+      },
+      {
+        "endpoint": "/api/storage/smart/tools",
+        "method": "GET",
+        "use": "Overí, či sú nainštalované <code>smartctl</code> a súvisiace nástroje."
+      }
+    ]
+  },
+  "network": {
+    "heading": "Sieť",
+    "rows": [
+      {
+        "endpoint": "/api/network",
+        "method": "GET",
+        "use": "Všetky rozhrania so stavom spojenia a adresami."
+      },
+      {
+        "endpoint": "/api/network/summary",
+        "method": "GET",
+        "use": "Kompaktný prehľad pre panel."
+      },
+      {
+        "endpoint": "/api/network/<iface>/metrics",
+        "method": "GET",
+        "use": "RX/TX pre každé rozhranie, počítadlá chýb a časové rady RRD."
+      },
+      {
+        "endpoint": "/api/network/latency/current",
+        "method": "GET",
+        "use": "Posledné meranie latencie k bráne."
+      },
+      {
+        "endpoint": "/api/network/latency/history",
+        "method": "GET",
+        "use": "Časový rad latencie brány."
+      }
+    ]
+  },
+  "vms": {
+    "heading": "VM a kontajnery",
+    "rows": [
+      {
+        "endpoint": "/api/vms",
+        "method": "GET",
+        "use": "VM a CT na lokálnom uzle so stavom, vmid a názvom."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>",
+        "method": "GET",
+        "use": "Celý detail pre jedného hosťa (config, sieť, disky)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "method": "GET",
+        "use": "CPU / pamäť / disk I/O časový rad pre jedného hosťa (RRD)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/logs",
+        "method": "GET",
+        "use": "Protokoly nedávnych úloh tohto hosťa."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "Zálohy uložené pre tohto hosťa."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Vyberte jednu akciu zo schémy: <code>'{'\"action\":\"start|stop|reboot|shutdown\"'}'</code>. Ovláda napájanie hosťa."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Spustí <code>vzdump</code> pre hosťa. Telo určuje úložisko a režim (<code>snapshot</code> / <code>suspend</code> / <code>stop</code>)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/config",
+        "method": "PUT",
+        "use": "Upraví pole popisu (poznámky) VM alebo CT. Ostatné konfiguračné kľúče tento koncový bod nemení."
+      },
+      {
+        "endpoint": "/api/node/metrics",
+        "method": "GET",
+        "use": "Súhrnné metriky uzla v časových radoch RRD."
+      }
+    ]
+  },
+  "backups": {
+    "heading": "Zálohy",
+    "rows": [
+      {
+        "endpoint": "/api/backups",
+        "method": "GET",
+        "use": "Zálohy nájdené na úložiskách dir, NFS, CIFS a PBS zisťovaných cez lokálny uzol. Nejde o úplnú kontrolu všetkých uzlov klastra."
+      },
+      {
+        "endpoint": "/api/backup-storages",
+        "method": "GET",
+        "use": "Úložiská označené ako ciele záloh s voľným miestom."
+      }
+    ]
+  },
+  "logs": {
+    "heading": "Logy, úlohy, udalosti",
+    "rows": [
+      {
+        "endpoint": "/api/logs",
+        "method": "GET",
+        "use": "Filtrované záznamy systémového denníka. Parametre: <code>?level=&service=&limit=</code>."
+      },
+      {
+        "endpoint": "/api/logs/download",
+        "method": "GET",
+        "use": "Exportuje filtrovaný rozsah ako obyčajný text."
+      },
+      {
+        "endpoint": "/api/events",
+        "method": "GET",
+        "use": "Interný tok udalostí používaný aj na oznámenia."
+      },
+      {
+        "endpoint": "/api/task-log/<upid>",
+        "method": "GET",
+        "use": "Úplný protokol úlohy Proxmox v obyčajnom texte podľa UPID."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Oznámenia a AI",
+    "intro": "Odosielanie, kanály a preformulovanie AI opisujú <notifLink>Oznámenia</notifLink> a <aiLink>Asistent AI</aiLink>.",
+    "rows": [
+      {
+        "endpoint": "/api/notifications",
+        "method": "GET",
+        "use": "Nedávne oznámenia zobrazené na paneli."
+      },
+      {
+        "endpoint": "/api/notifications/download",
+        "method": "GET",
+        "use": "Exportuje oznámenia ako text."
+      },
+      {
+        "endpoint": "/api/notifications/status",
+        "method": "GET",
+        "use": "Stav odosielania: aktívny proces na pozadí, dĺžka radu a posledné odoslanie."
+      },
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET",
+        "use": "Číta nastavenia oznámení: kanály, prepínače udalostí, preformulovanie AI a zobrazované meno."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET",
+        "use": "História odosielania. Parametre: <code>?limit=&offset=&severity=&channel=</code>."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "DELETE",
+        "use": "Vyprázdni tabuľku histórie odosielania."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Odošle skúšobné oznámenie do kanála. Telo: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Vytvorí vlastnú udalosť. Telo: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Overí spojenie s poskytovateľom AI. Polia tela (schéma): <code>'{'\"provider\",\"api_key\",\"model\",\"ollama_url?\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Zoznam dostupných modelov pre vybraného poskytovateľa AI."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Zaregistrujte monitor ako cieľ webhook v <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Odstráni cieľ Monitora z konfigurácie oznámení PVE."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Prečítajte si aktuálne PVE <code>notifications.cfg</code> ako to vidí PVE."
+      }
+    ]
+  },
+  "security": {
+    "heading": "Bezpečnosť (čítanie)",
+    "rows": [
+      {
+        "endpoint": "/api/security/firewall/status",
+        "method": "GET",
+        "use": "Stav firewallu PVE a aktívne pravidlá."
+      },
+      {
+        "endpoint": "/api/security/fail2ban/details",
+        "method": "GET",
+        "use": "Stav jailu Fail2Ban; vyžaduje nainštalovaný voliteľný komponent."
+      },
+      {
+        "endpoint": "/api/security/fail2ban/activity",
+        "method": "GET",
+        "use": "Nedávne udalosti Fail2Ban: blokovania, odblokovania a spustenia jailu."
+      },
+      {
+        "endpoint": "/api/security/lynis/status",
+        "method": "GET",
+        "use": "Stav Lynis: inštalácia a čas poslednej kontroly."
+      },
+      {
+        "endpoint": "/api/security/lynis/report",
+        "method": "GET",
+        "use": "Posledná správa Lynis: výstrahy, návrhy a index zabezpečenia."
+      },
+      {
+        "endpoint": "/api/security/tools",
+        "method": "GET",
+        "use": "Detekovať, ktoré voliteľné bezpečnostné nástroje (Fail2Ban, Lynis) sú nainštalované."
+      }
+    ]
+  },
+  "proxmenuxIntegration": {
+    "heading": "Integrácia ProxMenux",
+    "rows": [
+      {
+        "endpoint": "/api/proxmenux/update-status",
+        "method": "GET",
+        "use": "Dostupnosť aktualizácie ProxMenux Monitor, nainštalovaná a najnovšia verzia."
+      },
+      {
+        "endpoint": "/api/proxmenux/installed-tools",
+        "method": "GET",
+        "use": "Zoznam optimalizácií ProxMenux po inštalácii zaznamenaných na hostiteľovi (z <code>/usr/local/share/proxmenux/installed_tools.json</code>)."
+      },
+      {
+        "endpoint": "/api/proxmenux/tool-source/<key>",
+        "method": "GET",
+        "use": "Kód priradenej funkcie po inštalácii z aktuálnych skriptov hostiteľa alebo zachovaného staršieho kódu. Nezaručuje presnú snímku pôvodne spusteného kódu."
+      }
+    ]
+  },
+  "prometheus": {
+    "heading": "Metriky Prometheus",
+    "intro": "Overený koncový bod <code>GET /api/prometheus</code> vracia textový formát Prometheus 0.0.4. Každá metrika obsahuje <code>node=\"&lt;hostname&gt;\"</code> a časovú pečiatku. Zber zabezpečí Prometheus alebo kompatibilná databáza časových radov.",
+    "exportedTitle": "Exportované metriky",
+    "headerGroup": "Skupina",
+    "headerMetric": "Metrika",
+    "headerDesc": "Popis",
+    "groups": [
+      {
+        "group": "Systém",
+        "metrics": [
+          {
+            "metric": "proxmox_cpu_usage",
+            "desc": "Percento využitia CPU, metrika typu gauge."
+          },
+          {
+            "metric": "proxmox_memory_total_bytes",
+            "desc": "Úplná fyzická pamäť v bajtoch."
+          },
+          {
+            "metric": "proxmox_memory_used_bytes",
+            "desc": "Použitá pamäť v bajtoch."
+          },
+          {
+            "metric": "proxmox_memory_usage_percent",
+            "desc": "Percento využitia pamäte."
+          },
+          {
+            "metric": "proxmox_load_average",
+            "desc": "Priemerná systémová záťaž. Štítok <code>period=\"1m\" | \"5m\" | \"15m\"</code>."
+          }
+        ]
+      },
+      {
+        "group": "Čas prevádzky",
+        "metrics": [
+          {
+            "metric": "proxmox_uptime_seconds",
+            "desc": "Sekundy od posledného spustenia."
+          }
+        ]
+      },
+      {
+        "group": "Hardvér",
+        "metrics": [
+          {
+            "metric": "proxmox_cpu_temperature_celsius",
+            "desc": "Teplota puzdra CPU."
+          },
+          {
+            "metric": "proxmox_disk_temperature_celsius",
+            "desc": "Teplota každého disku. Štítok <code>disk</code>."
+          },
+          {
+            "metric": "proxmox_fan_speed_rpm",
+            "desc": "Otáčky ventilátorov. Štítok <code>fan</code>."
+          }
+        ]
+      },
+      {
+        "group": "Priestor na disku",
+        "metrics": [
+          {
+            "metric": "proxmox_disk_total_bytes",
+            "desc": "Celková kapacita každého exportovaného záznamu disku. Štítok <code>disk</code>."
+          },
+          {
+            "metric": "proxmox_disk_used_bytes",
+            "desc": "Použitá kapacita každého exportovaného záznamu disku."
+          },
+          {
+            "metric": "proxmox_disk_usage_percent",
+            "desc": "Percento použitej kapacity každého exportovaného záznamu disku."
+          }
+        ]
+      },
+      {
+        "group": "Sieť",
+        "metrics": [
+          {
+            "metric": "proxmox_network_bytes_sent_total",
+            "desc": "Celkový počet odoslaných bajtov, metrika typu counter."
+          },
+          {
+            "metric": "proxmox_network_bytes_received_total",
+            "desc": "Celkový počet prijatých bajtov, metrika typu counter."
+          },
+          {
+            "metric": "proxmox_interface_bytes_sent_total",
+            "desc": "Bajty odoslané cez každé rozhranie. Štítok <code>interface</code>."
+          },
+          {
+            "metric": "proxmox_interface_bytes_received_total",
+            "desc": "Bajty prijaté cez každé rozhranie."
+          }
+        ]
+      },
+      {
+        "group": "VMs / CTs",
+        "metrics": [
+          {
+            "metric": "proxmox_vms_total",
+            "desc": "Celkový počet VM a LXC."
+          },
+          {
+            "metric": "proxmox_vms_running",
+            "desc": "Počet spustených hostí."
+          },
+          {
+            "metric": "proxmox_vms_stopped",
+            "desc": "Počet zastavených hostí."
+          },
+          {
+            "metric": "proxmox_vm_status",
+            "desc": "Stav VM/CT: 1 spustený, 0 iný stav. Štítky <code>node</code>, <code>vmid</code> a <code>name</code>."
+          },
+          {
+            "metric": "proxmox_vm_cpu_usage",
+            "desc": "Využitie CPU pre každú VM/CT s rovnakými štítkami."
+          },
+          {
+            "metric": "proxmox_vm_memory_used_bytes / _max_bytes",
+            "desc": "Použitá pamäť a nastavené maximum každej VM/CT."
+          }
+        ]
+      },
+      {
+        "group": "GPU",
+        "metrics": [
+          {
+            "metric": "proxmox_gpu_temperature_celsius",
+            "desc": "Teplota GPU. Štítky <code>slot</code> a <code>vendor</code>; gpu obsahuje aj názov GPU."
+          },
+          {
+            "metric": "proxmox_gpu_utilization_percent",
+            "desc": "Percento využitia GPU."
+          },
+          {
+            "metric": "proxmox_gpu_memory_total_bytes",
+            "desc": "Celková pamäť GPU."
+          },
+          {
+            "metric": "proxmox_gpu_power_draw_watts",
+            "desc": "Príkon GPU vo wattoch."
+          },
+          {
+            "metric": "proxmox_gpu_clock_speed_mhz",
+            "desc": "Takt jadra GPU."
+          },
+          {
+            "metric": "proxmox_gpu_memory_clock_mhz",
+            "desc": "Takt pamäte GPU."
+          }
+        ]
+      },
+      {
+        "group": "UPS",
+        "metrics": [
+          {
+            "metric": "proxmox_ups_battery_charge_percent",
+            "desc": "Percento nabitia batérie."
+          },
+          {
+            "metric": "proxmox_ups_load_percent",
+            "desc": "Aktuálne zaťaženie UPS."
+          },
+          {
+            "metric": "proxmox_ups_runtime_seconds",
+            "desc": "Odhadovaná výdrž na batériu."
+          },
+          {
+            "metric": "proxmox_ups_input_voltage_volts",
+            "desc": "Vstupné napätie."
+          }
+        ]
+      }
+    ],
+    "scrapeTitle": "Konfigurácia zberu Prometheus",
+    "scrapeIntro": "Pri zapnutom overovaní zadajte token API do hlavičky Bearer v konfigurácii zberu Prometheus:",
+    "perHostTitle": "Zber pre každého hostiteľa",
+    "perHostBody": "Každá inštancia exportuje metriky svojho hostiteľa. V klastri nastavte Prometheus na zber z každého uzla. Štítok <code>node</code> rozlišuje rady v Grafane (<code>proxmox_vms_running'{'node=\"pve01\"'}'</code>)."
+  },
+  "puttingItTogether": {
+    "heading": "Prepojenie integrácií",
+    "body": "Pozrite <link>Integrácie</link> na prepojenie koncových bodov so senzormi Home Assistant, kartami Homepage, panelmi Grafana, tokmi n8n a ďalšími nástrojmi. Obsahuje bežné konfigurácie na kopírovanie. Táto stránka uvádza katalóg koncových bodov."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Prístup a overenie",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — vytváranie tokenov, auditný protokol, voliteľný jail Fail2Ban a TLS."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — obsah <code>data</code> pre každú udalosť pri volaní <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "AI asistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tailRich": " — fungovanie <code>/api/notifications/test-ai</code> a <code>/api/notifications/provider-models</code>."
+      },
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — formát odpovedí <code>/api/health/*</code> a význam desiatich kategórií."
+      }
+    ]
+  }
+}

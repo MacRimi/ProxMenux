@@ -1,0 +1,103 @@
+name: Qualified offline tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-offline-qualified.yml'
+      - '.github/scripts/run_offline_qualified.py'
+      - '.github/ci/offline-node/**'
+      - 'CONTRIBUTING.md'
+      - 'tests/**'
+      - 'AppImage/package.json'
+      - 'AppImage/package-lock.json'
+      - 'AppImage/scripts/*.py'
+      - 'AppImage/scripts/tests/test_health_persistence_recurrence.py'
+      - 'AppImage/scripts/tests/test_native_app_discovery.py'
+      - 'AppImage/scripts/tests/test_local_app_icons.py'
+      - 'AppImage/scripts/tests/test_local_app_icon_isolation.py'
+      - 'AppImage/scripts/tests/test_docker_app_discovery.py'
+      - 'AppImage/scripts/tests/test_pbs_i18n.py'
+      - 'AppImage/scripts/tests/fixtures/docker_discovery_inspect.json'
+      - 'AppImage/app/**'
+      - 'AppImage/components/**'
+      - 'AppImage/hooks/**'
+      - 'AppImage/lib/**'
+      - 'AppImage/messages/**'
+      - 'lang/*.json'
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/test-offline-qualified.yml'
+      - '.github/scripts/run_offline_qualified.py'
+      - '.github/ci/offline-node/**'
+      - 'CONTRIBUTING.md'
+      - 'tests/**'
+      - 'AppImage/package.json'
+      - 'AppImage/package-lock.json'
+      - 'AppImage/scripts/*.py'
+      - 'AppImage/scripts/tests/test_health_persistence_recurrence.py'
+      - 'AppImage/scripts/tests/test_native_app_discovery.py'
+      - 'AppImage/scripts/tests/test_local_app_icons.py'
+      - 'AppImage/scripts/tests/test_local_app_icon_isolation.py'
+      - 'AppImage/scripts/tests/test_docker_app_discovery.py'
+      - 'AppImage/scripts/tests/test_pbs_i18n.py'
+      - 'AppImage/scripts/tests/fixtures/docker_discovery_inspect.json'
+      - 'AppImage/app/**'
+      - 'AppImage/components/**'
+      - 'AppImage/hooks/**'
+      - 'AppImage/lib/**'
+      - 'AppImage/messages/**'
+      - 'lang/*.json'
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.func'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install native discovery route fixture dependency
+        run: python3 -m pip install 'Flask>=3,<4' 'Pillow==12.3.0' 'defusedxml==0.7.1'
+      - name: Run qualified Python files
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -I -B .github/scripts/run_offline_qualified.py --lane python
+      - name: Run health recurrence tests without TMPDIR
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: env -u TMPDIR python3 -I -B -m unittest discover -s AppImage/scripts/tests -p test_health_persistence_recurrence.py -v
+
+  offline-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Install only locked fixture dependencies (no lifecycle scripts)
+        run: |
+          npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          ln -s ../.github/ci/offline-node/node_modules AppImage/node_modules
+      - name: Run qualified Node files
+        env:
+          NODE_PATH: ${{ github.workspace }}/AppImage/node_modules
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -I -B .github/scripts/run_offline_qualified.py --lane node

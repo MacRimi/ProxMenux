@@ -1,20 +1,20 @@
 {
   "meta": {
-    "title": "Crear copias — flujo interactivo de copia | ProxMenux",
-    "description": "El flujo interactivo de copia en ProxMenux. Dos puntos de entrada (menú TUI de Scripts y UI Web del Monitor), tres destinos, dos modos de perfil, un paso común de staging y un diálogo de confirmación. Documenta la matriz de seis opciones, los perfiles Default y Custom, y qué ve el usuario entre seleccionar una copia y ver el archivo aterrizando en el destino.",
-    "ogTitle": "ProxMenux Backup — crear copias",
-    "ogDescription": "El flujo interactivo de copia con tres destinos, dos perfiles y un paso común de staging.",
-    "twitterTitle": "Crear copias | ProxMenux",
-    "twitterDescription": "Flujo interactivo de copia con tres destinos y dos modos de perfil."
+    "title": "Crear backups — flujo interactivo de backup | ProxMenux",
+    "description": "El flujo interactivo de backup en ProxMenux. Dos puntos de entrada (menú TUI de Scripts y UI Web del Monitor), tres destinos, dos modos de perfil, un paso común de staging y un diálogo de confirmación. Documenta la matriz de seis opciones, los perfiles Default y Custom, y qué ve el usuario entre seleccionar un backup y ver el archivo aterrizando en el destino.",
+    "ogTitle": "ProxMenux Backup — crear backups",
+    "ogDescription": "El flujo interactivo de backup con tres destinos, dos perfiles y un paso común de staging.",
+    "twitterTitle": "Crear backups | ProxMenux",
+    "twitterDescription": "Flujo interactivo de backup con tres destinos y dos modos de perfil."
   },
   "header": {
-    "title": "Crear copias",
-    "description": "El flujo interactivo de copia: elegir un destino y un perfil, revisar el resumen de confirmación, y ver el archivo aterrizando. Dos puntos de entrada comparten el mismo backend y producen archivos idénticos.",
+    "title": "Crear backups",
+    "description": "El flujo interactivo de backup: elegir un destino y un perfil, revisar el resumen de confirmación, y ver el archivo aterrizando. Dos puntos de entrada comparten el mismo backend y producen archivos idénticos.",
     "section": "Backup & Restore"
   },
   "intro": {
     "title": "Dos puntos de entrada, funcionalidad idéntica",
-    "body": "El TUI de Scripts y la UI Web del Monitor exponen <strong>exactamente la misma funcionalidad</strong>. Cada copia — manual o programada — pasa por la misma matriz de elección (tres destinos × dos perfiles) e invoca la misma función backend por celda (<code>_bk_pbs</code>, <code>_bk_borg</code> o <code>_bk_local</code>). Los archivos producidos desde uno u otro punto de entrada son indistinguibles. Cuál usar es una cuestión de preferencia: el TUI es amigable por SSH y admite scripting; el Monitor ofrece click-y-elegir y convive con las vistas de notificaciones y de tail del log."
+    "body": "El TUI de Scripts y la UI Web del Monitor exponen <strong>exactamente la misma funcionalidad</strong>. Cada backup — manual o programado — pasa por la misma matriz de elección (tres destinos × dos perfiles) e invoca la misma función backend por celda (<code>_bk_pbs</code>, <code>_bk_borg</code> o <code>_bk_local</code>). Los archivos producidos desde uno u otro punto de entrada son indistinguibles. Cuál usar es una cuestión de preferencia: el TUI es amigable por SSH y admite scripting; el Monitor ofrece click-y-elegir y convive con las vistas de notificaciones y de tail del log."
   },
   "entryPoints": {
     "heading": "Los dos puntos de entrada",
@@ -32,11 +32,11 @@
     ]
   },
   "modes": {
-    "heading": "Copias manuales vs programadas",
-    "body": "Las copias se pueden producir en dos modos: <strong>manuales</strong> (el flujo interactivo que documenta esta página — el usuario elige un destino y un perfil desde un menú y ve el archivo aterrizando) o <strong>programadas</strong> (un trabajo desatendido que se ejecuta en un timer estilo cron y aplica la retención configurada en el trabajo). Ambos modos soportan los mismos tres destinos y los mismos dos perfiles, y ambos están disponibles desde los dos puntos de entrada — el menú TUI de Scripts y la pestaña Backups del Monitor. Los trabajos programados usan las mismas funciones backend que el flujo manual a través de <code>run_scheduled_backup.sh</code>; los archivos producidos son indistinguibles.",
+    "heading": "Backups manuales vs programados",
+    "body": "Los backups se pueden producir en dos modos: <strong>manuales</strong> (el flujo interactivo que documenta esta página — el usuario elige un destino y un perfil desde un menú y ve el archivo aterrizando) o <strong>programadas</strong> (un trabajo desatendido que se ejecuta en un timer estilo cron y aplica la retención configurada en el trabajo). Ambos modos soportan los mismos tres destinos y los mismos dos perfiles, y ambos están disponibles desde los dos puntos de entrada — el menú TUI de Scripts y la pestaña Backups del Monitor. Los trabajos programados usan las mismas funciones backend que el flujo manual a través de <code>run_scheduled_backup.sh</code>; los archivos producidos son indistinguibles.",
     "seeAlso": "La página de trabajos programados cubre el flujo completo, incluyendo cómo crear un trabajo, adjuntarlo a un timer vzdump de PVE existente, y configurar los valores de retención.",
     "monitorAlt": "Pestaña Backups del Monitor de ProxMenux mostrando el diálogo New scheduled backup con los campos de destino, perfil, horario y retención.",
-    "monitorCaption": "Copia programada — Monitor de ProxMenux. El mismo diálogo estilo asistente que crea una copia manual lleva los campos de horario y retención al final para la ruta desatendida."
+    "monitorCaption": "Backup programado — Monitor de ProxMenux. El mismo diálogo estilo asistente que crea un backup manual lleva los campos de horario y retención al final para la ruta desatendida."
   },
   "matrix": {
     "heading": "La matriz de seis opciones",
@@ -83,13 +83,13 @@
   "profiles": {
     "heading": "Perfil Default vs Custom",
     "defaultTitle": "Perfil Default",
-    "defaultBody": "El perfil por defecto es la lista curada de <code>hb_default_profile_paths</code> (documentada en <em>Cómo funciona</em> bajo <em>Categorías de rutas</em>) más cada entrada del fichero de extras persistentes <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. El usuario confirma el destino y las opciones de cifrado y la copia continúa sin más selección de rutas.",
+    "defaultBody": "El perfil por defecto es la lista curada de <code>hb_default_profile_paths</code> (documentada en <em>Cómo funciona</em> bajo <em>Categorías de rutas</em>) más cada entrada del fichero de extras persistentes <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. El usuario confirma el destino y las opciones de cifrado y el backup continúa sin más selección de rutas.",
     "customTitle": "Perfil Custom",
-    "customBody": "El perfil Custom abre un checklist mostrando cada ruta del perfil por defecto (sin marcar) y cada extra persistente (premarcado, prefijado con <code>[+]</code>). El usuario marca el conjunto para esa ejecución y puede pulsar <em>Add custom path</em> para añadir una nueva ruta absoluta. Cualquier ruta añadida en línea se persiste en <code>backup-extra-paths.txt</code> para que futuras copias la recojan automáticamente sin volver a añadirla. Quitar la marca a un extra persistente lo desmarca para esa ejecución pero no lo elimina del fichero — la eliminación es una acción <em>Manage custom paths</em> separada, fuera del flujo de copia.",
+    "customBody": "El perfil Custom abre un checklist mostrando cada ruta del perfil por defecto (sin marcar) y cada extra persistente (premarcado, prefijado con <code>[+]</code>). El usuario marca el conjunto para esa ejecución y puede pulsar <em>Add custom path</em> para añadir una nueva ruta absoluta. Cualquier ruta añadida en línea se persiste en <code>backup-extra-paths.txt</code> para que futuros backups la recojan automáticamente sin volver a añadirla. Quitar la marca a un extra persistente lo desmarca para esa ejecución pero no lo elimina del fichero — la eliminación es una acción <em>Manage custom paths</em> separada, fuera del flujo de backup.",
     "customPickerAlt": "Checklist del perfil Custom mostrando las rutas del perfil por defecto (sin marcar) y los extras persistentes (premarcados con prefijo [+]), más botones para añadir una ruta nueva o confirmar la selección.",
     "customPickerCaption": "Perfil Custom — el path picker. Las rutas del perfil por defecto aparecen sin marcar; los extras persistentes aparecen premarcados con prefijo [+]. El usuario marca el conjunto para esa ejecución.",
     "manageCustomAlt": "Menú Manage custom paths mostrando la lista de extras persistentes y opciones para añadirlos, eliminarlos o editarlos.",
-    "manageCustomCaption": "Manage custom paths — el punto de entrada donde se añaden o eliminan los extras persistentes. Cada ruta listada aquí se incluye automáticamente en las copias en modo Default sin necesidad de abrir el picker Custom."
+    "manageCustomCaption": "Manage custom paths — el punto de entrada donde se añaden o eliminan los extras persistentes. Cada ruta listada aquí se incluye automáticamente en los backups en modo Default sin necesidad de abrir el picker Custom."
   },
   "commonPipeline": {
     "heading": "Qué se ejecuta con independencia del destino",
@@ -98,7 +98,7 @@
       {
         "step": "1",
         "name": "Ensamblado del rootfs",
-        "detail": "Ejecuta <code>rsync -a</code> por cada ruta seleccionada hacia <code>staging_root/rootfs/</code>. La base pmxcfs en <code>/var/lib/pve-cluster/config.db</code> se captura aparte con <code>sqlite3 .backup</code> para obtener un snapshot consistente sin parar el clúster, y los sidecars <code>.db-wal</code> / <code>.db-shm</code> se excluyen del rsync; si <code>sqlite3</code> no está disponible, se deposita un <code>config.db.raw-fallback</code> que la restauración promociona al importar. Excluye subrutas volátiles (historial de bash, cachés, papelera) de <code>/root/</code>. Las rutas ausentes en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
+        "detail": "Ejecuta <code>rsync -a</code> por cada ruta seleccionada hacia <code>staging_root/rootfs/</code>. La base pmxcfs en <code>/var/lib/pve-cluster/config.db</code> se captura aparte con <code>sqlite3 .backup</code> para obtener un snapshot consistente sin parar el clúster, y los sidecars <code>.db-wal</code> / <code>.db-shm</code> se excluyen del rsync; si <code>sqlite3</code> no está disponible, se deposita un <code>config.db.raw-fallback</code> que la restauración promociona al importar. Excluye subrutas volátiles (historial de bash, cachés, papelera) de <code>/root/</code>. Las rutas ausentes en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener el backup."
       },
       {
         "step": "2",
@@ -113,12 +113,12 @@
       {
         "step": "4",
         "name": "Info de la ejecución",
-        "detail": "<code>metadata/run_info.env</code> registra la identidad de la ejecución de copia — hostname, timestamp, versión del kernel — usada por el chequeo de compatibilidad de la restauración para determinar la dirección cross-kernel."
+        "detail": "<code>metadata/run_info.env</code> registra la identidad de la ejecución de backup — hostname, timestamp, versión del kernel — usada por el chequeo de compatibilidad de la restauración para determinar la dirección cross-kernel."
       },
       {
         "step": "5",
         "name": "Notificación (start)",
-        "detail": "Se dispara <code>hb_notify_lifecycle \"start\"</code>. Si las notificaciones están configuradas en el Monitor, se emite un evento usuario-facing <em>Host backup started</em>. Silencioso si no hay canales configurados."
+        "detail": "Se dispara <code>hb_notify_lifecycle \"start\"</code>. Si las notificaciones están configuradas en el Monitor, se emite el evento <em>Host backup started</em>, visible para el usuario. Si no hay canales configurados, no se envía nada."
       }
     ]
   },
@@ -150,17 +150,17 @@
       "<code>ProxMenux-Monitor.AppImage*</code>, <code>install_proxmenux*.sh</code>"
     ],
     "notInProfileTitle": "Rutas fuera del perfil",
-    "notInProfileBody": "Todo lo que no esté listado en <code>hb_default_profile_paths</code> y no se haya añadido como ruta custom o extra persistente no forma parte de la copia. Ejemplos notables:",
+    "notInProfileBody": "Todo lo que no esté listado en <code>hb_default_profile_paths</code> y no se haya añadido como ruta custom o extra persistente no forma parte del backup. Ejemplos notables:",
     "notInProfileItems": [
-      "<strong>Discos de VMs y LXCs</strong> — los gestiona <code>vzdump</code>, no esta funcionalidad. Los ficheros de configuración de los invitados bajo <code>/etc/pve/nodes/*/qemu-server/*.conf</code> y <code>lxc/*.conf</code> sí se capturan (viven bajo <code>/etc/pve</code>) para que la restauración reproduzca el inventario; los discos se re-adjuntan desde una copia existente de vzdump/PBS.",
+      "<strong>Discos de VMs y LXCs</strong> — los gestiona <code>vzdump</code>, no esta funcionalidad. Los ficheros de configuración de los invitados bajo <code>/etc/pve/nodes/*/qemu-server/*.conf</code> y <code>lxc/*.conf</code> sí se capturan (viven bajo <code>/etc/pve</code>) para que la restauración reproduzca el inventario; los discos se re-adjuntan desde un backup existente de vzdump/PBS.",
       "<strong><code>/boot</code> y <code>/boot/efi</code></strong> — los binarios del kernel, el initramfs y la partición ESP UEFI los regenera el propio destino con <code>update-initramfs</code>, <code>update-grub</code> o <code>proxmox-boot-tool refresh</code> tras la restauración. El bootloader nunca se copia verbatim.",
       "<strong>Filesystems runtime del kernel y sistema</strong> — <code>/proc</code>, <code>/sys</code>, <code>/dev</code> y <code>/run</code> son pseudo-filesystems que produce el kernel y udev; no se persisten en ningún sitio.",
       "<strong>Binarios de paquetes bajo <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> — los reinstala el APT del destino a partir de <code>packages.manual.list</code>.",
       "<strong><code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong> — estado runtime por host, no se restaura.",
-      "<strong><code>/home/USUARIO</code></strong> — no está en el perfil por defecto. Añadirlo como ruta custom cuando un sistema tenga directorios home de usuario que deban sobrevivir a una restauración."
+      "<strong><code>/home/USER</code></strong> — no está en el perfil por defecto. Añadirlo como ruta custom cuando un sistema tenga directorios home de usuario que deban sobrevivir a una restauración."
     ],
     "customPathsTitle": "Cómo se tratan las rutas custom",
-    "customPathsBody": "Una ruta custom añadida en línea en modo Custom o persistida en <code>backup-extra-paths.txt</code> pasa por el mismo pipeline de <code>rsync</code> que las rutas del perfil por defecto. Se aplican las exclusiones globales. Si la ruta custom está bajo <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, siguen aplicando las exclusiones específicas de arriba. Cada ruta archivada — default o custom — queda registrada en <code>metadata/paths_archived.txt</code>. Las rutas que no existen en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
+    "customPathsBody": "Una ruta custom añadida en línea en modo Custom o persistida en <code>backup-extra-paths.txt</code> pasa por el mismo pipeline de <code>rsync</code> que las rutas del perfil por defecto. Se aplican las exclusiones globales. Si la ruta custom está bajo <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, siguen aplicando las exclusiones específicas de arriba. Cada ruta archivada — default o custom — queda registrada en <code>metadata/paths_archived.txt</code>. Las rutas que no existen en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener el backup."
   },
   "archiveStructure": {
     "heading": "Estructura del archivo",
@@ -169,7 +169,7 @@
   },
   "confirmation": {
     "heading": "Resumen de confirmación",
-    "body": "Antes de que el backend escriba nada en el destino, ProxMenux muestra un diálogo resumen con el destino, el backup ID o nombre del archivo, el estado del cifrado y la lista de rutas que se copian. Cancelar aquí aborta la copia limpiamente — el directorio de staging se elimina por el hook <code>trap</code> definido en la función backend y ningún dato parcial llega al destino."
+    "body": "Antes de que el backend escriba nada en el destino, ProxMenux muestra un diálogo resumen con el destino, el backup ID o nombre del archivo, el estado del cifrado y la lista de rutas que se copian. Cancelar aquí aborta el backup limpiamente — el directorio de staging se elimina por el hook <code>trap</code> definido en la función backend y ningún dato parcial llega al destino."
   },
   "writing": {
     "heading": "Escritura en el destino",
@@ -181,7 +181,7 @@
       },
       {
         "topic": "Sidecar (sólo local)",
-        "detail": "<code>hb_write_archive_sidecar</code> deposita un <code>*.proxmenux.json</code> junto al archivo local para que el Monitor lo identifique como copia de host de ProxMenux incluso tras movimientos o renombrados."
+        "detail": "<code>hb_write_archive_sidecar</code> deposita un <code>*.proxmenux.json</code> junto al archivo local para que el Monitor lo identifique como backup de host de ProxMenux incluso tras movimientos o renombrados."
       },
       {
         "topic": "Notificación (complete/fail)",
@@ -190,12 +190,12 @@
     ]
   },
   "finishedScreens": {
-    "heading": "Cómo se ve una copia finalizada",
+    "heading": "Cómo se ve un backup finalizado",
     "intro": "El mismo evento de finalización lo exponen los dos puntos de entrada. El TUI escribe un bloque resumen en el terminal; la pestaña Backups del Monitor muestra la ejecución en la lista de archivos con badges de tamaño, duración y estado.",
-    "scriptsAlt": "TUI de ProxMenux Scripts mostrando una copia de host finalizada — destino, backup ID, ruta del snapshot, tamaño de datos, duración y estado de cifrado.",
-    "scriptsCaption": "Copia finalizada — ProxMenux Scripts (TUI). El bloque de finalización imprime el destino, backup ID, nombre del snapshot o archivo resultante, tamaño de datos, duración y estado de cifrado.",
-    "monitorAlt": "Pestaña Backups del Monitor de ProxMenux mostrando una entrada de copia de host finalizada con tamaño, duración, badge del método y indicador de cifrado.",
-    "monitorCaption": "Copia finalizada — pestaña Backups del Monitor de ProxMenux. La nueva copia aparece en la lista de archivos con el badge del método del destino, tamaño, duración y — cuando aplica — el indicador de cifrado."
+    "scriptsAlt": "TUI de ProxMenux Scripts mostrando un backup de host finalizado — destino, backup ID, ruta del snapshot, tamaño de datos, duración y estado de cifrado.",
+    "scriptsCaption": "Backup finalizado — ProxMenux Scripts (TUI). El bloque de finalización imprime el destino, backup ID, nombre del snapshot o archivo resultante, tamaño de datos, duración y estado de cifrado.",
+    "monitorAlt": "Pestaña Backups del Monitor de ProxMenux mostrando una entrada de backup de host finalizado con tamaño, duración, badge del método y indicador de cifrado.",
+    "monitorCaption": "Backup finalizado — pestaña Backups del Monitor de ProxMenux. El nuevo backup aparece en la lista de archivos con el badge del método del destino, tamaño, duración y — cuando aplica — el indicador de cifrado."
   },
   "whereNext": {
     "heading": "A dónde seguir",
@@ -208,7 +208,7 @@
       {
         "label": "Trabajos programados",
         "href": "/docs/backup-restore/scheduled-jobs",
-        "tail": " — ejecutar la misma copia desatendida en un horario en lugar de interactivamente."
+        "tail": " — ejecutar el mismo backup desatendido en un horario en lugar de interactivamente."
       },
       {
         "label": "Restauración",

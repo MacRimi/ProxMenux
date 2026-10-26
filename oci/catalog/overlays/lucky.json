@@ -1,0 +1,27 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Lucky web interface",
+        "type": "static-default",
+        "username": "666",
+        "password": "666",
+        "change_required": true,
+        "source": "upstream-lucky-readme",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/goodluck",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

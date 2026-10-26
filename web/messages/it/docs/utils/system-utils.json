@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "title": "Installatore di utilità di sistema | Documentazione ProxMenux",
+    "description": "Installatore di utilità CLI per Proxmox VE, con 25 pacchetti nell’elenco di riferimento (htop, btop, iperf3, tmux, ...). Selezione personalizzata, installazione completa e gruppi predefiniti (base, sviluppo, compressione, multiplexer, analisi, rete). I gruppi possono includere altri pacchetti. Usa ensure_repositories + install_single_package.",
+    "ogTitle": "Installatore di utilità di sistema | Documentazione ProxMenux",
+    "ogDescription": "Installare strumenti CLI curati su Proxmox VE con un clic o selezione personalizzata."
+  },
+  "header": {
+    "title": "Installatore di utilità di sistema",
+    "description": "Selettore delle 25 utilità CLI nell’elenco di riferimento PROXMENUX_UTILS. Offre selezione personalizzata, installazione completa, sei gruppi predefiniti e verifica delle installazioni. I gruppi possono includere strumenti esterni all’elenco. Usa le funzioni condivise ensure_repositories() + install_single_package() per gestire in modo coerente repository e messaggi sui pacchetti.",
+    "section": "Utilità"
+  },
+  "info": {
+    "title": "Cosa fa",
+    "body": "Installa strumenti CLI da un elenco di 25 pacchetti. Ogni installazione segue lo stesso processo: <code>ensure_repositories</code> verifica che l’host abbia un repository Proxmox utilizzabile per la versione principale di PVE; poi <code>install_single_package</code> installa il pacchetto e controlla che il comando sia in PATH."
+  },
+  "opening": {
+    "heading": "Apertura dell'installatore",
+    "intro": "Dal menu Utilità, scegliere <strong>System Utilities Installer</strong>. Il menu principale offre nove opzioni:",
+    "imageAlt": "Menu di installazione delle utilità di sistema con selezione personalizzata, ALL, gruppi predefiniti e verifica"
+  },
+  "actions": {
+    "heading": "Le 9 azioni del menu",
+    "headerOption": "Opzione",
+    "headerBehaviour": "Comportamento",
+    "rows": [
+      {
+        "option": "1. Selezione personalizzata",
+        "behaviourRich": "Elenco di selezione dei 25 pacchetti. Usa SPACE per selezionare e ENTER per confermare; vengono installati solo i pacchetti selezionati."
+      },
+      {
+        "option": "2. Installa TUTTE le utilità",
+        "behaviourRich": "Installazione one-shot di ogni pacchetto in <code>PROXMENUX_UTILS</code>. Utilizzare dopo una nuova installazione Proxmox."
+      },
+      {
+        "option": "3. Base",
+        "behaviourRich": "<code>grc</code>, <code>htop</code>, <code>tree</code>, <code>curl</code>, <code>wget</code>"
+      },
+      {
+        "option": "4. Sviluppo",
+        "behaviourRich": "<code>git</code>, <code>vim</code>, <code>nano</code>"
+      },
+      {
+        "option": "5. Compressione",
+        "behaviourRich": "<code>zip</code>, <code>unzip</code>, <code>rsync</code>"
+      },
+      {
+        "option": "6. Multiplexer di terminale",
+        "behaviourRich": "<code>screen</code>, <code>tmux</code>"
+      },
+      {
+        "option": "7. Analisi",
+        "behaviourRich": "<code>jq</code>, <code>ncdu</code>, <code>iotop</code>"
+      },
+      {
+        "option": "8. Rete",
+        "behaviourRich": "<code>iperf3</code>, <code>nethogs</code>, <code>nmap</code>, <code>tcpdump</code>, <code>lsof</code>"
+      },
+      {
+        "option": "9. Verifica installazioni",
+        "behaviourRich": "Esamina ogni voce di <code>PROXMENUX_UTILS</code>, controlla se il comando di verifica è in PATH e mostra un riepilogo Disponibile / Mancante."
+      }
+    ]
+  },
+  "packages": {
+    "heading": "I 25 pacchetti",
+    "intro": "Definiti nel file condiviso <code>scripts/global/utils-install-functions.sh</code> come <code>PROXMENUX_UTILS</code> (formato: <code>package:verify_command:description</code>). Altri script ProxMenux, per esempio gli avvii del monitoraggio di rete iftop / iptraf-ng / iperf3, riutilizzano queste voci per mantenere sincronizzati pacchetto e comando di verifica.",
+    "headerPackage": "Pacchetto",
+    "headerVerify": "Comando di verifica",
+    "headerDescription": "Descrizione",
+    "rows": [
+      {
+        "package": "axel",
+        "verify": "axel",
+        "description": "Acceleratore di download"
+      },
+      {
+        "package": "aria2",
+        "verify": "aria2c",
+        "description": "Downloader multi-source"
+      },
+      {
+        "package": "btop",
+        "verify": "btop",
+        "description": "Monitor moderno delle risorse"
+      },
+      {
+        "package": "cabextract",
+        "verify": "cabextract",
+        "description": "Estrarre i file CAB"
+      },
+      {
+        "package": "chntpw",
+        "verify": "chntpw",
+        "description": "Modifica del registro di Windows / password"
+      },
+      {
+        "package": "dos2unix",
+        "verify": "dos2unix",
+        "description": "Converti file di testo DOS / Unix"
+      },
+      {
+        "package": "genisoimage",
+        "verify": "genisoimage",
+        "description": "Crea immagini ISO"
+      },
+      {
+        "package": "grc",
+        "verify": "grc",
+        "description": "Colorazione generica dei log"
+      },
+      {
+        "package": "htop",
+        "verify": "htop",
+        "description": "Visualizzatore interattivo dei processi"
+      },
+      {
+        "package": "iftop",
+        "verify": "iftop",
+        "description": "Utilizzo della rete in tempo reale"
+      },
+      {
+        "package": "intel-gpu-tools",
+        "verify": "intel_gpu_top",
+        "description": "Strumenti Intel GPU"
+      },
+      {
+        "package": "iotop",
+        "verify": "iotop",
+        "description": "Monitoraggio dell’I/O dei dischi"
+      },
+      {
+        "package": "iperf3",
+        "verify": "iperf3",
+        "description": "Test di banda di rete"
+      },
+      {
+        "package": "ipset",
+        "verify": "ipset",
+        "description": "Gestione degli insiemi IP"
+      },
+      {
+        "package": "iptraf-ng",
+        "verify": "iptraf-ng",
+        "description": "Strumento di monitoraggio della rete"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "Utilità del disco VM"
+      },
+      {
+        "package": "msr-tools",
+        "verify": "rdmsr",
+        "description": "Accesso ai registri MSR della CPU"
+      },
+      {
+        "package": "net-tools",
+        "verify": "netstat",
+        "description": "Strumenti di networking legacy"
+      },
+      {
+        "package": "plocate",
+        "verify": "locate",
+        "description": "Individuare i file rapidamente"
+      },
+      {
+        "package": "s-tui",
+        "verify": "s-tui",
+        "description": "Stress-Terminal UI"
+      },
+      {
+        "package": "sshpass",
+        "verify": "sshpass",
+        "description": "Accesso non interattivo SSH"
+      },
+      {
+        "package": "tmux",
+        "verify": "tmux",
+        "description": "Multiplexer del terminale"
+      },
+      {
+        "package": "unzip",
+        "verify": "unzip",
+        "description": "Estrarre i file ZIP"
+      },
+      {
+        "package": "wimtools",
+        "verify": "wimlib-imagex",
+        "description": "Gestione delle immagini WIM"
+      },
+      {
+        "package": "zip",
+        "verify": "zip",
+        "description": "Crea file ZIP"
+      }
+    ]
+  },
+  "howItWorks": {
+    "heading": "Come funziona l’installazione di un pacchetto",
+    "items": [
+      "<code>ensure_repositories</code> rileva PVE 8 o 9 e legge i repository tramite l’API Proxmox. Con un repository Proxmox utilizzabile non cambia nulla. Un host senza abbonamento attivo con il solo Enterprise deve confermare il passaggio a no-subscription; <code>apt-get update</code> viene eseguito dopo il cambio accettato.",
+      "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> gestisce <code>apt-get install -y \"$pkg\"</code> con feedback (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
+    ],
+    "verifyIntro": "Dopo l'installazione, il comando di verifica viene controllato con <code>command -v \"$verify_cmd\"</code>. Tre risultati:",
+    "verifyOutcomes": [
+      "<strong>0 (successo):</strong> comando disponibile; il pacchetto è conteggiato come <em>Riuscito</em>.",
+      "<strong>1 (errore):</strong> apt non è riuscito; il pacchetto è conteggiato come <em>Non riuscito</em>.",
+      "<strong>2 (avviso):</strong> apt è riuscito, ma il comando atteso non è stato trovato in PATH; il pacchetto è conteggiato come <em>Con avvisi</em>."
+    ],
+    "summary": "Al termine di un’installazione personalizzata o di gruppo, una finestra mostra i conteggi <em>Riusciti / Con avvisi / Non riusciti</em>."
+  },
+  "verify": {
+    "heading": "Verifica installazioni",
+    "intro": "L’opzione 9 è in sola lettura: esamina <code>PROXMENUX_UTILS</code> ed esegue <code>command -v</code> per ogni comando di verifica. L’output è simile al seguente:",
+    "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "outro": "Utile prima di eseguire script che dipendono da questi strumenti (ad es. <code>uup_dump_iso_creator.sh</code> ha bisogno di <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Se manca qualcosa, eseguire l'installazione del gruppo corrispondente o selezionare i pacchetti mancanti tramite selezione personalizzata."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "reposTitle": "«Impossibile configurare i repository. Installazione annullata».",
+    "reposBody": "Il controllo dei repository non è riuscito: il passaggio a no-subscription è stato rifiutato, lo stato dell’abbonamento non è leggibile o una voce richiede attenzione. Il messaggio precedente indica la causa. I repository sono elencati in <em>Node → Updates → Repositories</em>; <code>apt-get update</code> da una console mostra l’errore apt.",
+    "warningsTitle": "Un pacchetto viene segnalato \"Con avvisi\" ma il comando funziona dopo aver chiuso il menu",
+    "warningsBody": "Dopo <code>apt-get install</code>, la funzione esegue <code>hash -r</code>, attende brevemente e verifica il comando atteso con <code>command -v</code>. Un avviso indica che il controllo continua a fallire, senza identificarne la causa. Prova una nuova shell, poi controlla l’installazione del pacchetto e PATH se il comando manca ancora.",
+    "hangsTitle": "Un’installazione apt si blocca",
+    "hangsBody": "Probabilmente una richiesta debconf è nascosta dall’output silenziato. Lo script usa <code>DEBIAN_FRONTEND=noninteractive</code> per le chiamate apt, che di solito evita le domande, ma alcuni pacchetti richiedono comunque dati. Annulla con <kbd>Ctrl</kbd>+<kbd>C</kbd> ed esegui <code>apt-get install -y &lt;pkg&gt;</code> manualmente da una shell per vedere la richiesta e decidere."
+  },
+  "files": {
+    "heading": "File coinvolti",
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Aggiornamento sistema Proxmox",
+        "tailRich": "— per il <code>apt dist-upgrade</code> effettivo sull'host."
+      },
+      {
+        "href": "/docs/network/monitoring",
+        "label": "Strumenti di monitoraggio in tempo reale (rete)",
+        "tailRich": "— utilizza iftop / iptraf-ng / iperf3 da questa stessa lista."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Panoramica delle utilità",
+        "tailRich": " — torna alla panoramica della sezione."
+      }
+    ]
+  }
+}

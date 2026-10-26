@@ -1,0 +1,422 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-emqx",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "EMQX"
+    },
+    "tagline": {
+      "en_US": "MQTT broker with a built-in management dashboard."
+    },
+    "description": {
+      "en_US": "A self-hosted MQTT broker for home automation, IoT devices and messaging clients, with a built-in web dashboard and API. It stores node data in its persistent data volume and does not require a separate database service."
+    },
+    "category": "network",
+    "category_label": "Network & Firewall",
+    "author": "emqx",
+    "developer": "emqx",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emqx.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 18083,
+      "path": "/"
+    },
+    "website": "https://www.emqx.com/en",
+    "documentation": "https://docs.emqx.com/en/emqx/latest/get-started/deploy/install-docker.html",
+    "repository": "https://github.com/emqx/emqx",
+    "tips": [
+      "ProxMenux generates a unique Dashboard administrator password during installation and shows it in the completion summary; save it before closing the terminal.",
+      "Keep the node hostname/IP stable after installation because EMQX stores node data using its node name."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "emqx",
+    "repository": "https://github.com/emqx/emqx",
+    "revision": "64aa6820f43234d8064e6924cc8c8fead495403c",
+    "image_repository_url": "https://hub.docker.com/r/emqx/emqx",
+    "readme_pushed_at": "2026-10-23T13:07:40Z",
+    "compose_sha256": "51ec2b035212a958b2a38acf72f2c090df158dc719ae79fd84450c4fcd8713aa",
+    "generated_at": "2026-10-26T00:19:19+00:00",
+    "readme_raw_url": "https://raw.githubusercontent.com/emqx/emqx/master/README.md"
+  },
+  "container_contract": {
+    "service_name": "emqx",
+    "container_name": "emqx",
+    "image": {
+      "reference": "emqx/emqx:5.10.5",
+      "registry": "docker.io",
+      "repository": "emqx/emqx",
+      "tag": "5.10.5",
+      "digest": null,
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "EMQX_DASHBOARD__DEFAULT_PASSWORD",
+        "example": "${GENERATED_DASHBOARD_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/opt/emqx/data",
+        "compose_source_example": "emqx-data-0",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/opt/emqx/log",
+        "compose_source_example": "emqx-data-1",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 2
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 1883,
+        "published_example": 1883,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 18083,
+        "published_example": 18083,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: emqx\nservices:\n  emqx:\n    image: emqx/emqx:5\n    restart: unless-stopped\n    ports:\n    - 1883:1883/tcp\n    - 18083:18083/tcp\n    volumes:\n    - emqx-data-0:/opt/emqx/data\n    - emqx-data-1:/opt/emqx/log\n    environment:\n      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${GENERATED_GENERATED_DASHBOARD_PASSWORD}\nvolumes:\n  emqx-data-0: null\n  emqx-data-1: null\n"
+  },
+  "compose_stack": {
+    "project_name": "emqx",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "emqx",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "emqx",
+        "image": "emqx/emqx:5.10.5",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "emqx/emqx:5.10.5",
+          "restart": "unless-stopped",
+          "ports": [
+            "1883:1883/tcp",
+            "18083:18083/tcp"
+          ],
+          "volumes": [
+            "emqx-data-0:/opt/emqx/data",
+            "emqx-data-1:/opt/emqx/log"
+          ],
+          "environment": {
+            "EMQX_DASHBOARD__DEFAULT_PASSWORD": "${GENERATED_GENERATED_DASHBOARD_PASSWORD}"
+          }
+        }
+      }
+    ],
+    "top_level": {
+      "name": "emqx",
+      "volumes": {
+        "emqx-data-0": null,
+        "emqx-data-1": null
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "emqx-volume-0",
+        "service": "emqx",
+        "container_path": "/opt/emqx/data",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "emqx-volume-1",
+        "service": "emqx",
+        "container_path": "/opt/emqx/log",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "emqx"
+      ],
+      "stop_order": [
+        "emqx"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "dashboard-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "emqx",
+              "environment_variable": "EMQX_DASHBOARD__DEFAULT_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "EMQX Dashboard",
+        "scheme": "http",
+        "port": 18083,
+        "path": "/",
+        "source": "upstream-documentation"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "EMQX Dashboard administrator",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "EMQX_DASHBOARD__DEFAULT_PASSWORD",
+        "change_required": false,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "The source definition identifies an OCI image reference.",
+        "native_lxc_behavior": "ProxMenux pulls the exact image reference in this profile and resolves it to an architecture-specific digest at installation.",
+        "reason": "Use the project-maintained image and the tag reviewed for this profile.",
+        "behavioral_impact": "A floating tag can resolve to a newer build on a later installation or image update.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Compose publishes application ports on its Docker host.",
+        "native_lxc_behavior": "The OCI process listens on the same application ports at its dedicated LXC address.",
+        "reason": "A dedicated LXC has its own network namespace and does not need Docker port NAT.",
+        "behavioral_impact": "Clients connect to the LXC address and the declared application port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "generated-dashboard-admin-password",
+        "upstream_behavior": "A fresh EMQX Dashboard initializes the admin account from dashboard.default_password; its published default is admin/public.",
+        "native_lxc_behavior": "ProxMenux generates a unique 24-byte hex password and passes it as EMQX_DASHBOARD__DEFAULT_PASSWORD before the first boot.",
+        "reason": "Avoid exposing a published default password while preserving the documented Dashboard login flow.",
+        "behavioral_impact": "The installer prints the generated password once in its completion summary; save it. EMQX initializes this password only on first boot.",
+        "validation": "pending-per-application"
+      }
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/opt/emqx/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/opt/emqx/log",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 18083,
+        "path": "/",
+        "timeout_seconds": 240,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": true
+      },
+      "generated_sensitive_environment": {
+        "EMQX_DASHBOARD__DEFAULT_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 24
+        }
+      },
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "not-yet-validated",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-reviewed-image-reference-and-resolved-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

@@ -17,6 +17,9 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f /usr/local/share/proxmenux/scripts/global/pmx_journal.sh ]]; then
+    source /usr/local/share/proxmenux/scripts/global/pmx_journal.sh
+fi
 
 load_language
 initialize_cache
@@ -77,7 +80,9 @@ create_backup() {
 
 # Create the patch script that will be called by APT hook
 create_patch_script() {
-    cat > "$PATCH_BIN" <<'EOFPATCH'
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "create_patch_script" "$FUNC_VERSION"
+    pmx_write_file "$PATCH_BIN" <<'EOFPATCH'
 #!/usr/bin/env bash
 # ==========================================================
 # Proxmox Subscription Banner Patch (v3 - Minimal)
@@ -278,6 +283,10 @@ reload_services() {
     systemctl is-active --quiet pvedaemon 2>/dev/null && {
         systemctl reload pvedaemon 2>/dev/null || true
     }
+    # Proxmox Backup Server serves the same toolkit from its own proxy.
+    systemctl is-active --quiet proxmox-backup-proxy 2>/dev/null && {
+        systemctl reload proxmox-backup-proxy 2>/dev/null || systemctl restart proxmox-backup-proxy 2>/dev/null || true
+    }
 }
 
 main() {
@@ -303,7 +312,7 @@ EOFAPT
     
     # Verify APT hook syntax
     apt-config dump >/dev/null 2>&1 || { 
-        msg_warn "APT hook syntax issue, removing..."
+        msg_warn "$(translate "APT hook syntax issue, removing...")"
         rm -f "$APT_HOOK"
     }
 }
@@ -311,9 +320,12 @@ EOFAPT
 # Main function to remove subscription banner
 remove_subscription_banner_v3() {
     local pve_version
-    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
-    
-    msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying minimal banner patch")"
+    if command -v pveversion >/dev/null 2>&1; then
+        pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+        msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying minimal banner patch")"
+    else
+        msg_info "$(translate "Detected Proxmox Backup Server") - $(translate "applying minimal banner patch")"
+    fi
     
 
     

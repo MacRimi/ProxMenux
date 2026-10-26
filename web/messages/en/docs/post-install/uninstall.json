@@ -58,7 +58,7 @@
           },
           {
             "tool": "APT Language Skip",
-            "restores": "Removes /etc/apt/apt.conf.d/99-disable-translations. APT will download language packages again."
+            "restores": "Removes /etc/apt/apt.conf.d/99-disable-translations, allowing APT to download translated package-description indexes according to its remaining language settings."
           },
           {
             "tool": "APT IPv4 Force",
@@ -83,7 +83,11 @@
           },
           {
             "tool": "System Limits Increase",
-            "restores": "Removes /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf and /etc/security/limits.d/99-limits.conf. Reverts PAM limits and systemd DefaultLimitNOFILE, and strips the ulimit -n 256000 line from /root/.profile."
+            "restores": "Removes /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf and /etc/security/limits.d/99-limits.conf. Reverts PAM limits and systemd DefaultLimitNOFILE. Its /root/.profile cleanup targets the legacy ulimit -n 256000 line; a ulimit -n 1048576 line from the current installer can remain and may need manual removal."
+          },
+          {
+            "tool": "ZRAM swap profile",
+            "restores": "Turns off the swap on /dev/zram0, stops dev-zram0.swap and removes /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. The systemd-zram-generator package is purged only when ProxMenux installed it and no other ZRAM setup is present. If the pages in ZRAM cannot be moved out, the profile stays active and nothing is removed."
           }
         ]
       },
@@ -100,7 +104,7 @@
           },
           {
             "tool": "TCP BBR + TCP Fast Open",
-            "restores": "Removes /etc/sysctl.d/99-tcp-bbr.conf and 99-tcp-fastopen.conf and reloads sysctl so the kernel returns to the cubic congestion control and to tcp_fastopen=1."
+            "restores": "Removes /etc/sysctl.d/99-kernel-bbr.conf and 99-tcp-fastopen.conf and reloads remaining sysctl configuration. File removal does not itself reset live values; defaults such as cubic and tcp_fastopen=1 return after reboot unless another configuration overrides them."
           },
           {
             "tool": "Persistent Interface Names",
@@ -162,8 +166,8 @@
             "restores": "Removes idle=nomwait from kernel cmdline (ZFS) or GRUB, and the ignore_msrs / report_ignored_msrs options from /etc/modprobe.d/kvm.conf."
           },
           {
-            "tool": "QEMU Guest Agent (templates)",
-            "restores": "Reads /usr/local/share/proxmenux/guest_agent.pkg (recorded at install time) and apt purges whichever package was installed (qemu-guest-agent for standard hosts, spice-vdagent when Spice mode is used)."
+            "tool": "Guest agent for a virtualized Proxmox host",
+            "restores": "Reads /usr/local/share/proxmenux/guest_agent.pkg and purges the recorded host package. The installer selects qemu-guest-agent, open-vm-tools or virtualbox-guest-utils according to the detected hypervisor. If the record is missing, the uninstaller tries those three packages. This acts on the nested Proxmox host, not guest templates."
           }
         ]
       },
@@ -205,7 +209,7 @@
           },
           {
             "tool": "pigz (parallel gzip)",
-            "restores": "Puts /bin/gzip.original back in place, removes the /bin/pigzwrapper, reverts the pigz and bwlimit lines in /etc/vzdump.conf and apt purges pigz."
+            "restores": "Copies the real gzip back from gzip.distrib, removes the dpkg diversion and /bin/pigzwrapper, comments out the pigz line in /etc/vzdump.conf and apt purges pigz once gzip is verified."
           },
           {
             "tool": "High Availability services",
@@ -217,7 +221,7 @@
           },
           {
             "tool": "OVH RTM (monitoring)",
-            "restores": "apt purges any ovh-* packages the RTM installer added and deletes the puppet manifests it dropped under /etc/puppet/. On non-OVH hosts nothing was ever installed, so nothing is removed."
+            "restores": "Purges packages matching ovh-rtm*, rtm and rtm-*, removes /etc/rtm and clears the RTM registry entry. Puppet artefacts under /etc/puppet/ may need manual inspection and cleanup; the uninstaller does not delete that directory. On non-OVH hosts the installer normally makes no changes."
           }
         ]
       }
@@ -226,7 +230,7 @@
   "edge": {
     "heading": "Edge cases and caveats",
     "packageTitle": "Package reinstall touches live Proxmox packages",
-    "packageBody": "Reverting <strong>Subscription Banner Removal</strong> reinstalls <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> and <code>libpve-http-server-perl</code> with <code>--force-confnew</code>. This is generally safe but does touch the running web UI — refresh your browser afterwards, and expect a few seconds of reconnection. Don't run this in the middle of a migration or clone operation.",
+    "packageBody": "If ProxMenux’s own backups cannot restore <strong>Subscription Banner Removal</strong>, the fallback reinstalls <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> and <code>libpve-http-server-perl</code> with <code>--force-confnew</code>. This touches the running web UI: refresh the browser afterwards and allow a few seconds to reconnect. Avoid doing it during a migration or clone operation.",
     "rebootTitle": "Persistent names and VFIO need a reboot",
     "rebootBody": "Removing ProxMenux's <code>10-proxmenux-*.link</code> files (<em>Persistent Interface Names</em>) and reverting <em>IOMMU/VFIO</em> do not affect the running system — they only matter after a reboot. ProxMenux sets the reboot flag automatically for these.",
     "perItemTitle": "You can revert one thing and keep the rest",

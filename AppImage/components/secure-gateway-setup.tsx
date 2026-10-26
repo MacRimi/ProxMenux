@@ -162,6 +162,19 @@ export function SecureGatewaySetup() {
     loadInitialData()
   }, [])
 
+  // The gateway was updated from the Updates tab of its container: read the
+  // update state and the status again so this card agrees with it.
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {}
+      if (detail.appId !== "secure-gateway" || detail.source === "card") return
+      void loadUpdateInfo(true)
+      void loadStatus()
+    }
+    window.addEventListener("proxmenuxManagedAppUpdated", refresh)
+    return () => window.removeEventListener("proxmenuxManagedAppUpdated", refresh)
+  }, [])
+
   const loadInitialData = async () => {
     setLoading(true)
     setLoadError(null)
@@ -288,6 +301,8 @@ export function SecureGatewaySetup() {
         // Status may briefly show "stopped" if tailscale was restarted —
         // refresh that too so the action buttons render the right state.
         await loadStatus()
+        // The Updates tab of the gateway container reads it again.
+        window.dispatchEvent(new CustomEvent("proxmenuxManagedAppUpdated", { detail: { appId: "secure-gateway", source: "card" } }))
       } else {
         setUpdateError(res?.message || sg("errors.updateFailed"))
       }

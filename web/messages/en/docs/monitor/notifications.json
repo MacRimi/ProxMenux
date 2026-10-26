@@ -25,7 +25,7 @@
       "sourcesLabel": "Sources",
       "sourcesDetail": "Health Monitor\nJournal watcher\nTask watcher\nPVE webhook hook\nPolling collector\nIn-process emitters",
       "dispatchLabel": "Dispatch pipeline",
-      "dispatchDetail": "Per-event toggle\nFingerprint dedup\nCooldown\nBurst aggregation",
+      "dispatchDetail": "Burst aggregation\nFingerprint / cooldown checks\nGroup rate limits\nPer-channel controls",
       "aiLabel": "AI rewrite (opt.)",
       "aiDetail": "OpenAI / Anthropic\nGemini / Groq\nOpenRouter / Ollama\n(off by default)",
       "channelsLabel": "Channels",
@@ -40,7 +40,7 @@
     "stepsIntro": "Pressing the button does three things in sequence:",
     "steps": [
       "Flips the panel to its <em>Active</em> state and unfolds the channel form below.",
-      "Registers a Proxmox VE webhook target in <code>/etc/pve/notifications.cfg</code> pointing at <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. From this moment on, anything Proxmox VE emits on its own (HA, replication, vzdump from the GUI) flows into the same pipeline as the Monitor's own events. See <pvelink>PVE webhook integration</pvelink> below for the full mechanics.",
+      "Registers a Proxmox webhook target in <code>/etc/pve/notifications.cfg</code>. Without Monitor HTTPS, it uses <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>; with HTTPS enabled, it uses the HTTP loopback listener on port 8009. PVE notifications then enter the Monitor’s dispatch process. See <pvelink>PVE webhook integration</pvelink> below.",
       "Starts the dispatch background thread. The thread polls the event queue and walks every event through the pipeline diagrammed above."
     ],
     "activeAlt": "Notifications card after enabling — Active badge, channel tabs, Display Name field and Advanced AI Enhancement collapsible section",
@@ -48,7 +48,7 @@
   },
   "sources": {
     "heading": "Event sources",
-    "intro": "Six independent collectors feed the notification engine. They run as background threads inside the Monitor process and emit a structured <code>NotificationEvent</code> every time something happens.",
+    "intro": "Six source types feed the notification engine: background collectors, the webhook receiver and direct emitters inside the process. They produce structured <code>NotificationEvent</code> objects.",
     "headerCollector": "Collector",
     "headerWatches": "Watches",
     "headerEvents": "Typical events",
@@ -70,7 +70,7 @@
       },
       {
         "collector": "Proxmox webhook hook",
-        "watches": "Listens on <code>POST /api/notifications/webhook</code>. Proxmox VE 8.1+ pushes its own notifications here once the integration is set up (see <pvelink>below</pvelink>).",
+        "watches": "Receives <code>POST /api/notifications/webhook</code>. PVE versions with webhook notification targets can forward their notifications here after setup (see <pvelink>below</pvelink>).",
         "events": "Anything PVE emits — including events the Monitor would otherwise miss (HA, replication, vzdump from the GUI)."
       },
       {
@@ -156,7 +156,7 @@
     "intro": "Email is the most flexible channel — and the one with the most fields. You need an SMTP server, a port, a TLS mode, optionally a username and password, a sender address and at least one recipient.",
     "imageAlt": "Email channel form with SMTP Host, Port, TLS Mode dropdown, Username, Password, From Address, To Addresses comma-separated and Subject Prefix fields",
     "imageCaption": "Email — SMTP host / port / TLS mode, optional username + password, sender address, comma-separated recipients and a subject prefix to make alerts easy to filter inbox-side.",
-    "appNote": "If you use a personal Gmail or Microsoft 365 account, the password field cannot be your normal account password — both providers require an <strong>app password</strong> generated specifically for third-party clients. The two flows are below.",
+    "appNote": "The Monitor uses password-based SMTP authentication. Gmail may require an <strong>app password</strong>. Microsoft support depends on the service and tenant policy; an app password does not override a ban on Basic authentication. Verify that your SMTP service permits this method.",
     "gmailTitle": "Gmail app password",
     "gmailIntro": "Gmail app passwords require <strong>2-Step Verification</strong> to be active on the Google account. If it isn't, the <em>App passwords</em> page won't exist.",
     "gmailItems": [
@@ -166,15 +166,15 @@
       "Fill the Email tab with: <em>Host</em> <code>smtp.gmail.com</code>, <em>Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Username</em> your Gmail address, <em>Password</em> the 16-character app password."
     ],
     "outlookTitle": "Microsoft / Outlook app password",
-    "outlookIntro": "Microsoft now requires <strong>two-step verification</strong> on the personal account before an app password can be created. Enterprise tenants where the admin has disabled SMTP basic auth need a different path (OAuth2) which is not currently supported by the Monitor — point those at an SMTP relay you control instead.",
+    "outlookIntro": "Microsoft app passwords require <strong>two-step verification</strong>, but their availability does not guarantee SMTP compatibility. Where the service or tenant requires OAuth2, the Monitor’s password-based SMTP client cannot authenticate. Use an SMTP relay that supports the required upstream authentication.",
     "outlookItems": [
       "Open <a>account.microsoft.com/security</a> and enable two-step verification.",
-      "Open <em>Advanced security options</em>, scroll to <em>App passwords</em> and click <em>Create a new app password</em>.",
-      "Microsoft shows a long random password — copy it.",
-      "Fill the Email tab with: <em>Host</em> <code>smtp-mail.outlook.com</code>, <em>Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Username</em> your Outlook / Microsoft 365 address, <em>Password</em> the generated app password."
+      "If your account offers <em>Advanced security options</em> → <em>App passwords</em>, choose <em>Create a new app password</em>. This option alone does not establish that your mail service accepts password-based SMTP.",
+      "If Microsoft generates an app password, copy it and verify that your SMTP service accepts it.",
+      "Only if your provider permits password-based SMTP, fill in its approved settings: <em>SMTP host</em> <code>smtp.office365.com</code> for Exchange Online, <em>Port</em> <code>587</code>, <em>TLS mode</em> <code>STARTTLS</code>, <em>Username</em> your mailbox address, and <em>Password</em> the permitted SMTP credential. Personal Outlook.com settings and authentication requirements are different; do not assume these credentials will work."
     ],
     "relayTitle": "Self-hosted SMTP relay",
-    "relayBody": "If you run your own SMTP relay (Postfix, msmtp, etc.) on the LAN, point the Monitor at it and skip the app-password dance entirely. The relay handles auth upstream and the Monitor sends in cleartext on a trusted network."
+    "relayBody": "Point the Monitor at an SMTP relay you control, such as Postfix. The relay handles upstream authentication. Configure the Monitor’s authentication and TLS mode to match the relay; using a local relay does not itself disable encryption."
   },
   "pushover": {
     "heading": "Pushover",
@@ -223,10 +223,10 @@
     "richHeader": "Rich — Rich messages on",
     "richOutro": "The toggle is per-channel: leave Email plain for inbox-rule readability while letting Telegram and Discord render the rich version. Channels that don't support inline formatting (plain-text email, Gotify) ignore the formatting and fall back to text either way.",
     "togglesTitle": "Per-event categories",
-    "togglesIntro": "Around seventy event types are grouped into eleven UI categories. Each event has a master toggle and a per-channel override — two layers that decide whether a given event reaches a given channel:",
+    "togglesIntro": "Each channel independently controls categories and individual event types. Turning a category off suppresses its events for that channel. Individual event toggles apply within enabled categories; there is no global master-event filter in the dispatcher.",
     "togglesItems": [
-      "<strong>Per-event master toggle.</strong> If <code>vm_start</code> is off everywhere, no channel ever sees a <code>vm_start</code>. Toggles persist as <code>event_toggles[event_type] = true | false</code>.",
-      "<strong>Per-channel overrides.</strong> An event type can also be muted for a specific channel (<em>\"send <code>backup_complete</code> to Discord but not to Telegram\"</em>). These live in <code>channel_overrides[channel_name][event_type]</code> and only apply if the event passed the master toggle."
+      "<strong>Per-channel category toggle.</strong> For example, disabling the VM/CT category suppresses <code>vm_start</code> and its peers for that channel. Category preferences are stored as <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
+      "<strong>Per-channel event toggle.</strong> Within an enabled category, you can choose <em>send <code>backup_complete</code> to Discord but not Telegram</em>. Individual preferences are stored as <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
     ],
     "togglesOutro": "Each category header in the screenshot also shows the count of events <em>currently enabled</em> / <em>total</em> for that group, and a category-level toggle that flips every event inside it on or off in one click — the shortcut for muting a whole group (e.g. all <code>info</code> backups, all update-related events) without expanding the section."
   },
@@ -238,7 +238,7 @@
     "purposeTitle": "What it is for",
     "purposeItems": [
       "<strong>Don't wake me at 03:00 for an update notice.</strong> Backups, app updates, post-install optimisations and other INFO-level events stop pinging your phone at night.",
-      "<strong>But still wake me for a fire.</strong> Disk failures, OOM kills, host shutdowns, fail2ban bans — anything classified as CRITICAL — bypass the window and arrive immediately.",
+      "<strong>Critical events still arrive.</strong> Events actually classified as CRITICAL bypass Quiet Hours. The event name alone does not make it critical: the journal watcher emits Fail2Ban blocks and host shutdown/reboot notices as INFO, so those can be buffered.",
       "<strong>Don't miss anything either.</strong> The events suppressed during the window aren't silently dropped — they sit in a SQLite buffer until you're back on the clock."
     ],
     "howTitle": "How it works",
@@ -251,11 +251,11 @@
       "<strong>Across restarts.</strong> If the Monitor restarts mid-window, the buffer is intact on disk. If the restart happens just after the window closed, the next dispatch cycle detects the pending rows and flushes them with a single \"recovery\" summary — no notifications are lost to a deploy or a reboot."
     ],
     "criticalTitle": "What counts as CRITICAL",
-    "criticalBody": "Severity is set at event creation, not at dispatch time. Disk failures, OOM kills, cluster split-brain, host shutdowns and the \"hard\" tier of disk I/O errors ship as CRITICAL by design. Everything else (backups OK, updates available, INFO logs, rate-limit hits) defaults to INFO or WARNING and is therefore quietable. You can verify a given event's default severity in the <link>Event catalogue</link> further down this page."
+    "criticalBody": "The producer sets the severity when creating each event. A disk, shutdown or security event is not automatically CRITICAL because of its name. For example, the journal watcher emits ip_block, system_shutdown and system_reboot as INFO. The <link>Event catalogue</link> lists the event types; inspect the producer and the received event for its actual severity."
   },
   "digest": {
     "heading": "Daily digest of INFO events",
-    "intro1": "The Daily Digest is the opposite knob: an <strong>opt-in</strong> setting that says \"don't send me every successful backup or update notice as it happens — collect them and send me one summary per day at 09:00 (or whatever hour I choose)\". Same goal as Quiet Hours (less noise) but a different mechanism (time-based summary instead of a daily window).",
+    "intro1": "The Daily Digest is an <strong>opt-in</strong> setting that collects eligible INFO notices, such as available updates, into one summary at 09:00 or another chosen time. Backup and replication results and live-action events are exempt. Quiet Hours instead delays non-critical messages during a daily window.",
     "intro2": "It lives in the same channel-settings card as Quiet Hours (see the figure under <link>Quiet Hours</link>), right underneath. You enable each one independently.",
     "purposeTitle": "What it is for",
     "purposeItems": [
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Per-channel opt-in.</strong> Off by default — Telegram doesn't silently batch your alerts. You enable it on the channels where you want a digest, leaving others on live delivery.",
       "<strong>Delivery time</strong> in your local timezone. Defaults to 09:00 but you can pick any time; the dispatcher fires the digest within ~60 s of that minute.",
-      "<strong>What goes into the digest:</strong> any event the channel would have received live whose severity is <strong>INFO</strong>. Examples — <em>vzdump complete</em>, <em>Tailscale update available</em>, <em>ProxMenux optimisation update available</em>, <em>APT security updates pending</em>, <em>rate-limit hit</em>.",
+      "<strong>Included in the digest:</strong> eligible generic events with severity <strong>INFO</strong>. Examples include <em>application update available</em>, <em>Tailscale update available</em>, <em>ProxMenux optimisation update available</em> and <em>APT security updates pending</em>. Backup results and other exempt action events remain live.",
       "<strong>What is never delayed:</strong>",
       "<strong>Persistence.</strong> Pending events sit in a SQLite table (<code>digest_pending</code>) until the configured hour. The Monitor can restart freely without losing what the digest will eventually contain.",
       "<strong>Empty days are silent.</strong> If nothing INFO-level happened, no digest is sent — the channel stays quiet rather than receiving a \"no events to report\" message."
@@ -274,10 +274,10 @@
     "neverDelayedSub": [
       "<strong>CRITICAL</strong> events always go through immediately.",
       "<strong>WARNING</strong> events always go through immediately.",
-      "Live-action events (VM/CT start / stop / shutdown / restart, vm_fail / ct_fail, backup start / fail, replication start / fail, host shutdown / reboot) bypass the digest even at INFO severity — you opted in to see those live, the digest would defeat that opt-in."
+      "Live-action events — VM/CT start, stop, shutdown, restart and failure; backup start and results; replication results; host shutdown and reboot — bypass the digest even at INFO severity. Quiet Hours can still delay non-critical events."
     ],
     "comboTitle": "Combining Quiet Hours and Daily Digest",
-    "comboBody": "The two work together. A channel can have <em>both</em> active — Quiet Hours from 22:00 to 07:00 plus a Daily Digest at 09:00. INFO events during the quiet window go to the quiet buffer and arrive at 07:00 as the close-of-window summary; INFO events during the day go to the digest buffer and arrive at 09:00 the next morning. CRITICAL and WARNING always cut through both. Choose Quiet Hours when the goal is a <em>window of silence</em>, the Daily Digest when the goal is a <em>fixed-time summary</em>; many setups want both."
+    "comboBody": "A channel can have <em>both</em> enabled: Quiet Hours from 22:00 to 07:00 and a Daily Digest at 09:00. Non-critical events during Quiet Hours enter its buffer and are released in the 07:00 summary. Eligible INFO events outside that window enter the digest. CRITICAL bypasses both; WARNING bypasses the digest but still waits during Quiet Hours. Choose a <em>window of silence</em>, a <em>fixed-time summary</em>, or both."
   },
   "displayName": {
     "heading": "Display Name",
@@ -288,23 +288,23 @@
   },
   "dispatch": {
     "heading": "Dispatch pipeline",
-    "intro": "Between an event being raised and a message leaving the host, three stages run in this order:",
+    "intro": "The table describes three related mechanisms. The actual flow begins with burst aggregation, then delivery-claim/cooldown checks and group rate limiting, followed by rendering and per-channel delivery controls:",
     "headerStage": "Stage",
     "headerWhat": "What it does",
     "headerTunable": "Tunable?",
     "rows": [
       {
-        "stage": "1. Fingerprint dedup",
+        "stage": "Fingerprint deduplication",
         "what": "Each event is hashed into a fingerprint (<code>event_type + key fields from data</code>). Identical fingerprints inside a short window are considered duplicates of the first one.",
         "tunable": "No — internal dispatcher logic."
       },
       {
-        "stage": "2. Cooldown",
-        "what": "After a fingerprint is sent, the same fingerprint is suppressed for the per-severity cooldown duration. Stored in the <code>notification_last_sent</code> SQLite table so it survives restarts. Defaults: <code>CRITICAL</code> 60 s, <code>WARNING</code> 300 s, <code>INFO</code> 900 s, plus a per-category override on top (e.g. <code>resources</code> 900 s, <code>updates</code> 86 400 s).",
-        "tunable": "No — defaults baked into the dispatcher."
+        "stage": "Cooldown",
+        "what": "After successful delivery, repeated fingerprints are suppressed and the state is saved in <code>notification_last_sent</code>. Base defaults for <code>CRITICAL</code>, <code>WARNING</code> and <code>INFO</code> are 86 400 s, as are <code>resources</code> and <code>updates</code>. Exceptions include 5 s for VM/CT actions and host shutdown/reboot, 10 s for backup/replication results, and 1 800–3 600 s for several health-state categories. Explicit event/group settings can override these values.",
+        "tunable": "Only through the settings API — a <code>cooldown.&lt;event_type&gt;</code> or <code>cooldown.&lt;group&gt;</code> key overrides the defaults; there is no control in the UI."
       },
       {
-        "stage": "3. Burst aggregation",
+        "stage": "Burst aggregation",
         "what": "When N events of a kind arrive inside a short window (e.g. an SSH brute-force flood), they are merged into a single <code>burst_*</code> message with a count and a sample.",
         "tunable": "No — window and threshold are hard-coded per event type."
       }
@@ -314,40 +314,40 @@
   },
   "aiRewrite": {
     "heading": "Optional AI rewrite",
-    "body1": "Any event can be passed through an LLM that rewrites its body in plain language and (optionally) in the target user's language before fan-out. The AI rewriter is off by default. When enabled it runs in the dispatch thread; if the provider call fails or times out, the original templated body is used instead.",
+    "body1": "Eligible events can be rewritten by an LLM before delivery. Backup results (backup_complete and backup_fail) bypass this rewrite. AI is off by default and runs in the dispatch thread when enabled. If the call fails or times out, the original template text is used.",
     "body2": "Six providers are supported (OpenAI, Anthropic, Google Gemini, Groq, OpenRouter and local Ollama), with per-channel detail level (<code>brief</code>, <code>standard</code>, <code>detailed</code>), output language, prompt mode (<code>default</code> or <code>custom</code>) and an optional custom prompt. Full configuration walk-through, captures and prompt examples live in the dedicated <link>AI Assistant</link> page.",
     "privacyTitle": "Privacy note",
-    "privacyBody": "AI rewrite sends the event body — which can include hostnames, IP addresses, usernames, error messages and journal lines — to the configured provider. Ollama keeps everything on-host; the other five providers transmit data to their respective endpoints. Disable the rewriter, or use Ollama, if the host runs in an environment where event content cannot leave the network."
+    "privacyBody": "AI requests can include the title, severity, rendered body, system/custom prompt and collected context, including hostnames, IPs, usernames, errors and journal lines. They go to the selected endpoint. Ollama keeps processing local only with both a local server and a local model; a remote server or cloud model sends data outside the host. Disable rewriting or use a controlled local endpoint and model when event content must stay on the network."
   },
   "pveWebhook": {
     "heading": "PVE webhook integration",
-    "intro1": "Proxmox VE 8.1+ has its own notification system with built-in <em>endpoints</em> (sendmail, gotify, SMTP, webhook). When you enable Notifications on the Monitor, it registers itself as one of those endpoints — a <code>webhook</code> target that points back at the Monitor's own API. From that moment on, anything Proxmox itself emits (HA fencing, replication, vzdump from the GUI, certificate renewal, etc.) flows through the same dispatch pipeline as the Monitor's own events.",
+    "intro1": "Proxmox’s notification system uses <em>targets</em>, including sendmail, Gotify, SMTP and, on versions supporting it, webhook. Enabling Monitor notifications registers a <code>webhook</code> target. PVE-emitted notifications such as HA, replication and GUI backup reports can then enter the same dispatch process.",
     "intro2": "The target is visible from the Proxmox GUI at <em>Datacenter → Notifications → Notification Targets</em>:",
     "imageAlt": "Proxmox VE Edit Webhook dialog showing the auto-created proxmenux-webhook target with method POST, URL http://127.0.0.1:8008/api/notifications/webhook and a JSON body template using escape title, escape message, escape severity, escape timestamp and json fields",
     "imageCaption": "The PVE-side webhook target as Proxmox sees it (the GUI is in the host's configured locale — Spanish in this example). Same fields apply in any language.",
     "registeredIntro": "What gets registered:",
     "registeredItems": [
-      "<strong>Method & URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. Loopback only — PVE talks to the Monitor process running on the same host.",
+      "<strong>Method and URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> when Monitor HTTPS is off. With HTTPS enabled, the target uses the separate HTTP loopback listener on port 8009. Both stay on the same host.",
       "<strong>Body template.</strong> A JSON body using PVE's native Handlebars helpers — stored base64-encoded in the config file by PVE, but it expands to:",
       "<strong>Matcher.</strong> A companion <code>matcher: proxmenux-matcher</code> block with <code>mode all</code> so every PVE notification reaches the target.",
-      "<strong>Companion priv block.</strong> An empty <code>webhook: proxmenux-webhook</code> entry is appended to <code>/etc/pve/priv/notifications.cfg</code>. PVE refuses to instantiate any webhook endpoint without a matching private block, even when no secrets are needed — so the Monitor writes a header-only stub there. No tokens, headers or HMAC are configured on the PVE side."
+      "<strong>Private configuration.</strong> Setup writes the matching <code>webhook: proxmenux-webhook</code> block in <code>/etc/pve/priv/notifications.cfg</code> with a <code>secret</code> entry named X-Webhook-Secret, encoded in base64. The public target block holds only the body template, method and URL. The private block is not an empty stub."
     ],
     "securityTitle": "How the receiver is secured",
     "securityIntro": "The webhook receiver at <code>POST /api/notifications/webhook</code> applies different security layers depending on where the request comes from:",
     "securityItems": [
-      "<strong>Loopback (<code>127.0.0.1</code> / <code>::1</code>).</strong> Rate-limit only. The endpoint trusts the loopback interface — only processes running on the host can reach it, and PVE itself cannot send custom auth headers in the body it generates. This is the path every PVE-emitted notification travels.",
-      "<strong>Remote callers.</strong> Five layers stack on top of rate-limiting: a shared secret in the <code>X-Webhook-Secret</code> header, a freshness timestamp in <code>X-ProxMenux-Timestamp</code> (rejected if it drifts more than the configured window), a replay-cache lookup, and an optional IP allowlist. The shared secret lives in the Monitor's SQLite settings table — not in <code>/etc/pve/priv/notifications.cfg</code> — and is generated at first setup. This path exists for custom integrations posting from outside the host; the PVE-configured target never exercises it."
+      "<strong>Local sources (<code>127.0.0.1</code> / <code>::1</code>).</strong> Rate limiting applies, but the remote secret/timestamp/replay checks are skipped. The receiver also treats addresses assigned to the host’s own interfaces as local. The automatically configured PVE target uses loopback.",
+      "<strong>Remote callers.</strong> In addition to rate limiting, the receiver checks the configured secret in <code>X-Webhook-Secret</code>, a timestamp from <code>X-ProxMenux-Timestamp</code> or the JSON body, replay detection and an optional IP allowlist. The secret is stored in SQLite; setup also writes a base64-encoded copy to <code>/etc/pve/priv/notifications.cfg</code> so PVE can send the header."
     ],
     "practiceTitle": "In practice",
-    "practiceBody": "The PVE setup writes the target as <code>http://127.0.0.1:8008</code>, so PVE-emitted notifications always go through the loopback path with rate-limit-only security. The remote-caller path with the shared secret is opt-in for custom integrations — point an external service at <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> and supply the <code>X-Webhook-Secret</code> header to use it.",
+    "practiceBody": "The PVE target uses <code>http://127.0.0.1:8008</code> without HTTPS, or HTTP port 8009 with Monitor HTTPS. For external integrations at <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code>, send the configured <code>X-Webhook-Secret</code> and a current timestamp, and satisfy replay and IP checks. A secret header alone is not sufficient.",
     "actionsIntro": "The Monitor manages this target through three actions on the Settings tab:",
     "actionsItems": [
-      "<strong>Setup</strong> — runs automatically when you enable Notifications. Creates the entry in <code>/etc/pve/notifications.cfg</code> after backing up the current file.",
+      "<strong>Setup</strong> — runs automatically when you enable Notifications. Creates the entry in <code>/etc/pve/notifications.cfg</code>. The file is written only when its content has to change, and a copy of the previous one is kept in <code>/usr/local/share/proxmenux/backups/pve-notifications/</code> (the three newest). Nothing is written while <code>/etc/pve</code> is not mounted: a Monitor that starts during a restart of <code>pve-cluster</code> registers the entry once it is back.",
       "<strong>Cleanup</strong> — removes the entry. The previous backup of the file is kept.",
       "<strong>Read config</strong> — shows the current targets and matchers as PVE sees them. This is how you confirm the Monitor's entry is the one firing when PVE has multiple notification routes configured."
     ],
     "clusterTitle": "Cluster nodes",
-    "clusterBody": "<code>/etc/pve/</code> is replicated across cluster members, so the webhook target is visible on every node. Each node, however, posts to its <em>own</em> <code>127.0.0.1:8008</code> — meaning the Monitor running on that node receives the events that PVE generated locally. Run the Monitor on every node you want to see in the Notifications history."
+    "clusterBody": "<code>/etc/pve/</code> is shared across cluster nodes, including the target URL and secret. Each node calls its <em>own</em> loopback listener: <code>127.0.0.1:8008</code> without HTTPS, or HTTP port 8009 with HTTPS. Run Monitor on each relevant node and keep the shared target consistent with every node’s listener configuration."
   },
   "catalogue": {
     "heading": "Event catalogue",
@@ -400,12 +400,48 @@
         "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
       }
     ],
-    "burstNote": "A handful of <code>burst_*</code> aggregation types (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) exist only in the dispatcher — they replace bursts of individual events with a single summary message and are not exposed as toggles in the UI. They inherit the on/off state of their parent event type."
+    "burstNote": "A handful of <code>burst_*</code> aggregation types (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) exist only in the dispatcher — they replace bursts of individual events with a single summary message and are not exposed as toggles in the UI. They inherit the on/off state of their parent event type.",
+    "backupResults": {
+      "heading": "Backup results",
+      "intro": "A notification about a Proxmox backup job states how the job ended. The result is read from the report Proxmox sends, and it sets the title, the icon shown with <em>Rich messages</em> on, and the status row of the email.",
+      "headerIcon": "Icon",
+      "headerResult": "Result",
+      "headerWhen": "When",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Backup complete",
+          "when": "Every guest of the job finished and the report carries no warnings."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Backup completed with warnings",
+          "when": "Every guest finished and the report carries at least one warning line."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Backup error reported",
+          "when": "A guest failed, or the job stopped with an error."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Backup outcome unconfirmed",
+          "when": "The report is incomplete or does not state a result for every guest."
+        }
+      ],
+      "items": [
+        "<strong>The title names what the job was about.</strong> It carries the storage and, for a job with a single guest, its type, name and ID. A failed job names the guest that failed.",
+        "<strong>The body lists each guest</strong> with its own result, size, duration and archive, followed by a line with the totals of the job.",
+        "<strong>Warnings and errors are listed once.</strong> Repeated lines are shown a single time with the main cause first; past eight lines, the rest is counted in a closing line and stays in the Proxmox task log.",
+        "<strong>A job that fails before its first guest</strong> shows the cause Proxmox gave, for example a storage that does not exist.",
+        "<strong>Summaries preserve the result.</strong> A backup in the Quiet Hours summary keeps its own result icon. Backup result events bypass the Daily Digest."
+      ]
+    }
   },
   "history": {
     "heading": "History",
     "body1": "Every dispatch <em>attempt</em> the dispatcher actually performs is recorded in the <code>notification_history</code> SQLite table. Each row stores the timestamp (<code>sent_at</code>), channel, event type, severity, title, rendered message body, a <code>success</code> flag and — when the send failed — the error returned by the provider in <code>error_message</code>. Burst-aggregated events appear as a single row with the <code>burst_*</code> event type. Events suppressed by the cooldown stage are not logged: they never become a dispatch attempt.",
-    "body2": "The History tab inside Settings → Notifications shows the last 20 entries and has a single <em>Clear</em> button that wipes the table.",
+    "body2": "Settings → Notifications has a <em>Notification history</em> section, closed by default, with the last 20 entries: the result of each send, its channel and date, the error when it failed and, for each daily digest run, whether it had something to send. The page does not offer to erase it: Audit & Report reads the same history to check the delivery of each channel.",
     "body3": "The same data is exposed at <code>GET /api/notifications/history</code> with optional <code>limit</code>, <code>offset</code>, <code>severity</code> and <code>channel</code> query parameters, and can be cleared with <code>DELETE /api/notifications/history</code>."
   },
   "api": {
@@ -447,7 +483,7 @@
       {
         "endpoint": "/api/notifications/webhook",
         "method": "POST",
-        "use": "Receives Proxmox VE's own notifications. Loopback callers are rate-limited only; remote callers must additionally pass the <code>X-Webhook-Secret</code> header, <code>X-ProxMenux-Timestamp</code> freshness check, replay cache and optional IP allowlist."
+        "use": "Receives Proxmox notifications. Local source addresses skip remote authentication checks but remain rate-limited. Remote requests are checked against <code>X-Webhook-Secret</code>, a timestamp in <code>X-ProxMenux-Timestamp</code> or the JSON body, replay detection and any configured IP allowlist."
       },
       {
         "endpoint": "/api/notifications/proxmox/setup-webhook",

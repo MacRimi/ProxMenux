@@ -30,6 +30,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -56,16 +60,20 @@ get_storage_config() {
 # ==========================================================
 
 ensure_iscsi_tools() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "ensure_iscsi_tools" "$FUNC_VERSION"
+
     if ! command -v iscsiadm >/dev/null 2>&1; then
         msg_info "$(translate "Installing iSCSI initiator tools...")"
         apt-get update &>/dev/null
-        apt-get install -y open-iscsi &>/dev/null
-        systemctl enable --now iscsid 2>/dev/null || true
+        pmx_install_pkg open-iscsi
+        pmx_enable_service iscsid 2>/dev/null || true
         msg_ok "$(translate "iSCSI tools installed")"
     fi
 
     if ! systemctl is-active --quiet iscsid 2>/dev/null; then
-        systemctl start iscsid 2>/dev/null || true
+        pmx_apply_setting "iscsid active state" "systemctl is-active iscsid 2>/dev/null || true" \
+            systemctl start iscsid || true
     fi
 }
 
@@ -217,6 +225,9 @@ configure_iscsi_storage() {
 # ==========================================================
 
 add_proxmox_iscsi_storage() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_proxmox_iscsi_storage" "$FUNC_VERSION"
+
     local storage_id="$1"
     local portal="$2"
     local target="$3"
@@ -359,6 +370,9 @@ view_iscsi_storages() {
 }
 
 remove_iscsi_storage() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "remove_iscsi_storage" "$FUNC_VERSION"
+
     if ! command -v pvesm >/dev/null 2>&1; then
         dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
             --msgbox "\n$(translate "pvesm not found.")" 8 60
@@ -457,7 +471,7 @@ test_iscsi_connectivity() {
                     if nc -z -w 2 "$portal_host" "$portal_port" 2>/dev/null; then
                         echo -e " | iSCSI port $portal_port: ${GN}$(translate "Open")${CL}"
                     else
-                        echo -e " | iSCSI port $portal_port: ${RD}$(translate "Closed")${CL}"
+                        echo -e " | iSCSI port $portal_port: ${RD}$(translate "Probe failed")${CL}"
                     fi
                 else
                     echo -e "${RD}$(translate "Unreachable")${CL}"

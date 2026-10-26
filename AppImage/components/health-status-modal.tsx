@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { useT } from "@/lib/i18n/provider"
+import { useIsPbs } from "@/lib/use-platform"
 
 interface CategoryCheck {
   status: string
@@ -119,6 +120,7 @@ const CATEGORIES = [
 
 export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatusModalProps) {
   const t = useT()
+  const isPbs = useIsPbs()
   const [loading, setLoading] = useState(true)
   const [healthData, setHealthData] = useState<HealthDetails | null>(null)
   const [dismissedItems, setDismissedItems] = useState<DismissedError[]>([])
@@ -299,6 +301,21 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const translateHealthText = (value?: string): string => {
     if (!value) return ""
     const exact: Record<string, string> = {
+      "No temperature sensor detected - install lm-sensors if hardware supports it": t("healthStatus.details.noTemperatureSensor"),
+      "Sustained high CPU usage": t("healthStatus.details.cpuHighSustained"),
+      "Temperature elevated": t("healthStatus.details.temperatureElevated"),
+      "No swap configured": t("healthStatus.details.noSwapConfigured"),
+      "High RAM usage sustained": t("healthStatus.details.ramHighSustained"),
+      "Swap nearly full with RAM tight": t("healthStatus.details.swapRamPressure"),
+      "Failed to check for updates (apt-get error)": t("healthStatus.details.updatesAptError"),
+      "apt-get timed out - repository may be unreachable": t("healthStatus.details.updatesAptTimeout"),
+      "Unknown": t("healthStatus.details.unknownDetail"),
+      "No failed login attempts in 24h": t("healthStatus.details.noFailedLogins"),
+      "Fail2Ban installed but service not active": t("healthStatus.details.fail2banInactive"),
+      "Unable to determine uptime": t("healthStatus.details.uptimeUnavailable"),
+      "Unable to check login attempts": t("healthStatus.details.loginCheckUnavailable"),
+      "Certificate expired": t("healthStatus.details.certificateExpired"),
+      "Certificate check inconclusive": t("healthStatus.details.certificateInconclusive"),
       "All systems operational": t("healthStatus.details.allOperational"),
       "Normal": t("healthStatus.details.normal"),
       "No I/O errors in dmesg": t("healthStatus.details.noIoErrors"),
@@ -321,7 +338,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "No VM startup failures": t("healthStatus.details.noVmFailures"),
       "Dismissed by user": t("healthStatus.details.dismissedByUser"),
     }
-    if (exact[value]) return exact[value]
+    if (Object.prototype.hasOwnProperty.call(exact, value)) return exact[value]
 
     let match = value.match(/^Latency ([\d.]+)ms to gateway$/)
     if (match) return t("healthStatus.details.gatewayLatency", { latency: match[1] })
@@ -347,6 +364,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (match) return t("healthStatus.details.startupStorageUnavailable", { storage: match[1] })
     match = value.match(/^\[Startup\] Storage '(.+)' has status: (.+)\. \(checking\.\.\.\)$/)
     if (match) return t("healthStatus.details.startupStorageStatus", { storage: match[1], status: match[2] })
+    match = value.match(/^([\d.]+)% used$/)
+    if (match) return t("healthStatus.details.storageUsage", { percent: match[1] })
     match = value.match(/^(.+) storage available$/)
     if (match) return t("healthStatus.details.storageAvailable", { type: match[1] })
     match = value.match(/^(.+) mount reachable$/)
@@ -359,6 +378,52 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (match) return t("healthStatus.details.pveStorageSafe", { count: match[1] })
     match = value.match(/^(\d+) remote mount\(s\) healthy$/)
     if (match) return t("healthStatus.details.remoteMountsHealthy", { count: match[1] })
+    match = value.match(/^CPU >(\d+(?:\.\d+)?)% sustained for (\d+)s$/)
+    if (match) return t("healthStatus.details.cpuSustained", { threshold: match[1], seconds: match[2] })
+    match = value.match(/^CPU check failed: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.cpuCheckFailed", { error: match[1] })
+    match = value.match(/^Sensor temperature (\d+(?:\.\d+)?)°C >80°C; high samples span ((?:\d+m )?\d+s)$/)
+    if (match) return t("healthStatus.details.sensorHighSamplesSpan", { temperature: match[1], duration: match[2] })
+    match = value.match(/^RAM >(\d+(?:\.\d+)?)% sustained for (\d+)s$/)
+    if (match) return t("healthStatus.details.ramSustained", { threshold: match[1], seconds: match[2] })
+    match = value.match(/^Memory pressure: swap (\d+)% used and only (\d+)% RAM available$/)
+    if (match) return t("healthStatus.details.memoryPressure", { swapPercent: match[1], ramAvailablePercent: match[2] })
+    match = value.match(/^Memory check failed: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.memoryCheckFailed", { error: match[1] })
+    match = value.match(/^(\d+) security update\(s\) pending$/)
+    if (match) return t("healthStatus.details.pendingSecurityUpdates", { count: match[1] })
+    match = value.match(/^(\d+) security update\(s\) pending \((\d+) days unpatched\)$/)
+    if (match) return t("healthStatus.details.pendingSecurityUpdatesUnpatched", { count: match[1], days: match[2] })
+    match = value.match(/^(\d+) security update\(s\) pending for (\d+) days$/)
+    if (match) return t("healthStatus.details.pendingSecurityUpdatesDays", { count: match[1], days: match[2] })
+    match = value.match(/^System not updated in (\d+) days \(>18 months\)$/)
+    if (match) return t("healthStatus.details.systemNotUpdatedMonths", { days: match[1] })
+    match = value.match(/^System not updated in (\d+) days \(>1 year\)$/)
+    if (match) return t("healthStatus.details.systemNotUpdatedYear", { days: match[1] })
+    match = value.match(/^Kernel update available for running ([^\s()]+)$/)
+    if (match) return t("healthStatus.details.runningKernelUpdate", { kernel: match[1] })
+    match = value.match(/^(\d+) kernel \+ (\d+) Proxmox update\(s\) available$/)
+    if (match) return t("healthStatus.details.kernelPveUpdates", { kernelCount: match[1], pveCount: match[2] })
+    match = value.match(/^(\d+) package update\(s\) pending$/)
+    if (match) return t("healthStatus.details.pendingPackageUpdates", { count: match[1] })
+    match = value.match(/^([a-z0-9][a-z0-9+.-]+(?::[a-z0-9]+)?(?: [^\s()]+ -> [^\s()]+)?) \(\+(\d+) more\)$/)
+    if (match) return t("healthStatus.details.kernelPackagesMore", { technicalIdentity: match[1], count: match[2] })
+    match = value.match(/^(\d+) kernel update\(s\) available \(none for running kernel( [^\s()]+)?\)$/)
+    if (match) return t("healthStatus.details.nonRunningKernelUpdates", { count: match[1], optionalKernel: match[2] || "" })
+    match = value.match(/^PVE ([^\s()]+) -> ([^\s()]+) available$/)
+    if (match) return t("healthStatus.details.pveVersionAvailable", { current: match[1], new: match[2] })
+    match = value.match(/^Updates check unavailable: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.updatesCheckUnavailable", { error: match[1] })
+    match = value.match(/^Unable to check Fail2Ban: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.fail2banCheckUnavailable", { error: match[1] })
+    match = value.match(/^Uptime (\d+) days \(>1 year, consider updating kernel\/system\)$/)
+    if (match) return t("healthStatus.details.uptimeKernelAdvice", { days: match[1] })
+    match = value.match(/^(\d+) failed attempts in 24h \(within threshold\)$/)
+    if (match) return t("healthStatus.details.failedLoginsWithinThreshold", { count: match[1] })
+    match = value.match(/^Security check unavailable: ([\s\S]*)$/)
+    if (match) return t("healthStatus.details.securityCheckUnavailable", { error: match[1] })
+    match = value.match(/^Certificate expires in (\d+) days$/)
+    if (match) return t("healthStatus.details.certificateExpiresDays", { days: match[1] })
     return value
   }
 
@@ -397,6 +462,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     return originalStatus?.toUpperCase() || "UNKNOWN"
   }
 
+  // Checks the host reports as not applicable (guests on PBS) are not listed or counted.
+  const visibleCategories = CATEGORIES.filter(({ key }) =>
+    !(healthData?.details?.[key as keyof typeof healthData.details] as { not_applicable?: boolean } | undefined)?.not_applicable)
+  const categoryLabel = (key: string) => t(`healthStatus.categories.${isPbs && key === "services" ? "pbsServices" : key}`)
+
   const getHealthStats = () => {
     if (!healthData?.details) return { total: 0, healthy: 0, info: 0, warnings: 0, critical: 0, unknown: 0 }
 
@@ -406,7 +476,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     let critical = 0
     let unknown = 0
 
-    CATEGORIES.forEach(({ key }) => {
+    visibleCategories.forEach(({ key }) => {
       const categoryData = healthData.details[key as keyof typeof healthData.details]
       if (categoryData) {
         const effectiveStatus = getEffectiveStatus(key, categoryData.status)
@@ -418,7 +488,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       }
     })
 
-    return { total: CATEGORIES.length, healthy, info, warnings, critical, unknown }
+    return { total: visibleCategories.length, healthy, info, warnings, critical, unknown }
   }
 
   const stats = getHealthStats()
@@ -696,7 +766,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
             {/* Category List */}
             <div className="space-y-2">
-              {CATEGORIES.map(({ key, Icon }) => {
+              {visibleCategories.map(({ key, Icon }) => {
                 const categoryData = healthData.details[key as keyof typeof healthData.details]
                 const originalStatus = categoryData?.status || "UNKNOWN"
                 const status = getEffectiveStatus(key, originalStatus)
@@ -721,7 +791,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                       </div>
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <p className="font-medium text-xs sm:text-sm truncate">{t(`healthStatus.categories.${key}`)}</p>
+                          <p className="font-medium text-xs sm:text-sm truncate">{categoryLabel(key)}</p>
                           {hasChecks && (
                             <span className="text-[10px] text-muted-foreground shrink-0">
                               ({Object.values(checks).filter(c => c.installed !== false).length})
@@ -808,7 +878,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                 {filteredDismissed.map((item) => {
                   const catMeta = CATEGORIES.find(c => c.category === item.category || c.key === item.category)
                   const CatIcon = catMeta?.Icon || BellOff
-                  const catLabel = catMeta ? t(`healthStatus.categories.${catMeta.key}`) : item.category
+                  const catLabel = catMeta ? categoryLabel(catMeta.key) : item.category
                   const isPermanent = item.permanent || item.suppression_remaining_hours === -1
                   
                   return (
@@ -873,7 +943,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                         <div key={cs.key} className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <CatIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-400/70 shrink-0" />
-                            <span className="text-[11px] sm:text-xs text-blue-400/80 truncate">{catMeta ? t(`healthStatus.categories.${catMeta.key}`) : cs.label}</span>
+                            <span className="text-[11px] sm:text-xs text-blue-400/80 truncate">{catMeta ? categoryLabel(catMeta.key) : cs.label}</span>
                           </div>
                           <Badge variant="outline" className="text-[9px] sm:text-[10px] border-blue-500/30 text-blue-400/80 bg-transparent shrink-0">
                             {durationLabel}

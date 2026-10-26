@@ -21,7 +21,8 @@
 #                       intentionally use sh -c with a variable
 #                       payload — the threat model matches "user
 #                       typed it via pct exec themselves"; ProxMenux
-#                       does not compose or interpret the command.
+#                       preserves arbitrary commands. Historical downloaded
+#                       shell launchers get an explicit download failure guard.
 #   ALLOW_HELPER_WITH_CUSTOM — "1" only for an explicit multi-app plan
 #                       where RUN_HELPER belongs to one registered app and
 #                       UPDATE_COMMAND contains other registered apps. The
@@ -38,11 +39,13 @@
 #   1  CT not found on this node
 #   2  CT could not be started
 #   3  pre-update backup failed (abort so the user still has a rollback)
-#   4  OS update failed OR OS family not supported for automated updates
+#   4  OS/app update failed OR OS family not supported for automated updates
 #   5  TARGET=app requested but no update method (neither UPDATE_COMMAND
 #      nor explicitly-enabled verified helper) available in the CT
 #   6  post-update restart failed
 #   7  another ProxMenux update is already running for this CT
+#   8  started CT could not record its verification handoff identity
+#   9  scheduled run skipped because the CT was intentionally stopped
 #
 # The frontend surfaces exit code + duration in a follow-up POST to
 # /api/lxc-updates/<vmid>/applied so the notification event fires with
@@ -60,6 +63,13 @@ UPDATE_COMMAND="${UPDATE_COMMAND:-}"
 ALLOW_HELPER_WITH_CUSTOM="${ALLOW_HELPER_WITH_CUSTOM:-0}"
 DOCKER_STANDALONE_TARGETS="${DOCKER_STANDALONE_TARGETS:-}"
 UPDATE_DOCKER_ENGINE="${UPDATE_DOCKER_ENGINE:-0}"
+
+# Reject an abandoned local-only mode rather than silently installing if an
+# older launcher still exports it. The check now has its own non-install job.
+if [[ "${CHECK_APPLY_OS:-0}" != "0" ]]; then
+  echo "ERROR: combined check-and-update was removed; run the explicit package check first." >&2
+  exit 4
+fi
 
 if [[ ! "$VMID" =~ ^[1-9][0-9]*$ ]]; then
   echo "ERROR: VMID must be a positive integer." >&2
@@ -115,10 +125,24 @@ extract_helper_slug_from_wrapper() {
 # One update per CT at a time, regardless of whether it came from the
 # UI or the scheduler. The descriptor remains open for this process.
 LOCK_DIR="${PROXMENUX_LOCK_DIR:-/run/lock}"
-exec 9>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
+exec 9>>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
 if ! flock -n 9; then
   echo "ERROR: another ProxMenux update is already running for CT $VMID." >&2
   exit 7
+fi
+
+if [[ -s "${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock" ]]; then
+  if ! python3 -c 'import sys; sys.path.insert(0, "/usr/local/share/proxmenux/monitor-app/usr/bin"); import lxc_check_job; lxc_check_job.check_control_task(int(sys.argv[1]))' "$VMID"; then
+    echo "ERROR: container control completion is not confirmed; nothing was changed." >&2
+    exit 7
+  fi
+fi
+
+if [[ "${REQUIRE_CHECKED_OS:-0}" == "1" ]]; then
+  if ! python3 -c 'import sys; sys.path.insert(0, "/usr/local/share/proxmenux/monitor-app/usr/bin"); import lxc_check_job; lxc_check_job.checked_os(int(sys.argv[1]))' "$VMID"; then
+    echo "ERROR: a fresh successful positive OS check is required; nothing was installed." >&2
+    exit 4
+  fi
 fi
 
 STARTED_AT=$(date -Iseconds)
@@ -140,11 +164,32 @@ fi
 # 2) CT must be running for pct exec. Auto-start stopped CTs, then
 #    restore their original stopped state on every exit path.
 STATE=$(pct status "$VMID" | awk '{print $2}')
+if [[ "$STATE" != "running" && "${EXECUTION_MODE:-}" == "scheduled" ]]; then
+  [[ -n "${SCHEDULED_STOPPED_MARKER:-}" ]] && printf '%s\n' "$SCHEDULED_STOPPED_MARKER"
+  echo "SKIPPED: CT $VMID is stopped; a scheduled update will not start it."
+  exit 9
+fi
 STARTED_BY_PROXMENUX=0
+OBSERVATION_ATTEMPTED=0
+capture_before_stop() {
+  if [[ "$STARTED_BY_PROXMENUX" == "1" && "$OBSERVATION_ATTEMPTED" == "0" && -z "${RUN_ID:-}" && "${EXECUTION_MODE:-}" == "web" ]]; then
+    OBSERVATION_ATTEMPTED=1
+    echo "WARNING: post-update verification has no RUN_ID; the result cannot be verified." >&2
+  fi
+  if [[ "$STARTED_BY_PROXMENUX" == "1" && "$OBSERVATION_ATTEMPTED" == "0" && -n "${RUN_ID:-}" ]]; then
+    OBSERVATION_ATTEMPTED=1
+    # Capture while pct exec works. Only the backend writes the registry.
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/lxc_update_observation.py \
+          --vmid "$VMID" --run-id "$RUN_ID" --include-apps; then
+      echo "WARNING: post-update package verification unavailable; the result will remain unverified." >&2
+    fi
+  fi
+}
 restore_original_state() {
   local rc=$?
   trap - EXIT INT TERM
   if [[ "$STARTED_BY_PROXMENUX" == "1" ]]; then
+    capture_before_stop
     echo
     echo "Restoring original state: stopping CT $VMID…"
     if ! pct shutdown "$VMID" --timeout 60; then
@@ -166,6 +211,15 @@ if [[ "$STATE" != "running" ]]; then
     exit 2
   fi
   STARTED_BY_PROXMENUX=1
+  # The finalizer must distinguish a failed/pre-start run from a run that
+  # actually started this previously stopped CT but later lacks a result.
+  if [[ -n "${RUN_ID:-}" ]]; then
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/lxc_update_observation.py \
+          --vmid "$VMID" --run-id "$RUN_ID" --mark-started; then
+      echo "ERROR: started CT verification identity could not be recorded." >&2
+      exit 8
+    fi
+  fi
   # give the CT a moment for services to come up
   sleep 3
 fi
@@ -273,6 +327,25 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
         APP_FAILED=1
       fi
     else
+      # Detection is not consent. Recheck the saved per-app choice here too,
+      # so a stale browser/plan cannot run a helper after it was deselected.
+      if ! python3 - "$VMID" "$RESOLVED_SLUG" <<'PY'
+import json
+import os
+import sys
+sys.path.insert(0, '/usr/local/share/proxmenux/monitor-app/usr/bin')
+import lxc_apps
+targets = json.loads(os.environ.get('REQUESTED_TARGETS_JSON') or '[]')
+if not isinstance(targets, list):
+    raise SystemExit(1)
+raise SystemExit(0 if lxc_apps.helper_update_selected(
+    sys.argv[1], sys.argv[2], targets or None,
+) else 1)
+PY
+      then
+        echo "ERROR: Helper-Scripts has not been selected for this application. Configure its update method first." >&2
+        exit 5
+      fi
       # Never execute the arbitrary URL embedded in the CT. The slug is
       # constrained by the parser; fetch the canonical upstream path.
       UPDATE_URL="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${RESOLVED_SLUG}.sh"
@@ -295,7 +368,18 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
       echo "ERROR: CT $VMID has neither wget nor curl — cannot fetch the helper." >&2
       APP_FAILED=1
     else
-      if ! pct exec "$VMID" -- bash -c "PHS_SILENT=1 bash -c \"\$($IN_CT_FETCH)\""; then
+      # Check the download before invoking bash: bash -c "$(failed wget)"
+      # otherwise executes an empty string and falsely returns success.
+      if ! pct exec "$VMID" -- bash -c "
+_proxmenux_updater=\$($IN_CT_FETCH) || {
+  echo 'ERROR: updater download failed; nothing was executed.' >&2
+  exit 1
+}
+[ -n \"\$_proxmenux_updater\" ] || {
+  echo 'ERROR: downloaded updater is empty; nothing was executed.' >&2
+  exit 1
+}
+PHS_SILENT=1 bash -c \"\$_proxmenux_updater\""; then
         echo "ERROR: community-scripts helper returned non-zero." >&2
         APP_FAILED=1
       fi
@@ -307,7 +391,19 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
   if [[ -n "$UPDATE_COMMAND" ]]; then
     echo "--- Running user-defined update command ---"
     echo "\$ $UPDATE_COMMAND"
-    if ! pct exec "$VMID" -- sh -c "$UPDATE_COMMAND"; then
+    # Also covers a legacy command submitted by a browser opened before the
+    # upgrade. Bulk/scheduled plans protect each constituent command upstream.
+    if ! PREPARED_COMMAND=$(UPDATE_COMMAND="$UPDATE_COMMAND" python3 - protect-update-command <<'PY'
+import os
+import sys
+sys.path.insert(0, '/usr/local/share/proxmenux/monitor-app/usr/bin')
+from lxc_apps import protect_download_update_command
+sys.stdout.write(protect_download_update_command(os.environ['UPDATE_COMMAND']))
+PY
+    ); then
+      echo "ERROR: could not prepare the update command; nothing was executed." >&2
+      APP_FAILED=1
+    elif ! pct exec "$VMID" -- sh -c "$PREPARED_COMMAND"; then
       echo "ERROR: user-defined update command returned non-zero." >&2
       APP_FAILED=1
     fi
@@ -354,6 +450,9 @@ fi
 #    OCI-style CTs whose PID 1 is a user entrypoint (a plain `apt
 #    upgrade` doesn't restart the app; a CT reboot does).
 if [[ "$RESTART" == "1" ]]; then
+  # A reboot may return before pct exec is usable again. Keep the verified
+  # package snapshot from before reboot, then restore the original state.
+  capture_before_stop
   echo "--- Rebooting CT $VMID ---"
   if ! pct reboot "$VMID"; then
     echo "ERROR: pct reboot failed." >&2

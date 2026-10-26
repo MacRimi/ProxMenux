@@ -307,6 +307,8 @@ def verify_password(password, password_hash):
     can log in once and trigger a rehash via `_maybe_rehash_password` —
     see lazy migration in `authenticate()`.
     """
+    if not isinstance(password, str) or not password:
+        return False
     if not isinstance(password_hash, str) or not password_hash:
         return False
     if password_hash.startswith(_PWD_PBKDF2_PREFIX):
@@ -576,6 +578,10 @@ def list_api_tokens():
         entry = {
             "id": t.get("id"),
             "name": t.get("name", "API Token"),
+            # Tokens issued before scope existed carry no claim and verify
+            # as full_admin, so the list reflects that rather than the
+            # read-only default a new token gets.
+            "scope": t.get("scope", "full_admin"),
             "token_prefix": t.get("token_prefix", "***"),
             "created_at": t.get("created_at"),
             "expires_at": t.get("expires_at"),
@@ -1109,6 +1115,9 @@ def _detect_proxmox_certificate_paths():
         return PROXMOX_CUSTOM_CERT_PATH, PROXMOX_CUSTOM_KEY_PATH
     if os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
         return PROXMOX_CERT_PATH, PROXMOX_KEY_PATH
+    pbs_cert, pbs_key = "/etc/proxmox-backup/proxy.pem", "/etc/proxmox-backup/proxy.key"
+    if os.path.isfile(pbs_cert) and os.path.isfile(pbs_key):
+        return pbs_cert, pbs_key
     return "", ""
 
 

@@ -39,86 +39,14 @@ PROXMENUX_UTILS=(
 )
 
 
-# Ensure APT repositories are configured for the current PVE version.
-# Creates missing no-subscription repo entries for PVE8 (bookworm) or PVE9 (trixie).
-ensure_repositories() {
-    local pve_version need_update=false
-    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+# Shared journal helpers for utility installs.
+if [[ -f "${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/global/pmx_journal.sh" ]]; then
+    source "${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/global/pmx_journal.sh"
+fi
 
-    if [[ -z "$pve_version" ]]; then
-        msg_error "Unable to detect Proxmox version."
-        return 1
-    fi
 
-    if (( pve_version >= 9 )); then
-        # ===== PVE 9 (Debian 13 - trixie) =====
-        # Force 0644 (world-readable) on every .sources file we drop.
-        # Under the default root umask 0027 the redirect would land at
-        # 0640, which the PVE 9 webgui's repository manager treats as
-        # unparseable and silently hides the source — issue #230.
-        if [[ ! -f /etc/apt/sources.list.d/proxmox.sources ]]; then
-            cat > /etc/apt/sources.list.d/proxmox.sources <<'EOF'
-Enabled: true
-Types: deb
-URIs: http://download.proxmox.com/debian/pve
-Suites: trixie
-Components: pve-no-subscription
-Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-EOF
-            chmod 0644 /etc/apt/sources.list.d/proxmox.sources
-            need_update=true
-        fi
-
-        if [[ ! -f /etc/apt/sources.list.d/debian.sources ]]; then
-            cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
-Types: deb
-URIs: http://deb.debian.org/debian/
-Suites: trixie trixie-updates
-Components: main contrib non-free-firmware
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-
-Types: deb
-URIs: http://security.debian.org/debian-security/
-Suites: trixie-security
-Components: main contrib non-free-firmware
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-EOF
-            chmod 0644 /etc/apt/sources.list.d/debian.sources
-            need_update=true
-        fi
-
-    else
-        # ===== PVE 8 (Debian 12 - bookworm) =====
-        local sources_file="/etc/apt/sources.list"
-
-        if ! grep -qE 'deb .* bookworm .* main' "$sources_file" 2>/dev/null; then
-            {
-                echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware"
-                echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware"
-                echo "deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware"
-            } >> "$sources_file"
-            need_update=true
-        fi
-
-        if [[ ! -f /etc/apt/sources.list.d/pve-no-subscription.list ]]; then
-            echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" \
-                > /etc/apt/sources.list.d/pve-no-subscription.list
-            need_update=true
-        fi
-    fi
-
-    if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
-        msg_info "$(translate "Updating APT package lists...")"
-        apt-get update >/dev/null 2>&1 || apt-get update
-        # Spinner pair: msg_info must be closed before returning.
-        # Without this the next `msg_info` caller spawns a second
-        # spinner on top of ours and the original line never gets
-        # ✓'d — leaving a dangling progress char on screen.
-        msg_ok "$(translate "APT package lists updated")"
-    fi
-
-    return 0
-}
+# Shared subscription and consent policy for all utility callers.
+source "$(dirname "${BASH_SOURCE[0]}")/repository-functions.sh"
 
 
 # Install a single package and verify the resulting command is available.
@@ -132,7 +60,16 @@ install_single_package() {
     msg_info "$(translate "Installing") $package${description:+ ($description)}..."
     local install_success=false
 
-    if DEBIAN_FRONTEND=noninteractive apt-get install -y "$package" >/dev/null 2>&1; then
+    # Every script that installs anything comes through here, so this is
+    # where an installation becomes visible in the audit. What gets
+    # recorded is the difference the operation made — the packages that
+    # were not on the host and now are, dependencies included — rather
+    # than the name that was asked for.
+    if declare -F pmx_install_pkg >/dev/null 2>&1; then
+        PMX_JOURNAL_FUNCTION="${PMX_JOURNAL_FUNCTION:-install_single_package}" \
+        PMX_JOURNAL_SOURCE="${PMX_JOURNAL_SOURCE:-${SCRIPT_SOURCE:-utils-install-functions.sh}}" \
+            pmx_install_pkg "$package" && install_success=true
+    elif DEBIAN_FRONTEND=noninteractive apt-get install -y "$package" >/dev/null 2>&1; then
         install_success=true
     fi
     cleanup 2>/dev/null || true
@@ -165,8 +102,12 @@ install_single_package() {
 # file, so user-authored .link files in /etc/systemd/network/ are
 # never touched.
 
-readonly PMX_NIC_LINK_DIR="/etc/systemd/network"
-readonly PMX_NIC_LINK_MARKER="# Managed by ProxMenux — do not edit"
+# Declared once: this file is sourced by both post-install flows, and an
+# update that runs functions of the two sources it twice in the same shell.
+declare -p PMX_NIC_LINK_DIR >/dev/null 2>&1 \
+    || readonly PMX_NIC_LINK_DIR="/etc/systemd/network"
+declare -p PMX_NIC_LINK_MARKER >/dev/null 2>&1 \
+    || readonly PMX_NIC_LINK_MARKER="# Managed by ProxMenux — do not edit"
 
 # Print the MAC address recorded in a .link file, uppercased, or empty
 # if the file has no MACAddress= line.
@@ -317,13 +258,16 @@ pmx_uninstall_persistent_network() {
 # ProxMenux components against that kernel — so drivers keep
 # working after the reboot without operator intervention.
 
-readonly PMX_COMPONENTS_STATUS="/usr/local/share/proxmenux/components_status.json"
+declare -p PMX_COMPONENTS_STATUS >/dev/null 2>&1 \
+    || readonly PMX_COMPONENTS_STATUS="/usr/local/share/proxmenux/components_status.json"
 
 # component_key : dkms_module_name  (empty module = not DKMS)
-readonly -a PMX_DKMS_COMPONENTS=(
-    "nvidia_driver:nvidia"
-    "coral_driver:gasket"
-)
+if ! declare -p PMX_DKMS_COMPONENTS >/dev/null 2>&1; then
+    readonly -a PMX_DKMS_COMPONENTS=(
+        "nvidia_driver:nvidia"
+        "coral_driver:gasket"
+    )
+fi
 
 # Print the newest installed pve/proxmox kernel version, or empty.
 _pmx_newest_installed_kernel() {
@@ -456,4 +400,19 @@ pmx_rebuild_dkms_after_kernel() {
         msg_ok "$(translate 'DKMS drivers reinstalled for kernel') ${newest_kernel}"
     fi
     return 0
+}
+
+# Log2RAM syncs only the archived journal files, so the active file it found
+# on disk when it was installed stays there. Restored at every boot, it makes
+# journald continue an old sequence and delete its newest archives first.
+# The sync removes that file from the disk copy. Returns 0 when it changes
+# the given Log2RAM script.
+pmx_log2ram_drop_stale_journal() {
+    local log2ram_bin="$1"
+    [[ -f "$log2ram_bin" ]] || return 1
+    grep -q -- '--exclude=journal/\*/\*' "$log2ram_bin" 2>/dev/null || return 1
+    grep -q -- '--delete-excluded' "$log2ram_bin" 2>/dev/null && return 1
+    [[ -e "${log2ram_bin}.proxmenux.bak" ]] || cp -a "$log2ram_bin" "${log2ram_bin}.proxmenux.bak"
+    sed '/optional_params+=("--exclude=journal\/\*\/\*")/a\        optional_params+=("--delete-excluded")' "$log2ram_bin" \
+        | pmx_write_file "$log2ram_bin"
 }

@@ -434,6 +434,29 @@ def scan(persist: bool = True) -> dict[str, Any]:
     return snapshot
 
 
+def reset_notified_versions() -> None:
+    """Forget which optimization versions have already been announced.
+
+    Each version is announced once, so a host that never applies a
+    pending optimization would otherwise stay silent about it forever.
+    Clearing the history reopens that single announcement.
+
+    The caller owns the timing: the notification collector runs this on
+    its first cycle after a service start, together with clearing the
+    matching delivery cooldown, because forgetting the history while the
+    cooldown still suppresses delivery would consume the announcement
+    without ever sending it.
+    """
+    try:
+        with _cache_lock:
+            scanned_at = float(_cache.get("scanned_at", 0.0) or 0.0)
+            updates = list(_cache.get("updates", []))
+        _write_persisted_snapshot(scanned_at, updates, {})
+    except OSError as e:
+        # Read-only host: de-duplication stays best-effort, as elsewhere.
+        print(f"[post_install_versions] could not reset notified versions: {e}")
+
+
 def scan_at_startup() -> dict[str, Any]:
     """Convenience wrapper called from flask_server startup.
 

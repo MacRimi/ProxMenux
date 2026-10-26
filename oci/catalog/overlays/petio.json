@@ -1,0 +1,30 @@
+{
+  "proxmox": {
+    "stack_adaptation_notes": [
+      "MongoDB implicit image volumes /data/db and /data/configdb receive managed Proxmox volumes with backup enabled.",
+      "MongoDB has no LAN interface; its unauthenticated upstream configuration is limited to the private stack network (also reachable by the Proxmox host).",
+      "Complete Petio web setup with MongoDB host mongo and port 27017. Plex credentials remain user-provided.",
+      "The latest MongoDB image requires compatible CPU instructions; application and hardware compatibility remain unvalidated."
+    ],
+    "stack_references": [
+      "https://github.com/docker-library/docs/tree/master/mongo",
+      "https://github.com/petio-team/petio"
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/app/api/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/app/logs",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

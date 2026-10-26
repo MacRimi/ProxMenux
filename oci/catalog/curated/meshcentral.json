@@ -1,0 +1,457 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-meshcentral",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "MeshCentral"
+    },
+    "tagline": {
+      "en_US": "Self-hosted remote device management."
+    },
+    "description": {
+      "en_US": "A web-based platform for managing and remotely accessing computers and other devices. The slim image uses the built-in NeDB database, so a separate MongoDB service is not required."
+    },
+    "category": "remote",
+    "category_label": "Remote Access & VPN",
+    "author": "ylianst",
+    "developer": "ylianst",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/meshcentral.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 443,
+      "path": "/"
+    },
+    "website": "https://meshcentral.com/",
+    "documentation": "https://docs.meshcentral.com/install/container/",
+    "repository": "https://github.com/Ylianst/MeshCentral",
+    "tips": [
+      "Create the first administrator account through the web interface.",
+      "MeshCentral downloads agent installers on first start, so the LXC needs outbound internet access during setup.",
+      "MeshCentral redirects HTTP to HTTPS and uses a self-signed certificate by default; use a trusted certificate before exposing it outside a trusted network."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "ylianst",
+    "repository": "https://github.com/Ylianst/MeshCentral",
+    "revision": "adce1ec488dc884ce947ea4e4808e6a520609b17",
+    "image_repository_url": "https://github.com/ylianst/MeshCentral/pkgs/container/meshcentral",
+    "readme_pushed_at": "2026-10-24T14:30:08Z",
+    "compose_sha256": "d9a6f1510c0aabcd7ff36ddd77ace197511c6839a86e83379da90cc6ba81926e",
+    "generated_at": "2026-10-26T00:19:19+00:00",
+    "readme_raw_url": "https://raw.githubusercontent.com/Ylianst/MeshCentral/master/README.md"
+  },
+  "container_contract": {
+    "service_name": "meshcentral",
+    "container_name": "meshcentral",
+    "image": {
+      "reference": "ghcr.io/ylianst/meshcentral:latest-slim",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/ylianst/meshcentral",
+      "tag": "latest-slim",
+      "digest": null,
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "DYNAMIC_CONFIG",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/opt/meshcentral/meshcentral-data",
+        "compose_source_example": "meshcentral-data-0",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/opt/meshcentral/meshcentral-files",
+        "compose_source_example": "meshcentral-data-1",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/opt/meshcentral/meshcentral-web",
+        "compose_source_example": "meshcentral-data-2",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 2
+        }
+      },
+      {
+        "id": "volume-3",
+        "container_path": "/opt/meshcentral/meshcentral-backups",
+        "compose_source_example": "meshcentral-data-3",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 80,
+        "published_example": 80,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 443,
+        "published_example": 443,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: meshcentral\nservices:\n  meshcentral:\n    image: ghcr.io/ylianst/meshcentral:latest-slim\n    restart: unless-stopped\n    ports:\n    - 80:80/tcp\n    - 443:443/tcp\n    volumes:\n    - meshcentral-data-0:/opt/meshcentral/meshcentral-data\n    - meshcentral-data-1:/opt/meshcentral/meshcentral-files\n    - meshcentral-data-2:/opt/meshcentral/meshcentral-web\n    - meshcentral-data-3:/opt/meshcentral/meshcentral-backups\n    environment:\n      DYNAMIC_CONFIG: 'false'\n    hostname: meshcentral\nvolumes:\n  meshcentral-data-0: null\n  meshcentral-data-1: null\n  meshcentral-data-2: null\n  meshcentral-data-3: null\n"
+  },
+  "compose_stack": {
+    "project_name": "meshcentral",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "meshcentral",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "meshcentral",
+        "image": "ghcr.io/ylianst/meshcentral:latest-slim",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "ghcr.io/ylianst/meshcentral:latest-slim",
+          "restart": "unless-stopped",
+          "ports": [
+            "80:80/tcp",
+            "443:443/tcp"
+          ],
+          "volumes": [
+            "meshcentral-data-0:/opt/meshcentral/meshcentral-data",
+            "meshcentral-data-1:/opt/meshcentral/meshcentral-files",
+            "meshcentral-data-2:/opt/meshcentral/meshcentral-web",
+            "meshcentral-data-3:/opt/meshcentral/meshcentral-backups"
+          ],
+          "environment": {
+            "DYNAMIC_CONFIG": "false"
+          },
+          "hostname": "meshcentral"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "meshcentral",
+      "volumes": {
+        "meshcentral-data-0": null,
+        "meshcentral-data-1": null,
+        "meshcentral-data-2": null,
+        "meshcentral-data-3": null
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "meshcentral-volume-0",
+        "service": "meshcentral",
+        "container_path": "/opt/meshcentral/meshcentral-data",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "meshcentral-volume-1",
+        "service": "meshcentral",
+        "container_path": "/opt/meshcentral/meshcentral-files",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "meshcentral-volume-2",
+        "service": "meshcentral",
+        "container_path": "/opt/meshcentral/meshcentral-web",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "meshcentral-volume-3",
+        "service": "meshcentral",
+        "container_path": "/opt/meshcentral/meshcentral-backups",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "meshcentral"
+      ],
+      "stop_order": [
+        "meshcentral"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "MeshCentral",
+        "scheme": "https",
+        "port": 443,
+        "path": "/",
+        "source": "upstream-documentation"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "runtime": {
+        "hostname": "meshcentral"
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/opt/meshcentral/meshcentral-data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/opt/meshcentral/meshcentral-files",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/opt/meshcentral/meshcentral-web",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/opt/meshcentral/meshcentral-backups",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "https",
+        "port": 443,
+        "path": "/",
+        "timeout_seconds": 300,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    },
+    "adaptations": [
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "The source definition identifies an OCI image reference.",
+        "native_lxc_behavior": "ProxMenux pulls the exact image reference in this profile and resolves it to an architecture-specific digest at installation.",
+        "reason": "Use the project-maintained image and the tag reviewed for this profile.",
+        "behavioral_impact": "A floating tag can resolve to a newer build on a later installation or image update.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Compose publishes application ports on its Docker host.",
+        "native_lxc_behavior": "The OCI process listens on the same application ports at its dedicated LXC address.",
+        "reason": "A dedicated LXC has its own network namespace and does not need Docker port NAT.",
+        "behavioral_impact": "Clients connect to the LXC address and the declared application port.",
+        "validation": "pending-per-application"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "not-yet-validated",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-reviewed-image-reference-and-resolved-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

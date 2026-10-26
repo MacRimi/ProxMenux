@@ -40,9 +40,10 @@ CATALOG_FILE = os.path.join(OCI_BASE_DIR, "catalog.json")
 INSTALLED_FILE = os.path.join(OCI_BASE_DIR, "installed.json")
 INSTANCES_DIR = os.path.join(OCI_BASE_DIR, "instances")
 
-# Source catalog from Scripts (bundled with ProxMenux)
-SCRIPTS_CATALOG = "/usr/local/share/proxmenux/scripts/oci/catalog.json"
-DEV_SCRIPTS_CATALOG = os.path.join(os.path.dirname(__file__), "..", "..", "Scripts", "oci", "catalog.json")
+# Source catalog shipped with ProxMenux, inside the OCI engine
+SCRIPTS_CATALOG = os.path.join(OCI_BASE_DIR, "engine", "addons", "secure-gateway.json")
+LEGACY_SCRIPTS_CATALOG = "/usr/local/share/proxmenux/scripts/oci/catalog.json"
+DEV_SCRIPTS_CATALOG = os.path.join(os.path.dirname(__file__), "..", "..", "oci", "addons", "secure-gateway.json")
 
 # Encryption key file
 ENCRYPTION_KEY_FILE = os.path.join(OCI_BASE_DIR, ".encryption_key")
@@ -143,10 +144,10 @@ def ensure_oci_directories():
     os.makedirs(INSTANCES_DIR, exist_ok=True)
     
     if not os.path.exists(CATALOG_FILE):
-        if os.path.exists(SCRIPTS_CATALOG):
-            shutil.copy2(SCRIPTS_CATALOG, CATALOG_FILE)
-        elif os.path.exists(DEV_SCRIPTS_CATALOG):
-            shutil.copy2(DEV_SCRIPTS_CATALOG, CATALOG_FILE)
+        for source in (SCRIPTS_CATALOG, LEGACY_SCRIPTS_CATALOG, DEV_SCRIPTS_CATALOG):
+            if os.path.exists(source):
+                shutil.copy2(source, CATALOG_FILE)
+                break
     
     if not os.path.exists(INSTALLED_FILE):
         with open(INSTALLED_FILE, 'w') as f:
@@ -689,7 +690,7 @@ def load_catalog() -> Dict[str, Any]:
     """Load the OCI app catalog."""
     ensure_oci_directories()
     
-    for path in [CATALOG_FILE, SCRIPTS_CATALOG, DEV_SCRIPTS_CATALOG]:
+    for path in [CATALOG_FILE, SCRIPTS_CATALOG, LEGACY_SCRIPTS_CATALOG, DEV_SCRIPTS_CATALOG]:
         if os.path.exists(path):
             try:
                 with open(path, 'r') as f:

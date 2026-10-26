@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Policy | Audit & Report",
+    "description": "The node policy of Audit & Report: backup, autostart and recovery objective of each guest, the role of each storage and the thresholds of the checks."
+  },
+  "header": {
+    "title": "Policy",
+    "description": "The policy declares what no inspection can deduce: what each guest and storage is for and the thresholds the checks apply.",
+    "section": "Audit & Report"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "With no declaration, the report describes; with one, it assesses",
+            "body": "An assessment sees what the host does, not what it is for. A guest without a backup whose purpose is not declared is reported as an observation. If its backup is declared required, the same absence is reported as a warning. Nothing has to be declared."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Policy view with the guests, the storage and the thresholds of the node",
+            "caption": "The Policy view."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Guests",
+      "intro": "Each VM and LXC of the node has three fields. A value left as default takes the general value, shown next to it.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Field",
+              "Values",
+              "Effect on the assessment"
+            ],
+            "rows": [
+              [
+                "Backup",
+                "Required, Not required, Not stated",
+                "A missing backup is a warning when it is required, an observation when it is not stated, and it is left out of the count when it is not required."
+              ],
+              [
+                "Autostart",
+                "Required, Not required, Not stated",
+                "Whether the guest has to start with the host."
+              ],
+              [
+                "Recovery objective",
+                "Hours",
+                "The maximum acceptable age of the last backup."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Storage",
+      "blocks": [
+        {
+          "p": "An unreachable storage is reported as critical when it is declared essential or serves a running guest, as a warning when its role is not stated, and as an observation when it is declared optional."
+        }
+      ],
+      "intro": "Each storage of the node is declared Essential, Optional or Not stated."
+    },
+    {
+      "id": "thresholds",
+      "title": "Thresholds",
+      "intro": "An empty threshold uses the shipped value, shown as its placeholder.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Storage capacity review (%) and thin pool fill review (%).",
+              "Thin overprovisioning ratio and memory overcommit ratio.",
+              "ZFS scrub interval (days).",
+              "Backup age fallback (days) and schedule grace (ratio).",
+              "Certificate expiry notice (days).",
+              "Disk service life (hours) and recent disk error window (days).",
+              "Lynis report age (days) and package index age (days).",
+              "Journal against its cap (%).",
+              "Filesystem space review (%) and filesystem inode review (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "How the policy is saved",
+      "blocks": [
+        {
+          "p": "The declaration is validated and saved atomically in <code>/usr/local/share/proxmenux/audit_policy.json</code>. Each save carries a revision: if the declaration changed in another session, the draft is not saved and the view offers to reload the saved declaration."
+        },
+        {
+          "calloutWarning": {
+            "title": "The policy is never inferred",
+            "body": "ProxMenux adds no requirement on its own. An empty field keeps the shipped value or stays not stated, and a partial declaration only affects the elements it names."
+          }
+        }
+      ]
+    }
+  ]
+}

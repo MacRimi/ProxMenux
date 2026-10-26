@@ -51,6 +51,10 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -59,7 +63,7 @@ initialize_cache
 # ==========================================================
 
 select_container() {
-    local menu_items=()
+    local menu_items=() oci_hidden=0
     while IFS= read -r line; do
         [[ "$line" =~ ^VMID ]] && continue
         local ctid status name
@@ -67,19 +71,26 @@ select_container() {
         status=$(echo "$line" | awk '{print $2}')
         name=$(echo "$line" | awk '{print $3}')
         [[ -z "$ctid" ]] && continue
+        if pmx_lxc_is_oci "$ctid"; then
+            oci_hidden=$((oci_hidden + 1))
+            continue
+        fi
         menu_items+=("$ctid" "${name:-CT-${ctid}} (${status})")
     done < <(pct list 2>/dev/null)
+
+    local oci_note="" list_h=12
+    [[ $oci_hidden -gt 0 ]] && list_h=7 && oci_note="\n\n$(translate 'Containers created from an OCI image are not listed: their devices are changed in OCI manager Apps.')"
 
     if [[ ${#menu_items[@]} -eq 0 ]]; then
         dialog --backtitle "ProxMenux" \
             --title "$(translate 'Install Coral TPU in LXC')" \
-            --msgbox "\n$(translate 'No LXC containers found on this system.')" 8 60
+            --msgbox "\n$(translate 'No LXC containers found on this system.')${oci_note}" 12 66
         exit 0
     fi
 
     CONTAINER_ID=$(dialog --backtitle "ProxMenux" \
         --title "$(translate 'Install Coral TPU in LXC')" \
-        --menu "\n$(translate 'Select the LXC container:')" 20 72 12 \
+        --menu "\n$(translate 'Select the LXC container:')${oci_note}" 20 72 "$list_h" \
         "${menu_items[@]}" \
         2>&1 >/dev/tty) || exit 0
 
@@ -161,6 +172,7 @@ suggest_gpu_passthrough_if_needed() {
 # ==========================================================
 
 add_udev_rule_for_coral_usb() {
+    pmx_journal_context "add_udev_rule_for_coral_usb" "1.5" "install_coral_lxc.sh"
     RULE_FILE="/etc/udev/rules.d/99-coral-usb.rules"
     RULE_CONTENT='# Coral USB Accelerator
 SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666", TAG+="uaccess", SYMLINK+="coral"
@@ -168,14 +180,16 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666"
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0666", TAG+="uaccess", SYMLINK+="coral"'
 
     if [[ ! -f "$RULE_FILE" ]]; then
-        echo "$RULE_CONTENT" > "$RULE_FILE"
+        printf '%s\n' "$RULE_CONTENT" | pmx_write_file "$RULE_FILE"
         udevadm control --reload-rules && udevadm trigger
+        pmx_record_execution "reload Coral USB udev rules" "udevadm control --reload-rules && udevadm trigger"
         msg_ok "$(translate 'Udev rules for Coral USB devices added and rules reloaded.')"
     elif ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
         # Append (>>) instead of overwriting (>) so any user-authored
         # rules in this file survive.
-        printf '\n%s\n' "$RULE_CONTENT" >> "$RULE_FILE"
+        printf '\n%s\n' "$RULE_CONTENT" | pmx_append_file "$RULE_FILE"
         udevadm control --reload-rules && udevadm trigger
+        pmx_record_execution "reload Coral USB udev rules" "udevadm control --reload-rules && udevadm trigger"
         msg_ok "$(translate 'Udev rules for Coral USB devices appended and rules reloaded.')"
     else
         msg_ok "$(translate 'Udev rules for Coral USB devices already exist.')"

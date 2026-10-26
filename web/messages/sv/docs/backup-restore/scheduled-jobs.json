@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Schemalagda jobb — timers, kopplingsläge, bevarande | ProxMenux",
+    "description": "Schemalagda ProxMenux-jobb för säkerhetskopiering av värden. Två sätt att skapa jobb (egen systemd-timer eller koppling till ett befintligt PVE vzdump-jobb), bevaranderegler per jobb via proxmox-backup-client, Borg eller lokal rensning, filer under /var/lib/proxmenux/backup-jobs och körningsskriptet som skapar samma arkiv som det interaktiva flödet.",
+    "ogTitle": "ProxMenux Backup - schemalagda jobb",
+    "ogDescription": "Obevakade schemalagda värdsäkerhetskopior med kopplingsläge, bevaranderegler och samma tre destinationer som det interaktiva flödet.",
+    "twitterTitle": "Planerade jobb | ProxMenux",
+    "twitterDescription": "Obevakade schemalagda värdsäkerhetskopieringsjobb med kopplingsläge och bevaranderegler."
+  },
+  "header": {
+    "title": "Planerade jobb",
+    "description": "Obevakade jobb för säkerhetskopiering av värden. Två modeller: ett nytt oberoende jobb med eget schema eller ett jobb kopplat till ett befintligt PVE vzdump-jobb som ärver dess schema och bevaranderegler. Båda skapar samma arkiv som det interaktiva flödet.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "De två modellerna för schemalagda jobb",
+    "body": "Ett schemalagt jobb kan skapas efter en av två modeller:",
+    "modelsList": [
+      "<strong>Nytt oberoende jobb</strong> - ProxMenux definierar själva arbetsschemat med sin egen systemd timer, oberoende av någon annan uppgift på värden. Kompatibel med alla tre destinationer: Lokal, PBS och Borg.",
+      "<strong>Koppla till ett befintligt PVE vzdump-jobb</strong> — jobbet har inget eget schema; det körs automatiskt när det överordnade vzdump-jobbet säkerhetskopierar värdens VM:ar och LXC:er. Det ärver schemat och bevarandereglerna. Stöder lokalt mål och PBS (Borg stöds inte eftersom PVE saknar en inbyggd schemaläggare för Borg)."
+    ]
+  },
+  "attachBadge": {
+    "title": "Kopplingsläge — rekommenderas när ett PVE vzdump-jobb redan finns",
+    "body": "Om ett PVE vzdump-jobb redan är konfigurerat för nodens VM:ar och LXC:er körs den kopplade värdsäkerhetskopieringen efter gästernas säkerhetskopiering, i <strong>samma säkerhetskopieringscykel</strong>. Vid återställning kommer gästkonfigurationerna från värdsäkerhetskopian (under <code>/etc/pve</code>) och gästdiskarna från cykelns vzdump-kopior. Detta underlättar samordnad återställning av hela noden men är ingen atomär ögonblicksbild: ändringar under cykeln kan ge skillnader mellan värdkonfiguration och gästernas disktillstånd."
+  },
+  "frequencyBadge": {
+    "title": "Rekommenderad frekvens",
+    "body": "Säkerhetskopiera värden ofta för att maximera kompatibiliteten med en framtida återställning. Ju närmare säkerhetskopian ligger värdens aktuella tillstånd, desto färre avvikelser i konfiguration, paket och komponenter måste återställningen hantera."
+  },
+  "modes": {
+    "heading": "De två lägena",
+    "rows": [
+      {
+        "mode": "Nytt schemalagt jobb",
+        "backends": "Lokalt, PBS, Borg",
+        "schedule": "Egen <code>OnCalendar</code> uttryck (systemd kalendersyntax - t.ex. <code>daily</code>, <code>Mon..Fri 03:00</code>).",
+        "retention": "Efterfrågas separat: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. Tillämpad av körningsskriptet efter varje framgångsrik backup."
+      },
+      {
+        "mode": "Bifoga till ett PVE vzdump jobb",
+        "backends": "Lokal, PBS (Borg har ingen PVE-sida schemaläggning)",
+        "schedule": "Ärvd från föräldern PVE jobb. Ingen systemd-timer installeras på ProxMenux-sidan.",
+        "retention": "Ärvd från förälderns <code>prune-backups</code>-konfiguration (mappade en-till-en till körningsskriptets <code>KEEP_*</code>-variabler via <code>hb_pve_prune_to_keep_env</code>)."
+      }
+    ]
+  },
+  "attachDetail": {
+    "heading": "Så fungerar kopplingsläget",
+    "intro": "PVE skriver <code>vzdump</code>-jobb till <code>/etc/pve/jobs.cfg</code>, med ett avsnitt per jobb som anger lagringen för VM- och LXC-kopiorna. Kopplingsläget kräver en backend som ProxMenux stöder (lokalt eller PBS). Värdsäkerhetskopieringen körs via job-end-hooken efter att gästernas säkerhetskopieringsjobb avslutats.",
+    "steps": [
+      {
+        "step": "1",
+        "detail": "Under jobbskapande listar ProxMenux kompatibla förälder PVE-uppgifter via <code>hb_pve_list_vzdump_jobs_for_backend</code>. Användaren väljer en."
+      },
+      {
+        "step": "2",
+        "detail": "Jobbets <code>.env</code> är skrivet med <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> och de ärvda <code>KEEP_*</code> värdena; ingen systemd timer skapas."
+      },
+      {
+        "step": "3",
+        "detail": "<code>hb_install_vzdump_hook</code> registrerar en skripthook i <code>/etc/vzdump.conf</code>. I job-end-fasen för varje vzdump-jobb jämförs mottaget <code>$STOREID</code> med <code>PVE_STORAGE</code> för varje aktiverat kopplat jobb, och körningsskriptet startas för matchande jobb. Matchningen görs efter lagring, inte efter det valda överordnade jobbets ID."
+      },
+      {
+        "step": "4",
+        "detail": "Arkivet sparas i samma lagring som vzdump-kopiorna: <code>path/dump/</code> för lokalt mål eller PBS-arkivlagret som konfigurerats i PVE-lagringsposten."
+      }
+    ],
+    "outroBody": "Kopplingsläget har ingen egen timer. Om det valda överordnade PVE-jobbet inaktiveras eller tas bort stoppas dess utlösning, men ett annat vzdump-jobb med samma lagring kan fortfarande starta värdsäkerhetskopieringen. Inaktivera eller ta bort själva ProxMenux-jobbet för att förhindra det. Vid inaktivering ligger jobbposten kvar och kan senare aktiveras eller kopplas igen."
+  },
+  "storageLayout": {
+    "heading": "Filer som utgör ett jobb",
+    "intro": "Varje schemalagt jobb beskrivs fullständigt av tre eller fyra filer på disken. Att läsa dem ger hela konfigurationen av jobbet utan att förlita sig på gränssnittet.",
+    "rows": [
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.env",
+        "content": "Backend, backup-ID eller destination, schema (nyt läge) eller PVE-förälder (Attach-läge), aktiverad flagga, lagring <code>KEEP_*</code>-värden, referenspekare."
+      },
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
+        "content": "En absolut sökväg per rad — valet från profilen fastställs när jobbet skapas. Om filen redigeras används det nya valet nästa gång timern löser ut."
+      },
+      {
+        "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
+        "content": "Nytt läge bara. Tjänsten anropar <code>run_scheduled_backup.sh JOB_ID</code>. Timern schemalägger det med <code>Persistent=true</code> (missade körningar utförs vid nästa start) och en liten <code>RandomizedDelaySec=120</code> att sprida belastning när flera jobb delar samma OnCalendar uttryck."
+      },
+      {
+        "path": "/etc/vzdump.conf script-hook",
+        "content": "Fäst läge bara. Installerad en gång av <code>hb_install_vzdump_hook</code>; matchar varje bifogat jobb <code>PVE_STORAGE</code> mot <code>$STOREID</code> PVE passerar till krokskriptet."
+      }
+    ]
+  },
+  "runner": {
+    "heading": "Vad ett jobb gör när det startar",
+    "intro": "Varje jobb – oavsett om det är nymodell eller bifogad – kör samma trestegssekvens:",
+    "steps": [
+      "<strong>Förbered säkerhetskopian.</strong> Läser jobbkonfigurationen (destination, profil, vägar) och monterar arkivträdet exakt på samma sätt som det interaktiva flödet gör. Resultatet är samma arkiv som en manuell säkerhetskopia med dessa inställningar skulle producera.",
+      "<strong>Skriv till destinationen.</strong> Laddar eller skriver arkivet till den konfigurerade destinationen - en lokal <code>.tar.zst</code> fil, en PBS backup, eller ett Borg-arkiv - med exakt samma verktyg och referenser en manuell säkerhetskopia till samma destination skulle använda.",
+      "<strong>Tillämpa bevaranderegler.</strong> Ta bort gamla säkerhetskopior från destinationen, hålla <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> räknas konfigurerade på jobbet. Pruning utförs av själva destinationen: PBS tillämpar sina egna bevaranderegler, Borg kör <code>borg prune</code>, och för Local ProxMenux raderar filerna som faller utanför <code>keep-last</code>-fönstret."
+    ]
+  },
+  "management": {
+    "heading": "Hantera jobb",
+    "intro": "Schemaläggarmenyn (Scripts TUI) och fliken Monitor Backups avslöjar samma åtgärder på något jobb.",
+    "rows": [
+      {
+        "action": "Kör nu",
+        "detail": "Anropar körningsskriptet omedelbart utan att vänta på timern eller vzdump-hooken. Användbart för att verifiera konfigurationen utan att vänta till nästa schemalagda körning."
+      },
+      {
+        "action": "Aktivera / Inaktivera",
+        "detail": "Nytt läge: <code>systemctl enable/disable --now</code> timern. Bifoga läge: vänder <code>ENABLED</code> flaggan i jobbenv - krokskriptet respekterar den vid nästa PVE-körning."
+      },
+      {
+        "action": "Redigera",
+        "detail": "Öppnar åter dialogerna för destination, schema, profil och bevarande och skriver om jobbfilerna. Jobb-ID:t behålls."
+      },
+      {
+        "action": "Ta bort",
+        "detail": "Tar bort jobbets env-fil, sökvägsfilen och systemd-timern med tjänsten (nytt läge) samt inaktiverar hookkopplingen (kopplingsläge). Arkiv som redan finns på destinationen påverkas inte."
+      },
+      {
+        "action": "Visa logg",
+        "detail": "Strömmar <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — en loggfil per körning. Körningsskriptet sänder också ut en kompakt statusrad till journald under tjänsten systemd."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Aviseringar",
+    "body": "Varje schemalagd körning utlöser samma <code>hb_notify_lifecycle</code>-händelser som det interaktiva flödet (<code>start</code>, <code>complete</code>, <code>fail</code>). Om aviseringskanaler är konfigurerade i Monitor visar obevakade jobb sina resultat på samma sätt som manuella säkerhetskopior – en användare behöver inte kontrollera loggen för att veta om ett jobb lyckades."
+  },
+  "whereNext": {
+    "heading": "Nästa steg",
+    "items": [
+      {
+        "label": "Skapa backups",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": " - det interaktiva flödet som delar backend med schemaläggaren."
+      },
+      {
+        "label": "Destinationer",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — per-backend konfiguration som används av både det interaktiva flödet och schemaläggaren."
+      },
+      {
+        "label": "Återställande",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — flödet som använder de säkerhetskopior som jobben skapar."
+      }
+    ]
+  }
+}

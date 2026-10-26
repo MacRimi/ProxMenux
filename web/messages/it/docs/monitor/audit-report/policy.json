@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Politica | Audit e report",
+    "description": "Politica del nodo in Audit e report: backup, avvio automatico e obiettivo di ripristino di ogni guest, ruolo di ogni archiviazione e soglie dei controlli."
+  },
+  "header": {
+    "title": "Politica",
+    "description": "La politica dichiara ciò che nessuna ispezione può dedurre: lo scopo di ogni guest e archiviazione e le soglie applicate dai controlli.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Senza dichiarazione il rapporto descrive; con una dichiarazione valuta",
+            "body": "Una valutazione vede cosa fa l'host, non a cosa serve. Un guest senza backup e senza scopo dichiarato viene segnalato come osservazione. Se il backup è dichiarato obbligatorio, la stessa assenza diventa un avviso. Non è obbligatorio dichiarare nulla."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Vista Politica con guest, archiviazione e soglie del nodo",
+            "caption": "La vista politica."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Guest",
+      "intro": "Ogni VM e LXC del nodo ha tre campi. Un valore lasciato come predefinito prende il valore generale, mostrato accanto ad esso.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Valori",
+              "Effetti sulla valutazione"
+            ],
+            "rows": [
+              [
+                "Backup",
+                "Richiesto, Non richiesto, Non dichiarato",
+                "Un backup mancante è un avviso quando è necessario, un'osservazione quando non è indicato, e viene lasciato fuori dal conteggio quando non è richiesto."
+              ],
+              [
+                "Avvio automatico",
+                "Richiesto, Non richiesto, Non dichiarato",
+                "Indica se il guest deve avviarsi insieme all'host."
+              ],
+              [
+                "Obiettivo di ripristino",
+                "Ore",
+                "L'età massima accettabile dell'ultimo backup."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Archiviazione",
+      "blocks": [
+        {
+          "p": "Un deposito irraggiungibile è segnalato come critico quando è dichiarato essenziale o serve un ospite in esecuzione, come un avvertimento quando il suo ruolo non è dichiarato, e come osservazione quando è dichiarato facoltativo."
+        }
+      ],
+      "intro": "Ogni archiviazione del nodo è dichiarata Essenziale, Facoltativa o Non dichiarata."
+    },
+    {
+      "id": "thresholds",
+      "title": "Soglie",
+      "intro": "Una soglia vuota usa il valore predefinito incluso, mostrato come segnaposto.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Controllo della capacità di archiviazione (%) e del riempimento del thin pool (%).",
+              "Rapporto di overprovisioning thin e rapporto di sovrallocazione della memoria.",
+              "Intervallo di scrub ZFS (giorni).",
+              "Limite alternativo dell'età del backup (giorni) e margine sulla pianificazione (rapporto).",
+              "Avviso di scadenza del certificato (giorni).",
+              "Durata del servizio del disco (ore) e finestra di errore del disco recente (giorni).",
+              "Età del rapporto Lynis (giorni) e degli indici dei pacchetti (giorni).",
+              "Utilizzo del journal rispetto al limite (%).",
+              "Controllo dello spazio (%) e degli inode (%) del filesystem."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Come si salva la politica",
+      "blocks": [
+        {
+          "p": "La dichiarazione viene convalidata e salvata atomicamente in <code>/usr/local/share/proxmenux/audit_policy.json</code>. Ogni salvataggio include una revisione: se un'altra sessione ha modificato la dichiarazione, la bozza non viene salvata e la vista propone di ricaricare la versione salvata."
+        },
+        {
+          "calloutWarning": {
+            "title": "La politica non è mai rinviata",
+            "body": "ProxMenux non aggiunge requisiti autonomamente. Un campo vuoto mantiene il valore predefinito o rimane non dichiarato; una dichiarazione parziale riguarda solo gli elementi indicati."
+          }
+        }
+      ]
+    }
+  ]
+}

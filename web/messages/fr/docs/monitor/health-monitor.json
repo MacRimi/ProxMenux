@@ -1,0 +1,372 @@
+{
+  "meta": {
+    "title": "Surveillance de Proxmox — CPU, mémoire, stockage, SMART, ZFS, journaux | ProxMenux",
+    "description": "Surveillance proactive de Proxmox VE : dix catégories toutes les cinq minutes (CPU et température, mémoire et swap, stockage, disques/SMART, réseau, VM, services, journaux, mises à jour et sécurité), quatre niveaux de gravité, périodes de mise en sourdine par catégorie, nettoyage des erreurs résolues, historique permanent des disques et notifications Telegram, Discord, Gotify ou e-mail.",
+    "ogTitle": "Surveillance de Proxmox — CPU, mémoire, stockage, SMART, ZFS, journaux",
+    "ogDescription": "Surveillance proactive de Proxmox VE dans dix catégories, avec niveaux de gravité, périodes de mise en sourdine et notifications par événement.",
+    "twitterTitle": "Surveillance de Proxmox | ProxMenux",
+    "twitterDescription": "Surveillance proactive de Proxmox VE dans dix catégories, avec niveaux de gravité et notifications."
+  },
+  "header": {
+    "title": "Moniteur de santé",
+    "description": "Ce contrôle continu examine dix catégories de l’hôte par cycles de cinq minutes, recueille les mesures entre les cycles, déduplique les constats en événements structurés et alimente le tableau de bord, les notifications et la reformulation IA facultative depuis une source commune.",
+    "section": "Moniteur ProxMenux"
+  },
+  "intro": {
+    "title": "Un scanner, trois consommateurs",
+    "body": "Un thread en arrière-plan exécute le cycle complet toutes les cinq minutes et enregistre chaque constat dans SQLite sous un <code>error_key</code> stable. Cela permet <strong>(1)</strong> au tableau de bord d’afficher l’état actuel, <strong>(2)</strong> au système de notifications de diffuser les nouveaux événements et <strong>(3)</strong> à l’assistant IA facultatif de reformuler les alertes clairement. Une seule configuration alimente tous ces composants."
+  },
+  "howItWorks": {
+    "heading": "Comment ça marche",
+    "intro": "La surveillance utilise deux threads parallèles. Un <strong>collecteur de mesures</strong> léger remplit les historiques du CPU, de la mémoire et des températures. Le <strong>cycle de contrôle complet</strong> lit ces données, évalue les conditions prolongées et exécute les autres vérifications environ toutes les cinq minutes, puis enregistre les constats dans SQLite pour le tableau de bord et les notifications.",
+    "scannerTitle": "De l'échantillon à la découverte stockée",
+    "scannerCaption": "Le collecteur remplit les historiques entre les cycles : CPU toutes les 5 s, mémoire toutes les 30 s et température toutes les 15 s. Il n’évalue pas les alertes lui-même. Le cycle complet analyse les historiques et vérifie SMART, ZFS, les journaux et les services avant d’enregistrer les constats dans SQLite.",
+    "scannerArrowLabel": "étape",
+    "scannerNodes": {
+      "samplerLabel": "Collecteur de mesures",
+      "samplerDetail": "Utilisation CPU 5 s\nMémoire 30 s\nTempérature 15 s\n→ historiques",
+      "cycleLabel": "Cycle complet de santé",
+      "cycleDetail": "Toutes les 5 min\nLit les historiques\n+ contrôles directs\n(SMART, ZFS,\nservices, journaux…)",
+      "checksLabel": "Contrôles par catégorie",
+      "checksDetail": "Dix catégories\n(CPU, mémoire,\nstockage, disques,\nréseau, VM,\nles services, les registres,\nmises à jour, sécurité)",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "table errors\n(actives +\nmasquées)\n+ disk_observations\n(historique permanent\npar disque)"
+    },
+    "notifTitle": "Du constat enregistré à l’utilisateur",
+    "notifCaption": "Circuit des notifications. La même table des erreurs alimente aussi le tableau de bord (listes des alertes actives et masquées) et le nettoyage de fin de cycle qui résout automatiquement les anciennes entrées. Ces deux fonctions utilisent directement les données, sans passer par le répartiteur.",
+    "notifArrowLabel": "événement",
+    "notifNodes": {
+      "errorsLabel": "tableau des erreurs",
+      "errorsDetail": "Lignes actives +\nmasquées\nidentifiées par\nerror_key",
+      "dispatcherLabel": "Expéditeur de notification",
+      "dispatcherDetail": "Nouveaux événements\nou gravité accrue\nSelon les réglages\n+ délai minimal",
+      "templatesLabel": "Modèles + réécriture de l'IA",
+      "templatesDetail": "Modèle\npar événement\n→ reformulation IA\nfacultative en\nlangage clair",
+      "channelsLabel": "Canaux",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nE-mail (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "Les dix catégories",
+    "imageAlt": "Vision Health Monitor montrant les dix catégories avec leurs statuts actuels (CPU, Mémoire, Stockage, Disques, Réseau, VMs, Services, Logs, Mises à jour, Sécurité)",
+    "imageCaption": "Le point de vue de Health Monitor — les dix catégories avec leur statut actuel. Les catégories d'un hôte sain sont toutes OK; les avertissements et les événements critiques apparaissent en ligne avec les lignes qui les ont produits.",
+    "intro": "Chaque cycle exécute dix contrôles indépendants. Chacun renvoie l’un des quatre états (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) et des données structurées : noms de périphériques, extraits de journaux et seuils exacts. Ces données apparaissent dans le tableau de bord et les notifications.",
+    "headerCategory": "Catégorie",
+    "headerChecks": "Sous-contrôles",
+    "headerEvents": "Événements typiques",
+    "rows": [
+      {
+        "category": "CPU et température",
+        "checks": "Utilisation CPU avec hystérésis, température du capteur",
+        "events": "Utilisation CPU élevée et prolongée ; avertissements de température fondés sur les mesures des capteurs."
+      },
+      {
+        "category": "Mémoire et swap",
+        "checks": "Utilisation RAM, utilisation swap",
+        "events": "Pression mémoire prolongée ; activité de l’OOM-killer ; espace swap épuisé."
+      },
+      {
+        "category": "Stockage",
+        "checks": "Stockages Proxmox, système de fichiers racine",
+        "events": "Seuils d’occupation dépassés sur la racine ou un autre système de fichiers surveillé (85% avertissement / 95% critique par défaut) ; stockages PVE indisponibles ; montages NFS/CIFS figés ou passés en lecture seule de façon inattendue ; stockages LVM-thin et autres pools dépassant les mêmes seuils."
+      },
+      {
+        "category": "Disques & SMART",
+        "checks": "SMART, erreurs dmesg E/S, pools ZFS, LVM, erreurs du système de fichiers",
+        "events": "Échec du contrôle SMART ; secteurs réalloués ou en attente ; erreurs d’E/S ATA ; pool ZFS DEGRADED / FAULTED ; remontage ext4 en lecture seule."
+      },
+      {
+        "category": "Réseau",
+        "checks": "Connectivité, état de liaison, latence de passerelle",
+        "events": "Bridge ou agrégat réseau hors service ; passerelle injoignable ; pics de latence persistants."
+      },
+      {
+        "category": "Machines virtuelles et conteneurs",
+        "checks": "Communication QMP, démarrage VM, démarrage conteneur",
+        "events": "Échec du démarrage d’une VM ou de l’arrêt d’un CT ; délai du socket QMP dépassé ; configuration ou disque manquants après un clonage."
+      },
+      {
+        "category": "Services PVE",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, mode grappe",
+        "events": "Le service s'est écrasé; le quorum du groupe a été perdu; <code>pmxcfs</code> bloqué."
+      },
+      {
+        "category": "Journaux système",
+        "checks": "Erreurs persistantes, pics d'erreur, cascades d'erreurs, messages critiques du noyau",
+        "events": "Erreurs identiques répétées; éclatement soudain d'avertissements (modèle de cascade); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> en dmesg."
+      },
+      {
+        "category": "Mises à jour du système",
+        "checks": "Mises à jour en attente, mises à jour de sécurité, version noyau / PVE, âge du système",
+        "events": "Mises à jour de sécurité ou du noyau utilisé en attente ; système non mis à jour depuis longtemps. La catégorie Mises à jour de la fenêtre État de santé affiche un bouton <em>Mettre à jour maintenant</em> lorsque des mises à jour sont en attente. Il lance la procédure complète de mise à jour ProxMenux dans la fenêtre ; sa fermeture actualise l’état avec <code>?refresh=1</code> afin que l’indicateur reflète le nouvel état sans attendre le cycle suivant."
+      },
+      {
+        "category": "Sécurité et certificats",
+        "checks": "Tentatives de connexion, certificats proches de l’expiration, état des jails Fail2Ban si installé",
+        "events": "Répété SSH / défaillances d'auth web; certificat PVE < 30 jours à compter de la date d'expiration; interdictions actives de Fail2Ban."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Modèle de gravité",
+    "headerStatus": "État",
+    "headerColour": "Couleur",
+    "headerMeaning": "Signification",
+    "headerNotification": "Notification",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Vert",
+        "meaning": "En bonne santé. Aucune constatation dans cette catégorie.",
+        "notification": "Silencieux."
+      },
+      {
+        "status": "INFO",
+        "colour": "Bleu",
+        "meaning": "État transitoire ou déjà résolu à signaler une fois. Sert aussi aux catégories qui ne contiennent <em>que</em> des alertes masquées.",
+        "notification": "Facultatif. Chaque type d’événement peut être activé ou désactivé par canal."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Jaune",
+        "meaning": "L'attention est nécessaire mais l'hôte est toujours fonctionnel. La cause est non-triviale — lire les détails.",
+        "notification": "Envoyée si ce type d’événement est activé pour le canal."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "Rouge",
+        "meaning": "Fonctionnalité cassée ou perte de données possible. Mesures à prendre.",
+        "notification": "Envoyée si le type d’événement est activé pour le canal. Une alerte de température CPU CRITICAL se déclenche à nouveau même après avoir été masquée."
+      }
+    ],
+    "infoNote": "Une catégorie <strong>OK</strong> contenant encore des alertes masquées pendant leur période de mise en sourdine s’affiche en <strong>INFO</strong>. Cela rappelle que des alertes sont masquées.",
+    "unknownTitle": "UNKNOWN lorsqu’un contrôle ne peut pas aboutir",
+    "unknownBody": "Un contrôle indisponible renvoie <code>UNKNOWN</code> ; après trois cycles consécutifs, un constat persistant est enregistré. Le tableau de bord l’affiche en jaune. L’état global limite <code>UNKNOWN</code> à <strong>WARNING</strong> : ce seul problème ne rend pas l’hôte critique."
+  },
+  "dashboardView": {
+    "heading": "La vue du tableau de bord",
+    "intro": "La surveillance se trouve dans l’onglet <strong>Aperçu</strong>. L’indicateur d’état de l’en-tête (Sain / Avertissement / Critique) ouvre une fenêtre avec deux listes :",
+    "items": [
+      "<strong>Actives</strong> — catégories avec un constat non résolu. Chaque ligne se déplie pour afficher les contrôles concernés, le texte brut <code>reason</code>, l’identifiant du périphérique ou de la VM et, si disponible, un lien vers Stockage, Réseau, VM, Journaux ou Matériel.",
+      "<strong>Masquées</strong> — alertes acquittées par l’utilisateur dont la période de mise en sourdine n’est pas terminée. Chaque ligne affiche le temps restant et la durée choisie. À l’expiration, elle quitte cette liste ; si la cause persiste et que la catégorie le permet, elle revient parmi les alertes <em>Actives</em>."
+    ],
+    "pillTitle": "L’indicateur reflète la catégorie la plus grave",
+    "pillBody": "La couleur de l’en-tête reflète la gravité maximale : CRITICAL → rouge, sinon WARNING → jaune, sinon INFO → bleu, sinon vert. Le point de la favicon et le badge PWA suivent la même logique.",
+    "updateNowTitle": "Bouton Mettre à jour maintenant dans l’en-tête de l’aperçu",
+    "updateNowBody1": "Si <em>Mises à jour système</em> signale des mises à jour en attente, <strong>Mettre à jour maintenant</strong> apparaît près de l’indicateur. La fenêtre lance la procédure de <em>ProxMenux → Settings post-install Proxmox → Proxmox System Update</em> : nettoyage des dépôts, <code>apt full-upgrade</code> via <code>update-pve-safe.sh</code>, reconstruction DKMS des pilotes gérés lors d’un nouveau noyau, autoremove/autoclean et proposition de redémarrage si nécessaire. La progression s’affiche en direct.",
+    "updateNowBody2": "À la fin, fermer la fenêtre appelle <code>GET /api/health/details?refresh=1</code> et invalide le cache du point d’accès. Les mises à jour en attente et la gravité sont recalculées depuis le nouvel état des paquets ; le badge disparaît sans attendre le prochain cycle. Le bouton est masqué si l’hôte est déjà à jour."
+  },
+  "dismiss": {
+    "heading": "Masquer les alertes et choisir la durée de mise en sourdine",
+    "intro": "Certains événements persistent par nature, comme <em>Mises à jour système : mises à jour disponibles</em> tant que l’hôte n’est pas mis à jour, et une notification toutes les cinq minutes pendant une semaine serait inutile. Le bouton <em>Mettre à jour maintenant</em> de la catégorie Mises à jour de la fenêtre État de santé permet de résoudre ce cas directement. Pour les autres cas ou les mises à jour reportées, la surveillance offre aussi deux mécanismes liés pour masquer les alertes :",
+    "step1": "<strong>Masquer un événement</strong> dans la fenêtre. Le menu propose <strong>24 heures</strong>, <strong>7 jours</strong> ou <strong>Définitivement</strong>, indépendamment de la catégorie. Le choix envoie <code>POST /api/health/acknowledge</code> avec <code>error_key</code> et <code>suppression_hours</code> (<code>-1</code> pour une durée permanente). L’événement passe dans la liste masquée avec l’horodatage <code>acknowledged_at</code>.",
+    "dropdownImageAlt": "Menu pour masquer une alerte : 24 heures, 7 jours ou définitivement",
+    "dropdownImageCaption": "La durée choisie ne concerne que cette alerte ; sans choix individuel, la valeur de la catégorie s’applique. Les alertes masquées définitivement portent un badge ambre <em>Permanent</em> et ne se déclenchent normalement plus. La température CPU critique constitue l’exception décrite plus bas.",
+    "step2": "<strong>Durée de mise en sourdine par catégorie</strong>. Dans Paramètres → Surveillance, ou via <code>POST /api/health/settings</code>, chacune des dix catégories possède une durée par défaut utilisée en l’absence de choix individuel :",
+    "imageAlt": "Durées de mise en sourdine par catégorie dans Paramètres → Surveillance",
+    "imageCaption": "Un menu par catégorie. Choisissez une durée longue pour les événements répétitifs, comme les mises à jour en attente, et courte pour ceux à réévaluer rapidement. Les mises en sourdine actives figurent dessous.",
+    "outro": "Pendant la mise en sourdine, le contrôle continue et met à jour <code>last_seen</code>, sans nouvelle notification. À l’expiration, le cycle suivant réévalue la cause : l’alerte peut se déclencher de nouveau ou disparaître si le problème est résolu.",
+    "activeSuppressionsTitle": "Consulter et annuler les mises en sourdine actives",
+    "activeSuppressionsBody": "Les alertes masquées, temporaires ou permanentes, figurent dans <strong>Paramètres → Surveillance → Mises en sourdine actives</strong>. Chaque ligne montre identifiant, catégorie, gravité, date et temps restant. <strong>Réactiver</strong> retire l’acquittement pour le prochain contrôle. Les acquittements permanents s’annulent ici ; les temporaires peuvent aussi être interrompus. Activez <em>Modifier</em>, sélectionnez les lignes à réactiver (bordure verte et texte barré), puis enregistrez. Annuler vide la sélection.",
+    "autoTitle": "Mise en sourdine automatique après changement de durée",
+    "autoBody": "Choisir une durée autre que les 24 h par défaut a un second effet : <strong>les futurs constats de la catégorie sont enregistrés comme déjà acquittés</strong>. Une semaine choisie pour les disques vaut donc aussi pour les nouveaux constats, sans les masquer un par un. Ils arrivent directement dans la liste masquée avec cette durée. Les catégories laissées à 24 h gardent le fonctionnement habituel : les nouveaux constats restent actifs jusqu’à votre intervention.",
+    "tempTitle": "Exception pour la température CPU CRITICAL",
+    "tempBody": "La couche de persistance prévoit une exception pour <strong>Température CPU CRITICAL</strong> : un tel enregistrement ignore l’acquittement antérieur et la mise en sourdine automatique. Cela ne signifie pas que tout contrôle de température émet un constat critique dès qu’un seuil configuré est dépassé.",
+    "nonDismissableTitle": "Quels constats peut-on masquer ?",
+    "nonDismissableBody": "La fenêtre propose Masquer uniquement si le contrôle renvoie explicitement dismissable = true. Une valeur fausse ou absente cache le bouton. La gravité seule ne détermine pas ce droit : plusieurs contrôles critiques autorisent l’acquittement. Les exemples décrivent les données actuelles ; masquer une alerte ne répare pas sa cause.",
+    "headerFinding": "Constatation",
+    "headerWhy": "Comportement de la mise en sourdine",
+    "rows": [
+      {
+        "finding": "Température CPU : avertissement / critique",
+        "why": "L’avertissement issu des mesures de température autorise explicitement la mise en sourdine. Une règle distincte ignore l’acquittement si un enregistrement de température CPU arrive avec la gravité CRITICAL."
+      },
+      {
+        "finding": "Espace critique du système de fichiers racine",
+        "why": "Les contrôles d’espace autorisent explicitement l’acquittement, même à un niveau critique. Cela ne libère pas d’espace et ne supprime pas le risque d’échec des écritures."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "Les constats d’état des pools ZFS (DEGRADED, FAULTED, UNAVAIL) autorisent explicitement l’acquittement, tout comme les contrôles de capacité des pools. Acquitter ne répare pas un pool dégradé ou défaillant."
+      },
+      {
+        "finding": "Erreurs d'entrée/sortie du disque avec SMART FAILED",
+        "why": "Les constats de disque enregistrés depuis le journal peuvent autoriser l’acquittement. SMART FAILED exige toujours une investigation ; le bouton dépend de l’indicateur du contrôle, pas du seul texte de l’alerte."
+      },
+      {
+        "finding": "Interface réseau DOWN",
+        "why": "Les contrôles persistants d’interface DOWN autorisent l’acquittement. Cela ne rétablit ni bridge, ni agrégat, ni liaison physique, ni accès distant."
+      },
+      {
+        "finding": "E/S sur disques sains (INFO)",
+        "why": "Les événements ATA ou dmesg transitoires avec un SMART sain peuvent être informatifs et se résoudre seuls. Les lignes informatives n’offrent pas forcément Masquer ; le contrôle détermine quand l’état est résolu."
+      }
+    ],
+    "principle": "Utilisez le bouton proposé pour le constat réel, sans déduire sa disponibilité de la catégorie ou de la gravité. L’acquittement contrôle l’affichage et les notifications. Les contrôles de retour à la normale et l’historique du disque restent distincts."
+  },
+  "autoresolve": {
+    "heading": "Auto-résolution et nettoyage",
+    "intro": "De nombreuses alertes disparaissent lorsque leur cause cesse : une VM redémarre correctement, un disque a été retiré ou la température redevient normale. Le nettoyage à la fin de chaque cycle de cinq minutes applique ces règles :",
+    "headerTrigger": "Déclencheur",
+    "headerAction": "Action",
+    "rows": [
+      {
+        "trigger": "Utilisation CPU ou température revenue à la normale.",
+        "action": "Marqué résolu. Ça sort de la liste Active."
+      },
+      {
+        "trigger": "Pression de mémoire en dessous du seuil d'avertissement après une alerte OOM / mémoire.",
+        "action": "Marqué résolu."
+      },
+      {
+        "trigger": "VM / CT référencé par l'erreur n'existe plus (<code>qm status</code> / <code>pct status</code> non-zéro).",
+        "action": "Marqué résolu comme ressource supprimée."
+      },
+      {
+        "trigger": "Le disque référencé par l'erreur n'est plus présent dans <code>/dev/</code>.",
+        "action": "Marqué résolu comme dispositif enlevé. L'historique d'observation permanente est conservé (voir section suivante)."
+      },
+      {
+        "trigger": "Constats issus du journal système (catégorie <code>logs</code>, entrées SMART, erreurs ATA ou E/S) lorsque leur période de mise en sourdine expire.",
+        "action": "Ils sont retirés. Chaque analyse examine les nouvelles entrées du journal à partir de ce point ; une ancienne ligne n’est pas réémise."
+      },
+      {
+        "trigger": "Erreurs résolues depuis plus de sept jours.",
+        "action": "Supprimées de la base pour limiter la taille de la table. L’historique des notifications est indépendant et conservé plus longtemps."
+      }
+    ],
+    "permanentTitle": "Masquer définitivement ne signifie pas résoudre",
+    "permanentBody": "Une durée de catégorie de <code>-1</code> (<em>permanente</em>) masque les futures alertes des éléments acquittés, sans ignorer le contrôle de résolution automatique. Si la cause disparaît, par exemple après suppression de la ressource ou retour sous le seuil, l’élément est toujours nettoyé automatiquement."
+  },
+  "observations": {
+    "heading": "Observations des disques — l’historique permanent",
+    "intro": "Les événements de disque méritent d’être conservés. Un avertissement SMART sur <code>/dev/sdh</code> à 02 h 14 reste utile après la fin de la rafale d’E/S et la résolution automatique : le disque a désormais des antécédents. La surveillance conserve donc une table <strong>permanente</strong> distincte : <code>disk_observations</code>.",
+    "headerProperty": "Propriété",
+    "headerErrors": "Table <code>errors</code> (Actives)",
+    "headerObs": "Table <code>disk_observations</code>",
+    "rows": [
+      {
+        "property": "Objet",
+        "errors": "Alimente la vue de santé <em>actuelle</em> et l’envoi des notifications.",
+        "obs": "Une piste d'audit permanente par disque."
+      },
+      {
+        "property": "Résoudre automatiquement",
+        "errors": "Oui : les lignes sont retirées lorsque la cause disparaît.",
+        "obs": "Non — les entrées persistent à jamais à moins que l'utilisateur les rejette explicitement."
+      },
+      {
+        "property": "Clé de déduplication",
+        "errors": "<code>error_key</code> (p. ex. <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> avec signatures stables dépouillées de données volatiles."
+      },
+      {
+        "property": "Emplacement d’affichage",
+        "errors": "Fenêtre de surveillance (listes Actives / Masquées).",
+        "obs": "Fiche du disque dans l’onglet <strong>Stockage</strong>, avec un badge « X obs. » par disque."
+      },
+      {
+        "property": "Ce qu'il enregistre",
+        "errors": "Ce qui est en train d'échouer.",
+        "obs": "Avertissements SMART (secteurs, température, CRC, autotests échoués), erreurs d’E/S (ATA / NVMe / dm), erreurs du système de fichiers et événements de pools ZFS."
+      }
+    ],
+    "outro": "Une alerte peut disparaître du tableau de bord tout en restant dans l’historique du disque. Ouvrez le disque dans Stockage : sa fiche affiche le nombre d’observations en attente, leurs horodatages, leur gravité et le message brut original. Ces informations aident à décider d’un remplacement.",
+    "renameTitle": "Les changements de nom des périphériques sont fusionnés automatiquement",
+    "renameBody": "Les disques peuvent d’abord apparaître sous un nom provisoire comme <code>ata8</code> ou <code>nvme0n1p3</code>. Les observations sont regroupées par numéro de série connu : si un événement est d’abord lié à <code>ata8</code> puis le même disque identifié comme <code>sdh</code>, ses anciennes observations sont rattachées à <code>sdh</code> au cycle suivant, sans fragmenter l’historique."
+  },
+  "notification": {
+    "heading": "Du constat à la notification",
+    "intro": "Chaque erreur active peut aussi déclencher une notification. Voici le parcours :",
+    "items": [
+      "Le scanner enregistre le résultat avec la catégorie + gravité + détails structurés.",
+      "Si le type d’événement est <strong>activé</strong> dans les notifications globales et que le canal n’a pas masqué cette catégorie, un événement est mis en file.",
+      "Le moteur de modèles produit un titre et un corps à partir des données structurées. Si la reformulation IA est activée, cette paire est transmise au fournisseur configuré pour une version en langage clair.",
+      "Le canal l’envoie sous forme de message Telegram, d’encart Discord, de notification push Gotify ou d’e-mail. Le résultat est enregistré dans <code>notification_history</code>.",
+      "Masquer une alerte démarre sa période de mise en sourdine. Les nouvelles détections du même <code>error_key</code> ne produisent normalement aucune notification et ne sont pas automatiquement mises en attente pour la fin de cette période. La température CPU critique reste une exception."
+    ],
+    "outro": "La configuration des canaux — jeton du bot Telegram, URL des webhooks, clés IA, réglages par événement et par canal — est décrite dans <notifLink>Notifications</notifLink> et <aiLink>Assistant IA</aiLink>."
+  },
+  "rest": {
+    "heading": "Points d’accès REST",
+    "intro": "Les actions de la fenêtre sont aussi accessibles par API pour scripts, tableaux de bord personnalisés ou bots. Les appels exigent un jeton Bearer valide, issu de la connexion ou de l’écran des jetons API. Les modifications, comme acquitter des alertes, enregistrer les réglages de suppression ou nettoyer les erreurs orphelines, exigent la portée full_admin ; read_only reçoit 403.",
+    "headerEndpoint": "Point d’accès",
+    "headerMethod": "Méthode",
+    "headerUse": "Utilisation",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Contrôle léger renvoyant du JSON avec <code>status</code>, <code>timestamp</code> et <code>version</code>. Convient aux contrôles de mots-clés Uptime Kuma ; le client doit envoyer un en-tête Bearer."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "État global : un niveau de gravité et un texte de synthèse. Authentification requise."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Les dix catégories avec leur état et les données structurées à l’origine de chacune."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "État complet : catégories, erreurs actives, alertes masquées et réglages de mise en sourdine. Une seule requête alimente la fenêtre ; un cache d’arrière-plan de six minutes accélère la réponse."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Juste la liste active. Filtré par <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Uniquement les alertes masquées, avec les heures restantes."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Corps: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Rejeter une alerte avec la fenêtre configurée de la catégorie."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Lire ou enregistrer la durée de mise en sourdine par catégorie."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Nettoyage manuel des erreurs liées à un périphérique ou une VM supprimé. Idempotent."
+      }
+    ],
+    "codeComment1": "# Obtenir l’état actuel pour un script",
+    "codeComment2": "# Rejeter une erreur spécifique",
+    "codeComment3": "# Définissez la suppression de la catégorie des disques à une semaine"
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "Tableau de bord",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — point d’ouverture de la fenêtre de surveillance dans l’interface."
+      },
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": " — canaux, réglages par événement, reformulation IA et historique."
+      },
+      {
+        "label": "Assistant IA",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — fournisseur (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), mode des instructions, niveau de détail par canal et langue."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — schéma SQLite (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) et cadence des threads d’arrière-plan."
+      }
+    ]
+  }
+}

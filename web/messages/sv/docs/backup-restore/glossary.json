@@ -1,0 +1,230 @@
+{
+  "meta": {
+    "title": "Ordlista - Backup & Restore | ProxMenux",
+    "description": "Termer i ProxMenux system för säkerhetskopiering och återställning: kryptering, nyckelfil, passfras, återställningskuvert, PBS, datablock, rootfs, manifest, körprocess och komplettering mellan kärnversioner.",
+    "ogTitle": "Backup & Återställ ordlista | ProxMenux",
+    "ogDescription": "Tydliga definitioner för ordförråd som används över ProxMenux backup och återställa dokumentation.",
+    "twitterTitle": "Backup & Återställ ordlista | ProxMenux",
+    "twitterDescription": "Passfras, keyfile, återhämtningskuvert, rootfs, manifest, PBS, bitar - alla definierade på ett ställe."
+  },
+  "header": {
+    "title": "Ordlista",
+    "description": "Termer i dokumentationen för säkerhetskopiering och återställning, med definitioner.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "body": "Termer grupperas efter tema. Varje post ger termen och en kort definition."
+  },
+  "groups": [
+    {
+      "title": "Kryptering och nyckelåterställning",
+      "intro": "Vocabulary för PBS kryptering block. Det handlar om två distinkta hemligheter: en binär nyckelfil och en skriftlig passfras.",
+      "entries": [
+        {
+          "id": "passphrase-recuperacion",
+          "term": "Återställningslösenfras",
+          "def": "Text lösenord användaren väljer för att skydda <a href=\"#sobre-recuperacion\">återställningskuvertet</a>. Det uppmanas två gånger med en matchkontroll, och används endast för att kryptera kuvertet och för att dekryptera det om nyckelfilen någonsin behöver återställas. <strong>Det är inte passfrasen som låser upp nyckelfilen själv</strong>, och det skickas aldrig till PBS. Under en normal backup lämnar den aldrig värden."
+        },
+        {
+          "id": "clave-cifrado",
+          "term": "Keyfile (krypteringsnyckel)",
+          "def": "Nyckelfil som proxmox-backup-client använder för att kryptera <a href=\"#chunk\">datablock</a> före uppladdning till PBS. Utan rätt nyckel kan krypterade data inte läsas. ProxMenux sparar filen på <code>/usr/local/share/proxmenux/pbs-key.conf</code> med läge <code>600</code>. Skydda den: <a href=\"#sobre-recuperacion\">återställningskuvertet</a> finns för att återställa filen om den förloras."
+        },
+        {
+          "id": "contrasena-keyfile",
+          "term": "Keyfile passfras (KDF passfras)",
+          "def": "Valfri passfras som keyfilen själv kan bära, skiljer sig från <a href=\"#passphrase-recuperacion\">återställningspassfrasen</a>. Det finns bara när nyckelfilen skapades med <code>--kdf scrypt</code> (vanligtvis en importerad nyckelfil). Utan det kan nyckelfilen inte låsas upp för användning. ProxMenux sparar den i krypterad form på värden så att schemalagda säkerhetskopior kan köras utan en interaktiv prompt."
+        },
+        {
+          "id": "sobre-recuperacion",
+          "term": "Återhämtningskuvert",
+          "def": "<a href=\"#clave-cifrado\">Nyckelfilen</a> är insvept i ett extra lager: det är krypterat med <a href=\"#passphrase-recuperacion\">Återhämtningspassfras</a> Använda <a href=\"#aes-256-cbc\">AES-256-CBC</a> och <a href=\"#pbkdf2\">PBKDF2</a> innan den någonsin lämnar värden. Det är det som laddas upp till PBS som den <code>-keyrecovery</code> grupp. Utan passfrasen är kuvertet ogenomskinligt: ladda ner det från PBS avslöjar inte keyfile."
+        },
+        {
+          "id": "cifrado-cliente",
+          "term": "Klient-side kryptering",
+          "def": "Krypteringsmodell där data krypteras på källvärden innan de laddas upp. PBS får bara och lagrar chiffertext; inte ens en PBS-administratör med databutiksåtkomst kan läsa den utan nyckelfilen. ProxMenux bygger på denna modell och lägger till <a href=\"#sobre-recuperacion\">återställningskuvertet</a> ovanpå."
+        },
+        {
+          "id": "kdf-none",
+          "term": "--kdf none",
+          "def": "Alternativ till <code>proxmox-backup-client key create</code> som producerar en nyckelfil utan bifogad passfras. Nyckelfilen kan användas direkt utan en prompt, vilket är viktigt för schemalagda jobb som körs obevakad. Detta är vad ProxMenux använder som standard när man skapar en ny nyckelfil."
+        },
+        {
+          "id": "kdf-scrypt",
+          "term": "--kdf scrypt",
+          "def": "Alternativ till <code>proxmox-backup-client key create</code> som producerar en nyckelfil skyddad av en <a href=\"#contrasena-keyfile\">nyckelfilspassfras</a>. Varje användning av nyckelfilen kräver att låsa upp den med den passfrasen. ProxMenux accepterar denna typ av nyckelfil på import och lagrar passfrasen krypterad så schemalagda säkerhetskopior kan fortfarande köras obevakad."
+        },
+        {
+          "id": "aes-256-cbc",
+          "term": "AES-256-CBC",
+          "def": "Standard symmetrisk chiffer. ProxMenux använder den (via <code>openssl enc -aes-256-cbc</code>) för att linda <a href=\"#clave-cifrado\">nyckelfilen</a> med <a href=\"#passphrase-recuperacion\">återställningspassfrasen</a> och producera <a href=\"#sobre-recuperacion\">kuvertet</a>."
+        },
+        {
+          "id": "pbkdf2",
+          "term": "PBKDF2",
+          "def": "Kryptografisk funktion som förvandlar en mänskligt utformad passfras till en binär nyckel som är lämplig för kryptering. Det saktar ner brute-force försök genom att tillämpa många iterationer. ProxMenux använder den med 600 000 iterationer och ett slumpmässigt salt när man krypterar återhämtningskuvertet."
+        }
+      ]
+    },
+    {
+      "title": "Backup struktur",
+      "intro": "Termer som beskriver vad som lever i en säkerhetskopia, oavsett destination.",
+      "entries": [
+        {
+          "id": "rootfs",
+          "term": "rootfs / rotfilsystem",
+          "def": "Filbaserad kopia av källvärdens filsystem skapad med <code>rsync</code> enligt <a href=\"#perfil-defecto\">standardprofilen</a> och <a href=\"#rutas-personalizadas\">egna sökvägar</a>. Det är ingen hel diskavbildning: endast sökvägar med konfiguration eller tillstånd som Proxmox inte kan återskapa självt kopieras."
+        },
+        {
+          "id": "manifiesto",
+          "term": "Manifest (manifest.json)",
+          "def": "Strukturerad JSON-dokument som beskriver källvärden vid backuptid: hårdvara, lagring, kärna, ProxMenux-installerade komponenter och inventering av VM och LXC. Den produceras av sex oberoende samlare. Återställningsflödet använder det för att jämföra källa och mål."
+        },
+        {
+          "id": "staging",
+          "term": "Staging katalog",
+          "def": "Tillfällig katalog där ProxMenux monterar de tre blocken (rootfs, metadata och manifest) innan du packar dem och laddar upp till destinationen. Det tas bort automatiskt när backupen slutar, även på abort."
+        },
+        {
+          "id": "perfil-defecto",
+          "term": "Standardprofil",
+          "def": "Utvalda sökvägar som ProxMenux kopierar som standard i varje säkerhetskopia. Omfattar PVE-konfiguration, nätverk, SSH, kärna, apt, ProxMenux-verktyg och mer. Definieras i koden och beskrivs på sidan <em>Hur det fungerar</em>."
+        },
+        {
+          "id": "rutas-personalizadas",
+          "term": "Anpassade vägar",
+          "def": "Extra vägar som användaren lägger till ovanpå <a href=\"#perfil-defecto\">default profil</a>. Antingen ihållande (lagras i <code>backup-extra-paths.txt</code>) eller per-run (plockad i anpassat läge)."
+        }
+      ]
+    },
+    {
+      "title": "Destinationer och lagring",
+      "intro": "Villkor bundna till var backup landar - PBS server, lokal arkiv eller Borg repository - och hur PBS organiserar data.",
+      "entries": [
+        {
+          "id": "repositorio-pbs",
+          "term": "PBS-arkivet",
+          "def": "Kombination av Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + användare som tar emot backupen. Identifierad av strängen <code>user@realm@host:datastore</code>. En enda PBS-server kan vara värd för flera förråd."
+        },
+        {
+          "id": "datastore",
+          "term": "Datalager",
+          "def": "Ett visst lagringsutrymme på en PBS-server där säkerhetskopior och deras datablock finns. Varje datalager ligger på ett filsystem på PBS-servern och har egna behörigheter och regler."
+        },
+        {
+          "id": "chunk",
+          "term": "Datablock / deduplicering av datablock",
+          "def": "PBS delar varje backup i varierande storlek bitar, identifierar varje bit av sin hash och lagrar varje bit bara en gång, även om det visas i många olika säkerhetskopior. Detta innebär successiva säkerhetskopior av samma värd - eller över liknande värdar - ta mycket lite extra utrymme."
+        },
+        {
+          "id": "fingerprint",
+          "term": "Fingeravtryck",
+          "def": "Kryptografiskt fingeravtryck av PBS-serverns TLS-certifikat. Den låter kunden verifiera att den talar till den avsedda servern utan att förlita sig på en myndighet för offentlig certifikat. ProxMenux passerar den till <code>proxmox-backup-client</code> via <code>PBS_FINGERPRINT</code> miljövariabel."
+        },
+        {
+          "id": "grupo-copia",
+          "term": "Säkerhetskopia grupp",
+          "def": "Logisk container inuti PBS under vilken successiva säkerhetskopior av samma tillgång ackumuleras. Varje ny backup delar deduplicering med tidigare i samma grupp. ProxMenux använder två grupper per värd när kryptering är aktiverad: en för värdbackupen och en med ett <code>-keyrecovery</code>-suffix för <a href=\"#sobre-recuperacion\">återställningskuvertet</a>."
+        },
+        {
+          "id": "backup-id",
+          "term": "Säkerhetskopierings-ID",
+          "def": "Namnet på <a href=\"#grupo-copia\">backup grupp</a>. ProxMenux standarder till <code>hostcfg-HOSTNAME</code> och låter användaren redigera det innan uppladdning; ostödda tecken tas bort automatiskt."
+        },
+        {
+          "id": "pxar",
+          "term": ".pxar",
+          "def": "PBS-inhemska arkivformat för kataloger. Det beter sig som en tar-arkiv optimerad för chunk deduplicering: snarare än att lagra en ogenomskinlig fil bryter PBS innehållet i återanvändbara bitar."
+        }
+      ]
+    },
+    {
+      "title": "Körning och schemaläggning",
+      "intro": "Termer i ProxMenux system för schemalagda jobb.",
+      "entries": [
+        {
+          "id": "runner",
+          "term": "Körprocess",
+          "def": "<code>run_scheduled_backup.sh</code>-skriptet som utför en schemalagd säkerhetskopia. Den läser jobbkonfigen, lanserar matchande backend (Local, PBS eller Borg), tillämpar lagring på framgång och skickar konfigurerade meddelanden."
+        },
+        {
+          "id": "trabajo-programado",
+          "term": "Schemalagt jobb",
+          "def": "Bestående konfiguration av en återkommande backup. Håller destination, referenser, kryptering, schema och lagring. Lever på <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
+        },
+        {
+          "id": "modo-adjunto",
+          "term": "Anslutet läge",
+          "def": "Jobb utan egen timer. En job-end-hook i PVE <code>vzdump</code> utlöser det efter gästsäkerhetskopior när mållagringen matchar. Det valda överordnade jobbet ger lagring och lagringsregler, som läses om från det överordnade jobbet vid varje körning, men hooken matchar lagring, inte jobb-ID. Även en annan uppgift med samma lagring kan utlösa det. Endast Local och PBS."
+        },
+        {
+          "id": "timer-systemd",
+          "term": "systemd-timer",
+          "def": "Standard systemd-mekanism som skjuter ett kommando i en kalender. ProxMenux skapar en timer per <em>oberoende</em> schemalagt jobb; <a href=\"#modo-adjunto\">attach-mode</a> jobb använder ingen timer, de körs via PVE script-hook."
+        },
+        {
+          "id": "retencion",
+          "term": "Lagringsregler (keep-last, keep-daily…)",
+          "def": "Policy som bestämmer vilka äldre säkerhetskopior som ska hållas och vilka som ska beskäras. Definieras per jobb med parametrar som <code>keep-last</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>. Tillämpad av körprocessen efter varje framgångsrik backup."
+        }
+      ]
+    },
+    {
+      "title": "Återställa",
+      "intro": "Termer från återställningsflödet.",
+      "entries": [
+        {
+          "id": "restauracion-universal",
+          "term": "Universell återställning",
+          "def": "ProxMenux-återställningsflödet extraherar inte bara filsystemet: det läser manifestet för att upptäcka skillnader mellan källa och mål, reproducerar systemkonfigurationen och kör om installatörerna för ProxMenux-hanterade komponenter. Målet är att reproducera källvärden, inte bara arkivet."
+        },
+        {
+          "id": "hidratacion",
+          "term": "Komplettering mellan kärnversioner",
+          "def": "Återställ pass som sammanfogar användarens egen konfiguration från källan (IOMMU-tokens, VFIO-enhets-ID, anpassade quirks, GRUB-nycklar) ovanpå målets färska startkonfiguration, utan att kopiera källans kärnbundna filer verbatim. Kör när målkärnan är nyare än backupen."
+        },
+        {
+          "id": "cross-kernel",
+          "term": "Återställning mellan kärnversioner",
+          "def": "Återställ var målets kärna skiljer sig från (vanligtvis är nyare än) källan. Kräver <a href=\"#hidratacion\">hydration</a> pass för att undvika att dra längs filer oförenliga med målets kärna."
+        },
+        {
+          "id": "instalador-postboot",
+          "term": "Installerare efter uppstart",
+          "def": "Komponenter installerade efter den första starten av den restaurerade värden (NVIDIA drivrutiner, Coral TPU drivrutiner, AMD GPU verktyg, Intel GPU verktyg). Varje installatör körs mot målets kärna, så den restaurerade värden beror inte på att källans kärna är närvarande."
+        },
+        {
+          "id": "compatibility-check",
+          "term": "Kompatibilitetskontroll",
+          "def": "Jämförelse mellan källans manifest och målets tillstånd som ProxMenux utför i början av återställningen. Det bestämmer vilka delar som kopieras verbatim, som behöver hydrering och som återskapas av en installatör."
+        },
+        {
+          "id": "equipo-recien-instalado",
+          "term": "Färsk installation",
+          "def": "Värd bara ominstallerad från början, utan lokal <a href=\"#clave-cifrado\">nyckelfil</a>. Återställa en krypterad säkerhetskopia kräver första återställning av nyckelfilen från <a href=\"#sobre-recuperacion\">återställningskuvertet</a> lagrad på PBS, med hjälp av <a href=\"#passphrase-recuperacion\">återställningspassfrasen</a>."
+        }
+      ]
+    }
+  ],
+  "whereNext": {
+    "heading": "Nästa steg",
+    "items": [
+      {
+        "label": "Hur det fungerar",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " — där rootfs, manifest och applikationsinventering passar in i en backup."
+      },
+      {
+        "label": "Proxmox Backup Server-mål",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": " - där klient-side kryptering, keyfile, återställningspassfras och kuvert dokumenteras på djupet."
+      },
+      {
+        "label": "Återställande",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — Återställande flöde och manifest användning."
+      }
+    ]
+  }
+}

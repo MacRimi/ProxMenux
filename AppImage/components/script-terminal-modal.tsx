@@ -31,6 +31,7 @@ import {
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 import { getTicketedWsUrl } from "@/lib/terminal-ws"
+import { scriptCompletion, scriptCompletionOutput } from "@/lib/script-completion"
 import { useT } from "../lib/i18n/provider"
 
 interface WebInteraction {
@@ -52,6 +53,9 @@ interface ScriptTerminalModalProps {
   params?: Record<string, string>
   completedSuccessfullyMessage?: string
   completedWithErrorMessage?: (exitCode: number) => string
+  cancelledExitCode?: number
+  // Only LXC Updates opts into a separate server-owned job transport.
+  backgroundUpdate?: { runId: string; vmid: number; resume: boolean }
   // Optional callback fired when the script's WebSocket closes
   // (script_runner sends an exit code and then closes). Lets the
   // parent auto-dismiss the modal — used by host-backup's Restore
@@ -69,6 +73,8 @@ export function ScriptTerminalModal({
   params = { EXECUTION_MODE: "web" },
   completedSuccessfullyMessage,
   completedWithErrorMessage,
+  cancelledExitCode,
+  backgroundUpdate,
   onComplete,
 }: ScriptTerminalModalProps) {
   const t = useT()
@@ -78,6 +84,7 @@ export function ScriptTerminalModal({
   // after dynamic imports resolve — captures the latest value without
   // re-binding the closure.
   const isOpenRef = useRef<boolean>(false)
+  const openGenerationRef = useRef(0)
   const fitAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
@@ -90,6 +97,7 @@ export function ScriptTerminalModal({
   const reconnectAttemptsRef = useRef(0)
   const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const completionReceivedRef = useRef(false)
+  const outputOffsetRef = useRef(0)
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
 
@@ -103,10 +111,12 @@ export function ScriptTerminalModal({
 
   const getCompletionMessage = useCallback(
     (exitCode: number) =>
-      exitCode === 0
+      scriptCompletion(exitCode, cancelledExitCode).kind === "cancelled"
+        ? t("scriptTerminal.cancelled")
+        : exitCode === 0
         ? (completedSuccessfullyMessage ?? t("scriptTerminal.completedSuccessfully"))
         : (completedWithErrorMessage?.(exitCode) ?? t("scriptTerminal.completedWithError", { code: exitCode })),
-    [completedSuccessfullyMessage, completedWithErrorMessage, t],
+    [completedSuccessfullyMessage, completedWithErrorMessage, cancelledExitCode, t],
   )
 
   const terminalContainerRef = useRef<HTMLDivElement>(null)
@@ -125,7 +135,7 @@ export function ScriptTerminalModal({
   }, [onComplete])
 
   const attemptReconnect = useCallback(() => {
-    if (!isOpen || isComplete || reconnectAttemptsRef.current >= 3) {
+    if (!isOpenRef.current || isComplete || reconnectAttemptsRef.current >= 3) {
       return
     }
 
@@ -139,12 +149,20 @@ export function ScriptTerminalModal({
     reconnectTimeoutRef.current = setTimeout(async () => {
       if (wsRef.current?.readyState !== WebSocket.OPEN && termRef.current) {
         if (wsRef.current) {
+          // Replacing a stale socket is not a script result. Its close event
+          // must not complete the operation before the new socket reports it.
+          wsRef.current.onclose = null
+          wsRef.current.onerror = null
+          wsRef.current.onmessage = null
           wsRef.current.close()
         }
 
         const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
         // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
-        const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
+        const generation = openGenerationRef.current
+        const ticketedUrl = await getTicketedWsUrl(wsUrl)
+        if (!isOpenRef.current || !termRef.current || generation !== openGenerationRef.current) return
+        const ws = new WebSocket(ticketedUrl)
         wsRef.current = ws
 
         ws.onopen = () => {
@@ -160,9 +178,11 @@ export function ScriptTerminalModal({
             }
           }, 30000)
 
-const initMessage = {
+        const initMessage = {
           script_path: scriptPath,
           params: paramsRef.current,
+          ...(backgroundUpdate ? { resume: true, vmid: backgroundUpdate.vmid,
+            offset: outputOffsetRef.current } : {}),
         }
         ws.send(JSON.stringify(initMessage))
 
@@ -176,6 +196,7 @@ const initMessage = {
         }
 
         ws.onmessage = (event) => {
+          if (completionReceivedRef.current) return
           // Filter out pong responses from heartbeat
           if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
             return
@@ -184,15 +205,15 @@ const initMessage = {
           // The PTY worker always emits this final line.  Treat it as a
           // completion fallback because some WebSocket servers tear down the
           // connection before the following structured message is flushed.
-          const exitMatch = typeof event.data === "string"
+          const exitMatch = !backgroundUpdate && typeof event.data === "string"
             ? event.data.match(/\[Script exited with code (-?\d+)\]/)
             : null
           if (exitMatch) {
             const exitCode = Number(exitMatch[1])
-            termRef.current?.write(event.data)
+            if (scriptCompletion(exitCode, cancelledExitCode).kind !== "cancelled") termRef.current?.write(event.data)
             completionReceivedRef.current = true
             setIsComplete(true)
-            termRef.current?.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+            termRef.current?.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
             onCompleteRef.current?.(exitCode)
             if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
             return
@@ -200,6 +221,31 @@ const initMessage = {
           
           try {
             const msg = JSON.parse(event.data)
+            if (msg.type === "job_output") {
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+              if (msg.truncated) termRef.current?.writeln(t("vmLxc.updates.backgroundOutputTrimmed"))
+              termRef.current?.write(msg.text)
+              outputOffsetRef.current = msg.offset
+              return
+            }
+            if (msg.type === "job_unavailable") {
+              setCurrentInteraction(null)
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+              termRef.current?.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+              completionReceivedRef.current = true
+              setIsComplete(true)
+              ws.close()
+              return
+            }
+            if (backgroundUpdate && msg.type === "web_interaction" && msg.interaction === null) {
+              setCurrentInteraction(null)
+              setInteractionInput("")
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+              return
+            }
             if (msg.type === "web_interaction" && msg.interaction) {
               setIsWaitingNextInteraction(false)
               if (waitingTimeoutRef.current) {
@@ -220,10 +266,15 @@ const initMessage = {
               return
             }
             if (msg.type === "script_complete") {
+              if (backgroundUpdate) {
+                setCurrentInteraction(null)
+                setIsWaitingNextInteraction(false)
+                if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+              }
               const exitCode = Number(msg.exit_code ?? 1)
               completionReceivedRef.current = true
               setIsComplete(true)
-              termRef.current?.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+              termRef.current?.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
               onCompleteRef.current?.(exitCode)
               if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
               return
@@ -244,6 +295,7 @@ const initMessage = {
         }
 
         ws.onclose = (event) => {
+          if (!isOpenRef.current) return
           setConnectionStatus("offline")
           if (keepAliveIntervalRef.current) {
             clearInterval(keepAliveIntervalRef.current)
@@ -255,13 +307,17 @@ const initMessage = {
           if (!isComplete && reconnectAttemptsRef.current < 3) {
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
-            setIsComplete(true)
-            onCompleteRef.current?.(-1)
+            if (backgroundUpdate) {
+              termRef.current?.writeln(t("vmLxc.updates.backgroundDetached"))
+            } else {
+              setIsComplete(true)
+              onCompleteRef.current?.(-1)
+            }
           }
         }
       }
     }, 1000)
-  }, [isOpen, isComplete, scriptPath, getCompletionMessage, t])
+  }, [isOpen, isComplete, scriptPath, getCompletionMessage, cancelledExitCode, t, backgroundUpdate])
 
   const sendKey = useCallback((key: string) => {
     if (!termRef.current) return
@@ -287,15 +343,15 @@ const initMessage = {
     // Snapshot the open-state at call time. After the dynamic xterm
     // imports resolve, bail out if the modal has since been closed —
     // otherwise we attach a Terminal to a stale ref and open a WS that
-    // nobody reads. Audit Tier 6 — useEffect con `import("xterm")` sin
-    // cancelación.
+    // nobody reads.
     const wasOpenAtCall = isOpenRef.current
+    const generation = ++openGenerationRef.current
     const [TerminalClass, FitAddonClass] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),
       import("xterm-addon-fit").then((mod) => mod.FitAddon),
       import("xterm/css/xterm.css"),
     ])
-    if (!wasOpenAtCall || !isOpenRef.current) return
+    if (!wasOpenAtCall || !isOpenRef.current || generation !== openGenerationRef.current) return
 
     const fontSize = window.innerWidth < 768 ? 12 : 16
 
@@ -356,7 +412,9 @@ const initMessage = {
 
     const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
     // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
-    const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
+    const ticketedUrl = await getTicketedWsUrl(wsUrl)
+    if (!isOpenRef.current || termRef.current !== term) return
+    const ws = new WebSocket(ticketedUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -374,6 +432,8 @@ const initMessage = {
       const initMessage = {
         script_path: scriptPath,
         params: paramsRef.current,
+        ...(backgroundUpdate ? { resume: backgroundUpdate.resume,
+          vmid: backgroundUpdate.vmid, offset: outputOffsetRef.current } : {}),
       }
       ws.send(JSON.stringify(initMessage))
 
@@ -393,6 +453,7 @@ const initMessage = {
     }
 
     ws.onmessage = (event) => {
+      if (completionReceivedRef.current) return
       // Filter out pong responses from heartbeat - don't display in terminal
       if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
         return
@@ -401,15 +462,15 @@ const initMessage = {
       // See the reconnect handler above.  The exit line is guaranteed to be
       // sent with the PTY output and is therefore a robust fallback when a
       // final JSON frame is lost during server-side socket teardown.
-      const exitMatch = typeof event.data === "string"
+      const exitMatch = !backgroundUpdate && typeof event.data === "string"
         ? event.data.match(/\[Script exited with code (-?\d+)\]/)
         : null
       if (exitMatch) {
         const exitCode = Number(exitMatch[1])
-        term.write(event.data)
+        if (scriptCompletion(exitCode, cancelledExitCode).kind !== "cancelled") term.write(event.data)
         completionReceivedRef.current = true
         setIsComplete(true)
-        term.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+        term.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
         onCompleteRef.current?.(exitCode)
         if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
         return
@@ -417,7 +478,32 @@ const initMessage = {
       
       try {
         const msg = JSON.parse(event.data)
+        if (msg.type === "job_output") {
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+          if (msg.truncated) term.writeln(t("vmLxc.updates.backgroundOutputTrimmed"))
+          term.write(msg.text)
+          outputOffsetRef.current = msg.offset
+          return
+        }
+        if (msg.type === "job_unavailable") {
+          setCurrentInteraction(null)
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+          term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+          completionReceivedRef.current = true
+          setIsComplete(true)
+          ws.close()
+          return
+        }
 
+        if (backgroundUpdate && msg.type === "web_interaction" && msg.interaction === null) {
+          setCurrentInteraction(null)
+          setInteractionInput("")
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+          return
+        }
         if (msg.type === "web_interaction" && msg.interaction) {
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) {
@@ -439,10 +525,15 @@ const initMessage = {
           return
         }
         if (msg.type === "script_complete") {
+          if (backgroundUpdate) {
+            setCurrentInteraction(null)
+            setIsWaitingNextInteraction(false)
+            if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+          }
           const exitCode = Number(msg.exit_code ?? 1)
           completionReceivedRef.current = true
           setIsComplete(true)
-          term.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+          term.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
           onCompleteRef.current?.(exitCode)
           if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
           return
@@ -467,6 +558,7 @@ const initMessage = {
     }
 
     ws.onclose = (event) => {
+      if (!isOpenRef.current) return
       setConnectionStatus("offline")
       if (!completionReceivedRef.current) {
         term.writeln(`\x1b[33m${t("scriptTerminal.connectionClosed")}\x1b[0m`)
@@ -478,8 +570,13 @@ const initMessage = {
       }
 
       if (!completionReceivedRef.current && !isComplete) {
-        setIsComplete(true)
-        onCompleteRef.current?.(-1)
+        if (backgroundUpdate) {
+          term.writeln(t("vmLxc.updates.backgroundDetached"))
+          attemptReconnect()
+        } else {
+          setIsComplete(true)
+          onCompleteRef.current?.(-1)
+        }
       }
     }
 
@@ -541,6 +638,7 @@ const initMessage = {
     if (isOpen) {
       initializeTerminal()
     } else {
+      openGenerationRef.current++
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
       }
@@ -567,6 +665,7 @@ const initMessage = {
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       reconnectAttemptsRef.current = 0
       completionReceivedRef.current = false
+      outputOffsetRef.current = 0
       setIsComplete(false)
       setInteractionInput("")
       setCurrentInteraction(null)
@@ -574,6 +673,28 @@ const initMessage = {
       setConnectionStatus("connecting")
     }
   }, [isOpen])
+
+  useEffect(() => () => {
+    if (!backgroundUpdate) return // Transport mode is fixed for this instance.
+    // Conditional parents can unmount an open modal. Detach that viewer too;
+    // only the background job owns its process and completion result.
+    isOpenRef.current = false
+    openGenerationRef.current++
+    for (const ref of [checkConnectionInterval, keepAliveIntervalRef]) {
+      if (ref.current) clearInterval(ref.current)
+    }
+    for (const ref of [waitingTimeoutRef, reconnectTimeoutRef]) {
+      if (ref.current) clearTimeout(ref.current)
+    }
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.onmessage = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    termRef.current?.dispose()
+    termRef.current = null
+  }, [])
 
   useEffect(() => {
     const updateDeviceType = () => {
@@ -630,8 +751,11 @@ const initMessage = {
   }, [isOpen, isComplete, attemptReconnect])
 
   const getScriptWebSocketUrl = (sid: string): string => {
+    const route = backgroundUpdate
+      ? `/ws/lxc-update/${encodeURIComponent(backgroundUpdate.runId)}`
+      : `/ws/script/${sid}`
     if (typeof window === "undefined") {
-      return `ws://localhost:${API_PORT}/ws/script/${sid}`
+      return `ws://localhost:${API_PORT}${route}`
     }
 
     const { protocol, hostname, port } = window.location
@@ -639,9 +763,9 @@ const initMessage = {
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
 
     if (isStandardPort) {
-      return `${wsProtocol}//${hostname}/ws/script/${sid}`
+      return `${wsProtocol}//${hostname}${route}`
     } else {
-      return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
+      return `${wsProtocol}//${hostname}:${API_PORT}${route}`
     }
   }
 
@@ -653,6 +777,10 @@ const initMessage = {
     if (value === "cancel" || value === "") {
       setCurrentInteraction(null)
       setInteractionInput("")
+      if (backgroundUpdate) {
+        wsRef.current.send(JSON.stringify({ type: "cancel" }))
+        return
+      }
       handleCloseModal()
       return
     }
@@ -815,7 +943,7 @@ const initMessage = {
           )}
 
           {(isMobile || isTablet) && (
-            <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 onPointerDown={(e) => {
                   e.preventDefault()
@@ -918,6 +1046,10 @@ const initMessage = {
                   <DropdownMenuItem onSelect={() => sendCommand("\x03")}>
                     <span className="font-mono text-xs mr-2">Ctrl+C</span>
                     <span className="text-muted-foreground text-xs">{t("scriptTerminal.cancelInterrupt")}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => sendCommand("\x04")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+D</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.endOfInput")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => sendCommand("\x18")}>
                     <span className="font-mono text-xs mr-2">Ctrl+X</span>

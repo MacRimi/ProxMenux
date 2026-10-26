@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "title": "O projekte | Dokumentácia ProxMenux",
+    "description": "O projekte ProxMenux: ciele, prispievatelia, časté otázky a pravidlá správania. Nástroj s otvoreným zdrojovým kódom na správu Proxmox VE 8+ cez ponuky, ktorý vyvíja a udržiava MacRimi s malým tímom testerov a prispievateľov.",
+    "ogTitle": "O projekte | Dokumentácia ProxMenux",
+    "ogDescription": "O ProxMenuxe — nástroji s otvoreným zdrojovým kódom na správu Proxmox VE 8+ cez ponuky."
+  },
+  "header": {
+    "title": "O projekte",
+    "description": "Informácie o projekte, časté otázky, prispievatelia a pravidlá správania. ProxMenux je nástroj s otvoreným zdrojovým kódom na správu Proxmox VE 8+ cez ponuky, ktorý vyvíja a udržiava MacRimi s pomocou malého tímu testerov a prispievateľov.",
+    "section": "O projekte"
+  },
+  "callout": {
+    "title": "Otvorený zdrojový kód, vývoj vedený komunitou",
+    "body": "ProxMenux sa poskytuje pod licenciou GPL-3.0 a vyvíja sa verejne na GitHube. Každý skript možno skontrolovať a každú zmenu dohľadať. Hlásenia chýb, nápady, kód aj testovanie sú vítané."
+  },
+  "section": {
+    "heading": "V tejto časti:",
+    "options": [
+      {
+        "icon": "HelpCircle",
+        "href": "/docs/about/faq",
+        "title": "FAQ",
+        "description": "Časté otázky: čo je ProxMenux, inštalácia, kompatibilita, prispôsobenie, aktualizácie, bezpečnosť, používanie v produkcii a odinštalovanie."
+      },
+      {
+        "icon": "Users",
+        "href": "/docs/about/contributors",
+        "title": "Prispievatelia",
+        "description": "Poďakovanie ľuďom, vďaka ktorým ProxMenux vzniká: testerom, kontrolórom a vývojárom, ktorí sa podieľajú na každom vydaní."
+      },
+      {
+        "icon": "ScrollText",
+        "href": "/docs/about/code-of-conduct",
+        "title": "Kódex správania",
+        "description": "Hodnoty projektu, zodpovednosť za kód a pravidlá prispievania. Povinné čítanie pred odoslaním PR alebo hlásenia problému."
+      }
+    ]
+  },
+  "involved": {
+    "heading": "Zapojte sa",
+    "intro": "Tri miesta na zapojenie sa do projektu:",
+    "cards": [
+      {
+        "href": "https://github.com/MacRimi/ProxMenux/issues/new",
+        "title": "🐛 Nahlásiť chybu",
+        "description": "GitHub Issues — priložte záznamy a kroky na zopakovanie problému."
+      },
+      {
+        "href": "https://github.com/MacRimi/ProxMenux/discussions",
+        "title": "💡 Navrhnúť funkciu",
+        "description": "GitHub Discussions — podeľte sa o nápady pred odoslaním PR."
+      },
+      {
+        "href": "https://github.com/MacRimi/ProxMenux/pulls",
+        "title": "🔀 Odoslať PR",
+        "description": "GitHub Pull Requests — najskôr si prečítajte pravidlá správania."
+      }
+    ]
+  },
+  "support": {
+    "heading": "Podpora projektu",
+    "introRich": "Ak vám ProxMenux šetrí čas, najjednoduchšie mu pomôžete osloviť ďalších ľudí tak, že <starlink>dáte repozitáru na GitHube ⭐</starlink>. Ak chcete pomôcť viac:",
+    "kofiLabel": "Podpora pre Ko-fi",
+    "kofiOutro": " — prispejete správcovi na kávu a podporíte pokračovanie vývoja."
+  }
+}

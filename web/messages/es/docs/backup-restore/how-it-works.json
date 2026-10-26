@@ -1,38 +1,38 @@
 {
   "meta": {
     "title": "Cómo funciona ProxMenux Backup por dentro — rootfs, manifiesto, aplicaciones",
-    "description": "Desglose detallado del contenido de una copia de ProxMenux: el rootfs producido por rsync del perfil de rutas por defecto, el manifiesto estructurado construido por seis colectores independientes, y el inventario de aplicaciones que dirige la reinstalación automática de paquetes y componentes tras una restauración.",
+    "description": "Desglose detallado del contenido de un backup de ProxMenux: el rootfs producido por rsync del perfil de rutas por defecto, el manifiesto estructurado construido por seis colectores independientes, y el inventario de aplicaciones que dirige la reinstalación automática de paquetes y componentes tras una restauración.",
     "ogTitle": "Cómo funciona ProxMenux Backup por dentro",
-    "ogDescription": "Los tres bloques de una copia de ProxMenux explicados: rootfs, manifiesto y aplicaciones.",
+    "ogDescription": "Los tres bloques de un backup de ProxMenux explicados: rootfs, manifiesto y aplicaciones.",
     "twitterTitle": "Cómo funciona ProxMenux Backup | ProxMenux",
-    "twitterDescription": "Los tres bloques de una copia de ProxMenux y cómo la restauración reproduce el host de origen a partir de ellos."
+    "twitterDescription": "Los tres bloques de un backup de ProxMenux y cómo la restauración reproduce el host de origen a partir de ellos."
   },
   "header": {
     "title": "Cómo funciona",
-    "description": "Desglose interno de una copia de seguridad creada con ProxMenux — sistema de ficheros, manifiesto e inventario de aplicaciones — y cómo la restauración consume los tres para reproducir el host de origen sobre un destino que puede no compartir el mismo kernel.",
+    "description": "Desglose interno de un backup creado con ProxMenux — sistema de ficheros, manifiesto e inventario de aplicaciones — y cómo la restauración consume los tres para reproducir el host de origen sobre un destino que puede no compartir el mismo kernel.",
     "section": "Backup & Restore"
   },
   "intro": {
     "title": "Un archivo, tres bloques",
-    "body": "Cada copia produce un layout de directorio con tres bloques bien definidos bajo una única raíz de staging. El archivo que se sube al destino (archivo local <code>.tar.zst</code>, backup PBS o archivo Borg) contiene ese layout exacto. La restauración lee los tres bloques de forma independiente, en un orden concreto que garantiza la corrección: primero se copia el <strong>rootfs</strong> —el sistema de archivos raíz del host— para colocar la configuración, después se consulta <strong>el manifiesto</strong> para detectar drift y decidir qué omitir, y finalmente <strong>el inventario de aplicaciones</strong> dirige la pasada de reinstalación post-arranque. No hay dependencias entre bloques — cada uno puede inspeccionarse o extraerse de forma independiente."
+    "body": "Cada backup produce una estructura con tres bloques definidos bajo un único directorio de preparación. El archivo subido al destino (<code>.tar.zst</code> local, backup PBS o archivo Borg) contiene esa misma estructura. La restauración utiliza los tres: consulta <strong>el manifiesto</strong> antes de aplicar cambios para detectar diferencias y decidir qué omitir; <strong>rootfs</strong> aporta los archivos de configuración, que se aplican en vivo o tras el reinicio; y <strong>el inventario de aplicaciones</strong> dirige la instalación de paquetes y la reinstalación de componentes después del arranque. Cada bloque puede inspeccionarse o extraerse de forma independiente."
   },
   "layout": {
     "heading": "Layout del archivo",
-    "intro": "Cada archivo respeta el mismo layout con independencia del destino. El subdirectorio <code>metadata/</code> contiene los bloques estructurados; el subdirectorio <code>rootfs/</code> contiene la copia del sistema de ficheros.",
-    "treeCaption": "El directorio de staging generado durante una copia. Todos los destinos reciben el mismo árbol (adaptado a su formato nativo: tar para local, chunks PBS para PBS, segmentos borg para Borg).",
+    "intro": "Cada archivo respeta el mismo layout con independencia del destino. El subdirectorio <code>metadata/</code> contiene los bloques estructurados; el subdirectorio <code>rootfs/</code> contiene el backup del sistema de ficheros.",
+    "treeCaption": "El directorio de staging generado durante un backup. Todos los destinos reciben el mismo árbol (adaptado a su formato nativo: tar para local, chunks PBS para PBS, segmentos borg para Borg).",
     "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel + método pmxcfs\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "El bloque rootfs",
-    "intro": "El árbol <code>rootfs/</code> es una <strong>copia plana del sistema de ficheros</strong> producida por <code>rsync</code> desde el host de origen. Contiene un <strong>perfil por defecto</strong> curado de rutas que importan para una restauración de Proxmox, más cualquier <strong>ruta personalizada</strong> añadida por el usuario al trabajo de copia o a la sesión interactiva. El conjunto es intencionadamente estrecho: solamente rutas que <em>contienen configuración</em> o <em>contienen estado que Proxmox no puede regenerar por sí solo</em>.",
+    "intro": "El árbol <code>rootfs/</code> es una <strong>copia plana del sistema de ficheros</strong> producida por <code>rsync</code> desde el host de origen. Contiene un <strong>perfil por defecto</strong> curado de rutas que importan para una restauración de Proxmox, más cualquier <strong>ruta personalizada</strong> añadida por el usuario al trabajo de backup o a la sesión interactiva. El conjunto es intencionadamente estrecho: solamente rutas que <em>contienen configuración</em> o <em>contienen estado que Proxmox no puede regenerar por sí solo</em>.",
     "defaultProfileTitle": "El perfil por defecto",
-    "defaultProfileBody": "El perfil por defecto está definido por <code>hb_default_profile_paths</code> en <code>lib_host_backup_common.sh</code>. Cubre ocho categorías que en conjunto describen un host Proxmox operativo:",
+    "defaultProfileBody": "El perfil por defecto se define en <code>hb_default_profile_paths</code> de <code>lib_host_backup_common.sh</code>. Incluye ocho categorías fijas y, si corresponde, el estado ZFS, que juntas describen un host Proxmox operativo:",
     "categoriesTitle": "Categorías de rutas",
     "categoryRows": [
       {
         "category": "Núcleo PVE",
         "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
-        "why": "Contenido del filesystem del clúster y valores por defecto de vzdump. La base pmxcfs (<code>config.db</code>) se captura con un snapshot consistente vía <code>sqlite3 .backup</code> sin parar el clúster, y los sidecars <code>.db-wal</code> y <code>.db-shm</code> quedan excluidos del rsync. Si <code>sqlite3</code> no está disponible, la copia deposita un <code>config.db.raw-fallback</code> que la restauración promociona automáticamente."
+        "why": "Contenido del filesystem del clúster y valores por defecto de vzdump. La base pmxcfs (<code>config.db</code>) se captura con un snapshot consistente vía <code>sqlite3 .backup</code> sin parar el clúster, y los sidecars <code>.db-wal</code> y <code>.db-shm</code> quedan excluidos del rsync. Si <code>sqlite3</code> no está disponible, el backup deposita un <code>config.db.raw-fallback</code> que la restauración promociona automáticamente."
       },
       {
         "category": "Identidad del host y red",
@@ -62,12 +62,12 @@
       {
         "category": "Estado ProxMenux y herramientas",
         "paths": "/etc/proxmenux, /etc/systemd/system, /etc/log2ram.conf, /etc/logrotate.conf, /etc/logrotate.d, /etc/lm-sensors, /etc/sensors3.conf, /etc/fail2ban, /etc/snmp, /etc/postfix, /etc/wireguard, /etc/openvpn, /etc/grafana, /etc/influxdb, /etc/prometheus, /etc/telegraf, /etc/zabbix",
-        "why": "Herramientas opcionales pero habituales de Proxmox. Las rutas ausentes se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
+        "why": "Herramientas opcionales pero habituales de Proxmox. Las rutas ausentes se registran en <code>metadata/missing_paths.txt</code> sin detener el backup."
       },
       {
         "category": "Binarios ProxMenux y root",
-        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /root (subdirs volátiles excluidos)",
-        "why": "Binarios instalados por ProxMenux y configuración por usuario bajo <code>/root</code>. Las rutas volátiles (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) quedan fuera de la copia."
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (subdirs volátiles excluidos)",
+        "why": "Binarios instalados por ProxMenux y configuración por usuario bajo <code>/root</code>. Las rutas volátiles (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) quedan fuera del backup. <code>/var/lib/proxmenux</code> guarda los trabajos de backup programados y el estado del host que mantiene ProxMenux; quedan fuera la preparación de una restauración, los backups de rollback y las marcas posteriores a la restauración, porque pertenecen al host que la ejecuta."
       },
       {
         "category": "Estado ZFS (condicional)",
@@ -76,18 +76,18 @@
       }
     ],
     "customTitle": "Ampliar el perfil con rutas propias",
-    "customBody": "Además del perfil por defecto, ProxMenux ofrece dos maneras de incluir rutas adicionales en una copia. Se combinan sin conflicto y ambas se aplican tanto a copias interactivas como a trabajos programados.",
+    "customBody": "Además del perfil por defecto, ProxMenux ofrece dos maneras de incluir rutas adicionales en un backup. Se combinan sin conflicto y ambas se aplican tanto a backups interactivos como a trabajos programados.",
     "customExtrasTitle": "1. Extras persistentes (fichero por-host)",
-    "customExtrasBody": "Un fichero de texto en <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> guarda una lista de rutas absolutas que el usuario ha marcado como \"incluir siempre\" en este host. Cuando una copia se ejecuta en modo <strong>Default</strong>, ProxMenux añade automáticamente estas rutas al perfil por defecto sin preguntar. El fichero se edita desde la interfaz — no hay que tocarlo a mano — y persiste entre reinicios y actualizaciones. Cada línea es una ruta absoluta; se admiten comentarios con <code>#</code>.",
+    "customExtrasBody": "Un fichero de texto en <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> guarda una lista de rutas absolutas que el usuario ha marcado como \"incluir siempre\" en este host. Cuando un backup se ejecuta en modo <strong>Default</strong>, ProxMenux añade automáticamente estas rutas al perfil por defecto sin preguntar. El fichero se edita desde la interfaz — no hay que tocarlo a mano — y persiste entre reinicios y actualizaciones. Cada línea es una ruta absoluta; se admiten comentarios con <code>#</code>.",
     "customModeTitle": "2. Modo Custom (por ejecución)",
-    "customModeBody": "Al lanzar una copia en modo <strong>Custom</strong>, en lugar de aplicar el perfil por defecto directamente, se muestra un checklist con todas las rutas: las del perfil por defecto y las de extras persistentes (estas últimas premarcadas con <code>[+]</code>). El usuario marca o desmarca lo que quiera para esa ejecución concreta, y puede además pulsar <em>Add custom path</em> para introducir una ruta nueva — que queda registrada en el fichero de extras persistentes para futuras copias.",
+    "customModeBody": "Al lanzar un backup en modo <strong>Custom</strong>, en lugar de aplicar el perfil por defecto directamente, se muestra un checklist con todas las rutas: las del perfil por defecto y las de extras persistentes (estas últimas premarcadas con <code>[+]</code>). El usuario marca o desmarca lo que quiera para esa ejecución concreta, y puede además pulsar <em>Add custom path</em> para introducir una ruta nueva — que queda registrada en el fichero de extras persistentes para futuros backups.",
     "customMissingTitle": "Rutas ausentes en el origen",
-    "customMissingBody": "Cualquier ruta del perfil (por defecto o añadida) que no exista en el host de origen se registra en <code>metadata/missing_paths.txt</code> dentro del archivo. La copia no falla ni interrumpe — el usuario ve el resumen de rutas archivadas y rutas ausentes al terminar. En la práctica esto ocurre con las rutas de herramientas opcionales como <code>/etc/wireguard</code> o <code>/etc/prometheus</code> cuando esas herramientas no están instaladas."
+    "customMissingBody": "Cualquier ruta del perfil (por defecto o añadida) que no exista en el host de origen se registra en <code>metadata/missing_paths.txt</code> dentro del archivo. El backup no falla ni interrumpe — el usuario ve el resumen de rutas archivadas y rutas ausentes al terminar. En la práctica esto ocurre con las rutas de herramientas opcionales como <code>/etc/wireguard</code> o <code>/etc/prometheus</code> cuando esas herramientas no están instaladas."
   },
   "manifest": {
     "heading": "El bloque manifiesto",
-    "intro": "<code>manifest.json</code> es un documento JSON estructurado que describe el host de origen en el momento de la copia. Se produce mediante <strong>seis colectores independientes</strong> orquestados por <code>build_manifest.sh</code>. Cada colector es de sólo lectura, produce un fragmento JSON bien definido y hace fallback a un valor vacío seguro si falla — el manifiesto sigue siendo utilizable aunque una sección quede incompleta.",
-    "orchestratorCaption": "Los seis colectores componen el manifiesto. Cada uno corre en su propio subproceso; un fallo en uno hace fallback al valor por defecto documentado y advierte, pero no aborta la copia.",
+    "intro": "<code>manifest.json</code> es un documento JSON estructurado que describe el host de origen en el momento del backup. Se produce mediante <strong>seis colectores independientes</strong> orquestados por <code>build_manifest.sh</code>. Cada colector es de sólo lectura, produce un fragmento JSON bien definido y hace fallback a un valor vacío seguro si falla — el manifiesto sigue siendo utilizable aunque una sección quede incompleta.",
+    "orchestratorCaption": "Los seis colectores componen el manifiesto. Cada uno corre en su propio subproceso; un fallo en uno hace fallback al valor por defecto documentado y advierte, pero no aborta el backup.",
     "collectorRows": [
       {
         "collector": "collect_source_host.sh",
@@ -117,15 +117,15 @@
       {
         "collector": "collect_guests.sh",
         "produces": "vms_lxcs_at_backup",
-        "content": "Enumera VMs (<code>qm list</code>) y LXCs (<code>pct list</code>) presentes en el momento de la copia — VMID, nombre, estado actual. Sólo el inventario: los datos reales del invitado son responsabilidad de <code>vzdump</code> / PBS."
+        "content": "Enumera VMs (<code>qm list</code>) y LXCs (<code>pct list</code>) presentes en el momento del backup — VMID, nombre, estado actual. Sólo el inventario: los datos reales del invitado son responsabilidad de <code>vzdump</code> / PBS."
       }
     ],
     "schemaTitle": "Validación por esquema",
-    "schemaBody": "ProxMenux incluye una plantilla que describe qué campos debe contener el manifiesto y qué forma tiene cada uno. Cuando se genera una copia se puede comprobar automáticamente que el manifiesto respeta esa plantilla, de modo que si un colector produjera un JSON malformado o con un campo mal escrito se detectaría en el momento. Es una comprobación destinada al desarrollo del propio ProxMenux: si el sistema no la tiene instalada, la copia sigue funcionando con normalidad y el manifiesto se genera igual."
+    "schemaBody": "ProxMenux incluye una plantilla que describe qué campos debe contener el manifiesto y qué forma tiene cada uno. Cuando se genera un backup se puede comprobar automáticamente que el manifiesto respeta esa plantilla, de modo que si un colector produjera un JSON malformado o con un campo mal escrito se detectaría en el momento. Es una comprobación destinada al desarrollo del propio ProxMenux: si el sistema no la tiene instalada, el backup sigue funcionando con normalidad y el manifiesto se genera igual."
   },
   "applications": {
     "heading": "El inventario de aplicaciones",
-    "intro": "Dos ficheros bajo <code>metadata/</code> catalogan todo lo instalado en el origen que no forma parte del conjunto de paquetes base de Proxmox VE. La restauración los utiliza para reproducir el conjunto exacto de software instalado por el usuario en el destino, usando APT o los instaladores propios de ProxMenux según cómo se instalara originalmente el software.",
+    "intro": "Dos inventarios registran el software añadido al conjunto base de Proxmox VE: la lista de paquetes en <code>metadata/</code> y el registro de componentes dentro de rootfs, detallados a continuación. La restauración los usa para reproducir el software del usuario con APT o los instaladores de ProxMenux, según cómo se instalara originalmente.",
     "packagesTitle": "packages.manual.list",
     "packagesBody": "Una lista de texto plano producida por <code>apt-mark showmanual</code>: todos los paquetes APT que fueron <em>instalados explícitamente</em> en el host de origen, ordenados alfabéticamente. Esto excluye los paquetes instalados como dependencias del ISO base de Proxmox VE (que APT del destino vuelve a traer automáticamente). Es leída por <code>_rs_run_complete_extras</code> durante la restauración, filtrada por un filtro <em>cascade-safe</em> de tres pases (<code>dpkg -s</code> para lo ya instalado, detección de sibling-major para librerías, <code>apt-get install --simulate</code> para riesgo de cascade-remove) y después instalada con <code>apt-get install -y</code>.",
     "componentsTitle": "components_status.json (parte del rootfs)",

@@ -4,10 +4,19 @@ Auto-translate missing keys in AppImage/messages/<locale>/common.json
 against the English source (AppImage/messages/en/common.json).
 
 Guardrails:
-  - Keys already translated in a target locale are PRESERVED. A key is
-    considered "already translated" when the target value is non-empty
-    AND differs from the English source. This protects human-curated
-    locales (Vaso73's sk) from being overwritten.
+  - Non-empty string translations are PRESERVED, including values equal
+    to English. --refresh explicitly opts into replacing valid strings.
+  - Arrays, objects and non-string leaves retain their JSON types. Array
+    entries are translated individually, never as serialized Python text.
+  - Preflight all locales; skip locales with existing type mismatches without
+    provider calls or writes, including with --refresh. Valid locales proceed,
+    but any skipped locale makes the run exit 1 (partial failure).
+    The diagnostic identifies the locale
+    and JSON Pointer requiring manual reconciliation. No automatic migration
+    of serialized arrays is attempted: parseability or equal length cannot
+    prove correspondence to current English indices. Recover human text only
+    after checking its original source/order; do not delete it to force refill.
+    Null string leaves remain eligible for filling, as in earlier versions.
   - `{placeholder}` tokens (next-intl style: `{vmid}`, `{appName}`, etc.)
     are extracted before translation and restored afterwards, so the
     interpolation contract stays intact regardless of what the
@@ -15,6 +24,13 @@ Guardrails:
   - `sk` IS translated by default too. Guardrail #1 protects every key
     Vaso73 has curated by hand; auto-translation only fills the keys
     that are still on the English fallback in sk.
+
+Workflow limitation: build-i18n-messages.yml runs Commit + push only after
+successful generation. Exit 1 for skipped locales prevents that step, even
+when valid locales made local progress. This does not restore automatic
+publication for the default locale set until mismatches are reconciled or
+workflow policy is separately changed. Invalid JSON syntax still aborts
+preflight globally; per-locale skipping covers parsed catalog type mismatches.
 
 Reuses the same translation providers as build_translation_cache.py so
 the CI environment (googletrans pinning, AppImage provider) stays
@@ -58,36 +74,38 @@ DEFAULT_CONTEXT = "Context: Technical UI text for a Proxmox management dashboard
 PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*\}")
 
 
-def flatten(node: dict, prefix: str = "") -> dict[str, str]:
-    """Depth-first flatten of a nested dict into ``{"a.b.c": "value"}``.
-    Non-string leaves are coerced to str (should not happen in messages
-    catalogs, but keeps the function total)."""
-    out: dict[str, str] = {}
-    for key, value in node.items():
-        path = f"{prefix}{key}" if not prefix else f"{prefix}.{key}"
-        if isinstance(value, dict):
-            out.update(flatten(value, path))
-        elif value is None:
-            out[path] = ""
-        else:
-            out[path] = str(value)
+CatalogPath = tuple[str | int, ...]
+
+
+def flatten(node: object, prefix: CatalogPath = ()) -> dict[CatalogPath, object]:
+    """Keep typed path segments and empty container markers, without coercion."""
+    if isinstance(node, dict):
+        out = {prefix: {}}
+        children = node.items()
+    elif isinstance(node, list):
+        out = {prefix: []}
+        children = enumerate(node)
+    else:
+        return {prefix: node}
+    for key, value in children:
+        out.update(flatten(value, prefix + (key,)))
     return out
 
 
-def unflatten(flat: dict[str, str]) -> dict:
-    """Inverse of ``flatten``: rebuild nested structure from dotted keys."""
-    out: dict = {}
-    for path, value in flat.items():
-        parts = path.split(".")
-        cursor = out
-        for part in parts[:-1]:
-            existing = cursor.get(part)
-            if not isinstance(existing, dict):
-                existing = {}
-                cursor[part] = existing
-            cursor = existing
-        cursor[parts[-1]] = value
-    return out
+def unflatten(flat: dict[CatalogPath, object]) -> object:
+    """Rebuild a tree from typed paths; parents precede children by depth."""
+    nodes = {}
+    for path in sorted(flat, key=len):
+        value = flat[path]
+        nodes[path] = {} if isinstance(value, dict) else [] if isinstance(value, list) else value
+        if path:
+            parent = nodes[path[:-1]]
+            key = path[-1]
+            if isinstance(parent, list):
+                while len(parent) <= key:
+                    parent.append(None)
+            parent[key] = nodes[path]
+    return nodes[()]
 
 
 def protect_placeholders(text: str) -> tuple[str, list[str]]:
@@ -98,7 +116,9 @@ def protect_placeholders(text: str) -> tuple[str, list[str]]:
 
     def _swap(match: re.Match) -> str:
         placeholders.append(match.group(0))
-        return f"__PMX_PH_{len(placeholders) - 1}__"
+        # No underscores: a local model splits on them and returns
+        # "PMX PH 0", so the placeholder never comes back.
+        return f"PMXPH{len(placeholders) - 1:03d}"
 
     return PLACEHOLDER_RE.sub(_swap, text), placeholders
 
@@ -109,8 +129,27 @@ def restore_placeholders(text: str, placeholders: list[str]) -> str:
     fallback assignment (target = existing or EN) upstream catches
     the worst case."""
     for i, original in enumerate(placeholders):
-        text = text.replace(f"__PMX_PH_{i}__", original)
+        text = text.replace(f"PMXPH{i:03d}", original)
     return text
+
+
+def translate_argos(text: str, lang: str) -> str:
+    """LibreTranslate's engine, running locally.
+
+    The remote providers answer a few thousand strings and then start
+    refusing, and a refusal here hands back the English and stores it as
+    a translation. Local models have no quota and no silent failure mode,
+    which is what makes them the right choice for filling a catalogue by
+    hand before it is committed.
+    """
+    try:
+        import argostranslate.translate as argos  # type: ignore
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            "argostranslate is not installed. Install argostranslate and the "
+            "en->target packages, or run with another provider."
+        ) from exc
+    return argos.translate(text, "en", lang)
 
 
 def translate_one(
@@ -121,7 +160,7 @@ def translate_one(
     timeout: int,
     appimage_path: Path,
 ) -> str:
-    """Dispatch to the correct provider. Reuses the same three
+    """Dispatch to the correct provider. Reuses the same
     implementations as build_translation_cache.py so there is exactly
     one place to fix if a provider changes upstream."""
     if provider == "googletrans":
@@ -130,6 +169,8 @@ def translate_one(
         raw = translate_google_web(text, lang, context, timeout)
     elif provider == "appimage":
         raw = translate_appimage(text, lang, context, timeout, appimage_path)
+    elif provider == "argos":
+        raw = translate_argos(text, lang)
     else:
         raise ValueError(f"Unknown provider: {provider}")
     return clean_translation(raw) or text
@@ -182,9 +223,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--provider",
-        choices=("appimage", "googletrans", "google-web"),
+        choices=("argos", "appimage", "googletrans", "google-web"),
         default="googletrans",
-        help="Translation provider. Default matches build_translation_cache.",
+        help=(
+            "Translation provider. The default matches build_translation_cache "
+            "and is what CI uses; `argos` runs locally with no quota and is the "
+            "one to reach for when filling a catalogue before committing it."
+        ),
     )
     parser.add_argument(
         "--appimage-path",
@@ -198,9 +243,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--refresh",
         action="store_true",
         help=(
-            "Re-translate EVERY key, ignoring existing translations. "
-            "Dangerous: this DOES overwrite human-curated strings. "
-            "Use only when you know what you are doing."
+            "Retranslate the keys named by --refresh-keys. On its own it has "
+            "no effect: an existing translation is never replaced."
+        ),
+    )
+    parser.add_argument(
+        "--refresh-keys",
+        type=Path,
+        help=(
+            "File with one dotted message key per line. Only these may be "
+            "retranslated over an existing value, and only with --refresh."
         ),
     )
     parser.add_argument(
@@ -240,11 +292,53 @@ def main() -> int:
     print(f"Provider: {args.provider}", flush=True)
     print(f"Sleep between calls: {args.sleep}s", flush=True)
 
-    total_failures: list[tuple[str, str, str]] = []
+    refresh_keys: set[str] = set()
+    if args.refresh_keys is not None:
+        if not args.refresh:
+            print("--refresh-keys needs --refresh.", file=sys.stderr)
+            return 1
+        refresh_keys = {
+            line.strip()
+            for line in args.refresh_keys.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        print(f"Refreshing {len(refresh_keys)} named keys.", flush=True)
+    elif args.refresh:
+        print("--refresh without --refresh-keys: existing translations are kept.",
+              flush=True)
 
+    total_failures: list[tuple[str, CatalogPath, str]] = []
+
+    # Preflight every locale before any provider call or write. Serialized
+    # arrays have no trustworthy index correspondence, even if JSON parses.
+    # Never guess, evaluate Python repr, or discard human text on --refresh.
+    targets = {}
+    skipped = set()
     for lang in languages:
         locale_path = messages_dir / lang / "common.json"
         target_flat = flatten(read_json(locale_path))
+        targets[lang] = target_flat
+        for key, en_value in en_flat.items():
+            if key not in target_flat:
+                continue
+            existing = target_flat[key]
+            if isinstance(en_value, str) and existing is None:
+                continue  # Historical null string leaves are treated as empty.
+            if type(existing) is not type(en_value):
+                pointer = "".join("/" + str(part).replace("~", "~0").replace("/", "~1") for part in key)
+                location = f"JSON Pointer {json.dumps(pointer)}" + (" (root)" if not key else "")
+                print(
+                    f"{locale_path}: {location}: expected {type(en_value).__name__}, "
+                    f"found {type(existing).__name__}; manual reconciliation required. "
+                    "Locale skipped; its catalog will not be written.", file=sys.stderr,
+                )
+                skipped.add(lang)
+
+    for lang in languages:
+        if lang in skipped:
+            continue
+        locale_path = messages_dir / lang / "common.json"
+        target_flat = targets[lang]
 
         # Decide what needs translating. Same rule as
         # build_translation_cache.py: only touch keys whose target
@@ -261,14 +355,25 @@ def main() -> int:
         #   3. Auto-fills from prior runs whose output happened to
         #      match EN — leaving them alone is the intended
         #      steady-state, not a bug.
-        # When someone genuinely wants to redo everything, --refresh
-        # is still available (and is destructive by design).
-        missing: list[str] = []
+        # An existing translation is never replaced. --refresh only reaches
+        # the keys named in --refresh-keys, so an overwrite is always one
+        # somebody asked for by name rather than a side effect of a run.
+        # Seed structural nodes and non-text leaves before any checkpoint.
+        # Only strings are sent to a translation provider.
+        original_flat = target_flat.copy()
         for key, en_value in en_flat.items():
-            if not en_value:
+            if not isinstance(en_value, str) or not en_value:
+                target_flat.setdefault(key, en_value)
+            elif key and isinstance(key[-1], int):
+                # Null keeps an untranslated array position addressable while
+                # allowing the runtime English fallback and a later retry.
+                target_flat.setdefault(key, None)
+        missing: list[CatalogPath] = []
+        for key, en_value in en_flat.items():
+            if not isinstance(en_value, str) or not en_value:
                 continue
             existing = target_flat.get(key, "")
-            if args.refresh or not existing:
+            if not existing or ".".join(str(part) for part in key) in refresh_keys:
                 missing.append(key)
 
         if args.limit > 0:
@@ -276,10 +381,12 @@ def main() -> int:
 
         print(f"\n=== {lang}: {len(missing)} keys to translate ===", flush=True)
         if not missing:
-            print(f"  {lang}: nothing to do", flush=True)
+            if target_flat != original_flat:
+                write_json(locale_path, unflatten(target_flat))
+            print(f"  {lang}: nothing to translate", flush=True)
             continue
 
-        failures_for_lang: list[tuple[str, str, str]] = []
+        failures_for_lang: list[tuple[str, CatalogPath, str]] = []
 
         for index, key in enumerate(missing, start=1):
             en_value = en_flat[key]
@@ -336,7 +443,18 @@ def main() -> int:
         # Previously we returned 2, which failed the whole run and
         # discarded 36 out of 38 successful translations because
         # 2 googletrans timeouts hit sv at the start of the burst.
-        return 0
+        if not skipped:
+            return 0
+
+    if skipped:
+        names = ', '.join(dict.fromkeys(lang for lang in languages if lang in skipped))
+        print(
+            f"\nPartial failure: skipped {len(skipped)} locale(s): {names}. "
+            "Valid locales processed; skipped catalogs unchanged. "
+            "Manual reconciliation required; exiting 1.",
+            file=sys.stderr, flush=True,
+        )
+        return 1
 
     print("\ni18n messages generated successfully.", flush=True)
     return 0

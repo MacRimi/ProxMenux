@@ -12,6 +12,9 @@ TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
 
 load_language
 initialize_cache
@@ -84,6 +87,8 @@ lvm_repair_check() {
 
 
 cleanup_duplicate_repos_pve9() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "cleanup_duplicate_repos_pve9" "$FUNC_VERSION"
     msg_info "$(translate "Cleaning up duplicate repositories...")"
 
     local sources_file="/etc/apt/sources.list"
@@ -109,15 +114,26 @@ cleanup_duplicate_repos_pve9() {
     }
 
     # Helper: back up a file once before modifying, so an accidental
-    # comment-out is always recoverable next to the original.
+    # comment-out is always recoverable. Outside sources.list.d: apt reads
+    # every file there and warns about each copy on every update.
+    local backup_dir="/var/backups/proxmenux/apt"
     _backup_once() {
         local file="$1"
         [[ -f "$file" ]] || return 0
         local ts backup
         ts=$(date +%Y%m%d_%H%M%S)
-        backup="${file}.proxmenux-backup.${ts}"
+        mkdir -p "$backup_dir"
+        backup="${backup_dir}/$(basename "$file").${ts}"
         [[ -f "$backup" ]] || cp -a "$file" "$backup"
     }
+
+    # Copies an earlier version left next to the originals move there too.
+    local stray
+    for stray in /etc/apt/sources.list.proxmenux-backup.* /etc/apt/sources.list.d/*.proxmenux-backup.*; do
+        [[ -f "$stray" ]] || continue
+        mkdir -p "$backup_dir"
+        mv -f "$stray" "${backup_dir}/$(basename "${stray/.proxmenux-backup./.}")"
+    done
 
     # ── Phase 1 — comment intra-file duplicates in sources.list by URL+Suite ──
     if [ -s "$sources_file" ]; then
@@ -152,7 +168,8 @@ cleanup_duplicate_repos_pve9() {
 
         if [[ "$file_changed" -eq 1 ]]; then
             _backup_once "$sources_file"
-            mv "$temp_file" "$sources_file"
+            pmx_write_file "$sources_file" < "$temp_file"
+            rm -f "$temp_file"
             chmod 644 "$sources_file"
         else
             rm -f "$temp_file"
@@ -201,7 +218,7 @@ cleanup_duplicate_repos_pve9() {
                 esc_uri=$(printf '%s' "$uri" | sed 's/[][\.^$*/]/\\&/g')
                 esc_suite=$(printf '%s' "$suite" | sed 's/[][\.^$*/]/\\&/g')
                 esc_comp=$(printf '%s' "$first_comp" | sed 's/[][\.^$*/]/\\&/g')
-                sed -i -E "/^deb[[:space:]]+${esc_uri}[[:space:]]+${esc_suite}[[:space:]]+.*(^| )${esc_comp}( |$)/s/^/# /" "$target_file"
+                pmx_edit_file "$target_file" -E "/^deb[[:space:]]+${esc_uri}[[:space:]]+${esc_suite}[[:space:]](.*[[:space:]])?${esc_comp}([[:space:]]|$)/s/^/# /"
                 cleaned_count=$((cleaned_count + 1))
             fi
         }
@@ -240,7 +257,7 @@ cleanup_duplicate_repos_pve9() {
         for old_file in /etc/apt/sources.list.d/pve-public-repo.list /etc/apt/sources.list.d/pve-install-repo.list; do
             if [ -f "$old_file" ]; then
                 _backup_once "$old_file"
-                rm -f "$old_file"
+                pmx_remove_file "$old_file"
                 cleaned_count=$((cleaned_count + 1))
             fi
         done
@@ -257,6 +274,8 @@ cleanup_duplicate_repos_pve9() {
 
 
 cleanup_duplicate_repos_pve9_() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "cleanup_duplicate_repos_pve9_" "$FUNC_VERSION"
     msg_info "$(translate "Cleaning up duplicate repositories...")"
     
     local sources_file="/etc/apt/sources.list"
@@ -285,7 +304,8 @@ cleanup_duplicate_repos_pve9_() {
         fi
     done < "$sources_file"
 
-    mv "$temp_file" "$sources_file"
+    pmx_write_file "$sources_file" < "$temp_file"
+    rm -f "$temp_file"
     chmod 644 "$sources_file"
 
     for src in proxmox debian ceph; do
@@ -308,7 +328,7 @@ cleanup_duplicate_repos_pve9_() {
 
             if [[ -n "$url_match" ]]; then
                 if grep -q "^deb.*$url_match" "$sources_file"; then
-                    sed -i "/^deb.*$url_match/s/^/# /" "$sources_file"
+                    pmx_edit_file "$sources_file" "/^deb.*$url_match/s/^/# /"
                     cleaned_count=$((cleaned_count + 1))
                 fi
             fi
@@ -316,7 +336,7 @@ cleanup_duplicate_repos_pve9_() {
             for list_file in /etc/apt/sources.list.d/*.list; do
                 [[ -f "$list_file" ]] || continue
                 if grep -q "^deb.*$url_match" "$list_file"; then
-                    sed -i "/^deb.*$url_match/s/^/# /" "$list_file"
+                    pmx_edit_file "$list_file" "/^deb.*$url_match/s/^/# /"
                     cleaned_count=$((cleaned_count + 1))
                 fi
             done
@@ -414,4 +434,41 @@ cleanup_duplicate_repos() {
     else
         cleanup_duplicate_repos_pve8
     fi
+}
+
+
+# ==========================================================
+# Update log helpers
+# ==========================================================
+# An update log is what is left once the terminal is gone: the Monitor
+# runs the same update from a systemd unit with no terminal at all, and
+# an operator reads the log days later to find out what moved.
+
+# Reads `apt list --upgradable` on stdin and writes one aligned
+# `name  old → new` line per package. Lines that do not carry the
+# "[upgradable from: …]" part are passed through as they came.
+pmx_format_upgradable() {
+    awk 'NF == 0 { next }
+         $0 ~ /\[upgradable from: / {
+             name = $1; sub(/\/.*/, "", name)
+             from = $6; sub(/\]$/, "", from)
+             printf "  %-30s %s → %s\n", name, from, $2
+             next
+         }
+         { print "  " $0 }'
+}
+
+# Writes what dpkg actually did since `$1` (a "YYYY-MM-DD HH:MM:SS"
+# stamp taken before the upgrade). dpkg's own log is the authoritative
+# record of the transaction — it carries both versions of every package
+# replaced, which apt's console output does not spell out.
+pmx_dpkg_changes_since() {
+    local since="$1"
+    [[ -n "$since" && -r /var/log/dpkg.log ]] || return 0
+    awk -v since="$since" '
+        ($1 " " $2) < since { next }
+        $3 == "upgrade" { pkg = $4; sub(/:.*/, "", pkg); printf "  %-30s %s → %s\n", pkg, $5, $6; next }
+        $3 == "install" { pkg = $4; sub(/:.*/, "", pkg); printf "  %-30s installed %s\n", pkg, $6; next }
+        $3 == "remove" || $3 == "purge" { pkg = $4; sub(/:.*/, "", pkg); printf "  %-30s %sd %s\n", pkg, $3, $5 }
+    ' /var/log/dpkg.log
 }

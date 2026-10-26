@@ -52,18 +52,28 @@ show_menu() {
 
     while true; do
 
-        local menu_title="Main ProxMenux"
+        local menu_title
+        menu_title="$(translate "Main menu")"
+
+        # As tall as its options need, cut to the terminal.
+        local height=24 limit=$(( $(tput lines 2>/dev/null || echo 24) - 2 ))
+        (( height > limit )) && height=$limit
+        local rows=$(( height - 8 ))
+        (( rows < 3 )) && rows=3
 
         dialog --clear \
             --backtitle "ProxMenux" \
-            --title "$(translate "$menu_title")" \
-            --menu "\n$(translate "Select an option:")" 21 70 12 \
+            --title "$menu_title" \
+            --menu "$(translate "Select an option:")" "$height" 75 "$rows" \
+            search "$(translate "Search options and applications")" \
+            "" "" \
             1 "$(translate "Settings post-install Proxmox")" \
             2 "$(translate "Hardware: GPUs and Coral-TPU")" \
             3 "$(translate "Create VM from template or script")" \
             4 "$(translate "Disk Manager")" \
             5 "$(translate "Storage & Share Manager")" \
             6 "$(translate "Proxmox VE Helper Scripts")" \
+            o "$(translate "OCI manager Apps (Technology Preview)")" \
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \
             9 "$(translate "Utilities and Tools")" \
@@ -84,12 +94,28 @@ show_menu() {
         OPTION=$(<"$TEMP_FILE")
 
         case $OPTION in
+            search)
+                # A result that is a sub-menu comes back as its path: it is
+                # opened from here, as the options below are.
+                local handoff
+                local -a target=()
+                handoff=$(mktemp)
+                python3 "$LOCAL_SCRIPTS/menus/search_menu.py" --handoff "$handoff"
+                mapfile -t target < "$handoff"
+                rm -f "$handoff"
+                if [[ "${target[0]:-}" == "$LOCAL_SCRIPTS"/* && -f "${target[0]}" ]]; then
+                    rm -f "$TEMP_FILE"
+                    exec bash "${target[@]}"
+                fi
+                ;;
+            "") ;;
             1) exec bash "$LOCAL_SCRIPTS/menus/menu_post_install.sh" ;;
             2) exec bash "$LOCAL_SCRIPTS/menus/hw_grafics_menu.sh" ;;
             3) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
             4) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;
             5) exec bash "$LOCAL_SCRIPTS/menus/share_menu.sh" ;;
             6) exec bash "$LOCAL_SCRIPTS/menus/menu_Helper_Scripts.sh" ;;
+            o) exec bash "$LOCAL_SCRIPTS/oci/oci_manager_apps.sh" ;;
             7) exec bash "$LOCAL_SCRIPTS/menus/network_menu.sh" ;;
             8) exec bash "$LOCAL_SCRIPTS/menus/security_menu.sh" ;;
             9) exec bash "$LOCAL_SCRIPTS/menus/utilities_menu.sh" ;;
@@ -102,4 +128,8 @@ show_menu() {
     done
 }
 
+source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+if pmx_is_pbs; then
+    exec bash "$LOCAL_SCRIPTS/menus/pbs_menu.sh"
+fi
 show_menu

@@ -1,0 +1,142 @@
+{
+  "_comment": "Applications tested for real. \"status\": \"laboratory-validated\" when tested in the ProxMenux lab; \"community_tested\" with the tester's GitHub user, the date and a link to the report when tested by the community. Read when the catalog loads and applied on top of the generated templates and the overlays, so a new entry shows without regenerating and a regeneration keeps it. oci/VALIDATION.md is generated from this file.",
+  "applications": {
+    "2fauth": {
+      "status": "laboratory-validated"
+    },
+    "adguard-home": {
+      "status": "laboratory-validated"
+    },
+    "adguardhome-sync": {
+      "status": "laboratory-validated"
+    },
+    "albyhub": {
+      "status": "laboratory-validated"
+    },
+    "alist": {
+      "status": "laboratory-validated"
+    },
+    "amule": {
+      "status": "laboratory-validated"
+    },
+    "chromium": {
+      "status": "laboratory-validated"
+    },
+    "codeproject-ai": {
+      "status": "laboratory-validated"
+    },
+    "copyparty": {
+      "status": "laboratory-validated"
+    },
+    "crafty": {
+      "status": "laboratory-validated"
+    },
+    "ddclient": {
+      "status": "laboratory-validated"
+    },
+    "duplicati": {
+      "status": "laboratory-validated"
+    },
+    "etherpad": {
+      "status": "laboratory-validated"
+    },
+    "filebrowser-quantum": {
+      "status": "laboratory-validated"
+    },
+    "flaresolverr": {
+      "status": "laboratory-validated"
+    },
+    "flexget": {
+      "status": "laboratory-validated"
+    },
+    "frigate": {
+      "status": "laboratory-validated"
+    },
+    "glances": {
+      "community_tested": {
+        "by": "Vaso73",
+        "date": "2026-09-27",
+        "report": "https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868"
+      }
+    },
+    "grafana": {
+      "status": "laboratory-validated"
+    },
+    "immich": {
+      "status": "laboratory-validated"
+    },
+    "jdownloader": {
+      "status": "laboratory-validated"
+    },
+    "jenkins": {
+      "status": "laboratory-validated"
+    },
+    "linkwarden": {
+      "status": "laboratory-validated"
+    },
+    "memos": {
+      "status": "laboratory-validated"
+    },
+    "mineos-node": {
+      "status": "laboratory-validated"
+    },
+    "motioneye": {
+      "status": "laboratory-validated"
+    },
+    "nextcloud": {
+      "status": "laboratory-validated"
+    },
+    "nextcloud-stack": {
+      "status": "laboratory-validated"
+    },
+    "openlist": {
+      "status": "laboratory-validated"
+    },
+    "openssh-server": {
+      "status": "laboratory-validated"
+    },
+    "paperless-ngx": {
+      "status": "laboratory-validated"
+    },
+    "phpmyadmin": {
+      "status": "laboratory-validated"
+    },
+    "pocketbase": {
+      "community_tested": {
+        "by": "Vaso73",
+        "date": "2026-09-27",
+        "report": "https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868"
+      }
+    },
+    "qbittorrent": {
+      "status": "laboratory-validated"
+    },
+    "rclone": {
+      "status": "laboratory-validated"
+    },
+    "rdtclient": {
+      "status": "laboratory-validated"
+    },
+    "sharecovex": {
+      "status": "laboratory-validated"
+    },
+    "snapotter": {
+      "status": "laboratory-validated"
+    },
+    "tandoor": {
+      "status": "laboratory-validated"
+    },
+    "thelounge": {
+      "status": "laboratory-validated"
+    },
+    "trilium": {
+      "status": "laboratory-validated"
+    },
+    "wg-easy": {
+      "status": "laboratory-validated"
+    },
+    "wireguard": {
+      "status": "laboratory-validated"
+    }
+  }
+}

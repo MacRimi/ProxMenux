@@ -1,0 +1,563 @@
+[
+  {
+    "title": "Settings post-install Proxmox",
+    "menu": "Settings post-install Proxmox",
+    "script": "menus/menu_post_install.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "menus/hw_grafics_menu.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Create VM from template or script",
+    "menu": "Create VM from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Disk Manager",
+    "menu": "Disk Manager",
+    "script": "menus/storage_menu.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Storage & Share Manager",
+    "menu": "Storage & Share Manager",
+    "script": "menus/share_menu.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Proxmox VE Helper Scripts",
+    "menu": "Proxmox VE Helper Scripts",
+    "script": "menus/menu_Helper_Scripts.sh",
+    "keywords": ""
+  },
+  {
+    "title": "OCI manager Apps (Technology Preview)",
+    "menu": "OCI manager Apps (Technology Preview)",
+    "script": "oci/oci_manager_apps.sh",
+    "keywords": "docker container image contenedor imagen apps"
+  },
+  {
+    "title": "Network Management",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red vpn bridge nic"
+  },
+  {
+    "title": "Security",
+    "menu": "Security",
+    "script": "menus/security_menu.sh",
+    "keywords": "security seguridad firewall"
+  },
+  {
+    "title": "Utilities and Tools",
+    "menu": "Utilities and Tools",
+    "script": "menus/utilities_menu.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Host Backup & Restore",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "keywords": "backup restore copia respaldo restaurar pbs borg"
+  },
+  {
+    "title": "Help and Info Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": ""
+  },
+  {
+    "title": "Settings",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "settings ajustes configuracion"
+  },
+  {
+    "title": "Automated post-installation script",
+    "menu": "Settings post-install Proxmox",
+    "script": "menus/menu_post_install.sh",
+    "keywords": "post postinstall optimizations optimizaciones auto",
+    "argument": "Automated post-installation script"
+  },
+  {
+    "title": "Customizable post-installation script",
+    "menu": "Settings post-install Proxmox",
+    "script": "post_install/customizable_post_install.sh",
+    "keywords": "post postinstall optimizations optimizaciones custom log2ram"
+  },
+  {
+    "title": "Uninstall optimizations",
+    "menu": "Settings post-install Proxmox",
+    "script": "post_install/uninstall-tools.sh",
+    "keywords": "post uninstall desinstalar"
+  },
+  {
+    "title": "Install/Update NVIDIA Drivers (Host + LXC)",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/nvidia_installer.sh",
+    "keywords": "gpu nvidia driver"
+  },
+  {
+    "title": "Install/Update Coral TPU on Host",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/install_coral.sh",
+    "keywords": "coral tpu usb"
+  },
+  {
+    "title": "Add GPU to LXC   (Intel | AMD | NVIDIA)",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/add_gpu_lxc.sh",
+    "keywords": "gpu passthrough lxc igpu"
+  },
+  {
+    "title": "Add Coral TPU to LXC",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/install_coral_lxc.sh",
+    "keywords": "coral tpu lxc usb"
+  },
+  {
+    "title": "Add GPU to VM    (Intel | AMD | NVIDIA)",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/add_gpu_vm.sh",
+    "keywords": "gpu passthrough vm"
+  },
+  {
+    "title": "Switch GPU Mode  (VM <-> LXC)",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/switch_gpu_mode.sh",
+    "keywords": "gpu mode modo"
+  },
+  {
+    "title": "Manual CLI Guide (GPU/TPU)",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "gpu_tpu/gpu-tpu-manual-guide.sh",
+    "keywords": "gpu tpu guide guia"
+  },
+  {
+    "title": "Create VM System NAS",
+    "menu": "Create VM from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": "vm virtual nas truenas openmediavault omv xigmanas rockstor fygoos fygonas fnos",
+    "argument": "1"
+  },
+  {
+    "title": "Create VM System Windows",
+    "menu": "Create VM from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": "vm virtual windows",
+    "argument": "2"
+  },
+  {
+    "title": "Create VM System Linux",
+    "menu": "Create VM from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": "vm virtual linux",
+    "argument": "3"
+  },
+  {
+    "title": "Create VM System macOS (OSX-PROXMOX)",
+    "menu": "Create VM from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": "vm virtual macos osx",
+    "argument": "4"
+  },
+  {
+    "title": "Create VM System Others (based Linux)",
+    "menu": "Create VM from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": "vm virtual",
+    "argument": "5"
+  },
+  {
+    "title": "ZimaOS",
+    "menu": "Create VM from template or script",
+    "script": "vm/zimaos.sh",
+    "keywords": "zima nas vm"
+  },
+  {
+    "title": "Synology DSM",
+    "menu": "Create VM from template or script",
+    "script": "vm/synology.sh",
+    "keywords": "synology dsm nas loader vm"
+  },
+  {
+    "title": "Import Disk to VM",
+    "menu": "Disk Manager",
+    "script": "storage/disk-passthrough.sh",
+    "keywords": "disk disco passthrough"
+  },
+  {
+    "title": "Import Disk Image to VM",
+    "menu": "Disk Manager",
+    "script": "storage/import-disk-image.sh",
+    "keywords": "disk disco import image imagen"
+  },
+  {
+    "title": "Add Controller or NVMe PCIe to VM",
+    "menu": "Disk Manager",
+    "script": "storage/add_controller_nvme_vm.sh",
+    "keywords": "nvme pcie controller passthrough"
+  },
+  {
+    "title": "Import Disk to LXC",
+    "menu": "Disk Manager",
+    "script": "storage/disk-passthrough_ct.sh",
+    "keywords": "disk disco passthrough lxc"
+  },
+  {
+    "title": "Format / Wipe Physical Disk (Safe)",
+    "menu": "Disk Manager",
+    "script": "storage/format-disk.sh",
+    "keywords": "disk disco format formatear wipe"
+  },
+  {
+    "title": "SMART Disk Health & Test",
+    "menu": "Disk Manager",
+    "script": "storage/smart-disk-test.sh",
+    "keywords": "smart disk disco health salud"
+  },
+  {
+    "title": "Manual CLI Guide (Disk and Storage Manager)",
+    "menu": "Disk Manager",
+    "script": "storage/disk-storage-manual-guide.sh",
+    "keywords": "disk storage guide guia"
+  },
+  {
+    "title": "Add NFS share    as Proxmox Storage",
+    "menu": "Storage & Share Manager",
+    "script": "share/nfs_host.sh",
+    "keywords": "nfs storage almacenamiento mount montar"
+  },
+  {
+    "title": "Add Samba share  as Proxmox Storage",
+    "menu": "Storage & Share Manager",
+    "script": "share/samba_host.sh",
+    "keywords": "samba smb cifs storage almacenamiento mount montar"
+  },
+  {
+    "title": "Add iSCSI Target as Proxmox Storage",
+    "menu": "Storage & Share Manager",
+    "script": "share/iscsi_host.sh",
+    "keywords": "iscsi storage almacenamiento"
+  },
+  {
+    "title": "Add Local Disk   as Proxmox Storage",
+    "menu": "Storage & Share Manager",
+    "script": "share/disk_host.sh",
+    "keywords": "disk disco local storage almacenamiento"
+  },
+  {
+    "title": "Create Shared Directory on Host",
+    "menu": "Storage & Share Manager",
+    "script": "share/local-shared-manager.sh",
+    "keywords": "directory directorio carpeta share compartir"
+  },
+  {
+    "title": "Configure LXC Mount Points    (Host ↔ Container)",
+    "menu": "Storage & Share Manager",
+    "script": "share/lxc-mount-manager_minimal.sh",
+    "keywords": "mount montaje host container contenedor bind"
+  },
+  {
+    "title": "Configure NFS   Client in LXC (only privileged)",
+    "menu": "Storage & Share Manager",
+    "script": "share/nfs_client.sh",
+    "keywords": "nfs share lxc"
+  },
+  {
+    "title": "Configure Samba Client in LXC (only privileged)",
+    "menu": "Storage & Share Manager",
+    "script": "share/samba_client.sh",
+    "keywords": "smb samba cifs share lxc"
+  },
+  {
+    "title": "Configure NFS   Server in LXC (only privileged)",
+    "menu": "Storage & Share Manager",
+    "script": "share/nfs_lxc_server.sh",
+    "keywords": "nfs share lxc"
+  },
+  {
+    "title": "Configure Samba Server in LXC (only privileged)",
+    "menu": "Storage & Share Manager",
+    "script": "share/samba_lxc_server.sh",
+    "keywords": "smb samba cifs share lxc"
+  },
+  {
+    "title": "Help & Info (commands)",
+    "menu": "Storage & Share Manager",
+    "script": "share/commands_share.sh",
+    "keywords": "help ayuda commands comandos share"
+  },
+  {
+    "title": "Real-time network usage (iftop)",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red iftop traffic trafico",
+    "argument": "Real-time network usage (iftop)"
+  },
+  {
+    "title": "Network monitoring tool (iptraf-ng)",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red iptraf traffic trafico",
+    "argument": "Network monitoring tool (iptraf-ng)"
+  },
+  {
+    "title": "Bandwidth test (iperf3)",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red iperf3 speed velocidad",
+    "argument": "Bandwidth test (iperf3)"
+  },
+  {
+    "title": "Show Routing Table",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red route rutas",
+    "argument": "Show Routing Table"
+  },
+  {
+    "title": "Test Connectivity",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red ping conectividad",
+    "argument": "Test Connectivity"
+  },
+  {
+    "title": "Advanced Diagnostics",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red diagnostics diagnostico",
+    "argument": "Advanced Diagnostics"
+  },
+  {
+    "title": "Analyze Bridge Configuration",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red bridge vmbr puente",
+    "argument": "Analyze Bridge Configuration"
+  },
+  {
+    "title": "Analyze Network Configuration",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red interfaces config",
+    "argument": "Analyze Network Configuration"
+  },
+  {
+    "title": "Setup Persistent Network Names",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red nic names nombres interfaces",
+    "argument": "Setup Persistent Network Names"
+  },
+  {
+    "title": "Restart Network Service",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red restart reiniciar red",
+    "argument": "Restart Network Service"
+  },
+  {
+    "title": "Show Network Config File",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red interfaces config",
+    "argument": "Show Network Config File"
+  },
+  {
+    "title": "Create Network Backup",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red backup red",
+    "argument": "Create Network Backup"
+  },
+  {
+    "title": "Restore Network Backup",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red restore restaurar red",
+    "argument": "Restore Network Backup"
+  },
+  {
+    "title": "Disable NIC Offloading (Intel e1000e)",
+    "menu": "Network Management",
+    "script": "menus/network_menu.sh",
+    "keywords": "network red intel e1000e offloading nic",
+    "argument": "Disable NIC Offloading (Intel e1000e)"
+  },
+  {
+    "title": "Fail2Ban - Intrusion Prevention",
+    "menu": "Security",
+    "script": "security/fail2ban_installer.sh",
+    "keywords": "fail2ban security seguridad ssh"
+  },
+  {
+    "title": "Lynis - Security Audit",
+    "menu": "Security",
+    "script": "security/lynis_installer.sh",
+    "keywords": "lynis audit auditoria security seguridad"
+  },
+  {
+    "title": "UUp Dump ISO creator Custom",
+    "menu": "Utilities and Tools",
+    "script": "utilities/uup_dump_iso_creator.sh",
+    "keywords": "windows iso uup dump"
+  },
+  {
+    "title": "System Utilities Installer",
+    "menu": "Utilities and Tools",
+    "script": "utilities/system_utils.sh",
+    "keywords": "utilities tools herramientas paquetes packages"
+  },
+  {
+    "title": "Proxmox System Update",
+    "menu": "Utilities and Tools",
+    "script": "menus/utilities_menu.sh",
+    "keywords": "update upgrade actualizar apt",
+    "argument": "3"
+  },
+  {
+    "title": "Upgrade PVE 8 to PVE 9",
+    "menu": "Utilities and Tools",
+    "script": "menus/utilities_menu.sh",
+    "keywords": "upgrade pve8 pve9 actualizar",
+    "argument": "4"
+  },
+  {
+    "title": "Export VM to OVA or OVF",
+    "menu": "Utilities and Tools",
+    "script": "utilities/export_vm_ova_ovf.sh",
+    "keywords": "export exportar vm ova ovf"
+  },
+  {
+    "title": "Import VM from OVA or OVF",
+    "menu": "Utilities and Tools",
+    "script": "utilities/import_vm_ova_ovf.sh",
+    "keywords": "import importar vm ova ovf"
+  },
+  {
+    "title": "Useful System Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "1"
+  },
+  {
+    "title": "VM and CT Management Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "2"
+  },
+  {
+    "title": "Storage and Disks Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "3"
+  },
+  {
+    "title": "Network Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "4"
+  },
+  {
+    "title": "Updates and Packages Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "5"
+  },
+  {
+    "title": "GPU Passthrough Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "6"
+  },
+  {
+    "title": "ZFS Management Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "7"
+  },
+  {
+    "title": "Backup and Restore Commands",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "8"
+  },
+  {
+    "title": "System CLI Tools",
+    "menu": "Help and Info Commands",
+    "script": "help_info_menu.sh",
+    "keywords": "help ayuda commands comandos cli",
+    "argument": "9"
+  },
+  {
+    "title": "Change Language",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "language idioma",
+    "argument": "change_language"
+  },
+  {
+    "title": "Change Release Channel",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "beta stable channel canal",
+    "argument": "change_release_channel"
+  },
+  {
+    "title": "Show Version Information",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "version",
+    "argument": "show_version_info"
+  },
+  {
+    "title": "Uninstall ProxMenux",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "uninstall desinstalar",
+    "argument": "uninstall_proxmenu"
+  },
+  {
+    "title": "Reset ProxMenux Monitor Password",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "monitor password contraseña",
+    "argument": "reset_monitor_password"
+  },
+  {
+    "title": "Show Monitor Service Status",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "monitor service servicio",
+    "argument": "show_monitor_status"
+  },
+  {
+    "title": "Activate ProxMenux Monitor",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "monitor",
+    "argument": "toggle_monitor"
+  },
+  {
+    "title": "Deactivate ProxMenux Monitor",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "monitor",
+    "argument": "toggle_monitor"
+  }
+]

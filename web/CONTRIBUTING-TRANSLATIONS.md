@@ -5,7 +5,12 @@ serves every published page under locale-prefixed URLs:
 
 - `/en/<path>` — English, the source of truth
 - `/es/<path>` — Spanish
+- `/de/<path>` — German
+- `/fr/<path>` — French
+- `/it/<path>` — Italian
+- `/pt/<path>` — Portuguese
 - `/sk/<path>` — Slovak, with English fallback where needed
+- `/sv/<path>` — Swedish
 
 We use [`next-intl`](https://next-intl.dev) for the i18n plumbing. Anyone
 can translate the docs without writing TypeScript: most of the work is
@@ -147,6 +152,18 @@ Example:
 ```
 
 ### 4. Test locally
+
+From the repository root, check the available catalogs without using a
+translation provider:
+
+```bash
+python3 .github/scripts/check_web_docs_catalogs.py
+```
+
+For a full locale-completion change, add `--require-complete` to also require
+every English file and leaf. This validates schema, placeholders, rich-text
+tags, literal code and rendering metadata; it does not replace linguistic
+review. Partial translations can continue to use the English fallback.
 
 ```bash
 cd web
@@ -306,12 +323,32 @@ registers a renderer for them.
 
 ---
 
+## Language style: Spanish (es)
+
+The same criterion applies to the Monitor (`AppImage/messages/es`), the terminal menus (`lang/es.json`) and the documentation (`web/messages/es`). It is Spain Spanish, written with rigour but without formality.
+
+- **Address the reader as *tú*, never *usted*:** «Introduce la ruta», «Comprueba la conexión», «Déjalo vacío», «tus backups».
+- **Buttons, menu options, tab names and short action labels use the infinitive, without address:** «Guardar», «Eliminar la GPU de la configuración», «Activar 2FA», «Añadir GPU a un LXC». A full instruction sentence uses *tú*: «Selecciona una opción».
+- **Status messages say what happened:** «Backup creado», «No se necesitan cambios».
+- **Spain vocabulary:** *pulsar* (not *presionar*), *introducir* (not *ingresar*), *volver* (not *regresar*), *elegir* or *seleccionar*, *hacer clic*, *añadir* (not *agregar*), *fallo* (not *falla* as a noun), *usuario* (not *operador*), *monitorización* (not *monitoreo*). The key is **Intro**, not *Enter* or *Entrar*.
+- **Destructive actions use *eliminar*,** not *quitar*.
+- **Activate and deactivate:** an action or switch of the user is *activar/desactivar*; a technical state can stay *habilitado/deshabilitado*.
+- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Helper-Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
+- **Translated:** *pila* (stack), *puente* (bridge), *pasarela* (gateway) when they are common nouns; *Secure Gateway* is a product name and stays as it is.
+- **One canonical form for repeated phrases,** for example «Pulsa Intro para volver al menú…».
+- **Documentation quotes screen texts exactly as the Spanish interface shows them,** and page titles end in «Documentación de ProxMenux».
+
+---
+
 ## Adding a new locale
 
 If you want to add a language that isn't in the project yet:
 
 1. Create `messages/<locale>/common.json` and the page catalogs. The automated
-   builder can provide the initial baseline.
+   builder can provide the initial baseline when explicitly dispatched. It
+   does not run on merge: changing English and its translations together must
+   not trigger machine retranslation of the reviewed text. Offline validation
+   still runs automatically for website changes.
 2. Review the shared navigation and a representative set of documentation
    pages with a native speaker.
 3. Add the locale code to `routing.ts` only when the locale is ready to be

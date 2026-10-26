@@ -919,7 +919,11 @@ _bk_manage_extra_paths() {
         if (( count == 0 )); then
             preview="$(hb_translate "You haven't added any custom paths yet.")"
         else
-            preview="$(hb_translate "Currently"): \Zb\Z4${count}\Zn $(hb_translate "custom path(s) saved.")"
+            preview="$(hb_translate "Custom paths currently saved: {count}.")"
+            if [[ "$preview" != *'{count}'* ]]; then
+                preview="Custom paths currently saved: {count}."
+            fi
+            preview="${preview//\{count\}/"\Zb\Z4${count}\Zn"}"
         fi
         preview+=$'\n\n'"$(hb_translate "Custom paths are included in BOTH default and custom backup profiles.")"
 
@@ -1750,10 +1754,19 @@ _rs_apply() {
             [[ "${HB_RESTORE_INCLUDE_ZFS:-0}" != "1" ]] && { ((skipped++)); continue; }
         fi
 
+        local -a state_excludes=()
+        [[ "$rel" == "var/lib/proxmenux" ]] && mapfile -t state_excludes < <(hb_state_dir_excludes)
+
         # Save current before overwriting
         if [[ -e "$dst" ]]; then
             mkdir -p "$backup_root/$(dirname "$rel")"
-            cp -a "$dst" "$backup_root/$rel" 2>/dev/null || true
+            if (( ${#state_excludes[@]} )); then
+                # backup_root lives inside /var/lib/proxmenux/pre-restore.
+                mkdir -p "$backup_root/$rel"
+                rsync -aAXH --filter='-x security.selinux' "${state_excludes[@]}" "$dst/" "$backup_root/$rel/" 2>/dev/null || true
+            else
+                cp -a "$dst" "$backup_root/$rel" 2>/dev/null || true
+            fi
         fi
 
         # Apply
@@ -1783,9 +1796,11 @@ _rs_apply() {
                     --exclude "restore-pending/"
                 )
             fi
-            if rsync -aAXH --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null; then
+            rsync_extra+=("${state_excludes[@]}")
+            if rsync -aAXH --filter='-x security.selinux' --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null; then
                 ((applied++))
                 [[ "$rel" == "var/lib/proxmenux/backup-jobs" || "$rel" == "var/lib/proxmenux/backup-jobs/"* ]] && jobs_restored=1
+                [[ "$rel" == "var/lib/proxmenux" && -d "$src/backup-jobs" ]] && jobs_restored=1
             else
                 ((skipped++))
             fi
@@ -2300,59 +2315,71 @@ _rs_prepare_pending_restore() {
     local pending_base="/var/lib/proxmenux/restore-pending"
     local restore_id pending_dir created_at
     restore_id="$(date +%Y%m%d_%H%M%S)"
-    pending_dir="${pending_base}/${restore_id}"
+    mkdir -p "$pending_base/completed" || return 1
+    # Never reuse a published tree, even for two restores in the same second.
+    pending_dir=$(mktemp -d "${pending_base}/${restore_id}.XXXXXX") || return 1
+    restore_id="${pending_dir##*/}"
     created_at="$(date -Iseconds)"
 
-    mkdir -p "$pending_dir/rootfs" "$pending_dir/metadata" "$pending_base/completed" || return 1
+    # Keep all writes private; callers use if, so do not rely on errexit.
+    if ! (
+        mkdir -p "$pending_dir/rootfs" "$pending_dir/metadata" || exit 1
 
-    local rel src dst
-    : > "$pending_dir/apply-on-boot.list"
-    for rel in "${pending_paths[@]}"; do
-        src="$staging_root/rootfs/$rel"
-        [[ -e "$src" ]] || continue
-        dst="$pending_dir/rootfs/$rel"
-        mkdir -p "$(dirname "$dst")"
-        if [[ -d "$src" ]]; then
-            mkdir -p "$dst"
-            rsync -aAXH --delete "$src/" "$dst/" 2>/dev/null || true
-        else
-            cp -a "$src" "$dst" 2>/dev/null || true
+        local rel src dst
+        : > "$pending_dir/apply-on-boot.list" || exit 1
+        for rel in "${pending_paths[@]}"; do
+            src="$staging_root/rootfs/$rel"
+            [[ -e "$src" ]] || {
+                msg_error "$(translate "Pending restore source is missing:") $rel"
+                exit 1
+            }
+            dst="$pending_dir/rootfs/$rel"
+            mkdir -p "$(dirname "$dst")" || exit 1
+            if [[ -d "$src" ]]; then
+                mkdir -p "$dst" || exit 1
+                if ! rsync -aAXH --filter='-x security.selinux' --delete "$src/" "$dst/" 2>/dev/null; then
+                    msg_error "$(translate "Could not stage pending restore path:") $rel"
+                    exit 1
+                fi
+            else
+                if ! cp -a "$src" "$dst" 2>/dev/null; then
+                    msg_error "$(translate "Could not stage pending restore path:") $rel"
+                    exit 1
+                fi
+            fi
+            echo "$rel" >> "$pending_dir/apply-on-boot.list" || exit 1
+        done
+
+        if [[ ! -s "$pending_dir/apply-on-boot.list" ]]; then
+            msg_warn "$(translate "Nothing to schedule for reboot from selected paths.")"
+            exit 1
         fi
-        echo "$rel" >> "$pending_dir/apply-on-boot.list"
-    done
 
-    if [[ ! -s "$pending_dir/apply-on-boot.list" ]]; then
-        rm -rf "$pending_dir"
-        msg_warn "$(translate "Nothing to schedule for reboot from selected paths.")"
-        return 1
-    fi
+        if [[ -d "$staging_root/metadata" ]]; then
+            cp -a "$staging_root/metadata/." "$pending_dir/metadata/" 2>/dev/null || exit 1
+        fi
 
-    [[ -d "$staging_root/metadata" ]] && cp -a "$staging_root/metadata/." "$pending_dir/metadata/" 2>/dev/null || true
+        # Persist the rollback plan: VMs/LXCs/components that exist
+        # on the host but not in the backup. apply_cluster_postboot.sh
+        # surfaces a read-only "what differs" report from this file
+        # after the boot. When the operator opted into destructive
+        # rollback (HB_ROLLBACK_EXECUTE=1) we also destroy those
+        # guests RIGHT NOW — before the reboot — so the operator
+        # sees `qm destroy` live in the Monitor terminal AND the
+        # next boot comes up without those guests reserving hardware
+        # (critical for GPU passthrough: a stale VM with hostpci
+        # entries makes Proxmox auto-bind the GPU to vfio-pci before
+        # the nvidia driver can claim it).
+        local _rb_script="${SCRIPT_DIR}/restore/compute_rollback_plan.sh"
+        [[ ! -x "$_rb_script" ]] && _rb_script="${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/backup_restore/restore/compute_rollback_plan.sh"
+        if [[ -x "$_rb_script" ]]; then
+            bash "$_rb_script" "$staging_root" > "$pending_dir/rollback.json" 2>/dev/null || exit 1
+            if [[ ! -s "$pending_dir/rollback.json" ]]; then
+                rm -f "$pending_dir/rollback.json" || exit 1
+            fi
+        fi
 
-    # Persist the rollback plan: VMs/LXCs/components that exist
-    # on the host but not in the backup. apply_cluster_postboot.sh
-    # surfaces a read-only "what differs" report from this file
-    # after the boot. When the operator opted into destructive
-    # rollback (HB_ROLLBACK_EXECUTE=1) we also destroy those
-    # guests RIGHT NOW — before the reboot — so the operator
-    # sees `qm destroy` live in the Monitor terminal AND the
-    # next boot comes up without those guests reserving hardware
-    # (critical for GPU passthrough: a stale VM with hostpci
-    # entries makes Proxmox auto-bind the GPU to vfio-pci before
-    # the nvidia driver can claim it).
-    local _rb_script="${SCRIPT_DIR}/restore/compute_rollback_plan.sh"
-    [[ ! -x "$_rb_script" ]] && _rb_script="${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/backup_restore/restore/compute_rollback_plan.sh"
-    if [[ -x "$_rb_script" ]]; then
-        bash "$_rb_script" "$staging_root" > "$pending_dir/rollback.json" 2>/dev/null || true
-        [[ ! -s "$pending_dir/rollback.json" ]] && rm -f "$pending_dir/rollback.json"
-    fi
-
-    if [[ "${HB_ROLLBACK_EXECUTE:-0}" == "1" && -s "$pending_dir/rollback.json" ]] \
-       && command -v jq >/dev/null 2>&1; then
-        _rs_execute_rollback "$pending_dir/rollback.json"
-    fi
-
-    cat > "$pending_dir/plan.env" <<EOF
+        cat > "$pending_dir/plan.env" <<EOF || exit 1
 RESTORE_ID=${restore_id}
 CREATED_AT=${created_at}
 HB_RESTORE_INCLUDE_ZFS=${HB_RESTORE_INCLUDE_ZFS:-0}
@@ -2361,24 +2388,43 @@ HB_COMPAT_CROSS_VERSION=${HB_COMPAT_CROSS_VERSION:-0}
 HB_COMPAT_KERNEL_DIRECTION=${HB_COMPAT_KERNEL_DIRECTION:-same}
 HB_HYDRATION_APPLIED=${HB_HYDRATION_APPLIED:-0}
 EOF
-    # Persist hardware-drift skips so apply_pending_restore.sh can filter
-    # them at boot. The RS_SKIP_PATHS env var only lives in the restore
-    # menu session; without writing it to disk, paths that would break
-    # the boot (stale EFI UUIDs, foreign zpool.cache, ...) leaked through
-    # to the post-boot apply and ended up corrupting the bootloader.
-    if [[ -n "${RS_SKIP_PATHS:-}" ]]; then
-        printf '%s\n' "$RS_SKIP_PATHS" > "$pending_dir/rs-skip-paths.txt"
-        chmod 600 "$pending_dir/rs-skip-paths.txt"
-    fi
-    echo "pending" > "$pending_dir/state"
-
-    ln -sfn "$pending_dir" "$pending_base/current"
-
-    _rs_install_pending_service_unit "$onboot_script"
-    systemctl daemon-reload >/dev/null 2>&1 || true
-    if ! systemctl enable proxmenux-restore-onboot.service >/dev/null 2>&1; then
-        msg_error "$(translate "Could not enable on-boot restore service.")"
+        # Persist hardware-drift skips so apply_pending_restore.sh can filter
+        # them at boot. The RS_SKIP_PATHS env var only lives in the restore
+        # menu session; without writing it to disk, paths that would break
+        # the boot (stale EFI UUIDs, foreign zpool.cache, ...) leaked through
+        # to the post-boot apply and ended up corrupting the bootloader.
+        if [[ -n "${RS_SKIP_PATHS:-}" ]]; then
+            printf '%s\n' "$RS_SKIP_PATHS" > "$pending_dir/rs-skip-paths.txt" || exit 1
+            chmod 600 "$pending_dir/rs-skip-paths.txt" || exit 1
+        fi
+        echo "pending" > "$pending_dir/state" || exit 1
+    ); then
+        rm -rf "$pending_dir"
+        msg_error "$(translate "Could not stage pending restore. Nothing new was scheduled.")"
         return 1
+    fi
+
+    # current is the boot consumer's readiness boundary (state alone is not).
+    # Prepare a sibling-filesystem link privately, then rename over current;
+    # never unlink the old job first or let mv follow a directory symlink.
+    if ! ln -s "$pending_dir" "$pending_dir/.current" \
+       || ! _rs_install_pending_service_unit "$onboot_script" \
+       || ! systemctl daemon-reload >/dev/null 2>&1 \
+       || ! systemctl enable proxmenux-restore-onboot.service >/dev/null 2>&1; then
+        rm -rf "$pending_dir"
+        msg_error "$(translate "Could not prepare on-boot restore service. Nothing new was scheduled.")"
+        return 1
+    fi
+    if ! mv -Tf "$pending_dir/.current" "$pending_base/current"; then
+        rm -rf "$pending_dir"
+        msg_error "$(translate "Could not publish pending restore. Previous pending restore was kept.")"
+        return 1
+    fi
+
+    # Destructive rollback is allowed only after staging and publication succeed.
+    if [[ "${HB_ROLLBACK_EXECUTE:-0}" == "1" && -s "$pending_dir/rollback.json" ]] \
+       && command -v jq >/dev/null 2>&1; then
+        _rs_execute_rollback "$pending_dir/rollback.json"
     fi
 
     echo -e ""
@@ -3847,7 +3893,13 @@ _rs_run_complete_extras() {
                         "${installable[@]}" >>"$apt_log" 2>&1
                 local apt_rc=$?
                 if (( apt_rc == 0 )); then
-                    msg_ok "$(translate "Installed:") ${#installable[@]} $(translate "packages.")"
+                    local installed_message
+                    installed_message="$(translate "Packages installed: {count}.")"
+                    if [[ "$installed_message" != *'{count}'* ]]; then
+                        installed_message="Packages installed: {count}."
+                    fi
+                    installed_message="${installed_message//\{count\}/${#installable[@]}}"
+                    msg_ok "$installed_message"
                 else
                     msg_warn "$(translate "apt-get exited") ${apt_rc} — $(translate "see log:") $apt_log"
                 fi
@@ -4114,10 +4166,12 @@ main_menu() {
             4   "$(_bk_format_menu_item "$(translate "Scheduled backups and retention policies")" "")" \
             5   "$(_bk_format_menu_item "$(translate "Configure backup destinations (PBS, Borg, local)")" "")" \
             ""  " " \
+            6   "$(_bk_format_menu_item "$(translate "VM and CT backup jobs (Datacenter > Backup)")" "")" \
+            ""  " " \
             ""  "\Z4───────────────────── $(translate "Community Scripts") ─────────────────────\Zn" \
-            6   "$(_bk_format_menu_item "PVE Host Backup" "Helper-Scripts")" \
-            7   "$(_bk_format_menu_item "proxmox_toolbox" "Tontonjo")" \
-            8   "$(_bk_format_menu_item "proxsave" "tis24dev")" \
+            7   "$(_bk_format_menu_item "PVE Host Backup" "Helper-Scripts")" \
+            8   "$(_bk_format_menu_item "proxmox_toolbox" "Tontonjo")" \
+            9   "$(_bk_format_menu_item "proxsave" "tis24dev")" \
             ""  " " \
             0   "$(_bk_format_menu_item "$(translate "Return")" "")" \
             3>&1 1>&2 2>&3) || break
@@ -4128,9 +4182,10 @@ main_menu() {
             3) _bk_manage_extra_paths ;;
             4) _bk_scheduler ;;
             5) _bk_manage_destinations ;;
-            6) _bk_community_pve_host_backup ;;
-            7) _bk_community_proxmox_toolbox ;;
-            8) _bk_community_proxsave ;;
+            6) bash "$LOCAL_SCRIPTS/backup_restore/vm_backup_jobs.sh" ;;
+            7) _bk_community_pve_host_backup ;;
+            8) _bk_community_proxmox_toolbox ;;
+            9) _bk_community_proxsave ;;
             0) break ;;
         esac
     done

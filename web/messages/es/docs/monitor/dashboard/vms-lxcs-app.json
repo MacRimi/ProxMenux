@@ -12,7 +12,7 @@
     "p2": "El procedimiento que modifica el software se configura por separado en la <link>pestaña Actualizaciones</link>. Guardar una app nunca ejecuta un instalador ni un actualizador.",
     "callout": "El registro, el seguimiento de versiones y la actualización son tres capacidades independientes. Cada una puede utilizarse sin exigir las otras dos.",
     "dashboardTitle": "Del registro al lanzador Apps",
-    "dashboard": "Cada enlace web guardado aquí también se muestra como una tarjeta en la <appsLink>pestaña Apps</appsLink> principal. Esta página del LXC sigue siendo la fuente original para el nombre, el logotipo, los enlaces y el seguimiento de versión de la aplicación."
+    "dashboard": "Cada enlace web guardado aquí aparece también como tarjeta en la <appsLink>pestaña Apps</appsLink> principal. Esta página del LXC sigue siendo la referencia para nombre, logotipo, enlaces y seguimiento de versiones."
   },
   "overview": {
     "heading": "Qué puede contener un registro",
@@ -31,7 +31,7 @@
     "lead": "Las aplicaciones sugeridas forman parte de la caché del modal de cada LXC. El escaneo de arranque las prepara en segundo plano para que la pestaña App pueda mostrar inmediatamente los resultados almacenados.",
     "items": [
       "Abrir la pestaña App <strong>no</strong> inicia otro escaneo del catálogo ni consulta repetidamente el LXC.",
-      "<strong>Buscar aplicaciones</strong> ejecuta expresamente una detección nueva solo para ese LXC. Se utiliza después de instalar software mientras ProxMenux ya está en ejecución.",
+      "<strong>Buscar aplicaciones</strong> ejecuta una detección nueva para ese LXC. Úsalo tras instalar software nuevo mientras ProxMenux ya está en ejecución.",
       "La lista anterior permanece visible durante la búsqueda. Las nuevas coincidencias se añaden al finalizar.",
       "Si no se encuentra ninguna coincidencia nueva, el resultado aparece junto a las acciones y <strong>Registrar aplicación</strong> continúa disponible para introducirla manualmente.",
       "Guardar, eliminar o restaurar una app actualiza la misma caché inmediatamente. El arranque o la restauración de un LXC actualiza únicamente ese sistema mediante su evento de ciclo de vida existente."
@@ -42,10 +42,10 @@
     "heading": "Registrar una aplicación",
     "lead": "Las sugerencias detectadas y los registros manuales utilizan el mismo editor:",
     "steps": [
-      "Pulsa <strong>Registrar</strong> en una sugerencia o <strong>Registrar aplicación</strong> para elegir una entrada del catálogo o escribir un nombre personalizado.",
+      "Pulsa <strong>Registrar</strong> en una sugerencia o <strong>Registrar aplicación</strong> para elegir del catálogo o introducir un nombre personalizado.",
       "Revisa el nombre y el logotipo propuestos por el catálogo.",
       "Añade los enlaces web necesarios. Los puertos en escucha se ofrecen como accesos rápidos, pero ninguno se guarda automáticamente.",
-      "Deja <strong>Seguir versión disponible</strong> desactivado para un registro de solo enlace o actívalo y revisa el detector instalado y la fuente disponible.",
+      "Deja <strong>Seguir versión disponible</strong> desactivado para registros de solo enlace, o actívalo y revisa el detector de la versión instalada y la fuente de la versión disponible.",
       "Utiliza <strong>Probar detector</strong> cuando el seguimiento esté activado y guarda el registro.",
       "Pulsa <strong>Hecho</strong> al terminar la edición. Las pestañas App y Actualizaciones reutilizan el registro actualizado de la caché."
     ]
@@ -80,7 +80,7 @@
       "Cada enlace guarda un esquema, un puerto, una descripción opcional y una URL de logotipo opcional.",
       "La URL mostrada utiliza la dirección actual ya detectada para el LXC; esa dirección no se duplica en cada registro.",
       "Un enlace sin logotipo propio utiliza el logotipo general de la app.",
-      "Varios enlaces pueden representar una interfaz de administración, una API, una interfaz secundaria u otro punto final de la misma app.",
+      "Varios enlaces pueden representar una interfaz de administración, una API, una interfaz secundaria u otro endpoint de la misma app.",
       "Una app guardada solo con enlaces también aparece en Actualizaciones, donde se puede configurar posteriormente un actualizador personalizado."
     ]
   },
@@ -90,23 +90,48 @@
     "colMethod": "Método de versión instalada",
     "colUse": "Uso",
     "detectorRows": [
-      { "method": "dpkg / apk", "use": "Lee la versión del paquete instalado desde los metadatos de Debian, Ubuntu o Alpine." },
-      { "method": "binary", "use": "Ejecuta una ruta binaria absoluta o un nombre de comando con sus parámetros de versión." },
-      { "method": "file + regex", "use": "Lee un archivo real y extrae la versión mediante un grupo de captura." },
-      { "method": "docker label / docker exec", "use": "Lee una etiqueta de versión OCI o ejecuta un comando de versión dentro de un contenedor Docker." },
-      { "method": "python distribution", "use": "Usa importlib.metadata mediante el intérprete de Python seleccionado." },
-      { "method": "command", "use": "Ejecuta un comando avanzado en formato argv, sin shell, y extrae la versión de su salida." },
-      { "method": "manual", "use": "Guarda una versión introducida manualmente; debe cambiarse después de actualizar la app." }
+      {
+        "method": "dpkg / apk",
+        "use": "Lee la versión del paquete instalado desde los metadatos de Debian, Ubuntu o Alpine."
+      },
+      {
+        "method": "binary",
+        "use": "Ejecuta una ruta binaria absoluta o un nombre de comando con sus parámetros de versión."
+      },
+      {
+        "method": "file + regex",
+        "use": "Lee un archivo real y extrae la versión mediante un grupo de captura."
+      },
+      {
+        "method": "docker label / docker exec",
+        "use": "Lee una etiqueta de versión OCI o ejecuta un comando de versión dentro de un contenedor Docker."
+      },
+      {
+        "method": "python distribution",
+        "use": "Usa importlib.metadata mediante el intérprete de Python seleccionado."
+      },
+      {
+        "method": "command",
+        "use": "Ejecuta un comando avanzado en formato argv, sin shell, y extrae la versión de su salida."
+      },
+      {
+        "method": "manual",
+        "use": "Guarda una versión introducida manualmente; debe cambiarse después de actualizar la app."
+      },
+      {
+        "method": "OCI image",
+        "use": "Para contenedores instalados por OCI manager Apps. Lee las versiones de app e imagen del registro de instalación y compara el digest instalado con el publicado por el registro de imágenes. No necesita configuración."
+      }
     ],
     "sourcesHeading": "Fuentes para la versión disponible",
     "sources": [
-      "<strong>Repositorio de GitHub</strong>: último lanzamiento o etiqueta de un repositorio público <code>propietario/nombre</code>.",
-      "<strong>HTTP JSON</strong>: un punto final público y una ruta como <code>data.version</code> o <code>releases[0].tag_name</code>.",
+      "<strong>Repositorio de GitHub</strong>: último lanzamiento o etiqueta de un repositorio público <code>owner/name</code>.",
+      "<strong>HTTP JSON</strong>: un endpoint público y una ruta con puntos, como <code>data.version</code> o <code>releases[0].tag_name</code>.",
       "<strong>Docker Hub</strong>: etiquetas versionadas filtradas con una expresión regular. La vista previa muestra etiquetas reales coincidentes antes de guardar.",
-      "Las etiquetas móviles como <code>latest</code>, <code>stable</code> o <code>lts</code> no contienen una versión. Esas imágenes se siguen por digest desde las actualizaciones de imágenes Docker."
+      "Etiquetas móviles como <code>latest</code>, <code>stable</code> o <code>lts</code> no contienen una versión. Sigue esas imágenes por digest en las actualizaciones de imágenes Docker."
     ],
     "regexHeading": "Expresión de captura",
-    "regexLead": "La expresión regular del detector debe devolver la versión en su <strong>primer grupo de captura</strong>.",
+    "regexLead": "La expresión regular debe devolver la versión en su <strong>primer grupo de captura</strong>.",
     "regexRules": [
       "Haz coincidir el texto emitido por el binario, archivo, comando o fuente de etiquetas seleccionada; no supongas una ruta genérica.",
       "Escapa los puntos literales como <code>\\.</code> para que no coincidan con cualquier carácter.",
@@ -134,11 +159,31 @@
     "colDisplay": "Presentación",
     "colMeaning": "Significado",
     "rows": [
-      { "state": "Actualización disponible", "display": "Versión disponible en morado con un icono de flecha ascendente", "meaning": "Las versiones instalada y disponible son diferentes." },
-      { "state": "Actualizada", "display": "Versiones instalada y disponible sin la alerta morada", "meaning": "La última comprobación no encontró una versión superior." },
-      { "state": "Seguimiento pendiente", "display": "Estado de comprobación o pendiente", "meaning": "El registro está configurado, pero aún no ha completado las dos comprobaciones." },
-      { "state": "Seguimiento desactivado", "display": "Solo enlaces web, sin bloque de comparación", "meaning": "El registro sigue siendo válido y puede tener un actualizador." },
-      { "state": "Error de comprobación", "display": "Explicación en ámbar dentro de la tarjeta", "meaning": "El estado guardado anterior permanece visible mientras se informa del error del detector o de la fuente." }
+      {
+        "state": "Actualización disponible",
+        "display": "Versión disponible en morado con un icono de flecha ascendente",
+        "meaning": "Las versiones instalada y disponible son diferentes."
+      },
+      {
+        "state": "Actualizada",
+        "display": "Versiones instalada y disponible sin la alerta morada",
+        "meaning": "La última comprobación no encontró una versión superior."
+      },
+      {
+        "state": "Seguimiento pendiente",
+        "display": "Estado de comprobación o pendiente",
+        "meaning": "El registro está configurado, pero aún no ha completado las dos comprobaciones."
+      },
+      {
+        "state": "Seguimiento desactivado",
+        "display": "Solo enlaces web, sin bloque de comparación",
+        "meaning": "El registro sigue siendo válido y puede tener un actualizador."
+      },
+      {
+        "state": "Error de comprobación",
+        "display": "Explicación en ámbar dentro de la tarjeta",
+        "meaning": "El estado guardado anterior permanece visible mientras se informa del error del detector o de la fuente."
+      }
     ]
   },
   "management": {
@@ -157,11 +202,26 @@
     "colProblem": "Situación",
     "colResolution": "Resolución",
     "rows": [
-      { "problem": "Se instaló software después de arrancar ProxMenux", "resolution": "Pulsa Buscar aplicaciones. El escaneo explícito actualiza las sugerencias en caché de ese LXC." },
-      { "problem": "No se detectó la aplicación", "resolution": "Regístrala manualmente. Un nombre y un enlace web son suficientes; el seguimiento puede añadirse después." },
-      { "problem": "El detector sugerido devuelve una versión incorrecta", "resolution": "Abre Editar campos, selecciona el paquete, binario o archivo real y prueba el detector antes de guardar." },
-      { "problem": "Una carga Docker no se ofrece como app LXC", "resolution": "Registra Docker y añade la interfaz publicada de la carga como enlace web de Docker. Las actualizaciones de imágenes permanecen en la sección Docker." },
-      { "problem": "Una app guardada no tiene botón de actualización", "resolution": "Abre Actualizaciones y configura su método. El seguimiento de versiones no define por sí solo cómo se instala una actualización." }
+      {
+        "problem": "Se instaló software después de arrancar ProxMenux",
+        "resolution": "Pulsa Buscar aplicaciones. El escaneo explícito actualiza las sugerencias en caché de ese LXC."
+      },
+      {
+        "problem": "No se detectó la aplicación",
+        "resolution": "Regístrala manualmente. Un nombre y un enlace web son suficientes; el seguimiento puede añadirse después."
+      },
+      {
+        "problem": "El detector sugerido devuelve una versión incorrecta",
+        "resolution": "Abre Editar campos, selecciona el paquete, binario o archivo real y prueba el detector antes de guardar."
+      },
+      {
+        "problem": "Una carga Docker no se ofrece como app LXC",
+        "resolution": "Registra Docker y añade la interfaz publicada de la carga como enlace web de Docker. Las actualizaciones de imágenes permanecen en la sección Docker."
+      },
+      {
+        "problem": "Una app guardada no tiene botón de actualización",
+        "resolution": "Abre Actualizaciones y configura su método. El seguimiento de versiones no define por sí solo cómo se instala una actualización."
+      }
     ]
   },
   "figures": {

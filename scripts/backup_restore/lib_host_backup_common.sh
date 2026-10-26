@@ -131,7 +131,7 @@ hb_default_profile_paths() {
         "/usr/local/bin"
         "/usr/local/sbin"
         "/usr/local/share/proxmenux"
-        "$HB_BACKUP_JOBS_DIR"
+        "/var/lib/proxmenux"   # backup jobs and host state; restore machinery excluded
 
         # ── Root home (rsync excludes volatile dirs) ─────────
         "/root"
@@ -142,6 +142,22 @@ hb_default_profile_paths() {
         paths+=("/etc/zfs")
     fi
     printf '%s\n' "${paths[@]}"
+}
+
+# rsync excludes for /var/lib/proxmenux, relative to that directory.
+# Restore staging, rollback copies and post-restore markers belong to the
+# host that runs the restore: they are neither backed up nor overwritten.
+hb_state_dir_excludes() {
+    printf '%s\n' \
+        --exclude=/restore-pending/ \
+        --exclude=/pre-restore/ \
+        --exclude=/recovery/ \
+        --exclude=/restore-history/ \
+        --exclude=/restore-state.json \
+        --exclude=/cluster-apply-pending \
+        --exclude=/post-restore-maintenance-pending \
+        --exclude=/exports/ \
+        --exclude=/helpers_cache.json
 }
 
 # ==========================================================
@@ -591,6 +607,22 @@ hb_prepare_staging() {
         (( jobs_covered )) || paths+=("$HB_BACKUP_JOBS_DIR")
     fi
 
+    # The logins to private image registries are needed to update the
+    # applications installed from them, whatever the profile selects.
+    local registry_logins=/etc/pve/priv/proxmenux/registry-auth.json
+    if [[ -e "$registry_logins" ]]; then
+        local logins_covered=0 candidate normalized
+        for candidate in "${paths[@]}"; do
+            normalized="${candidate%/}"
+            [[ -z "$normalized" ]] && normalized="/"
+            if [[ "$registry_logins" == "$normalized" || "$registry_logins" == "$normalized"/* ]]; then
+                logins_covered=1
+                break
+            fi
+        done
+        (( logins_covered )) || paths+=("$registry_logins")
+    fi
+
     rm -rf "$staging_root"
     mkdir -p "$staging_root/rootfs" "$staging_root/metadata"
 
@@ -664,8 +696,10 @@ hb_prepare_staging() {
         target="$staging_root/rootfs/$rel"
         if [[ -d "$p" ]]; then
             mkdir -p "$target"
+            # The SELinux label belongs to the host that wrote the file: pmxcfs
+            # has none, and rsync cannot remove the one /tmp gives the copy.
             local -a rsync_opts=(
-                -aAXH --numeric-ids
+                -aAXH --numeric-ids --filter='-x security.selinux'
             )
 
             # /var/lib/pve-cluster: skip the raw config.db and its WAL/SHM
@@ -713,6 +747,12 @@ hb_prepare_staging() {
                     --exclude "ProxMenux-Monitor.AppImage*"
                     --exclude "install_proxmenux*.sh"
                 )
+            fi
+
+            if (( ! operator_added )) && [[ "$rel" == "var/lib/proxmenux" ]]; then
+                local -a state_excludes=()
+                mapfile -t state_excludes < <(hb_state_dir_excludes)
+                rsync_opts+=("${state_excludes[@]}")
             fi
 
             if rsync "${rsync_opts[@]}" "$p/" "$target/"; then
@@ -2483,7 +2523,7 @@ hb_configure_borg_manual() {
         --menu "\n$(hb_translate "Select repository destination:")" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
         "remote" "$(hb_translate 'Remote server via SSH  (recommended — off-host, dedup across machines)')" \
-        "usb"    "$(hb_translate 'Mounted external disk  (offline-safe, single-machine dedup)')" \
+        "usb"    "$(hb_translate 'Mounted external disk  (no network needed, single-machine dedup)')" \
         "local"  "$(hb_translate 'Local directory  (single-machine — only use if it is a SEPARATE disk)')" \
         3>&1 1>&2 2>&3) || return 1
 
@@ -2672,7 +2712,7 @@ hb_configure_borg_manual() {
 
     _borg_repo_ref_new="$repo"
     if [[ -n "$ssh_key" ]]; then
-        local rsh_cmd="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
+        local rsh_cmd="ssh -i $ssh_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
         [[ -n "${port:-}" && "$port" != "22" ]] && rsh_cmd="$rsh_cmd -p $port"
         export BORG_RSH="$rsh_cmd"
     elif [[ -n "${port:-}" && "$port" != "22" ]]; then
@@ -2779,7 +2819,7 @@ hb_select_borg_repo() {
     _borg_repo_ref="${HB_BORG_REPOS[$sel]}"
     local key="${HB_BORG_KEYS[$sel]}"
     if [[ -n "$key" && -f "$key" ]]; then
-        export BORG_RSH="ssh -i $key -o StrictHostKeyChecking=accept-new"
+        export BORG_RSH="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
     else
         unset BORG_RSH
     fi
@@ -3396,11 +3436,16 @@ Log: ${HB_NOTIFY_LOG_FILE:-}"
                   log_file:$log, reason:$reason}}' \
         2>/dev/null)
     [[ -z "$payload" ]] && return 0
+    # The Monitor answers on the same port over HTTPS once it has a certificate.
+    local scheme="http"
+    [[ -f /etc/proxmenux/ssl_config.json ]] && \
+        jq -e '.enabled' /etc/proxmenux/ssl_config.json >/dev/null 2>&1 && \
+        scheme="https"
     curl -sk --connect-timeout 3 --max-time 5 \
         -X POST \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        http://127.0.0.1:8008/api/notifications/webhook \
+        "${scheme}://127.0.0.1:8008/api/notifications/webhook" \
         >/dev/null 2>&1 || true
 }
 

@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "title": "Zariadenia a zrýchlenie ProxMenux",
+    "description": "Ako OCI manager Apps sprístupňuje GPU, NVIDIA, Coral, USB, FUSE a ďalšie zariadenia kontajneru OCI ako overené natívne zdroje Proxmox VE."
+  },
+  "header": {
+    "title": "Zariadenia a akcelerácia",
+    "description": "GPU, NVIDIA, Coral, USB, FUSE a blokové zariadenia sa stávajú overenými natívnymi zdrojmi Proxmox VE pre kontajner.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "title": "Zariadenie, ktoré aplikácia potrebuje, nie celý hostiteľ",
+      "blocks": [
+        {
+          "p": "Zariadenie požadované súborom Compose alebo aplikačným profilom sa stáva konkrétnou položkou <code>devN</code> alebo LXC pripojením. Požiadanie o GPU, USB zariadenie alebo Coral nerobí kontajner privilegovaným."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Inventár hostiteľa",
+                "detail": "/dev/dri/renderD128\nGID 993 · Intel"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "výrobca a\noverenie oprávnení"
+              },
+              {
+                "label": "LXC",
+                "detail": "rovnaké zariadenie\nefektívne GID"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "origin",
+      "title": "Odkiaľ pochádza požiadavka na zariadenie",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Zdroj",
+              "Čo sa číta",
+              "Čo robí inštalátor"
+            ],
+            "rows": [
+              [
+                "Docker Compose",
+                "<code>devices</code>, <code>group_add</code>, <code>deploy.resources</code> a NVIDIA žiadosti",
+                "Každá požiadavka sa stáva požiadavkou zariadenia zobrazenou na preskúmanie"
+              ],
+              [
+                "Katalógový profil",
+                "Podpora GPU, Coral, OpenCL, USB alebo FUSE, ktorú aplikácia skutočne má",
+                "Ponúkajú sa len možnosti overené pre tento obraz"
+              ],
+              [
+                "Metadáta a dokumentácia obrazu",
+                "VA-API, Selkies, LinuxServer mods alebo NVIDIA runtime",
+                "Pridávajú sa zdokumentované premenné a príprava"
+              ],
+              [
+                "Výber užívateľa",
+                "iba CPU, Intel/AMD, OpenCL, NVIDIA alebo voliteľné zariadenie",
+                "Výber je uložený v inštančnej zmluve"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Zistené zariadenia sa nepripájajú automaticky",
+            "body": "Na hostiteľovi sa vytvorí inventár, ale ponúknu a pripoja sa len zariadenia deklarované v súbore Compose alebo kompatibilnom profile. GPU, USB adaptér či Coral prítomný na hostiteľovi sa nesprístupní každému LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "identify",
+      "title": "Ako sa identifikuje hostiteľské zariadenie",
+      "intro": "Pred úpravou LXC sa zariadenie číta na hostiteľovi a zodpovedá zvolenému profilu.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Identita",
+              "Overenie"
+            ],
+            "rows": [
+              [
+                "Intel/AMD DRM",
+                "<code>/dev/dri/renderD*</code> a <code>/sys/class/drm/NODE/device/vendor</code>",
+                "Znakové zariadenie s výrobcom <code>0x8086</code> (Intel) alebo <code>0x1002</code> (AMD)"
+              ],
+              [
+                "AMD OpenCL",
+                "Renderovací uzol a <code>/dev/kfd</code>, ak ho profil potrebuje",
+                "Existencia, typ, výrobca, oprávnenia a deklarovaná zlučiteľnosť"
+              ],
+              [
+                "AMD ROCm",
+                "Renderovací uzol, <code>/dev/kfd</code> a generácia, ktorú výpočtový ovládač hlási v <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
+                "GPU generácie, ktorú obraz ROCm aplikácie podporuje (uvedené GPU RDNA2 a novšie), sa ponúkne bez úprav. Ostatné GPU týchto rodín, napríklad Radeon 680M a 780M, sa ponúkajú ako experimentálne a nikdy nie sú navrhnutou voľbou. ROCm ich oficiálne nepodporuje: aplikácia ich prezentuje ako generáciu danej rodiny (<code>HSA_OVERRIDE_GFX_VERSION</code>) a inštalátor pred stiahnutím väčšieho obrazu vyžiada potvrdenie. Staršia GPU, napríklad integrovaná grafika Ryzen 5000U, sa neponúkne a Immich ponechá rozpoznávanie na CPU"
+              ],
+              [
+                "NVIDIA",
+                "<code>nvidia-smi</code> a <code>nvidia-container-cli</code>",
+                "GPU, UUID, PCI bus, verzia ovládača, Toolkit, uzly <code>/dev/nvidia*</code>, binárne súbory a knižnice"
+              ],
+              [
+                "Coral PCIe/M.2",
+                "<code>/dev/apex_N</code> a jeho odkaz na <code>/sys/dev/char/MAJOR:MINOR</code>",
+                "Uzol znakového zariadenia, čísla major/minor, vlastník, GID a oprávnenia"
+              ],
+              [
+                "USB a sériové",
+                "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> alebo <code>/dev/bus/usb/BBB/DDD</code>",
+                "Uzol znakového zariadenia; pri USB aj výrobca, produkt a sériové číslo, ak ich sysfs zverejňuje"
+              ],
+              [
+                "KVM, TUN, FUSE, video a generické SCSI",
+                "<code>/dev/kvm</code>, <code>/dev/net/tun</code>, <code>/dev/fuse</code>, <code>/dev/videoN</code> alebo <code>/dev/sgN</code>",
+                "Podporovaná cesta, typ uzla a účinné práva"
+              ],
+              [
+                "Optická mechanika",
+                "<code>/dev/srN</code>",
+                "Blokové zariadenie"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Čo sa stane počas inštalácie",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Šablóna ponúka svoje profily",
+                "body": "Napríklad len CPU, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL alebo NVIDIA. Možnosti patria k obrazu, nie k spoločnému menu."
+              },
+              {
+                "title": "Vyberie sa profil",
+                "body": "Určuje uzly zariadení, prostredie, mody alebo runtime, ktoré aplikácia potrebuje."
+              },
+              {
+                "title": "Navrhuje sa cesta",
+                "body": "Pre DRM, <code>/dev/dri/renderD128</code>, ktoré môžu byť zmenené na hostiteľa s niekoľkými renderových uzlov. Pre USB alebo sériový je vybraný konkrétny uzol."
+              },
+              {
+                "title": "Overenie",
+                "body": "Existencia, typ, povolený výrobca, povolenia a GID sú kontrolované. Nesúlad zastaví operáciu."
+              },
+              {
+                "title": "Zapíše sa kontrakt",
+                "body": "Cesta, režim, GID, zápis a profil sa zaznamenávajú pre aktualizácie a opätovné vytvorenia."
+              },
+              {
+                "title": "Pripojenie a skúška",
+                "body": "<code>pct set</code> pridáva položku <code>devN</code> a prístup sa potom kontroluje vo vnútri LXC. LinuxServer obrazy sú tiež kontrolované ako používateľ <code>abc</code>."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "config",
+      "title": "Ako sa objavuje v konfigurácii LXC",
+      "intro": "Ilustračné hodnoty: <code>dev0</code> a <code>dev1</code> sú voľné pozície priradené Proxmox VE. <code>renderD128</code>, <code>apex_0</code> a GID závisia od hardvéru uzla.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Intel/AMD VA-API",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=993,deny-write=0"
+              },
+              {
+                "title": "Coral PCIe/M.2",
+                "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "Špecifické USB zariadenie",
+                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "AMD OpenCL",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=GID,deny-write=0\ndev1: path=/dev/kfd,mode=0660,gid=GID,deny-write=0"
+              }
+            ]
+          }
+        },
+        {
+          "p": "GID sa načíta na hostiteľovi pomocou <code>stat</code> a zapíše do položky <code>devN</code>; nepredpokladá sa, že skupiny <code>render</code> a <code>video</code> majú pevné číslo. Zariadenie má v LXC rovnakú cestu <code>/dev</code>, na ktorej ho vyhľadávajú vlastné mechanizmy aplikácie."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Profily, ktoré môže obraz ponúknuť",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Výsledná konfigurácia",
+              "Ponúknuté, keď"
+            ],
+            "rows": [
+              [
+                "Intel/AMD VA-API",
+                "Renderovací uzol <code>/dev/dri</code>",
+                "Aplikácia podporuje video zrýchlenie"
+              ],
+              [
+                "OpenCL",
+                "Render uzol, <code>/dev/kfd</code> v prípade potreby a oficiálny mod",
+                "Obraz alebo profil ho dokumentuje"
+              ],
+              [
+                "NVIDIA",
+                "Zariadenia a knižnice ovládača na hostiteľovi",
+                "Hostiteľ má funkčný ovládač a NVIDIA Container Toolkit"
+              ],
+              [
+                "Coral",
+                "<code>/dev/apex_0</code> alebo zbernica USB",
+                "Profil vyhlasuje Coral podporu (Frigate)"
+              ],
+              [
+                "USB, sériové, FUSE",
+                "Jediné zariadenie, validovaný strom alebo funkcia LXC",
+                "Zmluva o ňu žiada"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nvidia",
+      "title": "NVIDIA",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "Požiadavka na uzol: NVIDIA Container Toolkit",
+            "body": "Funkčný ovládač na Proxmox VE nestačí na sprístupnenie GPU NVIDIA obrazu OCI. OCI manager Apps používa <code>nvidia-container-cli</code> zo súpravy NVIDIA Container Toolkit na identifikáciu zariadení a získanie binárnych súborov a knižníc zodpovedajúcich načítanému ovládaču."
+          }
+        },
+        {
+          "p": "<nvidiaLink>Inštalátor NVIDIA nástroja ProxMenux</nvidiaLink> nainštaluje NVIDIA Container Toolkit z oficiálneho repozitára NVIDIA spolu s ovládačom. Skontroluje jeho štyri balíky, overí <code>nvidia-container-cli</code> a zaznamená výsledok do denníka zmien <auditLink>Audit a správa</auditLink>."
+        },
+        {
+          "p": "Tieto dva príkazy na hostiteľovi ukazujú, či je k dispozícii ovládač a súbor nástrojov:"
+        },
+        {
+          "shell": {
+            "code": "nvidia-smi -L\nnvidia-container-cli --version"
+          }
+        },
+        {
+          "p": "Na hostiteľovi, kde bol ovládač nainštalovaný inými prostriedkami, je Toolkit nainštalovaný z oficiálneho stabilného úložiska:"
+        },
+        {
+          "shell": {
+            "code": "apt-get update\napt-get install -y --no-install-recommends ca-certificates curl gnupg2\n\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \\\n  | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\n\ncurl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \\\n  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \\\n  > /etc/apt/sources.list.d/nvidia-container-toolkit.list\n\napt-get update\napt-get install -y nvidia-container-toolkit libnvidia-container-tools"
+          }
+        },
+        {
+          "p": "Inventár, ktorý používa OCI manager Apps, je výstupom príkazu:"
+        },
+        {
+          "shell": {
+            "code": "nvidia-container-cli list --device all --libraries --binaries --firmwares --ipcs"
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Konfigurácia Runtime Docker nie je zahrnutá",
+            "body": "Kontajnery sú natívne LXC a nepoužívajú démona Docker, takže <code>nvidia-ctk runtime configure --runtime=docker</code> nehrá žiadnu úlohu: ProxMenux priamo volá <code>nvidia-container-cli</code> a zapíše zariadenia a pripojenia LXC. Príkazy a podporované platformy sú uvedené v <toolkitLink>návode na inštaláciu NVIDIA Container Toolkit</toolkitLink>."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "cpu",
+                "title": "Inventár z ovládača",
+                "body": "<code>nvidia-container-cli</code> uvádza uzly zariadenia, binárne súbory, firmware a knižnice nainštalovaného ovládača."
+              },
+              {
+                "icon": "refresh",
+                "title": "Bez pevnej verzie",
+                "body": "Šablóna nepomenuje súbory knižnice. Profil je generovaný z aktuálneho hostiteľa."
+              },
+              {
+                "icon": "shield",
+                "title": "Pripojenia iba na čítanie",
+                "body": "Hostiteľské knižnice sú namontované iba na čítanie namiesto kopírovania do kontajnera."
+              },
+              {
+                "icon": "hardDrive",
+                "title": "Zmeny ovládača",
+                "body": "Po zmene ovládača sa inventár znovu vygeneruje pred začiatkom postihnutých LXC."
+              }
+            ]
+          }
+        },
+        {
+          "code": {
+            "title": "Výsledok NVIDIA (zjednodušený)",
+            "code": "devN: path=/dev/nvidia0,...\ndevN: path=/dev/nvidiactl,...\ndevN: path=/dev/nvidia-uvm,...\nlxc.mount.entry: HOST_LIBRARY CONTAINER_LIBRARY none ro,bind,create=file 0 0"
+          }
+        },
+        {
+          "p": "Sprístupniť len <code>/dev/nvidia0</code> nestačí. Komponenty užívateľského priestoru načítaného ovládača sú namontované len na čítanie a <code>nvidia-smi</code> potom beží vnútri LXC pre porovnanie GPU, UUID, PCI zbernice a verzie s inventárom hostiteľa."
+        }
+      ]
+    },
+    {
+      "id": "usb",
+      "title": "USB, sériové a USB Coral",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "Číslovanie USB sa môže zmeniť",
+            "body": "Cesta ako <code>/dev/bus/usb/003/004</code> sa môže zmeniť po opätovnom pripojení zariadenia alebo reštarte hostiteľa. Profil zaznamená výrobcu, produkt a sériové číslo, ak sú dostupné, ale nová adresa zbernice sa automaticky nepremapuje."
+          }
+        },
+        {
+          "p": "Periférne zariadenie je daný jeho konkrétnym uzlom: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> alebo <code>/dev/bus/usb/BBB/DDD</code>. Sprístupnenie celého <code>/dev</code> nie je akceptovaný. Coral je ponúkaný len pre aplikácie, ktorých profil deklaruje."
+        }
+      ]
+    },
+    {
+      "id": "trees",
+      "title": "Stromy zariadení a funkcie LXC",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Žiadosť",
+              "Výsledná konfigurácia",
+              "Rozsah"
+            ],
+            "rows": [
+              [
+                "<code>/dev/dvb</code>, <code>/dev/snd</code> alebo <code>/dev/bus/usb</code>",
+                "Každý uzol znakového zariadenia v strome dostane vlastnú položku <code>devN</code> s režimom a GID hostiteľa",
+                "Len požadovaný strom, nie zvyšok <code>/dev</code>"
+              ],
+              [
+                "<code>/dev/fuse</code>",
+                "Uzol a, keď ho profil potrebuje, funkcia <code>fuse=1</code>",
+                "Samotná FUSE nepublikuje pripojenia do iných LXC"
+              ],
+              [
+                "<code>/dev/net/tun</code>",
+                "Položka <code>devN</code> s rovnakou cestou vo vnútri LXC",
+                "VPN alebo konfigurácia siete zostáva v aplikácii"
+              ],
+              [
+                "<code>/dev/kvm</code>",
+                "Potvrdená položka <code>devN</code>",
+                "Ponúkané iba vtedy, keď o to zmluva požiada"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Potvrdenie podľa úrovne rizika",
+      "blocks": [
+        {
+          "p": "Konkrétne zariadenia, voliteľné privilégium, požadované privilégium, AppArmor alebo seccomp relaxácia a prístup k mennému priestoru PID hostiteľa sa považujú za samostatné prípady, nie pod jedným generickým privilegovaným označením. Každá možnosť s rizikom sa vysvetľuje a potvrdzuje počas inštalácie."
+        }
+      ]
+    }
+  ]
+}

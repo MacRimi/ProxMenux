@@ -196,18 +196,29 @@ disk_referenced_in_config() {
 
 
 
-CT_LIST=$(pct list | awk 'NR>1 {print $1, $3}')
+CT_LIST=""
+OCI_NOTE=""
+CT_LIST_H=$UI_MENU_LIST_H
+while read -r ct_id ct_name; do
+    [[ -n "$ct_id" ]] || continue
+    if pmx_lxc_is_oci "$ct_id"; then
+        CT_LIST_H=$((UI_MENU_LIST_H - 2))
+        OCI_NOTE="\n\n$(translate "Containers created from an OCI image are not listed: their paths are changed in OCI manager Apps.")"
+        continue
+    fi
+    CT_LIST+="${CT_LIST:+ }$ct_id ${ct_name:-CT-$ct_id}"
+done < <(pct list | awk 'NR>1 {print $1, $3}')
 if [ -z "$CT_LIST" ]; then
     dialog --backtitle "$BACKTITLE" \
            --title "$(translate "Error")" \
-           --msgbox "$(translate "No CTs available in the system.")" $UI_MSG_H $UI_MSG_W
+           --msgbox "$(translate "No CTs available in the system.")${OCI_NOTE}" 12 $UI_MSG_W
     exit 1
 fi
 
 # shellcheck disable=SC2086  # CT_LIST is intentionally word-split into dialog menu pairs
 CTID=$(dialog --backtitle "$BACKTITLE" \
               --title "$(translate "Select CT for destination disk")" \
-              --menu "$(translate "Select the CT to which you want to add disks:")" $UI_MENU_H $UI_MENU_W $UI_MENU_LIST_H \
+              --menu "$(translate "Select the CT to which you want to add disks:")${OCI_NOTE}" $UI_MENU_H $UI_MENU_W $CT_LIST_H \
               $CT_LIST \
               2>&1 >/dev/tty)
 
@@ -457,7 +468,7 @@ for DISK in $SELECTED; do
     if lsblk "$DISK" | grep -q "raid" || grep -q "${DISK##*/}" /proc/mdstat; then
         dialog --backtitle "$BACKTITLE" \
                --title "$(translate "RAID Detected")" \
-               --msgbox "\n$(translate "The disk") $DISK_INFO $(translate "appears to be part of a") RAID. $(translate "For security reasons, the system cannot format it.")\\n\\n$(translate "If you are sure you want to use it, please remove the") RAID metadata $(translate "or format it manually using external tools.")\\n\\n$(translate "After that, run this script again to add it.")" $UI_RESULT_H $UI_RESULT_W
+               --msgbox "\n$(translate "The disk") $DISK_INFO $(translate "appears to be part of a") RAID. $(translate "For security reasons, the system cannot format it.")\\n\\n$(translate "If you are sure you want to use it, remove the RAID metadata or format it manually using external tools.")\\n\\n$(translate "After that, run this script again to add it.")" $UI_RESULT_H $UI_RESULT_W
         continue
     fi
 
@@ -713,7 +724,13 @@ done
 
 echo ""
 if [ "$DISKS_ADDED" -gt 0 ]; then
-    msg_ok "$(translate "Completed.") $DISKS_ADDED $(translate "disk(s) added to CT") $CTID."
+    COMPLETED_MESSAGE="$(translate "Completed. Disks added to CT {ctid}: {count}.")"
+    if [[ "$COMPLETED_MESSAGE" != *'{ctid}'* || "$COMPLETED_MESSAGE" != *'{count}'* ]]; then
+        COMPLETED_MESSAGE="Completed. Disks added to CT {ctid}: {count}."
+    fi
+    COMPLETED_MESSAGE="${COMPLETED_MESSAGE//\{ctid\}/$CTID}"
+    COMPLETED_MESSAGE="${COMPLETED_MESSAGE//\{count\}/$DISKS_ADDED}"
+    msg_ok "$COMPLETED_MESSAGE"
 else
     msg_warn "$(translate "No disks were added.")"
 fi

@@ -18,13 +18,13 @@
   },
   "howItWorks": {
     "heading": "How it works",
-    "intro": "The Health Monitor runs on two parallel lanes inside the Monitor process. A lightweight <strong>vital signs sampler</strong> reads CPU, memory and temperature every few seconds so that sustained-threshold conditions are detected fast; in parallel, the <strong>full health cycle</strong> runs every five minutes and exercises every category from end to end. Both lanes converge into the same SQLite tables — and from there, three consumers read the state independently.",
+    "intro": "The Health Monitor uses two parallel threads inside the Monitor process. A lightweight <strong>vital signs sampler</strong> fills CPU, memory and temperature history buffers. The <strong>full health cycle</strong> reads those buffers, evaluates sustained conditions and runs the other checks approximately every five minutes, then writes findings to SQLite for the dashboard and notification flow.",
     "scannerTitle": "From sample to stored finding",
-    "scannerCaption": "The scanner. Vital signs are sampled fast so sustained-CPU / sustained-memory pressure can be detected before the next 5-min cycle. The full cycle reads those buffers and runs the heavier checks (SMART, ZFS pool state, journal scanning, service health, etc.) before writing the structured findings to SQLite.",
+    "scannerCaption": "The sampler fills history buffers between health cycles: CPU usage every 5 s, memory every 30 s and temperature every 15 s. It does not evaluate alerts itself. The full cycle evaluates those buffers and runs heavier checks (SMART, ZFS pool state, journal scanning and service health) before writing findings to SQLite.",
     "scannerArrowLabel": "step",
     "scannerNodes": {
       "samplerLabel": "Vital signs sampler",
-      "samplerDetail": "CPU usage 30 s\nMemory 30 s\nTemperature 15 s\n→ history buffers",
+      "samplerDetail": "CPU usage 5 s\nMemory 30 s\nTemperature 15 s\n→ history buffers",
       "cycleLabel": "Full health cycle",
       "cycleDetail": "Every 5 min\nReads buffers\n+ live probes\n(SMART, ZFS,\nservices, journal…)",
       "checksLabel": "Per-category checks",
@@ -58,7 +58,7 @@
       {
         "category": "CPU & Temperature",
         "checks": "CPU usage with hysteresis, sensor temperature",
-        "events": "High sustained load; CPU temperature crossing the vendor warning / critical thresholds."
+        "events": "Sustained high CPU usage; sensor-temperature warnings based on sampled readings."
       },
       {
         "category": "Memory & Swap",
@@ -68,7 +68,7 @@
       {
         "category": "Storage",
         "checks": "Proxmox storages, root filesystem",
-        "events": "Storage offline (NFS server unreachable, CIFS expired creds); root mount > 90 %; LVM thin pool nearing full."
+        "events": "Root or other monitored filesystems crossing configured space thresholds (85% warning / 95% critical by default); unavailable PVE storages; stale or unexpectedly read-only NFS/CIFS mounts; LVM-thin and other pool storages crossing the same thresholds."
       },
       {
         "category": "Disks & SMART",
@@ -98,7 +98,7 @@
       {
         "category": "System Updates",
         "checks": "Pending updates, security updates, kernel / PVE version, system age",
-        "events": "Security updates available; pinned kernel several minor versions behind; host uptime > 90 days. When updates are pending, the Overview header shows an <em>Update Now</em> button that runs the full ProxMenux update flow inline; on close it re-hits the health endpoint with <code>?refresh=1</code> so the badge count reflects the new state without waiting for the next 5-min cycle."
+        "events": "Pending security or running-kernel updates; a system not updated for a long time. The Updates category of the Health Status modal shows an <em>Update Now</em> button when updates are pending. It runs the full ProxMenux update flow inline; closing it refreshes health with <code>?refresh=1</code> so the badge reflects the new state without waiting for the next cycle."
       },
       {
         "category": "Security & Certificates",
@@ -141,7 +141,7 @@
     ],
     "infoNote": "A category that is <strong>OK</strong> but has dismissed events still inside their suppression window is rendered as <strong>INFO</strong> — to remind you that something is being silenced rather than that nothing was ever wrong.",
     "unknownTitle": "UNKNOWN, when a check can't complete",
-    "unknownBody": "A check that fails to produce a verdict for three cycles in a row (a probe that times out, a sensor that disappeared, a tool that exits with an error) is recorded internally as <code>UNKNOWN</code>. The dashboard surfaces this as a yellow status — the overall view caps <code>UNKNOWN</code> at <strong>WARNING</strong> so it never escalates a healthy host to CRITICAL on its own."
+    "unknownBody": "An unavailable check returns <code>UNKNOWN</code>; after three consecutive such cycles, a persistent finding is recorded. The dashboard shows an unavailable check in yellow. The overall view caps <code>UNKNOWN</code> at <strong>WARNING</strong>, so an unavailable check alone does not make the host CRITICAL."
   },
   "dashboardView": {
     "heading": "The dashboard view",
@@ -158,10 +158,10 @@
   },
   "dismiss": {
     "heading": "Dismissing alerts and the Suppression Duration",
-    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The <em>Update Now</em> button in the Overview header is the direct shortcut to resolve that specific case in place; for everything else, or when patching is deferred, the Health Monitor also offers two coupled silencing mechanisms:",
+    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The <em>Update Now</em> button in the Updates category of the Health Status modal is the direct shortcut to resolve that specific case in place; for everything else, or when patching is deferred, the Health Monitor also offers two coupled silencing mechanisms:",
     "step1": "<strong>Per-event Dismiss action</strong> in the modal. The Dismiss button opens a small dropdown with three options — <strong>24 hours</strong>, <strong>7 days</strong> or <strong>Permanently</strong> — letting you choose how long this specific alert stays silenced regardless of the category's default. Picking one calls <code>POST /api/health/acknowledge</code> with the <code>error_key</code> and the chosen <code>suppression_hours</code> (<code>-1</code> for permanent). The event moves to the Dismissed list with a timestamped <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Dismiss dropdown on a Health Monitor alert — 24 hours, 7 days or Permanently",
-    "dropdownImageCaption": "Per-event Dismiss dropdown. The chosen window applies to this single alert; if no per-event window is selected the category's default is used. Permanent dismisses are tagged with a distinct amber <em>Permanent</em> badge in the Dismissed list and never re-fire.",
+    "dropdownImageCaption": "Per-event Dismiss dropdown. The chosen window applies to this single alert; without a per-event choice the category default is used. Permanent dismissals have an amber <em>Permanent</em> badge and normally do not re-fire. The critical CPU-temperature override described below is an exception.",
     "step2": "<strong>Per-category Suppression Duration setting</strong>. From the Settings → Health Monitor card (or <code>POST /api/health/settings</code>), each of the ten categories has its own default window applied when a Dismiss is fired without a per-event choice:",
     "imageAlt": "Per-category Suppression Duration settings card in Settings → Health Monitor",
     "imageCaption": "Suppression Duration card — one dropdown per category. Pick a longer window for noisy events (e.g. pending updates) and shorter for ones you want to re-evaluate quickly. Active Suppressions are listed underneath (see below).",
@@ -171,38 +171,38 @@
     "autoTitle": "Auto-suppression when you change the Duration",
     "autoBody": "Setting a category's Suppression Duration to anything other than the default 24 h has a second effect beyond user-initiated dismissals: <strong>future findings in that category enter the table already acknowledged</strong> with that duration. This is by design — if you've told the Monitor that you want disk-related events silenced for a week, brand-new disk findings honour that intent without you having to dismiss each one by hand. They appear directly in the Dismissed list with the configured remaining time. Categories left at 24 h are unaffected and behave the classic way (new findings land in Active until you act).",
     "tempTitle": "CPU temperature CRITICAL is the safety override",
-    "tempBody": "One specific finding bypasses the suppression entirely: <strong>CPU temperature CRITICAL</strong>. If the sensor crosses the critical threshold, the alert re-fires regardless of any prior dismissal — a cooked CPU is a cooked CPU. This is the only built-in override of the dismiss model.",
-    "nonDismissableTitle": "Findings that cannot be dismissed",
-    "nonDismissableBody": "A handful of findings are flagged non-dismissable on purpose — they signal a condition where silencing the alert could cost data, hardware or connectivity. The Dismiss button is hidden for these rows; the alert clears only when the underlying condition recovers and the auto-resolve cleanup picks it up. Other findings (transient I/O events on a healthy disk, recovered states) are also marked non-dismissable but for the opposite reason: there's nothing to silence because the row is already informational and self-clearing.",
+    "tempBody": "The persistence layer has a special guard for a record marked <strong>CPU temperature CRITICAL</strong>: if such a record is received, it bypasses prior acknowledgment and auto-suppression. This guard does not mean that every temperature checker emits a critical record whenever a configured critical threshold is crossed.",
+    "nonDismissableTitle": "Which findings can be dismissed?",
+    "nonDismissableBody": "The modal shows Dismiss only when an individual check explicitly returns dismissable = true. A false or missing flag hides that button. Severity alone does not determine this permission: several critical checks allow acknowledgment. The examples below describe the current payloads; silencing an alert does not repair its cause.",
     "headerFinding": "Finding",
-    "headerWhy": "Why it can't be dismissed",
+    "headerWhy": "Dismiss behavior",
     "rows": [
       {
         "finding": "CPU temperature warning / critical",
-        "why": "Hardware risk — sustained over-temperature damages silicon. Silencing would let a cooking CPU run unnoticed."
+        "why": "The sampled sensor-temperature warning explicitly allows dismissal. A separate persistence guard bypasses acknowledgment if a CPU-temperature record arrives with CRITICAL severity."
       },
       {
         "finding": "Filesystem space critical (root mount)",
-        "why": "Data loss risk — a full root prevents writes and corrupts state. The alert must remain visible until you free space."
+        "why": "Filesystem-space checks explicitly allow dismissal, including critical usage. Acknowledging the alert does not free space or remove the risk of failed writes."
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "Data integrity risk — pool failure threatens every dataset on it. Silencing while the pool is unhealthy is never the right answer."
+        "why": "ZFS pool-state findings (DEGRADED, FAULTED, UNAVAIL) explicitly allow dismissal, as do pool-capacity checks. Acknowledgment does not repair a degraded or faulted pool."
       },
       {
         "finding": "Disk I/O errors with SMART FAILED",
-        "why": "Drive failure confirmed by SMART — masking hides real hardware dying. The alert stays until the device is replaced (or removed from the host)."
+        "why": "Persisted journal-derived disk findings can allow dismissal. SMART FAILED still needs investigation; whether the button appears depends on the individual check flag, not on the alert text alone."
       },
       {
         "finding": "Network interface DOWN",
-        "why": "Connectivity loss — bridges, bonds and physical interfaces with active traffic must stay visible. Silencing them would mask a remote-management outage."
+        "why": "Persisted interface-DOWN checks explicitly allow dismissal. This does not restore a bridge, bond or physical link, or recover remote access."
       },
       {
         "finding": "I/O events on healthy disks (INFO)",
-        "why": "Transient ATA / dmesg events on a disk whose SMART says OK — flagged INFO and self-clearing. Nothing to dismiss because the next cycle already removes them."
+        "why": "Transient ATA or dmesg events with healthy SMART can be informational and self-clearing. Informational rows need not expose a Dismiss button; the checker determines when the condition is resolved."
       }
     ],
-    "principle": "Everything else can be dismissed. The principle is: alerts that indicate \"real damage in progress\" or that have already self-resolved are kept off the dismiss path; alerts about sustained conditions you may want to acknowledge and re-check later (high CPU usage, pending updates, certificate near expiry, log warnings, VM startup hiccups, etc.) all expose the Dismiss button."
+    "principle": "Use the button shown for the actual finding, rather than inferring availability from its category or severity. Acknowledgment controls alert presentation and notifications; recovery checks and disk history remain separate."
   },
   "autoresolve": {
     "heading": "Auto-resolution and cleanup",
@@ -283,13 +283,13 @@
       "If the event type is <strong>enabled</strong> in the global notification settings, and the channel hasn't silenced this category, an event is queued.",
       "The template engine renders a (title, body) pair from the structured details. If the AI rewriter is enabled, the same pair is also passed through the configured provider for a plain-language version.",
       "The channel implementation ships it: Telegram message, Discord embed, Gotify push or email. The dispatch outcome is stored in <code>notification_history</code>.",
-      "If a dismiss arrives later, the suppression window kicks in and any further re-fires of the same <code>error_key</code> stay queue-side until the window closes."
+      "Dismissing an alert starts its suppression window. Further detections of the same <code>error_key</code> normally produce no new notification during that window; they are not automatically queued for delivery when it ends. The critical CPU-temperature override remains an exception."
     ],
     "outro": "Channel configuration (Telegram bot token, webhook URLs, AI provider keys, per-event toggles, channel overrides) is documented in <notifLink>Notifications</notifLink> and <aiLink>AI Assistant</aiLink>."
   },
   "rest": {
     "heading": "REST endpoints",
-    "intro": "Everything the modal does is callable from the API — handy for scripts, custom dashboards or your own chat-bot integration.",
+    "intro": "The modal actions are also available through the API for scripts, custom dashboards or chatbots. Calls need a valid bearer token, either from login or the API-token screen. Changes such as acknowledging alerts, saving suppression settings or cleaning orphan errors require full_admin scope; read_only receives 403.",
     "headerEndpoint": "Endpoint",
     "headerMethod": "Method",
     "headerUse": "Use",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Small health probe — returns JSON with <code>status</code>, <code>timestamp</code> and <code>version</code>. Suitable for Uptime Kuma keyword checks; the receiver must send the bearer header."
+        "use": "Lightweight health probe returning JSON with <code>status</code>, <code>timestamp</code> and <code>version</code>. Suitable for Uptime Kuma keyword checks; the client must send a bearer header."
       },
       {
         "endpoint": "/api/health/status",

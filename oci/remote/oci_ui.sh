@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+# Helpers shared by the OCI installers: the look of the ProxMenux utils.sh
+# messages, the same translation cache and the private log of each run.
+# Safe under set -Eeuo pipefail.
+
+PMX_BASE_DIR=${PMX_BASE_DIR:-/usr/local/share/proxmenux}
+OCI_LOG_DIR=${OCI_LOG_DIR:-/var/log/proxmenux/oci}
+OCI_LOG=${OCI_LOG:-}
+
+_OCI_LANGUAGE=$(jq -r '.language // "en"' "$PMX_BASE_DIR/config.json" 2>/dev/null || true)
+[[ -n $_OCI_LANGUAGE && $_OCI_LANGUAGE != null ]] || _OCI_LANGUAGE=en
+_OCI_LANG_FILE="$PMX_BASE_DIR/lang/${_OCI_LANGUAGE}.json"
+
+_OCI_MG=$'\033[1;35m'
+_OCI_GN=$'\033[1;92m'
+_OCI_RD=$'\033[01;31m'
+_OCI_YW=$'\033[33m'
+_OCI_YWB=$'\033[1;33m'
+_OCI_BOLD=$'\033[1m'
+_OCI_CL=$'\033[m'
+_OCI_TAB="    "
+_OCI_SPINNER_PID=""
+
+translate() {
+  if [[ $_OCI_LANGUAGE == en || ! -s $_OCI_LANG_FILE ]]; then
+    printf '%s' "$1"
+    return 0
+  fi
+  local value
+  value=$(jq -r --arg text "$1" '.[$text] // empty' "$_OCI_LANG_FILE" 2>/dev/null || true)
+  printf '%s' "${value:-$1}"
+}
+
+_oci_spinner() {
+  local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏') i=0
+  printf '\033[?25l'
+  while :; do
+    printf '\r %s%s%s' "$_OCI_MG" "${frames[i]}" "$_OCI_CL"
+    i=$(( (i + 1) % ${#frames[@]} ))
+    sleep 0.1
+  done
+}
+
+stop_spinner() {
+  if [[ -n $_OCI_SPINNER_PID ]]; then
+    kill "$_OCI_SPINNER_PID" 2>/dev/null || true
+    wait "$_OCI_SPINNER_PID" 2>/dev/null || true
+    _OCI_SPINNER_PID=""
+  fi
+  printf '\033[?25h'
+}
+
+# The spinner is shown when the caller's terminal is interactive; OCI_SPINNER=1
+# is set by the Python front end, which relays this output to a terminal.
+msg_info() {
+  stop_spinner
+  printf '\r\033[K%s%s-%s%s' "$_OCI_TAB" "$_OCI_MG" "$1" "$_OCI_CL"
+  if [[ -t 1 || ${OCI_SPINNER:-0} == 1 ]]; then
+    _oci_spinner &
+    _OCI_SPINNER_PID=$!
+  else
+    printf '\n'
+  fi
+}
+
+# One line rewritten in place, for progress counters (no spinner).
+msg_progress() {
+  stop_spinner
+  printf '\r\033[K%s%s-%s%s' "$_OCI_TAB" "$_OCI_MG" "$1" "$_OCI_CL"
+}
+
+msg_ok() {
+  stop_spinner
+  printf '\r\033[K%s%s✓ %s%s%s%s\n' "$_OCI_TAB" "$_OCI_GN" "$_OCI_CL" "$_OCI_GN" "$1" "$_OCI_CL"
+}
+
+msg_warn() {
+  stop_spinner
+  printf '\r\033[K%s%s %s%s%s\n' "$_OCI_TAB" "$_OCI_CL" "$_OCI_YWB" "$1" "$_OCI_CL"
+}
+
+msg_error() {
+  stop_spinner
+  printf '\r\033[K%s%s[ERROR] %s%s\n' "$_OCI_TAB" "$_OCI_RD" "$1" "$_OCI_CL"
+}
+
+msg_info2() {
+  stop_spinner
+  printf '\r\033[K%s%s%s- %s%s\n' "$_OCI_TAB" "$_OCI_BOLD" "$_OCI_YW" "$1" "$_OCI_CL"
+}
+
+# Starts the private log of one run; every quiet command writes into it.
+oci_log_init() {
+  local name=${1:-oci}
+  [[ -n $OCI_LOG ]] && return 0
+  mkdir -p "$OCI_LOG_DIR"
+  chmod 0700 "$OCI_LOG_DIR" 2>/dev/null || true
+  OCI_LOG="$OCI_LOG_DIR/${name//[^A-Za-z0-9._-]/_}-$(date +%Y%m%d-%H%M%S).log"
+  : >"$OCI_LOG"
+  chmod 0600 "$OCI_LOG"
+  export OCI_LOG
+}
+
+oci_log() {
+  [[ -n $OCI_LOG ]] && printf '%s\n' "$*" >>"$OCI_LOG"
+  return 0
+}
+
+# Runs a command with its output in the log instead of the terminal.
+oci_quiet() {
+  if [[ -n $OCI_LOG ]]; then
+    "$@" >>"$OCI_LOG" 2>&1
+  else
+    "$@" >/dev/null 2>&1
+  fi
+}
+
+# `pct create` of an OCI archive, showing how much of the image is already
+# unpacked into the rootfs. Arguments: VMID ARCHIVE [pct create options...]
+oci_create_container() {
+  local vmid=$1 archive=$2
+  shift 2
+  local path=$archive rootfs="/var/lib/lxc/${vmid}/rootfs" log=${OCI_LOG:-/dev/null}
+  local total_mib=0 base_mib="" used_mib extracted_mib percentage pid status=0 elapsed=0 mounted=0 extracting=0
+  [[ $path == /* ]] || path=$(pvesm path "$archive" 2>/dev/null || true)
+  if [[ -n ${VERIFY_OCI_ARCHIVE:-} && -f $path ]]; then
+    total_mib=$(python3 "$VERIFY_OCI_ARCHIVE" --extracted-mib "$path" 2>/dev/null || printf '0')
+    [[ $total_mib =~ ^[0-9]+$ ]] || total_mib=0
+  fi
+  pct create "$vmid" "$archive" "$@" >>"$log" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    if mountpoint -q "$rootfs" 2>/dev/null; then
+      mounted=1
+      used_mib=$(df -BM --output=used "$rootfs" 2>/dev/null | tail -n 1 | tr -dc '0-9' || true)
+      used_mib=${used_mib:-0}
+      base_mib=${base_mib:-$used_mib}
+      extracted_mib=$(( used_mib > base_mib ? used_mib - base_mib : 0 ))
+      (( extracted_mib > 0 )) && extracting=1
+      if (( ! extracting )); then
+        msg_progress "$(translate "Creating the container: reading the image...") ${elapsed}s"
+      elif (( total_mib > 0 )); then
+        (( extracted_mib < total_mib )) || extracted_mib=$(( total_mib * 99 / 100 ))
+        percentage=$(( extracted_mib * 100 / total_mib ))
+        msg_progress "$(translate "Creating the container: extracting the image") ${extracted_mib} / ${total_mib} MiB (${percentage}%), ${elapsed}s"
+      else
+        msg_progress "$(translate "Creating the container: extracting the image") ${extracted_mib} MiB, ${elapsed}s"
+      fi
+    elif (( mounted )); then
+      msg_progress "$(translate "Creating the container: applying the image configuration...") ${elapsed}s"
+    else
+      msg_progress "$(translate "Creating the container: preparing its disk...") ${elapsed}s"
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  wait "$pid" || status=$?
+  return "$status"
+}
+
+# The extra paths the user added to the application container of a
+# multi-container application, from `.extra_mounts` of the deployment.
+# Argument: VMID. A path on the host is created for the root of the container.
+oci_apply_extra_mounts() {
+  local vmid=$1 type target source size read_only index value count=0
+  while IFS=$'\t' read -r type target source size read_only; do
+    [[ -n $type ]] || continue
+    [[ $target == /* && $target != *","* && $target != *[[:space:]]* ]] \
+      || die "$(translate "Invalid container path:") $target"
+    index=0
+    while pct config "$vmid" | grep -q "^mp${index}:"; do index=$((index + 1)); done
+    if [[ $type == managed-volume ]]; then
+      [[ $size =~ ^[0-9]+$ && $size -ge 1 && $source != /* && $source != *","* ]] \
+        || die "$(translate "Invalid volume size:") $target"
+      value="${source}:${size},mp=${target},backup=1"
+    elif [[ $type == host-bind ]]; then
+      [[ $source == /* && $source != *","* ]] || die "$(translate "Invalid host path:") $source"
+      if [[ ! -e $source ]]; then
+        install -d -m 0775 -o 100000 -g 100000 "$source"
+        oci_log "Shared directory created: $source (uid=100000 gid=100000)"
+      fi
+      [[ -d $source ]] || die "$(translate "The host bind source is not a regular file or directory:") $source"
+      value="${source},mp=${target},backup=0"
+    else
+      die "$(translate "Unsupported mount type:") $type"
+    fi
+    [[ $read_only == true ]] && value="${value},ro=1"
+    oci_quiet pct set "$vmid" "--mp${index}" "$value" \
+      || die "$(translate "Could not add the mount point:") $target"
+    count=$((count + 1))
+  done < <(jq -r '.extra_mounts[]? | [.type, .container_path, .source, (.size_gb // "-"), (.read_only // false)] | @tsv' "$DEPLOYMENT_FILE")
+  if (( count > 0 )); then
+    python3 "${SCRIPT_DIR}/oci_nested_mounts.py" follow "$vmid" \
+      || die "$(translate "Could not add the mount point:") CT $vmid"
+    msg_ok "$(translate "Mount points added:") $count"
+  fi
+  return 0
+}
+
+# The USB, serial or GPU nodes the user added to the application container of
+# a multi-container application, from `.extra_devices` of the deployment.
+# Argument: VMID. Each node keeps its path, with the group it has on the host.
+oci_apply_extra_devices() {
+  local vmid=$1 path mode deny_write gid index count=0
+  while IFS=$'\t' read -r path mode deny_write; do
+    [[ -n $path ]] || continue
+    [[ $path == /dev/* && $path != *","* && $path != *[[:space:]]* && $path != *".."* ]] \
+      || die "$(translate "Invalid device path:") $path"
+    [[ -c $path ]] || die "$(translate "The character device does not exist:") $path"
+    [[ $mode =~ ^0?[0-7]{3}$ ]] || die "$(translate "Invalid device mode:") $mode"
+    pct config "$vmid" | grep -Eq "^dev[0-9]+: (.*,)?path=${path}(,|$)" && continue
+    index=0
+    while pct config "$vmid" | grep -q "^dev${index}:"; do index=$((index + 1)); done
+    gid=$(stat -c '%g' "$path")
+    oci_quiet pct set "$vmid" "--dev${index}" "path=${path},mode=${mode},deny-write=${deny_write},gid=${gid}" \
+      || die "$(translate "Could not add the device to the container:") $path"
+    count=$((count + 1))
+  done < <(jq -r '.extra_devices[]? | select(.kind == "character-device") | [.host_path, (.mode // "0660"), (if .deny_write then 1 else 0 end)] | @tsv' "$DEPLOYMENT_FILE")
+  if (( count > 0 )); then
+    msg_ok "$(translate "Devices added:") $count"
+  fi
+  return 0
+}
+
+# Last lines of the log, for the error report.
+oci_log_tail() {
+  [[ -n $OCI_LOG && -s $OCI_LOG ]] || return 0
+  tail -n "${1:-15}" "$OCI_LOG" | sed "s/^/${_OCI_TAB}  /"
+}
+
+# ip= and gw= options of an access interface, DHCP or a static IPv4 with an
+# optional gateway, in OCI_ACCESS_NET. Returns 1 when a value is not valid.
+oci_access_net() {
+  local octet='(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])'
+  OCI_ACCESS_NET=""
+  if [[ $1 == dhcp ]]; then
+    OCI_ACCESS_NET="ip=dhcp"
+    return 0
+  fi
+  [[ $1 =~ ^($octet\.){3}$octet/([89]|[12][0-9]|3[0-2])$ ]] || return 1
+  [[ -z ${2:-} || $2 =~ ^($octet\.){3}$octet$ ]] || return 1
+  OCI_ACCESS_NET="ip=$1${2:+,gw=$2}"
+}

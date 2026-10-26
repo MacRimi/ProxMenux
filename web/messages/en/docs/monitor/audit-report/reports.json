@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "title": "Reports and comparisons | Audit & Report",
+    "description": "The six Audit & Report documents, how they are printed or saved as PDF, and how runs are compared with a reference run."
+  },
+  "header": {
+    "title": "Reports and comparisons",
+    "description": "Six documents, each composed for a different question, and the comparison of every run with a reference run.",
+    "section": "Audit & Report"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Six documents, not six styles",
+            "body": "The engine selects checks and sections before composing the document. A quick diagnosis is not a full audit with fewer pages, and an inventory presents no assessment results. The sample documents below use fictitious data."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "The six documents",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Full audit",
+                "body": "Documents the node end to end as a technical record.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  { "label": "Checks", "value": "Every available check." },
+                  { "label": "Contents", "value": "Executive summary; identity and cluster; hardware; network and latency; storage; guests; passthrough; applications; findings with evidence; sources and scope." }
+                ]
+              },
+              {
+                "title": "Quick diagnosis",
+                "body": "Shows what needs attention without the complete inventory.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  { "label": "Checks", "value": "The same checks as the full audit." },
+                  { "label": "Contents", "value": "Minimal identity; critical findings; warnings; relevant observations; unverified readings and priority actions. Diagrams, inventory and long annexes are left out." }
+                ]
+              },
+              {
+                "title": "Inventory",
+                "body": "Describes what exists on the node without assessing it.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  { "label": "Checks", "value": "None; no finding is classified." },
+                  { "label": "Contents", "value": "Identity; cluster; CPU and memory; board, BIOS and controllers; network; storage; VMs and LXCs; passthrough; applications and elements managed by ProxMenux." }
+                ]
+              },
+              {
+                "title": "Security review",
+                "body": "Covers exposure and the controls over access to the node.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  { "label": "Checks", "value": "The security area, plus container privileges, updates, repositories and the APT chain." },
+                  { "label": "Contents", "value": "Identity and cluster; network and latency; access; firewall; 2FA; certificates; privileges; updates; repositories; state and age of Lynis." }
+                ]
+              },
+              {
+                "title": "Backup assurance",
+                "body": "Checks that the declared protection exists and that its backups are usable.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  { "label": "Checks", "value": "The backup area, plus storage connectivity and notification delivery." },
+                  { "label": "Contents", "value": "Coverage per guest; declared recovery objective; age and result; destination; retention; verification; failed jobs; recovery and incomplete sources." }
+                ]
+              },
+              {
+                "title": "Capacity and wear",
+                "body": "Measures growth margin and signs of exhaustion or ageing.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  { "label": "Checks", "value": "The storage and hardware areas, plus memory, swap, journal and the host filesystem." },
+                  { "label": "Contents", "value": "Usage and thresholds; thin pools; overprovisioning; memory; inodes; ZFS; temperatures; power-on hours; SMART errors and NVMe/SSD service life." }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "First page of a full audit report",
+            "caption": "Every document shares the report identifier, numbered sections, date, node, profile and footer."
+          }
+        },
+        {
+          "p": "A document contains the identity of the node and the date of the assessment, the executive result, a summary by area, the structure of hardware, network and storage, the protection of the guests, the findings with their evidence, the sources that could not be read, and the scope and policy applied, in the measure each profile includes them."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Printing or saving as PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "Run", "body": "An assessment runs with the profile selected in <strong>Report</strong>." },
+              { "title": "Review", "body": "The finished run shows its findings, the sources it could not read and the policy it applied." },
+              { "title": "Generate report", "body": "<strong>Generate report</strong> opens the view prepared as a document." },
+              { "title": "Print", "body": "<strong>Print or save as PDF</strong> opens the print dialog of the browser, where a printer or <em>Save as PDF</em> is selected." }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "The printout is a document, not a screenshot",
+            "body": "The action bar is hidden, a table that continues on the next page repeats its header, blocks avoid unnecessary breaks and every page keeps the identification and numbering."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Comparing with a reference run",
+      "intro": "<strong>Use as reference</strong> marks a finished run as the reference. Later runs are compared with it and their findings are separated into:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Group", "Meaning"],
+            "rows": [
+              ["New", "Reported now and not before."],
+              ["Worse", "Still reported, and graver or reaching further than before."],
+              ["Better", "Still reported, but less grave or reaching less far than before."],
+              ["Resolved", "No longer reported, and nobody accepted them."],
+              ["Accepted", "No longer counted because a risk was accepted, not because the host changed."],
+              ["No longer assessed", "Present before and absent from this run; nothing verified that they stopped."]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": ["Reference run", "Behaviour"],
+            "rows": [
+              ["Setting it", "Any finished run can be marked; none is marked automatically."],
+              ["Changing it", "Marking another run moves the reference without deleting the history."],
+              ["Comparing", "When no two runs are selected, the comparison uses the reference and the selected or most recent run."],
+              ["Keeping runs", "The 30 most recent runs are kept, and the reference run is never removed."],
+              ["Without a reference", "The view states that no reference run has been chosen yet, so there is nothing to compare against."]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "A report describes one moment",
+            "body": "An assessment does not certify a whole period. Older results stop describing the current state; the view shows the age of the last run and each source keeps the time it was collected."
+          }
+        }
+      ]
+    }
+  ]
+}

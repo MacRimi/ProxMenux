@@ -108,7 +108,7 @@
   "coral": {
     "heading": "Coral TPU / AI Accelerators",
     "subHeading": "(conditional)",
-    "intro": "Renders when the host has Google Coral or other AI-accelerator devices wired up. Each device opens a modal with its connection type (M.2 / mini-PCIe / USB), PCIe link width, vendor / product ID, kernel driver (<code>apex</code> for PCIe, <code>libedgetpu</code> for USB), kernel modules (<code>gasket</code> + <code>apex</code>), device nodes (<code>/dev/apex_*</code>), Edge TPU runtime status, live temperature and the firmware hardware-warning thresholds.",
+    "intro": "Renders when the host has Google Coral or other AI-accelerator devices wired up. Each device opens a modal with its connection type (M.2 / mini-PCIe / USB), PCIe link width, vendor / product ID, software support (the <code>apex</code> kernel driver for PCIe, the <code>libedgetpu</code> user-space library for USB), kernel modules (<code>gasket</code> + <code>apex</code>), device nodes (<code>/dev/apex_*</code>), Edge TPU runtime status, live temperature and the firmware hardware-warning thresholds.",
     "imageAlt": "Coral Edge TPU detail modal: PCIe / M.2 connection, PCIe 5.0 GT/s x1 link, vendor 1ac1:089a, kernel driver apex, gasket and apex modules loaded, /dev/apex_0 present, Edge TPU Runtime not installed, temperature 53.5 °C with hardware warning thresholds",
     "imageCaption": "M.2 Coral with the host kernel modules loaded, the device node up and the firmware temperature warnings exposed. The runtime line goes green once the matching Edge TPU runtime is installed.",
     "pathsIntro": "Two install paths exist depending on the form factor:",
@@ -189,7 +189,7 @@
       {
         "section": "CPU temperature history",
         "endpoint": "/api/temperature/history",
-        "source": "Time series sampled by the Health Monitor every 5 min and persisted to SQLite."
+        "source": "Time series recorded by the temperature collector every 60 seconds and persisted to SQLite."
       },
       {
         "section": "GPU live metrics",

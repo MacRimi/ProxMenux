@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "title": "Skript efter installation av Proxmox VE — Automatiserat och anpassningsbart | ProxMenux",
+    "description": "Översikt över ProxMenux skript efter installation av Proxmox VE. Automatiserad tillämpar rimliga standardvärden utan frågor, Anpassningsbar låter dig välja exakt vad du vill i 10 kategorier och Avinstallera optimeringar återställer de ändringar som stöder återställning.",
+    "ogTitle": "Skript efter installation av Proxmox VE — Automatiserat och anpassningsbart",
+    "ogDescription": "Tillämpa vanliga optimeringar efter installation av Proxmox VE i 10 kategorier — automatiskt eller efter eget val, med återställbara alternativ.",
+    "twitterTitle": "Skript efter installation av Proxmox VE | ProxMenux",
+    "twitterDescription": "Automatiserade och anpassningsbara optimeringar efter installationen för Proxmox VE med reversibla alternativ."
+  },
+  "header": {
+    "title": "Skript efter installationen",
+    "description": "Konfigurera en nyinstallerad Proxmox VE-värd med ProxMenux optimeringar efter installationen. Tillämpa grundinställningarna automatiskt, välj enskilda alternativ, uppdatera installerade funktioner eller återställ de ändringar som stöds. Paketuppgraderingar presenteras inte som återställbara.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad menyn används till",
+    "body": "Efter installation av Proxmox VE finns dussintals små ändringar som gör värden snabbare och lättare att underhålla: paketförråd utan prenumeration, rimliga journald-gränser, lämpliga TCP-buffertar, SSD-vänlig logglagring, förbättringar i bashrc med mera. ProxMenux automatiserar dem och registrerar de konfigurationsändringar som stöder återställning."
+  },
+  "openingMenu": {
+    "heading": "Öppna menyn",
+    "body": "Välj <strong>Inställningar efter installation av Proxmox</strong> i ProxMenux huvudmeny. Då visas följande:",
+    "imageAlt": "Menyn för skript efter installation: Automatiserad, Anpassningsbar, det villkorliga alternativet Tillämpa tillgängliga uppdateringar (bara vid väntande uppdateringar) och Avinstallera, följt av Gemenskapens skript"
+  },
+  "threeWays": {
+    "heading": "Fyra sätt att tillämpa optimeringar",
+    "body": "De fyra ProxMenux-alternativen delar samma kod och register över installerade verktyg men ger olika grad av kontroll. <em>Tillämpa tillgängliga uppdateringar</em> visas bara när minst en installerad optimering har en nyare version på disk än den registrerade. På en nykonfigurerad värd är alternativet dolt."
+  },
+  "routes": [
+    {
+      "title": "Automatiserad",
+      "description": "Ett utvalt paket med 14 säkra och alltid användbara optimeringar som tillämpas i följd utan frågor. Ett bra standardval för de flesta användare.",
+      "bullets": [
+        "Paketförråd utan prenumeration + systemuppgradering",
+        "Minne, kärna, nätverkstuning",
+        "Log2RAM (auto-detekterad på SSD/NVMe)",
+        "Journald + logrotate storleksgränser",
+        "Beständiga gränssnittsnamn"
+      ]
+    },
+    {
+      "title": "Anpassningsbar",
+      "description": "Cirka 35 enskilda optimeringar i 10 kategorier. Du väljer exakt vilka som ska tillämpas. Samma motor som Automatiserad, med full kontroll.",
+      "bullets": [
+        "Gränssnitt med kryssrutor per kategori",
+        "Innehåller allt i Automatiserad samt alternativ som väljs uttryckligen (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD-korrigeringar …)",
+        "Kör så många gånger du vill — ändringarna är idempotenta"
+      ]
+    },
+    {
+      "title": "Tillämpa tillgängliga uppdateringar",
+      "description": "När en optimering efter installationen (Log2Ram, minnesinställningar, Logrotate …) har en nyare version på disk än den registrerade visar alternativet bara de ändrade optimeringarna. Motsvarande funktion körs igen och registret uppdateras — inget annat ändras.",
+      "bullets": [
+        "Uttryckligt val per optimering, endast de ändrade",
+        "Samma väljare finns i Monitors instrumentpanel",
+        "En samlad avisering när nya uppdateringar blir tillgängliga"
+      ]
+    },
+    {
+      "title": "Avinstallera optimeringar",
+      "description": "Återställbara ändringar som stöds registreras i ett JSON-register och kopplas till en återställningsfunktion. Åtgärder utan säker återställning, som fullständig paketuppgradering, är avsiktligt uteslutna.",
+      "bullets": [
+        "Detekterar tidigare tillämpade optimeringar automatiskt",
+        "Väljer rätt återställning för varje post: återställer från en .bak-säkerhetskopia om en sådan togs, tar bort konfigurationsfragmentet i sysctl.d om inget behövde säkerhetskopieras eller installerar om originalpaketet med --force-confnew (till exempel för prenumerationsbannern)",
+        "Fråga om omstart vid behov (VFIO, beständiga namn osv.)"
+      ]
+    }
+  ],
+  "whichTitle": "Vilken ska du välja?",
+  "whichBody": "För en ny Proxmox-installation med rimliga grundinställningar utan beslut: <autoLink><strong>Automatiserad</strong></autoLink>. Om du redan vet vilka justeringar du vill ha eller undvika: <customLink><strong>Anpassningsbar</strong></customLink>. För att bara uppdatera en tillämpad optimering som har en nyare version på disk: <updatesLink><strong>Tillämpa tillgängliga uppdateringar</strong></updatesLink>. För att återställa tidigare ändringar: <uninstallLink><strong>Avinstallera optimeringar</strong></uninstallLink>. Du kan kombinera dem: börja med Automatiserad, lägg sedan till Fastfetch eller IOMMU med Anpassningsbar och återställ enskilda poster senare.",
+  "mixing": {
+    "heading": "Blanda med andra post-install skript",
+    "stackTitle": "Kombinera inte flera skript efter installationen",
+    "stackBody": "Kör flera post-install-skript på samma värd kan orsaka duplicerade konfigurationsfiler, motstridiga sysctl-poster eller värre - brutna nätverk efter omstart. Om du redan tillämpade <strong>Helper-Scripts Post Install</strong>, kan vissa ProxMenux optimeringar överlappa med vad den redan konfigurerade. Håll dig till ett post-install-verktyg per värd.",
+    "xshokTitle": "xshok-proxmox: föråldrad",
+    "xshokBody": "Tidigare versioner av ProxMenux hänvisade till <a>xshok-proxmox</a> som ett kompletterande verktyg efter installationen. Projektet är nu föråldrat och erbjuds inte längre i ProxMenux. Om en tidigare körning lämnat markörer på värden upptäcker ProxMenux dem fortfarande och varnar dig. Det är dock inget som bör installeras tillsammans med ProxMenux i dag."
+  },
+  "community": {
+    "heading": "Gemenskapens skript",
+    "body": "Menyn erbjuder också två tredjepartsskript från projektet <a>community-scripts</a>: <em>Proxmox VE Post Install</em> och <em>Proxmox VE Microcode</em>. Startskripten laddar ned och kör originalförfattarnas skript via <code>wget | bash</code>. De underhålls inte av ProxMenux. Se <link>Externa paketförråd</link> för detaljer och frågor om tillit innan du kör dem."
+  },
+  "pbs": {
+    "heading": "På Proxmox Backup Server",
+    "body": "På en Proxmox Backup Server-värd öppnas samma meny från <strong>Inställningar efter installation av Proxmox</strong> i PBS-menyn. Automatiserat, Anpassningsbart, Tillämpa tillgängliga uppdateringar och Avinstallera optimeringar fungerar som på Proxmox VE, med dessa skillnader:",
+    "items": [
+      "<strong>Paketkällor och uppgradering:</strong> när servern saknar prenumeration och bara Enterprise-källan för PBS är aktiv frågar ProxMenux innan den byter till PBS-källan utan prenumeration. Bytet görs via serverns egen API för paketkällor, samma som används i <em>Administration > Repositories</em>. Med en aktiv prenumeration, eller med en källa utan prenumeration eller en testkälla redan konfigurerad, lämnas källorna som de är.",
+      "<strong>Anpassningsbar lista:</strong> alternativ som bara gäller Proxmox VE visas inte: gästagent, VFIO IOMMU, Open vSwitch, hastighet för vzdump-backuper, pigz, Appliance Manager, Ceph, hög tillgänglighet och OVH Real Time Monitoring.",
+      "<strong>Prenumerationsbanner:</strong> patchen gäller webbgränssnittet för Proxmox Backup Server, och Avinstallera optimeringar återställer det.",
+      "<strong>Figurine:</strong> installeras utan Proxmox VE-aliasen.",
+      "<strong>Communityskript:</strong> avsnittet erbjuder <em>Proxmox Backup Server Post Install</em> och <em>Proxmox Backup Server Microcode</em> i stället för Proxmox VE-skripten."
+    ]
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Proxmox systemuppdatering",
+        "href": "/docs/utils/system-update",
+        "tail": " — håller värden uppdaterad efter grundkonfigurationen."
+      },
+      {
+        "label": "Säkerhet",
+        "href": "/docs/security",
+        "tail": " — Fail2Ban + Lynis utöver säkerhetsförstärkningen efter installationen."
+      },
+      {
+        "label": "Visa versionsinformation",
+        "href": "/docs/settings/show-version-information",
+        "tail": " - se vilka postinstallationskomponenter som spåras som installerade."
+      },
+      {
+        "label": "Uppdateringar och paketkommandon",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — referens för apt / pveupgrade."
+      }
+    ]
+  }
+}

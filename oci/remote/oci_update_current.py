@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""Resolve a saved image channel and invoke the native update transaction."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+import oci_instances as instances
+import oci_instance_transaction as transaction
+import oci_work_backup as work_backup
+from oci_installation_state import image_from_archive, same_image
+from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
+
+# A registry login saved by ProxMenux lets skopeo read private images.
+REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
+if not os.environ.get('REGISTRY_AUTH_FILE') and os.path.isfile(REGISTRY_AUTH_FILE):
+    os.environ['REGISTRY_AUTH_FILE'] = REGISTRY_AUTH_FILE
+
+
+def repository(reference):
+    repo = reference.split('@', 1)[0]
+    if ':' in repo.rsplit('/', 1)[-1]:
+        repo = repo.rsplit(':', 1)[0]
+    return repo
+
+
+def run_quiet(args, error, capture=False):
+    """Runs a helper with its output in the private log; error is the message of a failure."""
+    transaction.log('$ ' + shlex.join(args))
+    process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=dict(os.environ, PYTHONPATH=str(Path(__file__).parent)))
+    try:
+        while True:
+            try:
+                output, errors = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                continue
+            if process.returncode:
+                transaction.log(f'  exit {process.returncode}')
+            transaction.log_output(None if capture else output, errors)
+            if process.returncode:
+                raise RuntimeError(error)
+            return output
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+
+
+def resolve_archive(desired, config, current=None, check=None, required_digest=None, local_archives=()):
+    # Shared by individual and coordinated operations; no guest mutation here.
+    # When the registry still serves the current digest nothing is downloaded.
+    reference = desired['template']['container_contract']['image']['reference']
+    architecture = transaction.parse_config(config)['arch']
+    msg_info(translate('Checking the image in the registry...'))
+    transaction.log(f'image: {reference} ({architecture})')
+    if required_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', required_digest):
+        raise ValueError(translate('Invalid saved image digest'))
+    lookup = repository(reference) + '@' + required_digest if required_digest else reference
+    # The reason of a failure reaches the log as one line, not as a traceback.
+    code = ('import json,sys; from oci_installation_state import resolve_candidate\n'
+            'try: print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))\n'
+            'except (RuntimeError, ValueError, OSError) as error: sys.exit(str(error))')
+    candidate = json.loads(run_quiet([sys.executable, '-c', code, lookup, architecture],
+                                     translate('Could not query the image registry'), capture=True))
+    digest = candidate['manifest_digest']
+    if not re.fullmatch(r'sha256:[a-f0-9]{64}', digest):
+        raise ValueError(translate('Invalid registry digest'))
+    registry_digest = candidate.get('registry_digest')
+    if registry_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', registry_digest):
+        raise ValueError(translate('Invalid registry digest'))
+    if required_digest is not None and registry_digest != required_digest:
+        raise ValueError(translate('The registry did not return the saved image digest'))
+    msg_ok(f"{translate('Image:')} {reference} ({candidate.get('version') or digest[7:19]})")
+    if current and same_image(candidate, current):
+        return None, digest
+    if check:
+        check()
+    verifier = Path(__file__).with_name('verify_oci_archive.py')
+
+    def intact(path):
+        try:
+            run_quiet([sys.executable, str(verifier), str(path)],
+                      translate('The image did not pass the integrity check'))
+            return same_image(candidate, image_from_archive(str(path)))
+        except (RuntimeError, OSError, ValueError, KeyError, tarfile.TarError):
+            return False
+
+    # Initial installations and updates use different archive names. The
+    # instance record knows the actual archive; validate it before looking
+    # only for the deterministic update-cache name. Never delete a rejected
+    # recorded path: another instance may still refer to it.
+    for saved in local_archives:
+        path = Path(saved) if saved else None
+        if path and not path.is_symlink() and path.is_file():
+            msg_info(translate('Verifying the image integrity...'))
+            if intact(path):
+                msg_ok(translate('Using the verified image from the cache'))
+                return path, digest
+    storage = desired['deployment']['template_storage']
+    if not re.fullmatch(r'[A-Za-z0-9_-]+', storage):
+        raise ValueError(translate('Invalid template storage'))
+    archive = Path(instances.command('pvesm', 'path',
+        f'{storage}:vztmpl/proxmenux-update-{architecture}-{digest[7:]}.tar').decode().strip())
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    if archive.is_symlink():
+        raise ValueError(translate('Unsafe OCI archive path'))
+    if archive.exists():
+        msg_info(translate('Verifying the image integrity...'))
+        if intact(archive):
+            msg_ok(translate('Using the verified image from the cache'))
+            return archive, digest
+        msg_warn(translate('The cached image is damaged; it will be downloaded again.'))
+        archive.unlink()
+    # The compressed layers are what the download writes; nothing was changed yet.
+    size, free = int(candidate.get('size') or 0), work_backup.available(archive.parent)
+    if size and free < int(size * 1.1) + 256 * 1024**2:
+        raise ValueError(f"{translate('The new image does not fit on the storage where images are downloaded:')} {storage}. "
+                         f"{translate('Needed:')} {work_backup.gib(int(size * 1.1) + 256 * 1024**2)}. "
+                         f"{translate('Free:')} {work_backup.gib(free)}. {translate('The application was not modified.')}")
+    # A download can come back complete yet damaged when the connection drops
+    # and the transfer resumes; the integrity check catches it, and a second
+    # download is what repairs it.
+    for attempt in (1, 2):
+        msg_info(transaction.fit(f"{translate('Downloading the image:')} {reference}"))
+        transaction.log(f'download attempt {attempt}/2')
+        fd, name = tempfile.mkstemp(prefix='.proxmenux-update-', suffix='.tar', dir=archive.parent)
+        os.close(fd)
+        partial = Path(name)
+        try:
+            run_quiet(['skopeo', 'copy', '--override-arch', architecture,
+                'docker://' + repository(reference) + '@' + digest,
+                'oci-archive:' + str(partial)], translate('Could not download the image'))
+            msg_ok(translate('Image downloaded'))
+            msg_info(translate('Verifying the image integrity...'))
+            if intact(partial):
+                partial.chmod(0o644)
+                os.replace(partial, archive)
+                msg_ok(translate('Image integrity verified'))
+                return archive, digest
+        except RuntimeError:
+            if attempt == 2:
+                raise
+        finally:
+            partial.unlink(missing_ok=True)
+        if attempt == 2:
+            raise RuntimeError(translate('Could not obtain an intact image after two attempts'))
+        msg_warn(translate('The image download did not complete correctly; downloading it again...'))
+
+
+def kept_settings(changes, deployment):
+    """Names of the settings changed in Proxmox that the new container keeps."""
+    labels = {'memory': translate('Memory'), 'swap': translate('Swap'), 'cores': translate('CPU cores'),
+              'cpulimit': translate('CPU cores'), 'cpuunits': translate('CPU priority'),
+              'onboot': translate('Start with Proxmox')}
+    kept = []
+    for key, value in changes.items():
+        section, name = transaction.ADOPTABLE[key]
+        if (deployment.get(section, {}) if section else deployment).get(name) == value:
+            kept.append(labels[key])
+    return kept
+
+
+def application_name(record, vmid):
+    """The name the user knows the application by, for its notifications."""
+    for template in ((record.get('stack') or {}).get('template') or {}, record.get('template') or {}):
+        title = (template.get('catalog_ui') or {}).get('title')
+        if isinstance(title, dict):
+            title = title.get('en_US') or next(iter(title.values()), '')
+        if isinstance(title, str) and title.strip():
+            return title.strip()
+    return f'CT {vmid}'
+
+
+def backup_native_settings(vmid, storage):
+    """An optional retained backup does not require rebuilding the guest."""
+    if storage:
+        import oci_keep_backup
+        oci_keep_backup.validate(storage)
+        transaction.run('vzdump', str(vmid), '--storage', storage, '--mode', 'snapshot',
+                        '--compress', 'zstd', '--notes-template',
+                        'ProxMenux OCI: before modifying container settings')
+
+
+def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=None):
+    operation = 'recreate' if proposal is not None else 'update'
+    msg_info(translate('Checking the container before the update...') if operation == 'update'
+             else translate('Checking the container before modifying it...'))
+    with instances.locked(instances.ROOT):
+        record = instances.read(instances.ROOT, vmid)
+        if record['status'] != 'installed' or record.get('pending_transaction') or record.get('pending_stack_transaction'):
+            raise ValueError(translate('The instance is not ready to be updated'))
+        config = instances.command('pct', 'config', str(vmid))
+        desired = transaction.candidate_contract(record, operation, proposal)
+        changes = transaction.external_changes(record, config)
+        resource_changes = None
+        if operation == 'recreate' and not changes:
+            import oci_resource_modify
+            resource_changes = oci_resource_modify.changes(record, desired, config)
+        # CPU/RAM edits retain the installed image and all unrelated native
+        # settings. They do not implicitly update the application or depend
+        # on the registry and the narrower recreation profile.
+        if resource_changes:
+            msg_ok(translate('Container checked'))
+            import oci_operation_notice
+            with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                backup_native_settings(vmid, keep_backup)
+                return oci_resource_modify.apply(instances.ROOT, record, desired, config, resource_changes)
+        if operation == 'recreate' and not changes:
+            import oci_native_modify
+            if oci_native_modify.changes(record, desired, config):
+                import oci_operation_notice
+                with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                    # Validate the native plan before an optional full backup.
+                    oci_native_modify.plan(record, desired, config)
+                    backup_native_settings(vmid, keep_backup)
+                    return oci_native_modify.apply(instances.ROOT, record, desired, config,
+                                                   acknowledge_external_data=acknowledge_external_data)
+        # An unsupported native edit still uses the existing installer. Decide
+        # the route before changing anything; actual validation/API failures
+        # must not silently switch to a destructive fallback.
+        transaction.preflight(record, desired, config)
+        msg_ok(translate('Container checked'))
+        current = record['observed']['image'] if operation == 'update' else None
+        check = lambda: work_backup.locate(
+            instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid)
+        if operation == 'recreate':
+            archive, digest = resolve_archive(desired, config, current, check,
+                local_archives=[record['observed'].get('archive_path')])
+        else:
+            archive, digest = resolve_archive(desired, config, current, check)
+        if archive is None:
+            msg_ok(translate('The image is already up to date; nothing was changed.'))
+            return
+        file_storage = None
+        if keep_backup:
+            import oci_keep_backup
+            oci_keep_backup.validate(keep_backup)
+            if oci_keep_backup.dump_dir(keep_backup) is None:
+                msg_info(f"{translate('Creating a backup in')} {keep_backup}...")
+                oci_keep_backup.before_update(vmid, keep_backup)
+                msg_ok(f"{translate('Backup created in')} {keep_backup}")
+            else:
+                file_storage = keep_backup
+        kept = kept_settings(changes, desired['deployment'])
+        if kept:
+            msg_info2(f"{translate('Keeping the settings changed in Proxmox:')} {', '.join(kept)}")
+        import oci_operation_notice
+        # A single container is only recreated to apply the changes of Modify.
+        kind = 'update' if operation == 'update' else 'modify'
+        with oci_operation_notice.operation([vmid], kind, application_name(record, vmid)):
+            transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
+                              registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
+                              keep_backup=file_storage)
+    marker = os.environ.get('OCI_RECREATED_MARKER')
+    if marker:
+        Path(marker).touch()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('vmid', type=int)
+    parser.add_argument('--acknowledge-external-data', action='store_true')
+    parser.add_argument('--proposal', type=Path)
+    parser.add_argument('--keep-backup', metavar='STORAGE')
+    args = parser.parse_args()
+    if os.geteuid() != 0:
+        parser.error(translate('Root privileges are required'))
+    try:
+        proposal = json.loads(args.proposal.read_text()) if args.proposal else None
+        update(args.vmid, args.acknowledge_external_data, proposal, args.keep_backup)
+        return 0
+    except BlockingIOError:
+        msg_error(translate('Another OCI operation is using the registry. This operation was not started.'))
+        return 1
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        transaction.report_error(error, f'update-{args.vmid}')
+        journal = transaction.pending_journal()
+        if journal and not transaction.recover_untouched(instances.ROOT, journal):
+            transaction.recovery_hint()
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

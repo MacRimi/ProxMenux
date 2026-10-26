@@ -1,0 +1,12 @@
+{
+  "environment_overrides": {
+    "CONFIG": {
+      "required": false,
+      "prompt": "Configuration in JSON on one line (optional)"
+    },
+    "SHOUTRRR_ADDRESSES": {
+      "required": false,
+      "prompt": "Shoutrrr addresses for the notifications (optional)"
+    }
+  }
+}

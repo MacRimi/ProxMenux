@@ -818,6 +818,103 @@ Note that the dev server has no Flask backend on the same host by default: the a
 
 ### Testing
 
+#### Offline script regressions (including i18n)
+
+From the repository root, run the complete script suite:
+
+```bash
+python3 -m unittest discover -s .github/scripts/tests -v
+```
+
+Prerequisites: Python 3.11+ (Python standard library only), Node **22.14+**,
+`/bin/bash`, and `/usr/bin/jq` for the isolated scheduler fixtures.
+(Node 22 LTS is the CI baseline). Node 20 can still build the Monitor, but
+cannot run this suite's native TypeScript consumer test. The test passes
+`--experimental-strip-types` explicitly and executes the actual pure lookup
+functions extracted from `AppImage/lib/i18n/provider.tsx`, not a reimplementation.
+It does not launch React or require `npm install`, `pip install`, a Proxmox host,
+API keys, or a translation provider. Generator tests use isolated temporary
+catalogs and fake/forbidden providers; repository catalogs are not regenerated.
+
+The command-description recovery regression first completes disposable copies
+of the shipped catalogs with the real generator and a deterministic offline
+provider, then requires a second run to make zero provider calls and zero
+writes. It checks that all existing nonempty translations and the frozen
+command-description arrays survive unchanged. A synthetic EN-only feature tests
+new nested strings, arrays, placeholders and non-text values. New message keys
+do not need to be added to a test-specific translation seed list.
+
+Scheduler fixtures discover every shipped `lang/*.json` cache and run the actual
+`translate` lookup at both empty-job consumers for PBS and local archive backends.
+They accept English fallback for missing/empty entries; complete translations are
+not required. Unconditional synthetic cases cover English bypass, missing files,
+missing keys and translated messages/hints. Only bounded shell functions are
+extracted: no administrative script is sourced or run in full. These scheduler
+messages have no placeholders; named-token preservation is tested separately by
+the existing cache-generator tests, not by scheduler/count-message assertions.
+The workflow watches all `lang/*.json` catalogs plus `.sh` and `.func` inputs
+under `scripts/`, and checks the Bash/jq prerequisites before running the suite.
+
+If Node is not on `PATH`, select a local executable without a global install:
+
+```bash
+NODE_BINARY=/path/to/node-v22.14.0/bin/node \
+  python3 -m unittest discover -s .github/scripts/tests -v
+```
+
+Missing, unusable, or older Node runtimes fail with setup instructions rather
+than silently skipping the consumer assertions. `.github/workflows/test-i18n.yml`
+provisions Python and Node and runs this same command on relevant pull requests
+and main/develop pushes (or manually). It is separate from the translation
+publication workflow and has read-only repository permissions.
+Its Actions name is **Offline script regressions** because it also covers menus,
+downloads, scheduler behavior and other scripts. The `offline-i18n` check ID is
+retained for compatibility with existing branch protection rules; a failure of
+that check is not necessarily a translation failure. Read its failing test name
+and traceback before changing catalogs or translation-provider settings.
+
+#### Qualified offline `tests/` CI lanes
+
+`.github/workflows/test-offline-qualified.yml` runs **only** the explicitly listed
+ten Python files (including the native discovery fixtures, the inert active-notification payload fixture and
+the focused health recurrence tests) and twelve
+Node files in `.github/scripts/run_offline_qualified.py`.
+The Python runner gives each test file a private temporary directory through
+`TMPDIR`. It removes that directory after the test file finishes.
+Run the same allowlist locally from the root of a clean, disposable checkout
+with no `AppImage/node_modules`. Do not run this over a normal Monitor install:
+the commands refuse an existing directory, file, or symlink (including a
+dangling symlink) rather than overwrite or reuse it. In Bash:
+
+```bash
+(
+  set -e
+  if [[ -e AppImage/node_modules || -L AppImage/node_modules ]]; then
+    printf '%s\n' 'Refusing: AppImage/node_modules already exists; use a clean disposable checkout (nothing overwritten).' >&2
+    exit 1
+  fi
+  npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+  ln -s ../.github/ci/offline-node/node_modules AppImage/node_modules
+  python3 -I -B .github/scripts/run_offline_qualified.py --lane python
+  NODE_PATH="$PWD/AppImage/node_modules" python3 -I -B .github/scripts/run_offline_qualified.py --lane node
+)
+```
+
+Requires Python 3.11, Flask 3.x for the native route fixtures, Node 22.14, npm and Bash/coreutils for the bounded shell
+fixtures. The separate lockfile installs only TypeScript, React, React DOM,
+Lucide icons and the locked scheduler dependency; it does not build the Monitor
+or run npm lifecycle scripts. `--legacy-peer-deps` admits the existing Lucide
+React peer constraint against locked React 19; it does not resolve that mismatch. The runner fails on missing files, zero discovered Python
+tests, skipped Python tests, or a nonzero exit from either lane. Node fixtures
+use top-level assertions, not a runner that reports case/skip totals.
+These are local fixture tests, not the whole `tests/` tree, `AppImage/tests/`,
+the whole `AppImage/scripts/tests/` tree, browser smoke, a live Proxmox host, or an AppImage
+build. The CI workflow has read-only permissions and runs on relevant PRs and
+main/develop pushes, or manually. Review the input paths and the test's imports
+before extending the explicit manifest.
+
+#### Monitor checks
+
 - **Python tests** — under `AppImage/scripts/tests/`. Run with `python3 -m unittest discover -s AppImage/scripts/tests`. Add a test file when you add non-trivial backend logic (auth, notifications, background checks).
 - **UI smoke test** — deploy the built AppImage to a test host, restart `proxmenux-monitor.service`, and walk through the affected views in the browser. There is no formal e2e suite yet; a real-host smoke pass is expected for any UI change.
 - **JSON parse** — after editing any i18n catalog, verify it parses: `python3 -c "import json; json.load(open('AppImage/messages/<lang>/common.json'))"`.

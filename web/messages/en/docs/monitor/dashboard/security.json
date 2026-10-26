@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Two scopes, one tab",
-    "body": "The Security tab is divided into two clearly separated sections: <strong>ProxMenux Monitor</strong> (settings for the dashboard itself) and <strong>Proxmox VE</strong> (settings for the host underneath). Cards render conditionally — Fail2Ban and Lynis only appear once installed."
+    "body": "The Security tab has two sections: <strong>ProxMenux Monitor</strong> (dashboard settings) and <strong>Proxmox VE</strong> (host settings). The Fail2Ban and Lynis cards offer installation when those tools are missing, then show their controls once installed."
   },
   "monitor": {
     "heading": "ProxMenux Monitor",
@@ -101,13 +101,13 @@
   },
   "pve": {
     "heading": "Proxmox VE",
-    "intro": "The host's own protections — firewall, intrusion prevention and security audit. Last two only render when their respective tools are installed."
+    "intro": "The host’s protections: firewall, intrusion prevention and security audit. The Fail2Ban and Lynis cards offer installation if the tools are missing, then expose their management controls."
   },
   "firewall": {
     "heading": "Proxmox Firewall",
     "imageAlt": "Proxmox Firewall card showing Cluster Firewall and Host Firewall status, Quick Access Rules for ProxMenux Monitor and Proxmox Web UI, Rules Overview counters and a list of Firewall Rules with Add Rule button",
     "imageCaption": "Proxmox Firewall card — cluster-level and host-level enable / disable toggles, common ports as <em>Quick Access Rules</em>, totals across <em>Rules Overview</em>, and the full rule list with <em>+ Add Rule</em>.",
-    "intro": "The card surfaces the Proxmox VE built-in firewall (which is independent from any host-level <code>iptables</code> / <code>nftables</code> you may run alongside). Three blocks:",
+    "intro": "The card manages the Proxmox VE firewall configuration. The classic backend uses <code>iptables</code>; the alternative backend uses <code>nftables</code>. It does not manage arbitrary rules created outside Proxmox. Three blocks:",
     "items": [
       "<strong>Cluster Firewall + Host Firewall</strong> — global toggles. The cluster firewall must be active for any host-level rule to take effect; the card flags this dependency inline.",
       "<strong>Quick Access Rules</strong> — pre-defined rows for ports that matter to ProxMenux itself: <code>8008/TCP</code> (Monitor), <code>8006/TCP</code> (Proxmox Web UI). Each row shows the current allow / deny / unprotected state. The Proxmox Web UI is allowed via the <em>built-in</em> Proxmox firewall macro and can't be removed accidentally.",
@@ -135,8 +135,8 @@
     "configAlt": "Configure sshd jail form with Max Retries, Ban Time in seconds with Permanent Ban option, Find Time, common values reminder, and Save Configuration button",
     "configCaption": "Editing the sshd jail — pick a stricter <em>Max Retries</em> for SSH if you only ever log in from your own subnet, or extend <em>Ban Time</em> for the public-facing dashboard.",
     "outro": "The full <em>What it installs / how it's configured / how to uninstall</em> walkthrough — including the manual install path, the SSH MaxAuthTries side effect, and the relationship with the <code>proxmenux-auth.log</code> journal — is in <link>ProxMenux → Security → Fail2Ban</link>.",
-    "calloutTitle": "Without Fail2Ban, brute-force protection is best-effort",
-    "calloutBody": "ProxMenux Monitor has its own <em>application-level</em> ban hook in the Flask request pipeline — but it only takes effect if Fail2Ban is installed and writes to the bans table. Without Fail2Ban, the Monitor logs failed logins to <code>proxmenux-auth.log</code> for future inspection but doesn't actively block IPs."
+    "calloutTitle": "Without Fail2Ban, this mechanism does not block IPs",
+    "calloutBody": "ProxMenux Monitor checks the IPs banned in Fail2Ban's <code>proxmenux</code> jail at the <em>application level</em> before handling Flask requests, caching the result for 30 seconds. Without Fail2Ban, failed logins are recorded in <code>proxmenux-auth.log</code> and the login endpoint is limited to 5 attempts per IP every 5 minutes, but no IP is banned."
   },
   "lynis": {
     "heading": "Lynis Security Audit",
@@ -145,7 +145,7 @@
     "whyUseful": "<strong>Why it's useful.</strong> Knowing the security posture of your server is hard to do by reading config files one by one. Lynis catches the things that are routinely overlooked: kernel hardening flags missing, weak SSH ciphers enabled, journal not persistent, sudoers <code>NOPASSWD</code> on default accounts, and many more. Re-running it after applying ProxMenux post-install tweaks gives you an objective number for the improvement.",
     "notInstalledAlt": "Lynis Security Audit card with Not Installed state and Install Lynis button, listing features: hardening scoring, vulnerability detection, compliance checking and GitHub source",
     "notInstalledCaption": "Lynis card before install — the blue box summarises what the tool does.",
-    "notBundled": "Lynis is also <strong>not bundled</strong>. ProxMenux installs the latest release directly from the official GitHub source (not the Debian package, which lags several minor versions).",
+    "notBundled": "Lynis is also <strong>not bundled</strong>. ProxMenux installs it directly from the official GitHub source rather than the Debian package.",
     "confirmAlt": "Install Lynis confirmation modal listing what Lynis does: hardening scoring, vulnerability detection, configuration analysis, compliance checking, source from official GitHub repository",
     "confirmCaption": "Install confirmation — explicit about the GitHub source.",
     "progressAlt": "Lynis Installation streaming panel: installing latest scan tool, version 3.1.6 confirmed, installation completed message",
@@ -157,7 +157,7 @@
     "runningCaption": "Audit in progress — the action button shows a spinner and the card explicitly warns that the scan can take 2–5 minutes.",
     "finishedBody": "When it finishes, the card flips to the results view: hardening index, warnings, suggestions and an <em>Audit Reports</em> list with each historical scan.",
     "resultsAlt": "Lynis Security Audit card with results: Hardening Index 71 with Lynis 66 PVE 71 breakdown, 3 warnings, 40 suggestions, Security Hardening Score progress bar Proxmox Adjusted 71 of 100 in the Good range, audit reports list with PDF download and Run Security Audit button",
-    "resultsCaption": "Audit results — Hardening Index <strong>71/100 (Good)</strong> on a sample run. The card also shows the \"Lynis raw score\" (66) versus the Proxmox-adjusted score (71) which adds back 11 points for findings the Lynis test corpus flags but are expected behaviour on Proxmox VE.",
+    "resultsCaption": "Audit results — Hardening Index <strong>71/100 (Good)</strong> in a sample run. The card shows the Lynis raw score (66) and the Proxmox-adjusted score (71). The adjustment depends on the raw score and the share of findings classified as expected on Proxmox VE; it is not a fixed 11-point addition.",
     "scoreTitle": "Lynis raw score vs Proxmox-adjusted score",
     "scoreIntro": "Lynis ships rules tuned for general-purpose Debian. Proxmox legitimately diverges from some of them (services running as root for cluster reasons, custom <code>journald</code> tuning, etc.). The card shows both numbers so you can:",
     "scoreItems": [
@@ -179,7 +179,7 @@
       {
         "card": "Authentication, 2FA, password change",
         "endpoint": "/api/auth/*",
-        "source": "Local SQLite + JWT issued by the Monitor."
+        "source": "Local auth configuration in ~/.config/proxmenux-monitor/auth.json; JWTs issued by the Monitor."
       },
       {
         "card": "SSL / HTTPS",

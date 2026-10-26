@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox Monitor API — Integration Reference | ProxMenux",
-    "description": "HTTP endpoints exposed by ProxMenux Monitor for integrations: Home Assistant, Homepage, Grafana, Prometheus, n8n and custom dashboards. Read-only data export plus the safe write operations needed by automations — VM control, backup trigger, notification dispatch, alert acknowledgement.",
+    "description": "HTTP endpoints exposed by ProxMenux Monitor for Home Assistant, Homepage, Grafana, Prometheus, n8n and custom dashboards. Read state and invoke documented write operations such as VM control, backup submission, notification dispatch and alert acknowledgement.",
     "ogTitle": "Proxmox Monitor API — Integration Reference",
     "ogDescription": "Endpoints exposed by ProxMenux Monitor for Home Assistant, Homepage, Grafana, Prometheus, n8n and custom dashboards.",
     "twitterTitle": "Proxmox Monitor API | ProxMenux",
@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "API Reference",
-    "description": "The HTTP endpoints integrators use to read state and trigger safe actions on ProxMenux Monitor — Home Assistant sensors, Homepage cards, Grafana dashboards, Prometheus scrapes, n8n flows and custom scripts. Every category, plus a complete list of Prometheus metrics, with curl examples.",
+    "description": "HTTP endpoints for reading state and invoking documented actions on ProxMenux Monitor: Home Assistant sensors, Homepage cards, Grafana dashboards, Prometheus collection, n8n flows and custom scripts. Includes endpoint categories, exported metrics and curl examples.",
     "section": "ProxMenux Monitor"
   },
   "intro": {
@@ -21,18 +21,18 @@
   "headerUse": "Use",
   "auth": {
     "heading": "Authentication",
-    "intro": "Every endpoint marked \"authenticated\" expects a JWT bearer token in the request header:",
+    "intro": "When authentication is enabled, protected endpoints expect a JWT bearer token in the request header:",
     "tokensIntro": "Two ways to obtain the token:",
     "items": [
-      "<strong>API tokens (recommended for integrations).</strong> Long-lived tokens minted from <strong>Settings → Security → API Tokens</strong> in the dashboard. Each token is named, can be revoked individually, and is what you should hand to Home Assistant / Homepage / Grafana / n8n.",
-      "<strong>Login flow (short-lived JWT).</strong> <code>POST /api/auth/login</code> with a username, password and TOTP token if 2FA is enabled. The returned JWT is short-lived and refreshed by the dashboard automatically; useful for ad-hoc scripts that authenticate as a human user."
+      "<strong>API tokens (recommended for integrations).</strong> Tokens valid for 365 days, created under <strong>Security → API Tokens</strong>. Each has a name and can be revoked individually. Use read_only for data collection and select full_admin only for integrations that need administrative actions.",
+      "<strong>Login flow (24-hour JWT).</strong> <code>POST /api/auth/login</code> with a username, password and TOTP token when required by 2FA. The returned session JWT expires after 24 hours; scripts must authenticate again when it expires."
     ],
     "flowLink": "The auth flow, password policy, 2FA setup, audit log and TLS configuration all live in <link>Access & Authentication</link>.",
     "rows": [
       {
         "endpoint": "/api/auth/login",
         "method": "POST",
-        "use": "Body: <code>'{'\"username\",\"password\",\"totp_token?\"'}'</code>. Returns a short-lived JWT."
+        "use": "Body fields (schematic): <code>'{'\"username\",\"password\",\"totp_token?\"'}'</code>. Returns a 24-hour session JWT."
       },
       {
         "endpoint": "/api/auth/api-tokens",
@@ -40,9 +40,9 @@
         "use": "List API tokens (metadata only — names, prefixes, dates; never the actual secret)."
       },
       {
-        "endpoint": "/api/auth/api-tokens",
+        "endpoint": "/api/auth/generate-api-token",
         "method": "POST",
-        "use": "Mint a new long-lived API token. Body: <code>'{'\"name\":\"'<'label'>'\"'}'</code>. The token value is returned once and cannot be retrieved again."
+        "use": "Create a 365-day API token using an authenticated session. Body fields: <code>password, token_name?, totp_token?, scope?</code>. Password and any required TOTP are checked again. Scope defaults to read_only; full_admin must be selected explicitly. The secret is returned only once."
       },
       {
         "endpoint": "/api/auth/api-tokens/<id>",
@@ -54,10 +54,10 @@
   "conventions": {
     "heading": "Conventions",
     "items": [
-      "All requests and responses are JSON unless explicitly noted (log download is plain text, <code>/api/prometheus</code> is text/plain in the OpenMetrics format, task log is plain text).",
-      "Successful mutating endpoints return <code>'{'\"success\": true, ...'}'</code>. Error responses use a non-2xx HTTP status with <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>.",
-      "List endpoints accept optional <code>limit</code>, <code>offset</code>, <code>since</code> and category-specific filters via query string.",
-      "Time fields are returned as Unix epoch seconds or ISO-8601 with explicit timezone, never as locale strings."
+      "Most endpoints use JSON. Downloads can return plain text, and <code>/api/prometheus</code> returns Prometheus text exposition format version 0.0.4 rather than OpenMetrics. Check the response type of the specific route.",
+      "Many write endpoints return <code>'{'\"success\": true, ...'}'</code>. Error formats vary; a common form is <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>. Check both HTTP status and response fields: some authentication challenges return HTTP 200 with success false.",
+      "Query parameters vary by endpoint. Use <code>limit</code>, <code>offset</code>, <code>since</code> and category-specific filters only where the route supports them.",
+      "Time formats vary by endpoint: Unix timestamps, ISO-8601 strings and systemd-formatted dates all occur. Do not assume every time field has the same unit or an explicit timezone."
     ]
   },
   "system": {
@@ -102,12 +102,12 @@
   },
   "actions": {
     "heading": "System actions",
-    "intro": "Fire-and-forget endpoints that trigger the same operations the operator would run from the Monitor UI or the shell menu — designed for Home Assistant, Homepage, Ansible, custom dashboards and any other automation that needs to reach into the host over HTTP. Every mutating route requires a token with <code>full_admin</code> scope; read-only <code>read_only</code> tokens can still poll the <code>.../status</code> endpoints without triggering anything. Each action returns 202 with a state snapshot; poll the matching <code>.../status</code> to observe progress.",
+    "intro": "The asynchronous system actions below start operations in transient systemd units. With authentication enabled, their write routes require <code>full_admin</code>; <code>read_only</code> tokens can poll <code>.../status</code>. Accepted starts return HTTP 202 with a state snapshot; poll the matching <code>.../status</code> for progress. Guest control and backup use different response contracts, described below.",
     "shapeTitle": "Common response shape",
-    "shapeIntro": "All action endpoints return the same JSON object — one shape to parse from any client:",
+    "shapeIntro": "Asynchronous system actions share the JSON state object below. Guest-control and backup responses have different shapes:",
     "shapeCode": "{\n  \"unit\": \"proxmenux-action-pve-update.service\",\n  \"state\": \"idle | running | success | failed | cancelled\",\n  \"started_at\": \"Sat 2026-08-01 11:01:32 CEST\",\n  \"finished_at\": null,\n  \"exit_code\": null,\n  \"result\": null\n}",
     "concurrencyTitle": "Concurrency and cancellation",
-    "concurrencyBody": "A second POST while a run is in flight returns 409 with the current running state. Cancel an in-flight run with a DELETE to the action's base URL; the state moves to <code>cancelled</code> and timestamps are preserved so the caller can still see when it was triggered and stopped. The last terminal state (success / failed / cancelled) is remembered until the next run replaces it.",
+    "concurrencyBody": "Starting a second run of the same system action returns HTTP 409 while it is active. Cancellation is available only for actions with a documented DELETE route, such as PVE update. Their state becomes <code>cancelled</code> and preserves timestamps. Terminal snapshots are kept in process memory and can be lost when the Monitor restarts.",
     "rows": [
       {
         "endpoint": "/api/system/power/reboot",
@@ -147,7 +147,7 @@
       {
         "endpoint": "/api/proxmenux/self-update/run",
         "method": "POST",
-        "use": "Update ProxMenux itself by piping the canonical stable installer. Runs in its own systemd unit so the update completes across the proxmenux-monitor restart the installer performs."
+        "use": "Update ProxMenux using the installer for the configured stable or beta channel. It runs in its own systemd unit so the job can survive the proxmenux-monitor service restart performed by the installer."
       },
       {
         "endpoint": "/api/proxmenux/self-update/status",
@@ -157,12 +157,12 @@
       {
         "endpoint": "/api/vms/<vmid>/control",
         "method": "POST",
-        "use": "Start / stop / shutdown / reboot a VM or LXC container (the same operations the Monitor's VM & LXC modal exposes). Body: {\"action\": \"start|stop|shutdown|reboot\"}. Synchronous — returns the outcome directly with no polling needed."
+        "use": "Submit VM or LXC power control. Body field <code>action</code> accepts <code>start</code>, <code>stop</code>, <code>shutdown</code> or <code>reboot</code>. A successful response returns a confirmed PVE task; it does not mean the operation has completed. Poll the guest control-task endpoint for its outcome."
       },
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Create a vzdump backup of a VM or LXC. Body (all optional except when the defaults don't match your storage layout): {\"storage\": \"<pve-storage>\", \"mode\": \"snapshot|suspend|stop\", \"compress\": \"zstd|lzo|gz|none\", \"protected\": true, \"notes\": \"…\", \"notification\": \"auto|always|failure|never\", \"pbs_change_detection\": \"default|legacy|data\"}. Returns the PVE task UPID."
+        "use": "Create a vzdump backup of a VM or LXC. Body fields, all optional unless the defaults do not match the storage layout: <code>storage</code> (a PVE storage), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> or <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> or <code>none</code>), <code>protected</code> (<code>true</code> or <code>false</code>), <code>notes</code> and <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> or <code>data</code>). Returns the PVE task UPID."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -171,7 +171,7 @@
       }
     ],
     "syncVsAsyncTitle": "Two flavours of action",
-    "syncVsAsyncBody": "System-level actions (host power, PVE update, ProxMenux self-update) can take minutes — they run in their own transient systemd unit and expose a <code>.../status</code> endpoint plus a <code>DELETE</code> to cancel. VM / LXC actions (start, stop, shutdown, reboot, backup) are fast and use the fire-and-return style the Monitor's UI already exposes: the POST returns the outcome directly. Both flavours share the same authentication model (JWT or long-lived API token).",
+    "syncVsAsyncBody": "Host power, PVE update and ProxMenux self-update run in transient systemd units with a <code>.../status</code> endpoint. Only PVE update has the <code>DELETE</code> cancellation route listed here. VM/LXC control returns a PVE task that must be polled; backup returns a UPID for a background job. An accepted request is not completion. Authentication and scope requirements depend on the route.",
     "curlTitle": "curl example",
     "curlBody": "Fire a PVE update and poll for completion — the exact same sequence a Home Assistant automation or an Ansible playbook would run:",
     "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
@@ -185,7 +185,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Small health probe — returns JSON with <code>status</code>, <code>timestamp</code>, <code>version</code>. Suitable for Uptime Kuma keyword checks; the receiver must send the bearer header."
+        "use": "Small health probe returning JSON with <code>status</code>, <code>timestamp</code> and <code>version</code>. Suitable for Uptime Kuma keyword checks; when authentication is enabled, the client must send the bearer header."
       },
       {
         "endpoint": "/api/health/status",
@@ -200,7 +200,7 @@
       {
         "endpoint": "/api/health/full",
         "method": "GET",
-        "use": "Full snapshot — categories + active errors + dismissed list + custom suppression settings. Backs the modal in one round-trip; uses a 6-min background cache for instant response."
+        "use": "Full snapshot: categories, active errors, dismissed alerts and custom suppression settings. It uses background check results when less than six minutes old; otherwise, or on a forced refresh, it runs a fresh check."
       },
       {
         "endpoint": "/api/health/active-errors",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Trigger a SMART self-test. Body: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Start a SMART self-test. Body schema: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",
@@ -336,7 +336,7 @@
       {
         "endpoint": "/api/vms",
         "method": "GET",
-        "use": "List of all VMs and CTs with status, vmid, name."
+        "use": "VMs and CTs on the local node, with status, vmid and name."
       },
       {
         "endpoint": "/api/vms/<vmid>",
@@ -361,7 +361,7 @@
       {
         "endpoint": "/api/vms/<vmid>/control",
         "method": "POST",
-        "use": "Body: <code>'{'\"action\":\"start|stop|reboot|shutdown\"'}'</code>. Power-cycle a guest."
+        "use": "Choose one action from the body schema: <code>'{'\"action\":\"start|stop|reboot|shutdown\"'}'</code>. Controls guest power state."
       },
       {
         "endpoint": "/api/vms/<vmid>/backup",
@@ -386,7 +386,7 @@
       {
         "endpoint": "/api/backups",
         "method": "GET",
-        "use": "Cluster-wide list of backups."
+        "use": "Backups found in dir, NFS, CIFS and PBS storages queried through the local node. This is not an exhaustive scan of every cluster node."
       },
       {
         "endpoint": "/api/backup-storages",
@@ -467,7 +467,7 @@
       {
         "endpoint": "/api/notifications/test-ai",
         "method": "POST",
-        "use": "Test the AI provider connection. Body: <code>'{'\"provider\",\"api_key\",\"model\",\"ollama_url?\"'}'</code>."
+        "use": "Test the AI provider connection. Body fields (schematic): <code>'{'\"provider\",\"api_key\",\"model\",\"ollama_url?\"'}'</code>."
       },
       {
         "endpoint": "/api/notifications/provider-models",
@@ -542,13 +542,13 @@
       {
         "endpoint": "/api/proxmenux/tool-source/<key>",
         "method": "GET",
-        "use": "Source code of a specific post-install function — the exact bash that was applied."
+        "use": "Source of the mapped post-install function, extracted from current host scripts or preserved legacy code. This is not a guaranteed snapshot of the exact code originally executed."
       }
     ]
   },
   "prometheus": {
     "heading": "Prometheus metrics",
-    "intro": "ProxMenux Monitor exposes a Prometheus-format scrape endpoint at <code>GET /api/prometheus</code> (authenticated) returning OpenMetrics-format text. Every metric is labelled with <code>node=\"&lt;hostname&gt;\"</code> and carries an explicit timestamp so it ingests cleanly into Prometheus, VictoriaMetrics, Mimir or any compatible TSDB.",
+    "intro": "The authenticated <code>GET /api/prometheus</code> endpoint returns Prometheus text exposition format version 0.0.4. Every metric includes <code>node=\"&lt;hostname&gt;\"</code> and an explicit timestamp. Collect it with Prometheus or another compatible time-series database.",
     "exportedTitle": "Exported metrics",
     "headerGroup": "Group",
     "headerMetric": "Metric",
@@ -597,7 +597,7 @@
           },
           {
             "metric": "proxmox_disk_temperature_celsius",
-            "desc": "Per-disk temperature. Label <code>device</code>."
+            "desc": "Temperature per disk. Label <code>disk</code>."
           },
           {
             "metric": "proxmox_fan_speed_rpm",
@@ -610,15 +610,15 @@
         "metrics": [
           {
             "metric": "proxmox_disk_total_bytes",
-            "desc": "Total disk space per mount. Label <code>mountpoint</code>."
+            "desc": "Total capacity per exported disk entry. Label <code>disk</code>."
           },
           {
             "metric": "proxmox_disk_used_bytes",
-            "desc": "Used disk space per mount."
+            "desc": "Used capacity per exported disk entry."
           },
           {
             "metric": "proxmox_disk_usage_percent",
-            "desc": "Disk usage percentage per mount."
+            "desc": "Used capacity percentage per exported disk entry."
           }
         ]
       },
@@ -660,7 +660,7 @@
           },
           {
             "metric": "proxmox_vm_status",
-            "desc": "Per-VM/CT status (1 = running, 0 = stopped). Labels <code>vmid</code>, <code>name</code>, <code>type</code>."
+            "desc": "Status per VM/CT (1 = running, 0 = otherwise). Labels <code>node</code>, <code>vmid</code>, <code>name</code>."
           },
           {
             "metric": "proxmox_vm_cpu_usage",
@@ -677,7 +677,7 @@
         "metrics": [
           {
             "metric": "proxmox_gpu_temperature_celsius",
-            "desc": "GPU temperature. Labels <code>slot</code>, <code>vendor</code>."
+            "desc": "GPU temperature. Labels <code>slot</code>, <code>vendor</code>; also includes the gpu name label."
           },
           {
             "metric": "proxmox_gpu_utilization_percent",
@@ -724,7 +724,7 @@
       }
     ],
     "scrapeTitle": "Prometheus scrape config",
-    "scrapeIntro": "The endpoint requires authentication. Pass the API token as a bearer header in your Prometheus scrape config:",
+    "scrapeIntro": "When authentication is enabled, pass an API token in the bearer header of your Prometheus collection configuration:",
     "perHostTitle": "Per-host scrape",
     "perHostBody": "Each ProxMenux Monitor instance exports metrics for the host it runs on. In a cluster, point Prometheus at every node — the <code>node</code> label on every series lets you distinguish them in Grafana queries (<code>proxmox_vms_running'{'node=\"pve01\"'}'</code>)."
   },

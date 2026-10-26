@@ -60,7 +60,7 @@ def _make_long_vzdump_report():
 
 
 class VzdumpWebhookTruncationTests(unittest.TestCase):
-    def test_truncating_vzdump_report_at_4096_can_create_false_failed_backup(self):
+    def test_truncating_vzdump_report_at_4096_leaves_guest_unconfirmed(self):
         full_message = _make_long_vzdump_report()
         truncated_message = full_message[:4096]
 
@@ -82,8 +82,8 @@ class VzdumpWebhookTruncationTests(unittest.TestCase):
 
         self.assertEqual(truncated_dockflare["name"], "dockflare")
         self.assertEqual(truncated_dockflare["status"], "")
-        self.assertIn("❌ dockflare (129)", truncated_body)
-        self.assertIn("❌ 1 failed", truncated_body)
+        self.assertIn("❔ dockflare (129)", truncated_body)
+        self.assertNotIn("❌ 1 failed", truncated_body)
 
     def test_webhook_handler_does_not_truncate_message_before_parsing(self):
         source = (SCRIPTS_DIR / "flask_notification_routes.py").read_text()

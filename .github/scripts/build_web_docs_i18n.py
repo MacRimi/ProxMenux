@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from build_translation_cache import (  # noqa: E402
     clean_translation,
     translate_appimage,
+    translate_argos,
     translate_google_web,
     translate_googletrans,
 )
@@ -72,6 +73,24 @@ TECHNICAL_TERMS = (
     "DKMS",
     "SSH",
     "API",
+    "Flask",
+    "SQLite",
+    "Prometheus",
+    "Grafana",
+    "Uptime Kuma",
+    "PWA",
+    "Fail2Ban",
+    "Tailscale",
+    "JavaScript",
+    "TypeScript",
+    "Next.js",
+    "Coral",
+    "rclone",
+    "journald",
+    "gasket",
+    "apex",
+    "Alpine",
+    "OpenVINO",
 )
 
 PROTECTED_PATTERNS = (
@@ -86,9 +105,14 @@ PROTECTED_PATTERNS = (
     re.compile(r"(?<![\w-])--[A-Za-z0-9][A-Za-z0-9_-]*"),
     re.compile(r"(?<![A-Za-z0-9<])/(?:[A-Za-z0-9._~:@%+=-]+/)*[A-Za-z0-9._~:@%+=-]+"),
     re.compile(r"\b[A-Za-z0-9_.-]+\.(?:json|ya?ml|toml|conf|service|socket|sh|py|tsx?|jsx?|md)\b"),
+    re.compile(r"(?<![\w.@])@[A-Za-z_][A-Za-z0-9_]*"),
+    # Identifiers and encoded delimiters remain literal even outside <code>.
+    re.compile(r"(?<![A-Za-z0-9_])_?[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+(?![A-Za-z0-9_])"),
+    re.compile(r"\b[A-Za-z0-9]*(?:[a-z][A-Z])[A-Za-z0-9]*\b"),
+    re.compile(r"&(?:[A-Za-z]+|#[0-9]+|#x[0-9A-Fa-f]+);"),
 )
 LITERAL_TAG_RE = re.compile(
-    r"<(code|kbd|pre)\b[^>]*>.*?</\1>",
+    r"<(code|codeNw|codeXs|kbd|pre)\b[^>]*>.*?</\1>",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -100,18 +124,30 @@ TERM_RE = re.compile(
     re.IGNORECASE,
 )
 TAG_RE = re.compile(r"</?([A-Za-z][A-Za-z0-9]*)>")
+# Every tag as written, attributes and self-closing slash included.
+ANY_TAG_RE = re.compile(r"</?[A-Za-z][^<>]*>")
+# Set from --provider: a local model rewrites bracketed sentinels, a remote
+# one drops bare ones beside inline markup. See protect_text.
+BARE_SENTINELS = False
 PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_.-]*\}")
 NON_TRANSLATABLE_KEYS = {
+    "accent",
+    "categoryslug",
     "command",
     "code",
     "href",
     "icon",
+    "iconbg",
     "id",
+    "menucmd",
     "path",
     "route",
     "slug",
     "src",
     "url",
+    "color",
+    "tone",
+    "variant",
 }
 SOURCE_STATE_VERSION = 1
 
@@ -179,12 +215,34 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
     if not source.strip() or not re.search(r"[A-Za-z]", source):
         return True
     last = str(path[-1]).lower() if path else ""
+    # These fields describe the surrounding snippet; they are prose, even
+    # though their names end in "Code".
+    if last in {"aftercode", "beforecode"}:
+        return False
+    # This UI breadcrumb is prose, rather than a filesystem path.
+    if last == "uipath" and "<strong>" in source:
+        return False
+    if last == "flow" and source in {"loader", "dedicated"}:
+        return True
+    # These exact values drive rendering/navigation; similarly named visible
+    # labels remain translatable.
+    if last == "branch" and source in {"main", "develop", "feature/*"}:
+        return True
+    if last == "kind" and source in {"internal", "external"}:
+        return True
+    if last == "key" and source in {"linux", "nas", "windows"}:
+        return True
     if last in NON_TRANSLATABLE_KEYS or any(
         last.endswith(suffix)
         for suffix in ("url", "href", "path", "command", "code", "icon")
     ):
         return True
-    if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/[A-Za-z0-9_./:@%+=-]+", source):
+    if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/\S+", source):
+        return True
+    # Standalone literal blocks contain examples, not prose. Separators between
+    # several blocks do not make their command/configuration contents translatable.
+    without_literals = LITERAL_TAG_RE.sub("", source)
+    if without_literals != source and not re.search(r"[A-Za-z]", ANY_TAG_RE.sub("", without_literals)):
         return True
     if re.fullmatch(r"[A-Z0-9_.:/+-]{2,}", source):
         return True
@@ -193,6 +251,15 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
 
 def leaf_token(path: tuple[str | int, ...]) -> str:
     return json.dumps(path, ensure_ascii=False, separators=(",", ":"))
+
+
+def literal_values_match(source: Any, target: Any) -> bool:
+    """Literal commands and rendering metadata must follow the source too."""
+    return all(
+        not should_copy(leaf.source, leaf.path)
+        or get_at_path(target, leaf.path) == leaf.source
+        for leaf in iter_leaves(source)
+    )
 
 
 def source_fingerprints(source: Any) -> dict[str, str]:
@@ -206,13 +273,13 @@ def needs_translation(
     source: str,
     target: Any,
     path: tuple[str | int, ...],
-    refresh: bool,
     forced_tokens: set[str] | None = None,
 ) -> bool:
     if should_copy(source, path):
         return False
-    if refresh:
-        return True
+    # An existing translation is never replaced. Only a leaf whose token was
+    # named on the command line may be retranslated over a real value, so an
+    # overwrite is always one somebody asked for rather than a side effect.
     if forced_tokens and leaf_token(path) in forced_tokens:
         return True
     return not isinstance(target, str) or not target.strip() or target == source
@@ -233,7 +300,7 @@ def protect_rich_tags(text: str) -> tuple[str, dict[str, str]]:
 
     def replace(match: re.Match[str]) -> str:
         original = match.group(1)
-        if original.lower() in {"code", "kbd", "pre"}:
+        if original.lower() in {"code", "codenw", "codexs", "kbd", "pre"}:
             return match.group(0)
         key = original.lower()
         internal = names.get(key)
@@ -279,6 +346,17 @@ def protect_text(text: str) -> tuple[str, dict[str, str]]:
         for match in TERM_RE.finditer(text)
         if not overlaps_literal(match.start(), match.end())
     )
+    if BARE_SENTINELS:
+        # A remote provider carries inline tags through untouched, so they are
+        # only validated afterwards. A local model rewrites them — dropping a
+        # </code>, merging two <em> — and the whole file is then discarded for
+        # a broken contract. Protecting them costs the translator the tag as
+        # context and saves the paragraph.
+        candidates.extend((match.start(), match.end()) for match in ANY_TAG_RE.finditer(text))
+        # A local model also rewrites what a literal block holds: it drops the
+        # underscores of an identifier, translates a subcommand and turns a
+        # pipe into punctuation. The whole block is one opaque token instead.
+        candidates.extend(literal_ranges)
     candidates.sort(key=lambda item: (item[0], -(item[1] - item[0])))
 
     selected: list[tuple[int, int]] = []
@@ -296,7 +374,12 @@ def protect_text(text: str) -> tuple[str, dict[str, str]]:
         # sit directly beside inline markup (for example an opening <em>
         # token followed by translated prose). Triple brackets remain opaque
         # in that position and preserve the complete rich-text contract.
-        token = f"[[[PMXDOC{index:04d}]]]"
+        #
+        # A local model treats the brackets as punctuation instead, and
+        # rewrites them: argos returns [PMXDOC0000] in German, [[PMXDOC0000]]
+        # in Slovak and [[[[PMXDOC0000]]]]] in Italian. The bare identifier
+        # survives every provider tried, so it is what a local run uses.
+        token = f"PMXDOC{index:04d}" if BARE_SENTINELS else f"[[[PMXDOC{index:04d}]]]"
         chunks.append(text[cursor:start])
         chunks.append(token)
         mapping[token] = text[start:end]
@@ -306,24 +389,39 @@ def protect_text(text: str) -> tuple[str, dict[str, str]]:
 
 
 def restore_text(text: str, mapping: dict[str, str]) -> str:
-    missing = [token for token in mapping if token not in text]
+    # A local model may append a digit to a bare sentinel. A substring match
+    # would silently restore the prefix and leak the extra digit into prose.
+    patterns = {token: re.compile(re.escape(token) + r"(?![0-9])") for token in mapping}
+    missing = [token for token, pattern in patterns.items() if not pattern.search(text)]
     if missing:
         raise ValueError(f"translation provider changed protected token {missing[0]}")
     for token, original in mapping.items():
-        text = text.replace(token, original)
+        text = patterns[token].sub(lambda match: original, text)
     return text
 
 
 def validate_contract(source: str, target: str) -> None:
     if sorted(TAG_RE.findall(source)) != sorted(TAG_RE.findall(target)):
         raise ValueError("rich-text tag contract changed")
+    if sorted(ANY_TAG_RE.findall(source)) != sorted(ANY_TAG_RE.findall(target)):
+        raise ValueError("markup changed")
+    literal = lambda text: sorted(match.group(0) for match in LITERAL_TAG_RE.finditer(text))
+    if literal(source) != literal(target):
+        raise ValueError("literal code changed")
     if sorted(PLACEHOLDER_RE.findall(source)) != sorted(PLACEHOLDER_RE.findall(target)):
         raise ValueError("placeholder contract changed")
+    # Bare numeric protection markers once leaked a trailing zero just
+    # outside an otherwise intact code span. Literal/ICU checks cannot see it.
+    residue = re.compile(r'(?:</(?:code|codeNw|codeXs|pre|kbd)>|<strong>)(0+)(?=\s|[;:/<().,-]|$)')
+    if len(residue.findall(target)) > len(residue.findall(source)):
+        raise ValueError("unexpected numeric residue next to literal markup")
 
 
 def provider_function(args: argparse.Namespace) -> Callable[[str, str], str]:
     def translate(text: str, language: str) -> str:
-        if args.provider == "googletrans":
+        if args.provider == "argos":
+            raw = translate_argos(text, language)
+        elif args.provider == "googletrans":
             raw = translate_googletrans(text, language, args.context)
         elif args.provider == "google-web":
             raw = translate_google_web(text, language, args.context, args.timeout)
@@ -446,7 +544,6 @@ def collect_memory(source_root: Path, messages_root: Path, language: str) -> dic
 def pending_leaves(
     source: Any,
     target: Any,
-    refresh: bool,
     forced_tokens: set[str] | None = None,
 ) -> list[Leaf]:
     return [
@@ -456,7 +553,6 @@ def pending_leaves(
             leaf.source,
             get_at_path(target, leaf.path),
             leaf.path,
-            refresh,
             forced_tokens,
         )
     ]
@@ -533,13 +629,14 @@ def translate_file(
     memory: dict[str, str],
     translate: Callable[[str, str], str],
     args: argparse.Namespace,
-) -> tuple[Any | None, list[str], int]:
+) -> tuple[Any | None, list[str], int, set[str]]:
     resolved: dict[tuple[str | int, ...], str] = {}
     failures: list[str] = []
+    failed_tokens: set[str] = set()
     jobs: dict[str, list[tuple[str | int, ...]]] = {}
 
     for leaf in leaves:
-        if not args.refresh and leaf.source in memory:
+        if leaf.source in memory:
             resolved[leaf.path] = memory[leaf.source]
             continue
         jobs.setdefault(leaf.source, []).append(leaf.path)
@@ -566,12 +663,17 @@ def translate_file(
                         resolved[path] = translated
                 except Exception as exc:
                     failures.append(f"{text[:90]}: {exc}")
+                    failed_tokens.update(leaf_token(path) for path in jobs[text])
                 if args.sleep:
                     time.sleep(args.sleep)
 
-    if failures:
-        return None, failures, len(jobs)
-    return merge_tree(source, target, resolved), [], len(jobs)
+    # What did translate is kept. merge_tree leaves a string it has no
+    # translation for as whatever the locale already held, or as the English
+    # source, so a file is written with the strings that worked rather than
+    # discarded whole: a dense paragraph that a provider cannot carry its
+    # protected tokens through used to take the other hundred and seventy
+    # strings of its file with it.
+    return merge_tree(source, target, resolved), failures, len(jobs), failed_tokens
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -586,8 +688,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--provider",
-        choices=("google-web", "googletrans", "appimage"),
+        choices=("argos", "google-web", "googletrans", "appimage"),
         default="googletrans",
+        help=(
+            "Translation provider. The default is what CI uses; `argos` runs "
+            "locally with no quota, which is what a corpus this size needs."
+        ),
     )
     parser.add_argument("--appimage-path", type=Path, default=Path("ProxMenux-Monitor.AppImage"))
     parser.add_argument(
@@ -623,7 +729,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    global BARE_SENTINELS
     args = build_parser().parse_args()
+    BARE_SENTINELS = args.provider == "argos"
     if args.workers < 1 or args.retries < 0 or args.max_files < 0:
         print("workers must be positive; retries and max-files cannot be negative", file=sys.stderr)
         return 2
@@ -646,7 +754,8 @@ def main() -> int:
         print("No target languages selected.", file=sys.stderr)
         return 2
     if args.refresh:
-        print("WARNING: --refresh overwrites existing translations in the selected scope.")
+        print("--refresh no longer overwrites existing translations; "
+              "name the leaves with --tokens instead.")
 
     translate = provider_function(args)
     state = load_source_state(source_state_path)
@@ -716,7 +825,7 @@ def main() -> int:
             pending_tokens.update(changed_tokens)
             pending_tokens.update(
                 leaf_token(leaf.path)
-                for leaf in pending_leaves(source, target, args.refresh)
+                for leaf in pending_leaves(source, target)
             )
             set_state_pending_tokens(state, language, relative, pending_tokens)
 
@@ -742,6 +851,11 @@ def main() -> int:
 
     total_failures = 0
     total_written = 0
+    # The provider decides the sentinel format, so a run that cannot be
+    # attributed to one cannot be diagnosed afterwards: a night of failures
+    # reading "translation provider changed protected token" left no way to
+    # tell whether the provider was the one the tokens were shaped for.
+    print(f"Provider: {args.provider} | bare sentinels: {BARE_SENTINELS}")
     print(f"English files: {len(files)} | locales: {', '.join(languages)}")
 
     for language in languages:
@@ -773,10 +887,13 @@ def main() -> int:
             source = file_info[relative_key][1]
             target = read_json(target_path)
             queued_tokens = state_pending_tokens(state, language, relative_key)
-            leaves = pending_leaves(source, target, args.refresh, queued_tokens)
+            leaves = pending_leaves(source, target, queued_tokens)
             total_strings += len(iter_leaves(source))
             missing_strings += len(leaves)
-            schema_changed = not schema_matches(source, target)
+            schema_changed = (
+                not schema_matches(source, target)
+                or not literal_values_match(source, target)
+            )
             if leaves or schema_changed:
                 pending.append(
                     (
@@ -816,7 +933,7 @@ def main() -> int:
                 f"({len(leaves)} strings{suffix})",
                 flush=True,
             )
-            built, failures, calls = translate_file(
+            built, failures, calls, failed_tokens = translate_file(
                 source,
                 target,
                 leaves,
@@ -827,18 +944,18 @@ def main() -> int:
             )
             if failures:
                 total_failures += len(failures)
-                set_state_pending_tokens(state, language, relative_key, queued_tokens)
-                write_json(source_state_path, state)
                 print(
-                    f"  skipped atomically after {len(failures)} failures "
-                    f"({calls} calls)",
+                    f"  {len(failures)} strings left untranslated ({calls} calls)",
                     file=sys.stderr,
                 )
                 for failure in failures[:5]:
                     print(f"  - {failure}", file=sys.stderr)
-                continue
             write_json(target_path, built)
-            set_state_pending_tokens(state, language, relative_key, set())
+            # The strings that failed stay pending, so the next run comes back
+            # for them and leaves the ones that translated alone.
+            set_state_pending_tokens(state, language, relative_key, failed_tokens)
+            if failures:
+                write_json(source_state_path, state)
             write_json(source_state_path, state)
             total_written += 1
             print(f"  wrote {target_path} ({calls} provider calls)", flush=True)

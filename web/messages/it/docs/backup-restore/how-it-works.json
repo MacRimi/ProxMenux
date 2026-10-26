@@ -1,0 +1,205 @@
+{
+  "meta": {
+    "title": "Come funziona il backup ProxMenux internamente — rootfs, manifesto, applicazioni",
+    "description": "Contenuto dettagliato di un backup ProxMenux: il rootfs copiato con rsync secondo il profilo di percorsi predefinito, il manifesto strutturato creato da sei moduli di raccolta indipendenti e l’inventario delle applicazioni che guida la reinstallazione automatica di pacchetti e componenti dopo il ripristino.",
+    "ogTitle": "Come funziona ProxMenux Backup internamente",
+    "ogDescription": "Le tre parti di un backup ProxMenux: rootfs, manifesto e applicazioni.",
+    "twitterTitle": "Come funziona ProxMenux Backup | ProxMenux",
+    "twitterDescription": "I tre payload di un backup ProxMenux e come il ripristino riproduce l'host sorgente da loro."
+  },
+  "header": {
+    "title": "Come funziona",
+    "description": "La ripartizione interna di un backup ProxMenux — filesystem, inventario manifesto e di applicazione — e come il ripristino consuma tutti e tre per riprodurre l'host sorgente su un obiettivo che potrebbe non condividere lo stesso kernel.",
+    "section": "Backup e ripristino"
+  },
+  "intro": {
+    "title": "Un archivio, tre parti",
+    "body": "Ogni backup crea tre parti definite sotto un’unica directory di preparazione. L’archivio caricato sulla destinazione (<code>.tar.zst</code> locale, backup PBS o archivio Borg) conserva questa struttura. Il ripristino usa tutte e tre: <strong>il manifesto</strong> viene consultato prima delle modifiche per rilevare differenze e decidere cosa escludere; <strong>rootfs</strong> fornisce i file di configurazione, applicati subito o dopo il riavvio; <strong>l’inventario delle applicazioni</strong> guida l’installazione dei pacchetti e la reinstallazione dei componenti dopo l’avvio. Ogni parte può essere esaminata o estratta indipendentemente."
+  },
+  "layout": {
+    "heading": "Disposizione dell'archivio",
+    "intro": "Ogni archivio segue lo stesso layout albero indipendentemente dalla destinazione. La sottodirectory <code>metadata/</code> contiene i dati strutturati; la sottodirectory <code>rootfs/</code> contiene la copia del filesystem.",
+    "treeCaption": "La directory di preparazione creata durante il backup. Tutte le destinazioni ricevono lo stesso albero nel proprio formato nativo: tar per i backup locali, blocchi PBS per PBS e segmenti Borg per Borg.",
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
+  },
+  "rootfs": {
+    "heading": "La parte rootfs",
+    "intro": "L’albero <code>rootfs/</code> è una <strong>semplice copia del filesystem</strong> prodotta da <code>rsync</code> dall’host di origine. Contiene un <strong>profilo predefinito</strong> di percorsi scelti per il ripristino Proxmox e gli eventuali <strong>percorsi personalizzati</strong> aggiunti all’attività o alla sessione interattiva. La selezione è volutamente limitata ai percorsi che <em>contengono configurazione</em> o <em>conservano uno stato che Proxmox non può rigenerare da solo</em>.",
+    "defaultProfileTitle": "Il profilo predefinito",
+    "defaultProfileBody": "Il profilo predefinito è definito da <code>hb_default_profile_paths</code> in <code>lib_host_backup_common.sh</code>. Copre otto categorie fisse e, se necessario, lo stato ZFS, che insieme descrivono un host Proxmox operativo:",
+    "categoriesTitle": "Categorie dei percorsi",
+    "categoryRows": [
+      {
+        "category": "Nucleo PVE",
+        "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
+        "why": "Contenuto del filesystem Cluster e default vzdump. Il database PMxcfs (<code>config.db</code>) viene catturato come un'istantanea coerente tramite <code>sqlite3 .backup</code> senza interrompere il cluster, e i sidecar <code>.db-wal</code> / <code>.db-shm</code> sono esclusi dal rsync. Quando <code>sqlite3</code> non è disponibile, viene creato <code>config.db.raw-fallback</code>, che il ripristino usa automaticamente come database."
+      },
+      {
+        "category": "Identità e rete host",
+        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network, /etc/systemd/network",
+        "why": "Tutto ciò che serve all’host per tornare in rete con la stessa identità. I file <code>.link</code> in <code>/etc/systemd/network</code> associano i nomi delle schede alle rispettive MAC, mantenendo i nomi durante reinstallazioni e modifiche hardware."
+      },
+      {
+        "category": "Accesso e autenticazione",
+        "paths": "/etc/ssh, /etc/sudoers, /etc/sudoers.d, /etc/pam.d, /etc/security",
+        "why": "Chiavi SSH, regole sudo e configurazione PAM. Perderle impedisce all’utente di accedere all’host ripristinato."
+      },
+      {
+        "category": "Kernel e avvio",
+        "paths": "/etc/default/grub, /etc/kernel, /etc/modules, /etc/modules-load.d, /etc/modprobe.d, /etc/sysctl.conf, /etc/sysctl.d, /etc/udev/rules.d, /etc/fstab, /etc/iscsi, /etc/multipath",
+        "why": "Parametri IOMMU, blacklist dei moduli, ID dei dispositivi VFIO, tabella dei montaggi e configurazione dello stack di archiviazione."
+      },
+      {
+        "category": "Shell e impostazioni locali",
+        "paths": "/etc/environment, /etc/bash.bashrc, /etc/inputrc, /etc/profile, /etc/profile.d, /etc/locale.gen, /etc/locale.conf",
+        "why": "Configurazione di shell a livello di sistema, variabili di ambiente, configurazione di generazione locale."
+      },
+      {
+        "category": "Gestione pacchetti e cron",
+        "paths": "/etc/apt, /etc/cron.d, /etc/cron.{daily,hourly,weekly,monthly}, /etc/cron.allow, /etc/cron.deny, /var/spool/cron/crontabs",
+        "why": "Fonti APT per una risoluzione coerente dei pacchetti, attività pianificate definite dall'utente."
+      },
+      {
+        "category": "ProxMenux stati e strumenti",
+        "paths": "/etc/proxmenux, /etc/systemd/system, /etc/log2ram.conf, /etc/logrotate.conf, /etc/logrotate.d, /etc/lm-sensors, /etc/sensors3.conf, /etc/fail2ban, /etc/snmp, /etc/postfix, /etc/wireguard, /etc/openvpn, /etc/grafana, /etc/influxdb, /etc/prometheus, /etc/telegraf, /etc/zabbix",
+        "why": "Utensili Proxmox opzionali ma comuni. I percorsi mancanti sono segnalati in <code>metadata/missing_paths.txt</code> senza interrompere il backup."
+      },
+      {
+        "category": "ProxMenux binari e root",
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (sottodiri volatili esclusi)",
+        "why": "File binari ProxMenux e configurazione per utente sotto <code>/root</code>. I percorsi volatili (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) sono esclusi dalla copia. <code>/var/lib/proxmenux</code> detiene i lavori di backup programmati e lo stato dell’host tenuto da ProxMenux; la messa in scena di ripristino, le copie rollback e i marcatori post-restore sono esclusi, perché appartengono all'host che gestisce un ripristino."
+      },
+      {
+        "category": "Stato ZFS (condizionato)",
+        "paths": "/etc/zfs",
+        "why": "Solo incluso quando l'host sorgente esegue ZFS. Contiene <code>zpool.cache</code> e <code>hostid</code>."
+      }
+    ],
+    "customTitle": "Estendere il profilo con percorsi personalizzati",
+    "customBody": "Oltre al profilo predefinito, ProxMenux offre due modi per includere ulteriori percorsi in un backup. Si compone senza conflitti ed entrambi si applicano a backup interattivi e lavori programmati.",
+    "customExtrasTitle": "1. Extra persistenti (file per host)",
+    "customExtrasBody": "Un file di testo a <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> contiene un elenco di percorsi assoluti che l'utente ha contrassegnato come \"sempre includere\" su questo host. Quando un backup viene eseguito in modalità <strong>Default</strong>, ProxMenux aggiunge questi percorsi al profilo predefinito automaticamente senza chiedere. Il file viene modificato dall'interfaccia — nessuna modifica manuale necessaria — e persiste attraverso riavvimenti e aggiornamenti. Un percorso assoluto per linea; sono consentiti commenti <code>#</code>.",
+    "customModeTitle": "2. Modalità personalizzata (per-run)",
+    "customModeBody": "Avviare un backup in modalità <strong>Custom</strong> sostituisce l'applicazione automatica del profilo predefinito con una lista di controllo che mostra ogni percorso: le voci del profilo predefinito e gli extra persistenti (prefissati con <code>[+]</code> e già selezionati). L'utente seleziona o deseleziona le voci per tale esecuzione specifica, e può anche premere <em>Aggiungi percorso personalizzato</em> per inserire un nuovo percorso — che viene poi persistito al file extra per i backup futuri.",
+    "customMissingTitle": "Sentieri assenti dalla fonte",
+    "customMissingBody": "Qualsiasi percorso dal profilo (default o aggiunto) che non esiste sull'host sorgente viene registrato in <code>metadata/missing_paths.txt</code> all'interno dell'archivio. Il backup non fallisce né si ferma — l'utente vede un riassunto di percorsi archiviati e percorsi mancanti alla fine. In pratica questo accade per percorsi di utensile opzionali come <code>/etc/wireguard</code> o <code>/etc/prometheus</code> quando questi strumenti non sono installati."
+  },
+  "manifest": {
+    "heading": "La parte manifesto",
+    "intro": "<code>manifest.json</code> è un documento strutturato JSON che descrive l'host sorgente al momento del backup. È prodotto da <strong>sei moduli di raccolta indipendenti</strong> orchestrati da <code>build_manifest.sh</code>. Ogni collettore è in sola lettura, produce un frammento JSON ben definito, e rientra in un default vuoto sicuro se non riesce — il manifesto è ancora utilizzabile se una sezione è incompleta.",
+    "orchestratorCaption": "I sei moduli di raccolta compongono il manifesto. Ogni collettore funziona nel proprio sottoprocesso; un guasto in uno rientra in un documento di default sicuro e avverte ma non interrompe il backup.",
+    "collectorRows": [
+      {
+        "collector": "collect_source_host.sh",
+        "produces": "source_host",
+        "content": "Hostname, versione PVE (<code>pveversion</code>), versione PBS se l'host esegue il ruolo di backup-server, kernel (<code>uname -r</code>), modalità boot (efi/bios), tipo filesystem root, modello CPU + architettura, memoria in KB."
+      },
+      {
+        "collector": "collect_hardware.sh",
+        "produces": "hardware_inventory",
+        "content": "GPU (con il fornitore e la mappatura dell'installatore ProxMenux), TPU (Coral USB + M.2 con il rilevamento di <code>lsusb</code>/<code>lspci</code>), NIC (con MAC, slot PCI e ponti), dispositivi wireless. Le voci GPU portano un'euristica <code>passthrough_eligible</code>."
+      },
+      {
+        "collector": "collect_storage.sh",
+        "produces": "storage_inventory",
+        "content": "Pool ZFS con relativo tipo e dischi membri identificati tramite <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> o percorsi diretti <code>/dev/sdX</code>, a seconda di come il pool è stato creato; gruppi di volumi e thin pool LVM; dischi fisici con supporto SMART; voci PVE di <code>storage.cfg</code>; montaggi esterni."
+      },
+      {
+        "collector": "collect_kernel.sh",
+        "produces": "kernel_params",
+        "content": "Parametri aggiunti dall’operatore in <code>/proc/cmdline</code>, esclusi quelli standard come <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code> e <code>splash</code>; moduli caricati all’avvio da <code>/etc/modules</code>; percorsi dei file <code>/etc/modprobe.d/*.conf</code> con direttive effettive (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
+      },
+      {
+        "collector": "collect_proxmenux_state.sh",
+        "produces": "proxmenux_installed_components",
+        "content": "Leggi <code>/usr/local/share/proxmenux/managed_installs.json</code> (registry di tutto ciò che ProxMenux ha installato) e <code>installed_tools.json</code>. Ogni voce mantiene il percorso di installazione (<code>menu_script</code>) in modo che il ripristino possa attivare lo stesso flusso di installazione."
+      },
+      {
+        "collector": "collect_guests.sh",
+        "produces": "vms_lxcs_at_backup",
+        "content": "Elenca le VM (<code>qm list</code>) e i container LXC (<code>pct list</code>) presenti al momento del backup: VMID, nome e stato. È soltanto l’inventario; il backup dei dati effettivi dei guest spetta a <code>vzdump</code> / PBS."
+      }
+    ],
+    "schemaTitle": "Validazione schema",
+    "schemaBody": "ProxMenux include un modello che descrive quali campi deve contenere il manifesto e la forma di ciascuno. Quando viene generato un backup, il manifesto può essere verificato automaticamente rispetto a quel modello, così un collettore che ha prodotto un JSON malformato o un campo scritto in modo errato viene individuato subito. La verifica è pensata per lo sviluppo di ProxMenux stesso: su un sistema in cui non è installata, il backup funziona come di consueto e il manifesto viene generato comunque."
+  },
+  "applications": {
+    "heading": "inventario delle applicazioni",
+    "intro": "Due inventari elencano il software aggiunto ai pacchetti base di Proxmox VE: la lista dei pacchetti in <code>metadata/</code> e il registro dei componenti in rootfs, descritti di seguito. Il ripristino usa APT o gli installatori ProxMenux per riprodurre il software dell’utente secondo il metodo originale di installazione.",
+    "packagesTitle": "packages.manual.list",
+    "packagesBody": "Una lista alfabetica in testo semplice prodotta da <code>apt-mark showmanual</code> con tutti i pacchetti APT <em>installati esplicitamente</em> sull’host di origine. Sono escluse le dipendenze del sistema Proxmox VE di base, che APT installa automaticamente sul destinatario. Durante il ripristino, <code>_rs_run_complete_extras</code> legge la lista e applica un <em>filtro contro le rimozioni a cascata</em> in tre passaggi: <code>dpkg -s</code> rileva i pacchetti già installati, vengono rilevate altre versioni principali delle librerie e <code>apt-get install --simulate</code> verifica il rischio di rimozioni a cascata. Infine usa <code>apt-get install -y</code> per i pacchetti rimasti.",
+    "componentsTitle": "components_status.json (parte di rootfs)",
+    "componentsBody": "Un registro JSON sotto <code>/usr/local/share/proxmenux/</code> che registra ogni componente ProxMenux installato con il suo stato esatto: versione, bandiere ProxMenux-specifiche (per NVIDIA: <code>patched</code> boolean; per Coral: versione DKMS). Questo file vive all'interno dei rootfs — non in <code>metadata/</code> — perché è <em>letto dopo</em> la copia di rootfs al bersaglio. Il distaccatore post-boot (<code>apply_cluster_postboot.sh</code>) itera sulle sue voci ed esegue il gancio <code>--auto-reinstall</code> di ciascun componente, che legge lo stato registrato e riproduce l'installazione contro il kernel corrente dell'obiettivo.",
+    "componentInstallersTitle": "Installatori di componenti",
+    "componentInstallersBody": "Quattro installatori ProxMenux attualmente espongono un punto di ingresso <code>--auto-reinstall</code>:",
+    "installerRows": [
+      {
+        "component": "nvidia_driver",
+        "installer": "gpu_tpu/nvidia_installer.sh",
+        "action": "Leggi <code>version</code> + <code>patched</code>. Scarica lo stesso runfile NVIDIA, costruisce moduli DKMS contro il kernel dell'obiettivo, riapplica la patch ProxMenux se la sorgente lo avesse."
+      },
+      {
+        "component": "coral_driver",
+        "installer": "gpu_tpu/install_coral.sh",
+        "action": "Legge la versione del driver Coral. Compili il modulo DKMS contro il kernel dell'obiettivo."
+      },
+      {
+        "component": "amdgpu_top",
+        "installer": "gpu_tpu/amd_gpu_tools.sh",
+        "action": "Legge la versione registrata. Ricarica l'esatta <code>.deb</code> dalla versione GitHub."
+      },
+      {
+        "component": "intel_gpu_tools",
+        "installer": "gpu_tpu/intel_gpu_tools.sh",
+        "action": "APT-installa il pacchetto. Idemponte se già presente da <code>packages.manual.list</code>."
+      }
+    ]
+  },
+  "restoreFlow": {
+    "heading": "Come il ripristino usa le tre parti",
+    "intro": "Il restauro e' una pipeline di sei stadi. Ogni fase legge un sottoinsieme specifico dell'archivio e aggiorna l'host di destinazione. Nessuna fase richiede che l'host sorgente sia raggiungibile — l'archivio è completamente autonomo.",
+    "stagesCaption": "La fase 1 usa il manifesto per decidere cosa modificare. La fase 2 copia i percorsi rootfs applicabili al sistema in esecuzione. La fase 3 prepara quelli rischiosi per il prossimo avvio. La fase 3b importa i pool ZFS di dati che non contengono la radice e hanno tutti i dischi presenti. La fase 4 gestisce i pacchetti. La fase 5 reinstalla i componenti dopo il riavvio per il kernel di destinazione.",
+    "stageRows": [
+      {
+        "stage": "1",
+        "name": "Controllo di compatibilità",
+        "reads": "manifest.json",
+        "action": "Esegue <code>hb_compat_check</code>. Confronta sorgente vs. hardware target (NIC, ID di archiviazione), versione PVE e versione kernel principale. Imposta <code>HB_COMPAT_KERNEL_DIRECTION</code> (<code>same</code>, <code>bk_newer</code> o <code>bk_older</code>) e popola <code>RS_SKIP_PATHS</code> con esclusione hardware-drift e cross-kernel."
+      },
+      {
+        "stage": "2",
+        "name": "Applicazione a sistema avviato",
+        "reads": "rootfs/ (solo percorsi sicuri)",
+        "action": "<code>_rs_apply … hot</code> copia le voci <code>hb_classify_path</code>=<code>hot</code> direttamente al target live. Qualsiasi cosa sotto <code>/etc/pve</code>, <code>/etc/network</code> o percorsi classificati come <em>reboot</em>/<em>dangerous</em> è differita."
+      },
+      {
+        "stage": "3",
+        "name": "Preparazione delle modifiche differite",
+        "reads": "rootfs/ (riavvio + percorsi pericolosi)",
+        "action": "<code>_rs_prepare_pending_restore</code> prepara i percorsi rischiosi in <code>/var/lib/proxmenux/pending-restore/</code>, scrive <code>plan.env</code>, <code>apply-on-boot.list</code> e <code>rs-skip-paths.txt</code> e abilita <code>proxmenux-restore-onboot.service</code> per il prossimo avvio."
+      },
+      {
+        "stage": "3b",
+        "name": "Importazione dei pool di dati",
+        "reads": "manifest.storage_inventory + target ZFS stato",
+        "action": "<code>_rs_import_data_pools</code> tenta di importare ogni pool ZFS che non contiene la radice e ha tutti i dischi presenti sul destinatario. Se il pool ha un hostid estraneo, riprova con <code>zpool import -f</code>. Se manca un disco, il pool viene saltato con un avviso. Il risultato per pool è registrato in <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "stage": "4",
+        "name": "Installazione del pacchetto",
+        "reads": "metadata/packages.manual.list",
+        "action": "<code>_rs_run_complete_extras</code> gestisce il filtro a cascata e chiama <code>apt-get install -y</code> con l'elenco dei pacchetti sopravvissuti. L'uscita completa va a <code>/var/log/proxmenux/restore-apt-*.log</code>."
+      },
+      {
+        "stage": "5",
+        "name": "Dopo l'avvio",
+        "reads": "rootfs (già applicato) + components_status.json",
+        "action": "Dopo il riavvio, <code>apply_pending_restore.sh</code> riprende i percorsi differiti e <code>apply_cluster_postboot.sh</code> corre <code>update-initramfs</code>, <code>update-grub</code> (o <code>proxmox-boot-tool refresh</code>) e itera oltre <code>components_status.json</code> sparando il gancio <code>--auto-reinstall</code> di ogni componente."
+      }
+    ]
+  },
+  "whyItWorks": {
+    "heading": "Perché suddividere il backup in tre parti",
+    "body": "La suddivisione segue il <strong>ciclo di vita</strong> dei dati. Il filesystem viene trasferito con <code>rsync</code>: rapidamente, in modo trasparente e atomico per file. Lo stato di configurazione da interpretare prima delle modifiche è <strong>JSON strutturato</strong>, leggibile separatamente, versionabile tramite schema e confrontabile automaticamente con lo stato di destinazione. Il software da reinstallare è descritto in un <strong>inventario</strong> di nomi e versioni; il gestore dei pacchetti e gli installatori ProxMenux scelgono i binari adatti. Ogni parte svolge il proprio compito. Insieme mirano a un ripristino coerente ma tollerante agli errori: un manifesto corrotto lascia rootfs ripristinabile, un pacchetto mancante non impedisce l’installazione dei componenti e un errore su una voce non ferma l’installazione della successiva."
+  }
+}

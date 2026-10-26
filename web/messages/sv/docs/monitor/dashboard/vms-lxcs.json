@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Översikt: VM och LXC | ProxMenux-dokumentation",
+    "description": "Fliken VM och LXC inventerar alla gäster på värden med CPU-, minnes- och diskanvändning i realtid. Detaljerna per gäst visar konfiguration, resurser, säkerhetskopior, konsolloggen för OCI-containrar, anteckningar och Starta / Stäng av / Starta om / Tvinga stopp."
+  },
+  "header": {
+    "title": "Översikt: VM och LXC",
+    "description": "Hela nodens gästinventering: fyra mätvärden överst, en sorterbar lista över alla VM och LXC nedanför samt gästdetaljer med konfiguration, resurser, säkerhetskopior, konsolloggen för OCI-containrar och de fyra livscykelkontrollerna (Starta / Stäng av / Starta om / Tvinga stopp).",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "intro": {
+    "title": "Kontroller för gäster",
+    "body": "Här styr du gästernas livscykel. Livscykelåtgärder går via <code>POST /api/vms/&lt;vmid&gt;/control</code>; Starta om och Tvinga stopp ber dig skriva VMID för att bekräfta, och svaret visas i gästens rad. Tvingad avstängning kräver den särskilda knappen Tvinga stopp."
+  },
+  "topRow": {
+    "heading": "Övre raden: fyra statistikkort",
+    "intro": "Fyra kort sammanfattar gästernas tillstånd: antal, CPU-användning, tilldelat minne jämfört med värdens kapacitet och disktilldelning.",
+    "imageAlt": "VMs & LXCs-fliken - topprad på fyra statskort: Total VMs & LXCs, Total CPU, Total Memory, Total Disk",
+    "imageCaption": "Övre raden: totaler och Körs / Stoppade, aktuell CPU-användning, använt minne / tilldelat körande gäster / totalt tilldelat med Inom gränserna samt tilldelat diskutrymme.",
+    "headerCard": "Kort",
+    "headerWhat": "Vad det visar",
+    "totalLabel": "Totalt VM och LXC",
+    "totalWhat": "Totalräkning med två märken - <em>X Running</em> (grön) och <em>Y Stopped</em> (röd, endast när > 0). Numret du tittar på när något inte kom tillbaka efter en omstart.",
+    "cpuLabel": "Total CPU",
+    "cpuWhat": "Gästernas sammanlagda aktuella CPU-användning som andel av värdens fysiska CPU, med texten <em>”Tilldelad CPU-användning”</em>.",
+    "memoryLabel": "Totalt minne",
+    "memoryIntro": "Tre avläsningar staplade vertikalt:",
+    "memoryItems": [
+      "<strong>Används nu</strong> — huvudvärde, exempelvis <em>15.4 GB</em>, och <em>X.X % av Y GB</em> av värdens RAM. Den blå stapeln visar procentandelen.",
+      "<strong>Tilldelat körande</strong> + <strong>Totalt tilldelat</strong> — summan av <code>maxmem</code> för <em>körande</em> gäster bredvid summan för <em>alla</em>, även stoppade. Den första gäller nu, den andra när allt startas samtidigt.",
+      "<strong>Inom gränserna</strong> är grönt och blir <em>Överallokerat</em> om total tilldelning överstiger värdens RAM. Kontrollerad överallokering kan fungera med KSM; märket varnar när marginalen minskar."
+    ],
+    "diskLabel": "Total disk",
+    "diskWhat": "Summan av tilldelat diskutrymme för alla gäster i GB eller TB med texten <em>”Tilldelat diskutrymme”</em>."
+  },
+  "inventory": {
+    "heading": "Lista över virtuella maskiner och containrar",
+    "intro": "En rad per gäst. Listan kommer från <code>/api/vms</code>, som sammanför <code>qm list</code> + <code>pct list</code> + <code>pvesh /cluster/resources</code> på värden.",
+    "imageAlt": "Virtual Machines & Containers lista - en rad per gäst med status, typmärke, namn, ID och inline CPU / minne / diskprocent",
+    "imageCaption": "Inventeringens mobilvy — samma data som datorvyn, omplacerade till en kolumn med kompakta procenttal och statusindikatorer.",
+    "rowsIntro": "Varje rad visar:",
+    "rows": [
+      "<strong>Statusikon</strong> — grön uppspelningstriangel för körande eller röd fyrkant för stoppad. Resten av raden tonas ner för stoppade gäster.",
+      "<strong>Typ</strong> — <em>LXC</em> i cyan för containrar, <em>VM</em> i lila för virtuella maskiner.",
+      "<strong>Namn</strong> — gästens värdnamn eller visningsnamn.",
+      "<strong>VMID</strong> - Proxmox numeriska ID under namnet.",
+      "<strong>Inline metrics</strong> - tre procenttal med sin ikon (CPU%, Memory%, Disk%). Varje ikon vänder orange när metriska korsar en uppmärksamhet tröskel (t.ex. minne över 90%), så en snabb genomsökning berättar vilken gäst som är under tryck utan att öppna den."
+    ],
+    "clickHint": "Klicka på en rad för att öppna detaljerna, oavsett om gästen körs eller är stoppad.",
+    "mobileTitle": "Listan är utformad för mobila enheter",
+    "mobileBody": "På telefoner och i smala fönster staplas typ, namn, ID och tre procenttal i en kolumn som på bilden. Breda vyer fördelar samma data horisontellt. Hela raden kan tryckas för att öppna detaljerna."
+  },
+  "drillIn": {
+    "heading": "Dialogruta med gästdetaljer",
+    "intro": "Dialogrutan visar namn, VMID, typ, tillstånd och drifttid. Flikarna anpassas till gästen: <strong>Status</strong>, <strong>App</strong> och <strong>Uppdateringar</strong> för LXC-appar, <strong>Monteringar</strong> när de finns, <strong>Loggar</strong> för OCI manager Apps-containrar, <strong>Säkerhetskopior</strong> och <strong>Brandvägg</strong>. Det fasta åtgärdsfältet ger livscykelkontroller och LXC-terminal från varje flik.",
+    "statusTitle": "Tab 1 - Status",
+    "statusImageAlt": "Gästdetaljer — Status med CPU, minne och disk i realtid, disk- och nätverks-I/O, OS-logotyp och Resurser / IP-adresser",
+    "statusImageCaption": "Status: CPU, minne och disk med staplar överst; total I/O (disk läst/skrivet, nätverk mottaget/skickat); sedan Resurser med Anteckningar, + Info och IP-adresslista.",
+    "statusIntro": "Standardfliken för att kontrollera gästens tillstånd. Tre block:",
+    "liveTitle": "1. Rad med aktuella mätvärden",
+    "liveItems": [
+      "<strong>CPU-användning (X kärnor)</strong> — procentandel med stapel. Antalet inställda kärnor i rubriken förklarar vad 100 % motsvarar.",
+      "<strong>Minne</strong> — <em>använt / maximalt</em> i GB med stapel.",
+      "<strong>Disk</strong> — <em>använt / maximalt</em> för gästens primära diskavbildning i samma format."
+    ],
+    "ioTitle": "2. I/O totalt + OS logo",
+    "ioItems": [
+      "<strong>Disk-I/O</strong> — total läsning (↓) och skrivning (↑) sedan start. Hjälper dig se en plötslig ökning av I/O jämfört med gästens normala nivå.",
+      "<strong>Nätverks-I/O</strong> — total nedladdning (↓) och uppladdning (↑), enligt samma princip.",
+      "<strong>OS-logotyp</strong> — Debian / Ubuntu / Alpine / Windows / etc. efter upptäckt system. Hjälper dig skilja öppna dialogrutor åt."
+    ],
+    "resourcesTitle": "3. Resursblock",
+    "resourcesIntro": "Konfiguration enligt Proxmox: CPU-kärnor, minne (inställt <code>maxmem</code>) och swap. Två utfällbara avsnitt i rubriken:",
+    "resourcesItems": [
+      "<strong>Anteckningar</strong> — gästens redigerbara beskrivning. Spara anropar <code>PUT /api/vms/&lt;vmid&gt;/config</code> och skriver till <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> eller <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
+      "<strong> + Info</strong> - extra fält som är för verbose för standardvyn: bios-läge, maskintyp, agenttillstånd, hostpci passthrough-poster, monteringspunkter (CT), startorder."
+    ],
+    "ipsTitle": "4. IP-adresser",
+    "ipsBody": "Varje IPv4- eller IPv6-adress visas i en grön etikett. Listan är tom för stoppade gäster eller VM utan QEMU-agent; LXC rapporterar adresser direkt.",
+    "appTitle": "Tab 2 - App (endast LXC)",
+    "appIntro": "Registrerar LXC-appar, sparar webblänkar och jämför valfritt versioner. Förslagen kommer från startcachen; <strong>Hitta appar</strong> gör om sökningen för denna LXC efter ny installation.",
+    "appLinkLead": "Se den",
+    "appLinkLabel": "den separata App-sidan",
+    "appLinkTail": "för cachad upptäckt, katalogstödd registrering, Docker webblänkar och versionsdetektorer.",
+    "updatesTitle": "Tab 3 - Uppdateringar (endast LXC)",
+    "updatesIntro": "<strong>OS-paket</strong>, appar, <strong>Docker Engine</strong> och Docker-avbildningar är separata mål. Varje mål kan köras enskilt eller väljas exakt för gruppvis eller schemalagd körning.",
+    "updatesLinkLead": "Se den",
+    "updatesLinkLabel": "Dedikerad uppdateringssida",
+    "updatesLinkTail": "för inbyggda och egna uppdateringsprogram, återskapande av Docker-containrar, gruppval, säkerhetsalternativ och schemaläggning.",
+    "mountsTitle": "Flik 4 — Monteringar (bara LXC, när de finns)",
+    "mountsImageAlt": "LXC-detaljer, Monteringar: PVE-volymer, bind-monteringar från värden eller PVE-lagring och NFS/CIFS monterade inne i CT:n. Varje kort visar typ, kapacitet, använda/totala byte, alternativ och status: grön fungerande, bärnsten skrivskyddad/avvikande, röd otillgänglig.",
+    "mountsImageCaption": "Monteringar visas bara för LXC med minst en monteringspunkt eller tillagd fjärrmontering. Utan monteringar visas ingen flik.",
+    "mountsIntro": "Proxmox visar monteringar inställda som <code>mpX</code>, men inte dem som läggs till inne i CT:n via <code>mount.cifs</code>, NFS med <code>autofs</code> med mera. Fliken förenar <strong>båda vyerna</strong>: inställda monteringar <strong>och</strong> dem som upptäcks i containern, med status och kapacitet när servern kan hämta den.",
+    "mountTypesTitle": "Typer av montering upptäckt",
+    "mountTypesItems": [
+      "<strong>PVE-volym</strong> — Proxmox-hanterad lagring som ZFS-subvolym, katalog eller Ceph RBD. Kapaciteten kommer från PVE-statistik och motsvarar Proxmox visning.",
+      "<strong>Bind från PVE-lagring</strong> — <code>mpX</code>-post med sökväg på lagring som PVE känner till.",
+      "<strong>Bind från värden</strong> — <code>mpX</code>-post med valfri värdsökväg (<code>/mnt/something</code>). Kapaciteten hämtas med <code>df</code> för den sökvägen.",
+      "<strong>Montering tillagd i CT</strong> — finns <em>bara</em> i containerns monteringsnamnrymd, exempelvis NFS som CT:n själv monterar. Kapaciteten läses med <code>pct exec &lt;vmid&gt; df</code>; <code>/proc/&lt;pid&gt;/root</code> från värden ger inte fjärrmonteringens riktiga statistik."
+    ],
+    "mountStateTitle": "Statuspunkt och varningar per kort",
+    "mountStateItems": [
+      "<green/> <strong>Grön</strong> — monteringen fungerar och är nåbar.",
+      "<amber/> <strong>Bärnsten</strong> — inställd men inte monterad, skrivskyddad eller <em>zombie-bindning</em>. Källan har försvunnit på värden men CT:n ser den fortfarande som monterad, exempelvis efter urkopplad USB-disk eller <code>umount</code> på värden.",
+      "<red/> <strong>Röd</strong> — otillgänglig: kontrollen kan inte nå monteringen, exempelvis en NFS-export vars server är nere."
+    ],
+    "mountsCalloutTitle": "Ytterligare information jämfört med Proxmox",
+    "mountsCalloutBody": "Visar containerns läs- och skrivplatser med kapacitet. NFS-/CIFS-delningar monterade inne i CT:n, som Proxmox inte visar, får samma utseende och hälsokontroll. Otillgängliga fjärrmonteringar och zombie-bindningar flaggas innan de orsakar problem vid säkerhetskopiering.",
+    "logsTitle": "Flik 5 — Loggar (bara OCI-containrar)",
+    "logsBody": "Bara för containrar från OCI manager Apps. Visar huvudprocessens konsol från <code>/var/log/proxmenux/oci/VMID.console.log</code>: senaste 100, 500 eller 1000 raderna, liveföljning när containern körs, filter och nedladdning. Filen läses om vid öppning även när containern är stoppad. Mer: <ociLink>OCI-containrar i ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Flik 6 — Säkerhetskopior",
+    "backupsImageAlt": "Gästdetaljer — Säkerhetskopior med tillgängliga kopior, destinationer, storlekar och knappen Skapa säkerhetskopia",
+    "backupsImageCaption": "Alla kopior av gästen på konfigurerade Proxmox-lagringar, nyaste först. Rubriken visar antalet.",
+    "backupsIntro": "Listar gästens kopior på Proxmox-lagringar, nyaste först. Räknaren i rubriken visar om kopior finns. Varje rad visar:",
+    "backupsItems": [
+      "<strong>Tidsstämpel</strong> — datum och tid för körningen.",
+      "<strong>Destination</strong> — lagring (PBS-Cloud, PBS-Local, NFS-Backup, …), färgad efter status.",
+      "<strong>Storlek</strong> — kopians slutliga storlek på disk."
+    ],
+    "backupsOutro": "<strong>+ Skapa säkerhetskopia</strong> startar en kopiering på lagringen markerad ”Backup target” i Proxmox. Återställning görs i Proxmox webbgränssnitt; Monitor visar gästens senaste kopior och kan skapa nya.",
+    "firewallTitle": "Tab 7 - Brandvägg",
+    "firewallIntro": "Läser gästens Proxmox-brandväggslogg direkt från värden utan extra tjänst eller periodiska hämtningar. Fliken finns alltid; innehållet beror på om brandväggen är aktiv och någon regel loggar paket.",
+    "firewallItems": [
+      "<strong>Brandvägg avstängd</strong> — ett bärnstensfärgat meddelande visar var den aktiveras i Proxmox (<em>&lt;Container|VM&gt; → Firewall → Options</em>) och att en regel behöver <code>log: info</code> eller högre för att paket ska synas.",
+      "<strong>Brandvägg aktiv, inga händelser</strong> — den tomma vyn påminner om samma loggningskrav, användbart direkt efter aktivering.",
+      "<strong>Händelser finns</strong> — rullningsbar ruta med fast teckenbredd och råposter efter åtgärd: <green>ACCEPT</green> grön, <orange>REJECT</orange> orange, <red>DROP</red> röd. Räknaren i rubriken visar laddade poster."
+    ],
+    "firewallRefresh": "<em>Uppdatera</em> hämtar de senaste posterna på begäran. Ingen automatisk uppdatering sker; listan visar läget vid öppning eller senaste tryck. Källan är <code>/var/log/pve-firewall.log</code>, filtrerad efter VMID via <code>GET /api/vms/&lt;vmid&gt;/firewall/log</code>.",
+    "firewallCalloutTitle": "Varför har det här när Proxmox UI redan visar det?",
+    "firewallCalloutBody": "Slipper byte till Proxmox och håller vyn avgränsad till samma VMID: starta gästen, kontrollera monteringar och brandväggshändelser och stoppa den igen i panelen. Regler redigeras i Proxmox; Monitor ändrar dem inte.",
+    "actionBarTitle": "Åtgärdsfält längst ned",
+    "actionBarIntro": "Alltid synlig vid foten av modalen oavsett vilken flik är aktiv:",
+    "consoleItem": "<strong>Konsol</strong>, bara för körande LXC, öppnar <code>pct enter &lt;vmid&gt;</code> i containern. Den använder xterm.js och WebSocket som <link>Terminalfliken</link>, med ett <strong>mobilanpassat verktygsfält</strong>: ESC, TAB, pilar, Enter och Ctrl+C / Ctrl+X / Ctrl+R. Den fungerar på telefon och surfplatta. För VM använder du Proxmox noVNC-konsol.",
+    "lifecycleIntro": "Fyra knappar i ett 2×2-rutnät skickar <code>POST /api/vms/&lt;vmid&gt;/control</code> med motsvarande <code>action</code>. Tillgängligheten beror på gästens tillstånd.",
+    "headerButton": "Knapp",
+    "headerEnabled": "Aktiverad när",
+    "headerAction": "Åtgärder som skickas till värd",
+    "lifecycleRows": [
+      {
+        "button": "Starta",
+        "color": "green",
+        "enabled": "Gästen är stoppad.",
+        "action": "qm start / pct start"
+      },
+      {
+        "button": "Stäng av",
+        "color": "blue",
+        "enabled": "Gästen körs.",
+        "action": "qm shutdown / pct shutdown — ordnad avstängning, ACPI"
+      },
+      {
+        "button": "Starta om",
+        "color": "blue",
+        "enabled": "Gästen körs.",
+        "action": "qm reboot / pct reboot — ordnad omstart"
+      },
+      {
+        "button": "Tvinga stopp",
+        "color": "red",
+        "enabled": "Gästen körs.",
+        "action": "qm stop / pct stop — tvingad avstängning"
+      }
+    ],
+    "forceStopTitle": "Tvinga stopp avslutar körningen omedelbart",
+    "forceStopBody": "<strong>Tvinga stopp</strong> hoppar över avstängningen som att dra ur strömmen. Använd <strong>Stäng av</strong> när gästen svarar. Tvinga bara stopp om avstängningen har hängt sig och du accepterar risken för dataförlust. Röd färg och tydlig text motverkar feltryck."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerSection": "Avsnitt av fliken",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "section": "Inventeringslista",
+        "endpoint": "/api/vms",
+        "source": "<code>pvesh get /cluster/resources --type vm</code> för VM och CT."
+      },
+      {
+        "section": "Detaljpanel (konfig, nätverk, diskar)",
+        "endpoint": "/api/vms/<vmid>",
+        "source": "<code>qm config &lt;id&gt;</code> för VM/<code>pct config &lt;id&gt;</code> för CT."
+      },
+      {
+        "section": "Diagram med gästens mätvärden",
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "source": "PVE RRD-data (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) kondenserade till en diagramvänlig form."
+      },
+      {
+        "section": "OCI-konsollogg (fliken Loggar)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Konsolutdata från avbildningens huvudprocess, läst från <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> på värden. Visas endast för OCI-containrar."
+      },
+      {
+        "section": "Backups tillgängliga för gäst",
+        "endpoint": "/api/vms/<vmid>/backups",
+        "source": "<code>pvesm list &lt;storage&gt;</code> filtreras av VMID."
+      },
+      {
+        "section": "Gästens brandväggslogg (Brandvägg-fliken)",
+        "endpoint": "/api/vms/<vmid>/firewall/log",
+        "source": "<code>/var/log/pve-firewall.log</code> filtreras av VMID."
+      },
+      {
+        "section": "Strömknappar (Starta / Tvinga stopp / Starta om / Stäng av)",
+        "endpoint": "/api/vms/<vmid>/control",
+        "source": "<code>qm start|stop|reboot|shutdown</code> eller <code>pct</code> motsvarande."
+      }
+    ],
+    "codeComment1": "# Jämför översiktens data med PVE",
+    "codeComment2": "# Granska gästens konfiguration precis som i dialogrutan",
+    "codeComment3": "# VM",
+    "codeComment4": "# CT"
+  },
+  "whereNext": {
+    "heading": "Nästa steg",
+    "items": [
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — VMs & Containers kategori (misslyckad start, QMP timeouts, CT avstängningsfel)."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " - vad <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> och <code>backup_*</code> händelser utlöser nedströms."
+      },
+      {
+        "label": "API-referens",
+        "href": "/docs/monitor/api",
+        "tailRich": " — slutpunkterna för VM och säkerhetskopior."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tailRich": " — de andra flikarna."
+      },
+      {
+        "label": "ProxMenux → Skapa VM",
+        "href": "/docs/create-vm",
+        "tailRich": " — skapa system: NAS-mallar (Synology med flera), Linux-/Windows-VM och standardvärden anpassade för Proxmox."
+      }
+    ]
+  }
+}

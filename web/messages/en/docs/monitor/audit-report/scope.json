@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "title": "Scope and guarantees | Audit & Report",
+    "description": "Where the data of Audit & Report comes from, what is outside its view, the guarantees of its design and where its data is stored."
+  },
+  "header": {
+    "title": "Scope and guarantees",
+    "description": "Where the data of an assessment comes from, what stays outside its view and where Audit & Report keeps its data.",
+    "section": "Audit & Report"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "What it observes",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "The configuration and state of the local node.",
+              "The declared configuration of the VMs and LXCs.",
+              "The state of the storage as Proxmox VE knows it.",
+              "The available history of backups and verifications.",
+              "SMART data and the events the Monitor has collected.",
+              "The state of services, cluster, HA and local sources."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "What is outside its view",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "The interior of the guests, beyond what they declare to Proxmox VE.",
+              "Network equipment outside the host.",
+              "Remote dependencies the node cannot observe.",
+              "Physical state the hardware does not expose.",
+              "Manual actions or actions of other software, in the change journal."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Missing evidence is not evidence of absence",
+            "body": "A source that cannot be read gives an unverified or incomplete result, never a conformant one. The report lists the sources that were not available."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Guarantees of the design",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Stable identifiers for the checks.",
+              "History of runs and findings.",
+              "A validated policy, saved atomically.",
+              "Accepted risks with a reason, visible.",
+              "Attribution of changes to script and function.",
+              "Capture before and after, where it is available.",
+              "An explicit result when something cannot be measured or captured."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Where the data is stored",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Data", "Location"],
+            "rows": [
+              ["Policy", "<code>/usr/local/share/proxmenux/audit_policy.json</code>"],
+              ["Assessments", "The audit database of the Monitor"],
+              ["Captured objects", "<code>/usr/local/share/proxmenux/changes/objects/</code>"],
+              ["Pending entries", "<code>/usr/local/share/proxmenux/changes/spool/</code>"],
+              ["Consolidated journal", "<code>/usr/local/share/proxmenux/changes.db</code>"]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "A tool to review, not a certification",
+            "body": "Audit & Report reviews, compares and documents the node. Its results are read together with the purpose of the system, the declared policy and the sources available."
+          }
+        }
+      ]
+    }
+  ]
+}

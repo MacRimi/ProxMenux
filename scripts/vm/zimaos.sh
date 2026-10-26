@@ -171,7 +171,12 @@ function run_gpu_passthrough_wizard() {
   fi
 
   if [[ ! -f "$gpu_script" ]]; then
-    msg_warn "$(translate "GPU passthrough assistant not found. You can run it later from Hardware Graphics.")"
+    local gpu_notice
+    gpu_notice="$(translate "GPU passthrough assistant not found. Later, open {menu} → {action} from the main menu to try again.")"
+    [[ "$gpu_notice" == *'{menu}'* && "$gpu_notice" == *'{action}'* ]] || gpu_notice="GPU passthrough assistant not found. Later, open {menu} → {action} from the main menu to try again."
+    gpu_notice="${gpu_notice//\{menu\}/"$(translate "Hardware: GPUs and Coral-TPU")"}"
+    gpu_notice="${gpu_notice//\{action\}/"$(translate "Add GPU to VM    (Intel | AMD | NVIDIA)")"}"
+    msg_warn "$gpu_notice"
     WIZARD_GPU_RESULT="cancelled"
     return 0
   fi
@@ -555,7 +560,7 @@ function select_disk_type() {
 }
 
 function select_virtual_disk() {
-  msg_info "Detecting available storage volumes..."
+  msg_info "$(translate "Detecting storage for disk images...")"
 
   local STORAGE_MENU=()
   local TAG TYPE FREE ITEM
@@ -579,8 +584,8 @@ function select_virtual_disk() {
     STORAGE=${STORAGE_MENU[0]}
   else
     [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" >/dev/null 2>&1
-    STORAGE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "Select Storage Volume")" --radiolist \
-      "$(translate  "Choose the storage volume for the virtual disk:\n")" 20 78 10 \
+    STORAGE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "Select Storage")" --radiolist \
+      "$(translate "Choose the storage for the virtual disk:")"$'\n' 20 78 10 \
       "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || return 0
     [[ -z "$STORAGE" ]] && return 0
   fi
@@ -990,7 +995,7 @@ function select_efi_storage() {
     [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" > /dev/null 2>&1
     while [ -z "${STORAGE:+x}" ]; do
       STORAGE=$(whiptail --backtitle "ProxMenuX" --title "EFI Disk Storage" --radiolist \
-        "$(translate "Choose the storage volume for the EFI disk (4MB):\n\nUse Spacebar to select.")" \
+        "$(translate "Choose the storage for the EFI disk (4MB):")"$'\n\n'"$(translate "Use Spacebar to select.")" \
         16 $(($MSG_MAX_LENGTH + 23)) 6 \
         "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || {
           msg_warn "$(translate "EFI storage selection cancelled.")" >&2
@@ -1041,8 +1046,8 @@ function select_storage_volume() {
     STORAGE=${STORAGE_MENU[0]}
   else
     while [ -z "${STORAGE:+x}" ]; do
-      STORAGE=$(whiptail --backtitle "ProxMenuX" --title "Storage Pools" --radiolist \
-        "$(translate "Choose the storage volume for $purpose:")" \
+      STORAGE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "Select Storage")" --radiolist \
+        "$(translate "Choose the storage for the loader disk:")" \
         16 $(($MSG_MAX_LENGTH + 23)) 6 \
         "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || {
           msg_warn "$(translate "Storage selection cancelled for $purpose.")" >&2

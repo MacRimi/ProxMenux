@@ -421,6 +421,22 @@ class HealthPersistence:
             )
         ''')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_excluded_interface ON excluded_interfaces(interface_name)')
+
+        # Disks the user wants left alone: no periodic SMART or temperature
+        # reads, so a drive can reach its own spin-down and stop cycling its
+        # heads. Keyed by a stable identity rather than the kernel name, which
+        # a USB drive can change (sda -> sdb) on every reconnection.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS excluded_disks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                disk_key TEXT UNIQUE NOT NULL,
+                disk_name TEXT,
+                model TEXT,
+                serial TEXT,
+                excluded_at TEXT NOT NULL,
+                reason TEXT
+            )
+        ''')
         
         conn.commit()
         
@@ -430,7 +446,7 @@ class HealthPersistence:
         required_tables = {'errors', 'events', 'system_capabilities', 'user_settings', 
                           'notification_history', 'notification_last_sent', 'notification_delivery_claims',
                           'disk_registry', 'disk_observations', 
-                          'excluded_storages', 'excluded_interfaces'}
+                          'excluded_storages', 'excluded_interfaces', 'excluded_disks'}
         missing = required_tables - tables
         if missing:
             print(f"[HealthPersistence] WARNING: Missing tables after init: {missing}")
@@ -447,9 +463,8 @@ class HealthPersistence:
         # and looks "new" again on the next boot. Audit Tier 5 — Health stack.
         #
         # IMPORTANT: Only cleans the `errors` table (health monitor state).
-        # The `disk_observations` table is a PERMANENT historical record
-        # and must NEVER be auto-modified on startup. Users dismiss
-        # observations manually from the disk detail UI.
+        # The `disk_observations` table is a PERMANENT historical record:
+        # nothing removes, hides or dismisses an observation.
         #
         # Covers: disk I/O (smart_*, disk_*), VM/CT (vm_*, ct_*, vmct_*),
         # and log errors (log_*) — all journal-sourced categories.
@@ -493,6 +508,30 @@ class HealthPersistence:
                           f"removed {cleaned_errors} stale error(s) from health monitor")
         except Exception as e:
             print(f"[HealthPersistence] Startup cleanup warning: {e}")
+
+        # Earlier versions marked an observation as dismissed once it had not
+        # been seen for 30 days, or when its device was gone, and left it out
+        # of the history of its disk even when the error came back. The mark
+        # is no longer used; it is taken off once so the table says what is
+        # shown.
+        _OBSERVATION_HISTORY_VERSION = '1'
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT setting_value FROM user_settings WHERE setting_key = ?',
+                           ('observation_history_version',))
+            row = cursor.fetchone()
+            if not (row and row[0] == _OBSERVATION_HISTORY_VERSION):
+                cursor.execute('UPDATE disk_observations SET dismissed = 0 WHERE dismissed = 1')
+                restored = cursor.rowcount
+                cursor.execute('''
+                    INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
+                    VALUES (?, ?, ?)
+                ''', ('observation_history_version', _OBSERVATION_HISTORY_VERSION, datetime.now().isoformat()))
+                conn.commit()
+                if restored > 0:
+                    print(f"[HealthPersistence] Disk observation history: {restored} observation(s) shown again")
+        except Exception as e:
+            print(f"[HealthPersistence] Observation history warning: {e}")
 
         conn.close()
     
@@ -590,6 +629,12 @@ class HealthPersistence:
             existing = cursor.fetchone()
 
             event_info = {'type': 'updated', 'needs_notification': False}
+
+            if existing and existing[1] == 0 and existing[2] is not None:
+                # A resolved, non-dismissed condition returning is a new episode.
+                # Keep event history and reuse normal insertion/suppression policy.
+                cursor.execute('DELETE FROM errors WHERE id = ?', (existing[0],))
+                existing = None
 
             if existing:
                 (err_id, ack, resolved_at, old_cat, old_severity, first_seen,
@@ -752,6 +797,7 @@ class HealthPersistence:
                     resolution_type = COALESCE(resolution_type, 'auto'),
                     resolution_reason = ?
                 WHERE error_key = ? AND resolved_at IS NULL
+                  AND NOT (acknowledged = 1 AND IFNULL(suppression_hours, 0) = -1)
             ''', (now, reason, error_key))
 
             if cursor.rowcount > 0:
@@ -865,10 +911,14 @@ class HealthPersistence:
 
             # Check if this error was acknowledged (dismissed)
             cursor.execute('''
-                SELECT acknowledged FROM errors WHERE error_key = ?
+                SELECT acknowledged, suppression_hours FROM errors WHERE error_key = ?
             ''', (error_key,))
             row = cursor.fetchone()
 
+            if row and row[0] == 1 and row[1] == -1:
+                # Silenced permanently: it stays silenced if the condition
+                # comes back, until the user re-enables it.
+                return
             if row and row[0] == 1:
                 # Dismissed error that naturally resolved - delete entirely
                 cursor.execute('DELETE FROM errors WHERE error_key = ?', (error_key,))
@@ -1258,6 +1308,13 @@ class HealthPersistence:
             now = datetime.now()
             now_iso = now.isoformat()
 
+            # A permanent dismissal that was closed only for its age is kept.
+            cursor.execute(
+                'UPDATE errors SET resolved_at = NULL, resolution_type = NULL, resolution_reason = NULL '
+                'WHERE acknowledged = 1 AND suppression_hours = -1 AND resolution_reason IN (%s)'
+                % ','.join('?' * len(self._AGED_OUT_REASONS)),
+                tuple(sorted(self._AGED_OUT_REASONS)))
+
             # Delete resolved errors older than 7 days
             cutoff_resolved = (now - timedelta(days=7)).isoformat()
             cursor.execute('DELETE FROM errors WHERE resolved_at < ?', (cutoff_resolved,))
@@ -1421,13 +1478,17 @@ class HealthPersistence:
         # Clean up errors for resources that no longer exist (VMs/CTs deleted, disks removed)
         self._cleanup_stale_resources()
 
-        # NOTE: cleanup_orphan_observations() is deliberately NOT invoked here.
-        # Running it on the 5-minute auto-resolve cycle silently dismissed legitimate
-        # observations (ZFS pool errors, ATA host events, dm-* aliases) before the user
-        # could see them in the UI history, even though notifications were already sent.
-        # The cleanup is still available as an explicit user action via
-        # POST /api/health/cleanup-disconnected-disks (flask_health_routes.py).
+        # NOTE: nothing here touches `disk_observations`. That table is the
+        # permanent history of each disk and no cycle removes or hides rows.
     
+    # Why the stale cleanup closes a record when nothing else did: its age.
+    _AGED_OUT_REASONS = frozenset({
+        'Log error aged out (>48h)',
+        'Temperature error stale (>24h no activity)',
+        'Update/security notice aged out (>7d)',
+        'Stale error (no activity >7d)',
+    })
+
     def _cleanup_stale_resources(self):
         """Resolve errors for resources that no longer exist.
         
@@ -1455,7 +1516,8 @@ class HealthPersistence:
         # An error is considered unresolved if resolution_type is NULL or empty
         # (resolved_at alone is not sufficient - it may be in an inconsistent state)
         cursor.execute('''
-            SELECT id, error_key, category, reason, first_seen, last_seen, severity FROM errors 
+            SELECT id, error_key, category, reason, first_seen, last_seen, severity,
+                   acknowledged, suppression_hours FROM errors
             WHERE resolution_type IS NULL OR resolution_type = ''
         ''')
         active_errors = cursor.fetchall()
@@ -1659,7 +1721,9 @@ class HealthPersistence:
                 return 0
         
         for error_row in active_errors:
-            err_id, error_key, category, reason, first_seen, last_seen, severity = error_row
+            (err_id, error_key, category, reason, first_seen, last_seen, severity,
+             acknowledged, suppression_hours) = error_row
+            permanent = acknowledged == 1 and suppression_hours == -1
             should_resolve = False
             resolution_reason = None
             age_hours = get_age_hours(first_seen)
@@ -1864,6 +1928,12 @@ class HealthPersistence:
                 should_resolve = True
                 resolution_reason = 'Stale error (no activity >7d)'
             
+            # A problem silenced permanently is not recorded again on purpose,
+            # so its lack of activity says nothing: only its resource going
+            # away ends it. The user brings it back from Active Suppressions.
+            if should_resolve and permanent and resolution_reason in self._AGED_OUT_REASONS:
+                should_resolve = False
+
             if should_resolve:
                 cursor.execute('''
                     UPDATE errors SET resolved_at = ?, resolution_type = 'auto', resolution_reason = ?
@@ -2313,6 +2383,10 @@ class HealthPersistence:
         
         updated_count = 0
         for err_id, error_key, category, old_hours in dismissed:
+            if old_hours == -1:
+                # A permanent dismissal is the user's choice for that alert,
+                # and only ends from Active Suppressions.
+                continue
             setting_key = None
             for skey, meta in self._get_category_labels().items():
                 if meta['category'] == category:
@@ -2544,7 +2618,7 @@ class HealthPersistence:
             cursor.execute('''
                 SELECT id FROM disk_registry 
                 WHERE device_name = ? AND serial != '' 
-                ORDER BY last_seen DESC LIMIT 1
+                ORDER BY removed ASC, last_seen DESC LIMIT 1
             ''', (clean_dev,))
             row = cursor.fetchone()
             if row:
@@ -2647,17 +2721,10 @@ class HealthPersistence:
                 first_col = 'first_occurrence' if 'first_occurrence' in columns else 'first_seen'
                 last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
 
-                # Upsert observation: if same (disk, type, signature), bump count + update last timestamp.
-                # IMPORTANT: Do NOT reset dismissed — if the user dismissed this observation,
-                # re-detecting the same journal entry must not un-dismiss it. BUT we DO
-                # keep counting + updating last_occurrence even when dismissed, because the
-                # responsible-monitoring contract is: every error counts toward the
-                # accumulated total shown in the disk modal ("324 connection errors"),
-                # even errors of the same signature the user already saw once. Dismissed
-                # only mutes notifications, NOT the per-disk error history surfaced in the
-                # UI. Reverting the earlier "WHERE dismissed=0" gate that froze the
-                # counter and last_occurrence for /dev/sdh on 2026-05-09, leaving 10
-                # silent days of unreported ATA errors (Pedro Rico, 19/05).
+                # The same observation seen again adds to its count and moves its
+                # last date; a different one is a new row. Observations are never
+                # dismissed nor hidden: the `dismissed` column stays in the table
+                # for databases of earlier versions and is not used.
                 cursor.execute(f'''
                     INSERT INTO disk_observations
                         (disk_registry_id, {type_col}, error_signature, {first_col},
@@ -2675,13 +2742,90 @@ class HealthPersistence:
         except Exception as e:
             print(f"[HealthPersistence] Error recording disk observation: {e}")
 
+    # A disk whose serial could not be read is recorded with none, or with the
+    # word the interface shows for it: neither identifies a disk.
+    _NO_SERIAL = "(serial IS NULL OR serial = '' OR serial = 'Unknown')"
+
+    @staticmethod
+    def _known_serial(serial: Optional[str]) -> str:
+        serial = (serial or '').strip()
+        return '' if serial.lower() in ('', 'unknown', 'n/a') else serial
+
+    def _disk_observation_scope(self, cursor, device_name: Optional[str], serial: Optional[str]):
+        """Which observations belong to the disk now known as `device_name`.
+
+        A disk is its serial number: its history follows it to whatever name
+        the kernel gives it. The name alone is a connector, and the disk that
+        was plugged there before keeps its own history. Observations recorded
+        under the name without a serial count for the current disk only from
+        the moment the previous disk with a serial was last seen there.
+
+        Returns (WHERE clause, parameters), or None when nothing is known.
+        """
+        clean_dev = (device_name or '').replace('/dev/', '')
+        serial = self._known_serial(serial)
+        if not serial and clean_dev:
+            cursor.execute(
+                f'SELECT serial FROM disk_registry WHERE device_name = ? AND NOT {self._NO_SERIAL} '
+                'ORDER BY removed ASC, last_seen DESC LIMIT 1', (clean_dev,))
+            row = cursor.fetchone()
+            serial = row[0] if row else ''
+        own = []
+        if serial:
+            cursor.execute('SELECT id FROM disk_registry WHERE serial = ?', (serial,))
+            own = [row[0] for row in cursor.fetchall()]
+        unidentified, since = [], None
+        if clean_dev:
+            cursor.execute(
+                f'SELECT id FROM disk_registry WHERE device_name = ? AND {self._NO_SERIAL}', (clean_dev,))
+            unidentified = [row[0] for row in cursor.fetchall()]
+            cursor.execute(
+                f'SELECT MAX(last_seen) FROM disk_registry '
+                f'WHERE device_name = ? AND NOT {self._NO_SERIAL} AND serial != ?',
+                (clean_dev, serial))
+            since = cursor.fetchone()[0]
+        if not own and not unidentified:
+            return None
+        cursor.execute('PRAGMA table_info(disk_observations)')
+        columns = [col[1] for col in cursor.fetchall()]
+        last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
+        clauses, params = [], []
+        if own:
+            clauses.append(f"o.disk_registry_id IN ({','.join('?' * len(own))})")
+            params += own
+        if unidentified:
+            clause = f"o.disk_registry_id IN ({','.join('?' * len(unidentified))})"
+            params += unidentified
+            if since:
+                clause = f'({clause} AND o.{last_col} >= ?)'
+                params.append(since)
+            clauses.append(clause)
+        return '(' + ' OR '.join(clauses) + ')', params
+
+    def count_disk_observations(self, device_name: str, serial: Optional[str] = None) -> int:
+        """How many observations a disk has: the number its badge shows, counted
+        the way `get_disk_observations` lists them."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                scope = self._disk_observation_scope(cursor, device_name, serial)
+                if scope is None:
+                    return 0
+                where, params = scope
+                cursor.execute(
+                    f'SELECT COUNT(*) FROM disk_observations o WHERE {where}', params)
+                return int(cursor.fetchone()[0])
+        except Exception as e:
+            print(f"[HealthPersistence] Error counting observations: {e}")
+            return 0
+
     def get_disk_observations(self, device_name: Optional[str] = None,
                                serial: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get active (non-dismissed) observations for one disk or all disks.
-        
-        For USB disks that may have multiple registry entries (one with serial,
-        one without), this searches ALL registry entries matching the device_name
-        to ensure observations are found regardless of which entry recorded them.
+        """The observations of one disk, or of every disk.
+
+        The history of a disk is permanent and an observation cannot be
+        dismissed: each different one is listed, with the number of times it
+        was seen.
         """
         try:
             conn = self._get_conn()
@@ -2696,48 +2840,29 @@ class HealthPersistence:
             last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
             
             if device_name or serial:
-                clean_dev = (device_name or '').replace('/dev/', '')
-                
-                # Get ALL disk_registry IDs that match this device_name
-                # This handles USB disks with multiple registry entries
-                cursor.execute(
-                    'SELECT id FROM disk_registry WHERE device_name = ?',
-                    (clean_dev,))
-                all_ids = [row[0] for row in cursor.fetchall()]
-                
-                # Also try to find by serial if provided
-                if serial:
-                    cursor.execute(
-                        'SELECT id FROM disk_registry WHERE serial = ? AND serial != ""',
-                        (serial,))
-                    serial_ids = [row[0] for row in cursor.fetchall()]
-                    all_ids = list(set(all_ids + serial_ids))
-                
-                if not all_ids:
+                scope = self._disk_observation_scope(cursor, device_name, serial)
+                if scope is None:
                     conn.close()
                     return []
-                
-                # Query observations for ALL matching registry entries
-                placeholders = ','.join('?' * len(all_ids))
+                where, params = scope
                 cursor.execute(f'''
                     SELECT o.id, o.{type_col}, o.error_signature,
                            o.{first_col}, o.{last_col},
-                           o.occurrence_count, o.raw_message, o.severity, o.dismissed,
+                           o.occurrence_count, o.raw_message, o.severity,
                            d.device_name, d.serial, d.model
                     FROM disk_observations o
                     JOIN disk_registry d ON o.disk_registry_id = d.id
-                    WHERE o.disk_registry_id IN ({placeholders}) AND o.dismissed = 0
+                    WHERE {where}
                     ORDER BY o.{last_col} DESC
-                ''', all_ids)
+                ''', params)
             else:
                 cursor.execute(f'''
                     SELECT o.id, o.{type_col}, o.error_signature,
                            o.{first_col}, o.{last_col},
-                           o.occurrence_count, o.raw_message, o.severity, o.dismissed,
+                           o.occurrence_count, o.raw_message, o.severity,
                            d.device_name, d.serial, d.model
                     FROM disk_observations o
                     JOIN disk_registry d ON o.disk_registry_id = d.id
-                    WHERE o.dismissed = 0
                     ORDER BY o.{last_col} DESC
                 ''')
             
@@ -2753,10 +2878,9 @@ class HealthPersistence:
                 'occurrence_count': r[5],
                 'raw_message': r[6] or '',
                 'severity': r[7],
-                'dismissed': bool(r[8]),
-                'device_name': r[9],
-                'serial': r[10],
-                'model': r[11],
+                'device_name': r[8],
+                'serial': r[9],
+                'model': r[10],
             } for r in rows]
         except Exception as e:
             print(f"[HealthPersistence] Error getting observations: {e}")
@@ -2778,7 +2902,6 @@ class HealthPersistence:
                     SELECT DISTINCT dr.device_name, dr.serial
                     FROM disk_observations o
                     JOIN disk_registry dr ON o.disk_registry_id = dr.id
-                    WHERE o.dismissed = 0
                 ''')
                 rows = cursor.fetchall()
                 return [{'device_name': r[0], 'serial': r[1] or ''} for r in rows]
@@ -2786,124 +2909,11 @@ class HealthPersistence:
             print(f"[HealthPersistence] get_all_observed_devices failed: {e}")
             return []
     
-    def get_disks_observation_counts(self) -> Dict[str, int]:
-        """Return {device_name: count} of active observations per disk.
-        
-        Groups by serial when available to consolidate counts across device name changes
-        (e.g., ata8 -> sdh). Also includes serial-keyed entries for cross-device matching.
-        """
-        try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            
-            # For disks WITH serial: group by serial to consolidate across device renames
-            cursor.execute('''
-                SELECT d.serial, COUNT(o.id) as cnt
-                FROM disk_observations o
-                JOIN disk_registry d ON o.disk_registry_id = d.id
-                WHERE o.dismissed = 0 AND d.serial IS NOT NULL AND d.serial != ''
-                GROUP BY d.serial
-            ''')
-            serial_counts = {row[0]: row[1] for row in cursor.fetchall()}
-            
-            # Get current device_name for each serial (prefer non-ata names)
-            cursor.execute('''
-                SELECT serial, device_name FROM disk_registry
-                WHERE serial IS NOT NULL AND serial != ''
-                ORDER BY 
-                    CASE WHEN device_name LIKE 'ata%' THEN 1 ELSE 0 END,
-                    last_seen DESC
-            ''')
-            serial_to_device = {}
-            for serial, device_name in cursor.fetchall():
-                if serial not in serial_to_device:
-                    serial_to_device[serial] = device_name
-            
-            # Resolve which serial currently OWNS each device_name. The
-            # kernel reuses NVMe / SD device names across reboots
-            # (e.g. the disk that was nvme4n1 with 5 NVMes plugged in
-            # comes back as nvme0n1 once 4 are removed), and
-            # disk_registry keeps a row for every (device_name, serial)
-            # combination it has ever seen. Without this check we would
-            # mirror an observation's count onto its serial's
-            # "most-recent" device_name even when that name is now in
-            # use by a DIFFERENT serial — surfacing a "1 obs." badge on
-            # a disk that has no observations of its own and a clean
-            # modal, since the modal correctly scopes by current
-            # (device_name, serial) pair.
-            cursor.execute('''
-                SELECT device_name, serial FROM disk_registry
-                WHERE device_name IS NOT NULL AND device_name != ''
-                ORDER BY last_seen DESC
-            ''')
-            current_owner = {}
-            for device_name, dev_serial in cursor.fetchall():
-                if device_name not in current_owner:
-                    current_owner[device_name] = dev_serial
-
-            # Build result
-            result = {}
-            for serial, cnt in serial_counts.items():
-                result[f'serial:{serial}'] = cnt
-                device_name = serial_to_device.get(serial)
-                if device_name and current_owner.get(device_name) == serial:
-                    result[device_name] = max(result.get(device_name, 0), cnt)
-            
-            # For disks WITHOUT serial: group by device_name
-            cursor.execute('''
-                SELECT d.device_name, COUNT(o.id) as cnt
-                FROM disk_observations o
-                JOIN disk_registry d ON o.disk_registry_id = d.id
-                WHERE o.dismissed = 0 AND (d.serial IS NULL OR d.serial = '')
-                GROUP BY d.device_name
-            ''')
-            for device_name, cnt in cursor.fetchall():
-                result[device_name] = max(result.get(device_name, 0), cnt)
-            
-            conn.close()
-            return result
-        except Exception as e:
-            print(f"[HealthPersistence] Error getting observation counts: {e}")
-            return {}
-
-    def dismiss_disk_observation(self, observation_id: int):
-        """Mark a single observation as dismissed."""
-        try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            cursor.execute(
-                'UPDATE disk_observations SET dismissed = 1 WHERE id = ?',
-                (observation_id,))
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"[HealthPersistence] Error dismissing observation: {e}")
-
-    def cleanup_stale_observations(self, max_age_days: int = 30):
-        """Auto-dismiss observations not seen in max_age_days."""
-        try:
-            from datetime import timedelta
-            cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            
-            # Detect column name for backward compatibility
-            cursor.execute('PRAGMA table_info(disk_observations)')
-            columns = [col[1] for col in cursor.fetchall()]
-            last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
-            
-            cursor.execute(f'''
-                UPDATE disk_observations 
-                SET dismissed = 1 
-                WHERE dismissed = 0 AND {last_col} < ?
-            ''', (cutoff,))
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"[HealthPersistence] Error cleaning stale observations: {e}")
-
-    def mark_removed_disks(self, active_device_names: List[str]):
-        """Mark disks not in active_device_names as removed."""
+    def mark_removed_disks(self, active_device_names: List[str],
+                           active_serials: Optional[Dict[str, str]] = None):
+        """Mark disks not in active_device_names as removed. With
+        `active_serials` ({device name: serial of the disk there now}), a disk
+        whose name was taken by a different one is marked removed as well."""
         try:
             now = datetime.now().isoformat()
             conn = self._get_conn()
@@ -2914,70 +2924,18 @@ class HealthPersistence:
                     UPDATE disk_registry SET removed = 1
                     WHERE device_name NOT IN ({placeholders}) AND removed = 0
                 ''', active_device_names)
+            for device_name, serial in (active_serials or {}).items():
+                serial = self._known_serial(serial)
+                if serial:
+                    cursor.execute(f'''
+                        UPDATE disk_registry SET removed = 1
+                        WHERE device_name = ? AND NOT {self._NO_SERIAL}
+                          AND serial != ? AND removed = 0
+                    ''', (device_name, serial))
             conn.commit()
             conn.close()
         except Exception as e:
             print(f"[HealthPersistence] Error marking removed disks: {e}")
-
-    # Logical (non-block) device-name prefixes used as observation keys for events that
-    # don't map to a /dev/<name> entry: ZFS pool names, ATA host identifiers (e.g. "ata8"
-    # from "ata8.00: exception ..." journal lines), device-mapper aliases, etc. These are
-    # never visible in /dev/ by design, so the original presence-based cleanup would
-    # always wrongly dismiss them. They are excluded from automatic cleanup; the user's
-    # explicit "clean up disconnected disks" action also skips them.
-    _LOGICAL_DEVICE_PREFIXES = ('zpool_', 'ata', 'dm-', 'nbd', 'loop', 'sr')
-
-    def cleanup_orphan_observations(self):
-        """
-        Dismiss observations for devices that no longer exist in /dev/.
-        Useful for cleaning up after USB drives or temporary devices are disconnected.
-
-        Observations whose `device_name` uses a logical (non-block) prefix are skipped —
-        ZFS pools, ATA hosts and dm-* aliases never appear under /dev/ by design and were
-        being silently dismissed by the previous version of this routine.
-        """
-        import os
-        import re
-        try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-
-            # Get all active (non-dismissed) observations with device info from disk_registry
-            cursor.execute('''
-                SELECT do.id, dr.device_name, dr.serial
-                FROM disk_observations do
-                JOIN disk_registry dr ON do.disk_registry_id = dr.id
-                WHERE do.dismissed = 0
-            ''')
-            observations = cursor.fetchall()
-
-            dismissed_count = 0
-            for obs_id, device_name, serial in observations:
-                # Skip non-block observations (ZFS pools, ATA hosts, dm-mapper, etc.)
-                if device_name and device_name.startswith(self._LOGICAL_DEVICE_PREFIXES):
-                    continue
-                # Check if device exists
-                dev_path = f'/dev/{device_name}'
-                # Also check base device (remove partition number)
-                base_dev = disk_base_name(device_name)
-                base_path = f'/dev/{base_dev}'
-
-                if not os.path.exists(dev_path) and not os.path.exists(base_path):
-                    cursor.execute('''
-                        UPDATE disk_observations SET dismissed = 1
-                        WHERE id = ?
-                    ''', (obs_id,))
-                    dismissed_count += 1
-
-            conn.commit()
-            conn.close()
-            if dismissed_count > 0:
-                print(f"[HealthPersistence] Cleaned up {dismissed_count} orphan observations")
-            return dismissed_count
-        except Exception as e:
-            print(f"[HealthPersistence] Error cleaning orphan observations: {e}")
-            return 0
-
 
     # ── Remote Storage Exclusions Methods ──
     
@@ -3257,6 +3215,67 @@ class HealthPersistence:
             print(f"[HealthPersistence] Error removing interface exclusion: {e}")
             return False
     
+    # ------------------------------------------------------------------
+    # Disk exclusions
+    # ------------------------------------------------------------------
+
+    def get_excluded_disks(self) -> List[Dict[str, Any]]:
+        """Every disk the user has excluded from periodic reads."""
+        try:
+            with self._db_connection(row_factory=True) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT disk_key, disk_name, model, serial, excluded_at, reason
+                    FROM excluded_disks
+                ''')
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"[HealthPersistence] Error getting excluded disks: {e}")
+            return []
+
+    def exclude_disk(self, disk_key: str, disk_name: str = None, model: str = None,
+                     serial: str = None, reason: str = None) -> bool:
+        """Add a disk to the exclusion list, or refresh its display fields."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO excluded_disks
+                    (disk_key, disk_name, model, serial, excluded_at, reason)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(disk_key) DO UPDATE SET
+                        disk_name = excluded.disk_name,
+                        model = excluded.model,
+                        serial = excluded.serial
+                ''', (disk_key, disk_name, model, serial, datetime.now().isoformat(), reason))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"[HealthPersistence] Error excluding disk: {e}")
+            return False
+
+    def remove_disk_exclusion(self, disk_key: str) -> bool:
+        """Put a disk back under periodic reads."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM excluded_disks WHERE disk_key = ?', (disk_key,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"[HealthPersistence] Error removing disk exclusion: {e}")
+            return False
+
+    def get_excluded_disk_keys(self) -> set:
+        """Stable keys of the excluded disks (see disk_identity.disk_key)."""
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT disk_key FROM excluded_disks')
+                return {row[0] for row in cursor.fetchall()}
+        except Exception:
+            return set()
+
     def get_excluded_interface_names(self, check_type: str = 'health') -> set:
         """
         Get set of interface names excluded for a specific check type.

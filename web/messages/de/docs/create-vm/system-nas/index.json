@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "title": "VM erstellen: System NAS | ProxMenux Dokumentation",
+    "description": "Erstellen Sie virtuelle NAS-Maschinen auf Proxmox VE mit ProxMenux. Unterstützt Synology DSM (Loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS und FygoOS. Umbrel OS ist über ein Community-Script verfügbar.",
+    "ogTitle": "VM erstellen: System NAS | ProxMenux Dokumentation",
+    "ogDescription": "Erstellen Sie virtuelle NAS-Maschinen auf Proxmox VE mit ProxMenux. Unterstützt Synology DSM (Loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS und FygoOS.",
+    "ogImageAlt": "ProxMenux System NAS Menü"
+  },
+  "header": {
+    "title": "VM erstellen: System NAS",
+    "description": "ProxMenux unterstützt acht NAS-Betriebssysteme als dedizierte VMs sowie einen optionalen Umbrel OS-Pfad über ein Community-Skript. Die meisten Systeme teilen sich den gleichen Auto-ISO-Flow; Synology DSM verwendet einen spezialisierten Loader-Assistenten.",
+    "section": "Virtuelle Maschinen"
+  },
+  "intro": {
+    "title": "Wie der NAS-Selektor funktioniert",
+    "body": "Im allgemeinen ISO-Ablauf versucht die NAS-Auswahl, die neueste stabile Version vom Projektspiegel zu ermitteln, und nutzt bei Bedarf eine Ersatzversion. Nach dem ISO-Download öffnet sich der gemeinsame Konfigurator für CPU, RAM, Laufwerke und Netzwerk. Synology DSM und ZimaOS verwenden eigene Installationsabläufe."
+  },
+  "image": {
+    "alt": "ProxMenux System NAS-Selektor",
+    "caption": "System-NAS-Auswahl"
+  },
+  "flowBadges": {
+    "loader": "Loader-Ablauf",
+    "auto-iso": "Automatischer ISO-Ablauf",
+    "dedicated": "Dediziertes Skript"
+  },
+  "labels": {
+    "base": "Basis",
+    "fileSystem": "Dateisystem",
+    "viewDetails": "Details anzeigen"
+  },
+  "supported": {
+    "heading": "Unterstützte NAS-Systeme",
+    "cards": [
+      {
+        "name": "Synology DSM",
+        "tagline": "DiskStation Manager mit dem ARC / RR-Loader. Erfordert die Konfiguration des Loaders vor dem ersten Booten.",
+        "icon": "HardDrive",
+        "base": "Linux (Custom)",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/synology",
+        "flow": "loader"
+      },
+      {
+        "name": "TrueNAS SCALE",
+        "tagline": "Debian-basiertes TrueNAS mit Docker-Apps in aktuellen Versionen und ZFS als primärem Dateisystem. Ältere SCALE-Versionen nutzten Kubernetes.",
+        "icon": "Database",
+        "base": "Debian Linux",
+        "fileSystem": "ZFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#truenas-scale",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "TrueNAS CORE",
+        "tagline": "FreeBSD-basiertes TrueNAS mit Schwerpunkt ZFS-Speicher. Jails und Plugins in CORE 13.3 sind veraltet und werden nicht unterstützt.",
+        "icon": "Database",
+        "base": "FreeBSD",
+        "fileSystem": "ZFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#truenas-core",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "OpenMediaVault",
+        "tagline": "Schlankes Debian-basiertes NAS mit modularer Plugin-Architektur. Gut für ältere Hardware.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "ext4, XFS, Btrfs",
+        "href": "/docs/create-vm/system-nas/system-nas-others#openmediavault",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "XigmaNAS",
+        "tagline": "FreeBSD-basierte NAS - der ursprüngliche Nachfolger von FreeNAS, konzentriert auf ZFS und Einfachheit.",
+        "icon": "Database",
+        "base": "FreeBSD",
+        "fileSystem": "ZFS, UFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#xigmanas",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "Rockstor",
+        "tagline": "openSUSE-basierte NAS rund um Btrfs. Rock-ons (Docker Apps) erweitern die Funktionalität.",
+        "icon": "HardDrive",
+        "base": "openSUSE Leap",
+        "fileSystem": "Btrfs",
+        "href": "/docs/create-vm/system-nas/system-nas-others#rockstor",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "ZimaOS",
+        "tagline": "Schlankes NAS-Betriebssystem für Medien, Docker-Apps und Hausautomation. Verwendet einen eigenen Installer.",
+        "icon": "MonitorIcon",
+        "base": "Buildroot (aus CasaOS hervorgegangen)",
+        "fileSystem": "ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#zimaos",
+        "flow": "dedicated"
+      },
+      {
+        "name": "FygoOS",
+        "tagline": "Internationale Ausgabe von fnOS: ein Debian-basiertes NAS mit Speichervolumen, Apps und Medien-Streaming, das über seine Web-Schnittstelle und die Fygo-Apps verwaltet wird.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#fygoos",
+        "flow": "auto-iso"
+      }
+    ]
+  },
+  "umbrel": {
+    "title": "Gemeinschaftsoption: Umbrel OS",
+    "bodyRich": "Der neunte NAS-Menüeintrag ist <strong>Umbrel OS</strong>. Er startet einen außerhalb von ProxMenux gepflegten <umbrelLink>community-scripts-Installer</umbrelLink> und ist hier nicht dokumentiert. Der Installer übernimmt den gesamten Ablauf und zeigt am Ende die Standardzugangsdaten an."
+  },
+  "zfsMem": {
+    "title": "Faustregel für den ZFS-Arbeitsspeicher",
+    "bodyRich": "Weisen Sie TrueNAS für den Grundbetrieb mindestens <strong>8 GB RAM</strong> zu, bei höherer Last mehr. ZFS nutzt RAM für den ARC-Cache; eine allgemeine Leistungsgrenze bei 8 GB gibt es aber nicht für jedes ZFS-NAS. Beachten Sie die Anforderungen der Distribution sowie Laufwerke, Dienste und Apps. Schlanke OMV- oder Rockstor-Systeme können weniger benötigen."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/create-vm/system-nas/synology",
+        "label": "Synology-VM",
+        "tail": "— dediziertes Installationsprogramm für Synology DSM (Xpenology) auf Proxmox."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Sonstige System-NAS",
+        "tail": "TrueNAS, OpenMediaVault, Rockstor, XigmaNAS, FygoOS und ähnliches."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": "- reale physische Festplatten an den NAS VM übergeben (empfohlen über virtuelle Festplatten für die Produktion)."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Verwaltungsbefehle",
+        "tail": "— nützlich, wenn Ihre NAS-Distribution ZFS darunter verwendet."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Übersicht zur VM-Erstellung",
+        "tail": "."
+      }
+    ]
+  }
+}

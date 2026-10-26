@@ -356,7 +356,7 @@ def _detect_oci_apps() -> list[dict]:
             "type": "oci_app",
             "name": app.get("name") or app_id,
             "current_version": None,  # filled by checker
-            "menu_label": "Settings → Secure Gateway",
+            "menu_label": "Security → Secure Gateway",
             "menu_script": None,  # OCI apps update via the dashboard, no bash script
             # Stash the raw app_id so the checker can find it without
             # parsing the prefixed registry id.
@@ -520,10 +520,11 @@ def _lxc_updates_notification_enabled() -> bool:
         return False
 
 
-def _list_pve_lxcs() -> list[dict]:
+def _list_pve_lxcs(*, strict: bool = False) -> list[dict]:
     """Return basic info per LXC on this node via ``pct list``. Each
     item is ``{vmid, status, name}``. Empty list on any failure — never
-    raises so the detector caller can continue.
+    raises by default. Strict callers distinguish a failed read from a
+    verified empty inventory before removing persisted observations.
     """
     try:
         r = subprocess.run(
@@ -531,16 +532,31 @@ def _list_pve_lxcs() -> list[dict]:
             capture_output=True, text=True, timeout=5,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        if strict:
+            raise RuntimeError('LXC inventory could not be read') from None
         return []
     if r.returncode != 0:
+        if strict:
+            raise RuntimeError('LXC inventory could not be read')
         return []
+    lines = r.stdout.splitlines()
+    # `pct list` returns successful empty stdout when the node has no CTs.
+    # That is a complete inventory, so strict callers may safely retire rows.
+    if not any(line.strip() for line in lines):
+        return []
+    if strict and (not lines or not lines[0].strip().startswith('VMID') or 'Status' not in lines[0]):
+        raise RuntimeError('LXC inventory is incomplete')
 
     out: list[dict] = []
-    for line in r.stdout.splitlines()[1:]:  # skip header row
+    for line in lines[1:]:  # skip header row
+        if not line.strip():
+            continue
         # `pct list` columns: VMID  Status  Lock  Name
         # `Lock` is empty most of the time, so split max 4 ways
         parts = line.split(None, 3)
         if len(parts) < 2:
+            if strict:
+                raise RuntimeError('LXC inventory is incomplete')
             continue
         vmid = parts[0]
         status = parts[1]
@@ -548,6 +564,8 @@ def _list_pve_lxcs() -> list[dict]:
         # be the name itself if Lock was omitted by the formatter.
         name = parts[-1] if len(parts) >= 3 else ""
         if not vmid.isdigit():
+            if strict:
+                raise RuntimeError('LXC inventory is incomplete')
             continue
         out.append({"vmid": vmid, "status": status, "name": name})
     return out
@@ -839,16 +857,17 @@ def _infer_helper_slug(vmid: str, hostname: str) -> Optional[str]:
     return _identify_helper_slug(vmid, hostname)[0]
 
 
-def _probe_lxc_os(vmid: str) -> Optional[str]:
+def _probe_lxc_os(vmid: str, *, raise_on_read_error: bool = False) -> Optional[str]:
     """Return a normalized family identifier (``debian`` / ``ubuntu`` /
     ``alpine``) by reading ``/etc/os-release`` inside the running CT.
     Returns None for distributions whose package manager we don't yet
     speak — those CTs are skipped in detection so the framework
     doesn't keep retrying a checker we can't run.
 
-    Cached per CT in the registry — re-probed only when the entry has
-    no ``_os_family`` yet, since the OS rarely changes for the life of
-    a CT.
+    Detection may reuse the registry hint; each explicit or scheduled update
+    check re-probes this file before selecting the package manager.
+    Strict checks distinguish an unreadable file (OSError) from a readable
+    unsupported OS (None); legacy detection retains its Optional contract.
     """
     try:
         r = subprocess.run(
@@ -857,16 +876,29 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
             timeout=_LXC_OS_PROBE_TIMEOUT_SEC,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        if raise_on_read_error:
+            raise OSError('current OS release could not be read') from None
         return None
     if r.returncode != 0:
+        if raise_on_read_error:
+            raise OSError('current OS release could not be read')
         return None
-    text = r.stdout.lower()
-    if "id=ubuntu" in text:
+    release = {}
+    for line in r.stdout.splitlines():
+        key, sep, value = line.partition("=")
+        if sep:
+            release[key.strip()] = value.strip().strip('\"').strip("'").lower()
+    identity = release.get("ID", "")
+    if not identity and raise_on_read_error:
+        raise OSError('current OS release has no usable ID')
+    if identity == "ubuntu":
         return "ubuntu"
-    if "id=debian" in text or "id_like=debian" in text:
+    if identity == "debian":
         return "debian"
-    if "id=alpine" in text:
+    if identity == "alpine":
         return "alpine"
+    if "debian" in release.get("ID_LIKE", "").split():
+        return "debian"
     # Future Phase 1.5: CentOS/Rocky/Alma (dnf check-update), Arch
     # (checkupdates), openSUSE (zypper list-updates). Each needs a
     # parser similar to apt/apk — skip silently for now.
@@ -874,13 +906,12 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
 
 
 def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
-    """Enumerate running Debian/Ubuntu CTs as registry entries.
+    """Detect running supported CTs and retain known stopped CTs by presence.
 
     OS detection is cached in the registry entry (`_os_family`), so the
-    expensive ``pct exec cat /etc/os-release`` only runs the first time
-    a CT is seen. CT reinstalls with a different OS will keep the old
-    family cached until the user resets the registry — acceptable
-    trade-off vs paying the probe cost every 24h cycle.
+    expensive ``pct exec cat /etc/os-release`` only runs during detection
+    when a CT is first seen. The checker independently re-reads it on each
+    check, including after a restore or external reinstall.
 
     Detection respects the dedicated `lxc_updates.detection_enabled`
     toggle (Settings → LXC Update Detection). When OFF, this returns []
@@ -907,7 +938,7 @@ def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
         if isinstance(it, dict) and it.get("type") == "lxc"
     }
 
-    cts = _list_pve_lxcs()
+    cts = _list_pve_lxcs(strict=True)
     # Set of CTs currently managed by oci_manager (Secure Gateway etc).
     # Their update path is the OCI app's own updater — we mark them so
     # the LXC row in the UI redirects the user there instead of running
@@ -918,11 +949,17 @@ def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
     for ct in cts:
         if only_vmid is not None and str(ct.get("vmid")) != str(int(only_vmid)):
             continue
-        if ct["status"] != "running":
-            continue
         vmid = ct["vmid"]
         cid = f"lxc:{vmid}"
         prior = existing_by_id.get(cid) or {}
+        if ct["status"] != "running":
+            # A stopped CT still exists. Only the full detection sweep keeps
+            # its registry identity; targeted refresh requires a running CT.
+            # Do not copy cached probe metadata back over a newer observation.
+            if only_vmid is None and prior:
+                out.append({'id': cid, 'type': 'lxc', '_vmid': vmid,
+                            'name': ct.get('name') or prior.get('name') or f'CT-{vmid}'})
+            continue
 
         # OCI-image marker is cached — the CT origin doesn't change
         # over its lifetime, and reading the pct config file is cheap
@@ -933,13 +970,12 @@ def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
         # future ProxMenux-shipped OCI app).
         managed_oci_app = oci_managed.get(str(vmid))
 
-        # OS family is only meaningful for non-OCI CTs. We still cache
-        # it for OCI (some images ARE Ubuntu/Debian underneath and
-        # future features might use it), but we don't require it.
+        # OCI/managed images have their own updater. Retain an existing OS
+        # hint, but never execute a guest OS probe for generic detection.
         os_family = prior.get("_os_family")
-        if not os_family:
+        if not os_family and not is_oci and not managed_oci_app:
             os_family = _probe_lxc_os(vmid)
-            if not is_oci and os_family not in _SUPPORTED_OS_FAMILIES:
+            if os_family not in _SUPPORTED_OS_FAMILIES:
                 # Non-OCI, non-supported family — the framework has
                 # no way to check its updates. Skip silently.
                 continue
@@ -1073,11 +1109,14 @@ def detect_and_register() -> dict:
     Returns the new registry.
     """
     discovered: dict[str, dict] = {}
+    failed_types: set[str] = set()
     for detector in _DETECTORS:
         try:
             result = detector()
         except Exception as e:
             print(f"[ProxMenux] managed_installs detector {detector.__name__} failed: {e}")
+            if detector is _detect_lxc_containers:
+                failed_types.add('lxc')
             continue
         for entry in _normalise_detector_result(result):
             if not entry.get("id"):
@@ -1103,7 +1142,7 @@ def detect_and_register() -> dict:
         for it in items:
             if not it.get("id") or it.get("removed_at"):
                 continue
-            if it["id"] not in discovered:
+            if it["id"] not in discovered and it.get('type') not in failed_types:
                 it["removed_at"] = now
 
         reg["items"] = items
@@ -1442,12 +1481,35 @@ def _refresh_lxc_pkg_cache_if_stale(vmid: str, family: str) -> dict:
         }
 
 
-def _check_lxc_updates(entry: dict) -> dict:
+# The daily collector persists at cycle end. Allow a full extra day so a
+# normal collection delay never briefly marks every guest's result stale.
+LXC_UPDATE_STALE_AFTER_SECONDS = 48 * 3600
+
+
+def lxc_update_freshness(update: dict) -> dict:
+    """Describe a stored observation, without running any guest command."""
+    age = None
+    try:
+        checked = datetime.datetime.fromisoformat(update.get("last_check", "").replace("Z", "+00:00"))
+        if checked.tzinfo is None:
+            checked = checked.replace(tzinfo=datetime.timezone.utc)
+        seconds = (datetime.datetime.now(datetime.timezone.utc) - checked).total_seconds()
+        if seconds >= 0:
+            age = int(seconds)
+    except (ValueError, TypeError, AttributeError):
+        pass
+    stale = age is None or age >= LXC_UPDATE_STALE_AFTER_SECONDS
+    return {"stale": stale, "age_seconds": age,
+            "stale_after_seconds": LXC_UPDATE_STALE_AFTER_SECONDS}
+
+
+def _check_lxc_updates(entry: dict, *, refresh_package_cache: bool = True) -> dict:
     """Inspect pending package updates inside the LXC and report them.
 
-    Dispatches to the right package-manager parser based on the cached
-    ``_os_family``. If the CT's local apt/apk metadata cache is older
-    than 24h, runs a best-effort refresh first via
+    Re-read /etc/os-release on every explicit/scheduled check, so a restore
+    or external reinstall cannot keep the old registry family. If the CT's
+    local apt/apk metadata cache is older than 24h, the existing collector
+    runs a best-effort refresh first via
     ``_refresh_lxc_pkg_cache_if_stale`` — without this, CTs that no
     one ever runs ``apt update`` in (long-running appliances) report
     0 pending updates even when upstream has hundreds queued.
@@ -1458,7 +1520,6 @@ def _check_lxc_updates(entry: dict) -> dict:
     update set does.
     """
     vmid = entry.get("_vmid")
-    family = (entry.get("_os_family") or "").lower()
     if not vmid:
         return {
             "available": False, "latest": None,
@@ -1483,7 +1544,26 @@ def _check_lxc_updates(entry: dict) -> dict:
             "_count": 0, "_security_count": 0, "_packages": [],
         }
 
-    refresh_diag = _refresh_lxc_pkg_cache_if_stale(vmid, family)
+    try:
+        family = _probe_lxc_os(str(vmid), raise_on_read_error=True)
+    except OSError:
+        # Keep the last known display hint, but never choose a package
+        # manager from it after a failed read or report a verified zero.
+        return {
+            "available": False, "latest": None, "last_check": _now_iso(),
+            "error": "current OS release could not be read",
+        }
+    entry["_os_family"] = family
+
+    if family not in _SUPPORTED_OS_FAMILIES:
+        return {
+            "available": False, "latest": None, "last_check": _now_iso(),
+            "error": "current OS could not be determined or is unsupported",
+        }
+
+    # The manual read-only action must never run apt-get/apk update.
+    refresh_diag = (_refresh_lxc_pkg_cache_if_stale(vmid, family)
+                    if refresh_package_cache else {})
 
     if family in ("debian", "ubuntu"):
         ok, stdout, err = _run_pct_pkg_listing(
@@ -1716,6 +1796,43 @@ def _store_update_result(item: dict, result: dict) -> None:
             item["update_check"][extra_key] = result[extra_key]
 
 
+def _clear_lxc_check_invalid_marker(vmid: int, check_started_ns: int) -> bool:
+    """Publish a persisted newer LXC check to the installation gate.
+
+    The marker is created by the explicit refresh worker.  Its own lock also
+    protects this cleanup against a later refresh starting while a scheduled
+    or lifecycle check is still completing.
+    """
+    try:
+        import lxc_check_job
+        return lxc_check_job.clear_invalid_marker(
+            vmid, check_started_ns=check_started_ns)
+    except Exception as exc:
+        print(f'[ProxMenux] could not clear stale LXC check marker for {vmid}: {exc}')
+        return False
+
+
+def refresh_oci_app(app_id: str) -> Optional[dict]:
+    """Read one OCI-managed application again and store what it reports.
+
+    Its card on the Security page and the Updates tab of its container read
+    different stores; after an update or a forced check from either one, the
+    registry is brought to the same state the application reports now."""
+    with _lock:
+        reg = _read_registry()
+        for it in reg.get("items", []):
+            if (it.get("type") != "oci_app" or it.get("removed_at")
+                    or it.get("_oci_app_id") != app_id):
+                continue
+            result = _check_oci_app(it)
+            _store_update_result(it, result)
+            if result.get("current"):
+                it["current_version"] = result["current"]
+            _write_registry(reg)
+            return it
+    return None
+
+
 def check_for_updates(force: bool = False) -> list[dict]:
     """Run every type-specific checker over active items, persist
     the updated state, return the list of items that have an update
@@ -1733,15 +1850,28 @@ def check_for_updates(force: bool = False) -> list[dict]:
         _nvidia_cache["fetched_at"] = 0
 
     updates_available: list[dict] = []
+    successful_lxc_checks: list[tuple[int, int]] = []
     with _lock:
         reg = _read_registry()
         items = reg.get("items", [])
+        lxc_states: dict[str, str] = {}
+        if any(it.get('type') == 'lxc' and not it.get('removed_at') for it in items):
+            try:
+                lxc_states = {str(ct['vmid']): ct['status'] for ct in _list_pve_lxcs(strict=True)}
+            except RuntimeError:
+                # Do not overwrite an observation or attempt guest probes
+                # when presence could not be verified by the host.
+                print('[ProxMenux] LXC inventory unavailable; stored checks retained')
         for it in items:
             if it.get("removed_at"):
+                continue
+            if (it.get('type') == 'lxc'
+                    and lxc_states.get(str(it.get('_vmid') or it.get('id', '').removeprefix('lxc:'))) != 'running'):
                 continue
             checker = _CHECKERS.get(it.get("type"))
             if not checker:
                 continue
+            check_started_ns = time.time_ns() if it.get('type') == 'lxc' else None
             try:
                 result = checker(it)
             except Exception as e:
@@ -1751,23 +1881,72 @@ def check_for_updates(force: bool = False) -> list[dict]:
                           "last_check": _now_iso(), "error": str(e)}
 
             _store_update_result(it, result)
+            if check_started_ns is not None and result.get('error') is None:
+                try:
+                    successful_lxc_checks.append((int(it.get('_vmid')), check_started_ns))
+                except (TypeError, ValueError):
+                    pass
 
             if it["update_check"]["available"]:
                 updates_available.append(it)
 
         reg["items"] = items
         reg["last_check_run"] = _now_iso()
-        _write_registry(reg)
+        if _write_registry(reg):
+            for vmid, check_started_ns in successful_lxc_checks:
+                _clear_lxc_check_invalid_marker(vmid, check_started_ns)
 
     return updates_available
 
 
-def refresh_lxc(vmid: int) -> Optional[dict]:
+def store_lxc_update_observation(vmid: int, observation: Optional[dict]) -> bool:
+    """Store a trusted host-runner observation in the backend's registry lock.
+
+    Missing verification clears the old counts, never fabricates a fresh zero.
+    This does not start a guest or run a package-manager command.
+    """
+    vmid = int(vmid)
+    now = _now_iso()
+    with _lock:
+        # A trusted targeted observation must never replace unrelated rows
+        # with an empty registry merely because the old file is unreadable.
+        try:
+            with open(_REGISTRY_PATH, encoding='utf-8') as handle:
+                existing = json.load(handle)
+            if (not isinstance(existing, dict) or not isinstance(existing.get('items'), list)
+                    or any(not isinstance(item, dict) for item in existing['items'])):
+                raise OSError('could not verify existing LXC update registry')
+        except FileNotFoundError:
+            pass
+        reg = _read_registry()
+        items = reg.setdefault("items", [])
+        target = next((it for it in items if it.get("id") == f"lxc:{vmid}"
+                       and it.get("type") == "lxc"), None)
+        if target is None:
+            if observation is None:
+                return False
+            target = _new_detected_entry(observation["entry"], now)
+            items.append(target)
+        if observation is not None:
+            _merge_detected_entry(target, observation["entry"], now)
+            result = observation["result"]
+        else:
+            target["_os_family"] = None
+            result = {"available": False, "last_check": now,
+                      "error": "post-update package verification unavailable while LXC is stopped"}
+        _store_update_result(target, result)
+        reg["version"] = _SCHEMA_VERSION
+        if not _write_registry(reg):
+            raise OSError("could not persist post-update LXC observation")
+        return not bool(result.get("error"))
+
+
+def refresh_lxc(vmid: int, *, refresh_package_cache: bool = True) -> Optional[dict]:
     """Detect and refresh exactly one running LXC.
 
-    This is the lifecycle counterpart of the daily collector. It is called
-    after a stopped container starts and deliberately leaves every other
-    guest's registry row untouched.
+    Called by lifecycle/apply finalizers and the explicit read-only action.
+    The latter passes refresh_package_cache=False to forbid index writes.
+    Every other guest's registry row is left untouched.
     """
     try:
         target_vmid = int(vmid)
@@ -1791,8 +1970,10 @@ def refresh_lxc(vmid: int) -> Optional[dict]:
         else:
             _merge_detected_entry(target, entry, now)
 
+        check_started_ns = time.time_ns()
         try:
-            result = _check_lxc_updates(target)
+            result = (_check_lxc_updates(target) if refresh_package_cache else
+                      _check_lxc_updates(target, refresh_package_cache=False))
         except Exception as exc:
             result = {
                 "available": False,
@@ -1804,5 +1985,8 @@ def refresh_lxc(vmid: int) -> Optional[dict]:
         reg["items"] = items
         reg["version"] = _SCHEMA_VERSION
         reg["last_targeted_refresh"] = now
-        _write_registry(reg)
+        if not _write_registry(reg):
+            raise OSError("could not persist LXC update check")
+        if result.get('error') is None:
+            _clear_lxc_check_invalid_marker(target_vmid, check_started_ns)
         return dict(target)

@@ -18,7 +18,7 @@
     "heading": "Why this option exists",
     "intro": "ProxMenux ships from two git branches:",
     "items": [
-      "<strong>Stable</strong> — the <code>main</code> branch. What the README points at, what most operators want, with a slower release cadence and only changes that have already been through beta validation.",
+      "<strong>Stable</strong> — the <code>main</code> branch. What the README points at, what most users want, with a slower release cadence and only changes that have already been through beta validation.",
       "<strong>Beta</strong> — the <code>develop</code> branch. Newer features and Monitor builds; carries the tag the next stable release will inherit. Some things may not work perfectly — that's the deal you sign up for and the way new features get tested before they ship."
     ],
     "outro": "Hopping between channels used to require remembering the right installer URL, copying it in from the README, and editing <code>config.json</code> by hand if something got out of sync. The unified option does the whole flow as a single guided action."
@@ -75,7 +75,7 @@
   },
   "unifiedCallout": {
     "title": "Why both directions are now one option",
-    "body": "The previous “Deactivate Beta Program” only existed if the host had ever joined the beta. Operators wanting to <em>join</em> had to find the beta installer URL elsewhere; operators wanting to <em>leave</em> sometimes had to manually clean up <code>beta_*</code> metadata to be sure. The unified <strong>Change Release Channel</strong> option always shows up, makes the current channel explicit, and treats both directions as the same kind of operation — runnable, repeatable, idempotent."
+    "body": "The previous “Deactivate Beta Program” only existed if the host had ever joined the beta. Users wanting to <em>join</em> had to find the beta installer URL elsewhere; users wanting to <em>leave</em> sometimes had to manually clean up <code>beta_*</code> metadata to be sure. The unified <strong>Change Release Channel</strong> option always shows up, makes the current channel explicit, and treats both directions as the same kind of operation — runnable, repeatable, idempotent."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",
@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "If this fails outside ProxMenux, it's a network / proxy issue on the host.",
     "errorsTitle": "“Installer finished with errors”",
-    "errorsBody": "The installer surfaced a non-zero exit code. The previous channel and any already-installed components are left as they were before the switch. Re-run the action; if it keeps failing, run the installer manually from a shell (see the manual equivalent above) — that gives you the full output instead of the dialog summary.",
+    "errorsBody": "The installer returned a non-zero exit code. There is no automatic rollback: some files or components may already have changed. Read the installer output shown above the error before pressing Enter and check the current state, then retry from the menu or run the installer manually from SSH or the host console.",
     "configTitle": "“Could not update config file” after switching to Stable",
     "configBody": "The post-install cleanup of beta metadata failed — usually because <code>config.json</code> has a syntax error from a manual edit. Validate it:",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",

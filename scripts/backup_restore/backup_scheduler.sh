@@ -394,8 +394,14 @@ _create_job_attached() {
   local -a jobs=()
   mapfile -t jobs < <(hb_pve_list_vzdump_jobs_for_backend "$backend")
   if (( ${#jobs[@]} == 0 )); then
+    local empty_message
+    if [[ "$backend" == "pbs" ]]; then
+      empty_message=$(translate "No matching PVE vzdump jobs were found for the PBS backend.")
+    else
+      empty_message=$(translate "No matching PVE vzdump jobs were found for the local archive backend.")
+    fi
     dialog --backtitle "ProxMenux" --title "$(translate "No compatible PVE jobs")" \
-      --msgbox "$(translate "No PVE vzdump job uses a") $backend $(translate "storage.")" 8 70
+      --msgbox "$empty_message" 8 70
     return 1
   fi
 
@@ -559,8 +565,14 @@ _create_job() {
       # If no compatible PVE job exists yet, show a helpful pointer
       # instead of silently dropping back to "new" mode.
       if [[ -z "$(hb_pve_list_vzdump_jobs_for_backend "$backend" 2>/dev/null | head -1)" ]]; then
+        local empty_message
+        if [[ "$backend" == "pbs" ]]; then
+          empty_message=$(translate "No matching PVE vzdump jobs were found for the PBS backend.")
+        else
+          empty_message=$(translate "No matching PVE vzdump jobs were found for the local archive backend.")
+        fi
         dialog --backtitle "ProxMenux" --title "$(translate "No compatible PVE jobs")" \
-          --msgbox "$(translate "No PVE vzdump job uses a") $backend $(translate "storage yet.")"$'\n\n'"$(translate "Create one first in Datacenter → Backup, then return here to attach.")" \
+          --msgbox "$empty_message"$'\n\n'"$(translate "Create one first in Datacenter → Backup, then return here to attach.")" \
           12 78
         return 1
       fi

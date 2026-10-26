@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "One archive, three payloads",
-    "body": "Every backup produces a directory layout with three well-defined payloads under a single staging root. The archive uploaded to the destination (local <code>.tar.zst</code>, PBS backup or Borg archive) contains this exact layout. The restore reads the three payloads independently, in a specific order that guarantees correctness: <strong>rootfs</strong> is copied first to lay down configuration, <strong>the manifest</strong> is consulted to detect drift and decide what to skip, and <strong>the application inventory</strong> drives the post-boot reinstall pass. No cross-payload dependencies — each one can be inspected or extracted independently."
+    "body": "Every backup produces a directory layout with three well-defined payloads under a single staging root. The archive uploaded to the destination (local <code>.tar.zst</code>, PBS backup or Borg archive) contains this exact layout. The restore uses all three: <strong>the manifest</strong> is consulted before applying changes to detect drift and decide what to skip; <strong>rootfs</strong> supplies the configuration files, applied live or deferred until reboot; and <strong>the application inventory</strong> drives package installation and the post-boot component reinstall. Each payload can be inspected or extracted independently."
   },
   "layout": {
     "heading": "Archive layout",
@@ -26,7 +26,7 @@
     "heading": "The rootfs payload",
     "intro": "The <code>rootfs/</code> tree is a <strong>plain filesystem copy</strong> produced by <code>rsync</code> from the source host. It contains a curated <strong>default profile</strong> of paths that matter for a Proxmox restore, plus any <strong>custom paths</strong> added by the user to the backup job or interactive session. The set is deliberately narrow: only paths that either <em>hold configuration</em> or <em>hold state that Proxmox cannot regenerate on its own</em>.",
     "defaultProfileTitle": "The default profile",
-    "defaultProfileBody": "The default profile is defined by <code>hb_default_profile_paths</code> in <code>lib_host_backup_common.sh</code>. It covers eight categories that together describe a working Proxmox host:",
+    "defaultProfileBody": "The default profile is defined by <code>hb_default_profile_paths</code> in <code>lib_host_backup_common.sh</code>. It covers eight fixed categories, plus conditional ZFS state, that together describe a working Proxmox host:",
     "categoriesTitle": "Path categories",
     "categoryRows": [
       {
@@ -66,8 +66,8 @@
       },
       {
         "category": "ProxMenux binaries & root",
-        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /root (volatile subdirs excluded)",
-        "why": "ProxMenux-installed binaries and per-user configuration under <code>/root</code>. Volatile paths (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) are excluded from the copy."
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (volatile subdirs excluded)",
+        "why": "ProxMenux-installed binaries and per-user configuration under <code>/root</code>. Volatile paths (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) are excluded from the copy. <code>/var/lib/proxmenux</code> holds the scheduled backup jobs and the host state kept by ProxMenux; the restore staging, the rollback copies and the post-restore markers are excluded, because they belong to the host that runs a restore."
       },
       {
         "category": "ZFS state (conditional)",
@@ -107,7 +107,7 @@
       {
         "collector": "collect_kernel.sh",
         "produces": "kernel_params",
-        "content": "Operator-authored tokens from <code>/proc/cmdline</code> (stripped of boilerplate like <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code>, <code>splash</code>), modules loaded at boot from <code>/etc/modules</code>, and paths of <code>/etc/modprobe.d/*.conf</code> files with actual directives (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
+        "content": "User-authored tokens from <code>/proc/cmdline</code> (stripped of boilerplate like <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code>, <code>splash</code>), modules loaded at boot from <code>/etc/modules</code>, and paths of <code>/etc/modprobe.d/*.conf</code> files with actual directives (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
       },
       {
         "collector": "collect_proxmenux_state.sh",
@@ -121,11 +121,11 @@
       }
     ],
     "schemaTitle": "Schema validation",
-    "schemaBody": "The manifest validates against <code>scripts/backup_restore/schema/manifest.schema.json</code>. Running <code>build_manifest.sh --validate</code> triggers a Python-side JSON Schema validation (requires <code>python3</code> + <code>jsonschema</code>). If the module is not present, the check is skipped silently — validation is primarily a developer aid, not a runtime dependency."
+    "schemaBody": "ProxMenux ships a template that describes which fields the manifest must contain and the shape of each one. When a backup is generated, the manifest can be checked against that template automatically, so a collector that produced malformed JSON or a misspelled field is caught at once. The check is meant for the development of ProxMenux itself: on a system that does not have it installed, the backup works as usual and the manifest is generated all the same."
   },
   "applications": {
     "heading": "The application inventory",
-    "intro": "Two files under <code>metadata/</code> catalogue everything installed on the source that is not part of the base Proxmox VE package set. The restore uses them to reproduce the exact set of user-installed software on the target, using either APT or ProxMenux's own installers depending on how the software was originally installed.",
+    "intro": "Two inventories catalogue the software installed on the source beyond the base Proxmox VE package set: the package list under <code>metadata/</code> and the component registry inside rootfs, detailed below. The restore uses them to reproduce user-installed software with APT or ProxMenux’s own installers, depending on how it was originally installed.",
     "packagesTitle": "packages.manual.list",
     "packagesBody": "A plain-text list produced by <code>apt-mark showmanual</code>: every APT package that was <em>explicitly installed</em> on the source host, sorted alphabetically. This excludes packages installed as dependencies of the base Proxmox VE ISO (they are re-pulled automatically by the target's own APT). Read by <code>_rs_run_complete_extras</code> during restore, filtered through a three-pass <em>cascade-safe</em> filter (<code>dpkg -s</code> for already-installed, sibling-major detection for library packages, <code>apt-get install --simulate</code> for cascade-remove risk), then installed with <code>apt-get install -y</code>.",
     "componentsTitle": "components_status.json (part of the rootfs)",

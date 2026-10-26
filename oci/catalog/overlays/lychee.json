@@ -1,0 +1,45 @@
+{
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/pictures",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  },
+  "environment_overrides": {
+    "DB_CONNECTION": {
+      "example": "sqlite",
+      "prompt": "Database type (sqlite, mysql or pgsql)"
+    },
+    "DB_DATABASE": {
+      "example": "/config/lychee.sqlite",
+      "prompt": "Database file for sqlite, or database name for mysql and pgsql"
+    },
+    "DB_HOST": {
+      "required": false,
+      "prompt": "Address of the database server (mysql and pgsql only)"
+    },
+    "DB_PORT": {
+      "required": false,
+      "prompt": "Port of the database server (mysql and pgsql only)"
+    },
+    "DB_USERNAME": {
+      "required": false,
+      "prompt": "User of the database server (mysql and pgsql only)"
+    },
+    "DB_PASSWORD": {
+      "required": false
+    }
+  }
+}

@@ -36,3 +36,7 @@ export function formatBytes(n: number): string {
   }
   return `${(n / (1024 * 1024 * 1024 * 1024)).toFixed(2)} TB`
 }
+
+// Cancel and Close in a dialog: an outlined button that reads as a button
+// on every dialog background.
+export const cancelButtonClass = "bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:bg-zinc-700/50"

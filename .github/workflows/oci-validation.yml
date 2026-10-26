@@ -1,0 +1,49 @@
+name: OCI validation record
+
+# verification.json is the record of OCI applications tested for real, and
+# oci/VALIDATION.md is generated from it. A pull request only adds or changes
+# the community tests credited to its own author.
+
+on:
+  pull_request:
+    paths:
+      - 'oci/catalog/verification.json'
+      - 'oci/catalog/index.json'
+      - 'oci/VALIDATION.md'
+      - '.github/scripts/oci_validation.py'
+      - '.github/workflows/oci-validation.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'oci/catalog/verification.json'
+      - 'oci/catalog/index.json'
+      - 'oci/VALIDATION.md'
+      - '.github/scripts/oci_validation.py'
+      - '.github/workflows/oci-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check the record and oci/VALIDATION.md
+        run: python3 .github/scripts/oci_validation.py check
+      - name: Check who the pull request credits
+        if: github.event_name == 'pull_request'
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE:oci/catalog/verification.json" > "$RUNNER_TEMP/base.json" 2>/dev/null || : > "$RUNNER_TEMP/base.json"
+          python3 .github/scripts/oci_validation.py authors --base "$RUNNER_TEMP/base.json" --author "$AUTHOR"

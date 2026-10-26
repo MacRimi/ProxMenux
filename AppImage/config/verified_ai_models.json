@@ -1,16 +1,16 @@
 {
   "_description": "Verified AI models for ProxMenux notifications. Only models listed here will be shown to users. Models are tested to work with the chat/completions API format.",
-  "_updated": "2026-09-02",
+  "_updated": "2026-10-26",
   "_verifier": "Refreshed with tools/ai-models-verifier (private). Re-run before each ProxMenux release to keep the list current. The verifier and ProxMenux share the same reasoning/thinking-model handlers so their verdicts stay aligned with runtime behaviour.",
   "groq": {
     "models": [
       "allam-2-7b",
       "qwen/qwen3.8-27b",
       "openai/gpt-oss-20b",
-      "groq/compound-mini"
+      "openai/gpt-oss-120b"
     ],
     "recommended": "openai/gpt-oss-20b",
-    "_note": "Verified 2026-09-02 with the Groq API. 4 of 12 tested pass. `llama-3.3-70b-versatile` no longer served by Groq. Recommended kept as `openai/gpt-oss-20b` (english-capable) — `allam-2-7b` is fastest but Arabic-focused; add manually if serving Arabic notifications."
+    "_note": "Verified 2026-10-26 with the Groq API. 4 of 8 tested pass. `groq/compound-mini` is no longer served and was dropped; `openai/gpt-oss-120b` added. Recommended kept as `openai/gpt-oss-20b` (english-capable) — `allam-2-7b` is fastest but Arabic-focused."
   },
   "gemini": {
     "models": [
@@ -21,7 +21,10 @@
       "gemini-flash-lite-latest",
       "gemini-2.5-flash",
       "gemini-3-flash-preview",
-      "gemini-3.5-flash"
+      "gemini-3.5-flash",
+      "gemini-3.6-flash",
+      "gemini-3.7-flash",
+      "gemini-3.8-flash"
     ],
     "recommended": "gemini-2.5-flash-lite",
     "_deprecated": [
@@ -31,50 +34,46 @@
       "gemini-1.0-pro",
       "gemini-pro"
     ],
-    "_note": "Verified 2026-09-02. gemini-flash-lite-latest passes consistently but gemini-2.5-flash-lite remains recommended because 'latest' aliases can drift. gemini-3.1-flash-lite is the stable successor to 3-flash-preview. Pro variants continue to reject thinkingBudget=0 and are overkill for notification translation."
+    "_note": "Verified 2026-10-26. Added gemini-3.6-flash, 3.7-flash and 3.8-flash. gemini-flash-lite-latest passes consistently but gemini-2.5-flash-lite remains recommended because 'latest' aliases can drift. Pro variants continue to reject thinkingBudget=0 and are overkill for notification translation; gemini-4-argon passes but takes ~20s per message."
   },
   "openai": {
     "models": [
-      "gpt-4.1-nano-2025-04-14",
-      "gpt-4.1-nano",
-      "gpt-4.1-2025-04-14",
-      "gpt-4.1",
-      "gpt-4o-2024-11-20",
-      "gpt-4o-2024-05-13",
-      "gpt-4o-mini",
-      "gpt-3.5-turbo-16k",
-      "gpt-4o-mini-2024-07-18",
-      "gpt-5-nano",
-      "gpt-3.5-turbo-1106",
-      "gpt-3.5-turbo-0125",
-      "gpt-5-nano-2025-08-07",
-      "gpt-4.1-mini",
-      "gpt-4.1-mini-2025-04-14",
-      "gpt-3.5-turbo",
-      "gpt-4o",
-      "gpt-4o-2024-08-06",
-      "gpt-4",
-      "gpt-4-turbo",
-      "gpt-4-turbo-2024-04-09",
-      "gpt-4-0613"
+      "gpt-6-luna",
+      "gpt-5.6-luna",
+      "gpt-5.4-mini",
+      "gpt-5.4-mini-2026-03-17",
+      "gpt-6-sol",
+      "gpt-6.1-sol",
+      "gpt-5.6-terra",
+      "gpt-5.2",
+      "gpt-5.2-2025-12-11",
+      "gpt-5.4",
+      "gpt-5.4-2026-03-05",
+      "gpt-5.6-sol",
+      "gpt-5.5",
+      "gpt-5.5-2026-04-23",
+      "gpt-6-astra"
     ],
-    "recommended": "gpt-4.1-nano",
-    "_note": "Verified 2026-09-02 with the OpenAI API — 22 of 74 tested pass. Includes stable aliases (gpt-4.1-nano, gpt-4o-mini, ...), dated snapshots for pinning (gpt-4o-2024-11-20, gpt-4.1-nano-2025-04-14) and legacy families (gpt-3.5-turbo, gpt-4) for cost-optimised use cases. Recommended kept as `gpt-4.1-nano` (stable alias, 1.39s)."
+    "recommended": "gpt-6-luna",
+    "_note": "Verified 2026-10-26 against the live API. Recommended `gpt-6-luna` (cheapest current model). Dropped every model that is retired (gpt-4.1-nano, gpt-3.5-turbo, gpt-4, gpt-4-turbo, ...) or has a shutdown date (gpt-4.1, gpt-4o, gpt-4o-mini, gpt-5-nano, gpt-5.1, gpt-5.4-nano)."
   },
   "anthropic": {
     "models": [
+      "claude-haiku-5-5",
       "claude-haiku-4-5-20251001",
-      "claude-opus-4-8",
-      "claude-sonnet-4-5-20250929",
-      "claude-opus-4-5-20251101",
-      "claude-opus-4-7",
+      "claude-sonnet-5-5",
+      "claude-sonnet-5",
       "claude-sonnet-4-6",
+      "claude-opus-5-5",
+      "claude-opus-4-8",
+      "claude-opus-4-7",
+      "claude-opus-4-6",
+      "claude-opus-4-5-20251101",
       "claude-fable-5",
-      "claude-fable-5-1",
-      "claude-opus-4-6"
+      "claude-fable-5-1"
     ],
-    "recommended": "claude-haiku-4-5-20251001",
-    "_note": "Verified 2026-09-02 — 9 of 11 tested pass. The `claude-haiku-4-5` alias no longer resolves upstream; the working snapshot is `claude-haiku-4-5-20251001` — used as recommended (2.89s). Full family surfaced: haiku/sonnet/opus/fable across generations 4.5/4.6/4.7/4.8/5."
+    "recommended": "claude-haiku-5-5",
+    "_note": "Verified 2026-10-26 against the live API. Added the 5.x family, recommended `claude-haiku-5-5`. Dropped `claude-sonnet-4-5` (retires 2026-11-30). `claude-opus-5` left out: false refusals on plain notifications."
   },
   "openrouter": {
     "models": [
@@ -113,13 +112,10 @@
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
       "nvidia/nemotron-3-super-120b-a12b:free",
       "google/gemma-4-26b-a4b-it:free",
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "poolside/laguna-s-2.1:free",
-      "openai/gpt-oss-20b:free"
+      "poolside/laguna-s-2.1:free"
     ],
     "recommended": "meta-llama/llama-3.3-70b-instruct",
-    "_note": "Curated manually from the 249+ models OpenRouter serves — the auto-verifier passes ~200 today but only a subset are practical for notification translation. Includes the 11 previously-curated paid models plus 22 new mainstream additions (gpt-5.1, claude-opus-4.8, sonnet-5, grok-4.3/4.20, kimi-k2, deepseek-v3.2, nova, cohere-a, sonar, ...) and 6 `:free` variants re-added manually — the free tier is intentionally supported per user request even though today's rate limits blocked some of them from passing the test."
+    "_note": "Curated manually from the 249+ models OpenRouter serves — the auto-verifier passes ~200 today but only a subset are practical for notification translation. Includes the 11 previously-curated paid models plus 22 new mainstream additions (gpt-5.1, claude-opus-4.8, sonnet-5, grok-4.3/4.20, kimi-k2, deepseek-v3.2, nova, cohere-a, sonar, ...) and 6 `:free` variants re-added manually — the free tier is intentionally supported per user request even though today's rate limits blocked some of them from passing the test. Reviewed 2026-10-26: three `:free` variants no longer served by OpenRouter were dropped."
   },
   "ollama": {
     "_note": "Ollama models are local, we don't filter them. User manages their own models.",

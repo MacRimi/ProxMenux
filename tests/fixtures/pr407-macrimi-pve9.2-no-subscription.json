@@ -1,0 +1,393 @@
+{
+  "digest": "7fbffd0c075540790e7f2ec23c75aeba46de0678018ddaf8bbd651df83d877d5",
+  "errors": [],
+  "files": [
+    {
+      "digest": [
+        253,
+        100,
+        211,
+        177,
+        180,
+        35,
+        211,
+        239,
+        245,
+        90,
+        223,
+        51,
+        116,
+        46,
+        51,
+        147,
+        22,
+        10,
+        146,
+        148,
+        233,
+        90,
+        157,
+        51,
+        173,
+        107,
+        3,
+        6,
+        244,
+        161,
+        179,
+        36
+      ],
+      "file-type": "sources",
+      "path": "/etc/apt/sources.list.d/pve-enterprise.sources",
+      "repositories": [
+        {
+          "Components": [
+            "pve-enterprise"
+          ],
+          "Enabled": 0,
+          "FileType": "sources",
+          "Options": [
+            {
+              "Key": "Signed-By",
+              "Values": [
+                "/usr/share/keyrings/proxmox-archive-keyring.gpg"
+              ]
+            },
+            {
+              "Key": "Enabled",
+              "Values": [
+                "false"
+              ]
+            }
+          ],
+          "Suites": [
+            "trixie"
+          ],
+          "Types": [
+            "deb"
+          ],
+          "URIs": [
+            "https://enterprise.proxmox.com/debian/pve"
+          ]
+        }
+      ]
+    },
+    {
+      "digest": [
+        123,
+        225,
+        114,
+        83,
+        116,
+        171,
+        113,
+        115,
+        199,
+        10,
+        41,
+        251,
+        134,
+        47,
+        44,
+        77,
+        199,
+        16,
+        248,
+        9,
+        228,
+        127,
+        22,
+        199,
+        36,
+        127,
+        226,
+        48,
+        146,
+        96,
+        111,
+        182
+      ],
+      "file-type": "sources",
+      "path": "/etc/apt/sources.list.d/ceph.sources",
+      "repositories": [
+        {
+          "Components": [
+            "enterprise"
+          ],
+          "Enabled": 0,
+          "FileType": "sources",
+          "Options": [
+            {
+              "Key": "Signed-By",
+              "Values": [
+                "/usr/share/keyrings/proxmox-archive-keyring.gpg"
+              ]
+            },
+            {
+              "Key": "Enabled",
+              "Values": [
+                "false"
+              ]
+            }
+          ],
+          "Suites": [
+            "trixie"
+          ],
+          "Types": [
+            "deb"
+          ],
+          "URIs": [
+            "https://enterprise.proxmox.com/debian/ceph-squid"
+          ]
+        }
+      ]
+    },
+    {
+      "digest": [
+        6,
+        229,
+        80,
+        130,
+        43,
+        203,
+        73,
+        237,
+        251,
+        213,
+        123,
+        79,
+        85,
+        43,
+        70,
+        149,
+        17,
+        51,
+        41,
+        180,
+        231,
+        173,
+        109,
+        5,
+        44,
+        6,
+        197,
+        14,
+        77,
+        153,
+        233,
+        89
+      ],
+      "file-type": "sources",
+      "path": "/etc/apt/sources.list.d/proxmox.sources",
+      "repositories": [
+        {
+          "Components": [
+            "pve-no-subscription"
+          ],
+          "Enabled": 1,
+          "FileType": "sources",
+          "Options": [
+            {
+              "Key": "Enabled",
+              "Values": [
+                "true"
+              ]
+            },
+            {
+              "Key": "Signed-By",
+              "Values": [
+                "/usr/share/keyrings/proxmox-archive-keyring.gpg"
+              ]
+            }
+          ],
+          "Suites": [
+            "trixie"
+          ],
+          "Types": [
+            "deb"
+          ],
+          "URIs": [
+            "http://download.proxmox.com/debian/pve"
+          ]
+        }
+      ]
+    },
+    {
+      "digest": [
+        183,
+        74,
+        82,
+        83,
+        226,
+        120,
+        146,
+        197,
+        41,
+        71,
+        199,
+        156,
+        112,
+        67,
+        208,
+        149,
+        172,
+        234,
+        178,
+        166,
+        137,
+        221,
+        198,
+        153,
+        50,
+        116,
+        80,
+        57,
+        229,
+        187,
+        82,
+        194
+      ],
+      "file-type": "sources",
+      "path": "/etc/apt/sources.list.d/debian.sources",
+      "repositories": [
+        {
+          "Components": [
+            "main",
+            "contrib",
+            "non-free",
+            "non-free-firmware"
+          ],
+          "Enabled": 1,
+          "FileType": "sources",
+          "Options": [
+            {
+              "Key": "Signed-By",
+              "Values": [
+                "/usr/share/keyrings/debian-archive-keyring.gpg"
+              ]
+            }
+          ],
+          "Suites": [
+            "trixie",
+            "trixie-updates"
+          ],
+          "Types": [
+            "deb"
+          ],
+          "URIs": [
+            "http://deb.debian.org/debian/"
+          ]
+        },
+        {
+          "Components": [
+            "main",
+            "contrib",
+            "non-free",
+            "non-free-firmware"
+          ],
+          "Enabled": 1,
+          "FileType": "sources",
+          "Options": [
+            {
+              "Key": "Signed-By",
+              "Values": [
+                "/usr/share/keyrings/debian-archive-keyring.gpg"
+              ]
+            }
+          ],
+          "Suites": [
+            "trixie-security"
+          ],
+          "Types": [
+            "deb"
+          ],
+          "URIs": [
+            "http://security.debian.org/debian-security/"
+          ]
+        }
+      ]
+    }
+  ],
+  "infos": [
+    {
+      "index": 0,
+      "kind": "origin",
+      "message": "Proxmox",
+      "path": "/etc/apt/sources.list.d/pve-enterprise.sources"
+    },
+    {
+      "index": 0,
+      "kind": "origin",
+      "message": "Proxmox",
+      "path": "/etc/apt/sources.list.d/ceph.sources"
+    },
+    {
+      "index": 0,
+      "kind": "origin",
+      "message": "Proxmox",
+      "path": "/etc/apt/sources.list.d/proxmox.sources"
+    },
+    {
+      "index": 0,
+      "kind": "origin",
+      "message": "Debian",
+      "path": "/etc/apt/sources.list.d/debian.sources"
+    },
+    {
+      "index": 1,
+      "kind": "origin",
+      "message": "Debian",
+      "path": "/etc/apt/sources.list.d/debian.sources"
+    }
+  ],
+  "standard-repos": [
+    {
+      "description": "This is the default, stable, and recommended repository, available for all Proxmox subscription users.",
+      "handle": "enterprise",
+      "name": "Enterprise",
+      "status": 0
+    },
+    {
+      "description": "This is the recommended repository for testing and non-production use. Its packages are not as heavily tested and validated as the production ready enterprise repository. You don't need a subscription key to access this repository.",
+      "handle": "no-subscription",
+      "name": "No-Subscription",
+      "status": 1
+    },
+    {
+      "description": "This repository contains the latest packages and is primarily used for test labs and by developers to test new features.",
+      "handle": "test",
+      "name": "Test"
+    },
+    {
+      "description": "This repository holds the production-ready Proxmox Ceph Squid packages.",
+      "handle": "ceph-squid-enterprise",
+      "name": "Ceph Squid Enterprise",
+      "status": 0
+    },
+    {
+      "description": "This repository holds the Proxmox Ceph Squid packages intended for non-production use.",
+      "handle": "ceph-squid-no-subscription",
+      "name": "Ceph Squid No-Subscription"
+    },
+    {
+      "description": "This repository contains the Ceph Squid packages before they are moved to the main repository.",
+      "handle": "ceph-squid-test",
+      "name": "Ceph Squid Test"
+    },
+    {
+      "description": "This repository holds the production-ready Proxmox Ceph Tentacle packages.",
+      "handle": "ceph-tentacle-enterprise",
+      "name": "Ceph Tentacle Enterprise"
+    },
+    {
+      "description": "This repository holds the Proxmox Ceph Tentacle packages intended for non-production use.",
+      "handle": "ceph-tentacle-no-subscription",
+      "name": "Ceph Tentacle No-Subscription"
+    },
+    {
+      "description": "This repository contains the Ceph Tentacle packages before they are moved to the main repository.",
+      "handle": "ceph-tentacle-test",
+      "name": "Ceph Tentacle Test"
+    }
+  ]
+}

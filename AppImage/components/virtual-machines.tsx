@@ -3,14 +3,15 @@
 import type React from "react"
 
 import { useState, useMemo, useEffect, useRef } from "react"
-import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached } from "../lib/lxc-apps-cache"
+import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached, syncLxcAppsState } from "../lib/lxc-apps-cache"
+import { getUpdateActionButtonClass } from "../lib/update-action-style"
 import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, ExternalLink, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -21,13 +22,40 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
-import { LxcAppPanel, ThemeAwareLogo } from "./lxc-app-panel"
+import { LxcUpdateJobs } from "./lxc-update-jobs"
+import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
+import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
+import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
+import { GuestBackupList } from "./guest-backup-list"
+import type { GuestBackup } from "../lib/guest-backup-archives"
+import { OciConsoleLogPanel } from "./oci-console-log-panel"
+import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import { waitForVmControlTask } from "../lib/vm-control"
+import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
+import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
-import { useT } from "@/lib/i18n/provider"
+import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
+
+// A schedule record predating the structured reason code still contains one
+// of these exact diagnostic messages. Recognise only those known historical
+// values so an already-recorded safe skip localizes after an upgrade, while
+// unrelated freeform diagnostics remain verbatim for troubleshooting.
+const LEGACY_STOPPED_SCHEDULE_REASONS = new Set([
+  "container is stopped; scheduled update was skipped",
+  "container was stopped before scheduled update could begin",
+])
+
+const scheduleReasonCodeFromPersisted = (reasonCode: unknown, reason: unknown): string | null => {
+  if (typeof reasonCode === "string" && reasonCode) return reasonCode
+  if (typeof reason === "string" && LEGACY_STOPPED_SCHEDULE_REASONS.has(reason.toLowerCase())) {
+    return "stopped_container"
+  }
+  return null
+}
 
 // Sent by /api/vms only for LXC rows, only when the user has enabled
 // `lxc_updates_available` notifications. The Monitor populates this
@@ -39,6 +67,19 @@ interface LxcPackageUpdate {
   latest: string
   security: boolean
 }
+// A container installed by OCI manager Apps, read from its record.
+interface OciInstanceInfo {
+  oci_instance: boolean
+  console_log: boolean
+  stack: boolean
+  primary_vmid: number
+  members: number[]
+  host_directories: boolean
+  pending: boolean
+  restored?: boolean
+  watchdog?: boolean
+}
+
 interface LxcUpdateCheck {
   available: boolean
   count: number
@@ -68,6 +109,9 @@ interface LxcUpdateCheck {
   helper_app_name?: string | null
   helper_updateable_known?: boolean
   os_family?: string | null
+  stale?: boolean
+  age_seconds?: number | null
+  stale_after_seconds?: number
 }
 
 // Summary attached to LXC rows in /api/vms when the user has
@@ -90,15 +134,35 @@ interface LxcAppWatch {
   id: string
   name: string | null
   installed_via?: string | null
+  // Set when the app runs inside Docker: its update is the image's, so it
+  // reports identity and installed version and nothing else.
+  update_via?: string | null
+  container_name?: string | null
+  // Resolved server-side from the image this app delegates to. Kept apart
+  // from latest_version/update_available so the CT badge counts the release
+  // once, through the image.
+  docker_available_version?: string | null
+  docker_update_available?: boolean | null
+  docker_pinned?: boolean | null
+  docker_image_reference?: string | null
+  docker_binding_error?: string | null
   ports?: LxcAppPort[]
   logo_url?: string | null
   health_path?: string | null
   installed_version: string | null
   latest_version: string | null
+  latest_published_at?: string | null
+  state_revision?: number
   update_available: boolean | null
   error: string | null
   checked_at: string | null
   has_repo?: boolean
+  // OCI image of an application installed by OCI manager Apps.
+  image_reference?: string | null
+  image_created?: string | null
+  installed_digest?: string | null
+  latest_image_created?: string | null
+  latest_digest?: string | null
   // Set for the synthetic entry that represents a ProxMenux-managed
   // OCI app (Secure Gateway). The frontend renders it read-only +
   // wires the Update action to /api/oci/installed/<id>/update.
@@ -108,6 +172,7 @@ interface LxcAppWatch {
   // update method. When set, the Updates tab renders an "Apply {app}"
   // button that runs `pct exec vmid -- sh -c "$update_command"`.
   update_command?: string
+  update_method?: AppUpdateMethod
   // Updates tab: per-app dismiss for the "no update method defined"
   // notice. Only hides the notice — the App tab still shows purple ⬆
   // when an update is available upstream.
@@ -164,6 +229,7 @@ interface LxcDockerImageUpdate {
   update_targets?: LxcDockerComposeTarget[]
   standalone_containers?: string[]
   update_available: boolean | null
+  pinned?: boolean
   error: string | null
 }
 
@@ -182,6 +248,9 @@ interface LxcDockerInventory {
 interface VMData {
   vmid: number
   name: string
+  // Compact PVE description included only for list search. The full notes
+  // remain in the guest detail modal.
+  description?: string
   status: string
   type: string
   cpu: number
@@ -196,6 +265,9 @@ interface VMData {
   diskread?: number
   diskwrite?: number
   ip?: string
+  // All LXC addresses reported by lxc-info. `ip` remains the primary
+  // address for backwards compatibility and compact card rendering.
+  ips?: string[]
   update_check?: LxcUpdateCheck
   // Proxmox tags as a raw string ("prod;web;monitoring" — PVE
   // separator is ';' but ',' is also accepted). Rendered as
@@ -213,15 +285,24 @@ interface VMData {
   modal_cache_revision?: number
 }
 
-function buildRegisteredAppUrl(vm: VMData, port?: LxcAppPort): string | null {
-  const custom = (port?.custom_url || "").trim()
-  if (custom) return custom
-  const rawIp = (vm.ip || "").trim().split("/")[0]
-  if (!rawIp || rawIp === "DHCP" || !port?.port) return null
-  const host = rawIp.includes(":") && !rawIp.startsWith("[") ? `[${rawIp}]` : rawIp
-  const scheme = port.scheme || ([443, 8443, 9443].includes(port.port) ? "https" : "http")
-  const path = port.web_path ? `/${port.web_path.replace(/^\/+/, "")}` : ""
-  return `${scheme}://${host}:${port.port}${path}`
+function hasLxcPendingUpdates(vm: VMData): boolean {
+  if (vm.type !== "lxc") return false
+  const osUpdates = vm.update_check?.count ?? 0
+  const appUpdates = (vm.app_watches || []).filter(
+    (app) => app.update_via !== "docker" && app.update_available === true && !app.exclude_from_badge,
+  ).length
+  const dockerRegistered = (vm.app_watches || []).some((app) => app.helper_slug === "docker")
+  const dockerUpdates = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
+  // An app that delegates to Docker has no update flag of its own, so its
+  // pending release reaches this count through the image — but only while
+  // Docker is registered. Registering just the application is now a
+  // supported choice, and it must not leave the CT looking up to date.
+  // Counted only when the image is not already counted, so one release
+  // stays one number.
+  const delegatedUpdates = dockerRegistered ? 0 : new Set((vm.app_watches || []).filter(
+    (app) => app.update_via === "docker" && app.docker_update_available === true && !app.exclude_from_badge,
+  ).map(app => app.docker_image_reference || app.id)).size
+  return osUpdates + appUpdates + dockerUpdates + delegatedUpdates > 0
 }
 
 interface VMConfig {
@@ -323,16 +404,7 @@ interface BackupStorage {
   avail_human?: string
 }
 
-interface VMBackup {
-  volid: string
-  storage: string
-  type: string
-  size: number
-  size_human: string
-  timestamp: number
-  date: string
-  notes?: string
-}
+type VMBackup = GuestBackup
 
 // Sprint 13.29: shape returned by /api/lxc/<vmid>/mount-points. Lives
 // next to VMBackup since both are LXC-modal data structures.
@@ -570,6 +642,9 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
     })
   const flags = optsEntries.filter((o) => o.value === null).map((o) => o.key)
   const keyValues = optsEntries.filter((o) => o.value !== null) as Array<{ key: string; value: string }>
+  const runtimeError = mp.runtime_error === "configured but not mounted"
+    ? t("vmLxc.details.mountErrors.configuredButNotMounted")
+    : mp.runtime_error
 
   return (
     <div className={`rounded-lg p-4 ${cardClasses}`}>
@@ -738,13 +813,13 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
       )}
 
       {/* Error / divergence note. */}
-      {mp.runtime_error && (
+      {runtimeError && (
         <p
           className={`mt-3 text-sm ${
             isStale ? "text-red-400" : "text-amber-400"
           }`}
         >
-          {mp.runtime_error}
+          {runtimeError}
         </p>
       )}
     </div>
@@ -753,6 +828,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 
 export function VirtualMachines() {
   const t = useT()
+  const { language } = useI18n()
   const {
     data: vmData,
     error,
@@ -810,6 +886,8 @@ export function VirtualMachines() {
   const lifecycleCacheRevisionsRef = useRef(new Map<number, number>())
   const [dockerInventoryRefreshingVmid, setDockerInventoryRefreshingVmid] = useState<number | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
+  const controlRequestRef = useRef(false)
+  const [controlAction, setControlAction] = useState<{ vmid: number; action: string } | null>(null)
   // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
   // shutdown sequence and can corrupt running guests; gate them behind a
   // typed-VMID match prompt to prevent misclicks. See audit Tier 2 #17.
@@ -831,6 +909,8 @@ export function VirtualMachines() {
   //   savedOnboot       → 2 s ack pill after successful save.
   const [resourcesEditMode, setResourcesEditMode] = useState(false)
   const [pendingOnboot, setPendingOnboot] = useState<boolean | null>(null)
+  // Watchdog of an OCI application: same edit-gate as the toggle above.
+  const [pendingWatchdog, setPendingWatchdog] = useState<boolean | null>(null)
   const [pendingTags, setPendingTags] = useState<string[] | null>(null)
   const [newTagDraft, setNewTagDraft] = useState<string>("")
   // When set (in edit mode), the pill at this index renders as an
@@ -853,6 +933,9 @@ export function VirtualMachines() {
   //     "settled" when the observed count differs from this baseline
   //     (or after a 15 s safety timeout).
   const [updatesRefreshing, setUpdatesRefreshing] = useState(false)
+  const [osCheckingVmid, setOsCheckingVmid] = useState<number | null>(null)
+  const osCheckRequestRef = useRef<number | null>(null)
+  const [osCheckError, setOsCheckError] = useState<string | null>(null)
   const [updatesResult, setUpdatesResult] = useState<{ pendingAfter: number; appliedCount: number } | null>(null)
   const [updatesBaselineCount, setUpdatesBaselineCount] = useState<number | null>(null)
   const selectedVMRef = useRef<VMData | null>(null)
@@ -883,12 +966,23 @@ export function VirtualMachines() {
   const [showBackupModal, setShowBackupModal] = useState(false)
   const [backupMode, setBackupMode] = useState<string>("snapshot")
   const [backupProtected, setBackupProtected] = useState(false)
-  const [backupNotification, setBackupNotification] = useState<string>("auto")
   const [backupNotes, setBackupNotes] = useState<string>("{{guestname}}")
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "app" | "updates" | "firewall">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "app" | "updates" | "firewall" | "logs">("status")
+  // OCI containers keep their console output on the host; the Logs tab is
+  // offered only when the backend finds that log for the open container.
+  const [consoleLogAvailable, setConsoleLogAvailable] = useState(false)
+  // Set when the open container was installed by OCI manager Apps: its
+  // Updates tab replaces the image instead of updating packages.
+  const [ociInstance, setOciInstance] = useState<OciInstanceInfo | null>(null)
+  // A container restored from a backup carries the mark of its installation
+  // and has no record on this host until it is recovered from the menu.
+  const [ociRestored, setOciRestored] = useState(false)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover"; recoverPrevious?: boolean } | null>(null)
+  const ociCompletionCodeRef = useRef<number | undefined>(undefined)
+  useEffect(() => { ociCompletionCodeRef.current = undefined }, [ociAction])
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -1031,13 +1125,22 @@ export function VirtualMachines() {
       if (!vm) return
       handleVMClick(vm)
       // handleVMClick resets the inner tab to "status"; override to
-      // "app" in the same render tick — React batches these and the
+      // the requested tab ("app" by default, "updates" from the update
+      // icon) in the same render tick — React batches these and the
       // last setActiveModalTab wins.
-      setActiveModalTab("app")
+      setActiveModalTab(detail.tab === "updates" ? "updates" : "app")
     }
     window.addEventListener("openLxcAppModal", handler as EventListener)
     return () => window.removeEventListener("openLxcAppModal", handler as EventListener)
   }, [vmData])
+
+  // An application ProxMenux manages (Secure Gateway) was updated or checked
+  // from its own card: read the guests again so its Updates tab agrees.
+  useEffect(() => {
+    const refresh = () => { mutate() }
+    window.addEventListener("proxmenuxManagedAppUpdated", refresh)
+    return () => window.removeEventListener("proxmenuxManagedAppUpdated", refresh)
+  }, [mutate])
 
   // Same deep-link but for QEMU guests. VMs don't have the App tab,
   // so we land on Status (which is what handleVMClick already
@@ -1065,6 +1168,12 @@ export function VirtualMachines() {
     setSelectedVM(updated)
   }, [vmData])
 
+  useEffect(() => {
+    for (const vm of vmData || []) {
+      if (vm.type === "lxc") syncLxcAppsState(vm.vmid, vm.app_watches || [])
+    }
+  }, [vmData])
+
   // Backend lifecycle refreshes are asynchronous: a start response returns
   // immediately, then the server waits for the guest (and Docker, for LXCs)
   // before publishing a complete new snapshot. When its revision changes,
@@ -1083,6 +1192,7 @@ export function VirtualMachines() {
       cache.details.delete(vm.vmid)
       cache.backups.delete(vm.vmid)
       cache.mountPoints.delete(vm.vmid)
+      if (vm.type === "lxc") reseedMountPoints(vm.vmid)
       cache.schedule.delete(vm.vmid)
       cache.firewall.delete(vm.vmid)
       dockerInventoryRequestedRef.current.delete(vm.vmid)
@@ -1103,6 +1213,31 @@ export function VirtualMachines() {
     selectedVMRef.current = selectedVM
   }, [selectedVM])
 
+  // Revalidate only the open modal, independently of the 2.5s list poll.
+  // This reads config, addresses and os-release, never package updates.
+  useEffect(() => {
+    const vmid = selectedVM?.vmid
+    if (vmid === undefined) return
+    let cancelled = false
+    let inFlight = false
+    const timer = setInterval(async () => {
+      if (inFlight) return
+      inFlight = true
+      try {
+        const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
+        if (!cancelled) {
+          vmModalCacheRef.current.details.set(vmid, details)
+          setVMDetails(details)
+        }
+      } catch {
+        // Keep the last snapshot; the next interval retries the read.
+      } finally {
+        inFlight = false
+      }
+    }, 30000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [selectedVM?.vmid])
+
   useEffect(() => {
     updatesBaselineCountRef.current = updatesBaselineCount
   }, [updatesBaselineCount])
@@ -1115,6 +1250,12 @@ export function VirtualMachines() {
   useEffect(() => {
     if (!updatesRefreshing) return
     if (!selectedVM) return
+    if (!selectedVM.update_check || selectedVM.update_check.error) {
+      setUpdatesResult(null)
+      setUpdatesRefreshing(false)
+      setUpdatesBaselineCount(null)
+      return
+    }
     const currentCount = selectedVM.update_check?.count ?? 0
     if (updatesBaselineCount !== null && currentCount !== updatesBaselineCount) {
       const applied = Math.max(0, updatesBaselineCount - currentCount)
@@ -1134,7 +1275,8 @@ export function VirtualMachines() {
     const safety = setTimeout(() => {
       const currentCount = selectedVMRef.current?.update_check?.count ?? 0
       const baseline = updatesBaselineCountRef.current
-      setUpdatesResult({
+      const observation = selectedVMRef.current?.update_check
+      setUpdatesResult(!observation || observation.error ? null : {
         pendingAfter: currentCount,
         appliedCount: Math.max(0, (baseline ?? 0) - currentCount),
       })
@@ -1154,6 +1296,7 @@ export function VirtualMachines() {
 
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
+    setOsCheckError(null)
     setBulkLoaded(null)
     setBulkConfigured(false)
     setBulkTargets(["os"])
@@ -1169,6 +1312,7 @@ export function VirtualMachines() {
     // start in view mode with no pending change.
     setResourcesEditMode(false)
     setPendingOnboot(null)
+    setPendingWatchdog(null)
     setPendingTags(null)
     setNewTagDraft("")
     setEditingTagIndex(null)
@@ -1180,6 +1324,9 @@ export function VirtualMachines() {
     setFirewallLogs([])
     setFirewallLogError(null)
     setFirewallEnabled(true)
+    setConsoleLogAvailable(false)
+    setOciInstance(null)
+    setOciRestored(false)
 
     // Prime UI from last-known payloads so a reopened guest never
     // flashes "Loading…" — the backend and this cache both revalidate
@@ -1221,6 +1368,7 @@ export function VirtualMachines() {
     // extends the same idea to the two tabs still on lazy-fetch.
     if (vm.type === "lxc") {
       fetchMountPoints(vm.vmid)
+      fetchOciInstance(vm.vmid)
       // Shared cache dedup: if a hover already fired this, we share
       // the same promise (no duplicate backend work). The App panel
       // reads from the same cache, so switching to that tab either
@@ -1282,7 +1430,8 @@ export function VirtualMachines() {
   useEffect(() => {
     if (!vmData || vmData.length === 0) return
     let cancelled = false
-    fetchApi<{
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const hydrate = (attempt: number) => fetchApi<{
       guests: Array<{
         vmid: number
         type: "qemu" | "lxc"
@@ -1297,6 +1446,10 @@ export function VirtualMachines() {
       .then((payload) => {
         if (cancelled || !payload?.guests) return
         const cache = vmModalCacheRef.current
+        // Guests the server has not warmed yet come back null; ask again
+        // shortly so their mount tab is seeded before the modal opens.
+        const pending = payload.guests.some((g) => g.type === "lxc" && !g.mount_points)
+        if (pending && attempt < 3) retryTimer = setTimeout(() => hydrate(attempt + 1), 20000)
         for (const g of payload.guests) {
           if (g.details) cache.details.set(g.vmid, g.details)
           if (g.backups?.backups) {
@@ -1330,9 +1483,36 @@ export function VirtualMachines() {
         // Silent — modal open handlers fall back to individual
         // fetches if the ref cache is empty.
       })
-    return () => { cancelled = true }
+    hydrate(0)
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vmidsKey])
+
+  const fetchOciInstance = (vmid: number) =>
+    fetchApi<OciInstanceInfo>(`/api/lxc/${vmid}/oci-instance`)
+      .then((r) => {
+        setConsoleLogAvailable(!!r?.console_log)
+        setOciInstance(r?.oci_instance ? r : null)
+        setOciRestored(!!r?.restored)
+      })
+      .catch(() => {
+        setConsoleLogAvailable(false)
+        setOciInstance(null)
+        setOciRestored(false)
+      })
+
+  // An operation that is still running when the modal opens clears on its
+  // own: the record is read again until it is published.
+  useEffect(() => {
+    if (!ociInstance?.pending || !selectedVM) return
+    const vmid = selectedVM.vmid
+    const timer = setInterval(() => fetchOciInstance(vmid), 15000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ociInstance?.pending, selectedVM?.vmid])
 
   const fetchMountPoints = async (vmid: number) => {
     // Two fetches in parallel:
@@ -1347,49 +1527,66 @@ export function VirtualMachines() {
     //      user perceives no lag.
     const hasSeed = mountPoints.length > 0
     if (!hasSeed) setLoadingMounts(true)
-    try {
-      const [staticResp, runtimeResp] = await Promise.all([
-        fetchApi<{
-          ok: boolean
-          mount_points: LxcMountPoint[]
-          ad_hoc_hint_count?: number
-        }>(`/api/lxc/${vmid}/mount-points`).catch((e) => {
-          console.error("Error fetching static mount points:", e)
-          return null
-        }),
-        fetchApi<{
-          ok: boolean
-          running: boolean
-          runtime: Record<string, Partial<LxcMountPoint>>
-          ad_hoc: LxcMountPoint[]
-        }>(`/api/lxc/${vmid}/mount-points/runtime`).catch((e) => {
-          console.error("Error fetching runtime mount points:", e)
-          return null
-        }),
-      ])
-      if (staticResp?.ok) {
-        const mp = staticResp.mount_points || []
-        const hint = staticResp.ad_hoc_hint_count ?? 0
-        setMountPoints(mp)
-        setMountsAdHocHint(hint)
-        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
-      } else if (!hasSeed) {
-        setMountPoints([])
-      }
-      if (runtimeResp?.ok) {
-        setMountPointsRuntime(runtimeResp.runtime || {})
-        setAdHocMounts(runtimeResp.ad_hoc || [])
-      } else {
+    // Each half is applied as soon as it lands: the static list decides
+    // whether the tab exists and must not wait for df/stat.
+    const staticReq = fetchApi<{
+      ok: boolean
+      mount_points: LxcMountPoint[]
+      ad_hoc_hint_count?: number
+    }>(`/api/lxc/${vmid}/mount-points`)
+      .then((staticResp) => {
+        if (staticResp?.ok) {
+          const mp = staticResp.mount_points || []
+          const hint = staticResp.ad_hoc_hint_count ?? 0
+          setMountPoints(mp)
+          setMountsAdHocHint(hint)
+          vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
+        } else if (!hasSeed) {
+          setMountPoints([])
+        }
+      })
+      .catch((e) => {
+        console.error("Error fetching static mount points:", e)
+        if (!hasSeed) setMountPoints([])
+      })
+      .finally(() => setLoadingMounts(false))
+    const runtimeReq = fetchApi<{
+      ok: boolean
+      running: boolean
+      runtime: Record<string, Partial<LxcMountPoint>>
+      ad_hoc: LxcMountPoint[]
+    }>(`/api/lxc/${vmid}/mount-points/runtime`)
+      .then((runtimeResp) => {
+        if (runtimeResp?.ok) {
+          setMountPointsRuntime(runtimeResp.runtime || {})
+          setAdHocMounts(runtimeResp.ad_hoc || [])
+        } else {
+          setMountPointsRuntime({})
+          setAdHocMounts([])
+        }
+      })
+      .catch((e) => {
+        console.error("Error fetching runtime mount points:", e)
         setMountPointsRuntime({})
         setAdHocMounts([])
-      }
-    } catch (error) {
-      console.error("Error fetching LXC mount points:", error)
-      if (!hasSeed) setMountPoints([])
-      setAdHocMounts([])
-    } finally {
-      setLoadingMounts(false)
-    }
+      })
+    await Promise.all([staticReq, runtimeReq])
+  }
+
+  // Background refill of the static mount list after a lifecycle event,
+  // so the next open of that guest renders its tab bar complete.
+  const reseedMountPoints = (vmid: number) => {
+    fetchApi<{ ok: boolean; mount_points: LxcMountPoint[]; ad_hoc_hint_count?: number }>(
+      `/api/lxc/${vmid}/mount-points`,
+    )
+      .then((r) => {
+        if (!r?.ok) return
+        vmModalCacheRef.current.mountPoints.set(vmid, {
+          mount_points: r.mount_points || [],
+          ad_hoc_hint_count: r.ad_hoc_hint_count ?? 0,
+        })
+      })
+      .catch(() => {})
   }
 
   const handleMetricsClick = () => {
@@ -1415,7 +1612,7 @@ export function VirtualMachines() {
     }
   }
 
-  const fetchVmBackups = async (vmid: number) => {
+  const fetchVmBackups = async (vmid: number, force = false) => {
     // Stale-while-revalidate with a 6-hour freshness gate.
     //
     // 1. If we already have backups (bulk hydration or a previous
@@ -1432,15 +1629,16 @@ export function VirtualMachines() {
     // 3. Loading spinner only on the true first load.
     const GATE_MS = 6 * 60 * 60 * 1000
     const seed = vmModalCacheRef.current.backups.get(vmid)
-    const isStale = !seed || (Date.now() - seed.fetchedAt) > GATE_MS
+    const isStale = force || !seed || (Date.now() - seed.fetchedAt) > GATE_MS
     if (!seed) setLoadingBackups(true)
     try {
       const url = isStale
         ? `/api/vms/${vmid}/backups?fresh=1`
         : `/api/vms/${vmid}/backups`
-      const response = await fetchApi<{ backups?: VMBackup[] }>(url)
+      const response = await fetchApi<{ backups?: VMBackup[]; error?: string }>(url)
+      if (response.error || !Array.isArray(response.backups)) throw new Error(response.error || "Backup inventory unavailable")
       if (response.backups) {
-        setVmBackups(response.backups)
+        if (selectedVMRef.current?.vmid === vmid) setVmBackups(response.backups)
         vmModalCacheRef.current.backups.set(vmid, { backups: response.backups, fetchedAt: Date.now() })
       }
     } catch (error) {
@@ -1448,9 +1646,10 @@ export function VirtualMachines() {
       // Only clear the visible list if we had nothing to show
       // in the first place — a transient network hiccup must not
       // wipe the stale-but-useful view the user is looking at.
-      if (!seed) setVmBackups([])
+      if (!seed && selectedVMRef.current?.vmid === vmid) setVmBackups([])
+      if (force) throw error
     } finally {
-      if (!seed) setLoadingBackups(false)
+      if (!seed && selectedVMRef.current?.vmid === vmid) setLoadingBackups(false)
     }
   }
 
@@ -1503,7 +1702,6 @@ export function VirtualMachines() {
     // Reset modal to defaults
     setBackupMode("snapshot")
     setBackupProtected(false)
-    setBackupNotification("auto")
     setBackupNotes("{{guestname}}")
     setBackupPbsChangeMode("default")
     // Auto-select first storage if none selected
@@ -1527,7 +1725,6 @@ export function VirtualMachines() {
           mode: backupMode,
           compress: "zstd",
           protected: backupProtected,
-          notification: backupNotification,
           notes: backupNotes,
           pbs_change_detection: backupPbsChangeMode
         }),
@@ -1547,6 +1744,7 @@ export function VirtualMachines() {
 
   const handleCancelResourcesEdit = () => {
     setPendingOnboot(null)
+    setPendingWatchdog(null)
     setPendingTags(null)
     setNewTagDraft("")
     setEditingTagIndex(null)
@@ -1567,16 +1765,26 @@ export function VirtualMachines() {
     if (pendingTags !== null && stringifyTags(pendingTags) !== stringifyTags(currentTags)) {
       payload.tags = pendingTags
     }
-    if (Object.keys(payload).length === 0) {
+    const watchdogChanged = !!ociInstance?.oci_instance && pendingWatchdog !== null && pendingWatchdog !== !!ociInstance.watchdog
+    if (Object.keys(payload).length === 0 && !watchdogChanged) {
       handleCancelResourcesEdit()
       return
     }
     setSavingOnboot(true)
     try {
-      await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      })
+      if (Object.keys(payload).length > 0) {
+        await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+      }
+      if (watchdogChanged) {
+        const updated = await fetchApi<OciInstanceInfo>(`/api/lxc/${selectedVM.vmid}/oci-watchdog`, {
+          method: "POST",
+          body: JSON.stringify({ enabled: pendingWatchdog }),
+        })
+        setOciInstance((prev) => (prev ? { ...prev, watchdog: !!updated?.watchdog } : prev))
+      }
       // Optimistic local reflect so the UI doesn't wait a poll cycle.
       if (payload.onboot !== undefined) {
         setVMDetails((prev) => (prev ? { ...prev, config: { ...prev.config, onboot: payload.onboot as number } } : prev))
@@ -1590,6 +1798,7 @@ export function VirtualMachines() {
       // list card too without waiting up to 2.5 s.
       void mutate()
       setPendingOnboot(null)
+      setPendingWatchdog(null)
       setPendingTags(null)
       setNewTagDraft("")
       setEditingTagIndex(null)
@@ -1605,12 +1814,16 @@ export function VirtualMachines() {
   }
 
   const handleVMControl = async (vmid: number, action: string) => {
+    if (controlRequestRef.current) return
+    controlRequestRef.current = true
+    setControlAction({ vmid, action })
     setControlLoading(true)
     try {
-      await fetchApi(`/api/vms/${vmid}/control`, {
+      const accepted = await fetchApi<{ task: string }>(`/api/vms/${vmid}/control`, {
         method: "POST",
         body: JSON.stringify({ action }),
       })
+      const completed = await waitForVmControlTask(vmid, action, accepted.task)
 
       // Any control action can change what the guest reports: a stop
       // hides runtime-only fields, a start may bring a new config that
@@ -1626,16 +1839,37 @@ export function VirtualMachines() {
       cache.firewall.delete(vmid)
       invalidateLxcApps(vmid)
 
-      mutate()
-      setSelectedVM(null)
-      setVMDetails(null)
+      // Publish the confirmed result as an SWR mutation before revalidating.
+      // SWR then discards list requests started before this completion.
+      try {
+        await mutate(current => current?.map(vm => vm.vmid === vmid
+          ? { ...vm, status: completed.guest_status as VMData["status"] } : vm), { revalidate: false })
+        await mutate()
+      } catch { /* Polling will retry; control already succeeded. */ }
+      // Keep the user's tab/scroll and last complete detail while revalidating.
+      // Never resurrect a modal the user closed, or overwrite another guest.
+      if (selectedVMRef.current?.vmid === vmid) {
+        setSelectedVM(current => current?.vmid === vmid
+          ? { ...current, status: completed.guest_status as VMData["status"] } : current)
+        try {
+          const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
+          cache.details.set(vmid, details)
+          if (selectedVMRef.current?.vmid === vmid) setVMDetails(details)
+        } catch {
+          // The control succeeded; detail polling will retry independently.
+        }
+      }
     } catch (error) {
       console.error(`Failed to ${action} VM ${vmid}:`, error)
       // Same UX issue as handleCreateBackup: a silent console.error left the
       // user looking at a "Stop"/"Start" button that just never reacted.
-      const msg = error instanceof Error ? error.message : t("vmLxc.errors.unknown")
+      const msg = error instanceof Error
+        ? (error.message === "controlNotConfirmed" ? t("vmLxc.errors.controlNotConfirmed") : error.message)
+        : t("vmLxc.errors.unknown")
       alert(t("vmLxc.errors.controlFailed", { action, vmid, message: msg }))
     } finally {
+      controlRequestRef.current = false
+      setControlAction(null)
       setControlLoading(false)
     }
   }
@@ -1647,40 +1881,6 @@ export function VirtualMachines() {
     setTerminalOpen(true)
   }
   
-const handleDownloadLogs = async (vmid: number, vmName: string) => {
-    try {
-      const data = await fetchApi(`/api/vms/${vmid}/logs`)
-
-      // Format logs as plain text
-      let logText = `=== ${t("vmLxc.logs.header", { name: vmName, vmid })} ===\n`
-      logText += `${t("vmLxc.logs.node")}: ${data.node}\n`
-      logText += `${t("vmLxc.logs.type")}: ${data.type}\n`
-      logText += `${t("vmLxc.logs.totalLines")}: ${data.log_lines}\n`
-      logText += `${t("vmLxc.logs.generated")}: ${new Date().toISOString()}\n`
-      logText += `\n${"=".repeat(80)}\n\n`
-
-      if (data.logs && Array.isArray(data.logs)) {
-        data.logs.forEach((log: any) => {
-          if (typeof log === "object" && log.t) {
-            logText += `${log.t}\n`
-          } else if (typeof log === "string") {
-            logText += `${log}\n`
-          }
-        })
-      }
-
-      const blob = new Blob([logText], { type: "text/plain" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${vmName}-${vmid}-logs.txt`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Error downloading logs:", error)
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "running":
@@ -1743,17 +1943,43 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       window.localStorage.setItem("proxmenux.vmListFilter", statusFilter)
     }
   }, [statusFilter])
+  const [updatesOnly, setUpdatesOnly] = useState(() => {
+    if (typeof window === "undefined") return false
+    return window.localStorage.getItem("proxmenux.vmListUpdatesOnly") === "true"
+  })
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("proxmenux.vmListUpdatesOnly", String(updatesOnly))
+    }
+  }, [updatesOnly])
+  const [vmSearchQuery, setVmSearchQuery] = useState("")
+
+  const vmSearchTerms = useMemo(
+    () => normalizeVmSearchValue(vmSearchQuery).trim().split(/\s+/).filter(Boolean),
+    [vmSearchQuery],
+  )
 
   const statusCounts = useMemo(() => ({
     all: safeVMData.length,
     running: safeVMData.filter((vm) => vm.status === "running").length,
     stopped: safeVMData.filter((vm) => vm.status === "stopped").length,
+    updates: safeVMData.filter(hasLxcPendingUpdates).length,
   }), [safeVMData])
 
+  const vmTypeSynonyms = useMemo(() => ({
+    lxc: t("vmLxc.filters.typeSynonyms.lxc"),
+    qemu: t("vmLxc.filters.typeSynonyms.qemu"),
+  }), [t])
+
   const filteredVMs = useMemo(() => {
-    if (statusFilter === "all") return safeVMData
-    return safeVMData.filter((vm) => vm.status === statusFilter)
-  }, [safeVMData, statusFilter])
+    const statusMatched = statusFilter === "all"
+      ? safeVMData
+      : safeVMData.filter((vm) => vm.status === statusFilter)
+    return statusMatched.filter((vm) => (
+      (!updatesOnly || hasLxcPendingUpdates(vm))
+      && matchesVmSearch(vm, vmSearchTerms, vmTypeSynonyms)
+    ))
+  }, [safeVMData, statusFilter, updatesOnly, vmSearchTerms, vmTypeSynonyms])
 
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,
@@ -1774,6 +2000,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [applyRestart, setApplyRestart] = useState(false)
   const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
   const [applyRunId, setApplyRunId] = useState<string>("")
+  const [applyResume, setApplyResume] = useState(false)
+  const [applyCheckedOs, setApplyCheckedOs] = useState(false)
   const [applyTargetIds, setApplyTargetIds] = useState<string[]>([])
   const [applyTargetLabels, setApplyTargetLabels] = useState<string[]>([])
   // Extra state carried alongside applyTarget when the App branch is
@@ -1796,14 +2024,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // Case-3a "no method" cards the user previously dismissed.
   const [customCmdEditingApp, setCustomCmdEditingApp] = useState<string | null>(null)
   const [customCmdDraft, setCustomCmdDraft] = useState<string>("")
+  const [updaterMethodDraft, setUpdaterMethodDraft] = useState<AppUpdateMethod>("none")
   const [customCmdSaving, setCustomCmdSaving] = useState(false)
   const [showHiddenNotices, setShowHiddenNotices] = useState(false)
-
-  const canonicalHelperUpdateCommand = (slug?: string | null) => {
-    const cleanSlug = (slug || "").trim()
-    if (!/^[A-Za-z0-9._-]+$/.test(cleanSlug)) return ""
-    return `PHS_SILENT=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${cleanSlug}.sh)"`
-  }
 
   // Docker Engine is updated by a protected host-side runner rather
   // than by an arbitrary command inside the CT. Surface the exact
@@ -1814,6 +2037,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const openCustomCmdEditor = (app: LxcAppWatch, initialCommand = "") => {
     setCustomCmdEditingApp(app.id)
     setCustomCmdDraft(app.update_command || initialCommand)
+    setUpdaterMethodDraft(app.update_method || (app.update_command || initialCommand ? "custom" : "none"))
   }
 
   // ── Options card unified state ──────────────────────────────────
@@ -1824,6 +2048,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // detected via the community-scripts pattern. All loaded once when
   // the user opens the Updates tab of a specific LXC.
   const [scheduleLoaded, setScheduleLoaded] = useState<number | null>(null)
+  const scheduleLoadRequestRef = useRef(0)
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleCron, setScheduleCron] = useState("0 3 * * *")
   const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
@@ -1833,6 +2058,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
   const [scheduleLastRunReason, setScheduleLastRunReason] = useState<string | null>(null)
+  const [scheduleLastRunReasonCode, setScheduleLastRunReasonCode] = useState<string | null>(null)
   const [scheduleLastRunLog, setScheduleLastRunLog] = useState<string | null>(null)
   const [scheduleLastRunRebootRequired, setScheduleLastRunRebootRequired] = useState(false)
   const [scheduleLastRunRebootPackages, setScheduleLastRunRebootPackages] = useState<string[]>([])
@@ -1868,6 +2094,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // with scheduled updates: changing a one-click manual selection must never
   // rewrite the cron automation configured in Options.
   const [bulkLoaded, setBulkLoaded] = useState<number | null>(null)
+  const bulkLoadRequestRef = useRef(0)
   const [bulkConfigured, setBulkConfigured] = useState(false)
   const [bulkTargets, setBulkTargets] = useState<string[]>(["os"])
   const [bulkPersistedTargets, setBulkPersistedTargets] = useState<string[]>(["os"])
@@ -1902,12 +2129,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       ? s.targets.map((value: any) => String(value))
       : ([...(legacyTarget !== "app" ? ["os"] : []), ...(legacyTarget !== "os" ? ["apps"] : [])]))
     setScheduleReleaseDelayDays(Number.isInteger(Number(s.release_delay_days)) ? Number(s.release_delay_days) : 0)
-    if (s.backup !== undefined) setApplyBackup(!!s.backup)
-    if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
-    if (s.restart !== undefined) setApplyRestart(!!s.restart)
+    setApplyBackup(!!s.backup)
+    setApplyBackupStorage(typeof s.backup_storage === "string" ? s.backup_storage : "")
+    setApplyRestart(!!s.restart)
     setScheduleLastRunAt(s.last_run_at || null)
     setScheduleLastRunStatus(s.last_run_status || null)
     setScheduleLastRunReason(s.last_run_reason || null)
+    setScheduleLastRunReasonCode(scheduleReasonCodeFromPersisted(s.last_run_reason_code, s.last_run_reason))
     setScheduleLastRunLog(s.last_run_log || null)
     setScheduleLastRunRebootRequired(s.last_run_reboot_required === true)
     setScheduleLastRunRebootPackages(Array.isArray(s.last_run_reboot_packages)
@@ -1917,30 +2145,46 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   }
 
   const loadSchedule = async (vmid: number) => {
+    if (selectedVMRef.current?.vmid !== vmid) return
+    const requestId = ++scheduleLoadRequestRef.current
+    const isCurrent = () => selectedVMRef.current?.vmid === vmid
+      && scheduleLoadRequestRef.current === requestId
     setScheduleError(null)
     // Seed from ref cache so tab-switching to Updates isn't a "Loading…"
     // moment when the payload was already fetched this session.
     const cachedSched = vmModalCacheRef.current.schedule.get(vmid)
-    if (cachedSched) applySchedulePayload(cachedSched)
+    // Missing options are this guest's defaults, never the previous guest's.
+    applySchedulePayload(cachedSched || {})
     try {
       const s: any = await fetchApi(`/api/vms/${vmid}/schedule`)
-      if (s && typeof s === "object") {
-        vmModalCacheRef.current.schedule.set(vmid, s)
-        applySchedulePayload(s)
-      }
+      if (!isCurrent()) return
+      if (!s || typeof s !== "object" || Array.isArray(s))
+        throw new Error(t("vmLxc.scheduled.loadFailed"))
+      vmModalCacheRef.current.schedule.set(vmid, s)
+      applySchedulePayload(s)
     } catch (e: any) {
-      setScheduleError(e?.message || "Could not load schedule")
+      if (isCurrent()) setScheduleError(e?.message || t("vmLxc.scheduled.loadFailed"))
     } finally {
-      setScheduleLoaded(vmid)
+      if (isCurrent()) setScheduleLoaded(vmid)
     }
   }
 
   const loadBulkUpdate = async (vmid: number) => {
+    if (selectedVMRef.current?.vmid !== vmid) return
+    const requestId = ++bulkLoadRequestRef.current
+    const isCurrent = () => selectedVMRef.current?.vmid === vmid
+      && bulkLoadRequestRef.current === requestId
     setBulkError(null)
     setBulkLoaded(null)
     setBulkEditMode(false)
+    setBulkConfigured(false)
+    setBulkTargets(["os"])
+    setBulkPersistedTargets(["os"])
     try {
       const config: any = await fetchApi(`/api/vms/${vmid}/bulk-update`)
+      if (!isCurrent()) return
+      if (!config || typeof config !== "object" || Array.isArray(config))
+        throw new Error(t("vmLxc.bulkUpdate.loadFailed"))
       const targets = Array.isArray(config?.targets)
         ? Array.from(new Set(config.targets.map((value: any) => String(value)))) as string[]
         : []
@@ -1950,12 +2194,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setBulkTargets(next)
       setBulkPersistedTargets(next)
     } catch (e: any) {
+      if (!isCurrent()) return
       setBulkConfigured(false)
       setBulkTargets(["os"])
       setBulkPersistedTargets(["os"])
-      setBulkError(e?.message || "Could not load bulk update")
+      setBulkError(e?.message || t("vmLxc.bulkUpdate.loadFailed"))
     } finally {
-      setBulkLoaded(vmid)
+      if (isCurrent()) setBulkLoaded(vmid)
     }
   }
 
@@ -2053,8 +2298,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // leave scheduleConfigured=false and Save PUTs cron="" so the
     // backend doesn't resurrect the schedule.
     const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
-    const hasOsTarget = scheduleTargets.includes("os")
-    const hasAppTarget = scheduleTargets.some((value) => value !== "os")
+    // A container installed by OCI manager Apps has one thing to update on
+    // a schedule: its image.
+    const targetsToSave = ociInstance ? ["oci_image"] : scheduleTargets
+    const hasOsTarget = targetsToSave.includes("os")
+    const hasAppTarget = targetsToSave.some((value) => value !== "os")
     const derivedTarget: "os" | "app" | "both" = hasOsTarget && hasAppTarget ? "both" : hasOsTarget ? "os" : "app"
     try {
       await fetchApi(`/api/vms/${vmid}/schedule`, {
@@ -2064,16 +2312,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           enabled: scheduleEnabled,
           cron: cronToSave,
           target: derivedTarget,
-          targets: scheduleTargets,
+          targets: targetsToSave,
           release_delay_days: scheduleReleaseDelayDays,
           backup: applyBackup,
           backup_storage: applyBackupStorage || selectedBackupStorage || "",
-          restart: applyRestart,
+          restart: ociInstance ? false : applyRestart,
         }),
       })
       if (cronToSave.trim()) setScheduleConfigured(true)
     } catch (e: any) {
-      setScheduleError(e?.message || "Save failed")
+      setScheduleError(e?.message || t("vmLxc.scheduled.saveFailed"))
     } finally {
       setScheduleSaving(false)
     }
@@ -2132,13 +2380,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setScheduleLastRunRebootPackages([])
       setScheduleReleaseDelayDays(0)
     } catch (e: any) {
-      setScheduleError(e?.message || "Delete failed")
+      setScheduleError(e?.message || t("vmLxc.scheduled.deleteFailed"))
     } finally {
       setScheduleSaving(false)
     }
   }
 
-  // Turn a 5-field cron into a plain-English label — mirrors the
+  // Turn a 5-field cron into a localized label — mirrors the
   // backend's _humanise_cron so view mode matches the picker's
   // preset labels.
   const humanCron = (expr: string): string => {
@@ -2151,21 +2399,25 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       if (isNaN(hn) || isNaN(mn)) return `${h}:${m}`
       return `${String(hn).padStart(2, "0")}:${String(mn).padStart(2, "0")}`
     }
-    if (d === "*" && mo === "*" && w === "*" && /^\d+$/.test(m) && /^\d+$/.test(h)) return `Daily at ${hhmm()}`
+    if (d === "*" && mo === "*" && w === "*" && /^\d+$/.test(m) && /^\d+$/.test(h)) return t("vmLxc.scheduled.humanDaily", { time: hhmm() })
     if (d === "*" && mo === "*" && /^\d+$/.test(w) && /^\d+$/.test(m) && /^\d+$/.test(h)) {
-      const wdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
       const wn = parseInt(w, 10)
-      const wname = (wn >= 0 && wn <= 6) ? wdays[wn] : w
-      return `Weekly (${wname} ${hhmm()})`
+      const wname = wn >= 0 && wn <= 6 ? t(`vmLxc.scheduled.weekdays.${wn}`) : w
+      return t("vmLxc.scheduled.humanWeekly", { day: wname, time: hhmm() })
     }
-    if (mo === "*" && w === "*" && /^\d+$/.test(d) && /^\d+$/.test(m) && /^\d+$/.test(h)) return `Monthly (day ${parseInt(d, 10)} at ${hhmm()})`
-    if (h === "*" && d === "*" && mo === "*" && w === "*" && m === "0") return "Hourly"
+    if (mo === "*" && w === "*" && /^\d+$/.test(d) && /^\d+$/.test(m) && /^\d+$/.test(h)) return t("vmLxc.scheduled.humanMonthly", { day: parseInt(d, 10), time: hhmm() })
+    if (h === "*" && d === "*" && mo === "*" && w === "*" && m === "0") return t("vmLxc.scheduled.humanHourly")
     return expr
   }
 
   const renderScheduleRunDetails = (indented = false) => {
     if (!scheduleLastRunAt || !selectedVM) return null
     const spacing = indented ? "pl-4" : ""
+    const scheduleLastRunReasonText = scheduleLastRunReasonCode === "stopped_container"
+      ? selectedVM.status === "stopped"
+        ? t("vmLxc.scheduled.reasonStoppedContainer")
+        : t("vmLxc.scheduled.reasonStoppedContainerHistorical")
+      : scheduleLastRunReason
     return (
       <div className={`space-y-1.5 ${spacing}`}>
         <div className="text-xs text-muted-foreground">
@@ -2179,14 +2431,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   : scheduleLastRunStatus === "deferred"
                     ? t("vmLxc.scheduled.runDeferred")
                     : scheduleLastRunStatus === "skipped"
-                      ? t("vmLxc.scheduled.runSkipped")
+                      ? t("vmLxc.scheduled.runSkippedStatus")
                       : t("vmLxc.scheduled.runFailed")}
             </span></>
           )}
         </div>
-        {scheduleLastRunReason && (
+        {scheduleLastRunReasonText && (
           <div className="text-xs text-muted-foreground break-words">
-            {scheduleLastRunReason}
+            {scheduleLastRunReasonText}
           </div>
         )}
         {scheduleLastRunRebootRequired && (
@@ -2296,7 +2548,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // record and would drop any field we omitted.
     const full: any = await fetchApi(`/api/vms/${vmid}/apps`)
     const current = (full?.apps || []).find((a: any) => a.id === app.id)
-    if (!current) throw new Error("app not found in sidecar")
+    if (!current) throw new Error(t("vmLxc.errors.appNotFound"))
     const { id: _id, state: _state, created_at: _created, ...rest } = current
     const payload = { ...rest, ...patch }
     const updated: any = await fetchApi(`/api/vms/${vmid}/apps/${app.id}`, {
@@ -2314,26 +2566,30 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setCustomCmdSaving(true)
     try {
       await patchAppWatch(vmid, app, {
-        update_command: customCmdDraft.trim(),
+        update_command: updaterMethodDraft === "helper" ? "" : customCmdDraft.trim(),
+        update_method: app.helper_slug === "docker" ? "custom" : updaterMethodDraft,
         // Saving a command implicitly re-enables the notice (moot —
         // the notice only shows when there is no command).
         hide_no_updater_notice: false,
       })
       closeCustomCmdEditor()
     } catch (e) {
-      alert(`Could not save custom command: ${(e as any)?.message || e}`)
+      alert(t("vmLxc.errors.saveCustomCommandFailed", { message: (e as any)?.message || String(e) }))
     } finally {
       setCustomCmdSaving(false)
     }
   }
   const removeCustomCommand = async (vmid: number, app: LxcAppWatch) => {
-    if (!confirm(`Remove the custom update command for "${app.name}"?`)) return
+    const confirmKey = app.helper_slug === "docker"
+      ? "vmLxc.errors.removeCustomCommandConfirm"
+      : "vmLxc.updates.disableUpdaterConfirm"
+    if (!confirm(t(confirmKey, { name: app.name || "" }))) return
     setCustomCmdSaving(true)
     try {
-      await patchAppWatch(vmid, app, { update_command: "" })
+      await patchAppWatch(vmid, app, { update_command: "", update_method: "none" })
       closeCustomCmdEditor()
     } catch (e) {
-      alert(`Could not remove custom command: ${(e as any)?.message || e}`)
+      alert(t("vmLxc.errors.removeCustomCommandFailed", { message: (e as any)?.message || String(e) }))
     } finally {
       setCustomCmdSaving(false)
     }
@@ -2342,15 +2598,28 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     try {
       await patchAppWatch(vmid, app, { hide_no_updater_notice: true })
     } catch (e) {
-      alert(`Could not hide notice: ${(e as any)?.message || e}`)
+      alert(t("vmLxc.errors.hideNoticeFailed", { message: (e as any)?.message || String(e) }))
     }
   }
 
   const openApplyTerminal = (
     vmid: number,
     target: "os" | "app" | "both",
-    opts?: { updateCommand?: string; appName?: string; runHelper?: boolean; allowHelperWithCustom?: boolean; dockerStandaloneTargets?: string[]; dockerEngine?: boolean; dockerRefresh?: boolean; targetIds?: string[]; targetLabels?: string[] },
+    opts?: { checkedOs?: boolean; updateCommand?: string; appName?: string; runHelper?: boolean; allowHelperWithCustom?: boolean; dockerStandaloneTargets?: string[]; dockerEngine?: boolean; dockerRefresh?: boolean; targetIds?: string[]; targetLabels?: string[] },
   ) => {
+    const guest = selectedVMRef.current
+    if (target === "os" || target === "both") {
+      if (osCheckingVmid !== null || osCheckRequestRef.current !== null || updatesRefreshing || (opts?.checkedOs && osCheckError)) return
+      const state = guest?.vmid === vmid ? getLxcOsUpdateState(guest.update_check) : "unknown"
+      if (state === "unknown") {
+        setOsCheckError(t("vmLxc.updates.checkBeforeUpdate"))
+        return
+      }
+      // A combined plan can still update apps when OS packages are current.
+      if (target === "os" && state === "current") return
+    }
+    // The explicit update button is the user's confirmation. The runner
+    // owns the temporary start, backup and restoration of a stopped guest.
     const fallbackTargets = target === "os"
       ? ["os"]
       : target === "both"
@@ -2363,16 +2632,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               ? ["docker-images"]
               : ["apps"]
     const fallbackLabels = target === "os"
-      ? ["OS"]
+      ? [t("vmLxc.bulkUpdate.osTarget")]
       : target === "both"
-        ? ["OS", "Applications"]
-        : [opts?.appName || (opts?.dockerEngine ? "Docker Engine" : "Application")]
+        ? [t("vmLxc.bulkUpdate.osTarget"), t("vmLxc.scheduled.targetApp")]
+        : [opts?.appName || (opts?.dockerEngine ? "Docker Engine" : t("vmLxc.scheduled.targetApp"))]
     const runId = typeof window !== "undefined" && typeof window.crypto?.randomUUID === "function"
       ? window.crypto.randomUUID()
       : `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
     setApplyVmid(vmid)
     setApplyTarget(target)
     setApplyRunId(runId)
+    setApplyResume(false)
+    setApplyCheckedOs(opts?.checkedOs === true)
     setApplyTargetIds(opts?.targetIds?.length ? opts.targetIds : fallbackTargets)
     setApplyTargetLabels(opts?.targetLabels?.length ? opts.targetLabels : fallbackLabels)
     setApplyUpdateCommand(opts?.updateCommand || "")
@@ -2392,27 +2663,37 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setApplyStartedAt(Date.now())
     setApplyOpen(true)
   }
-  const handleApplyComplete = async (exitCode = 0) => {
+  const resumeApplyJob = (job: LxcUpdateJob) => {
+    setApplyVmid(job.vmid)
+    setApplyTarget(job.target)
+    setApplyRunId(job.id)
+    setApplyCheckedOs(job.script_path.endsWith("/install_checked_os_updates.sh"))
+    setApplyResume(true)
+    setApplyStartedAt(job.created_at * 1000)
+    setApplyOpen(true)
+  }
+  const handleApplyComplete = async (exitCode = 0, notifyBackend = true) => {
     if (applyVmid == null) return
     const duration = Math.max(0, Math.round((Date.now() - applyStartedAt) / 1000))
-    // The modal fires onComplete on any WS close (success or user cancel).
-    // Report the same run ID so the backend can collapse this compatibility
-    // callback with its authoritative process-completion hook.
+    // Legacy callers may report the same run ID to the compatibility route.
+    // Background Updates only refresh the view after the server's real exit.
     try {
-      await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          success: exitCode === 0,
-          run_id: applyRunId,
-          target: applyTarget,
-          requested_targets: applyTargetIds,
-          target_labels: applyTargetLabels,
-          duration_seconds: duration,
-          ct_name: selectedVM?.name || `CT-${applyVmid}`,
-          refresh_docker_inventory: applyDockerRefresh,
-        }),
-      })
+      if (notifyBackend) {
+        await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            success: exitCode === 0,
+            run_id: applyRunId,
+            target: applyTarget,
+            requested_targets: applyTargetIds,
+            target_labels: applyTargetLabels,
+            duration_seconds: duration,
+            ct_name: selectedVM?.name || `CT-${applyVmid}`,
+            refresh_docker_inventory: applyDockerRefresh,
+          }),
+        })
+      }
     } catch {
       // Non-fatal — the backend process hook owns finalization.
     }
@@ -2430,6 +2711,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // performs the requests (the data map is only a render seed), so no
     // invalidation is needed and there is no "Loading applications" flash.
     void fetchLxcApps(applyVmid)
+    // Recovery can be opened from the job banner while another CT is selected.
+    // Refresh the operated guest without changing that other guest's result UI.
+    if (selectedVMRef.current?.vmid !== applyVmid) {
+      void mutate()
+      return
+    }
     // Enter the "Comprobando resultado…" state on the Updates tab.
     // Baseline snapshot lets a downstream useEffect detect when the
     // SWR poll actually delivers the post-apply counts (as opposed
@@ -2468,22 +2755,91 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // packages" section needs a clean `available`/`count` to avoid a
   // false "N package pending" every time a registered app has an
   // upstream bump.
+  const checkOsUpdates = async (vmid: number) => {
+    if (osCheckRequestRef.current !== null || applyOpen || controlLoading) return
+    osCheckRequestRef.current = vmid
+    setOsCheckingVmid(vmid)
+    setOsCheckError(null)
+    try {
+      const observation = await refreshCheckLxcUpdates<LxcUpdateCheck>(vmid)
+      await mutate((current) => Array.isArray(current)
+        ? current.map(vm => vm.vmid === vmid ? { ...vm, update_check: observation } : vm)
+        : current, { revalidate: false })
+      setSelectedVM(current => current?.vmid === vmid ? { ...current, update_check: observation } : current)
+      const details = await fetchApi<VMDetails>(`/api/vms/${vmid}`)
+      vmModalCacheRef.current.details.set(vmid, details)
+      if (selectedVMRef.current?.vmid === vmid) setVMDetails(details)
+      await mutate()
+    } catch (error: any) {
+      if (selectedVMRef.current?.vmid === vmid) {
+        setOsCheckError(error.status === 429
+          ? t("vmLxc.updates.checkCooldown", { seconds: error.body?.retry_after ?? 60 })
+          : error.message === "checkStillRunning"
+            ? t("vmLxc.updates.checkStillRunning")
+            : t("vmLxc.updates.osStatusUnavailable"))
+      }
+    } finally {
+      osCheckRequestRef.current = null
+      setOsCheckingVmid(null)
+    }
+  }
+
   const getAggregateUpdateCheck = (vm: VMData): LxcUpdateCheck | undefined => {
     const uc = vm.update_check
     const appCount = (vm.app_watches || []).filter(
-      (a) => a.update_available === true && !a.exclude_from_badge,
+      (a) => a.update_via !== "docker" && a.update_available === true && !a.exclude_from_badge,
     ).length
     const dockerRegistered = (vm.app_watches || []).some((a) => a.helper_slug === "docker")
     const dockerCount = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
+    // See hasLxcPendingUpdates: a delegated app counts only while its image
+    // is not already being counted through the Docker section.
+    const delegatedCount = dockerRegistered ? 0 : new Set((vm.app_watches || []).filter(
+      (a) => a.update_via === "docker" && a.docker_update_available === true && !a.exclude_from_badge,
+    ).map(app => app.docker_image_reference || app.id)).size
     const osCount = uc?.count ?? 0
-    const total = osCount + appCount + dockerCount
-    if (!uc && appCount === 0 && dockerCount === 0) return undefined
+    const total = osCount + appCount + dockerCount + delegatedCount
+    if (!uc && appCount === 0 && dockerCount === 0 && delegatedCount === 0) return undefined
     if (total === 0) return uc
+    // The badge names what is pending, and until now it could only name OS
+    // packages — so a container whose only pending update was an application
+    // showed a number that explained nothing. Applications and images join
+    // that list under the same names they carry everywhere else.
+    const pendingNames: LxcPackageUpdate[] = []
+    const namedImages = new Set<string>()
+    for (const a of vm.app_watches || []) {
+      if (a.exclude_from_badge) continue
+      const isDelegatedPending = a.update_via === "docker" && a.docker_update_available === true && !dockerRegistered
+      if (a.update_via === "docker" && !isDelegatedPending) continue
+      if (a.update_available !== true && !isDelegatedPending) continue
+      if (isDelegatedPending) {
+        const reference = a.docker_image_reference || a.id
+        if (namedImages.has(reference)) continue
+        namedImages.add(reference)
+      }
+      pendingNames.push({
+        name: a.name || "",
+        current: a.installed_version || "",
+        latest: (isDelegatedPending ? a.docker_available_version : a.latest_version) || "",
+        security: false,
+      })
+    }
+    if (dockerRegistered) {
+      for (const image of vm.docker_inventory?.images || []) {
+        if (image.update_available !== true) continue
+        pendingNames.push({
+          name: image.display_name || image.reference,
+          current: image.installed_version || "",
+          latest: image.available_version || "",
+          security: false,
+        })
+      }
+    }
     return {
       ...(uc || {}),
       count: total,
       available: true,
-      last_check: uc?.last_check ?? new Date().toISOString(),
+      packages: [...(uc?.packages || []), ...pendingNames],
+      last_check: uc?.last_check ?? null,
     } as LxcUpdateCheck
   }
 
@@ -2492,7 +2848,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     compact = false,
     onClick?: () => void,
   ) => {
-    if (!uc?.available || !uc.count || uc.count <= 0) return null
+    if (!uc) return null
+    if (!uc.available || !uc.count || uc.count <= 0) return null
     const last = uc.last_check
       ? new Date(uc.last_check).toLocaleString()
       : "—"
@@ -2817,7 +3174,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <span className="text-lg font-medium ml-1 text-muted-foreground">/ {total}</span>
                   </div>
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    {t("overview.runningCount", { count: running })}
+                    {t(getCountFormKey(language, "overview.runningCount", running), { count: running })}
                   </Badge>
                 </div>
                 <div className="mt-3 flex gap-1 flex-wrap">
@@ -2980,50 +3337,99 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
             <Server className="h-6 w-6" />
             {t("vmLxc.listTitle")}
           </CardTitle>
-          <div
-            role="tablist"
-            aria-label="Filter by status"
-            className="inline-flex w-full sm:w-auto rounded-lg border border-border bg-muted/40 p-1 gap-1"
-          >
-            {(["all", "running", "stopped"] as const).map((key) => {
-              const active = statusFilter === key
-              const label = key === "all" ? "All" : key === "running" ? "Running" : "Stopped"
-              // Icon color: white when the tab is active (over the blue fill);
-              // green / red on inactive tabs so the state mapping stays legible
-              // before selection. The black-text variant was tested and dropped
-              // — white reads cleaner alongside the sidebar/nav blue treatment.
-              const iconClass = active
-                ? "h-3.5 w-3.5 text-white"
-                : key === "running"
-                  ? "h-3.5 w-3.5 text-green-500 fill-green-500/25"
-                  : "h-3.5 w-3.5 text-red-500 fill-red-500/25"
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setStatusFilter(key)}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-blue-500 text-white shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                  }`}
-                >
-                  {key === "running" && <Play className={iconClass} />}
-                  {key === "stopped" && <Square className={iconClass} />}
-                  <span>{label}</span>
-                  <span className={`ml-0.5 text-xs tabular-nums ${active ? "text-white/80" : "opacity-70"}`}>
-                    {statusCounts[key]}
-                  </span>
-                </button>
-              )
-            })}
+          <div className="flex w-full flex-col gap-2 xl:w-auto xl:items-end">
+            <div className="flex w-full flex-col gap-2 md:flex-row md:flex-wrap md:items-center xl:flex-nowrap">
+              <div className="relative w-full md:w-72">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  inputMode="search"
+                  value={vmSearchQuery}
+                  onChange={(event) => setVmSearchQuery(event.target.value)}
+                  placeholder={t("vmLxc.filters.searchPlaceholder")}
+                  aria-label={t("vmLxc.filters.searchAriaLabel")}
+                  className="h-9 w-full rounded-md border border-border bg-card py-2 pl-8 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:border-border/80 focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                {vmSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setVmSearchQuery("")}
+                    aria-label={t("vmLxc.filters.clearSearch")}
+                    className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+               <div
+                 role="group"
+                 aria-label={t("vmLxc.statusFilter.ariaLabel")}
+                 className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto"
+               >
+                {(["all", "running", "stopped"] as const).map((key) => {
+                  const active = statusFilter === key
+                  const label = t(`vmLxc.statusFilter.${key}`)
+                  // Icon color: white when the tab is active (over the blue fill);
+                  // green / red on inactive tabs so the state mapping stays legible
+                  // before selection. The black-text variant was tested and dropped
+                  // — white reads cleaner alongside the sidebar/nav blue treatment.
+                  const iconClass = active
+                    ? "h-3.5 w-3.5 text-white"
+                    : key === "running"
+                      ? "h-3.5 w-3.5 text-green-500 fill-green-500/25"
+                      : "h-3.5 w-3.5 text-red-500 fill-red-500/25"
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                       aria-pressed={active}
+                       onClick={() => setStatusFilter(key)}
+                      className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
+                        active
+                          ? "bg-blue-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                      }`}
+                    >
+                      {key === "running" && <Play className={iconClass} />}
+                      {key === "stopped" && <Square className={iconClass} />}
+                      <span>{label}</span>
+                      <span className={`ml-0.5 text-xs tabular-nums ${active ? "text-white/80" : "opacity-70"}`}>
+                        {statusCounts[key]}
+                      </span>
+                    </button>
+                  )
+                 })}
+                 <button
+                   type="button"
+                   aria-pressed={updatesOnly}
+                   onClick={() => setUpdatesOnly((current) => !current)}
+                   className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
+                     updatesOnly
+                       ? "bg-violet-500/80 text-white shadow-sm"
+                       : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                   }`}
+                 >
+                   <ArrowUpCircle className="h-3.5 w-3.5" />
+                   <span>{t("vmLxc.filters.updates")}</span>
+                   <span className={`ml-0.5 text-xs tabular-nums ${updatesOnly ? "text-white/80" : "opacity-70"}`}>
+                     {statusCounts.updates}
+                   </span>
+                 </button>
+               </div>
+             </div>
+            {vmSearchTerms.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t("vmLxc.filters.resultCount", {
+                  shown: filteredVMs.length,
+                  total: safeVMData.length,
+                })}
+              </span>
+             )}
           </div>
         </CardHeader>
         <CardContent>
@@ -3031,7 +3437,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
           ) : filteredVMs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No {statusFilter === "running" ? "running" : "stopped"} virtual machines
+               {vmSearchTerms.length > 0
+                 ? t("vmLxc.filters.noMatches")
+                 : updatesOnly
+                   ? t("vmLxc.filters.noUpdates")
+                 : statusFilter === "running"
+                   ? t("vmLxc.filters.noRunning")
+                   : t("vmLxc.filters.noStopped")}
             </div>
           ) : (
             <div className="space-y-3">
@@ -3058,13 +3470,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 //      immediately without waiting for the batch.
                 let lxcIP: string | null | undefined = null
                 if (vm.type === "lxc") {
-                  lxcIP = vmConfigs[vm.vmid]
+                  lxcIP = vm.ip || vmConfigs[vm.vmid]
                   if (!lxcIP) {
                     const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
                     lxcIP = cached?.lxc_ip_info?.primary_ip
                       || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
                   }
                 }
+                const additionalIpCount = lxcIP
+                  ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
+                  : 0
 
                 return (
                   <div key={vm.vmid}>
@@ -3143,6 +3558,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <span className="text-sm text-foreground flex items-center gap-1">
                                   <Network className="h-3 w-3 text-green-500" />
                                   {lxcIP}
+                                  {additionalIpCount > 0 && (
+                                    <span
+                                      className="text-xs text-muted-foreground"
+                                      title={(vm.ips || []).join(", ")}
+                                    >
+                                      +{additionalIpCount}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -3349,7 +3772,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           // user tapped the terminal's Close button and got kicked
           // all the way back to the guest list.
           if (open) return
-          if (applyOpen || terminalOpen) return
+          if (applyOpen || terminalOpen || ociAction) return
           setSelectedVM(null)
           setVMDetails(null)
           setCurrentView("main")
@@ -3375,10 +3798,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           // remaining vectors (mobile tap slop reaching the parent's
           // scrim, ESC not consumed by the child) at the DOM level.
           onInteractOutside={(e) => {
-            if (applyOpen || terminalOpen) e.preventDefault()
+            if (applyOpen || terminalOpen || ociAction) e.preventDefault()
           }}
           onEscapeKeyDown={(e) => {
-            if (applyOpen || terminalOpen) e.preventDefault()
+            if (applyOpen || terminalOpen || ociAction) e.preventDefault()
           }}
         >
           {currentView === "main" ? (
@@ -3572,6 +3995,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </Badge>
                   </button>
                 )}
+                {/* Logs tab — native OCI containers only: the console
+                    output of the image's main process, read live from
+                    the host on every open. */}
+                {selectedVM?.type === "lxc" && (consoleLogAvailable || selectedVM?.update_check?.is_oci_lxc) && (
+                  <button
+                    onClick={() => setActiveModalTab("logs")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "logs"
+                        ? "border-sky-500 text-sky-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className={activeModalTab === "logs" ? "" : "hidden sm:inline"}>
+                      {t("vmLxc.tabs.logs")}
+                    </span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveModalTab("backups")}
                   className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
@@ -3695,11 +4136,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
                                     <span>↓</span>
-                                    <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                    <span>{formatBytes(selectedVM.diskread, false)}</span>
                                   </div>
                                   <div className="text-sm text-blue-500 flex items-center gap-1">
                                     <span>↑</span>
-                                    <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                    <span>{formatBytes(selectedVM.diskwrite, false)}</span>
                                   </div>
                                 </div>
                               </div>
@@ -3804,6 +4245,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           savingOnboot ||
                                           (
                                             (pendingOnboot === null || pendingOnboot === !!vmDetails.config.onboot) &&
+                                            (pendingWatchdog === null || !ociInstance?.oci_instance || pendingWatchdog === !!ociInstance.watchdog) &&
                                             (pendingTags === null || stringifyTags(pendingTags) === stringifyTags(parseTags(selectedVM?.tags)))
                                           )
                                         }
@@ -4035,6 +4477,34 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!resourcesEditMode ? "opacity-60" : ""}`}
                                 />
                               </div>
+
+                              {/* Watchdog of an OCI application: started
+                                  again when it stops on its own. */}
+                              {ociInstance?.oci_instance && (
+                                <div
+                                  className={`mt-1 rounded-md p-3 flex items-center justify-between gap-3 ${
+                                    resourcesEditMode ? "bg-accent" : ""
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <Eye className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-medium text-foreground">
+                                        {t("vmLxc.details.watchdog")}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground leading-relaxed">
+                                        {t("vmLxc.details.watchdogHelp")}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Switch
+                                    checked={pendingWatchdog ?? !!ociInstance.watchdog}
+                                    disabled={!resourcesEditMode || savingOnboot}
+                                    onCheckedChange={(v) => setPendingWatchdog(v)}
+                                    className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!resourcesEditMode ? "opacity-60" : ""}`}
+                                  />
+                                </div>
+                              )}
 
                               {/* IP Addresses with proper keys */}
                               {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
@@ -4780,11 +5250,27 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     null
                   return (
                     <LxcAppPanel
-                      key={`${selectedVM.vmid}-${selectedVM.modal_cache_revision ?? 0}`}
+                      // Refresh server data without destroying an unsaved editor.
+                      key={selectedVM.vmid}
+                      cacheRevision={selectedVM.modal_cache_revision ?? 0}
                       vmid={selectedVM.vmid}
                       ctIp={ctIp}
                       onChange={() => mutate()}
                       initialData={getLxcAppsCached(selectedVM.vmid) ?? null}
+                      oci={ociInstance?.oci_instance ? {
+                        instance: true,
+                        memberOf: ociInstance.stack && ociInstance.primary_vmid !== selectedVM.vmid
+                          ? (() => {
+                              const primaryVM = (vmData || []).find((v) => v.vmid === ociInstance.primary_vmid)
+                              return {
+                                vmid: ociInstance.primary_vmid,
+                                label: primaryVM
+                                  ? `${primaryVM.name} (CT ${ociInstance.primary_vmid})`
+                                  : `CT ${ociInstance.primary_vmid}`,
+                              }
+                            })()
+                          : null,
+                      } : null}
                       managed={
                         managedEntry
                           ? {
@@ -4910,6 +5396,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     onClick={async () => {
                                       try {
                                         await fetchApi(`/api/oci/installed/${appId}/update`, { method: "POST" })
+                                        // The card of this application on the Security page reads it again.
+                                        window.dispatchEvent(new CustomEvent("proxmenuxManagedAppUpdated", { detail: { appId } }))
                                         mutate()
                                       } catch { /* opening the App tab surfaces the error */ }
                                     }}
@@ -4941,9 +5429,323 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       )
                     })()}
 
-                    {/* Branch 1 — OCI-image container */}
-                    {!selectedVM.update_check?.managed_oci_app &&
-                      selectedVM.update_check?.is_oci_lxc && (
+                    {/* Branch 0b — container installed by OCI manager Apps. It is
+                        updated by replacing its image, through the same flow as
+                        the OCI menu; nothing of the package or app updaters of an
+                        ordinary LXC applies. */}
+                    {!selectedVM.update_check?.managed_oci_app && ociInstance && (() => {
+                      const ociApp = (selectedVM.app_watches || []).find((a) => a.installed_via === "oci_image")
+                      const hasUpdate = ociApp?.update_available === true
+                      const upToDate = ociApp?.update_available === false
+                      const installedLabel = ociApp ? ociImageLabel(ociApp.image_created, ociApp.installed_digest) : ""
+                      const latestLabel = ociApp ? ociImageLabel(ociApp.latest_image_created, ociApp.latest_digest) : ""
+                      const updateBtnCls = hasUpdate
+                        ? "bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                        : "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
+                      const neutralBtnCls = "border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                      const storageForBackup = applyBackupStorage || selectedBackupStorage
+                      // A stack is updated as a whole from its main container;
+                      // the other members only show their image.
+                      const stackMember = ociInstance.stack && ociInstance.primary_vmid !== selectedVM.vmid
+                      const primaryVM = (vmData || []).find((v) => v.vmid === ociInstance.primary_vmid)
+                      const primaryLabel = primaryVM
+                        ? `${primaryVM.name} (CT ${ociInstance.primary_vmid})`
+                        : `CT ${ociInstance.primary_vmid}`
+                      return (
+                        <>
+                          <Card className="border border-border bg-card/50">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-2 mb-3 min-w-0">
+                                <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <h3 className="text-sm font-semibold text-foreground truncate">
+                                  {ociApp?.name || selectedVM.name}
+                                </h3>
+                              </div>
+                              {ociApp?.checked_at && (
+                                <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                  {t("vmLxc.updates.lastCheckedPrefix")} {new Date(ociApp.checked_at).toLocaleString()}
+                                </div>
+                              )}
+                              {!ociApp ? (
+                                <div className="text-sm text-muted-foreground">{t("vmLxc.ociUpdates.notTracked")}</div>
+                              ) : hasUpdate ? (
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span>{t("vmLxc.ociUpdates.installedImage")} <code className="text-foreground/80">{installedLabel}</code></span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                                    <span>{t("vmLxc.ociUpdates.newImage", { image: latestLabel })}</span>
+                                  </div>
+                                </div>
+                              ) : upToDate ? (
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{installedLabel}</code></span>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <Package className="h-4 w-4 flex-shrink-0" />
+                                  <span>{t("vmLxc.ociUpdates.installedImage")} <code className="text-foreground/80">{installedLabel || "—"}</code></span>
+                                </div>
+                              )}
+                              {stackMember ? (
+                                <div className="mt-4 pt-4 border-t border-border/50 space-y-3">
+                                  <div className="text-sm text-muted-foreground flex items-start gap-2 leading-relaxed">
+                                    <Info className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                                    <span>{t("vmLxc.ociUpdates.memberNote", { primary: primaryLabel, count: ociInstance.members.length })}</span>
+                                  </div>
+                                  {primaryVM && (
+                                    <div className="flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        className={neutralBtnCls}
+                                        onClick={() => window.dispatchEvent(new CustomEvent("openLxcAppModal", {
+                                          detail: { vmid: ociInstance.primary_vmid, tab: "updates" },
+                                        }))}
+                                      >
+                                        <ChevronRight className="h-4 w-4 mr-1.5" />
+                                        {t("vmLxc.ociUpdates.openPrimary")}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                              <>
+                              {ociInstance.stack && (
+                                <div className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                                  {t("vmLxc.ociUpdates.stackNote", { primary: ociInstance.primary_vmid, count: ociInstance.members.length })}
+                                </div>
+                              )}
+                              {ociInstance.pending && (
+                                <div className="text-xs text-amber-400 mt-3 leading-relaxed">{t("vmLxc.ociUpdates.pendingNote")}</div>
+                              )}
+                              <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
+                                {!ociInstance.pending && (
+                                  <Button
+                                    size="sm"
+                                    className={neutralBtnCls}
+                                    onClick={() => setOciAction({
+                                      vmid: selectedVM.vmid,
+                                      action: "modify",
+                                    })}
+                                  >
+                                    <Settings2 className="h-4 w-4 mr-1.5" />
+                                    {t("vmLxc.ociUpdates.modify")}
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  className={updateBtnCls}
+                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update", recoverPrevious: !!ociInstance.pending })}
+                                >
+                                  {hasUpdate
+                                    ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                                    : <RefreshCw className="h-4 w-4 mr-1.5" />}
+                                  {ociInstance.pending ? t("vmLxc.ociUpdates.recover") : t("vmLxc.ociUpdates.update")}
+                                </Button>
+                              </div>
+                              </>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* Options — the backup the update keeps and the
+                              scheduled image update. */}
+                          {!stackMember && (
+                          <Card className={optionsEditMode ? "border border-border bg-card" : "border border-border bg-card/50"}>
+                            <CardContent className="p-4 space-y-4">
+                              <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.options.title")}</h3>
+                              {!optionsEditMode ? (
+                                <div className="text-sm flex items-center gap-2">
+                                  {applyBackup ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                  )}
+                                  <span>
+                                    {applyBackup
+                                      ? <>{t("vmLxc.ociUpdates.keepBackup")} <span className="text-muted-foreground">{t("vmLxc.options.snapshotOn", { storage: storageForBackup || t("vmLxc.options.storageAuto") })}</span></>
+                                      : <span className="text-muted-foreground">{t("vmLxc.ociUpdates.noKeepBackup")}</span>}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <Checkbox
+                                      id="oci-keep-backup"
+                                      checked={applyBackup}
+                                      onCheckedChange={(v) => setApplyBackup(Boolean(v))}
+                                      className="mt-0.5"
+                                    />
+                                    <Label htmlFor="oci-keep-backup" className="leading-tight cursor-pointer">
+                                      <span>{t("vmLxc.ociUpdates.keepBackup")}</span>
+                                      <div className="text-xs text-muted-foreground mt-0.5">{t("vmLxc.ociUpdates.keepBackupHelp")}</div>
+                                    </Label>
+                                  </div>
+                                  {applyBackup && backupStorages.length > 0 && (
+                                    <div className="pl-6">
+                                      <Label className="text-xs text-muted-foreground">{t("vmLxc.options.backupStorage")}</Label>
+                                      <Select value={storageForBackup} onValueChange={setApplyBackupStorage}>
+                                        <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
+                                          <SelectValue placeholder={t("vmLxc.options.pickStorage")} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {backupStorages.map((st) => (
+                                            <SelectItem key={st.storage} value={st.storage}>{st.storage}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="pt-4 border-t border-border/50 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-foreground">{t("vmLxc.scheduled.title")}</div>
+                                    {optionsEditMode && (
+                                      <div className="text-xs text-muted-foreground mt-0.5">{t("vmLxc.ociUpdates.scheduleHelp")}</div>
+                                    )}
+                                  </div>
+                                  <Switch
+                                    checked={scheduleEnabled}
+                                    onCheckedChange={(v) => { if (optionsEditMode) setScheduleEnabled(v) }}
+                                    disabled={!optionsEditMode}
+                                    className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
+                                  />
+                                </div>
+                                {!optionsEditMode && scheduleConfigured && (
+                                  <div className="text-sm space-y-1.5">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className={"h-2 w-2 rounded-full flex-shrink-0 " + (scheduleEnabled ? "bg-green-500" : "bg-muted-foreground/40")} />
+                                      <span className={scheduleEnabled ? "" : "text-muted-foreground"}>
+                                        <span className="text-foreground/80">{t("vmLxc.scheduled.chipLabel")}</span> — {humanCron(scheduleCron)}
+                                        {!scheduleEnabled && <span className="text-muted-foreground"> {t("vmLxc.scheduled.disabledSuffix")}</span>}
+                                      </span>
+                                    </div>
+                                    {scheduleReleaseDelayDays > 0 && (
+                                      <div className="text-xs text-muted-foreground pl-4">
+                                        {t("vmLxc.scheduled.releaseDelaySummary", { days: scheduleReleaseDelayDays })}
+                                      </div>
+                                    )}
+                                    {renderScheduleRunDetails(true)}
+                                  </div>
+                                )}
+                                {!optionsEditMode && !scheduleConfigured && (
+                                  <div className="text-sm flex items-center gap-2 text-muted-foreground">
+                                    <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                    <span>{t("vmLxc.scheduled.notScheduled")}</span>
+                                  </div>
+                                )}
+                                {optionsEditMode && scheduleEnabled && (
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.frequency")}</Label>
+                                        <Select
+                                          value={schedulePreset}
+                                          onValueChange={(v) => {
+                                            setSchedulePreset(v)
+                                            const preset = CRON_PRESETS.find((p) => p.value === v)
+                                            if (preset && preset.cron) setScheduleCron(preset.cron)
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
+                                          <SelectContent>
+                                            {CRON_PRESETS.map((p) => (
+                                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.cronExpression")}</Label>
+                                        <Input
+                                          value={scheduleCron}
+                                          onChange={(e) => { setScheduleCron(e.target.value); setSchedulePreset("custom") }}
+                                          placeholder={t("vmLxc.scheduled.cronPlaceholder")}
+                                          className="h-8 text-sm mt-1 font-mono"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.releaseDelayLabel")}</Label>
+                                      <Select value={String(scheduleReleaseDelayDays)} onValueChange={(v) => setScheduleReleaseDelayDays(Number(v))}>
+                                        <SelectTrigger className="h-8 text-sm mt-1 max-w-xs"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="0">{t("vmLxc.scheduled.releaseDelayNone")}</SelectItem>
+                                          {[1, 3, 7, 14].map((days) => (
+                                            <SelectItem key={days} value={String(days)}>{t("vmLxc.scheduled.releaseDelayDays", { days })}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <div className="text-[10px] text-muted-foreground mt-1 max-w-xl">{t("vmLxc.ociUpdates.releaseDelayHelp")}</div>
+                                    </div>
+                                    {renderScheduleRunDetails()}
+                                  </div>
+                                )}
+                                {optionsEditMode && scheduleConfigured && (
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={deleteScheduleFromOptions}
+                                      disabled={scheduleSaving}
+                                      className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      {t("vmLxc.scheduled.deleteButton")}
+                                    </button>
+                                  </div>
+                                )}
+                                {scheduleError && <div className="text-xs text-red-400">{scheduleError}</div>}
+                              </div>
+
+                              <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
+                                {!optionsEditMode ? (
+                                  <button
+                                    type="button"
+                                    onClick={enterOptionsEdit}
+                                    className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+                                  >
+                                    <Settings2 className="h-3.5 w-3.5" />
+                                    {t("vmLxc.options.editButton")}
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={cancelOptionsEdit}
+                                      disabled={scheduleSaving}
+                                      className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                    >
+                                      {t("vmLxc.options.cancelButton")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={saveOptionsEdit}
+                                      disabled={scheduleSaving}
+                                      className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
+                                    >
+                                      {scheduleSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                      {t("vmLxc.options.saveButton")}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                          )}
+                        </>
+                      )
+                    })()}
+
+                    {/* Branch 1 — OCI-image container not installed by
+                        OCI manager Apps */}
+                    {!selectedVM.update_check?.managed_oci_app && !ociInstance &&
+                      (ociRestored || selectedVM.update_check?.is_oci_lxc) && (
                       <Card className="border border-border bg-card/50">
                         <CardContent className="p-4 space-y-2">
                           <div className="flex items-center gap-2 mb-1">
@@ -4951,12 +5753,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <Container className="h-4 w-4 text-blue-400" />
                             </div>
                             <h3 className="text-sm font-semibold text-foreground">
-                              {t("vmLxc.updates.ociTitle")}
+                              {t(ociRestored ? "vmLxc.updates.ociRestoredTitle" : "vmLxc.updates.ociTitle")}
                             </h3>
                           </div>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            {t("vmLxc.updates.ociBody")}
+                            {t(ociRestored ? "vmLxc.updates.ociRestoredBody" : "vmLxc.updates.ociBody")}
                           </p>
+                          {ociRestored && (
+                            <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
+                              <Button
+                                size="sm"
+                                className="border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recover" })}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-1.5" />
+                                {t("vmLxc.ociUpdates.registerRestored")}
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )}
@@ -4975,13 +5789,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         Individual actions stay with their section. The
                         optional reusable bulk action is configured in its
                         own card immediately before Options. */}
-                    {!selectedVM.update_check?.managed_oci_app &&
+                    {!selectedVM.update_check?.managed_oci_app && !ociInstance && !ociRestored &&
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
-                        const osUpdateStatusKnown = !!uc && !uc.error
+                        const osUpdateStale = isLxcUpdateStale(uc)
+                        const osUpdateStatusKnown = getLxcOsUpdateState(uc) !== "unknown"
                         const hasOsUpdates = osUpdateStatusKnown && !!uc.available
                         const dockerAppWatch = (selectedVM.app_watches || []).find((a) => a.helper_slug === "docker")
                         const dockerRegistered = !!dockerAppWatch
+                        const dockerWorkloadsRegistered = dockerRegistered || (selectedVM.app_watches || []).some(a => a.update_via === "docker")
                         const dockerEngineInstalledVersion = selectedVM.docker_inventory?.engine_version
                           || dockerAppWatch?.installed_version
                           || ""
@@ -4998,7 +5814,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           || canonicalDockerEngineUpdateCommand
                         const dockerInventoryRefreshing = selectedVM.docker_inventory?.refreshing === true
                         const dockerInventoryAvailable = selectedVM.docker_inventory?.available === true
-                        const dockerImages = dockerRegistered ? (selectedVM.docker_inventory?.images || []) : []
+                        const delegatedContainers = new Set((selectedVM.app_watches || [])
+                          .filter(a => a.update_via === "docker").map(a => a.container_name))
+                        const dockerImages = (selectedVM.docker_inventory?.images || []).filter(image =>
+                          dockerRegistered || (image.used_by || []).some(name => delegatedContainers.has(name)))
+                        const followedImageReferences = new Set(dockerImages.map(image => image.reference))
                         const dockerPending = dockerImages.filter((image) => image.update_available === true)
                         const helperExists = !!uc?.app_updater_present && uc?.helper_slug_source === "update_wrapper"
                         const helperName = uc?.helper_app_name || null
@@ -5007,26 +5827,31 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const helperKnownNotUpdateable = !helperExists && !!uc?.helper_slug && uc?.helper_slug_source === "update_wrapper" && !!uc?.helper_updateable_known
                         const helperUnlisted = !helperExists && !!uc?.helper_slug && uc?.helper_slug_source === "update_wrapper" && !uc?.helper_updateable_known
                         // Registration, version tracking and update execution
-                        // are independent capabilities. Every saved app belongs
-                        // in Updates; installed_via only controls whether a
-                        // version state can be shown.
+                        // are independent capabilities. Docker-delegated apps
+                        // already have their complete lifecycle represented by
+                        // the image inventory, so rendering an app section for
+                        // them would duplicate the same update state.
                         const registeredApps = (selectedVM.app_watches || []).filter(
                           (a) => !a.managed_oci_app_id,
                         )
+                        const independentlyUpdatedApps = registeredApps.filter(
+                          (a) => a.update_via !== "docker",
+                        )
                         const helperSectionDetected = uc?.helper_slug !== "docker"
                           && (helperExists || helperKnownNotUpdateable || helperUnlisted || helperInferred)
-                        const helperMatchingApps = registeredApps.filter(
+                        const helperMatchingApps = independentlyUpdatedApps.filter(
                           (a) => !!a.helper_slug && a.helper_slug === uc?.helper_slug,
                         )
                         const helperOnlyApps = helperMatchingApps.filter(
                           (a) => !a.update_command,
                         )
-                        // Every registered app gets exactly one Updates
-                        // section. Docker and the CT-wide helper identity use
-                        // their specialised sections; all other registrations
-                        // use the generic section even when installed_via is
-                        // empty (Web Link only) or dpkg/apk is OS-managed.
-                        const appSections = registeredApps.filter((a) => {
+                        // Every independently updated app gets exactly one
+                        // Updates section. Docker and the CT-wide helper
+                        // identity use their specialised sections; all other
+                        // registrations use the generic section even when
+                        // installed_via is empty (Web Link only) or dpkg/apk
+                        // is OS-managed.
+                        const appSections = independentlyUpdatedApps.filter((a) => {
                           // Docker owns a dedicated section containing
                           // Engine and image lifecycles. Its command editor
                           // is rendered there so Docker never appears twice.
@@ -5043,11 +5868,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const scheduledAppChoices = registeredApps.filter((app) => {
                           if (app.helper_slug === "docker" || app.helper_slug === "adguard") return false
                           if (app.update_command?.trim()) return true
-                          return helperExists && app.helper_slug === uc?.helper_slug
+                          return helperExists && app.update_method === "helper" && app.helper_slug === uc?.helper_slug
                         }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
                         const versionTrackedScheduleAppIds = new Set(
                           registeredApps
-                            .filter((app) => !!app.installed_via && app.helper_slug !== "docker")
+                            .filter((app) => (
+                              !!app.installed_via
+                              && app.helper_slug !== "docker"
+                              // A delegated app never resolves a release date;
+                              // holding the schedule on it would defer forever.
+                              && app.update_via !== "docker"
+                            ))
                             .map((app) => `app:${app.id}`),
                         )
                         const scheduleHasVersionTrackedApps = scheduleTargets.includes("apps")
@@ -5055,7 +5886,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           : scheduleTargets.some((target) => versionTrackedScheduleAppIds.has(target))
                         const composeProjects = new Map<string, LxcDockerComposeTarget>()
                         for (const target of selectedVM.docker_inventory?.compose_projects || []) {
-                          composeProjects.set(`docker-compose:${target.project}`, target)
+                          if (dockerRegistered || dockerImages.some(image => (image.update_targets || []).some(item => item.project === target.project))) {
+                            composeProjects.set(`docker-compose:${target.project}`, target)
+                          }
                         }
                         const standaloneContainers = new Set<string>()
                         for (const image of dockerImages) {
@@ -5106,6 +5939,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           if (app.helper_slug === "docker") return false
                           if (app.update_command?.trim()) return true
                           return helperExists
+                            && app.update_method === "helper"
                             && app.helper_slug === uc?.helper_slug
                             && app.helper_slug !== "adguard"
                         }).map((app) => {
@@ -5115,12 +5949,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           return {
                             id: `app:${app.id}`,
                             label: app.name || t("vmLxc.updates.applicationDefaultName"),
+                            methodLabel: app.update_command?.trim()
+                              ? t("vmLxc.updates.customCommandTitle")
+                              : t("vmLxc.updates.helperMethod"),
                             detail: "",
                             logoUrl: webLinkLogo || app.logo_url?.trim() || "",
                           }
                         })
-                        const dockerUpdateUnits = dockerRegistered
-                          ? (selectedVM.docker_inventory?.update_units || [])
+                        const dockerUpdateUnits = dockerWorkloadsRegistered
+                          ? (selectedVM.docker_inventory?.update_units || []).filter(unit =>
+                              dockerRegistered || (unit.references || []).some(ref => followedImageReferences.has(ref)))
                           : []
                         const bulkActionChoices = [
                           ...bulkAppChoices,
@@ -5128,6 +5966,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             ? [{
                                 id: "docker-engine",
                                 label: "Docker Engine",
+                                methodLabel: t("vmLxc.scheduled.dockerEngineTarget"),
                                 detail: "",
                                 logoUrl: "",
                               }]
@@ -5135,6 +5974,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           ...dockerUpdateUnits.map((unit) => ({
                             id: unit.id,
                             label: unit.display_name || unit.primary_reference || unit.primary_service || unit.id,
+                            methodLabel: unit.kind === "compose"
+                              ? "Docker Compose"
+                              : t("vmLxc.bulkUpdate.dockerImageMethod"),
                             detail: (unit.dependent_services || []).length
                               ? t("vmLxc.bulkUpdate.includesDependencies", {
                                   names: (unit.dependent_services || []).join(", "),
@@ -5142,7 +5984,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               : "",
                             logoUrl: unit.logo_url || "",
                           })),
-                        ]
+                        ].map((choice, _index, choices) => ({
+                          ...choice,
+                          // Keep distinct action IDs; names alone never prove
+                          // that a custom updater and an image are one action.
+                          label: choices.filter((other) =>
+                            other.label.trim().toLowerCase() === choice.label.trim().toLowerCase()
+                          ).length > 1 ? `${choice.label} — ${choice.methodLabel}` : choice.label,
+                        }))
                         const bulkChoices = [{
                           id: "os",
                           label: t("vmLxc.bulkUpdate.osTarget"),
@@ -5153,6 +6002,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const bulkActionAppIds = new Set(bulkAppChoices.map((choice) => choice.id))
                         const bulkUnavailableApps = registeredApps.filter((app) => (
                           app.helper_slug !== "docker"
+                          // Not "unavailable": it updates through the Docker
+                          // unit listed right above in this same section.
+                          && app.update_via !== "docker"
                           && !bulkActionAppIds.has(`app:${app.id}`)
                         ))
                         const pendingDockerBulkTargets = bulkTargets.filter((target) => (
@@ -5183,7 +6035,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         // has been checked and is current, otherwise unknown.
                         const selectedBulkUpdateStates = bulkTargets.map((target) => {
                           if (target === "os") {
-                            if (!uc || uc.error) return null
+                            if (!osUpdateStatusKnown) return null
                             return hasOsUpdates
                           }
                           if (target === "docker-engine") {
@@ -5208,6 +6060,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           return null
                         })
                         const bulkHasPendingUpdates = selectedBulkUpdateStates.some((state) => state === true)
+                        const bulkHasUnknownTargets = selectedBulkUpdateStates.some((state) => state === null)
                         const bulkAllTargetsUpToDate = selectedBulkUpdateStates.length > 0
                           && selectedBulkUpdateStates.every((state) => state === false)
                         const toggleBulkChoice = (id: string, checked: boolean) => {
@@ -5216,9 +6069,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             ? Array.from(new Set(["os", ...current.filter((value) => value !== "os"), id]))
                             : current.filter((value) => value !== id))
                         }
-                        const pendingBtnCls = "bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
-                        const upToDateBtnCls = "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
-                        const neutralBtnCls = "border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                        const pendingBtnCls = getUpdateActionButtonClass(true, false)
+                        const upToDateBtnCls = getUpdateActionButtonClass(false, true)
                         return (
                           <>
                             <Card className="border border-border bg-card/50">
@@ -5228,7 +6080,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                     <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
+                                    <Button
+                                      size="sm" variant="outline" className="ml-auto"
+                                      disabled={selectedVM.status !== "running" || osCheckingVmid !== null || updatesRefreshing || controlLoading || applyOpen}
+                                      title={t("vmLxc.updates.refreshCheckHelp")}
+                                      onClick={() => checkOsUpdates(selectedVM.vmid)}
+                                    >
+                                      <RefreshCw className={`h-4 w-4 mr-1.5 ${osCheckingVmid === selectedVM.vmid ? "animate-spin" : ""}`} />
+                                      {t("vmLxc.updates.checkSystemPackages")}
+                                    </Button>
                                   </div>
+                                  {selectedVM.status !== "running" && (
+                                    <p className="text-sm text-muted-foreground mb-3">
+                                      {t("vmLxc.updates.startBeforeCheck")}
+                                    </p>
+                                  )}
                                   <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
                                     {t("vmLxc.updates.lastCheckedPrefix")}{" "}
                                     {uc?.last_check ? new Date(uc.last_check).toLocaleString() : "—"}
@@ -5236,7 +6102,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <> · {t("vmLxc.updates.familyLabel")} <code className="text-foreground/80">{uc.os_family}</code></>
                                     )}
                                   </div>
-                                  {!osUpdateStatusKnown ? (
+                                  {osCheckError && <p role="alert" className="text-sm text-amber-400 mb-2">{osCheckError}</p>}
+                                  {osCheckingVmid === selectedVM.vmid ? (
+                                    <div role="status" className="text-sm text-muted-foreground flex items-center gap-2">
+                                      <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
+                                      {t("vmLxc.updates.checkInProgress")}
+                                    </div>
+                                  ) : !uc?.last_check && !uc?.error ? (
+                                    <p className="text-sm text-muted-foreground">{t("vmLxc.updates.notCheckedYet")}</p>
+                                  ) : osUpdateStale && !uc?.error ? (
+                                    <p className="text-sm text-amber-400">{t("vmLxc.updates.checkStaleHelp")}</p>
+                                  ) : !osUpdateStatusKnown ? (
                                     <div
                                       className="text-sm text-muted-foreground flex items-center gap-2"
                                       title={uc?.error || undefined}
@@ -5253,18 +6129,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       return (
                                         <div className="divide-y divide-border/50">
                                           {uc!.packages.map((p) => (
-                                            <div key={p.name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm">
-                                              <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
+                                            <div key={p.name} className="py-2 text-sm min-w-0">
+                                              <span className="font-mono text-foreground/90 flex items-start gap-2 min-w-0">
                                                 {p.security && (
-                                                  <Shield className="h-4 w-4 text-green-500 flex-shrink-0" aria-label={t("vmLxc.updates.securityUpdateAria")} />
+                                                  <Shield className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" aria-label={t("vmLxc.updates.securityUpdateAria")} />
                                                 )}
-                                                <span className="truncate">{p.name}</span>
+                                                <span className="break-all" title={p.name}>{p.name}</span>
                                               </span>
-                                              <span className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0 font-mono text-xs sm:text-sm">
-                                                <span>{p.current || "—"}</span>
-                                                <span>→</span>
-                                                <span className="text-foreground">{p.latest}</span>
-                                              </span>
+                                              <div className={`${p.security ? "pl-6" : ""} mt-1.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 font-mono text-xs sm:text-sm`}>
+                                                <span className="text-muted-foreground break-all">{p.current || "—"}</span>
+                                                <span className="text-muted-foreground" aria-hidden="true">→</span>
+                                                <span className="text-foreground break-all">{p.latest}</span>
+                                              </div>
                                             </div>
                                           ))}
                                         </div>
@@ -5290,23 +6166,28 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       {t("vmLxc.updates.noOsUpdatesPending")}
                                     </div>
                                   )}
-                                  <div className="mt-3 flex justify-end">
+                                  {osUpdateStatusKnown && osCheckingVmid !== selectedVM.vmid && <div className="mt-3 flex justify-end">
+                                    {hasOsUpdates ? (
                                     <Button
                                       size="sm"
-                                      onClick={() => openApplyTerminal(selectedVM.vmid, "os")}
-                                      className={hasOsUpdates
-                                        ? pendingBtnCls
-                                        : osUpdateStatusKnown
-                                          ? upToDateBtnCls
-                                          : neutralBtnCls}
+                                      disabled={!hasOsUpdates || osCheckingVmid !== null || updatesRefreshing || controlLoading || !!osCheckError}
+                                      onClick={() => openApplyTerminal(selectedVM.vmid, "os", { checkedOs: true })}
+                                      className={getUpdateActionButtonClass(hasOsUpdates, osUpdateStatusKnown)}
                                     >
                                       {hasOsUpdates && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                       {!hasOsUpdates && !osUpdateStatusKnown && <RefreshCw className="h-4 w-4 mr-1.5" />}
-                                      {hasOsUpdates || !osUpdateStatusKnown
+                                      {hasOsUpdates
                                         ? t("vmLxc.updates.applyOsUpdate")
-                                        : t("vmLxc.updates.osUpToDate")}
+                                        : osUpdateStatusKnown
+                                          ? t("vmLxc.updates.osUpToDate")
+                                          : t("vmLxc.updates.checkBeforeUpdate")}
                                     </Button>
-                                  </div>
+                                    ) : (
+                                      <Button asChild size="sm" className={upToDateBtnCls}>
+                                        <span role="status">{t("vmLxc.updates.osUpToDate")}</span>
+                                      </Button>
+                                    )}
+                                  </div>}
                                 </div>
 
                                 {/* Docker has three independent lifecycles:
@@ -5314,8 +6195,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     standalone containers. Keep all three in
                                     one registered-app section while exposing
                                     a concrete action for each target. */}
-                                {dockerRegistered && dockerAppWatch && (
+                                {dockerWorkloadsRegistered && (
                                   <div className={dockerEditing ? "py-4 -mx-4 px-4 bg-accent [&_textarea]:bg-background" : "py-4"}>
+                                    {dockerAppWatch && (<>
                                     <div className="flex items-center justify-between gap-3 mb-3 min-w-0">
                                       <div className="flex items-center gap-2 min-w-0">
                                         <Container className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -5435,11 +6317,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     dockerRefresh: true,
                                                   },
                                             )}
-                                            className={`${dockerEngineHasUpdate
-                                              ? pendingBtnCls
-                                              : dockerEngineUpToDate
-                                                ? upToDateBtnCls
-                                                : neutralBtnCls} flex-shrink-0`}
+                                            className={`${getUpdateActionButtonClass(dockerEngineHasUpdate, dockerEngineUpToDate)} flex-shrink-0`}
                                           >
                                             {dockerEngineHasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                             {!dockerEngineHasUpdate && !dockerEngineUpToDate && <RefreshCw className="h-4 w-4 mr-1.5" />}
@@ -5450,8 +6328,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </div>
                                       </div>
                                     )}
+                                    </>)}
                                     {selectedVM.docker_inventory && (<>
-                                    <div className="border-t border-border/50 pt-4 mb-1 flex items-center justify-between gap-3">
+                                    <div id={`docker-images-${selectedVM.vmid}`} className="border-t border-border/50 pt-4 mb-1 flex items-center justify-between gap-3">
                                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                                         {t("vmLxc.updates.dockerImagesSubheading")}
                                       </div>
@@ -5501,20 +6380,34 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                  <span className="font-mono text-foreground/90 block truncate" title={image.reference}>
-                                                    {image.reference}
-                                                  </span>
+                                                  {image.display_name ? (
+                                                    <>
+                                                      <span className="text-foreground block truncate" title={image.display_name}>
+                                                        {image.display_name}
+                                                      </span>
+                                                      <span
+                                                        className="font-mono text-xs text-muted-foreground block truncate"
+                                                        title={image.reference}
+                                                      >
+                                                        {image.reference}
+                                                      </span>
+                                                    </>
+                                                  ) : (
+                                                    <span className="font-mono text-foreground/90 block truncate" title={image.reference}>
+                                                      {image.reference}
+                                                    </span>
+                                                  )}
                                                   <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
                                                     <Package className="h-3.5 w-3.5 flex-shrink-0" />
                                                     {image.installed_version ? (
-                                                      <span>
+                                                      <span className={image.update_available === false ? "text-green-500" : undefined}>
                                                         {t("vmLxc.updates.installedLabel")} {" "}
-                                                        <code className="text-foreground/80">{image.installed_version}</code>
+                                                        <code className={image.update_available === false ? "text-green-500" : "text-foreground/80"}>{image.installed_version}</code>
                                                       </span>
                                                     ) : (
-                                                      <span>
+                                                      <span className={image.update_available === false ? "text-green-500" : undefined}>
                                                         {t("vmLxc.updates.imageInstalledTag")} {" "}
-                                                        <code className="text-foreground/80">{image.tag}</code>
+                                                        <code className={image.update_available === false ? "text-green-500" : "text-foreground/80"}>{image.tag || image.local_digest?.slice(0, 19)}</code>
                                                       </span>
                                                     )}
                                                   </div>
@@ -5532,9 +6425,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                       {t("vmLxc.updates.imageUpToDate")}
                                                     </span>
                                                   )}
-                                                  {image.update_available === null && (
+                                                  {image.update_available === null && !image.pinned && (
                                                     <span className="sm:hidden mt-1 text-xs text-muted-foreground inline-flex" title={image.error || undefined}>
                                                       {t("vmLxc.updates.imageDigestUnknown")}
+                                                    </span>
+                                                  )}
+                                                  {image.pinned && (
+                                                    <span className="sm:hidden mt-1 text-xs text-muted-foreground inline-flex items-center gap-1.5" title={t("vmLxc.updates.imagePinnedTitle")}>
+                                                      <Pin className="h-3.5 w-3.5 flex-shrink-0" />
+                                                      {t("vmLxc.updates.imagePinned")}
                                                     </span>
                                                   )}
                                                 </div>
@@ -5546,9 +6445,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     {t("vmLxc.updates.imageUpToDate")}
                                                   </span>
                                                 )}
-                                                {image.update_available === null && (
+                                                {image.update_available === null && !image.pinned && (
                                                   <span className="hidden sm:inline-flex text-xs text-muted-foreground flex-shrink-0" title={image.error || undefined}>
                                                     {t("vmLxc.updates.imageDigestUnknown")}
+                                                  </span>
+                                                )}
+                                                {image.pinned && (
+                                                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0" title={t("vmLxc.updates.imagePinnedTitle")}>
+                                                    <Pin className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    {t("vmLxc.updates.imagePinned")}
                                                   </span>
                                                 )}
                                                 {image.update_available === true && (image.update_targets || []).map((target) => (
@@ -5615,12 +6520,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 {helperSectionDetected && (() => {
                                   const matchApp = helperOnlyApps[0] || null
                                   if (!matchApp || customCmdEditingApp === matchApp.id) return null
-                                  const helperEditorCommand = helperExists && !helperUsesWebUpdater
-                                    ? canonicalHelperUpdateCommand(uc?.helper_slug)
-                                    : ""
-                                  const appWebUrl = helperUsesWebUpdater
-                                    ? buildRegisteredAppUrl(selectedVM, matchApp.ports?.[0])
-                                    : null
+                                  const helperSelected = matchApp.update_method === "helper"
                                   const helperTracksVersion = !!matchApp.installed_via
                                   const hasUpd = helperTracksVersion && matchApp.update_available === true
                                   const upToD = helperTracksVersion && matchApp.update_available === false && !!matchApp.installed_version
@@ -5637,12 +6537,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           type="button"
                                           onClick={() => openCustomCmdEditor(
                                             matchApp,
-                                            helperEditorCommand,
                                           )}
                                           className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
                                         >
                                           <Settings2 className="h-3.5 w-3.5" />
-                                          {helperEditorCommand
+                                          {helperSelected
                                             ? t("vmLxc.updates.editApp")
                                             : t("vmLxc.updates.configureUpdater")}
                                         </button>
@@ -5694,14 +6593,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </div>
                                       ) : helperTracksVersion ? (
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                          {t("vmLxc.updates.versionTrackingPending")}
+                                          {t("vmLxc.updates.versionStatusUnknown")}
                                         </p>
                                       ) : helperExists ? (
                                         <p className="text-xs text-muted-foreground leading-relaxed">
                                           {t("vmLxc.updates.versionTrackingNotConfigured")}
                                         </p>
                                       ) : null}
-                                      {helperExists && !helperUsesWebUpdater && (() => {
+                                      {helperExists && !helperUsesWebUpdater && !helperSelected && (
+                                        <p className="mt-3 text-xs text-muted-foreground">{t("vmLxc.updates.noUpdaterSelected")}</p>
+                                      )}
+                                      {helperExists && !helperUsesWebUpdater && helperSelected && (() => {
                                         // Button state uses the matched
                                         // App Watch entry when present.
                                         // Without it we DON'T know the
@@ -5714,11 +6616,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         // still force the helper's own
                                         // update script.
                                         const noState = !hasUpd && !upToD
-                                        const cls = hasUpd ? pendingBtnCls : upToD ? upToDateBtnCls : neutralBtnCls
+                                        const cls = getUpdateActionButtonClass(hasUpd, upToD)
                                         const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
-                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "" })} className={cls}>
+                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "", targetIds: [`app:${matchApp.id}`] })} className={cls}>
                                               {hasUpd && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                               {noState && <RefreshCw className="h-4 w-4 mr-1.5" />}
                                               {label}
@@ -5727,20 +6629,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         )
                                       })()}
                                       {helperUsesWebUpdater && (
-                                        <div className="mt-3 space-y-3">
+                                        <div className="mt-3">
                                           <p className="text-xs text-muted-foreground leading-relaxed">
                                             {t("vmLxc.updates.adguardWebUpdateOnly")}
                                           </p>
-                                          {appWebUrl && (
-                                            <div className="flex justify-end">
-                                              <Button size="sm" variant="outline" asChild>
-                                                <a href={appWebUrl} target="_blank" rel="noopener noreferrer">
-                                                  <ExternalLink className="h-4 w-4 mr-1.5" />
-                                                  {t("vmLxc.updates.openAdguard")}
-                                                </a>
-                                              </Button>
-                                            </div>
-                                          )}
                                         </div>
                                       )}
                                       {!helperExists && !helperUsesWebUpdater && (
@@ -5772,14 +6664,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             {aw.name}
                                           </h3>
                                         </div>
-                                        {!editing && (
+                                        {!editing && aw.update_via !== "docker" && (
                                           <button
                                             type="button"
                                             onClick={() => openCustomCmdEditor(aw)}
                                             className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
                                           >
                                             <Settings2 className="h-3.5 w-3.5" />
-                                            {hasCmd
+                                            {hasCmd || aw.update_method === "helper"
                                               ? t("vmLxc.updates.editApp")
                                               : t("vmLxc.updates.configureUpdater")}
                                           </button>
@@ -5791,56 +6683,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </div>
                                       )}
                                       {editing ? (
-                                        <div className="space-y-3">
-                                          <div>
-                                            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                                              {t("vmLxc.updates.customCommandLabel")}
-                                            </Label>
-                                            <Textarea
-                                              value={customCmdDraft}
-                                              onChange={(e) => setCustomCmdDraft(e.target.value)}
-                                              placeholder={t("vmLxc.updates.customCommandPlaceholder")}
-                                              className="font-mono text-xs mt-2 min-h-[100px]"
-                                              maxLength={4096}
-                                            />
-                                          </div>
-                                          <div className="flex items-center justify-between gap-2">
-                                            <div>
-                                              {hasCmd && (
-                                                <button
-                                                  type="button"
-                                                  onClick={() => removeCustomCommand(selectedVM.vmid, aw)}
-                                                  disabled={customCmdSaving}
-                                                  className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
-                                                >
-                                                  <Trash2 className="h-3.5 w-3.5" />
-                                                  {t("vmLxc.updates.removeButton")}
-                                                </button>
-                                              )}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              <button
-                                                type="button"
-                                                onClick={closeCustomCmdEditor}
-                                                disabled={customCmdSaving}
-                                                className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
-                                              >
-                                                {t("vmLxc.updates.cancelButton")}
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => saveCustomCommand(selectedVM.vmid, aw)}
-                                                disabled={customCmdSaving || !customCmdDraft.trim() || (
-                                                  customCmdDraft.trim() === (aw.update_command || "").trim()
-                                                )}
-                                                className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
-                                              >
-                                                {customCmdSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                                                {t("vmLxc.updates.saveButton")}
-                                              </button>
-                                            </div>
-                                          </div>
-                                        </div>
+                                        <AppUpdaterEditor
+                                          method={updaterMethodDraft}
+                                          command={customCmdDraft}
+                                          helperAvailable={helperExists && !helperUsesWebUpdater && aw.helper_slug === uc?.helper_slug}
+                                          helperSlug={aw.helper_slug}
+                                          configured={hasCmd || aw.update_method === "helper"}
+                                          saving={customCmdSaving}
+                                          changed={updaterMethodDraft !== (aw.update_method || (hasCmd ? "custom" : "none")) || (
+                                            updaterMethodDraft === "custom" && customCmdDraft.trim() !== (aw.update_command || "").trim()
+                                          )}
+                                          onMethodChange={setUpdaterMethodDraft}
+                                          onCommandChange={setCustomCmdDraft}
+                                          onSave={() => saveCustomCommand(selectedVM.vmid, aw)}
+                                          onCancel={closeCustomCmdEditor}
+                                          onRemove={() => removeCustomCommand(selectedVM.vmid, aw)}
+                                        />
                                       ) : (
                                         <>
                                           {hasUpdate ? (
@@ -5865,11 +6723,50 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 <Package className="h-4 w-4 flex-shrink-0" />
                                                 <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
                                               </div>
-                                              <div>{t("vmLxc.updates.versionTrackingPendingShort")}</div>
+                                              {/* "Pending" is a promise that a number is on its way. For a
+                                                  delegated app it never is, by design: the image row carries
+                                                  the available version. Saying nothing here is the honest
+                                                  option — the delegation notice below explains where to look. */}
+                                              {aw.update_via === "docker" ? (
+                                                aw.docker_update_available === true && aw.docker_available_version ? (
+                                                  <div className="flex items-center gap-2 text-purple-400">
+                                                    <ArrowUpCircle className="h-4 w-4 flex-shrink-0" />
+                                                    <span>
+                                                      {t("vmLxc.updates.upstreamAvailable", { version: aw.docker_available_version })}
+                                                    </span>
+                                                  </div>
+                                                ) : aw.docker_update_available === true ? (
+                                                  <div className="flex items-center gap-2 text-purple-400">
+                                                    <ArrowUpCircle className="h-4 w-4 flex-shrink-0" />
+                                                    <span>{t("vmLxc.updates.imageUpdateAvailable")}</span>
+                                                  </div>
+                                                ) : aw.docker_update_available === false ? (
+                                                  <div className="flex items-center gap-2 text-green-500">
+                                                    <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                                                    <span>{t("vmLxc.updates.imageUpToDate")}</span>
+                                                  </div>
+                                                ) : aw.docker_pinned ? (
+                                                  <div className="flex items-center gap-2" title={t("vmLxc.updates.imagePinnedTitle")}>
+                                                    <Pin className="h-4 w-4 flex-shrink-0" />
+                                                    <span>{t("vmLxc.updates.imagePinned")}</span>
+                                                  </div>
+                                                ) : null
+                                              ) : (
+                                                <div>{t("vmLxc.updates.versionStatusUnknown")}</div>
+                                              )}
                                             </div>
                                           ) : tracksVersion ? (
                                             <div className="text-sm text-muted-foreground">
-                                              {t("vmLxc.updates.versionTrackingPendingShort")}
+                                              {aw.update_via === "docker"
+                                                ? <>{aw.docker_binding_error
+                                                  ? t("vmLxc.updates.dockerBindingUnavailable")
+                                                  : t("vmLxc.updates.updatedWithDockerImage")}{" "}
+                                                  <a className="text-blue-400 hover:underline" href={`#docker-images-${selectedVM.vmid}`}>
+                                                    {t("vmLxc.updates.dockerImagesSubheading")}
+                                                  </a></>
+                                                : aw.installed_via === "manual"
+                                                  ? t("vmLxc.updates.installedVersionUnverified")
+                                                  : t("vmLxc.updates.versionStatusUnknown")}
                                             </div>
                                           ) : hasCmd ? (
                                             <div className="text-sm text-muted-foreground">
@@ -5887,9 +6784,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   {
                                                     updateCommand: aw.update_command!,
                                                     appName: aw.name || "",
+                                                    targetIds: [`app:${aw.id}`],
+                                                    targetLabels: [aw.name || t("vmLxc.updates.applicationDefaultName")],
                                                   },
                                                 )}
-                                                className={hasUpdate ? pendingBtnCls : upToDate ? upToDateBtnCls : neutralBtnCls}
+                                                className={getUpdateActionButtonClass(hasUpdate, upToDate)}
                                               >
                                                 {hasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                                 {!hasUpdate && !upToDate && <RefreshCw className="h-4 w-4 mr-1.5" />}
@@ -5897,14 +6796,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   ? t("vmLxc.updates.applyUpdate")
                                                   : upToDate
                                                     ? t("vmLxc.updates.upToDate")
-                                                    : t("vmLxc.updates.runUpdater")}
+                                                    : aw.update_method === "helper"
+                                                      ? t("vmLxc.updates.runUpdater")
+                                                      : t("vmLxc.updates.runCustomCommand")}
                                               </Button>
                                             </div>
                                           ) : (
                                             <p className={`text-xs text-muted-foreground leading-relaxed min-w-0 ${tracksVersion ? "mt-3" : ""}`}>
-                                              {managedByOs
-                                                ? t("vmLxc.updates.managedByOsPackages")
-                                                : t("vmLxc.updates.noUpdateMethodBody")}
+                                              {aw.update_via === "docker"
+                                                ? t("vmLxc.updates.updatedWithDockerImage")
+                                                : managedByOs
+                                                  ? t("vmLxc.updates.managedByOsPackages")
+                                                  : t("vmLxc.updates.noUpdateMethodBody")}
                                             </p>
                                           )}
                                         </>
@@ -5933,6 +6836,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                                         {t("vmLxc.bulkUpdate.description")}
                                       </p>
+                                      {dockerRegistered && (
+                                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                          {t("vmLxc.bulkUpdate.osDockerScope")}
+                                        </p>
+                                      )}
                                     </div>
                                     {!bulkEditMode && (
                                       <button
@@ -6082,19 +6990,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="text-sm text-muted-foreground break-words">
                                         {selectedBulkLabels.join(" · ")}
                                       </div>
+                                      {bulkHasUnknownTargets && (
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                          {t("vmLxc.bulkUpdate.unverifiedTargetsHelp")}
+                                        </p>
+                                      )}
                                       <div className="flex justify-end">
                                         <Button
                                           size="sm"
                                           onClick={() => applyBulkUpdate(selectedVM.vmid)}
-                                          disabled={bulkApplying || (
+                                          disabled={bulkApplying || osCheckingVmid !== null || updatesRefreshing || !osUpdateStatusKnown || bulkAllTargetsUpToDate || (
                                             bulkTargets.some((target) => target.startsWith("docker-unit:"))
                                             && (dockerInventoryRefreshing || !dockerInventoryAvailable)
                                           )}
-                                          className={bulkHasPendingUpdates
-                                            ? pendingBtnCls
-                                            : bulkAllTargetsUpToDate
-                                              ? upToDateBtnCls
-                                              : neutralBtnCls}
+                                          className={getUpdateActionButtonClass(bulkHasPendingUpdates, bulkAllTargetsUpToDate)}
                                         >
                                           {bulkApplying
                                             ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
@@ -6533,7 +7442,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 )}
 
                 {/* Backups Tab */}
-                {activeModalTab === "backups" && (
+                {activeModalTab === "backups" && selectedVM && (
                   /* Backups tab layout: the Card fills the whole tab
                      body so the backup list can scroll inside its
                      bordered card instead of leaving empty space
@@ -6568,48 +7477,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         {/* Divider */}
                         <div className="border-t border-border/50 mb-4 shrink-0" />
 
-                        {/* Backup List */}
-                        <div className="flex items-center justify-between mb-3 shrink-0">
-                          <span className="text-xs text-muted-foreground">{t("vmLxc.backups.available")}</span>
-                          <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
-                        </div>
-
-                        {loadingBackups ? (
-                          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-0">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-sm">{t("vmLxc.backups.loading")}</span>
-                          </div>
-                        ) : vmBackups.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground min-h-0">
-                            <Archive className="h-12 w-12 mb-3 opacity-30" />
-                            <span className="text-sm">{t("vmLxc.backups.empty")}</span>
-                            <span className="text-xs mt-1">{t("vmLxc.backups.emptyHint")}</span>
-                          </div>
-                        ) : (
-                          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
-                            {vmBackups.map((backup, index) => (
-                              <div 
-                                key={`backup-${backup.volid}-${index}`}
-                                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-sm text-foreground">{backup.date}</span>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`text-xs ml-auto flex-shrink-0 ${getStorageColor(backup.storage).bg} ${getStorageColor(backup.storage).text} ${getStorageColor(backup.storage).border}`}
-                                  >
-                                    {backup.storage}
-                                  </Badge>
-                                </div>
-                                <Badge variant="outline" className="font-mono ml-2 flex-shrink-0">
-                                  {backup.size_human}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <GuestBackupList
+                          key={selectedVM.vmid}
+                          vmid={selectedVM.vmid}
+                          backups={vmBackups}
+                          loading={loadingBackups}
+                          onRefresh={async () => {
+                            vmModalCacheRef.current.backups.delete(selectedVM.vmid)
+                            await fetchVmBackups(selectedVM.vmid, true)
+                          }}
+                          storageColor={getStorageColor}
+                        />
                       </CardContent>
                     </Card>
                   </div>
@@ -6723,6 +7601,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </Card>
                   </div>
                 )}
+
+                {activeModalTab === "logs" && selectedVM?.type === "lxc" && (
+                  <OciConsoleLogPanel
+                    key={selectedVM.vmid}
+                    vmid={selectedVM.vmid}
+                    running={selectedVM.status === "running"}
+                  />
+                )}
               </div>
 
               <div className="border-t border-border bg-background px-6 py-4 mt-auto shrink-0">
@@ -6740,8 +7626,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     tab we added. */}
                 {(() => {
                   const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running"
+                  const pendingAction = controlAction?.vmid === selectedVM?.vmid ? controlAction?.action : null
+                  const controlLabel = (action: string, key: string) => pendingAction === action
+                    ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
-                    <div className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
                       {hasTerminal && (
                         <Button
                           className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 col-span-4 lg:col-span-1"
@@ -6755,19 +7644,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
                         disabled={selectedVM?.status === "running" || controlLoading}
                         onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "start")}
-                        title={t("vmLxc.actions.start")}
+                        title={controlLabel("start", "vmLxc.actions.start")}
                       >
-                        <Play className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.start")}</span>
+                        {pendingAction === "start" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <Play className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("start", "vmLxc.actions.start")}</span>
                       </Button>
                       <Button
                         className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
                         disabled={selectedVM?.status !== "running" || controlLoading}
                         onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "shutdown")}
-                        title={t("vmLxc.actions.shutdown")}
+                        title={controlLabel("shutdown", "vmLxc.actions.shutdown")}
                       >
-                        <Power className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.shutdown")}</span>
+                        {pendingAction === "shutdown" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <Power className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("shutdown", "vmLxc.actions.shutdown")}</span>
                       </Button>
                       <Button
                         className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
@@ -6777,10 +7666,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           vmid: selectedVM.vmid,
                           vmName: selectedVM.name,
                         })}
-                        title={t("vmLxc.actions.reboot")}
+                        title={controlLabel("reboot", "vmLxc.actions.reboot")}
                       >
-                        <RotateCcw className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.reboot")}</span>
+                        {pendingAction === "reboot" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("reboot", "vmLxc.actions.reboot")}</span>
                       </Button>
                       <Button
                         className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
@@ -6790,10 +7679,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           vmid: selectedVM.vmid,
                           vmName: selectedVM.name,
                         })}
-                        title={t("vmLxc.actions.forceStop")}
+                        title={controlLabel("stop", "vmLxc.actions.forceStop")}
                       >
-                        <StopCircle className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{t("vmLxc.actions.forceStop")}</span>
+                        {pendingAction === "stop" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <StopCircle className="h-4 w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{controlLabel("stop", "vmLxc.actions.forceStop")}</span>
                       </Button>
                     </div>
                   )
@@ -6951,25 +7840,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               </div>
             </div>
             
-            {/* Notification Row */}
-            <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <Bell className="h-3.5 w-3.5" />
-                  {t("vmLxc.backupModal.notification")}
-                </Label>
-              <Select value={backupNotification} onValueChange={setBackupNotification}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">{t("vmLxc.backupModal.useGlobalSettings")}</SelectItem>
-                  <SelectItem value="always">{t("vmLxc.backupModal.alwaysNotify")}</SelectItem>
-                  <SelectItem value="failure">{t("vmLxc.backupModal.notifyOnFailure")}</SelectItem>
-                  <SelectItem value="never">{t("vmLxc.backupModal.neverNotify")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
             {/* Protected Checkbox */}
             <div className="flex items-center space-x-2">
               <Checkbox 
@@ -7110,6 +7980,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         />
       )}
 
+      <LxcUpdateJobs activeRunId={applyOpen ? applyRunId : undefined} onResume={resumeApplyJob} />
+
       {/* LXC Update Apply Terminal — streams the apply_updates.sh
           script over WS/PTY (same wiring as the hardware installers).
           The backend finalizes on process exit; the close callback only
@@ -7121,21 +7993,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             setApplyOpen(false)
             setApplyVmid(null)
           }}
-          onComplete={handleApplyComplete}
-          scriptPath="/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+          onComplete={(exitCode) => {
+            markUpdateJobViewed(applyRunId)
+            // The server-owned job is the sole completion authority.
+            void handleApplyComplete(exitCode ?? 1, false)
+          }}
+          backgroundUpdate={{ runId: applyRunId, vmid: applyVmid, resume: applyResume }}
+          cancelledExitCode={130}
+          scriptPath={applyCheckedOs
+            ? "/usr/local/share/proxmenux/scripts/lxc/install_checked_os_updates.sh"
+            : "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"}
           scriptName="lxc_apply_updates"
           title={t("vmLxc.updates.terminalTitle", { vmid: applyVmid })}
           completedSuccessfullyMessage={t("vmLxc.updates.terminalCompletedSuccessfully")}
           completedWithErrorMessage={(exitCode) =>
             t("vmLxc.updates.terminalCompletedWithError", { code: exitCode })
           }
-          description={
-            applyTarget === "os"
-              ? t("vmLxc.updates.terminalDescriptionOs")
-              : applyTarget === "app"
-                ? t("vmLxc.updates.terminalDescriptionApp")
-                : t("vmLxc.updates.terminalDescriptionBoth")
-          }
+          description={t("vmLxc.updates.backgroundDescription")}
           params={{
             VMID: String(applyVmid),
             RUN_ID: applyRunId,
@@ -7153,6 +8027,43 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             DOCKER_STANDALONE_TARGETS: applyDockerStandaloneTargets,
             UPDATE_DOCKER_ENGINE: applyDockerEngine ? "1" : "0",
             REFRESH_DOCKER_INVENTORY: applyDockerRefresh ? "1" : "0",
+          }}
+        />
+      )}
+
+      {/* Update or modify an OCI instance: the same flow as OCI manager
+          Apps -> Manage installed OCI applications, for this container. */}
+      {ociAction && (
+        <ScriptTerminalModal
+          open={!!ociAction}
+          onClose={() => {
+            const vmid = ociAction.vmid
+            setOciAction(null)
+            if (!shouldRefreshOciAfterCompletion(ociCompletionCodeRef.current)) return
+            // The image, the digest and the record changed: read them again.
+            fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
+              .catch(() => undefined)
+              .finally(() => {
+                invalidateLxcApps(vmid)
+                vmModalCacheRef.current.mountPoints.delete(vmid)
+                fetchOciInstance(vmid)
+                fetchMountPoints(vmid)
+                mutate()
+              })
+          }}
+          scriptPath="/usr/local/share/proxmenux/scripts/oci/manage_instance.sh"
+          scriptName="oci_manage_instance"
+          cancelledExitCode={OCI_CANCELLED_EXIT_CODE}
+          onComplete={(exitCode) => { ociCompletionCodeRef.current = exitCode }}
+          title={ociAction.action === "update" ? t(ociAction.recoverPrevious
+            ? "vmLxc.ociUpdates.terminalTitleRecoverPrevious" : "vmLxc.ociUpdates.terminalTitleUpdate")
+            : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
+            : t("vmLxc.ociUpdates.terminalTitleModify")}
+          description={t("vmLxc.ociUpdates.terminalDescription")}
+          params={{
+            VMID: String(ociAction.vmid),
+            ACTION: ociAction.action,
+            KEEP_BACKUP: ociAction.action === "update" && applyBackup ? (applyBackupStorage || selectedBackupStorage || "") : "",
           }}
         />
       )}

@@ -1,0 +1,131 @@
+{
+  "container_contract": {
+    "environment": [
+      {
+        "name": "TITLE",
+        "example": "Etherpad",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DEFAULT_PAD_TEXT",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Text that new pads start with (empty = the text of the image)"
+      },
+      {
+        "name": "ADMIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "prompt": "Password of the Etherpad admin user",
+        "source": "etherpad-docker-documentation"
+      },
+      {
+        "name": "AUTHENTICATION_METHOD",
+        "example": "apikey",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DB_TYPE",
+        "example": "dirty",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DB_FILENAME",
+        "example": "/opt/etherpad-lite/var/dirty.db",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TRUST_PROXY",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SHOW_SETTINGS_IN_ADMIN_PAGE",
+        "example": "true",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REQUIRE_AUTHENTICATION",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REQUIRE_AUTHORIZATION",
+        "example": "false",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ]
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 9001,
+        "path": "/",
+        "source": "compose-metadata"
+      },
+      {
+        "label": "Admin page",
+        "scheme": "http",
+        "port": 9001,
+        "path": "/admin",
+        "source": "etherpad-docker-documentation"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Etherpad admin page",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "ADMIN_PASSWORD",
+        "change_required": false,
+        "source": "etherpad-docker-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "ADMIN_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": true
+        }
+      },
+      "volume_owner": {
+        "uid": 5001,
+        "gid": 0
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/opt/etherpad-lite/var",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  }
+}

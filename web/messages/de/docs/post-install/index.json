@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "title": "Proxmox VE Post-Install-Script — Automatisiert und anpassbar | ProxMenux",
+    "description": "Überblick über die ProxMenux-Skripte nach der Installation von Proxmox VE. Das automatische Skript wendet sinnvolle Vorgaben ohne Rückfragen an. Mit dem anpassbaren Skript wählen Sie gezielt aus 10 Kategorien. Unter Optimierungen deinstallieren können unterstützte reversible Änderungen zurückgesetzt werden.",
+    "ogTitle": "Proxmox VE Post-Install-Script — Automatisiert und anpassbar",
+    "ogDescription": "Übliche Proxmox VE-Postinstallationsoptimierungen in 10-Kategorien anwenden - automatisiert oder à la carte mit reversiblen Optionen.",
+    "twitterTitle": "Proxmox VE Post-Install-Script | ProxMenux",
+    "twitterDescription": "Automatisierte und anpassbare Nachinstallationsoptimierungen für Proxmox VE – mit reversiblen Optionen."
+  },
+  "header": {
+    "title": "Post-Install Skripte",
+    "description": "Konfigurieren Sie einen neuen Proxmox VE-Host mit den ProxMenux-Optimierungen nach der Installation. Wenden Sie die Baseline automatisch an, wählen Sie einzelne Optionen aus, aktualisieren Sie installierte Funktionen oder stellen Sie unterstützte reversible Änderungen wieder her. Paket-Upgrades werden nicht als reversibel dargestellt.",
+    "section": "Einstellungen nach der Installation von Proxmox"
+  },
+  "intro": {
+    "title": "Wozu dieses Menü dient",
+    "body": "Direkt nach der Installation von Proxmox VE machen Dutzende kleine Änderungen den Host schneller und leichter wartbar: Repositories ohne Abonnement, sinnvolle journald-Limits und TCP-Puffer, SSD-schonende Protokollspeicherung, bashrc-Verbesserungen und mehr. ProxMenux automatisiert sie und erfasst die unterstützten reversiblen Konfigurationsänderungen."
+  },
+  "openingMenu": {
+    "heading": "Öffnen des Menüs",
+    "body": "Wählen Sie im Hauptmenü von ProxMenux <strong>Einstellungen nach der Installation von Proxmox</strong>. Folgendes wird angezeigt:",
+    "imageAlt": "Menü für Skripte nach der Installation: Automatisch, Anpassbar, der bedingte Eintrag Verfügbare Updates anwenden (nur bei ausstehenden Updates) und Deinstallieren, gefolgt von Community-Skripten"
+  },
+  "threeWays": {
+    "heading": "Vier Möglichkeiten, Optimierungen anzuwenden",
+    "body": "Die vier ProxMenux-Einträge nutzen denselben Code und dasselbe Register installierter Werkzeuge, bieten aber unterschiedliche Kontrolle. <em>Verfügbare Updates anwenden</em> erscheint nur, wenn für mindestens eine installierte Optimierung eine neuere Version auf dem Datenträger liegt als die registrierte. Direkt nach der Einrichtung bleibt der Eintrag verborgen."
+  },
+  "routes": [
+    {
+      "title": "Automatisch",
+      "description": "Eine sorgfältig ausgewählte Gruppe von 14 sicheren, stets nützlichen Optimierungen, die nacheinander ohne Rückfragen angewendet werden. Eine gute Vorgabe für die meisten Benutzer.",
+      "bullets": [
+        "Repositories ohne Abonnement + Systemupgrade",
+        "Speicher, Kernel, Netzwerk-Tuning",
+        "Log2RAM (automatisch auf SSD/NVMe erkannt)",
+        "Journald + Logrotate-Größenbeschränkungen",
+        "Persistente Schnittstellennamen"
+      ]
+    },
+    {
+      "title": "Anpassbar",
+      "description": "Etwa 35 einzelne Optimierungen in 10 Kategorien. Sie wählen genau aus, welche angewendet werden. Dieselbe Grundlage wie Automatisch, aber mit voller Kontrolle.",
+      "bullets": [
+        "Auswahllisten pro Kategorie",
+        "Enthält alle Funktionen von Automatisch plus ausdrücklich auswählbare Optionen (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD-Korrekturen …)",
+        "Beliebig oft ausführbar — die Änderungen sind idempotent"
+      ]
+    },
+    {
+      "title": "Verfügbare Updates anwenden",
+      "description": "Liegt eine Nachinstallationsoptimierung (Log2Ram, Speichereinstellungen, Logrotate …) auf dem Datenträger in einer neueren Version vor als der auf dem Host erfassten, zeigt dieser Menüpunkt nur die betroffenen Optimierungen an. Er führt die jeweilige Funktion erneut aus und aktualisiert den gespeicherten Versionsstand. Alles andere bleibt unverändert.",
+      "bullets": [
+        "Jede Optimierung einzeln auswählen (nur geänderte)",
+        "Dieselbe Auswahl ist im Monitor-Dashboard verfügbar",
+        "Eine gemeinsame Benachrichtigung, wenn neue Updates verfügbar werden"
+      ]
+    },
+    {
+      "title": "Optimierungen deinstallieren",
+      "description": "Unterstützte rückgängig machbare Änderungen werden in einer JSON-Datei erfasst und mit einer Wiederherstellungsfunktion verknüpft. Aktionen ohne sichere Rückkehrmöglichkeit, etwa ein vollständiges Paketupgrade, sind bewusst ausgeschlossen.",
+      "bullets": [
+        "Erkennt zuvor angewendete Optimierungen automatisch",
+        "Wählt für jeden Eintrag den passenden Rückweg: aus einem vorhandenen .bak-Backup wiederherstellen, den sysctl.d-Konfigurationsausschnitt löschen, wenn keine Sicherung nötig war, oder das unveränderte Originalpaket mit --force-confnew neu installieren (z. B. beim Abonnementbanner)",
+        "Neustartabfrage bei Bedarf (VFIO, persistente Namen usw.)"
+      ]
+    }
+  ],
+  "whichTitle": "Welches sollten Sie wählen?",
+  "whichBody": "Bei einer neuen Proxmox-Installation mit sinnvollen Grundeinstellungen ohne Entscheidungen: <autoLink><strong>Automatisch</strong></autoLink>. Wenn Sie die gewünschten oder unerwünschten Anpassungen schon kennen: <customLink><strong>Anpassbar</strong></customLink>. Für eine bereits angewendete Optimierung, deren neuere Version auf dem Datenträger liegt: <updatesLink><strong>Verfügbare Updates anwenden</strong></updatesLink>. Zum sauberen Zurücksetzen früherer Änderungen: <uninstallLink><strong>Optimierungen deinstallieren</strong></uninstallLink>. Sie können kombinieren: zuerst Automatisch, dann unter Anpassbar Optionen wie Fastfetch oder IOMMU hinzufügen und später einzelne Einträge zurücksetzen.",
+  "mixing": {
+    "heading": "Mischen mit anderen Post-Installation-Scripts",
+    "stackTitle": "Stapeln Sie nicht mehrere Post-Installationsskripte",
+    "stackBody": "Das Ausführen mehrerer Post-Installationsskripte auf demselben Host kann doppelte Konfigurationsdateien, widersprüchliche sysctl-Einträge oder, schlimmer noch, defekte Netzwerke nach dem Neustart verursachen. Wenn Sie das <strong>Helper-Scripts Post Install</strong> bereits angewendet haben, können sich einige ProxMenux-Optimierungen mit dem bereits konfigurierten überschneiden. Bleiben Sie bei einem Post-Installations-Tool pro Host.",
+    "xshokTitle": "xshok-proxmox: veraltet",
+    "xshokBody": "Frühere Versionen von ProxMenux verwies auf <a>xshok-proxmox</a> als Begleitwerkzeug nach der Installation. Dieses Projekt ist jetzt veraltet und wird nicht mehr von ProxMenux angeboten. Wenn ein früherer Lauf von xshok-proxmox Markierungen auf dem Host hinterlassen hat, erkennt ProxMenux sie immer noch und wird Sie warnen - aber es ist nicht etwas, das Sie heute neben ProxMenux installieren sollten."
+  },
+  "community": {
+    "heading": "Gemeinschaftsskripte",
+    "body": "Das Menü bietet zwei Drittanbieterskripte aus dem Projekt <a>community-scripts</a>: <em>Proxmox VE Post Install</em> und <em>Proxmox VE Microcode</em>. Die Wrapper laden die Originalskripte mit <code>wget | bash</code> herunter und führen sie aus. ProxMenux pflegt sie nicht. Lesen Sie vor der Ausführung <link>Externe Repositories</link> für Details und Hinweise zur Vertrauenswürdigkeit."
+  },
+  "pbs": {
+    "heading": "Auf Proxmox Backup Server",
+    "body": "Auf einem Proxmox-Backup-Server-Host öffnet sich dasselbe Menü über <strong>Einstellungen nach der Installation von Proxmox</strong> im PBS-Menü. Automatisiert, Anpassbar, Verfügbare Updates anwenden und Optimierungen deinstallieren funktionieren wie unter Proxmox VE, mit diesen Unterschieden:",
+    "items": [
+      "<strong>Repositories und Upgrade:</strong> Hat der Server kein Abonnement und ist nur das Enterprise-Repository von PBS aktiv, fragt ProxMenux, bevor es zum No-Subscription-Repository von PBS wechselt. Der Wechsel erfolgt über die Repository-API des Servers selbst, dieselbe wie unter <em>Administration > Repositories</em>. Mit aktivem Abonnement oder bereits eingerichtetem No-Subscription- oder Test-Repository bleiben die Quellen unverändert.",
+      "<strong>Anpassbare Liste:</strong> Optionen, die nur für Proxmox VE gelten, werden nicht angezeigt: Gast-Agent, VFIO IOMMU, Open vSwitch, vzdump-Backup-Geschwindigkeit, pigz, Appliance Manager, Ceph, Hochverfügbarkeit und OVH Real Time Monitoring.",
+      "<strong>Abonnement-Hinweis:</strong> Der Patch gilt für die Weboberfläche von Proxmox Backup Server, und Optimierungen deinstallieren stellt sie wieder her.",
+      "<strong>Figurine:</strong> wird ohne die Proxmox-VE-Aliase installiert.",
+      "<strong>Community-Skripte:</strong> Der Abschnitt bietet <em>Proxmox Backup Server Post Install</em> und <em>Proxmox Backup Server Microcode</em> anstelle der Proxmox-VE-Skripte an."
+    ]
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Proxmox-Systemupdate",
+        "href": "/docs/utils/system-update",
+        "tail": " — hält den Host nach der Ersteinrichtung aktuell."
+      },
+      {
+        "label": "Sicherheit",
+        "href": "/docs/security",
+        "tail": "- Fail2Ban + Lynis oben auf der Nachinstallationshärtung."
+      },
+      {
+        "label": "Versionsinformationen anzeigen",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — zeigt, welche Komponenten nach der Installation als installiert erfasst sind."
+      },
+      {
+        "label": "Befehle für Updates und Pakete",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — Referenz für apt / pveupgrade."
+      }
+    ]
+  }
+}

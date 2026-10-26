@@ -1,14 +1,7 @@
 "use client"
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
-import enMessages from "../../messages/en/common.json"
-import deMessages from "../../messages/de/common.json"
-import esMessages from "../../messages/es/common.json"
-import frMessages from "../../messages/fr/common.json"
-import itMessages from "../../messages/it/common.json"
-import ptMessages from "../../messages/pt/common.json"
-import skMessages from "../../messages/sk/common.json"
-import svMessages from "../../messages/sv/common.json"
+import { MESSAGE_CATALOG } from "./catalogs"
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
@@ -20,17 +13,6 @@ import {
 
 type MessageTree = Record<string, unknown>
 type TranslationParams = Record<string, string | number>
-
-const MESSAGE_CATALOG: Record<LanguageCode, MessageTree> = {
-  en: enMessages as MessageTree,
-  de: deMessages as MessageTree,
-  es: esMessages as MessageTree,
-  fr: frMessages as MessageTree,
-  it: itMessages as MessageTree,
-  pt: ptMessages as MessageTree,
-  sk: skMessages as MessageTree,
-  sv: svMessages as MessageTree,
-}
 
 interface I18nContextValue {
   language: LanguageCode
@@ -130,6 +112,20 @@ export function useI18n() {
 
 export function useT() {
   return useI18n().t
+}
+
+export function getCountFormKey(language: LanguageCode, key: string, count: number): string {
+  if (language !== "sk") return key
+
+  const absoluteCount = Math.abs(count)
+  const lastDigit = absoluteCount % 10
+  const lastTwoDigits = absoluteCount % 100
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) return `${key}One`
+  if (lastDigit >= 2 && lastDigit <= 4 && !(lastTwoDigits >= 12 && lastTwoDigits <= 14)) {
+    return `${key}Few`
+  }
+  return `${key}Many`
 }
 
 export { SUPPORTED_LANGUAGES }

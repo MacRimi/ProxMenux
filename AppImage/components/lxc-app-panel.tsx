@@ -19,7 +19,7 @@
  * Secure Gateway.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Loader2, Save, RefreshCw, Trash2, Package, ExternalLink,
   AlertTriangle, Info, PlusCircle, Pencil, ChevronDown, ChevronRight, EyeOff,
@@ -32,17 +32,19 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { fetchApi } from "../lib/api-config"
-import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached } from "../lib/lxc-apps-cache"
+import { fetchApi, getApiUrl, getAuthToken } from "../lib/api-config"
+import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } from "../lib/lxc-apps-cache"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
+import { getCategoryLabel } from "../lib/category-label"
 import { useT } from "@/lib/i18n/provider"
+import { localizeAppEditorError } from "../lib/lxc-app-editor-errors"
 
 // installed_via is optional now — an empty value means "register only,
 // no version tracking, no warnings, just a clickable link". Docker
 // apps and casual "just want a link" registrations use this default.
 type InstalledVia = "" | "dpkg" | "apk" | "file" | "binary" |
                     "python_dist" | "docker_label" | "docker_exec" |
-                    "command" | "manual"
+                    "command" | "manual" | "oci_image"
 type GithubSource = "releases" | "tags"
 
 interface PortEntry {
@@ -92,10 +94,15 @@ interface AppConfig {
   health_path?: string
   logo_url?: string
   helper_slug?: string
+  discovery_id?: string
+  // Set when the application runs inside Docker: registered for its identity
+  // and installed version, updated by the image it comes from.
+  update_via?: string
   // Preserved here even though this editor does not execute updates.
   // The backend uses full-record replacement, so omitting these when
   // editing ports/tracking would silently erase the Updates-tab setup.
   update_command?: string
+  update_method?: "none" | "helper" | "custom"
   hide_no_updater_notice?: boolean
   // Per-app opt-out for the `app_update_available` notification.
   // Absent / true = notify; false = silenced. Set from the bell
@@ -106,15 +113,42 @@ interface AppConfig {
   exclude_from_badge?: boolean
 }
 
+// A port as the installation record states it: the application answers on
+// the first one, and any other is a service of its own (go2rtc next to Frigate).
+interface PortDetail {
+  port: number
+  scheme: string | null
+  path: string | null
+  description: string
+  logo_url: string
+}
+
+interface NativeDiscovery {
+  vmid: number
+  status: "not_scanned" | "complete" | "partial" | "error" | "busy"
+  issues?: string[]
+  stale: boolean
+  candidates: DetectedApp[]
+}
+
 interface DetectedApp {
+  discovery_id?: string
+  source?: "native_metadata" | "docker_metadata"
+  installed_version?: string | null
+  evidence?: Array<{ kind: string; value: string }>
   slug: string
   name: string
   logo_url?: string | null
   default_ports?: number[]
+  port_details?: PortDetail[] | null
   // Categoría preset from helpers_cache.category_names[0] — used to
   // auto-fill the Web Link editor when the user clicks "Register".
   category?: string | null
   tracking_suggestion?: TrackingSuggestion | null
+  // The scheme the application is served on, when it is known rather than
+  // guessed. A ProxMenux OCI install records it; Chromium answers on 3001
+  // over https, which no port heuristic can tell from 3000 over http.
+  scheme?: "http" | "https" | null
 }
 
 interface AppState {
@@ -124,12 +158,40 @@ interface AppState {
   update_available: boolean | null
   error: string | null
   checked_at: string | null
+  // An application installed from an OCI image: the image it runs and the
+  // one its registry publishes today. The image decides whether there is an
+  // update; the version above only says which application it carries.
+  installed_digest?: string | null
+  latest_digest?: string | null
+  image_created?: string | null
+  latest_image_created?: string | null
+  image_reference?: string | null
+  image_repository?: string | null
 }
+
+// The repository of an OCI image, shown the way the repository of a tracked
+// application is: owner/name for GitHub, the image name for Docker Hub.
+export const ociRepoLabel = (url: string) =>
+  url.replace(/^https?:\/\/(www\.)?/, "")
+    .replace(/^github\.com\//, "")
+    .replace(/^hub\.docker\.com\/(r|_)\//, "")
+    .replace(/\/$/, "")
+
+// "2026-09-24 · a3f21c08": an image as a reader can compare two of them.
+export const ociImageLabel = (created?: string | null, digest?: string | null) =>
+  [created ? created.slice(0, 10) : null, digest ? digest.split(":").pop()!.slice(0, 8) : null]
+    .filter(Boolean)
+    .join(" · ")
 
 interface AppEntry extends AppConfig {
   id: string
   state?: AppState
   created_at?: string
+  // Resolved server-side from the image a delegated app updates with. It is
+  // not the app's own upstream — the app deliberately has none — so it is
+  // kept in its own field rather than folded into state.latest_version.
+  docker_available_version?: string | null
+  docker_update_available?: boolean | null
 }
 
 interface SidecarResponse {
@@ -209,18 +271,52 @@ interface DockerWebLinkSuggestion {
   logo_url?: string | null
 }
 
+// Identity of a container ProxMenux installed from an OCI image. It comes
+// from the installation record rather than a probe, so it names the
+// application even when the guest also ships something else — CT 152 runs
+// Chromium and carries a docker client the probe reported instead.
+interface OciInstance {
+  template_id: string | null
+  image_reference: string | null
+  repository: string | null
+  scheme: string | null
+  port: number | null
+  path: string | null
+  website: string | null
+  // The ports of an application with no web address: a service that is
+  // reached on them and has no page to open.
+  service_ports?: { port: number; protocol: string }[] | null
+}
+
 interface Suggestions {
   ready?: boolean
   name_suggestion: string | null
   helper_slug: string | null
+  oci_instance?: OciInstance | null
   port_suggestions: number[]
   web_path_hint: string | null
   tracking_suggestion?: TrackingSuggestion | null
   default_ports?: number[]
+  port_details?: PortDetail[] | null
   logo_url?: string | null
   category?: string | null
   extras?: DetectedApp[]
+  docker_workloads?: DockerWorkload[]
   docker_web_links?: DockerWebLinkSuggestion[]
+}
+
+// A registrable application inside Docker. Its image remains the updater;
+// registration adds identity and version tracking, not a second update path.
+interface DockerWorkload {
+  slug: string
+  name: string
+  logo_url?: string | null
+  container_name?: string
+  installed_version?: string | null
+  installed_via?: string | null
+  tracking_suggestion?: TrackingSuggestion | null
+  default_ports?: number[]
+  category?: string | null
 }
 
 // Compact catalog entry — one row for every registerable app the
@@ -261,9 +357,14 @@ interface ManagedAppInfo {
 
 interface Props {
   vmid: number
+  cacheRevision?: number
   ctIp?: string | null
   onChange?: () => void
   managed?: ManagedAppInfo | null
+  // What the OCI record says about this container, known without probing
+  // it: whether ProxMenux installed it from an image, and whether it is a
+  // secondary container of a multi-container application.
+  oci?: { instance: boolean; memberOf?: { vmid: number; label: string } | null } | null
   // Optional seed payload from the parent's cross-open ref cache. When
   // supplied, the panel renders with real content on the very first
   // frame and only revalidates silently in the background — no
@@ -312,7 +413,40 @@ function selfhstThemeLogos(src: string) {
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 
+const LOCAL_LOGO_CACHE_PATH = /^\/api\/vms\/[1-9]\d*\/apps\/logo-cache\/[a-f0-9]{32}$/
+
+function CachedLocalLogo({ src, className }: { src: string; className: string }) {
+  const [image, setImage] = useState<{ src: string; url: string } | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+    let url: string | null = null
+    const token = getAuthToken()
+    fetch(getApiUrl(src), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal, cache: "no-store",
+    }).then(async response => {
+      if (!response.ok) throw new Error("cached icon unavailable")
+      const blob = await response.blob()
+      const mime = blob.type.split(";", 1)[0].trim().toLowerCase()
+      if (!["image/png", "image/svg+xml"].includes(mime) || blob.size > 262144) {
+        throw new Error("invalid cached icon")
+      }
+      if (!active) return
+      url = URL.createObjectURL(blob)
+      setImage({ src, url })
+    }).catch(() => { if (active) setImage(null) })
+    return () => {
+      active = false
+      controller.abort()
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [src])
+  return image?.src === src ? <img src={image.url} alt="" className={className} /> : null
+}
+
 export function ThemeAwareLogo({ src, className }: { src: string; className: string }) {
+  if (LOCAL_LOGO_CACHE_PATH.test(src)) return <CachedLocalLogo src={src} className={className} />
   const themed = selfhstThemeLogos(src)
   const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = "none"
@@ -339,7 +473,8 @@ function buildWebUrl(ip: string | undefined | null, port: number | "", scheme?: 
   const custom = (customUrl || "").trim()
   if (custom) return custom
   if (!ip || ip === "DHCP" || !port) return null
-  return `${scheme || defaultSchemeFor(port)}://${ip}:${port}`
+  const host = ip.includes(":") && !ip.startsWith("[") ? `[${ip}]` : ip
+  return `${scheme || defaultSchemeFor(port)}://${host}:${port}`
 }
 
 // Suggest a dpkg/apk package name from a friendly app name — lowercase,
@@ -364,7 +499,7 @@ function parseArgvInput(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean)
 }
 
-export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Props) {
+export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, cacheRevision = 0 }: Props) {
   const t = useT()
   const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
@@ -375,11 +510,77 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   const [loading, setLoading] = useState(!seed)
   const [sidecar, setSidecar] = useState<SidecarResponse | null>(seed?.sidecar ?? null)
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
+  const [nativeDiscovery, setNativeDiscovery] = useState<NativeDiscovery | null>(null)
+  const nativeRequest = useRef(0)
+  const [dockerDiscovery, setDockerDiscovery] = useState<NativeDiscovery | null>(null)
+  const dockerRequest = useRef(0)
+  const targetRef = useRef(vmid)
+  targetRef.current = vmid
+  const targetGeneration = useRef(0)
+  const previousTarget = useRef(vmid)
+  if (previousTarget.current !== vmid) {
+    previousTarget.current = vmid
+    targetGeneration.current += 1
+  }
+  useEffect(() => {
+    setNativeDiscovery(null)
+    setDockerDiscovery(null)
+    setEditing(null)
+    setDetectionNotice(null)
+    setSearchingApplications(false)
+    setSaving(false)
+    return () => { targetGeneration.current += 1 }
+  }, [vmid, managed])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = nativeRequest.current
+    let cancelled = false
+    if (managed) return
+    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
+          && nativeRequest.current === request) setNativeDiscovery(result)
+    }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
+    return () => { cancelled = true }
+  }, [vmid, managed, cacheRevision])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = dockerRequest.current
+    let cancelled = false
+    if (managed) return
+    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`).then(result => {
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
+          && dockerRequest.current === request) setDockerDiscovery(result)
+    }).catch(() => { /* optional cached result; never initiate a scan */ })
+    return () => { cancelled = true }
+  }, [vmid, managed])
+  const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchingApplications, setSearchingApplications] = useState(false)
   const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
   // Editor state
-  const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig } | null>(null)
+  const [editing, setEditingState] = useState<{ appId: string | null; draft: AppConfig; targetVmid: number } | null>(null)
+  const editingRef = useRef(editing)
+  editingRef.current = editing
+  const [iconEndpoint, setIconEndpoint] = useState("")
+  const [discoveringLocalLogo, setDiscoveringLocalLogo] = useState(false)
+  const iconRequest = useRef(0)
+  const iconAbort = useRef<AbortController | null>(null)
+  const setEditing: typeof setEditingState = value => {
+    // Invalidate synchronously, including before React commits a batched edit.
+    iconRequest.current += 1
+    iconAbort.current?.abort()
+    setDiscoveringLocalLogo(false)
+    setEditingState(value)
+  }
+  useEffect(() => {
+    iconRequest.current += 1
+    iconAbort.current?.abort()
+    setDiscoveringLocalLogo(false)
+    return () => {
+      iconRequest.current += 1
+      iconAbort.current?.abort()
+    }
+  }, [editing, vmid, iconEndpoint])
   const [binaryArgsInput, setBinaryArgsInput] = useState("")
   const [commandArgvInput, setCommandArgvInput] = useState("")
   const [saving, setSaving] = useState(false)
@@ -434,6 +635,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     // `initialData` or the shared cache, the sidecar is already
     // populated and the user shouldn't see a flash of "Loading…"
     // while we revalidate.
+    const generation = targetGeneration.current
+    const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
     if (!sidecar) setLoading(true)
     setError(null)
     try {
@@ -445,16 +648,24 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       // the "Loading applications…" flash that used to show while a
       // second, racing fetch caught up.
       const bundle = await fetchLxcApps(vmid)
-      if (bundle) {
+      if (bundle && isCurrent()) {
         setSidecar(bundle.sidecar)
         setSuggestions(bundle.suggestions)
       }
     } catch (e: any) {
-      setError(e?.message || t("vmLxc.appEditor.loadFailed"))
+      if (isCurrent()) setError(e?.message || t("vmLxc.appEditor.loadFailed"))
     } finally {
-      setLoading(false)
+      if (isCurrent()) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vmid, managed, cacheRevision])
+
+  useEffect(() => {
+    if (managed) return
+    return subscribeLxcApps(vmid, bundle => {
+      setSidecar(bundle.sidecar)
+      setSuggestions(bundle.suggestions)
+    })
   }, [vmid, managed])
 
   useEffect(() => { load() }, [load])
@@ -515,10 +726,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     if (lower.includes("github rate limited")) {
       return t("vmLxc.appEditor.upstreamErrorGithubRateLimit")
     }
-    return msg
+    if (lower.startsWith("registry unreachable")) {
+      return t("vmLxc.appEditor.upstreamErrorRegistry")
+    }
+    return localizeAppEditorError(msg, t)
   }
 
-  const editorOpen = !!editing
+  const editorOpen = !!editing && editing.targetVmid === vmid
 
   // The picker catalog is only needed after the user opens the editor.
   useEffect(() => {
@@ -554,16 +768,23 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   // (`extras[]` from the backend). Both use the same DetectedApp
   // shape so the empty state renders them uniformly.
   const detectedList: DetectedApp[] = useMemo(() => {
-    if (!suggestions) return []
-    const out: DetectedApp[] = []
-    if (suggestions.helper_slug && suggestions.name_suggestion) {
+    const out: DetectedApp[] = [...(nativeDiscovery?.vmid === vmid ? nativeDiscovery.candidates : []),
+      ...(dockerDiscovery?.vmid === vmid ? dockerDiscovery.candidates || [] : [])]
+    if (!suggestions) return out
+    // A ProxMenux OCI install has no helper slug — nothing was installed by a
+    // community script — so its template id identifies it instead.
+    const primarySlug = suggestions.helper_slug || suggestions.oci_instance?.template_id
+    if (primarySlug && suggestions.name_suggestion) {
       out.push({
-        slug: suggestions.helper_slug,
+        slug: primarySlug,
         name: suggestions.name_suggestion,
         logo_url: suggestions.logo_url,
         default_ports: suggestions.default_ports,
+        port_details: suggestions.port_details,
         category: suggestions.category,
         tracking_suggestion: suggestions.tracking_suggestion,
+        scheme: suggestions.oci_instance?.scheme === "https" ? "https"
+          : suggestions.oci_instance?.scheme === "http" ? "http" : null,
       })
     }
     const seen = new Set(out.map((d) => d.slug))
@@ -574,12 +795,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       }
     }
     return out
-  }, [suggestions])
+  }, [suggestions, nativeDiscovery, dockerDiscovery, vmid])
 
   // Registered slugs — used to filter the detection list down to
   // what the user hasn't already registered on this CT.
   const registeredSlugs = useMemo(
-    () => new Set(apps.map((a) => a.helper_slug).filter(Boolean) as string[]),
+    () => new Set(apps.flatMap((a) => [a.helper_slug, a.discovery_id]).filter(Boolean) as string[]),
     [apps],
   )
   // Dismissed slugs — persisted in the sidecar. Chips the user
@@ -594,12 +815,34 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   )
   // Alias for pre-existing consumers (post-registration chip strip).
   const unregisteredDetected = visibleDetected
+  // Applications running inside Docker. They are filtered the same way, and
+  // deliberately NOT nested inside the Docker chip: that chip disappears the
+  // moment Docker is registered, which is exactly when these become
+  // registrable.
+  const visibleWorkloads = (suggestions?.docker_workloads || []).filter(
+    (w) => !registeredSlugs.has(w.slug) && !dismissedSlugs.has(w.slug),
+  )
   // Detections the user hid and could restore from the Register-a-
   // different-app panel. Not affected by registration state.
-  const hiddenDetections = detectedList.filter((d) => dismissedSlugs.has(d.slug))
+  const hiddenDetections = [...detectedList, ...(suggestions?.docker_workloads || [])]
+    .filter((d, index, items) => dismissedSlugs.has(d.slug) && items.findIndex(item => item.slug === d.slug) === index)
 
-  const searchInstalledApplications = async () => {
-    const before = new Set(visibleDetected.map((item) => item.slug))
+  // A container installed from an OCI image holds exactly the application its
+  // record names, so there is nothing to search for and nothing else to add.
+  // What can go stale is what the record and the registry say, and this
+  // reads both again.
+  const isOciInstall = !!suggestions?.oci_instance || !!oci?.instance
+  const ociMemberOf = oci?.memberOf ?? null
+  const isOciAdguard = suggestions?.oci_instance?.template_id === "image-adguard-home"
+  useEffect(() => {
+    if (!isOciAdguard) return
+    let cancelled = false
+    fetchApi<{ available: boolean }>(`/api/vms/${vmid}/apps/adguard-setup`)
+      .then((result) => { if (!cancelled) setAdguardSetupAvailable(result.available === true) })
+      .catch(() => { if (!cancelled) setAdguardSetupAvailable(false) })
+    return () => { cancelled = true }
+  }, [vmid, isOciAdguard])
+  const refreshOciData = async () => {
     setSearchingApplications(true)
     setDetectionNotice(null)
     setError(null)
@@ -608,16 +851,79 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         method: "POST",
       })
       setSuggestions(result)
+      let next = sidecar
+      if (apps.length > 0) {
+        next = await fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
+        setSidecar(next)
+      }
+      if (next) setLxcAppsCached(vmid, next, result)
+      onChange?.()
+    } catch (e: any) {
+      setError(e?.message || t("vmLxc.appEditor.checkFailed"))
+    } finally {
+      setSearchingApplications(false)
+    }
+  }
+
+  const searchInstalledApplications = async () => {
+    const generation = targetGeneration.current
+    const request = ++nativeRequest.current
+    ++dockerRequest.current
+    const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
+      && nativeRequest.current === request
+    const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
+    setSearchingApplications(true)
+    setDetectionNotice(null)
+    setError(null)
+    try {
+      let native = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`, {
+        method: "POST",
+      })
+      if (!isCurrent()) return
+      setNativeDiscovery(native)
+      if (native.status === "error" || native.status === "busy") {
+        const stopped = native.status === "error" && Array.isArray(native.issues)
+          && native.issues.includes("guest_stopped")
+        setDetectionNotice({ found: false, text: t(stopped
+          ? "vmLxc.appEditor.nativeScanStopped" : "vmLxc.appEditor.nativeScanFailed") })
+        return
+      }
+      let docker = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`, {
+        method: "POST",
+      })
+      if (!isCurrent()) return
+      setDockerDiscovery(docker)
+      const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {
+        method: "POST",
+      })
+      if (!isCurrent()) return
+      // Recompose against the refreshed catalog without another native scan.
+      native = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`)
+      if (!isCurrent()) return
+      setNativeDiscovery(native)
+      docker = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`)
+      if (!isCurrent()) return
+      setDockerDiscovery(docker)
+      setSuggestions(result)
       if (sidecar) setLxcAppsCached(vmid, sidecar, result)
 
       const detected = new Set<string>()
       if (result.helper_slug) detected.add(result.helper_slug)
       for (const item of result.extras || []) detected.add(item.slug)
+      for (const item of result.docker_workloads || []) detected.add(item.slug)
+      for (const item of native.candidates) detected.add(item.slug)
+      for (const item of docker.candidates || []) detected.add(item.slug)
       const visible = [...detected].filter(
         (slug) => !registeredSlugs.has(slug) && !dismissedSlugs.has(slug),
       )
       const newCount = visible.filter((slug) => !before.has(slug)).length
-      if (newCount === 1) {
+      if (docker.status === "error" || docker.status === "busy") {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.dockerScanFailed") })
+      } else if (docker.status === "partial" || docker.stale) {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.dockerScanPartial") })
+      } else if (native.status === "partial") {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.nativeScanPartial") })
+      } else if (newCount === 1) {
         setDetectionNotice({ found: true, text: t("vmLxc.appEditor.oneNewApplicationDetected") })
       } else if (newCount > 1) {
         setDetectionNotice({
@@ -633,9 +939,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         })
       }
     } catch (e: any) {
-      setError(e?.message || t("vmLxc.appEditor.detectionFailed"))
+      if (isCurrent()) setError(e?.message || t("vmLxc.appEditor.detectionFailed"))
     } finally {
-      setSearchingApplications(false)
+      if (isCurrent()) setSearchingApplications(false)
     }
   }
 
@@ -652,6 +958,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     existing?: AppEntry,
     opts?: { withTracking?: boolean, preset?: DetectedApp },
   ) => {
+    const generation = targetGeneration.current
     let seed: AppConfig
     if (existing) {
       seed = {
@@ -680,7 +987,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         health_path: existing.health_path || "",
         logo_url: existing.logo_url || "",
         helper_slug: existing.helper_slug || "",
+        ...(existing.discovery_id ? { discovery_id: existing.discovery_id } : {}),
+        // Preserved explicitly: saving replaces the whole record, so dropping
+        // it here would silently un-delegate the app the first time someone
+        // edits one of its ports.
+        update_via: (existing as { update_via?: string }).update_via || "",
         update_command: existing.update_command || "",
+        update_method: existing.update_method || (existing.update_command ? "custom" : "none"),
         hide_no_updater_notice: existing.hide_no_updater_notice === true,
         notifications_enabled: existing.notifications_enabled !== false,
         exclude_from_badge: existing.exclude_from_badge === true,
@@ -705,14 +1018,34 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         const p = opts.preset
         seed.name = p.name
         seed.logo_url = p.logo_url || ""
-        seed.helper_slug = p.slug
+        if (p.discovery_id) {
+          seed.discovery_id = p.discovery_id
+          seed.update_method = "none"
+          seed.update_command = ""
+        } else seed.helper_slug = p.slug
         // Docker endpoints come from the real published host-port mappings
         // listed under Web links.  Do not pre-save a catalog default such as
         // 9000; the user explicitly chooses which workload links to add.
-        if (p.slug !== "docker" && p.default_ports?.length) {
-          seed.ports = p.default_ports.map((port) => ({
+        const suggestedPorts = isOciAdguard && p.slug === "image-adguard-home"
+          ? [80, ...(adguardSetupAvailable ? [3000] : [])]
+          : p.default_ports || []
+        if (p.port_details?.length && !(isOciAdguard && p.slug === "image-adguard-home")) {
+          seed.ports = p.port_details.map((d) => ({
+            port: d.port,
+            ...(d.description ? { description: d.description } : {}),
+            scheme: d.scheme === "https" ? "https" as const
+              : d.scheme === "http" ? "http" as const : defaultSchemeFor(d.port),
+            web_path: d.path || s?.web_path_hint || "",
+            ...(d.logo_url ? { logo_url: d.logo_url } : {}),
+            ...(p.category ? { category: p.category } : {}),
+          }))
+        } else if (p.slug !== "docker" && suggestedPorts.length) {
+          seed.ports = suggestedPorts.map((port) => ({
             port,
-            scheme: defaultSchemeFor(port),
+            ...(isOciAdguard && port === 3000 ? { description: "Config" } : {}),
+            // A recorded scheme beats the port heuristic: getting this wrong
+            // hands the user a link that cannot connect.
+            scheme: p.scheme || defaultSchemeFor(port),
             web_path: s?.web_path_hint || "",
             // Auto-fill Categoría from helpers_cache.category_names[0]
             // when the catalog entry carries one. User can still change
@@ -745,6 +1078,20 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             docker_image: (t as any).docker_image || "",
             tag_regex: t.tag_regex || "v?(\\d+\\.\\d+\\.\\d+)",
           }
+          // A containerised workload delegates its update to its image, and
+          // the backend refuses a delegation that also carries an upstream —
+          // so the upstream fields seeded above are cleared, not just ignored.
+          if ((t as { update_via?: string }).update_via === "docker") {
+            seed = {
+              ...seed,
+              update_via: "docker",
+              upstream_type: "",
+              repo: "",
+              upstream_url: "",
+              upstream_json_path: "",
+              docker_image: "",
+            }
+          }
           setShowAdvanced(true)
         } else {
           setShowAdvanced(false)
@@ -756,12 +1103,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         setShowAdvanced(false)
       }
     }
+    if (targetRef.current !== vmid || targetGeneration.current !== generation) return
     setBinaryArgsInput((seed.binary_args || []).join(", "))
     setCommandArgvInput((seed.command_argv || []).join(", "))
-    setEditing({ appId: existing?.id || null, draft: seed })
+    setEditing({ appId: existing?.id || null, draft: seed, targetVmid: vmid })
     setDetectorTest(null)
     setError(null)
-  }, [suggestions, vmid, sidecar])
+  }, [suggestions, vmid, sidecar, isOciAdguard, adguardSetupAvailable])
 
   const closeEditor = () => {
     setEditing(null)
@@ -772,7 +1120,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   }
 
   const save = async () => {
-    if (!editing) return
+    if (!editing || editing.targetVmid !== vmid || targetRef.current !== vmid) return
+    const generation = targetGeneration.current
+    const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
     setSaving(true)
     setError(null)
     try {
@@ -786,6 +1136,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         body: JSON.stringify(editing.draft),
       })
       if ((r as any).error) throw new Error((r as any).error)
+      if (!isCurrent()) return
       setSidecar(r)
       setLxcAppsCached(vmid, r, suggestions)
       setEditing(null)
@@ -793,9 +1144,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       setCommandArgvInput("")
       onChange?.()
     } catch (e: any) {
-      setError(e?.message || t("vmLxc.appEditor.saveFailed"))
+      if (isCurrent()) setError(e?.message || t("vmLxc.appEditor.saveFailed"))
     } finally {
-      setSaving(false)
+      if (isCurrent()) setSaving(false)
     }
   }
 
@@ -862,7 +1213,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   }
 
   const removeOne = async (appId: string) => {
-    if (!confirm("Remove this application from the CT's App tab?")) return
+    if (!confirm(t("vmLxc.appEditor.confirmRemove"))) return
     setBusyAppId(appId)
     setError(null)
     try {
@@ -1096,13 +1447,47 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   }
 
   // ── Editor ─────────────────────────────────────────────────────
-  if (editing) {
+  if (editorOpen && editing) {
     const draft = editing.draft
     const method = draft.installed_via || ""
     const isPackaged = method === "dpkg" || method === "apk"
     const setField = (patch: Partial<AppConfig>) => {
       setDetectorTest(null)
       setEditing({ ...editing, draft: { ...draft, ...patch } })
+    }
+    const iconPorts = draft.ports.filter(entry => typeof entry.port === "number" && entry.port > 0 && entry.port <= 65535)
+    const endpointKey = (entry: PortEntry) => `${entry.scheme || defaultSchemeFor(entry.port)}:${entry.port}`
+    const selectedIconPort = iconPorts.find(entry => endpointKey(entry) === iconEndpoint) || iconPorts[0]
+    const discoverLocalLogo = async () => {
+      if (!selectedIconPort || discoveringLocalLogo) return
+      const snapshot = editing
+      const generation = targetGeneration.current
+      const requestId = ++iconRequest.current
+      const controller = new AbortController()
+      iconAbort.current = controller
+      const current = () => iconRequest.current === requestId && editingRef.current === snapshot
+        && targetRef.current === vmid && targetGeneration.current === generation
+      setDiscoveringLocalLogo(true)
+      setError(null)
+      try {
+        const result = await fetchApi<{ logo_url: string }>(`/api/vms/${vmid}/apps/logo-discovery`, {
+          method: "POST", signal: controller.signal,
+          body: JSON.stringify({ port: selectedIconPort.port, scheme: selectedIconPort.scheme || defaultSchemeFor(selectedIconPort.port) }),
+        })
+        if (!current()) return
+        if (!LOCAL_LOGO_CACHE_PATH.test(result.logo_url) || !result.logo_url.startsWith(`/api/vms/${vmid}/`)) {
+          throw new Error("invalid icon response")
+        }
+        setEditing(previous => previous === snapshot
+          ? { ...previous, draft: { ...previous.draft, logo_url: result.logo_url } } : previous)
+      } catch (error: unknown) {
+        if (current()) {
+          const code = (error as { body?: { code?: string } })?.body?.code
+          setError(t(code === "local_logo_stopped" ? "vmLxc.appEditor.localLogoStopped" : "vmLxc.appEditor.localLogoUnavailable"))
+        }
+      } finally {
+        if (current()) setDiscoveringLocalLogo(false)
+      }
     }
     // Editing the Name auto-fills the Package field on packaged
     // methods when it's still empty. Rationale: 90% of the time the
@@ -1145,27 +1530,42 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         web_path: link.web_path || "/",
         logo_url: link.logo_url || "",
       }
-      const last = draft.ports[draft.ports.length - 1]
-      const indexAfterAdd = (last && last.port === "" && !last.description)
-        ? draft.ports.length - 1
-        : draft.ports.length
-      if (indexAfterAdd === draft.ports.length) {
-        setField({ ports: [...draft.ports, entry] })
-      } else {
-        const ports = [...draft.ports]
-        ports[indexAfterAdd] = entry
-        setField({ ports })
-      }
+      setDetectorTest(null)
+      setEditing((current) => {
+        if (!current) return current
+        const currentPorts = current.draft.ports
+        // The buttons disappear after a port is added, but guard the state
+        // update too so a double click can never create duplicate links.
+        if (currentPorts.some((port) => port.port === link.host_port)) return current
+        const ports = [...currentPorts]
+        const last = ports[ports.length - 1]
+        if (last && last.port === "" && !last.description) ports[ports.length - 1] = entry
+        else ports.push(entry)
+        return { ...current, draft: { ...current.draft, ports } }
+      })
       // Ask the backend whether this service_name has a known catalog
       // category and, if so, patch the just-inserted port so the user
       // finds it pre-selected instead of having to open the dropdown.
-      // Non-blocking — the port is already visible either way.
+      // This must be a functional update: the response can arrive after the
+      // user has added or edited more links, and must never restore the old
+      // draft captured by this render.
       const q = (link.service_name || "").trim()
       if (q) {
         fetchApi<{ category: string | null }>(`/api/apps/suggest_category?name=${encodeURIComponent(q)}`)
           .then((r) => {
             if (!r?.category) return
-            setPort(indexAfterAdd, { category: r.category })
+            setEditing((current) => {
+              if (!current) return current
+              let changed = false
+              const ports = current.draft.ports.map((port) => {
+                if (port.port !== link.host_port || port.category) return port
+                changed = true
+                return { ...port, category: r.category || undefined }
+              })
+              return changed
+                ? { ...current, draft: { ...current.draft, ports } }
+                : current
+            })
           })
           .catch(() => { /* non-fatal — user can pick manually */ })
       }
@@ -1175,15 +1575,32 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     const usedPorts = new Set(draft.ports.map((p) => p.port))
     const isDockerDraft = draft.helper_slug === "docker" ||
       (draft.installed_via === "binary" && draft.binary_path?.endsWith("/docker"))
+    // A recognised Docker workload belongs in one place at a time. Keep its
+    // links out of Docker while it is offered (or already registered) as an
+    // independent app. Dismissing that detection makes the links available
+    // under Docker again.
+    const independentDockerWorkloadSlugs = new Set(
+      (suggestions?.docker_workloads || [])
+        .filter((workload) => !dismissedSlugs.has(workload.slug))
+        .map((workload) => workload.slug),
+    )
     const suggestableDockerLinks = isDockerDraft
-      ? (suggestions?.docker_web_links || []).filter((link) => !usedPorts.has(link.host_port))
+      ? (suggestions?.docker_web_links || []).filter(
+          (link) =>
+            !usedPorts.has(link.host_port) &&
+            (!link.service_slug || !independentDockerWorkloadSlugs.has(link.service_slug)),
+        )
       : []
-    // A Docker registration uses structured container → published-port
-    // suggestions below.  Suppress the generic ss/netstat chips in that case
-    // so the same endpoint is not presented twice without its workload name.
-    const suggestable = isDockerDraft
-      ? []
-      : (suggestions?.port_suggestions || []).filter((p) => !usedPorts.has(p))
+    // Keep the generic ss/netstat probe available for Docker too. It covers
+    // host-networked services and listeners that Docker does not expose in
+    // NetworkSettings.Ports. Published ports already represented by a named
+    // Docker workload stay deduplicated from the generic chips.
+    const dockerPublishedPorts = new Set(
+      (suggestions?.docker_web_links || []).map((link) => link.host_port),
+    )
+    const suggestable = (suggestions?.port_suggestions || []).filter(
+      (port) => !usedPorts.has(port) && (!isDockerDraft || !dockerPublishedPorts.has(port)),
+    )
 
     return (
       <div className="space-y-4">
@@ -1304,18 +1721,47 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 from https://selfh.st/icons); empty → no logo in the
                 app card header. */}
             <div className="pt-2 border-t border-border/50">
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="app-logo" className="text-xs uppercase tracking-wider text-muted-foreground">
                 {t("vmLxc.appEditor.logoUrlLabel")} <span className="normal-case tracking-normal text-[10px] opacity-70">{t("vmLxc.appEditor.optionalSuffix")}</span>
               </Label>
+              <Button type="button" variant="outline" size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={!selectedIconPort || discoveringLocalLogo || saving}
+                onClick={discoverLocalLogo}>
+                {discoveringLocalLogo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}
+                {t("vmLxc.appEditor.discoverLocalLogo")}
+              </Button>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
               <Input
                 id="app-logo"
-                type="url"
+                type="text"
                 value={draft.logo_url || ""}
                 onChange={(e) => setField({ logo_url: e.target.value })}
                 placeholder={t("vmLxc.appEditor.portLogoPlaceholder")}
                 maxLength={512}
-                className="text-sm mt-2 font-mono"
+                className="text-sm font-mono"
               />
+              {draft.logo_url && LOCAL_LOGO_CACHE_PATH.test(draft.logo_url) &&
+                <ThemeAwareLogo src={draft.logo_url} className="h-8 w-8 shrink-0 object-contain" />}
+              </div>
+                {iconPorts.length > 1 && <select
+                  aria-label={t("vmLxc.appEditor.localLogoPort")}
+                  value={selectedIconPort ? endpointKey(selectedIconPort) : ""}
+                  onChange={event => {
+                    iconRequest.current += 1
+                    iconAbort.current?.abort()
+                    setDiscoveringLocalLogo(false)
+                    setIconEndpoint(event.target.value)
+                  }}
+                  className="mt-2 rounded border bg-background px-2 py-1 text-xs"
+                >
+                  {iconPorts.map(entry => <option key={endpointKey(entry)} value={endpointKey(entry)}>
+                    {endpointKey(entry)}
+                  </option>)}
+                </select>}
+              <p className="text-[10px] text-muted-foreground mt-1">{t("vmLxc.appEditor.localLogoHelp")}</p>
             </div>
 
             {/* Web links — each port becomes a clickable link (built as
@@ -1512,7 +1958,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                             <SelectContent>
                               <SelectItem value="__none__">{t("vmLxc.appEditor.portCategoryNone")}</SelectItem>
                               {categoryPresets.map((c) => (
-                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                                <SelectItem key={c} value={c}>{getCategoryLabel(t, c)}</SelectItem>
                               ))}
                               <SelectItem value="__add__">{t("vmLxc.appEditor.portCategoryAddNew")}</SelectItem>
                             </SelectContent>
@@ -1589,13 +2035,33 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           <SelectItem value="binary">{t("vmLxc.appEditor.binaryVersionHint")}</SelectItem>
                           <SelectItem value="file">{t("vmLxc.appEditor.methodFile")}</SelectItem>
                           <SelectItem value="python_dist">{t("vmLxc.appEditor.methodPython")}</SelectItem>
-                          <SelectItem value="docker_label" disabled>{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
+                          {/* Chosen by detection for a Docker workload; kept only so an
+                              application already using it shows its method. */}
+                          {method === "docker_label" && (
+                            <SelectItem value="docker_label">{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
+                          )}
                           <SelectItem value="docker_exec">{t("vmLxc.appEditor.methodDockerExec")}</SelectItem>
                           <SelectItem value="command">{t("vmLxc.appEditor.methodCommand")}</SelectItem>
                           <SelectItem value="manual">{t("vmLxc.appEditor.methodManual")}</SelectItem>
+                          {/* Only meaningful on a container ProxMenux installed
+                              from an image: the record it reads exists nowhere else. */}
+                          {(method === "oci_image" || suggestions?.oci_instance) && (
+                            <SelectItem value="oci_image">{t("vmLxc.appEditor.methodOciImage")}</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {method === "oci_image" && (
+                      <div className="sm:col-span-2 text-xs text-muted-foreground leading-relaxed">
+                        {t("vmLxc.appEditor.ociImageHelp")}
+                        {suggestions?.oci_instance?.image_reference && (
+                          <div className="mt-1">
+                            <code className="text-foreground/80">{suggestions.oci_instance.image_reference}</code>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {isPackaged && (
                       <div>
@@ -1604,14 +2070,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           id="app-package"
                           value={draft.package || ""}
                           onChange={(e) => setField({ package: e.target.value })}
-                          placeholder={method === "dpkg" ? "e.g. jellyfin-server" : "e.g. tailscale"}
+                          placeholder={t("vmLxc.appEditor.packageExample", { package: method === "dpkg" ? "jellyfin-server" : "tailscale" })}
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Auto-filled from Name. Verify with{" "}
+                          {t("vmLxc.appEditor.packageHelpBefore")}{" "}
                           <code className="text-foreground/70">
                             {method === "dpkg" ? "dpkg -l | grep <app>" : "apk info | grep <app>"}
                           </code>{" "}
-                          inside the CT.
+                          {t("vmLxc.appEditor.packageHelpAfter")}
                         </div>
                       </div>
                     )}
@@ -1627,8 +2093,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           className="font-mono text-xs"
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Absolute path. Find it with{" "}
-                          <code className="text-foreground/70">which &lt;app&gt;</code> or{" "}
+                          {t("vmLxc.appEditor.binaryHelpBefore")}{" "}
+                          <code className="text-foreground/70">which &lt;app&gt;</code>{" "}{t("vmLxc.appEditor.binaryHelpOr")}{" "}
                           <code className="text-foreground/70">systemctl show &lt;service&gt; -p ExecStart</code>.
                         </div>
                       </div>
@@ -1799,7 +2265,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                     </div>
                   )}
 
-                  {method && (() => {
+                  {/* The registry of the image is the upstream of an OCI
+                      install, and the record already names it. */}
+                  {method && method !== "oci_image" && (() => {
                     // Upstream source selector — 3 methods (github,
                     // http_json, docker_hub). Legacy sidecars with a
                     // `repo` set but no `upstream_type` default to
@@ -1824,6 +2292,22 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                       }
                       if (!t) patch.tag_regex = ""
                       setField(patch)
+                    }
+                    // A delegated app has no upstream of its own on purpose:
+                    // the image it runs on resolves the available version.
+                    // Showing an empty "none" dropdown reads as a setting the
+                    // user forgot, so say what is happening instead.
+                    if (editing.draft.update_via === "docker") {
+                      return (
+                        <div className="rounded-md border border-border/60 bg-background/40 p-3">
+                          <div className="text-xs font-medium text-foreground">
+                            {t("vmLxc.appEditor.upstreamDelegatedTitle")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                            {t("vmLxc.appEditor.upstreamDelegatedHelp")}
+                          </div>
+                        </div>
+                      )
                     }
                     return (
                       <>
@@ -2075,7 +2559,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                     {detectorTest.installed.version ? (
                       <div className="font-mono text-sm text-emerald-400">{detectorTest.installed.version}</div>
                     ) : (
-                      <div className="text-xs text-amber-300">{detectorTest.installed.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                      <div className="text-xs text-amber-300">{localizeUpstreamError(detectorTest.installed.error) || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
                     )}
                     <div className="mt-1.5 text-[10px] text-muted-foreground break-all">
                       {detectorTest.installed.method || "—"}
@@ -2091,7 +2575,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                     ) : detectorTest.upstream.version ? (
                       <div className="font-mono text-sm text-emerald-400">{detectorTest.upstream.version}</div>
                     ) : (
-                      <div className="text-xs text-amber-300">{detectorTest.upstream.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                      <div className="text-xs text-amber-300">{localizeUpstreamError(detectorTest.upstream.error) || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
                     )}
                     {detectorTest.upstream.type && (
                       <div className="mt-1.5 text-[10px] text-muted-foreground">{detectorTest.upstream.type}</div>
@@ -2104,7 +2588,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             {error && (
               <div className="text-xs text-red-400 flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
+                <span>{localizeAppEditorError(error, t)}</span>
               </div>
             )}
 
@@ -2195,6 +2679,31 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 ? t("vmLxc.appEditor.versionDetected", { version: d.tracking_suggestion.detected_version || "" })
                 : t("vmLxc.appEditor.detectedInContainer")}
             </div>
+            {(d.source === "native_metadata" || d.source === "docker_metadata") && (
+              <div className="text-xs text-muted-foreground mt-1 break-all">
+                <div>{d.installed_version
+                  ? t("vmLxc.appEditor.versionDetected", { version: d.installed_version })
+                  : t("vmLxc.appEditor.nativeVersionUnknown")}</div>
+                {(d.source === "docker_metadata"
+                  ? dockerDiscovery?.stale || dockerDiscovery?.status === "partial"
+                  : nativeDiscovery?.stale || nativeDiscovery?.status === "partial") && (
+                  <div className="text-amber-400">{t("vmLxc.appEditor.nativeEvidenceStale")}</div>
+                )}
+                {d.evidence?.map((e, index) => <div key={index}>
+                  {t(e.kind === "docker_container" ? "vmLxc.appEditor.dockerEvidenceContainer"
+                    : e.kind === "docker_image" ? "vmLxc.appEditor.dockerEvidenceImage"
+                    : e.kind === "compose_project" ? "vmLxc.appEditor.dockerEvidenceProject"
+                    : e.kind === "tcp_listener" ? (d.source === "docker_metadata"
+                      ? "vmLxc.appEditor.dockerEvidencePort" : "vmLxc.appEditor.nativeEvidencePort")
+                    : e.kind === "installation_file" ? "vmLxc.appEditor.nativeEvidenceFile"
+                    : e.kind === "process_executable" ? "vmLxc.appEditor.nativeEvidenceProcess"
+                    : e.kind === "working_directory" ? "vmLxc.appEditor.nativeEvidenceDirectory"
+                    : "vmLxc.appEditor.nativeEvidenceService")}: {e.value}
+                </div>)}
+                <div>{t(d.source === "docker_metadata"
+                  ? "vmLxc.appEditor.dockerEndpointReview" : "vmLxc.appEditor.nativeRegisterOnly")}</div>
+              </div>
+            )}
             {d.tracking_suggestion?.detector_source === "legacy_fallback" && (
               <div className="text-[10px] text-amber-400/90 mt-0.5">
                 {t("vmLxc.appEditor.legacyDetectorUsed")}
@@ -2216,6 +2725,67 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             variant="ghost"
             onClick={() => dismissDetection(d.slug, d.name)}
             aria-label={`Hide ${d.name} detection`}
+            title={t("vmLxc.appEditor.hidePermanentlyTooltip")}
+            className="flex-1 sm:flex-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300"
+          >
+            <EyeOff className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">{t("vmLxc.appEditor.hideButton")}</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // A containerised application. Same chip language as a native detection,
+  // with the update path spelled out: it is registered for what it is, not
+  // for an updater it does not have.
+  const renderWorkloadChip = (w: DockerWorkload) => (
+    <div key={`workload-${w.slug}`} className="p-3 rounded-md border border-border/60 bg-background/40">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {w.logo_url && (
+            <ThemeAwareLogo
+              src={w.logo_url}
+              className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
+            />
+          )}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-foreground truncate">{w.name}</div>
+            <div className="text-xs text-emerald-400/90">
+              {w.installed_version
+                ? t("vmLxc.appEditor.versionDetected", { version: w.installed_version })
+                : t("vmLxc.appEditor.detectedInContainer")}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              {t("vmLxc.appEditor.runsInsideDocker")}
+              {w.container_name ? ` · ${w.container_name}` : ""}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
+          <Button
+            size="sm"
+            onClick={() => openEditor(undefined, {
+              withTracking: !!w.tracking_suggestion,
+              preset: {
+                slug: w.slug,
+                name: w.name,
+                logo_url: w.logo_url || "",
+                default_ports: w.default_ports || [],
+                category: w.category || null,
+                tracking_suggestion: w.tracking_suggestion || null,
+              } as unknown as DetectedApp,
+            })}
+            className="flex-[3] sm:flex-none bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            <PlusCircle className="h-3.5 w-3.5 mr-1" />
+            {t("vmLxc.appEditor.registerButton")}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => dismissDetection(w.slug, w.name)}
+            aria-label={`${t("vmLxc.appEditor.hideButton")}: ${w.name}`}
             title={t("vmLxc.appEditor.hidePermanentlyTooltip")}
             className="flex-1 sm:flex-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300"
           >
@@ -2276,7 +2846,36 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           many detections there are (0, 1, or many). Below the chips,
           a single "Register a different app" button lets the user
           add something the auto-detector doesn't know about. */}
-      {apps.length === 0 && (
+      {/* A database or a cache of a multi-container application has no
+          application of its own: it is reached from the main container. */}
+      {apps.length === 0 && ociMemberOf && (
+        <Card className="border border-border bg-card/50">
+          <CardContent className="p-6 space-y-3">
+            <div className="mx-auto p-2 rounded-full bg-blue-500/10 w-fit">
+              <Info className="h-5 w-5 text-blue-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground text-center">
+              {t("vmLxc.appEditor.stackMemberTitle")}
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed text-center">
+              {t("vmLxc.appEditor.stackMemberBody", { primary: ociMemberOf.label })}
+            </p>
+            <div className="pt-1 flex justify-center">
+              <Button
+                onClick={() => window.dispatchEvent(new CustomEvent("openLxcAppModal", {
+                  detail: { vmid: ociMemberOf.vmid, tab: "app" },
+                }))}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                <ChevronRight className="h-4 w-4 mr-1.5" />
+                {t("vmLxc.ociUpdates.openPrimary")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {apps.length === 0 && !ociMemberOf && (
         <Card className="border border-border bg-card/50">
           <CardContent className="p-6 space-y-3">
             <div className="mx-auto p-2 rounded-full bg-emerald-500/10 w-fit">
@@ -2288,24 +2887,28 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed text-center">
               {t("vmLxc.appEditor.noAppsBody")}
             </p>
-            {visibleDetected.length > 0 && (
+            {(visibleDetected.length > 0 || visibleWorkloads.length > 0) && (
               <div className="space-y-2 pt-2">
                 {visibleDetected.map(renderDetectionChip)}
+                {visibleWorkloads.map(renderWorkloadChip)}
               </div>
             )}
             <div className="pt-1 flex flex-wrap justify-center gap-2">
               <Button
-                onClick={searchInstalledApplications}
+                onClick={isOciInstall ? refreshOciData : searchInstalledApplications}
                 disabled={searchingApplications}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 {searchingApplications
                   ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  : <Search className="h-4 w-4 mr-1.5" />}
-                {searchingApplications
-                  ? t("vmLxc.appEditor.searchingApplications")
-                  : t("vmLxc.appEditor.searchApplications")}
+                  : isOciInstall ? <RefreshCw className="h-4 w-4 mr-1.5" /> : <Search className="h-4 w-4 mr-1.5" />}
+                {isOciInstall
+                  ? t(searchingApplications ? "vmLxc.appEditor.refreshingData" : "vmLxc.appEditor.refreshData")
+                  : searchingApplications
+                    ? t("vmLxc.appEditor.searchingApplications")
+                    : t("vmLxc.appEditor.searchApplications")}
               </Button>
+              {!isOciInstall && (
               <Button
                 onClick={openBrowseOrEditor}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
@@ -2318,6 +2921,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                   </span>
                 )}
               </Button>
+              )}
             </div>
             {detectionNotice && (
               <p className={`text-xs text-center ${detectionNotice.found ? "text-emerald-400" : "text-muted-foreground"}`}>
@@ -2353,6 +2957,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                         {app.installed_via === "apk" && app.package && <>apk · <code className="text-foreground/80">{app.package}</code></>}
                         {app.installed_via === "file" && app.file_path && <>file · <code className="text-foreground/80">{app.file_path}</code></>}
                         {app.installed_via === "binary" && app.binary_path && <>binary · <code className="text-foreground/80">{app.binary_path}</code></>}
+                        {app.installed_via === "oci_image" && st?.image_reference && <>OCI · <code className="text-foreground/80 break-all">{st.image_reference}</code></>}
                       </div>
                     )}
                     {tracking && st?.checked_at && (
@@ -2364,6 +2969,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                         stack below Checked, full-width so long repo
                         names wrap cleanly instead of competing with
                         the top-right on narrow screens. */}
+                    {app.installed_via === "oci_image" && tracking && st?.image_repository && (
+                      <a
+                        href={st.image_repository}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="md:hidden mt-1 text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 min-w-0"
+                      >
+                        <span className="truncate">{ociRepoLabel(st.image_repository)}</span>
+                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                      </a>
+                    )}
                     {app.repo && tracking && (
                       <a
                         href={`https://github.com/${app.repo}`}
@@ -2380,6 +2996,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 {/* Desktop-only repo link: same row as the title on md+,
                     hidden on mobile where the stacked variant above
                     handles it. */}
+                {app.installed_via === "oci_image" && tracking && st?.image_repository && (
+                  <a
+                    href={st.image_repository}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden md:inline-flex text-xs text-muted-foreground hover:text-foreground items-center gap-1 flex-shrink-0 mt-1"
+                  >
+                    {ociRepoLabel(st.image_repository)}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
                 {app.repo && tracking && (
                   <a
                     href={`https://github.com/${app.repo}`}
@@ -2394,8 +3021,49 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               </div>
 
               {(() => {
-                const hasUpstream = !!(app.repo || app.upstream_type)
-                const hasUpdate = st?.update_available === true
+                // An application installed from an OCI image changes when its
+                // image does. Both are shown — the application version it
+                // carries and the image it runs — and the image decides.
+                if (app.installed_via === "oci_image") {
+                  if (!tracking) return null
+                  const newImage = st?.update_available === true
+                  const appMoved = !!(st?.latest_version && st.latest_version !== st.installed_version)
+                  return (
+                    <div className="mb-3 grid gap-3 grid-cols-1 sm:grid-cols-2">
+                      <div className="p-3 rounded-md bg-muted/40">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.ociAppVersion")}</div>
+                        <div className="text-lg font-semibold font-mono text-foreground break-all">
+                          {st?.installed_version || "—"}
+                        </div>
+                        {appMoved && (
+                          <div className="text-xs font-mono text-purple-400 mt-1 break-all">→ {st!.latest_version}</div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-md bg-muted/40">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.ociImage")}</div>
+                        <div className="text-sm font-semibold font-mono text-foreground">
+                          {ociImageLabel(st?.image_created, st?.installed_digest) || "—"}
+                        </div>
+                        {newImage ? (
+                          <div className="text-sm font-semibold font-mono text-purple-400 mt-1 flex items-center gap-2">
+                            {t("vmLxc.appEditor.ociNewImage")}: {ociImageLabel(st?.latest_image_created, st?.latest_digest)}
+                            <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label={t("vmLxc.appEditor.updateAvailableBadge")} />
+                          </div>
+                        ) : st?.latest_digest ? (
+                          <div className="text-xs text-muted-foreground mt-1">{t("vmLxc.appEditor.ociImageCurrent")}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                }
+                // A delegated app has no upstream of its own; the version to
+                // compare against comes from the image it updates with.
+                const delegated = app.update_via === "docker"
+                const hasUpstream = !!(app.repo || app.upstream_type) || (delegated && !!app.docker_available_version)
+                const hasUpdate = delegated
+                  ? app.docker_update_available === true
+                  : st?.update_available === true
+                const latestVersion = delegated ? app.docker_available_version : st?.latest_version
                 if (!tracking || !(st?.installed_version || hasUpstream)) return null
                 return (
                   <div className={"mb-3 grid gap-3 " + (st?.installed_version && hasUpstream ? "grid-cols-2" : "grid-cols-1")}>
@@ -2413,8 +3081,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                           {t("vmLxc.appEditor.latestUpstream")}
                         </div>
                         <div className={"text-lg font-semibold font-mono flex items-center gap-2 " + (hasUpdate ? "text-purple-400" : "text-foreground")}>
-                          {st?.latest_version || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
-                          {hasUpdate && st?.latest_version && (
+                          {latestVersion || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
+                          {hasUpdate && latestVersion && (
                             <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label={t("vmLxc.appEditor.updateAvailableBadge")} />
                           )}
                         </div>
@@ -2437,9 +3105,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                   Logo is optional (per-port `logo_url`); when absent
                   the row indents naturally to align with the text.
                   If we can't resolve an IP for the CT we hide the row. */}
-              {app.ports && app.ports.length > 0 && (
+              {(isOciAdguard ? true : !!app.ports?.length) && (
                 <div className="mb-3 space-y-4">
-                  {app.ports.map((p) => {
+                  {(isOciAdguard
+                    ? [
+                        { port: 80, description: app.name, scheme: "http" as const },
+                        ...(adguardSetupAvailable ? [{ port: 3000, description: "Config", scheme: "http" as const }] : []),
+                      ]
+                    : app.ports).map((p) => {
                     const url = buildWebUrl(ctIp, p.port, p.scheme, p.custom_url)
                     if (!url) return null
                     const label = p.description || app.name
@@ -2473,9 +3146,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                               <span
                                 style={categoryChipStyle(p.category, isLightTheme)}
                                 className="flex-shrink-0 px-1.5 py-0.5 border rounded text-[10px] font-medium truncate max-w-[40%]"
-                                title={p.category}
+                                title={getCategoryLabel(t, p.category)}
                               >
-                                {p.category}
+                                {getCategoryLabel(t, p.category)}
                               </span>
                             )}
                           </div>
@@ -2483,6 +3156,19 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                       </div>
                     )
                   })}
+                </div>
+              )}
+
+              {/* A service has no page to open: its address is shown as
+                  text, on the ports of its container. */}
+              {!app.ports?.length && app.installed_via === "oci_image" && !!ctIp && ctIp !== "DHCP"
+                && !!suggestions?.oci_instance?.service_ports?.length && (
+                <div className="mb-3 flex flex-col gap-1">
+                  {suggestions.oci_instance.service_ports.map((p) => (
+                    <span key={`${p.port}/${p.protocol}`} className="font-mono text-sm text-foreground">
+                      {ctIp.split("/")[0]}:{p.port}{p.protocol === "udp" ? "/udp" : ""}
+                    </span>
+                  ))}
                 </div>
               )}
 
@@ -2561,12 +3247,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           hasn't been registered yet is shown as a chip with a
           one-click Register button. Filtered against the sidecar's
           `helper_slug` field so a registered app never re-appears. */}
-      {apps.length > 0 && unregisteredDetected.length > 0 && (
+      {apps.length > 0 && (unregisteredDetected.length > 0 || visibleWorkloads.length > 0) && (
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             {t("vmLxc.appEditor.alsoDetectedContainer")}
           </div>
           {unregisteredDetected.map(renderDetectionChip)}
+          {visibleWorkloads.map(renderWorkloadChip)}
         </div>
       )}
 
@@ -2588,22 +3275,27 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           <Button
             variant="outline"
             size="sm"
-            onClick={searchInstalledApplications}
+            onClick={isOciInstall ? refreshOciData : searchInstalledApplications}
             disabled={searchingApplications || editMode}
             className="min-w-[7rem] sm:min-w-0 px-2.5 sm:px-3"
-            aria-label={searchingApplications
-              ? t("vmLxc.appEditor.searchingApplications")
-              : t("vmLxc.appEditor.searchApplications")}
+            aria-label={isOciInstall
+              ? t(searchingApplications ? "vmLxc.appEditor.refreshingData" : "vmLxc.appEditor.refreshData")
+              : searchingApplications
+                ? t("vmLxc.appEditor.searchingApplications")
+                : t("vmLxc.appEditor.searchApplications")}
           >
             {searchingApplications
               ? <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-              : <Search className="h-4 w-4 sm:mr-1.5" />}
+              : isOciInstall ? <RefreshCw className="h-4 w-4 sm:mr-1.5" /> : <Search className="h-4 w-4 sm:mr-1.5" />}
             <span className="hidden sm:inline">
-              {searchingApplications
-                ? t("vmLxc.appEditor.searchingApplications")
-                : t("vmLxc.appEditor.searchApplications")}
+              {isOciInstall
+                ? t(searchingApplications ? "vmLxc.appEditor.refreshingData" : "vmLxc.appEditor.refreshData")
+                : searchingApplications
+                  ? t("vmLxc.appEditor.searchingApplications")
+                  : t("vmLxc.appEditor.searchApplications")}
             </span>
           </Button>
+          {!isOciInstall && (
           <Button
             variant="outline"
             size="sm"
@@ -2622,6 +3314,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               )}
             </span>
           </Button>
+          )}
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}
@@ -2651,7 +3344,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       {error && (
         <div className="text-xs text-red-400 flex items-start gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <span>{localizeAppEditorError(error, t)}</span>
         </div>
       )}
     </div>

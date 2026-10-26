@@ -67,6 +67,7 @@ export default async function OptionalSettingsPage({
       fastfetch: { doesItems: string[]; customItems: string[]; logos: Logo[] }
       figurine: { doesItems: string[] }
       log2ram: { doesItems: string[] }
+      zram: { doesItems: string[] }
     } } }
   }
   const cephItems = messages.docs.postInstall.optional.ceph.doesItems
@@ -78,6 +79,7 @@ export default async function OptionalSettingsPage({
   const fastfetchLogos = messages.docs.postInstall.optional.fastfetch.logos
   const figurineItems = messages.docs.postInstall.optional.figurine.doesItems
   const log2ramItems = messages.docs.postInstall.optional.log2ram.doesItems
+  const zramItems = messages.docs.postInstall.optional.zram.doesItems
 
   const code = (chunks: React.ReactNode) => <code>{chunks}</code>
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
@@ -310,25 +312,31 @@ EOF
       <p className="text-lg mb-2">{t("figurine.automates")}</p>
       <CopyableCode
         code={`
-# Check for previous installation and remove if found
-if command -v figurine &> /dev/null; then
-  rm -f "/usr/local/bin/figurine"
-fi
-
 # Download and install Figurine
-version="2.0.0"
-file="figurine_linux_amd64_v\${version}.tar.gz"
+(
+set -e
+version="\${FIGURINE_VERSION:-2.1.1}"
+arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+case "$arch" in
+  amd64|x86_64) arch="amd64" ;;
+  arm64|aarch64) arch="arm64" ;;
+  armhf|armv7l|armv8l) arch="arm" ;;
+  *) echo "Unsupported architecture for Figurine: $arch" >&2; exit 1 ;;
+esac
+file="figurine_linux_\${arch}_v\${version}.tar.gz"
 url="https://github.com/arsham/figurine/releases/download/v\${version}/\${file}"
-wget -qO "/tmp/\${file}" "\${url}"
-tar -xf "/tmp/\${file}" -C "/tmp"
-mv "/tmp/deploy/figurine" "/usr/local/bin/figurine"
-chmod +x "/usr/local/bin/figurine"
+temp_dir="$(mktemp -d)"
+trap 'rm -rf "$temp_dir"' EXIT
+wget -qO "\${temp_dir}/\${file}" "\${url}"
+tar -xf "\${temp_dir}/\${file}" -C "$temp_dir"
+install -m 0755 "\${temp_dir}/deploy/figurine" "/usr/local/bin/figurine"
 
 # Create welcome message script
 cat << 'EOF' > "/etc/profile.d/figurine.sh"
 /usr/local/bin/figurine -f "3d.flf" $(hostname)
 EOF
 chmod +x "/etc/profile.d/figurine.sh"
+)
   `}
       />
 
@@ -370,6 +378,30 @@ chmod +x "/etc/profile.d/figurine.sh"
         <strong>{t("log2ram.verifyLabel")}</strong>
       </p>
       <CopyableCode code={t.raw("log2ram.verifyCode") as string} />
+
+      <StepHeading number={8} label={t("stepLabel")} title={t("zram.title")} />
+
+      <p className="mb-4">
+        {t.rich("zram.intro", { code })}
+      </p>
+
+      <p className="mb-4">
+        <strong>{t("zram.doesLabel")}</strong>
+      </p>
+      <ul className="list-disc pl-5 mb-4">
+        {zramItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`zram.doesItems.${idx}`, { code })}</li>
+        ))}
+      </ul>
+
+      <p className="mb-2">
+        <strong>{t("zram.howUseLabel")}</strong> {t("zram.howUseBody")}
+      </p>
+
+      <p className="text-lg mt-6 mb-2">
+        <strong>{t("zram.verifyLabel")}</strong>
+      </p>
+      <CopyableCode code={t.raw("zram.verifyCode") as string} />
 
       <section className="mt-12 p-4 bg-blue-100 rounded-md">
         <h2 className="text-xl font-semibold mb-2">{t("autoApplication.title")}</h2>

@@ -42,6 +42,9 @@ screen_capture="/tmp/proxmenux_add_gpu_vm_screen_$$.txt"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
 if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
@@ -113,11 +116,12 @@ _get_pci_driver() {
 }
 
 _add_line_if_missing() {
+    pmx_journal_context "_add_line_if_missing" "1.1" "add_gpu_vm.sh"
     local line="$1"
     local file="$2"
-    touch "$file"
+    [[ -f "$file" ]] || pmx_write_file "$file" < /dev/null
     if ! grep -qF "$line" "$file"; then
-        echo "$line" >> "$file"
+        echo "$line" | pmx_append_file "$file"
         HOST_CONFIG_CHANGED=true
     fi
 }
@@ -335,6 +339,11 @@ evaluate_host_reboot_requirement() {
                 needs_change=true
             fi
         done
+        # The state alone is not enough: its udev rule may have been removed.
+        if declare -F _proxmenux_vfio_bind_udev_rule_current >/dev/null 2>&1 \
+           && ! _proxmenux_vfio_bind_udev_rule_current; then
+            needs_change=true
+        fi
         _file_has_exact_line "softdep nvidia pre: vfio-pci" "$vfio_conf" || needs_change=true
         _file_has_exact_line "softdep nvidia_drm pre: vfio-pci" "$vfio_conf" || needs_change=true
         _file_has_exact_line "softdep nvidia_modeset pre: vfio-pci" "$vfio_conf" || needs_change=true
@@ -454,12 +463,14 @@ _is_pci_slot_assigned_to_vm() {
 
     local pci_full="$1"
     local vmid="$2"
-    local slot_base
-    slot_base="${pci_full#0000:}"
-    slot_base="${slot_base%.*}"   # 01:00
+    local bdf slot_base
+    bdf="${pci_full#0000:}"       # 01:00.0
+    slot_base="${bdf%.*}"         # 01:00
 
+    # The device itself or its whole slot; another function at the same slot
+    # is a different device.
     qm config "$vmid" 2>/dev/null \
-        | grep -qE "^hostpci[0-9]+:.*(0000:)?${slot_base}(\\.[0-7])?([,[:space:]]|$)"
+        | grep -qE "^hostpci[0-9]+:.*(0000:)?(${bdf}|${slot_base})([,;[:space:]]|$)"
 }
 
 # Match a specific PCI function when possible.
@@ -670,6 +681,7 @@ check_iommu_enabled() {
 }
 
 _enable_iommu_cmdline() {
+    pmx_journal_context "_enable_iommu_cmdline" "1.1" "add_gpu_vm.sh"
     local cpu_vendor
     cpu_vendor=$(grep -m1 "vendor_id" /proc/cpuinfo 2>/dev/null | awk '{print $3}')
 
@@ -692,8 +704,9 @@ _enable_iommu_cmdline() {
         # systemd-boot / ZFS
         if ! grep -q "$iommu_param" "$cmdline_file"; then
             cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)"
-            sed -i "s|\\s*$| ${iommu_param} iommu=pt|" "$cmdline_file"
+            pmx_edit_file "$cmdline_file" "s|\\s*$| ${iommu_param} iommu=pt|"
             proxmox-boot-tool refresh >/dev/null 2>&1 || true
+            pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
             msg_ok "$(translate 'IOMMU parameters added to /etc/kernel/cmdline')"
         else
             msg_ok "$(translate 'IOMMU already configured in /etc/kernel/cmdline')"
@@ -702,8 +715,9 @@ _enable_iommu_cmdline() {
         # GRUB
         if ! grep -q "$iommu_param" "$grub_file"; then
             cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)"
-            sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|" "$grub_file"
+            pmx_edit_file "$grub_file" "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$| ${iommu_param} iommu=pt\"|"
             update-grub >/dev/null 2>&1 || true
+            pmx_record_execution "update GRUB configuration" "update-grub"
             msg_ok "$(translate 'IOMMU parameters added to GRUB')"
         else
             msg_ok "$(translate 'IOMMU already configured in GRUB')"
@@ -1107,6 +1121,7 @@ analyze_iommu_group() {
     local group_dir="/sys/kernel/iommu_groups/${IOMMU_GROUP}/devices"
     local display_lines=""
     local extra_devices=0
+    local other_slot_devices=0
 
     for dev_path in "${group_dir}/"*; do
         [[ -e "$dev_path" ]] || continue
@@ -1135,8 +1150,16 @@ analyze_iommu_group() {
         display_lines+="  • ${dev}  ${dev_name}  [${dev_driver}]\n"
 
         [[ "$dev" != "$pci_full" ]] && extra_devices=$((extra_devices + 1))
+        [[ "${dev%.*}" != "${pci_full%.*}" ]] && other_slot_devices=$((other_slot_devices + 1))
     done
 
+    if [[ $other_slot_devices -gt 0 ]]; then
+        local box_h=$(( 13 + ${#IOMMU_DEVICES[@]} ))
+        (( box_h > 24 )) && box_h=24
+        _pmx_msgbox "$(translate 'IOMMU Group') ${IOMMU_GROUP}" \
+            "\n$(translate 'These devices share the IOMMU group of the selected GPU and will be assigned to the VM with it:')\n\n${display_lines}\n$(translate 'The host loses access to them. If the group includes a network or storage controller the host needs, cancel at the summary.')" \
+            "$box_h" 82
+    fi
 }
 
 # Returns 0 if the BDF at $1 is a real PCI audio device (class 04xx).
@@ -1395,7 +1418,7 @@ check_switch_mode() {
         SWITCH_FROM_LXC=true
         SWITCH_LXC_LIST=$(IFS=', '; echo "${lxc_affected[*]}")
 
-        local msg action_choice
+        local msg action_choice oci_count=0
         msg="\n$(translate 'The selected GPU is currently used by the following LXC container(s):')\n\n"
         local i
         for i in "${!LXC_AFFECTED_CTIDS[@]}"; do
@@ -1404,8 +1427,13 @@ check_switch_mode() {
             onboot_txt="onboot=0"
             [[ "${LXC_AFFECTED_RUNNING[$i]}" == "1" ]] && status_txt="$(translate 'running')"
             [[ "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]] && onboot_txt="onboot=1"
+            if pmx_lxc_is_oci "${LXC_AFFECTED_CTIDS[$i]}"; then
+                onboot_txt+=", OCI"
+                oci_count=$((oci_count + 1))
+            fi
             msg+="  •  CT ${LXC_AFFECTED_CTIDS[$i]} (${LXC_AFFECTED_NAMES[$i]}) [${status_txt}, ${onboot_txt}]\n"
         done
+        [[ "$oci_count" -gt 0 ]] && msg+="\n$(translate 'OCI containers keep their configuration: they are stopped and their Start on boot is disabled. Their GPU is removed from OCI manager Apps.')\n"
         msg+="\n$(translate 'VM passthrough requires exclusive VFIO binding of the GPU.')\n"
         msg+="$(translate 'Choose how to handle affected LXC containers before switching to VM mode.')\n\n"
         [[ "$running_count" -gt 0 ]] && \
@@ -1414,17 +1442,22 @@ check_switch_mode() {
             msg+="\Z1\Zb$(translate 'Start on boot enabled (onboot=1)'): ${onboot_count}\Zn\n"
         msg+="\n\Z1$(translate 'After this LXC → VM switch, reboot the host so the new binding state is applied cleanly.')\Zn"
 
-        action_choice=$(_pmx_menu --default-item "2" \
-            "$(translate 'GPU Used in LXC Containers')" \
-            "$msg" 25 96 8 \
-            "1" "$(translate 'Keep GPU in LXC config (disable Start on boot)')" \
-            "2" "$(translate 'Remove GPU from LXC config (keep Start on boot)')") || exit 0
+        if [[ "$oci_count" -eq ${#LXC_AFFECTED_CTIDS[@]} ]]; then
+            LXC_SWITCH_ACTION="keep_gpu_disable_onboot"
+            _pmx_msgbox "$(translate 'GPU Used in LXC Containers')" "$msg" 25 96
+        else
+            action_choice=$(_pmx_menu --default-item "2" \
+                "$(translate 'GPU Used in LXC Containers')" \
+                "$msg" 25 96 8 \
+                "1" "$(translate 'Keep GPU in LXC config (disable Start on boot)')" \
+                "2" "$(translate 'Remove GPU from LXC config (keep Start on boot)')") || exit 0
 
-        case "$action_choice" in
-            1) LXC_SWITCH_ACTION="keep_gpu_disable_onboot" ;;
-            2) LXC_SWITCH_ACTION="remove_gpu_keep_onboot" ;;
-            *) exit 0 ;;
-        esac
+            case "$action_choice" in
+                1) LXC_SWITCH_ACTION="keep_gpu_disable_onboot" ;;
+                2) LXC_SWITCH_ACTION="remove_gpu_keep_onboot" ;;
+                *) exit 0 ;;
+            esac
+        fi
     else
         SWITCH_FROM_LXC=false
     fi
@@ -1436,7 +1469,9 @@ check_switch_mode() {
         local vmid
         vmid=$(basename "$conf" .conf)
         [[ "$vmid" == "$SELECTED_VMID" ]] && continue  # same target VM, no conflict
-        if grep -qE "hostpci[0-9]+:.*${pci_slot}" "$conf"; then
+        # Another VM has the GPU when it has the function of the GPU itself;
+        # a neighbour at the same slot, as a USB controller, is not the GPU.
+        if [[ -n "$(_vm_gpu_hostpci_indexes "$conf" "$SELECTED_GPU_PCI" "${IOMMU_DEVICES[@]}")" ]]; then
             vm_src_id="$vmid"
             vm_src_name=$(grep "^name:" "$conf" 2>/dev/null | awk '{print $2}')
             break
@@ -1452,9 +1487,8 @@ check_switch_mode() {
             msg="\n$(translate 'The selected GPU is already assigned to another VM that is currently running:')\n\n"
             msg+="  VM ${vm_src_id} (${vm_src_name:-VM-${vm_src_id}})\n\n"
             msg+="$(translate 'The same GPU cannot be used by two VMs at the same time.')\n\n"
-            msg+="$(translate 'Next step: stop that VM first, then run')\n"
-            msg+="  Hardware Graphics → Add GPU to VM\n"
-            msg+="$(translate 'to move the GPU safely.')"
+            msg+="$(translate 'Stop that VM, then choose:')\n"
+            msg+="  $(translate 'Hardware: GPUs and Coral-TPU') → $(translate 'Add GPU to VM    (Intel | AMD | NVIDIA)')\n"
 
             _pmx_msgbox "$(translate 'GPU Busy in Running VM')" "$msg" 16 78
             exit 0
@@ -1613,9 +1647,12 @@ add_vfio_modules() {
 
 # ── vfio-pci IDs — merge with existing ones ─────────────
 configure_vfio_pci_ids() {
+    pmx_journal_context "configure_vfio_pci_ids" "1.1" "add_gpu_vm.sh"
     msg_info "$(translate 'Configuring vfio-pci binding...')"
     local vfio_conf="/etc/modprobe.d/vfio.conf"
-    touch "$vfio_conf"
+    local vfio_tmp
+    vfio_tmp=$(mktemp)
+    [[ -f "$vfio_conf" ]] && cat "$vfio_conf" > "$vfio_tmp"
 
     # ────────────────────────────────────────────────────────────────
     # NVIDIA: per-BDF binding (multi-GPU safe). The `options vfio-pci
@@ -1629,9 +1666,9 @@ configure_vfio_pci_ids() {
         # Clean up any previous ids= line that captured this NVIDIA
         # (older versions of this script wrote it; remove to avoid
         # collateral grabs on sibling GPUs of the same model).
-        if grep -qE '^options vfio-pci ids=' "$vfio_conf" 2>/dev/null; then
+        if grep -qE '^options vfio-pci ids=' "$vfio_tmp" 2>/dev/null; then
             local existing_line ids_part
-            existing_line=$(grep '^options vfio-pci ids=' "$vfio_conf" | head -1)
+            existing_line=$(grep '^options vfio-pci ids=' "$vfio_tmp" | head -1)
             ids_part=$(echo "$existing_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
 
             local kept=()
@@ -1644,20 +1681,30 @@ configure_vfio_pci_ids() {
                 $drop || kept+=("$eid")
             done
 
-            sed -i '/^options vfio-pci ids=/d' "$vfio_conf"
+            sed '/^options vfio-pci ids=/d' "$vfio_tmp" > "${vfio_tmp}.next"
+            mv "${vfio_tmp}.next" "$vfio_tmp"
             if [[ ${#kept[@]} -gt 0 ]]; then
                 local kept_str
                 kept_str=$(IFS=','; echo "${kept[*]}")
-                echo "options vfio-pci ids=${kept_str} disable_vga=1" >> "$vfio_conf"
+                echo "options vfio-pci ids=${kept_str} disable_vga=1" >> "$vfio_tmp"
             fi
             HOST_CONFIG_CHANGED=true
         fi
 
         # Ensure vfio loads before nvidia so the per-BDF override wins.
-        _add_line_if_missing "softdep nvidia pre: vfio-pci"        "$vfio_conf"
-        _add_line_if_missing "softdep nvidia_drm pre: vfio-pci"    "$vfio_conf"
-        _add_line_if_missing "softdep nvidia_modeset pre: vfio-pci" "$vfio_conf"
-        _add_line_if_missing "softdep nvidia_uvm pre: vfio-pci"    "$vfio_conf"
+        local softdep
+        for softdep in \
+            "softdep nvidia pre: vfio-pci" \
+            "softdep nvidia_drm pre: vfio-pci" \
+            "softdep nvidia_modeset pre: vfio-pci" \
+            "softdep nvidia_uvm pre: vfio-pci"; do
+            if ! grep -qF "$softdep" "$vfio_tmp"; then
+                echo "$softdep" >> "$vfio_tmp"
+                HOST_CONFIG_CHANGED=true
+            fi
+        done
+        pmx_write_file "$vfio_conf" < "$vfio_tmp"
+        rm -f "$vfio_tmp"
 
         # Per-BDF binder rule. IOMMU_DEVICES has the BDFs for the GPU
         # we're passing (and any same-group functions like the audio
@@ -1682,7 +1729,7 @@ configure_vfio_pci_ids() {
     # Collect existing IDs (if any)
     local existing_ids=()
     local existing_line
-    existing_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+    existing_line=$(grep "^options vfio-pci ids=" "$vfio_tmp" 2>/dev/null | head -1)
     if [[ -n "$existing_line" ]]; then
         local ids_part
         ids_part=$(echo "$existing_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
@@ -1703,13 +1750,16 @@ configure_vfio_pci_ids() {
     ids_str=$(IFS=','; echo "${all_ids[*]}")
 
     local existing_full_line
-    existing_full_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+    existing_full_line=$(grep "^options vfio-pci ids=" "$vfio_tmp" 2>/dev/null | head -1)
     local new_full_line="options vfio-pci ids=${ids_str} disable_vga=1"
     if [[ "$existing_full_line" != "$new_full_line" ]]; then
-        sed -i '/^options vfio-pci ids=/d' "$vfio_conf"
-        echo "$new_full_line" >> "$vfio_conf"
+        sed '/^options vfio-pci ids=/d' "$vfio_tmp" > "${vfio_tmp}.next"
+        mv "${vfio_tmp}.next" "$vfio_tmp"
+        echo "$new_full_line" >> "$vfio_tmp"
         HOST_CONFIG_CHANGED=true
     fi
+    pmx_write_file "$vfio_conf" < "$vfio_tmp"
+    rm -f "$vfio_tmp"
     msg_ok "$(translate 'vfio-pci IDs configured') (${ids_str})" | tee -a "$screen_capture"
 }
 
@@ -1787,6 +1837,7 @@ sanitize_nvidia_host_stack_for_vfio() {
 
 # ── AMD ROM dump: sysfs first, VFCT ACPI table as fallback ───────────────
 _dump_rom_via_vfct() {
+    pmx_journal_context "_dump_rom_via_vfct" "1.1" "add_gpu_vm.sh"
     local rom_dest="$1"
     local vfct_file="/sys/firmware/acpi/tables/VFCT"
     [[ -f "$vfct_file" ]] || return 1
@@ -1808,11 +1859,16 @@ _dump_rom_via_vfct() {
         return 1
     fi
 
-    dd if="$vfct_file" bs=1 skip=64 count="$img_length" of="$rom_dest" 2>/dev/null
+    local rom_tmp
+    rom_tmp=$(mktemp)
+    dd if="$vfct_file" bs=1 skip=64 count="$img_length" of="$rom_tmp" 2>/dev/null
+    pmx_write_file "$rom_dest" < "$rom_tmp"
+    rm -f "$rom_tmp"
     [[ -s "$rom_dest" ]]
 }
 
 dump_amd_rom() {
+    pmx_journal_context "dump_amd_rom" "1.1" "add_gpu_vm.sh"
     local pci_full="$SELECTED_GPU_PCI"
     local rom_path="/sys/bus/pci/devices/${pci_full}/rom"
     local kvm_dir="/usr/share/kvm"
@@ -1828,14 +1884,19 @@ dump_amd_rom() {
     if [[ -f "$rom_path" ]]; then
         msg_info "$(translate 'Dumping AMD GPU ROM BIOS via sysfs...')"
         echo 1 > "$rom_path" 2>/dev/null
-        if cat "$rom_path" > "$rom_dest" 2>>"$LOG_FILE" && [[ -s "$rom_dest" ]]; then
+        local rom_tmp
+        rom_tmp=$(mktemp)
+        if cat "$rom_path" > "$rom_tmp" 2>>"$LOG_FILE" && [[ -s "$rom_tmp" ]]; then
+            pmx_write_file "$rom_dest" < "$rom_tmp"
+            rm -f "$rom_tmp"
             echo 0 > "$rom_path" 2>/dev/null
             AMD_ROM_FILE="$rom_filename"
             msg_ok "$(translate 'GPU ROM dumped to') ${rom_dest}" | tee -a "$screen_capture"
             return 0
         fi
+        rm -f "$rom_tmp"
         echo 0 > "$rom_path" 2>/dev/null
-        rm -f "$rom_dest"
+        pmx_remove_file "$rom_dest"
         msg_warn "$(translate 'sysfs ROM dump failed — trying ACPI VFCT table...')"
     else
         msg_info "$(translate 'No sysfs ROM entry — trying ACPI VFCT table...')"
@@ -1848,7 +1909,7 @@ dump_amd_rom() {
         return 0
     fi
 
-    rm -f "$rom_dest"
+    pmx_remove_file "$rom_dest"
     msg_warn "$(translate 'ROM dump not available — configuring without romfile.')"
     msg_warn "$(translate 'Passthrough may still work without a ROM file.')"
 }
@@ -1909,7 +1970,15 @@ cleanup_lxc_configs() {
             msg_ok "$(translate 'LXC already stopped') ${ctid}" | tee -a "$screen_capture"
         fi
 
-        if [[ "$LXC_SWITCH_ACTION" == "keep_gpu_disable_onboot" ]]; then
+        # OCI manager Apps keeps the record of what an OCI container has: its
+        # configuration is not edited from here.
+        local action="$LXC_SWITCH_ACTION"
+        if pmx_lxc_is_oci "$ctid"; then
+            action="keep_gpu_disable_onboot"
+            msg_warn "$(translate 'OCI container, configuration kept. Remove its GPU from OCI manager Apps: CT') ${ctid}" | tee -a "$screen_capture"
+        fi
+
+        if [[ "$action" == "keep_gpu_disable_onboot" ]]; then
             if [[ "${LXC_AFFECTED_ONBOOT[$i]}" == "1" ]]; then
                 if pct set "$ctid" -onboot 0 >>"$LOG_FILE" 2>&1; then
                     msg_warn "$(translate 'Start on boot disabled for LXC') ${ctid}" | tee -a "$screen_capture"
@@ -1919,7 +1988,7 @@ cleanup_lxc_configs() {
             fi
         fi
 
-        if [[ "$LXC_SWITCH_ACTION" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
+        if [[ "$action" == "remove_gpu_keep_onboot" && -f "$conf" ]]; then
             _remove_selected_gpu_from_lxc_conf "$conf"
             msg_ok "$(translate 'GPU access removed from LXC') ${ctid}" | tee -a "$screen_capture"
         fi
@@ -1957,12 +2026,14 @@ cleanup_vm_config() {
     local src_conf="/etc/pve/qemu-server/${SWITCH_VM_SRC}.conf"
     if [[ -f "$src_conf" ]]; then
         msg_info "$(translate 'Removing GPU from VM') ${SWITCH_VM_SRC}..."
-        # Precise regex: slot must be followed by ".<function>" and a
-        # delimiter. Kept in sync with switch_gpu_mode.sh. A looser
-        # ".*${pci_slot}" would match the slot as a substring and wipe
-        # unrelated hostpci entries (e.g. slot "00:02" matching inside
-        # a dGPU BDF 0000:02:00.0).
-        sed -E -i "/^hostpci[0-9]+:[[:space:]]*(0000:)?${pci_slot}\.[0-7]([,[:space:]]|$)/d" "$src_conf"
+        # Only the entries that carry the GPU are removed: its own function,
+        # the audio at its slot and the devices of its IOMMU group. Other
+        # functions at the same slot stay in the source VM.
+        local _gpu_idx
+        while IFS= read -r _gpu_idx; do
+            [[ -n "$_gpu_idx" ]] || continue
+            _vm_remove_hostpci_index "$SWITCH_VM_SRC" "$_gpu_idx" "$LOG_FILE"
+        done < <(_vm_gpu_hostpci_indexes "$src_conf" "$SELECTED_GPU_PCI" "${IOMMU_DEVICES[@]}")
         msg_ok "$(translate 'GPU removed from VM') ${SWITCH_VM_SRC}" | tee -a "$screen_capture"
 
         # Cascade cleanup: detect audio companions orphaned in the
@@ -2159,11 +2230,14 @@ _configure_nvidia_kvm_hide() {
 
 # ── Update initramfs ─────────────────────────────────────
 update_initramfs_host() {
+    pmx_journal_context "update_initramfs_host" "1.1" "add_gpu_vm.sh"
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    pmx_record_execution "rebuild initramfs" "update-initramfs -u -k all"
     # Copy the freshly-built initramfs to the EFI System Partition.
     # Without this the bootloader keeps using the previous initramfs.
     proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
+    pmx_record_execution "refresh Proxmox boot configuration" "proxmox-boot-tool refresh"
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
 }
 

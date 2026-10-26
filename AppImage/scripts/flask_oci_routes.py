@@ -545,6 +545,15 @@ def update_auth_key(app_id: str):
         }), 500
 
 
+def _sync_managed_registry(app_id: str) -> None:
+    """Keep the Updates tab of the container in step with this page."""
+    try:
+        import managed_installs
+        managed_installs.refresh_oci_app(app_id)
+    except Exception as e:
+        logger.warning(f"Could not refresh the managed registry for {app_id}: {e}")
+
+
 @oci_bp.route("/installed/<app_id>/update-check", methods=["GET"])
 @require_auth
 def installed_update_check(app_id: str):
@@ -558,6 +567,8 @@ def installed_update_check(app_id: str):
     try:
         force = request.args.get("force", "").lower() in ("1", "true", "yes")
         result = oci_manager.check_app_update_available(app_id, force=force)
+        if force:
+            _sync_managed_registry(app_id)
         return jsonify({"success": True, **result})
     except Exception as e:
         logger.error(f"Failed to check app update for {app_id}: {e}")
@@ -572,6 +583,8 @@ def installed_update_apply(app_id: str):
     would cause an unnecessary brief disconnect."""
     try:
         result = oci_manager.update_app(app_id)
+        if result.get("success"):
+            _sync_managed_registry(app_id)
         status_code = 200 if result.get("success") else 500
         return jsonify(result), status_code
     except Exception as e:

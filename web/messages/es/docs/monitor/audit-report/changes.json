@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Cambios | Auditoría e informes",
+    "description": "Registro de cambios de Auditoría e informes: qué modificó ProxMenux en el host, el estado anterior, las diferencias y si puede deshacerse."
+  },
+  "header": {
+    "title": "Cambios",
+    "description": "Registro de las operaciones realizadas por ProxMenux en el host y, cuando se capturó, el estado anterior y posterior de cada una.",
+    "section": "Auditoría e informes"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Del script ejecutado al cambio realizado",
+            "body": "Una función extensa puede cambiar solo dos líneas. El registro guarda cada operación concreta con el script, función y versión responsables, el recurso afectado, las diferencias y la posibilidad de deshacerla."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Script",
+                "detail": "función + versión"
+              },
+              {
+                "label": "Captura",
+                "detail": "contenido previo"
+              },
+              {
+                "label": "Operación",
+                "detail": "archivo · paquete · servicio"
+              },
+              {
+                "label": "Registro",
+                "detail": "atribución + diferencia"
+              }
+            ],
+            "caption": "La captura se realiza al ejecutar la operación y se consolida cuando Monitor lee el registro."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Vista Cambios de Auditoría e informes con entradas agrupadas por opción de postinstalación y script",
+            "caption": "La vista Cambios, con la diferencia de un archivo editado por ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Tipos de entrada",
+      "intro": "El filtro de la parte superior separa las entradas por tipo.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Qué registra"
+            ],
+            "rows": [
+              [
+                "Configuración",
+                "ProxMenux escribió, editó o eliminó un archivo, cambió un ajuste o alteró un servicio."
+              ],
+              [
+                "Instalaciones",
+                "ProxMenux añadió un paquete o componente, y se registran los paquetes que aparecieron realmente."
+              ],
+              [
+                "Ejecuciones",
+                "ProxMenux ejecutó un comando; sus efectos dependen del propio comando."
+              ],
+              [
+                "Aplicado",
+                "Una función se aplicó antes de que existiera el registro; no se capturó su estado anterior."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Cómo se organiza la vista",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Sección",
+              "Contenido"
+            ],
+            "rows": [
+              [
+                "Optimizaciones de post-install",
+                "Agrupadas por la opción de post-install que seleccionó el usuario."
+              ],
+              [
+                "Scripts de ProxMenux",
+                "GPU, Coral, red, almacenamiento, seguridad, utilidades y el resto de scripts instrumentados, incluidos el instalador de ProxMenux y ProxMenux Monitor."
+              ],
+              [
+                "Paquetes y utilidades instalados",
+                "Software instalado por ProxMenux en el host."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Dentro de cada sección, <strong>Por función</strong> agrupa las entradas bajo la función que las hizo."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Qué muestra cada entrada",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "El script, la función y la versión responsables.",
+              "La fecha y el recurso afectado.",
+              "El estado conocido antes y después del cambio.",
+              "Las líneas añadidas y eliminadas.",
+              "Los paquetes que se añadieron realmente.",
+              "La transición de estado de un servicio.",
+              "<strong>Deshacer esto</strong>: <em>Restaura exactamente lo que había</em>, <em>Elimina el archivo (no existía antes)</em>, <em>Se puede desinstalar el paquete</em>, una reversión parcial o <em>No puede deshacerse desde el registro</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Qué significa el estado anterior",
+      "blocks": [
+        {
+          "p": "El estado anterior puede ser contenido capturado, un archivo creado por primera vez o un estado desconocido. Los cambios anteriores al registro no pueden reconstruirse; al volver a ejecutar la función, primero se captura el estado encontrado en ese momento."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Alcance del registro",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Los cambios manuales y los de otro software no se registran.",
+              "Solo se cubren las operaciones que pasan por las primitivas de auditoría de ProxMenux.",
+              "El registro nunca bloquea la operación que describe: si la entrada no puede escribirse, la operación continúa.",
+              "Los cambios sucesivos de un mismo recurso se muestran como el origen conocido frente al estado actual."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Evidencia guardada",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Comportamiento"
+            ],
+            "rows": [
+              [
+                "Entradas",
+                "Se conservan en el host; del registro no se elimina nada automáticamente."
+              ],
+              [
+                "Contenido capturado",
+                "Un objeto capturado se conserva mientras alguna entrada lo referencia."
+              ],
+              [
+                "Tamaño de una captura",
+                "El contenido de más de 1 MiB no se guarda entero; la entrada registra que la captura se omitió por su tamaño."
+              ],
+              [
+                "Lectura",
+                "El Monitor no carga objetos guardados de más de 2 MiB."
+              ],
+              [
+                "Diferencia",
+                "Se muestran como máximo 400 líneas; una diferencia más larga se marca como truncada."
+              ],
+              [
+                "Listado",
+                "La API devuelve por defecto 200 entradas por petición, con un máximo de 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Guardar el contenido no implica deshacer automáticamente",
+            "body": "El contenido anterior puede consultarse y restaurarse a mano, pero la vista Cambios no revierte operaciones. Una entrada de ejecución registra el comando sin conocer todos los efectos de la herramienta ejecutada."
+          }
+        }
+      ]
+    }
+  ]
+}

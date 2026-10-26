@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Same payload, three backends",
-    "body": "Every backup produces the same three payloads (rootfs, manifest, applications). What changes between destinations is how those payloads are stored and how the operator retrieves them for a restore. Each backend is implemented as a separate function in <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — but all four share the same staging step (<code>hb_prepare_staging</code>) and the same restore code path. The choice of destination only affects the write and the retrieval; it does not change what a restore does or how it consumes the archive."
+    "body": "Every backup produces the same three payloads (rootfs, manifest, applications). What changes between destinations is how those payloads are stored and how the operator retrieves them for a restore. Each backend is implemented as a separate function in <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — but all three share the same staging step (<code>hb_prepare_staging</code>) and the same restore code path. The choice of destination only affects the write and the retrieval; it does not change what a restore does or how it consumes the archive."
   },
   "comparison": {
     "heading": "Feature comparison",
@@ -29,8 +29,8 @@
       {
         "feature": "Compression",
         "local": "zstd (default level) via <code>tar --zstd</code>. gzip fallback.",
-        "pbs": "PBS-managed. The client streams uncompressed; the server chunks + compresses.",
-        "borg": "Borg's built-in (lz4 default). Configurable at repo init."
+        "pbs": "Managed by proxmox-backup-client. ProxMenux does not override compression settings.",
+        "borg": "Borg’s built-in compression. ProxMenux invokes borg create without overriding compression settings."
       },
       {
         "feature": "Deduplication",
@@ -76,7 +76,7 @@
   },
   "sameArchive": {
     "heading": "The archive layout does not change with the destination",
-    "body": "Inside any of the three destinations, the same <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> layout described in <em>How it works</em> is present. A <code>.tar.zst</code> extracted from a local archive, a <code>.pxar</code> restored from PBS, and a Borg archive extracted with <code>borg extract</code> all yield an identical directory tree. The restore code path (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) reads the same three payloads without knowing which destination they came from."
+    "body": "Wherever the backup is stored, it always holds the same three blocks described in <em>How it works</em>: the filesystem (<code>rootfs/</code>), the metadata (<code>metadata/</code>) and the manifest (<code>manifest.json</code>). Extracting a local <code>.tar.zst</code> archive, restoring a <code>.pxar</code> from PBS or extracting a Borg archive all yield an identical directory tree. The restore therefore always reads the same files, whichever destination the backup comes from."
   },
   "extractStandalone": {
     "heading": "Extracting a backup outside of ProxMenux",

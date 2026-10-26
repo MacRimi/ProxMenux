@@ -27,7 +27,7 @@
       "At least one physical disk not in use by the host or any other guest."
     ],
     "warnTitle": "Privileged container required",
-    "warnBody": "Direct device passthrough to an LXC container only works if the container is <strong>privileged</strong>. If the script detects <code>unprivileged: 1</code> in the config it offers to convert it in place (edits <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Cancel if you cannot accept the security trade-off of a privileged container."
+    "warnBody": "This script requires a <strong>privileged</strong> container for its direct disk attachment. If it detects <code>unprivileged: 1</code>, it offers to edit <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> in place. This changes the security model and does not remap existing file ownership. Back up the container and verify ownership before accepting, or rebuild it as privileged."
   },
   "steps": {
     "heading": "Step-by-step",
@@ -83,9 +83,9 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "unprivTitle": "\"Cannot continue with an unprivileged container\"",
-    "unprivBody": "You declined the conversion offer. Either re-run and accept the conversion, or convert the container manually by editing <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> and replacing <code>unprivileged: 1</code> with <code>unprivileged: 0</code>. You can also rebuild the container as privileged if you prefer not to convert in place.",
+    "unprivBody": "You declined the conversion, so the script stopped without changing anything. To continue, run it again and accept: the script stops the container, backs up its configuration to <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> and replaces <code>unprivileged: 1</code> with <code>unprivileged: 0</code>. That flag change alone does not convert the UID/GID ownership of existing files, so back up the container and fix the ownership first; alternatively, restore or rebuild the container as privileged.",
     "permsTitle": "Permissions inside the container are wrong",
-    "permsBody": "Mounts from the host into a privileged container land as <code>root:root</code>. If the service inside the CT runs as a different user (e.g. <code>www-data</code> for Nextcloud), <code>chown</code>/<code>chmod</code> inside the container to match its UID/GID after the first mount."
+    "permsBody": "Existing file ownership is retained when a partition is mounted into a privileged container; a newly formatted filesystem is often owned by <code>root:root</code>. If the service runs as another user (e.g. <code>www-data</code> for Nextcloud), inspect its UID/GID and adjust the required files with <code>chown</code>/<code>chmod</code>. Changes also affect the underlying disk."
   },
   "related": {
     "heading": "Related",

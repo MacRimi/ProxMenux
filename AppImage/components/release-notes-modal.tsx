@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages, Package, ScrollText, ArrowUpCircle, Search } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
@@ -18,6 +18,35 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.7": {
+    date: "October 26, 2026",
+    changes: {
+      added: [
+        "Audit & Report — a new page under Admin that assesses the node against forty-three Proxmox checks, keeps a journal of everything ProxMenux changed on the host, lets the expected state be declared as a policy and prints focused reports.",
+        "OCI manager Apps (Technology Preview) — applications installed from their official container images as native Proxmox LXC, with no Docker engine: a catalog of 514 applications, multi-container applications, hardware acceleration, updates that keep the data and recovery after a restore.",
+        "OCI applications in the Monitor — registered in the App tab, updated and modified from the Updates tab, with a Logs tab that follows their console and a watchdog switch.",
+        "ProxMenux on Proxmox Backup Server — the same installer, a menu, post-install and a Monitor of its own; a remote PBS can also be watched from PVE with a read-only token (contributed by @jcastro).",
+        "Search in the main menu across ProxMenux options, OCI applications and Helper-Scripts, and Helper-Scripts addons run on the host or inside the LXC they belong to.",
+        "Backup jobs of VMs and LXCs listed, created, edited and run from the Backup tab (contributed by @MattiaC46); VM and CT backups can be deleted and the retention of each backup storage edited (contributed by @jcastro).",
+        "Notifications in the reader's language (contributed by @Vaso73), a delivery history in the notification settings and grouped application update notifications.",
+        "The NVIDIA Container Toolkit installs with the driver, a ZRAM swap profile joins the customizable post-install (contributed by @phyrexia) and FygoOS joins the NAS systems of Create VM.",
+      ],
+      changed: [
+        "Read-only API tokens only read: every action that changes something, opening a terminal and revealing a stored credential require a full-admin token (reported by @f3rs3n).",
+        "Docker applications are registered with their own identity while their updates stay tied to the image (contributed by @byGarcia).",
+        "The observations of a disk belong to its serial number, and idle mechanical disks are left to spin down (reported by @spectante).",
+        "Find applications recognises services installed by hand and Docker containers with published ports, and LXC package checks and installs are separate steps (contributed by @Vaso73).",
+        "The node name in the header opens the other Monitors of the cluster and the configured PBS servers.",
+      ],
+      fixed: [
+        "Proxmox notifications arrive with HTTPS enabled on the Monitor, through a local listener that needs no certificate.",
+        "The Monitor leaves /etc/pve alone while Proxmox restarts its cluster service (reported by @shtefko).",
+        "Host backups work on hosts with SELinux (reported by @sbaghdadi), and the node web certificate is restored on the node it belongs to (reported by @tropicaljoe).",
+        "Log2RAM keeps the newest records of the journal and compresses rotated logs at once (reported by @f3rs3n).",
+        "Changing the mode of a GPU leaves the devices that share its slot alone (reported by @LucasR3C3).",
+      ],
+    },
+  },
   "1.2.6": {
     date: "September 2, 2026",
     changes: {
@@ -305,34 +334,64 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 // that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.aiCustomEndpoint",
-    text: "AI Assistant custom OpenAI endpoint — LiteLLM, LM Studio, LocalAI, vLLM, OmniRoute and any self-hosted proxy on private IPs, loopback or Docker networks are recognised when loading the model catalogue. The dropdown surfaces the server's error (or the underlying network reason) directly under the Load button (#325, reported by @jorgeffonte).",
+    icon: <Shield className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditAssessment",
+    text: "Audit & Report — a new page that documents and assesses the node. The Assessment runs a catalogue of checks across security, backups, capacity, storage, network, hardware, guests and system, classifying each finding as critical, warning, observation or conformant and stating what it read rather than judging it.",
   },
   {
-    icon: <Wrench className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.secureGatewayArch",
-    text: "Secure Gateway wizard — the Alpine template download, local template selection and pct create all match the host's real architecture, so x86_64 hosts receive amd64 containers and arm64 hosts receive arm64 containers (#324, reported by @N0X4DD0).",
+    icon: <ScrollText className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.changeJournal",
+    text: "Change journal — a Changes view that lists exactly what ProxMenux modified on this host: every configuration file, package and service it touched, with the prior state of each, deduplicated to a current-state view that shows the host as it stands now rather than a log of every run.",
   },
   {
-    icon: <Bell className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.atomicNotifications",
-    text: "Notification events reserve their deduplication fingerprint atomically before AI processing and channel delivery, so concurrent collectors, completion callbacks or parallel Monitor processes cannot send the same event twice. The reservation is released when no channel succeeds, preserving retries.",
+    icon: <Activity className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditReports",
+    text: "Reports — a full audit plus focused Security review, Backup assurance and Capacity & wear reports, each opening on its own posture header, and a printable Inventory; all export to PDF. A security assessment asks before running Lynis so a run stays fast.",
+  },
+  {
+    icon: <Sliders className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.auditPolicyBaseline",
+    text: "Policy and baseline — declare what the host is expected to be (backup requirements, firewall, root SSH login) so findings grade against it, mark a run as the reference, and see what changed since, with new, resolved and accepted findings kept apart.",
+  },
+  {
+    icon: <Package className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociCatalog",
+    text: "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries 514 applications.",
+  },
+  {
+    icon: <ScrollText className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociInMonitor",
+    text: "OCI applications in the Monitor — the App tab recognises them, the Updates tab updates and modifies them as the menu does, and a Logs tab follows the console output of the application live.",
+  },
+  {
+    icon: <Cpu className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociAcceleration",
+    text: "Hardware acceleration for OCI applications — the installer offers only the profiles the host can run: NVIDIA, Intel and AMD GPUs and, for Frigate, an Intel NPU or a Coral. The NVIDIA Container Toolkit installs with the driver.",
   },
   {
     icon: <DatabaseBackup className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.borgSshPort",
-    text: "Borg remote target — the Add Borg destination dialog and the shell TUI accept a custom SSH port. BORG_RSH, the auto key install flow and the capacity probe all honour it. Fully backwards compatible with existing entries created without an explicit port (suggested by @songochain in discussion #236).",
+    key: "releaseNotes.currentFeatures.ociRecovery",
+    text: "An OCI application travels with its backup — restored on this host or on another one, it is registered and managed again, and in a cluster it starts on whichever node it moves to.",
   },
   {
-    icon: <Shield className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.githubToken",
-    text: "Settings → GitHub API accepts an optional personal access token for release and tag checks when the anonymous quota is exhausted. The token is encrypted at rest and never returned to the browser; the rate-limit error is translated in every Monitor language (suggested by @SystemIdleProcess in discussion #306).",
+    icon: <Server className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.pbsSupport",
+    text: "ProxMenux on Proxmox Backup Server — it installs with the same command and opens a menu of its own, with post-install and a Monitor showing the health, datastores and tasks of the server (contributed by @jcastro).",
   },
   {
-    icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.replicationContext",
-    text: "Native Proxmox replication failure notifications resolve the replication job ID, affected VM/LXC ID and guest name; the exact error block from Proxmox is preserved as the reason, and each replication job deduplicates independently (reported by Ale R.).",
+    icon: <Search className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.menuSearch",
+    text: "Search in the main menu — a name or part of it finds a ProxMenux option, an OCI application or a Helper-Script, and opens it at its first screen.",
+  },
+  {
+    icon: <Calendar className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.guestBackupJobs",
+    text: "Backup jobs of VMs and LXCs — the Backup tab lists the scheduled jobs of Proxmox and creates, edits, enables and runs them; they are the same ones as Datacenter → Backup (contributed by @MattiaC46).",
+  },
+  {
+    icon: <Languages className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.notificationLanguage",
+    text: "Notifications in your language — titles, bodies and daily digests are written in the language chosen for notifications (contributed by @Vaso73).",
   },
 ]
 

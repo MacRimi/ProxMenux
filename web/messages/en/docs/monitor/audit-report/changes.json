@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "title": "Changes | Audit & Report",
+    "description": "The change journal of Audit & Report: what ProxMenux changed on the host, what was there before, the difference and whether it can be undone."
+  },
+  "header": {
+    "title": "Changes",
+    "description": "The journal of the operations ProxMenux performs on the host and, where it was captured, the state before and after each one.",
+    "section": "Audit & Report"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "From the script that ran to the change it made",
+            "body": "A long function may change only two lines. The journal keeps each concrete operation with the script, function and version responsible, the resource affected, the difference and whether it can be undone."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              { "label": "Script", "detail": "function + version" },
+              { "label": "Capture", "detail": "content before" },
+              { "label": "Operation", "detail": "file · package · service" },
+              { "label": "Journal", "detail": "attribution + difference" }
+            ],
+            "caption": "The capture is taken when the operation runs and is consolidated when the Monitor reads the journal."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Changes view of Audit & Report with the entries grouped by post-install option and script",
+            "caption": "The Changes view, with the difference of a file edited by ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Kinds of entry",
+      "intro": "The filter at the top separates the entries by kind.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Kind", "What it records"],
+            "rows": [
+              ["Configuration", "ProxMenux wrote, edited or removed a file, changed a setting or altered a service."],
+              ["Installations", "ProxMenux added a package or component, and the packages that actually appeared are recorded."],
+              ["Executions", "ProxMenux ran a command; what it changed is up to the command itself."],
+              ["Applied", "A function was applied before the journal existed; the state before it was not captured."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "How the view is organised",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Section", "Contents"],
+            "rows": [
+              ["Post-install optimizations", "Grouped by the post-install option the user selected."],
+              ["ProxMenux scripts", "GPU, Coral, network, storage, security, utilities and the other instrumented scripts, including the ProxMenux installer and ProxMenux Monitor."],
+              ["Installed packages and utilities", "Software ProxMenux installed on the host."]
+            ]
+          }
+        },
+        {
+          "p": "Within each section, <strong>By function</strong> groups the entries under the function that made them."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "What each entry shows",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "The script, function and version responsible.",
+              "The date and the affected resource.",
+              "The known state before and after the change.",
+              "The lines added and removed.",
+              "The packages that were actually added.",
+              "The state transition of a service.",
+              "<strong>Undoing this</strong>: <em>Restores exactly what was there</em>, <em>Deletes the file (there was none before)</em>, <em>The package can be uninstalled</em>, a partial undo, or <em>Cannot be undone from the journal</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "What the state before means",
+      "blocks": [
+        {
+          "p": "The state before can be captured content, a file created for the first time or an unknown state. Changes made before the journal existed cannot be reconstructed; running the function again captures first the state found at that moment."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Scope of the journal",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Manual changes and changes made by other software are not recorded.",
+              "Only operations that go through the ProxMenux audit primitives are covered.",
+              "Recording never blocks the operation it describes: if the entry cannot be written, the operation goes on.",
+              "Successive changes to one resource are shown as the known origin against the current state."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Stored evidence",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Element", "Behaviour"],
+            "rows": [
+              ["Entries", "They are kept on the host; nothing is removed from the journal automatically."],
+              ["Captured content", "A captured object is kept while an entry refers to it."],
+              ["Size of a capture", "Content above 1 MiB is not stored whole; the entry records that the capture was skipped because of its size."],
+              ["Reading", "The Monitor does not load stored objects above 2 MiB."],
+              ["Difference", "At most 400 lines are shown, and a longer difference is marked as truncated."],
+              ["Listing", "The API returns 200 entries per request by default and up to 1000."]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Kept content is not an automatic undo",
+            "body": "The content before a change can be inspected and restored by hand, but the Changes view does not revert operations. An execution entry records the command without knowing every effect of the tool it ran."
+          }
+        }
+      ]
+    }
+  ]
+}

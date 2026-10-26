@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Gestión de ZFS",
-    "description": "Referencia curada de comandos zpool y zfs: inspección de pools, CRUD de datasets, snapshots, clone y send/receive (incremental y recursivo), scrub / clear / replace para mantenimiento, además de estadísticas de E/S y resumen de ARC.",
+    "description": "Selección de comandos zpool y zfs: consulta de pools, creación, lectura, modificación y borrado de datasets, snapshots, clone y send/receive incremental y recursivo, mantenimiento con scrub / clear / replace, estadísticas de E/S y resumen de ARC.",
     "section": "Ayuda e información"
   },
   "intro": {
@@ -104,16 +104,16 @@
         },
         {
           "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
-          "description": "Poner un hold en un snapshot"
+          "description": "Proteger un snapshot del borrado mediante un hold"
         },
         {
           "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
-          "description": "Liberar un hold en un snapshot"
+          "description": "Liberar la protección hold de un snapshot"
         }
       ]
     },
     {
-      "title": "Clone y send/receive",
+      "title": "Clonación y send/receive",
       "commands": [
         {
           "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
@@ -142,15 +142,15 @@
       "commands": [
         {
           "command": "zpool scrub <pool>",
-          "description": "Iniciar un scrub sobre un pool"
+          "description": "Iniciar una comprobación scrub del pool"
         },
         {
           "command": "zpool scrub -s <pool>",
-          "description": "Parar un scrub en curso"
+          "description": "Detener el scrub en curso"
         },
         {
           "command": "zpool clear <pool>",
-          "description": "Limpiar los contadores de error de un pool"
+          "description": "Reiniciar los contadores de errores del pool"
         },
         {
           "command": "zpool clear <pool> <device>",
@@ -202,7 +202,7 @@
   ],
   "bestPractices": {
     "title": "Buenas prácticas operativas",
-    "bodyRich": "Ejecuta <code>zpool scrub</code> semanal o mensualmente para detectar corrupción silenciosa. Mantén al menos un 10-15% del pool libre — el rendimiento de ZFS cae con fuerza por encima del 80% lleno. Reemplaza siempre los dispositivos fallidos con <code>zpool replace</code> (in-place) en lugar de detach + add (que pierde la redundancia temporalmente)."
+    "bodyRich": "Programa <code>zpool scrub</code> periódicamente para verificar las sumas de comprobación y revisa el resultado. Mantén espacio libre: el impacto de llenar el pool depende de la carga y la distribución. Usa <code>zpool replace</code> para sustituir un dispositivo fallido y sigue el procedimiento de su tipo de vdev. Detach + add no equivale a sustituirlo y puede cambiar la topología o eliminar redundancia."
   },
   "related": {
     "heading": "Relacionado",
@@ -214,7 +214,7 @@
       },
       {
         "href": "/docs/help-info/backup-commands",
-        "label": "Backup y restauración",
+        "label": "Backup & Restore",
         "tail": " — vzdump, qmrestore."
       },
       {

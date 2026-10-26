@@ -1,0 +1,19 @@
+{
+  "first_run": {
+    "credentials": [
+      {
+        "label": "Jenkins unlock",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "change_required": true,
+        "source": "jenkins-initial-admin-password",
+        "retrieval": {
+          "method": "container-file",
+          "path": "/var/jenkins_home/secrets/initialAdminPassword",
+          "timeout_seconds": 300
+        }
+      }
+    ]
+  }
+}

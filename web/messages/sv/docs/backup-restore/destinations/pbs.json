@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Proxmox Backup Server destination - förvar, kryptering, återhämtning | ProxMenux",
+    "description": "PBS-målet lagrar ProxMenux värdsäkerhetskopior som PBS-säkerhetskopior. Sidan beskriver automatisk identifiering från /etc/pve/storage.cfg, manuell PBS-konfiguration, uppladdning av .pxar, klientkryptering med nyckelfil och en valfri återställningskopia skyddad med lösenfras samt återställning av nyckeln från flera källor på en nyinstallerad värd.",
+    "ogTitle": "ProxMenux Backup - Proxmox Backup Server destination",
+    "ogDescription": "Hur ProxMenux skriver värdbackups till Proxmox Backup Server med klient-side keyfile kryptering och återhämtning escrow.",
+    "twitterTitle": "PBS som mål för säkerhetskopior | ProxMenux",
+    "twitterDescription": "Proxmox Backup Server som mål med nyckelfilskryptering och en återställningskopia skyddad med lösenfras."
+  },
+  "header": {
+    "title": "Proxmox Backup Server",
+    "description": "PBS-målet laddar upp hela förberedelsekatalogen som en enda .pxar-säkerhetskopia till ett Proxmox Backup Server-datalager. Klientkryptering med nyckelfil är valfri, liksom uppladdning av en återställningskopia av nyckelfilen, skyddad med lösenfras, bredvid varje säkerhetskopia.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "recommendedBadge": "Rekommenderad destination",
+  "aboutPbs": {
+    "heading": "Vad Proxmox Backup Server är",
+    "body": "Proxmox Backup Server (PBS) är Proxmox egen backup server produkt, utvecklad och underhålls av samma team som författare Proxmox VE. Det är en dedikerad säkerhetskopieringsserver utformad för att ta emot säkerhetskopior från Proxmox VE-värdar (VM, LXCs och - via <code>proxmox-backup-client</code> - godtyckliga värdkataloger) med chunk-baserad deduplicering, klient-side-kryptering och lagringspolicy tillämpad server-side. ProxMenux använder PBS som en av de tre destinationerna för värdbackups; varje PBS-specifik mekanism som beskrivs på denna sida (backupgrupper, <code>.pxar</code> arkiv, <code>--backup-id</code>, keyfile kryptering) är standard PBS beteende."
+  },
+  "intro": {
+    "title": "En säkerhetskopia per körning, deduplicering på blocknivå",
+    "body": "En PBS-säkerhetskopia skapar en enda post i datalagret under säkerhetskopierings-ID:t <code>host/hostcfg-HOSTNAME/BACKUP-TIME</code>. Innehållet är ett <code>.pxar</code>-arkiv med samma struktur i tre delar som beskrivs i <em>Så fungerar det</em>. PBS deduplicerar block mellan alla säkerhetskopior i datalagret, så senare säkerhetskopior av samma värd överför och lagrar endast ändrade block. ProxMenux tillämpar själv lagringsreglerna för schemalagda jobb: efter varje lyckad körning kör <code>run_scheduled_backup.sh</code> kommandot <code>proxmox-backup-client prune</code> med <code>--keep-last</code> / <code>--keep-daily</code> / <code>--keep-weekly</code> och jobbets inställda värden."
+  },
+  "repoSelection": {
+    "heading": "Repository urval",
+    "intro": "ProxMenux hittar PBS-repositorier från två källor vid varje säkerhetskopiering. Användaren väljer ett från en enhetlig meny; för den körningen avgör valet vilken server och vilket datalager säkerhetskopian skickas till, vilket lösenord den autentiserar sig med och vilket <em>fingeravtryck</em> som validerar certifikatet.",
+    "sourceRows": [
+      {
+        "source": "Proxmox storage.cfg (identifierad automatiskt)",
+        "path": "/etc/pve/storage.cfg + /etc/pve/priv/storage/NAME.pw",
+        "content": "Varje <code>pbs:</code>-avsnitt i Proxmox egen lagringskonfiguration identifieras automatiskt. Server, datalager, användarnamn och fingeravtryck hämtas från avsnittet. Lösenordet läses från Proxmox egen katalog för inloggningsuppgifter. Uppgifterna behöver inte anges på nytt i ProxMenux; förvaret är tillgängligt så snart det har konfigurerats i Proxmox."
+      },
+      {
+        "source": "ProxMenux manuell konfig",
+        "path": "/usr/local/share/proxmenux/pbs-manual-configs.txt + pbs-pass-NAME.txt + pbs-fingerprint-NAME.txt",
+        "content": "Läggs till via <em>Konfigurera säkerhetskopieringsmål → PBS-mål → Lägg till PBS</em>. Du anger namn, användarnamn (<code>root@pam</code> eller <code>user@pbs!token</code>), värd eller IP-adress, datalager och lösenord. Om lösenordet lämnas tomt visas frågan igen; annars skulle en tom uppgift sparas utan varning och alla senare säkerhetskopior misslyckas med ett otydligt autentiseringsfel. Detta används när PBS-målet inte är registrerat som Proxmox-lagring."
+      }
+    ],
+    "menuTitle": "Urvalsmenyn",
+    "menuBody": "Båda källorna visas i en enda meny, varje rad märkt med sitt ursprung (<code>[proxmox]</code> eller <code>[manual]</code>). Anteckningar vars lösenord inte kunde lösas är taggade med en <code>⚠ no password</code>-varning - välja en utlöser ett lösenord återinträde innan backupen startar. Fingeravtrycket överförs till <code>proxmox-backup-client</code> via <code>PBS_FINGERPRINT</code>-miljövariabeln; när det saknas frågar klienten operatören att acceptera servercertifikatet interaktivt på den första säkerhetskopian."
+  },
+  "backupCommand": {
+    "heading": "Backup kommandot",
+    "intro": "Uppladdningen sker med ett enda anrop till <code>proxmox-backup-client backup</code>. ProxMenux använder <code>env</code> för att överföra lösenord, krypteringslösenord och fingeravtryck till klienten som miljövariabler.",
+    "cmd": "env \\\n    PBS_PASSWORD=\"$HB_PBS_SECRET\" \\\n    PBS_ENCRYPTION_PASSWORD=\"$HB_PBS_ENC_PASS\" \\\n    PBS_FINGERPRINT=\"$HB_PBS_FINGERPRINT\" \\\n    proxmox-backup-client backup \\\n        hostcfg.pxar:$staging_root \\\n        --repository USER@REALM@HOST:DATASTORE \\\n        --backup-type host \\\n        --backup-id  hostcfg-HOSTNAME \\\n        --backup-time BACKUP-EPOCH \\\n        [--keyfile /usr/local/share/proxmenux/pbs-key.conf]",
+    "backupIdTitle": "Namnge säkerhetskopierings-ID",
+    "backupIdBody": "Standard-ID är <code>hostcfg-HOSTNAME</code>. Operatören bekräftar eller redigerar det före uppladdning; tecken utanför <code>[A-Za-z0-9_-]</code> och avslutande bindestreck tas bort. Att återanvända samma ID är avsiktligt: PBS behandlar ID:t som en <em>grupp</em>, och varje senare säkerhetskopia blir en ny post i gruppen med gemensam deduplicering med tidigare körningar.",
+    "pxarTitle": "Varför källan är hela staging roten",
+    "pxarBody": "<code>.pxar</code>-arkivet packar hela arbetskatalogen: värdens filsystem (<code>rootfs/</code>), metadata (<code>metadata/</code>) och manifestet (<code>manifest.json</code>). Vid återställning jämför ProxMenux manifestet med målvärden för att avgöra om de är likvärdiga, om hårdvaran har ändrats eller om det är en annan maskin, och anpassar processen därefter. Äldre säkerhetskopior, gjorda av tidigare ProxMenux-versioner som bara packade filsystemet, återställs fortfarande korrekt: återställningen upptäcker det äldre formatet och ordnar om det automatiskt."
+  },
+  "encryption": {
+    "heading": "Klient-side kryptering",
+    "glossaryHint": "Avsnittet använder termerna <em>nyckelfil</em>, <em>lösenfras</em> och <em>återställningskuvert</em>. <glosarioLink>Ordlistan</glosarioLink> sammanfattar skillnaderna med en mening per term.",
+    "intro": "PBS klientkryptering med nyckelfil krypterar blocken på källvärden före uppladdning. Kryptering är valfri i ProxMenux. När den aktiveras väljer operatören uttryckligen ja eller nej till att även lagra en återställningskopia av nyckelfilen, skyddad med lösenfras, på PBS. Valet kan ändras senare i Monitor. Själva nyckelfilen finns alltid på den kanoniska sökvägen <code>/usr/local/share/proxmenux/pbs-key.conf</code> och återanvänds utan nya frågor vid varje senare krypterad säkerhetskopiering.",
+    "keyfileTitle": "Ställ in nyckelfilen",
+    "keyfileBody": "Krypteringsdialogen visas vid värdens första krypterade säkerhetskopiering. Först frågar den om säkerhetskopian ska krypteras: <em>Nej</em> fortsätter utan kryptering och <em>Ja</em> går till steg två. Det steget beror på om en nyckelfil redan finns på <code>/usr/local/share/proxmenux/pbs-key.conf</code>. I så fall återanvänds den utan frågor och säkerhetskopieringen fortsätter; inte heller senare säkerhetskopieringar frågar igen. Annars visar en meny två alternativ. <em>Skapa en ny nyckelfil</em> kör <code>proxmox-backup-client key create --kdf none</code>. <em>Använd en befintlig nyckelfil</em> identifierar automatiskt en PVE-hanterad nyckel: om det valda PBS-förvaret är registrerat i Proxmox med en krypteringsnyckel på <code>/etc/pve/priv/storage/&lt;NAME&gt;.enc</code>, kopieras filen utan frågor till ProxMenux kanoniska sökväg. Om ingen PVE-hanterad nyckel matchar förvaret efterfrågas den absoluta sökväg där operatören redan har placerat nyckelfilen på värden. I båda fallen installeras filen på den kanoniska sökvägen med <code>chmod 600</code>.",
+    "modesTitle": "En nyckelfil per värd eller en gemensam nyckelfil",
+    "modesIntro": "Båda driftsmodellerna stöds och ingen är obligatorisk. Operatören väljer utifrån hur värdarna är organiserade.",
+    "modesPerHostTitle": "En nyckelfil per värd (standard)",
+    "modesPerHostBody": "Varje värd genererar sin egen nyckelfil första gången det möjliggör PBS-kryptering. Isolering är maximal: att kompromissa med nyckelfilen hos en värd exponerar inte någon annans säkerhetskopior. Rekommenderas för produktionsflottor och för miljöer där värdar har olika ägare eller överensstämmelse gränser.",
+    "modesSharedTitle": "Gemensam nyckelfil (importeras på varje värd)",
+    "modesSharedBody": "En huvudnyckelfil skapas en gång och installeras på varje värd via alternativet <em>Använd en befintlig nyckelfil</em>. Hanteringen blir enklare: en enda hemlighet att skydda, och varje värd kan dekryptera alla andra värdars arkiv. Det är användbart för konsolidering, återställningsövningar mellan värdar och central verifiering av säkerhetskopior. Nackdelen är att en läcka av den gemensamma nyckeln exponerar alla värdar samtidigt. Rekommenderas för hemlabb och miljöer där alla värdar har samma ägare och ingår i samma tillitsområde.",
+    "recoveryTitle": "Ladda upp nyckeln till PBS – operatören bestämmer",
+    "recoveryBody": "Direkt efter valet av nyckelfil ställer ProxMenux den uttryckliga frågan <em>Ladda upp nyckeln till PBS?</em> med två svar. <strong>Ingen återställningsfil laddas upp till PBS förrän operatören svarar Ja.</strong> Standardvalet är <em>Nej, behåll endast lokalt</em>: nyckelfilen ligger kvar på den kanoniska lokala sökvägen, ProxMenux laddar inte upp någon återställningsfil till PBS och operatören ansvarar själv för kopian utanför värden. Knappen <em>Ladda ner nyckelfil</em> på PBS-målets rad i Monitor ger en kopia vid behov. Valet <em>Ja, ladda upp</em> efterfrågar en återställningslösenfras två gånger och kontrollerar att svaren matchar. ProxMenux skyddar nyckelfilen med AES-256-CBC och PBKDF2 (600 000 iterationer, slumpmässigt salt) och skapar <code>pbs-key.recovery.enc</code>. Varje senare krypterad säkerhetskopia laddar upp detta kuvert till PBS som en tillhörande säkerhetskopieringsgrupp. Dessa uppladdningar skickar varken lösenfrasen eller nyckelfilen i klartext till PBS. Valet kan ändras när som helst i Monitor: kontrollen på PBS-målets rad växlar Ja/Nej och tillämpar omedelbart Börja ladda upp, Sluta ladda upp eller Uppdatera lösenfras beroende på aktuellt tillstånd.",
+    "blobUploadTitle": "Tillhörande säkerhetskopieringsgrupp på PBS",
+    "blobUploadBody1": "När svaret är <em>Ja, ladda upp</em> laddar ProxMenux upp återställningskuvertet till PBS efter varje krypterad säkerhetskopiering, som en andra, tillhörande säkerhetskopieringsgrupp. Den har samma namn som värdens grupp men slutar på <code>-keyrecovery</code>. Grupperna visas bredvid varandra i datalagrets lista: en för värdsäkerhetskopior och en för återställningskuvert. <strong>Kuvertet lämnar aldrig värden i klartext</strong>: krypteringen sker på värden själv med AES-256-CBC och PBKDF2 innan några byte överförs (<code>openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt</code>). PBS tar endast emot det redan krypterade kuvertet.",
+    "envelopeSecurityTitle": "Överför nyckelåterhämtningsfilen till PBS en säkerhetsrisk?",
+    "envelopeSecurityBody": "Keyrecovery-filen krypteras i transit och i vila. Återhämtningspassfrasen lämnar aldrig värden: kryptering sker lokalt före uppladdningen, och PBS ser bara det redan krypterade resultatet. En PBS-administratör - eller någon med tillgång till databutiken - kan ladda ner nyckelrecovery-filen, men utan återställningspassfrasen kan de inte läsa nyckelfilen inuti: det är ogenomskinlig chiffertext. Rekonstruera nyckelfilen kräver båda bitarna samtidigt, nyckelrecovery-filen och passfrasen, och endast operatören håller båda.",
+    "blobUploadConstraintTitle": "Varför två grupper istället för en enda krypterad",
+    "blobUploadConstraintBody": "Ett enda anrop till <code>proxmox-backup-client backup</code> krypterar antingen alla sina arkiv med samma nyckelfil eller inget av dem. Värdsäkerhetskopian måste krypteras med värdens nyckelfil, men återställningskuvertet kan inte skickas med i samma uppladdning: då skulle det krypteras med just den nyckelfil som det innehåller. På en nyinstallerad värd skulle det inte gå att öppna, eftersom nyckelfilen skulle behövas för att dekryptera sig själv. Därför laddas de två filerna upp separat och visas som två grupper. PBS-klienten krypterar värdsäkerhetskopian med nyckelfilen, medan ProxMenux krypterar kuvertet med lösenfrasen före uppladdning. Två olika krypteringslager skyddar två olika innehåll.",
+    "blobUploadImageAlt": "PBS-gränssnittet visar säkerhetskopieringsgrupperna hostcfg-HOSTNAME och hostcfg-HOSTNAME-keyrecovery bredvid varandra i datalagrets lista.",
+    "blobUploadImageCaption": "PBS-gränssnittet — de tillhörande säkerhetskopieringsgrupperna. Huvudgruppen innehåller värdsäkerhetskopiorna; gruppen -keyrecovery innehåller nyckelfilen skyddad med lösenfras.",
+    "recoverTitle": "Återhämtning på en ny värd",
+    "recoverBody": "Om nyckelfilen saknas på den kanoniska sökvägen, efter en ominstallation eller uttrycklig borttagning, provar återställningen tre källor i ordning och stannar vid den första användbara nyckeln. Först kopieras en matchande PVE-hanterad nyckel från <code>/etc/pve/priv/storage/&lt;NAME&gt;.enc</code> utan frågor till den kanoniska sökvägen, om den finns för det valda PBS-förvaret. Om det finns en <code>-keyrecovery</code>-grupp på PBS laddas sedan den senaste ögonblicksbilden ner och operatören anger återställningslösenfrasen för att dekryptera den. Om båda alternativen misslyckas eller avböjs efterfrågas till sist den absoluta sökvägen till nyckelfilen på värden, och filen kopieras till den kanoniska sökvägen. Monitor visar samma importflöde i säkerhetskopians detaljdialog. En gul panel visas överst när Återställ, Ladda ner eller Visa innehåll behöver en nyckel som saknas. Om en installerad nyckel inte matchar säkerhetskopian returnerar PBS <code>wrong key — manifest's key XX does not match provided key YY</code>. Samma tre åtgärder visar då en strukturerad panel med manifestets nödvändiga nyckelfingeravtryck tydligt utmärkt, så att operatören kan identifiera rätt nyckelfil att importera för säkerhetskopian.",
+    "monitorManagementTitle": "Hantera nyckelfilen från Monitor",
+    "monitorManagementBody": "Monitor visar nyckelfilens kontroller på varje PBS-målrad på sidan för säkerhetskopieringskonfiguration. Raden har tre åtgärder: <em>Ladda ner</em> exporterar den aktuella nyckelfilen till användarens webbläsare, <em>Ladda upp</em> ersätter den installerade nyckelfilen med en som användaren tillhandahåller (den tidigare filen skrivs över först när den nya har kommit fram korrekt till sin sökväg) och <em>Ta bort</em> tar bort nyckelfilen från värden. Direkt bredvid finns reglaget för återställningskuvertet: ett Ja/Nej-val för <em>Ladda upp nyckeln till PBS?</em>, ett lösenfrasfält som visas när Ja väljs och en knapp som följer det aktuella tillståndet: <em>Börja ladda upp</em>, <em>Sluta ladda upp</em> eller <em>Uppdatera lösenfras</em>. Kontrollerna i Monitor och dialogrutan i skalet gör samma sak i grunden, så resultatet på disken och på PBS blir identiskt oavsett vilket som används."
+  },
+  "restoreAccess": {
+    "heading": "Hämta vid återställning",
+    "body": "Återställningen hittar ProxMenux värdsäkerhetskopior på PBS genom att lista grupperna i det konfigurerade förvaret och filtrera efter ID-mönster. Fliken Säkerhetskopior i Monitor visar samma lista. När en säkerhetskopia väljs körs <code>proxmox-backup-client restore</code> med samma förvar, lösenord och fingeravtryck, samt <code>--keyfile</code> om kopian är krypterad. Arkivet <code>.pxar</code> packas upp i en förberedelsekatalog som <code>_rs_check_layout</code> lämnar vidare till den vanliga återställningen. Utanför ProxMenux kan samma kommando packa upp arkivet till valfri sökväg för att granska trädet eller återställa manuellt."
+  },
+  "references": {
+    "heading": "Referenser",
+    "intro": "Officiell Proxmox Backup Server-dokumentation för komponenterna ProxMenux är beroende av.",
+    "items": [
+      {
+        "label": "Proxmox Backup Server dokumentation",
+        "href": "https://pbs.proxmox.com/docs/",
+        "tail": " - huvudingångspunkt som täcker installation, administration, lagring, användare och roller."
+      },
+      {
+        "label": "proxmox-backup-client",
+        "href": "https://pbs.proxmox.com/docs/backup-client.html",
+        "tail": " — kommandoradsverktyget som ProxMenux använder för varje säkerhetskopiering och återställning. Beskriver säkerhetskopierings-ID, typer, arkiv, förvarssyntax och miljövariabler."
+      },
+      {
+        "label": "Kryptering på klientsidan",
+        "href": "https://pbs.proxmox.com/docs/backup-client.html#encryption",
+        "tail": " — skapa nyckelfiler, --kdf-lägen och krypteringsmodellen som ProxMenux utökar med en återställningskopia skyddad med lösenfras."
+      },
+      {
+        "label": "Datalagerhantering",
+        "href": "https://pbs.proxmox.com/docs/storage.html",
+        "tail": " - skapa och hantera datastorer som tar emot värdbackups, inklusive chunk-store layout och behörigheter."
+      },
+      {
+        "label": "Gallring och skräpinsamling",
+        "href": "https://pbs.proxmox.com/docs/maintenance.html#pruning",
+        "tail": " — lagringsreglerna bakom --keep-last / --keep-daily / --keep-weekly som ProxMenux tillämpar per schemalagt jobb, samt hur PBS frigör oanvända block efter gallring."
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "container_contract": {
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/pocketbase/pb_data",
+        "compose_source_example": "/DATA/AppData/$AppID/pb_data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_seeds": [
+        {
+          "container_path": "/pocketbase/pb_data",
+          "source_path": "/pocketbase/pb_data",
+          "mount_types": [
+            "managed-volume",
+            "host-bind"
+          ]
+        }
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/pocketbase/pb_data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "credentials": [
+      {
+        "label": "PocketBase admin UI",
+        "type": "static-default",
+        "username": "casaos@admin.local",
+        "password": "adminpocketbase",
+        "change_required": true,
+        "source": "casaos-image-superuser",
+        "retrieval": null
+      }
+    ]
+  }
+}

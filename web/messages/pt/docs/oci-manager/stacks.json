@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "title": "Aplicações multi-contêineres ProxMenux",
+    "description": "Como o OCI Manager Apps transforma um aplicativo com seu banco de dados e cache em LXCs nativos coordenados: plano, rede privada, gancho de dependência, validação e atualizações transacionais."
+  },
+  "header": {
+    "title": "Aplicações com vários contentores",
+    "description": "Uma aplicação com seu banco de dados, cache e outros serviços torna-se vários LXCs nativos coordenados, instalados e atualizados como um.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Um aplicativo para o usuário, vários LXCs para Proxmox VE",
+            "body": "Uma definição multi-contentor é uma entrada do catálogo. O instalador cria um LXC nativo por serviço e mantém suas dependências explícitas. Immich, Nextcloud, Paperless-ngx e Tandoor são instalados desta forma."
+          }
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
+            "labels": {
+              "plan": "Plano de pilha",
+              "app": "Aplicação LXC",
+              "appNet": "LAN + privado",
+              "db": "PostgreSQL LXC",
+              "cache": "Valkey LXC",
+              "private": "privado"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "1. O plano, antes de existir qualquer recipiente",
+      "blocks": [
+        {
+          "p": "Nenhum LXC é criado enquanto a definição Compose é interpretada. Um plano completo vem em primeiro lugar, com cada membro, imagem, VMID, rede, caminho, segredo, ordem e verificação de saúde. Se o plano não for consistente, a instalação não começa."
+        },
+        {
+          "table": {
+            "headers": [
+              "Elemento do plano",
+              "Conteúdo",
+              "Verificado antes de criar qualquer coisa"
+            ],
+            "rows": [
+              [
+                "Membros",
+                "Aplicação principal, banco de dados, cache, aprendizado de máquina e outras dependências",
+                "VMIDs exclusivos, papéis conhecidos e exatamente um membro principal"
+              ],
+              [
+                "Imagens",
+                "Referência rolling, arquitetura e digest resolvido de cada serviço",
+                "Todos existem, suportam a arquitetura e passam pela verificação de integridade do OCI"
+              ],
+              [
+                "Rede",
+                "Ponte privada, sub-rede, endereço fixo por serviço e acesso LAN para o membro principal",
+                "Sem colisão com pontes ou subredes existentes e sem endereço repetido"
+              ],
+              [
+                "Persistência",
+                "Discos de container, diretórios de host, proprietários e backup",
+                "Nenhum caminho sobreposto, armazenamento disponível e permissões declaradas"
+              ],
+              [
+                "Segredos",
+                "Senha do banco de dados, chaves do aplicativo e credenciais iniciais",
+                "Gerado uma vez e dado apenas aos membros que os usam"
+              ],
+              [
+                "Ciclo de vida",
+                "Ordem de início, ordem de parada e uma verificação de funcionamento por membro",
+                "A aplicação principal começa por último e pára primeiro"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "title": "2. Criação, membro por membro",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Reserve cada VMID",
+                "body": "O inventário Proxmox VE e o registro de instância são verificados. Um CT existente não é adotado e um contrato que ainda pertence a outra instância não é reutilizado."
+              },
+              {
+                "title": "Preparar cada imagem",
+                "body": "Todas as imagens são resolvidas, baixadas e verificadas antes da criação do primeiro container."
+              },
+              {
+                "title": "Criar cada rootfs",
+                "body": "Os metadados oficiais do OCI são importados, e a identidade da instância ProxMenux e o papel de membro são adicionados."
+              },
+              {
+                "title": "Rede privada",
+                "body": "Uma ponte e uma sub-rede são criadas e cada membro recebe seu endereço fixo; apenas o membro principal também recebe a interface LAN."
+              },
+              {
+                "title": "Persistência",
+                "body": "Cada banco de dados e configuração obtém seu próprio disco de contêiner; somente os dados destinados a serem compartilhados usam diretórios de host."
+              },
+              {
+                "title": "Ambiente",
+                "body": "Endpoints internos, segredos compartilhados e variáveis de serviço são escritos. O aplicativo atinge suas dependências em seus endereços privados reservados."
+              },
+              {
+                "title": "Registro",
+                "body": "Cada membro registra sua configuração nativa, as mudanças rootfs que as atualizações têm que reproduzir e sua relação com a pilha."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "title": "3. Iniciar e verificar cada recipiente",
+      "intro": "Um LXC criado não significa um serviço pronto. As dependências começam em ordem e cada um passa uma verificação específica para o seu serviço.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Serviço",
+              "Verificação",
+              "O que mostra"
+            ],
+            "rows": [
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> no CT com o host, usuário e banco de dados esperados",
+                "O servidor aceita conexões para o banco de dados configurado"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code> ou <code>valkey-cli</code> <code>PING</code> contra o seu endereço privado",
+                "O broker escuta e responde"
+              ],
+              [
+                "aprendizado de máquina Immich",
+                "HTTP <code>GET /ping</code>, mais uma verificação do tempo de execução GPU selecionado",
+                "O serviço responde e a aceleração solicitada não passou a usar a CPU"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> com <code>installed=true</code>, <code>maintenance=false</code> e <code>needsDbUpgrade=false</code>",
+                "A inicialização terminou sem migração pendente"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP no endereço LAN e porto real do serviço",
+                "O frontend e suas dependências servem a aplicação"
+              ],
+              [
+                "Aplicação principal",
+                "O ponto final do seu modelo, por exemplo, <code>/api/server/ping</code> em Immich",
+                "A pilha inteira funciona através da aplicação que usa as dependências"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Em execução não significa funcionando corretamente",
+            "body": "O estado em execução apenas diz que o processo LXC existe. Quando o serviço oferece uma verificação melhor, é utilizado uma verificação exec ou HTTP com tempo limite. Se um membro para ou falha na verificação, a pilha não é declarada instalada."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "title": "4. O gancho de dependência",
+      "blocks": [
+        {
+          "p": "O gancho é definido apenas no recipiente principal de uma pilha dependente. Proxmox VE mantém o script como um trecho e o executa como o <code>hookscript</code> daquele CT. A receita da pilha não é escrita no script: ela vive em um contrato privado separado."
+        },
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Configuração principal do CT",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Contrato privado (exemplo)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
+            ]
+          }
+        },
+        {
+          "snippet": {
+            "summary": "Fonte completa de proxmenux-stack-dependencies.sh",
+            "pathCode": "local:snippets/proxmenux-stack-dependencies.sh",
+            "snippetCode": "stackDependencyHook"
+          }
+        },
+        {
+          "p": "O script é o mesmo para cada pilha. VMIDs, nomes, tipos de verificação e timeouts vêm do contrato privado <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> de cada pilha."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "O Proxmox VE chama pre-start",
+                "body": "Antes do início do CT principal, o gancho funciona com o seu VMID e a fase do ciclo de vida."
+              },
+              {
+                "title": "Um bloqueio por pilha",
+                "body": "<code>flock</code> em <code>/run/lock/proxmenux-stack-VMID.lock</code> impede duas sequências de início ao mesmo tempo."
+              },
+              {
+                "title": "O contrato é lido e validado",
+                "body": "São exigidos um esquema conhecido, dependências numéricas, rótulos, uma verificação exec, http ou running e um tempo limite positivo."
+              },
+              {
+                "title": "Dependências em ordem",
+                "body": "Cada CT deve existir; um parado é iniciado e um já em execução não é reiniciado."
+              },
+              {
+                "title": "Esperar o serviço ficar pronto",
+                "body": "A verificação é executada a cada dois segundos, e o CT também é confirmado para estar ainda em execução."
+              },
+              {
+                "title": "O CT principal começa",
+                "body": "Quando cada dependência está pronta, termina pré-inicial e o Proxmox VE inicia a aplicação."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "O gancho não para dependências",
+            "body": "As fases pós-início, pré-parar e pós-parar não fazem nada. Parar o CT principal deixa PostgreSQL, Redis, Valkey ou aprendizado de máquina em execução. O gancho ordena o início; ele não transforma vários LXCs em um processo."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Exemplo",
+              "Início posterior"
+            ],
+            "rows": [
+              [
+                "Pilha dependente",
+                "Immich, Nextcloud, aplicação com PostgreSQL",
+                "O gancho do CT principal inicia as dependências e espera por eles"
+              ],
+              [
+                "Conjunto de aplicativos",
+                "Conjunto de aplicações Arr",
+                "Nenhum membro principal: cada LXC segue o seu próprio <code>onboot</code>"
+              ],
+              [
+                "Aplicação única",
+                "Jellyfin",
+                "Proxmox VE inicia esse LXC diretamente"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stack-checks",
+      "title": "5. Verifica a pilha como um todo",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Cada VMID existe, é único e mantém a identidade de instância esperada.",
+              "Cada contrato pertence à mesma pilha, mantém seu papel e sua configuração nativa gravada.",
+              "O membro principal é o último em <code>start_order</code> e o primeiro em <code>stop_order</code>.",
+              "Nenhum membro, volume ou adaptação rootfs está faltando.",
+              "O gancho aponta para o trecho oficial, seu conteúdo é inalterado e seu contrato corresponde à receita da pilha.",
+              "As imagens e digests observados correspondem aos arquivos OCI preparados.",
+              "Dispositivos, perfis GPU, montagens, segredos e endpoints ainda correspondem aos contratos.",
+              "Após cada dependência passar, o ponto final da aplicação principal verifica a integração entre os membros."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Gerenciando uma pilha instalada",
+      "intro": "Em <strong>Gerenciar aplicativos OCI instalados</strong>, qualquer membro leva à pilha inteira. O menu oferece <strong>Atualizar todos os contêineres do aplicativo</strong>, <strong>Modificar caminhos e dispositivos extras</strong>, <strong>Recriar todos os contêineres com a configuração salva</strong> e <strong>Remover: excluir o aplicativo e seus contêineres</strong>. Recriar reconstrói cada contêiner da imagem original pelo digest salvo, sem procurar uma mais nova, seguindo os mesmos passos de uma atualização. A opção aparece para pilhas que podem ser atualizadas.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Qualquer membro",
+                "body": "O contrato dos membros nomeia o VMID principal e a lista completa de membros."
+              },
+              {
+                "title": "A pilha é reprodutível",
+                "body": "Identificações, contratos, gancho, adaptações e uma repetição coordenada para essa receita são validadas."
+              },
+              {
+                "title": "Primeiro as imagens",
+                "body": "O aplicativo não é parado até que cada digest tenha sido resolvido, baixado e verificado."
+              },
+              {
+                "title": "Parar e fazer backup do conjunto",
+                "body": "Os backups nativos verificados são feitos com a pilha parada, então a aplicação e os bancos de dados pertencem ao mesmo momento."
+              },
+              {
+                "title": "Atualizar e verificar cada membro",
+                "body": "Adaptação, rede, montagens, segredos e dispositivos são novamente aplicados antes do exame de saúde de cada membro."
+              },
+              {
+                "title": "Publicar ou recuperar tudo",
+                "body": "Os novos contratos só são publicados quando todos os membros passam. Se alguém falhar, cada membro é restaurado."
+              }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Modificar",
+              "O que muda",
+              "O que é guardado"
+            ],
+            "rows": [
+              [
+                "Caminhos e dispositivos adicionais",
+                "Eles são adicionados ou removidos do recipiente de aplicação, que reinicia. Nada é reconstruído.",
+                "Os dados da aplicação, da sua base de dados e dos outros contentores"
+              ],
+              [
+                "O que executa o reconhecimento (Immich)",
+                "O recipiente de aprendizado de máquina leva a imagem e os dispositivos do CPU ou de um GPU do hospedeiro. Todo o aplicativo é parado e atualizado, como em uma atualização",
+                "O cache do modelo, a biblioteca e o banco de dados. Se algo falhar, os recipientes anteriores e a escolha anterior são restaurados"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Uma pilha sem uma repetição coordenada não é atualizada",
+            "body": "Se a preparação de uma pilha não puder ser reproduzida, a atualização é recusada antes de a pilha ser parada. A aplicação continua a correr como está."
+          }
+        }
+      ]
+    },
+    {
+      "id": "failure",
+      "title": "6. Quando algo falha",
+      "blocks": [
+        {
+          "p": "Durante uma instalação, um erro para e remove os contêineres incompletos que a operação criou, e a ponte privada se a operação criou. Uma pilha não é publicada como válida até que toda a sequência termine."
+        },
+        {
+          "p": "Uma atualização é transacional: todas as imagens são preparadas primeiro, depois a pilha pára, cada membro é feito backup e o backup verificado, e só então é substituído cada rootfs. Os membros começam um a um com seu exame de saúde; se um falha, cada membro é restaurado a partir do mesmo conjunto de backups, de modo que o banco de dados eo aplicativo nunca pertencem a momentos diferentes."
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart TB\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "labels": {
+              "prepare": "Preparar cada imagem",
+              "stop": "Parar, membro principal primeiro",
+              "backup": "Cópia de segurança verificada de cada CT",
+              "replace": "Substituir rootfs",
+              "healthy": "Todos funcionando corretamente?",
+              "yes": "Sim",
+              "no": "Não",
+              "commit": "Publicar contratos",
+              "rollback": "Restaurar cada membro"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-assumed",
+      "title": "O que uma pilha não inclui",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Uma suíte instalada em um fluxo, como a suíte Arr, não é uma pilha dependente: seus recipientes não têm ordem de início entre eles.",
+              "A rede privada não substitui a autenticação, TLS ou a configuração de cada aplicativo.",
+              "O backup de um LXC não contém a ponte, o gancho ou os contratos do resto da pilha.",
+              "Prowlarr, Sonarr ou Radarr não recebem indexadores, perfis ou provedores de ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

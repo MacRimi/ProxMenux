@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Po inštalácii: Sledovanie | Dokumentácia ProxMenux",
+    "description": "Možnosti sledovania v prispôsobiteľnom skripte ProxMenux po inštalácii. Zatiaľ jediná možnosť: inštalácia OVH Real-Time Monitoring (RTM), ktorá sa vykoná iba po zistení, že hostiteľ je serverom OVH."
+  },
+  "header": {
+    "title": "Po inštalácii: monitorovanie",
+    "description": "Možnosti sledovania v prispôsobiteľnom skripte po inštalácii. Táto malá kategória je špecifická pre poskytovateľa: nainštaluje agenta OVH Real-Time Monitoring na dedikovaných serveroch OVH a inde nič nevykoná.",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Zámerne úzky rozsah",
+    "body": "Sledovanie po inštalácii sa obmedzuje na <strong>jedného agenta konkrétneho poskytovateľa</strong>. Všeobecné nástroje (Prometheus, Grafana, node_exporter) sem nepatria, pretože vyžadujú architektonické rozhodnutia o samostatnom hostiteľovi, uchovávaní údajov a cieľoch upozornení, ktoré sa nehodia do kroku na jedno kliknutie. ProxMenux Monitor, dodávaný s ProxMenux, pokrýva väčšinu tejto úlohy bez externého agenta."
+  },
+  "ovh": {
+    "heading": "Inštalovať OVH monitorovanie v reálnom čase (RTM)",
+    "intro": "Ak je hostiteľ Proxmox dedikovaný server prenajatý od <a>OVHcloud</a>, môžete povoliť RTM a sprístupniť hardvérovú telemetriu (teplota CPU, stav zdroja, SMART diskov, stav radiča RAID atď.) v ovládacom paneli OVH. Ide o rovnakého agenta, akého OVH používa pre funkciu „Server Monitoring“.",
+    "decisionsTitle": "Ako sa rozhoduje ProxMenux",
+    "decisionsItems": [
+      "Získa verejnú IP adresu hostiteľa cez <code>curl ipinfo.io/ip</code>.",
+      "Zistí vlastníckeho poskytovateľa pomocou dotazu <code>whois</code> na <code>v4.whois.cymru.com</code>.",
+      "Ak výsledok uvádza OVH, stiahne <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> a cez rúru ho odovzdá <code>bash</code> s manifestom Puppet pre RTM v2.",
+      "Ak výsledok <em>neuvádza</em> OVH, nič sa nenainštaluje. Možnosť nevykoná žiadne zmeny."
+    ],
+    "remoteTitle": "Vzdialený skript odovzdaný cez rúru do bash",
+    "remoteBody": "Inštalácia spustí <code>wget -qO - https://…apply.sh | bash</code>. Ak dôjde ku kompromitovaniu zrkadla OVH, skript sa na hostiteľovi vykoná ako root. Pred povolením zvážte dôveru v reťazec zrkadiel OVH oproti prínosu sledovania. Pre väčšinu domácich laboratórií a používateľov mimo OVH má možnosť zostať vypnutá.",
+    "noOpTitle": "Povoliť iba vtedy, ak je hostiteľ skutočne na OVH",
+    "noOpBody": "Na serveroch mimo OVH možnosť nič nemení, takže jej zaškrtnutie na domácom Proxmox nič nepokazí. Skript vypíše <em>„Nie je to server OVH, inštalácia RTM sa preskočí“</em> a ukončí sa bez inštalácie balíkov.",
+    "runsTitle": "Čo ProxMenux spúšťa",
+    "verifyTitle": "Overenie",
+    "verifyBody": "Na skutočnom hostiteľovi OVH by sa po reštarte mal v OVH Manager zobraziť <a>prehľad RTM</a> s aktuálnymi údajmi hostiteľa. Na strane Proxmox je zberač RTM službou systemd — overte ju priamo:",
+    "troubleTitle": "Riešenie problémov",
+    "revertTitle": "Odstrániť RTM cez menu Odinštalovať",
+    "revertBody": "Ak je RTM registrovaný ako nainštalovaný, Odinštalovať optimalizácie ponúkne položku OVH Real-Time Monitoring. Spustí <code>apt-get purge -y ''ovh-rtm*'' ''rtm'' ''rtm-*''</code>, odstráni /etc/rtm a označí RTM za odinštalovaný. Zvyšky Puppet môžu vyžadovať ručné čistenie; skontrolujte manifesty RTM v <code>/etc/puppet/</code>. Na hostiteľovi mimo OVH sa balíky RTM nenainštalovali, takže nie je čo odstrániť."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " — lokálny webový prehľad hostiteľa, ktorý funguje u každého poskytovateľa, nielen OVH."
+      },
+      {
+        "label": "Užitočné systémové príkazy",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — referencia pre sledovanie lokálneho hostiteľa."
+      },
+      {
+        "label": "Prispôsobiteľné nastavenia po inštalácii",
+        "href": "/docs/post-install/customizable",
+        "tail": " — späť do nadradeného menu."
+      }
+    ]
+  }
+}

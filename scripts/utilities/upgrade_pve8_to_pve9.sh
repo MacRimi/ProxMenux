@@ -36,8 +36,8 @@
 #     broken repo config).
 #   - dist-upgrade with --force-confdef --force-confold in
 #     unattended mode; user-driven dpkg prompts in interactive mode.
-#   - Post-upgrade: installs grub-efi-amd64 on EFI hosts, restarts
-#     pve-manager, re-runs pve8to9 to surface residual issues.
+#   - Post-upgrade: installs grub-efi-amd64 on EFI hosts and
+#     re-runs pve8to9 to surface residual issues.
 #   - Reboot prompt at the end.
 #   - Full log written to /var/log/pve8-a-pve9-<timestamp>.log.
 # ==========================================================
@@ -61,6 +61,9 @@ if [[ -f "$LOCAL_SCRIPTS/global/common-functions.sh" ]]; then
 fi
 if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+fi
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
 fi
 
 # ==========================================================
@@ -114,7 +117,7 @@ ask_run_mode() {
         msg_ok "$(translate "Run mode: Unattended")"
         export DEBIAN_FRONTEND=noninteractive
         export APT_LISTCHANGES_FRONTEND=none
-        exit 0
+        return 0
     fi
 
 
@@ -132,7 +135,7 @@ ask_run_mode() {
                        --menu "$text" 20 70 8 \
                        1 "$(translate "Automatic/Unattended")" \
                        2 "$(translate "Interactive (guided, prompts visible)")" \
-                       3 "$(translate "Run PVE 8 to 9") check" \
+                       3 "$(translate "Run PVE 8 to 9 check")" \
                        4 "$(translate "Manual upgrade guide step by step")" \
                        3>&1 1>&2 2>&3
             ); status=$?
@@ -175,7 +178,7 @@ ask_run_mode() {
                          --menu "$(translate "Choose how to perform the upgrade:")" 20 70 8 \
                          "1" "$(translate "Automatic/Unattended")" \
                          "2" "$(translate "Interactive (guided, prompts visible)")" \
-                         "3" "$(translate "Run PVE 8 to 9") check" \
+                         "3" "$(translate "Run PVE 8 to 9 check")" \
                          "4" "$(translate "Manual upgrade guide step by step")" \
                          3>&1 1>&2 2>&3
             ); then
@@ -376,42 +379,48 @@ EOF
 }
 
 disable_enterprise_repo_if_present() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "disable_enterprise_repo_if_present" "$FUNC_VERSION"
   local s="/etc/apt/sources.list.d/pve-enterprise.sources"
   local l="/etc/apt/sources.list.d/pve-enterprise.list"
   if [[ -f "$s" ]]; then
     if grep -qi '^Enabled:' "$s"; then
-      sed -i 's/^Enabled:.*/Enabled: false/i' "$s"
+      pmx_edit_file "$s" 's/^Enabled:.*/Enabled: false/i'
     else
-      echo "Enabled: false" >> "$s"
+      echo "Enabled: false" | pmx_append_file "$s"
     fi
   fi
   if [[ -f "$l" ]]; then
-    sed -i 's/^[[:space:]]*deb/# deb/' "$l"
+    pmx_edit_file "$l" 's/^[[:space:]]*deb/# deb/'
   fi
 }
 
 comment_legacy_pve8_lists() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "comment_legacy_pve8_lists" "$FUNC_VERSION"
   for f in /etc/apt/sources.list.d/pve-public-repo.list /etc/apt/sources.list.d/pve-install-repo.list; do
     [[ -f "$f" ]] || continue
-    sed -i 's/^[[:space:]]*deb/# deb/' "$f" || true
+    pmx_edit_file "$f" 's/^[[:space:]]*deb/# deb/' || true
   done
 }
 
 comment_legacy_ceph_list() {
+  local FUNC_VERSION="1.0"
+  pmx_journal_context "comment_legacy_ceph_list" "$FUNC_VERSION"
   local f="/etc/apt/sources.list.d/ceph.list"
   [[ -f "$f" ]] || return 0
-  sed -i 's/^[[:space:]]*deb/# deb/' "$f" || true
+  pmx_edit_file "$f" 's/^[[:space:]]*deb/# deb/' || true
 }
 
 apt_update_with_repo_fallback() {
 
-  local output status
-  output="$(apt-get update >/dev/null 2>&1 | tee -a "$LOG")"; status=${PIPESTATUS[0]}
-  if [[ $status -eq 0 ]]; then
+  local output
+  # Keep diagnostics and check the pipeline inside the command substitution.
+  if output="$(set -o pipefail; apt-get update 2>&1 | tee -a "$LOG")"; then
     msg_ok2 "$(translate "APT indexes updated for Trixie")"
     return 0
   fi
-  if [[ "$REPO_MODE" == "enterprise" ]] && { echo "$output" | grep -qE '401[[:space:]]+Unauthorized' || echo "$output" | grep -qi 'enterprise\.proxmox\.com'; }; then
+  if [[ "$REPO_MODE" == "enterprise" ]] && { grep -qE '401[[:space:]]+Unauthorized' <<< "$output" || grep -qi 'enterprise\.proxmox\.com' <<< "$output"; }; then
     if [[ "$ASSUME_YES" == "1" ]] || confirm "$(translate "Enterprise repository returned 401 Unauthorized (no valid subscription). Switch to the no-subscription repository and retry?")"; then
 
       disable_enterprise_repo_if_present
@@ -422,7 +431,7 @@ apt_update_with_repo_fallback() {
       REPO_MODE="no-subscription"
       msg_ok2 "$(translate "Repositories switched to no-subscription")"
 
-      if apt-get update >> "$LOG" >/dev/null 2>&1; then
+      if apt-get update >> "$LOG" 2>&1; then
         msg_ok2 "$(translate "APT indexes updated for Trixie (no-subscription)")"
         return 0
       else
@@ -448,7 +457,12 @@ proxmox_repo_candidate_ok() {
 
 
 simulate_would_remove_proxmox_ve() {
-  apt-get -s dist-upgrade >/dev/null 2>&1 | grep -Eq 'Remv[[:space:]]+proxmox-ve|The following packages will be REMOVED:.*proxmox-ve'
+  # Return 0 for removal, 1 for a safe plan, and 2 if simulation/logging fails.
+  local output
+  if ! output="$(set -o pipefail; LC_ALL=C apt-get -s dist-upgrade 2>&1 | tee -a "$LOG")"; then
+    return 2
+  fi
+  grep -Eq 'Remv[[:space:]]+proxmox-ve|The following packages will be REMOVED:.*proxmox-ve' <<< "$output"
 }
 
 
@@ -484,6 +498,11 @@ guard_against_proxmox_ve_removal() {
     echo "ls -l /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources"
     exit 1
   else
+    local status=$?
+    if [[ $status -ne 1 ]]; then
+      msg_error "$(translate "Pre-upgrade simulation failed. See log:") $LOG"
+      exit 1
+    fi
     msg_ok "$(translate "Pre-upgrade simulation passed: 'proxmox-ve' will be kept or upgraded safely.")"
   fi
 
@@ -606,7 +625,14 @@ apt_upgrade() {
         exit 1
 
     else
-        bash "$LOCAL_SCRIPTS/global/update-pve8.sh"
+        local update_rc=0
+        bash "$LOCAL_SCRIPTS/global/update-pve8.sh" || update_rc=$?
+        if [[ $update_rc -eq 3 ]]; then
+            exit 0
+        elif [[ $update_rc -ne 0 ]]; then
+            msg_error "$(translate "The Proxmox VE 8 update did not finish. The upgrade to Proxmox VE 9 was not started.")"
+            exit 1
+        fi
         hash -r
 
     fi
@@ -621,10 +647,6 @@ regenerate_pve_cache() {
   
   mkdir -p /var/lib/pve-manager
   chmod 755 /var/lib/pve-manager
-  
-  systemctl restart pve-manager 2>/dev/null || true
-  
-  sleep 2
   
   timeout 10 pvesh get /nodes/localhost/apt/update 2>/dev/null || true
   
@@ -758,7 +780,11 @@ run_pve8to9_check() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run 'PVE 8 to 9 check' to verify that all issues are resolved \n    before executing the PVE 8 → PVE 9 upgrade.")"
+            local check_help
+            check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues before starting the PVE 8 → PVE 9 upgrade.")"
+            [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues before starting the PVE 8 → PVE 9 upgrade."
+            check_help="${check_help//\{check\}/"$(translate "Run PVE 8 to 9 check")"}"
+            msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r
@@ -811,11 +837,11 @@ else
 fi
 
 
+FUNC_VERSION="1.0"
+pmx_journal_context "upgrade_pve8_to_pve9" "$FUNC_VERSION"
 if [[ "$DISABLE_AUDIT" == "1" ]]; then
-  append_step \
-    "" \
-    "Audit socket disabled or not required" \
-    "systemctl disable --now systemd-journald-audit.socket >/dev/null 2>&1 || true"
+  pmx_disable_service systemd-journald-audit.socket >> "$LOG" 2>&1 || true
+  echo -e "${BFR}${TAB}${CM}${GN}$(translate "Audit socket disabled or not required")${CL}"
 fi
 
 
@@ -856,10 +882,12 @@ fi
 # Step 4
 # ---------------------------
 
+FUNC_VERSION="1.0"
+pmx_journal_context "upgrade_pve8_to_pve9" "$FUNC_VERSION"
 OS_FILE="/etc/apt/sources.list"
 if [[ -f "$OS_FILE" ]]; then
   msg_info "$(translate "Updating Debian Bookworm → Trixie in sources.list...")"
-  if sed -i 's/bookworm/trixie/g' "$OS_FILE"; then
+  if pmx_edit_file "$OS_FILE" 's/bookworm/trixie/g'; then
     msg_ok "$(translate "sources.list updated to Trixie")"
   else
     msg_ok "$(translate "sources.list update skipped (no change)")"
@@ -871,7 +899,7 @@ fi
 PVE_ENT_LIST="/etc/apt/sources.list.d/pve-enterprise.list"
 msg_info "$(translate "Updating pve-enterprise.list (if present) to Trixie...")"
 if [[ -f "$PVE_ENT_LIST" ]]; then
-  if sed -i 's/bookworm/trixie/g' "$PVE_ENT_LIST"; then
+  if pmx_edit_file "$PVE_ENT_LIST" 's/bookworm/trixie/g'; then
     msg_ok "$(translate "pve-enterprise.list updated to Trixie")"
   else
     msg_ok "$(translate "pve-enterprise.list update skipped (no change)")"
@@ -884,9 +912,9 @@ fi
 msg_info "$(translate "Commenting any residual Bookworm lines in *.list...")"
 for f in /etc/apt/sources.list.d/*.list; do
   [[ -f "$f" ]] || continue
-  sed -i '/bookworm/s/^/# /' "$f" || true
+  pmx_edit_file "$f" '/bookworm/s/^/# /' || true
 done
-sed -i '/bookworm/s/^/# /' "$OS_FILE" 2>/dev/null || true
+pmx_edit_file "$OS_FILE" '/bookworm/s/^/# /' 2>/dev/null || true
 msg_ok "$(translate "Residual Bookworm entries commented where applicable")"
 
 
@@ -984,6 +1012,13 @@ else
     bash -lc "apt-get dist-upgrade"
 fi
 
+# pve-manager 9 ships pve-enterprise.sources during the upgrade.
+if [[ "$REPO_MODE" == "no-subscription" && -f /etc/apt/sources.list.d/pve-enterprise.sources ]] \
+   && ! grep -qi '^Enabled:[[:space:]]*\(false\|no\)' /etc/apt/sources.list.d/pve-enterprise.sources; then
+  disable_enterprise_repo_if_present
+  msg_ok "$(translate "Enterprise Proxmox repository disabled")"
+fi
+
 
 
 # ==========================================================
@@ -1004,7 +1039,7 @@ if [[ -d /sys/firmware/efi ]]; then
     run_step \
       "Installing grub-efi-amd64" \
       "grub-efi-amd64 installed or already present" \
-      "apt-get install grub-efi-amd64 >/dev/null 2>&1"
+      "apt-get install -y grub-efi-amd64 >/dev/null 2>&1"
   fi
 fi
 
@@ -1122,7 +1157,11 @@ run_pve8to9_check2() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run the script 'PVE 8 to 9 check' to verify that all issues are resolved \n   before rebooting.")"
+            local check_help
+            check_help="$(translate "Once finished, repeat the check ({check}) to review any remaining issues before rebooting.")"
+            [[ "$check_help" == *'{check}'* ]] || check_help="Once finished, repeat the check ({check}) to review any remaining issues before rebooting."
+            check_help="${check_help//\{check\}/"$(translate "Run PVE 8 to 9 check")"}"
+            msg_info2 "$check_help"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r

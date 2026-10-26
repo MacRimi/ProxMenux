@@ -3,8 +3,7 @@
 # ==========================================================
 # Guest Agent Configurator - ProxMenux
 # ==========================================================
-# Añade soporte al QEMU Guest Agent y dispositivos útiles.
-# Se adapta según el sistema operativo.
+# Adds QEMU Guest Agent support and the useful devices, per guest OS.
 # ==========================================================
 
 BASE_DIR="/usr/local/share/proxmenux"
@@ -28,7 +27,7 @@ function configure_guest_agent() {
 
   msg_info "$(translate "Adding QEMU Guest Agent support...")"
 
-  # Habilitar el agente en la VM
+  # Enable the agent on the VM
   qm set "$VMID" -agent enabled=1 >/dev/null 2>&1
 
   # Añadir canal de comunicación virtio

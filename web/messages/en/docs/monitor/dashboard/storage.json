@@ -14,7 +14,7 @@
   },
   "thresholds": {
     "title": "Status colours and thresholds applied here",
-    "intro": "Every bar, chip, and dot on this tab follows the same three-state classification — <green/> <strong>green</strong> below Warning, <amber/> <strong>amber</strong> from Warning to Critical, <red/> <strong>red</strong> at Critical and above. Recommended defaults shipped with ProxMenux:",
+    "intro": "Health Monitor classifies status as <green/> <strong>green</strong> below Warning, <amber/> <strong>amber</strong> from Warning to Critical, and <red/> <strong>red</strong> at Critical and above. Its recommended defaults follow. Individual dashboard bars can use different visual cutoffs, described below.",
     "items": [
       "<strong>Capacity</strong> (host disks, PVE storages, ZFS pools, LXC mounts) — Warning 85 %, Critical 95 %.",
       "<strong>Disk temperature</strong> — HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (warning / critical)."
@@ -33,7 +33,7 @@
     "localLabel": "Local Used",
     "localWhat": "Bytes used on local storages (LVM / LVM-thin / ZFS / dir on the host's own disks). Shows the used bytes prominently, with a footer line of <em>X.XX % of Y TB</em> so you see the fill-percentage at the same time.",
     "remoteLabel": "Remote Used",
-    "remoteWhat": "Same shape as Local Used but for remote storages (NFS / CIFS / PBS / Ceph / iSCSI). Counted separately because remote outages don't affect local data and you typically size and monitor them differently.",
+    "remoteWhat": "Same format as Local Used, for remote storages (NFS / CIFS / PBS / Ceph / iSCSI). Counted separately because local and remote failures have different scopes and these resources are typically sized and monitored differently.",
     "disksLabel": "Physical Disks",
     "disksIntro": "Two lines of breakdown for the inventory:",
     "disksItems": [
@@ -45,9 +45,9 @@
     "heading": "Proxmox Storage card",
     "intro": "One row per storage configured in <code>/etc/pve/storage.cfg</code>. Each row shows the type badge (<code>nfs</code> / <code>cifs</code> / <code>zfspool</code> / <code>lvm</code> / <code>lvmthin</code> / <code>dir</code> / <code>pbs</code>), the storage name, an active / error / not-monitored badge, the usage percentage and a coloured progress bar:",
     "items": [
-      "<strong>&lt; 75 %</strong> — blue progress bar, value in blue.",
-      "<strong>75 – 90 %</strong> — yellow progress bar, value in yellow (Health Monitor warns at this point).",
-      "<strong>> 90 %</strong> — red progress bar, value in red (Health Monitor escalates).",
+      "<strong>Up to 75 %</strong> — blue progress bar and value.",
+      "<strong>Above 75 % through 90 %</strong> — yellow progress bar and value. These are visual cutoffs, separate from Health Monitor thresholds.",
+      "<strong>> 90 %</strong> — red progress bar and value; this visual cutoff is separate from Health Monitor escalation.",
       "<strong>error</strong> — full row outlined in red, used when the storage is configured but unreachable (NFS server down, CIFS creds expired).",
       "<strong>excluded</strong> — purple outline + the badge \"not monitored\". Storages explicitly excluded by the user from health checks (handy for manual / archive volumes that are intentionally offline)."
     ],
@@ -70,12 +70,12 @@
     "items": [
       "<strong>Device path</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Type badge</strong> — SATA / NVMe (and the relevant icon).",
-      "<strong>System badge</strong> — orange tag that marks disks the host's OS is running from. The dashboard derives this from the mountpoints of <code>/</code> and <code>/boot</code>: any physical disk hosting them gets the <em>System</em> tag so you don't accidentally wipe or repurpose it. Disks without the tag are pure data drives.",
+      "<strong>System badge</strong> — orange tag for disks in use by the host: system mountpoints (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), active swap, ZFS pool members, LVM physical volumes, active RAID members or system partition labels. A missing tag does not prove a disk is safe to erase or repurpose.",
       "<strong>Model</strong> — vendor + model string from <code>smartctl -i</code>.",
       "<strong>Capacity</strong> — formatted human-readable.",
       "<strong>Temperature</strong> — current °C, coloured by the disk-type threshold (NVMe runs warmer than SATA).",
       "<strong>SMART status</strong> — passed / failed / unknown.",
-      "<strong>Observations badge</strong> — when the permanent <code>disk_observations</code> history has un-dismissed entries for this disk, a blue badge with the count appears (e.g. <em>3 obs.</em>). Click the disk to drill in and review them.",
+      "<strong>Observations badge</strong> — when the permanent <code>disk_observations</code> history has entries for this disk, a blue badge with the count appears (e.g. <em>3 obs.</em>). Click the disk to drill in and review them.",
       "<strong>Health badge</strong> — Healthy / Warning / Critical, derived from the SMART check + recent observations."
     ],
     "clickHint": "The whole row is clickable and opens the per-disk drill-in described below.",
@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> — model, serial, capacity, Health badge (Healthy / Warning / Critical).",
       "<strong>Wear & Lifetime</strong> — large life-remaining ring (97 %, 50 %, …) with the source attribute spelled out (<em>Media Wearout Indicator</em>, <em>Percentage Used</em>, …), a wear bar (current consumption %), an <em>Est. Life</em> projection in years and the total Data Written. NVMe drives also show <em>Available Spare</em>.",
-      "<strong>SMART Attributes</strong> — six headline fields on a 2-column grid: Temperature, Power On Hours (with humanised duration like <em>3y 116d</em>), Rotation Rate (or <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, Pending Sectors, CRC Errors. The full attribute table lives in the SMART tab."
+      "<strong>SMART Attributes</strong> — key fields on a 2-column grid: Temperature, Power On Hours (with humanised duration like <em>3y 116d</em>), Rotation Rate (or <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, Pending Sectors, CRC Errors. The full attribute table lives in the SMART tab."
     ],
     "smartTitle": "Tab 2 — SMART",
     "smartImageAlt": "Disk drill-in modal — SMART tab with Run SMART Test buttons (Short / Extended), last-test result and the full SMART attribute table",
@@ -108,11 +108,11 @@
       "<strong>SMART Attributes</strong> — the full attribute table (ID / name / value / worst / status with OK / warning / critical icons). For SATA / SAS, the classical numbered list. For NVMe, the structured fields from <code>nvme smart-log</code> (temperature, available spare, percentage used, data units written / read, host reads / writes, controller busy time, power cycles, unsafe shutdowns, media errors, error-log entries, warning / critical composite temperature time)."
     ],
     "pdfTitle": "View Full SMART Report (PDF)",
-    "pdfIntro": "At the bottom of the SMART tab, the <strong>View Full SMART Report</strong> button generates a printable, archive-ready PDF — the same structured report you'd send to a vendor for an RMA.",
+    "pdfIntro": "At the bottom of the SMART tab, <strong>View Full SMART Report</strong> opens a printable report. Use the browser’s print dialog to save it as PDF for archiving or to share with vendor support for an RMA.",
     "pdfPreviewAlt": "First page of the generated SMART Health Report PDF — Executive Summary with the PASSED ring + Disk Information block",
     "pdfPreviewCaption": "First page of the SMART Health Report — Executive Summary with the PASSED ring and the full Disk Information block. The full PDF below has the SSD wear ring, every SMART attribute and the test history.",
     "pdfDownloadLabel": "Download sample SMART report (PDF)",
-    "pdfSectionsIntro": "The report has five top-level sections:",
+    "pdfSectionsIntro": "The report includes these main sections:",
     "pdfSections": [
       "<strong>Executive Summary</strong> — large PASSED / FAILED verdict, plain-language disk health assessment paragraph (\"your disk is healthy / showing signs of wear / failing\"), and four quick stats (report timestamp, last-test type, test result, attributes checked).",
       "<strong>Disk Information</strong> — model, serial, capacity, type (HDD / SSD / NVMe), family, form factor, interface (SATA 3.3 · 6.0 Gb/s, …), TRIM support, current temperature with the optimal threshold, power-on time, power cycles, SMART status, plus the headline counters (pending sectors, CRC errors, reallocated sectors).",
@@ -121,13 +121,13 @@
       "<strong>Last Self-Test Result + Full Self-Test History</strong> — the latest test (type, result, completion message, at which power-on-hours mark) plus a numbered table of every retained test.",
       "<strong>Recommendations</strong> — action items based on the verdict: <em>Disk is Healthy / Schedule periodic tests / Backup strategy</em> for healthy drives, escalating language with replacement guidance when attributes are out of range."
     ],
-    "pdfOutro": "The PDF is produced server-side and downloaded with a stable filename pattern (<code>SMART-&lt;short-id&gt;.pdf</code>) so multiple snapshots over time can sit side-by-side in your archive. Useful when you're tracking degradation across months or sending evidence to vendor support.",
+    "pdfOutro": "The browser builds the printable report; Print and Save as PDF both open its print dialog. Choose a filename such as <code>SMART-&lt;short-id&gt;.pdf</code> when saving. Keep dated snapshots to compare changes over time or share them with vendor support.",
     "historyTitle": "Tab 3 — History",
     "historyImageAlt": "Disk drill-in modal — History tab listing past SMART tests with download and delete actions",
     "historyImageCaption": "History tab — every retained SMART test for this disk. Per row: type, timestamp, \"X days ago\" tag, latest marker, download (raw <code>smartctl</code> output) and delete actions.",
     "historyIntro": "The retained pool of SMART tests for this disk — both short and extended runs that completed. Each entry is the raw <code>smartctl</code> output captured at run time, plus the structured fields the Monitor parsed out for the dashboard. Per-row actions:",
     "historyItems": [
-      "<strong>Download</strong> — saves the raw <code>smartctl -a</code> output as a text file. Identical to what the PDF report parses, useful when you need the exact line a vendor asks for.",
+      "<strong>Download</strong> — saves that test's JSON snapshot (<code>smartctl -a --json</code> output, or <code>nvme smart-log</code> on NVMe when smartctl fails). Useful when vendor support needs the original diagnostic fields.",
       "<strong>Delete</strong> — removes the test from history. The retention limit set in the Schedule tab (<em>Last 5 / 10 / 20</em>) deletes oldest-first automatically; this action is the manual override."
     ],
     "scheduleTitle": "Tab 4 — Schedule",
@@ -154,7 +154,7 @@
       "HDD — typically cooler thresholds.",
       "SSD — moderate thresholds.",
       "NVMe — higher thresholds (NVMe runs hotter by design).",
-      "SAS — same defaults as HDD."
+      "SAS — defaults of 55 °C warning and 65 °C critical, distinct from HDD’s warning threshold."
     ],
     "tempConfigurable": "All four are configurable from <em>Settings → Health Monitor Thresholds</em>.",
     "tempWhyTitle": "Why a history matters here",
@@ -164,7 +164,7 @@
       "<strong>Threshold tuning.</strong> Before raising or lowering a threshold in <em>Settings → Health Monitor Thresholds</em>, the 30-day chart shows the disk's actual operating range so the new value lines up with what the hardware really does rather than a guess."
     ],
     "obsTitle": "Observation history (across tabs)",
-    "obsIntro": "Modern disks fail gradually. A disk can report SMART <strong>PASSED</strong> and still log occasional read errors in dmesg, drop SATA links, or expose pending sectors that come and go. The standard Proxmox UI shows you the current SMART verdict — it does not keep a history of those <em>signals</em>. ProxMenux does, and surfaces them right inside the disk modal.",
+    "obsIntro": "Disk faults can develop gradually. A disk may report SMART <strong>PASSED</strong> while logging read errors in dmesg, losing SATA links or reporting intermittent pending sectors. ProxMenux keeps a history of these <em>signals</em> and shows it inside the disk dialog alongside the current SMART verdict.",
     "obsImageAlt": "Disk Details modal Overview tab showing a healthy disk with SMART status Passed, 0 reallocated/pending/CRC errors, and an Observations section listing one recorded I/O Error event with the raw kernel message, a human translation of the ATA error code, first and last occurrence timestamps and an occurrence count",
     "obsImageCaption": "A disk that <strong>SMART says is fine</strong> can still have an observation history. The card is the historical signal layer underneath the SMART verdict.",
     "obsWhatTitle": "What an observation is",
@@ -177,17 +177,17 @@
     ],
     "obsWhyTitle": "Why ProxMenux records and shows them",
     "obsWhyItems": [
-      "<strong>Disk failure is rarely a single event.</strong> It usually starts with sporadic ATA bus errors, the odd UNC sector, or a couple of medium errors weeks before SMART flips to <em>FAILED</em>. Without persistence those early warnings disappear from dmesg on the next boot.",
-      "<strong>SMART can lie.</strong> A drive can show all attributes green and still be on the way out — the observation layer catches the symptoms SMART doesn't expose (especially ICRC, IDNF, link resets at lower SATA speeds).",
+      "<strong>Faults can develop over time.</strong> Sporadic ATA bus errors, UNC sectors or media errors may appear before SMART reports <em>FAILED</em>. A dmesg buffer alone does not preserve them across a reboot; the observation history does.",
+      "<strong>SMART does not rule out every fault.</strong> A drive can show green attributes while experiencing problems. Observations retain additional symptoms, including ICRC, IDNF and SATA link resets or speed reductions.",
       "<strong>It separates \"is happening now\" from \"happened recently\".</strong> The Health Monitor auto-resolves transient errors as soon as they stop firing, which is great for keeping the active alert list clean — but you still want to see, days later, that this disk had three I/O errors that night. The observation table is the answer.",
       "<strong>It feeds the tiered notification model.</strong> The disk_io detector reads observation rate from this table to decide silent / WARNING / CRITICAL (the sliding 24h window introduced in 1.2.1.2). The history is what makes that classification possible."
     ],
     "obsDedupTitle": "How dedup and re-notification work",
     "obsDedupBody1": "Observations are deduplicated by their <strong>signature</strong> — a stable fingerprint of the error type, device and key fields of the kernel line. The same event repeating bumps the <code>occurrence_count</code> on the existing row rather than creating a new one. A <strong>different signature</strong> on the same disk creates a new observation and is treated as a new event for notification purposes.",
-    "obsDedupBody2": "Notifications follow an anti-cascade rule: the first occurrence of a given (disk, signature, severity) combination pages the operator, and ProxMenux then waits 24 hours before pinging again about the same combination — even if the count keeps climbing. Escalating severity (WARNING → CRITICAL) breaks the cooldown so the operator is told when things get worse, not just when they happen.",
-    "obsDismissTitle": "Dismissing vs resolving",
-    "obsDismissBody1": "Each row has a <strong>dismiss</strong> action. Dismissing an observation tells ProxMenux \"I've seen this, stop notifying me about it\". It does <strong>not</strong> freeze the occurrence counter — if the same fault keeps happening the count keeps climbing in the background, ready to alert again if it ever escalates to a different severity tier or signature. A dismissed observation stays visible on the card with a muted style, so a future operator can still see \"this disk had history here\".",
-    "obsDismissBody2": "Resolving on the active-error side (Health Monitor) is independent of observation dismiss — the observation persists past the active error's auto-resolve. That's the whole point: it survives, so a transient warning from last week is still visible on the disk card today. See <link>Health Monitor</link> for the active-error side of the same picture."
+    "obsDedupBody2": "Notifications follow an anti-cascade rule: the first occurrence of a given (disk, signature, severity) combination pages the user, and ProxMenux then waits 24 hours before pinging again about the same combination — even if the count keeps climbing. Escalating severity (WARNING → CRITICAL) breaks the cooldown so the user is told when things get worse, not just when they happen.",
+    "obsDismissTitle": "Permanent history vs active errors",
+    "obsDismissBody1": "An observation cannot be dismissed, hidden or removed. Each different observation of a disk is one card; the same one seen again adds to its occurrence count and moves its last date instead of creating a new card. The history belongs to the disk, identified by its serial number: a disk plugged where another one was starts with none, and a disk the kernel renames keeps its own.",
+    "obsDismissBody2": "Resolving or dismissing on the active-error side (Health Monitor) is independent of the observations — the observation persists past the active error's auto-resolve. That's the whole point: it survives, so a transient warning from last week is still visible on the disk card today. See <link>Health Monitor</link> for the active-error side of the same picture."
   },
   "dataCollected": {
     "heading": "How the data is collected",
@@ -213,12 +213,12 @@
       {
         "section": "SMART current values",
         "endpoint": "/api/storage/smart/<disk>",
-        "source": "<code>smartctl -A &lt;dev&gt;</code> — refreshed on demand, not cached."
+        "source": "<code>smartctl -A &lt;dev&gt;</code> is one available probe; the detail endpoint also uses full SMART JSON and NVMe-specific data."
       },
       {
         "section": "SMART self-test history",
         "endpoint": "/api/storage/smart/<disk>/history",
-        "source": "Stored under <code>/var/lib/proxmenux-monitor/smart/&lt;disk&gt;/</code> as JSON snapshots."
+        "source": "Stored under <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code> as JSON snapshots."
       },
       {
         "section": "Permanent observations",

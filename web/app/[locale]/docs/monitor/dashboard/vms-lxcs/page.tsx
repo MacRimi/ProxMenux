@@ -292,6 +292,16 @@ export default async function VmsLxcsTabPage({
         {t("drillIn.mountsCalloutBody")}
       </Callout>
 
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.logsTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("drillIn.logsBody", {
+          code,
+          ociLink: (chunks: React.ReactNode) => (
+            <Link href="/docs/oci-manager/monitor" className="text-blue-600 hover:underline">{chunks}</Link>
+          ),
+        })}
+      </p>
+
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.backupsTitle")}</h3>
 
       <figure className="my-4">

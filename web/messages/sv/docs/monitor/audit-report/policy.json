@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Policy | Granskning och rapporter",
+    "description": "Nodens policy i Granskning och rapporter: säkerhetskopiering, autostart och återställningsmål för varje gäst, varje lagrings roll och kontrollernas tröskelvärden."
+  },
+  "header": {
+    "title": "Policy",
+    "description": "Policyn anger vad ingen inspektion kan härleda: syftet med varje gäst och lagring samt tröskelvärdena som kontrollerna tillämpar.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Utan angivna förväntningar beskriver rapporten; med dem bedömer den",
+            "body": "En bedömning ser vad värden gör, inte vad det är för. En gäst utan en säkerhetskopia vars syfte inte förklaras rapporteras som en observation. Om dess backup förklaras krävs, rapporteras samma frånvaro som en varning. Ingenting måste förklaras."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Policyvisning med gästerna, lagringen och trösklarna på noden",
+            "caption": "Policyvyn."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Gäster",
+      "intro": "Varje VM och LXC av noden har tre fält. Ett värde kvar som standard tar det allmänna värdet, som visas bredvid det.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Fält",
+              "Värden",
+              "Effekt på bedömningen"
+            ],
+            "rows": [
+              [
+                "Säkerhetskopiering",
+                "Krävs, Krävs inte, Ej angivet",
+                "En saknad säkerhetskopia är en varning när det krävs, en observation när det inte anges, och det lämnas ur räkningen när det inte krävs."
+              ],
+              [
+                "Autostart",
+                "Krävs, Krävs inte, Ej angivet",
+                "Om gästen måste starta tillsammans med värden."
+              ],
+              [
+                "Återställningsmål",
+                "Timmar",
+                "Den högsta acceptabla åldern för den sista säkerhetskopian."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Lagring",
+      "blocks": [
+        {
+          "p": "Lagring som inte kan nås rapporteras som kritisk om den angetts som nödvändig eller används av en gäst som körs, som en varning om rollen inte angetts och som en observation om den angetts som valfri."
+        }
+      ],
+      "intro": "Varje lagring av noden deklareras som väsentlig, valfri eller ej angiven."
+    },
+    {
+      "id": "thresholds",
+      "title": "Trösklar",
+      "intro": "Ett tomt tröskelfält använder det medföljande standardvärdet, som visas som platshållare.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Granskning av lagringskapacitet (%) och fyllnadsgrad i thin pool (%).",
+              "Kvot för thin-överallokering och överallokering av minne.",
+              "Intervall för ZFS-scrub (dagar).",
+              "Reservgräns för säkerhetskopians ålder (dagar) och marginal mot schemat (kvot).",
+              "Certifikat utgångsmeddelande (dagar).",
+              "Disk livslängd (timmar) och nyligen diskfel fönster (dagar).",
+              "Lynis-rapportens ålder (dagar) och paketindexets ålder (dagar).",
+              "Journalens användning i förhållande till sitt tak (%).",
+              "Granskning av filsystemets utrymme (%) och inoder (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Hur policyn sparas",
+      "blocks": [
+        {
+          "p": "Deklarationen valideras och sparas atomiskt i <code>/usr/local/share/proxmenux/audit_policy.json</code>. Varje sparning har en revision: om en annan session ändrat deklarationen sparas inte utkastet och vyn erbjuder att läsa in den sparade versionen igen."
+        },
+        {
+          "calloutWarning": {
+            "title": "Policyn härleds aldrig automatiskt",
+            "body": "ProxMenux lägger inte till egna krav. Ett tomt fält behåller standardvärdet eller förblir ej angivet; en delvis ifylld deklaration påverkar bara de namngivna delarna."
+          }
+        }
+      ]
+    }
+  ]
+}

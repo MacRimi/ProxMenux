@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: Systemübersicht | ProxMenux-Dokumentation",
+    "description": "Der Standardstartreiter von ProxMenux Monitor: vier Kennzahlenkarten (CPU, Arbeitsspeicher, aktive VMs und LXCs, Temperatur) mit Live-Aktualisierung und Minidiagramm, ein Verlaufsdiagramm und kompakte Speicher- und Netzwerkübersichten mit Links zu ihren Detailreitern."
+  },
+  "header": {
+    "title": "Dashboard: Registerkarte Systemübersicht",
+    "description": "Der Reiter, den das Dashboard standardmäßig öffnet: vier Live-Kennzahlenkarten oben, ein Verlaufsdiagramm in der Mitte und kompakte Speicher- und Netzwerkübersichten unten. Sie verwenden dieselben APIs wie die jeweiligen Detailreiter.",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "readOnly": {
+    "title": "Eine schreibgeschützte Momentaufnahme",
+    "body": "Alle Bereiche dieses Reiters dienen der Information. Aktionen finden Sie in den verlinkten Detailreitern: Speicher zur Datenträgerverwaltung, VMs und LXCs zum Starten und Stoppen von Gästen sowie Sicherheit zur Authentifizierung."
+  },
+  "captureAlt": "Registerkarte Systemübersicht — vier metrische Karten (CPU, Speicher, aktive VMs, Temperatur), Knotenmetrikdiagramm und Speicher- / Netzwerkzusammenfassungskarten",
+  "captureCaption": "Systemübersicht, der Standardstartreiter. Die vier Karten zeigen Live-Werte, das Diagramm zeigt den Verlauf und die beiden unteren Karten fassen Speicher und Netzwerk zusammen.",
+  "topRow": {
+    "heading": "Obere Reihe: Live-Kennzahlenkarten",
+    "intro": "Vier Karten im 2×2-Raster auf Mobilgeräten und in einer Reihe auf dem Desktop. Jede wird alle paar Sekunden über <code>/api/system</code> aktualisiert.",
+    "headerCard": "Karte",
+    "headerWhat": "Was es zeigt",
+    "headerSource": "Quelle",
+    "rows": [
+      {
+        "card": "CPU-Auslastung",
+        "what": "Aktueller Prozentsatz mit Fortschrittsbalken. Der Vitaldaten-Sampler aktualisiert ihn etwa jede Sekunde.",
+        "source": "psutil.cpu_percent()"
+      },
+      {
+        "card": "Arbeitsspeichernutzung",
+        "what": "Belegte GB, Prozentsatz und Gesamt-GB. Der Balken zeigt den Prozentsatz.",
+        "source": "psutil.virtual_memory()"
+      },
+      {
+        "card": "Aktive VM und LXC",
+        "what": "Anzahl laufender Gäste mit Aufschlüsselung nach Laufend/Gestoppt und Gesamtzahlen der VMs und LXCs in der Fußzeile.",
+        "source": "/api/vms (konsolidiert)"
+      },
+      {
+        "card": "Temperatur",
+        "what": "CPU-Temperatur in °C mit Statusanzeige (kühl/warm/heiß) und einem Minidiagramm der letzten 5 Minuten im Hintergrund. Ohne Sensor erscheint <em>N/A</em>. Ein Klick öffnet die Temperaturdetails.",
+        "source": "sensors / coretemp"
+      }
+    ],
+    "thresholdsTitle": "Hier angewendete Statusfarben und -schwellen",
+    "thresholdsIntro": "Ringe, Balken und Minidiagramme verwenden dieselbe Einteilung: <green/> <strong>grün</strong> unter der Warnschwelle, <amber/> <strong>bernsteinfarben</strong> zwischen Warn- und kritischer Schwelle, <red/> <strong>rot</strong> ab der kritischen Schwelle. Empfohlene Standardwerte von ProxMenux :",
+    "thresholdsItems": [
+      "<strong>CPU-Auslastung</strong> — Warnung 85 %, kritisch 95 %.",
+      "<strong>Arbeitsspeicher</strong> — Warnung 85 %, kritisch 95 %. Swap löst ebenfalls ab 5 % Nutzung den kritischen Zustand aus; ein gesunder Proxmox-Host sollte Swap nur selten verwenden.",
+      "<strong>CPU-Temperatur</strong> — Warnung 80 °C, kritisch 90 °C."
+    ],
+    "thresholdsOutro": "Alle Werte sind pro Host konfigurierbar. <link>Einstellungen → Grenzwerte der Zustandsüberwachung</link> ist die zentrale Referenz und erklärt ihre Anpassung.",
+    "sparklineTitle": "Das Minidiagramm zeigt den Verlauf",
+    "sparklineBody": "Die Temperaturkarte zeichnet eine 5-Minuten-Spur unter dem Wert, wobei die Linie und die Farbverlaufsfarbe dem gleichen Warning/Critical-Paar folgen, das oben dokumentiert ist. Es ist der schnellste Weg, um zu sehen, ob der Host in einem thermischen Aufstieg ist, ohne das Detail Modal zu öffnen."
+  },
+  "processes": {
+    "heading": "Prozesse mit der höchsten CPU- und Arbeitsspeichernutzung",
+    "intro": "Die Karten CPU-Auslastung und Arbeitsspeicher öffnen eine sortierbare Liste der 25 führenden Prozesse: nach CPU-Auslastung beim Öffnen über CPU, nach residentem Speicher beim Öffnen über Arbeitsspeicher.",
+    "listTitle": "Der Listendialog",
+    "listItems": [
+      "<strong>Automatische Aktualisierung</strong> — die Liste wird bei geöffnetem Dialog alle 5 Sekunden aktualisiert. Beim Schließen enden die Abfragen.",
+      "<strong>Filter</strong> — das Suchfeld grenzt die Liste nach Befehl, Benutzer oder PID ein.",
+      "<strong>Inline bar</strong> — die primäre metrische Spalte zeichnet einen kleinen Balken, der auf den höchsten Wert in der gefilterten Liste skaliert ist, so dass das Ranking auch dann sichtbar bleibt, wenn kein Prozess in der Nähe von 100 % liegt.",
+      "<strong>Mobiles Layout</strong> — unter 640 px werden PID und Benutzer ausgeblendet. Befehl, CPU % und Arbeitsspeicher passen so ohne horizontales Scrollen auf den Telefonbildschirm."
+    ],
+    "captureListAlt": "Dialog Prozesse nach Arbeitsspeichernutzung — nach RSS sortierte Tabelle mit PID, Benutzer, Befehl, CPU % und Arbeitsspeicher",
+    "captureListCaption": "Die Speicherkarte öffnet die nach RSS (indigo accent) sortierte Liste. Die CPU-Karte öffnet die gleiche Liste, sortiert nach CPU-Nutzung (blauer Akzent).",
+    "detailTitle": "Angaben zu den einzelnen Prozessen",
+    "detailIntro": "Ein Klick auf eine Zeile öffnet einen zweiten Dialog mit Live-Daten dieses Prozesses in vier Abschnitten :",
+    "detailItems": [
+      "<strong>Übersicht</strong> — Zustand, Elternprozess, Threadanzahl, offene Dateideskriptoren, Benutzer und Gruppe.",
+      "<strong>Ressourcen</strong> — CPU %, Arbeitsspeicher %, residenter Speicher (RSS), virtuelle Größe, Swap und gesamte gelesene/geschriebene I/O-Daten.",
+      "<strong>Befehl</strong> — Kurzname, vollständige Befehlszeile, Pfad der ausführbaren Datei und Arbeitsverzeichnis.",
+      "<strong>Laufzeit</strong> — Startzeitpunkt und bisherige Laufzeit."
+    ],
+    "detailRefresh": "Der Detaildialog wird alle 3 Sekunden aktualisiert. Endet der Prozess, stoppen die Abfragen und der bernsteinfarbene Hinweis <em>Dieser Prozess wurde beendet</em> erscheint. Die letzte erfasste Ansicht bleibt abgeblendet sichtbar und zeigt den Zustand vor dem Ende.",
+    "captureDetailAlt": "Prozessdetaildialog — Übersicht, Ressourcen, Befehl und Laufzeit für eine PID",
+    "captureDetailCaption": "Pro-Prozess-Detaildialog geöffnet von einer Listenzeile. Die Akzentfarbe stimmt mit der Karte überein, die sie geöffnet hat (blau für CPU, indigo für Memory)."
+  },
+  "middle": {
+    "heading": "Mitte: Knotenmetrikdiagramme",
+    "body1": "Unter den Karten zeigt <code>NodeMetricsCharts</code> CPU-, Arbeitsspeicher- und Datenträger-I/O-Verläufe aus dem RRD-Speicher von Proxmox über <code>/api/node/metrics</code>. Wählbar sind <em>1 Stunde / 24 Stunden / 7 Tage / 30 Tage / 1 Jahr</em>. Bei größeren Zeiträumen sinkt die Datenauflösung, damit die Anzeige flüssig bleibt.",
+    "body2": "Dies sind die gleichen Graphen, die die Proxmox-Web-Benutzeroberfläche für einen Knoten darstellt, nur in das dunkle Thema des Monitors konsolidiert und mit den anderen Panels ausgerichtet."
+  },
+  "bottom": {
+    "heading": "Untere Reihe: Speicher- und Netzwerkübersichten",
+    "storageTitle": "Speicherübersichtskarte",
+    "storageIntro": "Eine verdichtete Ansicht des Speicherzustands des Hosts, unterteilt in drei Blöcke:",
+    "storageItems": [
+      "<strong>Gesamtkapazität des Knotens</strong> — Summe aller VM-/LXC-Speicher und des lokalen Systemspeichers mit einem Verlaufsbalken für belegten und freien Platz.",
+      "<strong>Gesamtkapazität / Physische Datenträger</strong> — Rohkapazität und Anzahl der erkannten physischen Datenträger.",
+      "<strong>VM-/LXC-Speicher</strong> — belegter und freier Platz sowie Prozentsatz der Gastspeicher, ergänzt um deren Anzahl bei mehreren Speichern.",
+      "<strong>Lokaler Speicher (System)</strong> — Root-/Systemeinhängepunkt des Hosts, getrennt vom Gastpool."
+    ],
+    "storageDrillIn": "Details finden Sie im <link>Reiter Speicher</link>: SMART pro Datenträger, ZFS-Pools, Beobachtungsverlauf usw.",
+    "networkTitle": "Netzwerkübersichtskarte",
+    "networkBody1": "Die obere Zeile zeigt die Anzahl der aktiven Schnittstellen (physisch + Brücken kombiniert). Darunter befinden sich zwei Reihen farbiger Abzeichen für die Schnittstellen <code>up</code> — physische NICs in blau, Brücken in einer Sekundärfarbe. Ein Zeitrahmen-Selektor oben rechts (1 Stunde / 24 Stunden / 7 Tage / 30 Tage / 1 Jahr) steuert ein kleines RX / TX-Verkehrsdiagramm.",
+    "networkBody2": "Details pro Schnittstelle (IP/MAC, RRD-Diagramm, Bridge-Mitglieder, Bond-Modus usw.) stehen im <link>Reiter Netzwerk</link>."
+  },
+  "refresh": {
+    "heading": "Aktualisierungsmodell",
+    "intro": "Jeder Bereich verwaltet seinen Ladezustand (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, …), damit eine langsame Quelle die anderen nicht blockiert. Beim Laden erscheint ein pulsierender Platzhalter. Fehler werden abgefangen; ohne Temperatursensor zeigt die Karte etwa <em>N/A</em> statt eines Fehlers.",
+    "items": [
+      "<strong>Obere Kennzahlenkarten</strong> — Aktualisierung etwa alle 5 Sekunden. CPU und Temperatur erhalten zusätzlich jede Sekunde Daten vom Vitaldaten-Sampler.",
+      "<strong>Knotenmetrikdiagramm</strong> — lädt beim Öffnen sowie bei Änderung von Zeitraum oder Sprache. Erforderliche Wiederholungsversuche erfolgen nach 60 Sekunden.",
+      "<strong>Speicherkarte</strong> — Aktualisierung etwa alle 60 Sekunden. SMART-Daten bleiben länger im Cache; der Speicherreiter fordert bei Bedarf eine neue Abfrage an.",
+      "<strong>Netzwerkkarte</strong> — Zusammenfassung alle 59 Sekunden und Verkehrsdiagramm alle 60 Sekunden für den gewählten Zeitraum.",
+      "<strong>Manuell aktualisieren</strong> — die Schaltfläche Aktualisieren im Kopf lädt alle Bereiche sofort neu."
+    ]
+  },
+  "dataCollected": {
+    "heading": "Wie die Daten gesammelt werden",
+    "headerCard": "Karte",
+    "headerEndpoint": "Endpunkt",
+    "headerSource": "Quelle",
+    "rows": [
+      {
+        "card": "Statusanzeige im Kopf",
+        "endpoint": "/api/health",
+        "source": "Der zwischengespeicherte Gesamtstatus, der vom Health Monitor in jedem Zyklus erzeugt wird."
+      },
+      {
+        "card": "CPU / RAM / Swap / Betriebszeit",
+        "endpoint": "/api/system",
+        "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> mit Kurzfenster-CPU-Probenahme."
+      },
+      {
+        "card": "Host-Info (Kernel, BIOS, Distro)",
+        "endpoint": "/api/info",
+        "source": "<code>uname -a</code>, <code>dmidecode</code>, PVE-Version. Pro Prozess zwischengespeichert."
+      },
+      {
+        "card": "Speicher / Netzwerk / VMs Karten",
+        "endpoint": "/api/storage/summary, /api/network/summary, /api/vms",
+        "source": "Siehe die dedizierten Tabs für jeden. Die Kopfkarten zeigen eine verdichtete Ansicht von den gleichen Endpunkten."
+      },
+      {
+        "card": "Aktualisierungsintervall",
+        "endpoint": "—",
+        "source": "Systemdaten alle 5 Sekunden; Speicher, VMs und Netzwerkzusammenfassung alle 59 Sekunden. Aktualisieren im Kopf lädt alle Bereiche sofort neu."
+      }
+    ],
+    "codeComment1": "# Aufruf für die Statusanzeige im Kopf",
+    "codeComment2": "# öffentlich, kein Token",
+    "codeComment3": "# Authentifizierter Snapshot, der von den Karten verwendet wird"
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — der Dialog hinter der Statusanzeige im Kopf: zehn Kategorien sowie Ausblenden und Unterdrücken von Meldungen."
+      },
+      {
+        "label": "API-Referenz",
+        "href": "/docs/monitor/api",
+        "tail": " — die Endpunkte system, info und health."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": "— wie sich die gleichen Status in Telegram / Discord / E-Mail-Nachrichten verwandeln."
+      },
+      {
+        "label": "Dashboard-Index",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — die übrigen Dashboard-Reiter auf einen Blick."
+      },
+      {
+        "label": "Architektur",
+        "href": "/docs/monitor/architecture",
+        "tail": " — die Hintergrundthreads und APIs hinter dieser Ansicht."
+      }
+    ]
+  }
+}

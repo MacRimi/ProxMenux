@@ -48,8 +48,9 @@ import {
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { RestoreProgressCard } from "./restore-progress-card"
 import { fetchApi, getApiUrl } from "../lib/api-config"
+import { hostBackupErrorText } from "../lib/host-backup-messages"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
-import { formatStorage, formatBytes } from "../lib/utils"
+import { formatStorage, formatBytes, cancelButtonClass } from "../lib/utils"
 import { getStorageUsageColor } from "../lib/storage-usage-color"
 import { useI18n, useT } from "../lib/i18n/provider"
 
@@ -100,11 +101,15 @@ interface RemoteSnapshot {
   encrypted?: boolean
   borg_id?: string             // Borg-only fields when available
   borg_start_iso?: string
+  // The node the backup belongs to, read from its name; null when the name
+  // does not say (another node's backup under a name of its own choosing).
+  node?: string | null
 }
 
 interface RemoteArchivesResp {
   snapshots: RemoteSnapshot[]
   errors: Array<{ backend: string; repo_name: string; error: string }>
+  hostname?: string
 }
 
 interface ExportTask {
@@ -132,6 +137,7 @@ interface UnifiedArchive {
   // One of the two is populated depending on `source`.
   local?: BackupArchive
   remote?: RemoteSnapshot      // for both pbs and borg
+  node: string | null
 }
 
 interface BackupArchive {
@@ -146,6 +152,8 @@ interface BackupArchive {
   kind: "manual" | "scheduled" | "legacy"
   profile: string | null
   source_hostname: string | null
+  node?: string | null           // the node the backup belongs to
+  former_job?: boolean           // made by a job of this node that no longer exists
   // Which detection path identified this archive. Surfaced as a small tooltip
   // hint so the operator knows whether the metadata is authoritative
   // (sidecar) or inferred (filename / tar-peek).
@@ -518,7 +526,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       await mutateInfo()
       closeUpload()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
       setBusy(false)
     }
   }
@@ -535,7 +543,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       await mutateInfo()
       closeDelete()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
       setBusy(false)
     }
   }
@@ -618,8 +626,11 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                   <div className="flex-1 space-y-1">
                     <div className="font-semibold text-emerald-300">{t("backup.keyfileActions.pveKeyDetected")}</div>
                     <div className="text-muted-foreground">
-                      {t("backup.keyfileActions.pveKeyDescriptionBefore")} <code className="font-mono text-[10.5px]">{pveMatch.name}</code> {t("backup.keyfileActions.pveKeyDescriptionMiddle")}{" "}
-                      <code className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>. {t("backup.keyfileActions.pveKeyDescriptionAfter")}
+                      {t("backup.keyfileActions.pveKeyDescription").split(/(\{storage\}|\{path\})/).map((part, index) =>
+                        part === "{storage}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatch.name}</code>
+                          : part === "{path}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>
+                            : part
+                      )}
                     </div>
                   </div>
                 </div>
@@ -755,7 +766,7 @@ function KeyfileActionsBar({
       setPass1("")
       setPass2("")
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
     } finally {
       setBusy(false)
     }
@@ -946,7 +957,7 @@ export function HostBackup() {
       mutateJobs()
       setJobToDelete(null)
     } catch (e) {
-      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${e instanceof Error ? e.message : String(e)}` }))
+      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${hostBackupErrorText(e, t)}` }))
     } finally {
       setBusyJobId(null)
     }
@@ -961,11 +972,14 @@ export function HostBackup() {
     fetcher,
     { refreshInterval: 60000 },
   )
-  const { data: archivesResp, error: archivesErr, mutate: mutateArchives } = useSWR<{ archives: BackupArchive[] }>(
+  const { data: archivesResp, error: archivesErr, mutate: mutateArchives } = useSWR<{ archives: BackupArchive[]; hostname?: string }>(
     "/api/host-backups/archives",
     fetcher,
     { refreshInterval: 30000 },
   )
+  // On a cluster every PBS holds the backups of all nodes: the list shows
+  // this node's by default, and all of them on request.
+  const [archiveScope, setArchiveScope] = useState<"node" | "all">("node")
 
   // Background poll for the pending manual backup, independent of the
   // watch modal being open. Fires mutateArchives/mutateRemoteArchives
@@ -1002,6 +1016,7 @@ export function HostBackup() {
           created_at: a.mtime,
           source_label: a.path.replace(/\/[^/]+$/, "") || "/",
           local: a,
+          node: a.node ?? null,
         })
       }
     }
@@ -1014,12 +1029,21 @@ export function HostBackup() {
           created_at: s.backup_time,
           source_label: `${s.backend.toUpperCase()} ${s.repo_name}`,
           remote: s,
+          node: s.node ?? null,
         })
       }
     }
     out.sort((a, b) => b.created_at - a.created_at)
     return out
   })()
+  const thisNode = archivesResp?.hostname || remoteArchivesResp?.hostname || null
+  // The choice is offered only when some backup belongs to another node or
+  // its node is not known; a single node sees its list as before.
+  const otherNodeArchives = thisNode ? unifiedArchives.filter((u) => u.node !== thisNode).length : 0
+  const visibleArchives = archiveScope === "all" || otherNodeArchives === 0
+    ? unifiedArchives
+    : unifiedArchives.filter((u) => u.node === thisNode)
+  const hiddenArchives = unifiedArchives.length - visibleArchives.length
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -1184,7 +1208,7 @@ export function HostBackup() {
                         {!j.attached && j.next_run && (
                           <span className="inline-flex items-center gap-1" title={t("backup.jobs.nextRunTitle")}>
                             <Clock className="h-3.5 w-3.5 text-green-500" />
-                            <span>{t("backup.jobs.nextRun", { time: formatNext(j.next_run) })}</span>
+                            <span>{t("backup.jobs.nextRun")}: {formatNext(j.next_run)}</span>
                           </span>
                         )}
                         {(statusBadge || lastRunWhen) && (
@@ -1275,7 +1299,32 @@ export function HostBackup() {
             <Archive className="h-5 w-5 text-blue-500" />
             <CardTitle className="text-base font-semibold">{t("backup.archives.title")}</CardTitle>
           </div>
-          <Badge variant="outline">{unifiedArchives.length}</Badge>
+          <div className="flex items-center gap-2">
+            {otherNodeArchives > 0 && (
+              <div
+                role="group"
+                aria-label={t("backup.archives.scopeAriaLabel")}
+                className="inline-flex rounded-lg border border-border bg-muted/40 p-1 gap-1"
+              >
+                {(["node", "all"] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={archiveScope === key}
+                    onClick={() => setArchiveScope(key)}
+                    className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      archiveScope === key
+                        ? "bg-blue-500 text-white shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                    }`}
+                  >
+                    {key === "node" ? t("backup.archives.scopeThisNode") : t("backup.archives.scopeAllNodes")}
+                  </button>
+                ))}
+              </div>
+            )}
+            <Badge variant="outline">{visibleArchives.length}</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-muted-foreground mb-3">
@@ -1286,7 +1335,7 @@ export function HostBackup() {
               <div className="font-medium">{t("backup.archives.remoteQueryWarning")}</div>
               {remoteArchivesResp.errors.map((e, i) => (
                 <div key={i} className="font-mono break-all">
-                  {e.backend}/{e.repo_name}: {e.error}
+                  {e.backend}/{e.repo_name}: {hostBackupErrorText(e.error, t)}
                 </div>
               ))}
             </div>
@@ -1298,13 +1347,21 @@ export function HostBackup() {
               <Loader2 className="h-4 w-4 animate-spin" />
               {t("backup.common.loading")}
             </div>
-          ) : unifiedArchives.length === 0 ? (
+          ) : visibleArchives.length === 0 && hiddenArchives === 0 ? (
             <div className="text-sm text-muted-foreground py-4">
-              {t("backup.archives.emptyBefore")} <span className="font-medium">{t("backup.manual.run")}</span> {t("backup.archives.emptyAfter")}
+              {t("backup.archives.emptyMessage")}
             </div>
           ) : (
             <div className="space-y-2">
-              {unifiedArchives.map((u) => {
+              {hiddenArchives > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t("backup.archives.hiddenOtherNodes", { count: hiddenArchives })}{" "}
+                  <button type="button" className="text-blue-400 hover:underline" onClick={() => setArchiveScope("all")}>
+                    {t("backup.archives.scopeShowAll")}
+                  </button>
+                </p>
+              )}
+              {visibleArchives.map((u) => {
                 const localKind = u.local?.kind
                 const localJobId = u.local?.job_id
                 const localHost = u.local?.source_hostname
@@ -1363,6 +1420,14 @@ export function HostBackup() {
                             {t("backup.status.manual")}
                           </span>
                         ) : null}
+                        {u.source === "local" && u.local?.former_job && (
+                          <span
+                            className="uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-400"
+                            title={t("backup.archives.formerJobTitle")}
+                          >
+                            {t("backup.archives.formerJob")}
+                          </span>
+                        )}
                         {(u.source === "pbs" || u.source === "borg") && u.remote?.backup_id && (
                           <span>{u.source === "pbs" ? t("backup.archives.group") : t("backup.archives.archive")}: <code className="font-mono">{u.remote.backup_id}</code></span>
                         )}
@@ -1510,7 +1575,7 @@ export function HostBackup() {
           )}
           <div className="flex justify-end gap-2 mt-2">
             <Button
-              variant="ghost"
+              variant="outline" className={cancelButtonClass}
               onClick={() => setJobToDelete(null)}
               disabled={busyJobId === jobToDelete?.id}
             >
@@ -1697,7 +1762,7 @@ function InspectModal({
       setImportFile(null)
       setImportPath("")
     } catch (e) {
-      setImportError(e instanceof Error ? e.message : String(e))
+      setImportError(hostBackupErrorText(e, t))
     } finally {
       setImporting(false)
     }
@@ -1748,7 +1813,7 @@ function InspectModal({
           : undefined,
       })
     } catch (e) {
-      setRestoreError(e instanceof Error ? e.message : String(e))
+      setRestoreError(hostBackupErrorText(e, t))
     } finally {
       setRestorePreparing(false)
     }
@@ -1777,7 +1842,7 @@ function InspectModal({
       a.click()
       document.body.removeChild(a)
     } catch (e) {
-      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.downloadFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       // The download itself runs in the browser's network stack;
       // we just initiated it. Clear the spinner immediately.
@@ -1850,7 +1915,7 @@ function InspectModal({
       document.body.removeChild(a)
       setExportTask(null)
     } catch (e) {
-      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.downloadFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setDownloading(false)
     }
@@ -1898,7 +1963,7 @@ function InspectModal({
       setShowDeleteArchiveConfirm(false)
       if (onDeleted) onDeleted(); else onClose()
     } catch (e) {
-      setError(t("backup.errors.deleteFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.deleteFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setDeletingArchive(false)
     }
@@ -1925,7 +1990,7 @@ function InspectModal({
       ) as NonNullable<typeof instructions>
       setInstructions(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setFetchingInstructions(false)
     }
@@ -1957,7 +2022,7 @@ function InspectModal({
       )
       setReport(res)
     } catch (e: any) {
-      setError(e?.message || t("backup.errors.preflightFailed"))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setRunning(false)
     }
@@ -2032,7 +2097,19 @@ function InspectModal({
                     <div><span className="text-muted-foreground">{t("backup.fields.createdLabel")}</span> {formatMtime(localArc.mtime)}</div>
                     <div><span className="text-muted-foreground">{t("backup.fields.sizeLabel")}</span> {formatBytes(localArc.size_bytes)}</div>
                     <div className="sm:col-span-2"><span className="text-muted-foreground">{t("backup.fields.pathLabel")}</span> <code className="font-mono break-all">{localArc.path}</code></div>
-                    {localArc.job_id && <div><span className="text-muted-foreground">{t("backup.fields.jobIdLabel")}</span> <code className="font-mono">{localArc.job_id}</code></div>}
+                    {localArc.job_id && (
+                      <div>
+                        <span className="text-muted-foreground">{t("backup.fields.jobIdLabel")}</span> <code className="font-mono">{localArc.job_id}</code>
+                        {localArc.former_job && (
+                          <span
+                            className="ml-2 uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-400"
+                            title={t("backup.archives.formerJobTitle")}
+                          >
+                            {t("backup.archives.formerJob")}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {localArc.profile && <div><span className="text-muted-foreground">{t("backup.fields.profileLabel")}</span> <code className="font-mono">{localArc.profile === "default" ? t("backup.profile.default") : localArc.profile === "custom" ? t("backup.profile.custom") : localArc.profile}</code></div>}
                     {localArc.source_hostname && <div><span className="text-muted-foreground">{t("backup.fields.sourceHostLabel")}</span> <code className="font-mono">{localArc.source_hostname}</code></div>}
                     <div><span className="text-muted-foreground">{t("backup.fields.detectedViaLabel")}</span> <code className="font-mono text-[10px]">{localArc.detected_via === "sidecar" ? t("backup.archives.companionFile") : localArc.detected_via}</code></div>
@@ -2088,7 +2165,7 @@ function InspectModal({
                   <span className="text-muted-foreground">— {exportTask.message}</span>
                 </div>
                 {exportTask.state === "failed" && exportTask.error && (
-                  <div className="text-red-500 mt-1">{exportTask.error}</div>
+                  <div className="text-red-500 mt-1">{hostBackupErrorText(exportTask.error, t)}</div>
                 )}
                 {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
                   <div className="text-emerald-400">{t("backup.archives.packedSizeLabel")} {formatBytes(exportTask.size_bytes)}</div>
@@ -2131,8 +2208,11 @@ function InspectModal({
                       <div className="flex-1 space-y-1">
                         <div className="font-semibold text-emerald-300">{t("backup.keyfileActions.pveKeyDetected")}</div>
                         <div className="text-muted-foreground">
-                          {t("backup.keyfileActions.pveKeyDescriptionBefore")} <code className="font-mono text-[10.5px]">{pveMatchInspect.name}</code> {t("backup.keyfileActions.pveKeyDescriptionMiddle")}{" "}
-                          <code className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>. {t("backup.keyfileActions.pveKeyDescriptionAfter")}
+                          {t("backup.keyfileActions.pveKeyDescription").split(/(\{storage\}|\{path\})/).map((part, index) =>
+                            part === "{storage}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatchInspect.name}</code>
+                              : part === "{path}" ? <code key={index} className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>
+                                : part
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2302,7 +2382,7 @@ function InspectModal({
             </DialogHeader>
             {kf && <KeyfileErrorBlock err={kf} />}
             <div className="flex justify-end">
-              <Button variant="ghost" onClick={() => setRestoreError(null)}>{t("actions.close")}</Button>
+              <Button variant="outline" className={cancelButtonClass} onClick={() => setRestoreError(null)}>{t("actions.close")}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -2408,7 +2488,7 @@ function InspectModal({
           {archive?.source === "local" ? localArc?.id : remoteArc?.snapshot}
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setShowDeleteArchiveConfirm(false)} disabled={deletingArchive}>
+          <Button variant="outline" className={cancelButtonClass} onClick={() => setShowDeleteArchiveConfirm(false)} disabled={deletingArchive}>
             {t("actions.cancel")}
           </Button>
           <Button variant="destructive" onClick={deleteArchive} disabled={deletingArchive}>
@@ -2439,7 +2519,7 @@ function InspectModal({
 {archiveLog?.content ?? ""}
         </pre>
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={() => setShowArchiveFullLog(false)}>{t("actions.close")}</Button>
+          <Button variant="outline" className={cancelButtonClass} onClick={() => setShowArchiveFullLog(false)}>{t("actions.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -2627,7 +2707,7 @@ function PreflightReportView({ report }: { report: PreflightReport }) {
               <Icon className={`h-3.5 w-3.5 ${color} flex-shrink-0 mt-0.5`} />
               <div className="flex-1 min-w-0">
                 <span className={`font-mono ${color}`}>{c.id}</span>
-                <span className="text-muted-foreground ml-2">{c.message}</span>
+                <span className="text-muted-foreground ml-2">{hostBackupErrorText(c.message, t)}</span>
               </div>
             </div>
           )
@@ -3247,9 +3327,9 @@ function CreateJobDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
-          : err.message
-        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
+          ? `${hostBackupErrorText(err, t)}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
+          : hostBackupErrorText(err, t)
+        setError(t("backup.errors.encryptionSetupFailed", { error: detail || hostBackupErrorText(e, t) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -3312,7 +3392,7 @@ function CreateJobDialog({
       })
       onCreated()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -3685,7 +3765,7 @@ function CreateJobDialog({
                     </>
                   ) : (
                     <div className="text-red-500">
-                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {calendarPreview.error}
+                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {hostBackupErrorText(calendarPreview.error, t)}
                     </div>
                   )
                 ) : (
@@ -3879,7 +3959,14 @@ function CreateJobDialog({
                           {t("backup.encryption.encryptBackups")}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          {t("backup.encryption.pbsHelpBefore")} <code className="font-mono">--keyfile</code> {t("backup.encryption.pbsHelpMiddle")} <code className="font-mono">proxmox-backup-client backup</code>. {t("backup.encryption.pbsHelpAfter")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) {t("backup.encryption.pbsHelpEnd")}
+                          {t("backup.encryption.pbsHelp").split(/(\{keyfile\}|\{option\}|\{mode\})/).map((part, index) => {
+                            const literals: Record<string, string> = {
+                              "{keyfile}": "/usr/local/share/proxmenux/pbs-key.conf",
+                              "{option}": "--keyfile",
+                              "{mode}": "0600",
+                            }
+                            return literals[part] ? <code key={index} className="font-mono break-all">{literals[part]}</code> : part
+                          })}
                         </p>
                       </div>
                     </label>
@@ -4089,7 +4176,7 @@ function CreateJobDialog({
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        {t("backup.destinations.localAttachHelpBefore")} <code className="font-mono">/dump</code> {t("backup.destinations.localAttachHelpMiddle")} <code className="font-mono">/var/lib/vz/dump</code>.
+                        {t("backup.destinations.localAttachHelpMessage")}
                       </p>
                     </>
                   ) : (
@@ -4303,7 +4390,7 @@ function CreateJobDialog({
         {/* Footer navigation */}
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
           <Button
-            variant="ghost"
+            variant="outline" className={cancelButtonClass}
             onClick={onClose}
             disabled={submitting}
           >
@@ -4610,9 +4697,9 @@ function ManualBackupDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
-          : err.message
-        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
+          ? `${hostBackupErrorText(err, t)}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
+          : hostBackupErrorText(err, t)
+        setError(t("backup.errors.encryptionSetupFailed", { error: detail || hostBackupErrorText(e, t) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -4652,7 +4739,7 @@ function ManualBackupDialog({
       )
       onLaunched(resp.job_id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -5200,7 +5287,7 @@ function ManualBackupDialog({
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose} disabled={submitting}>
             {t("actions.cancel")}
           </Button>
           <div className="flex items-center gap-2">
@@ -5456,7 +5543,7 @@ function DestinationsSection({
       await fetchApi(`/api/host-backups/destinations/pbs/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5468,7 +5555,7 @@ function DestinationsSection({
       await fetchApi(`/api/host-backups/destinations/borg/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5485,7 +5572,7 @@ function DestinationsSection({
       )
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5513,7 +5600,7 @@ function DestinationsSection({
       })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5709,13 +5796,13 @@ function DestinationsSection({
                   )}
                   {backups > 0 && (
                     <div className="px-3 py-2 rounded-md border border-blue-500/40 bg-blue-500/5">
-                      {t("backup.destinations.backupsKeptBefore", { count: backups })} <span className="font-medium">{t("backup.destinations.kept")}</span>.
+                      {t("backup.destinations.backupsKeptMessage")}
                     </div>
                   )}
                 </div>
               )}
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setConfirmingDest(null)}>
+                <Button variant="outline" className={cancelButtonClass} onClick={() => setConfirmingDest(null)}>
                   {t("actions.cancel")}
                 </Button>
                 <Button variant="destructive" onClick={confirmDeleteDest}>
@@ -5956,7 +6043,7 @@ function DestinationRow({
 
       {capacity?.error && (
         <p className="mt-3 text-[11px] text-muted-foreground italic">
-          {t("backup.destinations.capacityUnavailable", { error: capacity.error })}
+          {t("backup.destinations.capacityUnavailable", { error: hostBackupErrorText(capacity.error, t) })}
         </p>
       )}
       {!capacity && (
@@ -6039,7 +6126,7 @@ function ConfigureDestinationWizard({
           ))}
         </div>
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={onClose}>{t("actions.cancel")}</Button>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose}>{t("actions.cancel")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -6177,7 +6264,13 @@ function AddDestinationDialog({
         // back to the URL match; default 22 when neither is set.
         const port = editing.ssh_port ?? (ssh[3] ? Number(ssh[3]) : 22)
         setBorgSshPort(String(port || 22))
-        setBorgSshRemotePath(`/${ssh[4]}`)
+        // `./path` (relative to the SSH user's home) and `~/path` are Borg
+        // path forms of their own — only an absolute path gets the slash
+        // the URL dropped.
+        const remotePath = ssh[4]
+        setBorgSshRemotePath(
+          remotePath.startsWith("./") || remotePath.startsWith("~/") ? remotePath : `/${remotePath}`,
+        )
         setBorgSshKeyPath(editing.ssh_key_path || "/root/.ssh/proxmenux_borg")
         setBorgRepo("")
       } else {
@@ -6249,7 +6342,7 @@ function AddDestinationDialog({
       )
       setGeneratedKey(resp)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setGeneratingKey(false)
     }
@@ -6313,7 +6406,7 @@ function AddDestinationDialog({
       }
       onSaved(savedRepo)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -6429,7 +6522,7 @@ function AddDestinationDialog({
                     <Label htmlFor="borgSshUser">{t("backup.fields.sshUser")}</Label>
                     <Input id="borgSshUser" value={borgSshUser} onChange={(e) => setBorgSshUser(e.target.value)} className="font-mono mt-1" placeholder="borg" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("backup.destinations.sshUserHelpBefore")} <code className="font-mono">borg serve</code>. {t("backup.destinations.sshUserHelpAfter")} <code className="font-mono">borg</code>, {t("backup.destinations.not")} <code className="font-mono">root</code>.
+                      {t("backup.destinations.sshUserHelpMessage")}
                     </p>
                   </div>
                   <div className="grid grid-cols-[1fr_100px] gap-3">
@@ -6458,14 +6551,13 @@ function AddDestinationDialog({
                     <Label htmlFor="borgKeyPath">{t("backup.fields.sshKeyPath")}</Label>
                     <Input id="borgKeyPath" value={borgSshKeyPath} onChange={(e) => setBorgSshKeyPath(e.target.value)} className="font-mono mt-1" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("backup.destinations.sshKeyHelpBefore")}
-                      {" "}{t("backup.destinations.sshKeyHelpMiddle")} <span className="font-medium text-foreground">{t("backup.actions.generateKey")}</span> {t("backup.destinations.sshKeyHelpAfter")}
+                      {t("backup.destinations.sshKeyHelpMessage", { action: t("backup.actions.prepareSshKey") })}
                     </p>
                   </div>
 
                   <div className="rounded-md border border-border bg-card p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium">{t("backup.destinations.generateNewSshKey")}</span>
+                      <span className="text-xs font-medium">{t("backup.destinations.sshKeySetupTitle")}</span>
                       <Button
                         type="button"
                         size="sm"
@@ -6475,13 +6567,13 @@ function AddDestinationDialog({
                         onClick={generateBorgKey}
                       >
                         {generatingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
-                        {generatedKey ? t("backup.actions.regenerate") : t("backup.actions.generateKey")}
+                        {t("backup.actions.prepareSshKey")}
                       </Button>
                     </div>
                     {generatedKey ? (
                       <>
                         <p className="text-[11px] text-muted-foreground">
-                          {t("backup.destinations.appendAuthorizedKeyBefore")} <code className="font-mono">~{borgSshUser}/.ssh/authorized_keys</code>:
+                          {t("backup.destinations.sshAuthorizedKeyHelp", { user: borgSshUser })}
                         </p>
                         <textarea
                           readOnly
@@ -6492,7 +6584,7 @@ function AddDestinationDialog({
                       </>
                     ) : (
                       <p className="text-[11px] text-muted-foreground">
-                        {t("backup.destinations.createsSshKeyBefore")} <code className="font-mono">borg serve</code> {t("backup.destinations.createsSshKeyAfter")}
+                        {t("backup.destinations.sshKeySetupHelp")}
                       </p>
                     )}
                   </div>
@@ -6595,7 +6687,7 @@ function AddDestinationDialog({
           )}
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-border">
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>{t("actions.cancel")}</Button>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose} disabled={submitting}>{t("actions.cancel")}</Button>
           <Button
             onClick={handleSave}
             disabled={!canSubmit || submitting}
@@ -6665,7 +6757,7 @@ function UsbPicker({
       mutate()
       if (resp?.mountpoint) onPick(resp.mountpoint)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -6693,7 +6785,7 @@ function UsbPicker({
       setFormatTyped("")
       if (resp?.mountpoint) onPick(resp.mountpoint)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -6844,7 +6936,7 @@ function UsbPicker({
           )}
           <div className="flex justify-end gap-2">
             <Button
-              variant="ghost"
+              variant="outline" className={cancelButtonClass}
               onClick={() => { setFormatTarget(null); setFormatTyped("") }}
               disabled={busyKey === formatTarget?.path_or_device}
             >
@@ -6910,7 +7002,7 @@ function ExtraPathsSection() {
       setNewPath("")
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -6923,7 +7015,7 @@ function ExtraPathsSection() {
       await fetchApi(`/api/host-backups/extra-paths?path=${encodeURIComponent(p)}`, { method: "DELETE" })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyPath(null)
     }
@@ -7089,7 +7181,7 @@ function UsbDrivesSection() {
       })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7107,7 +7199,7 @@ function UsbDrivesSection() {
       })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7131,7 +7223,7 @@ function UsbDrivesSection() {
       setFormatTarget(null)
       setFormatTyped("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7267,7 +7359,7 @@ function UsbDrivesSection() {
             </div>
           )}
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="ghost" onClick={() => { setFormatTarget(null); setFormatTyped("") }} disabled={busyKey === formatTarget?.path_or_device}>
+            <Button variant="outline" className={cancelButtonClass} onClick={() => { setFormatTarget(null); setFormatTyped("") }} disabled={busyKey === formatTarget?.path_or_device}>
               {t("actions.cancel")}
             </Button>
             <Button
@@ -7417,7 +7509,7 @@ function JobDetailModal({
       setRunning(false)
       setRunBaseline(null)
       setRunBaselineLogPath(null)
-      setActionError(t("backup.errors.runFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setActionError(t("backup.errors.runFailed", { error: hostBackupErrorText(e, t) }))
     }
   }
 
@@ -7431,7 +7523,7 @@ function JobDetailModal({
       await refetch()
       onChanged()
     } catch (e) {
-      setActionError(t("backup.errors.toggleFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setActionError(t("backup.errors.toggleFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setBusy("")
     }
@@ -7763,7 +7855,7 @@ function JobDetailModal({
             {detail?.id}
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowDisableConfirm(false)}>
+            <Button variant="outline" className={cancelButtonClass} onClick={() => setShowDisableConfirm(false)}>
               {t("actions.cancel")}
             </Button>
             <Button
@@ -8064,7 +8156,7 @@ function PbsKeyfileRecoveryDialog({
       })
       onRecovered()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusy(false)
     }
@@ -8146,7 +8238,7 @@ function PbsKeyfileRecoveryDialog({
         )}
 
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose} disabled={busy}>
             {t("actions.cancel")}
           </Button>
           <Button
@@ -8251,7 +8343,7 @@ function ArchiveContentsModal({
       body: JSON.stringify(body),
     })
       .then((r: any) => setData(r))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => setError(hostBackupErrorText(e, t)))
       .finally(() => setLoading(false))
   }, [open, source, repo_name, snapshot, path])
 
@@ -8480,7 +8572,7 @@ function PlanSummary({ plan }: { plan: any }) {
           <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">{t("backup.plan.blockers")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {blockers.map((b, i) => (
-              <li key={i} className="text-red-400">{typeof b === "string" ? b : (b.message || JSON.stringify(b))}</li>
+              <li key={i} className="text-red-400">{hostBackupErrorText(typeof b === "string" ? b : (b.message || JSON.stringify(b)), t)}</li>
             ))}
           </ul>
         </div>
@@ -8490,7 +8582,7 @@ function PlanSummary({ plan }: { plan: any }) {
           <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">{t("backup.plan.warnings")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {warnings.map((w, i) => (
-              <li key={i} className="text-amber-400">{typeof w === "string" ? w : (w.message || JSON.stringify(w))}</li>
+              <li key={i} className="text-amber-400">{hostBackupErrorText(typeof w === "string" ? w : (w.message || JSON.stringify(w)), t)}</li>
             ))}
           </ul>
         </div>
@@ -8520,7 +8612,7 @@ function StorageSection({ storage }: { storage: any }) {
             <div className="min-w-0 flex-1">
               <code className="font-mono">{e.name || e.storage || `entry ${i}`}</code>
               {e.type && <span className="text-muted-foreground ml-2">{e.type}</span>}
-              {e.message && <div className="text-muted-foreground text-[11px]">{e.message}</div>}
+              {e.message && <div className="text-muted-foreground text-[11px]">{hostBackupErrorText(e.message, t)}</div>}
             </div>
           </li>
         )
@@ -9021,7 +9113,7 @@ function RestoreOptionsModal({
               {t("backup.actions.back")}
             </Button>
           )}
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="outline" className={cancelButtonClass} onClick={onClose}>
             {t("actions.cancel")}
           </Button>
           {step === "custom" && (

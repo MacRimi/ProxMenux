@@ -443,7 +443,13 @@ done
 
 echo ""
 if [ "$DISKS_ADDED" -gt 0 ]; then
-    msg_ok "$(translate "Completed.") $DISKS_ADDED $(translate "disk(s) added to VM") $VMID."
+    COMPLETED_MESSAGE="$(translate "Completed. Disks added to VM {vmid}: {count}.")"
+    if [[ "$COMPLETED_MESSAGE" != *'{vmid}'* || "$COMPLETED_MESSAGE" != *'{count}'* ]]; then
+        COMPLETED_MESSAGE="Completed. Disks added to VM {vmid}: {count}."
+    fi
+    COMPLETED_MESSAGE="${COMPLETED_MESSAGE//\{vmid\}/$VMID}"
+    COMPLETED_MESSAGE="${COMPLETED_MESSAGE//\{count\}/$DISKS_ADDED}"
+    msg_ok "$COMPLETED_MESSAGE"
 else
     msg_warn "$(translate "No disks were added.")"
 fi

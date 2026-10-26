@@ -54,6 +54,10 @@ elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/disk_ops_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/disk_ops_helpers.sh"
 fi
 
+if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -471,6 +475,8 @@ format_and_mount_disk() {
     local disk="$1"
     local mount_path="$2"
     local filesystem="$3"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "format_and_mount_disk" "$FUNC_VERSION"
 
     # Final confirmation before any destructive operation
     local disk_size
@@ -544,6 +550,8 @@ mount_disk_permanently() {
     local partition="$1"
     local mount_path="$2"
     local filesystem="$3"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "mount_disk_permanently" "$FUNC_VERSION"
 
     if [[ "$filesystem" == "zfs" ]]; then
         if ! zpool list "$STORAGE_ID" >/dev/null 2>&1; then
@@ -574,13 +582,13 @@ mount_disk_permanently() {
 
     if [[ -n "$disk_uuid" ]]; then
         # Remove any existing fstab entry for this UUID or mount point
-        sed -i "\|UUID=$disk_uuid|d" /etc/fstab
-        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
-        echo "UUID=$disk_uuid  $mount_path  $filesystem  defaults,nofail  0  2" >> /etc/fstab
+        pmx_edit_file /etc/fstab "\|UUID=$disk_uuid|d"
+        pmx_edit_file /etc/fstab "\|[[:space:]]${mount_path}[[:space:]]|d"
+        echo "UUID=$disk_uuid  $mount_path  $filesystem  defaults,nofail  0  2" | pmx_append_file /etc/fstab
         msg_ok "$(translate "Added to /etc/fstab using UUID")"
     else
-        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
-        echo "$partition  $mount_path  $filesystem  defaults,nofail  0  2" >> /etc/fstab
+        pmx_edit_file /etc/fstab "\|[[:space:]]${mount_path}[[:space:]]|d"
+        echo "$partition  $mount_path  $filesystem  defaults,nofail  0  2" | pmx_append_file /etc/fstab
         msg_ok "$(translate "Added to /etc/fstab using device path")"
     fi
 
@@ -604,6 +612,8 @@ mount_disk_permanently() {
 # but the change is harmless: existing owners keep their access.
 _apply_lxc_bind_mount_perms() {
     local mount_path="$1"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "_apply_lxc_bind_mount_perms" "$FUNC_VERSION"
     [[ "${MODE_FSTAB:-0}" -eq 1 ]] || return 0
     [[ -d "$mount_path" ]] || return 0
 
@@ -619,6 +629,8 @@ _apply_lxc_bind_mount_perms() {
 mount_existing_disk() {
     local disk="$1"
     local mount_path="$2"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "mount_existing_disk" "$FUNC_VERSION"
 
     local existing_fs
     existing_fs=$(blkid -s TYPE -o value "$disk" 2>/dev/null || true)
@@ -634,7 +646,13 @@ mount_existing_disk() {
     mkdir -p "$mount_path"
     msg_ok "$(translate "Mount point created")"
 
-    msg_info "$(translate "Mounting existing") $existing_fs $(translate "filesystem...")"
+    local mount_message
+    mount_message="$(translate "Mounting existing filesystem ({filesystem})...")"
+    if [[ "$mount_message" != *'{filesystem}'* ]]; then
+        mount_message="Mounting existing filesystem ({filesystem})..."
+    fi
+    mount_message="${mount_message//\{filesystem\}/$existing_fs}"
+    msg_info "$mount_message"
     if ! mount "$disk" "$mount_path" 2>/dev/null; then
         msg_error "$(translate "Failed to mount disk")"
         return 1
@@ -645,9 +663,9 @@ mount_existing_disk() {
     local disk_uuid
     disk_uuid=$(blkid -s UUID -o value "$disk" 2>/dev/null)
     if [[ -n "$disk_uuid" ]]; then
-        sed -i "\|UUID=$disk_uuid|d" /etc/fstab
-        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
-        echo "UUID=$disk_uuid  $mount_path  $existing_fs  defaults,nofail  0  2" >> /etc/fstab
+        pmx_edit_file /etc/fstab "\|UUID=$disk_uuid|d"
+        pmx_edit_file /etc/fstab "\|[[:space:]]${mount_path}[[:space:]]|d"
+        echo "UUID=$disk_uuid  $mount_path  $existing_fs  defaults,nofail  0  2" | pmx_append_file /etc/fstab
         msg_ok "$(translate "Added to /etc/fstab")"
     fi
 
@@ -664,6 +682,8 @@ add_proxmox_dir_storage() {
     local content="$3"
     local storage_kind="dir"
     local pool_name="$storage_id"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_proxmox_dir_storage" "$FUNC_VERSION"
 
     if [[ "${FILESYSTEM:-}" == "zfs" ]]; then
         storage_kind="zfspool"
@@ -742,6 +762,9 @@ add_proxmox_dir_storage() {
 # ==========================================================
 
 add_disk_to_proxmox() {
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "add_disk_to_proxmox" "$FUNC_VERSION"
+
     # Check required tools
     for tool in parted mkfs.ext4 mkfs.xfs blkid lsblk sgdisk; do
         if ! command -v "$tool" >/dev/null 2>&1; then
@@ -749,7 +772,7 @@ add_disk_to_proxmox() {
             msg_title "$(translate "Add Local Disk as Proxmox Storage")"
             msg_info "$(translate "Installing required tools...")"
             apt-get update &>/dev/null
-            apt-get install -y parted e2fsprogs util-linux xfsprogs gdisk btrfs-progs &>/dev/null
+            pmx_install_pkg parted e2fsprogs util-linux xfsprogs gdisk btrfs-progs
             stop_spinner
             break
         fi
@@ -990,6 +1013,8 @@ view_disk_storages() {
 
 _remove_pvesm_storage() {
     local storage_id="$1"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "_remove_pvesm_storage" "$FUNC_VERSION"
     local path pool content stype
     path=$(get_storage_config "$storage_id" | awk '$1 == "path" {print $2}')
     pool=$(get_storage_config "$storage_id" | awk '$1 == "pool" {print $2}')
@@ -1045,7 +1070,9 @@ _remove_pvesm_storage() {
         msg_info "$(translate "Removing from /etc/fstab...")"
         local tmp
         tmp=$(mktemp)
-        awk -v mp="$path" '$2 != mp' /etc/fstab > "$tmp" && mv "$tmp" /etc/fstab
+        if awk -v mp="$path" '$2 != mp' /etc/fstab > "$tmp"; then
+            pmx_write_file /etc/fstab < "$tmp" && rm -f "$tmp"
+        fi
         systemctl daemon-reload 2>/dev/null || true
         msg_ok "$(translate "Removed from /etc/fstab")"
     fi
@@ -1082,6 +1109,8 @@ _remove_pvesm_storage() {
 
 _remove_fstab_entry() {
     local mount_point="$1"
+    local FUNC_VERSION="1.0"
+    pmx_journal_context "_remove_fstab_entry" "$FUNC_VERSION"
 
     local fs fstype
     while IFS= read -r line; do
@@ -1133,7 +1162,8 @@ _remove_fstab_entry() {
         local tmp
         tmp=$(mktemp)
         awk -v mp="$mount_point" '$2 != mp' /etc/fstab > "$tmp"
-        mv "$tmp" /etc/fstab
+        pmx_write_file /etc/fstab < "$tmp"
+        rm -f "$tmp"
         systemctl daemon-reload 2>/dev/null || true
         msg_ok "$(translate "Removed from /etc/fstab")"
 

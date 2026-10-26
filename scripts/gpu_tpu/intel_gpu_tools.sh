@@ -24,6 +24,10 @@ if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
 
+if [[ -f "$BASE_DIR/scripts/global/pmx_journal.sh" ]]; then
+    source "$BASE_DIR/scripts/global/pmx_journal.sh"
+fi
+
 if [[ -f "$COMMON_FUNC" ]]; then
   source "$COMMON_FUNC"
 fi
@@ -73,9 +77,10 @@ check_intel_gpu_tools_installed() {
 # Install intel-gpu-tools
 # ==========================================================
 install_intel_gpu_tools() {
+  pmx_journal_context "install_intel_gpu_tools" "1.0" "intel_gpu_tools.sh"
   msg_info "$(translate 'Installing intel-gpu-tools...')"
   
-  if apt-get install -y intel-gpu-tools >>"$LOG_FILE" 2>&1; then
+  if pmx_install_pkg intel-gpu-tools >>"$LOG_FILE" 2>&1; then
     msg_ok "$(translate 'intel-gpu-tools installed successfully')"
     
     # Get installed version
@@ -97,9 +102,11 @@ install_intel_gpu_tools() {
 # Uninstall intel-gpu-tools
 # ==========================================================
 uninstall_intel_gpu_tools() {
+  pmx_journal_context "uninstall_intel_gpu_tools" "1.0" "intel_gpu_tools.sh"
   msg_info "$(translate 'Uninstalling intel-gpu-tools...')"
   
   if apt-get remove -y intel-gpu-tools >>"$LOG_FILE" 2>&1; then
+    pmx_record_uninstall "intel-gpu-tools"
     msg_ok "$(translate 'intel-gpu-tools uninstalled successfully')"
     
     if type update_component_status &>/dev/null; then
@@ -116,6 +123,7 @@ uninstall_intel_gpu_tools() {
 # Main execution
 # ==========================================================
 main() {
+  pmx_journal_context "main" "1.0" "intel_gpu_tools.sh"
   # Show ProxMenux logo and title
   show_proxmenux_logo
   msg_title "$(translate "$SCRIPT_TITLE")"
@@ -149,7 +157,7 @@ main() {
     if [[ -n "$available_version" && "$available_version" != "$INTEL_GPU_TOOLS_VERSION" ]]; then
       msg_ok "$(translate 'A newer version is available:') $available_version"
       
-      if apt-get install -y intel-gpu-tools >>"$LOG_FILE" 2>&1; then
+      if pmx_install_pkg intel-gpu-tools >>"$LOG_FILE" 2>&1; then
         INTEL_GPU_TOOLS_VERSION="$available_version"
         msg_ok "$(translate 'intel-gpu-tools updated to') $INTEL_GPU_TOOLS_VERSION"
         

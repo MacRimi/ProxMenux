@@ -1,0 +1,29 @@
+{
+  "catalog_ui": {
+    "tips": [
+      "The managed /config volume is prepared with the configured PUID/PGID before LinuxServer starts.",
+      "The installer verifies the HTTPS WebUI on port 3001 before reporting success."
+    ]
+  },
+  "proxmox": {
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "https",
+        "port": 3001,
+        "path": "/",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      }
+    }
+  }
+}

@@ -1,16 +1,16 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor — Panel | ProxMenux Documentation",
-    "description": "El panel es la interfaz principal de ProxMenux Monitor: diez pestañas de contenido, incluido el lanzador Apps, además de la cabecera global y un orden de navegación configurable."
+    "title": "ProxMenux Monitor — Panel | Documentación de ProxMenux",
+    "description": "El panel es la interfaz principal de ProxMenux Monitor: diez pestañas, incluido el lanzador Apps, una cabecera global y un orden de navegación configurable."
   },
   "header": {
     "title": "Panel",
-    "description": "El panel es la vista diaria de ProxMenux Monitor: diez pestañas de contenido, incluido el lanzador Apps, además de una cabecera global y un orden de navegación configurable.",
+    "description": "La vista diaria de ProxMenux Monitor: diez pestañas, incluido el lanzador Apps, una cabecera global y un orden de navegación configurable.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
     "title": "Una cabecera, diez pestañas",
-    "body": "La cabecera (logo, nombre del nodo, información de estado, uptime, refresco, conmutador de tema) permanece visible en todo momento. La pestaña activa que hay debajo cambia el área de contenido entera. El color de la información de estado refleja la peor categoría del <link>Monitor de salud</link> — es el mismo dato visto desde el panel."
+    "body": "La cabecera (logo, nombre del nodo, indicador de estado, tiempo activo, actualización y tema) permanece visible. La pestaña activa cambia toda el área de contenido. El color del indicador refleja la peor categoría del <link>Monitor de estado</link>: el mismo dato mostrado en el panel."
   },
   "tabs": {
     "heading": "Las diez pestañas",
@@ -24,9 +24,9 @@
         "owns": "Widgets de CPU, memoria y temperatura; contador de VMs y LXCs activos; gráficas históricas y resúmenes de almacenamiento y red. Es la pestaña inicial mientras no se personalice el orden de navegación."
       },
       {
-        "name": "Apps",
+        "name": "Aplicaciones",
         "linksTo": "/docs/monitor/dashboard/apps",
-        "owns": "Lanzador unificado para enlaces web registrados en LXCs y enlaces personalizados, con categorías, búsqueda, acceso al invitado y señales de actualización por aplicación."
+        "owns": "Lanzador unificado de enlaces web de LXC registrados y enlaces personalizados, con categorías, búsqueda, accesos al invitado y señales de actualización por aplicación."
       },
       {
         "name": "Almacenamiento",
@@ -34,11 +34,11 @@
       },
       {
         "name": "Red",
-        "owns": "Cada interfaz (física / bond / bridge / OVS), IP/MAC, gráficas RX/TX, RRD histórica por interfaz."
+        "owns": "Interfaces físicas, bond, bridge y OVS, direcciones IP/MAC, gráficas RX/TX e histórico RRD por interfaz."
       },
       {
         "name": "VMs y LXCs",
-        "owns": "Inventario de guests, vista en detalle de config / métricas / logs, acciones start / stop / reboot / shutdown."
+        "owns": "Inventario de invitados, detalles de configuración, métricas y registros, acciones de iniciar, detener, reiniciar y apagar."
       },
       {
         "name": "Hardware",
@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminal",
-        "owns": "Shell en el navegador al host o a cualquier VM/CT, sobre <code>xterm.js</code> y WebSockets."
+        "owns": "Shell del host o de cualquier VM/CT en el navegador, con <code>xterm.js</code> sobre WebSockets."
       },
       {
         "name": "Seguridad",
@@ -58,19 +58,19 @@
       },
       {
         "name": "Ajustes",
-        "owns": "Idioma del Monitor, orden de navegación, canales de notificación, proveedor de IA, umbrales de salud, exclusiones e inventario de optimizaciones."
+        "owns": "Idioma de Monitor, orden de navegación, canales de notificación, proveedor IA, umbrales de estado, exclusiones e inventario de optimizaciones posteriores a la instalación."
       }
     ]
   },
   "headerAnatomy": {
     "heading": "Anatomía de la cabecera",
     "items": [
-      "<strong>Logo de ProxMenux.</strong> El logo cambia a la variante \"actualización disponible\" cuando se detecta una nueva release del Monitor.",
-      "<strong>Identidad del nodo</strong> — el nombre del nodo Proxmox resuelto desde <code>pvesh get /nodes</code>, con fallback a <code>hostname</code>.",
-      "<strong>Información del estado de salud</strong> — Healthy (verde), Warning (amarillo), Critical (rojo). Pulsa encima para abrir la modal del Monitor de salud. Aparece una insignia azul extra de <em>info</em> cuando hay items descartados que siguen dentro de su ventana de supresión.",
-      "<strong>Uptime</strong> — tiempo desde el último arranque del host, formateado de forma legible.",
-      "<strong>Botón de refresco</strong> — relanza todas las llamadas API en vivo sin recargar la página entera.",
-      "<strong>Conmutador de tema</strong> — claro / oscuro / sistema. Persiste en <code>localStorage</code>."
+      "<strong>Logo y nombre del producto</strong> a la izquierda. El logo adopta la variante «actualización disponible» cuando se detecta una versión más reciente de Monitor.",
+      "<strong>Identidad del nodo</strong>: nombre obtenido con <code>pvesh get /nodes</code>, usando <code>hostname</code> como alternativa.",
+      "<strong>Indicador de estado</strong>: Correcto (verde), Advertencia (amarillo), Crítico (rojo). Abre el Monitor de estado al pulsarlo. Una insignia azul <em>info</em> aparece si hay elementos descartados cuyo periodo de supresión sigue vigente.",
+      "<strong>Tiempo activo</strong>: tiempo de funcionamiento del host en formato legible.",
+      "<strong>Botón de actualización</strong>: repite las llamadas API de datos en directo sin recargar toda la página.",
+      "<strong>Selector de tema</strong>: claro, oscuro o sistema. Se guarda en <code>localStorage</code>."
     ]
   },
   "whereNext": {
@@ -79,7 +79,7 @@
       {
         "label": "Pestaña Apps",
         "href": "/docs/monitor/dashboard/apps",
-        "tail": " — el lanzador unificado de enlaces web y su relación con las aplicaciones registradas en LXCs."
+        "tail": " — lanzador unificado de enlaces web y relación con las aplicaciones LXC registradas."
       },
       {
         "label": "Pestaña Resumen del sistema",
@@ -89,7 +89,7 @@
       {
         "label": "Monitor de salud",
         "href": "/docs/monitor/health-monitor",
-        "tail": " — la modal detrás de la información de estado, vista en profundidad de las diez categorías."
+        "tail": " — ventana del indicador de estado, con detalle de diez categorías."
       },
       {
         "label": "Arquitectura",
