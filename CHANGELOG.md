@@ -277,6 +277,7 @@ Real installations compared side by side with the same images under Docker, and 
 - **The field icons of a notification show in French too** ([PR #523](https://github.com/MacRimi/ProxMenux/pull/523), contributed by [@f3rs3n](https://github.com/f3rs3n)), where a non-breaking space comes before the colon of each label.
 - **A health problem of a VM or CT names the guest**, such as a QMP command that timed out during a backup, in its notification and in the Quiet Hours summary, and a recovery shows its category by name, such as *VMs and containers*, in the reader's language.
 - **The AI rewrite works with the current Claude models** ([PR #530](https://github.com/MacRimi/ProxMenux/pull/530), contributed by [@MaEscalanteHe](https://github.com/MaEscalanteHe)): the Anthropic list moves to the 5.x family with Claude Haiku 5.5 recommended, and a model that declines or answers with no text leaves the original notification to be sent.
+- **The AI rewrite works with the current OpenAI models** ([PR #532](https://github.com/MacRimi/ProxMenux/pull/532), contributed by [@MaEscalanteHe](https://github.com/MaEscalanteHe)): the list moves to GPT-5.x and GPT-6 with GPT-6 Luna recommended, and each model gets the parameters it accepts. A saved model that leaves the list is replaced by the recommended one, with a notification.
 - **The AI model lists were reviewed against each provider**: Gemini adds 3.6, 3.7 and 3.8 Flash, Groq adds GPT-OSS 120B, and the Groq and OpenRouter models no longer served were removed.
 
 ### 📦 Grouped application update notifications
