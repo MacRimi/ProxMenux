@@ -147,6 +147,8 @@ def _recommended_storage(volume: dict[str, Any]) -> str:
     default = volume.get("default")
     if {"managed-volume", "host-bind"} <= choices:
         both = f"{translate('Container volume')} / {translate('Host directory')}"
+        if default == "host-bind":
+            both = f"{translate('Host directory')} / {translate('Container volume')}"
         return f"{translate('Optional')}: {both}" if default == "skip" else both
     if default == "skip":
         return translate("Optional, not mounted by default")

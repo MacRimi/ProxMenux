@@ -507,8 +507,8 @@ def build_deployment(
         offered = list(choices)
         chosen = advanced or {"managed-volume", "host-bind"} <= set(choices)
         if chosen and len(offered) > 1:
-            # The answer is the user's: a host directory is never proposed.
-            proposed = "managed-volume" if item["default"] == "host-bind" else item["default"]
+            # The answer is the user's; the choice of the oci-compose is proposed.
+            proposed = item["default"]
             volume_mode = ui.choose(f"{translate('Where to store')} {item['container_path']}",
                                     [(choice, labels[choice]) for choice in offered], proposed)
             if volume_mode is None:

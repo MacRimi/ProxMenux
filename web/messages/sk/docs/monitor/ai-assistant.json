@@ -121,7 +121,7 @@
       "tagline": "Veľmi rýchla, veľkorysá voľná úroveň (30 req/min). Ideálne začať.",
       "items": [
         "Kľúč API: <a>console.groq.com/keys</a>",
-        "Príklady z dodaného zoznamu modelov: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Príklady z dodaného zoznamu modelov: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
         "Dodané odporúčanie: <strong><code>openai/gpt-oss-20b</code></strong>. Dostupnosť pre svoj účet overte výberom poskytovateľa a testom spojenia."
       ]
     },

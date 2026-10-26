@@ -121,7 +121,7 @@
       "tagline": "Sehr schnelle, großzügige freie Stufe (30 req/min). Ideal zum Starten.",
       "items": [
         "API-Schlüssel: <a>console.groq.com/keys</a>",
-        "Beispiele aus der mitgelieferten Modellliste: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Beispiele aus der mitgelieferten Modellliste: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
         "Mitgelieferte Empfehlung: <strong><code>openai/gpt-oss-20b</code></strong>. Prüfen Sie die Verfügbarkeit für Ihr Konto über die Anbieterauswahl und den Verbindungstest."
       ]
     },

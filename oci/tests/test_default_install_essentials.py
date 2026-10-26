@@ -104,6 +104,15 @@ class DefaultInstallEssentialsTests(unittest.TestCase):
             self.assertEqual({m["source"] for m in plan["mounts"] if m["type"] == "managed-volume"} - {"Public"},
                              set(), app)
 
+    def test_the_files_to_back_up_are_proposed_on_a_host_directory(self, *_):
+        for app in ("duplicati", "duplicati-official"):
+            ui, plan = self.build(app)
+            source = next(m for m in plan["mounts"] if m["container_path"] == "/source")
+            self.assertEqual(source["type"], "host-bind", app)
+            self.assertIn("Host path for /source", ui.asked, app)
+            backups = next(m for m in plan["mounts"] if m["container_path"] == "/backups")
+            self.assertEqual(backups["type"], "managed-volume", app)
+
     def test_the_members_of_a_stack_ask_nothing_of_their_own(self, *_):
         for app in ("linkwarden", "suite-arr"):
             ui, _plan = self.build(app)

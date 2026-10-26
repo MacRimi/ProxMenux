@@ -121,7 +121,7 @@
       "tagline": "Muy rápido, nivel gratuito generoso (30 req/min). Ideal para empezar.",
       "items": [
         "Clave API: <a>console.groq.com/keys</a>",
-        "Ejemplos de la lista de modelos incluida: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Ejemplos de la lista de modelos incluida: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
         "Recomendación incluida: <strong><code>openai/gpt-oss-20b</code></strong>. Comprueba su disponibilidad para tu cuenta con el selector del proveedor y la prueba de conexión."
       ]
     },

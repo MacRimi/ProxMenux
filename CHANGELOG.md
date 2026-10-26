@@ -120,6 +120,7 @@ ProxMenux does not build its own containers for these applications: it reads the
 - **A host directory that already exists can be opened to the application that shares it**, with access rules (ACL) that leave the owner of the files as it is.
 - **A shared host directory shows what the host has mounted inside it**: network shares, disks and ZFS datasets, also the ones mounted while the container runs.
 - **A shared host directory is recognised by its filesystem**, so an application keeps being updated after the host restarts or a disk comes back under another device name (reported by Charly Silva).
+- **The installer proposes the place each application expects for a path**: a library, a recording folder or the files Duplicati backs up are proposed on a host directory, and the user can still choose a container disk.
 
 ### Updating, modifying and recreating
 
@@ -274,7 +275,9 @@ Real installations compared side by side with the same images under Docker, and 
 - **Excluded storages stay out of the capacity alert** (reported by @christiannieveslauz), and a storage that is filling up says how full it is.
 - **A private bridge with nothing connected is not reported as down.**
 - **The field icons of a notification show in French too** ([PR #523](https://github.com/MacRimi/ProxMenux/pull/523), contributed by [@f3rs3n](https://github.com/f3rs3n)), where a non-breaking space comes before the colon of each label.
+- **A health problem of a VM or CT names the guest**, such as a QMP command that timed out during a backup, in its notification and in the Quiet Hours summary, and a recovery shows its category by name, such as *VMs and containers*, in the reader's language.
 - **The AI rewrite works with the current Claude models** ([PR #530](https://github.com/MacRimi/ProxMenux/pull/530), contributed by [@MaEscalanteHe](https://github.com/MaEscalanteHe)): the Anthropic list moves to the 5.x family with Claude Haiku 5.5 recommended, and a model that declines or answers with no text leaves the original notification to be sent.
+- **The AI model lists were reviewed against each provider**: Gemini adds 3.6, 3.7 and 3.8 Flash, Groq adds GPT-OSS 120B, and the Groq and OpenRouter models no longer served were removed.
 
 ### 📦 Grouped application update notifications
 

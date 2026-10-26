@@ -121,7 +121,7 @@
       "tagline": "Mycket snabb, generös fri nivå (30 req/min). Perfekt att börja.",
       "items": [
         "API-nyckel: <a>console.groq.com/keys</a>",
-        "Exempel från den medföljande modellistan: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Exempel från den medföljande modellistan: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
         "Medföljande rekommendation: <strong><code>openai/gpt-oss-20b</code></strong>. Kontrollera tillgängligheten för ditt konto med leverantörsväljaren och anslutningstestet."
       ]
     },

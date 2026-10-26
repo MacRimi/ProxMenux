@@ -119,6 +119,7 @@ ProxMenux no construye sus propios contenedores para estas aplicaciones: lee la 
 - **Un directorio del host que ya existe se puede abrir a la aplicación que lo comparte**, con reglas de acceso (ACL) que dejan intacto el propietario de los archivos.
 - **Un directorio compartido del host muestra lo que el host tiene montado dentro de él**: recursos compartidos de red, discos y datasets ZFS, también los que se montan mientras el contenedor está en marcha.
 - **Un directorio compartido del host se reconoce por su sistema de archivos**, así que una aplicación se sigue actualizando después de que el host se reinicie o de que un disco vuelva con otro nombre de dispositivo (reportado por Charly Silva).
+- **El instalador propone el sitio que cada aplicación espera para una ruta**: una biblioteca, una carpeta de grabaciones o los archivos de los que Duplicati hace backup se proponen en un directorio del host, y se puede elegir igualmente un disco del contenedor.
 
 ### Actualizar, modificar y recrear
 
@@ -273,7 +274,9 @@ Instalaciones reales comparadas una junto a otra con las mismas imágenes en Doc
 - **Los almacenamientos excluidos quedan fuera de la alerta de capacidad** (reportado por @christiannieveslauz), y un almacenamiento que se está llenando indica cuánto está ocupado.
 - **Un bridge privado sin nada conectado no se notifica como caído.**
 - **Los iconos de los campos de una notificación también se muestran en francés** ([PR #523](https://github.com/MacRimi/ProxMenux/pull/523), aportado por [@f3rs3n](https://github.com/f3rs3n)), donde un espacio de no separación precede a los dos puntos de cada etiqueta.
+- **Un problema de salud de una VM o un CT nombra a la máquina**, como un comando QMP que no respondió durante un backup, en su notificación y en el resumen de las horas de silencio, y una recuperación muestra su categoría por su nombre, como *Máquinas virtuales y contenedores*, en el idioma del lector.
 - **La reescritura con IA funciona con los modelos actuales de Claude** ([PR #530](https://github.com/MacRimi/ProxMenux/pull/530), aportado por [@MaEscalanteHe](https://github.com/MaEscalanteHe)): la lista de Anthropic pasa a la familia 5.x, con Claude Haiku 5.5 como recomendado, y si un modelo rechaza la petición o responde sin texto se envía la notificación original.
+- **Las listas de modelos de IA se han revisado con cada proveedor**: Gemini añade 3.6, 3.7 y 3.8 Flash, Groq añade GPT-OSS 120B y se han eliminado los modelos de Groq y OpenRouter que ya no se sirven.
 
 ### 📦 Notificaciones agrupadas de actualizaciones de aplicaciones
 

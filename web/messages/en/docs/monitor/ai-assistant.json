@@ -121,7 +121,7 @@
       "tagline": "Very fast, generous free tier (30 req/min). Ideal to start.",
       "items": [
         "API key: <a>console.groq.com/keys</a>",
-        "Examples from the bundled model list: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Examples from the bundled model list: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
         "Bundled recommendation: <strong><code>openai/gpt-oss-20b</code></strong>. Use the provider selector and connection test to check availability for your account."
       ]
     },

@@ -2125,8 +2125,21 @@ def render_template(event_type: str, data: Dict[str, Any],
             or ''
         )
         _ent = str(_ent).strip()
+    # A VM or CT health issue records the guest as id, vmname and type.
+    if not _ent and str(variables.get('category', '')) == 'vms' and variables.get('id'):
+        _ent = f"{variables.get('type') or 'VM/CT'} {variables['id']}"
+        if variables.get('vmname'):
+            _ent += f" ({variables['vmname']})"
     variables['entity'] = _ent
     variables['entity_suffix'] = f' — {_ent}' if _ent else ''
+
+    # Health categories reach the templates by their key ("vms"); show the
+    # name the health summary uses for them, in the reader's language.
+    _category = str(variables.get('category', '')).strip()
+    if _category:
+        _category_label = runtime_message(f'healthDegraded.categories.{_category}', language)
+        if _category_label:
+            variables['category'] = _category_label
 
     # `title_or_default` lets a template surface a caller-computed title
     # when the caller already knows the entity context (e.g.

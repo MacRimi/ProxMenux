@@ -121,7 +121,7 @@
       "tagline": "Molto veloce, generoso tier libero (30 req/min). Ideale per iniziare.",
       "items": [
         "Chiave API: <a>console.groq.com/keys</a>",
-        "Esempi dall’elenco di modelli incluso: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Esempi dall’elenco di modelli incluso: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
         "Raccomandazione inclusa: <strong><code>openai/gpt-oss-20b</code></strong>. Verifica la disponibilità per il tuo account tramite il selettore del provider e il test di connessione."
       ]
     },
