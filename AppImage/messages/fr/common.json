@@ -1496,12 +1496,12 @@
       "runCustomCommand": "Exécuter une commande personnalisée",
       "installedVersionUnverified": "La version installée n'est pas vérifiée. La disponibilité d'une mise à jour n'a pas pu être confirmée.",
       "versionStatusUnknown": "La disponibilité d'une mise à jour n'est pas vérifiée. Les informations de version sont indisponibles ou incomplètes.",
-      "backgroundRunning": "{name} (CT {vmid}): an update is running on the server.",
-      "backgroundOutputTrimmed": "la sortie précédente a été tronquée ;la mise à jour continue normalement.",
-      "backgroundFinished": "{name} (CT {vmid}) : une mise à jour est terminée.Visualisez son résultat.",
+      "backgroundRunning": "{name} (CT {vmid}) : une mise à jour est en cours sur le serveur.",
+      "backgroundOutputTrimmed": "La sortie précédente a été raccourcie ; la mise à jour continue normalement.",
+      "backgroundFinished": "{name} (CT {vmid}) : une mise à jour est terminée. Consultez son résultat.",
       "viewBackgroundJob": "Afficher la mise à jour",
-      "backgroundDetached": "Le spectateur s'est déconnecté.La mise à jour continue sur le serveur ;reconnectez-vous après vous être connecté.",
-      "backgroundDescription": "La fermeture de cette fenêtre laisse la mise à jour en cours d'exécution.Utilisez Ctrl+C pour l'annuler."
+      "backgroundDetached": "L’affichage s’est déconnecté. La mise à jour continue sur le serveur ; reconnectez-vous après vous être authentifié.",
+      "backgroundDescription": "Fermer cette fenêtre n’arrête pas la mise à jour. Utilisez Ctrl+C pour l’annuler."
     },
     "bulkUpdate": {
       "title": "Mise à jour groupée",
@@ -3730,7 +3730,7 @@
       "guestBackupJobs": "Tâches de sauvegarde des VM et des LXC — l'onglet Sauvegarde liste les tâches planifiées de Proxmox et permet de les créer, les modifier, les activer et les exécuter ; ce sont les mêmes que dans Datacenter → Backup (contribution de @MattiaC46).",
       "notificationLanguage": "Notifications dans votre langue — les titres, les corps et les résumés quotidiens sont rédigés dans la langue choisie pour les notifications (contribution de @Vaso73).",
       "auditReviewDate": "Audit & Report — une constatation acceptée peut porter une date de révision qui la fait réapparaître sans retirer la décision, et la comparaison indique si une constatation s'est aggravée, améliorée ou maintenue (avec @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview) — une nouvelle entrée du menu ProxMenux installe les applications à partir de leurs images de conteneur officielles en tant que LXC Proxmox natifs, sans moteur Docker. Le catalogue réunit 464 applications.",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — une nouvelle entrée du menu ProxMenux installe les applications à partir de leurs images de conteneur officielles en tant que LXC Proxmox natifs, sans moteur Docker. Le catalogue réunit 514 applications.",
       "pbsSupport": "ProxMenux sur Proxmox Backup Server — il s'installe avec la même commande et ouvre son propre menu, avec post-installation et un Monitor qui affiche la santé, les datastores et les tâches du serveur (contribution de @jcastro).",
       "menuSearch": "Recherche dans le menu principal — un nom ou une partie du nom trouve une option de ProxMenux, une application OCI ou un Helper-Script, et l'ouvre sur son premier écran."
     }

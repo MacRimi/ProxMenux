@@ -220,6 +220,10 @@
     },
     "installer_profile": {
       "generated_sensitive_environment": {},
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
       "volume_preparations": [
         {
           "container_path": "/data",

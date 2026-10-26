@@ -1496,12 +1496,12 @@
       "runCustomCommand": "Kör anpassat kommando",
       "installedVersionUnverified": "Den installerade versionen är inte verifierad. Det gick inte att bekräfta om en uppdatering finns.",
       "versionStatusUnknown": "Det är inte verifierat om en uppdatering finns. Versionsinformationen saknas eller är ofullständig.",
-      "backgroundRunning": "{name} (CT {vmid}): en uppdatering körs på servern.",
-      "backgroundOutputTrimmed": "Tidigare utdata trimmades;uppdateringen fortsätter normalt.",
-      "backgroundFinished": "{name} (CT {vmid}): en uppdatering har slutförts.Se dess resultat.",
+      "backgroundRunning": "{name} (CT {vmid}): en uppdatering pågår på servern.",
+      "backgroundOutputTrimmed": "Tidigare utdata har kortats; uppdateringen fortsätter som vanligt.",
+      "backgroundFinished": "{name} (CT {vmid}): en uppdatering är klar. Visa resultatet.",
       "viewBackgroundJob": "Visa uppdatering",
-      "backgroundDetached": "Tittaren kopplades bort.Uppdateringen fortsätter på servern;återanslut efter inloggning.",
-      "backgroundDescription": "Om du stänger det här fönstret körs uppdateringen.Använd Ctrl+C för att avbryta."
+      "backgroundDetached": "Visningen kopplades från. Uppdateringen fortsätter på servern; anslut igen efter inloggningen.",
+      "backgroundDescription": "Att stänga det här fönstret stoppar inte uppdateringen. Använd Ctrl+C för att avbryta den."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",
@@ -3730,7 +3730,7 @@
       "guestBackupJobs": "Säkerhetskopieringsjobb för VM:ar och LXC:er — fliken Säkerhetskopiering listar Proxmox schemalagda jobb och skapar, redigerar, aktiverar och kör dem; de är desamma som i Datacenter → Backup (bidrag från @MattiaC46).",
       "notificationLanguage": "Meddelanden på ditt språk — titlar, brödtexter och dagliga sammanfattningar skrivs på det språk som valts för meddelanden (bidrag från @Vaso73).",
       "auditReviewDate": "Audit & Report — ett accepterat fynd kan ha ett granskningsdatum som tar upp det igen utan att beslutet dras tillbaka, och jämförelsen visar om ett fynd blev värre, blev bättre eller låg kvar (med @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller 464 applikationer.",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller 514 applikationer.",
       "pbsSupport": "ProxMenux på Proxmox Backup Server — installeras med samma kommando och öppnar en egen meny, med efterinstallation och en Monitor som visar serverns hälsa, datalager och uppgifter (bidrag från @jcastro).",
       "menuSearch": "Sökning i huvudmenyn — ett namn eller en del av det hittar ett ProxMenux-alternativ, en OCI-applikation eller ett Helper-Script och öppnar det på dess första skärm."
     }

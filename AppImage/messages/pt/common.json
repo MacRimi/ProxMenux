@@ -1496,12 +1496,12 @@
       "runCustomCommand": "Executar comando personalizado",
       "installedVersionUnverified": "A versão instalada não foi verificada. Não foi possível confirmar se há uma atualização disponível.",
       "versionStatusUnknown": "A disponibilidade de atualização não foi verificada. As informações de versão estão indisponíveis ou incompletas.",
-      "backgroundRunning": "{name} (CT {vmid}): uma atualização está em execução no servidor.",
-      "backgroundOutputTrimmed": "a saída anterior foi cortada;a atualização continua normalmente.",
-      "backgroundFinished": "{name} (CT {vmid}): uma atualização foi concluída.Veja seu resultado.",
+      "backgroundRunning": "{name} (CT {vmid}): está a decorrer uma atualização no servidor.",
+      "backgroundOutputTrimmed": "A saída anterior foi encurtada; a atualização continua normalmente.",
+      "backgroundFinished": "{name} (CT {vmid}): uma atualização terminou. Veja o resultado.",
       "viewBackgroundJob": "Ver atualização",
-      "backgroundDetached": "O visualizador se desconectou.A atualização continua no servidor;reconecte após fazer login.",
-      "backgroundDescription": "Fechar esta janela deixa a atualização em execução.Use Ctrl+C para cancelar."
+      "backgroundDetached": "O visualizador desligou-se. A atualização continua no servidor; volte a ligar-se depois de iniciar sessão.",
+      "backgroundDescription": "Fechar esta janela não interrompe a atualização. Use Ctrl+C para a cancelar."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",
@@ -3730,7 +3730,7 @@
       "guestBackupJobs": "Tarefas de backup de VM e LXC — o separador Backup lista as tarefas agendadas do Proxmox e permite criá-las, editá-las, ativá-las e executá-las; são as mesmas de Datacenter → Backup (contribuição de @MattiaC46).",
       "notificationLanguage": "Notificações no seu idioma — títulos, corpos e resumos diários são escritos no idioma escolhido para as notificações (contribuição de @Vaso73).",
       "auditReviewDate": "Auditoria & Relatório — uma constatação aceite pode ter uma data de revisão que a traz de volta sem retirar a decisão, e a comparação indica se uma constatação piorou, melhorou ou se manteve (com @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview) — uma nova entrada no menu do ProxMenux instala aplicações a partir das suas imagens de contentor oficiais como LXC nativos do Proxmox, sem motor Docker. O catálogo reúne 464 aplicações.",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — uma nova entrada no menu do ProxMenux instala aplicações a partir das suas imagens de contentor oficiais como LXC nativos do Proxmox, sem motor Docker. O catálogo reúne 514 aplicações.",
       "pbsSupport": "ProxMenux no Proxmox Backup Server — instala-se com o mesmo comando e abre um menu próprio, com pós-instalação e um Monitor que mostra o estado, os datastores e as tarefas do servidor (contribuição de @jcastro).",
       "menuSearch": "Pesquisa no menu principal — um nome ou parte dele encontra uma opção do ProxMenux, uma aplicação OCI ou um Helper-Script e abre-o no seu primeiro ecrã."
     }
