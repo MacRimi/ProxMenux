@@ -131,7 +131,7 @@
       "items": [
         "Kľúč API: <a>platform.openai.com/api-keys</a>",
         "Príklady z dodaného zoznamu modelov: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
-        "Dodané odporúčanie: <strong><code>gpt-6-luna</code></strong>, najúspornejší aktuálny model. Všetky modely v zozname sú modely uvažovania; adaptér každému posiela parametre, ktoré prijíma."
+        "Odporúčaný model v aplikácii: <strong><code>gpt-6-luna</code></strong>, aktuálne najúspornejší model. Všetky modely v dodanom zozname sú modely s uvažovaním; adaptér každému posiela iba parametre, ktoré podporuje."
       ],
       "baseUrlTitle": "Základné URL kompatibilné s OpenAI",
       "baseUrlBody": "Poskytovateľ OpenAI prijíma vlastnú <em>Základnú URL</em> pre kompatibilné služby, napríklad <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong> a <strong>Fireworks AI</strong>, ktoré používajú formát <code>/v1/chat/completions</code>. URL nastavte na karte OpenAI vedľa kľúča API."
@@ -142,7 +142,7 @@
       "items": [
         "Kľúč API: <a>console.anthropic.com/settings/keys</a>",
         "Príklady z dodaného zoznamu modelov: <code>claude-haiku-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>.",
-        "Dodané odporúčanie: <strong><code>claude-haiku-5-5</code></strong>, najúspornejší aktuálny model Claude."
+        "Odporúčaný model v aplikácii: <strong><code>claude-haiku-5-5</code></strong>, aktuálne najúspornejší model Claude."
       ]
     },
     "gemini": {
