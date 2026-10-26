@@ -3723,7 +3723,7 @@
       "guestBackupJobs": "Úlohy zálohovania VM a LXC — karta Zálohovanie zobrazuje naplánované úlohy Proxmoxu a umožňuje ich vytvárať, upravovať, povoľovať a spúšťať; sú to tie isté ako v Datacenter → Backup (prispel @MattiaC46).",
       "notificationLanguage": "Upozornenia vo vašom jazyku — názvy, texty a denné súhrny sú napísané v jazyku zvolenom pre upozornenia (prispel @Vaso73).",
       "auditReviewDate": "Audit a správy — akceptované zistenie môže mať dátum kontroly, ktorý ho znova pripomenie bez zrušenia rozhodnutia, a porovnanie ukáže, či sa zistenie zhoršilo, zlepšilo alebo zostalo rovnaké (s @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview) — nová položka v ponuke ProxMenux inštaluje aplikácie z ich oficiálnych kontajnerových image ako natívne Proxmox LXC, bez enginu Docker. Katalóg obsahuje 364 aplikácií.",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — nová položka v ponuke ProxMenux inštaluje aplikácie z ich oficiálnych kontajnerových image ako natívne Proxmox LXC, bez enginu Docker. Katalóg obsahuje 464 aplikácií.",
       "pbsSupport": "ProxMenux na Proxmox Backup Server — inštaluje sa rovnakým príkazom a otvára vlastnú ponuku s poinštaláciou a Monitorom, ktorý zobrazuje stav, úložiská dát a úlohy servera (prispel @jcastro).",
       "menuSearch": "Vyhľadávanie v hlavnej ponuke — názov alebo jeho časť nájde možnosť ProxMenux, aplikáciu OCI alebo Helper-Script a otvorí ju na jej prvej obrazovke."
     }
