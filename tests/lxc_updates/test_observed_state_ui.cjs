@@ -138,7 +138,7 @@ const context = {
   invalidateLxcApps: () => {}, setSelectedVM: value => { context.selectionChanged = value },
   alert: value => { context.alerted = value },
 }
-for (const name of ["Vmid", "Target", "RunId", "TargetIds", "TargetLabels", "UpdateCommand", "AppName",
+for (const name of ["Vmid", "Target", "RunId", "Resume", "TargetIds", "TargetLabels", "UpdateCommand", "AppName",
     "RunHelper", "AllowHelperWithCustom", "DockerStandaloneTargets", "DockerEngine", "DockerRefresh",
     "BackupStorage", "StartedAt", "Open", "CheckAndUpdate", "CheckedOs"])
   context[`setApply${name}`] = value => { context[`apply${name}`] = value }
@@ -205,6 +205,7 @@ for (const [target, options] of [
   context.applyOpen = false
   ui.openApply(100, target, options)
   assert.equal(context.applyOpen, true, `explicit ${target} update opens the terminal directly`)
+  assert.equal(context.applyResume, false, 'an explicitly started update is distinguished from attach-only recovery')
 }
 assert.equal(confirmationCalls, 0, 'ordinary update entry points never open a browser confirmation')
 assert(!source.includes('checkAndUpdate'), 'the abandoned combined check/install action has no UI path')
