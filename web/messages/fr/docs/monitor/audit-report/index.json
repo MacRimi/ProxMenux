@@ -57,13 +57,6 @@
             ],
             "caption": "L'évaluation fournit les faits, la politique leur donne du contexte et le journal consigne les actions de ProxMenux."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Audit et rapports dans ProxMenux Monitor avec les vues Évaluation, Modifications et Politique",
-            "caption": "Vérification et rapport, la vue d'évaluation étant ouverte."
-          }
         }
       ]
     },

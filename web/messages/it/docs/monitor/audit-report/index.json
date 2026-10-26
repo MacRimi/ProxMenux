@@ -57,13 +57,6 @@
             ],
             "caption": "La valutazione fornisce i dati, la politica dà loro contesto e il registro documenta gli interventi di ProxMenux."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Audit e report in ProxMenux Monitor con le viste Valutazione, Modifiche e Politica",
-            "caption": "Audit & Report, con la vista di valutazione aperta."
-          }
         }
       ]
     },

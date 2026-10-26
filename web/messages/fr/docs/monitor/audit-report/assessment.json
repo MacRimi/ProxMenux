@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "La revue de sécurité utilise le rapport Lynis de l'hôte. Si Lynis n'a jamais été exécuté ou si le rapport dépasse l'ancienneté autorisée par la politique, un dialogue propose <strong>Exécuter avec Lynis</strong>, qui prend quelques minutes de plus, ou <strong>Exécuter sans Lynis</strong>, qui utilise le rapport existant."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Boîte de dialogue qui offre d'exécuter l'évaluation avec ou sans Lynis",
-            "caption": "Le dialogue Lynis avant un examen de sécurité."
-          }
         }
       ]
     },

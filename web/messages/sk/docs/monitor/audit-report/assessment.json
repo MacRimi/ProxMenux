@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "Bezpečnostná kontrola používa správu Lynis z hostiteľa. Ak Lynis ešte nebol spustený alebo je správa staršia než povoľuje politika, dialóg ponúkne <strong>Spustiť s Lynis</strong>, čo trvá o niekoľko minút dlhšie, alebo <strong>Spustiť bez Lynis</strong>, čo použije existujúcu správu."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Dialóg, ktorý ponúka spustenie hodnotenia s alebo bez Lynis",
-            "caption": "Lynisov dialóg pred bezpečnostnou previerkou."
-          }
         }
       ]
     },

@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "Säkerhetsgranskningen använder värdens Lynis-rapport. Om Lynis aldrig har körts eller rapporten är äldre än policyn tillåter erbjuder en dialog <strong>Kör med Lynis</strong>, som tar några minuter extra, eller <strong>Kör utan Lynis</strong>, som använder befintlig rapport."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Dialog som erbjuder att köra bedömningen med eller utan Lynis",
-            "caption": "Lynis-dialogen före en säkerhetsgranskning."
-          }
         }
       ]
     },

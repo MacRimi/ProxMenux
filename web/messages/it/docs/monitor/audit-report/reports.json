@@ -30,7 +30,6 @@
               {
                 "title": "Audit completo",
                 "body": "Documenta tutto il nodo come registro tecnico.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   {
                     "label": "Controlli",
@@ -45,7 +44,6 @@
               {
                 "title": "Diagnosi rapida",
                 "body": "Mostra ciò che ha bisogno di attenzione senza l'inventario completo.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   {
                     "label": "Controlli",
@@ -60,7 +58,6 @@
               {
                 "title": "Inventario",
                 "body": "Descrive ciò che esiste sul nodo senza valutarlo.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   {
                     "label": "Controlli",
@@ -75,7 +72,6 @@
               {
                 "title": "Verifica sicurezza",
                 "body": "Copre l'esposizione e i controlli sull'accesso al nodo.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   {
                     "label": "Controlli",
@@ -90,7 +86,6 @@
               {
                 "title": "Affidabilità backup",
                 "body": "Controlla che la protezione dichiarata esista e che i suoi backup siano utilizzabili.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   {
                     "label": "Controlli",
@@ -105,7 +100,6 @@
               {
                 "title": "Capacità e usura",
                 "body": "Misura il margine di crescita e i segni di esaurimento o invecchiamento.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   {
                     "label": "Controlli",
@@ -118,13 +112,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "Prima pagina di un rapporto completo di audit",
-            "caption": "Ogni documento condivide l'identificatore del rapporto, le sezioni numerate, la data, il nodo, il profilo e il piè di pagina."
           }
         },
         {

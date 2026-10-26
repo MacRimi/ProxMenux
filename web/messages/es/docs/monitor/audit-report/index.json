@@ -57,13 +57,6 @@
             ],
             "caption": "La evaluación aporta los hechos, la política les da contexto y el registro recoge lo que hizo ProxMenux."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Auditoría e informes en ProxMenux Monitor con las vistas Evaluación, Cambios y Política",
-            "caption": "Auditoría e informes, con la vista Evaluación abierta."
-          }
         }
       ]
     },

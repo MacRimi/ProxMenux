@@ -17,13 +17,6 @@
             "title": "Utan angivna förväntningar beskriver rapporten; med dem bedömer den",
             "body": "En bedömning ser vad värden gör, inte vad det är för. En gäst utan en säkerhetskopia vars syfte inte förklaras rapporteras som en observation. Om dess backup förklaras krävs, rapporteras samma frånvaro som en varning. Ingenting måste förklaras."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Policyvisning med gästerna, lagringen och trösklarna på noden",
-            "caption": "Policyvyn."
-          }
         }
       ]
     },

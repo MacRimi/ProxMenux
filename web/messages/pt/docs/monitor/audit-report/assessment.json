@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "A revisão de segurança utiliza o relatório Lynis do anfitrião. Se Lynis nunca foi executado ou o relatório ultrapassa a antiguidade permitida pela política, um diálogo oferece <strong>Executar com Lynis</strong>, que demora alguns minutos mais, ou <strong>Executar sem Lynis</strong>, que utiliza o relatório existente."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Janela que se oferece para executar a avaliação com ou sem Lynis",
-            "caption": "O diálogo Lynis antes de uma revisão de segurança."
-          }
         }
       ]
     },

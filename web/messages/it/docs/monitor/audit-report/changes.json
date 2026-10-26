@@ -40,13 +40,6 @@
             ],
             "caption": "L'acquisizione avviene durante l'operazione e viene consolidata quando Monitor legge il registro."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Vista Modifiche di Audit e report con voci raggruppate per opzione post-installazione e script",
-            "caption": "La vista Modifiche con le differenze di un file modificato da ProxMenux."
-          }
         }
       ]
     },

@@ -17,13 +17,6 @@
             "title": "Sans déclaration, le rapport décrit ; avec une déclaration, il évalue",
             "body": "Une évaluation voit ce que l'hôte fait, pas ce qu'il est pour. Un invité sans sauvegarde dont le but n'est pas déclaré est signalé comme une observation. Si sa sauvegarde est déclarée nécessaire, la même absence est signalée comme un avertissement. Rien ne doit être déclaré."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Vue Politique avec les invités, le stockage et les seuils du nœud",
-            "caption": "La vue Politique."
-          }
         }
       ]
     },

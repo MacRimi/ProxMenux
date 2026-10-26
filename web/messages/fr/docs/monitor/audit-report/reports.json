@@ -30,7 +30,6 @@
               {
                 "title": "Audit complet",
                 "body": "Documente le nœud de bout en bout sous forme de dossier technique.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   {
                     "label": "Contrôles",
@@ -45,7 +44,6 @@
               {
                 "title": "Diagnostic rapide",
                 "body": "Montre ce qui a besoin d'attention sans l'inventaire complet.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   {
                     "label": "Contrôles",
@@ -60,7 +58,6 @@
               {
                 "title": "Inventaire",
                 "body": "Décrit ce qui existe sur le noeud sans l'évaluer.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   {
                     "label": "Contrôles",
@@ -75,7 +72,6 @@
               {
                 "title": "Examen de la sécurité",
                 "body": "Couvre l'exposition et les contrôles sur l'accès au nœud.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   {
                     "label": "Contrôles",
@@ -90,7 +86,6 @@
               {
                 "title": "Assurance de sauvegarde",
                 "body": "Vérifier que la protection déclarée existe et que ses sauvegardes sont utilisables.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   {
                     "label": "Contrôles",
@@ -105,7 +100,6 @@
               {
                 "title": "Capacité et usure",
                 "body": "Mesure la marge de croissance et les signes d'épuisement ou de vieillissement.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   {
                     "label": "Contrôles",
@@ -118,13 +112,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "Première page d'un rapport d'audit complet",
-            "caption": "Chaque document partage l'identificateur de rapport, les sections numérotées, la date, le noeud, le profil et le pied de page."
           }
         },
         {

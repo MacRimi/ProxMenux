@@ -40,13 +40,6 @@
             ],
             "caption": "La capture est réalisée lors de l'exécution de l'opération et consolidée quand Monitor lit le journal."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Vue Modifications d'Audit et rapports avec les entrées regroupées par option de post-installation et par script",
-            "caption": "La vue Modifications, avec la différence d'un fichier édité par ProxMenux."
-          }
         }
       ]
     },

@@ -40,13 +40,6 @@
             ],
             "caption": "Registreringen görs när åtgärden körs och sammanställs när Monitor läser loggen."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Vyn Ändringar i Granskning och rapporter med poster grupperade efter efterinstallationsalternativ och skript",
-            "caption": "Förändringsvyn, med skillnaden i en fil redigerad av ProxMenux."
-          }
         }
       ]
     },

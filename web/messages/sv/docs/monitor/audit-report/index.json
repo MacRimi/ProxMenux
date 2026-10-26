@@ -57,13 +57,6 @@
             ],
             "caption": "Bedömningen ger fakta, policyn ger dem sammanhang och loggen registrerar ProxMenux åtgärder."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Granskning och rapporter i ProxMenux Monitor med vyerna Bedömning, Ändringar och Policy",
-            "caption": "Audit & Report, med bedömningsvyn öppen."
-          }
         }
       ]
     },

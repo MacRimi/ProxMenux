@@ -30,7 +30,6 @@
               {
                 "title": "Vollständiges Audit",
                 "body": "Dokumentiert den gesamten Knoten als technische Bestandsaufnahme.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   {
                     "label": "Kontrollen",
@@ -45,7 +44,6 @@
               {
                 "title": "Schnelldiagnose",
                 "body": "Zeigt, was Aufmerksamkeit braucht, ohne das komplette Inventar.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   {
                     "label": "Kontrollen",
@@ -60,7 +58,6 @@
               {
                 "title": "Inventar",
                 "body": "Beschreibt, was auf dem Knoten existiert, ohne es zu bewerten.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   {
                     "label": "Kontrollen",
@@ -75,7 +72,6 @@
               {
                 "title": "Sicherheitsüberprüfung",
                 "body": "Umfasst die Exposition und die Kontrollen über den Zugang zum Knoten.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   {
                     "label": "Kontrollen",
@@ -90,7 +86,6 @@
               {
                 "title": "Überprüfung der Sicherungen",
                 "body": "Prüft, ob der deklarierte Schutz vorhanden ist und ob seine Backups verwendbar sind.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   {
                     "label": "Kontrollen",
@@ -105,7 +100,6 @@
               {
                 "title": "Kapazität und Verschleiß",
                 "body": "Misst Wachstumsspielraum und Anzeichen von Erschöpfung oder Alterung.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   {
                     "label": "Kontrollen",
@@ -118,13 +112,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "Erste Seite eines vollständigen Auditberichts",
-            "caption": "Jedes Dokument teilt die Berichtskennung, die nummerierten Abschnitte, das Datum, den Knoten, das Profil und die Fußzeile."
           }
         },
         {

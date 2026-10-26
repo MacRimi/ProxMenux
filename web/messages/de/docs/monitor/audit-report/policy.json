@@ -17,13 +17,6 @@
             "title": "Ohne Festlegung beschreibt der Bericht; mit ihr bewertet er",
             "body": "Eine Bewertung sieht, was der Host tut, nicht, wozu er dient. Ein Gast ohne Backup, dessen Verwendungszweck nicht angegeben ist, wird als Beobachtung gemeldet. Wenn dessen Sicherung als erforderlich erklärt wird, wird die gleiche Abwesenheit als Warnung gemeldet. Es muss nichts deklariert werden."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Richtlinienansicht mit Gastsystemen, Speicher und Schwellenwerten des Knotens",
-            "caption": "Die Richtlinienansicht."
-          }
         }
       ]
     },
