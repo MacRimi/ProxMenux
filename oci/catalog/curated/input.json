@@ -400,11 +400,27 @@
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": true
-      }
+      },
+      "tmpfs_mounts": [
+        {
+          "id": "runtime",
+          "container_path": "/run",
+          "default_size_mb": 64,
+          "minimum_size_mb": 16,
+          "prompt_size": false,
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev"
+          ],
+          "owner_strategy": "image-user",
+          "mode": "0755"
+        }
+      ]
     }
   },
   "compatibility": {
-    "automatic_install_candidate": false,
+    "automatic_install_candidate": true,
     "validated": false,
     "supported_compose_keys": [
       "image",
@@ -414,7 +430,7 @@
       "environment"
     ],
     "untranslated_blockers": [],
-    "policy": "Excluded from the installable catalog pending compatibility review. The tested image runs as nobody, but its nginx and PHP-FPM startup requires writable runtime paths under /run; the current native OCI-LXC recipe could not start the service. Do not install until a supported runtime mapping is confirmed."
+    "policy": "The image runs nginx and PHP-FPM as its OCI image user. ProxMenux provides a native /run tmpfs owned by that effective LXC init user, with writable mode for the runtime files. The recipe remains unvalidated until a clean install passes its startup health check."
   },
   "validation": {
     "schema": "passed-at-generation",

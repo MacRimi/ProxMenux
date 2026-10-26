@@ -6194,7 +6194,7 @@
       "curated_path": "catalog/curated/input.json",
       "template": "apps/input.json",
       "template_status": "generated-unvalidated",
-      "automatic_install_candidate": false,
+      "automatic_install_candidate": true,
       "untranslated_blockers": [],
       "requires_privileged_lxc": false,
       "optional_privileged_lxc": false,
@@ -6202,7 +6202,7 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "hidden": true,
+      "hidden": false,
       "template_id": "image-input"
     },
     {
