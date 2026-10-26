@@ -6494,7 +6494,8 @@
         "topCpuShort": "TOP CPU",
         "topMemory": "TOP MEMORIA",
         "nodes": "NODOS",
-        "guests": "INVITADOS"
+        "guests": "INVITADOS",
+        "history": "HISTORIAL"
       },
       "labels": {
         "load": "load",
@@ -6527,7 +6528,23 @@
         "prev": "prev",
         "peak": "pico",
         "max": "max",
-        "window": "ventana {window} (w)"
+        "window": "ventana {window} (w)",
+        "now": "ahora",
+        "last60": "últimos 60 min",
+        "peakShort": "pk",
+        "noHistory": "sin historial",
+        "minPerCol": "{minutes} min/col",
+        "colsPerMin": "1 min = {cols} col",
+        "secPerCol": "1 col = {seconds} s",
+        "live": "en vivo {window}",
+        "minAgo": "min atrás",
+        "other": "OTROS",
+        "outsideTop": "fuera de las listas top",
+        "footprint": "huella",
+        "shareOfVcpu": "uso de vCPU",
+        "guests": "invitados",
+        "noCluster": "sin cluster (no hay corosync.conf)",
+        "kernel": "kernel"
       },
       "status": {
         "data": "datos {age}",
@@ -6558,7 +6575,10 @@
         "vcpu": "vCPU",
         "hostCores": "HOST",
         "memUsed": "MEM USADA",
-        "load": "LOAD"
+        "load": "LOAD",
+        "guest": "INVITADO",
+        "usedTotal": "USADO/TOTAL",
+        "usedAssignedLong": "USADO/ASIGNADO"
       },
       "footer": {
         "quit": "q login",
@@ -6568,7 +6588,9 @@
         "glyphs": "a glifos",
         "otherTty": "Ctrl+Alt+F2",
         "sort": "c/m orden",
-        "window": "w 1m/5m"
+        "window": "w 1m/5m",
+        "zoom": "+/- texto ({position}/{count})",
+        "otherTtyHint": "otra TTY"
       }
     },
     "notifications": {
