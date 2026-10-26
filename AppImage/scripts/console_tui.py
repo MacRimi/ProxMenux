@@ -1,10 +1,18 @@
-"""Curses entry point for the read-only ProxMenux console."""
+"""Curses entry point for the read-only ProxMenux console.
+
+Exit codes: 0 when the operator quits (``q``, Ctrl+C, SIGTERM or SIGHUP),
+10 to ask for bigger text (``+`` or ``=``), 11 to ask for smaller text
+(``-``), 64 for invalid arguments; any other code is a crash. The text keys
+only act with ``--zoom i/n`` (given by a launcher that can change the console
+font) and never past either end of that range.
+"""
 
 import os
 import sys
 _HERE = os.path.dirname(os.path.realpath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
+import console_brand  # noqa: E402
 import console_metrics  # noqa: E402
 import console_render  # noqa: E402
 import console_snapshot  # noqa: E402
@@ -19,17 +27,46 @@ import signal
 import time
 
 
-_ROLES = {"title": curses.COLOR_CYAN, "text": None, "dim": None,
-          "ok": curses.COLOR_GREEN, "warn": curses.COLOR_YELLOW,
-          "crit": curses.COLOR_RED, "selected": None}
-_ASCII_TOKENS = {key: ("-" if key == "BOX_H" else "|" if key == "BOX_V"
-                       else "#" if key == "BAR_FULL" else "."
-                       if key in ("BAR_EMPTY", "BULLET") else "+")
-                 for key in console_render.ACS_TOKENS}
-_COUNTERS = {"netin": "net_rx_bps", "netout": "net_tx_bps",
-             "diskread": "disk_read_bps", "diskwrite": "disk_write_bps"}
+EXIT_OK = 0
+EXIT_BIGGER = 10
+EXIT_SMALLER = 11
+EXIT_USAGE = 64
+REDRAW_EVERY_S = 5
+WINDOWS_S = (60, 300)
+_MAX_ZOOM_STEPS = 64
+
+# Role -> (foreground, attributes) on the default background; None keeps the
+# terminal's default foreground.
+_COLOURS = {
+    "title": (curses.COLOR_CYAN, 0),
+    "text": (None, 0),
+    "dim": (None, curses.A_DIM),
+    "ok": (curses.COLOR_GREEN, 0),
+    "warn": (curses.COLOR_YELLOW, curses.A_BOLD),
+    "crit": (curses.COLOR_RED, curses.A_BOLD),
+    "selected": (None, curses.A_REVERSE),
+    "graph_in": (curses.COLOR_CYAN, 0),
+    "graph_out": (curses.COLOR_MAGENTA, 0),
+    "brand": (curses.COLOR_WHITE, curses.A_BOLD),
+    "brand_badge": (None, curses.A_BOLD | curses.A_REVERSE),
+}
+# Monochrome: attributes per role for text cells, and for bar and graph cells
+# (the ``glyph`` attribute), which are never drawn in reverse video.
+_MONO_TEXT = {
+    "title": curses.A_BOLD, "text": 0, "dim": curses.A_DIM, "ok": 0,
+    "warn": curses.A_BOLD, "crit": curses.A_BOLD | curses.A_REVERSE,
+    "selected": curses.A_REVERSE, "graph_in": 0, "graph_out": 0,
+    "brand": curses.A_BOLD, "brand_badge": curses.A_REVERSE,
+}
+_MONO_GLYPH = {"dim": curses.A_DIM, "warn": curses.A_BOLD, "crit": curses.A_BOLD}
+_CELL_ATTRS = {"dim": curses.A_DIM, "reverse": curses.A_REVERSE, "bold": curses.A_BOLD}
+# In a UTF-8 locale ncurses sends ACS_BLOCK as U+25AE, which the console fonts
+# (Lat15-Terminus) draw as a small square; bars and graphs need U+2588.
+_UTF8_ACS = {"BAR_FULL": "\u2588"}
 _LANGUAGE = re.compile(r"[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]+)?\Z")
+_ZOOM = re.compile(r"([0-9]{1,2})/([0-9]{1,2})\Z")
 _stop_requested = False
+_utf8 = False  # whether the locale's codeset is UTF-8; set by main()
 
 
 def _catalog_value(catalog, key):
@@ -90,233 +127,365 @@ def _configuration_language():
         return "en"
 
 
-class GuestRates:
-    """Derive guest byte rates only across consecutive valid observations."""
-
-    def __init__(self):
-        self.previous = {}
-        self.observed_at = None
-
-    def update(self, guests, observed_at):
-        dt = (observed_at - self.observed_at
-              if isinstance(observed_at, (int, float)) and
-              isinstance(self.observed_at, (int, float)) else 0)
-        current = {}
-        output = []
-        for item in guests:
-            guest = dict(item)
-            key = (guest.get("type"), guest.get("vmid"))
-            old = self.previous.get(key)
-            stable = (dt > 0 and old is not None and
-                      old.get("node") == guest.get("node") and
-                      isinstance(guest.get("uptime"), (int, float)) and
-                      isinstance(old.get("uptime"), (int, float)) and
-                      guest["uptime"] >= old["uptime"])
-            if stable:
-                stable = all(not (isinstance(old.get(source), (int, float)) and
-                                  isinstance(guest.get(source), (int, float)) and
-                                  guest[source] < old[source]) for source in _COUNTERS)
-            if stable:
-                for source, target in _COUNTERS.items():
-                    first, second = old.get(source), guest.get(source)
-                    if (isinstance(first, (int, float)) and
-                            isinstance(second, (int, float)) and second >= first):
-                        guest[target] = (second - first) / dt
-            current[key] = item
-            output.append(guest)
-        self.previous = current
-        self.observed_at = observed_at
-        return output
+def _kernel(proc_root):
+    """Running kernel release from ``proc/sys/kernel/osrelease``, or None."""
+    try:
+        with open(Path(proc_root) / "proc/sys/kernel/osrelease", encoding="ascii",
+                  errors="replace") as stream:
+            release = stream.read(256).strip()
+    except OSError:
+        return None
+    return release or None
 
 
-def _color_pairs():
-    pairs = {role: 0 for role in _ROLES}
-    if not curses.has_colors():
-        return pairs
+# ---------------------------------------------------------------- painting
+
+def _palette(mono):
+    """Role -> (text style, glyph style); colour pairs unless ``mono``."""
+    palette = {role: (_MONO_TEXT[role], _MONO_GLYPH.get(role, 0)) for role in _MONO_TEXT}
+    if mono or not curses.has_colors():
+        return palette
     curses.start_color()
     try:
         curses.use_default_colors()
-        background = -1
+        background = default = -1
     except curses.error:
-        background = curses.COLOR_BLACK
-    for number, (role, foreground) in enumerate(_ROLES.items(), 1):
+        background, default = curses.COLOR_BLACK, curses.COLOR_WHITE
+    for number, (role, (foreground, attrs)) in enumerate(_COLOURS.items(), 1):
         try:
-            color = (background if background == -1 else curses.COLOR_WHITE)
-            curses.init_pair(number, color if foreground is None else foreground,
-                             background)
-            pairs[role] = curses.color_pair(number)
+            curses.init_pair(number, default if foreground is None else foreground, background)
         except curses.error:
-            pass
-    return pairs
+            continue  # this role keeps its monochrome attributes
+        style = curses.color_pair(number) | attrs
+        palette[role] = (style, style & ~curses.A_REVERSE)
+    return palette
 
 
-def _paint(stdscr, grid, pairs):
+def _style(role, attrs, palette):
+    """Curses attributes of a cell; bar and graph cells never in reverse."""
+    glyph = console_render.GLYPH in attrs
+    style = palette.get(role, (0, 0))[1 if glyph else 0]
+    for attr in attrs:
+        style |= _CELL_ATTRS.get(attr, 0)
+    return style & ~curses.A_REVERSE if glyph else style
+
+
+def _char(value):
+    """A grid character as curses needs it: an ``ACS_*`` constant or text.
+
+    Logical tokens map through ``console_render.ACS_TOKENS``; a value without
+    the ``ACS_`` prefix is the literal character itself. Before ``initscr`` (or
+    on a terminal without the constant) the ASCII fallback is used; in a UTF-8
+    locale the full block is sent as U+2588 (see ``_UTF8_ACS``).
+    """
+    name = console_render.ACS_TOKENS.get(value)
+    if name is None:
+        return value
+    if not name.startswith("ACS_"):
+        return name
+    if _utf8 and value in _UTF8_ACS:
+        return _UTF8_ACS[value]
+    glyph = getattr(curses, name, None)
+    return glyph if glyph is not None else console_render.ASCII_TOKENS[value]
+
+
+def _runs(row, width, palette, last_row, memo):
+    """Yield ``(x, text_or_acs, style)``, joining text cells of one style.
+
+    ``memo`` caches ``cell -> (char, style)`` across the rows of a frame.
+    """
+    start, text, style = 0, "", None
+    for x, cell in enumerate(row[:width]):
+        if last_row and x == width - 1:
+            break  # writing the bottom-right cell would scroll the screen
+        try:
+            char, cell_style = memo[cell]
+        except (KeyError, TypeError):  # TypeError: a cell that is not hashable
+            value, role, attrs = cell
+            char, cell_style = _char(value), _style(role, attrs, palette)
+            if isinstance(attrs, tuple):
+                memo[cell] = char, cell_style
+        if isinstance(char, str) and cell_style == style:
+            text += char
+            continue
+        if text:
+            yield start, text, style
+        if isinstance(char, str):
+            start, text, style = x, char, cell_style
+        else:
+            yield x, char, cell_style
+            start, text, style = x + 1, "", None
+    if text:
+        yield start, text, style
+
+
+def _paint(stdscr, grid, palette, redraw=False):
+    """Write the grid, park the cursor at (0, 0) and refresh.
+
+    ``redraw`` rewrites every cell even where curses thinks the screen is
+    already right (kernel messages scrolled or overwrote it), without the
+    clear-screen flash of ``clearok``.
+    """
     height, width = stdscr.getmaxyx()
     stdscr.erase()
-    for y, row in enumerate(grid):
-        if y >= height:
-            break
-        for x, (char, role, attrs) in enumerate(row):
-            if x >= width or (y == height - 1 and x == width - 1):
-                continue
-            style = pairs.get(role, 0)
-            for attr in attrs:
-                style |= {"dim": curses.A_DIM, "reverse": curses.A_REVERSE,
-                          "bold": curses.A_BOLD}.get(attr, 0)
-            if role == "dim":
-                style |= curses.A_DIM
-            if role == "selected":
-                style |= curses.A_REVERSE
-            token = console_render.ACS_TOKENS.get(char)
-            if token is not None:
-                glyph = getattr(curses, token, None)
-                if glyph is None:
-                    char = _ASCII_TOKENS[char]
-                else:
-                    char = glyph
+    memo = {}
+    for y, row in enumerate(grid[:height]):
+        for x, value, style in _runs(row, width, palette, y == height - 1, memo):
             try:
-                if isinstance(char, int):
-                    stdscr.addch(y, x, char, style)
+                if isinstance(value, int):
+                    stdscr.addch(y, x, value, style)
                 else:
-                    stdscr.addstr(y, x, char, style)
+                    try:
+                        stdscr.addstr(y, x, value, style)
+                    except UnicodeEncodeError:
+                        stdscr.addstr(y, x, value.encode("ascii", "replace").decode(), style)
             except curses.error:
                 # A resize may land between getmaxyx and a cell write.
                 continue
+    if redraw:
+        stdscr.redrawwin()
+    try:
+        stdscr.move(0, 0)
+    except curses.error:
+        pass
     stdscr.refresh()
 
 
-def _signal_stop(_signum, _frame):
-    global _stop_requested
-    _stop_requested = True
+# ---------------------------------------------------------------- arguments
+
+class _Parser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_USAGE, f"{self.prog}: error: {message}\n")
+
+
+def _zoom(value):
+    match = _ZOOM.match(value)
+    position, count = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+    if not 1 <= position <= count <= _MAX_ZOOM_STEPS:
+        raise argparse.ArgumentTypeError(
+            f"expected POSITION/COUNT with 1 <= POSITION <= COUNT <= {_MAX_ZOOM_STEPS}: {value!r}")
+    return position, count
 
 
 def _parse_args(argv):
-    parser = argparse.ArgumentParser(description="ProxMenux console TUI")
-    parser.add_argument("--once", action="store_true")
+    parser = _Parser(prog="proxmenux-console", description="ProxMenux console TUI")
+    parser.add_argument("--once", action="store_true", help="draw one frame and exit")
     parser.add_argument("--snapshot", default=console_snapshot.DEFAULT_PATH)
     parser.add_argument("--proc-root", default="/")
     parser.add_argument("--state-dir", default=os.environ.get(
         "PMX_CONSOLE_STATE_DIR", console_snapshot.DEFAULT_STATE_DIR))
     parser.add_argument("--glyphs", choices=("acs", "unicode", "ascii", "auto"),
                         default="acs")
+    parser.add_argument("--view", choices=("node", "cluster"), default="node",
+                        help="view shown first")
+    parser.add_argument("--mono", action="store_true",
+                        help="no colours: roles as bold, dim and reverse text")
+    parser.add_argument("--brand", metavar="TEXT",
+                        help="badge in the header (e.g. HOMELAB); invalid text is ignored")
+    parser.add_argument("--brand-art", metavar="FILE",
+                        help="root-owned block art shown where rows are free; "
+                             "an invalid file is ignored")
+    parser.add_argument("--zoom", type=_zoom, metavar="POSITION/COUNT",
+                        help="font step of the launcher; enables + and - (exit 10 and 11)")
     parser.add_argument("--autostart", action="store_true")
     return parser.parse_args(argv)
 
 
-def _run(stdscr, args):
+# ---------------------------------------------------------------- loop
+
+def _signal_stop(_signum, _frame):
+    global _stop_requested
+    _stop_requested = True
+
+
+class Controls:
+    """What the keyboard changes: view, guest sort, graph window and glyphs.
+
+    ``press(key)`` returns an exit code (``EXIT_OK``, ``EXIT_BIGGER``,
+    ``EXIT_SMALLER``), ``RELOAD`` (re-read the snapshot and clear the screen),
+    ``CLEAR`` (clear the screen) or None.
+    """
+
+    RELOAD = "reload"
+    CLEAR = "clear"
+    _NEXT_GLYPHS = {"acs": "ascii", "ascii": "unicode", "unicode": "acs"}
+
+    def __init__(self, view="node", glyphs="acs", zoom=None):
+        self.view = view
+        self.glyphs = "acs" if glyphs == "auto" else glyphs
+        self.zoom = zoom
+        self.sort = "cpu"
+        self.window_s = WINDOWS_S[0]
+
+    def press(self, key):
+        if self.zoom is not None:
+            position, count = self.zoom
+            if key in (ord("+"), ord("=")):
+                return EXIT_BIGGER if position < count else None
+            if key == ord("-"):
+                return EXIT_SMALLER if position > 1 else None
+        if key in (ord("q"), ord("Q"), 3):  # 3: Ctrl+C when it is not a signal
+            return EXIT_OK
+        if key in (9, curses.KEY_LEFT, curses.KEY_RIGHT):
+            self.view = "cluster" if self.view == "node" else "node"
+        elif key in (ord("1"), ord("2")):
+            self.view = "node" if key == ord("1") else "cluster"
+        elif key == ord("r"):
+            return self.RELOAD
+        elif key == curses.KEY_RESIZE:
+            return self.CLEAR
+        elif key == ord("a"):
+            self.glyphs = self._NEXT_GLYPHS[self.glyphs]
+        elif key == ord("w"):
+            self.window_s = WINDOWS_S[(WINDOWS_S.index(self.window_s) + 1) % len(WINDOWS_S)]
+        elif self.view == "cluster" and key in (ord("c"), ord("m")):
+            self.sort = "cpu" if key == ord("c") else "mem"
+        return None
+
+
+def _snapshot_view(snapshot, now):
+    """``(data, fresh)``: the document with ``age_s`` and whether guest data is
+    recent enough (``age <= 2 × publish_interval_s``) for host totals."""
+    if snapshot is None or snapshot.reason is not None:
+        return None, False
+    data = dict(snapshot.data)
+    observed = data.get("observed_at")
+    age = max(0, now - observed) if observed is not None else None
+    data["age_s"] = age
+    interval = data.get("publish_interval_s") or console_snapshot.PUBLISH_INTERVAL_S
+    fresh = ((data.get("resources") or {}).get("status") == "ok" and age is not None
+             and age <= 2 * interval)
+    return data, fresh
+
+
+def _local(sampler, kernel, window_s, now):
+    """One local sample plus what the graphs need from the sampler."""
+    local = sampler.sample(now)
+    local["kernel"] = kernel
+    local["series"] = {name: list(values) for name, values in sampler.history.items()}
+    local["stats"] = {name: sampler.stats(name, window_s) for name in sampler.history}
+    return local
+
+
+def _view_model(controls, local, data, fresh, translator, now, brand):
+    guests = ((data or {}).get("resources") or {}).get("guests") or []
+    node = ((data or {}).get("node") or {}).get("name")
+    return {"local": local, "snapshot": data,
+            "host_other": console_metrics.host_other(local, guests, node, fresh),
+            "glyphs": controls.glyphs, "lang": translator.language, "tr": translator,
+            "now": now, "selected_view": controls.view, "sort": controls.sort,
+            "window_s": controls.window_s, "brand": brand,
+            "zoom": list(controls.zoom) if controls.zoom else None}
+
+
+def _renew_lease(state_dir, now):
+    """Keep the publisher's lease (``<state_dir>/client/lease``) fresh."""
+    try:
+        console_snapshot.touch_lease(state_dir, now)
+    except (OSError, ValueError):
+        pass
+
+
+def _run(stdscr, args, brand):
     try:
         curses.curs_set(0)
     except curses.error:
         pass
     stdscr.timeout(1000)
     stdscr.keypad(True)
-    pairs = _color_pairs()
+    stdscr.leaveok(False)
+    curses.flushinp()  # keys typed while a launcher restarted the console
+    palette = _palette(args.mono)
     sampler = console_metrics.LocalSampler(proc_root=args.proc_root)
+    kernel = _kernel(args.proc_root)
     translator = Translator()
-    rates = GuestRates()
-    glyphs = "acs" if args.glyphs == "auto" else args.glyphs
-    selected_view = "node"
-    sort = "cpu"
+    controls = Controls(args.view, args.glyphs, args.zoom)
     snapshot = None
-    guests = []
-    previous_mtime = object()
-    last_clear = time.monotonic()
+    previous_key = object()
     reload_now = True
-    repaint = False
+    clear = False
+    last_redraw = time.monotonic()
     while not _stop_requested:
         now = time.time()
-        local = sampler.sample(time.monotonic())
-        try:
-            console_snapshot.touch_lease(args.state_dir, now)
-        except (OSError, ValueError):
-            pass
+        local = _local(sampler, kernel, controls.window_s, time.monotonic())
+        _renew_lease(args.state_dir, now)
         try:
             info = os.stat(args.snapshot)
-            mtime = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size)
+            key = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size)
         except OSError:
-            mtime = None
-        if reload_now or mtime != previous_mtime:
+            key = None
+        if reload_now or key != previous_key:
             snapshot = console_snapshot.load_snapshot(args.snapshot, now)
-            if snapshot.reason is None:
-                resources = snapshot.data.get("resources") or {}
-                guests = rates.update(resources.get("guests") or [],
-                                      resources.get("observed_at"))
-            else:
-                rates = GuestRates()
-                guests = []
-            previous_mtime = mtime
+            previous_key = key
             reload_now = False
-        if snapshot is not None and snapshot.reason is None:
-            data = dict(snapshot.data)
-            observed = data.get("observed_at")
-            data["age_s"] = max(0, now - observed) if observed is not None else None
-            data["resources"] = dict(data.get("resources") or {}, guests=guests)
-            language = data.get("language")
-        else:
-            data = None
-            language = _configuration_language()
-        translator.set_language(language)
-        resources = (data or {}).get("resources") or {}
-        node = (data or {}).get("node") or {}
-        age = (data or {}).get("age_s")
-        fresh = (resources.get("status") == "ok" and age is not None
-                 and age <= 10)
-        other = console_metrics.host_other(local, guests, node.get("name"), fresh)
-        view_model = {"local": local, "snapshot": data, "host_other": other,
-                      "glyphs": glyphs, "lang": translator.language, "tr": translator,
-                      "now": now, "selected_view": selected_view, "sort": sort}
+        data, fresh = _snapshot_view(snapshot, now)
+        translator.set_language(data.get("language") if data else _configuration_language())
         height, width = stdscr.getmaxyx()
-        if repaint or time.monotonic() - last_clear >= 30:
+        grid = console_render.render(
+            _view_model(controls, local, data, fresh, translator, now, brand), width, height)
+        redraw = False
+        if clear:
             stdscr.clearok(True)
-            last_clear = time.monotonic()
-            repaint = False
-        _paint(stdscr, console_render.render(view_model, width, height), pairs)
+            clear = False
+            last_redraw = time.monotonic()
+        elif time.monotonic() - last_redraw >= REDRAW_EVERY_S:
+            redraw = True
+            last_redraw = time.monotonic()
+        _paint(stdscr, grid, palette, redraw)
         if args.once or _stop_requested:
             break
-        key = stdscr.getch()
-        if key in (ord("q"), ord("Q")):
-            break
-        if key in (9, curses.KEY_LEFT, curses.KEY_RIGHT):
-            selected_view = "cluster" if selected_view == "node" else "node"
-        elif key == ord("1"):
-            selected_view = "node"
-        elif key == ord("2"):
-            selected_view = "cluster"
-        elif key == ord("r"):
-            reload_now = True
-            repaint = True
+        action = controls.press(stdscr.getch())
+        if action == Controls.RELOAD:
+            reload_now = clear = True
+            _renew_lease(args.state_dir, time.time())
+        elif action == Controls.CLEAR:
+            clear = True
+        elif action is not None:
+            return action
+    return EXIT_OK
+
+
+def _session(args, brand):
+    """``curses.wrapper`` without colours by default and with a teardown that
+    always reaches ``endwin`` (a hung-up terminal may fail the earlier steps)."""
+    stdscr = curses.initscr()
+    try:
+        curses.noecho()
+        curses.cbreak()
+        return _run(stdscr, args, brand)
+    finally:
+        for step in (lambda: stdscr.keypad(False), curses.echo, curses.nocbreak,
+                     curses.endwin):
             try:
-                console_snapshot.touch_lease(args.state_dir, time.time())
-            except (OSError, ValueError):
+                step()
+            except curses.error:
                 pass
-        elif key == ord("a"):
-            glyphs = {"acs": "ascii", "ascii": "unicode", "unicode": "acs"}[glyphs]
-        elif key == curses.KEY_RESIZE:
-            repaint = True
-        elif selected_view == "cluster" and key in (ord("c"), ord("m")):
-            sort = "cpu" if key == ord("c") else "mem"
 
 
 def main(argv=None):
-    global _stop_requested
+    global _stop_requested, _utf8
     try:
         locale.setlocale(locale.LC_ALL, "")
     except locale.Error:
         pass
+    _utf8 = locale.nl_langinfo(locale.CODESET).upper().replace("-", "") == "UTF8"
     args = _parse_args(argv)
+    brand = console_brand.load(args.brand, args.brand_art)
     _stop_requested = False
     previous = {}
     for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         previous[signum] = signal.signal(signum, _signal_stop)
+    # Ignored before initscr, so curses does not install its own suspend handler.
+    previous[signal.SIGTSTP] = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
     try:
-        curses.wrapper(_run, args)
+        return _session(args, brand)
     except Exception as exc:
         print("console_tui: " + str(exc).replace("\n", " "), file=sys.stderr)
         return 1
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)
-    return 0
 
 
 if __name__ == "__main__":

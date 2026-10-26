@@ -1,7 +1,8 @@
 name: Console TUI tests
 
 # Not in CI: AppImage/scripts/tests/test_console_tui_smoke.py drives the TUI
-# through a pty with real curses and runs on a QA host instead.
+# through a pty with real curses and runs on a QA host instead;
+# test_console_tui.py covers the same entry point without a terminal.
 
 on:
   pull_request:
@@ -13,6 +14,9 @@ on:
       - 'AppImage/scripts/tests/test_console_snapshot.py'
       - 'AppImage/scripts/tests/test_console_render.py'
       - 'AppImage/scripts/tests/test_console_graphs.py'
+      - 'AppImage/scripts/tests/test_console_cluster.py'
+      - 'AppImage/scripts/tests/test_console_brand.py'
+      - 'AppImage/scripts/tests/test_console_tui.py'
       - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
       - 'AppImage/scripts/tests/test_console_monitor_hook.py'
       - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
@@ -30,6 +34,9 @@ on:
       - 'AppImage/scripts/tests/test_console_snapshot.py'
       - 'AppImage/scripts/tests/test_console_render.py'
       - 'AppImage/scripts/tests/test_console_graphs.py'
+      - 'AppImage/scripts/tests/test_console_cluster.py'
+      - 'AppImage/scripts/tests/test_console_brand.py'
+      - 'AppImage/scripts/tests/test_console_tui.py'
       - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
       - 'AppImage/scripts/tests/test_console_monitor_hook.py'
       - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
@@ -65,6 +72,12 @@ jobs:
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_render.py -v
       - name: Test console graphs
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_graphs.py -v
+      - name: Test console cluster view
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_cluster.py -v
+      - name: Test console brand
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_brand.py -v
+      - name: Test console TUI entry point (no terminal)
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_tui.py -v
       - name: Test cluster resources cache
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_cluster_resources_cache.py -v
       - name: Test the Monitor hook that starts the console publisher
