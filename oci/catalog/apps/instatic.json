@@ -1,0 +1,372 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-instatic",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Instatic"
+    },
+    "description": {
+      "en_US": "Single-server website CMS and visual editor with SQLite-backed content, media uploads, forms, and publishing."
+    },
+    "category": "web",
+    "category_label": "Webservers & Proxies",
+    "author": "CoreBunch",
+    "developer": "CoreBunch",
+    "icon": "https://raw.githubusercontent.com/CoreBunch/Instatic/main/public/favicon.svg",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 3001,
+      "path": "/admin"
+    },
+    "website": "https://github.com/CoreBunch/Instatic",
+    "documentation": "https://github.com/CoreBunch/Instatic/blob/main/docs/deployment/vps.md",
+    "repository": "https://github.com/CoreBunch/Instatic",
+    "tips": [
+      "The initial visit at /admin creates the site and administrator. INSTATIC_SECRET_KEY is generated and persisted with the recipe; back up the volume."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "CoreBunch",
+    "repository": "https://github.com/CoreBunch/Instatic",
+    "default_branch": "main",
+    "revision": "1a7ab33ff1614e80b2f618b284dd55b0e2b9d9ae",
+    "image_repository_url": "https://github.com/orgs/CoreBunch/packages/container/package/instatic",
+    "readme_pushed_at": "",
+    "compose_sha256": "b8b34bcb67ace12f558f3a93b2363bfd525992ea66c9dd89b9cb53258087a16f",
+    "generated_at": "2026-10-26T06:12:09+00:00",
+    "readme_raw_url": "https://raw.githubusercontent.com/CoreBunch/Instatic/main/README.md"
+  },
+  "container_contract": {
+    "service_name": "instatic",
+    "container_name": "instatic",
+    "image": {
+      "reference": "ghcr.io/corebunch/instatic:latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/corebunch/instatic",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PORT",
+        "example": "3001",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "DATABASE_URL",
+        "example": "sqlite:/app/data/cms.db",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "UPLOADS_DIR",
+        "example": "/app/uploads",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "STATIC_DIR",
+        "example": "/app/dist",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "INSTATIC_SECRET_KEY",
+        "example": "${GENERATED_INSTATIC_SECRET_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/app/data",
+        "compose_source_example": "./data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/app/uploads",
+        "compose_source_example": "./uploads",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 3001,
+        "published_example": 3001,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "{\n  \"name\": \"instatic\",\n  \"services\": {\n    \"instatic\": {\n      \"image\": \"ghcr.io/corebunch/instatic:latest\",\n      \"container_name\": \"instatic\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"3001:3001/tcp\"\n      ],\n      \"volumes\": [\n        \"./data:/app/data\",\n        \"./uploads:/app/uploads\"\n      ],\n      \"environment\": {\n        \"PORT\": \"3001\",\n        \"DATABASE_URL\": \"sqlite:/app/data/cms.db\",\n        \"UPLOADS_DIR\": \"/app/uploads\",\n        \"STATIC_DIR\": \"/app/dist\",\n        \"INSTATIC_SECRET_KEY\": \"${GENERATED_INSTATIC_SECRET_KEY}\"\n      }\n    }\n  }\n}"
+  },
+  "compose_stack": {
+    "project_name": "instatic",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "instatic",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "instatic",
+        "image": "ghcr.io/corebunch/instatic:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "ghcr.io/corebunch/instatic:latest",
+          "container_name": "instatic",
+          "restart": "unless-stopped",
+          "ports": [
+            "3001:3001/tcp"
+          ],
+          "volumes": [
+            "./data:/app/data",
+            "./uploads:/app/uploads"
+          ],
+          "environment": {
+            "PORT": "3001",
+            "DATABASE_URL": "sqlite:/app/data/cms.db",
+            "UPLOADS_DIR": "/app/uploads",
+            "STATIC_DIR": "/app/dist",
+            "INSTATIC_SECRET_KEY": "${GENERATED_INSTATIC_SECRET_KEY}"
+          }
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "instatic-volume-0",
+        "service": "instatic",
+        "container_path": "/app/data",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "instatic-volume-1",
+        "service": "instatic",
+        "container_path": "/app/uploads",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "instatic"
+      ],
+      "stop_order": [
+        "instatic"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "generated-instatic-instatic-secret-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "instatic",
+              "environment_variable": "INSTATIC_SECRET_KEY"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Instatic",
+        "scheme": "http",
+        "port": 3001,
+        "path": "/admin",
+        "source": "upstream-documentation"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 120
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
+      "generated_sensitive_environment": {
+        "INSTATIC_SECRET_KEY": {
+          "strategy": "token-hex",
+          "bytes": 24
+        }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/app/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/app/uploads",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 3001,
+        "path": "/health",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": true
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "image",
+      "container_name",
+      "environment",
+      "ports",
+      "restart",
+      "volumes",
+      "user"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single OCI image and one application service. Persistent paths, required settings, listeners and upstream first-run steps are recorded; runtime installation and service behavior remain unvalidated until laboratory testing."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}
