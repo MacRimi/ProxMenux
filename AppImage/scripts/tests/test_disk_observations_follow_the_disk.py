@@ -1,6 +1,5 @@
 """The observations of a disk belong to its serial number, not to the
 connector it is plugged in."""
-import sqlite3
 import sys
 import tempfile
 import unittest
@@ -9,25 +8,14 @@ from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-# The module opens the database of the host when it is imported.
-_connect = sqlite3.connect
-with patch.object(Path, 'mkdir'), patch('builtins.print'), \
-        patch('sqlite3.connect', side_effect=lambda *args, **kwargs: _connect(':memory:')):
-    import health_persistence as hp_module
+from health_fixture_modules import load_health_persistence
 
 
 class DiskObservationIdentityTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        store = hp_module.HealthPersistence.__new__(hp_module.HealthPersistence)
-        for name, value in vars(hp_module.health_persistence).items():
-            setattr(store, name, value)
-        store.data_dir = Path(tmp.name)
-        store.db_path = store.data_dir / 'health_monitor.db'
-        with patch('builtins.print'):
-            store._init_database()
-        self.store = store
+        self.store = load_health_persistence(tmp.name).health_persistence
 
     def record(self, device, serial, signature):
         self.store.register_disk(device, serial)

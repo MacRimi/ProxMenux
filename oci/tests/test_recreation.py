@@ -49,6 +49,13 @@ class RecreationCatalogTests(unittest.TestCase):
         self.assertEqual(candidate['template']['catalog_ui']['title']['en_US'],
                          catalog.compose('chromium')['catalog_ui']['title']['en_US'])
 
+    def test_curated_only_index_entry_has_internal_template_id(self):
+        catalog = Catalog(ROOT)
+        self.assertFalse((ROOT / 'catalog' / 'apps' / 'it-tools.json').exists())
+        item = next(item for item in catalog._curated_items({}) if item['id'] == 'it-tools')
+        self.assertEqual(item['template_id'], 'image-it-tools')
+        self.assertIsNone(item['template'])
+
     def test_navidrome_baseurl_is_optional(self):
         catalog = Catalog(ROOT)
         template = catalog.compose('navidrome')

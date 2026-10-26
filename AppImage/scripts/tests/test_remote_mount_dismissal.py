@@ -2,25 +2,20 @@
 import sys
 import unittest
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
+import tempfile
+from health_fixture_modules import load_health_modules
 from unittest.mock import patch
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-_health_persistence_module = ModuleType("health_persistence")
-_health_persistence_module.health_persistence = SimpleNamespace(cleanup_old_errors=lambda: None)
-_health_persistence_module.disk_base_name = lambda name: str(name).replace("/dev/", "")
-sys.modules.setdefault("health_persistence", _health_persistence_module)
-sys.modules.setdefault("psutil", ModuleType("psutil"))
-sys.modules.setdefault("flask_server", SimpleNamespace(
-    get_proxmox_node_name=lambda: "fixture",
-    get_cached_pvesh_cluster_resources_vm=lambda: [],
-    get_cached_vm_disk=lambda _vmid: None,
-))
-
-import health_monitor  # noqa: E402
+def setUpModule():
+    global health_monitor
+    temporary = tempfile.TemporaryDirectory(prefix='remote-mount-')
+    unittest.addModuleCleanup(temporary.cleanup)
+    health_monitor, _, _ = load_health_modules(temporary.name)
 
 
 class _Persistence:
