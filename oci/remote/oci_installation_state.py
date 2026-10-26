@@ -56,11 +56,39 @@ def version_from_environment(repository, environment):
     return found.get(expected)
 
 
+# What a registry answer means, read from skopeo's error output. Only the
+# cause is reported: the output itself can carry credentials.
+REGISTRY_ERRORS = (
+    (('toomanyrequests', 'too many requests', 'rate limit', 'registry 429'),
+     'The registry limited the requests. Try again later, or add an account for this registry.'),
+    (('unauthorized', 'authentication required', 'access to the resource is denied', '403 forbidden',
+      'registry 401', 'registry 403'),
+     'The registry refused access to the image.'),
+    (('manifest unknown', 'name unknown', '404 not found'),
+     'The image or its tag does not exist in the registry.'),
+    (('no such host', 'i/o timeout', 'connection refused', 'connection reset', 'network is unreachable',
+      'tls handshake timeout', 'context deadline exceeded', ': eof'),
+     'The registry could not be reached. Check the connection and try again.'),
+)
+
+
+def registry_error(errors):
+    text = errors.decode(errors='replace').casefold()
+    for patterns, message in REGISTRY_ERRORS:
+        if any(pattern in text for pattern in patterns):
+            return translate(message)
+    return None
+
+
 def command(*args):
-    result = subprocess.run(args, capture_output=True, timeout=120)
+    if args[:2] == ('skopeo', 'inspect'):
+        # A registry that fails for a moment is asked again before giving up.
+        args = args[:2] + ('--retry-times', '3', '--retry-delay', '5s') + args[2:]
+    result = subprocess.run(args, capture_output=True, timeout=300)
     if result.returncode:
         # Tool errors may contain credentials or environment values.
-        raise RuntimeError(f"{args[0]} {translate('failed with exit code')} {result.returncode}")
+        reason = registry_error(result.stderr) if args[0] == 'skopeo' else None
+        raise RuntimeError(reason or f"{args[0]} {translate('failed with exit code')} {result.returncode}")
     return result.stdout
 
 

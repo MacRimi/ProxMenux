@@ -67,8 +67,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     if required_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', required_digest):
         raise ValueError(translate('Invalid saved image digest'))
     lookup = repository(reference) + '@' + required_digest if required_digest else reference
-    code = ('import json,sys; from oci_installation_state import resolve_candidate; '
-            'print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))')
+    # The reason of a failure reaches the log as one line, not as a traceback.
+    code = ('import json,sys; from oci_installation_state import resolve_candidate\n'
+            'try: print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))\n'
+            'except (RuntimeError, ValueError, OSError) as error: sys.exit(str(error))')
     candidate = json.loads(run_quiet([sys.executable, '-c', code, lookup, architecture],
                                      translate('Could not query the image registry'), capture=True))
     digest = candidate['manifest_digest']
