@@ -3,6 +3,8 @@
 
 ### New version ProxMenux v1.2.7
 
+![ProxMenux 1.2.7](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_127.png)
+
 ProxMenux 1.2.7 brings two new tools. **Audit & Report**, a new page under Admin in ProxMenux Monitor, documents a Proxmox node, assesses it against forty-three checks and prints the result as a report you can hand to somebody else, next to a journal of everything ProxMenux itself has changed on the host. **OCI manager Apps**, a new entry in the main menu, installs applications straight from their official container images as native Proxmox LXC containers, with no Docker engine anywhere: a catalog of 514 applications, multi-container applications such as Immich, Nextcloud and Paperless, hardware acceleration profiles, updates that keep the data, and recovery after a restore or on another host, all of it also managed from the Monitor.
 
 Around them: a **search in the main menu** across ProxMenux options, OCI applications and Helper-Scripts, **ProxMenux on Proxmox Backup Server**, the **backup jobs of VMs and CTs** managed from ProxMenux, read-only API tokens that can only read, notifications written in the reader's language, Docker applications registered with their own identity, a disk history that follows each disk by its serial number, and a long list of improvements across backups, notifications, the Monitor, the installer and the translations, in eight languages.
