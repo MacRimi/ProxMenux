@@ -36,6 +36,10 @@ jobs:
           python-version: '3.13'
       - name: Install OCI test dependencies
         run: python3 -m pip install -r oci/requirements.txt
+      - name: Run watchdog identity and lifecycle regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p test_watchdog.py -v
       - name: Run OCI image reuse and resource edit regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'
