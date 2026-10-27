@@ -14447,6 +14447,38 @@
       "template_id": "image-scrutiny"
     },
     {
+      "id": "scrypted",
+      "provider": "official",
+      "template_family": "curated-profile",
+      "title": "Scrypted",
+      "repository": "https://github.com/koush/scrypted",
+      "description": "Manage cameras and integrate video devices with Apple HomeKit, Google Home, Alexa and Home Assistant from one self-hosted platform.",
+      "website": "https://scrypted.app/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/scrypted.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/koush/scrypted:latest",
+      "category": "smarthome",
+      "category_label": "IoT & Smart Home",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/scrypted.json",
+      "template": "apps/scrypted.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-scrypted"
+    },
+    {
       "id": "scummvm",
       "provider": "linuxserver.io",
       "title": "Scummvm",

@@ -2703,6 +2703,10 @@
           "title": "Disk space - LXC rootfs",
           "description": "Per-container root disk, evaluated against the rootfs size from PVE."
         },
+        "vm_disk": {
+          "title": "Disk space - VMs",
+          "description": "Filesystems of running VMs as the QEMU guest agent reports them, passthrough drives included. VMs without the guest agent are not evaluated."
+        },
         "lxc_mount": {
           "title": "LXC mount points",
           "description": "Capacity of mountpoints inside running CTs (mp0, mp1, NFS, bind mounts). Excludes the rootfs; that is covered above."

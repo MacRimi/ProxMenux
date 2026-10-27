@@ -2575,6 +2575,10 @@
           "title": "Miesto na disku - LXC rootfs",
           "description": "Koreňový disk každého kontajnera, hodnotený podľa veľkosti rootfs z PVE."
         },
+        "vm_disk": {
+          "title": "Miesto na disku - VM",
+          "description": "Súborové systémy spustených VM podľa hlásenia hosťovského agenta QEMU vrátane diskov v passthrough. VM bez hosťovského agenta sa nevyhodnocujú."
+        },
         "lxc_mount": {
           "title": "Prípojné body LXC",
           "description": "Kapacita prípojných bodov v bežiacich CT (mp0, mp1, NFS, bind mounty). Rootfs je riešený vyššie."

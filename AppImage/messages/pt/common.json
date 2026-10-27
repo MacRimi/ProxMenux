@@ -2576,6 +2576,10 @@
           "title": "Espaço em disco - rootfs LXC",
           "description": "Disco raiz por contêiner, avaliado em relação ao tamanho do rootfs do PVE."
         },
+        "vm_disk": {
+          "title": "Espaço em disco - VMs",
+          "description": "Sistemas de ficheiros das VMs em execução, conforme os reporta o agente convidado do QEMU, incluindo discos em passthrough. As VMs sem agente convidado não são avaliadas."
+        },
         "lxc_mount": {
           "title": "Pontos de montagem LXC",
           "description": "Capacidade de pontos de montagem dentro de CTs em execução (mp0, mp1, NFS, montagens de ligação). Exclui os rootfs; que é abordado acima."
