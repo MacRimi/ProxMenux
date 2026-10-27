@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (ottimizzato per SSD, automatico)",
-      "what": "Riduce l’usura SSD/NVMe spostando /var/log in un ramdisk tmpfs sincronizzato periodicamente sul disco. Installazione dal progetto upstream quando il disco root è SSD o NVMe. Dimensione in base alla RAM dell’host (128M / 256M / 512M), sincronizzazione periodica e protezione automatica che elimina vecchi journal all’80% e tronca i log molto attivi al 92% prima della scrittura. Adatta i limiti journald al ramdisk. Dettagli su <link>Log2RAM</link>.",
+      "what": "Riduce l'usura di SSD/NVMe spostando /var/log su un ramdisk tmpfs che viene scritto su disco a intervalli programmati. Viene installato dal progetto ufficiale quando il disco di sistema è SSD o NVMe. Dimensiona il ramdisk in base alla RAM dell'host (128M / 256M / 512M) e aggiunge un controllo che ruota e scrive i log quando il ramdisk supera l'85%. Il journal e i log delle attività di Proxmox VE e Proxmox Backup Server restano su disco. Tutti i dettagli in <link>Log2RAM</link>.",
       "category": "Archiviazione",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Impostazioni predefinite in base all’hardware",
-  "hardwareBody": "Lo script legge l'hardware dell'host prima di applicare le impostazioni. Log2RAM è installato solo su dischi SSD/root NVMe per impostazione predefinita (richiede se il rilevamento indica diversamente). La dimensione del disco ram Log2RAM viene scelta dal totale RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). I limiti del journald vengono adattati alla dimensione del ramdisk quando Log2RAM è attivo, per evitare di riempirlo.",
+  "hardwareBody": "Lo script legge l'hardware dell'host prima di applicare le impostazioni. Log2RAM è installato solo su dischi SSD/root NVMe per impostazione predefinita (richiede se il rilevamento indica diversamente). La dimensione del disco ram Log2RAM viene scelta dal totale RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Con Log2RAM attivo, il journal resta su disco con un proprio limite.",
   "upgrade": {
     "heading": "Aggiorna gli elenchi dei pacchetti e il sistema",
     "intro": "Il primo passo del pacchetto automatizzato è l'aggiornamento Proxmox. La guida di aggiornamento di Proxmox per un host in esecuzione (nella stessa versione principale) è quella di eseguire:",

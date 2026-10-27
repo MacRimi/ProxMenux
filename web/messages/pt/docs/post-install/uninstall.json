@@ -125,7 +125,7 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Para e desativa o serviço e o timer. Purga trabalhos de cron, unidades systemd, binários, arquivos de configuração e o diretório /var/log.hdd. Também desinstala o pacote apt se ele foi instalado dessa forma."
+            "restores": "Desativa o serviço e o temporizador e remove a configuração do ProxMenux para o Log2RAM. No desligamento seguinte, o Log2RAM grava /var/log no disco; na inicialização seguinte, o journal e os logs de tarefas voltam para /var/log e os ficheiros do Log2RAM são removidos."
           },
           {
             "tool": "TRIM automático do ZFS",

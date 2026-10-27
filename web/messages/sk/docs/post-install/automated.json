@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (prispôsobené pre SSD, automatické)",
-      "what": "Znižuje opotrebenie SSD/NVMe presunom /var/log na ramdisk tmpfs s pravidelnou synchronizáciou na disk. Inštalácia z pôvodného projektu pri koreňovom disku SSD alebo NVMe. Veľkosť podľa RAM hostiteľa (128M / 256M / 512M), pravidelná synchronizácia a ochrana, ktorá pri 80% zaplnení vyčistí staré žurnály a pri 92% skráti rýchlo rastúce logy pred zápisom. Limity journald prispôsobí ramdisku. Podrobnosti v <link>Log2RAM</link>.",
+      "what": "Znižuje opotrebenie SSD/NVMe presunutím /var/log na ramdisk tmpfs, ktorý sa podľa plánu zapisuje na disk. Inštaluje sa z pôvodného projektu, keď je systémový disk SSD alebo NVMe. Veľkosť ramdisku určí podľa RAM hostiteľa (128M / 256M / 512M) a pridá kontrolu, ktorá zrotuje a zapíše logy, keď ramdisk prekročí 85 %. Journal a logy úloh Proxmox VE a Proxmox Backup Server zostávajú na disku. Všetky podrobnosti v <link>Log2RAM</link>.",
       "category": "Úložisko",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Predvolené hodnoty podľa hardvéru",
-  "hardwareBody": "Skript pred nastavením preskúma hardvér hostiteľa. Log2RAM sa predvolene inštaluje iba pri koreňovom disku SSD alebo NVMe; pri inej detekcii žiada potvrdenie. Veľkosť ramdisku sa vyberá podľa celkovej RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Pri aktívnom Log2RAM sa limity journald prispôsobia ramdisku, aby sa nezaplnil.",
+  "hardwareBody": "Skript pred nastavením preskúma hardvér hostiteľa. Log2RAM sa predvolene inštaluje iba pri koreňovom disku SSD alebo NVMe; pri inej detekcii žiada potvrdenie. Veľkosť ramdisku sa vyberá podľa celkovej RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Keď je Log2RAM aktívny, journal zostáva na disku s vlastným limitom.",
   "upgrade": {
     "heading": "Aktualizovať systém",
     "intro": "Prvým krokom automatického postupu je aktualizácia Proxmoxu. Oficiálny návod pre bežiaci hostiteľ v rámci rovnakej hlavnej verzie odporúča spustiť:",

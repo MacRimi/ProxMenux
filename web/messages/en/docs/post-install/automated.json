@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (SSD-aware, auto)",
-      "what": "Reduces SSD/NVMe wear by moving /var/log to a tmpfs ramdisk with periodic disk sync. Installed from the upstream project when the root disk is SSD or NVMe. Sizes the ramdisk by host RAM (128M / 256M / 512M), schedules periodic sync and an auto-sync guard that vacuums at 80% and truncates hot logs at 92% before writing. Adjusts journald limits to fit in the ramdisk. Full details on <link>Log2RAM</link>.",
+      "what": "Reduces SSD/NVMe wear by moving /var/log to a tmpfs ramdisk that is written to disk on a schedule. Installed from the upstream project when the root disk is SSD or NVMe. Sizes the ramdisk by host RAM (128M / 256M / 512M) and adds a guard that rotates and writes the logs when the ramdisk passes 85%. The journal and the task logs of Proxmox VE and Proxmox Backup Server stay on disk. Full details on <link>Log2RAM</link>.",
       "category": "Storage",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Hardware-aware defaults",
-  "hardwareBody": "The script reads the host hardware before applying settings. Log2RAM is only installed on SSD / NVMe root disks by default (it prompts if detection says otherwise). Log2RAM ramdisk size is picked from total RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). The journald limits are matched to the ramdisk size when Log2RAM is active, to avoid filling it.",
+  "hardwareBody": "The script reads the host hardware before applying settings. Log2RAM is only installed on SSD / NVMe root disks by default (it prompts if detection says otherwise). Log2RAM ramdisk size is picked from total RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). When Log2RAM is active, the journal stays on disk with its own limit.",
   "upgrade": {
     "heading": "Update and upgrade system",
     "intro": "The very first step of the Automated bundle is the Proxmox upgrade. Proxmox's own upgrade guidance for a running host (within the same major version) is to run:",

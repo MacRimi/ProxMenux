@@ -2312,6 +2312,7 @@
         "testing": "Testning…",
         "testConnection": "Testa anslutningen",
         "ollamaUrl": "Ollama URL",
+        "ollamaApiKeyHint": "Lämna tomt för en vanlig Ollama-server. Om din proxy eller gateway kräver en nyckel skickas den som Authorization: Bearer. Fältet aktiverar inte autentisering på servern.",
         "getKey": "Få nyckel",
         "loadModelsPlaceholder": "Klicka på Ladda för att hämta modeller",
         "selectModel": "Välj modell",
