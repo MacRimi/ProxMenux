@@ -58,6 +58,7 @@ NODE_FILES = (
     "tests/test_borg_ssh_guidance.cjs",
     "tests/test_storage_messages.cjs",
     "tests/test_health_text.cjs",
+    "tests/test_overview_chart_axis_gutters.cjs",
 )
 
 # unittest's CLI accepts a missing pattern as a successful zero-test run.

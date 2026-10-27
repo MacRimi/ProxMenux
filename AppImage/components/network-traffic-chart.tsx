@@ -291,7 +291,7 @@ export function NetworkTrafficChart({
     <>
     <MetricsCacheNotice lastChecked={staleAt} />
     <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data} margin={{ bottom: 80 }}>
+      <AreaChart data={data} margin={{ bottom: 80, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
         <XAxis
           dataKey="time"
