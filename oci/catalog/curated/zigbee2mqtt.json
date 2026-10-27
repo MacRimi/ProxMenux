@@ -362,7 +362,23 @@
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": true
-      }
+      },
+      "optional_devices": [
+        {
+          "id": "zigbee-serial-adapter",
+          "kind": "character-device",
+          "purpose": "serial",
+          "enable_prompt": "Pass a host device to the LXC",
+          "enabled_default": false,
+          "required_by_compose": false,
+          "path_prompt": "USB or serial device node",
+          "host_path_default": "/dev/ttyACM0",
+          "container_path_strategy": "same-as-host",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid"
+        }
+      ]
     }
   },
   "compatibility": {
