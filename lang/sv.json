@@ -8869,5 +8869,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Initial Umami administrator": "Umamis första administratör",
+  "Privacy-focused, self-hosted web analytics.": "Självhostad webbanalys med fokus på integritet.",
+  "The official Umami and PostgreSQL Compose services do not request privileged mode or relaxed host confinement.": "De officiella Compose-tjänsterna för Umami och PostgreSQL begär varken privilegierat läge eller en mindre strikt isolering av värdsystemet.",
+  "A self-hosted, no-code database and application platform.": "Självhostad plattform för databaser och applikationer utan kodning.",
+  "Public URL used to access Baserow (for example https://baserow.example.com)": "Offentlig URL för åtkomst till Baserow (till exempel https://baserow.example.com)"
 }

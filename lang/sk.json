@@ -8870,5 +8870,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Initial Umami administrator": "Počiatočný správca Umami",
+  "Privacy-focused, self-hosted web analytics.": "Webová analytika s dôrazom na ochranu súkromia, ktorú prevádzkujete na vlastnom serveri.",
+  "The official Umami and PostgreSQL Compose services do not request privileged mode or relaxed host confinement.": "Oficiálne služby Umami a PostgreSQL v Compose nevyžadujú privilegovaný režim ani zmiernenie izolácie hostiteľa.",
+  "A self-hosted, no-code database and application platform.": "Databázová a aplikačná platforma bez kódu, ktorú si hostujete sami.",
+  "Public URL used to access Baserow (for example https://baserow.example.com)": "Verejná adresa URL na prístup k Baserow (napríklad https://baserow.example.com)"
 }

@@ -8869,5 +8869,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Initial Umami administrator": "Erster Administrator für Umami",
+  "Privacy-focused, self-hosted web analytics.": "Datenschutzorientierte, selbst gehostete Webanalyse.",
+  "The official Umami and PostgreSQL Compose services do not request privileged mode or relaxed host confinement.": "Die offiziellen Compose-Dienste von Umami und PostgreSQL fordern weder den privilegierten Modus noch eine gelockerte Isolation des Hostsystems an.",
+  "A self-hosted, no-code database and application platform.": "Selbst gehostete No-Code-Plattform für Datenbanken und Anwendungen.",
+  "Public URL used to access Baserow (for example https://baserow.example.com)": "Öffentliche URL für den Zugriff auf Baserow (zum Beispiel https://baserow.example.com)"
 }
