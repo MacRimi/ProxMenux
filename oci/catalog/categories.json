@@ -419,6 +419,16 @@
     "zipkin": "monitoring",
     "znc": "communication",
     "zoraxy": "web",
-    "zotero": "documents"
+    "zotero": "documents",
+    "campfire": "gaming",
+    "chhoto-url": "tools",
+    "openhabittracker": "productivity",
+    "watcharr": "media",
+    "ech0": "communication",
+    "activepieces": "automation",
+    "bytebase": "databases",
+    "metabase": "monitoring",
+    "kopia": "backup",
+    "restic-rest-server": "backup"
   }
 }

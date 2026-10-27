@@ -1,0 +1,540 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-kopia",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Kopia",
+      "es_ES": "Kopia"
+    },
+    "tagline": {
+      "en_US": "Create encrypted, deduplicated backups and restore files.",
+      "es_ES": "Crea copias cifradas y deduplicadas y restaura archivos."
+    },
+    "description": {
+      "en_US": "Kopia provides encrypted, deduplicated backups with a web interface for repositories, policies, snapshots and restores. This profile supports browsing and restoring files through the UI; mounting snapshots with FUSE is not enabled.",
+      "es_ES": "Kopia ofrece copias cifradas y deduplicadas, con una interfaz web para repositorios, políticas, snapshots y restauraciones. Este perfil permite explorar y restaurar archivos desde la interfaz; no habilita el montaje de snapshots mediante FUSE."
+    },
+    "category": "backup",
+    "category_label": "Backup & Recovery",
+    "author": "kopia",
+    "developer": "kopia",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kopia.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 51515,
+      "path": "/"
+    },
+    "website": "https://github.com/kopia/kopia",
+    "documentation": "https://kopia.io/docs/installation/",
+    "repository": "https://github.com/kopia/kopia",
+    "tips": [
+      "The installer generates a web UI password and a separate repository encryption password. Keep the Proxmox LXC configuration and /app/config volume in backups; without the repository password, encrypted snapshots cannot be opened.",
+      "On first visit, create a repository in Kopia UI at /repository, then add /data as a read-only source and choose /restore for restores. Choose a host bind for /data and for /repository if you want to back up a NAS or other host directory.",
+      "The recipe keeps the LXC unprivileged and does not configure FUSE snapshot mounting. Use Kopia UI restore workflows rather than mounting snapshots into the host.",
+      "The server uses HTTP on its LXC address. Keep it on a trusted LAN or put it behind an HTTPS reverse proxy before allowing access from untrusted networks.",
+      "This profile uses the web interface to browse and restore files. It does not enable mounting snapshots with FUSE or shared mount propagation.",
+      "Este perfil usa la interfaz web para explorar y restaurar archivos. No habilita el montaje de snapshots con FUSE ni la propagación compartida de montajes."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "kopia",
+    "repository": "https://github.com/kopia/kopia",
+    "revision": "0835005737025dc3e5203df0138c8265686cb4b3",
+    "image_repository_url": "https://hub.docker.com/r/kopia/kopia",
+    "readme_pushed_at": "",
+    "compose_sha256": "e17828b2fb52ceea822dc412d87549dabe2fb0f404ba16b21272e01d8a78b5c8",
+    "generated_at": "2026-10-26T06:50:27+00:00",
+    "readme_raw_url": "https://kopia.io/docs/installation/"
+  },
+  "container_contract": {
+    "service_name": "kopia",
+    "container_name": "kopia",
+    "image": {
+      "reference": "kopia/kopia:latest",
+      "registry": "docker.io",
+      "repository": "kopia/kopia",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "KOPIA_PASSWORD",
+        "example": "${GENERATED_KOPIA_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "official-docker-documentation"
+      },
+      {
+        "name": "KOPIA_SERVER_USERNAME",
+        "example": "kopia",
+        "required": true,
+        "sensitive": false,
+        "source": "official-kopia-cli",
+        "prompt_user": false
+      },
+      {
+        "name": "KOPIA_SERVER_PASSWORD",
+        "example": "${GENERATED_KOPIA_SERVER_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "official-kopia-cli"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/app/config",
+        "compose_source_example": "kopia-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 2
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/app/cache",
+        "compose_source_example": "kopia-cache",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/app/logs",
+        "compose_source_example": "kopia-logs",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 2
+        }
+      },
+      {
+        "id": "volume-3",
+        "container_path": "/data",
+        "compose_source_example": "./backup-source",
+        "read_only": true,
+        "required": true,
+        "installation_choice": [
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 1
+        }
+      },
+      {
+        "id": "volume-4",
+        "container_path": "/repository",
+        "compose_source_example": "./kopia-repository",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 16
+        }
+      },
+      {
+        "id": "volume-5",
+        "container_path": "/restore",
+        "compose_source_example": "kopia-restore",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 51515,
+        "published_example": 51515,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "{\n  \"name\": \"kopia\",\n  \"services\": {\n    \"kopia\": {\n      \"image\": \"kopia/kopia:latest\",\n      \"container_name\": \"kopia\",\n      \"hostname\": \"kopia\",\n      \"restart\": \"unless-stopped\",\n      \"command\": [\n        \"server\",\n        \"start\",\n        \"--async-repo-connect\",\n        \"--address=0.0.0.0:51515\",\n        \"--server-username=kopia\"\n      ],\n      \"environment\": {\n        \"KOPIA_PASSWORD\": \"${GENERATED_KOPIA_PASSWORD}\",\n        \"KOPIA_SERVER_USERNAME\": \"kopia\",\n        \"KOPIA_SERVER_PASSWORD\": \"${GENERATED_KOPIA_SERVER_PASSWORD}\"\n      },\n      \"ports\": [\n        \"51515:51515/tcp\"\n      ],\n      \"volumes\": [\n        \"kopia-config:/app/config\",\n        \"kopia-cache:/app/cache\",\n        \"kopia-logs:/app/logs\",\n        \"./backup-source:/data:ro\",\n        \"kopia-repository:/repository\",\n        \"kopia-restore:/restore\"\n      ]\n    }\n  }\n}\n"
+  },
+  "compose_stack": {
+    "project_name": "kopia",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "kopia",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "kopia",
+        "image": "kopia/kopia:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "kopia/kopia:latest",
+          "container_name": "kopia",
+          "hostname": "kopia",
+          "restart": "unless-stopped",
+          "command": [
+            "server",
+            "start",
+            "--async-repo-connect",
+            "--address=0.0.0.0:51515",
+            "--server-username=kopia",
+            "--insecure"
+          ],
+          "environment": {
+            "KOPIA_PASSWORD": "${GENERATED_KOPIA_PASSWORD}",
+            "KOPIA_SERVER_USERNAME": "kopia",
+            "KOPIA_SERVER_PASSWORD": "${GENERATED_KOPIA_SERVER_PASSWORD}"
+          },
+          "ports": [
+            "51515:51515/tcp"
+          ],
+          "volumes": [
+            "kopia-config:/app/config",
+            "kopia-cache:/app/cache",
+            "kopia-logs:/app/logs",
+            "./backup-source:/data:ro",
+            "kopia-repository:/repository",
+            "kopia-restore:/restore"
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "name": "kopia"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "kopia-volume-0",
+        "service": "kopia",
+        "container_path": "/app/config",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "kopia-volume-1",
+        "service": "kopia",
+        "container_path": "/app/cache",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "kopia-volume-2",
+        "service": "kopia",
+        "container_path": "/app/logs",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "kopia-volume-3",
+        "service": "kopia",
+        "container_path": "/data",
+        "mode": "host-bind",
+        "user_selectable": false,
+        "backup": false,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "kopia-volume-4",
+        "service": "kopia",
+        "container_path": "/repository",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "kopia-volume-5",
+        "service": "kopia",
+        "container_path": "/restore",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "kopia"
+      ],
+      "stop_order": [
+        "kopia"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "kopia-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "kopia",
+              "environment_variable": "KOPIA_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "kopia-server-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "kopia",
+              "environment_variable": "KOPIA_SERVER_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Kopia Web UI",
+        "scheme": "http",
+        "port": 51515,
+        "path": "/",
+        "source": "official-docker-documentation"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Kopia Web UI login",
+        "type": "configured-or-installer-generated",
+        "username": "kopia",
+        "password": null,
+        "password_environment": "KOPIA_SERVER_PASSWORD",
+        "change_required": false,
+        "source": "official-kopia-cli",
+        "retrieval": null
+      },
+      {
+        "label": "Repository encryption password",
+        "type": "configured-or-installer-generated",
+        "username": "Not applicable",
+        "password": null,
+        "password_environment": "KOPIA_PASSWORD",
+        "change_required": false,
+        "source": "official-docker-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 120
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "The Compose definition publishes service ports on its Docker host.",
+        "native_lxc_behavior": "ProxMenux keeps the image service ports and exposes them on this LXC address without Docker port NAT.",
+        "reason": "The application runs in its own Proxmox LXC network namespace.",
+        "behavioral_impact": "Connect to the LXC address and the service port shown in the install summary.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose provides the command that starts the service.",
+        "native_lxc_behavior": "ProxMenux imports the image entrypoint and applies the reviewed command as the native OCI process.",
+        "reason": "The image runs directly as a native OCI LXC process.",
+        "behavioral_impact": "The process starts with the upstream server command.",
+        "validation": "pending-per-application"
+      }
+    ],
+    "installer_profile": {
+      "generated_sensitive_environment": {
+        "KOPIA_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": false
+        },
+        "KOPIA_SERVER_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 24,
+          "prompt": true
+        }
+      },
+      "runtime": {
+        "command": [
+          "server",
+          "start",
+          "--async-repo-connect",
+          "--address=0.0.0.0:51515",
+          "--server-username=kopia",
+          "--insecure"
+        ],
+        "hostname": "kopia"
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 51515,
+        "path": "/",
+        "timeout_seconds": 240,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 3,
+        "verify_tls": false,
+        "accept_any_status": true
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "command",
+      "container_name",
+      "environment",
+      "hostname",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The single upstream image runs as a native Proxmox OCI LXC. Only the documented image command, environment, ports and persistent paths are translated."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}
