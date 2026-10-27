@@ -272,10 +272,12 @@ EOF
         else
             # The package list rides in the same dialog as the summary, so
             # the decision is taken knowing what is about to be replaced.
-            # --scrolltext keeps the buttons reachable however long it is.
+            # Keep Yes focused while the full package list remains scrollable.
+            # --keep-tite restores the execution screen after confirmation.
             menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
             menu_text+="$(translate "Do you want to proceed with the system update?")"
-            if whiptail --title "$(translate "Proxmox Update")" --scrolltext --yesno "$menu_text" 24 78; then
+            if dialog --keep-tite --title "$(translate "Proxmox Update")" \
+                --default-button yes --no-collapse --scrollbar --yesno "$menu_text" 24 78; then
                 return 0
             else
                 return 1

@@ -133,25 +133,25 @@
   },
   "log2ram": {
     "title": "Install Log2RAM (SSD/NVMe wear reduction)",
-    "intro": "Log2RAM mounts <code>/var/log</code> on a tmpfs ramdisk and periodically syncs it to the underlying disk. Buffering frequent journald writes in RAM can reduce root SSD wear and disk I/O. Periodic sync and a clean shutdown save logs to disk, but an abrupt power loss can lose entries written since the last sync.",
+    "intro": "Log2RAM mounts <code>/var/log</code> on a tmpfs ramdisk and writes it to disk on a schedule, so the logs that change all the time, such as the pveproxy access log, are written to RAM instead of the root SSD. The journal and the task logs of Proxmox VE and Proxmox Backup Server stay on disk. A clean shutdown writes the ramdisk to disk; an abrupt power loss loses only the text logs written since the last sync.",
     "upstreamLabel": "Upstream project:",
     "upstreamUrl": "https://github.com/azlux/log2ram",
     "upstreamLinkLabel": "azlux/log2ram on GitHub",
     "doesLabel": "What ProxMenux does:",
     "doesItems": [
       "Detects whether the root disk is SSD/NVMe by reading <code>/sys/block/&lt;dev&gt;/queue/rotational</code>. On a rotational disk the Automated flow asks first before installing.",
-      "Clones the upstream repository (<code>azlux/log2ram</code>) into <code>/tmp/log2ram</code> and patches its <code>install.sh</code>, replacing <code>rsync -aAXv</code> with <code>rsync -aXv --no-acls</code>. That adjustment avoids the <em>set_acl: Operation not supported</em> exit 23 failure that the vanilla script triggers when moving /var/log on filesystems without ACL support. The <code>log2ram</code> systemd unit is enabled after install.",
+      "Installs Log2RAM 1.7.2 from the upstream project, checking that the download is that release, and leaves its code unchanged. Its error e-mail is turned off with <code>NOTIFICATION=false</code>, as Proxmox VE has no mail command by default.",
       "Sizes the ramdisk based on host RAM: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Writes the value to <code>SIZE=</code> in <code>/etc/log2ram.conf</code>.",
-      "Schedules a periodic disk sync via <code>/etc/cron.d/log2ram</code>: every 1h / 3h / 6h according to the same RAM tier.",
-      "Installs an auto-sync guard at <code>/usr/local/bin/log2ram-check.sh</code>, wired to <code>/etc/cron.d/log2ram-auto-sync</code> to run every 10 minutes. When <code>/var/log</code> reaches 80% of the ramdisk size the guard vacuums journald; at 92% it first runs <code>logrotate -f /etc/logrotate.d/proxmox-backup-api</code> when that file exists (forcing rotation of the PBS API logs, typically the largest consumer on a host running PBS) and then truncates <code>pveproxy access/error</code> and <code>pveam.log</code> before syncing. The plain <code>log2ram write</code> command copies tmpfs to disk but does NOT shrink the tmpfs, so this guard prevents PVE from crashing with <em>No space left on device</em> when logs grow uncontrolled.",
-      "Detects whether <code>proxmox-backup-server</code> runs as a service on the host. When present, drops <code>/etc/logrotate.d/proxmox-backup-api</code> (20 MB × 3 rotation) and <code>/etc/cron.hourly/proxmox-backup-logrotate</code>, so the PBS API logs — the usual source of growth on a PBS host — stay bounded even between Log2RAM's periodic syncs. On hosts without PBS this step is a no-op.",
-      "Adjusts systemd-journald limits (<code>SystemMaxUse</code>, <code>RuntimeMaxUse</code>) to fit within the ramdisk so a single burst cannot fill it.",
-      "Registers itself in <code>installed_tools.json</code> so it can be reverted from Uninstall Optimizations."
+      "Keeps on disk the journal (<code>/var/log/journal</code>), the Proxmox VE task logs (<code>/var/log/pve</code>) and, where it is installed, the Proxmox Backup Server logs (<code>/var/log/proxmox-backup</code>), in <code>/var/hdd.journal</code>, <code>/var/hdd.pve</code> and <code>/var/hdd.proxmox-backup</code>. Each usual path becomes a link to its folder on disk. The move happens at boot, before Log2RAM starts.",
+      "Writes the ramdisk to disk with the Log2RAM timer every 1h / 3h / 6h according to the same RAM tier, and flushes the disk after each write, so a finished sync survives a power cut.",
+      "Installs a guard in <code>/etc/cron.d/log2ram-auto-sync</code> that runs every 10 minutes. When <code>/var/log</code> passes 85% of the ramdisk, it rotates the logs, compresses the ones just rotated and writes everything to disk. No log is emptied.",
+      "Keeps the systemd journal on disk with a 1 GB limit, in <code>/etc/systemd/journald.conf.d/proxmenux-log2ram.conf</code>. On a host running Proxmox Backup Server, adds <code>/etc/logrotate.d/proxmox-backup-api</code> (20 MB × 3 rotation) for its API logs.",
+      "Registers itself in <code>installed_tools.json</code> so it can be reverted from Uninstall Optimizations. An update from an earlier version keeps the size and sync interval, and moves the journal to disk at the next boot."
     ],
     "howUseLabel": "How to use:",
-    "howUseBody": "On the Automated flow Log2RAM installs unattended when an SSD/NVMe root is detected. The Customizable flow asks for size, sync interval and whether to enable the auto-sync guard. Its prompt currently says 90%, but the generated guard uses the 80% cleanup and 92% aggressive thresholds described above.",
+    "howUseBody": "On the Automated flow Log2RAM installs unattended when an SSD/NVMe root is detected. The Customizable flow asks for size, sync interval and whether to enable the guard. The changes take effect at the next boot.",
     "verifyLabel": "Verify and manage from the shell:",
-    "verifyCode": "# Service state and configured timers\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Current ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Force a sync now (tmpfs → disk); does NOT shrink the tmpfs\nlog2ram write\n\n# Trigger the auto-sync guard on demand (vacuum + sync when usage is high)\n/usr/local/bin/log2ram-check.sh\n\n# Current config: SIZE, mail settings, path\ncat /etc/log2ram.conf\n\n# ProxMenux-specific cron jobs\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
+    "verifyCode": "# Service state and sync timer\nsystemctl status log2ram\nsystemctl list-timers log2ram-daily.timer\n\n# Ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Folders kept on disk, and the journal size\nls -l /var/log | grep -- '->'\njournalctl --disk-usage\n\n# Write the ramdisk to disk now\nsystemctl reload log2ram\n\n# Current configuration\ncat /etc/log2ram.conf\nsystemctl cat log2ram\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
   },
   "zram": {
     "title": "Enable ZRAM swap profile",

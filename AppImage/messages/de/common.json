@@ -2312,6 +2312,7 @@
         "testing": "Testen…",
         "testConnection": "Testverbindung",
         "ollamaUrl": "Ollama-URL",
+        "ollamaApiKeyHint": "Bei einem normalen Ollama-Server leer lassen. Wenn dein Proxy oder Gateway einen Schlüssel verlangt, wird er als Authorization: Bearer gesendet. Dieses Feld aktiviert keine Authentifizierung auf dem Server.",
         "getKey": "Holen Sie sich den Schlüssel",
         "loadModelsPlaceholder": "Klicken Sie auf „Laden“, um Modelle abzurufen",
         "selectModel": "Modell auswählen",

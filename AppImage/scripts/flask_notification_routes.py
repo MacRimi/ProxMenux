@@ -446,7 +446,7 @@ def get_provider_models():
     Request body:
         {
             "provider": "gemini|groq|openai|openrouter|ollama|anthropic",
-            "api_key": "your-api-key",  // Not needed for ollama
+            "api_key": "your-api-key",  // Optional for protected Ollama gateways
             "ollama_url": "http://localhost:11434",  // Only for ollama
             "openai_base_url": "https://custom.endpoint/v1"  // Optional for openai
         }
@@ -498,9 +498,10 @@ def get_provider_models():
         if provider == 'ollama':
             import urllib.request
             import urllib.error
+            from ai_providers.ollama_provider import ollama_headers
             
             url = f"{ollama_url.rstrip('/')}/api/tags"
-            req = urllib.request.Request(url, method='GET')
+            req = urllib.request.Request(url, method='GET', headers=ollama_headers(api_key))
             req.add_header('User-Agent', 'ProxMenux-Monitor/1.1')
             
             with urllib.request.urlopen(req, timeout=10) as resp:

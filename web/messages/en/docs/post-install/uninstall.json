@@ -125,7 +125,7 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Stops and disables the service and timer. Purges cron jobs, systemd units, binaries, config files and the /var/log.hdd directory. Also uninstalls the apt package if it was installed that way."
+            "restores": "Disables the service and timer and removes the ProxMenux configuration of Log2RAM. At the next shutdown Log2RAM writes /var/log to disk; at the next boot the journal and the task logs return to /var/log and the Log2RAM files are removed."
           },
           {
             "tool": "ZFS autotrim",

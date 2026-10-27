@@ -86,6 +86,7 @@ SENSITIVE_KEYS = {
     'ai_api_key_anthropic',
     'ai_api_key_openai',
     'ai_api_key_openrouter',
+    'ai_api_key_ollama',
     # `telegram.bot_token` — was previously listed as `telegram.token`,
     # which never matched the real config_key (`bot_token` in
     # CHANNEL_TYPES). The mismatch silently sent Telegram bot tokens
@@ -3019,6 +3020,7 @@ class NotificationManager:
         current_provider = self._config.get('ai_provider', 'groq')
         _raw_keys = {
             'groq': self._config.get('ai_api_key_groq', ''),
+            'ollama': self._config.get('ai_api_key_ollama', ''),
             'gemini': self._config.get('ai_api_key_gemini', ''),
             'anthropic': self._config.get('ai_api_key_anthropic', ''),
             'openai': self._config.get('ai_api_key_openai', ''),
@@ -3026,7 +3028,7 @@ class NotificationManager:
         }
         ai_api_keys = {
             'groq': _mask_if_set(_raw_keys['groq']),
-            'ollama': '',  # Ollama doesn't need API key
+            'ollama': _mask_if_set(_raw_keys['ollama']),
             'gemini': _mask_if_set(_raw_keys['gemini']),
             'anthropic': _mask_if_set(_raw_keys['anthropic']),
             'openai': _mask_if_set(_raw_keys['openai']),

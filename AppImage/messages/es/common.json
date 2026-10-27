@@ -2465,6 +2465,7 @@
         "testing": "Pruebas…",
         "testConnection": "Conexión de prueba",
         "ollamaUrl": "URL de Ollama",
+        "ollamaApiKeyHint": "Déjala vacía para un servidor Ollama estándar. Si tu proxy o pasarela requiere una clave, se envía como Authorization: Bearer. Este campo no activa la autenticación en el servidor.",
         "getKey": "Obtener clave",
         "loadModelsPlaceholder": "Haz clic en Cargar para buscar modelos",
         "selectModel": "Seleccionar modelo",

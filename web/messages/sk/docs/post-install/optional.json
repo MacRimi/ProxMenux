@@ -133,25 +133,25 @@
   },
   "log2ram": {
     "title": "Nainštalovať Log2RAM (zníženie opotrebenia SSD/NVMe)",
-    "intro": "Log2RAM pripojí <code>/var/log</code> ako ramdisk tmpfs a pravidelne ho synchronizuje na disk. Ukladanie častých zápisov journald do RAM môže znížiť opotrebenie SSD a diskové I/O. Synchronizácia a riadne vypnutie uložia logy na disk, ale náhly výpadok napájania môže stratiť záznamy od poslednej synchronizácie.",
+    "intro": "Log2RAM pripojí <code>/var/log</code> na ramdisk tmpfs a podľa plánu ho zapisuje na disk, takže logy, ktoré sa neustále menia, napríklad prístupový log pveproxy, sa zapisujú do RAM namiesto na systémový SSD. Journal a logy úloh Proxmox VE a Proxmox Backup Server zostávajú na disku. Čisté vypnutie zapíše ramdisk na disk; pri náhlom výpadku napájania sa stratia len textové logy zapísané od poslednej synchronizácie.",
     "upstreamLabel": "Pôvodný projekt:",
     "upstreamUrl": "https://github.com/azlux/log2ram",
     "upstreamLinkLabel": "azlux/log2ram na GitHub",
     "doesLabel": "Čo robí ProxMenux:",
     "doesItems": [
       "Čítaním <code>/sys/block/&lt;dev&gt;/queue/rotational</code> zistí, či je koreňový disk SSD/NVMe. Pri rotačnom disku sa automatický postup pred inštaláciou opýta.",
-      "Naklonuje pôvodný repozitár (<code>azlux/log2ram</code>) do <code>/tmp/log2ram</code> a upraví <code>install.sh</code>: nahradí <code>rsync -aAXv</code> príkazom <code>rsync -aXv --no-acls</code>. Predíde tak chybe <em>set_acl: Operation not supported</em> s návratovým kódom 23 pri presune /var/log na súborovom systéme bez ACL. Jednotka systemd <code>log2ram</code> sa po inštalácii zapne.",
+      "Nainštaluje Log2RAM 1.7.2 z pôvodného projektu, overí, že stiahnutý súbor je táto verzia, a jeho kód ponechá bez zmien. Chybový e-mail vypne pomocou <code>NOTIFICATION=false</code>, pretože Proxmox VE neobsahuje príkaz mail.",
       "Nastaví veľkosť ramdisku podľa RAM hostiteľa: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Zapíše hodnotu do <code>SIZE=</code> v <code>/etc/log2ram.conf</code>.",
-      "Plánuje periodickú synchronizáciu disku cez <code>/etc/cron.d/log2ram</code>: každý 1h / 3h / 6h podľa rovnakej úrovne RAM.",
-      "Nainštaluje <code>/usr/local/bin/log2ram-check.sh</code>, spúšťaný cez <code>/etc/cron.d/log2ram-auto-sync</code> každých 10 minút. Keď <code>/var/log</code> dosiahne 80% ramdisku, vyčistí staré žurnály. Pri 92% najprv spustí <code>logrotate -f /etc/logrotate.d/proxmox-backup-api</code>, ak súbor existuje: logy API PBS bývajú najväčším spotrebiteľom miesta na hostiteľovi PBS. Potom skráti <code>pveproxy access/error</code> a <code>pveam.log</code> pred synchronizáciou. Samotný <code>log2ram write</code> skopíruje tmpfs na disk, ale nezmenší ho. Ochrana pomáha predchádzať pádom PVE s <em>No space left on device</em> pri nekontrolovanom raste logov.",
-      "Zistí službu <code>proxmox-backup-server</code> na hostiteľovi. Ak existuje, vytvorí <code>/etc/logrotate.d/proxmox-backup-api</code> (20 MB × 3 rotácie) a <code>/etc/cron.hourly/proxmox-backup-logrotate</code>, aby obmedzil logy API PBS, častý zdroj rastu, aj medzi synchronizáciami Log2RAM. Bez PBS nič nezmení.",
-      "Prispôsobí limity systemd-journald (<code>SystemMaxUse</code>, <code>RuntimeMaxUse</code>) ramdisku, aby ho nárazový príval záznamov nezaplnil.",
-      "Zaznamená sa v <code>installed_tools.json</code>, aby sa dal vrátiť cez Odinštalovať optimalizácie."
+      "Ponechá na disku journal (<code>/var/log/journal</code>), logy úloh Proxmox VE (<code>/var/log/pve</code>) a, ak je nainštalovaný, logy Proxmox Backup Server (<code>/var/log/proxmox-backup</code>), v <code>/var/hdd.journal</code>, <code>/var/hdd.pve</code> a <code>/var/hdd.proxmox-backup</code>. Každá bežná cesta sa zmení na odkaz na svoj priečinok na disku. Presun prebehne pri štarte, ešte pred spustením Log2RAM.",
+      "Zapisuje ramdisk na disk časovačom Log2RAM každú 1 h / 3 h / 6 h podľa rovnakého pásma RAM a po každom zápise vyprázdni vyrovnávaciu pamäť disku, takže dokončená synchronizácia prežije výpadok napájania.",
+      "Nainštaluje kontrolu v <code>/etc/cron.d/log2ram-auto-sync</code>, ktorá sa spúšťa každých 10 minút. Keď <code>/var/log</code> prekročí 85 % ramdisku, zrotuje logy, skomprimuje práve zrotované a všetko zapíše na disk. Žiadny log sa nevyprázdňuje.",
+      "Ponechá journal systemd na disku s limitom 1 GB, v <code>/etc/systemd/journald.conf.d/proxmenux-log2ram.conf</code>. Na hostiteľovi s Proxmox Backup Server pridá <code>/etc/logrotate.d/proxmox-backup-api</code> (rotácia 20 MB × 3) pre jeho logy API.",
+      "Zaregistruje sa v <code>installed_tools.json</code>, aby ho bolo možné vrátiť v časti Odinštalovať optimalizácie. Aktualizácia zo staršej verzie zachová veľkosť a interval synchronizácie a pri ďalšom štarte presunie journal na disk."
     ],
     "howUseLabel": "Ako používať:",
-    "howUseBody": "Automatický postup nainštaluje Log2RAM bez zásahu pri zistení koreňového SSD/NVMe. Prispôsobiteľný postup sa pýta na veľkosť, interval a ochranu synchronizácie. Výzva uvádza 90%, no vytvorený skript používa vyššie opísané limity 80% na čistenie a 92% na intenzívne čistenie.",
+    "howUseBody": "V automatickom postupe sa Log2RAM nainštaluje bez zásahu, keď zistí systémový disk SSD/NVMe. Prispôsobiteľný postup sa pýta na veľkosť, interval synchronizácie a na to, či zapnúť kontrolu. Zmeny sa uplatnia pri ďalšom štarte.",
     "verifyLabel": "Overiť a spravovať zo shellu:",
-    "verifyCode": "# Service state and configured timers\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Current ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Force a sync now (tmpfs → disk); does NOT shrink the tmpfs\nlog2ram write\n\n# Trigger the auto-sync guard on demand (vacuum + sync when usage is high)\n/usr/local/bin/log2ram-check.sh\n\n# Current config: SIZE, mail settings, path\ncat /etc/log2ram.conf\n\n# ProxMenux-specific cron jobs\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
+    "verifyCode": "# Service state and sync timer\nsystemctl status log2ram\nsystemctl list-timers log2ram-daily.timer\n\n# Ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Folders kept on disk, and the journal size\nls -l /var/log | grep -- '->'\njournalctl --disk-usage\n\n# Write the ramdisk to disk now\nsystemctl reload log2ram\n\n# Current configuration\ncat /etc/log2ram.conf\nsystemctl cat log2ram\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
   },
   "zram": {
     "title": "Povoliť výmenný profil ZRAM",

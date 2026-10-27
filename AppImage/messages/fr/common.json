@@ -2312,6 +2312,7 @@
         "testing": "Essai…",
         "testConnection": "Tester la connexion",
         "ollamaUrl": "URL d'Ollama",
+        "ollamaApiKeyHint": "Laissez ce champ vide pour un serveur Ollama standard. Si votre proxy ou passerelle exige une clé, elle est envoyée dans Authorization: Bearer. Ce champ n'active pas l'authentification sur le serveur.",
         "getKey": "Obtenir la clé",
         "loadModelsPlaceholder": "Cliquez sur Charger pour récupérer les modèles",
         "selectModel": "Sélectionnez le modèle",

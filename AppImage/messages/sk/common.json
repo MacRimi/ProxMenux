@@ -2311,6 +2311,7 @@
         "testing": "Testujem…",
         "testConnection": "Otestovať pripojenie",
         "ollamaUrl": "URL služby Ollama",
+        "ollamaApiKeyHint": "Pre bežný server Ollama nechajte prázdne. Ak proxy alebo brána vyžaduje kľúč, odosiela sa ako Authorization: Bearer. Toto pole nezapína autentifikáciu na serveri.",
         "getKey": "Získať kľúč",
         "loadModelsPlaceholder": "Kliknutím na Načítať získate modely",
         "selectModel": "Vyberte model",

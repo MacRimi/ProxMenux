@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (según el SSD, automático)",
-      "what": "Reduce el desgaste del SSD/NVMe moviendo /var/log a una ramdisk tmpfs con sync periódico al disco. Se instala desde el proyecto oficial cuando el disco raíz es SSD o NVMe. Dimensiona la ramdisk según la RAM (128M / 256M / 512M), programa el sync periódico y un guardián de auto-sync que compacta al 80% y trunca los logs calientes al 92% antes de escribir. Ajusta los límites de journald para caber en la ramdisk. Detalle completo en <link>Log2RAM</link>.",
+      "what": "Reduce el desgaste del SSD/NVMe moviendo /var/log a una ramdisk tmpfs que se escribe en disco de forma programada. Se instala desde el proyecto oficial cuando el disco raíz es SSD o NVMe. Dimensiona la ramdisk según la RAM del host (128M / 256M / 512M) y añade una vigilancia que rota y escribe los logs cuando la ramdisk supera el 85%. El journal y los registros de tareas de Proxmox VE y Proxmox Backup Server se quedan en disco. Todos los detalles en <link>Log2RAM</link>.",
       "category": "Almacenamiento",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Valores predeterminados adaptados al hardware",
-  "hardwareBody": "El script lee el hardware del host antes de aplicar los ajustes. Log2RAM solo se instala en discos raíz SSD / NVMe por defecto (pregunta si la detección dice lo contrario). El tamaño del ramdisk de Log2RAM se elige a partir de la RAM total (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Los límites de journald se ajustan al tamaño del ramdisk cuando Log2RAM está activo, para no llenarlo.",
+  "hardwareBody": "El script lee el hardware del host antes de aplicar los ajustes. Log2RAM solo se instala en discos raíz SSD / NVMe por defecto (pregunta si la detección dice lo contrario). El tamaño del ramdisk de Log2RAM se elige a partir de la RAM total (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Con Log2RAM activo, el journal se queda en disco con su propio límite.",
   "upgrade": {
     "heading": "Actualizar y hacer upgrade del sistema",
     "intro": "El primer paso del bundle Automatizado es el upgrade de Proxmox. La guía oficial de Proxmox para hacer upgrade de un host en ejecución (dentro de la misma versión mayor) es ejecutar:",

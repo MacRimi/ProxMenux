@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import Mock, patch
@@ -145,6 +146,66 @@ class LvmReaderTests(unittest.TestCase):
 
     def test_module_is_shipped(self):
         self.assertIn('cp "$SCRIPT_DIR/lvm_device_scope.py" "$APP_DIR/usr/bin/"', (SCRIPTS / "build_appimage.sh").read_text())
+
+
+class QuietDiskIdentityTests(unittest.TestCase):
+    """A quiet rotational disk the Monitor knows nothing of yet, as after a
+    restart, is still shown by its model, serial and type."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        root = Path(folder.name)
+        for name, value in (("sys/block/sdb/device/model", "WDC WD40EFRX-68N\n"), ("sys/block/sdb/dev", "8:16\n"),
+                            ("sys/block/sdb/queue/rotational", "1\n"),
+                            ("run/udev/data/b8:16", "E:ID_MODEL=WDC_WD40EFRX-68N32N0\nE:ID_SERIAL_SHORT=WD-WCC7K4FV37J0\n")):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(value)
+        self.policy = "idle"
+        self.disk_module = types.ModuleType("disk_temperature_history")
+        self.disk_module.disk_read_policy = lambda disk: self.policy
+        self.disk_module.settle_own_reads = Mock()
+        modules = patch.dict(sys.modules, disk_temperature_history=self.disk_module)
+        modules.start()
+        self.addCleanup(modules.stop)
+        self.standby = Mock(return_value=False)
+        self.read = Mock(return_value={"model": "WDC WD40EFRX-68N32N0", "serial": "WD-WCC7K4FV37J0",
+                                       "rotation_rate": 5400, "health": "healthy", "temperature": 31})
+        self.cache = {}
+        namespace = {"Path": lambda path: root / path.lstrip("/"), "time": __import__("time"),
+                     "_smart_result_cache": self.cache, "_SMART_RESULT_TTL": 30, "_hdd_in_standby": self.standby,
+                     "_get_smart_data_uncached": self.read, "_smart_data_useful": lambda data: data.get("model") != "Unknown",
+                     "_smart_fail_backoff": {}, "_smart_fail_counts": {}, "_smart_probe_cache": {},
+                     "_SMART_FAIL_THRESHOLD": 3, "_SMART_FAIL_BACKOFF_SEC": 3600}
+        tree = ast.parse((SCRIPTS / "flask_server.py").read_text())
+        nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+                 and n.name in ("_smart_default_payload", "_smart_identity_payload", "get_smart_data")]
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), "flask_server.py", "exec"), namespace)
+        self.get = namespace["get_smart_data"]
+
+    def test_a_spinning_disk_is_read_once(self):
+        data = self.get("sdb")
+        self.assertEqual((data["model"], data["rotation_rate"], data["health"], data["idle"]),
+                         ("WDC WD40EFRX-68N32N0", 5400, "healthy", True))
+        self.disk_module.settle_own_reads.assert_called_once_with(["sdb"])
+        self.cache["sdb"] = (0, self.cache["sdb"][1])
+        self.get("sdb")
+        self.read.assert_called_once()
+        self.assertEqual(self.standby.call_count, 1)
+
+    def test_a_parked_disk_is_not_woken_and_keeps_its_identity(self):
+        self.standby.return_value = True
+        data = self.get("sdb")
+        self.read.assert_not_called()
+        self.assertEqual((data["model"], data["serial"], data["rotation_rate"], data["idle"]),
+                         ("WDC WD40EFRX-68N32N0", "WD-WCC7K4FV37J0", -1, True))
+
+    def test_an_excluded_disk_receives_no_command(self):
+        self.policy = "excluded"
+        data = self.get("sdb")
+        self.standby.assert_not_called()
+        self.read.assert_not_called()
+        self.assertEqual((data["model"], data["rotation_rate"], data["excluded"]), ("WDC WD40EFRX-68N32N0", -1, True))
 
 
 if __name__ == "__main__":
