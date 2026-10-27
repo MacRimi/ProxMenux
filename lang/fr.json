@@ -8912,5 +8912,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "Discover and monitor devices on your local network.": "Découvrez et surveillez les appareils de votre réseau local."
 }
