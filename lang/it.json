@@ -1959,6 +1959,7 @@
   "Discard changes": "Scarta le modifiche",
   "Discard unapplied changes?": "Scartare le modifiche non applicate?",
   "Discover NFS exports on a server": "Individua le esportazioni NFS di un server",
+  "Discover and monitor devices on your local network.": "Rileva e monitora i dispositivi della tua rete locale.",
   "Discover targets on portal:": "Scopri target sul portale:",
   "Discovering iSCSI targets...": "Individuazione dei target iSCSI...",
   "Discovery successful": "Scoperta riuscita",
@@ -8915,6 +8916,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "Discover and monitor devices on your local network.": "Rileva e monitora i dispositivi della tua rete locale."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
 }

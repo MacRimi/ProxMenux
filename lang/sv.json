@@ -1959,6 +1959,7 @@
   "Discard changes": "Kasta ändringar",
   "Discard unapplied changes?": "Kasta ändringar som inte har tillämpats?",
   "Discover NFS exports on a server": "Hitta NFS-exporter på en server",
+  "Discover and monitor devices on your local network.": "Hitta och övervaka enheter i ditt lokala nätverk.",
   "Discover targets on portal:": "Upptäck mål på portalen:",
   "Discovering iSCSI targets...": "Upptäcker iSCSI-mål...",
   "Discovery successful": "Upptäckten lyckades",
@@ -8915,6 +8916,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "Discover and monitor devices on your local network.": "Hitta och övervaka enheter i ditt lokala nätverk."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }
