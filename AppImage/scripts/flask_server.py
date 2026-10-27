@@ -5048,6 +5048,34 @@ def _lvm_device_args():
     return lvm_device_args(_hdd_in_standby)
 
 
+def _smart_identity_payload(disk_name):
+    """The empty payload with what the host knows of the disk without sending
+    it any command: its model, its serial and whether it spins."""
+    base = _smart_default_payload()
+    try:
+        model = Path(f'/sys/block/{disk_name}/device/model').read_text().strip()
+        if model:
+            base['model'] = model
+    except OSError:
+        pass
+    try:
+        device = Path(f'/sys/block/{disk_name}/dev').read_text().strip()
+        for line in Path(f'/run/udev/data/b{device}').read_text().splitlines():
+            key, _, value = line.partition('=')
+            if key == 'E:ID_MODEL' and value.strip():
+                base['model'] = value.strip().replace('_', ' ')
+            elif key == 'E:ID_SERIAL_SHORT' and value.strip():
+                base['serial'] = value.strip()
+    except OSError:
+        pass
+    try:
+        if Path(f'/sys/block/{disk_name}/queue/rotational').read_text().strip() == '1':
+            base['rotation_rate'] = -1  # HDD, RPM unknown
+    except OSError:
+        pass
+    return base
+
+
 def get_smart_data(disk_name):
     """Cached wrapper around the underlying smartctl probe.
 
@@ -5086,7 +5114,15 @@ def get_smart_data(disk_name):
     except Exception:
         policy = 'read'
     if policy != 'read':
-        base = dict(cached[1]) if cached else _smart_default_payload()
+        if not cached and policy == 'idle' and not _hdd_in_standby(disk_name):
+            # Nothing is known of it yet, as after a restart: a disk that is
+            # spinning is read once; a parked one is not woken.
+            result = _get_smart_data_uncached(disk_name)
+            _dth.settle_own_reads([disk_name])
+            if _smart_data_useful(result):
+                _smart_result_cache[disk_name] = (now, dict(result))
+                cached = _smart_result_cache[disk_name]
+        base = dict(cached[1]) if cached else _smart_identity_payload(disk_name)
         base['temperature'] = 0
         base['excluded'] = policy == 'excluded'
         base['idle'] = policy == 'idle'
@@ -5098,7 +5134,7 @@ def get_smart_data(disk_name):
         # the disk sleeps. The Storage view paints its own Standby badge
         # from the temperature poller's flag. Don't refresh the cache
         # timestamp: the moment the disk is active again we re-probe.
-        base = dict(cached[1]) if cached else _smart_default_payload()
+        base = dict(cached[1]) if cached else _smart_identity_payload(disk_name)
         base['standby'] = True
         base['temperature'] = 0
         return base
