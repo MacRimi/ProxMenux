@@ -2576,6 +2576,10 @@
           "title": "Diskutrymme - LXC rootfs",
           "description": "Rotskiva per behållare, utvärderad mot rootfs-storleken från PVE."
         },
+        "vm_disk": {
+          "title": "Diskutrymme - VM",
+          "description": "Filsystem i körande VM så som QEMU-gästagenten rapporterar dem, inklusive genomsläppta diskar. VM utan gästagent utvärderas inte."
+        },
         "lxc_mount": {
           "title": "LXC fästpunkter",
           "description": "Kapacitet för monteringspunkter inuti körda CT: er (mp0, mp1, NFS, bind mounts). Utesluter rootfs; som täcks ovan."
