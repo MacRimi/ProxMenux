@@ -34,6 +34,18 @@ def _valid_image_reference(reference: str) -> bool:
         return False
 
 
+def _registry_lookup(reference: str) -> str:
+    """Use the pull engine's repository/digest form only for registry transport.
+
+    Skopeo rejects Docker's valid tag@digest spelling. The written reference
+    remains the recipe identity; its tag is removed only from the query.
+    """
+    if not _valid_image_reference(reference):
+        raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
+    image = _image_contract(reference)
+    return image['repository'] + '@' + image['digest'] if image.get('digest') else reference
+
+
 MAX_COMPOSE_BYTES = 256 * 1024
 # An oci-compose: the file ProxMenux installs an application from. The catalog
 # keeps one for each of its applications and every installation records its own.
@@ -254,7 +266,7 @@ def enrich_image_defaults(ui, document: dict[str, Any], *, image_entrypoints: di
         if not _valid_image_reference(reference):
             raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
         if reference not in inspected:
-            command = ['skopeo', 'inspect', '--config', f'docker://{reference}']
+            command = ['skopeo', 'inspect', '--config', f'docker://{_registry_lookup(reference)}']
             result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=120)
             if result.returncode and _registry_refused(reference):
                 from .registry_accounts import offer_sign_in
@@ -297,7 +309,7 @@ def compose_from_image(reference: str, title: str | None = None) -> str:
     persistent paths and its variables."""
     if not _valid_image_reference(reference):
         raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
-    result = subprocess.run(['skopeo', 'inspect', '--config', f'docker://{reference}'],
+    result = subprocess.run(['skopeo', 'inspect', '--config', f'docker://{_registry_lookup(reference)}'],
                             capture_output=True, text=True, check=False, timeout=120)
     if result.returncode != 0:
         raise ConversionError(f"{translate('The image could not be read from its registry:')} "
@@ -711,7 +723,7 @@ def ignored_settings(text: str) -> list[str]:
 def registry_report(reference: str) -> tuple[bool, str]:
     """Whether the image really exists in its registry, and for which
     architectures. A name written by hand is easy to get wrong."""
-    result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{reference}'],
+    result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{_registry_lookup(reference)}'],
                             capture_output=True, text=True, check=False, timeout=120)
     if result.returncode != 0:
         return False, f"{translate('Could not inspect the image in its registry:')} {reference}"
@@ -722,7 +734,7 @@ def registry_report(reference: str) -> tuple[bool, str]:
     manifests = document.get('manifests')
     if not manifests:
         # The image publishes a single manifest: its architecture is in the image itself.
-        detail = subprocess.run(['skopeo', 'inspect', f'docker://{reference}'],
+        detail = subprocess.run(['skopeo', 'inspect', f'docker://{_registry_lookup(reference)}'],
                                 capture_output=True, text=True, check=False, timeout=120)
         try:
             architecture = json.loads(detail.stdout).get('Architecture') if detail.returncode == 0 else None
@@ -740,9 +752,9 @@ def registry_report(reference: str) -> tuple[bool, str]:
 def _registry_refused(reference: str) -> bool:
     """Whether the registry answered that the image needs an account."""
     try:
-        result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{reference}'],
+        result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{_registry_lookup(reference)}'],
                                 capture_output=True, text=True, check=False, timeout=120)
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired, ConversionError):
         return False
     return result.returncode != 0 and refuses_access(result.stderr)
 

@@ -111,7 +111,8 @@ class OciWordingTests(TestCase):
     def test_registry_nonzero_and_success_command_unchanged(self):
         result = SimpleNamespace(returncode=1, stdout='', stderr='connection timed out')
         run = Mock(return_value=result)
-        report = function(CUSTOM, 'registry_report', subprocess=SimpleNamespace(run=run))
+        report = function(CUSTOM, 'registry_report', subprocess=SimpleNamespace(run=run),
+                          _registry_lookup=lambda reference: reference)
         self.assertEqual(report('example:latest'),
                          (False, 'Could not inspect the image in its registry: example:latest'))
         run.assert_called_once_with(['skopeo', 'inspect', '--raw', 'docker://example:latest'],
