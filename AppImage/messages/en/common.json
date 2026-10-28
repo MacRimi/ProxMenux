@@ -5326,6 +5326,7 @@
       "lastKnown": "Last known available version",
       "available": "Update available",
       "current": "ProxMenux is up to date",
+      "currentVersion": "Version {version} is up to date",
       "unknown": "Could not verify the available version",
       "unverified": "Unverified",
       "stable": "Stable channel",

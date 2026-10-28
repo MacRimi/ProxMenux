@@ -5198,6 +5198,7 @@
       "lastKnown": "Posledná známa dostupná verzia",
       "available": "Dostupná aktualizácia",
       "current": "ProxMenux je aktuálny",
+      "currentVersion": "Verzia {version} je aktuálna",
       "unknown": "Dostupnú verziu sa nepodarilo overiť",
       "unverified": "Neoverené",
       "stable": "Stabilný kanál",

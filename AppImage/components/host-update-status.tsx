@@ -5,6 +5,7 @@ import * as Confirm from "@radix-ui/react-alert-dialog"
 import { Button } from "./ui/button"
 import { getAuthToken } from "@/lib/api-config"
 import { useT } from "@/lib/i18n/provider"
+import { CheckCircle2, AlertTriangle, Info, ChevronRight } from "lucide-react"
 
 function headers() {
   const token = getAuthToken()
@@ -145,14 +146,32 @@ export function ProxMenuxVersionCard({ getApiUrl }: { getApiUrl: Url }) {
     return () => { disposed = true; active?.abort(); clearInterval(interval); window.removeEventListener("focus", read); document.removeEventListener("visibilitychange", read) }
   }, [getApiUrl])
   const state = value?.state ?? "unknown"
-  return <section aria-label={t("healthStatus.versions.title")} className="mt-3 mx-2 sm:mx-3 rounded-lg border bg-muted/10 p-3 text-[10px] sm:text-xs">
-    <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 className="font-semibold">{t("healthStatus.versions.title")}</h3>
-      <span className={state === "unknown" ? "text-amber-500" : state === "available" ? "text-blue-500" : "text-green-500"}>{t(`healthStatus.versions.${state}`)}</span></div>
-    <dl className="grid grid-cols-2 gap-4">
+  const versions = <dl className="grid grid-cols-2 gap-4">
       <div><dt className="text-muted-foreground mb-1">{t("healthStatus.versions.installed")}</dt><dd className="font-mono font-semibold">{value?.installed ?? t("healthStatus.versions.unverified")}</dd></div>
       <div><dt className="text-muted-foreground mb-1">{t(state === "unknown" && value?.available ? "healthStatus.versions.lastKnown" : "healthStatus.versions.latest")}</dt><dd className="font-mono font-semibold">{value?.available ?? t("healthStatus.versions.unverified")}</dd></div>
     </dl>
+  const metadata = <>
     {value && <p className="mt-3 text-muted-foreground">{t(`healthStatus.versions.${value.channel}`)}</p>}
     {value?.checked_at && <p className="mt-1 text-muted-foreground">{t("healthStatus.versions.checked", { time: new Date(value.checked_at).toLocaleString() })}</p>}
+  </>
+  if (state !== "available") return <details aria-label={t("healthStatus.versions.title")} className="group text-[10px] sm:text-xs">
+    <summary className="flex items-start gap-2 py-1.5 px-2 sm:px-3 rounded-md hover:bg-muted/40 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+      {state === "current" ? <CheckCircle2 aria-hidden="true" className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 text-green-500" /> : <AlertTriangle aria-hidden="true" className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 text-amber-500" />}
+      <span className="font-medium shrink-0">ProxMenux</span>
+      <span className={`flex-1 min-w-0 break-words ${state === "current" ? "text-muted-foreground" : "text-amber-500"}`}>
+        {state === "current" ? t("healthStatus.versions.currentVersion", { version: value!.installed! }) : t("healthStatus.versions.unknown")}
+      </span>
+      <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+    </summary>
+    <div className="ml-7 mr-2 sm:mr-3 pb-2">
+      {state === "unknown" && versions}
+      {metadata}
+    </div>
+  </details>
+  return <section aria-label={t("healthStatus.versions.title")} className="mt-3 mx-2 sm:mx-3 rounded-lg border bg-muted/10 p-3 text-[10px] sm:text-xs">
+    <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 className="font-semibold">{t("healthStatus.versions.title")}</h3>
+      <span className="flex items-center gap-1.5 text-blue-500"><Info aria-hidden="true" className="h-3.5 w-3.5" />{t("healthStatus.versions.available")}</span></div>
+    {versions}
+    {metadata}
   </section>
 }

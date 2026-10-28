@@ -47,6 +47,7 @@ NODE_FILES = (
     "tests/test_reboot_health_refresh.cjs",
     "tests/test_host_update_controls.cjs",
     "tests/test_reboot_recovery.cjs",
+    "tests/test_proxmenux_version_row.cjs",
     "tests/test_lxc_update_jobs.cjs",
     "tests/test_api_import_boundaries.cjs",
     "tests/test_api_errors.cjs",
