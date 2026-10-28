@@ -54,8 +54,8 @@ interface ScriptTerminalModalProps {
   completedSuccessfullyMessage?: string
   completedWithErrorMessage?: (exitCode: number) => string
   cancelledExitCode?: number
-  // Only LXC Updates opts into a separate server-owned job transport.
-  backgroundUpdate?: { runId: string; vmid: number; resume: boolean }
+  // Explicit server-owned transports; ordinary /ws/script keeps its contract.
+  backgroundUpdate?: { runId: string; vmid?: number; resume: boolean; kind?: "host" }
   // Optional callback fired when the script's WebSocket closes
   // (script_runner sends an exit code and then closes). Lets the
   // parent auto-dismiss the modal — used by host-backup's Restore
@@ -178,7 +178,9 @@ export function ScriptTerminalModal({
             }
           }, 30000)
 
-        const initMessage = {
+        const initMessage = backgroundUpdate?.kind === "host" ? {
+          resume: true, offset: outputOffsetRef.current,
+        } : {
           script_path: scriptPath,
           params: paramsRef.current,
           ...(backgroundUpdate ? { resume: true, vmid: backgroundUpdate.vmid,
@@ -221,6 +223,10 @@ export function ScriptTerminalModal({
           
           try {
             const msg = JSON.parse(event.data)
+            if (msg.type === "host_update_state") {
+              if (msg.state === "attention") termRef.current?.writeln(t("healthStatus.hostUpdate.attention"))
+              return
+            }
             if (msg.type === "job_output") {
               setIsWaitingNextInteraction(false)
               if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
@@ -429,7 +435,9 @@ export function ScriptTerminalModal({
         }
       }, 30000)
 
-      const initMessage = {
+      const initMessage = backgroundUpdate?.kind === "host" ? {
+        resume: backgroundUpdate.resume, offset: outputOffsetRef.current,
+      } : {
         script_path: scriptPath,
         params: paramsRef.current,
         ...(backgroundUpdate ? { resume: backgroundUpdate.resume,
@@ -478,6 +486,10 @@ export function ScriptTerminalModal({
       
       try {
         const msg = JSON.parse(event.data)
+        if (msg.type === "host_update_state") {
+          if (msg.state === "attention") term.writeln(t("healthStatus.hostUpdate.attention"))
+          return
+        }
         if (msg.type === "job_output") {
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
@@ -752,7 +764,7 @@ export function ScriptTerminalModal({
 
   const getScriptWebSocketUrl = (sid: string): string => {
     const route = backgroundUpdate
-      ? `/ws/lxc-update/${encodeURIComponent(backgroundUpdate.runId)}`
+      ? `/ws/${backgroundUpdate.kind === "host" ? "host-update" : "lxc-update"}/${encodeURIComponent(backgroundUpdate.runId)}`
       : `/ws/script/${sid}`
     if (typeof window === "undefined") {
       return `ws://localhost:${API_PORT}${route}`

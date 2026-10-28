@@ -1,4 +1,6 @@
 {
+  "Host update lock is unavailable.": "Zámok aktualizácie servera nie je dostupný.",
+  "A host update is already running. Reconnect to it instead of starting another.": "Aktualizácia servera už beží. Otvor jej existujúci priebeh namiesto ďalšieho spustenia.",
   "# Alternative if you prefer screen": "# Alternatíva, ak preferujete screen",
   "# Recommended: avoids disconnection during upgrade": "# Odporúčané: zabráni odpojeniu počas aktualizácie",
   "%s of %s updates failed — see the messages above.": "Zlyhalo %s z %s aktualizácií — pozri hlášky vyššie.",

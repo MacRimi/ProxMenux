@@ -41,6 +41,7 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { HostUpdateJobs, type HostUpdateJob } from "./host-update-jobs"
 import { useT } from "@/lib/i18n/provider"
 import { useIsPbs } from "@/lib/use-platform"
 
@@ -129,6 +130,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [dismissingKey, setDismissingKey] = useState<string | null>(null)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
+  const [hostJob, setHostJob] = useState<{ runId: string; resume: boolean; kind: "host" } | null>(null)
+  const [hostJobs, setHostJobs] = useState<HostUpdateJob[]>([])
 
   const fetchHealthDetails = useCallback(async (force = false) => {
     setLoading(true)
@@ -330,6 +333,9 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "Active": t("healthStatus.details.active"),
       "UP": t("healthStatus.details.up"),
       "Kernel/PVE up to date": t("healthStatus.details.kernelUpToDate"),
+      "No reboot required": t("healthStatus.hostUpdate.noReboot"),
+      "Reboot required by the operating system": t("healthStatus.hostUpdate.rebootMarker"),
+      "Could not determine whether a reboot is required": t("healthStatus.hostUpdate.rebootUnknown"),
       "Proxmox VE is up to date": t("healthStatus.details.proxmoxUpToDate"),
       "No security updates pending": t("healthStatus.details.noSecurityUpdates"),
       "No container startup errors": t("healthStatus.details.noContainerErrors"),
@@ -341,6 +347,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (Object.prototype.hasOwnProperty.call(exact, value)) return exact[value]
 
     let match = value.match(/^Latency ([\d.]+)ms to gateway$/)
+    const reboot = value.match(/^Reboot required: running (.+); installed (.+)$/)
+    if (reboot) return t("healthStatus.hostUpdate.rebootKernel", { running: reboot[1], installed: reboot[2] })
     if (match) return t("healthStatus.details.gatewayLatency", { latency: match[1] })
     match = value.match(/^(\d+) failed login attempts in 24h$/)
     if (match) return t("healthStatus.details.failedLogins", { count: match[1] })
@@ -623,7 +631,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "smart_health", "io_errors", "zfs_pools", "lvm_volumes", "lvm_check", "connectivity",
       "qmp_communication", "container_startup", "vm_startup", "oom_killer", "cluster_mode",
       "log_error_cascade", "log_error_spike", "log_persistent_errors", "log_critical_errors",
-      "pve_version", "security_updates", "system_age", "pending_updates", "kernel_pve", "uptime",
+      "pve_version", "security_updates", "system_age", "pending_updates", "kernel_pve", "uptime", "reboot_required",
       "certificates", "login_attempts", "fail2ban", "proxmox_storages",
     ])
     if (knownKeys.has(key)) return t(`healthStatus.checks.${key}`)
@@ -710,6 +718,13 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
             )}
           </DialogDescription>
         </DialogHeader>
+
+        <HostUpdateJobs open={open} activeId={showUpdateTerminal ? hostJob?.runId : undefined}
+          onJobs={setHostJobs} onSettled={() => { void fetchHealthDetails(true) }}
+          onResume={job => {
+            setHostJob({ runId: job.id, resume: true, kind: "host" })
+            setShowUpdateTerminal(true)
+          }} />
 
         {loading && (
           <div className="flex items-center justify-center py-8">
@@ -845,11 +860,17 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                             pending prevents the operator from spawning a
                             terminal that would only report "System is
                             already up to date". */}
-                        {key === "updates" && status?.toUpperCase() !== "OK" && (
+                        {key === "updates" && Number(categoryData?.count ?? 0) > 0 && (
                           <div className="flex justify-end px-3 py-2 pt-1">
                             <Button
                               size="sm"
-                              onClick={() => setShowUpdateTerminal(true)}
+                              disabled={hostJobs.some(job => job.state !== "complete")}
+                              onClick={() => {
+                                const runId = window.crypto?.randomUUID?.()
+                                  || `host-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+                                setHostJob({ runId, resume: false, kind: "host" })
+                                setShowUpdateTerminal(true)
+                              }}
                               className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                             >
                               <ArrowUpCircle className="h-4 w-4 mr-1.5" />
@@ -968,7 +989,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         )}
       </DialogContent>
       <ScriptTerminalModal
+        key={hostJob?.runId || "host-update"}
         open={showUpdateTerminal}
+        backgroundUpdate={hostJob || undefined}
+        cancelledExitCode={130}
+        onComplete={() => { void fetchHealthDetails(true) }}
         onClose={() => {
           setShowUpdateTerminal(false)
           // Force a fresh read (cache-busting via ?refresh=1) so the

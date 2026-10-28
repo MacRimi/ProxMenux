@@ -149,6 +149,8 @@ cp "$SCRIPT_DIR/managed_installs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "âš
 cp "$SCRIPT_DIR/lxc_update_observation.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_update_finalization.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_update_jobs.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/host_update_jobs.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/kernel_reboot.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_check_job.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/native_app_discovery.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/local_app_icons.py" "$APP_DIR/usr/bin/"

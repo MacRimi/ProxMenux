@@ -200,6 +200,74 @@ def lxc_update_viewer(ws, run_id):
     # No process termination, PTY close or completion callback here. The job's
     # worker alone owns those, even while no viewer is authenticated/connected.
 
+def _host_update_completed(script_path, params, exit_code, duration_seconds):
+    """Invalidate health even when no viewer is left to close its modal."""
+    from health_monitor import health_monitor
+    for key in ('updates_check', 'overall_health', '_bg_overall', '_bg_detailed'):
+        health_monitor.last_check_times.pop(key, None)
+        health_monitor.cached_results.pop(key, None)
+
+
+@terminal_bp.route('/api/host-update-jobs', methods=['GET'])
+@require_admin_scope
+def host_update_jobs_status():
+    from host_update_jobs import list_jobs
+    return jsonify({'jobs': list_jobs()})
+
+
+@sock.route('/ws/host-update/<run_id>')
+def host_update_viewer(ws, run_id):
+    """New fixed-script contract; existing script/LXC routes stay intact."""
+    if not _ws_auth_check():
+        ws.close(reason=1008, message="Authentication required")
+        return
+    from host_update_jobs import get, start
+    try:
+        init = json.loads(ws.receive(timeout=10))
+        if (not isinstance(init, dict) or set(init) - {'resume', 'offset'}
+                or type(init.get('resume')) is not bool):
+            raise ValueError("Invalid host update request")
+        offset = init.get('offset', 0)
+        if type(offset) is not int or offset < 0:
+            raise ValueError("Invalid host update cursor")
+        job = get(run_id) if init['resume'] else start(run_id, _host_update_completed)
+        revision = -1
+        while True:
+            view = job.read(offset)
+            if view['text'] or view['offset'] != offset:
+                ws.send(json.dumps({'type': 'job_output', 'text': view['text'],
+                                    'offset': view['offset'], 'truncated': view['truncated']}))
+                offset = view['offset']
+            if view['revision'] != revision:
+                revision = view['revision']
+                ws.send(json.dumps({'type': 'web_interaction', 'interaction': view['interaction']}))
+                ws.send(json.dumps({'type': 'host_update_state', 'state': view['state'],
+                                    'attention_reason': view['attention_reason']}))
+            if view['state'] == 'complete':
+                ws.send(json.dumps({'type': 'script_complete', 'exit_code': view['exit_code']}))
+                break
+            data = ws.receive(timeout=.2)
+            if data is None:
+                if getattr(ws, 'connected', True) is False or getattr(ws, 'closed', False) is True:
+                    break
+                continue
+            try:
+                message = json.loads(data)
+            except (TypeError, ValueError):
+                message = data
+            if isinstance(message, dict) and message.get('type') == 'ping':
+                ws.send('{"type":"pong"}')
+            else:
+                job.input(message)
+    except (ValueError, KeyError, OSError, TypeError) as exc:
+        try:
+            ws.send(json.dumps({'type': 'job_unavailable', 'message': str(exc)}))
+        except Exception:
+            pass
+    except Exception:
+        pass  # An observer disconnect never signals the owner or its PTY.
+
+
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
 def terminal_health():
     """Health check for terminal service"""

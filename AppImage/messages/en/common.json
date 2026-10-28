@@ -5309,6 +5309,16 @@
     }
   },
   "healthStatus": {
+    "hostUpdate": {
+      "running": "The host update continues even if you sign out. Reopen it after signing in.",
+      "finished": "A host update has finished. View its result before starting another.",
+      "attention": "The host update needs attention. It has not been stopped; reconnect to inspect it.",
+      "view": "View update",
+      "noReboot": "No reboot required",
+      "rebootMarker": "The operating system requires a reboot.",
+      "rebootUnknown": "Could not determine whether a reboot is required.",
+      "rebootKernel": "A reboot is required to activate {installed}. Currently running: {running}."
+    },
     "title": "System health status",
     "description": "Detailed checks of all system components",
     "status": {
@@ -5365,6 +5375,7 @@
       "system_age": "System age",
       "pending_updates": "Pending updates",
       "kernel_pve": "Kernel / PVE",
+      "reboot_required": "Reboot required",
       "uptime": "Uptime",
       "certificates": "Certificates",
       "login_attempts": "Login attempts",

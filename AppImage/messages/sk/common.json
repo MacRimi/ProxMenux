@@ -5181,6 +5181,16 @@
     }
   },
   "healthStatus": {
+    "hostUpdate": {
+      "running": "Aktualizácia servera pokračuje aj po odhlásení. Po prihlásení ju môžeš znova otvoriť.",
+      "finished": "Aktualizácia servera sa skončila. Pred ďalším spustením si pozri jej výsledok.",
+      "attention": "Aktualizácia servera potrebuje kontrolu. Nebola zastavená; otvor ju a skontroluj priebeh.",
+      "view": "Zobraziť aktualizáciu",
+      "noReboot": "Reštart nie je potrebný",
+      "rebootMarker": "Operačný systém vyžaduje reštart.",
+      "rebootUnknown": "Nepodarilo sa zistiť, či je potrebný reštart.",
+      "rebootKernel": "Na aktiváciu jadra {installed} je potrebný reštart. Teraz beží: {running}."
+    },
     "title": "Stav systému",
     "description": "Podrobná kontrola všetkých častí systému",
     "status": {
@@ -5237,6 +5247,7 @@
       "system_age": "Aktuálnosť systému",
       "pending_updates": "Čakajúce aktualizácie",
       "kernel_pve": "Jadro / PVE",
+      "reboot_required": "Potrebný reštart",
       "uptime": "Doba prevádzky",
       "certificates": "Certifikáty",
       "login_attempts": "Pokusy o prihlásenie",
