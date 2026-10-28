@@ -149,6 +149,63 @@ class ResolveVolumeOwnerTests(unittest.TestCase):
             igs.resolve_volume_owner(service, 'some-future-strategy')
 
 
+class ImportedRuntimeOwnerTests(unittest.TestCase):
+    def test_numeric_imported_user_controls_fresh_app_volume_without_puid(self):
+        service = make_service()
+        service['vmid'] = 4820
+        with patch.object(igs, 'run', return_value='lxc.init.uid: 1000\nlxc.init.gid: 1000\n'):
+            owner = igs.runtime_volume_owner(service)
+        self.assertEqual(owner, (1000, 1000))
+        self.assertEqual(igs.resolve_volume_owner(service, 'mapped-application-user', owner), (101000, 101000))
+
+    def test_explicit_zero_puid_and_volume_owner_override_the_imported_user(self):
+        service = make_service(environment=[{'name': 'PUID', 'value': '0'}, {'name': 'PGID', 'value': '2500'}])
+        self.assertEqual(igs.resolve_volume_owner(service, 'mapped-application-user', (1000, 1000)), (100000, 102500))
+        service['template']['proxmox']['installer_profile']['volume_owner'] = {'uid': 1234, 'gid': 2345}
+        self.assertEqual(igs.resolve_volume_owner(service, 'mapped-application-user', (1000, 1000)), (101234, 102345))
+        with patch.object(igs, 'runtime_volume_owner', side_effect=AssertionError('mapped root must not inspect USER')):
+            self.assertEqual(igs.resolve_volume_owner(service, 'mapped-root'), (100000, 100000))
+
+    def test_imported_root_is_not_replaced_by_a_guessed_app_user(self):
+        service = make_service()
+        service['vmid'] = 4820
+        service['observed'] = {'image': {'defaults': {'User': 'node'}}}
+        with patch.object(igs, 'run', return_value='lxc.init.uid: 0\nlxc.init.gid: 0\n'):
+            self.assertEqual(igs.runtime_volume_owner(service), (0, 0))
+
+    def test_named_image_user_and_group_resolve_from_mounted_rootfs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'etc').mkdir()
+            (root / 'etc/passwd').write_text('root:x:0:0:root:/root:/bin/sh\nnode:x:1000:1000:Node:/home/node:/bin/sh\n')
+            (root / 'etc/group').write_text('root:x:0:\nnode:x:1000:\nshared:x:2500:\n')
+            service = make_service()
+            service['observed'] = {'image': {'defaults': {'User': 'node:shared'}}}
+            self.assertEqual(igs.runtime_volume_owner(service, root), (1000, 2500))
+            service['observed']['image']['defaults']['User'] = '1000'
+            self.assertEqual(igs.runtime_volume_owner(service, root), (1000, 1000))
+
+    def test_actual_compose_user_override_wins_over_image_user(self):
+        service = make_service(unprivileged=False)
+        service['vmid'] = 4820
+        service['observed'] = {'image': {'defaults': {'User': 'node'}}}
+        with patch.object(igs, 'run', return_value='lxc.init.uid: 2000\nlxc.init.gid: 3000\n'):
+            owner = igs.runtime_volume_owner(service)
+        self.assertEqual(igs.resolve_volume_owner(service, 'mapped-application-user', owner), (2000, 3000))
+
+    def test_named_user_cannot_be_resolved_through_a_host_file_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'rootfs'
+            (root / 'etc').mkdir(parents=True)
+            outside = Path(tmp) / 'host-passwd'
+            outside.write_text('node:x:1000:1000:Node:/home/node:/bin/sh\n')
+            (root / 'etc/passwd').symlink_to(outside)
+            service = make_service()
+            service['observed'] = {'image': {'defaults': {'User': 'node'}}}
+            with self.assertRaises(RuntimeError):
+                igs.runtime_volume_owner(service, root)
+
+
 class ApplyVolumePreparationTests(unittest.TestCase):
     def _target(self, tmp, with_lost_found=True):
         target = Path(tmp) / 'target'

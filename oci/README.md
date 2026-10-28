@@ -209,7 +209,82 @@ The native path checks the saved configuration and installation identity, keeps 
 
 ## From a Compose file or a docker run command to an oci-compose
 
-The converter reads a Compose file with one service. A `docker run` command and an image reference alone are first written as a Compose file and follow the same path, so the three produce the same kind of oci-compose.
+The converter reads Compose files with one or several services. Multi-service
+files use the native stack compiler: each service runs in its own LXC, with
+dependency ordering and a private network. The first service that publishes a
+port is selected as the main service, unless `x-casaos.main` selects another one.
+Every image is checked for registry access before installation; written tags,
+digests and image entrypoints are preserved.
+
+The file importer resolves an explicitly selected project `.env` and service
+`env_file` files, then applies Compose interpolation and service overrides. It
+does not silently import the host process environment. Missing required values
+are requested before installation, and summaries hide secret values. An inline
+Compose definition can also supply an environment file or enter values through
+the assistant.
+
+Published web services receive individual LAN addresses. The main web check uses
+the same LAN URL shown to the user; private backend aliases stay on the internal
+network. Internal services can use declared or inherited image health checks,
+exposed TCP ports, or a clearly labelled process-running check. A running process
+alone does not satisfy `service_healthy`.
+
+For custom stacks, loopback public URLs in variables such as `PUBLIC_URL` or
+`PENPOT_PUBLIC_URI` are mapped to the service publishing their original Compose
+host port, using that service's LAN address and container port. Explicit external
+URLs and internal loopback endpoints remain unchanged. Automatic public URL
+mapping requires a static frontend address; with DHCP, provide the application's
+explicit public URL instead. This lets every dependent service receive its final
+public URL before its first start, including migration jobs.
+Only names containing a `PUBLIC` or `EXTERNAL` segment and ending in `URL`,
+`URI` or `ORIGIN` qualify for this automatic mapping. Other application-specific
+variables, such as `NEXTAUTH_URL` or `ROOT_URL`, must contain the intended URL in
+the supplied Compose or environment file. Changing a frontend IP later also
+requires updating its application URLs.
+
+Private members receive specific routes to their own stack's static frontend
+addresses before the application starts. These routes stay inside the container's
+network namespace and use the frontend's private address as the next hop. Native
+update and recovery preserve their ownership records and rebuild the required
+host configuration, including when a restore changes container IDs.
+
+Repeated identical volume sources share one host directory, selected once;
+separate configuration volumes stay independent. Host directories are not part
+of a normal Proxmox container backup. Newly created private data volumes use the
+imported image user unless an explicit volume owner or PUID/PGID overrides it.
+SELinux `z`/`Z` labels are reported as not applied on a non-enforcing host; an
+enforcing host is refused rather than silently losing their protection.
+
+An explicit Compose `stop_signal` overrides the image's stop signal through
+`lxc.signal.halt`. Without it, the image signal stays unchanged, including when
+Compose replaces its entrypoint. A worker sharing a web image may therefore
+need its own declared stop signal. Native updates abort safely if a service
+does not stop; they do not silently force termination to replace its disks.
+Some programs ignore termination signals when running as PID 1. Setting a signal
+does not add an init process or guarantee graceful shutdown; an explicit
+`SIGKILL` requests forced termination, not a graceful stop.
+
+A dependency declared with `service_completed_successfully` runs as a one-shot
+job. Its original command must finish with a verified exit code of zero before
+the dependent service starts. Such jobs are excluded from onboot and watchdog
+restarts. Update and restore invalidate the completion proof when the image,
+runtime configuration or recovery identity changes. A migration update is
+refused when database or unclassified backend data lives in host directories
+that the transaction cannot safely restore.
+The native exit-status monitor currently accepts LXC 7.0.0, the verified protocol
+version. Other versions refuse one-shot execution rather than treating a stopped
+container as proof of success.
+
+Before each native stack backup, the engine writes the validated original
+installation record into every stopped member and reads it back. A missing or
+unverifiable copy aborts the backup, so database and worker archives do not
+silently lose the metadata needed to register the restored stack.
+
+The bridges are local to the installation node; they are not a cluster SDN.
+Unsupported network and runtime semantics are reported before installation.
+Support for several services does not imply complete Docker Compose compatibility.
+A `docker run` command or image reference is converted to Compose first and
+follows the same importer.
 
 Starting from this definition:
 
@@ -251,7 +326,7 @@ each key becomes a field of the oci-compose:
 | `stop_grace_period` | `proxmox.defaults.shutdown_timeout_seconds` | The time a shutdown waits |
 | `labels`, `logging` | Kept in `container_contract.original_compose` only | Not applied: they are read by Docker tools |
 
-What has no translation stops the installation and is named: `pid: host`, a Compose file with several services given to this option, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
+What has no translation stops the installation and is named: `pid: host`, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
 
 Besides those fields, the converter writes the blocks that describe the translation itself: where the definition came from, the keys it understood, the adaptations it applied and the state of each validation. They are listed in [Blocks ProxMenux writes](#blocks-proxmenux-writes).
 

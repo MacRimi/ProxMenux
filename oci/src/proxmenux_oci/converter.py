@@ -40,6 +40,7 @@ SUPPORTED_SERVICE_KEYS = {
     "shm_size",
     "stdin_open",
     "stop_grace_period",
+    "stop_signal",
     "sysctls",
     "tty",
     "ulimits",
@@ -58,6 +59,18 @@ LINUX_CAPABILITIES = {
     "SYS_PACCT", "SYS_PTRACE", "SYS_RAWIO", "SYS_RESOURCE", "SYS_TIME",
     "SYS_TTY_CONFIG", "SYSLOG", "WAKE_ALARM",
 }
+
+# Linux signal names accepted by LXC. Keep independent of the review host OS.
+_STOP_SIGNALS = set("HUP INT QUIT ILL TRAP ABRT IOT BUS FPE KILL USR1 SEGV USR2 PIPE ALRM TERM STKFLT CHLD CLD CONT STOP TSTP TTIN TTOU URG XCPU XFSZ VTALRM PROF WINCH IO POLL PWR SYS UNUSED RTMIN RTMAX".split())
+
+def _stop_signal(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    name = value.strip().upper()
+    if name.startswith("SIG"):
+        name = name[3:]
+    return "SIG" + name if name in _STOP_SIGNALS else None
+
 
 SENSITIVE_NAME = re.compile(
     r"(?:PASS|PASSWORD|TOKEN|SECRET|API_?KEY|PRIVATE_KEY|CREDENTIAL|(?:^|_)KEY(?:$|_))",
@@ -463,7 +476,7 @@ def _extra_hosts(value: Any) -> list[dict[str, str]] | None:
     for raw_host, raw_address in entries:
         host = str(raw_host).strip()
         address = str(raw_address).strip()
-        if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", host):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,252}", host):
             return None
         if address != "host-gateway" and not re.fullmatch(r"[0-9A-Fa-f:.]+", address):
             return None
@@ -889,6 +902,8 @@ def _compose_option_blockers(
         blockers.append("mac-address-format")
     _, device_blockers = _device_installer_profile(service, optional_devices)
     blockers.extend(device_blockers)
+    if "stop_signal" in service and _stop_signal(service["stop_signal"]) is None:
+        blockers.append("stop-signal-format")
     runtime = service.get("runtime")
     if runtime is not None and str(runtime).casefold() != "nvidia":
         blockers.append(f"runtime-value:{runtime}")
@@ -949,6 +964,10 @@ def _compose_installer_profile(
         profile.setdefault("runtime", {})["command"] = service["command"]
     if "entrypoint" in service and service["entrypoint"] is not None:
         profile.setdefault("runtime", {})["compose_entrypoint"] = service["entrypoint"]
+    if service.get("stop_signal") is not None:
+        halt_signal = _stop_signal(service["stop_signal"])
+        if halt_signal is not None:
+            profile.setdefault("runtime", {})["halt_signal"] = halt_signal
     if service.get("working_dir") is not None:
         profile.setdefault("runtime", {})["working_directory"] = str(service["working_dir"])
     if service.get("user") is not None:
@@ -1580,7 +1599,7 @@ def convert_readme(
                 "environment": "import-image-env-then-apply-compose-overrides",
                 "user": "import-from-oci-image",
                 "working_dir": "import-from-oci-image",
-                "stop_signal": "import-from-oci-image",
+                "stop_signal": "apply-compose-override" if service.get("stop_signal") is not None else "import-from-oci-image",
             },
             **(
                 {"installer_profile": _compose_installer_profile(service, markers["devices"], markers["security_opt"])}

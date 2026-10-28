@@ -33,6 +33,7 @@ import oci_host_mounts as host_mounts
 import oci_nested_mounts as nested_mounts
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
+import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
 import oci_ui
@@ -52,7 +53,7 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
 # Their output is data (and may hold saved secrets); it is never logged.
 DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get'), ('pct', 'df')}
 # Kept across a modification: the watchdog and where the backups are made.
-HOST_PREFERENCES = ('watchdog', 'work_storage')
+HOST_PREFERENCES = ('watchdog', 'work_storage', 'stack_public_routes')
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
 ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
 SPINNER_FRAME = re.compile('^ ?[' + ''.join(oci_ui.FRAMES) + ']')
@@ -476,7 +477,7 @@ def candidate_contract(record, operation, proposal=None):
     # of what is being edited: it stays as the record has it now.
     for key in HOST_PREFERENCES:
         if key in record['deployment']:
-            result['deployment'][key] = record['deployment'][key]
+            result['deployment'][key] = copy.deepcopy(record['deployment'][key])
         else:
             result['deployment'].pop(key, None)
     return with_default_healthcheck(result)
@@ -519,6 +520,11 @@ def external_changes(record, config, adopt=True):
     return values
 
 
+def without_public_routes(config, vmid):
+    """The managed include is validated separately from sysctl includes."""
+    return b'\n'.join(line for line in config.splitlines() if not public_routes.own(line, vmid)) + b'\n'
+
+
 def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
@@ -555,7 +561,10 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
     files = runtime_settings.file_binds(config)
     if files:
         runtime_keys.add('lxc.mount.entry')
-    runtime_settings.check(config, deployment, record['vmid'])
+    public_routes.check(config, deployment, record['vmid'], record['installation_id'])
+    if deployment.get('stack_public_routes'):
+        runtime_keys.add('lxc.include')
+    runtime_settings.check(without_public_routes(config, record['vmid']), deployment, record['vmid'])
     coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
     preserved_keys = {'nameserver', 'searchdomain', 'timezone', 'protection'} if in_place else set()
     detached = unused_volumes(config)
@@ -567,7 +576,7 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
             or any(not re.fullmatch(r'[A-Za-z0-9_.-]+:[^\s,]+', value) or value in used_volumes
                    for value in detached.values())):
         raise ValueError(translate('The container disks do not match the saved record'))
-    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
+    if re.search(r'^\[[^]\r\n]+\]\s*$', config.decode(), re.MULTILINE) or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
     if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
@@ -680,7 +689,8 @@ def freeze_host_sources(record, candidate, acknowledge_external_data, files=()):
 
 
 def check_runtime_mounts(config, deployment):
-    runtime_settings.check(config, deployment, deployment['vmid'])
+    public_routes.check(config, deployment, deployment['vmid'])
+    runtime_settings.check(without_public_routes(config, deployment['vmid']), deployment, deployment['vmid'])
     nested_mounts.check(config)
     actual = mounts(config)
     files = runtime_settings.file_binds(config)
@@ -1303,6 +1313,7 @@ def complete_recovery(root, journal, state):
         raise ValueError(translate('The configuration changed after the backup was restored; the recovery is not confirmed'))
     cleanup_restored_format_dirs(vmid, state['record']['deployment'], state['record']['installation_id'])
     runtime_settings.restore(state['record']['deployment'], vmid)
+    public_routes.restore(state['record']['deployment'], vmid, state['record']['installation_id'])
     check_runtime_mounts(config, state['record']['deployment'])
     gpu_devices.check(config, state['record']['deployment'])
     if show:

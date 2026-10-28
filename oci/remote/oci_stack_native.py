@@ -3,15 +3,20 @@
 import argparse
 import copy
 import json
+import ipaddress
 import os
 from pathlib import Path
 import socket
 import stat
 import subprocess
 import time
+import tempfile
 import uuid
 
 import oci_image_cache as image_cache
+import oci_carried_record as carried
+import oci_stack_public_routes as public_routes
+import oci_compose_jobs as compose_jobs
 import oci_instances as instances
 import oci_instance_transaction as member_tx
 import oci_stack_plan
@@ -21,6 +26,17 @@ import oci_work_backup as work_backup
 from oci_installation_state import image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
+
+
+def tcp_target(check):
+    """Saved dependency probes only connect to numeric addresses and real TCP ports."""
+    host, port = check.get('host'), check.get('port')
+    if not isinstance(host, str) or type(port) is not int or not 0 < port < 65536:
+        raise ValueError(translate('Invalid service check arguments'))
+    try:
+        return str(ipaddress.IPv4Address(host)), port
+    except ValueError as error:
+        raise ValueError(translate('Invalid service check arguments')) from error
 
 
 def validate_database_transition(previous, candidate):
@@ -152,6 +168,28 @@ def immich_plan(primary, records, inventory, lifecycle, operation):
     return plan
 
 
+def write_hook_contract(path, value):
+    """Atomically replace a pmxcfs private file without changing its directory mode.
+
+    pmxcfs assigns permissions from the path and rejects chmod on /etc/pve/priv.
+    The registry writer manages ordinary private directories, so it is not used here.
+    """
+    for target, directory in ((path.parent, True), (path, False)):
+        info = target.lstat()
+        correct_type = stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode)
+        if not correct_type or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+            raise ValueError(translate('Unsafe dependency hook contract'))
+    fd, temporary = tempfile.mkstemp(dir=path.parent, prefix='.proxmenux-job-')
+    try:
+        with os.fdopen(fd, 'w') as output:
+            json.dump(value, output, indent=2)
+            output.write('\n')
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 class NativeAdapter:
     def __init__(self, root, journal, plan, acknowledge_external_data=False):
         self.root, self.journal, self.plan = root, Path(journal), plan
@@ -190,6 +228,7 @@ class NativeAdapter:
                 if row['type'] != 'lxc' or row.get('node') != socket.gethostname().split('.')[0]:
                     raise ValueError(translate('A member VMID is in use by another guest or is on another node'))
                 config = instances.command('pct', 'config', str(vmid))
+                public_routes.check(config, record['deployment'], vmid, record['installation_id'])
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
                 if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config, ignore_tags=True):
@@ -206,8 +245,29 @@ class NativeAdapter:
             if pending and pending != str(self.journal):
                 raise ValueError(translate('Another stack operation is pending'))
 
+    def _migration_backups(self):
+        if not any(self.is_job(vmid) for vmid in self.services):
+            return
+        database_kinds = {'postgres', 'mariadb', 'linuxserver/mariadb', 'mongo',
+                          'getmeili/meilisearch', 'redis', 'valkey/valkey'}
+        markers = ('PG_MAJOR=', 'MYSQL_MAJOR=', 'MYSQL_VERSION=', 'MARIADB_MAJOR=',
+                   'MARIADB_VERSION=', 'MONGO_VERSION=', 'MONGODB_VERSION=')
+        for vmid, record in self.records.items():
+            service = self.services[vmid]
+            if self.is_job(vmid):
+                continue
+            environment = record.get('observed', {}).get('image', {}).get('defaults', {}).get('Env') or []
+            database = service.get('kind') in database_kinds or any(
+                isinstance(value, str) and value.startswith(markers) for value in environment)
+            unknown_backend = vmid != self.plan['primary_vmid'] and not service.get('frontend')
+            external = any(mount.get('type') == 'host-bind' and not mount.get('read_only')
+                           for mount in record['deployment'].get('mounts', []))
+            if external and (database or unknown_backend):
+                raise ValueError(translate('Migration jobs cannot safely restore database or unclassified backend data from host directories'))
+
     def preflight(self):
         self.validate(self.plan)
+        self._migration_backups()
         ha = json.loads(instances.command('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
         if not isinstance(ha, list) or any(r.get('sid') == 'ct:%s' % vmid for r in ha for vmid in self.records):
             raise ValueError(translate('High availability resources are not supported for stacks'))
@@ -220,7 +280,7 @@ class NativeAdapter:
             member_tx.preflight(record, record, config, coordinated=True)
             member_tx.freeze_host_sources(record, record, self.acknowledge)
             check = self.services[vmid].get('healthcheck', {})
-            if check.get('type') not in ('exec', 'http', 'running'):
+            if check.get('type') not in ('exec', 'http', 'running', 'tcp', 'completed'):
                 raise ValueError(translate('A member has no reproducible service check'))
             if check['type'] == 'exec' and not check.get('argv'):
                 raise ValueError(translate('Empty exec service check'))
@@ -231,6 +291,16 @@ class NativeAdapter:
                 raise ValueError(translate('HTTP service check without a saved URL'))
             if check['type'] == 'http' and not check['url'].startswith(('http://', 'https://')):
                 raise ValueError(translate('Invalid service check URL'))
+            if check['type'] == 'tcp':
+                tcp_target(check)
+            if check['type'] == 'completed':
+                oci_stack_plan.validate_job_check(check, record)
+                expected = compose_jobs.job_spec_from_record(record, config.decode(), check['timeout_seconds'])
+                if (check['job'] != expected or record['deployment'].get('onboot')
+                        or record['deployment'].get('watchdog')
+                        or record['deployment'].get('execution_mode') != 'one-shot'
+                        or parse_config(config).get('onboot', '0') != '0' or self.is_running(vmid)):
+                    raise ValueError(translate('Invalid service check arguments'))
             if not 0 < int(check.get('timeout_seconds', 120)) <= 3600:
                 raise ValueError(translate('Invalid service check timeout'))
         primary_id = self.plan['primary_vmid']
@@ -340,7 +410,7 @@ class NativeAdapter:
         if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
             member_tx.stop(vmid)
 
-    def backup(self, vmid, identity):
+    def backup(self, vmid, transaction_id):
         self.validate(self.plan)
         base = self.work_base()
         if base != self.journal.parent and not (self.journal.parent / work_backup.MARK).exists():
@@ -350,6 +420,8 @@ class NativeAdapter:
                      f"{self.records[self.plan['primary_vmid']]['deployment'].get(work_backup.KEY)}")
         directory = base / ('backup-%s' % vmid)
         private_directory(directory)
+        config = member_tx.owned(vmid, self.records[vmid]['installation_id']).decode()
+        carried.carry_backup(self.root, vmid, self.records[vmid], config)
         archive = member_tx.verified_backup(vmid, directory, 'zstd',
                                             translate('The backup of a member could not be identified'))
         return {'archive': str(archive), 'sha256': member_tx.filehash(archive)}
@@ -382,12 +454,83 @@ class NativeAdapter:
             progress=f"{translate('Recreating') if operation == 'recreate' else translate('Updating')} "
                      f"{self.describe(vmid)}:")
 
+    def is_job(self, vmid):
+        return self.services[vmid].get('healthcheck', {}).get('type') == 'completed'
+
+    def _job_contract(self, rollback=False):
+        """Rebind jobs to staged/restored images and journal the hook transition."""
+        if not any(self.is_job(vmid) for vmid in self.services):
+            return
+        primary = self.plan['primary_vmid']
+        path = Path('/etc/pve/priv/proxmenux-stack-%s.json' % primary)
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
+            raise ValueError(translate('Unsafe dependency hook contract'))
+        current = json.loads(path.read_text())
+        operation = self.state()['id']
+        marker = self.journal.with_name('completed-job-contract.json')
+        if marker.is_symlink():
+            raise ValueError(translate('Unsafe dependency hook contract'))
+        state = {'schema': 1, 'operation_id': operation}
+        if marker.exists():
+            info = marker.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+                raise ValueError(translate('Unsafe dependency hook contract'))
+            state = json.loads(marker.read_text())
+            if state.get('schema') != 1 or state.get('operation_id') != operation:
+                raise ValueError(translate('The dependency hook and the stack recipe differ'))
+        original = next(member for member in self.plan['members'] if member['vmid'] == primary)
+        original_services = original['stack']['deployment']['services']
+        expected = state.get('job_hook_contract')
+        intent = state.get('job_hook_contract_intent')
+        if expected is None:
+            expected = {'schema': 1, 'stack': original['stack']['deployment'].get('stack_name', '')}
+            expected['dependencies'] = [{'vmid': s['vmid'], 'label': s['name'], 'healthcheck': s['healthcheck']}
+                                        for s in original_services if s['vmid'] != primary and not s.get('deferred_setup')]
+        accepted = [expected]
+        if intent is not None:
+            accepted.extend([intent['before'], intent['after']])
+        if current not in accepted:
+            raise ValueError(translate('The dependency hook and the stack recipe differ'))
+        if rollback:
+            self.services = {s['vmid']: copy.deepcopy(s) for s in original_services}
+        for vmid, service in self.services.items():
+            if not self.is_job(vmid):
+                continue
+            record = instances.read(self.root, vmid)
+            config = member_tx.owned(vmid, record['installation_id']).decode()
+            timeout = service['healthcheck'].get('timeout_seconds', 300)
+            service['healthcheck'] = {'type': 'completed', 'timeout_seconds': timeout,
+                                     'job': compose_jobs.job_spec_from_record(record, config, timeout)}
+        rebuilt = copy.deepcopy(current)
+        rebuilt['dependencies'] = [{'vmid': s['vmid'], 'label': s['name'], 'healthcheck': s['healthcheck']}
+                                   for s in self.services.values() if s['vmid'] != primary and not s.get('deferred_setup')]
+        if current != rebuilt or intent is not None:
+            state['job_hook_contract_intent'] = {'before': current, 'after': rebuilt}
+            instances.write(marker, state)
+            write_hook_contract(path, rebuilt)
+            state['job_hook_contract'] = rebuilt
+            state.pop('job_hook_contract_intent', None)
+            instances.write(marker, state)
+
+    def _ensure_job(self, vmid, force=False):
+        self._job_contract()
+        return compose_jobs.ensure_completed(vmid, self.services[vmid]['healthcheck']['job'], force=force)
+
     def start(self, vmid):
         self.validate(self.plan)
+        if self.is_job(vmid):
+            self._ensure_job(vmid)
+            return
+        if vmid == self.plan['primary_vmid']:
+            self._job_contract()
         if not self.is_running(vmid):
             member_tx.run('pct', 'start', str(vmid))
 
     def healthcheck(self, vmid):
+        if self.is_job(vmid):
+            self._ensure_job(vmid)
+            return
         check = self.services[vmid]['healthcheck']
         timeout = int(check.get('timeout_seconds', 120))
         if not 0 < timeout <= 3600:
@@ -399,8 +542,15 @@ class NativeAdapter:
             try:
                 if check['type'] == 'exec':
                     member_tx.run('pct', 'exec', str(vmid), '--', *check['argv'])
+                    # Main/custom web services retain both contracts: an exec
+                    # check never replaces the advertised HTTP readiness probe.
+                    if check.get('url') and (self.services[vmid].get('frontend') or check.get('endpoint')):
+                        member_tx.run('curl', '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
                 elif check['type'] == 'http':
                     member_tx.run('curl', '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
+                elif check['type'] == 'tcp':
+                    with socket.create_connection(tcp_target(check), timeout=5):
+                        pass
                 member_tx.gpu_devices.validate_runtime(vmid, self.records[vmid]['deployment'])
                 deployment = self.records[vmid]['deployment']
                 if deployment.get('replay_profile') == {'adapter': 'install_immich_stack.sh', 'role': 'machine-learning'}:
@@ -419,7 +569,7 @@ class NativeAdapter:
                             'assert (any(d.startswith("GPU") for d in ort.capi._pybind_state.get_available_openvino_device_ids()) '
                             'if p=="openvino" else ctypes.CDLL("libcuda.so.1").cuInit(0)==0)', acceleration)
                 return
-            except RuntimeError:
+            except (RuntimeError, OSError):
                 time.sleep(2)
         raise ValueError(f"{translate('A member did not pass its service check:')} {self.describe(vmid)}")
 
@@ -441,12 +591,22 @@ class NativeAdapter:
             instances.write(journal, child)
 
     def restore_running_state(self, running, order):
+        recovering = self.state().get('phase') == 'recovering'
+        has_jobs = any(self.is_job(vmid) for vmid in order)
         for vmid in order:
+            if self.is_job(vmid):
+                if recovering and running.get(str(self.plan['primary_vmid'])):
+                    self._ensure_job(vmid, force=True)
+                continue
             if running[str(vmid)]:
                 self.start(vmid)
-        for vmid in order:
-            if running[str(vmid)]:
-                self.healthcheck(vmid)
+                if has_jobs:
+                    # A rollback migration may require the restored database to be ready.
+                    self.healthcheck(vmid)
+        if not has_jobs:
+            for vmid in order:
+                if running[str(vmid)]:
+                    self.healthcheck(vmid)
         # Starting the primary can start dependencies through its native hook.
         for vmid in reversed(order):
             if not running[str(vmid)]:
@@ -465,7 +625,7 @@ class NativeAdapter:
             # Keep child journals available even if publication is interrupted.
             links = self.journal.parent / ('member-%s.json' % vmid)
             instances.write(links, {'journal': str(journal)})
-            member_tx.run('pct', 'set', str(vmid), '--onboot', '1' if original['deployment']['onboot'] else '0')
+            member_tx.run('pct', 'set', str(vmid), '--onboot', '1' if original['deployment']['onboot'] and not self.is_job(vmid) else '0')
             after = member_tx.owned(vmid, original['installation_id'])
             if ([line for line in before.splitlines() if not line.startswith(b'onboot: ')]
                     != [line for line in after.splitlines() if not line.startswith(b'onboot: ')]):
@@ -476,6 +636,7 @@ class NativeAdapter:
         primary_id = self.plan['primary_vmid']
         primary = instances.read(self.root, primary_id)
         primary['stack']['members'] = []
+        primary['stack']['deployment']['services'] = copy.deepcopy(list(self.services.values()))
         for vmid in self.plan['start_order']:
             record = instances.read(self.root, vmid)
             record.pop('stack', None)
@@ -555,8 +716,12 @@ class NativeAdapter:
             if any(self.plan.get(flag) for flag in ('nextcloud_replay', 'paperless_replay', 'tandoor_replay', 'immich_replay')):
                 record['deployment']['native_config'] = record['observed']['config']
                 record['deployment']['member_replay_projection'] = replay.normalize(record)
+            if self.is_job(vmid) and self.state().get('replacement_intent'):
+                # Restored database contents invalidate an earlier completion proof too.
+                record['recovered_at'] = instances.now()
             record['pending_stack_transaction'] = str(self.journal)
             instances.write(instances.location(self.root, vmid), record)
+        self._job_contract(rollback=True)
         primary_id = plan['primary_vmid']
         primary = instances.read(self.root, primary_id)
         snapshots = []
@@ -566,6 +731,7 @@ class NativeAdapter:
             snapshot.pop('pending_stack_transaction', None)
             snapshots.append(snapshot)
         primary['stack']['members'] = snapshots
+        primary['stack']['deployment']['services'] = copy.deepcopy(list(self.services.values()))
         instances.write(instances.location(self.root, primary_id), primary)
 
     def finalize(self, state):

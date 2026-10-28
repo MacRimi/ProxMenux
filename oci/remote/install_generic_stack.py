@@ -26,6 +26,7 @@ import xml.etree.ElementTree as ET
 from allocate_private_network import allocate_network, existing_bridges, existing_networks
 import oci_instances
 import oci_nested_mounts
+import oci_stack_public_routes
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, stop_spinner, log
 
 HERE = Path(__file__).resolve().parent
@@ -96,7 +97,7 @@ def report_error(text, tail=True):
 
 def persist_instances(deployment, services, primary_id=None):
     template = json.loads(Path(sys.argv[1]).read_text()) if primary_id is not None else {}
-    with oci_instances.locked(oci_instances.ROOT):
+    with oci_instances.locked(oci_instances.ROOT, timeout=60):
         if primary_id is not None:
             oci_instances.save_assembly(oci_instances.ROOT, primary_id, template, deployment, services)
             oci_instances.resume_assembly(oci_instances.ROOT, primary_id)
@@ -244,6 +245,122 @@ def relay_child_output(stream):
     return result
 
 
+def assign_health_address(service):
+    """Bind a generated dependency probe to its allocated private address."""
+    check = service['healthcheck']
+    if check['type'] == 'http':
+        endpoint = check['endpoint']
+        check['url'] = f"{endpoint['scheme']}://{service['ip']}:{endpoint['port']}{endpoint['path']}"
+    elif check['type'] == 'tcp':
+        check['host'] = service['ip']
+
+
+def public_bindings(services):
+    """Validate compiler-owned targets before any host/container mutation."""
+    names = {service['name']: service for service in services}
+    result = []
+    failure = translate('Invalid stack contract')
+    for service in services:
+        bindings = service.get('public_environment_bindings', {})
+        if not isinstance(bindings, dict):
+            raise RuntimeError(failure)
+        environment = service['deployment'].get('environment', [])
+        for key, binding in bindings.items():
+            if (not isinstance(key, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', key)
+                    or not isinstance(binding, dict)
+                    or set(binding) != {'target_service', 'container_port', 'value'}
+                    or not isinstance(binding.get('target_service'), str)):
+                raise RuntimeError(failure)
+            target = names.get(binding['target_service'])
+            value = binding.get('value')
+            if (target is None or not (target.get('frontend') or target.get('main'))
+                    or type(binding.get('container_port')) is not int
+                    or not 0 < binding['container_port'] < 65536
+                    or not isinstance(value, str) or value.count('@STACK_LAN_IP@') != 1
+                    or any(char in value for char in '\r\n')
+                    or sum(entry.get('name') == key for entry in environment) != 1):
+                raise RuntimeError(failure)
+            result.append((service, key, binding, target))
+    if any(target.get('frontend_ipv4') == 'dhcp' for _, _, _, target in result):
+        raise RuntimeError(translate('Automatic public URLs require static frontend addresses or explicit URLs'))
+    return result
+
+
+def _set_public_value(service, key, value):
+    for entry in service['deployment']['environment']:
+        if entry['name'] == key:
+            entry['value'] = value
+            return
+    raise RuntimeError(translate('Invalid stack contract'))
+
+
+def prepare_public_environment(services):
+    """Known static destinations are final before any application's first start."""
+    for service, key, binding, target in public_bindings(services):
+        address = target.get('frontend_ipv4')
+        try:
+            address = ipaddress.ip_interface(address).ip
+            if address.version != 4:
+                raise ValueError()
+        except (ValueError, TypeError) as error:
+            raise RuntimeError(translate('Invalid stack contract')) from error
+        _set_public_value(service, key, binding['value'].replace('@STACK_LAN_IP@', str(address)))
+
+
+def install_public_routes(services, primary_id, bridge):
+    """Private members can reach only this stack's own static frontend IPs."""
+    frontends = [service for service in services if service.get('main') or service.get('frontend')]
+    targets = {}
+    for service in frontends:
+        address = service.get('frontend_ipv4')
+        if not address or address == 'dhcp':
+            continue
+        destination = str(ipaddress.IPv4Interface(address).ip)
+        if destination in targets:
+            raise RuntimeError(translate('Duplicate stack frontend address'))
+        targets[destination] = service
+    if not targets:
+        return
+    records = {service['vmid']: oci_instances.read(oci_instances.ROOT, service['vmid']) for service in services}
+    stack_id = records[primary_id]['installation_id']
+    for service in services:
+        if service.get('main') or service.get('frontend'):
+            continue
+        vmid = service['vmid']
+        identity = records[vmid]['installation_id']
+        spec = {'schema': 1, 'stack_id': stack_id, 'primary_vmid': primary_id,
+                'vmid': vmid, 'installation_id': identity, 'private_bridge': bridge,
+                'private_address': service['ip'] + '/24', 'routes': [
+                    {'destination': destination, 'via': target['ip'], 'target_vmid': target['vmid'],
+                     'target_installation_id': records[target['vmid']]['installation_id']}
+                    for destination, target in sorted(targets.items())]}
+        plan = service['deployment']
+        plan['stack_public_routes'] = spec
+        oci_stack_public_routes.validate(plan, vmid, identity)
+        config = Path(f'/etc/pve/lxc/{vmid}.conf')
+        text = config.read_text()
+        # Never replace another include or accept a stale route contract.
+        oci_stack_public_routes.check(text, {}, vmid, require_host_assets=False)
+        line = oci_stack_public_routes.install(plan, vmid, identity)
+        config.write_text(text.rstrip('\n') + '\n' + line + '\n')
+        oci_stack_public_routes.check(config.read_text(), plan, vmid, identity)
+
+
+def bind_completed_jobs(services):
+    """All members and private aliases exist before a job can be authorized."""
+    from oci_compose_jobs import job_spec_from_record
+    for service in services:
+        check = service['healthcheck']
+        if check.get('type') != 'completed':
+            continue
+        vmid = int(service['vmid'])
+        run('pct', 'set', vmid, '--onboot', '0')
+        service['deployment']['onboot'] = False
+        record = oci_instances.read(oci_instances.ROOT, vmid)
+        check['job'] = job_spec_from_record(record, run('pct', 'config', vmid),
+                                            int(check.get('timeout_seconds', 300)))
+
+
 def lan_access_urls(services, subnet, strict=True):
     urls = []
     for service in services:
@@ -271,15 +388,43 @@ def lan_access_urls(services, subnet, strict=True):
     return urls
 
 
-def _last_int_env(service, names):
-    """Last matching PUID/PGID-style value from deployment.environment,
-    or 0 if absent/unparsable — mirrors install_oci.sh's
-    `[.environment[]? | select(.name == ...) | .value] | last // "0"`
-    plus its numeric-guard `[[ $X =~ ^[0-9]+$ ]] || X=0`."""
+def wait_main_web(service, subnet):
+    """Check the advertised frontend, preserving private IPs for backend aliases.
+
+    A service may legitimately refuse HTTP requests whose Host is its private
+    stack address. The endpoint shown to the user is the readiness contract.
+    """
+    deadline = time.monotonic() + min(120, int(service['healthcheck']['timeout_seconds']))
+    url = None
+    while time.monotonic() < deadline:
+        try:
+            found = lan_access_urls([service], subnet)
+            if found:
+                url = found[0]['url']
+                break
+        except (RuntimeError, OSError, subprocess.SubprocessError):
+            pass
+        time.sleep(1)
+    if url is None:
+        raise RuntimeError(translate('No LAN address was obtained'))
+    service['healthcheck']['url'] = url
+    wait_web(service, url)
+    return url
+
+
+def _last_int_env(service, names, default=0):
+    """Use the last explicit environment override, falling back only if absent.
+
+    Invalid explicit values retain the installer's existing zero fallback.
+    """
     value = None
+    found = False
     for entry in service['deployment'].get('environment', []):
         if entry.get('name') in names:
+            found = True
             value = entry.get('value')
+    if not found:
+        return default
     try:
         parsed = int(value)
     except (TypeError, ValueError):
@@ -287,28 +432,78 @@ def _last_int_env(service, names):
     return parsed if parsed >= 0 else 0
 
 
-def resolve_volume_owner(service, owner_strategy):
-    """(uid, gid) for a given volume_preparations owner_strategy,
-    mirroring install_oci.sh's HOST_ROOT_UID/HOST_ROOT_GID (mapped-root)
-    and HOST_BIND_UID/HOST_BIND_GID (mapped-application-user) — these
-    are deliberately DIFFERENT values, not the same computation:
+def runtime_volume_owner(service, root=None):
+    """Container IDs from the OCI import, with image USER as a fallback.
 
-    - mapped-root: 100000:100000 for an unprivileged container, 0:0
-      otherwise. Never depends on PUID/PGID or volume_owner (matches
-      install_oci.sh's HOST_ROOT_UID/HOST_ROOT_GID, which are pinned
-      constants that do not read CONTAINER_PUID/CONTAINER_PGID at all).
-    - mapped-application-user: the container's own PUID/PGID (last of
-      PUID/USER_ID/UID and PGID/GROUP_ID/GID in deployment.environment,
-      overridden by the template's volume_owner.uid/gid when present —
-      matches install_oci.sh's IMAGE_VOLUME_UID/GID override of
-      CONTAINER_PUID/CONTAINER_PGID before the offset is applied),
-      offset by 100000 for an unprivileged container (matches
-      HOST_BIND_UID/HOST_BIND_GID). volume_owner only ever overrides
-      this application-user value, never mapped-root's.
+    Proxmox has already resolved a named USER and Compose user override into
+    lxc.init.uid/gid. No ownership is changed here. The mounted image account
+    files are only needed on versions that omit one of those numeric fields.
+    """
+    vmid = service.get('vmid')
+    config = {}
+    if type(vmid) is int and vmid >= 100:
+        from oci_installation_state import parse_config
+        config = parse_config(run('pct', 'config', vmid).encode())
+    resolved = {}
+    for name, key in (('uid', 'lxc.init.uid'), ('gid', 'lxc.init.gid')):
+        value = config.get(key)
+        if value is not None:
+            if not re.fullmatch(r'[0-9]+', value):
+                raise RuntimeError(translate('The imported OCI user or group is not numeric'))
+            resolved[name] = int(value)
+    if len(resolved) == 2:
+        return resolved['uid'], resolved['gid']
+    image = (service.get('observed') or {}).get('image') or {}
+    if not image and type(vmid) is int and vmid >= 100:
+        try:
+            record = oci_instances.read(oci_instances.ROOT, vmid)
+            image = (record.get('observed') or {}).get('image') or {}
+        except (OSError, ValueError, KeyError):
+            pass
+    declared = str((image.get('defaults') or {}).get('User') or '')
+    user, separator, group = declared.partition(':')
+    accounts, groups = {}, {}
+    if root is not None:
+        root = Path(root)
+        for filename, target in (('passwd', accounts), ('group', groups)):
+            path = root / 'etc' / filename
+            if path.resolve().is_relative_to(root.resolve()) and path.is_file() and not path.is_symlink():
+                for line in path.read_text(errors='replace').splitlines():
+                    fields = line.split(':')
+                    if len(fields) >= (4 if filename == 'passwd' else 3) and fields[2].isdigit():
+                        if filename == 'passwd' and fields[3].isdigit():
+                            target[fields[0]] = (int(fields[2]), int(fields[3]))
+                        elif filename == 'group':
+                            target[fields[0]] = int(fields[2])
+    if not user:
+        uid, gid = 0, 0
+    elif user.isdigit():
+        uid = int(user)
+        gid = next((value[1] for value in accounts.values() if value[0] == uid), 0)
+    elif user in accounts:
+        uid, gid = accounts[user]
+    elif 'uid' in resolved:
+        uid = resolved['uid']
+        gid = next((value[1] for value in accounts.values() if value[0] == uid), 0)
+    else:
+        raise RuntimeError(translate('The imported OCI user or group is not numeric'))
+    if separator and group:
+        if group.isdigit():
+            gid = int(group)
+        elif group in groups:
+            gid = groups[group]
+        elif 'gid' not in resolved:
+            raise RuntimeError(translate('The imported OCI user or group is not numeric'))
+    return resolved.get('uid', uid), resolved.get('gid', gid)
 
-    Any value that cannot be parsed as a non-negative integer is
-    treated as 0, matching install_oci.sh's `[[ ... =~ ^[0-9]+$ ]] ||
-    ...=0` guard.
+
+def resolve_volume_owner(service, owner_strategy, imported_owner=None):
+    """Resolve fresh volume ownership without changing existing host directories.
+
+    Mapped root remains fixed. Application ownership starts with the actual
+    OCI import user, then honors explicit PUID/PGID aliases and the recipe's
+    declared volume_owner override. All values are container IDs until the
+    standard unprivileged offset is applied exactly once.
     """
     unprivileged = bool(service['deployment']['security']['unprivileged'])
     if owner_strategy == 'mapped-root':
@@ -316,8 +511,9 @@ def resolve_volume_owner(service, owner_strategy):
     if owner_strategy != 'mapped-application-user':
         raise RuntimeError(f"{translate('Unsupported owner strategy:')} {owner_strategy}")
 
-    puid = _last_int_env(service, ('PUID', 'USER_ID', 'UID'))
-    pgid = _last_int_env(service, ('PGID', 'GROUP_ID', 'GID'))
+    imported_uid, imported_gid = (runtime_volume_owner(service) if imported_owner is None else imported_owner)
+    puid = _last_int_env(service, ('PUID', 'USER_ID', 'UID'), imported_uid)
+    pgid = _last_int_env(service, ('PGID', 'GROUP_ID', 'GID'), imported_gid)
 
     volume_owner = service.get('template', {}).get('proxmox', {}) \
         .get('installer_profile', {}).get('volume_owner') or {}
@@ -338,7 +534,7 @@ def resolve_volume_owner(service, owner_strategy):
     return (puid + offset, pgid + offset)
 
 
-def apply_volume_preparation(service, mount, target):
+def apply_volume_preparation(service, mount, target, imported_owner=None):
     """Declarative volume_preparations for one already-attached (but
     still empty/freshly-mounted) mount, mirroring install_oci.sh's
     apply_installer_profile() semantics (only_when_mount_type /
@@ -381,7 +577,7 @@ def apply_volume_preparation(service, mount, target):
         if lost.is_dir() and not lost.is_symlink():
             lost.rmdir()
     owner_strategy = match.get('owner_strategy')
-    owner = resolve_volume_owner(service, owner_strategy)
+    owner = resolve_volume_owner(service, owner_strategy, imported_owner)
     log(LOG, f"Volume prepared before the first start: {mount['container_path']}")
     return True, owner
 
@@ -390,6 +586,7 @@ def attach_mounts(service, temporary):
     """Populate new managed volumes from the image, preserving its ownership."""
     vmid = service['vmid']
     root = Path(f'/var/lib/lxc/{vmid}/rootfs')
+    imported_owner = None
     for index, mount in enumerate(service['deployment']['mounts']):
         target = root / mount['container_path'].lstrip('/')
         seed = temporary / f'seed-{vmid}-{index}'
@@ -398,6 +595,8 @@ def attach_mounts(service, temporary):
         try:
             if not target.resolve().is_relative_to(root.resolve()) or target.is_symlink():
                 raise RuntimeError(translate('Unsafe volume path'))
+            if imported_owner is None:
+                imported_owner = runtime_volume_owner(service, root)
             if target.is_dir():
                 stat = target.stat()
                 owner = (stat.st_uid,stat.st_gid,stat.st_mode & 0o777)
@@ -421,6 +620,12 @@ def attach_mounts(service, temporary):
             if not source.is_absolute() or ',' in str(source) or '\n' in str(source):
                 raise RuntimeError(translate('Invalid shared path'))
             if not source.exists():
+                shared_owner = mount.get('host_owner')
+                if shared_owner is not None:
+                    if (not isinstance(shared_owner, list) or len(shared_owner) != 2
+                            or any(type(value) is not int or not 0 <= value <= 2**32-2 for value in shared_owner)):
+                        raise RuntimeError(translate('Invalid shared path'))
+                    owner = (*shared_owner, owner[2])
                 source.mkdir(parents=True)
                 os.chown(source,*owner[:2])
                 source.chmod(owner[2])
@@ -431,7 +636,7 @@ def attach_mounts(service, temporary):
         if mount['type']=='managed-volume':
             run('pct','mount',vmid)
             try:
-                applied, declared_owner = apply_volume_preparation(service, mount, target)
+                applied, declared_owner = apply_volume_preparation(service, mount, target, imported_owner)
                 if not applied:
                     lost=target/'lost+found'
                     if lost.is_dir() and not lost.is_symlink():
@@ -466,6 +671,13 @@ def wait_web(primary, url):
         try:
             with opener.open(url,timeout=4) as response:
                 if response.status<400:
+                    check = primary['healthcheck']
+                    if check.get('type') == 'exec':
+                        remaining = max(1, deadline-time.monotonic())
+                        process = subprocess.run(['pct', 'exec', str(primary['vmid']), '--', *check['argv']],
+                                                 capture_output=True, timeout=min(30, remaining), check=False)
+                        if process.returncode != 0:
+                            raise RuntimeError('Health check has not succeeded yet')
                     return
         except Exception:
             pass
@@ -738,6 +950,12 @@ def finish_independent_suite(services, subnet):
     return result
 
 
+def check_selinux_labels(template, enforcing_path=Path('/sys/fs/selinux/enforce')):
+    if (template.get('proxmox', {}).get('custom_compose_selinux_labels')
+            and enforcing_path.is_file() and enforcing_path.read_text().strip() == '1'):
+        raise RuntimeError(translate('SELinux volume labels cannot be ignored while SELinux is enforcing.'))
+
+
 def main():
     deployment = json.loads(Path(sys.argv[2]).read_text())
     if deployment.get('deployment_kind') != 'generic-multi-lxc-stack':
@@ -750,10 +968,12 @@ def main():
         return
     if os.geteuid()!=0:
         raise RuntimeError(translate('The installer must run as root on Proxmox VE'))
+    check_selinux_labels(json.loads(Path(sys.argv[1]).read_text()))
     init_log(deployment.get('stack_name') or 'stack')
     services = copy.deepcopy(deployment['services'])
     independent = bool(deployment.get('suite_arr'))
     primary = None if independent else next(s for s in services if s['main'])
+    prepare_public_environment(services)
     created = []
     bridge_created = False
     lifecycle = None
@@ -779,7 +999,7 @@ def main():
             s['vmid'] = base+s['offset']
             s['ip'] = str(subnet.network_address+30+s['offset'])
             for alias in s['aliases']:
-                if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*',alias):
+                if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,252}',alias):
                     raise RuntimeError(translate('Invalid service alias'))
                 aliases.append({'hostname':alias,'address':s['ip']})
         if not independent:
@@ -805,7 +1025,7 @@ def main():
             results = {}
             for order,s in enumerate(services,1):
                 plan = s['deployment']
-                s['public_environment'] = {e['name']:e['value'] for e in plan['environment'] if '@STACK_LAN_IP@' in e['value']}
+                s['public_environment'] = {e['name']:e['value'] for e in plan['environment'] if '@STACK_LAN_IP@' in e['value'] and e['name'] not in s.get('public_environment_bindings', {})}
                 for e in plan['environment']:
                     e['value'] = e['value'].replace('@STACK_LAN_IP@',s['ip'])
                 plan['vmid'] = s['vmid']
@@ -831,17 +1051,19 @@ def main():
                 if s['main'] or s.get('frontend'):
                     address = access_address(s.get('frontend_ipv4') or 'dhcp', deployment['network'].get('frontend_gateway'))
                     run('pct','set',s['vmid'],'--net1',f"name=eth1,bridge={deployment['network']['frontend_bridge']},{address},host-managed=1,firewall=1,type=veth")
-                if s['healthcheck']['type']=='http':
-                    endpoint = s['healthcheck']['endpoint']
-                    s['healthcheck']['url'] = f"{endpoint['scheme']}://{s['ip']}:{endpoint['port']}{endpoint['path']}"
+                assign_health_address(s)
+            # Existing CT/network configurations now reserve every allocated ID and subnet.
+            # Never retain the allocation lock while startup/hooks wait for another registry operation.
+            fcntl.flock(lock,fcntl.LOCK_UN)
             if independent:
-                fcntl.flock(lock,fcntl.LOCK_UN)
                 result = finish_independent_suite(services,subnet)
                 persist_instances(deployment, services)
                 refresh_notes(services)
                 result.update(completion_notes=list(deployment.get('completion_notes',[])), log=LOG)
                 print('PROXMENUX_RESULT='+base64.b64encode(json.dumps(result).encode()).decode(),flush=True)
                 return
+            install_public_routes(services, primary_id, bridge)
+            bind_completed_jobs(services)
             hook_spec = Path(tmp)/'lifecycle.json'
             write_json(hook_spec,{'schema':1,'stack':deployment['stack_name'],'dependencies':[
                 {'vmid':s['vmid'],'label':s['name'],'healthcheck':s['healthcheck']} for s in services if not s['main'] and not s.get('deferred_setup')]})
@@ -849,20 +1071,15 @@ def main():
                 msg_info(translate('Installing the stack startup hook...'))
                 run('bash',HERE/'stack_dependency_hook.sh','--install',primary_id,hook_spec,capture=False)
                 msg_ok(translate('Stack startup hook installed'))
-            fcntl.flock(lock,fcntl.LOCK_UN)
             msg_info(translate('Starting the main container and its dependencies...') if len(services) > 1
                      else translate('Starting the container...'))
             run('pct','start',primary_id,capture=False,timeout=600)
             msg_ok(f"{translate('Container started')}: CT {primary_id} ({primary['name']})")
             endpoint = primary['healthcheck']['endpoint']
-            url = f"{endpoint['scheme']}://{primary['ip']}:{endpoint['port']}{endpoint['path']}"
             msg_info(translate('Waiting for the application to respond...'))
-            wait_web(primary,url)
-            addresses=run('lxc-info','-n',primary_id,'-iH').splitlines()
-            lan = next((a for a in addresses if re.fullmatch(r'\d+\.\d+\.\d+\.\d+',a) and ipaddress.ip_address(a) not in subnet),None)
-            if not lan:
-                raise RuntimeError(translate('No LAN address was obtained'))
-            public_url = f"{endpoint['scheme']}://{lan}:{endpoint['port']}{endpoint['path']}"
+            public_url = wait_main_web(primary, subnet)
+            url = public_url
+            lan = urllib.parse.urlsplit(public_url).hostname
             msg_ok(f"{translate('Application responding:')} {public_url}")
             if primary['public_environment']:
                 msg_info(translate('Applying the LAN address to the application URLs...'))
@@ -883,7 +1100,8 @@ def main():
             refresh_notes(services)
             # The credentials of the main service come from its own installation.
             result.update(vmid=primary_id,ip=lan,stack_vmids={s['name']:s['vmid'] for s in services},
-                          urls=[{'label':'Web UI','url':public_url}],
+                          urls=(lan_access_urls(services, subnet) if sum(bool(s['main'] or s.get('frontend')) for s in services) > 1
+                                else [{'label':'Web UI','url':public_url}]),
                           credentials=result.get('credentials') or [])
             result.update(completion_notes=[note.replace('{main_vmid}',str(primary_id))
                                             for note in deployment.get('completion_notes', [])], log=LOG)
