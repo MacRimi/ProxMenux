@@ -2112,8 +2112,8 @@ apply_kept_settings
 if jq -e '.stack_public_routes != null' "$DEPLOYMENT_FILE" >/dev/null; then
   ROUTE_INCLUDE=$(python3 "${SCRIPT_DIR}/oci_stack_public_routes.py" install "$VMID" \
     --deployment "$DEPLOYMENT_FILE" --installation-id "$INSTANCE_ID") \
-    || die "Managed public route installation failed"
-  [[ -n "$ROUTE_INCLUDE" ]] || die "Managed public route include is missing"
+    || die "$(translate "Managed public route installation failed")"
+  [[ -n "$ROUTE_INCLUDE" ]] || die "$(translate "Managed public route include is missing")"
   grep -Fxq "$ROUTE_INCLUDE" "$CONF" || printf '%s\n' "$ROUTE_INCLUDE" >>"$CONF"
 fi
 

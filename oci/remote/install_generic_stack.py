@@ -317,7 +317,7 @@ def install_public_routes(services, primary_id, bridge):
             continue
         destination = str(ipaddress.IPv4Interface(address).ip)
         if destination in targets:
-            raise RuntimeError('Duplicate stack frontend address')
+            raise RuntimeError(translate('Duplicate stack frontend address'))
         targets[destination] = service
     if not targets:
         return
