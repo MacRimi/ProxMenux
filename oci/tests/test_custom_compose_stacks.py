@@ -55,6 +55,14 @@ class CustomComposeStacks(unittest.TestCase):
             with self.subTest(metadata=metadata), self.assertRaises(ConversionError):
                 custom.template_from_compose(COMPOSE + metadata + '\n')
 
+    def test_short_read_only_time_mount_is_removed_from_stack(self):
+        text = COMPOSE.replace("    ports:", "    volumes: [/etc/localtime:/etc/localtime:ro]\n    ports:")
+        template = custom.template_from_compose(text)
+        app = next(service for service in ordered_services(template) if service['name'] == 'app')
+        self.assertEqual(app['compose']['volumes'], [])
+        self.assertFalse(any('System path' in error for error in template['compatibility']['untranslated_blockers']))
+        self.assertTrue(template['compatibility']['automatic_install_candidate'])
+
     def test_written_digest_and_tag_survive_in_full_image_contracts(self):
         digest = 'sha256:' + 'a' * 64
         reference = 'ghcr.io/example/adminer:4@' + digest

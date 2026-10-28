@@ -174,7 +174,7 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
 
 def _template_from_stack(compose: dict[str, Any], title: str | None) -> dict[str, Any]:
     """Reuse the catalog stack compiler, keeping explicitly selected image versions."""
-    from .stack import apply_stack_support
+    from .stack import apply_stack_support, normalized_mounts
 
     services = _services(compose)
     singles = {}
@@ -210,9 +210,8 @@ def _template_from_stack(compose: dict[str, Any], title: str | None) -> dict[str
         if 'environment' in services[service['name']]:
             service['compose']['environment'] = copy.deepcopy(services[service['name']]['environment'])
         service['compose']['volumes'] = [
-            mount for mount in service['compose'].get('volumes', [])
-            if (mount.get('target') if isinstance(mount, dict)
-                else str(mount).split(':')[-1]) not in TIME_SETTINGS]
+            mount for mount in normalized_mounts(service['compose'].get('volumes', []))
+            if mount['target'] not in TIME_SETTINGS]
     template['container_contract']['original_compose'] = _dump({
         **template['compose_stack']['top_level'],
         'services': {service['name']: service['compose'] for service in template['compose_stack']['services']}})
