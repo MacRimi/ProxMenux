@@ -2576,6 +2576,10 @@
           "title": "Speicherplatz – LXC rootfs",
           "description": "Root-Laufwerk pro Container, bewertet anhand der Rootfs-Größe von PVE."
         },
+        "vm_disk": {
+          "title": "Speicherplatz - VMs",
+          "description": "Dateisysteme laufender VMs, wie der QEMU-Gastagent sie meldet, einschließlich durchgereichter Laufwerke. VMs ohne Gastagent werden nicht ausgewertet."
+        },
         "lxc_mount": {
           "title": "LXC-Montagepunkte",
           "description": "Kapazität der Mountpunkte innerhalb laufender CTs (mp0, mp1, NFS, Bind-Mounts). Schließt die Rootfs aus; das steht oben."

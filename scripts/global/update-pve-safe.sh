@@ -205,12 +205,9 @@ update_pve_safe() {
     fi
 
     # The package list rides in the same dialog as the summary, so the
-    # decision is taken knowing what is about to be replaced. Keep Yes focused
-    # while the list remains scrollable; --keep-tite restores the execution screen.
-    menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
-    menu_text+="$(translate "Do you want to proceed with the system update?")"
-    if ! dialog --keep-tite --title "$(translate "Proxmox Update")" \
-        --default-button yes --no-collapse --scrollbar --yesno "$menu_text" 24 78; then
+    # decision is taken knowing what is about to be replaced.
+    if ! pmx_confirm_update "$(translate "Proxmox Update")" "$menu_text" "$upgradable_list" \
+        "$(translate "Do you want to proceed with the system update?")"; then
         msg_info2 "$(translate "Update cancelled by user")"
         apt-get -y autoremove >/dev/null 2>&1 || true
         apt-get -y autoclean >/dev/null 2>&1 || true

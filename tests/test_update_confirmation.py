@@ -1,7 +1,7 @@
 """Exercise only the update confirmation widget in a disposable terminal.
 
-No update script is sourced or executed: the isolated UI command receives
-synthetic package names. Requires dialog; skips on systems without it.
+No update script is sourced or executed: the shared confirmation function
+receives synthetic package names. Requires whiptail; skips without it.
 """
 
 import errno
@@ -27,17 +27,23 @@ UPDATERS = (
 )
 
 
-def confirmation_command(name):
-    source = (ROOT / "scripts/global" / name).read_text()
-    match = re.search(
-        r'^\s*if (?:! )?((?:dialog|whiptail) --(?:keep-tite --)?title '
-        r'"\$\(translate "Proxmox Update"\)"[^;]+); then',
-        source,
-        re.MULTILINE,
-    )
+COMMON = ROOT / "scripts/global/common-functions.sh"
+
+
+def confirmation_function():
+    match = re.search(r"^pmx_confirm_update\(\) \{\n.*?^\}\n", COMMON.read_text(),
+                      re.MULTILINE | re.DOTALL)
     if not match:
-        raise AssertionError("Update confirmation not found: " + name)
-    return match.group(1)
+        raise AssertionError("pmx_confirm_update not found")
+    return match.group(0)
+
+
+def confirmation_command():
+    """The shared confirmation as an updater calls it; the package list comes
+    from UPDATE_CONFIRMATION_TEXT, formatted as pmx_format_upgradable writes it."""
+    return (confirmation_function() + 'pmx_confirm_update "Proxmox Update" '
+            '"System Update Information\\n\\n" "$UPDATE_CONFIRMATION_TEXT" '
+            '"Do you want to proceed with the system update?"')
 
 
 def run_widget(command, text, keys):
@@ -50,8 +56,7 @@ def run_widget(command, text, keys):
         for key in list(environment):
             if key.startswith("DIALOG_"):
                 environment.pop(key)
-        script = ('translate() { printf "%s" "$1"; }\n'
-                  'menu_text=$UPDATE_CONFIRMATION_TEXT\n' + command)
+        script = 'translate() { printf "%s" "$1"; }\n' + command
         os.execve("/bin/bash", ["bash", "-c", script], environment)
 
     output = bytearray()
@@ -90,36 +95,47 @@ def run_widget(command, text, keys):
         os.close(terminal)
 
 
-@unittest.skipUnless(shutil.which("dialog"), "dialog is not installed")
+def packages(count, long_every=0):
+    """Formatted list lines; every `long_every`-th package spans three lines."""
+    lines = []
+    for i in range(count):
+        if long_every and i % long_every == 0:
+            lines += ["  libsamba-{:03d}".format(i), "      2:2.11.0+samba4.22.10+dfsg-0+deb13u1",
+                      "    → 2:2.11.0+samba4.22.11+dfsg-0+deb13u1"]
+        else:
+            lines.append("  package-{:03d}                    1.0 → 2.0".format(i))
+    return "\n".join(lines)
+
+
+@unittest.skipUnless(shutil.which("whiptail"), "whiptail is not installed")
 class UpdateConfirmationTest(unittest.TestCase):
     def test_enter_confirms_yes_without_tab_for_short_and_long_lists(self):
-        for updater in UPDATERS:
-            for count in (1, 80):
-                with self.subTest(updater=updater, packages=count):
-                    text = "System Update Information\\n\\n" + "\\n".join(
-                        "  package-{:02d}  1.0 -> 2.0".format(i)
-                        for i in range(count)
-                    ) + "\\n\\nDo you want to proceed with the system update?"
-                    status, output = run_widget(confirmation_command(updater), text, b"\r")
-                    self.assertEqual(status, 0, output)
+        for count in (1, 80, 200):
+            with self.subTest(packages=count):
+                status, output = run_widget(confirmation_command(), packages(count, 7), b"\r")
+                self.assertEqual(status, 0, output)
 
     def test_tab_can_select_no_and_escape_can_cancel(self):
-        for updater in UPDATERS:
-            for keys, expected in ((b"\t\r", 1), (b"\x1b", 255)):
-                with self.subTest(updater=updater, keys=keys):
-                    status, output = run_widget(confirmation_command(updater), "Confirm update?", keys)
-                    self.assertEqual(status, expected, output)
+        for keys, expected in ((b"\t\r", 1), (b"\x1b", 255)):
+            with self.subTest(keys=keys):
+                status, output = run_widget(confirmation_command(), packages(80), keys)
+                self.assertEqual(status, expected, output)
 
-    def test_full_list_remains_scrollable_with_yes_focused(self):
-        text = "\\n".join("package-{:03d}".format(i) for i in range(80))
-        for updater in UPDATERS:
+    def test_a_long_list_fits_and_counts_the_packages_left_out(self):
+        status, output = run_widget(confirmation_command(), packages(200, 7), b"\r")
+        self.assertEqual(status, 0, output)
+        plain = re.sub(rb"\x1b(?:\[[0-?]*[ -/]*[@-~]|[()][A-Za-z0-9]|.)", b"", output)
+        self.assertIn(b"more packages; the full list is in the update log", plain)
+        # A package is shown whole or counted, never cut after its name.
+        self.assertNotRegex(plain, rb"libsamba-\d{3}\s+\.\.\.")
+
+    def test_every_updater_asks_through_the_shared_confirmation(self):
+        for updater in UPDATERS + ("update-pbs.sh",):
             with self.subTest(updater=updater):
-                # G scrolls to the end of the yes/no text without moving focus.
-                status, output = run_widget(confirmation_command(updater), text, b"G\r")
-                self.assertEqual(status, 0, output)
-                # Curses may repaint only changed digits rather than emit a
-                # complete final line. Its 100% indicator confirms the end.
-                self.assertIn(b"100%", output)
+                source = (ROOT / "scripts/global" / updater).read_text()
+                self.assertIn("pmx_confirm_update ", source)
+                self.assertNotIn("--scrolltext --yesno", source)
+                self.assertNotIn("dialog --keep-tite", source)
 
 
 if __name__ == "__main__":

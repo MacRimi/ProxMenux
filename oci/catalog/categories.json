@@ -430,6 +430,7 @@
     "bytebase": "databases",
     "metabase": "monitoring",
     "kopia": "backup",
-    "restic-rest-server": "backup"
+    "restic-rest-server": "backup",
+    "netalertx": "monitoring"
   }
 }

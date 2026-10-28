@@ -19,6 +19,7 @@ import {
   FolderOpen,
   Database,
   Waves,
+  Monitor,
 } from "lucide-react"
 import { getApiUrl, getAuthToken } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
@@ -85,6 +86,7 @@ interface ThresholdsTree {
   memory: { warning: ThresholdLeaf; critical: ThresholdLeaf; swap_high: ThresholdLeaf; available_min: ThresholdLeaf }
   host_storage: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   lxc_rootfs: { warning: ThresholdLeaf; critical: ThresholdLeaf }
+  vm_disk: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   cpu_temperature: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   disk_temperature: {
     hdd: { warning: ThresholdLeaf; critical: ThresholdLeaf }
@@ -203,6 +205,17 @@ const SECTIONS: SectionDef[] = [
     ],
   },
   {
+    id: "vm_disk",
+    title: "Disk space — VMs",
+    icon: Monitor,
+    description:
+      "Filesystems of running VMs as the QEMU guest agent reports them, passthrough drives included. VMs without the guest agent are not evaluated.",
+    fields: [
+      { path: ["vm_disk", "warning"], label: "Warning" },
+      { path: ["vm_disk", "critical"], label: "Critical" },
+    ],
+  },
+  {
     id: "lxc_mount",
     title: "LXC mount points",
     icon: FolderOpen,
@@ -285,7 +298,7 @@ function computeVisualRange(
 // ─── Component ───────────────────────────────────────────────────────────────
 
 // Guests and PVE storages do not exist on a Proxmox Backup Server.
-const PVE_ONLY_SECTIONS = new Set(["lxc_rootfs", "lxc_mount", "pve_storage"])
+const PVE_ONLY_SECTIONS = new Set(["lxc_rootfs", "vm_disk", "lxc_mount", "pve_storage"])
 
 export function HealthThresholds() {
   const t = useT()
