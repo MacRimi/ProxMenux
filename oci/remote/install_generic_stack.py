@@ -26,6 +26,7 @@ import xml.etree.ElementTree as ET
 from allocate_private_network import allocate_network, existing_bridges, existing_networks
 import oci_instances
 import oci_nested_mounts
+import oci_stack_public_routes
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, stop_spinner, log
 
 HERE = Path(__file__).resolve().parent
@@ -304,6 +305,45 @@ def prepare_public_environment(services):
         except (ValueError, TypeError) as error:
             raise RuntimeError(translate('Invalid stack contract')) from error
         _set_public_value(service, key, binding['value'].replace('@STACK_LAN_IP@', str(address)))
+
+
+def install_public_routes(services, primary_id, bridge):
+    """Private members can reach only this stack's own static frontend IPs."""
+    frontends = [service for service in services if service.get('main') or service.get('frontend')]
+    targets = {}
+    for service in frontends:
+        address = service.get('frontend_ipv4')
+        if not address or address == 'dhcp':
+            continue
+        destination = str(ipaddress.IPv4Interface(address).ip)
+        if destination in targets:
+            raise RuntimeError('Duplicate stack frontend address')
+        targets[destination] = service
+    if not targets:
+        return
+    records = {service['vmid']: oci_instances.read(oci_instances.ROOT, service['vmid']) for service in services}
+    stack_id = records[primary_id]['installation_id']
+    for service in services:
+        if service.get('main') or service.get('frontend'):
+            continue
+        vmid = service['vmid']
+        identity = records[vmid]['installation_id']
+        spec = {'schema': 1, 'stack_id': stack_id, 'primary_vmid': primary_id,
+                'vmid': vmid, 'installation_id': identity, 'private_bridge': bridge,
+                'private_address': service['ip'] + '/24', 'routes': [
+                    {'destination': destination, 'via': target['ip'], 'target_vmid': target['vmid'],
+                     'target_installation_id': records[target['vmid']]['installation_id']}
+                    for destination, target in sorted(targets.items())]}
+        plan = service['deployment']
+        plan['stack_public_routes'] = spec
+        oci_stack_public_routes.validate(plan, vmid, identity)
+        config = Path(f'/etc/pve/lxc/{vmid}.conf')
+        text = config.read_text()
+        # Never replace another include or accept a stale route contract.
+        oci_stack_public_routes.check(text, {}, vmid, require_host_assets=False)
+        line = oci_stack_public_routes.install(plan, vmid, identity)
+        config.write_text(text.rstrip('\n') + '\n' + line + '\n')
+        oci_stack_public_routes.check(config.read_text(), plan, vmid, identity)
 
 
 def bind_completed_jobs(services):
@@ -1022,6 +1062,7 @@ def main():
                 result.update(completion_notes=list(deployment.get('completion_notes',[])), log=LOG)
                 print('PROXMENUX_RESULT='+base64.b64encode(json.dumps(result).encode()).decode(),flush=True)
                 return
+            install_public_routes(services, primary_id, bridge)
             bind_completed_jobs(services)
             hook_spec = Path(tmp)/'lifecycle.json'
             write_json(hook_spec,{'schema':1,'stack':deployment['stack_name'],'dependencies':[

@@ -20,6 +20,7 @@ import oci_image_cache as image_cache
 import oci_work_backup as work_backup
 import oci_instances as instances
 import oci_compose_jobs as compose_jobs
+import oci_stack_public_routes as public_routes
 from oci_installation_state import parse_config
 import oci_console
 import oci_runtime_settings as runtime_settings
@@ -198,7 +199,7 @@ def _leftovers(vmid):
     """Whether anything of the container is still on the host."""
     paths = [runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid),
              runtime_settings.seccomp_path(vmid), SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh', MONITOR_APPS / f'{int(vmid)}.json',
-             CLUSTER_RECORDS / f'{int(vmid)}.json',
+             CLUSTER_RECORDS / f'{int(vmid)}.json', public_routes.include_path(vmid), public_routes.contract_path(vmid),
              *oci_console.LOG_DIR.glob(f'{int(vmid)}.console.log*')]
     return any(path.exists() for path in paths)
 
@@ -214,7 +215,8 @@ def sweep_orphans(root):
                                (runtime_settings.seccomp_path(0).parent, r'([0-9]+)\.proxmenux-seccomp'),
                                (oci_console.LOG_DIR, r'([0-9]+)\.console\.log.*'),
                                (SNIPPETS, r'proxmenux-rclone-([0-9]+)-fuse-hook\.sh'),
-                               (CLUSTER_RECORDS, r'([0-9]+)\.json')):
+                               (CLUSTER_RECORDS, r'([0-9]+)\.json'),
+                               (public_routes.DIRECTORY, r'([0-9]+)\.(?:conf|json)')):
         if directory.is_dir():
             found.update(int(m.group(1)) for m in (re.fullmatch(pattern, p.name) for p in directory.iterdir()) if m)
     # Only the App tab registrations of OCI installs; the other ones belong to
@@ -231,9 +233,16 @@ def sweep_orphans(root):
         if instances.guest_exists(vmid):
             continue
         record = instances.has_contract(root, vmid)
+        route_assets = public_routes.contract_path(vmid).exists() or public_routes.include_path(vmid).exists()
+        route_identity = instances.read(root, vmid)['installation_id'] if record and route_assets else None
         if record and not instances.release_orphan(root, vmid):
             continue
         if not (record or _leftovers(vmid)):
+            continue
+        try:
+            public_routes.remove(vmid, route_identity)
+        except (ValueError, OSError):
+            # Changed or unowned assets remain for inspection, never guessed.
             continue
         oci_console.remove_log(vmid)
         remove_host_state(vmid)
@@ -340,6 +349,7 @@ def remove(root, vmid):
             msg_warn(f"{translate('The container no longer exists:')} CT {member}")
             incomplete = True
             oci_console.remove_log(member)
+            public_routes.remove(member, record['installation_id'])
             remove_host_state(member)
         elif instances.identity(config) != record['installation_id']:
             msg_warn(f"{translate('The VMID belongs to another container now and is not touched:')} CT {member}")
@@ -349,6 +359,7 @@ def remove(root, vmid):
             subprocess.run(['pct', 'stop', str(member), '--skiplock', '1'], check=False, capture_output=True)
             run('pct', 'destroy', str(member), '--purge', '1', '--destroy-unreferenced-disks', '1')
             oci_console.remove_log(member)
+            public_routes.remove(member, record['installation_id'])
             remove_host_state(member)
             msg_ok(f"{translate('Container removed:')} CT {member}")
     if bridge and not bridge_in_use(bridge, set(members)):

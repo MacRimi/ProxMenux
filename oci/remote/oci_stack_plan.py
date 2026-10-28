@@ -1,5 +1,6 @@
 """Read-only validation of a coordinated stack operation, before host changes."""
 import copy
+import oci_stack_public_routes as public_routes
 import re
 import uuid
 
@@ -32,6 +33,27 @@ def validate_job_check(check, record=None):
     return job
 
 
+def validate_public_route_members(primary_id, records):
+    """A route may name only the frontends of this exact recorded stack."""
+    for vmid, record in records.items():
+        spec = public_routes.validate(record.get('deployment', {}), vmid, record['installation_id'])
+        if spec is None:
+            continue
+        primary = records.get(primary_id)
+        if (primary is None or spec['primary_vmid'] != primary_id
+                or spec['stack_id'] != primary['installation_id']):
+            raise ValueError(translate('Invalid stack contract'))
+        members = {member['vmid']: member['installation_id']
+                   for member in primary.get('stack', {}).get('members', [])}
+        if members.get(vmid) != record['installation_id']:
+            raise ValueError(translate('Invalid stack contract'))
+        for route in spec['routes']:
+            target = records.get(route['target_vmid'])
+            if (target is None or target['installation_id'] != route['target_installation_id']
+                    or members.get(route['target_vmid']) != route['target_installation_id']):
+                raise ValueError(translate('Invalid stack contract'))
+
+
 def build(primary, records, inventory, operation):
     """Inventory maps VMIDs to installation UUIDs, including unrelated guests.
 
@@ -43,6 +65,7 @@ def build(primary, records, inventory, operation):
     stack = primary.get('stack')
     if not stack or not stack.get('members'):
         raise ValueError(translate('This is not a coordinated stack'))
+    validate_public_route_members(primary['vmid'], records)
     snapshots = stack['members']
     ids = [member['vmid'] for member in snapshots]
     if any(type(vmid) is not int or vmid < 100 for vmid in ids) or len(set(ids)) != len(ids):

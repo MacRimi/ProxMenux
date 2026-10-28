@@ -15,6 +15,7 @@ import uuid
 
 import oci_image_cache as image_cache
 import oci_carried_record as carried
+import oci_stack_public_routes as public_routes
 import oci_compose_jobs as compose_jobs
 import oci_instances as instances
 import oci_instance_transaction as member_tx
@@ -227,6 +228,7 @@ class NativeAdapter:
                 if row['type'] != 'lxc' or row.get('node') != socket.gethostname().split('.')[0]:
                     raise ValueError(translate('A member VMID is in use by another guest or is on another node'))
                 config = instances.command('pct', 'config', str(vmid))
+                public_routes.check(config, record['deployment'], vmid, record['installation_id'])
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
                 if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config, ignore_tags=True):

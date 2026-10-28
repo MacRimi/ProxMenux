@@ -242,6 +242,12 @@ variables, such as `NEXTAUTH_URL` or `ROOT_URL`, must contain the intended URL i
 the supplied Compose or environment file. Changing a frontend IP later also
 requires updating its application URLs.
 
+Private members receive specific routes to their own stack's static frontend
+addresses before the application starts. These routes stay inside the container's
+network namespace and use the frontend's private address as the next hop. Native
+update and recovery preserve their ownership records and rebuild the required
+host configuration, including when a restore changes container IDs.
+
 Repeated identical volume sources share one host directory, selected once;
 separate configuration volumes stay independent. Host directories are not part
 of a normal Proxmox container backup. Newly created private data volumes use the

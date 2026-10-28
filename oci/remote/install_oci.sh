@@ -2107,6 +2107,16 @@ apply_rlimits
 apply_host_monitor
 apply_kept_settings
 
+# Recreated stack members retain their owned pre-init routes. Append rather
+# than replacing lxc.include: other managed runtime includes must survive.
+if jq -e '.stack_public_routes != null' "$DEPLOYMENT_FILE" >/dev/null; then
+  ROUTE_INCLUDE=$(python3 "${SCRIPT_DIR}/oci_stack_public_routes.py" install "$VMID" \
+    --deployment "$DEPLOYMENT_FILE" --installation-id "$INSTANCE_ID") \
+    || die "Managed public route installation failed"
+  [[ -n "$ROUTE_INCLUDE" ]] || die "Managed public route include is missing"
+  grep -Fxq "$ROUTE_INCLUDE" "$CONF" || printf '%s\n' "$ROUTE_INCLUDE" >>"$CONF"
+fi
+
 while IFS= read -r REPAIR_ENCODED; do
   [[ -n $REPAIR_ENCODED ]] || continue
   run_pre_start_repair "$(printf '%s' "$REPAIR_ENCODED" | base64 -d)"

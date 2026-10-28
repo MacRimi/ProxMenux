@@ -42,6 +42,7 @@ class JobInstallIntegrationTests(unittest.TestCase):
                 staged=Path(command[1]).parent/'oci_compose_jobs.py'
                 self.assertEqual(staged.read_bytes(),(ROOT/'remote/oci_compose_jobs.py').read_bytes())
                 self.assertEqual((staged.parent/'oci_carried_record.py').read_bytes(),(ROOT/'remote/oci_carried_record.py').read_bytes())
+                self.assertEqual((staged.parent/'oci_stack_public_routes.py').read_bytes(),(ROOT/'remote/oci_stack_public_routes.py').read_bytes())
                 return None
             with patch.object(installer,'_stream_process',side_effect=inspect):
                 installer._run_remote_install(ROOT,template,{'deployment_kind':'generic-multi-lxc-stack'},'local',True)
@@ -54,6 +55,7 @@ class JobInstallIntegrationTests(unittest.TestCase):
                 with tarfile.open(fileobj=io.BytesIO(data),mode='r:gz') as archive:
                     self.assertEqual(archive.extractfile('oci_compose_jobs.py').read(),(ROOT/'remote/oci_compose_jobs.py').read_bytes())
                     self.assertEqual(archive.extractfile('oci_carried_record.py').read(),(ROOT/'remote/oci_carried_record.py').read_bytes())
+                    self.assertEqual(archive.extractfile('oci_stack_public_routes.py').read(),(ROOT/'remote/oci_stack_public_routes.py').read_bytes())
                 return None
             with patch.object(installer,'_stream_process',side_effect=inspect):
                 installer._run_remote_install(ROOT,template,{'deployment_kind':'generic-multi-lxc-stack'},'test-node',True)

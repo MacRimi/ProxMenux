@@ -31,6 +31,7 @@ import tempfile
 
 import oci_carried_record as carried
 import oci_console
+import oci_stack_public_routes as public_routes
 import oci_instances as instances
 import oci_compose_jobs as compose_jobs
 import oci_stack_plan
@@ -59,7 +60,7 @@ HOST_MONITOR_CONTENT = 'lxc.namespace.share.pid = 1\nlxc.namespace.share.net = 1
 # them from, so they are not offered again.
 UNRECOVERABLE = '.unrecoverable.json'
 # The fields of a record that name a container of the application.
-VMID_KEYS = ('vmid', 'primary_vmid', 'base_vmid')
+VMID_KEYS = ('vmid', 'primary_vmid', 'base_vmid', 'target_vmid')
 
 
 def run(*args):
@@ -287,7 +288,7 @@ def renumbered_lines(text, old, new):
              f'lxc.include: {runtime_settings.legacy_include_path(old)}': f'lxc.include: {runtime_settings.include_path(new)}'}
     hook = re.compile(rf'(hookscript: \S+:snippets/proxmenux-rclone-){int(old)}(-fuse-hook\.sh)')
     lines = [hook.sub(rf'\g<1>{int(new)}\g<2>', swaps.get(line, line)) if line.startswith('hookscript: ')
-             else swaps.get(line, line) for line in text.split('\n')]
+             else swaps.get(line, public_routes.renumber_line(line, old, new)) for line in text.split('\n')]
     return '\n'.join(lines)
 
 
@@ -441,6 +442,11 @@ def check_host_resources(plan):
         vmid, label = entry['vmid'], f"CT {entry['vmid']}"
         values = parse_config(entry['config'].encode())
         deployment = entry['copy']['record']['deployment']
+        projected = renumbered_lines(entry['config'], entry.get('recorded', vmid), vmid)
+        try:
+            public_routes.check(projected, deployment, vmid, entry.get('installation_id'), require_host_assets=False)
+        except ValueError as error:
+            plan['blockers'].append(f"{label}: {error}")
         directories = [value.split(',', 1)[0] for key, value in values.items()
                        if re.fullmatch(r'mp[0-9]+', key) and value.startswith('/')]
         devices = [oci_stack_modify.device_path(value) for key, value in values.items()
@@ -482,6 +488,9 @@ def check_host_resources(plan):
             if key != 'lxc.include':
                 continue
             path = Path(value)
+            if any(public_routes.own(f'lxc.include: {path}', number) for number in {vmid, entry.get('recorded', vmid)}):
+                # Canonical assets are emitted from the validated deployment before start.
+                continue
             if path in HOST_MONITOR:
                 if path.exists() and path.read_text() != HOST_MONITOR_CONTENT:
                     plan['blockers'].append(f"{label}: {translate('a different host monitor include already exists:')} {path}")
@@ -708,12 +717,27 @@ def check_records(root, plan):
             plan['blockers'].append(f"CT {entry['vmid']}: {translate('this host keeps a record of another installation with an operation pending')}")
 
 
+def check_public_route_members(root, plan):
+    """Guest-carried routes can target only members validated in this recovery."""
+    restored = {entry['vmid']: entry['copy']['record'] for entry in plan['restored'] if entry.get('copy')}
+    try:
+        records = {member['vmid']: restored.get(member['vmid']) or instances.read(root, member['vmid'])
+                   for member in plan['members']}
+        if not any(record.get('deployment', {}).get('stack_public_routes') for record in records.values()):
+            return
+        oci_stack_plan.validate_public_route_members(plan['primary'], records)
+    except (ValueError, KeyError, OSError) as error:
+        plan['blockers'].append(translate('Invalid stack contract') + ': ' + str(error))
+
+
 def prepare(root):
     """Every restored application of this node, with what prevents its
     recovery and what the user has to know."""
     plans = applications(root, [examine(entry) for entry in pending(root)])
     for plan in plans:
         check_records(root, plan)
+        if not plan['blockers']:
+            check_public_route_members(root, plan)
         if not plan['blockers']:
             check_networks(plan)
             check_host_resources(plan)
@@ -740,6 +764,7 @@ def restore_host_files(entry):
     vmid = entry['vmid']
     deployment = entry['copy']['record']['deployment']
     renumber_config(entry)
+    public_routes.restore(deployment, vmid, entry.get('installation_id'))
     for line in entry['config'].splitlines():
         key, _, value = line.partition(': ')
         if key == 'lxc.include':
