@@ -8601,6 +8601,7 @@
   "missing": "mancanti",
   "mkfs.btrfs not found. Install btrfs-progs and retry.": "mkfs.btrfs non trovato. Installare btrfs-progs e riprovare.",
   "more": "in più",
+  "more packages; the full list is in the update log": "pacchetti in più; l'elenco completo è nel log dell'aggiornamento",
   "motionEye web interface": "Interfaccia web motionEye",
   "mount.cifs command not found after installation.": "Comando mount.cifs non trovato dopo l'installazione.",
   "mount.nfs command not found after installation.": "Comando mount.nfs non trovato dopo l'installazione.",

@@ -8602,6 +8602,7 @@
   "missing": "chýba",
   "mkfs.btrfs not found. Install btrfs-progs and retry.": "mkfs.btrfs sa nenašiel. Nainštalujte btrfs-progs a skúste to znova.",
   "more": "ďalších",
+  "more packages; the full list is in the update log": "ďalších balíkov; úplný zoznam je v zázname aktualizácie",
   "motionEye web interface": "Webové rozhranie motionEye",
   "mount.cifs command not found after installation.": "Príkaz mount.cifs sa po inštalácii nenašiel.",
   "mount.nfs command not found after installation.": "Príkaz mount.nfs sa po inštalácii nenašiel.",
