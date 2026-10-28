@@ -265,7 +265,7 @@
           "list": {
             "items": [
               "Dockerfile bez publikovaného obrazu: obraz sa musí najprv zostaviť a zverejniť v registri OCI.",
-              "Súbor Compose s viacerými službami sa zablokuje, pretože táto voľba inštaluje iba jednu službu do jedného kontajnera, aj keď viaceré služby používajú rovnaký obraz.",
+              "Súbory Compose s viacerými službami používajú samostatný natívny LXC pre každú službu. Každá webová aplikácia potrebuje vlastný publikovaný port; zväzky s rovnakým zdrojom môžu zdieľať adresár hostiteľa. Nepodporované voľby, externé siete a služby bez podporovanej kontroly stavu naďalej blokujú inštaláciu.",
               "<code>configs</code>, externé tajné údaje alebo formáty zariadení, ktoré nemožno jednoznačne prispôsobiť.",
               "Nahradenia shellu, napríklad <code>$(command)</code>: namiesto nich treba zapísať výslednú hodnotu.",
               "Nerozpoznané voľby <code>docker run</code> a <code>--env-file</code>: namiesto nich použite súbor Compose s výslovne uvedenými hodnotami."

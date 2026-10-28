@@ -2,6 +2,7 @@
 is translated into the same template the catalog applications use."""
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -20,7 +21,7 @@ from .catalog import TIME_SETTINGS
 from .cli import install_template
 from .i18n import source_text
 from .installer import ADVANCED_MODE, DEFAULT_MODE
-from .converter import ConversionError
+from .converter import ConversionError, _image_contract
 from .i18n import N_, translate
 from .registry_auth import RegistryError, refuses_access, validate_image
 from .ui import UserCancelled
@@ -107,22 +108,14 @@ def _check_mounts(service: dict[str, Any]) -> None:
 def _keep_reference(template: dict[str, Any], reference: str) -> None:
     """The catalog normalizes every image to its latest tag; an image given by
     hand keeps the tag or the digest that was written."""
-    repository, _, digest = reference.partition('@')
-    tag = ''
-    if ':' in repository.rsplit('/', 1)[-1]:
-        repository, _, tag = repository.rpartition(':')
-    image = template['container_contract']['image']
-    image['reference'] = reference if (tag or digest) else f'{repository}:latest'
-    image['repository'] = repository
-    image['tag'] = tag or ('' if digest else 'latest')
-    image['digest'] = f'@{digest}' if digest else None
-    if tag or digest:
+    image = _image_contract(reference)
+    if image.get('digest') or ':' in reference.split('@', 1)[0].rsplit('/', 1)[-1]:
         image['pull_policy'] = 'resolve-written-reference-to-architecture-digest-at-install'
+    template['container_contract']['image'] = image
 
 
 def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]:
-    """The template of a Compose file with a single service. The metadata the
-    importer expects is taken from the service itself."""
+    """Translate a Compose application through the native single or stack installer."""
     try:
         compose = yaml.safe_load(text)
     except yaml.YAMLError as error:
@@ -131,9 +124,7 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
         raise ConversionError(translate('The Compose file does not contain a Compose document'))
     services = _services(compose)
     if len(services) > 1:
-        raise ConversionError(
-            f"{translate('The Compose file describes several services:')} {', '.join(services)}. "
-            f"{translate('Only one service at a time can be installed this way.')}")
+        return _template_from_stack(compose, title)
     name = next(iter(services))
     service = services[name] or {}
     if not service.get('image'):
@@ -178,6 +169,63 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
         raise ConversionError(
             f"{translate('These container mount paths have an extension-like suffix:')} {', '.join(files)}. "
             f"{translate('This import rejects these paths without checking whether they are files or directories.')}")
+    return template
+
+
+def _template_from_stack(compose: dict[str, Any], title: str | None) -> dict[str, Any]:
+    """Reuse the catalog stack compiler, keeping explicitly selected image versions."""
+    from .stack import apply_stack_support
+
+    services = _services(compose)
+    singles = {}
+    for name, service in services.items():
+        if not isinstance(service, dict):
+            raise ConversionError(f"{translate('The service declares no image:')} {name}")
+        singles[name] = template_from_compose(_dump({'services': {name: service}}), title)
+    metadata = compose.get('x-casaos', {})
+    if metadata is None:
+        metadata = {}
+    if not isinstance(metadata, dict):
+        raise ConversionError('x-casaos.main no identifica un servicio valido')
+    main = metadata.get('main') or next(
+        (name for name, service in services.items() if _published_port(service)), next(iter(services)))
+    if not isinstance(main, str) or main not in services:
+        raise ConversionError('x-casaos.main no identifica un servicio valido')
+    document = copy.deepcopy(compose)
+    document['x-casaos'] = {**metadata, 'main': main,
+                           'title': {'en_US': title or main}}
+    port = _published_port(services[main])
+    if port:
+        document['x-casaos'].update(port_map=port, scheme='http', index='/')
+    identifier = normalize_app_id(str(compose.get('name') or title or main))
+    template = convert_casaos_compose(_dump(document), 'local', '',
+                                     f'local/{identifier}/docker-compose.yml', '')
+    template['proxmox']['custom_compose_stack'] = True
+    _keep_reference(template, str(services[main]['image']))
+    # Catalog imports use latest. A pasted Compose must keep every written tag/digest.
+    for service in template['compose_stack']['services']:
+        reference = singles[service['name']]['container_contract']['image']['reference']
+        service['image'] = reference
+        service['compose']['image'] = reference
+        if 'environment' in services[service['name']]:
+            service['compose']['environment'] = copy.deepcopy(services[service['name']]['environment'])
+        service['compose']['volumes'] = [
+            mount for mount in service['compose'].get('volumes', [])
+            if (mount.get('target') if isinstance(mount, dict)
+                else str(mount).split(':')[-1]) not in TIME_SETTINGS]
+    template['container_contract']['original_compose'] = _dump({
+        **template['compose_stack']['top_level'],
+        'services': {service['name']: service['compose'] for service in template['compose_stack']['services']}})
+    for service in template['container_contract']['related_services']:
+        service['image'] = singles[service['name']]['container_contract']['image']['reference']
+    preparations = list({entry['container_path']: entry for single in singles.values()
+                         for entry in single['proxmox'].get('installer_profile', {}).get('volume_preparations', [])}.values())
+    template['proxmox'].setdefault('installer_profile', {})['volume_preparations'] = preparations
+    apply_stack_support(template)
+    # Keep compiler diagnostics visible at the custom-image boundary.
+    if template['proxmox'].get('generic_stack_review'):
+        template['compatibility']['automatic_install_candidate'] = False
+        template['compatibility']['untranslated_blockers'] = template['proxmox']['generic_stack_review']
     return template
 
 
@@ -589,7 +637,7 @@ def ignored_settings(text: str) -> list[str]:
             notes.append(translate('The container takes its time zone from Proxmox, so the time files '
                                    'of the host are not attached to it.'))
             break
-    if compose.get('networks') or compose.get('volumes'):
+    if len(compose.get('services') or {}) == 1 and (compose.get('networks') or compose.get('volumes')):
         notes.append(translate('The container gets its own address and its own volumes, so the networks '
                                'and volumes declared in the file are not used.'))
     return notes
@@ -642,6 +690,10 @@ def describe(template: dict[str, Any]) -> str:
     profile = proxmox.get('installer_profile', {}) or {}
     security = proxmox.get('security_profile', {}) or {}
     lines = [f"{translate('Image') + ':':<14} {contract['image']['reference']}"]
+    services = (template.get('compose_stack') or {}).get('services') or []
+    if len(services) > 1:
+        lines += ['', translate('Containers of the application:')]
+        lines += [f"  {service['name']}: {service['image']}" for service in services]
     endpoints = template.get('first_run', {}).get('endpoints') or []
     if endpoints:
         # The address is read from the published port; the image does not say
@@ -679,7 +731,7 @@ def describe(template: dict[str, Any]) -> str:
     if environment:
         lines += ['', translate('Variables the installation asks for:')]
         lines += [f"  {item['name']}"
-                  + (f" = {item['example']}" if item.get('example') and not item['sensitive'] else '')
+                  + (f" = {item['example']}" if item.get('example') and not item['sensitive'] and len(services) <= 1 else '')
                   + ('' if item.get('required', True) else f" ({translate('optional')})")
                   for item in environment]
     devices = profile.get('device_requests') or []
@@ -744,13 +796,17 @@ def _explore(ui) -> None:
         template = template_from_compose(text)
     title = translate('Image that is not in the catalog')
     summary = describe(template) + (describe_oci_compose(template) if written else '')
-    reference = template['container_contract']['image']['reference']
-    available, report = registry_report(reference)
-    if not available and _registry_refused(reference):
-        from .registry_accounts import offer_sign_in
-        if offer_sign_in(ui, reference, title):
-            available, report = registry_report(reference)
-    summary += '\n\n' + report
+    stack_services = (template.get('compose_stack') or {}).get('services') or []
+    references = list(dict.fromkeys(service['image'] for service in stack_services)) if len(stack_services) > 1 else [template['container_contract']['image']['reference']]
+    available = True
+    for reference in references:
+        accessible, report = registry_report(reference)
+        if not accessible and _registry_refused(reference):
+            from .registry_accounts import offer_sign_in
+            if offer_sign_in(ui, reference, title):
+                accessible, report = registry_report(reference)
+        available = available and accessible
+        summary += '\n\n' + report
     if notes:
         summary += '\n\n' + '\n'.join(notes)
     if not available:
@@ -762,7 +818,7 @@ def _explore(ui) -> None:
         ui.message(f"{translate('This image cannot be installed as it is described:')}\n\n{summary}", title)
         return
     # An oci-compose already says which of its values are secret and which it generates.
-    secrets = [] if written else _ask_secrets(template)
+    secrets = [] if written or len(stack_services) > 1 else _ask_secrets(template)
     if secrets:
         summary += ('\n\n' + translate('These values are asked during the installation:') + ' '
                     + ', '.join(secrets))

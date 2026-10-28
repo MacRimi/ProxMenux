@@ -209,7 +209,7 @@ The native path checks the saved configuration and installation identity, keeps 
 
 ## From a Compose file or a docker run command to an oci-compose
 
-The converter reads a Compose file with one service. A `docker run` command and an image reference alone are first written as a Compose file and follow the same path, so the three produce the same kind of oci-compose.
+The converter reads Compose files with one or several services. Multi-service files use the same native stack compiler as catalog applications: each service runs in its own LXC, with dependency ordering and private networking. The first service that publishes a port is selected as the main service, unless `x-casaos.main` specifies another one. Every image is checked for registry access before installation, and written tags and digests are preserved. Each web application uses its own published container port for its health check and receives its own LAN address. Repeated identical volume sources share one host directory, whose location is selected once; separate configuration volumes remain independent. Unsupported stack features (including external networks and application services without a supported health check) are reported before installation. A `docker run` command and an image reference alone are first written as a Compose file and follow the same path, so the three produce the same kind of oci-compose.
 
 Starting from this definition:
 
@@ -251,7 +251,7 @@ each key becomes a field of the oci-compose:
 | `stop_grace_period` | `proxmox.defaults.shutdown_timeout_seconds` | The time a shutdown waits |
 | `labels`, `logging` | Kept in `container_contract.original_compose` only | Not applied: they are read by Docker tools |
 
-What has no translation stops the installation and is named: `pid: host`, a Compose file with several services given to this option, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
+What has no translation stops the installation and is named: `pid: host`, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
 
 Besides those fields, the converter writes the blocks that describe the translation itself: where the definition came from, the keys it understood, the adaptations it applied and the state of each validation. They are listed in [Blocks ProxMenux writes](#blocks-proxmenux-writes).
 

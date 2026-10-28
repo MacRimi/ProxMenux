@@ -421,6 +421,12 @@ def attach_mounts(service, temporary):
             if not source.is_absolute() or ',' in str(source) or '\n' in str(source):
                 raise RuntimeError(translate('Invalid shared path'))
             if not source.exists():
+                shared_owner = mount.get('host_owner')
+                if shared_owner is not None:
+                    if (not isinstance(shared_owner, list) or len(shared_owner) != 2
+                            or any(type(value) is not int or not 0 <= value <= 2**32-2 for value in shared_owner)):
+                        raise RuntimeError(translate('Invalid shared path'))
+                    owner = (*shared_owner, owner[2])
                 source.mkdir(parents=True)
                 os.chown(source,*owner[:2])
                 source.chmod(owner[2])
@@ -883,7 +889,8 @@ def main():
             refresh_notes(services)
             # The credentials of the main service come from its own installation.
             result.update(vmid=primary_id,ip=lan,stack_vmids={s['name']:s['vmid'] for s in services},
-                          urls=[{'label':'Web UI','url':public_url}],
+                          urls=(lan_access_urls(services, subnet) if sum(bool(s['main'] or s.get('frontend')) for s in services) > 1
+                                else [{'label':'Web UI','url':public_url}]),
                           credentials=result.get('credentials') or [])
             result.update(completion_notes=[note.replace('{main_vmid}',str(primary_id))
                                             for note in deployment.get('completion_notes', [])], log=LOG)

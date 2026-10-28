@@ -265,7 +265,7 @@
           "list": {
             "items": [
               "Ein Dockerfile ohne veröffentlichtes Image: Das Image muss zuerst gebaut und in einer OCI-Registry veröffentlicht werden.",
-              "Eine Compose-Datei mit mehreren Diensten: Diese Option installiert jeweils einen Dienst in einem Container, auch wenn mehrere Dienste dasselbe Image verwenden.",
+              "Compose-Dateien mit mehreren Diensten verwenden einen nativen LXC pro Dienst. Jede Webanwendung benötigt einen eigenen veröffentlichten Port; Volumes mit derselben Quelle können ein Hostverzeichnis gemeinsam nutzen. Nicht unterstützte Optionen, externe Netzwerke und Dienste ohne unterstützte Zustandsprüfung verhindern weiterhin die Installation.",
               "<code>configs</code>, externe Geheimnisse oder Geräteformate, die sich nicht eindeutig umsetzen lassen.",
               "Shell-Ersetzungen wie <code>$(command)</code>: Stattdessen muss der resultierende Wert angegeben werden.",
               "Nicht erkannte <code>docker run</code>-Optionen und <code>--env-file</code>: Verwenden Sie stattdessen eine Compose-Datei mit expliziten Werten."
