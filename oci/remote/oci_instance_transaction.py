@@ -567,7 +567,7 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
             or any(not re.fullmatch(r'[A-Za-z0-9_.-]+:[^\s,]+', value) or value in used_volumes
                    for value in detached.values())):
         raise ValueError(translate('The container disks do not match the saved record'))
-    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
+    if re.search(r'^\[[^]\r\n]+\]\s*$', config.decode(), re.MULTILINE) or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
     if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
