@@ -94,6 +94,8 @@ class RebootGuards(unittest.TestCase):
     def setUp(self):
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
         self.root=Path(temporary.name); self.lock=self.root/'update.lock'
+        (self.root/'proc').mkdir()
+        self.proc=patch.object(controls,'PROC',self.root/'proc');self.proc.start();self.addCleanup(self.proc.stop)
         boot=self.root/'boot_id';boot.write_text('fixture-boot')
         self.boot=patch.object(controls,'BOOT_ID',boot);self.boot.start();self.addCleanup(self.boot.stop)
         self.a=patch.object(controls,'LOCK',str(self.lock)); self.a.start(); self.addCleanup(self.a.stop)
@@ -121,8 +123,8 @@ class RebootGuards(unittest.TestCase):
         self.lock.touch()
         marker=self.root/'inert-action'
         command=list(controls.COMMAND)
-        self.assertEqual(command[-1],'/bin/systemctl reboot && /bin/sleep 60')
-        command[4]=str(self.lock);command[-1]='printf reached > '+shlex.quote(str(marker))
+        self.assertEqual(command[5:],['/usr/bin/python3','/usr/local/share/proxmenux/monitor-app/usr/bin/host_update_controls.py','--execute-reboot'])
+        command[4]=str(self.lock);command[5:]=['/bin/sh','-c','printf reached > '+shlex.quote(str(marker))]
         with self.lock.open('r') as owner:
             fcntl.flock(owner,fcntl.LOCK_EX|fcntl.LOCK_NB)
             self.assertFalse(controls.reboot_context()['allowed'])
@@ -136,6 +138,39 @@ class RebootGuards(unittest.TestCase):
         for state in ('current','unknown','not_applicable'):
             self.probe.return_value={'state':state}
             self.assertFalse(controls.reboot_context()['allowed'])
+
+    def test_direct_package_process_blocks_before_kernel_probe(self):
+        path=self.root/'proc/123';path.mkdir();(path/'comm').write_text('apt-get\n')
+        self.assertFalse(controls.reboot_context()['allowed'])
+        self.probe.assert_not_called()
+
+    def test_worker_package_locks_missing_or_unknown_kernel_never_reboot(self):
+        paths=[str(self.root/name) for name in ('frontend','backend')]
+        with patch.object(controls,'PACKAGE_LOCKS',paths),patch.object(controls.subprocess,'run') as reboot,patch.object(controls.time,'sleep') as delay:
+            self.assertEqual(controls.execute_reboot(),75)
+            reboot.assert_not_called();delay.assert_not_called()
+            for path in paths:Path(path).touch()
+            self.probe.return_value={'state':'unknown'}
+            self.assertEqual(controls.execute_reboot(),77)
+            reboot.assert_not_called()
+            self.probe.return_value={'state':'required'}
+            self.assertEqual(controls.execute_reboot(),0)
+            reboot.assert_called_once_with(['/bin/systemctl','reboot'],check=True,timeout=10)
+            delay.assert_called_once_with(60)
+
+    def test_actual_posix_package_lock_blocks_worker_before_reboot(self):
+        paths=[str(self.root/name) for name in ('frontend','backend')]
+        for path in paths:Path(path).touch()
+        # A separate process holds the same POSIX lock, just as APT does.
+        code='import fcntl,sys,time; f=open(sys.argv[1],"r+"); fcntl.lockf(f,fcntl.LOCK_EX); print("locked",flush=True); time.sleep(5)'
+        child=subprocess.Popen([sys.executable,'-c',code,paths[0]],stdout=subprocess.PIPE,text=True)
+        try:
+            self.assertEqual(child.stdout.readline().strip(),'locked')
+            with patch.object(controls,'PACKAGE_LOCKS',paths),patch.object(controls.subprocess,'run') as reboot:
+                self.assertEqual(controls.execute_reboot(),75)
+                reboot.assert_not_called()
+        finally:
+            child.terminate();child.wait(timeout=2);child.stdout.close()
 
 
 class Routes(unittest.TestCase):
