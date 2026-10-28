@@ -307,6 +307,7 @@ def get_full_health():
         bg_key = '_bg_detailed'
         bg_last = health_monitor.last_check_times.get(bg_key, 0)
         bg_age = _time.time() - bg_last if type(bg_last) in (int, float) else float('inf')
+        publish_live = False
 
         if 0 <= bg_age < 360 and bg_key in health_monitor.cached_results:
             # Use cached result (at most ~5 min old)
@@ -318,12 +319,29 @@ def get_full_health():
         else:
             # No fresh cache, run live (first load or cache expired)
             details = health_monitor.get_detailed_status()
+            if (not isinstance(details, dict) or not details.get('timestamp')
+                    or details.get('overall') not in ('OK', 'INFO', 'WARNING', 'CRITICAL', 'UNKNOWN')
+                    or not isinstance(details.get('summary'), str)
+                    or not isinstance(details.get('details'), dict)
+                    or not isinstance(details['details'].get('updates'), dict)):
+                raise ValueError('Health snapshot is incomplete')
+            # Publish an explicit check too: its caller may have invalidated
+            # the background cache after an update. A following read-only poll
+            # must see this result instead of waiting for another collector.
+            publish_live = True
 
         # Installed/running kernel state changes outside Monitor jobs too.
         # Overlay fresh read-only evidence without refreshing other checks or
         # rewriting the background collector's snapshot/timestamp.
         from kernel_reboot import refresh_health_reboot
         details = refresh_health_reboot(details)
+        if publish_live:
+            checked_at = _time.time()
+            health_monitor.cached_results[bg_key] = details
+            health_monitor.cached_results['_bg_overall'] = {
+                'status': details['overall'], 'summary': details['summary']}
+            health_monitor.last_check_times[bg_key] = checked_at
+            health_monitor.last_check_times['_bg_overall'] = checked_at
         
         active_errors = health_persistence.get_active_errors()
         dismissed = health_persistence.get_dismissed_errors()

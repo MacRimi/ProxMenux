@@ -249,7 +249,7 @@ class Routes(unittest.TestCase):
                    _TICKET_MAX_INFLIGHT=256,time=time,secrets=__import__('secrets'),json=json,
                    _host_update_completed=self.callback)
         names={'_issue_terminal_ticket','_consume_terminal_ticket','_ws_auth_check',
-               'issue_terminal_ticket_route','host_update_jobs_status','host_update_viewer'}
+               'issue_terminal_ticket_route','host_update_jobs_status','host_update_result','host_update_viewer'}
         nodes=[n for n in ast.parse((ROOT/'AppImage/scripts/flask_terminal_routes.py').read_text()).body if isinstance(n,ast.FunctionDef) and n.name in names]
         self.assertEqual(len(nodes),len(names))
         exec(compile(ast.Module(body=nodes,type_ignores=[]),'actual-host-routes','exec'),scope)
@@ -277,10 +277,33 @@ class Routes(unittest.TestCase):
             with patch.object(jobs.subprocess,'Popen') as spawn:
                 self.assertEqual(self.ticket(token).status_code,status)
                 self.assertEqual(self.client.get('/api/host-update-jobs',headers={'Authorization':'Bearer '+token}).status_code,status)
+                self.assertEqual(self.client.get('/api/host-update-jobs/fixture/result',headers={'Authorization':'Bearer '+token}).status_code,status)
                 self.attach(dict(resume=False))
                 spawn.assert_not_called()
         self.assertEqual(jobs.list_jobs(),[])
 
+    def test_finished_result_is_read_only_and_bounded_by_owner_output(self):
+        view=dict(state='complete',exit_code=0,text='inert saved output',truncated=False)
+        with patch.object(jobs,'get',return_value=SimpleNamespace(read=Mock(return_value=view))) as get,patch.object(jobs,'start') as start,patch.object(jobs.subprocess,'Popen') as spawn:
+            response=self.client.get('/api/host-update-jobs/fixture/result',headers={'Authorization':'Bearer valid'})
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.json,view)
+            self.assertEqual(response.headers['Cache-Control'],'no-store')
+            get.assert_called_once_with('fixture');start.assert_not_called();spawn.assert_not_called()
+
+    def test_result_auth_missing_invalid_running_never_starts_job(self):
+        with patch.object(jobs,'get') as get,patch.object(jobs,'start') as start,patch.object(jobs.subprocess,'Popen') as spawn:
+            self.assertEqual(self.client.get('/api/host-update-jobs/fixture/result').status_code,401)
+            get.assert_not_called()
+            get.side_effect=KeyError('missing')
+            self.assertEqual(self.client.get('/api/host-update-jobs/missing/result',headers={'Authorization':'Bearer valid'}).status_code,404)
+            get.side_effect=ValueError('invalid')
+            self.assertEqual(self.client.get('/api/host-update-jobs/invalid/result',headers={'Authorization':'Bearer valid'}).status_code,404)
+            get.side_effect=None
+            for state in ('running','attention','finalizing'):
+                get.return_value=SimpleNamespace(read=Mock(return_value=dict(state=state,exit_code=None)))
+                self.assertEqual(self.client.get('/api/host-update-jobs/fixture/result',headers={'Authorization':'Bearer valid'}).status_code,409)
+            start.assert_not_called();spawn.assert_not_called()
     def test_real_route_disconnect_401_then_relogin_replays_one_job(self):
         self.attach(dict(resume=False),self.ticket().json['ticket'])
         job=jobs.get('job-1')

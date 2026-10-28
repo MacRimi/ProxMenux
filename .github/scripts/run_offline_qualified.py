@@ -21,6 +21,7 @@ PYTHON_FILES = (
     "tests/test_reboot_health_refresh.py",
     "tests/test_host_update_controls.py",
     "tests/test_host_update_packaging.py",
+    "tests/test_host_update_version.py",
     "tests/test_lxc_update_jobs.py",
     "tests/test_post_install_i18n.py",
     "tests/test_remaining_cli_i18n.py",

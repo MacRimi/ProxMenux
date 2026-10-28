@@ -78,6 +78,10 @@ def wire_fixture():
             assert events.read_text().splitlines() == ['start', 'poststep']
             assert len(callbacks) == 1
             assert 'completed' in ''.join(frame.get('text', '') for frame in frames)
+            saved=requests.get(base+'/api/host-update-jobs/one-host-run/result',headers=headers,timeout=3)
+            assert saved.status_code==200 and saved.headers['Cache-Control']=='no-store'
+            assert saved.json()['exit_code']==0 and 'completed' in saved.json()['text']
+            assert events.read_text().splitlines()==['start','poststep'] and len(callbacks)==1
             if viewer.connected:
                 viewer.close()
             viewer = connect('missing-host-run', True)

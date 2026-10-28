@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { HostUpdateJobs, type HostUpdateJob } from "./host-update-jobs"
+import { HostUpdateResult } from "./host-update-result"
 import { RestartAfterUpdate, ProxMenuxVersionCard } from "./host-update-status"
 import { useT } from "@/lib/i18n/provider"
 import { useIsPbs } from "@/lib/use-platform"
@@ -134,6 +135,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
   const [hostJob, setHostJob] = useState<{ runId: string; resume: boolean; kind: "host" } | null>(null)
   const [hostJobs, setHostJobs] = useState<HostUpdateJob[]>([])
+  const [resultJobId, setResultJobId] = useState<string | null>(null)
   const healthRequest = useRef<AbortController | null>(null)
   const previousAutoExpanded = useRef<Set<string>>(new Set())
 
@@ -790,6 +792,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         <HostUpdateJobs open={open} activeId={showUpdateTerminal ? hostJob?.runId : undefined}
           onJobs={setHostJobs} onSettled={() => { void fetchHealthDetails(true) }}
           onResume={job => {
+            if (job.state === "complete") { setResultJobId(job.id); return }
             setHostJob({ runId: job.id, resume: true, kind: "host" })
             setShowUpdateTerminal(true)
           }} />
@@ -1069,6 +1072,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           </div>
         )}
       </DialogContent>
+      <HostUpdateResult jobId={resultJobId} getApiUrl={getApiUrl} onClose={() => setResultJobId(null)} />
       <ScriptTerminalModal
         key={hostJob?.runId || "host-update"}
         open={showUpdateTerminal}

@@ -60,4 +60,36 @@ const en=JSON.parse(fs.readFileSync(path.join(app,'messages/en/common.json'),'ut
 const sk=JSON.parse(fs.readFileSync(path.join(app,'messages/sk/common.json'),'utf8'))
 assert.deepEqual(Object.keys(en.healthStatus.hostUpdate).sort(),Object.keys(sk.healthStatus.hostUpdate).sort())
 assert.ok(health.includes('Number(categoryData?.count ?? 0) > 0'),'reboot-only state has no Update Now action')
-console.log('PASS host initial/resume transport, legacy/LXC routes, disconnect/unmount and EN/SK keys')
+const savedTree=ts.createSourceFile('result.tsx',fs.readFileSync(path.join(app,'components/host-update-result.tsx'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
+let readResult
+function resultWalk(n){
+ if(ts.isArrowFunction(n)&&n.modifiers?.some(m=>m.kind===ts.SyntaxKind.AsyncKeyword)&&n.getText(savedTree).includes('value.state'))readResult=n.getText(savedTree)
+ ts.forEachChild(n,resultWalk)
+}
+resultWalk(savedTree);assert.ok(readResult)
+async function results(){
+ const response={state:'complete',exit_code:0,text:'inert saved result',truncated:false}
+ for(const code of [0,1,130,-15]){
+  const calls=[],writes=[],codes=[],errors=[]
+  const scope={getAuthToken:()=>null,getApiUrl:p=>p,jobId:'saved-id',controller:new AbortController(),container:{current:{}},disposed:false,
+   fetch:async(p,options)=>{calls.push({p,options});return {ok:true,json:async()=>({...response,exit_code:code})}},
+   require:n=>n==='xterm'?{Terminal:class{loadAddon(){}open(){}write(v){writes.push(v)}writeln(v){writes.push(v)}}}:{FitAddon:class{fit(){}}},
+   ResizeObserver:class{observe(){}},setExitCode:v=>codes.push(v),setFailed:v=>errors.push(v),clearTimeout(){},timeout:1,t:s=>s}
+  await compile(readResult,scope)()
+  assert.deepEqual(codes,[code]);assert.deepEqual(errors,[]);assert.deepEqual(writes,['inert saved result'])
+  assert.equal(calls.length,1);assert.equal(calls[0].p,'/api/host-update-jobs/saved-id/result');assert.ok(!calls[0].options.method||calls[0].options.method==='GET')
+  for(const value of [null,{...response,state:'running'},{...response,exit_code:false},{...response,text:null},{...response,truncated:null}]){
+   codes.length=errors.length=writes.length=0
+   scope.fetch=async()=>({ok:true,json:async()=>value});await compile(readResult,scope)()
+   assert.deepEqual(codes,[]);assert.deepEqual(writes,[]);assert.deepEqual(errors,[true])
+  }
+  codes.length=errors.length=writes.length=0
+  scope.fetch=async()=>({ok:false});await compile(readResult,scope)()
+  assert.deepEqual(errors,[true]);assert.deepEqual(codes,[]);assert.deepEqual(writes,[])
+  codes.length=errors.length=writes.length=0;scope.disposed=true;scope.controller.abort()
+  scope.fetch=async()=>({ok:true,json:async()=>response});await compile(readResult,scope)()
+  assert.deepEqual(codes,[]);assert.deepEqual(errors,[]);assert.deepEqual(writes,[],'closed result cannot receive a late response')
+ }
+ console.log('PASS host/legacy/LXC transports and actual readonly result GET: success/error/cancel/invalid/late-response; zero WS/start callbacks')
+}
+results().catch(error=>{console.error(error);process.exitCode=1})

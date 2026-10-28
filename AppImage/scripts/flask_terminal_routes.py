@@ -215,6 +215,22 @@ def host_update_jobs_status():
     return jsonify({'jobs': list_jobs()})
 
 
+@terminal_bp.route('/api/host-update-jobs/<run_id>/result', methods=['GET'])
+@require_admin_scope
+def host_update_result(run_id):
+    """Read a completed owner's retained output; never create or resume a job."""
+    from host_update_jobs import get
+    try:
+        view = get(run_id).read(0)
+    except (ValueError, KeyError):
+        return jsonify({'error': 'Host update result is unavailable'}), 404
+    if view['state'] != 'complete' or type(view['exit_code']) is not int:
+        return jsonify({'error': 'Host update has not completed'}), 409
+    response = jsonify({key: view[key] for key in ('state', 'exit_code', 'text', 'truncated')})
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
 @sock.route('/ws/host-update/<run_id>')
 def host_update_viewer(ws, run_id):
     """New fixed-script contract; existing script/LXC routes stay intact."""

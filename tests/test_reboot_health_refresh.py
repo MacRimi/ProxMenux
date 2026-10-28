@@ -143,6 +143,29 @@ class FullHealth(unittest.TestCase):
         self.assertEqual(code, 200)
         self.owner.get_detailed_status.assert_called_once()
 
+    def test_explicit_refresh_publishes_then_poll_never_rechecks(self):
+        result, code = self.call('?refresh=1')
+        self.assertEqual(code, 200)
+        self.assertIn('_bg_detailed', self.owner.cached_results)
+        self.assertEqual(self.owner.cached_results['_bg_overall']['status'],result['health']['overall'])
+        self.assertEqual(self.owner.last_check_times['_bg_overall'],self.owner.last_check_times['_bg_detailed'])
+        before = copy.deepcopy(self.owner.cached_results)
+        result, code = self.call('?cached=1')
+        self.assertEqual(code, 200)
+        self.assertEqual(result['health']['timestamp'], 'original')
+        self.assertEqual(self.owner.cached_results, before)
+        self.owner.get_detailed_status.assert_called_once()
+
+    def test_invalid_live_result_never_publishes_or_becomes_fresh(self):
+        for result in (None, {}, {'details': {}}, {'details': {'updates': {'status': 'OK'}}}):
+            with self.subTest(result=result):
+                self.owner.cached_results.clear()
+                self.owner.last_check_times.clear()
+                self.owner.get_detailed_status.return_value = result
+                self.assertEqual(self.call()[1], 500)
+                self.assertNotIn('_bg_detailed', self.owner.cached_results)
+                self.assertNotIn('_bg_detailed', self.owner.last_check_times)
+
 
 class Overlay(unittest.TestCase):
     def test_repeated_required_unknown_current_preserves_package_result_and_snapshot(self):
