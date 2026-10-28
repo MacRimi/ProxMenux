@@ -6932,6 +6932,7 @@
   "The build could not be checked beforehand; continuing without that check.": "Non è stato possibile verificare la build in anticipo; si prosegue senza tale verifica.",
   "The cached image does not match the current digest": "L'immagine nella cache non corrisponde al digest corrente",
   "The cached image is damaged; it will be downloaded again.": "L'immagine nella cache è danneggiata; verrà scaricata nuovamente.",
+  "The carried record could not be verified before the backup": "Impossibile verificare la copia del registro nel contenitore prima del backup",
   "The changes need the application installer": "Le modifiche richiedono il programma di installazione dell’applicazione",
   "The character device does not exist:": "Il dispositivo a caratteri non esiste:",
   "The command asks for a password that is not echoed. After creating the users, the web interface asks for a user name and a password.": "Il comando richiede una password non visualizzata durante la digitazione. Dopo la creazione degli utenti, l’interfaccia web richiede nome utente e password.",

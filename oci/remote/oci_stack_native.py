@@ -14,6 +14,7 @@ import tempfile
 import uuid
 
 import oci_image_cache as image_cache
+import oci_carried_record as carried
 import oci_compose_jobs as compose_jobs
 import oci_instances as instances
 import oci_instance_transaction as member_tx
@@ -417,6 +418,8 @@ class NativeAdapter:
                      f"{self.records[self.plan['primary_vmid']]['deployment'].get(work_backup.KEY)}")
         directory = base / ('backup-%s' % vmid)
         private_directory(directory)
+        config = member_tx.owned(vmid, identity).decode()
+        carried.carry_backup(self.root, vmid, self.records[vmid], config)
         archive = member_tx.verified_backup(vmid, directory, 'zstd',
                                             translate('The backup of a member could not be identified'))
         return {'archive': str(archive), 'sha256': member_tx.filehash(archive)}

@@ -6933,6 +6933,7 @@
   "The build could not be checked beforehand; continuing without that check.": "Zostavenie nebolo možné vopred skontrolovať;pokračovanie bez tejto kontroly.",
   "The cached image does not match the current digest": "Comment",
   "The cached image is damaged; it will be downloaded again.": "Obraz vo vyrovnávacej pamäti je poškodený; stiahne sa znova.",
+  "The carried record could not be verified before the backup": "Pred zálohovaním sa nepodarilo overiť kópiu záznamu uloženú v kontajneri",
   "The changes need the application installer": "Zmeny vyžadujú inštalačný program aplikácie",
   "The character device does not exist:": "Znakové zariadenie neexistuje:",
   "The command asks for a password that is not echoed. After creating the users, the web interface asks for a user name and a password.": "Príkaz sa opýta na heslo, ktoré sa pri písaní nezobrazuje. Po vytvorení používateľov bude webové rozhranie vyžadovať používateľské meno a heslo.",

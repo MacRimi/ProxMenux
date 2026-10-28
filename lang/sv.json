@@ -6932,6 +6932,7 @@
   "The build could not be checked beforehand; continuing without that check.": "Bygget kunde inte kontrolleras i förväg;fortsätter utan den kontrollen.",
   "The cached image does not match the current digest": "Den cachade bilden matchar inte den nuvarande smältningen",
   "The cached image is damaged; it will be downloaded again.": "Den cachade bilden är skadad; den kommer att laddas ner igen.",
+  "The carried record could not be verified before the backup": "Kopian av installationsposten i containern kunde inte verifieras före säkerhetskopieringen",
   "The changes need the application installer": "Ändringarna kräver programmets installationsverktyg",
   "The character device does not exist:": "Karaktärenheten existerar inte:",
   "The command asks for a password that is not echoed. After creating the users, the web interface asks for a user name and a password.": "Kommandot begär ett lösenord som inte echoed. Efter att ha skapat användarna ber webbgränssnittet om ett användarnamn och ett lösenord.",

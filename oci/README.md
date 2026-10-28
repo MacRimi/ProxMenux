@@ -256,6 +256,11 @@ The native exit-status monitor currently accepts LXC 7.0.0, the verified protoco
 version. Other versions refuse one-shot execution rather than treating a stopped
 container as proof of success.
 
+Before each native stack backup, the engine writes the validated original
+installation record into every stopped member and reads it back. A missing or
+unverifiable copy aborts the backup, so database and worker archives do not
+silently lose the metadata needed to register the restored stack.
+
 The bridges are local to the installation node; they are not a cluster SDN.
 Unsupported network and runtime semantics are reported before installation.
 Support for several services does not imply complete Docker Compose compatibility.
