@@ -50,6 +50,7 @@ def require_auth(f):
         auth_header = request.headers.get('Authorization')
         
         if not auth_header:
+            verify_token_full(None)  # Guarded, credential-free rejection diagnostic.
             return jsonify({
                 "error": "Authentication required",
                 "message": "No authorization header provided"
@@ -58,6 +59,7 @@ def require_auth(f):
         # Extract token from "Bearer <token>" format
         parts = auth_header.split()
         if len(parts) != 2 or parts[0].lower() != 'bearer':
+            verify_token_full(None)
             return jsonify({
                 "error": "Invalid authorization header",
                 "message": "Authorization header must be in format: Bearer <token>"

@@ -13,6 +13,15 @@ import sys
 import tempfile
 
 PYTHON_FILES = (
+    "tests/test_host_update_jobs.py",
+    "tests/test_host_update_transport.py",
+    "tests/test_host_update_shell.py",
+    "tests/test_host_update_auth.py",
+    "tests/test_kernel_reboot.py",
+    "tests/test_reboot_health_refresh.py",
+    "tests/test_host_update_controls.py",
+    "tests/test_host_update_packaging.py",
+    "tests/test_host_update_version.py",
     "tests/test_lxc_update_jobs.py",
     "tests/test_post_install_i18n.py",
     "tests/test_remaining_cli_i18n.py",
@@ -34,6 +43,11 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
+    "tests/test_host_update_ui.cjs",
+    "tests/test_reboot_health_refresh.cjs",
+    "tests/test_host_update_controls.cjs",
+    "tests/test_reboot_recovery.cjs",
+    "tests/test_proxmenux_version_row.cjs",
     "tests/test_lxc_update_jobs.cjs",
     "tests/test_api_import_boundaries.cjs",
     "tests/test_api_errors.cjs",

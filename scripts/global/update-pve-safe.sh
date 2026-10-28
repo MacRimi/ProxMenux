@@ -209,6 +209,10 @@ update_pve_safe() {
     if ! pmx_confirm_update "$(translate "Proxmox Update")" "$menu_text" "$upgradable_list" \
         "$(translate "Do you want to proceed with the system update?")"; then
         msg_info2 "$(translate "Update cancelled by user")"
+        if [[ "${PROXMENUX_HOST_UPDATE_JOB:-}" == "1" && "${EXECUTION_MODE:-}" == "web" ]]; then
+            rm -f "$screen_capture"
+            return 130
+        fi
         apt-get -y autoremove >/dev/null 2>&1 || true
         apt-get -y autoclean >/dev/null 2>&1 || true
         rm -f "$screen_capture"

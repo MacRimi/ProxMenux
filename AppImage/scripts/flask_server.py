@@ -1752,6 +1752,7 @@ def get_uptime():
 _system_info_cache = {
     'proxmox_version': None,
     'proxmox_version_time': 0,
+    'proxmox_version_stamp': 0.0,
     'available_updates': 0,
     'available_updates_time': 0,
     'available_updates_stamp': 0.0,
@@ -2748,6 +2749,9 @@ def _action_state(unit_name):
     return result_dict
 
 
+app.extensions['host_update_power'] = {'run': _action_run, 'state': _action_state}
+
+
 def _action_cancel(unit_name):
     """Stop a running transient action unit. Idempotent — succeeds on
     units that are not running (or don't exist).
@@ -3504,14 +3508,16 @@ def get_coral_info():
 
 
 def get_proxmox_version():
-    """Get Proxmox version if available. Cached for 6 hours."""
+    """Cache the installed PVE version until package state changes."""
     global _system_info_cache
     if is_pbs_host():
         return get_platform().get('version')
     
     now = time.time()
-    if _system_info_cache['proxmox_version'] is not None and \
-       now - _system_info_cache['proxmox_version_time'] < _SYSTEM_INFO_CACHE_TTL:
+    stamp = _apt_state_stamp()
+    age = now - _system_info_cache['proxmox_version_time']
+    if _system_info_cache['proxmox_version'] is not None and (0 <= age < _AVAILABLE_UPDATES_MIN_INTERVAL or
+       (stamp == _system_info_cache.get('proxmox_version_stamp') and 0 <= age < _SYSTEM_INFO_CACHE_TTL)):
         return _system_info_cache['proxmox_version']
     
     proxmox_version = None
@@ -3527,8 +3533,11 @@ def get_proxmox_version():
     except Exception as e:
         pass
     
+    if proxmox_version is None:
+        return None  # Keep last-known cache intact, but do not present it as fresh.
     _system_info_cache['proxmox_version'] = proxmox_version
     _system_info_cache['proxmox_version_time'] = now
+    _system_info_cache['proxmox_version_stamp'] = stamp
     return proxmox_version
 
 def _apt_state_stamp():

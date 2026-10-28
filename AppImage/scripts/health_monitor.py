@@ -4751,6 +4751,10 @@ class HealthMonitor:
         Inst lines and exposes them as an INFO sub-check.
         """
         cache_key = 'updates_check'
+        # Kernel activation is independent of pending APT packages. Check it
+        # even when the package result is cached; this performs no APT call.
+        from kernel_reboot import reboot_status, with_reboot_status
+        reboot = reboot_status()
         current_time = time.time()
         apt_history_path = '/var/log/apt/history.log'
 
@@ -4773,7 +4777,7 @@ class HealthMonitor:
             cache_ts = self.last_check_times[cache_key]
             history_changed = (history_mtime is not None and history_mtime > cache_ts)
             if not history_changed and current_time - cache_ts < 600:
-                return self.cached_results.get(cache_key)
+                return with_reboot_status(self.cached_results.get(cache_key), reboot)
 
         try:
             last_update_days = None
@@ -4803,11 +4807,11 @@ class HealthMonitor:
                 )
             except subprocess.TimeoutExpired:
                 print("[HealthMonitor] apt-get upgrade --dry-run timed out")
-                return {
+                return with_reboot_status({
                     'status': 'UNKNOWN',
                     'reason': 'apt-get timed out - repository may be unreachable',
                     'count': 0, 'checks': {}
-                }
+                }, reboot)
             
             status = 'OK'
             reason = None
@@ -5124,11 +5128,11 @@ class HealthMonitor:
             
             self.cached_results[cache_key] = update_result
             self.last_check_times[cache_key] = current_time
-            return update_result
+            return with_reboot_status(update_result, reboot)
             
         except Exception as e:
             print(f"[HealthMonitor] Updates check failed: {e}")
-            return {'status': 'UNKNOWN', 'reason': f'Updates check unavailable: {str(e)}', 'count': 0, 'checks': {}, 'dismissable': True}
+            return with_reboot_status({'status': 'UNKNOWN', 'reason': f'Updates check unavailable: {str(e)}', 'count': 0, 'checks': {}, 'dismissable': True}, reboot)
     
     def _check_fail2ban_bans(self) -> Dict[str, Any]:
         """

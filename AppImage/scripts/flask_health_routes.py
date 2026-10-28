@@ -2,7 +2,7 @@
 Flask routes for health monitoring with persistence support
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from health_monitor import health_monitor
 from health_persistence import health_persistence
 from jwt_middleware import require_auth, require_admin_scope
@@ -16,6 +16,53 @@ except ImportError:
     MOUNT_MONITOR_AVAILABLE = False
 
 health_bp = Blueprint('health', __name__)
+
+
+@health_bp.route('/api/health/proxmenux-version', methods=['GET'])
+@require_auth
+def get_proxmenux_version():
+    from proxmenux_version_status import version_status
+    return jsonify(version_status())
+
+
+@health_bp.route('/api/health/reboot-context', methods=['GET'])
+@require_admin_scope
+def get_reboot_context():
+    from host_update_controls import reboot_context
+    return jsonify(reboot_context())
+
+
+@health_bp.route('/api/health/reboot-after-update', methods=['POST'])
+@require_admin_scope
+def reboot_after_update():
+    import socket
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or data.get('confirm') is not True or data.get('hostname') != socket.gethostname() or not isinstance(data.get('boot_id'), str) or not data['boot_id']:
+        return jsonify({'reason': 'confirmation'}), 400
+    power = current_app.extensions.get('host_update_power')
+    if not power:
+        return jsonify({'reason': 'unavailable'}), 503
+    from host_update_controls import reboot_context, COMMAND, UNIT
+    context = reboot_context()
+    if context.get('boot_id') != data['boot_id']:
+        return jsonify({'reason': 'confirmation'}), 409
+    if not context['allowed']:
+        return jsonify({'reason': context['reason']}), 409
+    ok, error = power['run'](UNIT, list(COMMAND), description='ProxMenux: reboot after host update',
+                             extra_properties=['RuntimeMaxSec=75'])
+    if not ok:
+        return jsonify({'reason': 'unavailable'}), error.get('status', 500)
+    return jsonify({'accepted': True}), 202
+
+
+@health_bp.route('/api/health/reboot-after-update/status', methods=['GET'])
+@require_admin_scope
+def reboot_after_update_status():
+    power = current_app.extensions.get('host_update_power')
+    if not power:
+        return jsonify({'state': 'unknown'}), 503
+    from host_update_controls import UNIT
+    return jsonify(power['state'](UNIT))
 
 @health_bp.route('/api/health/status', methods=['GET'])
 @require_auth
@@ -243,10 +290,14 @@ def get_full_health():
     security before returning, so an event that just changed underlying state
     (Update Now finished, dismiss action) sees the new value immediately
     instead of waiting for the next polling tick.
+    ?cached=1 is a strictly read-only poll: no full checks or cache clearing,
+    even with refresh=1. Unavailable/stale snapshots return 503. Every valid
+    response refreshes reboot evidence, while keeping the full audit's date.
     """
     import time as _time
     try:
-        if request.args.get('refresh') == '1':
+        cached_only = request.args.get('cached') == '1'
+        if not cached_only and request.args.get('refresh') == '1':
             for ck in ('updates_check', 'pve_services', 'security_check',
                        '_bg_detailed', '_bg_overall', 'overall_health'):
                 health_monitor.last_check_times.pop(ck, None)
@@ -255,14 +306,42 @@ def get_full_health():
         # Try to use the background-cached detailed result for instant response
         bg_key = '_bg_detailed'
         bg_last = health_monitor.last_check_times.get(bg_key, 0)
-        bg_age = _time.time() - bg_last
+        bg_age = _time.time() - bg_last if type(bg_last) in (int, float) else float('inf')
+        publish_live = False
 
-        if bg_age < 360 and bg_key in health_monitor.cached_results:
+        if 0 <= bg_age < 360 and bg_key in health_monitor.cached_results:
             # Use cached result (at most ~5 min old)
             details = health_monitor.cached_results[bg_key]
+        elif cached_only:
+            # Automatic polling must never start APT or a full audit, even
+            # during startup, collector failure, expiry or a conflicting flag.
+            return jsonify({'error': 'Health snapshot is not available yet'}), 503
         else:
             # No fresh cache, run live (first load or cache expired)
             details = health_monitor.get_detailed_status()
+            if (not isinstance(details, dict) or not details.get('timestamp')
+                    or details.get('overall') not in ('OK', 'INFO', 'WARNING', 'CRITICAL', 'UNKNOWN')
+                    or not isinstance(details.get('summary'), str)
+                    or not isinstance(details.get('details'), dict)
+                    or not isinstance(details['details'].get('updates'), dict)):
+                raise ValueError('Health snapshot is incomplete')
+            # Publish an explicit check too: its caller may have invalidated
+            # the background cache after an update. A following read-only poll
+            # must see this result instead of waiting for another collector.
+            publish_live = True
+
+        # Installed/running kernel state changes outside Monitor jobs too.
+        # Overlay fresh read-only evidence without refreshing other checks or
+        # rewriting the background collector's snapshot/timestamp.
+        from kernel_reboot import refresh_health_reboot
+        details = refresh_health_reboot(details)
+        if publish_live:
+            checked_at = _time.time()
+            health_monitor.cached_results[bg_key] = details
+            health_monitor.cached_results['_bg_overall'] = {
+                'status': details['overall'], 'summary': details['summary']}
+            health_monitor.last_check_times[bg_key] = checked_at
+            health_monitor.last_check_times['_bg_overall'] = checked_at
         
         active_errors = health_persistence.get_active_errors()
         dismissed = health_persistence.get_dismissed_errors()

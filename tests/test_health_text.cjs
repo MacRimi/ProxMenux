@@ -261,5 +261,31 @@ for (const input of passthrough) {
   check(`passthrough ${JSON.stringify(input)}`, () => assert.equal(select(input), input));
   for (const locale of Object.keys(catalogs)) check(`passthrough ${locale} ${JSON.stringify(input)}`, () => assert.equal(render(input, locale), input));
 }
+// Real summary contract from health_monitor: category prefix + reason.
+for (const [locale, expectedText] of [
+  ['sk', 'Aktualizácie systému: K dispozícii je aktualizácia pre bežiace jadro 7.0.14-25-pve'],
+  ['en', 'System updates: Kernel update available for running 7.0.14-25-pve'],
+]) {
+  check(`prefixed update summary ${locale}`, () => assert.equal(
+    render('Updates: Kernel update available for running 7.0.14-25-pve', locale), expectedText));
+  const opaque = 'Repository unavailable; diagnostic: /srv/path {count}\nline 2';
+  check(`prefixed diagnostic preserved ${locale}`, () => assert.equal(
+    render('Updates: ' + opaque, locale), translator(locale)('healthStatus.categories.updates') + ': ' + opaque));
+}
+let summaryMapper;
+walk(source,n=>{if(ts.isVariableDeclaration(n)&&n.name.getText(source)==='translateHealthSummary')summaryMapper=n.initializer;});
+assert.ok(summaryMapper,'actual summary mapper handles the real bare Updates result');
+const summaryFactory=new Function('t',compile('const translateHealthText='+emit(mapper,source)+';const translateHealthSummary='+emit(summaryMapper,source))+';return translateHealthSummary;');
+for(const locale of ['sk','en']){
+  const t=translator(locale), summary=summaryFactory(t);
+  const detail='Reboot required: running 7.0.14-25-pve; installed 7.0.14-26-pve';
+  const value={summary:'Updates',details:{updates:{checks:{reboot_required:{status:'INFO',detail}}}}};
+  const before=JSON.stringify(value);
+  assert.equal(summary(value),t('healthStatus.hostUpdate.rebootKernel',{running:'7.0.14-25-pve',installed:'7.0.14-26-pve'}));
+  assert.equal(JSON.stringify(value),before,'rendering never mutates the snapshot');
+  assert.equal(summary({summary:'Updates',details:{}}),t('healthStatus.categories.updates'));
+  assert.equal(summary({summary:'Updates',details:{updates:{checks:{reboot_required:{status:'UNKNOWN',detail}}}}}),t('healthStatus.categories.updates'),'unknown evidence cannot create a reboot-required summary');
+  assert.equal(summary({summary:'opaque diagnostic',details:{}}),'opaque diagnostic');
+}
 if (failures) throw new Error(`${failures} health-text assertions failed`);
 console.log(`PASS: actual health mapper/provider; ${new Set(cases.map(row => row[1])).size} new keys, ${cases.length} message variants, ${Object.keys(catalogs).length} shipped locales and unconditional missing-key fallback`);
