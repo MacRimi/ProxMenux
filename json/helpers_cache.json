@@ -11314,6 +11314,47 @@
     "os": "debian"
   },
   {
+    "name": "JumpServer",
+    "slug": "jumpserver",
+    "desc": "JumpServer is an open-source PAM (Privileged Access Management) / bastion host that provides unified, audited access to SSH, RDP, VNC, Telnet, Kubernetes and database assets through a single web console, with full session recording and playback.",
+    "script": "ct/jumpserver.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/jumpserver.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/jumpserver.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "The generated admin password is saved to ~/jumpserver.creds inside the container.",
+      "The SSH bastion (character-protocol) endpoint is on port 2222, e.g. ssh -p 2222 <user>@<container-ip> — this is separate from the web console on port 80.",
+      "First start takes several minutes: the core service runs database migrations, downloads a GeoIP database, and installs built-in RDP applets on its own before the web UI becomes reachable."
+    ],
+    "warnings": [
+      "Upstream only ships JumpServer v5 as Docker images, so this script builds KoKo, Lina and Luna from source at the same tag as the core. Installs and updates take a long time and need the default resources."
+    ],
+    "port": 80,
+    "website": "https://www.jumpserver.org/",
+    "documentation": "https://docs.jumpserver.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jumpserver.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Jupyter Notebook",
     "slug": "jupyternotebook",
     "desc": "The Jupyter Notebook is an open-source web application that allows you to create and share documents that contain live code, equations, visualizations and narrative text. Uses include: data cleaning and transformation, numerical simulation, statistical modeling, data visualization, machine learning, and much more.",
@@ -26361,7 +26402,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
