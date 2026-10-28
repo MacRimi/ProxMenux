@@ -88,7 +88,7 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
       <div className="flex items-start gap-2 flex-1 min-w-0 text-[10px] sm:text-xs"><span className="shrink-0">{icon}</span>
         <div><span className="font-medium mr-2">{label}</span><span className="text-muted-foreground break-words">{detail}</span></div></div>
       <Button variant="outline" className={`${compact} self-start sm:shrink-0 border-amber-500/40 text-amber-500`}
-        disabled={disabled || accepted} onClick={() => setOpen(true)}>{t("healthStatus.restart.button")}</Button>
+        disabled={disabled || pending || accepted} onClick={() => setOpen(true)}>{t("healthStatus.restart.button")}</Button>
     </div>
     {disabled && <p className="mt-2 text-xs text-muted-foreground">{t("healthStatus.restart.blocked")}</p>}
     {accepted && <p role="status" className="mt-2 text-xs text-blue-500">{t("healthStatus.restart.accepted")}</p>}
@@ -103,7 +103,7 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
         {(error || context?.reason === "unknown") && <p role="alert" className="mt-3 text-xs text-amber-500">{t("healthStatus.restart.unconfirmed")}</p>}
         <div className="mt-5 flex justify-end gap-2.5">
           <Confirm.Cancel asChild><Button variant="outline" className={compact} disabled={pending}>{t("healthStatus.restart.cancel")}</Button></Confirm.Cancel>
-          <Confirm.Action asChild><Button variant="destructive" className={compact} disabled={disabled || !context?.allowed || submitted}
+          <Confirm.Action asChild><Button variant="destructive" className={compact} disabled={disabled || !context?.allowed || pending || submitted}
             onClick={event => { event.preventDefault(); void confirm() }}>{t("healthStatus.restart.confirm")}</Button></Confirm.Action>
         </div>
       </Confirm.Content>

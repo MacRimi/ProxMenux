@@ -2,8 +2,14 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm')
 const app=path.resolve(__dirname,'../AppImage'),ts=require(path.join(app,'node_modules/typescript'))
 const tree=ts.createSourceFile('controls.tsx',fs.readFileSync(path.join(app,'components/host-update-status.tsx'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
-let callback
-function walk(n){if(ts.isVariableDeclaration(n)&&n.name.getText(tree)==='confirm')callback=n.initializer.getText(tree);ts.forEachChild(n,walk)}
+let callback,triggerDisabled
+function walk(n){
+ if(ts.isVariableDeclaration(n)&&n.name.getText(tree)==='confirm')callback=n.initializer.getText(tree)
+ if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(tree)==='Button'&&n.children.some(c=>c.getText(tree).includes('healthStatus.restart.button'))){
+  triggerDisabled=n.openingElement.attributes.properties.find(p=>p.name?.getText(tree)==='disabled').initializer.expression.getText(tree)
+ }
+ ts.forEachChild(n,walk)
+}
 walk(tree);assert.ok(callback)
 function fixture(){
  const calls=[],events=[]
@@ -16,6 +22,8 @@ function fixture(){
  return {scope,calls,events,run}
 }
 async function main(){
+ assert.ok(triggerDisabled)
+ assert.equal(vm.runInNewContext(triggerDisabled,{disabled:false,accepted:false,pending:true}),true,'closing confirmation while its request is pending must not enable another request')
  for(const block of ['disabled','submitted','sending','missing-context','not-allowed']){
   const x=fixture()
   if(block==='sending')x.scope.sending.current=true
