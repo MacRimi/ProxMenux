@@ -10,6 +10,7 @@ import sys
 import tempfile
 from types import ModuleType, SimpleNamespace
 import unittest
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 from flask import Flask
@@ -18,6 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'AppImage/scripts'))
 import host_update_controls as controls
 import proxmenux_version_status as versions
+
+SHUTDOWN_HELPER = b'/usr/share/unattended-upgrades/unattended-upgrade-shutdown'
+WAITING_HELPER = b'/usr/bin/python3\0' + SHUTDOWN_HELPER + b'\0--wait-for-signal\0'
+REAL_UPDATER = b'/usr/bin/python3\0/usr/bin/unattended-upgrade\0'
 
 
 class VersionStatus(unittest.TestCase):
@@ -103,6 +108,68 @@ class RebootGuards(unittest.TestCase):
         self.probe=patch.object(controls,'reboot_status',return_value={'state':'required'}).start()
         self.addCleanup(patch.stopall)
 
+    def package(self, command=WAITING_HELPER, name='unattended-upgr', pid='123'):
+        path=self.root/'proc'/pid;path.mkdir(exist_ok=True)
+        (path/'comm').write_text(name+'\n')
+        (path/'cmdline').write_bytes(command)
+        return path
+
+    def test_waiting_shutdown_helper_does_not_block_required_reboot_or_run_commands(self):
+        # Debian's service ExecStart, including the /usr/bin/python3 shebang.
+        for command in (WAITING_HELPER, SHUTDOWN_HELPER+b'\0--wait-for-signal\0'):
+            with self.subTest(command=command),patch.object(controls.subprocess,'run') as run:
+                self.package(command)
+                self.assertEqual(controls.reboot_context()['reason'],'required')
+                run.assert_not_called()
+
+    def test_actual_package_tools_and_unattended_updater_still_block_before_probe(self):
+        for name in ('apt','apt-get','dpkg','unattended-upgr'):
+            with self.subTest(name=name):
+                self.package(REAL_UPDATER,name)
+                self.assertEqual(controls.reboot_context()['reason'],'busy')
+        self.probe.assert_not_called()
+
+    def test_waiting_helper_never_hides_another_active_updater(self):
+        self.package()
+        self.package(REAL_UPDATER,pid='124')
+        self.assertEqual(controls.reboot_context()['reason'],'busy')
+        self.probe.assert_not_called()
+
+    def test_helper_without_wait_flag_and_lookalike_arguments_stay_busy(self):
+        commands=(SHUTDOWN_HELPER+b'\0',
+                  b'/usr/bin/unattended-upgrade\0--wait-for-signal\0',
+                  b'/usr/bin/unattended-upgrade\0'+SHUTDOWN_HELPER+b'\0--wait-for-signal\0',
+                  b'/bin/sh\0-c\0'+SHUTDOWN_HELPER+b' --wait-for-signal\0',
+                  b'/usr/bin/python3\0-c\0'+SHUTDOWN_HELPER+b'\0--wait-for-signal\0',
+                  WAITING_HELPER+b'--unexpected\0',
+                  b'/tmp/unattended-upgrade-shutdown\0--wait-for-signal\0')
+        for command in commands:
+            with self.subTest(command=command):
+                self.package(command)
+                self.assertEqual(controls.reboot_context()['reason'],'busy')
+        self.probe.assert_not_called()
+
+    def test_empty_partial_malformed_and_missing_live_cmdline_stay_busy(self):
+        for command in (b'',b'\0',WAITING_HELPER[:-1],WAITING_HELPER+b'\0',b'\xff\0'):
+            with self.subTest(command=command):
+                self.package(command)
+                self.assertEqual(controls.reboot_context()['reason'],'busy')
+        (self.root/'proc/123/cmdline').unlink()
+        self.assertEqual(controls.reboot_context()['reason'],'busy')
+        self.probe.assert_not_called()
+
+    def test_unreadable_cmdline_blocks_but_process_that_exits_can_be_skipped(self):
+        process=self.package()
+        with patch.object(Path,'read_bytes',side_effect=PermissionError('fixture denied')):
+            self.assertEqual(controls.reboot_context()['reason'],'busy')
+        self.probe.assert_not_called()
+        def exited():
+            for path in process.iterdir():path.unlink()
+            process.rmdir()
+            raise FileNotFoundError('fixture exited after comm read')
+        with patch.object(Path,'read_bytes',side_effect=exited):
+            self.assertTrue(controls.reboot_context()['allowed'])
+
     def test_active_attention_starting_and_unreadable_jobs_block_before_kernel_probe(self):
         for state in ('starting','running','attention','finalizing',None):
             self.jobs.return_value=[{'state':state}]
@@ -163,14 +230,17 @@ class RebootGuards(unittest.TestCase):
         for path in paths:Path(path).touch()
         # A separate process holds the same POSIX lock, just as APT does.
         code='import fcntl,sys,time; f=open(sys.argv[1],"r+"); fcntl.lockf(f,fcntl.LOCK_EX); print("locked",flush=True); time.sleep(5)'
-        child=subprocess.Popen([sys.executable,'-c',code,paths[0]],stdout=subprocess.PIPE,text=True)
-        try:
-            self.assertEqual(child.stdout.readline().strip(),'locked')
-            with patch.object(controls,'PACKAGE_LOCKS',paths),patch.object(controls.subprocess,'run') as reboot:
-                self.assertEqual(controls.execute_reboot(),75)
-                reboot.assert_not_called()
-        finally:
-            child.terminate();child.wait(timeout=2);child.stdout.close()
+        for held in paths:
+            child=subprocess.Popen([sys.executable,'-c',code,held],stdout=subprocess.PIPE,text=True)
+            try:
+                self.assertEqual(child.stdout.readline().strip(),'locked')
+                with patch.object(controls,'PACKAGE_LOCKS',paths),patch.object(controls.subprocess,'run') as reboot:
+                    self.assertEqual(controls.execute_reboot(),75)
+                    reboot.assert_not_called()
+                    self.probe.assert_not_called()
+                self.assertEqual([Path(path).read_bytes() for path in paths],[b'',b''])
+            finally:
+                child.terminate();child.wait(timeout=2);child.stdout.close()
 
 
 class Routes(unittest.TestCase):
@@ -191,12 +261,48 @@ class Routes(unittest.TestCase):
         self.app=Flask(__name__);self.app.register_blueprint(routes.health_bp)
         self.run=Mock(return_value=(True,{}));self.state=Mock(return_value={'state':'running'})
         self.app.extensions['host_update_power']={'run':self.run,'state':self.state}
+        self.real_context=controls.reboot_context
         self.context=patch.object(controls,'reboot_context',return_value={'allowed':True,'reason':'required','boot_id':'fixture-boot'}).start()
         self.version=patch.object(versions,'version_status',return_value={'state':'unknown'}).start()
         self.addCleanup(patch.stopall)
         self.client=self.app.test_client()
         import socket
         self.body={'confirm':True,'hostname':socket.gethostname(),'boot_id':'fixture-boot'}
+
+    @contextmanager
+    def actual_package_context(self,command):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);proc=root/'proc';(proc/'123').mkdir(parents=True)
+            (proc/'123/comm').write_text('unattended-upgr\n')
+            (proc/'123/cmdline').write_bytes(command)
+            boot=root/'boot_id';boot.write_text('fixture-boot')
+            with patch.object(controls,'PROC',proc),patch.object(controls,'BOOT_ID',boot),\
+                 patch.object(controls,'LOCK',str(root/'missing-lock')),\
+                 patch.object(controls,'list_jobs',return_value=[]),\
+                 patch.object(controls,'reboot_status',return_value={'state':'required'}) as probe,\
+                 patch.object(controls,'reboot_context',wraps=self.real_context):
+                yield probe
+
+    def test_actual_context_routes_allow_waiting_helper_and_only_queue_guarded_action(self):
+        with self.actual_package_context(WAITING_HELPER):
+            response=self.client.get('/api/health/reboot-context',headers={'Authorization':'Bearer admin'})
+            self.assertEqual(response.status_code,200)
+            self.assertTrue(response.json['allowed'])
+            self.run.assert_not_called()
+            response=self.client.post('/api/health/reboot-after-update',json=self.body,headers={'Authorization':'Bearer admin'})
+            self.assertEqual(response.status_code,202)
+            self.run.assert_called_once_with(controls.UNIT,list(controls.COMMAND),description='ProxMenux: reboot after host update',extra_properties=['RuntimeMaxSec=75'])
+
+    def test_actual_context_routes_deny_active_or_uncertain_updater_without_launch(self):
+        for command in (REAL_UPDATER,b'',WAITING_HELPER[:-1]):
+            with self.subTest(command=command),self.actual_package_context(command) as probe:
+                response=self.client.get('/api/health/reboot-context',headers={'Authorization':'Bearer admin'})
+                self.assertEqual(response.status_code,200)
+                self.assertEqual(response.json['reason'],'busy')
+                response=self.client.post('/api/health/reboot-after-update',json=self.body,headers={'Authorization':'Bearer admin'})
+                self.assertEqual(response.status_code,409)
+                self.assertEqual(response.json['reason'],'busy')
+                probe.assert_not_called();self.run.assert_not_called()
 
     def test_denied_auth_and_methods_do_not_probe_or_launch(self):
         for token in (None,'bad','reader'):

@@ -29,10 +29,22 @@ def package_process_active():
             if not path.name.isdigit():
                 continue
             try:
-                if (path/'comm').read_text().strip() in ('apt', 'apt-get', 'dpkg', 'unattended-upgr'):
+                name = (path/'comm').read_text().strip()
+                if name == 'unattended-upgr':
+                    # Linux comm truncates both the updater and its persistent
+                    # shutdown helper to 15 bytes. Exempt only the exact idle
+                    # service command (also with its system Python shebang).
+                    argv = (path/'cmdline').read_bytes().split(b'\0')
+                    helper = b'/usr/share/unattended-upgrades/unattended-upgrade-shutdown'
+                    if argv in ([helper, b'--wait-for-signal', b''],
+                                [b'/usr/bin/python3', helper, b'--wait-for-signal', b'']):
+                        continue
+                    return True
+                if name in ('apt', 'apt-get', 'dpkg'):
                     return True
             except (FileNotFoundError, ProcessLookupError):
-                continue
+                if path.exists():
+                    return True
     except OSError:
         return True
     return False

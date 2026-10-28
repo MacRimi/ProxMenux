@@ -5,6 +5,7 @@ are inert executables which record calls; no root, network or host update.
 """
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -70,12 +71,18 @@ msg_success() { echo "$*"; }
 show_proxmenux_logo() { :; }
 LOCAL_SCRIPTS="$FIXTURE/scripts"
 ''')
+        # Keep the real confirmation contract added upstream; stub only the
+        # package/host effects, not the updater's shared decision helper.
+        confirmation = re.search(r'^pmx_confirm_update\(\) \{\n.*?^\}\n',
+                                 (ROOT / 'scripts/global/common-functions.sh').read_text(),
+                                 re.MULTILINE | re.DOTALL)
+        self.assertIsNotNone(confirmation)
         (scripts / 'global/common-functions.sh').write_text('''
 pmx_format_upgradable() { cat; }
 pmx_dpkg_changes_since() { echo 'package changes fixture'; }
 lvm_repair_check() { echo lvm-poststep >> "$CALLS"; }
 pmx_rebuild_dkms_after_kernel() { echo dkms-poststep >> "$CALLS"; }
-''')
+''' + confirmation.group(0))
         (scripts / 'global/utils-install-functions.sh').write_text('ensure_repositories() { return 0; }\n')
         commands = {
             'pveversion': "echo 'pve-manager/9.2.24/test (running kernel: 7.0.14-25-pve)'",
@@ -93,7 +100,9 @@ else
   exit "${UPGRADE_EXIT:-0}"
 fi''',
             'dialog': 'echo dialog >> "$CALLS"; exit "${CONFIRM_EXIT:-0}"',
-            'whiptail': 'echo "whiptail $*" >> "$CALLS"; exit 1',
+            'whiptail': '''echo "whiptail $*" >> "$CALLS"
+if [[ "$1" == --title && "$2" == "Proxmox Update" ]]; then exit "${CONFIRM_EXIT:-0}"; fi
+exit 1''',
             'reboot': 'echo FORBIDDEN-REBOOT >> "$CALLS"; exit 99',
             'clear': ':',
         }
@@ -139,7 +148,8 @@ fi''',
         self.assertIn('apt-get -y autoremove', calls)
         self.assertIn('apt-get -y autoclean', calls)
         self.assertNotIn('FORBIDDEN-REBOOT', calls)
-        self.assertNotIn('whiptail', calls)
+        self.assertIn('whiptail --title Proxmox Update --yesno', calls)
+        self.assertNotIn('whiptail --title Reboot Required', calls)
         self.assertIn('Reboot Required', output)
         self.assertIn('You can reboot later manually.', output)
         self.assertFalse((self.folder / 'marker-in-progress').exists())
@@ -161,7 +171,7 @@ fi''',
         proc = self.start(UPGRADE_EXIT='1')
         output, _ = proc.communicate(timeout=5)
         self.assertEqual(proc.returncode, 1, output)
-        for forbidden in ('autoremove', 'autoclean', 'REBOOT', 'poststep', 'whiptail'):
+        for forbidden in ('autoremove', 'autoclean', 'REBOOT', 'poststep', 'whiptail --title Reboot Required'):
             self.assertNotIn(forbidden, self.calls.read_text())
 
     def test_old_menu_cli_contract_retains_explicit_reboot_prompt(self):
