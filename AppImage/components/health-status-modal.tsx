@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { getAuthToken } from "@/lib/api-config"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -132,9 +132,16 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
   const [hostJob, setHostJob] = useState<{ runId: string; resume: boolean; kind: "host" } | null>(null)
   const [hostJobs, setHostJobs] = useState<HostUpdateJob[]>([])
+  const healthRequest = useRef<AbortController | null>(null)
+  const previousAutoExpanded = useRef<Set<string>>(new Set())
 
-  const fetchHealthDetails = useCallback(async (force = false) => {
-    setLoading(true)
+  const fetchHealthDetails = useCallback(async (force = false, cachedOnly = false) => {
+    if (cachedOnly && healthRequest.current) return
+    healthRequest.current?.abort()
+    const controller = new AbortController()
+    healthRequest.current = controller
+    const timeout = cachedOnly ? setTimeout(() => controller.abort(), 10000) : undefined
+    if (!cachedOnly) setLoading(true)
     setError(null)
 
     try {
@@ -147,14 +154,19 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         authHeaders["Authorization"] = `Bearer ${token}`
       }
 
-      const response = await fetch(getApiUrl(force ? "/api/health/full?refresh=1" : "/api/health/full"), { headers: authHeaders })
+      const path = cachedOnly ? "/api/health/full?cached=1" : force ? "/api/health/full?refresh=1" : "/api/health/full"
+      const response = await fetch(getApiUrl(path), { headers: authHeaders, signal: controller.signal })
+      if (healthRequest.current !== controller) return
       let infoCount = 0
       
       if (!response.ok) {
+        // Polling cannot fall back to a legacy endpoint that runs a full audit.
+        if (cachedOnly) throw new Error(t("healthStatus.errors.fetchFailed"))
         // Fallback to legacy endpoint
-        const legacyResponse = await fetch(getApiUrl("/api/health/details"), { headers: authHeaders })
+        const legacyResponse = await fetch(getApiUrl("/api/health/details"), { headers: authHeaders, signal: controller.signal })
         if (!legacyResponse.ok) throw new Error(t("healthStatus.errors.fetchFailed"))
         const data = await legacyResponse.json()
+        if (healthRequest.current !== controller) return
         setHealthData(data)
         setDismissedItems([])
         setCustomSuppressions([])
@@ -171,6 +183,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         }
       } else {
         const fullData: FullHealthData = await response.json()
+        if (healthRequest.current !== controller) return
+        if (!fullData?.health?.details) throw new Error(t("healthStatus.errors.fetchFailed"))
         setHealthData(fullData.health)
         setDismissedItems(fullData.dismissed || [])
         setCustomSuppressions(fullData.custom_suppressions || [])
@@ -210,9 +224,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       })
       window.dispatchEvent(event)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("healthStatus.errors.unknown"))
+      if (healthRequest.current === controller) {
+        setError(err instanceof Error ? err.message : t("healthStatus.errors.unknown"))
+      }
     } finally {
-      setLoading(false)
+      if (timeout !== undefined) clearTimeout(timeout)
+      if (healthRequest.current === controller) {
+        healthRequest.current = null
+        setLoading(false)
+      }
     }
   }, [getApiUrl, t])
 
@@ -228,9 +248,21 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   useEffect(() => {
     if (open) {
       fetchHealthDetails()
-      // Auto-refresh every 5 minutes while modal is open
-      const refreshInterval = setInterval(() => fetchHealthDetails(), 300000)
-      return () => clearInterval(refreshInterval)
+      // Recheck reboot evidence promptly without running APT/full health checks.
+      const refresh = () => {
+        if (document.visibilityState === "visible") void fetchHealthDetails(false, true)
+      }
+      const refreshInterval = setInterval(refresh, 30000)
+      window.addEventListener("focus", refresh)
+      document.addEventListener("visibilitychange", refresh)
+      return () => {
+        clearInterval(refreshInterval)
+        window.removeEventListener("focus", refresh)
+        document.removeEventListener("visibilitychange", refresh)
+        const controller = healthRequest.current
+        healthRequest.current = null
+        controller?.abort()
+      }
     }
   }, [open, fetchHealthDetails])
 
@@ -248,7 +280,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           nonOkCategories.add(key)
         }
       })
-      setExpandedCategories(nonOkCategories)
+      const newlyDegraded = [...nonOkCategories].filter(key => !previousAutoExpanded.current.has(key))
+      previousAutoExpanded.current = nonOkCategories
+      if (newlyDegraded.length) {
+        setExpandedCategories(previous => new Set([...previous, ...newlyDegraded]))
+      }
     }
   }, [healthData])
 

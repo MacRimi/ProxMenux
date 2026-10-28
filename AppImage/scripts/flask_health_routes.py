@@ -243,10 +243,14 @@ def get_full_health():
     security before returning, so an event that just changed underlying state
     (Update Now finished, dismiss action) sees the new value immediately
     instead of waiting for the next polling tick.
+    ?cached=1 is a strictly read-only poll: no full checks or cache clearing,
+    even with refresh=1. Unavailable/stale snapshots return 503. Every valid
+    response refreshes reboot evidence, while keeping the full audit's date.
     """
     import time as _time
     try:
-        if request.args.get('refresh') == '1':
+        cached_only = request.args.get('cached') == '1'
+        if not cached_only and request.args.get('refresh') == '1':
             for ck in ('updates_check', 'pve_services', 'security_check',
                        '_bg_detailed', '_bg_overall', 'overall_health'):
                 health_monitor.last_check_times.pop(ck, None)
@@ -255,14 +259,24 @@ def get_full_health():
         # Try to use the background-cached detailed result for instant response
         bg_key = '_bg_detailed'
         bg_last = health_monitor.last_check_times.get(bg_key, 0)
-        bg_age = _time.time() - bg_last
+        bg_age = _time.time() - bg_last if type(bg_last) in (int, float) else float('inf')
 
-        if bg_age < 360 and bg_key in health_monitor.cached_results:
+        if 0 <= bg_age < 360 and bg_key in health_monitor.cached_results:
             # Use cached result (at most ~5 min old)
             details = health_monitor.cached_results[bg_key]
+        elif cached_only:
+            # Automatic polling must never start APT or a full audit, even
+            # during startup, collector failure, expiry or a conflicting flag.
+            return jsonify({'error': 'Health snapshot is not available yet'}), 503
         else:
             # No fresh cache, run live (first load or cache expired)
             details = health_monitor.get_detailed_status()
+
+        # Installed/running kernel state changes outside Monitor jobs too.
+        # Overlay fresh read-only evidence without refreshing other checks or
+        # rewriting the background collector's snapshot/timestamp.
+        from kernel_reboot import refresh_health_reboot
+        details = refresh_health_reboot(details)
         
         active_errors = health_persistence.get_active_errors()
         dismissed = health_persistence.get_dismissed_errors()

@@ -1,5 +1,6 @@
 """Read-only reboot evidence, independent of APT pending-update caches."""
 import os
+import copy
 from pathlib import Path
 import re
 import subprocess
@@ -63,6 +64,13 @@ def with_reboot_status(updates, reboot):
         return updates
     result = dict(updates or dict(status='UNKNOWN', count=None, checks={}))
     result['checks'] = dict(result.get('checks') or {})
+    # Keep the package result separate so a later reboot-only overlay can
+    # clear its own INFO/UNKNOWN without hiding a package-check failure.
+    base_status = result.get('package_status', result.get('status', 'UNKNOWN'))
+    if result.get('all_dismissed'):
+        base_status = 'OK'
+    result['package_status'] = base_status
+    result['status'] = base_status
     required = reboot['state'] == 'required'
     unknown = reboot['state'] == 'unknown'
     result['reboot_required'] = True if required else None if unknown else False
@@ -76,4 +84,33 @@ def with_reboot_status(updates, reboot):
                                                detail=detail, error_key='reboot_required')
     if result.get('status') == 'OK' and (required or unknown):
         result['status'] = 'INFO' if required else 'UNKNOWN'
+    return result
+
+
+def refresh_health_reboot(snapshot):
+    """Refresh only reboot evidence on an immutable, dated health snapshot.
+
+    Never runs the full health check, APT, persistence writes or lifecycle
+    commands. Other categories and the audit timestamp retain their age.
+    """
+    result = copy.deepcopy(snapshot)
+    details = result.get('details')
+    if not isinstance(details, dict) or not isinstance(details.get('updates'), dict):
+        raise ValueError('Health snapshot has no updates result')
+    details['updates'] = with_reboot_status(details['updates'], reboot_status())
+    if details['updates']['status'] == snapshot['details']['updates']['status']:
+        return result
+    issues = {status: [] for status in ('CRITICAL', 'WARNING', 'UNKNOWN', 'INFO')}
+    for key, block in details.items():
+        if not isinstance(block, dict):
+            continue
+        status = block.get('status', 'UNKNOWN')
+        if status in issues:
+            label = key.replace('_', ' ').capitalize()
+            reason = block.get('reason')
+            issues[status].append(f'{label}: {reason}' if reason else label)
+    result['overall'] = ('CRITICAL' if issues['CRITICAL'] else 'WARNING'
+                         if issues['WARNING'] or issues['UNKNOWN'] else 'OK')
+    primary = next((values for values in issues.values() if values), [])
+    result['summary'] = '; '.join(primary) if primary else 'All systems operational'
     return result

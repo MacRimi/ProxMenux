@@ -18,6 +18,7 @@ PYTHON_FILES = (
     "tests/test_host_update_shell.py",
     "tests/test_host_update_auth.py",
     "tests/test_kernel_reboot.py",
+    "tests/test_reboot_health_refresh.py",
     "tests/test_lxc_update_jobs.py",
     "tests/test_post_install_i18n.py",
     "tests/test_remaining_cli_i18n.py",
@@ -40,6 +41,7 @@ PYTHON_FILES = (
 )
 NODE_FILES = (
     "tests/test_host_update_ui.cjs",
+    "tests/test_reboot_health_refresh.cjs",
     "tests/test_lxc_update_jobs.cjs",
     "tests/test_api_import_boundaries.cjs",
     "tests/test_api_errors.cjs",
