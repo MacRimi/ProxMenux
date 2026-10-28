@@ -261,5 +261,16 @@ for (const input of passthrough) {
   check(`passthrough ${JSON.stringify(input)}`, () => assert.equal(select(input), input));
   for (const locale of Object.keys(catalogs)) check(`passthrough ${locale} ${JSON.stringify(input)}`, () => assert.equal(render(input, locale), input));
 }
+// Real summary contract from health_monitor: category prefix + reason.
+for (const [locale, expectedText] of [
+  ['sk', 'Aktualizácie systému: K dispozícii je aktualizácia pre bežiace jadro 7.0.14-25-pve'],
+  ['en', 'System updates: Kernel update available for running 7.0.14-25-pve'],
+]) {
+  check(`prefixed update summary ${locale}`, () => assert.equal(
+    render('Updates: Kernel update available for running 7.0.14-25-pve', locale), expectedText));
+  const opaque = 'Repository unavailable; diagnostic: /srv/path {count}\nline 2';
+  check(`prefixed diagnostic preserved ${locale}`, () => assert.equal(
+    render('Updates: ' + opaque, locale), translator(locale)('healthStatus.categories.updates') + ': ' + opaque));
+}
 if (failures) throw new Error(`${failures} health-text assertions failed`);
 console.log(`PASS: actual health mapper/provider; ${new Set(cases.map(row => row[1])).size} new keys, ${cases.length} message variants, ${Object.keys(catalogs).length} shipped locales and unconditional missing-key fallback`);

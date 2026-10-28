@@ -340,6 +340,10 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
   const translateHealthText = (value?: string): string => {
     if (!value) return ""
+    // Health summaries include the category before the same detail text.
+    if (value.startsWith("Updates: ")) {
+      return `${t("healthStatus.categories.updates")}: ${translateHealthText(value.slice(9))}`
+    }
     const exact: Record<string, string> = {
       "No temperature sensor detected - install lm-sensors if hardware supports it": t("healthStatus.details.noTemperatureSensor"),
       "Sustained high CPU usage": t("healthStatus.details.cpuHighSustained"),
@@ -903,9 +907,13 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                             pending prevents the operator from spawning a
                             terminal that would only report "System is
                             already up to date". */}
-                        {key === "updates" && <ProxMenuxVersionCard getApiUrl={getApiUrl} />}
                         {key === "updates" && Number(categoryData?.count ?? 0) > 0 && (
-                          <div className="flex justify-end px-3 py-2 pt-1">
+                          <p className="px-2 sm:px-3 mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                            {t("healthStatus.packagePlanNote")}
+                          </p>
+                        )}
+                        {key === "updates" && Number(categoryData?.count ?? 0) > 0 && (
+                          <div className="flex justify-end px-2 sm:px-3 pt-3 pb-1">
                             <Button
                               size="sm"
                               disabled={hostJobs.some(job => job.state !== "complete")}
@@ -915,13 +923,14 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                                 setHostJob({ runId, resume: false, kind: "host" })
                                 setShowUpdateTerminal(true)
                               }}
-                              className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                              className="h-10 sm:h-[34px] bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                             >
                               <ArrowUpCircle className="h-4 w-4 mr-1.5" />
-                              {t("healthStatus.updateNow")}
+                              {t("healthStatus.updateSystem")}
                             </Button>
                           </div>
                         )}
+                        {key === "updates" && <ProxMenuxVersionCard getApiUrl={getApiUrl} />}
                       </div>
                     )}
                   </div>
