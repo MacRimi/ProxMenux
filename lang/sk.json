@@ -1,6 +1,4 @@
 {
-  "Host update lock is unavailable.": "Zámok aktualizácie servera nie je dostupný.",
-  "A host update is already running. Reconnect to it instead of starting another.": "Aktualizácia servera už beží. Otvor jej existujúci priebeh namiesto ďalšieho spustenia.",
   "# Alternative if you prefer screen": "# Alternatíva, ak preferujete screen",
   "# Recommended: avoids disconnection during upgrade": "# Odporúčané: zabráni odpojeniu počas aktualizácie",
   "%s of %s updates failed — see the messages above.": "Zlyhalo %s z %s aktualizácií — pozri hlášky vyššie.",
@@ -89,6 +87,7 @@
   "A host reboot is required after this change.": "Po tejto zmene je potrebný reštart hosta.",
   "A host reboot is required before starting the VM. Reboot now?": "Pred spustením VM je potrebný reštart servera. Reštartovať teraz?",
   "A host script is not written over a symbolic link:": "Hostiteľský skript sa nepíše cez symbolický odkaz:",
+  "A host update is already running. Reconnect to it instead of starting another.": "Aktualizácia servera už beží. Otvor jej existujúci priebeh namiesto ďalšieho spustenia.",
   "A job with this ID already exists.": "Úloha s týmto ID už existuje.",
   "A journal already exists; review or recover it before trying again": "Záznam operácie už existuje; pred ďalším pokusom ho skontrolujte alebo vykonajte obnovu",
   "A keyfile is installed at:": "Keyfile je nainštalovaný v:",
@@ -3090,6 +3089,7 @@
   "Host paths found in container configs or saved records (not targeted for removal):": "Cesty hostiteľa nájdené v konfiguráciách kontajnerov alebo v uložených záznamoch (neodstraňujú sa):",
   "Host permissions applied (o+rwx + default ACL) — unprivileged LXCs can read/write through bind-mounts": "Oprávnenia hosta boli nastavené (o+rwx + predvolené ACL) - neprivilegované LXC môžu čítať/zapisovať cez bind mounty",
   "Host system path": "Cesta k hostiteľskému systému",
+  "Host update lock is unavailable.": "Zámok aktualizácie servera nie je dostupný.",
   "Host write access confirmed.": "Zápis z hosta je potvrdený.",
   "Hostname": "Názov servera",
   "Hostname or IP address clients will use for this GoToSocial instance": "Názov hostiteľa alebo IP adresa, ktorú klienti použijú pre túto inštanciu GoToSocial",
