@@ -410,7 +410,7 @@ class NativeAdapter:
         if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
             member_tx.stop(vmid)
 
-    def backup(self, vmid, identity):
+    def backup(self, vmid, transaction_id):
         self.validate(self.plan)
         base = self.work_base()
         if base != self.journal.parent and not (self.journal.parent / work_backup.MARK).exists():
@@ -420,7 +420,7 @@ class NativeAdapter:
                      f"{self.records[self.plan['primary_vmid']]['deployment'].get(work_backup.KEY)}")
         directory = base / ('backup-%s' % vmid)
         private_directory(directory)
-        config = member_tx.owned(vmid, identity).decode()
+        config = member_tx.owned(vmid, self.records[vmid]['installation_id']).decode()
         carried.carry_backup(self.root, vmid, self.records[vmid], config)
         archive = member_tx.verified_backup(vmid, directory, 'zstd',
                                             translate('The backup of a member could not be identified'))

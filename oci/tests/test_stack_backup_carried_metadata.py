@@ -17,7 +17,7 @@ class StackBackupCarriedMetadataTests(unittest.TestCase):
         adapter.records={4901:{'vmid':4901,'installation_id':'original','status':'installed'}}
         return adapter
 
-    def test_restore_metadata_is_verified_before_archive_creation(self):
+    def test_transaction_id_does_not_replace_container_identity_before_archive_creation(self):
         with tempfile.TemporaryDirectory() as folder:
             adapter=self.adapter(folder);events=[]
             archive=Path(folder)/'archive.tar.zst'
@@ -26,7 +26,7 @@ class StackBackupCarriedMetadataTests(unittest.TestCase):
                  patch.object(native.carried,'carry_backup',side_effect=lambda *args:events.append(('carry',args)),create=True), \
                  patch.object(native.member_tx,'verified_backup',side_effect=lambda *args:events.append(('backup',args)) or archive), \
                  patch.object(native.member_tx,'filehash',return_value='verified-sha'):
-                result=adapter.backup(4901,'original')
+                result=adapter.backup(4901,'different-transaction-id')
             owned.assert_called_once_with(4901,'original')
             self.assertEqual([event[0] for event in events],['carry','backup'])
             self.assertEqual(events[0][1],(adapter.root,4901,adapter.records[4901],'validated original config'))
@@ -40,5 +40,5 @@ class StackBackupCarriedMetadataTests(unittest.TestCase):
                  patch.object(native.carried,'carry_backup',side_effect=ValueError('metadata not verified'),create=True), \
                  patch.object(native.member_tx,'verified_backup') as backup:
                 with self.assertRaisesRegex(ValueError,'metadata not verified'):
-                    adapter.backup(4901,'original')
+                    adapter.backup(4901,'different-transaction-id')
             backup.assert_not_called()
