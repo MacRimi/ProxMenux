@@ -32,6 +32,8 @@ import tempfile
 import oci_carried_record as carried
 import oci_console
 import oci_instances as instances
+import oci_compose_jobs as compose_jobs
+import oci_stack_plan
 import oci_instance_transaction as transaction
 import oci_nested_mounts
 import oci_nvidia_refresh
@@ -660,6 +662,19 @@ def valid_contract(contract, dependents):
                     return False
             except ValueError:
                 return False
+        elif check.get('type') == 'tcp':
+            try:
+                if (not isinstance(check.get('host'), str)
+                        or ipaddress.IPv4Address(check['host']) not in PRIVATE
+                        or type(check.get('port')) is not int or not 0 < check['port'] < 65536):
+                    return False
+            except ValueError:
+                return False
+        elif check.get('type') == 'completed':
+            try:
+                oci_stack_plan.validate_job_check(check)
+            except (ValueError, TypeError, KeyError):
+                return False
         elif check.get('type') != 'running':
             return False
     return True
@@ -903,6 +918,7 @@ def register(root, plan):
                 # leaves it; this also proves the stack can still be updated.
                 oci_stack_modify.register(root, vmid)
         refresh_service_plans(root, [vmid for vmid, stack in written if stack])
+        refresh_completed_jobs(root, plan)
     except BaseException:
         for vmid, _ in written:
             path = instances.location(root, vmid)
@@ -943,6 +959,65 @@ def refresh_service_plans(root, vmids):
             changed = True
         if changed:
             instances.write(instances.location(root, vmid), record)
+
+
+def refresh_completed_jobs(root, plan):
+    """Rebind restored job proofs before a start, including a deferred start."""
+    primaries = set()
+    for entry in plan['restored']:
+        record = instances.read(root, entry['vmid'])
+        primary = record.get('stack_member', {}).get('primary_vmid')
+        if record.get('stack'):
+            primary = record['vmid']
+        if primary is not None:
+            primaries.add(primary)
+    for primary_id in primaries:
+        primary = instances.read(root, primary_id)
+        services = primary.get('stack', {}).get('deployment', {}).get('services', [])
+        jobs = [service for service in services if service.get('healthcheck', {}).get('type') == 'completed']
+        if not jobs:
+            continue
+        for service in jobs:
+            vmid = service['vmid']
+            record = instances.read(root, vmid)
+            if (record['deployment'].get('onboot') or record['deployment'].get('watchdog')
+                    or record['deployment'].get('execution_mode') != 'one-shot'):
+                raise ValueError(translate('Invalid service check arguments'))
+            config = checked('pct', 'config', str(vmid))
+            # Any restored member may include database data from before the cached proof.
+            record['recovered_at'] = instances.now()
+            instances.write(instances.location(root, vmid), record)
+            timeout = service['healthcheck'].get('timeout_seconds', 300)
+            service['healthcheck'] = {'type': 'completed', 'timeout_seconds': timeout,
+                                     'job': compose_jobs.job_spec_from_record(record, config, timeout)}
+        dependencies = [{'vmid': service['vmid'], 'label': service['name'],
+                         'healthcheck': service['healthcheck']} for service in services
+                        if service['vmid'] != primary_id and not service.get('deferred_setup')]
+        contract = {'schema': 1, 'stack': primary['stack']['deployment'].get('stack_name', ''),
+                    'dependencies': dependencies}
+        with tempfile.NamedTemporaryFile('w', suffix='.json') as file:
+            json.dump(contract, file)
+            file.flush()
+            checked('bash', str(ENGINE / 'stack_dependency_hook.sh'), '--install', str(primary_id), file.name)
+        for entry in plan['restored']:
+            if entry['vmid'] == primary_id:
+                entry['contract'] = contract
+        primary['stack']['deployment']['services'] = services
+        members = primary['stack'].get('members', [])
+        for index, member in enumerate(members):
+            if any(service['vmid'] == member.get('vmid') for service in jobs):
+                current = copy.deepcopy(instances.read(root, member['vmid']))
+                current.pop('stack', None)
+                members[index] = current
+        instances.write(instances.location(root, primary_id), primary)
+
+
+def completed_job(root, vmid):
+    record = instances.read(root, vmid)
+    primary = record.get('stack_member', {}).get('primary_vmid', vmid)
+    main = record if primary == vmid else instances.read(root, primary)
+    return any(service.get('vmid') == vmid and service.get('healthcheck', {}).get('type') == 'completed'
+               for service in main.get('stack', {}).get('deployment', {}).get('services', []))
 
 
 def start_order(entry):
@@ -990,6 +1065,9 @@ def recover(root, plan, start=False, host_firewall=()):
             msg_warn(f"{translate('Could not add the confirmed host firewall rule')}: {text}")
     if start and not plan['hold']:
         for entry in sorted(plan['restored'], key=start_order):
+            if completed_job(root, entry['vmid']):
+                # The main hook executes jobs in graph order with authenticated exit proofs.
+                continue
             if 'running' in run('pct', 'status', str(entry['vmid'])).stdout:
                 continue
             msg_info(f"{translate('Starting the container...')} CT {entry['vmid']}")

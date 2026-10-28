@@ -265,9 +265,18 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
             child = service["deployment"]
             lines.append(f"  {service['name']}: {child['resources']['cores']} CPU, "
                          f"{child['resources']['memory_mb']} MB RAM")
+            check = service.get('healthcheck', {}).get('type')
+            if check:
+                label = {'running': translate('Process running only (no health check declared)'),
+                         'completed': translate('Must finish successfully (exit code 0)'),
+                         'exec': translate('Command'), 'http': 'HTTP', 'tcp': 'TCP'}.get(check, check)
+                lines.append(f"    {translate('Startup check')}: {label}")
             for mount in child["mounts"]:
                 target = (f"{mount['size_gb']} GB {on} {mount['source']}"
-                          if mount["type"] == "managed-volume" else mount["source"])
+                          if mount["type"] == "managed-volume" else
+                          f"{translate('Host directory (not included in Proxmox backups)')}: {mount['source']}")
+                if mount['type'] == 'managed-volume' and mount.get('backup'):
+                    target += f" ({translate('in backups')})"
                 lines.append(f"    {mount['container_path']} → {target}")
         for key, label in (("media", N_("Library")), ("application", N_("Application data")), ("transfer", N_("Consume/export"))):
             storage = plan.get(key)
@@ -457,7 +466,10 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
         _print_installation_summary(result, removed)
         if watchdog:
             from .management import set_watchdog
-            if set_watchdog(PROJECT_ROOT, sorted(vmids), True):
+            job_names = {service['name'] for service in deployment.get('services', [])
+                         if service.get('deployment', {}).get('execution_mode') == 'one-shot'}
+            job_vmids = {int(vmid) for name, vmid in (result.get('stack_vmids') or {}).items() if name in job_names}
+            if set_watchdog(PROJECT_ROOT, sorted(vmids-job_vmids), True):
                 console.msg_ok(translate("Watchdog enabled: the application is restarted when it crashes."))
             else:
                 console.msg_warn(translate("The watchdog could not be enabled. Turn it on from Manage installed OCI applications."))

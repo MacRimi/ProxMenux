@@ -85,7 +85,10 @@ class OciWordingTests(TestCase):
         template = function(CUSTOM, 'template_from_compose',
             _services=lambda doc: doc['services'], _template_from_stack=stack)
         self.assertIs(template(json.dumps(document)), converted)
-        stack.assert_called_once_with(document, None)
+        stack.assert_called_once()
+        self.assertEqual(stack.call_args.args, (document, None))
+        self.assertFalse(stack.call_args.kwargs['interpolated'])
+        self.assertIsNone(stack.call_args.kwargs.get('image_entrypoints'))
 
     def test_empty_paste_is_specific_and_nonempty_unchanged(self):
         for title, expected in ((None, 'No Compose file was given'),

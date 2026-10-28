@@ -29,6 +29,9 @@ TRANSACTION = ROOT / 'oci/remote/oci_stack_transaction.py'
 
 
 def extracted(path, name, scope):
+    if name == 'remove':
+        # Operational cache cleanup is exercised by the engine tests; keep wording tests inert.
+        scope.setdefault('compose_jobs', SimpleNamespace(forget_completed=lambda *args: None))
     node = next(n for n in ast.parse(path.read_text()).body
                 if isinstance(n, ast.FunctionDef) and n.name == name)
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), scope)

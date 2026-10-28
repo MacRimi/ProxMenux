@@ -6,6 +6,8 @@ import base64
 import re
 import secrets
 import hashlib
+import math
+import shlex
 from urllib.parse import urlsplit, urlunsplit, quote
 
 import yaml
@@ -52,6 +54,12 @@ def environment(value):
 
 def kind(image):
     repo = canonical_image_repository(image)
+    for prefix in ('docker.io/', 'index.docker.io/', 'registry-1.docker.io/'):
+        if repo.startswith(prefix):
+            repo = repo[len(prefix):]
+            break
+    if repo.startswith('library/'):
+        repo = repo[len('library/'):]
     return repo if repo in {'postgres', 'redis', 'valkey/valkey', 'mariadb', 'linuxserver/mariadb', 'mongo', 'getmeili/meilisearch'} else 'application'
 
 
@@ -76,6 +84,47 @@ def authenticated_redis(service):
     return (kind(service['image']) == 'redis' and not c.get('entrypoint')
             and c.get('command') == ['redis-server','--requirepass','${REDISCLI_AUTH}']
             and bool(environment(c.get('environment')).get('REDISCLI_AUTH')))
+
+
+def custom_dependency_command(service, image_entrypoint=None):
+    """Known server commands may add flags; another executable is not equivalent."""
+    if service['compose'].get('entrypoint'):
+        return False
+    command = service['compose'].get('command')
+    if not command:
+        return True
+    try:
+        argv = shlex.split(command) if isinstance(command, str) else command
+    except ValueError:
+        return False
+    if (not isinstance(argv, list) or not argv or any(not isinstance(arg, str) for arg in argv)):
+        return False
+    allowed = {'postgres': {'postgres'}, 'redis': {'redis-server'},
+               'valkey/valkey': {'valkey-server'}, 'mariadb': {'mariadbd', 'mysqld'},
+               'linuxserver/mariadb': {'mariadbd', 'mysqld'}, 'mongo': {'mongod'},
+               'getmeili/meilisearch': {'meilisearch'}}
+    # Password-protected Redis still needs its own validated auth check.
+    if kind(service['image']) in {'redis', 'valkey/valkey'} and any(
+            arg.split('=', 1)[0] in {'--requirepass', '--masterauth', '--aclfile'} for arg in argv):
+        return authenticated_redis(service)
+    if argv[0].startswith('-'):
+        # Docker passes options through the actual image entrypoint. Do not
+        # guess or prepend a database executable on behalf of the image.
+        return (isinstance(image_entrypoint, list) and bool(image_entrypoint)
+                and all(isinstance(arg, str) and arg for arg in image_entrypoint))
+    return argv[0] in allowed.get(kind(service['image']), set())
+
+
+def completed_services(template):
+    """Jobs are declared by Compose's successful-completion dependency condition."""
+    jobs = set()
+    for service in template.get('compose_stack', {}).get('services', []):
+        dependencies = service['compose'].get('depends_on') or {}
+        if isinstance(dependencies, dict):
+            for name, requirement in dependencies.items():
+                if isinstance(requirement, dict) and requirement.get('condition') == 'service_completed_successfully':
+                    jobs.add(name)
+    return jobs
 
 
 def ordered_services(template):
@@ -105,7 +154,10 @@ def ordered_services(template):
         for dep in raw:
             if isinstance(raw, dict):
                 condition = raw[dep].get('condition', 'service_started')
-                if condition not in {'service_started', 'service_healthy'}:
+                allowed = {'service_started', 'service_healthy'}
+                if template.get('proxmox', {}).get('custom_compose_stack'):
+                    allowed.add('service_completed_successfully')
+                if condition not in allowed:
                     raise StackError(f"{name}: {translate('unsupported dependency condition')} {condition}")
                 if raw[dep].get('required', True) is False:
                     raise StackError(f"{name}: {translate('optional dependencies are not yet supported')}")
@@ -170,9 +222,12 @@ def service_template(parent, service, main=False):
     return single
 
 
-def service_endpoint(service):
-    """A custom web service is checked on its own container port, not a host mapping."""
-    for port in service['compose'].get('ports') or []:
+def service_endpoint(service, include_expose=False):
+    """Return a TCP port; only a published port implies a web frontend here."""
+    ports = list(service['compose'].get('ports') or [])
+    if include_expose:
+        ports += list(service['compose'].get('expose') or [])
+    for port in ports:
         if isinstance(port, dict):
             protocol = port.get('protocol', 'tcp')
             target = port.get('target')
@@ -183,6 +238,80 @@ def service_endpoint(service):
         if protocol == 'tcp' and str(target).isdigit() and 0 < int(target) < 65536:
             return {'scheme': 'http', 'port': int(target), 'path': '/'}
     return None
+
+
+def _check_duration(value, default):
+    if value is None:
+        return default
+    text = str(value).strip().lower()
+    parts = list(re.finditer(r'(\d+(?:\.\d+)?)(ns|us|ms|h|m|s)', text))
+    if not parts or ''.join(item.group() for item in parts) != text:
+        raise StackError(translate('Invalid service check timeout'))
+    factors = {'ns': 1e-9, 'us': 1e-6, 'ms': 1e-3, 's': 1, 'm': 60, 'h': 3600}
+    duration = sum(float(item.group(1)) * factors[item.group(2)] for item in parts)
+    if not math.isfinite(duration) or duration < 0 or duration > 3600:
+        raise StackError(translate('Invalid service check timeout'))
+    return duration
+
+
+def compose_healthcheck(service):
+    """An explicit worker readiness command executed inside its own LXC."""
+    raw = service['compose'].get('healthcheck')
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise StackError(translate('Invalid service check arguments'))
+    if raw.get('disable') is True:
+        return None
+    test = raw.get('test')
+    if test == ['NONE']:
+        return None
+    if isinstance(test, str):
+        test = ['CMD-SHELL', test]
+    if (not isinstance(test, list) or len(test) < 2
+            or any(not isinstance(arg, str) or any(ch in arg for ch in '\0\n\r') for arg in test)):
+        raise StackError(translate('Invalid service check arguments'))
+    if test[0] == 'CMD':
+        argv = test[1:]
+    elif test[0] == 'CMD-SHELL' and len(test) == 2 and test[1].strip():
+        # pct exec does not promise the image PID1 environment. Reject checks
+        # that would silently evaluate an unset runtime variable.
+        reference = re.search(r'\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[^}]+\})', test[1])
+        if reference:
+            raise StackError(f"healthcheck: {translate('needs stack review')}: {reference.group(0)}")
+        argv = ['sh', '-c', test[1]]
+    else:
+        raise StackError(translate('Invalid service check arguments'))
+    if not argv or not argv[0].strip():
+        raise StackError(translate('Empty exec service check'))
+    interval = _check_duration(raw.get('interval'), 30)
+    request = _check_duration(raw.get('timeout'), 5)
+    start_period = _check_duration(raw.get('start_period'), 0)
+    retries = raw.get('retries', 3)
+    if (type(retries) is not int or retries < 1 or retries > 1000
+            or interval <= 0 or request <= 0):
+        raise StackError(translate('Invalid service check timeout'))
+    total = max(30, math.ceil(start_period + (interval + request) * retries))
+    if total > 3600:
+        raise StackError(translate('Invalid service check timeout'))
+    return {'type': 'exec', 'argv': argv, 'timeout_seconds': total}
+
+
+def readiness_mode(service):
+    """A declared healthy check is distinct from port liveness or running only."""
+    if compose_healthcheck(service) or kind(service['image']) != 'application':
+        return 'exec'
+    if service_endpoint(service):
+        return 'http'
+    if service_endpoint(service, include_expose=True):
+        return 'tcp'
+    return 'running'
+
+
+def _entrypoint_for(template, service):
+    entries = template.get('proxmox', {}).get('stack_image_entrypoints', {})
+    reference = service['image']
+    return entries.get(reference) or (entries.get(reference[:-7]) if reference.endswith(':latest') else None)
 
 
 def shared_sources(services):
@@ -202,6 +331,7 @@ def assess(template):
     custom = template.get('proxmox', {}).get('custom_compose_stack', False)
     try:
         services = ordered_services(template)
+        literal = template.get('proxmox', {}).get('custom_compose_interpolated', False)
         top = template['compose_stack'].get('top_level', {})
         if any(k not in {'name', 'networks', 'volumes', 'version'}
                and not (custom and str(k).startswith('x-')) for k in top):
@@ -211,16 +341,42 @@ def assess(template):
             raise StackError(translate('Multiple networks or external networks are not yet supported'))
         if any(v for v in top.get('volumes', {}).values()):
             raise StackError(translate('Top-level volume options are not yet supported'))
+        healthy_required = set()
+        # Short-form dependencies mean service_started; collect long-form
+        # healthy requirements even when other services use the short form.
+        for service in services:
+            dependencies = service['compose'].get('depends_on') or {}
+            if isinstance(dependencies, dict):
+                healthy_required.update(name for name, condition in dependencies.items()
+                                        if isinstance(condition, dict) and condition.get('condition') == 'service_healthy')
+        jobs = completed_services(template) if custom else set()
+        if template['compose_stack']['main_service'] in jobs or jobs & healthy_required:
+            raise StackError(translate('unsupported dependency condition') + ': service_completed_successfully')
+        for service in services:
+            if service['name'] in jobs and service['compose'].get('restart') not in (None, 'no'):
+                raise StackError(translate('unsupported dependency condition') + ': restart')
         seen_sources = set()
         for s in services:
             c = s['compose']
             for key in ('profiles','build','configs','secrets','env_file','pid','privileged','devices','runtime','cap_add','security_opt','network_mode','extra_hosts'):
                 if c.get(key):
                     errors.append(f"{s['name']}: {key} {translate('needs stack review')}")
-            if (s['name'] != template['compose_stack']['main_service'] and kind(s['image']) == 'application'
-                    and not (custom and service_endpoint(s))):
-                errors.append(f"{s['name']}: {translate('health and persistence profile not yet defined')}")
-            if kind(s['image']) != 'application' and (c.get('command') or c.get('entrypoint')) and not authenticated_redis(s):
+            try:
+                explicit_check = compose_healthcheck(s) if custom else None
+            except StackError as error:
+                errors.append(f"{s['name']}: {error}")
+                explicit_check = None
+            if (custom and s['name'] == template['compose_stack']['main_service']
+                    and explicit_check and service_endpoint(s) is None):
+                errors.append(f"{s['name']}: {translate('Main endpoint not yet defined')}")
+            if s['name'] != template['compose_stack']['main_service'] and kind(s['image']) == 'application':
+                if not custom:
+                    errors.append(f"{s['name']}: {translate('health and persistence profile not yet defined')}")
+                elif s['name'] in healthy_required and explicit_check is None:
+                    errors.append(f"{s['name']}: service_healthy {translate('needs stack review')}: "
+                                  f"{translate('health and persistence profile not yet defined')}")
+            if (kind(s['image']) != 'application' and (c.get('command') or c.get('entrypoint'))
+                    and not authenticated_redis(s) and not (custom and custom_dependency_command(s, _entrypoint_for(template, s)))):
                 errors.append(f"{s['name']}: {translate('custom dependency commands are not yet supported')}")
             for m in normalized_mounts(c.get('volumes', [])):
                 source = m.get('source')
@@ -236,7 +392,7 @@ def assess(template):
             for k,v in env.items():
                 for a,b in VARIABLE.findall(v):
                     variable = a or b
-                    if variable not in {'TZ','PUID','PGID'} and not variable.startswith('GENERATED_'):
+                    if not literal and variable not in {'TZ','PUID','PGID'} and not variable.startswith('GENERATED_'):
                         errors.append(f'{s["name"]}: {translate("unsupported variable")} {variable}')
                     if variable.startswith('GENERATED_') and re.search(r'API_KEY|CLIENT_SECRET|CREDENTIALS_ENABLED', variable):
                         errors.append(f'{s["name"]}: {translate("unsupported external credential or boolean")} {variable}')
@@ -253,19 +409,21 @@ def assess(template):
                     errors.append(f"{source}: {translate('Volumes shared between services are not yet supported')}")
         if not template['first_run'].get('endpoints'):
             errors.append(translate('Main endpoint not yet defined'))
-        resolve_environments(services, 'UTC', template.get('proxmox', {}).get('stack_generators', {}))
+        resolve_environments(services, 'UTC', template.get('proxmox', {}).get('stack_generators', {}), literal=literal)
     except (ValueError, KeyError, TypeError, ConversionError) as e:
         errors.append(str(e))
     return sorted(set(errors))
 
 
-def resolve_environments(services, timezone, generators=None):
+def resolve_environments(services, timezone, generators=None, literal=False):
     tokens = {'TZ': timezone, 'PUID': '1000', 'PGID': '1000'}
     resolved = {}
     for s in services:
         env = environment(s['compose'].get('environment'))
         def replace(match):
             name = match.group(1) or match.group(2)
+            if literal:
+                return match.group(0)
             if name.startswith('GENERATED_'):
                 if name not in tokens:
                     generator = (generators or {}).get(name)
@@ -279,7 +437,10 @@ def resolve_environments(services, timezone, generators=None):
                 raise StackError(f"{translate('Unresolved variable:')} {name}")
             return tokens[name]
         resolved[s['name']] = {k: VARIABLE.sub(replace, v) for k,v in env.items()}
-    # Bind URL credentials using the destination service, never a global text replacement.
+    if literal:
+        return resolved
+    # Catalog-generated credentials are bound only for legacy catalog definitions.
+    # A fully interpolated custom Compose keeps its explicit connection strings.
     databases = {}
     for s in services:
         if kind(s['image']) == 'postgres':
@@ -343,6 +504,7 @@ def build_stack(template, ui, mode='advanced'):
     services = copy.deepcopy(ordered_services(template))
     defaults = template['proxmox']['defaults']
     custom = template.get('proxmox', {}).get('custom_compose_stack', False)
+    jobs = completed_services(template) if custom else set()
     shared = shared_sources(services) if custom else set()
     shared_paths = {}
     # A default installation takes the name, the VMID and the settings from the
@@ -360,19 +522,23 @@ def build_stack(template, ui, mode='advanced'):
         root = ask_storage(ui, translate('Storage for rootfs'), 'rootdir', defaults['rootfs_storage'])
     cache = ask_storage(ui, translate('Storage for the OCI image cache'), 'vztmpl', defaults['template_storage'], mode)
     generators = template.get('proxmox', {}).get('stack_generators', {})
+    literal = template.get('proxmox', {}).get('custom_compose_interpolated', False)
     # The data paths of every member are settled before the network and the settings.
     volumes = root
-    draft_envs = resolve_environments(copy.deepcopy(services), host.timezone(), generators)
+    draft_envs = resolve_environments(copy.deepcopy(services), host.timezone(), generators, literal=literal)
     drafts = []
+    selected_resources = {}
     for s in services:
         draft = copy.deepcopy(s)
         draft['compose']['environment'] = draft_envs[s['name']]
         _, plan = _service_plan(template, draft)
-        if mode != DEFAULT_MODE and s['name'] == template['compose_stack']['main_service']:
-            resources = {'cores': int(ui.ask(translate('CPU cores'), str(plan['resources']['cores']))),
-                         'memory_mb': int(ui.ask(translate('Memory in MB'), str(plan['resources']['memory_mb'])))}
+        if mode != DEFAULT_MODE and (custom or s['name'] == template['compose_stack']['main_service']):
+            prefix = s['name']+': ' if custom and s['name'] != template['compose_stack']['main_service'] else ''
+            resources = {'cores': int(ui.ask(prefix+translate('CPU cores'), str(plan['resources']['cores']))),
+                         'memory_mb': int(ui.ask(prefix+translate('Memory in MB'), str(plan['resources']['memory_mb'])))}
             if resources['cores'] < 1 or resources['memory_mb'] < 256:
                 raise StackError(translate('Invalid resources'))
+            selected_resources[s['name']] = resources
         # The paths of the application itself hold the user's data, so where
         # they go is asked in a default installation too; the databases and
         # caches beside it keep the values of the recipe.
@@ -394,13 +560,16 @@ def build_stack(template, ui, mode='advanced'):
                     if chosen.rstrip('/') in {'', '/etc', '/var', '/usr', '/root', '/dev', '/proc', '/sys', '/run', '/boot', '/bin', '/sbin', '/lib', '/lib64'}:
                         raise StackError(translate('Invalid volume target'))
                 env = draft_envs[s['name']]
-                uid, gid = env.get('PUID', '1000'), env.get('PGID', '1000')
-                if not str(uid).isdigit() or not str(gid).isdigit() or int(uid) > 65535 or int(gid) > 65535:
-                    raise StackError(translate('Invalid resources'))
-                offset = 100000 if plan.get('security', {}).get('unprivileged', True) else 0
                 m.update(type='host-bind', source=shared_paths[source], backup=False, size_gb=None,
-                         read_only=bool(source_mount.get('read_only')),
-                         host_owner=[int(uid)+offset, int(gid)+offset])
+                         read_only=bool(source_mount.get('read_only')))
+                # Without an explicit PUID/PGID, use the imported image user
+                # when creating the directory, just like private volumes.
+                if 'PUID' in env or 'PGID' in env:
+                    uid, gid = env.get('PUID', '1000'), env.get('PGID', '1000')
+                    if not str(uid).isdigit() or not str(gid).isdigit() or int(uid) > 65535 or int(gid) > 65535:
+                        raise StackError(translate('Invalid resources'))
+                    offset = 100000 if plan.get('security', {}).get('unprivileged', True) else 0
+                    m['host_owner'] = [int(uid)+offset, int(gid)+offset]
                 continue
             mount_mode = (ui.choose(f"{translate('Where to store')} {label}",
                                     [('managed-volume', translate('Container volume (included in backups)')),
@@ -430,7 +599,7 @@ def build_stack(template, ui, mode='advanced'):
     address_labels = frontend_names if custom else ['']
     addresses, gateway = access.ask_addresses(ui, bridge, address_labels)
     timezone = quiet.ask(translate('Timezone'), host.timezone())
-    envs = resolve_environments(services, timezone, generators)
+    envs = resolve_environments(services, timezone, generators, literal=literal)
     for group in template.get('proxmox', {}).get('stack_optional_environment', []):
         service_name = group['service']
         if service_name not in envs:
@@ -459,16 +628,27 @@ def build_stack(template, ui, mode='advanced'):
         single, plan = _service_plan(template, s)
         k = kind(s['image'])
         # Values are already resolved; do not reinterpret user credentials as Compose variables.
-        plan['environment'] = [{'name':key,'value':value,'sensitive':True} for key,value in env.items() if value != '']
+        plan['environment'] = [{'name':key,'value':value,'sensitive':True} for key,value in env.items() if value != '' or literal]
         plan.update(hostname=_hostname_default(name+'-'+s['name']), template_storage=cache,
                     start_after_create=False)
         plan['rootfs']['storage'] = root
         if 'memory_default_mb' not in single['proxmox'].get('installer_profile', {}).get('resources', {}):
             plan['resources']['memory_mb'] = max(1024 if k in {'postgres','mariadb','linuxserver/mariadb','mongo','getmeili/meilisearch'} else 512, plan['resources']['memory_mb'])
         plan['mounts'] = drafts[index]['deployment']['mounts']
-        if main and mode != DEFAULT_MODE:
-            plan['resources'].update(resources)
-        if k == 'postgres':
+        if s['name'] in selected_resources:
+            plan['resources'].update(selected_resources[s['name']])
+        explicit_check = compose_healthcheck(s) if custom else None
+        if s['name'] in jobs:
+            health = {'type': 'completed', 'timeout_seconds': 300}
+            plan['execution_mode'] = 'one-shot'
+        elif explicit_check:
+            health = explicit_check
+            if main:
+                endpoint = service_endpoint(s)
+                if endpoint is None:
+                    raise StackError(f"{s['name']}: {translate('Main endpoint not yet defined')}")
+                health['endpoint'] = endpoint
+        elif k == 'postgres':
             health = {'type':'exec','timeout_seconds':180,'argv':['pg_isready','-h','127.0.0.1','-U',env.get('POSTGRES_USER','postgres'),'-d',env.get('POSTGRES_DB',env.get('POSTGRES_USER','postgres'))]}
         elif k == 'mariadb':
             health = {'type':'exec','timeout_seconds':240,'argv':['healthcheck.sh','--connect','--innodb_initialized']}
@@ -488,14 +668,19 @@ def build_stack(template, ui, mode='advanced'):
                 check = "REDISCLI_AUTH=${REDISCLI_AUTH:-$(tr '\\000' '\\n' < /proc/1/environ | sed -n 's/^REDISCLI_AUTH=//p')}; export REDISCLI_AUTH; " + check
             health = {'type':'exec','timeout_seconds':90,'argv':['sh','-c',check]}
         else:
-            endpoint = service_endpoint(s) if custom else template['first_run']['endpoints'][0]
+            endpoint = service_endpoint(s, include_expose=not main) if custom else template['first_run']['endpoints'][0]
             if endpoint is None:
-                raise StackError(f"{s['name']}: {translate('Main endpoint not yet defined')}")
-            health = {'type':'http','timeout_seconds':360,'endpoint':endpoint}
+                if main or not custom:
+                    raise StackError(f"{s['name']}: {translate('Main endpoint not yet defined')}")
+                health = {'type': 'running', 'timeout_seconds': 30}
+            elif custom and not main and service_endpoint(s) is None:
+                health = {'type': 'tcp', 'timeout_seconds': 180, 'port': endpoint['port']}
+            else:
+                health = {'type':'http','timeout_seconds':360,'endpoint':endpoint}
         plans.append({'name':s['name'],'main':main,'kind':k,'offset':0 if main else len(plans)+1,
                       'aliases':list(dict.fromkeys([s['name'],s['compose'].get('container_name',s['name'])])),
                       'template':single,'deployment':plan,'healthcheck':health})
-        if s['name'] in frontend_names:
+        if s['name'] in frontend_names and s['name'] not in jobs:
             plans[-1]['frontend'] = True
             plans[-1]['frontend_ipv4'] = addresses[s['name']] if custom else addresses['']
     if mode != DEFAULT_MODE:
@@ -503,7 +688,7 @@ def build_stack(template, ui, mode='advanced'):
         ask_stack_extra_devices(ui, plans)
     onboot = ui.confirm(translate('Start the stack with Proxmox'), False)
     for plan in plans:
-        plan['deployment']['onboot'] = onboot
+        plan['deployment']['onboot'] = onboot and plan['name'] not in jobs
     return {'deployment_kind':'generic-multi-lxc-stack','stack_name':name,'base_vmid':int(vmid) if vmid else None,
             'completion_notes':template.get('proxmox',{}).get('stack_completion_notes',[]),
             'rootfs_storage':root,'template_storage':cache,'onboot':onboot,'start_after_create':True,

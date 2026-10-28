@@ -994,6 +994,11 @@ prepare_nvidia_driver_links() {
 
 source "$SCRIPT_DIR/oci_nvidia_setup.sh"
 
+oci_valid_extra_hostname() {
+  # Compose network aliases may contain underscores; each entry stays one hosts-file token.
+  [[ ${#1} -le 253 && $1 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]
+}
+
 apply_extra_hosts() {
   local count rootfs hosts_file temporary address hostname bridge_address failed=0
   count=$(jq '.extra_hosts? // [] | length' "$DEPLOYMENT_FILE")
@@ -1021,7 +1026,7 @@ apply_extra_hosts() {
           || { oci_log "Could not resolve host-gateway on $BRIDGE"; failed=1; break; }
         address=$bridge_address
       fi
-      [[ $hostname =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] \
+      oci_valid_extra_hostname "$hostname" \
         || { oci_log "Invalid extra hostname: $hostname"; failed=1; break; }
       [[ $address =~ ^[0-9A-Fa-f:.]+$ ]] \
         || { oci_log "Invalid extra host address: $address"; failed=1; break; }

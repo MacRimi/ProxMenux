@@ -906,7 +906,7 @@ def convert_casaos_compose(
                 "environment": "import-image-env-then-apply-compose-overrides",
                 "user": "import-from-oci-image",
                 "working_dir": "import-from-oci-image",
-                "stop_signal": "import-from-oci-image",
+                "stop_signal": "apply-compose-override" if service.get("stop_signal") is not None else "import-from-oci-image",
             },
             **(
                 {"installer_profile": _compose_installer_profile(service, markers["devices"], markers["security_opt"])}

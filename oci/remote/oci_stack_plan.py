@@ -1,7 +1,35 @@
 """Read-only validation of a coordinated stack operation, before host changes."""
 import copy
+import re
+import uuid
 
 from oci_ui import translate
+
+
+def validate_job_check(check, record=None):
+    """Validate a completion proof request without treating STOPPED as success."""
+    failure = translate('Invalid service check arguments')
+    if not isinstance(check, dict) or check.get('type') != 'completed':
+        raise ValueError(failure)
+    job = check.get('job')
+    if not isinstance(job, dict):
+        raise ValueError(failure)
+    try:
+        identity = str(uuid.UUID(job['installation_id']))
+    except (KeyError, ValueError, TypeError, AttributeError) as error:
+        raise ValueError(failure) from error
+    timeout = job.get('timeout_seconds')
+    if (type(timeout) is not int or not 30 <= timeout <= 3600
+            or type(check.get('timeout_seconds')) is not int or check['timeout_seconds'] != timeout
+            or not isinstance(job.get('image_digest'), str)
+            or not re.fullmatch(r'sha256:[0-9a-f]{64}', job['image_digest'])
+            or not isinstance(job.get('expected_config_fingerprint'), str)
+            or not re.fullmatch(r'[0-9a-f]{64}', job['expected_config_fingerprint'])):
+        raise ValueError(failure)
+    if record is not None and (record.get('installation_id') != identity
+            or record.get('observed', {}).get('resolved_registry_digest') != job['image_digest']):
+        raise ValueError(failure)
+    return job
 
 
 def build(primary, records, inventory, operation):
@@ -48,6 +76,13 @@ def build(primary, records, inventory, operation):
             missing.append(vmid)
         if current.get('deployment', {}).get('rootfs_adaptation_replay_required'):
             blockers.append({'vmid': vmid, 'reason': 'dedicated-adapter-replay-required'})
+        service = next(service for service in services if service['vmid'] == vmid)
+        if service.get('healthcheck', {}).get('type') == 'completed':
+            validate_job_check(service['healthcheck'], current)
+            if (vmid == primary['vmid'] or current.get('deployment', {}).get('onboot')
+                    or current.get('deployment', {}).get('watchdog')
+                    or current.get('deployment', {}).get('execution_mode') != 'one-shot'):
+                raise ValueError(translate('Invalid service check arguments'))
         members.append(copy.deepcopy(current))
     if missing and operation == 'update':
         raise ValueError(translate('Stack members are missing; recreate them after verifying their volumes'))

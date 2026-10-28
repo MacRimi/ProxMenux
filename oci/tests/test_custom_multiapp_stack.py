@@ -54,9 +54,9 @@ class CustomMultiAppStackTests(unittest.TestCase):
         self.assertEqual(assess(template()), [])
         self.assertTrue(assess(template(custom=False)))
 
-    def test_app_without_own_port_is_rejected(self):
+    def test_custom_background_app_without_port_is_only_checked_running(self):
         result = template(text=COMPOSE.replace("    ports: ['7878:7878']\n", ''))
-        self.assertTrue(any('health and persistence' in e for e in assess(result)))
+        self.assertEqual(assess(result), [])
 
     def test_service_image_contract_preserves_tag_and_digest(self):
         parent = template()
@@ -95,6 +95,27 @@ class CustomMultiAppStackTests(unittest.TestCase):
         self.assertEqual({s['name']:s['frontend_ipv4'] for s in plan['services']}, supplied)
         self.assertEqual(plan['network']['frontend_gateway'], '192.0.2.1')
 
+    def test_advanced_custom_resources_are_selected_per_service(self):
+        class ResourceUI(UI):
+            def ask(self,text,default=None,**kwargs):
+                if text=='radarr: Memory in MB': return '768'
+                if text=='radarr: CPU cores': return '3'
+                if text=='Memory in MB': return '2048'
+                if text=='CPU cores': return '2'
+                return super().ask(text,default,**kwargs)
+        with patch('proxmenux_oci.installer.ask_storage',return_value='local-zfs'), \
+             patch('proxmenux_oci.installer.ask_bridge',return_value='vmbr0'), \
+             patch('proxmenux_oci.host.timezone',return_value='UTC'), \
+             patch('proxmenux_oci.custom_mounts.ask_stack_custom_mounts'), \
+             patch('proxmenux_oci.extra_devices.ask_stack_extra_devices'), \
+             patch('proxmenux_oci.network.ask_addresses',return_value=({'sonarr':'dhcp','radarr':'dhcp'},None)):
+            plan=build_stack(template(),ResourceUI(),ADVANCED_MODE)
+        resources={service['name']:service['deployment']['resources'] for service in plan['services']}
+        self.assertEqual(resources['radarr']['memory_mb'],768)
+        self.assertEqual(resources['radarr']['cores'],3)
+        self.assertEqual(resources['sonarr']['memory_mb'],2048)
+        self.assertEqual(resources['sonarr']['cores'],2)
+
     def test_build_assigns_distinct_endpoints_and_shared_bind_source(self):
         ui = UI()
         with patch('proxmenux_oci.installer.ask_storage', return_value='local-zfs'), \
@@ -115,6 +136,17 @@ class CustomMultiAppStackTests(unittest.TestCase):
         self.assertEqual(len([text for text in ui.asks if text.endswith('shared-data')]), 1)
         configs = [next(m for m in s['deployment']['mounts'] if m['container_path']=='/config') for s in members.values()]
         self.assertTrue(all(m['type']=='managed-volume' for m in configs))
+
+    def test_shared_directory_without_puid_uses_imported_image_owner(self):
+        text = COMPOSE.replace("    environment: {PUID: '1000', PGID: '1000'}\n", '')
+        with patch('proxmenux_oci.installer.ask_storage', return_value='local-zfs'), \
+             patch('proxmenux_oci.installer.ask_bridge', return_value='vmbr0'), \
+             patch('proxmenux_oci.host.timezone', return_value='UTC'), \
+             patch('proxmenux_oci.network.ask_addresses', side_effect=lambda ui, bridge, labels: ({name:'dhcp' for name in labels}, None)):
+            plan = build_stack(template(text=text), UI(), DEFAULT_MODE)
+        for service in plan['services']:
+            shared = next(m for m in service['deployment']['mounts'] if m['container_path'] == '/data')
+            self.assertNotIn('host_owner', shared)
 
 
 if __name__ == '__main__':

@@ -19,6 +19,7 @@ import sys
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
 import oci_instances as instances
+import oci_compose_jobs as compose_jobs
 from oci_installation_state import parse_config
 import oci_console
 import oci_runtime_settings as runtime_settings
@@ -365,6 +366,8 @@ def remove(root, vmid):
     if lifecycle.exists() and not lifecycle.is_symlink():
         lifecycle.unlink()
     for member in members:
+        record = instances.read(root, member)
+        compose_jobs.forget_completed(member, record['installation_id'])
         directory = instances.location(root, member).parent
         work_backup.forget(root, member)
         if directory.is_dir() and not directory.is_symlink():
