@@ -118,7 +118,14 @@ class ManagedRouteLifecycleTests(unittest.TestCase):
                 root=Path(folder)/'records';root.mkdir()
                 routes.install(deployment(),4901,WORKER)
                 if case=='changed':routes.include_path(4901).write_text('foreign hook')
-                with patch.object(removal.instances,'guest_exists',return_value=case=='reused'), \
+                with patch.multiple(removal,CLUSTER_NODES=Path(folder)/'nodes',
+                     SNIPPETS=Path(folder)/'snippets',MONITOR_APPS=Path(folder)/'apps',
+                     CLUSTER_RECORDS=Path(folder)/'cluster-records'), \
+                     patch.object(removal.runtime_settings,'include_path',lambda vmid:Path(folder)/f'{vmid}.sysctls'), \
+                     patch.object(removal.runtime_settings,'legacy_include_path',lambda vmid:Path(folder)/f'{vmid}.legacy'), \
+                     patch.object(removal.runtime_settings,'seccomp_path',lambda vmid:Path(folder)/f'{vmid}.seccomp'), \
+                     patch.object(removal.oci_console,'LOG_DIR',Path(folder)/'logs'), \
+                     patch.object(removal.instances,'guest_exists',return_value=case=='reused'), \
                      patch.object(removal.instances,'has_contract',return_value=case=='pending'), \
                      patch.object(removal.instances,'read',return_value={'installation_id':WORKER}), \
                      patch.object(removal.instances,'release_orphan',return_value=False), \

@@ -19,6 +19,9 @@ class CarriedConfigCacheTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
+        contract = patch.object(carried, 'STACK_CONTRACT', str(Path(self.tmp.name) / 'stack-{}.json'))
+        contract.start()
+        self.addCleanup(contract.stop)
         self.root = Path(self.tmp.name) / 'instances'
         self.source = Path(self.tmp.name) / 'lxc'
         self.source.mkdir()

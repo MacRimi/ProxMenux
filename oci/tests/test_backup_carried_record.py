@@ -33,7 +33,8 @@ class BackupCarriedRecordTests(unittest.TestCase):
             code = self.unmount_code if args[1]=='unmount' else 0
             return SimpleNamespace(returncode=code, stdout=value)
         for name, value in [('_run',run),('_host_directory_missing',lambda _:False),
-                            ('ROOTFS',self.rootfs_base),('mapped_root',lambda _: (os.getuid(),os.getgid()))]:
+                            ('ROOTFS',self.rootfs_base),('STACK_CONTRACT',str(Path(temporary.name)/'stack-{}.json')),
+                            ('mapped_root',lambda _: (os.getuid(),os.getgid()))]:
             context=patch.object(carried,name,value);context.start();self.addCleanup(context.stop)
 
     def carry(self, original=None):
