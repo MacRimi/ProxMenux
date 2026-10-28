@@ -2748,6 +2748,9 @@ def _action_state(unit_name):
     return result_dict
 
 
+app.extensions['host_update_power'] = {'run': _action_run, 'state': _action_state}
+
+
 def _action_cancel(unit_name):
     """Stop a running transient action unit. Idempotent — succeeds on
     units that are not running (or don't exist).

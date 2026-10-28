@@ -2,7 +2,7 @@
 Flask routes for health monitoring with persistence support
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from health_monitor import health_monitor
 from health_persistence import health_persistence
 from jwt_middleware import require_auth, require_admin_scope
@@ -16,6 +16,53 @@ except ImportError:
     MOUNT_MONITOR_AVAILABLE = False
 
 health_bp = Blueprint('health', __name__)
+
+
+@health_bp.route('/api/health/proxmenux-version', methods=['GET'])
+@require_auth
+def get_proxmenux_version():
+    from proxmenux_version_status import version_status
+    return jsonify(version_status())
+
+
+@health_bp.route('/api/health/reboot-context', methods=['GET'])
+@require_admin_scope
+def get_reboot_context():
+    from host_update_controls import reboot_context
+    return jsonify(reboot_context())
+
+
+@health_bp.route('/api/health/reboot-after-update', methods=['POST'])
+@require_admin_scope
+def reboot_after_update():
+    import socket
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or data.get('confirm') is not True or data.get('hostname') != socket.gethostname() or not isinstance(data.get('boot_id'), str) or not data['boot_id']:
+        return jsonify({'reason': 'confirmation'}), 400
+    power = current_app.extensions.get('host_update_power')
+    if not power:
+        return jsonify({'reason': 'unavailable'}), 503
+    from host_update_controls import reboot_context, COMMAND, UNIT
+    context = reboot_context()
+    if context.get('boot_id') != data['boot_id']:
+        return jsonify({'reason': 'confirmation'}), 409
+    if not context['allowed']:
+        return jsonify({'reason': context['reason']}), 409
+    ok, error = power['run'](UNIT, list(COMMAND), description='ProxMenux: reboot after host update',
+                             extra_properties=['RuntimeMaxSec=75'])
+    if not ok:
+        return jsonify({'reason': 'unavailable'}), error.get('status', 500)
+    return jsonify({'accepted': True}), 202
+
+
+@health_bp.route('/api/health/reboot-after-update/status', methods=['GET'])
+@require_admin_scope
+def reboot_after_update_status():
+    power = current_app.extensions.get('host_update_power')
+    if not power:
+        return jsonify({'state': 'unknown'}), 503
+    from host_update_controls import UNIT
+    return jsonify(power['state'](UNIT))
 
 @health_bp.route('/api/health/status', methods=['GET'])
 @require_auth

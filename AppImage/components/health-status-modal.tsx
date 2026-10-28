@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { HostUpdateJobs, type HostUpdateJob } from "./host-update-jobs"
+import { RestartAfterUpdate, ProxMenuxVersionCard } from "./host-update-status"
 import { useT } from "@/lib/i18n/provider"
 import { useIsPbs } from "@/lib/use-platform"
 
@@ -370,6 +371,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "UP": t("healthStatus.details.up"),
       "Kernel/PVE up to date": t("healthStatus.details.kernelUpToDate"),
       "No reboot required": t("healthStatus.hostUpdate.noReboot"),
+      "No pending updates": t("healthStatus.details.noPendingUpdates"),
       "Reboot required by the operating system": t("healthStatus.hostUpdate.rebootMarker"),
       "Could not determine whether a reboot is required": t("healthStatus.hostUpdate.rebootUnknown"),
       "Proxmox VE is up to date": t("healthStatus.details.proxmoxUpToDate"),
@@ -689,6 +691,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         {Object.entries(checks)
           .filter(([, checkData]) => checkData.installed !== false)
           .map(([checkKey, checkData]) => {
+          if (categoryKey === "updates" && checkKey === "reboot_required" && checkData.status === "INFO") {
+            return <RestartAfterUpdate key={checkKey} getApiUrl={getApiUrl}
+              disabled={hostJobs.some(job => job.state !== "complete")} label={formatCheckLabel(checkKey)}
+              detail={translateHealthText(checkData.detail)} icon={getStatusIcon(checkData.status, "sm")} />
+          }
           const isDismissable = checkData.dismissable === true
           const checkStatus = checkData.status?.toUpperCase() || "OK"
 
@@ -896,6 +903,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                             pending prevents the operator from spawning a
                             terminal that would only report "System is
                             already up to date". */}
+                        {key === "updates" && <ProxMenuxVersionCard getApiUrl={getApiUrl} />}
                         {key === "updates" && Number(categoryData?.count ?? 0) > 0 && (
                           <div className="flex justify-end px-3 py-2 pt-1">
                             <Button

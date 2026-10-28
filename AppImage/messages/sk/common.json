@@ -5181,6 +5181,29 @@
     }
   },
   "healthStatus": {
+    "restart": {
+      "button": "Reštartovať server",
+      "title": "Reštartovať server {server}?",
+      "impact": "Reštart dočasne preruší dostupnosť servera, virtuálnych strojov, kontajnerov a ich služieb.",
+      "cancel": "Zrušiť",
+      "confirm": "Potvrdiť reštart",
+      "blocked": "Reštart bude dostupný po dokončení aktualizácie servera.",
+      "accepted": "Požiadavka na reštart bola prijatá. Over, že sa server znova sprístupní.",
+      "unconfirmed": "Požiadavku na reštart sa nepodarilo overiť. Pred ďalším pokusom skontroluj server."
+    },
+    "versions": {
+      "title": "Aktualizácia ProxMenuxu",
+      "installed": "Nainštalovaná verzia",
+      "latest": "Dostupná verzia",
+      "lastKnown": "Posledná známa dostupná verzia",
+      "available": "Dostupná aktualizácia",
+      "current": "ProxMenux je aktuálny",
+      "unknown": "Dostupnú verziu sa nepodarilo overiť",
+      "unverified": "Neoverené",
+      "stable": "Stabilný kanál",
+      "beta": "Beta kanál",
+      "checked": "Posledná úspešná kontrola: {time}"
+    },
     "hostUpdate": {
       "running": "Aktualizácia servera pokračuje aj po odhlásení. Po prihlásení ju môžeš znova otvoriť.",
       "finished": "Aktualizácia servera sa skončila. Pred ďalším spustením si pozri jej výsledok.",
@@ -5314,6 +5337,7 @@
       "runningKernelUpdate": "K dispozícii je aktualizácia jadra pre spustenie {kernel}",
       "kernelPveUpdates": "Dostupné aktualizácie jadra: {kernelCount}; dostupné aktualizácie Proxmox: {pveCount}",
       "pendingPackageUpdates": "Čakajúce aktualizácie balíka: {count}",
+      "noPendingUpdates": "Žiadne čakajúce aktualizácie",
       "updatesAptError": "Nepodarilo sa skontrolovať aktualizácie (chyba apt-get)",
       "updatesAptTimeout": "Časový limit apt-get vypršal - úložisko môže byť nedostupné",
       "kernelPackagesMore": "{technicalIdentity} (+{count} viac)",

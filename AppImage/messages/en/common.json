@@ -5309,6 +5309,29 @@
     }
   },
   "healthStatus": {
+    "restart": {
+      "button": "Restart server",
+      "title": "Restart server {server}?",
+      "impact": "Restarting temporarily interrupts the server, virtual machines, containers and their services.",
+      "cancel": "Cancel",
+      "confirm": "Confirm restart",
+      "blocked": "Restart will be available after the host update finishes.",
+      "accepted": "Restart request accepted. Check that the server returns online.",
+      "unconfirmed": "The restart request could not be verified. Check the server before trying again."
+    },
+    "versions": {
+      "title": "ProxMenux update",
+      "installed": "Installed version",
+      "latest": "Available version",
+      "lastKnown": "Last known available version",
+      "available": "Update available",
+      "current": "ProxMenux is up to date",
+      "unknown": "Could not verify the available version",
+      "unverified": "Unverified",
+      "stable": "Stable channel",
+      "beta": "Beta channel",
+      "checked": "Last successful check: {time}"
+    },
     "hostUpdate": {
       "running": "The host update continues even if you sign out. Reopen it after signing in.",
       "finished": "A host update has finished. View its result before starting another.",
@@ -5403,6 +5426,7 @@
       "runningKernelUpdate": "Kernel update available for running {kernel}",
       "kernelPveUpdates": "Kernel updates available: {kernelCount}; Proxmox updates available: {pveCount}",
       "pendingPackageUpdates": "Package updates pending: {count}",
+      "noPendingUpdates": "No pending updates",
       "updatesAptError": "Failed to check for updates (apt-get error)",
       "updatesAptTimeout": "apt-get timed out - repository may be unreachable",
       "kernelPackagesMore": "{technicalIdentity} (+{count} more)",
