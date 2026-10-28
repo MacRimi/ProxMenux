@@ -16,6 +16,47 @@ def command_output(*command: str) -> str:
     return result.stdout
 
 
+def _interface_files() -> list[Path]:
+    """Include pending Proxmox network edits and down interface definitions."""
+    paths = [Path('/etc/network/interfaces'), Path('/etc/network/interfaces.new')]
+    paths.extend(Path('/etc/network/interfaces.d').glob('*'))
+    return [path for path in paths if path.is_file()]
+
+
+def _configured_networks(text: str) -> list[ipaddress.IPv4Network]:
+    networks = []
+    addresses = []
+    netmask = None
+    inet = False
+
+    def collect():
+        for address in addresses:
+            value = address if '/' in address else address+'/'+(netmask or '32')
+            try:
+                interface = ipaddress.ip_interface(value)
+                if interface.version == 4:
+                    networks.append(interface.network)
+            except ValueError:
+                continue
+
+    for line in text.splitlines():
+        words = line.partition('#')[0].split()
+        if not words:
+            continue
+        if words[0] == 'iface':
+            collect()
+            addresses = []
+            netmask = None
+            inet = len(words) >= 4 and words[2] == 'inet'
+        elif inet and len(words) >= 2:
+            if words[0] == 'address':
+                addresses.append(words[1])
+            elif words[0] == 'netmask':
+                netmask = words[1]
+    collect()
+    return networks
+
+
 def existing_bridges() -> set[str]:
     bridges: set[str] = set()
     for line in command_output("ip", "-o", "link", "show").splitlines():
@@ -25,15 +66,13 @@ def existing_bridges() -> set[str]:
     for path in Path("/etc/pve/lxc").glob("*.conf"):
         text = path.read_text(encoding="utf-8", errors="ignore")
         bridges.update(re.findall(r"(?:^|,)bridge=([^,\s]+)", text, re.MULTILINE))
-    interface_paths = [Path("/etc/network/interfaces")]
-    interface_paths.extend(Path("/etc/network/interfaces.d").glob("*"))
-    for path in interface_paths:
-        if not path.is_file():
-            continue
+    for path in _interface_files():
         text = path.read_text(encoding="utf-8", errors="ignore")
-        bridges.update(
-            re.findall(r"^(?:auto|iface)\s+(vmbr\d+)\b", text, re.MULTILINE)
-        )
+        for line in text.splitlines():
+            words = line.partition('#')[0].split()
+            if words and words[0] in {'auto', 'iface'}:
+                names = words[1:] if words[0] == 'auto' else words[1:2]
+                bridges.update(name for name in names if re.fullmatch(r'vmbr\d+', name))
     return bridges
 
 
@@ -54,6 +93,8 @@ def existing_networks() -> list[ipaddress.IPv4Network]:
                 networks.append(ipaddress.ip_interface(address).network)
             except ValueError:
                 pass
+    for path in _interface_files():
+        networks.extend(_configured_networks(path.read_text(encoding='utf-8', errors='ignore')))
     return networks
 
 
