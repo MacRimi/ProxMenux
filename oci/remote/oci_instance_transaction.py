@@ -1352,6 +1352,22 @@ def complete_recovery(root, journal, state):
             msg_info2(translate('Shared host files are kept as they are; the backup does not restore their content.'))
 
 
+def check_recovery_runtime(config, state):
+    """Validate owned route assets before excluding their include from GPU/sysctl checks."""
+    error = None
+    for key in ('record', 'candidate_contract'):
+        saved = state.get(key) or {}
+        try:
+            public_routes.check(config, saved.get('deployment', {}), state['vmid'],
+                                state['record']['installation_id'])
+            break
+        except public_routes.RouteError as failure:
+            error = failure
+    else:
+        raise error
+    gpu_devices.check_recovery_entries(without_public_routes(config, state['vmid']), state)
+
+
 def recover(root, journal):
     state = json.loads(journal.read_text())
     if state.get('kind') == 'native-modify':
@@ -1418,7 +1434,7 @@ def recover(root, journal):
     if current_path.exists():
         stop(vmid)
         current = owned(vmid, record['installation_id'])
-        gpu_devices.check_recovery_entries(current, state)
+        check_recovery_runtime(current, state)
         if unused_volumes(current).keys() - state.get('retained_unused', {}).keys():
             raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
         move_retained_unused(state, to_stage=True)
