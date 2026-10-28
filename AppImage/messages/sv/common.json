@@ -5242,7 +5242,8 @@
       "certificates": "Certifikat",
       "login_attempts": "Inloggningsförsök",
       "fail2ban": "Fail2Ban",
-      "proxmox_storages": "Proxmox lagring"
+      "proxmox_storages": "Proxmox lagring",
+      "reboot_required": "Omstart krävs"
     },
     "details": {
       "allOperational": "Alla system i drift",
@@ -5321,7 +5322,8 @@
       "securityCheckUnavailable": "Säkerhetskontroll inte tillgänglig: {error}",
       "certificateExpired": "Certifikatet har gått ut",
       "certificateExpiresDays": "Certifikats utgång (dagar): {days}",
-      "certificateInconclusive": "Certifikatkontrollen gav inget säkert resultat"
+      "certificateInconclusive": "Certifikatkontrollen gav inget säkert resultat",
+      "noPendingUpdates": "Inga väntande uppdateringar"
     },
     "time": {
       "justNow": "just nu",
@@ -5358,7 +5360,53 @@
       "years": "{count} år",
       "24hours": "24 timmar",
       "7days": "7 dagar"
-    }
+    },
+    "restart": {
+      "button": "Starta om servern",
+      "title": "Starta om servern {server}?",
+      "impact": "Omstart avbryts tillfälligt servern, virtuella maskiner, behållare och deras tjänster.",
+      "cancel": "Avbryt",
+      "confirm": "Bekräfta omstart",
+      "blocked": "Omstart kommer att vara tillgänglig när värduppdateringen är klar.",
+      "accepted": "Begäran om omstart accepteras.Kontrollera att servern återgår online.",
+      "unconfirmed": "Omstartsbegäran kunde inte verifieras.Kontrollera servern innan du försöker igen."
+    },
+    "versions": {
+      "title": "ProxMenux uppdatering",
+      "installed": "Installerad version",
+      "latest": "Tillgänglig version",
+      "lastKnown": "Senast kända tillgängliga version",
+      "available": "Uppdatering tillgänglig",
+      "current": "ProxMenux är uppdaterad",
+      "currentVersion": "Version {version} är uppdaterad",
+      "unknown": "Det gick inte att verifiera den tillgängliga versionen",
+      "unverified": "Ej verifierad",
+      "stable": "Stabil kanal",
+      "beta": "Beta kanal",
+      "checked": "Senaste lyckade kontroll: {time}"
+    },
+    "hostUpdate": {
+      "running": "Värduppdateringen fortsätter även om du loggar ut.Öppna den igen efter att ha loggat in.",
+      "finished": "Den senaste värduppdateringen har slutförts.Resultatet är tillgängligt.",
+      "attention": "Värduppdateringen behöver uppmärksamhet.Det har inte stoppats;återanslut för att inspektera den.",
+      "view": "Visa uppdatering",
+      "viewResult": "Visa resultat",
+      "hideResult": "Dölj resultatet",
+      "resultTitle": "Värduppdateringsresultat",
+      "resultReadOnly": "Sparad utdata från en slutförd uppdatering.Att öppna den kör inte en annan uppdatering.",
+      "resultUnavailable": "Det sparade resultatet kunde inte laddas.Ingen uppdatering startades.",
+      "retryResult": "Ladda om resultatet",
+      "loadingResult": "Laddar sparat resultat...",
+      "closeResult": "Stäng resultat",
+      "noReboot": "Ingen omstart krävs",
+      "rebootMarker": "Operativsystemet kräver en omstart.",
+      "rebootUnknown": "Kunde inte avgöra om en omstart krävs.",
+      "rebootKernel": "En omstart krävs för att aktivera {installed}.Körs för närvarande: {running}."
+    },
+    "updateSystem": "Uppdatera systemet",
+    "packagePlanNote": "Planen innehåller också nya paket, till exempel en ny kärna.Översikten räknar endast uppdateringar av befintliga paket.",
+    "snapshotUnavailable": "Nya hälsoresultat är inte tillgängliga ännu.",
+    "lastKnownResults": "Visar de senaste tillgängliga resultaten med deras ursprungliga kontrolltid."
   },
   "profilePage": {
     "loading": "Laddar profil...",

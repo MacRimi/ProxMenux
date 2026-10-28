@@ -5242,7 +5242,8 @@
       "certificates": "Certificats",
       "login_attempts": "Tentatives de connexion",
       "fail2ban": "Échec2Ban",
-      "proxmox_storages": "Stockage Proxmox"
+      "proxmox_storages": "Stockage Proxmox",
+      "reboot_required": "Redémarrage requis"
     },
     "details": {
       "allOperational": "Tous les systèmes opérationnels",
@@ -5321,7 +5322,8 @@
       "securityCheckUnavailable": "Contrôle de sécurité indisponible : {error}",
       "certificateExpired": "Certificat expiré",
       "certificateExpiresDays": "Expiration du certificat (jours) : {days}",
-      "certificateInconclusive": "Vérification du certificat non concluante"
+      "certificateInconclusive": "Vérification du certificat non concluante",
+      "noPendingUpdates": "aucune mise à jour en attente"
     },
     "time": {
       "justNow": "tout à l' heure",
@@ -5358,7 +5360,53 @@
       "years": "{count} ans",
       "24hours": "24 heures",
       "7days": "7 jours"
-    }
+    },
+    "restart": {
+      "button": "Redémarrer le serveur",
+      "title": "Redémarrer le serveur {server} ?",
+      "impact": "Le redémarrage interrompt temporairement le serveur, les machines virtuelles, les conteneurs et leurs services.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer le redémarrage",
+      "blocked": "Le redémarrage sera disponible une fois la mise à jour de l'hôte terminée.",
+      "accepted": "demande de redémarrage acceptée.Vérifiez que le serveur revient en ligne.",
+      "unconfirmed": "La demande de redémarrage n'a pas pu être vérifiée.Vérifiez le serveur avant de réessayer."
+    },
+    "versions": {
+      "title": "mise à jour ProxMenux",
+      "installed": "version installée",
+      "latest": "version disponible",
+      "lastKnown": "Dernière version disponible connue",
+      "available": "mise à jour disponible",
+      "current": "ProxMenux est à jour",
+      "currentVersion": "La version {version} est à jour",
+      "unknown": "Impossible de vérifier la version disponible",
+      "unverified": "non vérifié",
+      "stable": "Canal stable",
+      "beta": "canal Beta",
+      "checked": "Dernière vérification réussie : {time}"
+    },
+    "hostUpdate": {
+      "running": "La mise à jour de l'hôte se poursuit même si vous vous déconnectez.Rouvrez-le après vous être connecté.",
+      "finished": "La dernière mise à jour de l'hôte est terminée.Son résultat est disponible.",
+      "attention": "La mise à jour de l'hôte nécessite votre attention.Cela n’a pas été arrêté ;reconnectez-vous pour l’inspecter.",
+      "view": "Afficher la mise à jour",
+      "viewResult": "Afficher le résultat",
+      "hideResult": "Masquer le résultat",
+      "resultTitle": "Résultat de la mise à jour de l'hôte",
+      "resultReadOnly": "sortie enregistrée d’une mise à jour terminée.L'ouvrir n'exécute pas une autre mise à jour.",
+      "resultUnavailable": "Le résultat enregistré n'a pas pu être chargé.Aucune mise à jour n'a été lancée.",
+      "retryResult": "Recharger le résultat",
+      "loadingResult": "Chargement du résultat enregistré…",
+      "closeResult": "Fermer le résultat",
+      "noReboot": "Aucun redémarrage requis",
+      "rebootMarker": "Le système d’exploitation nécessite un redémarrage.",
+      "rebootUnknown": "impossible de déterminer si un redémarrage est requis.",
+      "rebootKernel": "Un redémarrage est nécessaire pour activer {installed}.En cours d'exécution : {running}."
+    },
+    "updateSystem": "Mettre à jour le système",
+    "packagePlanNote": "Le plan comprend également de nouveaux packages, tels qu'un nouveau noyau.L'aperçu ne compte que les mises à jour des packages existants.",
+    "snapshotUnavailable": "Les nouveaux résultats de santé ne sont pas encore disponibles.",
+    "lastKnownResults": "Affichage des derniers résultats disponibles avec leur heure de vérification d'origine."
   },
   "profilePage": {
     "loading": "Chargement du profil…",

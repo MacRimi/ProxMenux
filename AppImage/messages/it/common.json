@@ -5242,7 +5242,8 @@
       "certificates": "Certificati",
       "login_attempts": "Tentativi di accesso",
       "fail2ban": "Fail2Ban",
-      "proxmox_storages": "Storage Proxmox"
+      "proxmox_storages": "Storage Proxmox",
+      "reboot_required": "riavvio richiesto"
     },
     "details": {
       "noTemperatureSensor": "Nessun sensore di temperatura rilevato. Installa lm-sensors se l’hardware lo supporta.",
@@ -5321,7 +5322,8 @@
       "startupStorageChecking": "Controllo storage Proxmox dopo l’avvio: {storage}",
       "startupStorageNotFound": "Controllo storage Proxmox dopo l’avvio: {storage} non è ancora visibile sul server",
       "startupStorageUnavailable": "Controllo storage Proxmox dopo l’avvio: {storage} non è ancora pronto",
-      "startupStorageStatus": "Controllo storage Proxmox dopo l’avvio: {storage} (stato corrente: {status})"
+      "startupStorageStatus": "Controllo storage Proxmox dopo l’avvio: {storage} (stato corrente: {status})",
+      "noPendingUpdates": "nessun aggiornamento in sospeso"
     },
     "time": {
       "justNow": "proprio adesso",
@@ -5358,7 +5360,53 @@
       "years": "{count} anni",
       "24hours": "24 ore",
       "7days": "7 giorni"
-    }
+    },
+    "restart": {
+      "button": "riavvia il server",
+      "title": "riavviare il server {server}?",
+      "impact": "il riavvio interrompe temporaneamente il server, le macchine virtuali, i contenitori e i relativi servizi.",
+      "cancel": "Annulla",
+      "confirm": "conferma il riavvio",
+      "blocked": "il riavvio sarà disponibile al termine dell'aggiornamento dell'host.",
+      "accepted": "richiesta di riavvio accettata.Verificare che il server ritorni online.",
+      "unconfirmed": "non è stato possibile verificare la richiesta di riavvio.Controlla il server prima di riprovare."
+    },
+    "versions": {
+      "title": "aggiornamento ProxMenux",
+      "installed": "versione installata",
+      "latest": "versione disponibile",
+      "lastKnown": "ultima versione disponibile conosciuta",
+      "available": "aggiornamento disponibile",
+      "current": "ProxMenux è aggiornato",
+      "currentVersion": "la versione {version} è aggiornata",
+      "unknown": "impossibile verificare la versione disponibile",
+      "unverified": "non verificato",
+      "stable": "canale stabile",
+      "beta": "canale Beta",
+      "checked": "Ultimo controllo riuscito: {time}"
+    },
+    "hostUpdate": {
+      "running": "l'aggiornamento dell'host continua anche se ti disconnetti.Riaprilo dopo aver effettuato l'accesso.",
+      "finished": "l'ultimo aggiornamento dell'host è terminato.Il suo risultato è disponibile.",
+      "attention": "l'aggiornamento dell'host richiede attenzione.Non è stato fermato;riconnettersi per ispezionarlo.",
+      "view": "visualizza l'aggiornamento",
+      "viewResult": "Visualizza il risultato",
+      "hideResult": "nascondi il risultato",
+      "resultTitle": "risultato dell'aggiornamento dell'host",
+      "resultReadOnly": "output salvato di un aggiornamento completato.Aprendolo non viene eseguito un altro aggiornamento.",
+      "resultUnavailable": "non è stato possibile caricare il risultato salvato.Non è stato avviato alcun aggiornamento.",
+      "retryResult": "ricarica il risultato",
+      "loadingResult": "caricamento del risultato salvato…",
+      "closeResult": "chiudi risultato",
+      "noReboot": "non è richiesto alcun riavvio",
+      "rebootMarker": "il sistema operativo richiede un riavvio.",
+      "rebootUnknown": "impossibile determinare se è necessario un riavvio.",
+      "rebootKernel": "è necessario un riavvio per attivare {installed}.Attualmente in esecuzione: {running}."
+    },
+    "updateSystem": "aggiornamento del sistema",
+    "packagePlanNote": "il piano include anche nuovi pacchetti, come un nuovo kernel.La panoramica conta solo gli aggiornamenti ai pacchetti esistenti.",
+    "snapshotUnavailable": "i nuovi risultati sulla salute non sono ancora disponibili.",
+    "lastKnownResults": "mostra gli ultimi risultati disponibili con l'ora di controllo originale."
   },
   "profilePage": {
     "loading": "Caricamento profilo…",

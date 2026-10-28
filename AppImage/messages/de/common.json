@@ -5242,7 +5242,8 @@
       "certificates": "Zertifikate",
       "login_attempts": "Anmeldeversuche",
       "fail2ban": "Fail2Ban",
-      "proxmox_storages": "Proxmox-Speicher"
+      "proxmox_storages": "Proxmox-Speicher",
+      "reboot_required": "Neustart erforderlich"
     },
     "details": {
       "allOperational": "Alle Systeme betriebsbereit",
@@ -5321,7 +5322,8 @@
       "securityCheckUnavailable": "Sicherheitsüberprüfung nicht verfügbar: {error}",
       "certificateExpired": "Zertifikat abgelaufen",
       "certificateExpiresDays": "Zertifikatsablauf (Tage): {days}",
-      "certificateInconclusive": "Zertifikatsprüfung nicht schlüssig"
+      "certificateInconclusive": "Zertifikatsprüfung nicht schlüssig",
+      "noPendingUpdates": "Keine ausstehenden Aktualisierungen"
     },
     "time": {
       "justNow": "soeben",
@@ -5358,7 +5360,53 @@
       "years": "{count} Jahre",
       "24hours": "24 Stunden",
       "7days": "7 Tage"
-    }
+    },
+    "restart": {
+      "button": "Server neu starten",
+      "title": "Server {server} neu starten?",
+      "impact": "Durch einen Neustart werden der Server, die virtuellen Maschinen, Container und deren Dienste vorübergehend unterbrochen.",
+      "cancel": "Abbrechen",
+      "confirm": "Neustart bestätigen",
+      "blocked": "Neustart ist verfügbar, nachdem das Host-Update abgeschlossen ist.",
+      "accepted": "Neustartanforderung angenommen.Überprüfen Sie, ob der Server wieder online ist.",
+      "unconfirmed": "Die Neustartanforderung konnte nicht überprüft werden.Überprüfen Sie den Server, bevor Sie es erneut versuchen."
+    },
+    "versions": {
+      "title": "ProxMenux-Update",
+      "installed": "Installierte Version",
+      "latest": "Verfügbare Version",
+      "lastKnown": "Letzte bekannte verfügbare Version",
+      "available": "Update verfügbar",
+      "current": "ProxMenux ist aktuell",
+      "currentVersion": "Version {version} ist aktuell",
+      "unknown": "Die verfügbare Version konnte nicht überprüft werden",
+      "unverified": "Nicht bestätigt",
+      "stable": "Stabiler Kanal",
+      "beta": "Beta-Kanal",
+      "checked": "Letzte erfolgreiche Prüfung: {time}"
+    },
+    "hostUpdate": {
+      "running": "Das Host-Update wird auch dann fortgesetzt, wenn Sie sich abmelden.Öffnen Sie es nach der Anmeldung erneut.",
+      "finished": "Das letzte Host-Update ist abgeschlossen.Das Ergebnis liegt vor.",
+      "attention": "Das Host-Update erfordert Aufmerksamkeit.Es wurde nicht gestoppt;Stellen Sie die Verbindung erneut her, um es zu überprüfen.",
+      "view": "Update anzeigen",
+      "viewResult": "Ergebnis anzeigen",
+      "hideResult": "Ergebnis ausblenden",
+      "resultTitle": "Host-Update-Ergebnis",
+      "resultReadOnly": "Gespeicherte Ausgabe eines abgeschlossenen Updates.Beim Öffnen wird kein weiteres Update ausgeführt.",
+      "resultUnavailable": "Das gespeicherte Ergebnis konnte nicht geladen werden.Es wurde kein Update gestartet.",
+      "retryResult": "Ergebnis neu laden",
+      "loadingResult": "Gespeichertes Ergebnis wird geladen…",
+      "closeResult": "Ergebnis schließen",
+      "noReboot": "Kein Neustart erforderlich",
+      "rebootMarker": "Das Betriebssystem erfordert einen Neustart.",
+      "rebootUnknown": "Es konnte nicht festgestellt werden, ob ein Neustart erforderlich ist.",
+      "rebootKernel": "Zum Aktivieren von {installed} ist ein Neustart erforderlich.Derzeit läuft: {running}."
+    },
+    "updateSystem": "System aktualisieren",
+    "packagePlanNote": "Der Plan umfasst auch neue Pakete, etwa einen neuen Kernel.Die Übersicht zählt nur Aktualisierungen bestehender Pakete.",
+    "snapshotUnavailable": "Es sind noch keine neuen Gesundheitsergebnisse verfügbar.",
+    "lastKnownResults": "Zeigt die letzten verfügbaren Ergebnisse mit ihrer ursprünglichen Prüfzeit an."
   },
   "profilePage": {
     "loading": "Profil wird geladen…",

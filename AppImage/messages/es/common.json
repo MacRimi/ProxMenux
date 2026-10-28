@@ -5395,7 +5395,8 @@
       "certificates": "Certificados",
       "login_attempts": "Intentos de inicio de sesión",
       "fail2ban": "Fail2Ban",
-      "proxmox_storages": "Almacenamiento Proxmox"
+      "proxmox_storages": "Almacenamiento Proxmox",
+      "reboot_required": "Es necesario reiniciar"
     },
     "details": {
       "allOperational": "Todos los sistemas operativos.",
@@ -5474,7 +5475,8 @@
       "securityCheckUnavailable": "Comprobación de seguridad no disponible: {error}",
       "certificateExpired": "Certificado caducado",
       "certificateExpiresDays": "Caducidad del certificado (días): {days}",
-      "certificateInconclusive": "Comprobación del certificado no concluyente"
+      "certificateInconclusive": "Comprobación del certificado no concluyente",
+      "noPendingUpdates": "No hay actualizaciones pendientes"
     },
     "time": {
       "justNow": "En este momento",
@@ -5511,7 +5513,53 @@
       "years": "{count} años",
       "24hours": "24 horas",
       "7days": "7 dias"
-    }
+    },
+    "restart": {
+      "button": "reiniciar el servidor",
+      "title": "¿Reiniciar el servidor {server}?",
+      "impact": "El reinicio interrumpe temporalmente el servidor, las máquinas virtuales, los contenedores y sus servicios.",
+      "cancel": "Cancelar",
+      "confirm": "confirmar reinicio",
+      "blocked": "el reinicio estará disponible una vez que finalice la actualización del host.",
+      "accepted": "Solicitud de reinicio aceptada.Compruebe que el servidor vuelva a estar en línea.",
+      "unconfirmed": "No se pudo verificar la solicitud de reinicio.Verifique el servidor antes de volver a intentarlo."
+    },
+    "versions": {
+      "title": "actualización ProxMenux",
+      "installed": "versión instalada",
+      "latest": "Versión disponible",
+      "lastKnown": "última versión disponible conocida",
+      "available": "Actualización disponible",
+      "current": "ProxMenux está actualizado",
+      "currentVersion": "La versión {version} está actualizada",
+      "unknown": "No se pudo verificar la versión disponible",
+      "unverified": "No verificado",
+      "stable": "canal estable",
+      "beta": "canal Beta",
+      "checked": "Última verificación exitosa: {time}"
+    },
+    "hostUpdate": {
+      "running": "la actualización del host continúa incluso si cierra sesión.Vuelva a abrirlo después de iniciar sesión.",
+      "finished": "La última actualización del host ha finalizado.Su resultado está disponible.",
+      "attention": "La actualización del host necesita atención.No ha sido detenido;Vuelva a conectarlo para inspeccionarlo.",
+      "view": "Ver actualización",
+      "viewResult": "Ver resultado",
+      "hideResult": "Ocultar resultado",
+      "resultTitle": "resultado de la actualización del host",
+      "resultReadOnly": "resultado guardado de una actualización completa.Al abrirlo no se ejecuta otra actualización.",
+      "resultUnavailable": "No se pudo cargar el resultado guardado.No se inició ninguna actualización.",
+      "retryResult": "recargar resultado",
+      "loadingResult": "Cargando resultado guardado…",
+      "closeResult": "Cerrar resultado",
+      "noReboot": "No es necesario reiniciar",
+      "rebootMarker": "El sistema operativo requiere un reinicio.",
+      "rebootUnknown": "No se pudo determinar si es necesario reiniciar.",
+      "rebootKernel": "Es necesario reiniciar para activar {installed}.Actualmente en ejecución: {running}."
+    },
+    "updateSystem": "sistema de actualización",
+    "packagePlanNote": "el plan también incluye nuevos paquetes, como un nuevo kernel.La descripción general cuenta únicamente las actualizaciones de los paquetes existentes.",
+    "snapshotUnavailable": "Los nuevos resultados de salud aún no están disponibles.",
+    "lastKnownResults": "muestra los últimos resultados disponibles con su hora de verificación original."
   },
   "profilePage": {
     "loading": "Cargando perfil…",
