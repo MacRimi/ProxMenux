@@ -10,6 +10,7 @@ import socket
 import stat
 import subprocess
 import time
+import tempfile
 import uuid
 
 import oci_image_cache as image_cache
@@ -163,6 +164,28 @@ def immich_plan(primary, records, inventory, lifecycle, operation):
     plan['original_members'] = copy.deepcopy(list(records.values()))
     plan['immich_replay'] = True
     return plan
+
+
+def write_hook_contract(path, value):
+    """Atomically replace a pmxcfs private file without changing its directory mode.
+
+    pmxcfs assigns permissions from the path and rejects chmod on /etc/pve/priv.
+    The registry writer manages ordinary private directories, so it is not used here.
+    """
+    for target, directory in ((path.parent, True), (path, False)):
+        info = target.lstat()
+        correct_type = stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode)
+        if not correct_type or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+            raise ValueError(translate('Unsafe dependency hook contract'))
+    fd, temporary = tempfile.mkstemp(dir=path.parent, prefix='.proxmenux-job-')
+    try:
+        with os.fdopen(fd, 'w') as output:
+            json.dump(value, output, indent=2)
+            output.write('\n')
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 class NativeAdapter:
@@ -480,7 +503,7 @@ class NativeAdapter:
         if current != rebuilt or intent is not None:
             state['job_hook_contract_intent'] = {'before': current, 'after': rebuilt}
             instances.write(marker, state)
-            instances.write(path, rebuilt)
+            write_hook_contract(path, rebuilt)
             state['job_hook_contract'] = rebuilt
             state.pop('job_hook_contract_intent', None)
             instances.write(marker, state)
@@ -514,6 +537,10 @@ class NativeAdapter:
             try:
                 if check['type'] == 'exec':
                     member_tx.run('pct', 'exec', str(vmid), '--', *check['argv'])
+                    # Main/custom web services retain both contracts: an exec
+                    # check never replaces the advertised HTTP readiness probe.
+                    if check.get('url') and (self.services[vmid].get('frontend') or check.get('endpoint')):
+                        member_tx.run('curl', '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
                 elif check['type'] == 'http':
                     member_tx.run('curl', '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
                 elif check['type'] == 'tcp':

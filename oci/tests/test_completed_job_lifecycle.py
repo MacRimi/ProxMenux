@@ -135,6 +135,7 @@ class NativeCompletedJobs(unittest.TestCase):
         with patch.object(native, 'Path', return_value=path), \
              patch.object(adapter, 'state', side_effect=lambda: copy.deepcopy(state)), \
              patch.object(instances, 'write', side_effect=write), \
+             patch.object(native, 'write_hook_contract', side_effect=write), \
              patch.object(instances, 'read', return_value=staged), \
              patch.object(native.member_tx, 'owned', return_value=CONFIG.encode()), \
              patch.object(jobs, 'job_spec_from_record', return_value=updated) as bind:
@@ -181,6 +182,7 @@ class NativeCompletedJobs(unittest.TestCase):
                     actual_write(path, value)
             with patch.object(native, 'Path', return_value=hook), \
                  patch.object(instances, 'write', side_effect=write), \
+             patch.object(native, 'write_hook_contract', side_effect=write), \
                  patch.object(instances, 'read', return_value=staged), \
                  patch.object(native.member_tx, 'owned', return_value=CONFIG.encode()), \
                  patch.object(jobs, 'job_spec_from_record', return_value=updated):

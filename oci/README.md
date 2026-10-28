@@ -252,6 +252,9 @@ restarts. Update and restore invalidate the completion proof when the image,
 runtime configuration or recovery identity changes. A migration update is
 refused when database or unclassified backend data lives in host directories
 that the transaction cannot safely restore.
+The native exit-status monitor currently accepts LXC 7.0.0, the verified protocol
+version. Other versions refuse one-shot execution rather than treating a stopped
+container as proof of success.
 
 The bridges are local to the installation node; they are not a cluster SDN.
 Unsupported network and runtime semantics are reported before installation.
