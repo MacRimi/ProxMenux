@@ -552,7 +552,8 @@ def build_stack(template, ui, mode='advanced'):
     # A default installation takes the name, the VMID and the settings from the
     # recipe; it still asks the storage, the address and how the stack starts.
     quiet = DefaultsUI() if mode == DEFAULT_MODE else ui
-    name = _hostname_default(quiet.ask(translate('Stack name'), template['compose_stack']['project_name']))
+    # An imported Compose file was already named before its installation.
+    name = _hostname_default((DefaultsUI() if custom else quiet).ask(translate('Stack name'), template['compose_stack']['project_name']))
     vmid = quiet.ask(translate('Base VMID (empty = next free block)'), '', required=False)
     from . import host
     from . import network as access

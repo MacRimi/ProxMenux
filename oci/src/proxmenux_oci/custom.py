@@ -809,7 +809,9 @@ def describe(template: dict[str, Any]) -> str:
                   for volume in volumes]
     environment = contract.get('environment') or []
     if environment:
-        lines += ['', translate('Variables the installation asks for:')]
+        # A stack takes its values from the Compose file; none is asked here.
+        lines += ['', translate('Variables the installation asks for:') if len(services) <= 1 else
+                  f"{translate('Variables')} ({template['compose_stack']['main_service']}):"]
         lines += [f"  {item['name']}"
                   + (f" = {item['example']}" if item.get('example') and not item['sensitive'] and len(services) <= 1 else '')
                   + ('' if item.get('required', True) else f" ({translate('optional')})")
@@ -852,13 +854,17 @@ def _ask_secrets(template: dict[str, Any]) -> list[str]:
 
 
 def _name(ui, template: dict[str, Any]) -> str:
-    default = normalize_app_id(source_text(template['catalog_ui'].get('title'))
+    stack = template.get('compose_stack') if len((template.get('compose_stack') or {}).get('services') or []) > 1 else None
+    default = normalize_app_id((stack or {}).get('project_name') or source_text(template['catalog_ui'].get('title'))
                                or template['container_contract'].get('container_name') or 'oci-app')
     name = normalize_app_id(ui.ask(translate('Name for this application'), default))
     if not name:
         raise UserCancelled(translate('No name was given'))
     template['catalog_ui']['title'] = {'en_US': name}
     template['container_contract']['container_name'] = name
+    if stack:
+        # The containers of the stack are named after it.
+        stack['project_name'] = name
     return name
 
 
@@ -897,6 +903,8 @@ def _explore(ui) -> None:
             if offer_sign_in(ui, reference, title):
                 accessible, report = registry_report(reference)
         available = available and accessible
+        if accessible and len(references) > 1:
+            report = f'{reference}: {report}'
         reports.append(report)
         summary += '\n\n' + report
     if notes:

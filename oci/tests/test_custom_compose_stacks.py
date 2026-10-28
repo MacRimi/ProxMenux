@@ -109,6 +109,40 @@ class CustomComposeStacks(unittest.TestCase):
         install.assert_not_called()
         self.assertIn('app missing', ui.text)
 
+    def test_each_registry_line_names_its_image(self):
+        class UI:
+            def message(self, text, title):
+                self.text = text
+        ui = UI()
+        with patch.object(custom, 'read_definition', return_value=(COMPOSE, 'Compose')), \
+             patch.object(custom, 'registry_report', side_effect=[(True, 'in registry'), (False, 'app missing')]), \
+             patch.object(custom, '_registry_refused', return_value=False), \
+             patch.object(custom, 'install_template'):
+            custom.explore(ui)
+        self.assertIn('postgres:16: in registry', ui.text)
+        self.assertNotIn('adminer:4: app missing', ui.text)
+
+    @patch('proxmenux_oci.i18n.language', return_value='en')
+    def test_stack_summary_does_not_announce_questions_about_its_variables(self, _):
+        template = custom.template_from_compose(COMPOSE.replace(
+            "    ports:", "    environment:\n      ADMINER_DEFAULT_SERVER: db\n    ports:"))
+        summary = custom.describe(template)
+        self.assertNotIn('Variables the installation asks for', summary)
+        self.assertIn('Variables (app):\n  ADMINER_DEFAULT_SERVER', summary)
+        single = custom.template_from_compose('services: {app: {image: nginx:1.27, environment: {MODE: x}}}')
+        self.assertIn('Variables the installation asks for', custom.describe(single))
+
+    def test_the_name_given_names_the_stack(self):
+        template = custom.template_from_compose('name: adminer-postgres\n' + COMPOSE)
+        class UI:
+            def ask(self, text, default=None, required=True):
+                self.default = default
+                return 'tools'
+        ui = UI()
+        self.assertEqual(custom._name(ui, template), 'tools')
+        self.assertEqual(ui.default, 'adminer-postgres')
+        self.assertEqual(template['compose_stack']['project_name'], 'tools')
+
     def test_single_image_still_uses_single_container_flow(self):
         template = custom.template_from_compose('services: {app: {image: nginx:1.27}}')
         self.assertNotEqual(template['proxmox'].get('installer_profile', {}).get('stack_driver'), 'generic-multi-lxc-stack')
