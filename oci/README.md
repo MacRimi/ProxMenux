@@ -229,6 +229,19 @@ network. Internal services can use declared or inherited image health checks,
 exposed TCP ports, or a clearly labelled process-running check. A running process
 alone does not satisfy `service_healthy`.
 
+For custom stacks, loopback public URLs in variables such as `PUBLIC_URL` or
+`PENPOT_PUBLIC_URI` are mapped to the service publishing their original Compose
+host port, using that service's LAN address and container port. Explicit external
+URLs and internal loopback endpoints remain unchanged. Automatic public URL
+mapping requires a static frontend address; with DHCP, provide the application's
+explicit public URL instead. This lets every dependent service receive its final
+public URL before its first start, including migration jobs.
+Only names containing a `PUBLIC` or `EXTERNAL` segment and ending in `URL`,
+`URI` or `ORIGIN` qualify for this automatic mapping. Other application-specific
+variables, such as `NEXTAUTH_URL` or `ROOT_URL`, must contain the intended URL in
+the supplied Compose or environment file. Changing a frontend IP later also
+requires updating its application URLs.
+
 Repeated identical volume sources share one host directory, selected once;
 separate configuration volumes stay independent. Host directories are not part
 of a normal Proxmox container backup. Newly created private data volumes use the

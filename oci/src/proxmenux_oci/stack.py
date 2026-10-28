@@ -14,7 +14,7 @@ import yaml
 
 from .casaos import convert_casaos_compose, canonical_image_repository
 from .converter import ConversionError
-from .converter import _image_contract, _split_short_mount
+from .converter import _image_contract, _split_short_mount, _port_contract
 from .i18n import translate
 
 
@@ -240,6 +240,46 @@ def service_endpoint(service, include_expose=False):
     return None
 
 
+def public_environment_bindings(services, main_name, environments=None):
+    """Bind loopback URL origins to the service publishing their Compose host port."""
+    frontends = [service for service in services if service_endpoint(service)]
+    result = {}
+    for service in services:
+        bindings = {}
+        values = (environments or {}).get(service['name'], environment(service['compose'].get('environment')))
+        for key, value in values.items():
+            words = key.upper().split('_')
+            if not ({'PUBLIC', 'EXTERNAL'} & set(words[:-1]) and words[-1] in {'URL', 'URI', 'ORIGIN'}):
+                continue
+            if not re.match(r'^https?://', value, re.I):
+                continue
+            url = urlsplit(value)
+            if url.scheme not in {'http', 'https'} or url.hostname not in {'localhost', '127.0.0.1', '0.0.0.0', '::1'}:
+                continue
+            try:
+                origin_port = url.port or (443 if url.scheme == 'https' else 80)
+            except ValueError as error:
+                raise StackError(translate('Invalid service check URL')) from error
+            matches = set()
+            for target in frontends:
+                for port in _port_contract(target['compose'].get('ports'), set()):
+                    if (port['protocol'] == 'tcp' and port.get('published_example') == origin_port
+                            and not port.get('container_port_end') and not port.get('published_example_end')):
+                        matches.add((target['name'], port['container_port']))
+            if len(matches) > 1:
+                raise StackError(f"{service['name']}: {key}: {translate('Ambiguous local public URL; use an explicit URL')}")
+            if not matches:
+                raise StackError(f"{service['name']}: {key}: {translate('Local public URL has no matching published port; use an explicit URL')}")
+            target_name, target_port = next(iter(matches))
+            credentials = url.netloc.rpartition('@')[0]+'@' if '@' in url.netloc else ''
+            rendered = urlunsplit((url.scheme, credentials+'@STACK_LAN_IP@:'+str(target_port),
+                                   url.path, url.query, url.fragment))
+            bindings[key] = {'target_service': target_name, 'container_port': target_port, 'value': rendered}
+        if bindings:
+            result[service['name']] = bindings
+    return result
+
+
 def _check_duration(value, default):
     if value is None:
         return default
@@ -350,6 +390,8 @@ def assess(template):
                 healthy_required.update(name for name, condition in dependencies.items()
                                         if isinstance(condition, dict) and condition.get('condition') == 'service_healthy')
         jobs = completed_services(template) if custom else set()
+        if custom:
+            public_environment_bindings(services, template['compose_stack']['main_service'])
         if template['compose_stack']['main_service'] in jobs or jobs & healthy_required:
             raise StackError(translate('unsupported dependency condition') + ': service_completed_successfully')
         for service in services:
@@ -614,13 +656,18 @@ def build_stack(template, ui, mode='advanced'):
             if not value or any(c in value for c in '\r\n'):
                 raise StackError(translate('External credential is empty or spans multiple lines'))
             envs[service_name][field['name']] = value
+    public_bindings = public_environment_bindings(services, template['compose_stack']['main_service'], envs) if custom else {}
+    if any(addresses[binding['target_service']] == 'dhcp' for bindings in public_bindings.values() for binding in bindings.values()):
+        raise StackError(translate('Automatic public URLs require static frontend addresses or explicit URLs'))
     plans = []
     for index, s in enumerate(services):
         main = s['name'] == template['compose_stack']['main_service']
         env = envs[s['name']]
         # Public application URLs cannot retain localhost in a remote deployment.
         for key,value in list(env.items()):
-            if value.startswith(('http://localhost', 'http://127.0.0.1', 'http://0.0.0.0')):
+            if custom and key in public_bindings.get(s['name'], {}):
+                env[key] = public_bindings[s['name']][key]['value']
+            elif not custom and value.startswith(('http://localhost', 'http://127.0.0.1', 'http://0.0.0.0')):
                 url = urlsplit(value)
                 endpoint = template['first_run']['endpoints'][0]
                 env[key] = urlunsplit((url.scheme, '@STACK_LAN_IP@:'+str(endpoint['port']), url.path, url.query, url.fragment))
@@ -680,6 +727,8 @@ def build_stack(template, ui, mode='advanced'):
         plans.append({'name':s['name'],'main':main,'kind':k,'offset':0 if main else len(plans)+1,
                       'aliases':list(dict.fromkeys([s['name'],s['compose'].get('container_name',s['name'])])),
                       'template':single,'deployment':plan,'healthcheck':health})
+        if public_bindings.get(s['name']):
+            plans[-1]['public_environment_bindings'] = public_bindings[s['name']]
         if s['name'] in frontend_names and s['name'] not in jobs:
             plans[-1]['frontend'] = True
             plans[-1]['frontend_ipv4'] = addresses[s['name']] if custom else addresses['']

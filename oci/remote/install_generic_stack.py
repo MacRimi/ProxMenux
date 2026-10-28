@@ -254,6 +254,58 @@ def assign_health_address(service):
         check['host'] = service['ip']
 
 
+def public_bindings(services):
+    """Validate compiler-owned targets before any host/container mutation."""
+    names = {service['name']: service for service in services}
+    result = []
+    failure = translate('Invalid stack contract')
+    for service in services:
+        bindings = service.get('public_environment_bindings', {})
+        if not isinstance(bindings, dict):
+            raise RuntimeError(failure)
+        environment = service['deployment'].get('environment', [])
+        for key, binding in bindings.items():
+            if (not isinstance(key, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', key)
+                    or not isinstance(binding, dict)
+                    or set(binding) != {'target_service', 'container_port', 'value'}
+                    or not isinstance(binding.get('target_service'), str)):
+                raise RuntimeError(failure)
+            target = names.get(binding['target_service'])
+            value = binding.get('value')
+            if (target is None or not (target.get('frontend') or target.get('main'))
+                    or type(binding.get('container_port')) is not int
+                    or not 0 < binding['container_port'] < 65536
+                    or not isinstance(value, str) or value.count('@STACK_LAN_IP@') != 1
+                    or any(char in value for char in '\r\n')
+                    or sum(entry.get('name') == key for entry in environment) != 1):
+                raise RuntimeError(failure)
+            result.append((service, key, binding, target))
+    if any(target.get('frontend_ipv4') == 'dhcp' for _, _, _, target in result):
+        raise RuntimeError(translate('Automatic public URLs require static frontend addresses or explicit URLs'))
+    return result
+
+
+def _set_public_value(service, key, value):
+    for entry in service['deployment']['environment']:
+        if entry['name'] == key:
+            entry['value'] = value
+            return
+    raise RuntimeError(translate('Invalid stack contract'))
+
+
+def prepare_public_environment(services):
+    """Known static destinations are final before any application's first start."""
+    for service, key, binding, target in public_bindings(services):
+        address = target.get('frontend_ipv4')
+        try:
+            address = ipaddress.ip_interface(address).ip
+            if address.version != 4:
+                raise ValueError()
+        except (ValueError, TypeError) as error:
+            raise RuntimeError(translate('Invalid stack contract')) from error
+        _set_public_value(service, key, binding['value'].replace('@STACK_LAN_IP@', str(address)))
+
+
 def bind_completed_jobs(services):
     """All members and private aliases exist before a job can be authorized."""
     from oci_compose_jobs import job_spec_from_record
@@ -881,6 +933,7 @@ def main():
     services = copy.deepcopy(deployment['services'])
     independent = bool(deployment.get('suite_arr'))
     primary = None if independent else next(s for s in services if s['main'])
+    prepare_public_environment(services)
     created = []
     bridge_created = False
     lifecycle = None
@@ -932,7 +985,7 @@ def main():
             results = {}
             for order,s in enumerate(services,1):
                 plan = s['deployment']
-                s['public_environment'] = {e['name']:e['value'] for e in plan['environment'] if '@STACK_LAN_IP@' in e['value']}
+                s['public_environment'] = {e['name']:e['value'] for e in plan['environment'] if '@STACK_LAN_IP@' in e['value'] and e['name'] not in s.get('public_environment_bindings', {})}
                 for e in plan['environment']:
                     e['value'] = e['value'].replace('@STACK_LAN_IP@',s['ip'])
                 plan['vmid'] = s['vmid']
