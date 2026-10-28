@@ -5372,6 +5372,8 @@
     "updateNow": "Aktualizovať teraz",
     "updateSystem": "Aktualizovať systém",
     "packagePlanNote": "Plán zahŕňa aj nové balíky, napríklad nové jadro. Prehľad počíta iba aktualizácie existujúcich balíkov.",
+    "snapshotUnavailable": "Nový výsledok kontroly zatiaľ nie je k dispozícii.",
+    "lastKnownResults": "Zobrazené sú posledné dostupné údaje s pôvodným časom kontroly.",
     "dismissedItems": "Skryté upozornenia ({count})",
     "permanent": "Natrvalo",
     "dismissed": "Skryté",

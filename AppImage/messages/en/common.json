@@ -5500,6 +5500,8 @@
     "updateNow": "Update now",
     "updateSystem": "Update system",
     "packagePlanNote": "The plan also includes new packages, such as a new kernel. The overview counts updates to existing packages only.",
+    "snapshotUnavailable": "New health results are not available yet.",
+    "lastKnownResults": "Showing the last available results with their original check time.",
     "dismissedItems": "Dismissed items ({count})",
     "permanent": "Permanent",
     "dismissed": "Dismissed",

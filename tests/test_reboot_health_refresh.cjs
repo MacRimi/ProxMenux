@@ -19,7 +19,7 @@ const modal = source('health-status-modal.tsx', 'fetchHealthDetails', 'Recheck r
 const header = source('proxmox-dashboard.tsx', 'fetchHealthInfoCount', 'Header reboot information')
 const compile = (code, scope) => vm.runInNewContext(ts.transpileModule('('+code+')', {compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText, scope)
 function environment() {
-  const calls = [], data = [], errors = [], counts = [], events = [], timers = new Map(), listeners = new Map()
+  const calls = [], data = [], errors = [], counts = [], events = [], availability = [], timers = new Map(), listeners = new Map()
   let timerId = 0
   const categories = [{key:'updates', category:'updates'}]
   const scope = {AbortController, CustomEvent:class {constructor(type, values){this.type=type;this.detail=values.detail}},
@@ -27,11 +27,12 @@ function environment() {
     CATEGORIES:categories, HEALTH_CATEGORY_KEYS:categories,
     setHealthData:v=>data.push(v), setDismissedItems(){}, setCustomSuppressions(){},
     setLoading(){}, setError:v=>errors.push(v), setInfoCount:v=>counts.push(v),
+    setSnapshotUnavailable:v=>availability.push(v),
     setTimeout(fn, delay){timers.set(++timerId,{fn,delay});return timerId}, clearTimeout:id=>timers.delete(id),
     window:{dispatchEvent:e=>events.push(e)},
     fetch:async(p, opts)=>{calls.push({p,opts});return {ok:true,json:async()=>payload('INFO')}},
     fetchApi:async(p, opts)=>{calls.push({p,opts});return payload('INFO')}}
-  return {scope,calls,data,errors,counts,events,timers,listeners}
+  return {scope,calls,data,errors,counts,events,availability,timers,listeners}
 }
 function payload(status='OK') {return {health:{overall:'OK',timestamp:'original',details:{updates:{status,count:0}}},dismissed:[],custom_suppressions:[]}}
 async function callbacks() {
@@ -44,6 +45,25 @@ async function callbacks() {
     assert.deepEqual(item===modal ? env.events[0].detail.infoCount : env.counts[0],1)
   }
   const env=environment(), run=compile(modal.callback,env.scope)
+  const pending=environment(), poll=compile(modal.callback,pending.scope)
+  pending.scope.fetch=async(p)=>{pending.calls.push({p});return {ok:false,status:503}}
+  await poll(false,true)
+  assert.deepEqual(pending.availability,[true],'expected cache gap is explicitly unavailable, not a red failure or healthy result')
+  assert.equal(pending.errors.filter(Boolean).length,0)
+  assert.equal(pending.data.length,0,'cache gap cannot erase or replace the last known data')
+  assert.deepEqual(pending.calls.map(x=>x.p),['/api/health/full?cached=1'],'no full/legacy fallback on cache miss')
+  pending.scope.fetch=async()=>({ok:true,json:async()=>payload('INFO')})
+  await poll(false,true)
+  assert.deepEqual(pending.availability,[true,false],'a real successful response clears the unavailable notice')
+  assert.equal(pending.data.length,1)
+  for(const status of [401,500]){
+    const failed=environment()
+    failed.scope.fetch=async()=>({ok:false,status})
+    await compile(modal.callback,failed.scope)(false,true)
+    assert.ok(failed.errors.filter(Boolean).length,'auth and server failures remain errors')
+    assert.equal(failed.data.length,0)
+    assert.ok(!failed.availability.includes(true),'real failures are not relabelled as a cache gap')
+  }
   env.scope.fetch=async(p)=>{env.calls.push({p});return {ok:false}}
   await run(false,true)
   assert.deepEqual(env.calls.map(x=>x.p),['/api/health/full?cached=1'])

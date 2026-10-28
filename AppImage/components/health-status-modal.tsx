@@ -128,6 +128,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [dismissedItems, setDismissedItems] = useState<DismissedError[]>([])
   const [customSuppressions, setCustomSuppressions] = useState<CustomSuppression[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [snapshotUnavailable, setSnapshotUnavailable] = useState(false)
   const [dismissingKey, setDismissingKey] = useState<string | null>(null)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
@@ -161,6 +162,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       let infoCount = 0
       
       if (!response.ok) {
+        if (cachedOnly && response.status === 503) {
+          // Completion invalidates the snapshot before the collector refills it.
+          // Keep the dated result, explicitly unavailable; never start an audit.
+          setSnapshotUnavailable(true)
+          return
+        }
         // Polling cannot fall back to a legacy endpoint that runs a full audit.
         if (cachedOnly) throw new Error(t("healthStatus.errors.fetchFailed"))
         // Fallback to legacy endpoint
@@ -168,6 +175,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         if (!legacyResponse.ok) throw new Error(t("healthStatus.errors.fetchFailed"))
         const data = await legacyResponse.json()
         if (healthRequest.current !== controller) return
+        setSnapshotUnavailable(false)
         setHealthData(data)
         setDismissedItems([])
         setCustomSuppressions([])
@@ -186,6 +194,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         const fullData: FullHealthData = await response.json()
         if (healthRequest.current !== controller) return
         if (!fullData?.health?.details) throw new Error(t("healthStatus.errors.fetchFailed"))
+        setSnapshotUnavailable(false)
         setHealthData(fullData.health)
         setDismissedItems(fullData.dismissed || [])
         setCustomSuppressions(fullData.custom_suppressions || [])
@@ -226,6 +235,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       window.dispatchEvent(event)
     } catch (err) {
       if (healthRequest.current === controller) {
+        setSnapshotUnavailable(false)
         setError(err instanceof Error ? err.message : t("healthStatus.errors.unknown"))
       }
     } finally {
@@ -684,6 +694,17 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       .replace(/\b\w/g, (c) => c.toUpperCase())
   }
 
+  const translateHealthSummary = (snapshot: HealthDetails): string => {
+    if (snapshot.summary === "Updates") {
+      const reboot = snapshot.details?.updates?.checks?.reboot_required
+      if (reboot?.status === "INFO" && typeof reboot.detail === "string" && reboot.detail) {
+        return translateHealthText(reboot.detail)
+      }
+      return t("healthStatus.categories.updates")
+    }
+    return translateHealthText(snapshot.summary)
+  }
+
   const renderChecks = (
     checks: Record<string, { status: string; detail: string; dismissable?: boolean; [key: string]: any }>,
     categoryKey: string
@@ -786,6 +807,13 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           </div>
         )}
 
+        {snapshotUnavailable && (
+          <div role="status" className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs text-amber-600 dark:text-amber-400">
+            <p>{t("healthStatus.snapshotUnavailable")}</p>
+            {healthData && <p className="mt-1">{t("healthStatus.lastKnownResults")}</p>}
+          </div>
+        )}
+
         {healthData && !loading && (
           <div className="space-y-4">
             {/* Overall Stats Summary */}
@@ -822,7 +850,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
             {healthData.summary && healthData.summary !== "All systems operational" && (
               <div className="text-xs sm:text-sm p-3 rounded-lg bg-muted/20 border overflow-hidden max-w-full">
-                <p className="font-medium text-foreground break-words whitespace-pre-wrap">{translateHealthText(healthData.summary)}</p>
+                <p className="font-medium text-foreground break-words whitespace-pre-wrap">{translateHealthSummary(healthData)}</p>
               </div>
             )}
 

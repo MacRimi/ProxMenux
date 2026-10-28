@@ -83,6 +83,24 @@ class FullHealth(unittest.TestCase):
         self.owner.get_detailed_status.assert_not_called()
         self.probe.assert_not_called()
 
+    def test_real_completion_finalizer_then_cached_poll_has_no_new_audit(self):
+        import sys
+        from types import ModuleType
+        node = next(n for n in ast.parse((ROOT/'AppImage/scripts/flask_terminal_routes.py').read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == '_host_update_completed')
+        scope = {}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), 'actual-finalizer', 'exec'), scope)
+        module = ModuleType('health_monitor')
+        module.health_monitor = self.owner
+        with patch.dict(sys.modules, {'health_monitor': module}):
+            scope['_host_update_completed']('/fixed-script', {}, 0, 164)
+        self.assertNotIn('_bg_detailed', self.owner.cached_results)
+        result, code = self.call('?cached=1')
+        self.assertEqual(code, 503)
+        self.assertIn('error', result)
+        self.owner.get_detailed_status.assert_not_called()
+        self.probe.assert_not_called()
+
     def test_cached_only_just_before_boundary_is_fresh_reboot_without_full_check(self):
         self.owner.last_check_times['_bg_detailed'] = self.now-359.999
         result, code = self.call('?cached=1')
