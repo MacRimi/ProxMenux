@@ -13,7 +13,7 @@ function walk(n){
 walk(tree);assert.ok(callback)
 function fixture(){
  const calls=[],events=[]
- const scope={AbortController,JSON,Error,disabled:false,context:{allowed:true,hostname:'fixture-host',boot_id:'fixture-boot'},submitted:false,
+ const scope={AbortController,JSON,Error,disabled:false,unavailable:false,context:{allowed:true,hostname:'fixture-host',boot_id:'fixture-boot'},submitted:false,
   sending:{current:false},alive:{current:true},postRequest:{current:null},getApiUrl:p=>p,headers:()=>({}),
   setSubmitted:v=>events.push(['submitted',v]),setPending:v=>events.push(['pending',v]),setError:v=>events.push(['error',v]),
   setAccepted:v=>events.push(['accepted',v]),setOpen:v=>events.push(['open',v]),
@@ -23,8 +23,8 @@ function fixture(){
 }
 async function main(){
  assert.ok(triggerDisabled)
- assert.equal(vm.runInNewContext(triggerDisabled,{disabled:false,accepted:false,pending:true}),true,'closing confirmation while its request is pending must not enable another request')
- for(const block of ['disabled','submitted','sending','missing-context','not-allowed']){
+ assert.equal(vm.runInNewContext(triggerDisabled,{disabled:false,unavailable:false,context:{allowed:true},accepted:false,pending:true}),true,'closing confirmation while its request is pending must not enable another request')
+ for(const block of ['disabled','unavailable','submitted','sending','missing-context','not-allowed']){
   const x=fixture()
   if(block==='sending')x.scope.sending.current=true
   else if(block==='missing-context')x.scope.context=null

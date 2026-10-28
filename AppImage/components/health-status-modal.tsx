@@ -720,6 +720,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           .map(([checkKey, checkData]) => {
           if (categoryKey === "updates" && checkKey === "reboot_required" && checkData.status === "INFO") {
             return <RestartAfterUpdate key={checkKey} getApiUrl={getApiUrl}
+              unavailable={loading || snapshotUnavailable || !!error}
               disabled={hostJobs.some(job => job.state !== "complete")} label={formatCheckLabel(checkKey)}
               detail={translateHealthText(checkData.detail)} icon={getStatusIcon(checkData.status, "sm")} />
           }
@@ -817,8 +818,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           </div>
         )}
 
-        {healthData && !loading && (
-          <div className="space-y-4">
+        {healthData && (
+          <fieldset disabled={loading} className="space-y-4 min-w-0">
             {/* Overall Stats Summary */}
             <div className={`grid gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-muted/30 border ${stats.info > 0 ? "grid-cols-5" : "grid-cols-4"}`}>
               <div className="text-center">
@@ -1069,7 +1070,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                 {t("healthStatus.lastUpdated", { date: new Date(healthData.timestamp).toLocaleString(document.documentElement.lang) })}
               </div>
             )}
-          </div>
+          </fieldset>
         )}
       </DialogContent>
       <HostUpdateResult jobId={resultJobId} getApiUrl={getApiUrl} onClose={() => setResultJobId(null)} />

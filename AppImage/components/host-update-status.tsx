@@ -14,8 +14,8 @@ type Url = (path: string) => string
 type Context = { hostname: string; boot_id: string; allowed: boolean; reason: string }
 const compact = "h-10 sm:h-[34px] px-3 text-xs"
 
-export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }: {
-  getApiUrl: Url; disabled: boolean; label: string; detail: string; icon: ReactNode
+export function RestartAfterUpdate({ getApiUrl, disabled, unavailable = false, label, detail, icon }: {
+  getApiUrl: Url; disabled: boolean; unavailable?: boolean; label: string; detail: string; icon: ReactNode
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -29,7 +29,6 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
   const postRequest = useRef<AbortController | null>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false; postRequest.current?.abort() } }, [])
   useEffect(() => {
-    if (!open) return
     let disposed = false, reading = false
     let active: AbortController | undefined
     setContext(null); setSubmitted(false); setError(false); sending.current = false
@@ -48,7 +47,9 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
       finally { clearTimeout(timeout); reading = false }
     }
     void read()
-    const interval = setInterval(read, 2000)
+    // A retained health snapshot must never grant permission after reconnect
+    // or remount. This cheap read does not run APT or a full health check.
+    const interval = setInterval(read, open ? 2000 : 30000)
     return () => { disposed = true; clearInterval(interval); active?.abort() }
   }, [open, getApiUrl])
   useEffect(() => {
@@ -70,7 +71,7 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
     return () => { disposed = true; controller.abort(); clearInterval(interval); clearTimeout(timeout) }
   }, [accepted, getApiUrl])
   const confirm = async () => {
-    if (disabled || !context?.allowed || sending.current || submitted) return
+    if (disabled || unavailable || !context?.allowed || sending.current || submitted) return
     sending.current = true; setSubmitted(true); setPending(true); setError(false)
     const controller = new AbortController(); postRequest.current = controller
     const timeout = setTimeout(() => controller.abort(), 15000)
@@ -88,7 +89,7 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
       <div className="flex items-start gap-2 flex-1 min-w-0 text-[10px] sm:text-xs"><span className="shrink-0">{icon}</span>
         <div><span className="font-medium mr-2">{label}</span><span className="text-muted-foreground break-words">{detail}</span></div></div>
       <Button variant="outline" className={`${compact} self-start sm:shrink-0 border-amber-500/40 text-amber-500`}
-        disabled={disabled || pending || accepted} onClick={() => setOpen(true)}>{t("healthStatus.restart.button")}</Button>
+        disabled={disabled || unavailable || !context?.allowed || pending || accepted} onClick={() => setOpen(true)}>{t("healthStatus.restart.button")}</Button>
     </div>
     {disabled && <p className="mt-2 text-xs text-muted-foreground">{t("healthStatus.restart.blocked")}</p>}
     {accepted && <p role="status" className="mt-2 text-xs text-blue-500">{t("healthStatus.restart.accepted")}</p>}
@@ -103,7 +104,7 @@ export function RestartAfterUpdate({ getApiUrl, disabled, label, detail, icon }:
         {(error || context?.reason === "unknown") && <p role="alert" className="mt-3 text-xs text-amber-500">{t("healthStatus.restart.unconfirmed")}</p>}
         <div className="mt-5 flex justify-end gap-2.5">
           <Confirm.Cancel asChild><Button variant="outline" className={compact} disabled={pending}>{t("healthStatus.restart.cancel")}</Button></Confirm.Cancel>
-          <Confirm.Action asChild><Button variant="destructive" className={compact} disabled={disabled || !context?.allowed || pending || submitted}
+          <Confirm.Action asChild><Button variant="destructive" className={compact} disabled={disabled || unavailable || !context?.allowed || pending || submitted}
             onClick={event => { event.preventDefault(); void confirm() }}>{t("healthStatus.restart.confirm")}</Button></Confirm.Action>
         </div>
       </Confirm.Content>
