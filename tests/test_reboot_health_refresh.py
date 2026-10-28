@@ -63,6 +63,7 @@ class FullHealth(unittest.TestCase):
         self.assertTrue(result['health']['details']['updates']['reboot_required'])
         self.assertEqual(result['health']['details']['updates']['count'], 0)
         self.assertEqual(result['health']['timestamp'], 'original')
+        self.assertEqual(result['health']['summary'], 'Reboot required: running 7.0.14-25-pve; installed 7.0.14-26-pve')
         self.assertEqual(self.cached, before)
         self.owner.get_detailed_status.assert_not_called()
         self.assertEqual(self.probe.call_count, 1)

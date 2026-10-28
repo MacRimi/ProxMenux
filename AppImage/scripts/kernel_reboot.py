@@ -108,7 +108,12 @@ def refresh_health_reboot(snapshot):
         if status in issues:
             label = key.replace('_', ' ').capitalize()
             reason = block.get('reason')
-            issues[status].append(f'{label}: {reason}' if reason else label)
+            if key == 'updates' and not reason:
+                # Reuse the existing localized reboot detail contract rather
+                # than introducing an untranslated, context-free "Updates".
+                issues[status].append(block['checks']['reboot_required']['detail'])
+            else:
+                issues[status].append(f'{label}: {reason}' if reason else label)
     result['overall'] = ('CRITICAL' if issues['CRITICAL'] else 'WARNING'
                          if issues['WARNING'] or issues['UNKNOWN'] else 'OK')
     primary = next((values for values in issues.values() if values), [])
