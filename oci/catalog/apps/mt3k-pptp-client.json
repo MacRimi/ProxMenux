@@ -1,0 +1,556 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-mt3k-pptp-client",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "MT3K PPTP Client"
+    },
+    "tagline": {
+      "en_US": "Route chosen networks through a legacy PPTP server on a home router."
+    },
+    "description": {
+      "en_US": "MT3K PPTP Client runs pppd as PID 1 and connects to a PPTP server, usually the legacy VPN server on a home router, then installs the CIDR routes you list. PPTP with MPPE is broken cryptography: use it only on networks you already trust, not as a secure VPN."
+    },
+    "category": "remote",
+    "category_label": "Remote Access & VPN",
+    "author": "MT3K",
+    "developer": "MT3K",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openvpn.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": null,
+      "path": "/"
+    },
+    "website": "https://github.com/MondoBoricua/MT3K-pptp-client-oci",
+    "documentation": "https://github.com/MondoBoricua/MT3K-pptp-client-oci/blob/main/README.md",
+    "repository": "https://github.com/MondoBoricua/MT3K-pptp-client-oci",
+    "tips": [
+      "PPTP with MPPE is broken cryptography. Use it only on a trusted legacy network, not as a secure VPN.",
+      "On the Proxmox host, load ppp_generic and ppp_mppe (the pptp kernel module is not needed: the client uses userspace pptp over GRE). Pass /dev/ppp into the container and keep NET_ADMIN.",
+      "GRE (IP protocol 47) must be allowed between this host and the PPTP server. TCP 1723 alone is not enough.",
+      "If the tunnel connects but large transfers stall, lower PPTP_MTU. The default is 1400.",
+      "A getaddrinfo failure at start means the container has no network yet. PPTP_NET_WAIT (default 120 seconds) covers that wait."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "mondoboricua",
+    "repository": "https://github.com/MondoBoricua/MT3K-pptp-client-oci",
+    "default_branch": "main",
+    "revision": "36f5e469cb4d11596c2904f78b002ca10ef7940b",
+    "image_repository_url": "https://github.com/MondoBoricua/MT3K-pptp-client-oci/pkgs/container/mt3k-pptp-client",
+    "readme_raw_url": "https://github.com/MondoBoricua/MT3K-pptp-client-oci/raw/refs/heads/main/README.md",
+    "compose_sha256": "5c24b9b6f52886ca2cf2c25c98ef0938a4c9fbcb10a0831fe3ba22e6fed6b912",
+    "generated_at": "2026-10-28T01:17:10Z"
+  },
+  "container_contract": {
+    "service_name": "mt3k-pptp-client",
+    "container_name": "mt3k-pptp-client",
+    "image": {
+      "reference": "ghcr.io/mondoboricua/mt3k-pptp-client:latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/mondoboricua/mt3k-pptp-client",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PPTP_SERVER",
+        "example": "vpn.example.com",
+        "prompt": "PPTP server hostname or IP",
+        "prompt_user": true,
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_USER",
+        "example": "pptp-user",
+        "prompt": "PPTP username",
+        "prompt_user": true,
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_PASS",
+        "example": "change-me",
+        "prompt": "PPTP password",
+        "prompt_user": true,
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_PASS_FILE",
+        "example": "",
+        "prompt": "Password file (overrides the PPTP password)",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_ROUTES",
+        "example": "192.0.2.0/24 198.51.100.0/24",
+        "prompt": "Networks to route through the tunnel",
+        "prompt_user": true,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_DEFAULT_ROUTE",
+        "example": "false",
+        "prompt": "Install a default route through the tunnel",
+        "prompt_user": true,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_MPPE",
+        "example": "required",
+        "prompt": "MPPE mode",
+        "prompt_user": true,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_MTU",
+        "example": "1400",
+        "prompt": "Tunnel MTU",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_PEER_NAME",
+        "example": "mt3k-pptp",
+        "prompt": "PPP peer name",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_RETRY_MIN",
+        "example": "30",
+        "prompt": "Minimum retry delay in seconds",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_RETRY_MAX",
+        "example": "300",
+        "prompt": "Maximum retry delay in seconds",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_DNS",
+        "example": "false",
+        "prompt": "Use peer DNS",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_DEBUG",
+        "example": "false",
+        "prompt": "PPP debug logging",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PPTP_NET_WAIT",
+        "example": "120",
+        "prompt": "Seconds to wait for the network",
+        "prompt_user": false,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [],
+    "ports": [],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "# Contrato del cliente. ProxMenux lee este archivo para armar el catalogo.\nname: mt3k-pptp-client\nservices:\n  mt3k-pptp-client:\n    image: ghcr.io/mondoboricua/mt3k-pptp-client:latest\n    container_name: mt3k-pptp-client\n    cap_add:\n      - NET_ADMIN\n    devices:\n      - /dev/ppp:/dev/ppp\n    environment:\n      PPTP_SERVER: vpn.example.com\n      PPTP_USER: pptp-user\n      PPTP_PASS: change-me\n      PPTP_PASS_FILE: \"\"\n      PPTP_ROUTES: \"192.0.2.0/24 198.51.100.0/24\"\n      PPTP_DEFAULT_ROUTE: \"false\"\n      PPTP_MPPE: required\n      PPTP_MTU: \"1400\"\n      PPTP_PEER_NAME: mt3k-pptp\n      PPTP_RETRY_MIN: \"30\"\n      PPTP_RETRY_MAX: \"300\"\n      PPTP_DNS: \"false\"\n      PPTP_DEBUG: \"false\"\n      PPTP_NET_WAIT: \"120\"\n    restart: unless-stopped\n"
+  },
+  "compose_stack": {
+    "project_name": "mt3k-pptp-client",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "mt3k-pptp-client",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "mt3k-pptp-client",
+        "image": "ghcr.io/mondoboricua/mt3k-pptp-client:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "ghcr.io/mondoboricua/mt3k-pptp-client:latest",
+          "container_name": "mt3k-pptp-client",
+          "cap_add": [
+            "NET_ADMIN"
+          ],
+          "devices": [
+            "/dev/ppp:/dev/ppp"
+          ],
+          "environment": {
+            "PPTP_SERVER": "vpn.example.com",
+            "PPTP_USER": "pptp-user",
+            "PPTP_PASS": "change-me",
+            "PPTP_PASS_FILE": "",
+            "PPTP_ROUTES": "192.0.2.0/24 198.51.100.0/24",
+            "PPTP_DEFAULT_ROUTE": "false",
+            "PPTP_MPPE": "required",
+            "PPTP_MTU": "1400",
+            "PPTP_PEER_NAME": "mt3k-pptp",
+            "PPTP_RETRY_MIN": "30",
+            "PPTP_RETRY_MAX": "300",
+            "PPTP_DNS": "false",
+            "PPTP_DEBUG": "false",
+            "PPTP_NET_WAIT": "120"
+          },
+          "restart": "unless-stopped"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "mt3k-pptp-client"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "mt3k-pptp-client"
+      ],
+      "stop_order": [
+        "mt3k-pptp-client"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 1,
+      "memory_mb": 256,
+      "swap_mb": 128,
+      "rootfs_size_gb": 4,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux keeps the LXC unprivileged by default and exposes the broad Compose privilege request only as an explicit compatibility option.",
+        "reason": "A Compose privilege request is source metadata, not proof that the image technically requires a privileged LXC.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-resource-limits",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "installer_profile": {
+      "security": {
+        "required_capabilities": [
+          "NET_ADMIN"
+        ],
+        "host_modules": [
+          {
+            "name": "ppp_generic",
+            "enable_prompt": "Load ppp_generic on the Proxmox host",
+            "enabled_default": true,
+            "required_by_compose": true
+          },
+          {
+            "name": "ppp_mppe",
+            "enable_prompt": "Load ppp_mppe on the Proxmox host",
+            "enabled_default": true,
+            "required_by_compose": true
+          }
+        ]
+      },
+      "optional_devices": [
+        {
+          "id": "ppp",
+          "kind": "character-device",
+          "purpose": "ppp",
+          "enable_prompt": "Pass /dev/ppp through to the LXC",
+          "enabled_default": true,
+          "required_by_compose": true,
+          "path_prompt": "PPP character device",
+          "host_path_default": "/dev/ppp",
+          "container_path_strategy": "same-as-host",
+          "mode": "0600",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid"
+        }
+      ]
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}
