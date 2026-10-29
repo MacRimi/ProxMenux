@@ -16360,7 +16360,11 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "multi_container": true
+      "multi_container": true,
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-10-29"
+      }
     },
     {
       "id": "thelounge",

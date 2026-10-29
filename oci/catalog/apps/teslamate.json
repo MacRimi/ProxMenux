@@ -658,7 +658,7 @@
     "rollback": "passed-controlled-healthcheck-failure-with-accompanying-engine-fix",
     "modification": "passed-extra-managed-volume",
     "removal": "passed-containers-volumes-registry-and-network-cleanup-host-data-retained",
-    "browser_ui": "pending-local-browser-use-disabled",
+    "browser_ui": "passed-teslamate-sign-in-and-grafana-login-dashboard-rendered",
     "vehicle_authorization": "not-tested-no-Tesla-account-tokens-used",
     "runtime_architecture": "amd64-only-on-ms03",
     "oci_engine_tests": "1106-passed-3-root-only-cases-covered-separately",
@@ -680,5 +680,11 @@
       "waits_for_dependency_healthchecks": true,
       "stops_dependencies_with_main": false
     }
+  },
+  "community_tested": {
+    "by": "jcastro",
+    "date": "2026-10-29",
+    "digest": "c85b3d447502683ed7bf12fb478e0dae9a985fe975ac22cccb64faeb4c4a5d31",
+    "scenario": "MS03/amd64: default and advanced install, browser login, volumes/restart, Modify, 4.3 to 4.4 update, controlled rollback, native backup/restore to new VMIDs and removal. No vehicle tokens used."
   }
 }

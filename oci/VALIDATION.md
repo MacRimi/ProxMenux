@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-43 of 530 applications in the OCI catalog have been tested for real: 41 in the ProxMenux lab and 2 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+44 of 530 applications in the OCI catalog have been tested for real: 41 in the ProxMenux lab and 3 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -26,6 +26,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 |---|---|---|---|---|---|
 | Glances | [@Vaso73](https://github.com/Vaso73) | 2026-09-27 | — | — | [Report](https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868) |
 | PocketBase | [@Vaso73](https://github.com/Vaso73) | 2026-09-27 | — | — | [Report](https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868) |
+| TeslaMate | [@jcastro](https://github.com/jcastro) | 2026-10-29 | `c85b3d447502` | MS03/amd64: default and advanced install, browser login, volumes/restart, Modify, 4.3 to 4.4 update, controlled rollback, native backup/restore to new VMIDs and removal. No vehicle tokens used. | — |
 
 ## Tested in the ProxMenux lab
 
