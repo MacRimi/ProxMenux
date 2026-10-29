@@ -1,0 +1,684 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-teslamate",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "TeslaMate"
+    },
+    "tagline": {
+      "en_US": "Tesla data logger with Grafana dashboards"
+    },
+    "description": {
+      "en_US": "TeslaMate with PostgreSQL, Grafana and a private Mosquitto broker. Runs as four native OCI LXCs without Docker Engine."
+    },
+    "category": "monitoring",
+    "category_label": "Monitoring & Analytics",
+    "author": "TeslaMate",
+    "developer": "TeslaMate",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teslamate.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 4000,
+      "path": "/"
+    },
+    "website": "https://teslamate.org",
+    "documentation": "https://docs.teslamate.org/docs/installation/docker/",
+    "repository": "https://github.com/teslamate-org/teslamate",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": "2026-10-29"
+  },
+  "source": {
+    "provider": "teslamate-org",
+    "repository": "https://github.com/teslamate-org/teslamate",
+    "revision": "012892b45e2ab159d3ae1eb1dc9bf85ced0eadfa20ca478821ab3cae0cef8f94",
+    "image_repository_url": "https://hub.docker.com/r/teslamate/teslamate",
+    "readme_pushed_at": "",
+    "compose_sha256": "012892b45e2ab159d3ae1eb1dc9bf85ced0eadfa20ca478821ab3cae0cef8f94",
+    "generated_at": "2026-10-28T23:42:45+00:00"
+  },
+  "container_contract": {
+    "service_name": "teslamate",
+    "container_name": "teslamate",
+    "image": {
+      "reference": "teslamate/teslamate:latest",
+      "registry": "docker.io",
+      "repository": "teslamate/teslamate",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "DATABASE_HOST",
+        "example": "database",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_NAME",
+        "example": "teslamate",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_PASS",
+        "example": "${GENERATED_GENERATED_DB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_USER",
+        "example": "teslamate",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ENCRYPTION_KEY",
+        "example": "${GENERATED_GENERATED_ENCRYPTION_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MQTT_HOST",
+        "example": "mosquitto",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/opt/app/import",
+        "compose_source_example": "import",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 4000,
+        "published_example": 4000,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "database",
+        "image": "postgres:18-trixie"
+      },
+      {
+        "name": "grafana",
+        "image": "teslamate/grafana:latest"
+      },
+      {
+        "name": "mosquitto",
+        "image": "eclipse-mosquitto:2"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: teslamate\nservices:\n  database:\n    environment:\n      POSTGRES_DB: teslamate\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_USER: teslamate\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n        - CMD\n        - pg_isready\n        - -U\n        - teslamate\n        - -d\n        - teslamate\n      timeout: 5s\n    image: postgres:18-trixie\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: database\n        target: /var/lib/postgresql\n  grafana:\n    depends_on:\n      database:\n        condition: service_healthy\n    entrypoint:\n      - /bin/sh\n      - -c\n      - mkdir -p \"$GF_PATHS_DATA\" && exec /run.sh \"$@\"\n      - --\n    environment:\n      DATABASE_HOST: database\n      DATABASE_NAME: teslamate\n      DATABASE_PASS: ${GENERATED_DB_PASSWORD}\n      DATABASE_USER: teslamate\n      GF_PATHS_DATA: /var/lib/grafana/data\n      GF_PATHS_PLUGINS: /var/lib/grafana/data/plugins\n    image: teslamate/grafana:latest\n    ports:\n      - 3000:3000\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: grafana\n        target: /var/lib/grafana\n  mosquitto:\n    command:\n      - mosquitto\n      - -c\n      - /mosquitto-no-auth.conf\n    image: eclipse-mosquitto:2\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: mosquitto-config\n        target: /mosquitto/config\n      - read_only: false\n        source: mosquitto-data\n        target: /mosquitto/data\n      - read_only: false\n        source: mosquitto-log\n        target: /mosquitto/log\n  teslamate:\n    depends_on:\n      database:\n        condition: service_healthy\n      mosquitto:\n        condition: service_started\n    environment:\n      DATABASE_HOST: database\n      DATABASE_NAME: teslamate\n      DATABASE_PASS: ${GENERATED_DB_PASSWORD}\n      DATABASE_USER: teslamate\n      ENCRYPTION_KEY: ${GENERATED_ENCRYPTION_KEY}\n      MQTT_HOST: mosquitto\n    image: teslamate/teslamate:latest\n    ports:\n      - 4000:4000\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: import\n        target: /opt/app/import\nvolumes:\n  database: {}\n  grafana: {}\n  import: {}\n  mosquitto-config: {}\n  mosquitto-data: {}\n  mosquitto-log: {}\n"
+  },
+  "compose_stack": {
+    "project_name": "teslamate",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "teslamate",
+    "service_count": 4,
+    "services": [
+      {
+        "name": "database",
+        "image": "postgres:18-trixie",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "environment": {
+            "POSTGRES_USER": "teslamate",
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "POSTGRES_DB": "teslamate"
+          },
+          "healthcheck": {
+            "interval": "5s",
+            "retries": 30,
+            "test": [
+              "CMD",
+              "pg_isready",
+              "-U",
+              "teslamate",
+              "-d",
+              "teslamate"
+            ],
+            "timeout": "5s"
+          },
+          "image": "postgres:18-trixie",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "database",
+              "target": "/var/lib/postgresql",
+              "read_only": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "grafana",
+        "image": "teslamate/grafana:latest",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [
+          "database"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "depends_on": {
+            "database": {
+              "condition": "service_healthy"
+            }
+          },
+          "entrypoint": [
+            "/bin/sh",
+            "-c",
+            "mkdir -p \"$GF_PATHS_DATA\" && exec /run.sh \"$@\"",
+            "--"
+          ],
+          "environment": {
+            "DATABASE_USER": "teslamate",
+            "DATABASE_PASS": "${GENERATED_DB_PASSWORD}",
+            "DATABASE_NAME": "teslamate",
+            "DATABASE_HOST": "database",
+            "GF_PATHS_DATA": "/var/lib/grafana/data",
+            "GF_PATHS_PLUGINS": "/var/lib/grafana/data/plugins"
+          },
+          "image": "teslamate/grafana:latest",
+          "ports": [
+            "3000:3000"
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "grafana",
+              "target": "/var/lib/grafana",
+              "read_only": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "mosquitto",
+        "image": "eclipse-mosquitto:2",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 3,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "command": [
+            "mosquitto",
+            "-c",
+            "/mosquitto-no-auth.conf"
+          ],
+          "image": "eclipse-mosquitto:2",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "mosquitto-config",
+              "target": "/mosquitto/config",
+              "read_only": false
+            },
+            {
+              "source": "mosquitto-data",
+              "target": "/mosquitto/data",
+              "read_only": false
+            },
+            {
+              "source": "mosquitto-log",
+              "target": "/mosquitto/log",
+              "read_only": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "teslamate",
+        "image": "teslamate/teslamate:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "database",
+          "mosquitto"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "depends_on": {
+            "database": {
+              "condition": "service_healthy"
+            },
+            "mosquitto": {
+              "condition": "service_started"
+            }
+          },
+          "environment": {
+            "ENCRYPTION_KEY": "${GENERATED_ENCRYPTION_KEY}",
+            "DATABASE_USER": "teslamate",
+            "DATABASE_PASS": "${GENERATED_DB_PASSWORD}",
+            "DATABASE_NAME": "teslamate",
+            "DATABASE_HOST": "database",
+            "MQTT_HOST": "mosquitto"
+          },
+          "image": "teslamate/teslamate:latest",
+          "ports": [
+            "4000:4000"
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "import",
+              "target": "/opt/app/import",
+              "read_only": false
+            }
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "name": "teslamate",
+      "volumes": {
+        "database": {},
+        "grafana": {},
+        "import": {},
+        "mosquitto-config": {},
+        "mosquitto-data": {},
+        "mosquitto-log": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "database-volume-0",
+        "service": "database",
+        "container_path": "/var/lib/postgresql",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "grafana-volume-0",
+        "service": "grafana",
+        "container_path": "/var/lib/grafana",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "mosquitto-volume-0",
+        "service": "mosquitto",
+        "container_path": "/mosquitto/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "mosquitto-volume-1",
+        "service": "mosquitto",
+        "container_path": "/mosquitto/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "mosquitto-volume-2",
+        "service": "mosquitto",
+        "container_path": "/mosquitto/log",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "teslamate-volume-0",
+        "service": "teslamate",
+        "container_path": "/opt/app/import",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 4,
+      "start_order": [
+        "database",
+        "grafana",
+        "mosquitto",
+        "teslamate"
+      ],
+      "stop_order": [
+        "teslamate",
+        "mosquitto",
+        "grafana",
+        "database"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "generated-db-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "database",
+              "environment_variable": "POSTGRES_PASSWORD"
+            },
+            {
+              "service": "grafana",
+              "environment_variable": "DATABASE_PASS"
+            },
+            {
+              "service": "teslamate",
+              "environment_variable": "DATABASE_PASS"
+            }
+          ]
+        },
+        {
+          "id": "generated-encryption-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "teslamate",
+              "environment_variable": "ENCRYPTION_KEY"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 4000,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Grafana administrator",
+        "type": "static-default",
+        "username": "admin",
+        "password": "admin",
+        "change_required": true,
+        "source": "official-documentation",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "official-four-service-stack",
+        "upstream_behavior": "The official Compose runs TeslaMate, PostgreSQL, Grafana and Mosquitto.",
+        "native_lxc_behavior": "The generic OCI stack driver creates one native LXC per service with ordered startup and private service aliases.",
+        "reason": "Preserve the complete upstream application without Docker Engine.",
+        "behavioral_impact": "TeslaMate and Grafana receive frontend addresses; the database and MQTT broker remain private.",
+        "validation": "passed-ms03-2026-10-29"
+      },
+      {
+        "id": "postgres-major-version",
+        "upstream_behavior": "The official deployment selects postgres:18-trixie and persists /var/lib/postgresql.",
+        "native_lxc_behavior": "Keep that tag and volume root, including the versioned PostgreSQL data directory.",
+        "reason": "Avoid an unintended PostgreSQL major-version change.",
+        "behavioral_impact": "Minor image updates remain available within the selected major version.",
+        "validation": "passed-ms03-2026-10-29"
+      },
+      {
+        "id": "mosquitto-declared-log-volume",
+        "upstream_behavior": "The Mosquitto image declares /mosquitto/log as a data volume in addition to /mosquitto/data.",
+        "native_lxc_behavior": "Add a backup-enabled managed volume for /mosquitto/log alongside configuration and data.",
+        "reason": "Every OCI-declared data path must survive image replacement.",
+        "behavioral_impact": "The MQTT port remains private; no image is rebuilt.",
+        "validation": "passed-ms03-2026-10-29"
+      },
+      {
+        "id": "grafana-nested-persistent-data",
+        "upstream_behavior": "Grafana stores SQLite at the persistent mount root.",
+        "native_lxc_behavior": "Use a data subdirectory, created by a shell entrypoint before executing the original /run.sh.",
+        "reason": "Proxmox restores mount roots with root ownership; nested data retains the Grafana user ownership.",
+        "behavioral_impact": "Official image and original startup script are retained. Data and plugins remain backed up in the same volume.",
+        "validation": "passed-ms03-2026-10-29"
+      }
+    ],
+    "custom_compose_stack": true,
+    "custom_compose_interpolated": false,
+    "stack_image_entrypoints": {},
+    "installer_profile": {
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/opt/app/import",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/postgresql",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/grafana",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/mosquitto/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/mosquitto/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/mosquitto/log",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "stop_signal",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Reviewed four-service application using the generic native OCI stack driver; runtime evidence is recorded in validation."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "passed-ms03-default-resource-profile-and-advanced-settings",
+    "service_health": "passed-teslamate-http-grafana-login-and-postgresql-datasource",
+    "restart_persistence": "passed",
+    "backup_restore": "passed-native-backups-restored-under-new-vmids",
+    "update_preserves_data": "passed-4.3.0-to-4.4.0",
+    "rollback": "passed-controlled-healthcheck-failure-with-accompanying-engine-fix",
+    "modification": "passed-extra-managed-volume",
+    "removal": "passed-containers-volumes-registry-and-network-cleanup-host-data-retained",
+    "browser_ui": "pending-local-browser-use-disabled",
+    "vehicle_authorization": "not-tested-no-Tesla-account-tokens-used",
+    "runtime_architecture": "amd64-only-on-ms03",
+    "oci_engine_tests": "1106-passed-3-root-only-cases-covered-separately",
+    "offline_i18n_tests": "608-passed"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false
+    }
+  }
+}
