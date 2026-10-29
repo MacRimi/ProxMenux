@@ -274,11 +274,7 @@ export const sidebarItems: MenuItem[] = [
           { title: "Overview", i18nKey: "settingsOverview", href: "/docs/settings" },
           { title: "ProxMenux Monitor", i18nKey: "settingsMonitor", href: "/docs/settings/proxmenux-monitor" },
           { title: "Change Release Channel", i18nKey: "settingsBeta", href: "/docs/settings/beta-program" },
-          // "Change Language" is intentionally hidden until the translation
-          // install flow is reactivated. The page file at
-          // /docs/settings/change-language/page.tsx is preserved so we can
-          // restore this entry in a single line edit once the feature ships.
-          // { title: "Change Language", i18nKey: "settingsLanguage", href: "/docs/settings/change-language" },
+          { title: "Change Language", i18nKey: "settingsLanguage", href: "/docs/settings/change-language" },
           { title: "Show Version Information", i18nKey: "settingsVersion", href: "/docs/settings/show-version-information" },
           { title: "Uninstall ProxMenux", i18nKey: "settingsUninstall", href: "/docs/settings/uninstall-proxmenux" },
         ],
