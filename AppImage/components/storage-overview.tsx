@@ -121,12 +121,56 @@ interface DiskObservation {
   model: string
 }
 
+// Pool layout from `zpool status -j` (OpenZFS 2.3+). Only present when
+// details_available is true; older ZFS gets the basic fields above.
+interface ZFSDevice {
+  path: string
+  disk: string | null // base block device (e.g. "sdb"), null for file vdevs
+  state: string // ONLINE | DEGRADED | FAULTED | OFFLINE | UNAVAIL | REMOVED | AVAIL | INUSE
+  read_errors: number
+  write_errors: number
+  checksum_errors: number
+  slow_ios: number
+  via: string | null // "spare-0" / "replacing-0" while a device is being swapped
+}
+
+interface ZFSVdev {
+  name: string
+  type: string // mirror | raidz | draid | disk
+  parity: number | null
+  class: "normal" | "special" | "dedup" | "log" | "cache" | "spare"
+  state: string
+  read_errors: number
+  write_errors: number
+  checksum_errors: number
+  devices: ZFSDevice[]
+}
+
+interface ZFSScan {
+  function: "SCRUB" | "RESILVER" | string
+  state: "SCANNING" | "FINISHED" | "CANCELED" | string
+  start_time: number | null
+  end_time: number | null
+  errors: number
+  repaired_bytes: number
+  percent: number | null // only while SCANNING
+}
+
 interface ZFSPool {
   name: string
   size: string
   allocated: string
   free: string
   health: string
+  fragmentation?: number | null
+  capacity?: number | null
+  dedup_ratio?: number | null
+  details_available?: boolean
+  status?: string | null
+  action?: string | null
+  error_count?: number
+  scan?: ZFSScan | null
+  vdevs?: ZFSVdev[]
 }
 
 interface StorageData {
@@ -250,6 +294,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
   const [mountDetail, setMountDetail] = useState<RemoteMount | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDisk, setSelectedDisk] = useState<DiskInfo | null>(null)
+  const [selectedPool, setSelectedPool] = useState<ZFSPool | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [diskObservations, setDiskObservations] = useState<DiskObservation[]>([])
   const [loadingObservations, setLoadingObservations] = useState(false)
@@ -396,6 +441,57 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
         return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">{healthLabel()}</Badge>
     }
   }
+
+  // ZFS device/vdev states are shown verbatim, as `zpool status` prints them.
+  const getZfsStateBadge = (state: string) => {
+    const style =
+      state === "ONLINE"
+        ? "bg-green-500/10 text-green-500 border-green-500/20"
+        : state === "AVAIL" || state === "INUSE"
+          ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+          : state === "DEGRADED"
+            ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+            : "bg-red-500/10 text-red-500 border-red-500/20"
+    return <Badge className={`font-mono text-xs ${style}`}>{state}</Badge>
+  }
+
+  const getZfsVdevLabel = (vdev: ZFSVdev) => {
+    if (vdev.type === "mirror") return t("storage.zfs.mirror")
+    if (vdev.type === "raidz") return t("storage.zfs.raidz", { parity: vdev.parity ?? 1 })
+    if (vdev.type === "draid") return t("storage.zfs.draid", { parity: vdev.parity ?? 1 })
+    return t("storage.zfs.singleDisk")
+  }
+
+  // One-line pool shape for the card, e.g. "RAIDZ2", "2 x Mirror", "Stripe".
+  const getZfsLayoutSummary = (pool: ZFSPool) => {
+    const data = (pool.vdevs ?? []).filter((v) => v.class === "normal")
+    if (data.length === 0) return null
+    if (data.every((v) => v.type === "disk")) {
+      return data.length === 1 ? t("storage.zfs.singleDisk") : t("storage.zfs.stripe")
+    }
+    const labels = [...new Set(data.map(getZfsVdevLabel))]
+    if (labels.length === 1 && data.length > 1) return `${data.length} x ${labels[0]}`
+    return labels.join(" + ")
+  }
+
+  const formatZfsTime = (epoch: number | null | undefined) =>
+    epoch ? new Date(epoch * 1000).toLocaleString() : t("common.notAvailable")
+
+  const getZfsScanSummary = (scan: ZFSScan | null | undefined) => {
+    if (!scan) return t("storage.zfs.neverScrubbed")
+    const kind = scan.function === "RESILVER" ? t("storage.zfs.resilver") : t("storage.zfs.scrub")
+    if (scan.state === "SCANNING") {
+      return t("storage.zfs.scanRunning", { kind, percent: scan.percent ?? 0 })
+    }
+    if (scan.state === "CANCELED") return t("storage.zfs.scanCanceled", { kind })
+    return t("storage.zfs.scanFinished", {
+      kind,
+      date: scan.end_time ? new Date(scan.end_time * 1000).toLocaleDateString() : "",
+    })
+  }
+
+  const zfsDeviceErrors = (d: { read_errors: number; write_errors: number; checksum_errors: number }) =>
+    d.read_errors + d.write_errors + d.checksum_errors
 
   // Tiny coloured dot that prefixes status / counter values. Adds
   // accessibility-friendly redundancy (colour + position) to fields
@@ -1769,7 +1865,11 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
           <CardContent>
             <div className="space-y-4">
               {storageData.zfs_pools.map((pool) => (
-                <div key={pool.name} className="border rounded-lg p-4">
+                <div
+                  key={pool.name}
+                  className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelectedPool(pool)}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold text-lg">{pool.name}</h3>
@@ -1777,6 +1877,31 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                     </div>
                     {getHealthIcon(pool.health)}
                   </div>
+                  {pool.details_available && (() => {
+                    const dataDevices = (pool.vdevs ?? [])
+                      .filter((v) => v.class === "normal")
+                      .reduce((n, v) => n + v.devices.length, 0)
+                    const problems = (pool.vdevs ?? []).some(
+                      (v) => v.devices.some((d) => zfsDeviceErrors(d) > 0) || zfsDeviceErrors(v) > 0,
+                    ) || (pool.error_count ?? 0) > 0
+                    return (
+                      <p className="text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-2">
+                        <span className="font-medium text-foreground">{getZfsLayoutSummary(pool)}</span>
+                        <span>|</span>
+                        <span>
+                          {t(dataDevices === 1 ? "storage.zfs.diskCountOne" : "storage.zfs.diskCountMany", { count: dataDevices })}
+                        </span>
+                        <span>|</span>
+                        <span>{getZfsScanSummary(pool.scan)}</span>
+                        {problems && (
+                          <span className="flex items-center gap-1 text-red-500">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            {t("storage.zfs.errorsReported")}
+                          </span>
+                        )}
+                      </p>
+                    )
+                  })()}
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-sm text-muted-foreground">{t("storage.size")}</p>
@@ -1797,6 +1922,197 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
           </CardContent>
         </Card>
       )}
+
+      {/* ZFS Pool Details Dialog: re-resolved from storageData so it follows
+          the background refresh while open (e.g. resilver progress). */}
+      <Dialog open={selectedPool !== null} onOpenChange={(open) => { if (!open) setSelectedPool(null) }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          {selectedPool && (() => {
+            const pool = storageData.zfs_pools.find((p) => p.name === selectedPool.name) ?? selectedPool
+            const classOrder: ZFSVdev["class"][] = ["normal", "special", "dedup", "log", "cache", "spare"]
+            const vdevs = [...(pool.vdevs ?? [])].sort(
+              (a, b) => classOrder.indexOf(a.class) - classOrder.indexOf(b.class),
+            )
+            const showSlowIos = vdevs.some((v) => v.devices.some((d) => d.slow_ios > 0))
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-3">
+                    <Database className="h-5 w-5" />
+                    {pool.name}
+                    {getHealthBadge(pool.health)}
+                  </DialogTitle>
+                  <DialogDescription>{t("storage.zfs.poolDetails")}</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-5">
+                  {(pool.status || pool.action) && (
+                    <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm space-y-1">
+                      {pool.status && <p><span className="font-medium">{t("storage.zfs.status")}:</span> {pool.status}</p>}
+                      {pool.action && <p><span className="font-medium">{t("storage.zfs.action")}:</span> {pool.action}</p>}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">{t("storage.size")}</p>
+                      <p className="font-medium">{pool.size}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t("storage.allocated")}</p>
+                      <p className="font-medium">{pool.allocated}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t("storage.free")}</p>
+                      <p className="font-medium">{pool.free}</p>
+                    </div>
+                    {pool.capacity != null && (
+                      <div>
+                        <p className="text-muted-foreground">{t("storage.zfs.capacity")}</p>
+                        <p className="font-medium">{pool.capacity}%</p>
+                      </div>
+                    )}
+                    {pool.fragmentation != null && (
+                      <div>
+                        <p className="text-muted-foreground">{t("storage.zfs.fragmentation")}</p>
+                        <p className="font-medium">{pool.fragmentation}%</p>
+                      </div>
+                    )}
+                    {pool.dedup_ratio != null && (
+                      <div>
+                        <p className="text-muted-foreground">{t("storage.zfs.dedupRatio")}</p>
+                        <p className="font-medium">{pool.dedup_ratio.toFixed(2)}x</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {!pool.details_available ? (
+                    <p className="text-sm text-muted-foreground italic">{t("storage.zfs.detailsUnavailable")}</p>
+                  ) : (
+                    <>
+                      {/* Scrub / resilver */}
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          {t("storage.zfs.scanTitle")}
+                        </h3>
+                        <p className="text-sm">{getZfsScanSummary(pool.scan)}</p>
+                        {pool.scan?.state === "SCANNING" && <Progress value={pool.scan.percent ?? 0} className="h-2" />}
+                        {pool.scan && (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.started")}</p>
+                              <p className="font-medium">{formatZfsTime(pool.scan.start_time)}</p>
+                            </div>
+                            {pool.scan.state !== "SCANNING" && (
+                              <div>
+                                <p className="text-muted-foreground">{t("storage.zfs.ended")}</p>
+                                <p className="font-medium">{formatZfsTime(pool.scan.end_time)}</p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.repaired")}</p>
+                              <p className="font-medium">{formatStorage(pool.scan.repaired_bytes / 1024 ** 3)}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.scanErrors")}</p>
+                              <p className={`font-medium ${pool.scan.errors > 0 ? "text-red-500" : ""}`}>{pool.scan.errors}</p>
+                            </div>
+                          </div>
+                        )}
+                        <p className={`text-sm ${(pool.error_count ?? 0) > 0 ? "text-red-500" : "text-green-500"}`}>
+                          {(pool.error_count ?? 0) > 0
+                            ? t("storage.zfs.dataErrors", { count: pool.error_count ?? 0 })
+                            : t("storage.zfs.noDataErrors")}
+                        </p>
+                      </div>
+
+                      {/* Layout: one block per top-level vdev */}
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          {t("storage.zfs.layout")}
+                          {getZfsLayoutSummary(pool) && (
+                            <span className="ml-2 normal-case font-normal text-foreground">{getZfsLayoutSummary(pool)}</span>
+                          )}
+                        </h3>
+                        {vdevs.map((vdev, i) => (
+                          <div key={`${vdev.class}-${vdev.name}-${i}`} className="border rounded-lg">
+                            <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-muted/30">
+                              <Badge variant="outline" className="text-xs">{t(`storage.zfs.classes.${vdev.class}`)}</Badge>
+                              <span className="text-sm font-medium">{getZfsVdevLabel(vdev)}</span>
+                              {vdev.type !== "disk" && (
+                                <span className="font-mono text-xs text-muted-foreground">{vdev.name}</span>
+                              )}
+                              <span className="ml-auto">{getZfsStateBadge(vdev.state)}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-xs text-muted-foreground">
+                                    <th className="text-left font-normal px-3 py-1.5">{t("storage.zfs.device")}</th>
+                                    <th className="text-left font-normal px-2 py-1.5">{t("storage.zfs.disk")}</th>
+                                    <th className="text-left font-normal px-2 py-1.5">{t("storage.zfs.state")}</th>
+                                    <th className="text-right font-normal px-2 py-1.5" title={t("storage.zfs.readErrors")}>{t("storage.zfs.readShort")}</th>
+                                    <th className="text-right font-normal px-2 py-1.5" title={t("storage.zfs.writeErrors")}>{t("storage.zfs.writeShort")}</th>
+                                    <th className="text-right font-normal px-2 py-1.5" title={t("storage.zfs.checksumErrors")}>{t("storage.zfs.checksumShort")}</th>
+                                    {showSlowIos && (
+                                      <th className="text-right font-normal px-3 py-1.5">{t("storage.zfs.slowIos")}</th>
+                                    )}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {vdev.devices.map((dev) => {
+                                    const diskInfo = dev.disk ? storageData.disks.find((d) => d.name === dev.disk) : undefined
+                                    const errCls = (n: number) => `text-right px-2 py-1.5 font-mono ${n > 0 ? "text-red-500 font-semibold" : "text-muted-foreground"}`
+                                    return (
+                                      <tr key={`${dev.path}-${dev.via ?? ""}`} className="border-t border-border/50">
+                                        <td className="px-3 py-1.5 font-mono text-xs break-all" title={dev.path}>
+                                          {dev.path.split("/").pop()}
+                                          {dev.via && (
+                                            <span className="ml-2 text-muted-foreground">({t("storage.zfs.via", { name: dev.via })})</span>
+                                          )}
+                                        </td>
+                                        <td className="px-2 py-1.5">
+                                          {diskInfo ? (
+                                            <button
+                                              type="button"
+                                              title={diskInfo.model}
+                                              onClick={() => {
+                                                setSelectedPool(null)
+                                                handleDiskClick(diskInfo)
+                                              }}
+                                            >
+                                              <Badge variant="outline" className="font-mono hover:bg-accent">{diskInfo.name}</Badge>
+                                            </button>
+                                          ) : (
+                                            <span className="font-mono text-xs text-muted-foreground">{dev.disk ?? "-"}</span>
+                                          )}
+                                        </td>
+                                        <td className="px-2 py-1.5">{getZfsStateBadge(dev.state)}</td>
+                                        <td className={errCls(dev.read_errors)}>{dev.read_errors}</td>
+                                        <td className={errCls(dev.write_errors)}>{dev.write_errors}</td>
+                                        <td className={errCls(dev.checksum_errors)}>{dev.checksum_errors}</td>
+                                        {showSlowIos && (
+                                          <td className={`text-right px-3 py-1.5 font-mono ${dev.slow_ios > 0 ? "text-yellow-500" : "text-muted-foreground"}`}>
+                                            {dev.slow_ios}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Physical Disks (internal only) */}
       <Card>
