@@ -6994,8 +6994,12 @@
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/fedora-vm.sh",
     "type": "vm",
     "type_id": "lte524abgx960bd",
-    "categories": [],
-    "category_names": [],
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
     "notes": [
       "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
       "Each Fedora release is supported for about 13 months, so plan on upgrading roughly once a year."
@@ -26390,7 +26394,8 @@
     ],
     "notes": [
       "Data is stored in /opt/victorialogs_data and persists across updates.",
-      "vlutils (vlogscli, vlagent) are installed in /opt/vlutils."
+      "vlutils (vlogscli, vlagent) are installed in /opt/vlutils.",
+      "Syslog ingestion is enabled on TCP/UDP 514 (RFC3164/RFC5424). Point devices such as UniFi Remote Syslog to <IP>:514"
     ],
     "warnings": [
       "VictoriaLogs has no built-in authentication. Use a reverse proxy with authentication for production deployments."
