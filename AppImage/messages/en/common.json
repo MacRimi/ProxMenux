@@ -308,6 +308,10 @@
     "remoteMounts": "Remote Mounts",
     "externalStorageUsb": "External Storage (USB)",
     "physicalDisksSmart": "Physical Disks & SMART Status",
+    "storageController": "Storage Controller",
+    "noController": "No controller detected",
+    "diskCountOne": "{count} disk",
+    "diskCountMany": "{count} disks",
     "zfsPools": "ZFS Pools",
     "local": "Local",
     "remote": "Remote",
@@ -2063,6 +2067,11 @@
       "label": "Network Unit Display",
       "bytes": "Bytes",
       "bits": "Bits"
+    },
+    "storageDisplay": {
+      "title": "Storage Display",
+      "description": "Change how disks are laid out on the Storage page",
+      "groupByController": "Group physical disks by storage controller"
     },
     "healthMonitor": {
       "title": "Health Monitor",
@@ -4159,6 +4168,8 @@
       "vendor": "Vendor",
       "pciSlot": "PCI Slot",
       "driver": "Driver",
+      "storageController": "Storage Controller",
+      "attachedDisks": "Attached Disks",
       "kernelModule": "Kernel Module",
       "kernelDriver": "Kernel Driver",
       "kernelModules": "Kernel Modules",
