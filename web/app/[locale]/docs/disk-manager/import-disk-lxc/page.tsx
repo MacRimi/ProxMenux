@@ -93,6 +93,7 @@ export default async function ImportDiskLXCPage({
 └──────────────────┬──────────────────────────┘
                    ▼
       pct list — user picks target CT
+      (containers from OCI images not listed)
                    │
                    ▼
       Privileged check
@@ -109,32 +110,31 @@ export default async function ImportDiskLXCPage({
                    │
                    ▼
       Visibility filter
-      ├─ Hidden: root / swap / system-mounted
-      ├─ Hidden: active ZFS / LVM / RAID members
-      ├─ Hidden: already in any VM/CT config
-      ├─ Shown: free disks
-      └─ Shown with ⚠ label: stale metadata
+      ├─ Hidden: mounted (root included),
+      │          host LVM, ZFS members,
+      │          active RAID members
+      ├─ Hidden: already in this CT's config
+      ├─ Shown with ⚠ In use: referenced by
+      │          another VM / CT
+      └─ Shown with ⚠ RAID / LVM label
                    │
                    ▼
-      User selects ONE disk
-      (only a single disk per run)
+      User selects one or more disks
                    │
                    ▼
-      Filesystem probe on the first partition
-      ├─ ext4 / xfs / btrfs  → reuse as-is
-      │                        (data is preserved)
-      └─ empty / unsupported → offer to format
-                               ├─ pick fs: ext4 / xfs / btrfs
-                               └─ mkfs.<fs> will run in Phase 2
+      For each selected disk:
+      ├─ Used by a running VM/CT → skip
+      ├─ In a stopped VM/CT → confirm
+      ├─ RAID member → refused
+      ├─ Filesystem on the first partition?
+      │    ├─ yes → use as-is or format
+      │    └─ no  → format
+      │    (format: pick ext4 / xfs / btrfs
+      │     + confirm data loss)
+      └─ Mount point path
+         (suggested: /mnt/disk_<device>)
                    │
-                   ▼
-      User types mount point path
-      (e.g. /mnt/data  /mnt/disk_passthrough)
-                   │
-                   ▼
-      Summary: disk → mount point
-                   │
-   ┌──────── Cancel   OR   Confirm ────┐
+   ┌──────── Cancel   OR   Answer all ─┐
    ▼                                   ▼
 Exit, nothing        ┌─────────────────┴─────────────────┐
 was changed          │  PHASE 2 — Apply                   │
@@ -146,7 +146,9 @@ was changed          │  PHASE 2 — Apply                   │
                                        │
                                        ▼
                        If formatting was chosen:
-                       └─ mkfs.<fs> /dev/disk/by-id/…-part1
+                       ├─ no partition → parted mklabel
+                       │    gpt + mkpart 0% 100%
+                       └─ mkfs.<fs> <partition>
                                        │
                                        ▼
                        Resolve best persistent partition
@@ -155,6 +157,11 @@ was changed          │  PHASE 2 — Apply                   │
                                        ▼
                        Find next free mpN index
                        (scans pct config output)
+                                       │
+                                       ▼
+                       xfs / btrfs: install xfsprogs or
+                       btrfs-progs inside the CT
+                       (offers to start it if stopped)
                                        │
                                        ▼
                        pct set <CTID> -mpN \\

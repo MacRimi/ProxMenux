@@ -84,10 +84,10 @@ export default async function FormatDiskPage({
                    │
                    ▼
       Visibility filter
-      ├─ Hidden: root / swap / system-mounted
-      ├─ Hidden: active ZFS / LVM / RAID members
-      ├─ Hidden: referenced by any VM/LXC config
-      └─ Shown: fully free disks (⚠ for stale sigs)
+      ├─ Hidden: system mount / swap / root pool
+      ├─ Shown, blocked: used by a running VM/CT
+      └─ Shown with warning: stopped guest ref,
+         data mounts, ZFS / LVM / RAID members
                    │
                    ▼
       User picks a disk
@@ -100,13 +100,6 @@ export default async function FormatDiskPage({
       └─ 4. Full format      (new GPT + mkfs)
                    │
                    ▼
-      Mode = 4? → extra questions
-      ├─ Filesystem: ext4 / xfs / exfat / btrfs
-      │    └─ if tool missing (mkfs.btrfs,
-      │       mkfs.exfat) → abort with hint
-      └─ Optional label
-                   │
-                   ▼
       ╔════════════════════════════════════╗
       ║  Double confirmation gate           ║
       ║  (1) yes/no dialog with summary     ║
@@ -117,9 +110,18 @@ export default async function FormatDiskPage({
                          │
   ┌──────── Cancel   OR   Confirm ────┐
   ▼                                   ▼
-Exit, nothing        ┌─────────────────┴─────────────────┐
-was changed          │  PHASE 2 — Execute                 │
+Exit, nothing             Mode = 4? → Filesystem:
+was changed               ext4 / xfs / exfat / btrfs / zfs
+                          (zfs → also asks the pool name)
+                                      │
+                     ┌────────────────┴──────────────────┐
+                     │  PHASE 2 — Execute                 │
                      └─────────────────┬─────────────────┘
+                                       ▼
+                       Mode 4: install exfatprogs if
+                       mkfs.exfat is missing; abort if
+                       mkfs.btrfs is missing
+                                       │
                                        ▼
                        Pre-execution re-validation
                        (state may have changed since
@@ -130,19 +132,25 @@ was changed          │  PHASE 2 — Execute                 │
                        │    → hard block, abort
                        ├─ Disk has active swap?
                        │    → hard block, abort
-                       └─ Data partitions still mounted?
-                          → auto-unmount; abort if fails
+                       ├─ Data partitions still mounted?
+                       │    → auto-unmount; abort if fails
+                       ├─ Active ZFS pool on the disk?
+                       │    → zpool export
+                       └─ Used by a running VM/CT?
+                            → hard block, abort
                                        │
                                        ▼
                        Run the selected mode:
                        ┌─────────────────────────────────┐
                        │ 1. Wipe all                     │
-                       │    wipefs -af <disk>            │
+                       │    wipefs -af each partition    │
                        │    sgdisk --zap-all <disk>      │
+                       │    blkdiscard (if supported)    │
+                       │    zero first + last 16 MiB     │
                        ├─────────────────────────────────┤
                        │ 2. Remove FS labels             │
-                       │    wipefs -af <disk>            │
-                       │    + wipefs -af each partition  │
+                       │    wipefs -af --types <fs/raid> │
+                       │      <disk> + each partition    │
                        │    (partition table PRESERVED)  │
                        ├─────────────────────────────────┤
                        │ 3. Zero all data                │
@@ -152,17 +160,12 @@ was changed          │  PHASE 2 — Execute                 │
                        │    (partition table PRESERVED)  │
                        ├─────────────────────────────────┤
                        │ 4. Full format                  │
-                       │    wipefs -af <disk>            │
-                       │    sgdisk --zap-all <disk>      │
-                       │    sgdisk -n 1:0:0 -t 1:8300    │
-                       │      <disk>                     │
-                       │    mkfs.<fs> [-L <label>]       │
-                       │      <disk>1                    │
-                       └─────────────────────────────────┘
-                                       │
-                                       ▼
-                       Final summary (operation + disk +
-                       bytes touched if applicable)`}
+                       │    same wipe as mode 1          │
+                       │    parted mklabel gpt           │
+                       │    parted mkpart 1MiB 100%      │
+                       │    mkfs.<fs> <disk>1            │
+                       │    (zfs: zpool create <pool>)   │
+                       └─────────────────────────────────┘`}
       </pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("visibility.heading")}</h2>
@@ -238,8 +241,10 @@ wipefs -af /dev/sdX
 sgdisk --zap-all /dev/sdX
 
 # --- mode 2: remove FS labels only (keep partitions + data) ---
-wipefs -af /dev/sdX           # clears superblock signatures
-# (do NOT run sgdisk --zap-all; it would wipe the partition table)
+# --types limits wipefs to filesystem/RAID signatures; without it,
+# wipefs -af on the disk would also erase the partition table
+types=$(blkid -k | paste -sd,)
+wipefs -af --types "$types" /dev/sdX /dev/sdX?*
 
 # --- mode 3: zero all data (keep partition table) ---
 for p in /dev/sdX?*; do
@@ -249,8 +254,8 @@ done
 # --- mode 4: full format (new GPT + filesystem) ---
 wipefs -af /dev/sdX
 sgdisk --zap-all /dev/sdX
-sgdisk -n 1:0:0 -t 1:8300 /dev/sdX         # one partition, Linux filesystem
-mkfs.ext4 -L mylabel /dev/sdX1             # pick the fs you want`} />
+parted -s /dev/sdX mklabel gpt mkpart primary 1MiB 100%   # one partition
+mkfs.ext4 /dev/sdX1                        # pick the fs you want`} />
 
       <Callout variant="troubleshoot" title={t("troubleshoot.notListedTitle")}>
         {t.rich("troubleshoot.notListedBody", { code })}

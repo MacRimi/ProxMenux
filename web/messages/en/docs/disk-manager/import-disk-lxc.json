@@ -16,15 +16,15 @@
   },
   "howRuns": {
     "heading": "How the script runs",
-    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually changing the container config\". Until the final confirmation, nothing is mounted into the CT.",
-    "summary": "ProxMenux filters out the root disk, mounted disks, and disks already referenced by any VM/LXC config. Disks with active ZFS/LVM/RAID membership are hidden; stale signatures show a ⚠ label so you can wipe them before formatting."
+    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually changing the container config\". Until the last dialog is answered, nothing is changed on the host or in the CT.",
+    "summary": "ProxMenux hides the root disk and other mounted disks, ZFS members, active RAID members, disks used by host LVM and disks already in this container. Disks referenced by another VM or CT are shown as ⚠ In use, and RAID / LVM signatures show a ⚠ label."
   },
   "prereqs": {
     "heading": "Prerequisites",
     "items": [
       "At least one LXC container defined on the host.",
       "The container is <strong>privileged</strong>, or you accept the script's offer to convert it.",
-      "At least one physical disk not in use by the host or any other guest."
+      "At least one physical disk not in use by the host."
     ],
     "warnTitle": "Privileged container required",
     "warnBody": "This script requires a <strong>privileged</strong> container for its direct disk attachment. If it detects <code>unprivileged: 1</code>, it offers to edit <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> in place. This changes the security model and does not remap existing file ownership. Back up the container and verify ownership before accepting, or rebuild it as privileged."
@@ -37,31 +37,31 @@
         "title": "Pick the target container",
         "img": "/disk/select-container.png",
         "caption": "Container selection menu",
-        "bodyRich": "ProxMenux lists every LXC container on the host (<code>pct list</code>). Pick the one that will receive the disk. If the container is unprivileged you are offered to convert it now."
+        "bodyRich": "ProxMenux lists the LXC containers on the host (<code>pct list</code>), except those created from an OCI image, whose paths are managed in the OCI manager. Pick the one that will receive the disks. If the container is unprivileged you are offered to convert it now."
       },
       {
         "title": "Pick the physical disk",
         "img": "/disk/disk-selection-ct.png",
         "caption": "Free disks detected on the host (with ⚠ labels for stale metadata)",
-        "bodyRich": "Only safe candidates are shown. Unlike the VM flow, this script attaches <strong>one disk per run</strong> — run it again for each extra disk you want to add."
+        "bodyRich": "Only safe candidates are shown, and you can select <strong>several disks</strong> in one run. For each disk, a running VM or CT that uses it skips the disk, a stopped one asks you to confirm, and a RAID member is refused."
       },
       {
         "title": "Format or reuse",
-        "intro": "The script inspects the disk:",
+        "intro": "For each selected disk the script inspects the first partition:",
         "items": [
-          "If it already carries a supported filesystem (ext4 / xfs / btrfs) you can reuse it as-is (existing files are preserved).",
-          "If it has no supported filesystem you are offered to format it. Pick ext4 / xfs / btrfs."
+          "If it already has a filesystem, you choose to use it as-is (existing files are preserved) or format it.",
+          "If it has no filesystem, it is formatted: pick ext4 / xfs / btrfs. Formatting always asks for one more confirmation."
         ]
       },
       {
         "title": "Pick the mount point",
-        "bodyRich": "Type the path where the container should see the disk, e.g. <code>/mnt/data</code> or <code>/mnt/disk_passthrough</code>. This is the path <em>inside</em> the container; the host already sees the partition under <code>/dev/disk/by-id/…</code>."
+        "bodyRich": "Type the path where the container should see the disk. ProxMenux suggests <code>/mnt/disk_&lt;device&gt;</code> (for example <code>/mnt/disk_sdb</code>) and adds a suffix if that path is already in use. This is the path <em>inside</em> the container; the host refers to the partition through <code>/dev/disk/by-id/…</code>."
       },
       {
         "title": "Attach and verify",
         "img": "/disk/assignment-ct.png",
         "caption": "Assignment to CT",
-        "bodyRich": "ProxMenux appends a fresh <code>mpN:</code> entry to the container config, skipping indexes already in use, and re-reads the config to confirm. If the container is running the mount is exec'd live; otherwise it takes effect on the next start.",
+        "bodyRich": "ProxMenux appends a fresh <code>mpN:</code> entry to the container config, skipping indexes already in use, and re-reads the config to confirm. For xfs and btrfs it also installs <code>xfsprogs</code> or <code>btrfs-progs</code> inside the container, offering to start it if it is stopped. If the container is running the mount is exec'd live; otherwise it takes effect on the next start.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Mount point created successfully",
         "extraCaption": "Mount point created and verified"
@@ -75,9 +75,9 @@
   "important": {
     "heading": "Important considerations",
     "items": [
-      "<strong>One disk per run</strong>. Re-run the script for each additional disk.",
+      "<strong>Several disks per run</strong>: select them together in the checklist; each one gets its own mount point.",
       "Do <strong>not</strong> attach the same partition to several containers that might mount it simultaneously — concurrent writes corrupt the filesystem.",
-      "<strong>Old metadata</strong> (RAID / ZFS / LVM signatures) must be cleared manually before the script will let you format, otherwise <code>mkfs</code> refuses to overwrite. Use the <wipeLink>Format / Wipe Physical Disk</wipeLink> tool for that."
+      "<strong>Old metadata</strong>: disks with ZFS signatures are hidden and RAID members are refused. Clear that metadata first with the <wipeLink>Format / Wipe Physical Disk</wipeLink> tool."
     ]
   },
   "troubleshoot": {

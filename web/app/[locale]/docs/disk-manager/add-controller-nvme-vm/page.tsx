@@ -86,67 +86,61 @@ export default async function AddControllerNVMeVMPage({
 └──────────────────┬──────────────────────────┘
                    ▼
       qm list — user picks target VM
+      ├─ VM running?         → reject
+      └─ Machine type not q35? → reject
                    │
                    ▼
-      IOMMU status on the running kernel
-      ├─ /sys/kernel/iommu_groups/* exists?
+      IOMMU status
+      ├─ Active, or already in the cmdline
+      │  (reboot pending) → continue
       │
-      ├─ Yes → IOMMU active, continue
-      │
-      └─ No  → cmdline check + offer to enable
+      └─ Not configured → offer to enable
             CPU vendor detect (cat /proc/cpuinfo)
-            ├─ Intel → write intel_iommu=on
-            └─ AMD   → write amd_iommu=on
+            ├─ Intel → intel_iommu=on iommu=pt
+            └─ AMD   → amd_iommu=on iommu=pt
             Into:
             ├─ /etc/kernel/cmdline  (systemd-boot)
+            │    + proxmox-boot-tool refresh
             └─ /etc/default/grub    (GRUB)
-            + update-initramfs -u -k all
-            + offer reboot now
-            ├─ reboot accepted → reboot
-            └─ reboot declined → abort
-                 (re-run after reboot)
+                 + update-grub
+            Flow continues; reboot offered at the end
                    │
                    ▼
       Enumerate storage-class PCI devices
-      lspci -Dnn filtered by class:
-      ├─ SATA / SAS / SCSI / NVMe controllers
-      ├─ Resolve IOMMU group via /sys path
-      └─ For HBAs: list disks currently behind
+      (/sys/bus/pci/devices, class 01xx)
+      └─ Resolve the disks behind each one
                    │
                    ▼
-      Conflict / eligibility filter
+      Eligibility filter
       ├─ Already in this VM's hostpci? → hide
-      ├─ Already in another VM's hostpci?
-      │    → block (shown with owner VM id)
-      ├─ Carries the Proxmox root disk
-      │    or any disk referenced by an LXC
-      │    → block
-      └─ Shared IOMMU group
-         with non-storage members?
-            → show ⚠ warning inline
+      ├─ A disk holds the Proxmox system
+      │    or is used by a running VM/CT
+      │    → hide (listed as "Hidden for safety")
+      └─ A disk is referenced by a stopped
+         VM/CT → show with ⚠
                    │
                    ▼
       User selects device(s) via checklist
+      └─ SR-IOV VFs / active PFs → excluded
                    │
                    ▼
-      Summary:
-      (VM + each PCI device + IOMMU group
-       membership + reboot status)
+      Conflict policies
+      ├─ Device in another VM's hostpci
+      │    ├─ owner running → skip device
+      │    └─ owner stopped → keep + onboot=0
+      │       / move to target / skip
+      └─ Disk referenced by stopped VM/CT
+           → onboot=0 / remove refs / skip
+                   │
+                   ▼
+      Summary + compatibility notice
+      (flags old BIOS / low-power CPUs)
                    │
    ┌──────── Cancel   OR   Confirm ────┐
    ▼                                   ▼
 Exit, nothing        ┌─────────────────┴─────────────────┐
 was changed          │  PHASE 2 — Apply                   │
                      └─────────────────┬─────────────────┘
-                                       ▼
-                       Host side (once per session):
-                       ├─ Add vfio-pci to /etc/modules
-                       ├─ Append the device vendor:device
-                       │  IDs to /etc/modprobe.d/vfio.conf
-                       └─ update-initramfs -u -k all
-                       (so the device is bound to vfio-pci
-                        at next boot, not the native driver)
-                                       │
                                        ▼
                        For each selected device:
                        ├─ Find next free hostpciN slot
@@ -156,13 +150,10 @@ was changed          │  PHASE 2 — Apply                   │
                              (e.g. 0000:01:00.0,pcie=1)
                                        │
                                        ▼
-                       Verify: qm config <VMID> shows
-                       the new hostpciN entries
-                                       │
-                                       ▼
                        If IOMMU was just enabled:
-                       └─ reminder to reboot before
-                          starting the VM
+                       └─ offer to reboot now; otherwise
+                          do not start the VM until the
+                          host has rebooted
                                        │
                                        ▼
                        Guest on next boot sees the
