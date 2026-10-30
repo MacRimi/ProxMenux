@@ -4418,9 +4418,6 @@ def get_system_disks():
             ['pvs', *dev_args, '--noheadings', '-o', 'pv_name,vg_name'],
             capture_output=True, text=True, timeout=5
         ) if dev_args is not None else None
-        if result is not None:
-            from lvm_device_scope import settle_scan_reads
-            settle_scan_reads()
         if result is not None and result.returncode == 0:
             for line in result.stdout.strip().split('\n'):
                 if line.strip():
@@ -4558,12 +4555,10 @@ def get_storage_info():
                         # temperature graph isn't a monitor bug — the
                         # disk is parked. See issue #232.
                         in_standby = False
-                        in_idle = False
                         in_excluded = False
                         try:
                             import disk_temperature_history as _dth
                             in_standby = _dth.is_disk_in_standby(disk_name)
-                            in_idle = _dth.is_disk_idle(disk_name)
                             in_excluded = disk_name in _dth.excluded_disk_names()
                         except Exception:
                             pass
@@ -4574,7 +4569,6 @@ def get_storage_info():
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'standby': in_standby,
-                            'idle': in_idle,
                             'excluded': in_excluded,
                             'health': smart_data.get('health', 'unknown'),
                             'power_on_hours': smart_data.get('power_on_hours', 0),
@@ -5305,28 +5299,19 @@ def get_smart_data(disk_name):
     if cached and now - cached[0] < _SMART_RESULT_TTL:
         return dict(cached[1])
 
-    # Excluded, or rotational with no I/O since it was last looked at: send
-    # it nothing — not even the power-mode question below, which is still a
-    # command. Serve what is known, without a temperature that would only be
-    # stale. Same rule as the temperature poller, so the two agree.
+    # Excluded in Settings: send it nothing — not even the power-mode
+    # question below, which is still a command. Serve what is known, without
+    # a temperature that would only be stale. Same rule as the temperature
+    # poller, so the two agree.
     try:
         import disk_temperature_history as _dth
         policy = _dth.disk_read_policy(disk_name)
     except Exception:
         policy = 'read'
     if policy != 'read':
-        if not cached and policy == 'idle' and not _hdd_in_standby(disk_name):
-            # Nothing is known of it yet, as after a restart: a disk that is
-            # spinning is read once; a parked one is not woken.
-            result = _get_smart_data_uncached(disk_name)
-            _dth.settle_own_reads([disk_name])
-            if _smart_data_useful(result):
-                _smart_result_cache[disk_name] = (now, dict(result))
-                cached = _smart_result_cache[disk_name]
         base = dict(cached[1]) if cached else _smart_identity_payload(disk_name)
         base['temperature'] = 0
-        base['excluded'] = policy == 'excluded'
-        base['idle'] = policy == 'idle'
+        base['excluded'] = True
         return base
 
     if _hdd_in_standby(disk_name):

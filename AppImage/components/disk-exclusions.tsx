@@ -18,7 +18,6 @@ interface DiskEntry {
   rotational: boolean
   excluded: boolean
   excluded_at: string | null
-  idle: boolean
   present: boolean
 }
 
@@ -204,15 +203,6 @@ export function DiskExclusions() {
                         {excluded && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-400">
                             {t("settings.diskExclusions.excluded")}
-                          </Badge>
-                        )}
-                        {!excluded && disk.idle && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground"
-                            title={t("storage.idleTitle")}
-                          >
-                            {t("storage.idle")}
                           </Badge>
                         )}
                         {!disk.present && (

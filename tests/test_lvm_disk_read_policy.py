@@ -125,13 +125,6 @@ class LvmScopeTests(unittest.TestCase):
         self.excluded = set()
         self.assertEqual(self.args(inventory), [])
 
-    def test_the_scan_settles_its_own_reads_on_the_disks_it_read(self):
-        self.excluded = {"sda"}
-        settled = Mock()
-        self.disk_module.settle_own_reads = settled
-        self.args()
-        scope.settle_scan_reads()
-        settled.assert_called_once_with({"nvme0n1", "sdb"})
 
 
 class LvmReaderTests(unittest.TestCase):
@@ -174,9 +167,20 @@ class LvmReaderTests(unittest.TestCase):
         self.assertIn('cp "$SCRIPT_DIR/lvm_device_scope.py" "$APP_DIR/usr/bin/"', (SCRIPTS / "build_appimage.sh").read_text())
 
 
+class DiskReadPolicyTests(unittest.TestCase):
+    """Only the exclusions in Settings keep a disk from being read."""
+
+    def test_a_disk_without_activity_is_still_read_unless_excluded(self):
+        import disk_temperature_history as dth
+        with patch.object(dth, "_excluded_disk_names", return_value={"sdc"}):
+            self.assertEqual(dth.disk_read_policy("sdb"), dth.READ)
+            self.assertEqual(dth.disk_read_policy("sdb"), dth.READ)
+            self.assertEqual(dth.disk_read_policy("sdc"), dth.EXCLUDED)
+
+
 class QuietDiskIdentityTests(unittest.TestCase):
-    """A quiet rotational disk the Monitor knows nothing of yet, as after a
-    restart, is still shown by its model, serial and type."""
+    """A rotational disk is read on schedule; a parked one is not woken and
+    is still shown by its model, serial and type."""
 
     def setUp(self):
         folder = tempfile.TemporaryDirectory()
@@ -187,10 +191,9 @@ class QuietDiskIdentityTests(unittest.TestCase):
                             ("run/udev/data/b8:16", "E:ID_MODEL=WDC_WD40EFRX-68N32N0\nE:ID_SERIAL_SHORT=WD-WCC7K4FV37J0\n")):
             (root / name).parent.mkdir(parents=True, exist_ok=True)
             (root / name).write_text(value)
-        self.policy = "idle"
+        self.policy = "read"
         self.disk_module = types.ModuleType("disk_temperature_history")
         self.disk_module.disk_read_policy = lambda disk: self.policy
-        self.disk_module.settle_own_reads = Mock()
         modules = patch.dict(sys.modules, disk_temperature_history=self.disk_module)
         modules.start()
         self.addCleanup(modules.stop)
@@ -209,21 +212,17 @@ class QuietDiskIdentityTests(unittest.TestCase):
         exec(compile(ast.Module(body=nodes, type_ignores=[]), "flask_server.py", "exec"), namespace)
         self.get = namespace["get_smart_data"]
 
-    def test_a_spinning_disk_is_read_once(self):
+    def test_a_spinning_disk_is_read(self):
         data = self.get("sdb")
-        self.assertEqual((data["model"], data["rotation_rate"], data["health"], data["idle"]),
-                         ("WDC WD40EFRX-68N32N0", 5400, "healthy", True))
-        self.disk_module.settle_own_reads.assert_called_once_with(["sdb"])
-        self.cache["sdb"] = (0, self.cache["sdb"][1])
-        self.get("sdb")
+        self.assertEqual((data["model"], data["rotation_rate"], data["health"], data["temperature"]),
+                         ("WDC WD40EFRX-68N32N0", 5400, "healthy", 31))
         self.read.assert_called_once()
-        self.assertEqual(self.standby.call_count, 1)
 
     def test_a_parked_disk_is_not_woken_and_keeps_its_identity(self):
         self.standby.return_value = True
         data = self.get("sdb")
         self.read.assert_not_called()
-        self.assertEqual((data["model"], data["serial"], data["rotation_rate"], data["idle"]),
+        self.assertEqual((data["model"], data["serial"], data["rotation_rate"], data["standby"]),
                          ("WDC WD40EFRX-68N32N0", "WD-WCC7K4FV37J0", -1, True))
 
     def test_an_excluded_disk_receives_no_command(self):

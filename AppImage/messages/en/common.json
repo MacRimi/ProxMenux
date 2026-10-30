@@ -322,6 +322,8 @@
       "fragmentation": "Fragmentation",
       "dedupRatio": "Dedup Ratio",
       "layout": "Layout",
+      "totalSize": "Total size",
+      "fragShort": "Frag.",
       "singleDisk": "Single disk",
       "stripe": "Stripe",
       "mirror": "Mirror",

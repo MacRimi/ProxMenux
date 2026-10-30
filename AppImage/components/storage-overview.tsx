@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power, Moon, EyeOff } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power, EyeOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -71,7 +71,6 @@ interface DiskInfo {
   // badge AND to suppress the (stale) temperature value, so the
   // operator understands the graph is frozen on purpose — issue #232.
   standby?: boolean
-  idle?: boolean
   excluded?: boolean
   health: string
   power_on_hours?: number
@@ -303,6 +302,24 @@ function groupDisksBySlot(disks: DiskInfo[]): [string | null, DiskInfo[]][] {
 }
 
 // `disksOnly` is the PBS Monitor: its disks and pools, without Proxmox VE storages.
+// Same ring as the disk wear gauge, with a faint track so 0% still reads.
+// Used for the fragmentation of a ZFS pool.
+function PercentRing({ value, color, label }: { value: number; color: string; label: string }) {
+  const pct = Math.max(0, Math.min(100, value))
+  return (
+    <svg width="88" height="88" viewBox="0 0 88 88" className="flex-shrink-0">
+      <circle cx="44" cy="44" r="35" fill="none" stroke={color} strokeOpacity="0.15" strokeWidth="6" />
+      <circle cx="44" cy="44" r="35" fill="none" stroke={color} strokeWidth="6"
+        strokeDasharray={`${pct * 2.199} 219.9`}
+        strokeLinecap="round" transform="rotate(-90 44 44)" />
+      <text x="44" y="40" textAnchor="middle" fill={color} fontSize="20" fontWeight="700">{pct}%</text>
+      <text x="44" y="56" textAnchor="middle" fill="currentColor" fontSize="12" className="text-muted-foreground">{label}</text>
+    </svg>
+  )
+}
+
+const zfsFragmentationColor = (pct: number) => (pct > 80 ? "#ef4444" : pct > 50 ? "#eab308" : "#06b6d4")
+
 export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } = {}) {
   const t = useT()
 
@@ -332,6 +349,12 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
   // 85 vh capped by the visual viewport otherwise). Keeps every
   // detail modal at a matching size across the app.
   const [isStandalone, setIsStandalone] = useState(false)
+  // Disk, ZFS pool and remote mount details share one size.
+  const detailDialogClass = `max-w-4xl flex flex-col p-0 overflow-hidden ${
+    isStandalone
+      ? "h-[95vh] sm:h-[90vh]"
+      : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
+  }`
 
   useEffect(() => {
     const checkStandalone = () => {
@@ -561,7 +584,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
   // in 4 different disk-list views (system / data / pool / other) and we
   // want them all to behave identically — issue #232 fix.
   // Why a disk shows no live temperature, when it doesn't: excluded by the
-  // user, parked, or idle and deliberately not read. Shared by every view
+  // user, or parked. Shared by every view
   // that paints a disk's temperature, so they cannot disagree.
   const renderNoReadingBadge = (disk: DiskInfo) => {
     if (disk.excluded) {
@@ -583,17 +606,6 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
         >
           <Power className="h-3 w-3" />
           {t("storage.standby")}
-        </Badge>
-      )
-    }
-    if (disk.idle) {
-      return (
-        <Badge
-          className="bg-muted text-muted-foreground border-border gap-1"
-          title={t("storage.idleTitle")}
-        >
-          <Moon className="h-3 w-3" />
-          {t("storage.idle")}
         </Badge>
       )
     }
@@ -1100,7 +1112,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
 
     storageData.disks.forEach((disk) => {
       // Match disk rows: policy-suppressed cached readings are not live temperatures.
-      if (disk.standby || disk.idle || disk.excluded || typeof disk.temperature !== "number" ||
+      if (disk.standby || disk.excluded || typeof disk.temperature !== "number" ||
           !Number.isFinite(disk.temperature) || disk.temperature <= 0) {
         unavailable++
         return
@@ -1735,7 +1747,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
           overlay with text-xs/text-[10px] all over and looked
           shrunken next to the rest of the modals. */}
       <Dialog open={!!mountDetail} onOpenChange={(open) => { if (!open) setMountDetail(null) }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className={detailDialogClass}>
           {mountDetail && (() => {
             const m = mountDetail
             const isStale = m.status === "stale"
@@ -1782,7 +1794,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="px-6 pb-6 overflow-auto space-y-5">
+                <div className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto space-y-5">
                   {/* Type + tags */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className={getStorageTypeBadge(m.fstype)}>{m.fstype}</Badge>
@@ -1895,7 +1907,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
               {storageData.zfs_pools.map((pool) => (
                 <div
                   key={pool.name}
-                  className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="border border-white/10 rounded-lg p-4 cursor-pointer bg-card hover:bg-white/5 transition-colors"
                   onClick={() => setSelectedPool(pool)}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -1903,7 +1915,10 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                       <h3 className="font-semibold text-lg">{pool.name}</h3>
                       {getHealthBadge(pool.health)}
                     </div>
-                    {getHealthIcon(pool.health)}
+                    <div className="flex items-center gap-2">
+                      {pool.capacity != null && <span className="text-sm font-medium">{pool.capacity}%</span>}
+                      {getHealthIcon(pool.health)}
+                    </div>
                   </div>
                   {pool.details_available && (() => {
                     const dataDevices = (pool.vdevs ?? [])
@@ -1930,6 +1945,18 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                       </p>
                     )
                   })()}
+                  {pool.capacity != null && (
+                    <Progress
+                      value={pool.capacity}
+                      className={`h-2 mb-2 ${
+                        pool.capacity > 90
+                          ? "[&>div]:bg-red-500"
+                          : pool.capacity > 75
+                            ? "[&>div]:bg-yellow-500"
+                            : "[&>div]:bg-blue-500"
+                      }`}
+                    />
+                  )}
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-sm text-muted-foreground">{t("storage.size")}</p>
@@ -1954,7 +1981,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
       {/* ZFS Pool Details Dialog: re-resolved from storageData so it follows
           the background refresh while open (e.g. resilver progress). */}
       <Dialog open={selectedPool !== null} onOpenChange={(open) => { if (!open) setSelectedPool(null) }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className={detailDialogClass}>
           {selectedPool && (() => {
             const pool = storageData.zfs_pools.find((p) => p.name === selectedPool.name) ?? selectedPool
             const classOrder: ZFSVdev["class"][] = ["normal", "special", "dedup", "log", "cache", "spare"]
@@ -1964,7 +1991,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
             const showSlowIos = vdevs.some((v) => v.devices.some((d) => d.slow_ios > 0))
             return (
               <>
-                <DialogHeader>
+                <DialogHeader className="px-6 pt-6 pb-2">
                   <DialogTitle className="flex items-center gap-3">
                     <Database className="h-5 w-5" />
                     {pool.name}
@@ -1973,7 +2000,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                   <DialogDescription>{t("storage.zfs.poolDetails")}</DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-5">
+                <div className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto flex flex-col gap-5">
                   {(pool.status || pool.action) && (
                     <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm space-y-1">
                       {pool.status && <p><span className="font-medium">{t("storage.zfs.status")}:</span> {pool.status}</p>}
@@ -1981,35 +2008,57 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">{t("storage.size")}</p>
-                      <p className="font-medium">{pool.size}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t("storage.allocated")}</p>
-                      <p className="font-medium">{pool.allocated}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t("storage.free")}</p>
-                      <p className="font-medium">{pool.free}</p>
-                    </div>
-                    {pool.capacity != null && (
-                      <div>
-                        <p className="text-muted-foreground">{t("storage.zfs.capacity")}</p>
-                        <p className="font-medium">{pool.capacity}%</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-lg border border-border p-4 flex flex-col justify-center gap-3">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t("storage.free")}</p>
+                          <p className="text-lg font-semibold">{pool.free}</p>
+                        </div>
+                        {pool.capacity != null && <span className="text-sm font-medium">{pool.capacity}%</span>}
                       </div>
-                    )}
-                    {pool.fragmentation != null && (
-                      <div>
-                        <p className="text-muted-foreground">{t("storage.zfs.fragmentation")}</p>
-                        <p className="font-medium">{pool.fragmentation}%</p>
+                      {pool.capacity != null && (
+                        <Progress
+                          value={pool.capacity}
+                          className={`h-2 ${
+                            pool.capacity > 90
+                              ? "[&>div]:bg-red-500"
+                              : pool.capacity > 75
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-blue-500"
+                          }`}
+                        />
+                      )}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">{t("storage.allocated")}</p>
+                          <p className="font-medium">{pool.allocated}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground">{t("storage.zfs.totalSize")}</p>
+                          <p className="font-medium">{pool.size}</p>
+                        </div>
                       </div>
-                    )}
-                    {pool.dedup_ratio != null && (
-                      <div>
-                        <p className="text-muted-foreground">{t("storage.zfs.dedupRatio")}</p>
-                        <p className="font-medium">{pool.dedup_ratio.toFixed(2)}x</p>
+                    </div>
+                    {(pool.fragmentation != null || pool.dedup_ratio != null) && (
+                      <div className="rounded-lg border border-border p-4 flex items-center gap-5">
+                        {pool.fragmentation != null && (
+                          <PercentRing value={pool.fragmentation} color={zfsFragmentationColor(pool.fragmentation)} label={t("storage.zfs.fragShort")} />
+                        )}
+                        <div className="min-w-0 flex-1 space-y-3 text-sm">
+                          {pool.fragmentation != null && (
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.fragmentation")}</p>
+                              <p className="font-medium">{pool.fragmentation}%</p>
+                            </div>
+                          )}
+                          {pool.dedup_ratio != null && (
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.dedupRatio")}</p>
+                              <p className="font-medium">{pool.dedup_ratio.toFixed(2)}x</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2019,7 +2068,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                   ) : (
                     <>
                       {/* Scrub / resilver */}
-                      <div className="space-y-2">
+                      <div className="rounded-lg border border-border p-4 space-y-2">
                         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                           {t("storage.zfs.scanTitle")}
                         </h3>
@@ -2054,16 +2103,14 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                         </p>
                       </div>
 
-                      {/* Layout: one block per top-level vdev */}
-                      <div className="space-y-3">
+                      {/* Layout: one block per top-level vdev; the last one
+                          reaches the bottom of the dialog. */}
+                      <div className="flex-1 flex flex-col gap-3">
                         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                           {t("storage.zfs.layout")}
-                          {getZfsLayoutSummary(pool) && (
-                            <span className="ml-2 normal-case font-normal text-foreground">{getZfsLayoutSummary(pool)}</span>
-                          )}
                         </h3>
                         {vdevs.map((vdev, i) => (
-                          <div key={`${vdev.class}-${vdev.name}-${i}`} className="border rounded-lg">
+                          <div key={`${vdev.class}-${vdev.name}-${i}`} className={`border rounded-lg ${i === vdevs.length - 1 ? "flex-1" : ""}`}>
                             <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-muted/30">
                               <Badge variant="outline" className="text-xs">{t(`storage.zfs.classes.${vdev.class}`)}</Badge>
                               <span className="text-sm font-medium">{getZfsVdevLabel(vdev)}</span>
@@ -2219,13 +2266,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
           setSmartJsonData(null)
         }
       }}>
-        <DialogContent
-          className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
-            isStandalone
-              ? "h-[95vh] sm:h-[90vh]"
-              : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
-          }`}
-        >
+        <DialogContent className={detailDialogClass}>
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               {selectedDisk?.connection_type === 'usb' ? (

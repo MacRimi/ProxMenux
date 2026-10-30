@@ -807,7 +807,6 @@ def get_disks_for_exclusion():
                 **disk,
                 'excluded': entry is not None,
                 'excluded_at': entry.get('excluded_at') if entry else None,
-                'idle': _dth.is_disk_idle(disk['name']),
                 'present': True,
             })
         # An excluded disk that is not connected right now — an unplugged USB
@@ -826,7 +825,6 @@ def get_disks_for_exclusion():
                 'rotational': False,
                 'excluded': True,
                 'excluded_at': entry.get('excluded_at'),
-                'idle': False,
                 'present': False,
             })
         result.sort(key=lambda d: (not d['present'], d['name']))
