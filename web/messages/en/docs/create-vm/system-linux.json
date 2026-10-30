@@ -8,12 +8,12 @@
   },
   "header": {
     "title": "Create VM: System Linux",
-    "description": "Create a Linux VM on Proxmox VE. ProxMenux ships with a curated catalogue of official Linux ISOs ready to download, plus a local-ISO picker, and routes everything through the shared VM wizard, the unified storage plan and the optional GPU passthrough assistant.",
+    "description": "Create a Linux VM on Proxmox VE. ProxMenux ships with a curated catalogue of official Linux ISOs ready to download, plus a local-ISO picker and the community Cloud-Init scripts, and routes everything through the shared VM wizard, the unified storage plan and the optional GPU passthrough assistant.",
     "section": "Virtual Machines"
   },
   "intro": {
     "title": "What this script does",
-    "body": "The Linux selector offers two ProxMenux-managed sources of installation media: an official ISO from the curated list (auto-downloaded) or a local ISO you uploaded yourself. Whichever you pick, the rest of the flow is the shared wizard: CPU / RAM / BIOS → storage plan → optional GPU passthrough → VM creation."
+    "body": "The Linux selector offers three options: an official ISO from the curated list (auto-downloaded), a local ISO you uploaded yourself, or a Cloud-Init script from the community Helper-Scripts (Arch, Debian, Ubuntu). For the first two, the rest of the flow is the shared wizard: CPU / RAM / BIOS → storage plan → optional GPU passthrough → VM creation."
   },
   "image": {
     "alt": "ProxMenux Linux installation options",
@@ -145,7 +145,7 @@
     "officialImageAlt": "Linux distribution selection",
     "officialImageCaption": "Linux distribution selection",
     "localHeading": "Local ISO",
-    "localBody": "Uses any Linux ISO already present in <code>/var/lib/vz/template/iso</code>. The script lists every <code>*.iso</code> it finds and lets you pick one.",
+    "localBody": "Uses any Linux ISO already present in a Proxmox storage with ISO content (local, NFS, CIFS…). The script lists every ISO it finds, with its storage, and lets you pick one.",
     "localImageAlt": "Local ISO selection menu",
     "localImageCaption": "Local ISO selection menu",
     "distros": [

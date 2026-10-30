@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Opening the menu",
-    "body": "From ProxMenux's main menu, select <strong>Create VM</strong>. You will see this:",
+    "body": "From ProxMenux's main menu, select <strong>Create VM from template or script</strong>. You will see this:",
     "imageAlt": "Create VM dispatcher with 3 ProxMenux options (NAS / Windows / Linux) followed by the External Scripts section (macOS / Others)"
   },
   "families": {
@@ -52,7 +52,7 @@
         "description": "Windows 10, 11 and Server editions with Windows-friendly defaults (q35 + OVMF + TPM 2.0) and VirtIO drivers pre-mounted.",
         "bullets": [
           "UUP Dump for up-to-date ISOs",
-          "Or local ISO from /var/lib/vz/template/iso",
+          "Or a local ISO from any Proxmox ISO storage",
           "TPM 2.0 added automatically",
           "VirtIO drivers ISO attached to ide3",
           "Guest agent channel enabled"
@@ -80,7 +80,7 @@
     "title": "Community scripts (not documented here)",
     "intro": "The two entries below the <em>External Scripts</em> separator run code that is <strong>not part of ProxMenux</strong>, so they are intentionally left outside this documentation:",
     "macosRich": "<strong>System macOS</strong> — runs the external <osxLink>OSX-PROXMOX</osxLink> installer. It clones the upstream repository, prepares the host and <strong>reboots automatically when finished</strong>. Refer to the project's own documentation.",
-    "othersRich": "<strong>System Others (Linux-based)</strong> — loads a curated list of community Linux-based installers (home-server OSes, router/firewall appliances, etc.). Each community script is maintained outside ProxMenux."
+    "othersRich": "<strong>System Others (Linux-based)</strong> — loads a short list of community prebuilt Linux VMs: Home Assistant OS, a Docker VM (Debian + SSH + Docker) and Nextcloud. Each community script is maintained outside ProxMenux."
   },
   "afterPick": {
     "heading": "What happens after you pick an OS",
