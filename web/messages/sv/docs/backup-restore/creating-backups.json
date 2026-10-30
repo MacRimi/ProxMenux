@@ -125,13 +125,6 @@
   "included": {
     "heading": "Vad går in och vad stannar ut",
     "intro": "Varje sökväg i den fastställda profilen (standard + beständiga tillägg + val i anpassat läge) kopieras med <code>rsync -aAXH --numeric-ids</code>. En delad uteslutningslista gäller för varje sökväg, och två kataloger har ytterligare sökvägsspecifika uteslutningar.",
-    "globalTitle": "Globala uteslutningar (tillämpas varje väg)",
-    "globalItems": [
-      "<code>images/</code> - bilddumpar.",
-      "<code>dump/</code> — utdata från vzdump.",
-      "<code>tmp/</code> - tillfälliga filer.",
-      "<code>*.log</code> loggfiler."
-    ],
     "rootTitle": "<code>/root/</code>-uteslutningar",
     "rootBody": "<code>/root/</code> ingår i standardprofilen så att användarens skript och konfiguration sparas i arkivet. Flyktiga undersökvägar utesluts:",
     "rootItems": [

@@ -125,13 +125,6 @@
   "included": {
     "heading": "Was reingeht und was draußen bleibt",
     "intro": "Jeder Pfad im aufgelösten Profil (Standard + persistente Extras + Custom-Mode-Auswahl) wird mit <code>rsync -aAXH --numeric-ids</code> kopiert. Eine gemeinsame Ausschlussliste gilt für jeden Pfad, und zwei Verzeichnisse tragen zusätzliche pfadspezifische Ausschlüsse.",
-    "globalTitle": "Globale Ausschlüsse (auf jeden Pfad angewendet)",
-    "globalItems": [
-      "<code>images/</code> — Image Dumps.",
-      "<code>dump/</code> — Ausgaben von vzdump.",
-      "<code>tmp/</code> — temporäre Dateien.",
-      "<code>*.log</code> — Protokolldateien."
-    ],
     "rootTitle": "<code>/root/</code> Ausschlüsse",
     "rootBody": "<code>/root/</code> ist Teil des Standardprofils, sodass Benutzerskripte und Konfigurationen im Archiv landen. Flüchtige Subpfade werden fallen gelassen:",
     "rootItems": [

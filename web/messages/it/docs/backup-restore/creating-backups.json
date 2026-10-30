@@ -125,13 +125,6 @@
   "included": {
     "heading": "Cosa entra e cosa rimane fuori",
     "intro": "Ogni percorso nel profilo risolto (predefinito + extra persistenti + selezione personalizzata) viene copiato con <code>rsync -aAXH --numeric-ids</code>. Un elenco di esclusione condiviso si applica a ogni percorso, e due directory portano ulteriori esclusioni specifiche del percorso.",
-    "globalTitle": "Esclusioni globali (applicate ad ogni percorso)",
-    "globalItems": [
-      "<code>images/</code> — dump immagine.",
-      "<code>dump/</code> — output di vzdump.",
-      "<code>tmp/</code> — file temporanei.",
-      "<code>*.log</code> — file di registro."
-    ],
     "rootTitle": "<code>/root/</code> esclusioni",
     "rootBody": "<code>/root/</code> fa parte del profilo predefinito per includere nell’archivio gli script e la configurazione dell’utente. Sono esclusi i sottopercorsi volatili:",
     "rootItems": [

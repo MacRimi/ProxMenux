@@ -125,13 +125,6 @@
   "included": {
     "heading": "Čo ide dnu a čo zostane vonku",
     "intro": "Každá cesta v určenom profile (predvolené + trvalé doplnky + výber vo vlastnom režime) je skopírovaná s <code>rsync -aAXH --numeric-ids</code>. Spoločný zoznam vylúčení sa vzťahuje na každú cestu a dva adresáre majú dodatočné výnimky špecifické pre jednotlivé trasy.",
-    "globalTitle": "Globálne vylúčenia (uplatnené na každú cestu)",
-    "globalItems": [
-      "<code>images/</code> — výpisy obrazov.",
-      "<code>dump/</code> — výstupy vzdump.",
-      "<code>tmp/</code> - dočasné súbory.",
-      "<code>*.log</code> — súbory záznamov."
-    ],
     "rootTitle": "Výnimky <code>/root/</code>",
     "rootBody": "<code>/root/</code> je súčasťou predvoleného profilu, aby sa do archívu zahrnuli používateľské skripty a konfigurácia. Dočasné podcesty sa vynechajú:",
     "rootItems": [

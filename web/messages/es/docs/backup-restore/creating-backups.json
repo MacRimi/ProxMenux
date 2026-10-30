@@ -125,13 +125,6 @@
   "included": {
     "heading": "Qué entra y qué se excluye",
     "intro": "Cada ruta del perfil resuelto (default + extras persistentes + selección en modo Custom) se copia con <code>rsync -aAXH --numeric-ids</code>. Una lista de exclusiones compartida aplica a cada ruta, y dos directorios llevan exclusiones específicas adicionales.",
-    "globalTitle": "Exclusiones globales (aplican a cada ruta)",
-    "globalItems": [
-      "<code>images/</code> — dumps de imágenes.",
-      "<code>dump/</code> — salidas de vzdump.",
-      "<code>tmp/</code> — ficheros temporales.",
-      "<code>*.log</code> — ficheros de log."
-    ],
     "rootTitle": "Exclusiones de <code>/root/</code>",
     "rootBody": "<code>/root/</code> forma parte del perfil por defecto para que los scripts y config del usuario entren en el archivo. Se descartan los subpaths volátiles:",
     "rootItems": [

@@ -21,8 +21,8 @@
     "rows": [
       {
         "entry": "ProxMenux Scripts (TUI)",
-        "path": "menu → Utilities → Host Config Backup",
-        "detail": "Dialog-based flow, SSH-friendly. The main menu presents the six options directly. Uses <code>backup_menu</code> in <code>backup_host.sh</code>."
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Dialog-based flow, SSH-friendly. The main menu entry opens Host Config Backup / Restore; Backup host configuration leads to the six options. Uses <code>backup_menu</code> in <code>backup_host.sh</code>."
       },
       {
         "entry": "ProxMenux Monitor (Web UI)",
@@ -83,7 +83,7 @@
   "profiles": {
     "heading": "Default vs Custom profile",
     "defaultTitle": "Default profile",
-    "defaultBody": "The default profile is the curated list from <code>hb_default_profile_paths</code> (documented in <em>How it works</em> under <em>Path categories</em>) plus every entry in the persistent extras file <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. The user confirms the destination and encryption options and the backup proceeds without further path selection.",
+    "defaultBody": "The default profile is the curated list from <code>hb_default_profile_paths</code> (documented in <em>How it works</em> under <em>Path categories</em>) plus every entry in the persistent extras file <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. The user picks the destination and encryption options and the backup proceeds without further path selection.",
     "customTitle": "Custom profile",
     "customBody": "The custom profile opens a checklist showing every path in the default profile (unchecked) and every persistent extra (pre-checked, prefixed with <code>[+]</code>). The user ticks the set for this run and can press <em>Add custom path</em> to append a new absolute path. Any path added inline is persisted to <code>backup-extra-paths.txt</code> so future backups pick it up automatically without re-adding it. Removing a persistent extra unticks it for this run but does not delete it from the file — deletion is a separate <em>Manage custom paths</em> action outside the backup flow.",
     "customPickerAlt": "Custom profile checklist showing the default-profile paths (unchecked) and persistent extras (pre-checked with a [+] prefix), plus buttons to add a new path or confirm the selection.",
@@ -124,14 +124,7 @@
   },
   "included": {
     "heading": "What goes in and what stays out",
-    "intro": "Every path in the resolved profile (default + persistent extras + custom-mode selection) is copied with <code>rsync -aAXH --numeric-ids</code>. A shared exclusion list applies to every path, and two directories carry additional path-specific exclusions.",
-    "globalTitle": "Global exclusions (applied to every path)",
-    "globalItems": [
-      "<code>images/</code> — image dumps.",
-      "<code>dump/</code> — vzdump outputs.",
-      "<code>tmp/</code> — temporary files.",
-      "<code>*.log</code> — log files."
-    ],
+    "intro": "Every path in the resolved profile (default + persistent extras + custom-mode selection) is copied with <code>rsync -aAXH --numeric-ids</code>. There is no global exclusion list; a few directories carry path-specific exclusions.",
     "rootTitle": "<code>/root/</code> exclusions",
     "rootBody": "<code>/root/</code> is part of the default profile so user scripts and config land in the archive. Volatile subpaths are dropped:",
     "rootItems": [
@@ -160,16 +153,16 @@
       "<strong><code>/home/USER</code></strong> — not in the default profile. Add it as a custom path when a system carries user home directories that must survive a restore."
     ],
     "customPathsTitle": "How custom paths are handled",
-    "customPathsBody": "A custom path added inline in Custom mode or persisted in <code>backup-extra-paths.txt</code> goes through the same <code>rsync</code> pipeline as default-profile paths. Global exclusions apply. If the custom path happens to be under <code>/root/</code> or <code>/usr/local/share/proxmenux/</code>, the path-specific exclusions above still apply. Every archived path — default or custom — is recorded in <code>metadata/paths_archived.txt</code>. Paths that do not exist on the source are recorded in <code>metadata/missing_paths.txt</code> without stopping the backup."
+    "customPathsBody": "A custom path added inline in Custom mode or persisted in <code>backup-extra-paths.txt</code> goes through the same <code>rsync</code> pipeline as default-profile paths. If the custom path happens to be under <code>/root/</code> or <code>/usr/local/share/proxmenux/</code>, the path-specific exclusions above still apply. Every archived path — default or custom — is recorded in <code>metadata/selected_paths.txt</code>. Paths that do not exist on the source are recorded in <code>metadata/missing_paths.txt</code> without stopping the backup, and paths that fail to copy in <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Archive structure",
     "intro": "The staging directory produced by every backend follows the same layout regardless of destination. The tarball, PBS <code>.pxar</code> or Borg archive stores this tree verbatim.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Confirmation summary",
-    "body": "Before the backend writes anything to the destination, ProxMenux shows a summary dialog with the destination, backup ID or archive name, encryption state, and the list of paths being copied. Cancelling here aborts the backup cleanly — the staging directory is removed by the <code>trap</code> hook set on the backend function and no partial data reaches the destination."
+    "body": "Before the backend writes anything to the destination, ProxMenux prints a summary in the terminal with the destination, backup ID or archive name, encryption state, and the list of paths being copied. There is no confirm or cancel step at this point; the copy starts right after. If the backup fails or is interrupted, the staging directory is removed by the <code>trap</code> hook set on the backend function and no partial data reaches the destination."
   },
   "writing": {
     "heading": "Writing to the destination",

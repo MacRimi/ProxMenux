@@ -125,13 +125,6 @@
   "included": {
     "heading": "Ce qui entre et ce qui reste en dehors",
     "intro": "Chaque chemin dans le profil résolu (par défaut + suppléments persistants + sélection en mode personnalisé) est copié avec <code>rsync -aAXH --numeric-ids</code>. Une liste d'exclusion partagée s'applique à chaque chemin, et deux répertoires comportent d'autres exclusions spécifiques au chemin.",
-    "globalTitle": "Les exclusions globales (appliquées à chaque voie)",
-    "globalItems": [
-      "<code>images/</code> — images de disque exportées.",
-      "<code>dump/</code> — sorties vzdump.",
-      "<code>tmp/</code> — fichiers temporaires.",
-      "<code>*.log</code> — fichiers journaux."
-    ],
     "rootTitle": "Exclusions de <code>/root/</code>",
     "rootBody": "<code>/root/</code> fait partie du profil par défaut, de sorte que les scripts utilisateur et la configuration se trouvent dans l'archive. Les sous-chemins volatils sont abandonnés:",
     "rootItems": [

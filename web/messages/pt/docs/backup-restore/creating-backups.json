@@ -125,13 +125,6 @@
   "included": {
     "heading": "O que entra e o que fica fora",
     "intro": "Cada caminho no perfil resolvido (padrão + extras persistentes + seleção de modo personalizado) é copiado com <code>rsync -aAXH --numeric-ids</code>. Uma lista de exclusão compartilhada aplica-se a cada caminho, e dois diretórios carregam exclusões adicionais específicas do caminho.",
-    "globalTitle": "Exclusões globais (aplicadas a cada caminho)",
-    "globalItems": [
-      "<code>images/</code> — dumps de imagens.",
-      "<code>dump/</code> — saídas vzdump.",
-      "<code>tmp/</code> — ficheiros temporários.",
-      "<code>*.log</code> — ficheiros de registo."
-    ],
     "rootTitle": "Exclusões <code>/root/</code>",
     "rootBody": "<code>/root/</code> faz parte do perfil padrão para incluir os scripts e a configuração do usuário no arquivo. Os subcaminhos voláteis são excluídos:",
     "rootItems": [
