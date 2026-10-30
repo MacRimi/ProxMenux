@@ -95,7 +95,6 @@ missingok
 notifempty
 compress
 size 10M
-delaycompress
 copytruncate
 
 include /etc/logrotate.d`}

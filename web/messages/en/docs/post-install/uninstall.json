@@ -33,7 +33,7 @@
         "title": "Reversal runs",
         "body1": "For each selected item, ProxMenux calls its matching uninstall function. Most reversals follow one of three patterns:",
         "items": [
-          "<strong>Backup-based</strong> — restore a <code>.bak</code> captured at apply time (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Backup-based</strong>: restore a <code>.bak</code> captured at apply time (bashrc, logrotate.conf). journald.conf is rewritten with the stock defaults, and GRUB / kernel cmdline have only the ProxMenux tokens stripped.",
           "<strong>Delete-the-config</strong> — remove ProxMenux's <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code>, or systemd unit, then reload.",
           "<strong>Package reinstall</strong> — for UI changes like the subscription banner, reinstall the upstream packages with <code>--force-confnew</code> to restore shipped configuration."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Subscription Banner Removal",
-            "restores": "First tries to restore the UI files from ProxMenux's own backups (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* and, when the mobile UI is patched, index.html.tpl.backup.*). Only if a backup is missing or corrupt, falls back to reinstalling pve-manager, proxmox-widget-toolkit, libjs-extjs and libpve-http-server-perl with force-confnew. Also clears cached .js / .gz copies."
+            "restores": "On PVE 9 and PBS, first tries to restore the UI files from ProxMenux's own backups (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* and, when the mobile UI is patched, index.html.tpl.backup.*). On PVE 8, or if a backup is missing or corrupt, falls back to reinstalling pve-manager, proxmox-widget-toolkit, libjs-extjs and libpve-http-server-perl with force-confnew. Also clears cached .js / .gz copies."
           },
           {
             "tool": "APT Language Skip",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "System Limits Increase",
-            "restores": "Removes /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf and /etc/security/limits.d/99-limits.conf. Reverts PAM limits and systemd DefaultLimitNOFILE. Its /root/.profile cleanup targets the legacy ulimit -n 256000 line; a ulimit -n 1048576 line from the current installer can remain and may need manual removal."
+            "restores": "Removes /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf and /etc/security/limits.d/99-limits.conf. Reverts PAM limits and systemd DefaultLimitNOFILE. Removes both the legacy ulimit -n 256000 line and the current ulimit -n 1048576 line from /root/.profile."
           },
           {
             "tool": "ZRAM swap profile",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "ZFS auto-snapshot",
-            "restores": "Removes the cron entries the script wrote and offers to apt purge zfs-auto-snapshot. Existing snapshot datasets on the pools are left intact — remove them separately if you want them gone."
+            "restores": "Purges the zfs-auto-snapshot package without asking, which also removes its cron files. Existing snapshot datasets on the pools are left intact — remove them separately if you want them gone."
           },
           {
             "tool": "vzdump speed limits",

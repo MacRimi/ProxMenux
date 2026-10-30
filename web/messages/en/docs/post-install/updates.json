@@ -69,11 +69,11 @@
       },
       {
         "title": "Registry refresh sent to the Monitor",
-        "body": "Once the batch finishes, the menu POSTs to <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> to rebuild <code>/usr/local/share/proxmenux/updates_available.json</code>. After all pending updates are applied, the update badge in the Monitor’s Optimizations card and the conditional shell menu entry disappear without waiting for the next scheduled scan. The Optimizations card itself remains available."
+        "body": "Once the batch finishes, the menu POSTs to <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> (https when Monitor SSL is enabled) to rebuild <code>/usr/local/share/proxmenux/updates_available.json</code>. After all pending updates are applied, the update badge in the Monitor’s Optimizations card and the conditional shell menu entry disappear without waiting for the next scheduled scan. The Optimizations card itself remains available."
       }
     ],
     "jqTitle": "jq is required",
-    "jqBody": "The Path A checklist relies on <code>jq</code> to parse the pending-updates JSON. If <code>jq</code> is missing, the flow exits silently — you would see the menu entry with a count but nothing would happen after picking rows. On any modern Proxmox install <code>jq</code> is present; if in doubt run <code>apt install -y jq</code>."
+    "jqBody": "The Path A checklist relies on <code>jq</code> to parse the pending-updates JSON. Without <code>jq</code> the \"Apply available updates\" entry is hidden, and if the picker is reached anyway it shows \"jq is required to apply updates from this menu\". On any modern Proxmox install <code>jq</code> is present; if in doubt run <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "How it differs from the other paths",
