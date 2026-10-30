@@ -86,6 +86,7 @@
       "ociStorageNetwork": "Dáta, cesty a sieť",
       "ociHardware": "Zariadenia a akcelerácia",
       "ociStacks": "Aplikácie s viacerými kontajnermi",
+      "ociContributeApp": "Nainštalovať aplikáciu a pridať ju do katalógu",
       "ociLifecycle": "Inštalácia, aktualizácia a vytvorenie znova",
       "ociMonitor": "V ProxMenux Monitore",
       "proxmenuxScripts": "Skripty ProxMenux",

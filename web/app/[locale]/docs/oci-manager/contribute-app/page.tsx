@@ -6,6 +6,8 @@ const NAMESPACE = "docs.ociManager.contributeApp"
 const URL = "https://proxmenux.com/docs/oci-manager/contribute-app"
 
 const LINKS = {
+  proposals: "https://github.com/MacRimi/ProxMenux/discussions/440",
+  readme: "https://github.com/MacRimi/ProxMenux/blob/develop/oci/README.md#writing-and-testing-an-oci-compose",
   roadmap: "https://github.com/users/MacRimi/projects/1",
   catalog: "https://github.com/MacRimi/ProxMenux/tree/develop/oci/catalog",
   validation: "https://github.com/MacRimi/ProxMenux/blob/develop/oci/VALIDATION.md",

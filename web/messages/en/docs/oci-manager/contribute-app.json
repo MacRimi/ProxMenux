@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Install an app and add it to the OCI catalog | ProxMenux",
-    "description": "A reusable brief for an agent: install a self-hosted app with ProxMenux OCI Manager, verify it, and prepare a catalog contribution for everyone."
+    "description": "A reusable brief for an agent: install a self-hosted app with OCI manager Apps, verify it, and prepare a catalog contribution for everyone."
   },
   "header": {
     "title": "Install an app and add it to the OCI catalog",
@@ -14,7 +14,7 @@
       "title": "One request, two outcomes",
       "blocks": [
         {
-          "p": "Use this guide when you want an agent to install a self-hosted application on the Proxmox system you choose and, if the app is a good fit, contribute its recipe to the ProxMenux OCI catalog. The guide is intended for different users, Proxmox hosts, CPU architectures, storage backends and hardware. It does not assume a particular computer or homelab."
+          "p": "Use this guide when you want an agent to install a self-hosted application on the Proxmox system you choose and propose it for the ProxMenux OCI catalog. The guide is intended for different users, Proxmox hosts, CPU architectures, storage backends and hardware. It does not assume a particular computer or homelab."
         },
         {
           "cards": {
@@ -27,7 +27,7 @@
               {
                 "icon": "boxes",
                 "title": "The catalog entry",
-                "body": "The agent checks the upstream image, creates a reusable recipe, tests it as far as the available system allows and prepares a pull request for other ProxMenux users."
+                "body": "The agent checks the upstream image, writes an oci-compose for it, tests it as far as the available system allows and prepares a pull request for other ProxMenux users."
               }
             ]
           }
@@ -39,7 +39,7 @@
           }
         },
         {
-          "p": "A catalog recipe is not automatically marked <strong>Verified</strong>. That label follows the project's separate <validation>validation process</validation>. A successful download or container start is not enough to claim the app works."
+          "p": "A catalog entry is not automatically shown as verified, with a ✓ in the installer lists. That mark follows the project's separate <validation>validation process</validation>. A successful download or container start is not enough to claim the app works."
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "agentPrompt": {
             "title": "Reusable request",
-            "body": "I want to install [APP NAME] on the Proxmox system I select, using ProxMenux OCI Manager. If it is suitable, I also want you to prepare a contribution to the ProxMenux OCI catalog so other users can install it.\n\nUpstream project or image (if known): [LINK OR UNKNOWN]\nProxmox system to use: [SELECTED HOST OR UNKNOWN]\nSpecial requirements (if known): [DATA, NETWORK, GPU/USB, HTTPS, OR NONE]\n\nPlease work through these steps:\n1. Inspect the selected Proxmox host and report its Proxmox VE version, architecture, available storage, network options and relevant devices. Do not assume a specific architecture or hardware.\n2. Check the upstream project and image, the current ProxMenux catalog, open pull requests and recent maintainer guidance. Do not add a duplicate. Prefer the developer's image and identify its publisher accurately.\n3. Install my requested app through ProxMenux OCI Manager. Review the image, resources, data paths, network and variables before confirming. Protect existing services and data. Keep this requested app installed after testing unless I ask you to remove it.\n4. Check that the service actually responds and that its login or first-run setup works. Record what you observed; do not claim untested features.\n5. Prepare the catalog recipe and icon. If the app needs several services, represent and test the full stack using the current ProxMenux approach; do not omit required databases, caches or internal networking.\n6. Run the repository checks, including `cd oci && python3 -m unittest discover -s tests`, plus relevant catalog, documentation and offline translation checks. Fix failures caused by this change and rerun the checks.\n7. Validate the catalog candidate with disposable test instances where practical. Do not use my retained app or its data for destructive update, restore or removal tests. Record unavailable hardware and untested cases honestly.\n8. Prepare a focused pull request with the app name, image, icon, concise test results and limitations. Check all required CI results and maintainer comments. Do not merge the pull request.\n9. Clean up only temporary test guests, temporary files and test backups created for this work. Preserve my requested installation, its data, and all unrelated guests and backups.\n\nBefore making an irreversible change, exposing the service publicly, or deleting anything that may contain my data, stop and ask me. Do not put passwords, tokens or private configuration in the repository or pull request. Finish with the app URL or connection details, the pull request link, checks observed, cleanup performed and any remaining limitations."
+            "body": "I want to install [APP NAME] on the Proxmox system I select, using OCI manager Apps. If it is suitable, I also want you to prepare a contribution to the ProxMenux OCI catalog so other users can install it.\n\nUpstream project or image (if known): [LINK OR UNKNOWN]\nProxmox system to use: [SELECTED HOST OR UNKNOWN]\nSpecial requirements (if known): [DATA, NETWORK, GPU/USB, HTTPS, OR NONE]\n\nPlease work through these steps:\n1. Inspect the selected Proxmox host and report its Proxmox VE version, architecture, available storage, network options and relevant devices. Do not assume a specific architecture or hardware.\n2. Check the upstream project and image, the current ProxMenux catalog, open pull requests and recent maintainer guidance. Do not add a duplicate. Applications are suggested for the catalog in discussion #440 (https://github.com/MacRimi/ProxMenux/discussions/440): if it is not there yet, suggest it with its image, the registry it is published in and its category. The catalog uses the developer-published image when one exists; identify its publisher accurately.\n3. Install my requested app through OCI manager Apps. Review the image, resources, data paths, network and variables before confirming. Protect existing services and data. Keep this requested app installed after testing unless I ask you to remove it.\n4. Check that the service actually responds and that its login or first-run setup works. Record what you observed; do not claim untested features.\n5. Write the oci-compose for the catalog entry, following oci/README.md and the files in oci/examples/, and prepare the icon. If the app needs several services, represent and test the full stack using the current ProxMenux approach; do not omit required databases, caches or internal networking.\n6. Run the repository checks, including `cd oci && python3 -m unittest discover -s tests -p 'test_*.py'` as an unprivileged user on a copy of the repository, never on a production host, plus relevant catalog, documentation and offline translation checks. Fix failures caused by this change and rerun the checks.\n7. Validate the catalog candidate with disposable test instances where practical. Do not use my retained app or its data for destructive update, restore or removal tests. Record unavailable hardware and untested cases honestly.\n8. Prepare a focused pull request with the app name, image, icon, concise test results and limitations, and attach the tested oci-compose to the suggestion in discussion #440. Check all required CI results and maintainer comments. Do not merge the pull request.\n9. Clean up only temporary test guests, temporary files and test backups created for this work. Preserve my requested installation, its data, and all unrelated guests and backups.\n\nBefore making an irreversible change, exposing the service publicly, or deleting anything that may contain my data, stop and ask me. Do not put passwords, tokens or private configuration in the repository or pull request. Finish with the app URL or connection details, the pull request link, checks observed, cleanup performed and any remaining limitations."
           }
         },
         {
@@ -77,7 +77,7 @@
               },
               {
                 "title": "Check the app and catalog",
-                "body": "Read the developer's documentation and deployment example. Check the <roadmap>roadmap</roadmap>, <catalog>catalog</catalog> and open pull requests for duplicates or current design decisions. Prefer a developer-published image; if a community image is needed, verify and name its publisher."
+                "body": "Read the developer's documentation and deployment example. Check the <proposals>suggestions for the OCI catalog</proposals>, the <roadmap>roadmap</roadmap>, the <catalog>catalog</catalog> and open pull requests for duplicates or current design decisions, and suggest the app there first. The catalog uses the developer-published image when one exists; a community image needs its publisher verified and named."
               },
               {
                 "title": "Understand the full deployment",
@@ -85,7 +85,7 @@
               },
               {
                 "title": "Resolve the image",
-                "body": "Use the OCI Manager's Skopeo flow to resolve and download the image and verify its layers. If it fails, identify the actual cause: credentials, missing image or tag, unsupported architecture, network trouble or registry rate limit."
+                "body": "Use the Skopeo flow of OCI manager Apps to resolve and download the image and verify its layers. If it fails, identify the actual cause: credentials, missing image or tag, unsupported architecture, network trouble or registry rate limit."
               }
             ]
           }
@@ -99,7 +99,7 @@
         {
           "list": {
             "items": [
-              "Use ProxMenux OCI Manager for the deployment. Choose an unused test VMID where needed, and use the storage, bridge, address and resource settings appropriate to the selected host and the user's request.",
+              "Use OCI manager Apps for the deployment. Choose an unused test VMID where needed, and use the storage, bridge, address and resource settings appropriate to the selected host and the user's request.",
               "Before confirmation, review the image, resources, persistent paths, network and variables. Keep secrets hidden. For advanced installation, compare the selected VMID, CPU, RAM, storage, bridge, variables and supported device mappings with the resulting `pct config`.",
               "Use the credential method the app actually provides: user-entered, generated by the installer, printed on first start or documented by the image. Confirm the credentials work, and redact them from evidence.",
               "Check the real service. For a web app, open the shown URL and confirm the page or login loads. For a non-web service, verify its expected protocol and port. Use HTTPS or a reverse proxy only when needed for the requested test or deployment.",
@@ -118,22 +118,22 @@
     },
     {
       "id": "catalog",
-      "title": "Prepare and validate the catalog recipe",
+      "title": "Prepare and validate the catalog entry",
       "blocks": [
         {
           "list": {
             "items": [
-              "Follow the current catalog schema and a maintained example. Add a unique ID, accurate category, upstream attribution, documentation links, supported architectures, correct image reference and the app's icon. Check that the icon is the right product and renders correctly.",
+              "Follow the oci-compose guide in <readme>oci/README.md</readme> and the files in `oci/examples/`. Add a unique ID, accurate category, upstream attribution, documentation links, supported architectures, correct image reference and the app's icon. Check that the icon is the right product and renders correctly.",
               "Preserve the image's startup behavior, ports, environment and persistent paths. Mark secrets as sensitive. Set data ownership and permissions from upstream evidence, not guesswork.",
               "Use conservative defaults and expose optional settings deliberately. Advertise GPU, NPU, USB or architecture support only when the current ProxMenux flow supports it and the requirement is documented.",
               "Represent every required service in a multi-service app and preserve dependencies, private networking, health checks, persistent paths and coordinated operations. Keep a complex stack or shared engine change separate when maintainers can review it more safely that way.",
-              "Run the full OCI engine suite on Linux, even if CI does not run it. Run relevant schema, catalog, documentation, i18n and validation-record checks. Never edit the generated `oci/VALIDATION.md` page by hand."
+              "Run the full OCI engine suite as an unprivileged user on a copy of the repository, even if CI does not run it. Run relevant schema, catalog, documentation, i18n and validation-record checks. Never edit the generated `oci/VALIDATION.md` page by hand: `python3 .github/scripts/oci_validation.py render` regenerates it."
             ]
           }
         },
         {
           "shell": {
-            "code": "cd oci && python3 -m unittest discover -s tests"
+            "code": "cd oci && python3 -m unittest discover -s tests -p 'test_*.py'"
           }
         }
       ]
@@ -178,7 +178,7 @@
               ],
               [
                 "Backup and restore",
-                "A Proxmox backup restored to another disposable VMID starts, responds and appears in Manage."
+                "A Proxmox backup restored to another disposable VMID starts, responds and appears in Manage installed OCI applications."
               ],
               [
                 "Update and rollback",
@@ -190,7 +190,7 @@
               ],
               [
                 "Removal",
-                "Manage removes the test LXC(s), disks and records. Host data directories remain. Remove only backups made for disposable test VMIDs."
+                "Manage installed OCI applications removes the test LXC(s), disks and records. Host data directories remain. Remove only backups made for disposable test VMIDs."
               ]
             ]
           }
