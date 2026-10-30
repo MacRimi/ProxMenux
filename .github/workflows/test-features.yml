@@ -249,7 +249,7 @@ jobs:
 
   registry-accounts:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -330,10 +330,10 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -m unittest discover -s oci/tests -p test_catalog_web_links.py -v
-      - name: Validate Authentik catalog recipe
+      - name: Run full OCI engine test suite
         env:
           PYTHONDONTWRITEBYTECODE: '1'
-        run: python3 -m unittest discover -s oci/tests -p test_authentik_recipe.py -v
+        run: python3 -m unittest discover -s oci/tests -v
 
   pbs:
     runs-on: ubuntu-latest
