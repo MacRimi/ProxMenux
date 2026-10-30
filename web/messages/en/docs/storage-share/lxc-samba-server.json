@@ -30,12 +30,12 @@
     "headerAction": "What the script does",
     "bindType": "Bind-mount from host",
     "bindTypeSubRich": "detected via <code>mount</code> output",
-    "bindActionRich": "Creates group <code>sharedfiles</code> (default GID 999, dynamic if taken), adds the Samba user to it, then <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — new files inherit the group). If the user still cannot write, applies <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "bindActionRich": "Creates group <code>sharedfiles</code> (default GID 101000, dynamic if taken), adds the Samba user to it, then <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — new files inherit the group). If the user still cannot write, applies <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
     "localType": "Local folder inside CT",
     "localTypeSub": "no bind mount detected",
     "localActionRich": "Standard ownership: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. No shared group needed because no other CT writes to this folder. Falls back to <code>setfacl</code> if write access is still missing.",
-    "gidTitle": "GID for 'sharedfiles' differs from the NFS server flow",
-    "gidBody": "The Samba server script uses GID <strong>999</strong> for <code>sharedfiles</code>, while the <nfsLink>NFS server flow</nfsLink> uses GID <strong>101000</strong>. If you run both servers in the same CT and want a single shared group across both protocols, edit one of them to match the other after the install (e.g. <code>groupmod -g 101000 sharedfiles</code>) and re-apply ownership on the affected folders. This is a known inconsistency in the current scripts."
+    "gidTitle": "GID for 'sharedfiles'",
+    "gidBody": "The Samba server script creates <code>sharedfiles</code> with GID <strong>101000</strong>, the same GID the <nfsLink>NFS server flow</nfsLink> uses, so both protocols share one group. If another group already holds GID 101000 inside the CT, the script creates <code>sharedfiles</code> with a dynamic GID instead. Check it with <code>getent group sharedfiles</code>."
   },
   "opening": {
     "heading": "Opening the tool",
@@ -107,7 +107,7 @@
     "groupTitle": "Files written by the client appear with wrong group on the server",
     "groupBody": "The script sets <code>force group = sharedfiles</code> in the share block, so new files should be group <code>sharedfiles</code>. If they aren't, the SGID bit on the parent directory may have been lost (someone ran <code>chmod</code> by hand). Reapply: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
     "bothTitle": "Sharing the same folder over both NFS and Samba",
-    "bothBody": "ProxMenux uses different GIDs for <code>sharedfiles</code> in each script (Samba: 999, NFS: 101000). If you serve the same folder via both, decide on one GID and align both. The simplest fix: after running both scripts, edit the smaller GID:"
+    "bothBody": "Both scripts use GID 101000 for <code>sharedfiles</code>, so a folder served over both protocols needs no extra step. If the Samba script fell back to a dynamic GID because 101000 was taken, free that GID and align the group by hand:"
   },
   "related": {
     "heading": "Related",
