@@ -330,6 +330,10 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -m unittest discover -s oci/tests -p test_catalog_web_links.py -v
+      - name: Validate Authentik catalog recipe
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p test_authentik_recipe.py -v
 
   pbs:
     runs-on: ubuntu-latest
