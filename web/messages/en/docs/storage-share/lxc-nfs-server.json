@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Uninstall NFS server",
-    "body": "Full clean-up after confirmation: stops + disables <code>nfs-kernel-server</code> and <code>rpcbind</code>, clears <code>/etc/exports</code>, <code>apt-get purge</code> the NFS packages, removes the <code>sharedfiles</code> group and the <code>remap_*</code> users, kills any leftover processes. The exported <strong>folders themselves are not deleted</strong> — only the NFS configuration and packages.",
+    "body": "Full clean-up after confirmation: stops + disables <code>nfs-kernel-server</code> and <code>rpcbind</code>, clears <code>/etc/exports</code>, <code>apt-get purge</code> <code>nfs-kernel-server</code> and <code>nfs-common</code>, removes the <code>remap_*</code> users and the <code>sharedfiles</code> group (only if no regular users are still members, which is usually not the case), kills any leftover processes. The exported <strong>folders themselves are not deleted</strong> — only the NFS configuration and packages.",
     "warnTitle": "The script stops at the export line, not at the data",
     "warnBody": "Both <em>Delete export</em> and <em>Uninstall NFS server</em> remove the export configuration. The data on the exported folder is preserved. To delete the data too, do it explicitly with <code>rm -rf</code> after the script finishes — and back it up first if anyone might still need it."
   },
