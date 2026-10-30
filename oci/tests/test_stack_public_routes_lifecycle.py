@@ -59,6 +59,41 @@ class ManagedRouteLifecycleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Invalid stack contract'):
             plans.validate_public_route_members(4900,bad)
 
+    def test_recovery_accepts_validated_owned_routes_and_keeps_unknown_include_guard(self):
+        with tempfile.TemporaryDirectory() as folder,self.assets(folder):
+            plan=deployment();routes.install(plan,4901,WORKER)
+            config=f'lxc.include: {routes.include_path(4901)}\n'.encode()
+            state={'vmid':4901,'record':{'installation_id':WORKER,'deployment':plan},
+                   'candidate_contract':{'installation_id':WORKER,'deployment':copy.deepcopy(plan)}}
+            tx.check_recovery_runtime(config,state)
+            with self.assertRaisesRegex(ValueError,'not part of the journal'):
+                tx.check_recovery_runtime(config+b'lxc.include: /unknown/profile.conf\n',state)
+
+    def test_recovery_refuses_tampered_owned_route_assets(self):
+        with tempfile.TemporaryDirectory() as folder,self.assets(folder):
+            plan=deployment();routes.install(plan,4901,WORKER)
+            config=f'lxc.include: {routes.include_path(4901)}\n'.encode()
+            state={'vmid':4901,'record':{'installation_id':WORKER,'deployment':plan},
+                   'candidate_contract':{'installation_id':WORKER,'deployment':copy.deepcopy(plan)}}
+            routes.include_path(4901).write_text('lxc.hook.start-host: /untrusted\n')
+            with self.assertRaisesRegex(routes.RouteError,'was changed'):
+                tx.check_recovery_runtime(config,state)
+
+    def test_recovery_refuses_an_owned_include_not_declared_by_either_contract(self):
+        with tempfile.TemporaryDirectory() as folder,self.assets(folder):
+            routes.install(deployment(),4901,WORKER)
+            state={'vmid':4901,'record':{'installation_id':WORKER,'deployment':{}},
+                   'candidate_contract':{'installation_id':WORKER,'deployment':{}}}
+            with self.assertRaisesRegex(routes.RouteError,'differs from the contract'):
+                tx.check_recovery_runtime(f'lxc.include: {routes.include_path(4901)}\n'.encode(),state)
+
+    def test_recovery_can_validate_the_candidate_route_contract(self):
+        with tempfile.TemporaryDirectory() as folder,self.assets(folder):
+            plan=deployment();routes.install(plan,4901,WORKER)
+            state={'vmid':4901,'record':{'installation_id':WORKER,'deployment':{}},
+                   'candidate_contract':{'installation_id':WORKER,'deployment':plan}}
+            tx.check_recovery_runtime(f'lxc.include: {routes.include_path(4901)}\n'.encode(),state)
+
     def test_plan_rejects_changed_target_and_stack_identities(self):
         for field in ('target_installation_id','stack_id'):
             bad=records();spec=bad[4901]['deployment']['stack_public_routes']

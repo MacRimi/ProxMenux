@@ -16330,6 +16330,43 @@
       "template_id": "image-termix"
     },
     {
+      "id": "teslamate",
+      "provider": "teslamate-org",
+      "template_family": "curated-profile",
+      "title": "TeslaMate",
+      "repository": "https://github.com/teslamate-org/teslamate",
+      "description": "TeslaMate with PostgreSQL, Grafana and a private Mosquitto broker. Runs as four native OCI LXCs without Docker Engine.",
+      "website": "https://teslamate.org",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teslamate.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": "2026-10-29",
+      "main_image": "teslamate/teslamate:latest",
+      "category": "monitoring",
+      "category_label": "Monitoring & Analytics",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/teslamate.json",
+      "template_id": "image-teslamate",
+      "template": "apps/teslamate.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true,
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-10-29"
+      }
+    },
+    {
       "id": "thelounge",
       "provider": "linuxserver.io",
       "title": "Thelounge",

@@ -523,6 +523,23 @@ class DefaultsUI:
         pass
 
 
+def stack_lxc_hostname(stack_name, service_name, main=False):
+    """Give the main LXC the stack name and avoid repeating it in members."""
+    from .installer import _hostname_default
+
+    stack = _hostname_default(stack_name)
+    if main:
+        return stack
+
+    suffix = _hostname_default(service_name)
+    prefix = stack + '-'
+    if suffix.startswith(prefix):
+        suffix = suffix[len(prefix):]
+    if suffix == 'database':
+        suffix = 'db'
+    return _hostname_default(f'{stack}-{suffix}')
+
+
 def _service_plan(template, service):
     """The single-container template and plan of one stack member."""
     from .installer import build_deployment, DEFAULT_MODE
@@ -677,7 +694,7 @@ def build_stack(template, ui, mode='advanced'):
         k = kind(s['image'])
         # Values are already resolved; do not reinterpret user credentials as Compose variables.
         plan['environment'] = [{'name':key,'value':value,'sensitive':True} for key,value in env.items() if value != '' or literal]
-        plan.update(hostname=_hostname_default(name+'-'+s['name']), template_storage=cache,
+        plan.update(hostname=stack_lxc_hostname(name, s['name'], main), template_storage=cache,
                     start_after_create=False)
         plan['rootfs']['storage'] = root
         if 'memory_default_mb' not in single['proxmox'].get('installer_profile', {}).get('resources', {}):
