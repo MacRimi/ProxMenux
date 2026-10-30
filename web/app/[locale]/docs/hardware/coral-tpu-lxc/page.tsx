@@ -304,10 +304,11 @@ apt-get update
 apt-get install -y gnupg curl ca-certificates
 
 # Google Coral APT repo
+mkdir -p /etc/apt/keyrings
 curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \\
-  | gpg --dearmor -o /usr/share/keyrings/coral-edgetpu.gpg
+  | gpg --dearmor -o /etc/apt/keyrings/coral-edgetpu.gpg
 
-echo 'deb [signed-by=/usr/share/keyrings/coral-edgetpu.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main' \\
+echo 'deb [signed-by=/etc/apt/keyrings/coral-edgetpu.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main' \\
   > /etc/apt/sources.list.d/coral-edgetpu.list
 
 apt-get update
