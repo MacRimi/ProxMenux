@@ -4031,6 +4031,149 @@ def _resolve_zfs_entry(entry):
     return None
 
 
+def get_zpool_status_details():
+    """Return `zpool status` for every pool as parsed JSON, keyed by pool name.
+
+    Needs OpenZFS 2.3+ for `-j`. Returns None when the JSON output isn't
+    available (older ZFS, no zpool binary) so callers can tell "no details"
+    apart from "no pools". --json-int gives raw byte counts and epoch
+    timestamps; -P gives full device paths.
+    """
+    try:
+        result = subprocess.run(
+            ['zpool', 'status', '-j', '--json-int', '-P'],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return None
+        return json.loads(result.stdout).get('pools') or {}
+    except Exception:
+        return None
+
+
+def _zfs_member_disk(path):
+    """Map a pool member path (by-id, by-partlabel, /dev/sdX3...) to its base disk.
+
+    Pure sysfs (no lsblk subprocess) since /api/storage is polled and a
+    pool can have dozens of members. Non-/dev members (file vdevs) give None.
+    """
+    if not path.startswith('/dev/'):
+        return None
+    try:
+        name = os.path.basename(os.path.realpath(path))
+        if os.path.exists(f'/sys/class/block/{name}/partition'):
+            return os.path.basename(os.path.dirname(os.path.realpath(f'/sys/class/block/{name}')))
+        if os.path.exists(f'/sys/class/block/{name}'):
+            return name
+    except Exception:
+        pass
+    return None
+
+
+def _zfs_errors(node):
+    return {
+        'read_errors': node.get('read_errors', 0),
+        'write_errors': node.get('write_errors', 0),
+        'checksum_errors': node.get('checksum_errors', 0),
+    }
+
+
+def _zfs_device(node, via=None):
+    path = node.get('path') or node.get('name', '')
+    return {
+        'path': path,
+        'disk': _zfs_member_disk(path),
+        'state': node.get('state', 'UNKNOWN'),
+        'slow_ios': node.get('slow_ios', 0),
+        'via': via,
+        **_zfs_errors(node),
+    }
+
+
+_ZFS_PARITY_RE = re.compile(r'^(?:raidz|draid)(\d)')
+
+
+def _zfs_vdev(node, vdev_class):
+    """Flatten one top-level vdev into {type, parity, devices[...]}.
+
+    A leaf at the top level (single disk, stripe member, log/cache/spare
+    device) becomes a vdev of type 'disk' holding just itself. spare-N and
+    replacing-N wrappers inside a mirror/raidz are unwrapped, with each
+    device tagged `via` so the UI can show what's being swapped.
+    """
+    children = node.get('vdevs') or {}
+    if not children:
+        device = _zfs_device(node)
+        return {
+            'name': device['path'],
+            'type': 'disk',
+            'parity': None,
+            'class': vdev_class,
+            'state': device['state'],
+            'devices': [device],
+            **_zfs_errors(node),
+        }
+
+    devices = []
+    for child in children.values():
+        if child.get('vdevs'):
+            devices.extend(_zfs_device(leaf, via=child.get('name')) for leaf in child['vdevs'].values())
+        else:
+            devices.append(_zfs_device(child))
+
+    parity = _ZFS_PARITY_RE.match(node.get('name', ''))
+    return {
+        'name': node.get('name', ''),
+        'type': node.get('vdev_type', ''),
+        'parity': int(parity.group(1)) if parity else None,
+        'class': vdev_class,
+        'state': node.get('state', 'UNKNOWN'),
+        'devices': devices,
+        **_zfs_errors(node),
+    }
+
+
+def _zfs_pool_details(pool):
+    """Turn one pool from `zpool status -j` into the shape the Storage view uses.
+
+    Data/special/dedup vdevs hang off the root vdev; log, cache and spare
+    devices live in separate top-level maps. GUIDs are dropped; they don't
+    fit in a JS number and the UI doesn't need them.
+    """
+    root = (pool.get('vdevs') or {}).get(pool.get('name'), {})
+    vdevs = [_zfs_vdev(child, child.get('class', 'normal')) for child in (root.get('vdevs') or {}).values()]
+    for key, vdev_class in (('logs', 'log'), ('l2cache', 'cache'), ('spares', 'spare')):
+        vdevs.extend(_zfs_vdev(child, vdev_class) for child in (pool.get(key) or {}).values())
+
+    scan = None
+    stats = pool.get('scan_stats')
+    if stats:
+        # issued/to_examine drifts either side of 100 once finished (skipped
+        # blocks), so progress is only meaningful while the scan is running.
+        to_examine = stats.get('to_examine') or 0
+        running = stats.get('state') == 'SCANNING' and to_examine
+        scan = {
+            'function': stats.get('function'),       # SCRUB | RESILVER
+            'state': stats.get('state'),             # SCANNING | FINISHED | CANCELED
+            'start_time': stats.get('start_time'),
+            'end_time': stats.get('end_time'),
+            'errors': stats.get('errors', 0),
+            'repaired_bytes': stats.get('processed', 0),
+            'percent': min(100.0, round(100 * (stats.get('issued') or 0) / to_examine, 1)) if running else None,
+        }
+
+    def _tidy(text):
+        return ' '.join(text.split()) if text else None
+
+    return {
+        'status': _tidy(pool.get('status')),
+        'action': _tidy(pool.get('action')),
+        'error_count': pool.get('error_count', 0),
+        'scan': scan,
+        'vdevs': vdevs,
+    }
+
+
 def get_system_disks():
     """
     Detect which physical disks are used by the system (Proxmox).
@@ -4483,9 +4626,7 @@ def get_storage_info():
             disk_partitions = psutil.disk_partitions()
             total_used = 0
             total_available = 0
-            
-            zfs_disks = set()
-            
+
             for partition in disk_partitions:
                 try:
                     # Skip special filesystems
@@ -4531,9 +4672,11 @@ def get_storage_info():
                     continue
             
             try:
-                result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free,health'], 
+                result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free,health,frag,cap,dedup'],
                                       capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
+                    # One `zpool status` for all pools; None on ZFS < 2.3 (no -j)
+                    zpool_details = get_zpool_status_details()
                     for line in result.stdout.strip().split('\n'):
                         if line:
                             parts = line.split('\t')
@@ -4543,6 +4686,14 @@ def get_storage_info():
                                 pool_alloc_bytes = int(parts[2])
                                 pool_free_bytes = int(parts[3])
                                 pool_health = parts[4]
+                                # frag is '-' on pools without spacemap histograms
+                                extra = parts[5:8] + ['-'] * (8 - len(parts))
+                                fragmentation = int(extra[0]) if extra[0].isdigit() else None
+                                capacity = int(extra[1]) if extra[1].isdigit() else None
+                                try:
+                                    dedup_ratio = float(extra[2])
+                                except ValueError:
+                                    dedup_ratio = None
                                 
                                 total_used += pool_alloc_bytes
                                 total_available += pool_free_bytes
@@ -4563,22 +4714,20 @@ def get_storage_info():
                                     'size': format_zfs_size(pool_size_bytes),
                                     'allocated': format_zfs_size(pool_alloc_bytes),
                                     'free': format_zfs_size(pool_free_bytes),
-                                    'health': pool_health
+                                    'health': pool_health,
+                                    'fragmentation': fragmentation,
+                                    'capacity': capacity,
+                                    'dedup_ratio': dedup_ratio,
+                                    'details_available': False,
                                 }
+                                if zpool_details and pool_name in zpool_details:
+                                    try:
+                                        pool_info.update(_zfs_pool_details(zpool_details[pool_name]))
+                                        pool_info['details_available'] = True
+                                    except Exception:
+                                        pass
                                 storage_data['zfs_pools'].append(pool_info)
-                                
-                                try:
-                                    pool_status = subprocess.run(['zpool', 'status', pool_name], 
-                                                               capture_output=True, text=True, timeout=5)
-                                    if pool_status.returncode == 0:
-                                        for status_line in pool_status.stdout.split('\n'):
-                                            for disk_name in physical_disks.keys():
-                                                if disk_name in status_line:
-                                                    zfs_disks.add(disk_name)
-                                except Exception as e:
-                                    # print(f"Error getting ZFS pool status for {pool_name}: {e}")
-                                    pass
-                                    
+
             except FileNotFoundError:
                 # print("[v0] Note: ZFS not installed")
                 pass
