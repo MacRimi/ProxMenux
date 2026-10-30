@@ -877,7 +877,11 @@
       "checksumShort": "CK",
       "slowIos": "Langsame E/As",
       "via": "über {name}"
-    }
+    },
+    "storageController": "Speichercontroller",
+    "noController": "Kein Controller erkannt",
+    "diskCountOne": "{count}-Datenträger",
+    "diskCountMany": "{count}-Festplatten"
   },
   "details": {
     "temperature": {
@@ -2666,6 +2670,11 @@
       "saveFailed": "Konnte die Laufwerksausschlüsse nicht retten.",
       "help": "Für ein ausgeschlossenes Laufwerk werden weder Temperatur noch SMART-Werte planmäßig ausgelesen, nicht einmal der Energiestatus wird abgefragt, sodass es völlig in Ruhe gelassen wird. Beim Aufrufen der SMART-Details werden diese immer noch gelsesn.",
       "idleHelp": "Mechanische Laufwerke ohne Aktivität werden bereits automatisch in Ruhe gelassen, bis sie wieder verwendet werden."
+    },
+    "storageDisplay": {
+      "title": "Speicheranzeige",
+      "description": "Ändern Sie die Anordnung der Festplatten auf der Seite „Speicher“.",
+      "groupByController": "Physische Festplatten nach Speichercontroller gruppieren"
     }
   },
   "login": {
@@ -4144,7 +4153,9 @@
       "interface": "Schnittstelle",
       "rotationRate": "Rotationsrate",
       "classCode": "Klassencode",
-      "serial": "Seriell"
+      "serial": "Seriell",
+      "storageController": "Speichercontroller",
+      "attachedDisks": "Angehängte Datenträger"
     },
     "values": {
       "cores": "{count} Kerne",

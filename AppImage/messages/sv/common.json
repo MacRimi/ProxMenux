@@ -877,7 +877,11 @@
       "checksumShort": "CK",
       "slowIos": "Långsamma I/O",
       "via": "via {name}"
-    }
+    },
+    "storageController": "Storage Controller",
+    "noController": "Ingen kontroller upptäckt",
+    "diskCountOne": "{count} disk",
+    "diskCountMany": "{count} diskar"
   },
   "details": {
     "temperature": {
@@ -2666,6 +2670,11 @@
       "saveFailed": "Kunde inte spara diskutslag.",
       "help": "En exkluderad disk får ingen schemalagd temperatur eller SMART läser - inte ens en power-mode fråga - så det lämnas helt ensam. Öppna SMART-detaljerna läser det fortfarande.",
       "idleHelp": "Mekaniska diskar utan aktivitet lämnas redan ensam automatiskt tills något använder dem igen."
+    },
+    "storageDisplay": {
+      "title": "Storage Display",
+      "description": "Ändra hur diskar läggs ut på sidan Lagring",
+      "groupByController": "Group physical disks by storage controller"
     }
   },
   "login": {
@@ -4144,7 +4153,9 @@
       "interface": "Gränssnitt",
       "rotationRate": "Rotationshastighet",
       "classCode": "Klasskod",
-      "serial": "Serie"
+      "serial": "Serie",
+      "storageController": "Storage Controller",
+      "attachedDisks": "Attached Disks"
     },
     "values": {
       "cores": "{count} kärnor",

@@ -877,7 +877,11 @@
       "checksumShort": "CK",
       "slowIos": "E/S lentas",
       "via": "via {name}"
-    }
+    },
+    "storageController": "Controlador de armazenamento",
+    "noController": "Nenhum controlador detectado",
+    "diskCountOne": "disco {count}",
+    "diskCountMany": "discos {count}"
   },
   "details": {
     "temperature": {
@@ -2666,6 +2670,11 @@
       "saveFailed": "Não foi possível salvar as exclusões do disco.",
       "help": "Um disco excluído não recebe temperatura programada ou SMART lê — nem mesmo uma consulta de modo de potência — por isso é deixado completamente sozinho. A abertura dos seus detalhes SMART ainda o lê.",
       "idleHelp": "Discos mecânicos sem atividade já são deixados sozinhos automaticamente até que algo os use novamente."
+    },
+    "storageDisplay": {
+      "title": "Exibição de armazenamento",
+      "description": "alterar a disposição dos discos na página Armazenamento",
+      "groupByController": "Agrupar discos físicos por controlador de armazenamento"
     }
   },
   "login": {
@@ -4144,7 +4153,9 @@
       "interface": "Interface",
       "rotationRate": "Taxa de rotação",
       "classCode": "Código de classe",
-      "serial": "Serial"
+      "serial": "Serial",
+      "storageController": "Controlador de armazenamento",
+      "attachedDisks": "Discos anexados"
     },
     "values": {
       "cores": "{count} núcleos",

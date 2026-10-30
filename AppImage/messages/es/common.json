@@ -1030,7 +1030,11 @@
       "checksumShort": "CK",
       "slowIos": "E/S lentas",
       "via": "vía {name}"
-    }
+    },
+    "storageController": "Controlador de almacenamiento",
+    "noController": "No se detectó ningún controlador",
+    "diskCountOne": "disco {count}",
+    "diskCountMany": "discos {count}"
   },
   "details": {
     "temperature": {
@@ -2819,6 +2823,11 @@
       "saveFailed": "No se pudieron guardar las exclusiones de discos.",
       "help": "Un disco excluido no recibe lecturas periódicas de temperatura ni de SMART —ni siquiera la consulta de su estado de energía—, así que el Monitor no lo consulta en absoluto. Abrir sus detalles SMART sí lo lee.",
       "idleHelp": "Los discos mecánicos sin actividad ya no se consultan automáticamente, para no sacarlos del reposo, hasta que algo vuelve a usarlos."
+    },
+    "storageDisplay": {
+      "title": "Pantalla de almacenamiento",
+      "description": "cambie la distribución de los discos en la página Almacenamiento",
+      "groupByController": "agrupar discos físicos por controlador de almacenamiento"
     }
   },
   "login": {
@@ -4297,7 +4306,9 @@
       "interface": "Interfaz",
       "rotationRate": "Velocidad de rotación",
       "classCode": "Código de clase",
-      "serial": "De serie"
+      "serial": "De serie",
+      "storageController": "Controlador de almacenamiento",
+      "attachedDisks": "Discos adjuntos"
     },
     "values": {
       "cores": "{count} núcleos",

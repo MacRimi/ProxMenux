@@ -877,7 +877,11 @@
       "checksumShort": "CK",
       "slowIos": "I/O lenti",
       "via": "tramite {name}"
-    }
+    },
+    "storageController": "controller di archiviazione",
+    "noController": "nessun controller rilevato",
+    "diskCountOne": "disco {count}",
+    "diskCountMany": "dischi {count}"
   },
   "details": {
     "temperature": {
@@ -2666,6 +2670,11 @@
       "saveFailed": "Impossibile salvare le esclusioni dei dischi.",
       "help": "Un disco escluso non viene interrogato durante i controlli pianificati, nemmeno per temperatura, SMART o modalità di alimentazione. L’apertura dei suoi dettagli SMART comporta comunque una lettura.",
       "idleHelp": "I dischi meccanici inattivi vengono già lasciati a riposo automaticamente finché non vengono nuovamente utilizzati."
+    },
+    "storageDisplay": {
+      "title": "visualizzazione della memoria",
+      "description": "modifica la disposizione dei dischi nella pagina Archiviazione",
+      "groupByController": "raggruppa i dischi fisici per controller di archiviazione"
     }
   },
   "login": {
@@ -4144,7 +4153,9 @@
       "interface": "Interfaccia",
       "rotationRate": "Velocità di rotazione",
       "classCode": "Codice classe",
-      "serial": "Seriale"
+      "serial": "Seriale",
+      "storageController": "controller di archiviazione",
+      "attachedDisks": "Dischi allegati"
     },
     "values": {
       "cores": "{count} core",

@@ -876,7 +876,11 @@
       "checksumShort": "CK",
       "slowIos": "Pomalé I/O",
       "via": "cez {name}"
-    }
+    },
+    "storageController": "Storage Controller",
+    "noController": "Nezistil sa žiadny ovládač",
+    "diskCountOne": "disk {count}",
+    "diskCountMany": "disky {count}"
   },
   "details": {
     "temperature": {
@@ -2665,6 +2669,11 @@
       "saveFailed": "Nepodarilo sa uložiť vylúčenie disku.",
       "help": "Vylúčený disk nedostane žiadnu plánovanú teplotu alebo SMART číta  Otvorenie jeho SMART detaily stále číta.",
       "idleHelp": "Mechanické disky bez aktivity sú už automaticky ponechané samé, kým ich niečo znova nepoužíva."
+    },
+    "storageDisplay": {
+      "title": "Displej úložiska",
+      "description": "Zmeňte spôsob rozloženia diskov na stránke Úložisko",
+      "groupByController": "Zoskupenie fyzických diskov podľa radiča úložiska"
     }
   },
   "login": {
@@ -4143,7 +4152,9 @@
       "interface": "Rozhranie",
       "rotationRate": "Otáčky",
       "classCode": "Kód triedy",
-      "serial": "Sériové číslo"
+      "serial": "Sériové číslo",
+      "storageController": "Storage Controller",
+      "attachedDisks": "Pripojené disky"
     },
     "values": {
       "cores": "{count} jadier",
