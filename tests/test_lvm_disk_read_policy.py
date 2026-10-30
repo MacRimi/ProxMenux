@@ -35,11 +35,37 @@ class LvmScopeTests(unittest.TestCase):
         self.modules.start()
         self.addCleanup(self.modules.stop)
 
+    lvmconfig = types.SimpleNamespace(returncode=0, stdout='global_filter=["r|/dev/zd.*|","r|/dev/rbd.*|"]\nfilter="a|.*|"\n')
+
     def args(self, inventory=INVENTORY, code=0):
-        with patch.object(scope.subprocess, "run", return_value=types.SimpleNamespace(returncode=code, stdout=inventory)) as run:
+        def run(command, **_):
+            if command[0] == "lvmconfig":
+                return self.lvmconfig
+            return types.SimpleNamespace(returncode=code, stdout=inventory)
+        with patch.object(scope.subprocess, "run", side_effect=run) as mocked:
             args = scope.lvm_device_args(self.standby)
-        self.assertEqual(run.call_args.args[0], ["lsblk", "-J", "-l", "-o", "KNAME,TYPE,PKNAME,FSTYPE"])
+        self.assertEqual(mocked.call_args_list[0].args[0], ["lsblk", "-J", "-l", "-o", "KNAME,TYPE,PKNAME,FSTYPE"])
         return args
+
+    def test_volumes_lvm_filters_reject_are_not_named(self):
+        # A guest's volume group on a zvol is hidden by the Proxmox
+        # global_filter, which an explicit --devices list would bypass.
+        inventory = lsblk(("nvme0n1", "disk", None, None), ("nvme0n1p1", "part", "nvme0n1", "LVM2_member"),
+                          ("sda", "disk", None, None), ("sda1", "part", "sda", "LVM2_member"),
+                          ("zd48", "disk", None, None), ("zd48p3", "part", "zd48", "LVM2_member"),
+                          ("rbd0", "disk", None, None), ("rbd0p1", "part", "rbd0", "LVM2_member"))
+        self.assertEqual(self.args(inventory), ["--devices", "/dev/nvme0n1p1"])
+        self.excluded = {"sda", "nvme0n1"}
+        self.assertIsNone(self.args(inventory))
+
+    def test_an_unreadable_lvm_filter_skips_the_restricted_scan(self):
+        for output in (types.SimpleNamespace(returncode=5, stdout=""),
+                       types.SimpleNamespace(returncode=0, stdout='global_filter=["x|/dev/zd.*|"]\n'),
+                       types.SimpleNamespace(returncode=0, stdout='filter=["r|[|"]\n')):
+            self.lvmconfig = output
+            self.assertIsNone(self.args())
+        self.excluded = set()
+        self.assertEqual(self.args(), [])
 
     def test_excluded_disks_and_their_partitions_are_not_in_the_scan(self):
         self.assertEqual(self.args(), ["--devices", "/dev/nvme0n1p1,/dev/sdb1"])

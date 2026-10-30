@@ -49,6 +49,40 @@ def _topology():
     return types, parents, volumes
 
 
+def _lvm_filters():
+    """LVM's own global_filter and filter, as lists of (accept, pattern).
+    An explicit --devices list bypasses them, so a guest's volume group on
+    a zvol would otherwise appear on the host."""
+    result = subprocess.run(["lvmconfig", "--type", "full", "devices/global_filter", "devices/filter"],
+                            capture_output=True, text=True, timeout=5)
+    if result.returncode:
+        return None
+    filters = []
+    for line in result.stdout.splitlines():
+        name, _, value = line.strip().partition("=")
+        if name not in ("global_filter", "filter"):
+            continue
+        rules = []
+        for item in re.findall(r'"((?:[^"\\]|\\.)*)"', value):
+            end = item.rfind(item[1]) if len(item) > 2 else -1
+            if item[:1] not in ("a", "r") or end <= 1:
+                return None
+            rules.append((item[0] == "a", re.compile(item[2:end])))
+        filters.append(rules)
+    return filters
+
+
+def _accepted(path, filters):
+    """The first pattern a path matches decides; no match accepts it."""
+    for rules in filters:
+        for accept, pattern in rules:
+            if pattern.search(path):
+                if not accept:
+                    return False
+                break
+    return True
+
+
 def _disks_under(name, parents, seen=None):
     """The disks a device is built on: itself, or its parents' disks."""
     seen = seen if seen is not None else set()
@@ -92,9 +126,13 @@ def lvm_device_args(standby_check):
             _scanned_disks.update(disks - blocked)
         if not blocked:
             return []
+        filters = _lvm_filters()
+        if filters is None:
+            return None
         # An explicit list makes LVM open every device in it, so only the
         # physical volumes are named: a RAID, multipath or encrypted volume
         # built on a blocked disk would read that disk too and stays out.
+        allowed = [path for path in allowed if _accepted(path, filters)]
         if not allowed:
             return None
         return ["--devices", ",".join(allowed)]

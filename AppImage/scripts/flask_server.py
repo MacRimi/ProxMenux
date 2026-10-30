@@ -2392,8 +2392,10 @@ def _compute_vm_disk_from_fsinfo(fsinfo):
         # real C:\ mount, and marking their signature eagerly would
         # suppress C:\ and yield None for the entire VM (bug reported
         # for a Windows 11 VM at 166 GB used / 1965 GB total).
+        # Some agents omit `dev`, so partitions of one disk share the
+        # disk fields; the filesystem name keeps /boot and / apart.
         d = disks[0]
-        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'))
+        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'), fs.get('name'))
         if sig in seen_disks:
             continue
         seen_disks.add(sig)
