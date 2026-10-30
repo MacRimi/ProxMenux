@@ -203,7 +203,7 @@
       "backupRestoreDestLocal": "Archivo local",
       "backupRestoreDestPbs": "Proxmox Backup Server",
       "backupRestoreDestBorg": "Borg",
-      "backupRestoreCreating": "Crear copias",
+      "backupRestoreCreating": "Crear backups",
       "backupRestoreJobs": "Trabajos programados",
       "backupRestoreRestoring": "Restauración",
       "backupRestoreCrossKernel": "Restauración cross-kernel",
