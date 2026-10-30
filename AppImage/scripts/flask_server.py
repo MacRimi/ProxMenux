@@ -3967,6 +3967,106 @@ def is_disk_removable(disk_name):
         return False
 
 
+_PCI_ADDR_RE = re.compile(r'^([0-9a-f]{4,}):([0-9a-f]{2}:[0-9a-f]{2}\.[0-7])$')
+
+
+def _last_pci_slot(sysfs_path):
+    """Return the deepest PCI address in a resolved sysfs path, in lspci format.
+
+    lspci omits the PCI domain when it is 0000, so we do too; that keeps the
+    result directly comparable with pci_devices[].slot. Non-zero domains (e.g.
+    Intel VMD's 10000:) are kept, matching what lspci prints for them.
+    """
+    slot = None
+    for part in sysfs_path.split('/'):
+        m = _PCI_ADDR_RE.match(part)
+        if m:
+            domain, bdf = m.groups()
+            slot = bdf if domain == '0000' else f'{domain}:{bdf}'
+    return slot
+
+
+def get_disk_controller_slot(disk_name):
+    """Return the PCI slot of the controller a disk hangs off, or None.
+
+    The disk's sysfs device path runs from the PCI root down through any
+    bridges to the controller, then into the controller's own topology:
+      SAS HBA  .../0000:01:00.0/host6/port-6:1/end_device-6:1/...  -> 01:00.0
+      SATA     .../0000:02:00.1/ata1/host0/...                     -> 02:00.1
+      USB      .../0000:0c:00.3/usb3/3-2/3-2.4/.../host7/...       -> 0c:00.3
+      NVMe     .../0000:03:04.0/0000:08:00.0/nvme/nvme0            -> 08:00.0
+    Bridges come earlier in the path, so the last PCI address is always the
+    controller. zvols, loop and other virtual devices have no device link.
+    """
+    try:
+        device_path = f'/sys/block/{disk_name}/device'
+        if os.path.exists(device_path):
+            slot = _last_pci_slot(os.path.realpath(device_path))
+            if slot:
+                return slot
+
+        # NVMe native multipath can point the namespace at an nvme-subsystem
+        # with no PCI parent; fall back to the controller's own device link.
+        match = re.match(r'(nvme\d+)n\d+', disk_name)
+        if match:
+            ctrl_path = f'/sys/class/nvme/{match.group(1)}/device'
+            if os.path.exists(ctrl_path):
+                return _last_pci_slot(os.path.realpath(ctrl_path))
+    except Exception:
+        pass
+    return None
+
+
+def get_storage_controllers(slots):
+    """Describe the PCI controllers at the given slots, keyed by slot.
+
+    Built from the cached `lspci -vmm` output rather than the full
+    /api/hardware enumeration, so the Storage view can label its
+    controller groups without paying for get_hardware_info(). No class
+    filter: whatever a disk resolved to is described, including SATA
+    controllers left in BIOS IDE mode.
+    """
+    wanted = {s for s in slots if s}
+    controllers = {}
+    if not wanted:
+        return controllers
+
+    for block in get_cached_lspci_vmm().split('\n\n'):
+        fields = {}
+        for line in block.split('\n'):
+            if ':' in line:
+                key, value = line.split(':', 1)
+                fields[key.strip()] = value.strip()
+        slot = fields.get('Slot')
+        if slot not in wanted:
+            continue
+
+        driver = None
+        try:
+            sysfs_addr = slot if slot.count(':') == 2 else f'0000:{slot}'
+            driver_link = f'/sys/bus/pci/devices/{sysfs_addr}/driver'
+            if os.path.exists(driver_link):
+                driver = os.path.basename(os.readlink(driver_link))
+        except Exception:
+            pass
+
+        # lspci prints "Device 84ca" when it has no name for the subsystem;
+        # drop that so the UI falls back to the real chip name.
+        sdevice = fields.get('SDevice') or None
+        if sdevice and re.fullmatch(r'Device [0-9a-f]{4}', sdevice):
+            sdevice = None
+
+        controllers[slot] = {
+            'slot': slot,
+            'class': fields.get('Class', ''),
+            'vendor': fields.get('Vendor', ''),
+            'device': fields.get('Device', ''),
+            'sdevice': sdevice,
+            'driver': driver,
+        }
+    return controllers
+
+
 def is_disk_usb(disk_name):
     """Return True when sysfs places the disk behind a USB bus."""
     return resolver_is_usb_disk(disk_name)
@@ -4492,6 +4592,7 @@ def get_storage_info():
                             'total_lbas_written': smart_data.get('total_lbas_written'),
                             'ssd_life_left': smart_data.get('ssd_life_left'),
                             'connection_type': conn_type,
+                            'controller_slot': get_disk_controller_slot(disk_name),
                             'removable': removable,
                             'is_system_disk': is_system_disk,
                             'system_usage': system_usage,
@@ -4775,7 +4876,10 @@ def get_storage_info():
             pass
         
         storage_data['disks'] = list(physical_disks.values())
-        
+        storage_data['controllers'] = get_storage_controllers(
+            d.get('controller_slot') for d in physical_disks.values()
+        )
+
         return storage_data
         
     except Exception as e:
@@ -9579,6 +9683,7 @@ def _get_hardware_info_uncached():
                             'rotation_rate': smart_data.get('rotation_rate', 0),
                             'form_factor': form_factor,
                             'sata_version': sata_version,
+                            'controller_slot': get_disk_controller_slot(disk_name),
                         }
                         
                         if pcie_info:
@@ -9723,8 +9828,9 @@ def _get_hardware_info_uncached():
                             if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
                                 device_type = 'Graphics Card'
                                 include_device = True
-                            # Storage controllers (including SCSI/SAS HBA cards like LSI 9400-16i)
-                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory', 'SCSI', 'Serial Attached SCSI', 'SAS']):
+                            # Storage controllers (including SCSI/SAS HBA cards like LSI 9400-16i,
+                            # and SATA controllers left in BIOS IDE mode, which report "IDE interface")
+                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory', 'SCSI', 'Serial Attached SCSI', 'SAS', 'IDE']):
                                 device_type = 'Storage Controller'
                                 include_device = True
                             # Network controllers

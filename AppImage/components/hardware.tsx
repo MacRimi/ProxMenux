@@ -633,6 +633,13 @@ export default function Hardware() {
     return realtimeGPUData.has_monitoring_tool === true
   }
 
+  const diskCountBySlot = new Map<string, number>()
+  for (const disk of hardwareData?.storage_devices ?? []) {
+    if (disk.controller_slot) {
+      diskCountBySlot.set(disk.controller_slot, (diskCountBySlot.get(disk.controller_slot) ?? 0) + 1)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -2358,14 +2365,23 @@ return (
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.pci_devices.map((device, index) => (
+            {hardwareData.pci_devices.map((device, index) => {
+              const diskCount = diskCountBySlot.get(device.slot) ?? 0
+              return (
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
                 className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
+                    {diskCount > 0 && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {t("hardware.counts.devices", { count: diskCount })}
+                      </Badge>
+                    )}
+                  </div>
                   <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
                 </div>
                 <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
@@ -2374,7 +2390,8 @@ return (
                   <p className="mt-1 font-mono text-xs text-green-500 truncate">{t("hardware.labels.driver")}: {device.driver}</p>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}
@@ -2434,6 +2451,37 @@ return (
                   <span className="font-mono text-sm">{selectedPCIDevice.kernel_module}</span>
                 </div>
               )}
+
+              {(() => {
+                const attachedDisks = (hardwareData?.storage_devices ?? []).filter(
+                  (disk) => disk.controller_slot === selectedPCIDevice.slot,
+                )
+                if (attachedDisks.length === 0) return null
+                return (
+                  <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {t("hardware.labels.attachedDisks")} ({attachedDisks.length})
+                    </span>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {attachedDisks.map((disk) => (
+                        <button
+                          key={disk.name}
+                          type="button"
+                          title={disk.model}
+                          onClick={() => {
+                            setSelectedPCIDevice(null)
+                            setSelectedDisk(disk)
+                          }}
+                        >
+                          <Badge variant="outline" className="font-mono hover:bg-accent">
+                            {disk.name}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </DialogContent>
@@ -2826,6 +2874,34 @@ return (
                   <span className="font-mono text-sm text-green-500">{selectedDisk.driver}</span>
                 </div>
               )}
+
+              {selectedDisk.controller_slot && (() => {
+                // Fall back to the bare slot when the controller's PCI class isn't one we list
+                const controller = hardwareData?.pci_devices?.find((d) => d.slot === selectedDisk.controller_slot)
+                return (
+                  <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.storageController")}</span>
+                    <span className="text-sm text-right">
+                      {controller ? (
+                        <button
+                          type="button"
+                          className="text-blue-400 hover:underline text-right"
+                          onClick={() => {
+                            setSelectedDisk(null)
+                            setSelectedPCIDevice(controller)
+                          }}
+                        >
+                          {/* lspci's "Device 84ca" placeholder means no subsystem name, so use the chip name */}
+                          {controller.sdevice && !/^Device [0-9a-f]{4}$/.test(controller.sdevice)
+                            ? controller.sdevice
+                            : controller.device}
+                        </button>
+                      ) : null}
+                      <span className="ml-2 font-mono text-muted-foreground">{selectedDisk.controller_slot}</span>
+                    </span>
+                  </div>
+                )
+              })()}
 
               {selectedDisk.rotation_rate !== undefined && selectedDisk.rotation_rate !== null && (
                 <div className="flex justify-between border-b border-border/50 pb-2">

@@ -14,6 +14,7 @@ import { DiskTemperatureCard } from "./disk-temperature-card"
 import { getDiskType as resolveDiskType } from "../lib/disk-type"
 import { APP_VERSION } from "../lib/version"
 import { useT } from "@/lib/i18n/provider"
+import { useGroupDisksByController } from "../lib/storage-display"
 import {
   useDiskTempThresholds,
   loadDiskTempThresholds,
@@ -102,6 +103,7 @@ interface DiskInfo {
   }
   observations_count?: number
   connection_type?: 'usb' | 'sata' | 'nvme' | 'sas' | 'internal' | 'unknown'
+  controller_slot?: string | null // PCI slot of the storage controller, key into StorageData.controllers
   removable?: boolean
   is_system_disk?: boolean
   system_usage?: string[]
@@ -173,11 +175,21 @@ interface ZFSPool {
   vdevs?: ZFSVdev[]
 }
 
+interface StorageController {
+  slot: string
+  class: string
+  vendor: string
+  device: string
+  sdevice?: string | null
+  driver?: string | null
+}
+
 interface StorageData {
   total: number
   used: number
   available: number
   disks: DiskInfo[]
+  controllers?: Record<string, StorageController>
   zfs_pools: ZFSPool[]
   disk_count: number
   healthy_disks: number
@@ -275,6 +287,21 @@ function translateAtaError(raw: string, t: (key: string) => string): string | nu
   return out.length ? out.join('; ') : null
 }
 
+// Bucket disks by controller PCI slot, ordered by slot so groups follow
+// the bus layout. Disks with no resolvable controller go last.
+function groupDisksBySlot(disks: DiskInfo[]): [string | null, DiskInfo[]][] {
+  const groups = new Map<string | null, DiskInfo[]>()
+  for (const disk of disks) {
+    const slot = disk.controller_slot ?? null
+    groups.set(slot, [...(groups.get(slot) ?? []), disk])
+  }
+  return [...groups.entries()].sort(([a], [b]) => {
+    if (a === null) return 1
+    if (b === null) return -1
+    return a.localeCompare(b)
+  })
+}
+
 // `disksOnly` is the PBS Monitor: its disks and pools, without Proxmox VE storages.
 export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } = {}) {
   const t = useT()
@@ -284,6 +311,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
   // sensible defaults from `lib/health-thresholds`, so first paint
   // never blocks on the network.
   const dtThresholds = useDiskTempThresholds()
+  const [groupDisksByController] = useGroupDisksByController()
 
   const [storageData, setStorageData] = useState<StorageData | null>(null)
   const [proxmoxStorage, setProxmoxStorage] = useState<ProxmoxStorageData | null>(null)
@@ -2123,11 +2151,43 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {storageData.disks
-              .filter((d) => d.connection_type !== 'usb')
-              .map((disk) => renderDiskCardV2(disk))}
-          </div>
+          {groupDisksByController ? (
+            <div className="space-y-6">
+              {groupDisksBySlot(storageData.disks.filter((d) => d.connection_type !== 'usb')).map(([slot, disks]) => {
+                const controller = slot ? storageData.controllers?.[slot] : undefined
+                return (
+                  <div key={slot ?? "none"}>
+                    <div className="flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-border/50">
+                      <Server className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {controller
+                          ? controller.sdevice || controller.device
+                          : slot ?? t("storage.noController")}
+                      </span>
+                      {slot && <span className="font-mono text-xs text-muted-foreground">{slot}</span>}
+                      {controller?.driver && (
+                        <Badge variant="outline" className="font-mono text-xs text-green-500">
+                          {controller.driver}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        {t(disks.length === 1 ? "storage.diskCountOne" : "storage.diskCountMany", { count: disks.length })}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {disks.map((disk) => renderDiskCardV2(disk))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {storageData.disks
+                .filter((d) => d.connection_type !== 'usb')
+                .map((disk) => renderDiskCardV2(disk))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -2282,6 +2342,28 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                     )}
                   </div>
                 </div>
+                {selectedDisk.controller_slot && (() => {
+                  const controller = storageData.controllers?.[selectedDisk.controller_slot]
+                  return (
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">{t("storage.storageController")}</p>
+                      <p className="font-medium">
+                        {controller ? controller.sdevice || controller.device : selectedDisk.controller_slot}
+                        {controller && (
+                          <span className="ml-2 font-mono text-xs text-muted-foreground">{selectedDisk.controller_slot}</span>
+                        )}
+                        {controller?.driver && (
+                          <Badge variant="outline" className="ml-2 font-mono text-xs text-green-500">
+                            {controller.driver}
+                          </Badge>
+                        )}
+                      </p>
+                      {controller && controller.sdevice && (
+                        <p className="text-xs text-muted-foreground">{controller.vendor} - {controller.device}</p>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Wear & Lifetime — DiskInfo (real-time, 60s refresh) for NVMe + SSD. SMART JSON as fallback. HDD: hidden. */}
