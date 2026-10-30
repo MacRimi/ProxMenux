@@ -3832,69 +3832,6 @@ def serve_dashboard():
         pass
         return jsonify({'error': f'Dashboard not available: {str(e)}'}), 500
 
-@app.route('/manifest.json')
-def serve_manifest():
-    """Serve PWA manifest"""
-    try:
-        manifest_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'public', 'manifest.json'),
-            os.path.join(os.path.dirname(__file__), '..', 'public', 'manifest.json')
-        ]
-        
-        for manifest_path in manifest_paths:
-            if os.path.exists(manifest_path):
-                return send_file(manifest_path)
-        
-        # Return default manifest if not found
-        return jsonify({
-            "name": "ProxMenux Monitor",
-            "short_name": "ProxMenux",
-            "description": "Proxmox System Monitoring Dashboard",
-            "start_url": "/",
-            "display": "standalone",
-            "background_color": "#0a0a0a",
-            "theme_color": "#4f46e5",
-            "icons": [
-                {
-                    "src": "/images/proxmenux-logo.png",
-                    "sizes": "256x256",
-                    "type": "image/png"
-                }
-            ]
-        })
-    except Exception as e:
-        # print(f"Error serving manifest: {e}")
-        pass
-        return jsonify({}), 404
-
-@app.route('/sw.js')
-def serve_sw():
-    """Serve service worker"""
-    return '''
-    const CACHE_NAME = 'proxmenux-v1';
-    const urlsToCache = [
-        '/',
-        '/api/system',
-        '/api/storage',
-        '/api/network',
-        '/api/health'
-    ];
-
-    self.addEventListener('install', event => {
-        event.waitUntil(
-            caches.open(CACHE_NAME)
-                .then(cache => cache.addAll(urlsToCache))
-        );
-    });
-
-    self.addEventListener('fetch', event => {
-        event.respondWith(
-            caches.match(event.request)
-                .then(response => response || fetch(event.request))
-        );
-    });
-    ''', 200, {'Content-Type': 'application/javascript'}
-
 @app.route('/_next/<path:filename>')
 def serve_next_static(filename):
     """Serve Next.js static files"""
