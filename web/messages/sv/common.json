@@ -94,6 +94,7 @@
       "ociStorageNetwork": "Data, sökvägar och nätverk",
       "ociHardware": "Enheter och acceleration",
       "ociStacks": "Program med flera containrar",
+      "ociContributeApp": "Installera en app och bidra till katalogen",
       "ociLifecycle": "Installera, uppdatera och ändra",
       "ociMonitor": "I ProxMenux Monitor",
       "proxmenuxScripts": "ProxMenux Scripts",

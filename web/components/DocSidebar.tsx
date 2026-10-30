@@ -111,6 +111,7 @@ export const sidebarItems: MenuItem[] = [
       { title: "Data, paths and networking", i18nKey: "ociStorageNetwork", href: "/docs/oci-manager/storage-network" },
       { title: "Devices and acceleration", i18nKey: "ociHardware", href: "/docs/oci-manager/hardware" },
       { title: "Multi-container applications", i18nKey: "ociStacks", href: "/docs/oci-manager/stacks" },
+      { title: "Install an app and contribute it", i18nKey: "ociContributeApp", href: "/docs/oci-manager/contribute-app" },
       { title: "Install, update and recreate", i18nKey: "ociLifecycle", href: "/docs/oci-manager/lifecycle" },
       { title: "In ProxMenux Monitor", i18nKey: "ociMonitor", href: "/docs/oci-manager/monitor" },
     ],

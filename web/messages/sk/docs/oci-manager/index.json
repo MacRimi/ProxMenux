@@ -195,6 +195,11 @@
                 "tail": "Aplikácia, databáza a vyrovnávacia pamäť v koordinovaných LXC."
               },
               {
+                "label": "Nainštalovať aplikáciu a pridať ju do katalógu",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "pokyny pre agenta, testy a príspevok do katalógu."
+              },
+              {
                 "label": "Inštalácia, aktualizácia a úpravy",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Kontrakt inštancie a operácie s ním."
