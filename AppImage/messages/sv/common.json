@@ -876,7 +876,9 @@
       "writeShort": "W",
       "checksumShort": "CK",
       "slowIos": "Långsamma I/O",
-      "via": "via {name}"
+      "via": "via {name}",
+      "totalSize": "Total storlek",
+      "fragShort": "Frag."
     },
     "storageController": "Storage Controller",
     "noController": "Ingen kontroller upptäckt",

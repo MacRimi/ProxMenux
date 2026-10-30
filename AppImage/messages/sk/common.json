@@ -875,7 +875,9 @@
       "writeShort": "W",
       "checksumShort": "CK",
       "slowIos": "Pomalé I/O",
-      "via": "cez {name}"
+      "via": "cez {name}",
+      "totalSize": "Celková veľkosť",
+      "fragShort": "Frag."
     },
     "storageController": "Storage Controller",
     "noController": "Nezistil sa žiadny ovládač",

@@ -876,7 +876,9 @@
       "writeShort": "W",
       "checksumShort": "CK",
       "slowIos": "I/O lenti",
-      "via": "tramite {name}"
+      "via": "tramite {name}",
+      "totalSize": "dimensione totale",
+      "fragShort": "frag."
     },
     "storageController": "controller di archiviazione",
     "noController": "nessun controller rilevato",

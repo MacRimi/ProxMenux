@@ -876,7 +876,9 @@
       "writeShort": "W",
       "checksumShort": "CK",
       "slowIos": "E/S lentes",
-      "via": "via {name}"
+      "via": "via {name}",
+      "totalSize": "Taille totale",
+      "fragShort": "Frag."
     },
     "storageController": "Contrôleur de stockage",
     "noController": "Aucun contrôleur détecté",

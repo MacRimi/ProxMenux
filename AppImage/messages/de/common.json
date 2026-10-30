@@ -876,7 +876,9 @@
       "writeShort": "W",
       "checksumShort": "CK",
       "slowIos": "Langsame E/As",
-      "via": "über {name}"
+      "via": "über {name}",
+      "totalSize": "Gesamtgröße",
+      "fragShort": "Frag."
     },
     "storageController": "Speichercontroller",
     "noController": "Kein Controller erkannt",
