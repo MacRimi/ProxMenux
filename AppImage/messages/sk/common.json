@@ -826,7 +826,57 @@
     "temperatureCriticalCount": "Kritické teploty: {count}",
     "temperatureUnavailable": "Teploty nie sú k dispozícii",
     "temperatureIncomplete": "Údaje o teplote nie sú úplné",
-    "temperatureUnavailableCount": "Nedostupné: {count}"
+    "temperatureUnavailableCount": "Nedostupné: {count}",
+    "zfs": {
+      "classes": {
+        "normal": "Údaje",
+        "special": "Špeciálne",
+        "dedup": "Dedup",
+        "log": "Log",
+        "cache": "Cache",
+        "spare": "Náhradné"
+      },
+      "poolDetails": "Rozloženie fondu, stav čistenia a stav zariadenia",
+      "detailsUnavailable": "Podrobné usporiadanie bazéna vyžaduje OpenZFS 2.3 alebo novší.",
+      "status": "Stav",
+      "action": "Akcia",
+      "capacity": "Kapacita",
+      "fragmentation": "Fragmentácia",
+      "dedupRatio": "Dedup Ratio",
+      "layout": "Rozloženie",
+      "singleDisk": "Jeden disk",
+      "stripe": "Stripe",
+      "mirror": "Zrkadlo",
+      "raidz": "RAIDZ{parity}",
+      "draid": "dRAID{parity}",
+      "diskCountOne": "disk {count}",
+      "diskCountMany": "disky {count}",
+      "errorsReported": "Boli nahlásené chyby",
+      "scanTitle": "Scrub / Resilver",
+      "scrub": "Drhnúť",
+      "resilver": "Resilver",
+      "neverScrubbed": "Nikdy nedrhnuté",
+      "scanRunning": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preklad: {kind} prebieha ({percent}%)",
+      "scanCanceled": "{kind} zrušené",
+      "scanFinished": "{kind} dokončené {date}",
+      "started": "Spustené",
+      "ended": "Hotovo",
+      "repaired": "Opravené",
+      "scanErrors": "Chyby skenovania",
+      "dataErrors": "Chyby údajov {count}",
+      "noDataErrors": "Žiadne známe chyby údajov",
+      "device": "Zariadenie",
+      "disk": "Disk",
+      "state": "Štát",
+      "readErrors": "Chyby čítania",
+      "writeErrors": "Chyby zápisu",
+      "checksumErrors": "Chyby kontrolného súčtu",
+      "readShort": "R",
+      "writeShort": "W",
+      "checksumShort": "CK",
+      "slowIos": "Pomalé I/O",
+      "via": "cez {name}"
+    }
   },
   "details": {
     "temperature": {
@@ -7821,15 +7871,40 @@
       "datastoreUnavailable": "Súborový systém dátového úložiska nie je dostupný."
     },
     "taskTypes": {
-      "backup": "Zálohovanie", "restore": "Obnova", "verify": "Overovanie",
-      "verifyGroup": "Overovanie skupiny záloh", "verifySnapshot": "Overovanie snímky",
-      "prune": "Odstraňovanie starých záloh", "garbageCollection": "Čistenie nepoužívaných dát", "sync": "Synchronizácia",
-      "updateCheck": "Kontrola aktualizácií", "terminal": "Terminál", "createDatastore": "Vytvorenie dátového úložiska",
+      "backup": "Zálohovanie",
+      "restore": "Obnova",
+      "verify": "Overovanie",
+      "verifyGroup": "Overovanie skupiny záloh",
+      "verifySnapshot": "Overovanie snímky",
+      "prune": "Odstraňovanie starých záloh",
+      "garbageCollection": "Čistenie nepoužívaných dát",
+      "sync": "Synchronizácia",
+      "updateCheck": "Kontrola aktualizácií",
+      "terminal": "Terminál",
+      "createDatastore": "Vytvorenie dátového úložiska",
       "other": "Iná úloha ({type})"
     },
-    "states": { "ok": "V poriadku", "unknown": "Neznámy", "warnings": "Upozornenia: {count}", "warning": "Upozornenie", "error": "Chyba" },
-    "serviceStates": { "active": "Aktívna", "inactive": "Neaktívna", "failed": "Zlyhala", "activating": "Spúšťa sa", "deactivating": "Zastavuje sa", "unknown": "Neznámy stav" },
-    "durationUnits": { "seconds": "{count} s", "minutes": "{count} min", "hours": "{count} h", "days": "{count} d" }
+    "states": {
+      "ok": "V poriadku",
+      "unknown": "Neznámy",
+      "warnings": "Upozornenia: {count}",
+      "warning": "Upozornenie",
+      "error": "Chyba"
+    },
+    "serviceStates": {
+      "active": "Aktívna",
+      "inactive": "Neaktívna",
+      "failed": "Zlyhala",
+      "activating": "Spúšťa sa",
+      "deactivating": "Zastavuje sa",
+      "unknown": "Neznámy stav"
+    },
+    "durationUnits": {
+      "seconds": "{count} s",
+      "minutes": "{count} min",
+      "hours": "{count} h",
+      "days": "{count} d"
+    }
   },
   "monitorLinks": {
     "groups": {
