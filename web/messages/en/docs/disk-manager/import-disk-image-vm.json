@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "How the script runs",
-    "body": "The flow has two phases. Phase 1 collects every decision (VM, storage, source directory, images, per-image options) up-front via dialogs. Phase 2 runs <code>qm importdisk</code> for each selected image. Until Phase 2 begins, nothing is copied and the VM config is not touched."
+    "body": "The flow has two phases. Phase 1 collects every decision (VM, storage, source directory, images, per-image options) up-front via dialogs. Phase 2 runs <code>qm importdisk</code> for each selected image. Phase 2 starts right after the last per-image question, without a separate final confirmation; until then nothing is copied and the VM config is not touched."
   },
   "prereqs": {
     "heading": "Prerequisites",

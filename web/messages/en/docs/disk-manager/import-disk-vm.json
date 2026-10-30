@@ -16,8 +16,8 @@
   },
   "howRuns": {
     "heading": "How the script runs",
-    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually attaching disks to the VM\". Until the final confirmation, the VM config is untouched.",
-    "summary": "ProxMenux filters out anything it cannot safely pass: the root disk, disks mounted on the host, members of an active ZFS/LVM/RAID pool and disks already referenced by any VM/LXC config. Disks with <em>stale</em> metadata (old ZFS / RAID / LVM signatures that are no longer in use) are shown with a ⚠ label but are not blocked."
+    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually attaching disks to the VM\". Until the last dialog is answered, the VM config is untouched; there is no separate final confirmation, so cancel with Esc at any earlier dialog.",
+    "summary": "ProxMenux filters out anything it cannot safely pass: the root disk and other disks mounted on the host, disks used by host LVM, ZFS members (active or stale), active RAID members and disks already in this VM's config. Disks used by another VM or CT are shown as ⚠ In use, and leftover RAID / LVM signatures get a ⚠ label but are not blocked."
   },
   "prereqs": {
     "heading": "Prerequisites",
@@ -39,7 +39,7 @@
         "title": "Pick the physical disk(s) to attach",
         "img": "/disk/disk-selection.png",
         "caption": "Free disks detected on the host (with ⚠ labels for stale metadata)",
-        "body": "The script scans every host disk and shows only the ones that are safe to attach. The checklist lets you select one or several at once. Disks with old ZFS / LVM / RAID signatures still show up, labelled with ⚠ so you know they need a wipe before the guest can format them."
+        "body": "The script scans every host disk and shows only the ones that are safe to attach. The checklist lets you select one or several at once. Disks with old LVM / RAID signatures still show up, labelled with ⚠ (disks with ZFS signatures are hidden) so you know they need a wipe before the guest can format them."
       },
       {
         "title": "Pick the bus interface",
@@ -65,7 +65,7 @@
     "migrationTitle": "Live migration is not possible",
     "migrationBody": "A VM with a physical passthrough disk is <strong>tied to the host that exposes that disk</strong>. Another node normally lacks the same <code>/dev/disk/by-id/…</code> path and disk data. Back up and transfer that data separately, or use managed virtual disks on shared or supported replicated storage for mobility; do not assume Proxmox storage replication covers this device.",
     "shareTitle": "Do not share a physical disk between VMs",
-    "shareBody": "Attaching the same physical disk to two VMs at the same time will corrupt data on next write. ProxMenux detects this situation and blocks it, but if you bypass the script (direct <code>qm set</code>), make sure only one guest ever mounts the disk."
+    "shareBody": "Attaching the same physical disk to two VMs at the same time will corrupt data on next write. ProxMenux blocks it when the other guest is running and asks for confirmation when it is stopped, but if you bypass the script (direct <code>qm set</code>), make sure only one guest ever mounts the disk."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",
