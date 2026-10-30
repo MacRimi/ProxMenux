@@ -3505,6 +3505,7 @@
   "Intel render device for recognition": "Dispositivo di rendering Intel per il riconoscimento",
   "Intel/AMD (VA-API and QSV)": "Intel/AMD (VA-API e QSV)",
   "Intel/AMD (VA-API)": "Intel/AMD (VA-API)",
+  "Intel/AMD (Vulkan)": "Intel/AMD (Vulkan)",
   "Intel/AMD (streaming rendering and encoding)": "Intel/AMD (rendering e codifica per lo streaming)",
   "Intel/AMD DRM node (device only)": "Nodo DRM Intel/AMD (solo dispositivo)",
   "Intel/AMD VA-API": "Intel/AMD VA-API",
