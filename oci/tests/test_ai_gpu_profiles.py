@@ -17,9 +17,11 @@ from test_advanced_flow_order import RecordingUI, storages
 
 RENDER, KFD = "/dev/dri/renderD128", "/dev/kfd"
 EXPECTED = {
-    "ollama": {"cpu": (":latest", []), "nvidia": (":latest", ["nvidia-runtime"]), "rocm": (":rocm", [RENDER, KFD])},
+    "ollama": {"cpu": (":latest", []), "nvidia": (":latest", ["nvidia-runtime"]), "vulkan": (":latest", [RENDER]),
+               "rocm": (":rocm", [RENDER, KFD])},
     "llamacpp": {"cpu": (":server", []), "nvidia": (":server-cuda", ["nvidia-runtime"]),
-                 "rocm": (":server-rocm", [RENDER, KFD]), "intel": (":server-intel", [RENDER])},
+                 "vulkan": (":server-vulkan", [RENDER]), "rocm": (":server-rocm", [RENDER, KFD]),
+                 "intel": (":server-intel", [RENDER])},
     "faster-whisper": {"cpu": (":latest", []), "nvidia": (":gpu", ["nvidia-runtime"])},
     "piper": {"cpu": (":latest", []), "nvidia": (":gpu", ["nvidia-runtime"])},
 }

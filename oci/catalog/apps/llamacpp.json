@@ -306,8 +306,52 @@
             ]
           },
           {
+            "id": "vulkan",
+            "label": "Intel/AMD (Vulkan)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ghcr.io/ggml-org/llama.cpp:server-vulkan",
+              "registry": "ghcr.io",
+              "repository": "ghcr.io/ggml-org/llama.cpp",
+              "tag": "server-vulkan",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ]
+          },
+          {
             "id": "rocm",
             "label": "AMD (ROCm)",
+            "amd_gfx_targets": [
+              90008,
+              90010,
+              90402,
+              100300,
+              110000,
+              110001,
+              110002,
+              110500,
+              110501,
+              120000,
+              120001
+            ],
             "architectures": [
               "amd64"
             ],

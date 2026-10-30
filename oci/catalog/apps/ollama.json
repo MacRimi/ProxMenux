@@ -411,8 +411,59 @@
             ]
           },
           {
+            "id": "vulkan",
+            "label": "Intel/AMD (Vulkan)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ollama/ollama:latest",
+              "registry": "docker.io",
+              "repository": "ollama/ollama",
+              "tag": "latest",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ],
+            "environment": [
+              {
+                "name": "OLLAMA_IGPU_ENABLE",
+                "value": "1"
+              }
+            ]
+          },
+          {
             "id": "rocm",
             "label": "AMD (ROCm)",
+            "amd_gfx_targets": [
+              90008,
+              90010,
+              90402,
+              90500,
+              100300,
+              110000,
+              110001,
+              110002,
+              110500,
+              110501,
+              120000,
+              120001
+            ],
             "architectures": [
               "amd64"
             ],
@@ -447,6 +498,12 @@
                 "gid_strategy": "host-device-gid",
                 "kind": "character-device",
                 "container_path_strategy": "same-as-host"
+              }
+            ],
+            "environment": [
+              {
+                "name": "OLLAMA_IGPU_ENABLE",
+                "value": "1"
               }
             ]
           }
