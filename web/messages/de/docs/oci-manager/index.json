@@ -195,6 +195,11 @@
                 "tail": "Anwendung, Datenbank und Cache als koordinierte LXCs."
               },
               {
+                "label": "Eine App installieren und zum Katalog beitragen",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "Anleitung für Agenten, Tests und Katalog-Pull-Request."
+              },
+              {
                 "label": "Installieren, aktualisieren und ändern",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Der Instanzvertrag und seine Vorgänge."

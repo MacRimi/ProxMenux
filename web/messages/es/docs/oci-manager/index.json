@@ -195,6 +195,11 @@
                 "tail": "Aplicación, base de datos y caché en varios LXC coordinados."
               },
               {
+                "label": "Instalar una aplicación y proponerla al catálogo",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "instrucciones para el agente, pruebas y pull request."
+              },
+              {
                 "label": "Instalar, actualizar y modificar",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "El contrato de la instancia y sus operaciones."

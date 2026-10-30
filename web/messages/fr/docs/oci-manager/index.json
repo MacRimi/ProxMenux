@@ -195,6 +195,11 @@
                 "tail": "Application, base de données et cache dans des LXC coordonnés."
               },
               {
+                "label": "Installer une application et contribuer au catalogue",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "instructions pour l’agent, tests et demande de fusion."
+              },
+              {
                 "label": "Installer, mettre à jour et modifier",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Le contrat de l’instance et ses opérations."
