@@ -55,7 +55,7 @@ class NativeExecWebReadinessTests(unittest.TestCase):
                         adapter.healthcheck(4800)
                 else:
                     adapter.healthcheck(4800)
-            self.assertEqual(probes, ['pct', 'curl'])
+            self.assertEqual(probes, ['pct', 'pct', 'curl'])
         finally:
             server.shutdown(); server.server_close(); thread.join(timeout=2)
 

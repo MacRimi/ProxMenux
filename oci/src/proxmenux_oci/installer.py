@@ -589,6 +589,7 @@ def build_deployment(
                 if key not in tmpfs_mounts[-1] and installer_profile.get("volume_owner", {}).get(key) is not None:
                     tmpfs_mounts[-1][key] = installer_profile["volume_owner"][key]
 
+    vlan_tag = None
     if advanced:
         bridge = ask_bridge(ui, translate("Network bridge"), defaults["bridge"])
         if mac_address:
@@ -597,6 +598,7 @@ def build_deployment(
             ipv4, gateway = "host", None
         else:
             ipv4, gateway = access.ask_ipv4(ui, bridge)
+            vlan_tag = access.ask_vlan_tag(ui)
     else:
         bridge = ask_bridge(ui, "", defaults["bridge"], DEFAULT_MODE)
         if host_monitor:
@@ -760,6 +762,7 @@ def build_deployment(
             "firewall": defaults["firewall"],
             "host_managed": defaults["host_managed_network"],
             "mac_address": mac_address,
+            **({"vlan_tag": vlan_tag} if vlan_tag else {}),
         },
         "features": defaults.get("features", []),
         "security": {
@@ -832,6 +835,7 @@ def _build_rclone_deployment(
         raise InstallError(translate("The web UI password must have at least 24 characters"))
     bridge = ask_bridge(ui, translate("Network bridge"), schema["bridge"]["default"])
     ipv4, gateway = access.ask_ipv4(ui, bridge)
+    vlan_tag = access.ask_vlan_tag(ui)
 
     return {
         "vmid": int(vmid_text) if vmid_text else None,
@@ -851,6 +855,7 @@ def _build_rclone_deployment(
             "firewall": defaults["firewall"],
             "host_managed": defaults["host_managed_network"],
             "mac_address": None,
+            **({"vlan_tag": vlan_tag} if vlan_tag else {}),
         },
         "features": defaults["features"],
         "security": {
@@ -1082,6 +1087,7 @@ def _build_immich_deployment(
     addresses, frontend_gateway = access.ask_addresses(
         essential_ui(ui), frontend_bridge, [translate("Immich server"), "Immich Machine learning"])
     server_ipv4, ml_ipv4 = addresses.values()
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     (video_acceleration, render_device, vaapi_driver,
      ml_acceleration, ml_render) = _ask_immich_acceleration(ui, rootfs_storage)
@@ -1112,6 +1118,7 @@ def _build_immich_deployment(
             "frontend_ipv4": server_ipv4,
             "machine_learning_frontend_ipv4": ml_ipv4,
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": defaults["private_network"]["bridge"],
             "private_subnet": defaults["private_network"]["subnet"],
@@ -1199,6 +1206,7 @@ def _build_nextcloud_stack_deployment(
     extra_mounts = ask_application_extra_paths(ui, ["/var/www/html"], application_storage or rootfs_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Nextcloud"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     admin_username = ui.ask(
         translate("Initial administrator user"), defaults["application"]["admin_username"]
@@ -1239,6 +1247,7 @@ def _build_nextcloud_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1323,6 +1332,7 @@ def _build_paperless_stack_deployment(
              "/usr/src/paperless/export"], application_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Paperless"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     ocr_language = ui.ask(translate("OCR language (Tesseract code)"), defaults["ocr_language"])
     if not re.fullmatch(r"[a-z]{3}(?:\+[a-z]{3})*", ocr_language):
@@ -1368,6 +1378,7 @@ def _build_paperless_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1450,6 +1461,7 @@ def _build_tandoor_stack_deployment(
         ui, ["/opt/recipes/mediafiles", "/opt/recipes/staticfiles"], static_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Tandoor"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     allowed_hosts = ui.ask(
         translate("Allowed hosts (comma separated; * allows access through the assigned IP)"),
@@ -1510,6 +1522,7 @@ def _build_tandoor_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],

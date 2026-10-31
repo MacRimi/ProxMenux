@@ -655,6 +655,7 @@ def build_stack(template, ui, mode='advanced'):
         from .custom_mounts import ask_stack_custom_mounts
         ask_stack_custom_mounts(ui, drafts, volumes)
     bridge = ask_bridge(ui, translate('Access bridge'), defaults['bridge'], mode)
+    vlan_tag = access.ask_vlan_tag(quiet)
     frontend_names = [
         s['name'] for s in services
         if (s['name'] == template['compose_stack']['main_service']
@@ -765,7 +766,7 @@ def build_stack(template, ui, mode='advanced'):
     return {'deployment_kind':'generic-multi-lxc-stack','stack_name':name,'base_vmid':int(vmid) if vmid else None,
             'completion_notes':template.get('proxmox',{}).get('stack_completion_notes',[]),
             'rootfs_storage':root,'template_storage':cache,'onboot':onboot,'start_after_create':True,
-            'network':{'frontend_bridge':bridge,'frontend_gateway':gateway,'private_allocation':'automatic','private_bridge':'vmbr10','private_subnet':'10.77.0.0/24','private_host_address':'10.77.0.1/24'},
+            'network':{'frontend_bridge':bridge,'frontend_gateway':gateway,**({'frontend_vlan_tag':vlan_tag} if vlan_tag else {}),'private_allocation':'automatic','private_bridge':'vmbr10','private_subnet':'10.77.0.0/24','private_host_address':'10.77.0.1/24'},
             'services':plans}
 
 

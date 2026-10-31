@@ -65,6 +65,12 @@ def check(config):
         raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
 
 
+def stale(config):
+    """Whether a mount point taken away left its lines behind."""
+    wanted = {line for group in groups(config) for line in group}
+    return any(own(line) and line not in wanted for line in config.decode().splitlines())
+
+
 def follow(vmid):
     """Write the lines of the mount points the container has now, and no
     others. Any snapshot section is left as it is."""

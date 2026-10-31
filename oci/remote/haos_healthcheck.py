@@ -11,6 +11,7 @@ import traceback
 import urllib.error
 import urllib.request
 
+from oci_installation_state import container_curl
 from oci_ui import log, msg_progress, translate
 
 
@@ -79,7 +80,14 @@ def containers_ready(items):
             and bool(by_name['homeassistant'].get('Config', {}).get('Image')))
 
 
-def http_ready(url, timeout=5):
+def http_ready(vmid, url, timeout=5):
+    curl = container_curl(vmid, lambda *args: capture(args).encode())
+    if curl != ['curl']:
+        try:
+            return capture([*curl, '-sS', '--noproxy', '*', '-o', '/dev/null', '-w', '%{http_code}',
+                            '--max-time', str(timeout), url], timeout=timeout + 1).strip() == '200'
+        except subprocess.SubprocessError:
+            return False
     # Do not route private healthchecks through an environment HTTP proxy.
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
@@ -111,10 +119,10 @@ def probe(vmid, ip, remaining):
     supervisor = json.loads(run(docker + ['exec', 'hassio_cli', 'ha', '--raw-json', 'supervisor', 'info']))
     if not supervisor_ready(supervisor):
         raise Pending(translate('Supervisor does not confirm healthy and supported yet'))
-    if not http_ready(f'http://{ip}:4357/', max(0.1, min(5, remaining()))):
+    if not http_ready(vmid, f'http://{ip}:4357/', max(0.1, min(5, remaining()))):
         raise Pending(translate('Observer is not responding on port 4357'))
     for port in (8123, 80):
-        if http_ready(f'http://{ip}:{port}/', max(0.1, min(5, remaining()))):
+        if http_ready(vmid, f'http://{ip}:{port}/', max(0.1, min(5, remaining()))):
             return [{'label': 'Home Assistant', 'url': f'http://{ip}:{port}/'},
                     {'label': 'Home Assistant Observer', 'url': f'http://{ip}:4357/'}]
     raise Pending(translate('Core is running, but not responding over HTTP on 80/8123'))

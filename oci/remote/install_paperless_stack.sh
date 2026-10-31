@@ -132,7 +132,8 @@ FRONTEND_IPV4=$(jqr '.network.frontend_ipv4')
 FRONTEND_GATEWAY=$(jq -r '.network.frontend_gateway // empty' "$DEPLOYMENT_FILE")
 oci_access_net "$FRONTEND_IPV4" "$FRONTEND_GATEWAY" \
   || die "$(translate "Invalid access address:") $FRONTEND_IPV4 $FRONTEND_GATEWAY"
-FRONTEND_NET=$OCI_ACCESS_NET
+oci_vlan_option frontend_vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+FRONTEND_NET=$OCI_ACCESS_NET$OCI_VLAN_OPTION
 PRIVATE_BRIDGE=$(jqr '.network.private_bridge')
 PRIVATE_SUBNET=$(jqr '.network.private_subnet')
 PRIVATE_HOST_ADDRESS=$(jqr '.network.private_host_address')
@@ -513,7 +514,7 @@ if (( START_AFTER == 1 )); then
       | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
       | grep -vFx "$APPLICATION_IP" | head -n 1 || true)
     if [[ -n $APPLICATION_LAN_IP ]] \
-      && curl -fsS "http://${APPLICATION_LAN_IP}:8000/" >/dev/null 2>&1; then
+      && oci_curl "$APPLICATION_ID" -fsS "http://${APPLICATION_LAN_IP}:8000/" >/dev/null 2>&1; then
       break
     fi
     if [[ $(pct status "$APPLICATION_ID" 2>/dev/null) != *running* ]]; then
@@ -523,7 +524,7 @@ if (( START_AFTER == 1 )); then
   done
   [[ -n $APPLICATION_LAN_IP ]] \
     || die "$(translate "The application did not get an address on the access network:") Paperless-ngx"
-  curl -fsS "http://${APPLICATION_LAN_IP}:8000/" >/dev/null 2>>"$OCI_LOG" \
+  oci_curl "$APPLICATION_ID" -fsS "http://${APPLICATION_LAN_IP}:8000/" >/dev/null 2>>"$OCI_LOG" \
     || die "$(translate "The application did not pass its HTTP check:") Paperless-ngx"
   msg_ok "$(translate "Application responding:") http://${APPLICATION_LAN_IP}:8000/"
 fi

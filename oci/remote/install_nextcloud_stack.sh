@@ -132,7 +132,8 @@ FRONTEND_IPV4=$(jqr '.network.frontend_ipv4')
 FRONTEND_GATEWAY=$(jq -r '.network.frontend_gateway // empty' "$DEPLOYMENT_FILE")
 oci_access_net "$FRONTEND_IPV4" "$FRONTEND_GATEWAY" \
   || die "$(translate "Invalid access address:") $FRONTEND_IPV4 $FRONTEND_GATEWAY"
-FRONTEND_NET=$OCI_ACCESS_NET
+oci_vlan_option frontend_vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+FRONTEND_NET=$OCI_ACCESS_NET$OCI_VLAN_OPTION
 PRIVATE_BRIDGE=$(jqr '.network.private_bridge')
 PRIVATE_SUBNET=$(jqr '.network.private_subnet')
 PRIVATE_HOST_ADDRESS=$(jqr '.network.private_host_address')
@@ -511,7 +512,7 @@ if (( START_AFTER == 1 )); then
       | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
       | grep -vFx "$APPLICATION_IP" | head -n 1 || true)
     if [[ -n $APPLICATION_LAN_IP ]] \
-      && curl -fsS -H 'Host: localhost' \
+      && oci_curl "$APPLICATION_ID" -fsS -H 'Host: localhost' \
         "http://${APPLICATION_LAN_IP}/status.php" >/dev/null 2>&1; then
       break
     fi
@@ -521,7 +522,7 @@ if (( START_AFTER == 1 )); then
     || die "$(translate "The application did not get an address on the access network:") Nextcloud"
   # Nextcloud 34 validates status.php against trusted_domains before the LAN IP
   # can be registered. localhost is the official image's initial trusted host.
-  STATUS_JSON=$(curl -fsS -H 'Host: localhost' \
+  STATUS_JSON=$(oci_curl "$APPLICATION_ID" -fsS -H 'Host: localhost' \
     "http://${APPLICATION_LAN_IP}/status.php")
   jq -e '.installed == true and .maintenance == false and .needsDbUpgrade == false' \
     <<<"$STATUS_JSON" >/dev/null \

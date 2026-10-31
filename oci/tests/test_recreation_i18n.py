@@ -131,7 +131,7 @@ class SlovakEditorTests(unittest.TestCase):
         self.assertIn('Vlastná cesta nemôže skryť systémové adresáre', self.text(ui))
 
     def test_network_gateway_explains_outbound_route(self):
-        ui = EditorUI(['static'], ['vmbr0', '192.0.2.42/24', ''], confirms=[])
+        ui = EditorUI(['static'], ['vmbr0', '192.0.2.42/24', '', ''], confirms=[])
         with patch.object(installer.host, 'bridges', return_value=[]), \
                 patch.object(installer.host, 'address_answers', return_value=False):
             recreation.edit_setting(copy.deepcopy(self.original), ui, 'network')

@@ -78,7 +78,7 @@ class ProposalTests(unittest.TestCase):
         self.assertIsNone(reconcile.propose(record, updated))
         self.assertEqual(reconcile.transaction.external_changes(record, updated), {})
 
-    def test_notes_cannot_hide_identity_or_network_changes(self):
+    def test_notes_cannot_hide_identity_or_platform_changes(self):
         marker = '11111111-1111-1111-1111-111111111111'
         config = f'description: Old notes proxmenux-instance={marker}\n'.encode()
         record = {
@@ -88,7 +88,7 @@ class ProposalTests(unittest.TestCase):
         }
         with self.assertRaises(ValueError):
             reconcile.propose(record, b'description: Different instance\n')
-        changed = f'description: New notes proxmenux-instance={marker}\nnet0: name=eth0,bridge=vmbr1\n'.encode()
+        changed = f'description: New notes proxmenux-instance={marker}\narch: arm64\n'.encode()
         with self.assertRaises(ValueError):
             reconcile.propose(record, changed)
         with self.assertRaises(ValueError):
@@ -197,10 +197,11 @@ class EnvironmentAdoptionTests(unittest.TestCase):
         proposal = self.propose(record, 'APP_PASSWORD=first-secret\0PATH=/bin')
         self.assertEqual(proposal['details'], [])
 
-    def test_removing_an_image_default_is_refused(self):
+    def test_an_image_default_removed_in_proxmox_comes_back_with_its_value(self):
         record = self.record('PATH=/bin\0APP_PASSWORD=first-secret')
-        with self.assertRaisesRegex(ValueError, 'env'):
-            self.propose(record, 'APP_PASSWORD=first-secret')
+        proposal = self.propose(record, 'APP_PASSWORD=first-secret')
+        self.assertFalse(proposal['review'])
+        self.assertNotIn('PATH', [item['name'] for item in proposal['candidate']['deployment']['environment']])
 
     def test_removing_a_saved_variable_removes_it_from_the_contract(self):
         record = self.record('PATH=/bin\0APP_PASSWORD=first-secret')
@@ -211,9 +212,9 @@ class EnvironmentAdoptionTests(unittest.TestCase):
     def test_other_changes_next_to_the_variables_are_still_refused(self):
         record = self.record('PATH=/bin')
         config = (f'description: proxmenux-instance={self.marker}\nenv: PATH=/bin\0A=1\n'
-                  'net0: name=eth0,bridge=vmbr1\n').encode()
+                  'arch: arm64\n').encode()
         with (patch.object(reconcile.instances, 'identity', return_value=self.marker),
-              self.assertRaisesRegex(ValueError, 'net0')):
+              self.assertRaisesRegex(ValueError, 'arch')):
             reconcile.propose(record, config)
 
 

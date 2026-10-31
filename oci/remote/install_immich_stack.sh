@@ -140,10 +140,11 @@ ML_FRONTEND_IPV4=$(jq -r '.network.machine_learning_frontend_ipv4 // "dhcp"' "$D
 FRONTEND_GATEWAY=$(jq -r '.network.frontend_gateway // empty' "$DEPLOYMENT_FILE")
 oci_access_net "$FRONTEND_IPV4" "$FRONTEND_GATEWAY" \
   || die "$(translate "Invalid access address:") $FRONTEND_IPV4 $FRONTEND_GATEWAY"
-FRONTEND_NET=$OCI_ACCESS_NET
+oci_vlan_option frontend_vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+FRONTEND_NET=$OCI_ACCESS_NET$OCI_VLAN_OPTION
 oci_access_net "$ML_FRONTEND_IPV4" "$FRONTEND_GATEWAY" \
   || die "$(translate "Invalid access address:") $ML_FRONTEND_IPV4 $FRONTEND_GATEWAY"
-ML_FRONTEND_NET=$OCI_ACCESS_NET
+ML_FRONTEND_NET=$OCI_ACCESS_NET$OCI_VLAN_OPTION
 PRIVATE_BRIDGE=$(jqr '.network.private_bridge')
 PRIVATE_SUBNET=$(jqr '.network.private_subnet')
 PRIVATE_HOST_ADDRESS=$(jqr '.network.private_host_address')

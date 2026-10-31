@@ -23,7 +23,7 @@ import oci_stack_plan
 import oci_stack_transaction as stack_tx
 import oci_stack_replay as replay
 import oci_work_backup as work_backup
-from oci_installation_state import image_from_archive, parse_config, private_directory, sha
+from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
 
@@ -545,9 +545,9 @@ class NativeAdapter:
                     # Main/custom web services retain both contracts: an exec
                     # check never replaces the advertised HTTP readiness probe.
                     if check.get('url') and (self.services[vmid].get('frontend') or check.get('endpoint')):
-                        member_tx.run('curl', '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
+                        member_tx.run(*container_curl(vmid, member_tx.run), '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
                 elif check['type'] == 'http':
-                    member_tx.run('curl', '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
+                    member_tx.run(*container_curl(vmid, member_tx.run), '-fsS', '--noproxy', '*', '--max-time', '5', check['url'])
                 elif check['type'] == 'tcp':
                     with socket.create_connection(tcp_target(check), timeout=5):
                         pass
@@ -848,6 +848,10 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
             result = stack_tx.execute(journal, adapter)
             msg_ok(translate('Stack recovery completed; every member is back to its previous installation.'))
             return result
+        import oci_stack_modify
+        for member in primary['stack']['members']:
+            oci_stack_modify.adopt(root, member['vmid'])
+        primary = instances.read(root, primary_id)
         records, inventory = {}, {}
         for snapshot in primary['stack']['members']:
             member_id = snapshot['vmid']

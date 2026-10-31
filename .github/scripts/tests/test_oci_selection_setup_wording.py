@@ -133,7 +133,7 @@ class SelectionSetupWording(TestCase):
             with self.subTest(app=app):
                 path = ROOT / f'oci/remote/install_{app}_stack.sh'
                 lines = path.read_text().splitlines()
-                start = next(i for i, line in enumerate(lines) if line.strip().startswith('curl -fsS "http://${APPLICATION_LAN_IP}' + port + '/" >/dev/null 2>>"$OCI_LOG"'))
+                start = next(i for i, line in enumerate(lines) if line.strip().startswith('oci_curl "$APPLICATION_ID" -fsS "http://${APPLICATION_LAN_IP}' + port + '/" >/dev/null 2>>"$OCI_LOG"'))
                 command = '\n'.join(lines[start:start + (3 if app == 'tandoor' else 2)])
                 # Actual Bash failure expression, never source the parent installer.
                 harness = '''set -u
@@ -141,6 +141,7 @@ APPLICATION_LAN_IP=192.0.2.1
 APPLICATION_ID=101
 OCI_LOG=/dev/null
 curl() { return 7; }
+oci_curl() { shift; curl "$@"; }
 translate() { printf '%s' "$1"; }
 print_first_boot_diagnostics() { :; }
 die() { printf 'ERROR:%s\\n' "$1"; }

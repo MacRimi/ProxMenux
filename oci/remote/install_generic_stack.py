@@ -662,6 +662,16 @@ def attach_mounts(service, temporary):
     oci_nested_mounts.follow(vmid)
 
 
+def web_answers(vmid, url, opener):
+    from oci_installation_state import container_curl
+    curl = container_curl(vmid, lambda *args: run(*args).encode())
+    if curl != ['curl']:
+        run(*curl, '-fsS', '--noproxy', '*', '-o', '/dev/null', '--max-time', '4', url)
+        return True
+    with opener.open(url,timeout=4) as response:
+        return response.status<400
+
+
 def wait_web(primary, url):
     deadline = time.monotonic()+primary['healthcheck']['timeout_seconds']
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -669,16 +679,15 @@ def wait_web(primary, url):
         if run('pct','status',primary['vmid']).strip()!='status: running':
             raise RuntimeError(f"{translate('The container stopped:')} {primary['name']} (CT {primary['vmid']})")
         try:
-            with opener.open(url,timeout=4) as response:
-                if response.status<400:
-                    check = primary['healthcheck']
-                    if check.get('type') == 'exec':
-                        remaining = max(1, deadline-time.monotonic())
-                        process = subprocess.run(['pct', 'exec', str(primary['vmid']), '--', *check['argv']],
-                                                 capture_output=True, timeout=min(30, remaining), check=False)
-                        if process.returncode != 0:
-                            raise RuntimeError('Health check has not succeeded yet')
-                    return
+            if web_answers(primary['vmid'], url, opener):
+                check = primary['healthcheck']
+                if check.get('type') == 'exec':
+                    remaining = max(1, deadline-time.monotonic())
+                    process = subprocess.run(['pct', 'exec', str(primary['vmid']), '--', *check['argv']],
+                                             capture_output=True, timeout=min(30, remaining), check=False)
+                    if process.returncode != 0:
+                        raise RuntimeError('Health check has not succeeded yet')
+                return
         except Exception:
             pass
         if time.monotonic()>=deadline:
@@ -1050,7 +1059,9 @@ def main():
                     run('pct','set',s['vmid'],'--startup',f'order={order*10},up=5,down=30')
                 if s['main'] or s.get('frontend'):
                     address = access_address(s.get('frontend_ipv4') or 'dhcp', deployment['network'].get('frontend_gateway'))
-                    run('pct','set',s['vmid'],'--net1',f"name=eth1,bridge={deployment['network']['frontend_bridge']},{address},host-managed=1,firewall=1,type=veth")
+                    vlan_tag = deployment['network'].get('frontend_vlan_tag')
+                    tag = f",tag={int(vlan_tag)}" if vlan_tag else ''
+                    run('pct','set',s['vmid'],'--net1',f"name=eth1,bridge={deployment['network']['frontend_bridge']},{address}{tag},host-managed=1,firewall=1,type=veth")
                 assign_health_address(s)
             # Existing CT/network configurations now reserve every allocated ID and subnet.
             # Never retain the allocation lock while startup/hooks wait for another registry operation.

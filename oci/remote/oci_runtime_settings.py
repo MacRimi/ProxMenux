@@ -204,12 +204,14 @@ def filter_config(config, deployment, runtime_config=None):
     declared = set(tmpfs_lines(deployment, runtime_config if runtime_config is not None else config))
     files = {m['source'] for m in deployment.get('mounts', []) if m.get('type') == 'host-bind'}
 
+    custom = {line.encode() for line in deployment.get('custom_lxc', [])}
+
     def own(line):
         entry = line.decode().strip().split(': ', 1)[1]
         match = FILE_BIND.fullmatch(entry)
         return entry in declared or bool(match and match.group(1) in files)
     return b''.join(line for line in config.splitlines(keepends=True)
-                    if not line.startswith(b'lxc.include: ') and not (
+                    if not line.startswith(b'lxc.include: ') and line.rstrip(b'\n') not in custom and not (
                         line.startswith(b'lxc.mount.entry: ') and own(line)))
 
 

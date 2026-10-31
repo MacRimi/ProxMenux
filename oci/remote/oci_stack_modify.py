@@ -183,14 +183,36 @@ def register(root, vmid):
                                   if path not in listed and (gpu_devices.gpu_path(path)
                                                              or gpu_devices.peripheral_path(path))]
     instances.write(instances.location(root, vmid), record)
+    snapshot(root, vmid)
+
+
+def adopt(root, vmid):
+    """Take into the record what was changed in Proxmox on a member, so an
+    operation on the stack keeps it. The caller holds the registry lock."""
+    record = instances.read(root, vmid)
+    config = instances.command('pct', 'config', str(vmid))
+    if instances.same_config_except_notes(record, config, ignore_tags=True):
+        return
+    if (record['deployment'].get('replay_profile') or {}).get('adapter') in CONVERTERS:
+        register(root, vmid)
+        return
+    proposal = reconcile.propose(record, config, member=True)
+    if proposal:
+        reconcile.commit_locked(root, vmid, proposal, member=True)
+        snapshot(root, vmid)
+
+
+def snapshot(root, vmid):
+    """Refresh the copy of a member its main container keeps."""
+    record = instances.read(root, vmid)
     primary_id = (record.get('stack_member') or {}).get('primary_vmid', vmid)
     primary = instances.read(root, primary_id)
-    snapshot = instances.read(root, vmid)
-    snapshot.pop('stack', None)
+    copied = instances.read(root, vmid)
+    copied.pop('stack', None)
     members = primary.get('stack', {}).get('members', [])
     for index, member in enumerate(members):
         if member.get('vmid') == vmid:
-            members[index] = snapshot
+            members[index] = copied
     instances.write(instances.location(root, primary_id), primary)
 
 

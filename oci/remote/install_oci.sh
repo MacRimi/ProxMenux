@@ -361,10 +361,10 @@ cleanup_canonical_inputs() {
 healthcheck_probe() {
   local code status=0
   if [[ ${HC_ANY_STATUS:-false} == true ]]; then
-    code=$(curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
+    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
     (( status == 0 )) && [[ $code =~ ^[1-4][0-9][0-9]$ ]] && return 0
   else
-    curl "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
+    oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
     (( status == 0 )) && return 0
   fi
   # A port taken from the compose file may serve a database or SSH: an answer
@@ -1044,12 +1044,13 @@ apply_extra_hosts() {
 }
 
 # Settings an update gives back to the rebuilt container before it starts:
-# the LAN leg of a suite or stack member, its start order and current tags.
+# the LAN leg of a suite or stack member, its start order and current tags,
+# and what the user set in Proxmox.
 apply_kept_settings() {
   local key value
   while IFS=$'\t' read -r key value; do
     [[ -n $key ]] || continue
-    [[ $key == net1 || $key == startup || $key == tags ]] \
+    [[ $key =~ ^(net[01]|startup|tags|features|nameserver|searchdomain|timezone|cpulimit|cmode|console|tty|hookscript|entrypoint)$ ]] \
       || die "$(translate "Unsupported kept setting:") $key"
     if [[ $key == tags && -z $value ]]; then
       oci_quiet pct set "$VMID" --delete tags
@@ -1057,6 +1058,13 @@ apply_kept_settings() {
       oci_quiet pct set "$VMID" "--$key" "$value"
     fi || die "$(translate "Could not restore the container setting:") $key"
   done < <(jq -r '.kept_proxmox_settings // {} | to_entries[] | [.key, .value] | @tsv' "$DEPLOYMENT_FILE")
+  while IFS= read -r value; do
+    [[ -n $value ]] || continue
+    [[ $value =~ ^lxc\.[A-Za-z0-9._-]+:\  ]] \
+      || die "$(translate "Unsupported kept setting:") $value"
+    printf '%s\n' "$value" >>"$CONF" \
+      || die "$(translate "Could not restore the container setting:") $value"
+  done < <(jq -r '.custom_lxc // [] | .[]' "$DEPLOYMENT_FILE")
 }
 
 apply_runtime_user() {
@@ -1714,6 +1722,8 @@ NET="name=eth0,bridge=${BRIDGE},firewall=${FIREWALL},host-managed=1,ip=${IPV4},t
 if [[ -n $GATEWAY ]]; then
   NET="${NET},gw=${GATEWAY}"
 fi
+oci_vlan_option vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+NET="${NET}${OCI_VLAN_OPTION}"
 if [[ -n $MAC_ADDRESS ]]; then
   [[ $MAC_ADDRESS =~ ^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$ ]] \
     || die "$(translate "Invalid MAC address:") $MAC_ADDRESS"

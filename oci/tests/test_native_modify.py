@@ -61,6 +61,24 @@ class NativePlanTests(unittest.TestCase):
         self.assertEqual(fields['tag'], '20'); self.assertEqual(fields['ip6'], 'auto')
         self.assertEqual(fields['ip'], '192.0.2.2/24'); self.assertEqual(fields['gw'], '192.0.2.1')
 
+    def test_the_vlan_tag_is_set_changed_and_removed(self):
+        for saved, wanted, expected in ((None, 30, '30'), (20, 30, '30'), (20, None, None)):
+            with self.subTest(saved=saved, wanted=wanted):
+                self.record['deployment']['network'].pop('vlan_tag', None)
+                self.candidate['deployment']['network'].pop('vlan_tag', None)
+                if saved: self.record['deployment']['network']['vlan_tag'] = saved
+                if wanted: self.candidate['deployment']['network']['vlan_tag'] = wanted
+                self.candidate['deployment']['network']['ipv4'] = '192.0.2.2/24'
+                with patch.object(Path, 'is_dir', return_value=True):
+                    result = native.plan(self.record, self.candidate, self.config)
+                fields = dict(x.split('=',1) for x in result['values']['net0'].split(','))
+                self.assertEqual(fields.get('tag'), expected)
+
+    def test_an_invalid_vlan_tag_is_rejected_before_stopping(self):
+        self.candidate['deployment']['network']['vlan_tag'] = 5000
+        with patch.object(Path, 'is_dir', return_value=True), self.assertRaises(ValueError):
+            native.plan(self.record, self.candidate, self.config)
+
     def test_invalid_network_is_rejected_before_stopping(self):
         for value in ('nonsense', '2001:db8::1/64'):
             self.candidate['deployment']['network']['ipv4'] = value

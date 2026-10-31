@@ -338,11 +338,13 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
         static = [address for address in addresses if address != "dhcp"]
         row(translate("Network"), f"{network['frontend_bridge']} · {', '.join(static) if static else 'DHCP'}"
                                   + (f" · gw {network['frontend_gateway']}" if network.get("frontend_gateway") else "")
+                                  + (f" · VLAN {network['frontend_vlan_tag']}" if network.get("frontend_vlan_tag") else "")
                                   + f" · {translate('private network assigned automatically')}")
     elif network:
         ipv4 = network.get("ipv4", "dhcp")
         row(translate("Network"), f"{network.get('bridge', '-')} · {'DHCP' if ipv4 == 'dhcp' else ipv4}"
-                                  + (f" · gw {network['gateway']}" if network.get("gateway") else ""))
+                                  + (f" · gw {network['gateway']}" if network.get("gateway") else "")
+                                  + (f" · VLAN {network['vlan_tag']}" if network.get("vlan_tag") else ""))
     devices = plan.get("devices", [])
     if plan.get("hardware_profile") or devices:
         profiles = (template.get("proxmox", {}).get("installer_profile", {})

@@ -136,6 +136,16 @@ def parse_config(data):
     return values
 
 
+def container_curl(vmid, run=command):
+    """curl for an address of this container. The host may have no route to the
+    VLAN of an interface: there it runs inside the network of the container."""
+    config = parse_config(run('pct', 'config', str(vmid)))
+    if not any(re.fullmatch(r'net[0-9]+', key) and re.search(r'(^|,)tag=', value) for key, value in config.items()):
+        return ['curl']
+    pid = run('lxc-info', '-n', str(vmid), '-pH').decode().strip()
+    return ['nsenter', f'--net=/proc/{pid}/ns/net', 'curl']
+
+
 def private_directory(path):
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     if path.is_symlink() or path.stat().st_uid != os.geteuid():

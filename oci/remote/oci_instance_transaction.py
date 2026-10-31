@@ -27,7 +27,7 @@ import uuid
 from urllib.parse import unquote
 
 import oci_instances as instances
-from oci_installation_state import image_from_archive, parse_config, private_directory, sha
+from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
 import oci_nested_mounts as nested_mounts
@@ -484,11 +484,78 @@ def candidate_contract(record, operation, proposal=None):
 
 
 # Proxmox settings the rebuilt container gets back exactly as they are: the
-# LAN leg ProxMenux adds to a suite or stack member, the start order and tags.
-KEPT_AS_IS = ('net1', 'startup', 'tags')
+# LAN leg ProxMenux adds to a suite or stack member, the start order, the tags
+# and what the user set there. ProxMenux does not decide any of them.
+KEPT_AS_IS = ('net1', 'startup', 'tags', 'features', 'nameserver', 'searchdomain', 'timezone',
+              'cpulimit', 'cmode', 'console', 'tty', 'hookscript', 'protection')
 ADOPTABLE = {'memory': ('resources', 'memory_mb'), 'swap': ('resources', 'swap_mb'),
              'cores': ('resources', 'cores'), 'cpulimit': ('resources', 'cores'),
-             'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot')}
+             'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot'),
+             'hostname': (None, 'hostname'), 'entrypoint': (None, 'custom_entrypoint'),
+             'bridge': ('network', 'bridge'), 'ipv4': ('network', 'ipv4'),
+             'gateway': ('network', 'gateway'), 'firewall': ('network', 'firewall'),
+             'vlan_tag': ('network', 'vlan_tag')}
+
+
+def network_fields(net):
+    """What a network line says that the record of an application keeps."""
+    fields = dict(item.split('=', 1) for item in (net or '').split(',') if '=' in item)
+    tag = fields.get('tag')
+    return {'bridge': fields.get('bridge'), 'ipv4': fields.get('ip'), 'gateway': fields.get('gw'),
+            'firewall': fields.get('firewall', '0') == '1', 'vlan_tag': int(tag) if tag else None}
+
+
+# What the engine writes itself among the lxc.* lines of a container.
+ENGINE_LXC = ('lxc.environment', 'lxc.init.', 'lxc.signal.', 'lxc.console.', 'lxc.hook.', 'lxc.include',
+              'lxc.idmap', 'lxc.mount.auto')
+
+
+def without_backup_snapshot(config):
+    """The configuration without the mark of a snapshot a backup left behind:
+    it is not a setting, and a snapshot of the user is not this one."""
+    return b''.join(line for line in config.splitlines(keepends=True) if line.strip() != b'parent: vzdump')
+
+
+def drop_backup_snapshot(vmid):
+    """A disk with a snapshot cannot be moved. The one an interrupted backup
+    left goes the way Proxmox removes it before its next backup."""
+    config = run('pct', 'config', str(vmid))
+    if without_backup_snapshot(config) != config and 'lock' not in parse_config(config):
+        run('pct', 'delsnapshot', str(vmid), 'vzdump', '--force', '1')
+
+
+def settings(config):
+    """The settings of a configuration to compare with those saved: without
+    that mark, and without the lines that follow the mount points."""
+    return parse_config(nested_mounts.without(without_backup_snapshot(config)))
+
+
+def custom_lxc(record, config):
+    """The raw lxc.* lines the user added in Proxmox: the ones saved before that
+    are still there, and the new ones. A rebuilt container gets them back."""
+    before = record['observed']['config'].splitlines()
+    saved = record['deployment'].get('custom_lxc', [])
+    lines = config.decode().splitlines()
+    return [line for line in lines if line.startswith('lxc.') and ': ' in line
+            and not line.startswith(ENGINE_LXC) and not nested_mounts.own(line)
+            and (line in saved or line not in before)]
+
+
+def kept_settings(record, candidate, cfg):
+    """What a rebuilt container takes from the one it replaces. The network and
+    the features go back as they are unless Modify has just changed them.
+    Protection comes back at the end: a protected container cannot be replaced."""
+    kept = {key: cfg[key] for key in KEPT_AS_IS if key in cfg and key != 'protection'}
+    if 'cores' not in cfg:
+        kept.pop('cpulimit', None)
+    if candidate['deployment'].get('security') != record['deployment'].get('security'):
+        kept.pop('features', None)
+    if 'net0' in cfg and candidate['deployment'].get('network') == record['deployment'].get('network'):
+        kept['net0'] = cfg['net0']
+    # Only a command the user set: the one of the image changes with the image.
+    if candidate['deployment'].get('custom_entrypoint') and 'entrypoint' in cfg:
+        kept['entrypoint'] = cfg['entrypoint']
+    return kept
 
 
 def external_changes(record, config, adopt=True):
@@ -496,7 +563,7 @@ def external_changes(record, config, adopt=True):
     values. Any change the new container cannot keep is refused."""
     if sha(config) == record['observed']['config_sha256']:
         return {}
-    before, now = parse_config(record['observed']['config'].encode()), parse_config(config)
+    before, now = settings(record['observed']['config'].encode()), settings(config)
     changed = sorted(key for key in before.keys() | now.keys() if before.get(key) != now.get(key))
     if ('description' in changed
             and instances.identity(record['observed']['config'].encode()) == record['installation_id']
@@ -504,10 +571,19 @@ def external_changes(record, config, adopt=True):
         changed.remove('description')
     cores_key = 'cpulimit' if 'cpulimit' in before and 'cores' not in before else 'cores'
     values = {}
+    # The network line stays as the user left it: a stack carries it over as
+    # it is, and an application also takes it into its record.
+    if 'net0' in changed:
+        changed.remove('net0')
+        if adopt:
+            old_net, new_net = network_fields(before.get('net0')), network_fields(now.get('net0'))
+            values.update({key: value for key, value in new_net.items() if old_net[key] != value})
     for key in changed if adopt else ():
         value = now.get(key)
         if key == 'onboot':
             values[key] = value == '1'
+        elif key in ('hostname', 'entrypoint') and value:
+            values[key] = value
         elif key == 'cpuunits' and value is None:
             values[key] = None
         elif key in ('memory', 'swap', 'cpuunits', cores_key) and value and re.fullmatch(r'[0-9]+', value):
@@ -540,6 +616,10 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
         target = desired.setdefault(section, {}) if section else desired
         if target.get(name) == recorded.get(name):
             target[name] = value
+    # Lines the user added are carried over and are not part of what is checked.
+    custom = deployment.get('custom_lxc', [])
+    config = b''.join(line for line in without_backup_snapshot(config).splitlines(keepends=True)
+                      if line.decode().rstrip('\n') not in custom)
     cfg = parse_config(config)
     for key in ('lxc.init.uid', 'lxc.init.gid'):
         if key in cfg and not re.fullmatch(r'[0-9]+', cfg[key]):
@@ -818,7 +898,7 @@ def healthcheck(vmid, template):
         ok = False
         if ip:
             any_status = check.get('accept_any_status', False)
-            args = ['curl', '-sS' if any_status else '-fsS', '--noproxy', '*', '-o', '/dev/null',
+            args = [*container_curl(vmid, run), '-sS' if any_status else '-fsS', '--noproxy', '*', '-o', '/dev/null',
                     '--max-time', str(check.get('request_timeout_seconds', 5))]
             if any_status:
                 args += ['-w', '%{http_code}']
@@ -933,6 +1013,8 @@ def commit(root, journal, state):
     gpu_devices.verify(state.get('desired_gpu_devices', {}))
     gpu_devices.check(config, state['candidate_contract']['deployment'])
     checkpoint(journal, state, 'committing')
+    if state.get('protected'):
+        run('pct', 'set', str(state['vmid']), '--protection', '1')
     result = copy.deepcopy(state['candidate_contract'])
     result.update(status='installed', completed_at=instances.now(),
                   last_transaction=state['id'],
@@ -1087,6 +1169,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         if 'stack' in expected:
             record['stack'] = copy.deepcopy(expected['stack'])
     candidate = candidate_contract(record, operation, proposal)
+    drop_backup_snapshot(vmid)
     before = run('pct', 'config', str(vmid))
     cfg, actual, mac = preflight(record, candidate, before, coordinated)
     description = original_description({'record': record, 'before_config': before.decode()})
@@ -1140,7 +1223,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
              'external_data_acknowledged': acknowledge_external_data,
              'original_gpu_devices': original_gpu, 'desired_gpu_devices': desired_gpu,
              'was_running': run('pct', 'status', str(vmid)).strip() == b'status: running'}
-    state['kept_config'] = {key: cfg[key] for key in KEPT_AS_IS if key in cfg}
+    state['kept_config'] = kept_settings(record, candidate, cfg)
+    state['protected'] = cfg.get('protection') == '1'
     # The installer adds default tags. Preserve an explicit absence too, so
     # deleting all tags in Proxmox does not bring them back on the next update.
     state['kept_config']['tags'] = cfg.get('tags', '')
@@ -1150,11 +1234,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         state['runtime_deployment']['kept_proxmox_settings'] = state['kept_config']
     if coordinated:
         state['coordinated'] = coordinated
-        state['preserved_stack_config'] = {key: cfg[key] for key in ('net1', 'startup', 'hookscript') if key in cfg}
-        state['preserved_stack_config']['tags'] = cfg.get('tags', '')
-        if operation == 'update':
-            state['preserved_stack_config'].update({key: cfg[key] for key in
-                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits') if key in cfg})
+        state['preserved_stack_config'] = dict(state['kept_config'])
+        if operation == 'update' and 'cpuunits' in cfg:
+            state['preserved_stack_config']['cpuunits'] = cfg['cpuunits']
     checkpoint(journal, state, 'prepared')
     pending = copy.deepcopy(record)
     pending.update(status='updating', pending_transaction=str(journal), transaction_id=state['id'])
@@ -1227,6 +1309,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     firewall = Path(f'/etc/pve/firewall/{vmid}.fw')
     state['firewall_config'] = firewall.read_text() if firewall.exists() else None
     checkpoint(journal, state, 'replacing-root')
+    if state.get('protected'):
+        run('pct', 'set', str(vmid), '--delete', 'protection')
     run('pct', 'destroy', str(vmid))
     checkpoint(journal, state, 'installing-candidate')
     if show:

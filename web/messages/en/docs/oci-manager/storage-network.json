@@ -224,6 +224,9 @@
           }
         },
         {
+          "p": "The access interface can carry a VLAN tag. The advanced installation asks for it next to the address, and Modify changes or removes it on a single application. A tag set in Proxmox is kept. With a tag, ProxMenux checks the application from inside its container, so the host does not need access to that VLAN."
+        },
+        {
           "flow": {
             "nodes": [
               {

@@ -455,12 +455,11 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
             return False
         if adoption:
             summary = '\n'.join(adoption['details'])
-            # Variables reordered in Proxmox change nothing that needs a decision.
-            if summary and not ui.review(
+            if adoption['review'] and not ui.review(
                     f"{translate('These changes were made in Proxmox outside ProxMenux:')}\n\n{summary}\n\n"
                     + translate('They will be saved in oci-compose before continuing.'),
                     translate('Review external OCI changes'),
-                    question=translate('Include these changes in oci-compose?'), default=False):
+                    question=translate('Include these changes in oci-compose?'), default=True):
                 return False
             try:
                 record = reconcile.commit(instances.ROOT, row['vmid'], adoption)
@@ -694,7 +693,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
 
 class UnattendedUI:
     """The answers of a scheduled run: a step with a positive default goes on,
-    and one that needs a person (adopting external changes) stops the run."""
+    and one that needs a person stops the run."""
     unattended = True
 
     def __init__(self):

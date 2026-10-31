@@ -162,13 +162,16 @@ def kept_settings(changes, deployment):
     """Names of the settings changed in Proxmox that the new container keeps."""
     labels = {'memory': translate('Memory'), 'swap': translate('Swap'), 'cores': translate('CPU cores'),
               'cpulimit': translate('CPU cores'), 'cpuunits': translate('CPU priority'),
-              'onboot': translate('Start with Proxmox')}
+              'onboot': translate('Start with Proxmox'), 'hostname': translate('Hostname'),
+              'entrypoint': translate('Start command'),
+              'bridge': translate('Network'), 'ipv4': translate('Network'), 'gateway': translate('Network'),
+              'firewall': translate('Network'), 'vlan_tag': translate('VLAN tag')}
     kept = []
     for key, value in changes.items():
         section, name = transaction.ADOPTABLE[key]
         if (deployment.get(section, {}) if section else deployment).get(name) == value:
             kept.append(labels[key])
-    return kept
+    return list(dict.fromkeys(kept))
 
 
 def application_name(record, vmid):
