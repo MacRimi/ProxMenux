@@ -107,6 +107,12 @@ _job_is_attached() {
 
 # Reads a key=val pair from the job .env file (handles `printf %q`
 # quoting that _write_job_env produces).
+_calendar_is_valid() {
+  [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" == "1" ]] && return 0
+  command -v systemd-analyze >/dev/null 2>&1 || return 0
+  systemd-analyze calendar "$1" >/dev/null 2>&1
+}
+
 _job_env_get() {
   local id="$1" key="$2" f raw
   f=$(_job_file "$id")
@@ -315,12 +321,10 @@ _reconcile_restored_jobs() {
     fi
 
     on_calendar=$(_job_env_get "$id" ON_CALENDAR || echo "")
-    if [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" != "1" ]] && command -v systemd-analyze >/dev/null 2>&1; then
-      if ! systemd-analyze calendar "$on_calendar" >/dev/null 2>&1; then
-        echo "${id}: invalid systemd OnCalendar expression." >&2
-        invalid=$((invalid + 1))
-        continue
-      fi
+    if ! _calendar_is_valid "$on_calendar"; then
+      echo "${id}: invalid systemd OnCalendar expression." >&2
+      invalid=$((invalid + 1))
+      continue
     fi
 
     if ! _write_job_units "$id" "$on_calendar"; then
@@ -582,9 +586,18 @@ _create_job() {
   fi
 
   on_calendar=$(dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
-    --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Example: daily or Mon..Fri 03:00")" \
+    --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Example: daily, 02:30 or Mon..Fri 03:00")" \
     11 72 "daily" 3>&1 1>&2 2>&3) || return 1
   [[ -z "$on_calendar" ]] && return 1
+  # A timer with an invalid expression never fires and reports no error.
+  while ! _calendar_is_valid "$on_calendar"; do
+    dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
+      --msgbox "$(translate "This schedule is not valid. Examples: daily, 02:30 or Mon..Fri 03:00")" 8 72
+    on_calendar=$(dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
+      --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Example: daily, 02:30 or Mon..Fri 03:00")" \
+      11 72 "$on_calendar" 3>&1 1>&2 2>&3) || return 1
+    [[ -z "$on_calendar" ]] && return 1
+  done
 
   profile_mode=$(dialog --backtitle "ProxMenux" --title "$(translate "Profile")" \
     --menu "\n$(translate "Select backup profile:")" 12 68 4 \
