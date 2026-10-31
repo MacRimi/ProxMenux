@@ -2,7 +2,8 @@
 """Build a verified ProxMenux LXC application-version tracking catalog.
 
 The source of truth is a pinned snapshot of community-scripts/ProxmoxVE,
-downloaded through the GitHub REST API.  Only ct/*.sh launchers are considered.
+plus community-scripts/core for its shared version helpers after the split.
+Both are downloaded through the GitHub REST API. Only ct/*.sh launchers are considered.
 
 An operational hint is emitted only when two independent pieces of the helper
 scripts agree:
@@ -37,6 +38,7 @@ from typing import Any, Iterable
 
 
 DEFAULT_REPOSITORY = "community-scripts/ProxmoxVE"
+DEFAULT_CORE_REPOSITORY = "community-scripts/core"
 DEFAULT_REF = "main"
 API_VERSION = "2022-11-28"
 USER_AGENT = "ProxMenux-app-tracking-catalog/1.0"
@@ -169,6 +171,7 @@ def obtain_snapshot(
     repository: str,
     ref: str,
     cache_dir: Path,
+    required_paths: tuple[str, ...] = ("ct",),
 ) -> tuple[Path, str, str]:
     commit = client.json(f"/repos/{repository}/commits/{ref}")
     commit_sha = str(commit.get("sha") or "")
@@ -177,7 +180,7 @@ def obtain_snapshot(
 
     snapshot_dir = cache_dir / repository.replace("/", "--") / commit_sha
     marker = snapshot_dir / ".snapshot-complete"
-    if marker.exists() and (snapshot_dir / "ct").is_dir():
+    if marker.exists() and all((snapshot_dir / path).exists() for path in required_paths):
         return snapshot_dir, commit_sha, marker.read_text(encoding="utf-8").strip()
 
     payload = client.request(
@@ -190,6 +193,8 @@ def obtain_snapshot(
     temp_dir = Path(tempfile.mkdtemp(prefix=f"{commit_sha}.tmp-", dir=temp_parent))
     try:
         safe_extract_tar(payload, temp_dir)
+        if not all((temp_dir / path).exists() for path in required_paths):
+            raise CatalogError(f"Invalid source snapshot for {repository}@{commit_sha}")
         (temp_dir / ".snapshot-complete").write_text(archive_sha + "\n", encoding="utf-8")
         if snapshot_dir.exists():
             shutil.rmtree(snapshot_dir)
@@ -521,23 +526,66 @@ def repo_from_helper(item: dict[str, Any]) -> str:
     return match.group(1) if match else ""
 
 
+def shared_helper_path(source: Path, core_source: Path | None = None) -> Path:
+    """Locate source text only; never source or execute upstream shell code."""
+    candidates = [source / "misc" / "tools.func"]
+    if core_source is not None:
+        candidates.extend(core_source / path for path in ("lib/forge.func", "lib/tools.func"))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise CatalogError(
+        "Shared version helpers not found. Older trees use misc/tools.func; "
+        "current trees require community-scripts/core (--core-source-dir for a local checkout)."
+    )
+
+
+def shell_function(text: str, name: str) -> str:
+    match = re.search(
+        rf"(?ms)^(?:function\s+)?{re.escape(name)}\s*\(\)\s*\{{[^\n]*\n(.*?)^\}}",
+        text,
+    )
+    return match.group(1) if match else ""
+
+
+def verify_shared_helper(path: Path) -> None:
+    """Check both ends of the cache contract, including the new forge wrappers."""
+    text = read_text(path)
+    read_body = shell_function(text, "check_for_gh_release")
+    write_body = shell_function(text, "fetch_and_deploy_gh_release")
+    if re.search(r'\bcheck_for_release\s+github\s+"\$1"\s+"\$2"', read_body):
+        read_body = shell_function(text, "check_for_release")
+    if re.search(r'\bfetch_and_deploy_release\s+github\s+"\$1"\s+"\$2"', write_body):
+        write_body = shell_function(text, "fetch_and_deploy_release")
+    normalization = r'app_lc="\$\(echo "\$\{app,,\}" \| tr -d [\'\"] [\'\"]\)"'
+    valid = (
+        re.search(normalization, read_body)
+        and re.search(normalization, write_body)
+        and re.search(r'(?:local\s+)?current_file="\$HOME/\.\$\{app_lc\}"', read_body)
+        and re.search(r'(?:local\s+)?version_file="\$HOME/\.\$\{app_lc\}"', write_body)
+        and re.search(r'echo "\$version" >"\$version_file"', write_body)
+        and re.search(r'\$current_file', read_body)
+    )
+    if not valid:
+        raise CatalogError(f"Could not verify the shared GitHub release cache contract in {path}")
+
+
 def build_catalog(
     source: Path,
     helpers: dict[str, dict[str, Any]],
+    *,
+    core_source: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     catalog: dict[str, Any] = {}
     v2_apps: dict[str, Any] = {}
     records: list[dict[str, Any]] = []
     launchers = sorted((source / "ct").glob("*.sh"))
-    tools_func = source / "misc" / "tools.func"
-    tools_text = read_text(tools_func)
-    shared_helper_verified = bool(
-        re.search(r'local version_file="\$HOME/\.\$\{app_lc\}"', tools_text)
-        and re.search(r'echo "\$version" >"\$version_file"', tools_text)
-        and re.search(r'local current_file="\$HOME/\.\$\{app_lc\}"', tools_text)
+    tools_func = shared_helper_path(source, core_source)
+    verify_shared_helper(tools_func)
+    helper_contract = (
+        "misc/tools.func" if tools_func == source / "misc" / "tools.func"
+        else f"core/{tools_func.relative_to(core_source).as_posix()}"
     )
-    if not shared_helper_verified:
-        raise CatalogError("Could not verify the shared GitHub release cache contract in misc/tools.func")
 
     for launcher_path in launchers:
         slug = launcher_path.stem
@@ -696,7 +744,7 @@ def build_catalog(
                     "evidence": {
                         "install": f"install/{installer_path.name}: matching deploy helper",
                         "update": f"ct/{launcher_path.name}: matching release check",
-                        "contract": "misc/tools.func: shared version-cache contract",
+                        "contract": f"{helper_contract}: shared version-cache contract",
                     },
                 }
             )
@@ -712,7 +760,7 @@ def build_catalog(
                     "evidence": {
                         "install": f"install/{installer_path.name}: fetch_and_deploy_gh_release({release.app}, {release.repo})",
                         "update": f"ct/{launcher_path.name}: check_for_gh_release({release.app}, {release.repo})",
-                        "contract": "misc/tools.func writes and reads /root/.<normalized-app>",
+                        "contract": f"{helper_contract} writes and reads /root/.<normalized-app>",
                     },
                 }
             )
@@ -874,7 +922,7 @@ def build_catalog(
             "status_counts": status_counts,
             "method_counts": method_counts,
             "reason_counts": reason_counts,
-            "shared_release_cache_contract_verified": shared_helper_verified,
+            "shared_release_cache_contract_verified": True,
             "helper_upstream_tag_validation": tag_validation,
         },
         "records": records,
@@ -1307,6 +1355,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", default=DEFAULT_REPOSITORY)
     parser.add_argument("--ref", default=DEFAULT_REF)
+    parser.add_argument("--core-repository", default=DEFAULT_CORE_REPOSITORY)
+    parser.add_argument("--core-ref", default=DEFAULT_REF)
+    parser.add_argument(
+        "--core-source-dir", type=Path,
+        help="Local community-scripts/core checkout for split source trees (no download)",
+    )
     parser.add_argument(
         "--source-dir",
         type=Path,
@@ -1346,6 +1400,7 @@ def main(argv: list[str] | None = None) -> int:
     client = GitHubClient()
     commit_sha = "local-source"
     archive_sha = "not-applicable"
+    core_provenance = None
     try:
         if args.source_dir:
             source = args.source_dir.resolve()
@@ -1355,10 +1410,27 @@ def main(argv: list[str] | None = None) -> int:
             source, commit_sha, archive_sha = obtain_snapshot(
                 client, args.repository, args.ref, args.cache_dir.expanduser().resolve()
             )
-        if not (source / "ct").is_dir() or not (source / "misc" / "tools.func").is_file():
+        if not (source / "ct").is_dir() or not (source / "install").is_dir():
             raise CatalogError(f"Not a valid ProxmoxVE source tree: {source}")
+        core_source = None
+        if not (source / "misc" / "tools.func").is_file():
+            if args.core_source_dir:
+                core_source = args.core_source_dir.resolve()
+                core_commit, core_archive = "local-source", "not-applicable"
+            elif args.source_dir:
+                raise CatalogError("Split local source tree: provide --core-source-dir for its shared helpers")
+            else:
+                core_source, core_commit, core_archive = obtain_snapshot(
+                    client, args.core_repository, args.core_ref,
+                    args.cache_dir.expanduser().resolve(), required_paths=("lib/forge.func",),
+                )
+            core_provenance = {
+                "repository": args.core_repository, "ref": args.core_ref,
+                "commit_sha": core_commit, "archive_sha256": core_archive,
+                "source_dir": str(core_source),
+            }
         helpers = load_helper_catalog(args.helpers_cache)
-        catalog, audit, v2 = build_catalog(source, helpers)
+        catalog, audit, v2 = build_catalog(source, helpers, core_source=core_source)
         audit["demoted_helper_markers"] = (
             [] if args.include_helper_markers else demote_generic_helper_markers(catalog, v2, audit)
         )
@@ -1376,6 +1448,7 @@ def main(argv: list[str] | None = None) -> int:
             "ref": args.ref,
             "commit_sha": commit_sha,
             "archive_sha256": archive_sha,
+            "core": core_provenance,
             "source_dir": str(source),
             "generated_at_unix": int(time.time()),
             "generator_sha256": sha256_file(Path(__file__).resolve()),
