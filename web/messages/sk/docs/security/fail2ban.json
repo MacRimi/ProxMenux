@@ -130,7 +130,7 @@
     "monitorEmptyBody": "<code>[proxmenux]</code> jail číta <code>/var/log/proxmenux-auth.log</code>, ktorý je napísaný aplikáciou ProxMenux Monitor Flask – nie zapisovačom journald. Ak nespustíte Monitor, súbor zostane prázdny a jail sa nikdy nespustí. To sa očakáva; konfigurácia jail je neškodná. Ak spustíte Monitor a protokol je prázdny, skontrolujte konfiguráciu protokolovania Flask.",
     "selfBanTitle": "Zakázal som sám seba.",
     "selfBanIntro": "Z konzoly / IPMI / iKVM (alebo inej povolenej IP adresy):",
-    "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
+    "selfBanCode": "fail2ban-client unban <YOUR_IP>\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
     "aptFailTitle": "apt-get zlyhá: ''Unable to locate package fail2ban''",
     "aptFailBody": "Hostiteľovi chýbajú repozitáre Debian (bežné pri minimálnej inštalácii Proxmox). Inštalátor to rozpozná a pred opakovaním vytvorí <code>/etc/apt/sources.list.d/debian.sources</code> so správnym kódovým označením (<code>bookworm</code> / <code>trixie</code>). Ak chyba pretrváva, skontrolujte <code>VERSION_CODENAME</code> v <code>/etc/os-release</code> a dostupnosť URL repozitára.",
     "lockoutTitle": "SSH ma po inštalácii zamkne",

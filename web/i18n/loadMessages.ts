@@ -45,7 +45,7 @@ function readDir(dir: string): Record<string, unknown> {
 
     if (!entry.name.endsWith(".json")) continue
 
-    const parsed = JSON.parse(fs.readFileSync(fullPath, "utf-8"))
+    const parsed = decodeEntities(JSON.parse(fs.readFileSync(fullPath, "utf-8")))
     const base = entry.name.replace(/\.json$/, "")
 
     if (base === "common" || base === "index") {
@@ -57,6 +57,20 @@ function readDir(dir: string): Record<string, unknown> {
   }
 
   return out
+}
+
+// Catalogs write "&lt;x&gt;" so the ICU parser does not read "<x>" as a rich
+// tag, but React renders text, not HTML. ICU quoting ('<') keeps the parser
+// off and renders the literal character.
+function decodeEntities(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value.replace(/&lt;/g, "'<'").replace(/&gt;/g, "'>'").replace(/&amp;/g, "&")
+  }
+  if (Array.isArray(value)) return value.map(decodeEntities)
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decodeEntities(v)]))
+  }
+  return value
 }
 
 function toCamel(name: string): string {
