@@ -105,14 +105,17 @@ _job_is_attached() {
   [[ -n "$storage" ]]
 }
 
-# Reads a key=val pair from the job .env file (handles `printf %q`
-# quoting that _write_job_env produces).
+# Literal systemd expressions, never translated.
+CALENDAR_EXAMPLES="daily, 02:30, Mon..Fri 03:00"
+
 _calendar_is_valid() {
   [[ "${PMX_BACKUP_NO_SYSTEMCTL:-0}" == "1" ]] && return 0
   command -v systemd-analyze >/dev/null 2>&1 || return 0
   systemd-analyze calendar "$1" >/dev/null 2>&1
 }
 
+# Reads a key=val pair from the job .env file (handles `printf %q`
+# quoting that _write_job_env produces).
 _job_env_get() {
   local id="$1" key="$2" f raw
   f=$(_job_file "$id")
@@ -354,6 +357,40 @@ _reconcile_restored_jobs() {
   (( invalid == 0 ))
 }
 
+# systemd rejects a time after daily, weekly or monthly, and a job saved that
+# way has a timer that never fires. Returns the expression systemd accepts.
+_repaired_calendar() {
+  [[ "$1" =~ ^(daily|weekly|monthly)[[:space:]]+([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?)$ ]] || return 1
+  case "${BASH_REMATCH[1]}" in
+    daily) echo "${BASH_REMATCH[2]}" ;;
+    weekly) echo "Mon ${BASH_REMATCH[2]}" ;;
+    monthly) echo "*-*-01 ${BASH_REMATCH[2]}" ;;
+  esac
+}
+
+_repair_job_schedules() {
+  local env_file id on_calendar fixed line
+  for env_file in "$JOBS_DIR"/*.env; do
+    [[ -f "$env_file" ]] || continue
+    id="$(basename "$env_file" .env)"
+    [[ "$(_job_env_get "$id" MANUAL_RUN || echo 0)" == "1" ]] && continue
+    _job_is_attached "$id" && continue
+    on_calendar=$(_job_env_get "$id" ON_CALENDAR || echo "")
+    [[ -n "$on_calendar" ]] || continue
+    _calendar_is_valid "$on_calendar" && continue
+    fixed=$(_repaired_calendar "$on_calendar") || continue
+    _calendar_is_valid "$fixed" || continue
+
+    printf -v line 'ON_CALENDAR=%q' "$fixed"
+    LINE="$line" awk '/^ON_CALENDAR=/ { print ENVIRON["LINE"]; next } { print }' \
+      "$env_file" > "${env_file}.tmp" && mv "${env_file}.tmp" "$env_file" || continue
+    _write_job_units "$id" "$fixed" || continue
+    if [[ "$(_job_env_get "$id" ENABLED || echo 0)" == "1" ]]; then
+      _scheduler_systemctl enable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
 _prompt_retention() {
   local __out_var="$1"
   local last hourly daily weekly monthly yearly
@@ -586,15 +623,15 @@ _create_job() {
   fi
 
   on_calendar=$(dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
-    --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Example: daily, 02:30 or Mon..Fri 03:00")" \
+    --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Examples:") ${CALENDAR_EXAMPLES}" \
     11 72 "daily" 3>&1 1>&2 2>&3) || return 1
   [[ -z "$on_calendar" ]] && return 1
   # A timer with an invalid expression never fires and reports no error.
   while ! _calendar_is_valid "$on_calendar"; do
     dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
-      --msgbox "$(translate "This schedule is not valid. Examples: daily, 02:30 or Mon..Fri 03:00")" 8 72
+      --msgbox "$(translate "This schedule is not valid.")"$'\n'"$(translate "Examples:") ${CALENDAR_EXAMPLES}" 9 72
     on_calendar=$(dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
-      --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Example: daily, 02:30 or Mon..Fri 03:00")" \
+      --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Examples:") ${CALENDAR_EXAMPLES}" \
       11 72 "$on_calendar" 3>&1 1>&2 2>&3) || return 1
     [[ -z "$on_calendar" ]] && return 1
   done
@@ -995,6 +1032,11 @@ main_menu() {
 if [[ "${1:-}" == "--reconcile-restored" ]]; then
   _reconcile_restored_jobs
   exit $?
+fi
+
+if [[ "${1:-}" == "--repair-schedules" ]]; then
+  _repair_job_schedules
+  exit 0
 fi
 
 load_language
