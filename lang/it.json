@@ -7513,6 +7513,7 @@
   "This removes the storage from Proxmox. The iSCSI target is not affected.": "Ciò rimuove lo storage da Proxmox. Il target iSCSI non è interessato.",
   "This replaces the currently installed keyfile.": "Sostituisce il file di chiavi attualmente installato.",
   "This returns available IQNs.": "Ciò restituisce gli IQN disponibili.",
+  "This schedule is not valid.": "Questa pianificazione non è valida.",
   "This schedule is not valid. Examples: daily, 02:30 or Mon..Fri 03:00": "Questa pianificazione non è valida. Esempi: tutti i giorni, 02:30 o lunedì..venerdì 03:00",
   "This script cannot be executed from the Proxmox web terminal.": "Questo script non può essere eseguito dal terminale web Proxmox.",
   "This script must be run as root.": "Questo script deve essere eseguito come root.",
