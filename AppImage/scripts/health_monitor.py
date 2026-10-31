@@ -385,6 +385,10 @@ class HealthMonitor:
     
     # PVE Critical Services
     PVE_SERVICES = ['pveproxy', 'pvedaemon', 'pvestatd', 'pve-cluster']
+    # A restart passes through these for a few seconds; a service that stays
+    # in one of them longer is not restarting, it is failing to.
+    SERVICE_TRANSIENT_STATES = ('activating', 'deactivating')
+    SERVICE_SETTLE_SECONDS = 8
     
     # P2 fix: Pre-compiled regex patterns for performance (avoid re-compiling on every line)
     _BENIGN_RE = None
@@ -3893,6 +3897,28 @@ class HealthMonitor:
             print(f"[HealthMonitor] VMs/CTs persistence check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'VM/CT check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
     
+    def _service_state(self, service: str) -> str:
+        """The state of a service, once a restart in progress has finished."""
+        deadline = time.time() + self.SERVICE_SETTLE_SECONDS
+        while True:
+            state = subprocess.run(
+                ['systemctl', 'is-active', service],
+                capture_output=True,
+                text=True,
+                timeout=2
+            ).stdout.strip()
+            if state not in self.SERVICE_TRANSIENT_STATES or time.time() >= deadline:
+                return state
+            time.sleep(1)
+
+    def _package_update_running(self) -> bool:
+        """An update stops and restarts the services it replaces."""
+        try:
+            from notification_events import is_apt_active_on_host
+            return is_apt_active_on_host()
+        except Exception:
+            return False
+
     def _check_pve_services(self) -> Dict[str, Any]:
         """
         Check critical Proxmox services with persistence tracking.
@@ -3923,20 +3949,20 @@ class HealthMonitor:
 
             for service in services_to_check:
                 try:
-                    result = subprocess.run(
-                        ['systemctl', 'is-active', service],
-                        capture_output=True,
-                        text=True,
-                        timeout=2
-                    )
-
-                    status = result.stdout.strip()
-                    if result.returncode != 0 or status != 'active':
+                    status = self._service_state(service)
+                    # A service reloading its configuration keeps running.
+                    if status not in ('active', 'reloading'):
                         failed_services.append(service)
                         service_details[service] = status or 'inactive'
                 except Exception:
                     failed_services.append(service)
                     service_details[service] = 'error'
+
+            # During a package update nothing is concluded about these services
+            # in either direction: the next check after it does that.
+            in_update = []
+            if failed_services and self._package_update_running():
+                in_update, failed_services = failed_services, []
 
             # Auto-clear errors for services that are healthy this cycle.
             # Lifted out of the `if failed_services:` branch so it runs
@@ -3945,7 +3971,7 @@ class HealthMonitor:
             # active forever (the dismissed-only path returned before the
             # cleanup loop). Audit Tier 5 — Health stack.
             for svc in services_to_check:
-                if svc not in failed_services:
+                if svc not in failed_services and svc not in in_update:
                     error_key = f'{service_prefix}_service_{svc}'
                     if health_persistence.is_error_active(error_key):
                         health_persistence.clear_error(error_key)
@@ -3961,6 +3987,12 @@ class HealthMonitor:
                         'detail': f'Service is {state}',
                         'error_key': error_key,
                         'dismissable': True,
+                    }
+                elif svc in in_update:
+                    checks[svc] = {
+                        'status': 'OK',
+                        'detail': f"Service is {service_details.get(svc, 'inactive')}",
+                        'error_key': error_key,
                     }
                 else:
                     checks[svc] = {
