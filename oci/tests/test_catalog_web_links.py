@@ -56,6 +56,24 @@ class CatalogWebLinks(unittest.TestCase):
         self.assertEqual((check["scheme"], check["port"]), ("http", 9696))
         self.assertNotIn("accept_non_http", check)
 
+    def test_ollama_links_to_its_api_instead_of_claiming_a_web_ui(self):
+        template = self.catalog.compose("ollama")
+        launch = template["catalog_ui"]["launch"]
+        self.assertEqual(launch, {"scheme": "http", "port": 11434, "path": "/api/version"})
+        endpoint = template["first_run"]["endpoints"][0]
+        self.assertEqual(endpoint["label"], "Ollama API (no Web UI)")
+        self.assertEqual({key: endpoint[key] for key in launch}, launch)
+        self.assertEqual(endpoint["source"], "ollama-http-api")
+        self.assertNotIn("Web interface", template["catalog_ui"]["description"]["en_US"])
+        self.assertIn("does not include an interactive Web UI",
+                      template["catalog_ui"]["description"]["en_US"])
+        check = transaction.effective_healthcheck(template)
+        self.assertEqual((check["scheme"], check["port"], check["path"]),
+                         ("http", 11434, "/api/version"))
+        notes = oci_description.render(template, "", "ollama", "192.0.2.10")
+        self.assertIn('href="http://192.0.2.10:11434/api/version"', notes)
+        self.assertIn("Ollama API (no Web UI)", notes)
+
     @patch("proxmenux_oci.installer.host.gpus", return_value={"intel": [], "amd": [], "nvidia": False})
     @patch("proxmenux_oci.i18n.language", return_value="en")
     @patch("proxmenux_oci.installer.host.storages", side_effect=storages)
