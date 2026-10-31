@@ -153,12 +153,13 @@ class AuthentikRecipeTests(unittest.TestCase):
         self.assertNotIn("frontend", services["postgresql"])
 
     def test_first_run_discloses_the_initial_admin_setup_without_faking_a_password(self):
+        # akadmin has no password until it is created in the setup wizard,
+        # which opens from the root address.
         first_run = self.curated["first_run"]
         self.assertEqual(first_run["endpoints"][0]["port"], 9000)
-        credential = first_run["credentials"][0]
-        self.assertEqual(credential["username"], "akadmin")
-        self.assertIsNone(credential["password"])
-        self.assertTrue(credential["change_required"])
+        self.assertEqual(first_run["endpoints"][0]["path"], "/")
+        self.assertEqual(first_run["credentials"], [])
+        self.assertIn("akadmin", self.curated["proxmox"]["stack_completion_notes"][0])
 
 
 if __name__ == "__main__":

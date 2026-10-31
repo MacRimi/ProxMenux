@@ -462,16 +462,7 @@
         "source": "official-compose"
       }
     ],
-    "credentials": [
-      {
-        "label": "Initial administrator account",
-        "type": "static-default",
-        "username": "akadmin",
-        "password": null,
-        "change_required": true,
-        "source": "Authentik documentation; set the akadmin password during the first-run setup"
-      }
-    ]
+    "credentials": []
   },
   "proxmox": {
     "runtime": "native-oci-lxc",
@@ -561,7 +552,10 @@
     ],
     "custom_compose_stack": true,
     "custom_compose_interpolated": false,
-    "stack_image_entrypoints": {}
+    "stack_image_entrypoints": {},
+    "stack_completion_notes": [
+      "Open the web address and create the password of the akadmin user in the first-run setup."
+    ]
   },
   "compatibility": {
     "automatic_install_candidate": true,
