@@ -34,7 +34,8 @@
     "repository": "https://github.com/goauthentik/authentik",
     "tips": [
       "The server and worker share /data and /templates through host directories; those directories are not included in Proxmox CT backups.",
-      "The worker Docker-socket mount is omitted. Use the embedded outpost or deploy and manage a separate outpost manually."
+      "The worker Docker-socket mount is omitted. Use the embedded outpost or deploy and manage a separate outpost manually.",
+      "The worker gets an interface on the selected Proxmox bridge for outbound access; PostgreSQL stays on the private stack network."
     ],
     "mini_changelog": [],
     "display_version": "2026.8.5",
@@ -213,7 +214,7 @@
         "depends_on": [
           "postgresql"
         ],
-        "frontend_network": false,
+        "frontend_network": true,
         "private_network": true,
         "compose": {
           "command": "worker",
@@ -311,7 +312,7 @@
       "private_creation": "automatic-create-if-missing",
       "private_address_allocation": "automatic-static-address-per-service",
       "service_discovery": "private-addresses-with-compose-service-host-aliases",
-      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "dependency_external_access": "worker-through-selected-proxmox-bridge; postgresql-private-only",
       "prompt_user_for_private_network": false
     },
     "storage": [

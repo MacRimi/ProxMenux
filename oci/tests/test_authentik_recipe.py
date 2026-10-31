@@ -2,10 +2,16 @@
 
 import json
 from pathlib import Path
+import sys
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from proxmenux_oci.installer import DEFAULT_MODE
+from proxmenux_oci.stack import DefaultsUI, build_stack
 
 
 class AuthentikRecipeTests(unittest.TestCase):
@@ -129,6 +135,22 @@ class AuthentikRecipeTests(unittest.TestCase):
             self.services["server"]["compose"]["ports"],
             ["9000:9000", "9443:9443"],
         )
+
+    def test_worker_gets_lan_interface_while_postgresql_stays_private(self):
+        selected = {"worker": "192.0.2.21/24", "server": "192.0.2.22/24"}
+        with patch("proxmenux_oci.installer.ask_storage", return_value="local-zfs"), \
+             patch("proxmenux_oci.installer.ask_bridge", return_value="vmbr0"), \
+             patch("proxmenux_oci.host.timezone", return_value="UTC"), \
+             patch("proxmenux_oci.network.ask_addresses", return_value=(selected, "192.0.2.1")) as ask_addresses:
+            plan = build_stack(self.curated, DefaultsUI(), DEFAULT_MODE)
+
+        services = {service["name"]: service for service in plan["services"]}
+        self.assertEqual(ask_addresses.call_args.args[2], ["worker", "server"])
+        self.assertTrue(services["worker"]["frontend"])
+        self.assertEqual(services["worker"]["frontend_ipv4"], selected["worker"])
+        self.assertTrue(services["server"]["frontend"])
+        self.assertEqual(services["server"]["frontend_ipv4"], selected["server"])
+        self.assertNotIn("frontend", services["postgresql"])
 
     def test_first_run_discloses_the_initial_admin_setup_without_faking_a_password(self):
         first_run = self.curated["first_run"]

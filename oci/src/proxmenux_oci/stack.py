@@ -655,8 +655,14 @@ def build_stack(template, ui, mode='advanced'):
         from .custom_mounts import ask_stack_custom_mounts
         ask_stack_custom_mounts(ui, drafts, volumes)
     bridge = ask_bridge(ui, translate('Access bridge'), defaults['bridge'], mode)
-    frontend_names = [s['name'] for s in services if s['name'] == template['compose_stack']['main_service'] or (custom and service_endpoint(s))]
-    address_labels = frontend_names if custom else ['']
+    frontend_names = [
+        s['name'] for s in services
+        if (s['name'] == template['compose_stack']['main_service']
+            or s.get('frontend_network') is True
+            or (custom and service_endpoint(s)))
+    ]
+    labelled_frontends = custom or len(frontend_names) > 1
+    address_labels = frontend_names if labelled_frontends else ['']
     addresses, gateway = access.ask_addresses(ui, bridge, address_labels)
     timezone = quiet.ask(translate('Timezone'), host.timezone())
     envs = resolve_environments(services, timezone, generators, literal=literal)
@@ -749,7 +755,7 @@ def build_stack(template, ui, mode='advanced'):
             plans[-1]['public_environment_bindings'] = public_bindings[s['name']]
         if s['name'] in frontend_names and s['name'] not in jobs:
             plans[-1]['frontend'] = True
-            plans[-1]['frontend_ipv4'] = addresses[s['name']] if custom else addresses['']
+            plans[-1]['frontend_ipv4'] = addresses[s['name']] if labelled_frontends else addresses['']
     if mode != DEFAULT_MODE:
         from .extra_devices import ask_stack_extra_devices
         ask_stack_extra_devices(ui, plans)
