@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "De flesta installeras av efterinstallationsskriptet",
-    "body": "Om du körde ProxMenux efterinstallationsskript med standardvalen är de flesta verktygen redan installerade. För det som saknas erbjuder <utilsLink>installationsprogrammet för systemverktyg</utilsLink> fördefinierade grupper, till exempel grundverktyg, utveckling, nätverk och analys."
+    "body": "De flesta av dessa verktyg är inte installerade som standard, inte ens av efterinstallationen med standardvalen. För att lägga till dem erbjuder ProxMenux <utilsLink>installationsprogram för systemverktyg</utilsLink> dem som fördefinierade grupper, till exempel grundverktyg, utveckling, nätverk och analys."
   },
   "commandGroups": [
     {

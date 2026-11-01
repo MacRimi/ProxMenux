@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "La mayoría se instalan con Post-instalación",
-    "body": "Si ejecutaste el script post-instalación de ProxMenux con las selecciones por defecto, la mayoría de estas herramientas ya están instaladas. Para cualquiera que falte, el <utilsLink>Instalador de utilidades del sistema</utilsLink> de ProxMenux las ofrece como grupos predefinidos (basic, dev, network, analysis, …)."
+    "body": "La mayoría de estas herramientas no vienen instaladas por defecto, ni siquiera con el script post-instalación y sus selecciones por defecto. Para añadirlas, el <utilsLink>Instalador de utilidades del sistema</utilsLink> de ProxMenux las ofrece como grupos predefinidos (basic, dev, network, analysis, …)."
   },
   "commandGroups": [
     {

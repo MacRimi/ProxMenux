@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Was dieses Skript macht",
-    "body": "Der Windows-Ablauf fragt nach der ISO-Quelle: UUP Dump oder eine lokale Kopie unter <code>/var/lib/vz/template/iso</code>. Danach startet der gemeinsame VM-Assistent mit Windows-Vorgaben: <code>q35</code>, OVMF und TPM 2.0. Die VirtIO-Treiber-ISO wird als zweites CD-ROM eingebunden; die VM ist damit bereit für den Windows-Installer."
+    "body": "Der Windows-Ablauf fragt nach der ISO-Quelle: UUP Dump oder eine lokale ISO aus einem beliebigen Proxmox-Speicher mit ISO-Inhalt. Danach startet der gemeinsame VM-Assistent mit Windows-Vorgaben: <code>q35</code>, OVMF und TPM 2.0. Die VirtIO-Treiber-ISO wird als zweites CD-ROM eingebunden; die VM ist damit bereit für den Windows-Installer."
   },
   "image": {
     "alt": "ProxMenux Windows Installationsoptionen",
@@ -165,7 +165,7 @@
     ],
     "uupLearnMore": "Erfahren Sie mehr über UUP Dump ISO Creator",
     "localTitle": "Installieren mit lokaler ISO",
-    "localBody": "Verwendet eine Windows-ISO, die Sie bereits in den lokalen Speicher des Hosts hochgeladen haben (<code>/var/lib/vz/template/iso</code>). Das Skript listet jede Nicht-VirtIO ISO auf, die es findet, und lässt Sie eine auswählen.",
+    "localBody": "Verwendet eine Windows-ISO, die Sie bereits in einen beliebigen Proxmox-Speicher mit ISO-Inhalt hochgeladen haben (local, NFS, CIFS…). Das Skript listet jede Nicht-VirtIO ISO auf, die es findet, mit ihrem Speicher und lässt Sie eine auswählen.",
     "localImageAlt": "Lokales ISO-Auswahlmenü",
     "localImageCaption": "Lokales ISO-Auswahlmenü"
   },

@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Hantering av VM:ar och CT:er",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots och kloning."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull, redigering av konfigurationsfiler."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Nätverkskommandon",
-        "description": "ip / ss / nmcli, kontroll av nätverksbryggor, ping / traceroute, DNS-uppslagningar och fail2ban-client."
+        "description": "ip / ss / nmcli, kontroll av nätverksbryggor, ping / traceroute / mtr, DNS-uppslagningar, pve-firewall och tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "ZFS-hantering",
-        "description": "zpool / zfs för status, dataset, snapshots, send/receive, ARC-justering och TRIM."
+        "description": "zpool / zfs för status, dataset, snapshots, send/receive, scrubs och arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Säkerhetskopiering och återställning",
-        "description": "vzdump, qmrestore / pct restore, verktyg för Proxmox Backup Server och snapshot-åtgärder."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf och säkerhetskopieringsjobb, listning och rensning av dumpar."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "System CLI-verktyg",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — verktyg för daglig administration."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: verktyg för daglig administration."
       }
     ]
   },

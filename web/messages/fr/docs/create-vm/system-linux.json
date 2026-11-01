@@ -8,12 +8,12 @@
   },
   "header": {
     "title": "Créer une VM : système Linux",
-    "description": "Créez une VM Linux sur Proxmox VE. ProxMenux propose un catalogue d’ISO Linux officielles à télécharger et un sélecteur d’ISO locales. Chaque parcours passe par l’assistant VM commun, le plan de stockage et l’assistant facultatif de passthrough GPU.",
+    "description": "Créez une VM Linux sur Proxmox VE. ProxMenux propose un catalogue d’ISO Linux officielles à télécharger, un sélecteur d’ISO locales et les scripts Cloud-Init de la communauté. Chaque parcours passe par l’assistant VM commun, le plan de stockage et l’assistant facultatif de passthrough GPU.",
     "section": "Machines virtuelles"
   },
   "intro": {
     "title": "Ce que ce script fait",
-    "body": "Choisissez une ISO Linux officielle à télécharger automatiquement ou une ISO locale déjà chargée. L’assistant commun passe ensuite par CPU, RAM et BIOS, le plan de stockage, le passthrough GPU facultatif et la création de la VM."
+    "body": "Le sélecteur Linux propose trois options : une ISO officielle de la liste sélectionnée (téléchargée automatiquement), une ISO locale que vous avez chargée vous-même, ou un script Cloud-Init des Helper-Scripts de la communauté (Arch, Debian, Ubuntu). Pour les deux premières, la suite du flux est l’assistant commun : CPU, RAM et BIOS, plan de stockage, passthrough GPU facultatif et création de la VM."
   },
   "image": {
     "alt": "Options d'installation de ProxMenux Linux",
@@ -145,7 +145,7 @@
     "officialImageAlt": "Sélection de distribution Linux",
     "officialImageCaption": "Sélection de distribution Linux",
     "localHeading": "ISO locale",
-    "localBody": "Utilise une ISO Linux déjà présente dans <code>/var/lib/vz/template/iso</code>. Le script affiche tous les fichiers <code>*.iso</code> trouvés et vous permet d’en choisir un.",
+    "localBody": "Utilise toute ISO Linux déjà présente dans un stockage Proxmox avec contenu ISO (local, NFS, CIFS…). Le script affiche toutes les ISO trouvées, avec leur stockage, et vous permet d’en choisir une.",
     "localImageAlt": "Menu local de sélection ISO",
     "localImageCaption": "Menu local de sélection ISO",
     "distros": [

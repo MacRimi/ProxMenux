@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Gestión de VM y CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots y clonación."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull y edición de ficheros de configuración."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Comandos de red",
-        "description": "ip / ss / nmcli, inspección de bridges, ping / traceroute, consultas DNS y fail2ban-client."
+        "description": "ip / ss / nmcli, inspección de bridges, ping / traceroute / mtr, consultas DNS, pve-firewall y tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Gestión de ZFS",
-        "description": "Comandos zpool / zfs para estado, datasets, snapshots, send/receive, ajuste de ARC y TRIM."
+        "description": "Comandos zpool / zfs para estado, datasets, snapshots, send/receive, scrubs y arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Backup y restauración",
-        "description": "vzdump, qmrestore / pct restore, ayudas para Proxmox Backup Server, operaciones de snapshot."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf y trabajos de backup, listado y limpieza de dumps."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Herramientas CLI del sistema",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch: herramientas de administración para el día a día."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: herramientas de administración para el día a día."
       }
     ]
   },

@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "La plupart sont installés par le script de post-installation",
-    "body": "Si vous avez exécuté le script de post-installation avec les choix par défaut, la plupart de ces outils sont déjà installés. Pour les outils manquants, l’<utilsLink>installateur d’utilitaires système</utilsLink> de ProxMenux propose des groupes prédéfinis : base, développement, réseau, analyse, etc."
+    "body": "La plupart de ces outils ne sont pas installés par défaut, pas même par la post-installation avec ses choix par défaut. Pour les ajouter, l’<utilsLink>installateur d’utilitaires système</utilsLink> de ProxMenux les propose sous forme de groupes prédéfinis : base, développement, réseau, analyse, etc."
   },
   "commandGroups": [
     {

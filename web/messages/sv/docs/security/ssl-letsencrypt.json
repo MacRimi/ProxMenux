@@ -138,7 +138,7 @@
     "bodyRich": "Att spara förändringen skriver <code>/etc/proxmenux/ssl_config.json</code> och utlöser en omstart av <code>proxmenux-monitor</code> systemd-enheten. Fliken webbläsare kommer att förlora sin nuvarande anslutning - ladda den på <code>https://&lt;host&gt;:8008/</code>. Den första belastningen med en Let's Encrypt-cert bör inte visa någon varning; med Proxmox självsignerad cert kommer webbläsaren att kräva ett undantag, samma som för port 8006.",
     "reverse": {
       "heading": "Omvända proxyservrar och webhooks",
-      "bodyRich": "När Monitorn byter till HTTPS, Proxmox VE webhook URL-adresser registrerade för meddelanden också vända från <code>http://</code> till <code>https://</code> automatiskt. Befintliga webhook-poster skrivs om nästa gång en anmälningsregel sparas eller återupptäcks, så ingen manuell redigering av Proxmox-meddelandekonfig behövs."
+      "bodyRich": "När Monitorn byter till HTTPS vänds Proxmox VE webhook URL-adresser registrerade för meddelanden också från <code>http://</code> till <code>https://</code> automatiskt. Om en ProxMenux-webhook redan är registrerad i Proxmox registreras den på nytt med det nya schemat när HTTPS aktiveras eller inaktiveras, så ingen manuell redigering av Proxmox-meddelandekonfig behövs."
     }
   },
   "trustCa": {

@@ -8,12 +8,12 @@
   },
   "header": {
     "title": "Vytvoriť VM: systém Linux",
-    "description": "Vytvorte VM Linux na Proxmox VE. ProxMenux ponúka vybraný katalóg oficiálnych ISO Linuxu na stiahnutie aj výber lokálneho ISO. Všetky možnosti používajú spoločného sprievodcu VM, plán úložiska a voliteľného sprievodcu GPU passthrough.",
+    "description": "Vytvorte VM Linux na Proxmox VE. ProxMenux ponúka vybraný katalóg oficiálnych ISO Linuxu na stiahnutie, výber lokálneho ISO a komunitné skripty Cloud-Init. Všetky možnosti používajú spoločného sprievodcu VM, plán úložiska a voliteľného sprievodcu GPU passthrough.",
     "section": "Virtuálne stroje"
   },
   "intro": {
     "title": "Čo tento skript robí",
-    "body": "Vyberiete oficiálne ISO Linuxu na automatické stiahnutie alebo už nahrané lokálne ISO. Spoločný sprievodca potom nastaví CPU, RAM a BIOS, plán úložiska, voliteľný GPU passthrough a vytvorí VM."
+    "body": "Výber Linuxu ponúka tri možnosti: oficiálne ISO zo zoznamu (automaticky stiahnuté), lokálne ISO, ktoré ste nahrali sami, alebo skript Cloud-Init z komunitných Helper-Scripts (Arch, Debian, Ubuntu). Pri prvých dvoch je zvyšok postupu spoločný sprievodca: CPU, RAM a BIOS, plán úložiska, voliteľný GPU passthrough a vytvorenie VM."
   },
   "image": {
     "alt": "Možnosti inštalácie ProxMenux Linux",
@@ -145,7 +145,7 @@
     "officialImageAlt": "Výber distribúcie Linuxu",
     "officialImageCaption": "Výber distribúcie Linuxu",
     "localHeading": "Miestne ISO",
-    "localBody": "Použije ISO Linuxu, ktoré už je v <code>/var/lib/vz/template/iso</code>. Skript zobrazí všetky nájdené súbory <code>*.iso</code> a umožní jeden vybrať.",
+    "localBody": "Použije ľubovoľné ISO Linuxu, ktoré už je v úložisku Proxmoxu s obsahom ISO (local, NFS, CIFS…). Skript zobrazí všetky nájdené ISO spolu s ich úložiskom a umožní jedno vybrať.",
     "localImageAlt": "Lokálne menu výberu ISO",
     "localImageCaption": "Lokálne menu výberu ISO",
     "distros": [

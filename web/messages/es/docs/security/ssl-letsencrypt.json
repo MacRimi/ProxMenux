@@ -138,7 +138,7 @@
     "bodyRich": "Guardar el cambio escribe <code>/etc/proxmenux/ssl_config.json</code> y dispara un reinicio de la unidad systemd <code>proxmenux-monitor</code>. La pestaña del navegador perderá su conexión actual — recárgala en <code>https://&lt;host&gt;:8008/</code>. La primera carga con un certificado Let's Encrypt no debería mostrar warning; con el certificado self-signed de Proxmox el navegador requerirá una excepción, la misma que para el puerto 8006.",
     "reverse": {
       "heading": "Proxies inversos y webhooks",
-      "bodyRich": "Cuando el Monitor cambia a HTTPS, las URLs de webhook de Proxmox VE registradas para notificaciones también pasan de <code>http://</code> a <code>https://</code> automáticamente. Las entradas de webhook existentes se reescriben la próxima vez que una regla de notificación se guarda o se vuelve a detectar, así que no hace falta edición manual de la configuración de notificaciones de Proxmox."
+      "bodyRich": "Cuando el Monitor cambia a HTTPS, las URLs de webhook de Proxmox VE registradas para notificaciones también pasan de <code>http://</code> a <code>https://</code> automáticamente. Si ya hay un webhook de ProxMenux registrado en Proxmox, se vuelve a registrar con el nuevo esquema al activar o desactivar HTTPS, así que no hace falta edición manual de la configuración de notificaciones de Proxmox."
     }
   },
   "trustCa": {

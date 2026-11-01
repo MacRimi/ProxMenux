@@ -130,7 +130,7 @@
     "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
     "sshTitle": "La auditoría muestra \"Warning: Test SSH-7408 — MaxAuthTries set incorrectly\"",
     "sshIntro": "El demonio SSH permite demasiados intentos de autenticación por conexión. O bien instala <link>Fail2Ban</link> desde ProxMenux (que establece <code>MaxAuthTries=3</code> automáticamente) o edita <code>/etc/ssh/sshd_config</code> a mano:",
-    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "sshCode": "sed -i -E 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
     "scoreTitle": "La puntuación bajó tras una actualización de Proxmox",
     "scoreBody": "Ejecuta <code>lynis update info</code> primero — una actualización de Lynis puede haber añadido controles nuevos que marcan configuración existente. Actualiza Lynis desde el menú, vuelve a auditar y atiende los nuevos hallazgos."
   },

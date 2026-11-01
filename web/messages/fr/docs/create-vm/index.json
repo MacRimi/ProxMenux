@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Ouverture du menu",
-    "body": "Dans le menu principal de ProxMenux, sélectionnez <strong>Créer VM</strong>. Vous verrez ceci :",
+    "body": "Dans le menu principal de ProxMenux, sélectionnez <strong>Create VM from template or script</strong>. Vous verrez ceci :",
     "imageAlt": "Créer un répartiteur VM avec les options 3 ProxMenux (NAS / Windows / Linux) suivi de la section Scripts communautaires (macOS / Autres)"
   },
   "families": {
@@ -52,7 +52,7 @@
         "description": "Éditions Windows 10, 11 et Server avec des réglages adaptés (q35 + OVMF + TPM 2.0) et l’ISO des pilotes VirtIO déjà montée.",
         "bullets": [
           "UUP Dump pour les ISO à jour",
-          "Ou ISO local à partir de /var/lib/vz/template/iso",
+          "Ou une ISO locale depuis n’importe quel stockage ISO de Proxmox",
           "TPM 2.0 ajouté automatiquement",
           "ISO des pilotes VirtIO connectée à ide3",
           "canal d'agent invité activé"
@@ -80,7 +80,7 @@
     "title": "Scripts communautaires (non documentés ici)",
     "intro": "Les deux entrées sous le séparateur <em>Scripts externes</em> exécutent du code qui <strong>ne fait pas partie de ProxMenux</strong>. Elles sont donc volontairement exclues de cette documentation :",
     "macosRich": "<strong>Système macOS</strong> : exécute l’installateur externe <osxLink>OSX-PROXMOX</osxLink>. Il clone le dépôt d’origine, prépare l’hôte et <strong>redémarre automatiquement à la fin</strong>. Consultez la documentation du projet.",
-    "othersRich": "<strong>Autres systèmes (basés sur Linux)</strong> : charge une sélection d’installateurs communautaires pour serveurs domestiques, routeurs, pare-feu, etc. Chaque script est maintenu hors de ProxMenux."
+    "othersRich": "<strong>Autres systèmes (basés sur Linux)</strong> : charge une courte liste de VM Linux communautaires préconstruites : Home Assistant OS, une VM Docker (Debian + SSH + Docker) et Nextcloud. Chaque script communautaire est maintenu hors de ProxMenux."
   },
   "afterPick": {
     "heading": "Ce qui se passe après avoir choisi un OS",

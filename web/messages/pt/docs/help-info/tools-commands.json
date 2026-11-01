@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "A maioria é instalada pelo script de pós-instalação",
-    "body": "Se executou o script de pós-instalação com as opções predefinidas, a maioria destas ferramentas já está instalada. Para as que faltarem, o <utilsLink>instalador de utilitários de sistema</utilsLink> do ProxMenux oferece grupos predefinidos: base, desenvolvimento, rede, análise, entre outros."
+    "body": "A maioria destas ferramentas não vem instalada por padrão, nem mesmo com a pós-instalação e as suas opções predefinidas. Para as adicionar, o <utilsLink>instalador de utilitários de sistema</utilsLink> do ProxMenux oferece grupos predefinidos: base, desenvolvimento, rede, análise, entre outros."
   },
   "commandGroups": [
     {

@@ -8,12 +8,12 @@
   },
   "header": {
     "title": "Skapa VM: Linux-system",
-    "description": "Skapa en Linux-VM på Proxmox VE. ProxMenux har en katalog med utvalda officiella Linux-ISO:er för nedladdning och en väljare för lokala ISO:er. Alla alternativ använder den gemensamma VM-guiden, lagringsplanen och den valfria guiden för GPU-passthrough.",
+    "description": "Skapa en Linux-VM på Proxmox VE. ProxMenux har en katalog med utvalda officiella Linux-ISO:er för nedladdning, en väljare för lokala ISO:er och gemenskapens Cloud-Init-skript. Alla alternativ använder den gemensamma VM-guiden, lagringsplanen och den valfria guiden för GPU-passthrough.",
     "section": "Virtuella maskiner"
   },
   "intro": {
     "title": "Vad skriptet gör",
-    "body": "Välj en officiell Linux-ISO för automatisk nedladdning eller en lokal ISO som redan har laddats upp. Den gemensamma guiden går sedan igenom CPU, RAM och BIOS, lagringsplan, valfri GPU-passthrough och skapandet av VM:n."
+    "body": "Linux-väljaren erbjuder tre alternativ: en officiell ISO från den utvalda listan (hämtas automatiskt), en lokal ISO som du själv har laddat upp, eller ett Cloud-Init-skript från gemenskapens Helper-Scripts (Arch, Debian, Ubuntu). För de två första är resten av flödet den gemensamma guiden: CPU / RAM / BIOS, lagringsplan, valfri GPU-passthrough och skapandet av VM:n."
   },
   "image": {
     "alt": "ProxMenux Linux installationsalternativ",
@@ -145,7 +145,7 @@
     "officialImageAlt": "Val av Linux-distribution",
     "officialImageCaption": "Val av Linux-distribution",
     "localHeading": "Lokalt ISO",
-    "localBody": "Använder en Linux-ISO som redan finns i <code>/var/lib/vz/template/iso</code>. Skriptet listar alla <code>*.iso</code>-filer det hittar och låter dig välja en.",
+    "localBody": "Använder en Linux-ISO som redan finns i en Proxmox-lagring med ISO-innehåll (local, NFS, CIFS…). Skriptet listar alla ISO-filer det hittar, med respektive lagring, och låter dig välja en.",
     "localImageAlt": "Lokala ISO urvalsmenyn",
     "localImageCaption": "Lokala ISO urvalsmenyn",
     "distros": [

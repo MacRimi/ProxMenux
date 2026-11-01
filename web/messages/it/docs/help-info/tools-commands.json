@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "La maggior parte viene installata dopo l’installazione",
-    "body": "Se hai eseguito lo script di post-installazione con le scelte predefinite, la maggior parte degli strumenti è già installata. Per quelli mancanti, l’<utilsLink>installazione delle utilità di sistema</utilsLink> di ProxMenux offre gruppi predefiniti: base, sviluppo, rete, analisi e altri."
+    "body": "La maggior parte di questi strumenti non è installata per impostazione predefinita, nemmeno dallo script di post-installazione con le scelte predefinite. Per aggiungerli, l’<utilsLink>installazione delle utilità di sistema</utilsLink> di ProxMenux offre gruppi predefiniti: base, sviluppo, rete, analisi e altri."
   },
   "commandGroups": [
     {

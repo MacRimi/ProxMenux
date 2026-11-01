@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Die meisten werden nach der Installation eingerichtet",
-    "body": "Wenn Sie das ProxMenux-Skript nach der Installation mit der Standardauswahl ausgeführt haben, sind die meisten Werkzeuge bereits vorhanden. Fehlende Werkzeuge bietet der <utilsLink>Installer für Systemwerkzeuge</utilsLink> in vordefinierten Gruppen an, etwa Basis, Entwicklung, Netzwerk und Analyse."
+    "body": "Die meisten dieser Werkzeuge sind standardmäßig nicht installiert, auch nicht durch Post-Install mit seiner Standardauswahl. Zum Hinzufügen bietet der <utilsLink>Installer für Systemwerkzeuge</utilsLink> von ProxMenux sie in vordefinierten Gruppen an, etwa Basis, Entwicklung, Netzwerk und Analyse."
   },
   "commandGroups": [
     {

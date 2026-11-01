@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "VM- und CT-Verwaltung",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, Snapshots und Klonen."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull sowie Bearbeiten von Konfigurationsdateien."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Netzwerkbefehle",
-        "description": "ip / ss / nmcli, Prüfung von Netzwerkbrücken, ping / traceroute, DNS-Abfragen und fail2ban-client."
+        "description": "ip / ss / nmcli, Prüfung von Netzwerkbrücken, ping / traceroute / mtr, DNS-Abfragen, pve-firewall und tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "ZFS-Verwaltung",
-        "description": "zpool / zfs für Status, Datasets, Snapshots, send/receive, ARC-Anpassung und TRIM."
+        "description": "zpool / zfs für Status, Datasets, Snapshots, send/receive, Scrubs, arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Sicherung und Wiederherstellung",
-        "description": "vzdump, qmrestore / pct restore, Hilfswerkzeuge für Proxmox Backup Server und Snapshot-Vorgänge."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf und Backup-Jobs, Auflisten und Bereinigen von Dumps."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "System-CLI-Tools",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — Administrationswerkzeuge für den Alltag."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: Administrationswerkzeuge für den Alltag."
       }
     ]
   },

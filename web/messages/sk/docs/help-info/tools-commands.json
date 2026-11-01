@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Väčšinu nainštaluje skript po inštalácii",
-    "body": "Ak ste spustili skript ProxMenuxu po inštalácii s predvoleným výberom, väčšina nástrojov je už nainštalovaná. Chýbajúce nástroje ponúka <utilsLink>inštalátor systémových nástrojov</utilsLink> v skupinách ako základné, vývoj, sieť a analýza."
+    "body": "Väčšina týchto nástrojov nie je nainštalovaná predvolene, ani po Post-Install s predvoleným výberom. Na ich doplnenie ich <utilsLink>inštalátor systémových nástrojov</utilsLink> v ProxMenuxe ponúka v preddefinovaných skupinách (základné, vývoj, sieť, analýza, …)."
   },
   "commandGroups": [
     {

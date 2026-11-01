@@ -65,6 +65,6 @@
   },
   "componentStatus": {
     "heading": "Komponentenstatus",
-    "body": "Beide Installateure registrieren ihren Status in <code>/usr/local/share/proxmenux/components_status.json</code> unter der Kategorie <code>security</code>. ProxMenux verwendet diese Datei, um zu entscheiden, ob die Installation oder das Menü bei nachfolgenden Durchläufen angezeigt werden soll, und die gleichen Daten speisen die Dashboards im ProxMenux Monitor, wenn vorhanden."
+    "body": "Beide Installateure registrieren ihren Status in <code>/usr/local/share/proxmenux/components_status.json</code> unter der Kategorie <code>security</code>. Die Menüs entscheiden zwischen Installation und Verwaltung, indem sie die installierte Binärdatei direkt erkennen (<code>fail2ban-client</code>, <code>lynis</code>); die Datei speist, wenn vorhanden, die Dashboards im ProxMenux Monitor."
   }
 }

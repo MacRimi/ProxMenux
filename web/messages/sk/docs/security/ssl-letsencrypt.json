@@ -138,7 +138,7 @@
     "bodyRich": "Uloženie zmeny zapíše <code>/etc/proxmenux/ssl_config.json</code> a reštartuje jednotku systemd <code>proxmenux-monitor</code>. Karta prehliadača stratí spojenie; načítajte ju znova na <code>https://&lt;host&gt;:8008/</code>. Certifikát Let’s Encrypt by nemal vyvolať upozornenie; pri certifikáte Proxmox s vlastným podpisom bude prehliadač vyžadovať výnimku, rovnako ako na porte 8006.",
     "reverse": {
       "heading": "Reverzné proxy a webhooky",
-      "bodyRich": "Pri prepnutí Monitora na HTTPS sa adresy webhookov Proxmox VE pre oznámenia automaticky zmenia z <code>http://</code> na <code>https://</code>. Existujúce záznamy sa prepíšu pri ďalšom uložení alebo opätovnom rozpoznaní pravidla oznámení; ručná úprava konfigurácie oznámení Proxmox nie je potrebná."
+      "bodyRich": "Pri prepnutí Monitora na HTTPS sa adresy webhookov Proxmox VE pre oznámenia automaticky zmenia z <code>http://</code> na <code>https://</code>. Ak je webhook ProxMenux v Proxmoxe už zaregistrovaný, pri zapnutí alebo vypnutí HTTPS sa zaregistruje znova s novou schémou; ručná úprava konfigurácie oznámení Proxmox nie je potrebná."
     }
   },
   "trustCa": {
