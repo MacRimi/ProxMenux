@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Backup de seguridad",
-        "body": "Copia <code>/etc/network/interfaces</code> a <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. La ruta exacta del backup se muestra antes de la copia y de nuevo después, con el comando de rollback.",
+        "body": "Copia <code>/etc/network/interfaces</code> a <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. El diálogo previo a la copia muestra un nombre indicativo; la ruta exacta del fichero creado se muestra después de la copia, con el comando de rollback.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Previsualizar los cambios propuestos",
-        "body": "Lista exactamente qué bridges se modificarán y qué sustituciones de puertos se harán. Si el análisis determina que no hay nada que reparar porque el puerto ha reaparecido entre las comprobaciones, el proceso termina con <em>«No se necesitan cambios»</em>.",
+        "body": "Lista qué bridges se modificarán y los cambios de puertos sugeridos. Si el análisis determina que no hay nada que reparar porque el puerto ha reaparecido entre las comprobaciones, el proceso termina con <em>«No se necesitan cambios»</em>.",
         "tone": "blue"
       },
       {
         "title": "4. Aplicar los cambios",
-        "body": "Para cada bridge afectado, ejecuta <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contra <code>/etc/network/interfaces</code>. Si un bridge no tenía un reemplazo válido disponible, la sustitución se omite y se reporta en el paso 5.",
+        "body": "Para cada bridge afectado, ejecuta <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contra <code>/etc/network/interfaces</code>. El nuevo valor de <code>bridge-ports</code> conserva solo los puertos que todavía existen, así que un puerto inválido junto a uno válido simplemente se elimina. Si no queda ningún puerto válido, usa la primera NIC física detectada; si el host no tiene ninguna, la línea se escribe vacía. El paso 5 reporta el resultado.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "El análisis se detiene con «Unsupported Network Stack»",
     "unsupportedBody": "El host usa netplan, systemd-networkd o NetworkManager. La herramienta solo admite <code>/etc/network/interfaces</code>. Cambia primero el host a la pila clásica o edita la configuración con las herramientas nativas del gestor (p. ej. <code>netplan apply</code>).",
     "noSuggestTitle": "No se imprime sugerencia para un puerto inválido",
-    "noSuggestBody": "El host no tiene ninguna interfaz física libre (todas están ya en otro bridge o no existen). El análisis cae a sugerir <code>bridge-ports none</code> para que el bridge al menos pueda levantar sin puerto. Añade una NIC o migra puertos entre bridges manualmente antes de volver a ejecutar.",
+    "noSuggestBody": "ProxMenux no detectó ninguna interfaz física (la lista solo filtra nombres virtuales como <code>vmbr</code>, <code>bond</code>, <code>veth</code> o <code>tap</code>; no comprueba si una NIC ya está en otro bridge). El análisis cae a sugerir <code>bridge-ports none</code> para que el bridge al menos pueda levantar sin puerto. Añade una NIC o migra puertos entre bridges manualmente antes de volver a ejecutar.",
     "stillDownTitle": "La reparación termina pero el bridge sigue DOWN",
     "stillDownBody": "<code>sed</code> actualizó el fichero pero se rechazó <code>systemctl restart networking</code>. Ejecútalo manualmente cuando la nueva config esté verificada, o reinicia. Si se aceptó el reinicio y el bridge sigue DOWN, ejecuta <code>ip link show</code> para confirmar que el nuevo puerto existe, y luego mira <code>journalctl -u networking</code> para ver el error real (cable desenchufado, link no negociado, puerto ya miembro de otro bridge).",
     "lostSshTitle": "He perdido el acceso SSH justo después de reiniciar networking",

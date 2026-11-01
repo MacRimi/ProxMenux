@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "För varje fysisk NIC på värden, skriver en liten fil under <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> som säger: <em> \"enheten med denna MAC måste alltid kallas detta namn\" </em>. systemd-udevd tillämpar regeln vid varje start, innan <code>ifupdown</code> läser <code>/etc/network/interfaces</code>."
+    "body": "För varje fysisk NIC på värden, skriver en liten fil under <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> som säger: <em> \"enheten med denna MAC måste alltid kallas detta namn\" </em>. systemd-udevd tillämpar regeln vid varje start, innan <code>ifupdown</code> läser <code>/etc/network/interfaces</code>."
   },
   "problem": {
     "heading": "Problemet detta löser",
@@ -34,7 +34,7 @@
       "readLabel": "Läs varje MAC",
       "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
       "writeLabel": "Skriv .link-fil",
-      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+      "writeDetail": "/etc/systemd/network/\n  10-proxmenux-'<'iface'>'.link"
     },
     "minimalIntro": "Varje genererad fil är avsiktligt minimal:",
     "minimalOutro": "Vid start matchar systemd-udevd enheten på MAC-adress och tilldelar det begärda namnet <em>innan</em> andra komponenter (ifupdown, kärnans standardnamngivning) kommer åt den. Filprefixet <code>10-</code> ser till att reglerna läses in tidigt, före standardfilen <code>99-default.link</code>."
@@ -103,9 +103,9 @@
     "emptyTitle": "\"Inga fysiska gränssnitt hittades\" efter att ha kört verktyget",
     "emptyBody": "Kärnan ser inga gränssnitt som bygger på PCI / phy80211 på värden. Kontrollera med <code>ls -l /sys/class/net/</code> — varje post ska ha antingen en symbolisk länk <code>device</code> (PCI) eller en post <code>phy80211</code> (Wi-Fi). Om båda saknas för ett verkligt nätverkskort är drivrutinen inte inläst.",
     "noChangeTitle": "Efter omstarten ändrades inte namnen som förväntat.",
-    "noChangeBody": "Kontrollera att filen finns och är korrekt formaterad: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Kontrollera sedan udev-loggarna: <code>journalctl -u systemd-udevd -b | grep -i link</code>. En vanlig orsak är en kvarvarande kärnparameter <code>net.ifnames=0</code> som helt inaktiverar förutsägbara namn — ta bort den från <code>/etc/default/grub</code>, kör <code>update-grub</code> och starta om.",
+    "noChangeBody": "Kontrollera att filen finns och är korrekt formaterad: <code>cat /etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Kontrollera sedan udev-loggarna: <code>journalctl -u systemd-udevd -b | grep -i link</code>. En vanlig orsak är en kvarvarande kärnparameter <code>net.ifnames=0</code> som helt inaktiverar förutsägbara namn — ta bort den från <code>/etc/default/grub</code>, kör <code>update-grub</code> och starta om.",
     "undoTitle": "Jag vill ångra beständig namngivning",
-    "undoBody": "Radera antingen <code>.link</code>-filerna (<code>rm /etc/systemd/network/10-*.link</code>) eller återställ dem från säkerhetskopieringskatalogen som skapades vid föregående körning. Starta om för att tillämpa ändringen."
+    "undoBody": "Radera antingen de filer ProxMenux skapade (<code>rm /etc/systemd/network/10-proxmenux-*.link</code>), vilket lämnar kvar alla <code>.link</code>-filer du själv skrivit, eller återställ dem från säkerhetskopieringskatalogen som skapades vid föregående körning. Starta om för att tillämpa ändringen."
   },
   "related": {
     "heading": "Relaterat",

@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Bezpečnostná záloha",
-        "body": "Skopíruje <code>/etc/network/interfaces</code> do <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Cestu zobrazí pred kopírovaním aj po ňom.",
+        "body": "Skopíruje <code>/etc/network/interfaces</code> do <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Orientačný názov sa zobrazí pred kopírovaním, presná cesta po ňom.",
         "tone": "blue"
       },
       {

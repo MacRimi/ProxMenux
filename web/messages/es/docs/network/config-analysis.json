@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Backup de seguridad",
-        "body": "Copia <code>/etc/network/interfaces</code> a <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. La ruta se muestra antes y después.",
+        "body": "Copia <code>/etc/network/interfaces</code> a <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Se muestra un nombre indicativo antes de la copia; la ruta exacta, después.",
         "tone": "blue"
       },
       {

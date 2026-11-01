@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Sicherheitssicherung",
-        "body": "Kopiert <code>/etc/network/interfaces</code> nach <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Der Pfad wird vorher und nachher angezeigt.",
+        "body": "Kopiert <code>/etc/network/interfaces</code> nach <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Vor dem Kopieren wird ein Beispielname angezeigt; der genaue Pfad danach.",
         "tone": "blue"
       },
       {
