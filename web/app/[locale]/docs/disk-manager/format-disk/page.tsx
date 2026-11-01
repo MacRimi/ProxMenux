@@ -172,7 +172,7 @@ was changed               ext4 / xfs / exfat / btrfs / zfs
       <p className="mb-4 text-gray-800 leading-relaxed">{t("visibility.intro")}</p>
       <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
         {visItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`visibility.items.${idx}`, { strong, em })}</li>
+          <li key={idx}>{t.rich(`visibility.items.${idx}`, { strong, em, code })}</li>
         ))}
       </ul>
 
