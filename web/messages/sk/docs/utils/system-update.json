@@ -128,7 +128,7 @@
         "body": "Repozitár Enterprise je zapnutý, ale hostiteľ nemá aktívne predplatné. Pred <code>apt-get update</code> skript ponúkne prechod na no-subscription. Ak ste ho odmietli, spustite aktualizáciu znova a potvrďte ho, alebo vypnite Enterprise v <em>Node → Updates → Repositories</em> a zapnite no-subscription."
       },
       {
-        "title": "dist-upgrade sa zastaví pri \"Configuring grub-pc\"",
+        "title": "full-upgrade sa zastaví pri \"Configuring grub-pc\"",
         "body": "Ak sa zobrazuje interaktívna otázka GRUB, žiada zariadenia na inštaláciu zavádzača. Voľba <code>--force-confold</code> platí pre konfiguračné súbory, nie pre tento výber zariadení. Pomocou <kbd>Tab</kbd> + <kbd>Space</kbd> vyberte príslušné zavádzacie disky a potom OK. Výber možno nastaviť vopred pomocou <code>dpkg-reconfigure grub-pc</code>."
       },
       {

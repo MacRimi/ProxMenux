@@ -128,7 +128,7 @@
         "body": "Il repository Enterprise è abilitato, ma l’host non ha un abbonamento attivo. Prima di <code>apt-get update</code>, lo script propone il passaggio a no-subscription. Se hai rifiutato, ripeti l’aggiornamento e accetta, oppure disabilita Enterprise in <em>Node → Updates → Repositories</em> e abilita no-subscription."
       },
       {
-        "title": "dist-upgrade si blocca su \"Configuring grub-pc\"",
+        "title": "full-upgrade si blocca su \"Configuring grub-pc\"",
         "body": "Se compare una richiesta interattiva di GRUB, chiede i dispositivi su cui installare il boot loader. L’opzione <code>--force-confold</code> riguarda i file di configurazione, non questa selezione. Usa <kbd>Tab</kbd> + <kbd>Space</kbd> per scegliere i dischi di avvio appropriati, poi OK. Puoi configurare la scelta in anticipo con <code>dpkg-reconfigure grub-pc</code>."
       },
       {

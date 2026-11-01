@@ -235,7 +235,7 @@
       {
         "href": "/docs/utils/system-update",
         "label": "Actualización del sistema Proxmox",
-        "tailRich": " — para el <code>apt dist-upgrade</code> real en el host."
+        "tailRich": " — para el <code>apt full-upgrade</code> real en el host."
       },
       {
         "href": "/docs/network/monitoring",

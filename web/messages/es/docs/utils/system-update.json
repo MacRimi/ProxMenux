@@ -128,7 +128,7 @@
         "body": "El repositorio Enterprise está habilitado y el host no tiene suscripción activa. El worker ofrece el cambio a sin suscripción antes de <code>apt-get update</code>; si se rechazó, ejecuta de nuevo la actualización y acéptalo, o deshabilita la fuente Enterprise en <em>Nodo → Actualizaciones → Repositorios</em> y habilita la de sin suscripción."
       },
       {
-        "title": "dist-upgrade se queda colgado en \"Configuring grub-pc\"",
+        "title": "full-upgrade se queda colgado en \"Configuring grub-pc\"",
         "body": "Si aparece una pregunta interactiva de GRUB, solicita los dispositivos donde instalar el cargador de arranque. La opción <code>--force-confold</code> se aplica a decisiones sobre archivos de configuración, no a esta selección de dispositivos. Usa <kbd>Tab</kbd> + <kbd>Space</kbd> para seleccionar los discos de arranque adecuados y después OK. Puedes configurar esta selección de antemano con <code>dpkg-reconfigure grub-pc</code>."
       },
       {
