@@ -69,11 +69,11 @@
       },
       {
         "title": "Aktualizácia registra zaslaná monitoru",
-        "body": "Po dokončení dávky menu odošle požiadavku POST na <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> na obnovu <code>/usr/local/share/proxmenux/updates_available.json</code>. Po použití všetkých aktualizácií zmizne ich počítadlo na karte Optimalizácie aj podmienená položka menu shellu bez čakania na ďalšiu kontrolu. Samotná karta zostane dostupná."
+        "body": "Po dokončení dávky menu odošle požiadavku POST na <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> (https, keď je v Monitore zapnuté SSL) na obnovu <code>/usr/local/share/proxmenux/updates_available.json</code>. Po použití všetkých aktualizácií zmizne ich počítadlo na karte Optimalizácie v Monitore aj podmienená položka menu shellu bez čakania na ďalšiu kontrolu. Samotná karta zostane dostupná."
       }
     ],
     "jqTitle": "Vyžaduje sa jq",
-    "jqBody": "Výber na ceste A používa <code>jq</code> na spracovanie JSON čakajúcich aktualizácií. Ak <code>jq</code> chýba, postup sa potichu ukončí: menu ukáže počet, ale po výbere sa nič nestane. Moderná inštalácia Proxmox má <code>jq</code>; pri pochybnostiach spustite <code>apt install -y jq</code>."
+    "jqBody": "Výber na ceste A používa <code>jq</code> na spracovanie JSON čakajúcich aktualizácií. Bez <code>jq</code> je položka „Apply available updates“ skrytá a ak sa výber predsa otvorí, zobrazí „jq is required to apply updates from this menu“. Moderná inštalácia Proxmox má <code>jq</code>; pri pochybnostiach spustite <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "Ako sa líši od ostatných ciest",

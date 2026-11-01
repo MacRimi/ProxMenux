@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "APT-repositorier + full uppgradering",
-      "what": "Inaktiverar företagsförråden pve-enterprise.sources och ceph.sources, skriver en no-subscription-källa för värdens Debian-kodnamn och kör sedan apt update && apt full-upgrade -y, Proxmox officiella uppgraderingskommando.",
+      "what": "Inaktiverar företagsförråden (pve-enterprise.sources / ceph.sources på PVE 9, .list-filerna på PVE 8), skriver en no-subscription-källa för värdens Debian-kodnamn och kör sedan apt update && apt full-upgrade -y (dist-upgrade på PVE 8).",
       "category": "Grundinställningar",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "Det första steget i Automated-paketet är Proxmox-uppgraderingen. Proxmox egen uppgraderingsvägledning för en löpande värd (inom samma stora version) är att köra:",
     "after": "Denna rad är det officiella kommandot för aktuella Proxmox-versioner. Skriptet kör <strong>exakt</strong> detta och lägger till förrådsstädning och efterarbete enligt uppgraderingsguiden — samma steg som det fristående verktyget <link>Proxmox systemuppdatering</link>:",
     "items": [
-      "Inaktiverar Enterprise-källorna <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, tar bort äldre förrådsfiler och skriver en no-subscription-källa för värdens kodnamn.",
+      "Inaktiverar företagsförråden (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> på PVE 9, <code>.list</code>-filerna på PVE 8), tar bort äldre förrådsfiler och skriver en no-subscription-källa för värdens kodnamn.",
       "Kör uppgraderingen utan interaktion med <code>DEBIAN_FRONTEND=noninteractive</code> och <code>--force-confdef --force-confold</code>. Anpassade konfigurationsfiler behålls även när de har ändrats i ursprungsprojektet.",
       "Installerar viktiga Proxmox-paket om de saknas (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Kontroll av LVM-metadatas rimlighet, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> och omstartsfråga bara om kärnan faktiskt ändrats."

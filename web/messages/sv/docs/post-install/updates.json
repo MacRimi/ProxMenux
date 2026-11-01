@@ -69,11 +69,11 @@
       },
       {
         "title": "Registreringsuppdatering skickas till Monitor",
-        "body": "När omgången är klar skickar menyn en POST-begäran till <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> för att återskapa <code>/usr/local/share/proxmenux/updates_available.json</code>. När alla väntande uppdateringar tillämpats försvinner räknaren och det villkorliga skalmenyalternativet utan att invänta nästa skanning. Optimeringskortet finns kvar."
+        "body": "När omgången är klar skickar menyn en POST-begäran till <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> (https när Monitor-SSL är aktiverat) för att återskapa <code>/usr/local/share/proxmenux/updates_available.json</code>. När alla väntande uppdateringar tillämpats försvinner räknaren och det villkorliga skalmenyalternativet utan att invänta nästa skanning. Optimeringskortet finns kvar."
       }
     ],
     "jqTitle": "jq krävs",
-    "jqBody": "Listan i väg A använder <code>jq</code> för att läsa JSON med väntande uppdateringar. Om <code>jq</code> saknas avslutas flödet tyst: menyn visar antalet men inget händer efter valet. På en modern Proxmox-installation finns <code>jq</code>; kör annars <code>apt install -y jq</code>."
+    "jqBody": "Listan i väg A använder <code>jq</code> för att läsa JSON med väntande uppdateringar. Utan <code>jq</code> döljs posten \"Apply available updates\", och om väljaren ändå nås visas \"jq is required to apply updates from this menu\". På en modern Proxmox-installation finns <code>jq</code>; kör annars <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "Hur det skiljer sig från de andra vägarna",

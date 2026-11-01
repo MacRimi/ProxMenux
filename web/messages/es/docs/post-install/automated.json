@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "Repositorios APT + actualización completa",
-      "what": "Desactiva pve-enterprise.sources y ceph.sources enterprise, escribe una fuente limpia sin suscripción para el codename Debian del host, y luego ejecuta apt update && apt full-upgrade -y (el comando oficial de upgrade de Proxmox).",
+      "what": "Desactiva los repositorios enterprise (pve-enterprise.sources / ceph.sources en PVE 9, los ficheros .list en PVE 8), escribe una fuente limpia sin suscripción para el codename Debian del host, y luego ejecuta apt update && apt full-upgrade -y (dist-upgrade en PVE 8).",
       "category": "Ajustes básicos",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "El primer paso del bundle Automatizado es el upgrade de Proxmox. La guía oficial de Proxmox para hacer upgrade de un host en ejecución (dentro de la misma versión mayor) es ejecutar:",
     "after": "Esa única línea es el comando oficial en cualquier release actual de Proxmox. El script Automatizado ejecuta <strong>exactamente</strong> eso, y lo envuelve con la limpieza de repositorios y la limpieza post-upgrade que la guía oficial también recomienda — mismos pasos que la utilidad independiente <link>Proxmox System Update</link>:",
     "items": [
-      "Desactiva enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, elimina archivos de repos legacy, escribe una fuente limpia sin suscripción para el codename del host.",
+      "Desactiva los repositorios enterprise (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> en PVE 9, los ficheros <code>.list</code> en PVE 8), elimina archivos de repos legacy, escribe una fuente limpia sin suscripción para el codename del host.",
       "Ejecuta el upgrade de forma no interactiva con <code>DEBIAN_FRONTEND=noninteractive</code> y <code>--force-confdef --force-confold</code> — los archivos de configuración que has customizado siguen siendo tuyos cuando upstream también ha cambiado.",
       "Instala paquetes esenciales de Proxmox si faltan (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Comprobación de coherencia de metadatos LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> y solicitud de reinicio solo si cambió el núcleo."

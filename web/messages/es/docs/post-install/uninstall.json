@@ -33,7 +33,7 @@
         "title": "Se ejecuta la reversión",
         "body1": "Para cada item seleccionado, ProxMenux llama a su función de uninstall correspondiente. La mayoría de las reversiones siguen uno de tres patrones:",
         "items": [
-          "<strong>Basado en backup</strong> — restaura un <code>.bak</code> capturado en el momento de aplicar (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Basado en backup</strong>: restaura un <code>.bak</code> capturado en el momento de aplicar (bashrc, logrotate.conf). journald.conf se reescribe con los valores por defecto de fábrica, y en GRUB / cmdline del kernel solo se quitan los tokens de ProxMenux.",
           "<strong>Borrar la config</strong> — elimina los <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code>, o unit systemd de ProxMenux, y recarga.",
           "<strong>Reinstalación de paquete</strong> — para cambios de UI como el banner de suscripción, reinstala los paquetes upstream con <code>--force-confnew</code> para restaurar la configuración distribuida."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Eliminación del aviso de suscripción",
-            "restores": "Primero intenta restaurar los archivos de la UI desde los backups propios de ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* y, cuando la UI móvil está parcheada, index.html.tpl.backup.*). Solo si un backup falta o está corrupto, cae al reinstalado de pve-manager, proxmox-widget-toolkit, libjs-extjs y libpve-http-server-perl con force-confnew. También limpia las copias .js / .gz cacheadas."
+            "restores": "En PVE 9 y PBS, primero intenta restaurar los archivos de la UI desde los backups propios de ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* y, cuando la UI móvil está parcheada, index.html.tpl.backup.*). En PVE 8, o si un backup falta o está corrupto, cae al reinstalado de pve-manager, proxmox-widget-toolkit, libjs-extjs y libpve-http-server-perl con force-confnew. También limpia las copias .js / .gz cacheadas."
           },
           {
             "tool": "Omitir idiomas de APT",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "Aumento de los límites del sistema",
-            "restores": "Elimina /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf y /etc/security/limits.d/99-limits.conf. Revierte límites PAM y DefaultLimitNOFILE de systemd. En /root/.profile solo limpia la línea antigua ulimit -n 256000; la actual ulimit -n 1048576 puede permanecer y requerir eliminación manual."
+            "restores": "Elimina /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf y /etc/security/limits.d/99-limits.conf. Revierte límites PAM y DefaultLimitNOFILE de systemd. Elimina de /root/.profile tanto la línea antigua ulimit -n 256000 como la actual ulimit -n 1048576."
           },
           {
             "tool": "Perfil de swap con ZRAM",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Instantáneas automáticas de ZFS",
-            "restores": "Elimina las entradas cron que el script escribió y ofrece hacer apt purge zfs-auto-snapshot. Los datasets de snapshots existentes en los pools se dejan intactos — bórralos por separado si los quieres fuera."
+            "restores": "Purga el paquete zfs-auto-snapshot sin preguntar, lo que también elimina sus ficheros cron. Los datasets de snapshots existentes en los pools se dejan intactos — bórralos por separado si los quieres fuera."
           },
           {
             "tool": "Límites de velocidad de vzdump",

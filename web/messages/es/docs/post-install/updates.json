@@ -69,11 +69,11 @@
       },
       {
         "title": "Refresco del registro enviado al Monitor",
-        "body": "Al terminar el lote, el menú envía una petición POST a <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> para reconstruir <code>/usr/local/share/proxmenux/updates_available.json</code>. Tras aplicar todo lo pendiente, desaparecen el contador de actualizaciones de la tarjeta Optimizaciones y la entrada condicional de la shell, sin esperar al siguiente análisis. La tarjeta Optimizaciones sigue disponible."
+        "body": "Al terminar el lote, el menú envía una petición POST a <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> (https cuando el SSL de Monitor está activado) para reconstruir <code>/usr/local/share/proxmenux/updates_available.json</code>. Tras aplicar todo lo pendiente, desaparecen el contador de actualizaciones de la tarjeta Optimizaciones y la entrada condicional de la shell, sin esperar al siguiente análisis. La tarjeta Optimizaciones sigue disponible."
       }
     ],
     "jqTitle": "jq es obligatorio",
-    "jqBody": "La checklist de la Ruta A depende de <code>jq</code> para parsear el JSON de actualizaciones pendientes. Si <code>jq</code> no está, el flujo termina en silencio — verías la entrada del menú con contador pero al elegir filas no ocurriría nada. En cualquier instalación moderna de Proxmox <code>jq</code> está presente; si tienes dudas ejecuta <code>apt install -y jq</code>."
+    "jqBody": "La checklist de la Ruta A depende de <code>jq</code> para parsear el JSON de actualizaciones pendientes. Sin <code>jq</code> la entrada \"Apply available updates\" se oculta, y si se llega igualmente al selector muestra \"jq is required to apply updates from this menu\". En cualquier instalación moderna de Proxmox <code>jq</code> está presente; si tienes dudas ejecuta <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "En qué se diferencia de las otras rutas",

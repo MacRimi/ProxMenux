@@ -33,7 +33,7 @@
         "title": "Rückgängigmachen wird ausgeführt",
         "body1": "Für jedes ausgewählte Element ruft ProxMenux seine passende Deinstallationsfunktion auf. Die meisten Umkehrungen folgen einem von drei Mustern:",
         "items": [
-          "<strong>Backup-basierte </strong> — Wiederherstellung eines <code>.bak</code>, das zum Zeitpunkt der Anwendung erfasst wurde (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Backup-basiert</strong>: Wiederherstellung eines <code>.bak</code>, das zum Zeitpunkt der Anwendung erfasst wurde (bashrc, logrotate.conf). journald.conf wird mit den Standardwerten neu geschrieben, und bei GRUB / kernel cmdline werden nur die ProxMenux-Token entfernt.",
           "<strong>Konfiguration löschen</strong> — ProxMenux-Dateien <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> oder die systemd-Unit entfernen und neu laden.",
           "<strong>Pakete neu installieren</strong> — bei UI-Änderungen wie dem Abonnementhinweis die Originalpakete mit <code>--force-confnew</code> neu installieren, um ausgelieferte Einstellungen wiederherzustellen."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Abonnementbanner entfernen",
-            "restores": "Zunächst wird versucht, die UI-Dateien aus ProxMenux-eigenen Backups wiederherzustellen (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* und, wenn die mobile UI gepatcht wird, index.html.tpl.backup.*). Nur wenn ein Backup fehlt oder beschädigt ist, greift man auf die Neuinstallation von pve-manager, proxmox-widget-toolkit, libjs-extjs und libpve-http-server-perl mit force-confnew zurück. Löscht auch zwischengespeicherte .js / .gz-Kopien."
+            "restores": "Auf PVE 9 und PBS wird zunächst versucht, die UI-Dateien aus ProxMenux-eigenen Backups wiederherzustellen (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* und, wenn die mobile UI gepatcht wird, index.html.tpl.backup.*). Auf PVE 8 oder wenn ein Backup fehlt oder beschädigt ist, greift man auf die Neuinstallation von pve-manager, proxmox-widget-toolkit, libjs-extjs und libpve-http-server-perl mit force-confnew zurück. Löscht auch zwischengespeicherte .js / .gz-Kopien."
           },
           {
             "tool": "APT-Sprachdateien überspringen",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Automatische ZFS-Snapshots",
-            "restores": "Entfernt die Cron-Einträge, die das Skript geschrieben hat, und bietet an, zfs-auto-snapshot zu bereinigen. Bestehende Snapshot-Datensätze in den Pools bleiben intakt - entfernen Sie sie separat, wenn Sie sie weghaben möchten."
+            "restores": "Entfernt das Paket zfs-auto-snapshot ohne Rückfrage (purge), wodurch auch seine Cron-Dateien entfernt werden. Bestehende Snapshot-Datensätze in den Pools bleiben intakt - entfernen Sie sie separat, wenn Sie sie weghaben möchten."
           },
           {
             "tool": "vzdump-Geschwindigkeitsbegrenzung",
