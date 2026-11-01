@@ -21,8 +21,8 @@
     "rows": [
       {
         "entry": "ProxMenux Scripts (TUI)",
-        "path": "menu → Utilities → Host Config Backup",
-        "detail": "Fluxo baseado em diálogo, SSH-friendly. O menu principal apresenta as seis opções diretamente. Utiliza <code>backup_menu</code> em <code>backup_host.sh</code>."
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Fluxo baseado em diálogo, SSH-friendly. A entrada do menu principal abre Host Config Backup / Restore; Backup host configuration leva às seis opções. Utiliza <code>backup_menu</code> em <code>backup_host.sh</code>."
       },
       {
         "entry": "ProxMenux Monitor (UI Web)",
@@ -83,7 +83,7 @@
   "profiles": {
     "heading": "Perfil padrão vs personalizado",
     "defaultTitle": "Perfil padrão",
-    "defaultBody": "O perfil padrão é a lista com curadoria de <code>hb_default_profile_paths</code> (documentada em <em>Como funciona</em> sob <em>Categorias de caminho</em>) além de cada entrada no arquivo de extras persistente <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. O usuário confirma as opções de destino e criptografia e o backup prossegue sem mais seleção de caminho.",
+    "defaultBody": "O perfil padrão é a lista curada de <code>hb_default_profile_paths</code> (documentada em <em>How it works</em>, em <em>Path categories</em>) mais cada entrada do arquivo persistente de extras <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. O usuário escolhe o destino e as opções de criptografia e o backup prossegue sem mais seleção de caminhos.",
     "customTitle": "Perfil personalizado",
     "customBody": "O perfil personalizado abre uma lista com todos os caminhos do perfil padrão (desmarcados) e todos os extras persistentes (pré-marcados, com o prefixo <code>[+]</code>). O usuário marca os caminhos para esta execução e pode pressionar <em>Adicionar caminho personalizado</em> para incluir um novo caminho absoluto. Todo caminho adicionado durante esse processo é salvo em <code>backup-extra-paths.txt</code>, para que os próximos backups o incluam automaticamente. Desmarcar um extra persistente o exclui apenas desta execução, sem removê-lo do arquivo — a remoção é feita pela ação separada <em>Gerenciar caminhos personalizados</em>, fora do fluxo de backup.",
     "customPickerAlt": "Lista de verificação de perfil personalizada que mostra os caminhos de perfil padrão (desmarcados) e extras persistentes (pré-marcados com um prefixo [+]), além de botões para adicionar um novo caminho ou confirmar a seleção.",
@@ -124,7 +124,7 @@
   },
   "included": {
     "heading": "O que entra e o que fica fora",
-    "intro": "Cada caminho no perfil resolvido (padrão + extras persistentes + seleção de modo personalizado) é copiado com <code>rsync -aAXH --numeric-ids</code>. Uma lista de exclusão compartilhada aplica-se a cada caminho, e dois diretórios carregam exclusões adicionais específicas do caminho.",
+    "intro": "Cada caminho no perfil resolvido (padrão + extras persistentes + seleção de modo personalizado) é copiado com <code>rsync -aAXH --numeric-ids</code>. Não há lista de exclusão global; alguns diretórios têm exclusões específicas do caminho.",
     "rootTitle": "Exclusões <code>/root/</code>",
     "rootBody": "<code>/root/</code> faz parte do perfil padrão para incluir os scripts e a configuração do usuário no arquivo. Os subcaminhos voláteis são excluídos:",
     "rootItems": [
@@ -153,16 +153,16 @@
       "<strong><code>/home/USER</code></strong> — não no perfil padrão. Adicione-o como um caminho personalizado quando um sistema carrega diretórios domésticos do usuário que devem sobreviver a uma restauração."
     ],
     "customPathsTitle": "Como os caminhos personalizados são tratados",
-    "customPathsBody": "Um caminho personalizado adicionado inline em modo Personalizado ou persistido em <code>backup-extra-paths.txt</code> passa pelo mesmo pipeline <code>rsync</code> como caminhos de perfil padrão. Exclusões globais aplicam-se. Se o caminho personalizado estiver sob <code>/root/</code> ou <code>/usr/local/share/proxmenux/</code>, as exclusões específicas do caminho acima ainda se aplicam. Cada caminho arquivado — padrão ou personalizado — é gravado em <code>metadata/paths_archived.txt</code>. Caminhos que não existem na fonte são gravados em <code>metadata/missing_paths.txt</code> sem parar o backup."
+    "customPathsBody": "Um caminho personalizado adicionado inline em modo Personalizado ou persistido em <code>backup-extra-paths.txt</code> passa pelo mesmo pipeline <code>rsync</code> dos caminhos de perfil padrão. Se o caminho personalizado estiver sob <code>/root/</code> ou <code>/usr/local/share/proxmenux/</code>, as exclusões específicas do caminho acima ainda se aplicam. Cada caminho arquivado — padrão ou personalizado — é gravado em <code>metadata/selected_paths.txt</code>. Caminhos que não existem na fonte são gravados em <code>metadata/missing_paths.txt</code> sem parar o backup, e os caminhos cuja cópia falha são gravados em <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Estrutura do arquivo",
     "intro": "O diretório de preparação temporária produzido por cada infraestrutura segue o mesmo layout, independentemente do destino. O tarball, PBS <code>.pxar</code> ou arquivo Borg armazena esta árvore sem alterações.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Resumo da confirmação",
-    "body": "Antes da infra- estrutura escrever qualquer coisa para o destino, o ProxMenux mostra uma janela sumária com o nome do destino, ID de backup ou arquivo, estado de criptografia e a lista de caminhos copiados. Cancelar aqui aborta o backup de forma limpa — o diretório de preparação temporária é removido pelo gancho <code>trap</code> definido na função de infraestrutura e nenhum dado parcial atinge o destino."
+    "body": "Antes de a infraestrutura escrever qualquer coisa no destino, o ProxMenux imprime no terminal um resumo com o destino, o ID de backup ou nome do arquivo, o estado de criptografia e a lista de caminhos copiados. Neste ponto não há etapa de confirmar ou cancelar; a cópia começa logo em seguida. Se o backup falhar ou for interrompido, o diretório de preparação temporária é removido pelo gancho <code>trap</code> definido na função de infraestrutura e nenhum dado parcial atinge o destino."
   },
   "writing": {
     "heading": "Gravando para o destino",

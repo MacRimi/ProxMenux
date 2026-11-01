@@ -21,8 +21,8 @@
     "rows": [
       {
         "entry": "ProxMenux Scripts (TUI)",
-        "path": "menu → Utilities → Host Config Backup",
-        "detail": "Flusso basato sul dialogo, SSH-friendly. Il menu principale presenta le sei opzioni direttamente. Utilizza <code>backup_menu</code> in <code>backup_host.sh</code>."
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Flusso basato sul dialogo, SSH-friendly. La voce del menu principale apre Host Config Backup / Restore; Backup host configuration porta alle sei opzioni. Utilizza <code>backup_menu</code> in <code>backup_host.sh</code>."
       },
       {
         "entry": "ProxMenux Monitor (interfaccia web)",
@@ -83,7 +83,7 @@
   "profiles": {
     "heading": "Profilo predefinito e personalizzato",
     "defaultTitle": "Profilo predefinito",
-    "defaultBody": "Il profilo predefinito è l'elenco curato da <code>hb_default_profile_paths</code> (documentato in <em>Come funziona</em> sotto <em>Categorie di percorsi</em>) più ogni voce nel file extra persistente <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. L'utente conferma le opzioni di destinazione e crittografia e il backup procede senza ulteriori selezioni dei percorsi.",
+    "defaultBody": "Il profilo predefinito è l'elenco curato da <code>hb_default_profile_paths</code> (documentato in <em>Come funziona</em> sotto <em>Categorie di percorsi</em>) più ogni voce nel file extra persistente <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. L'utente sceglie le opzioni di destinazione e crittografia e il backup procede senza ulteriori selezioni dei percorsi.",
     "customTitle": "Profilo personalizzato",
     "customBody": "Il profilo personalizzato apre un elenco con tutti i percorsi del profilo predefinito (non selezionati) e tutti gli extra persistenti (già selezionati, con il prefisso <code>[+]</code>). L’utente seleziona i percorsi per questa esecuzione e può premere <em>Aggiungi percorso personalizzato</em> per aggiungere un nuovo percorso assoluto. I percorsi aggiunti vengono salvati in <code>backup-extra-paths.txt</code>, così i backup futuri li includono automaticamente senza doverli aggiungere di nuovo. Deselezionare un extra persistente lo esclude da questa esecuzione ma non lo elimina dal file — l’eliminazione avviene con l’azione separata <em>Gestisci percorsi personalizzati</em>, al di fuori del flusso di backup.",
     "customPickerAlt": "Elenco di controllo del profilo personalizzato che mostra i percorsi di predefinito (non selezionati) e gli extra persistenti (già selezionati con un prefisso [+]), più pulsanti per aggiungere un nuovo percorso o confermare la selezione.",
@@ -124,7 +124,7 @@
   },
   "included": {
     "heading": "Cosa entra e cosa rimane fuori",
-    "intro": "Ogni percorso nel profilo risolto (predefinito + extra persistenti + selezione personalizzata) viene copiato con <code>rsync -aAXH --numeric-ids</code>. Un elenco di esclusione condiviso si applica a ogni percorso, e due directory portano ulteriori esclusioni specifiche del percorso.",
+    "intro": "Ogni percorso nel profilo risolto (predefinito + extra persistenti + selezione personalizzata) viene copiato con <code>rsync -aAXH --numeric-ids</code>. Non esiste un elenco di esclusione globale; alcune directory hanno esclusioni specifiche del percorso.",
     "rootTitle": "<code>/root/</code> esclusioni",
     "rootBody": "<code>/root/</code> fa parte del profilo predefinito per includere nell’archivio gli script e la configurazione dell’utente. Sono esclusi i sottopercorsi volatili:",
     "rootItems": [
@@ -153,16 +153,16 @@
       "<strong><code>/home/USER</code></strong> — non nel profilo predefinito. Aggiungilo come un percorso personalizzato quando un sistema porta directory home degli utenti che devono sopravvivere a un ripristino."
     ],
     "customPathsTitle": "Come vengono gestiti i percorsi personalizzati",
-    "customPathsBody": "Un percorso personalizzato aggiunto in linea in modalità personalizzata o persistito in <code>backup-extra-paths.txt</code> passa attraverso la stessa pipeline <code>rsync</code> come percorsi di default-profile. Si applicano esclusioni globali. Se il percorso personalizzato avviene sotto <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, si applicano ancora le esclusioni specifiche del percorso. Ogni percorso archiviato — predefinito o personalizzato — viene registrato in <code>metadata/paths_archived.txt</code>. I percorsi che non esistono sulla sorgente sono registrati in <code>metadata/missing_paths.txt</code> senza interrompere il backup."
+    "customPathsBody": "Un percorso personalizzato aggiunto in linea in modalità personalizzata o persistito in <code>backup-extra-paths.txt</code> passa attraverso la stessa pipeline <code>rsync</code> come percorsi di default-profile. Se il percorso personalizzato avviene sotto <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, si applicano ancora le esclusioni specifiche del percorso. Ogni percorso archiviato — predefinito o personalizzato — viene registrato in <code>metadata/selected_paths.txt</code>. I percorsi che non esistono sulla sorgente sono registrati in <code>metadata/missing_paths.txt</code> senza interrompere il backup, e i percorsi la cui copia fallisce in <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Struttura dell'archivio",
     "intro": "La directory di staging prodotta da ogni backend segue lo stesso layout indipendentemente dalla destinazione. Il tarball, PBS <code>.pxar</code> o Borg archivio memorizza questo albero verbatim.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Riepilogo conferma",
-    "body": "Prima che il backend scriva qualcosa alla destinazione, ProxMenux mostra una finestra di dialogo sommaria con la destinazione, l'ID di backup o il nome dell'archivio, lo stato di crittografia e l'elenco dei percorsi da copiare. Cancellando qui interrompe il backup in modo pulito — la directory di staging viene rimossa dal gancio <code>trap</code> impostato sulla funzione backend e nessun dato parziale raggiunge la destinazione."
+    "body": "Prima che il backend scriva qualcosa alla destinazione, ProxMenux stampa nel terminale un riepilogo con la destinazione, l'ID di backup o il nome dell'archivio, lo stato di crittografia e l'elenco dei percorsi da copiare. In questo punto non c'è alcun passaggio di conferma o annullamento; la copia inizia subito dopo. Se il backup fallisce o viene interrotto, la directory di staging viene rimossa dal gancio <code>trap</code> impostato sulla funzione backend e nessun dato parziale raggiunge la destinazione."
   },
   "writing": {
     "heading": "Scrivere alla destinazione",

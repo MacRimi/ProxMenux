@@ -33,7 +33,7 @@
       {
         "source": "Configuração manual do ProxMenux",
         "path": "/usr/local/share/proxmenux/pbs-manual-configs.txt + pbs-pass-NAME.txt + pbs-fingerprint-NAME.txt",
-        "content": "Adicionado de <em>Configure destinos de backup → destinos de PBS → Adicione PBS</em>. Pede um nome, nome de usuário (<code>root@pam</code> ou <code>user@pbs!token</code>), host ou IP, datastore e senha. A senha re-prompts na entrada vazia — uma gravação vazia persistiria silenciosamente e cada backup subsequente falharia com um erro de autenticação opaco. Este caminho é usado quando o PBS alvo não é registrado como armazenamento Proxmox."
+        "content": "Adicionado de <em>Configure backup destinations → Proxmox Backup Server (PBS) destinations → + Add new PBS manually</em>. Pede um nome, nome de usuário (<code>root@pam</code> ou <code>user@pbs!token</code>), host ou IP, datastore e senha. A senha re-prompts na entrada vazia — uma gravação vazia persistiria silenciosamente e cada backup subsequente falharia com um erro de autenticação opaco. Este caminho é usado quando o PBS alvo não é registrado como armazenamento Proxmox."
       }
     ],
     "menuTitle": "Menu de seleção",

@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Aufträge verwalten",
-    "intro": "Das Scheduler-Menü (Scripts TUI) und die Registerkarte Monitor Backups zeigen die gleichen Aktionen bei jedem Job.",
+    "intro": "Das Scheduler-Menü im Scripts TUI (Backup scheduler and retention) bietet Run now, Enable / Disable und Delete sowie eine Liste der Jobs mit ihrem letzten Ausführungsstatus. Edit und View log sind nur in der Registerkarte Monitor Backups verfügbar.",
     "rows": [
       {
         "action": "Jetzt ausführen",
@@ -112,7 +112,7 @@
         "detail": "Neuer Modus: <code>systemctl enable/disable --now</code> der Timer. Attach-Modus: Dreht das <code>ENABLED</code>-Flag im Job Env um — das Hook-Skript berücksichtigt es beim nächsten PVE-Aufruf."
       },
       {
-        "action": "Bearbeiten",
+        "action": "Bearbeiten (nur Monitor)",
         "detail": "Öffnet Ziel, Zeitplan, Profil und Aufbewahrungsaufforderungen neu und schreibt die Jobdateien neu. Bewahrt die Job ID auf."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Entfernt die Job env, Pfaddatei, systemd Timer + Service (Neuer Modus) und deaktiviert die Hakenbindung (Attach-Modus). Berührt keine Archive bereits am Zielort."
       },
       {
-        "action": "Protokoll anzeigen",
+        "action": "Protokoll anzeigen (nur Monitor)",
         "detail": "Zeigt laufend an: <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> – eine Protokolldatei pro Lauf. Der Runner gibt außerdem eine kompakte Statuszeile an journald unter dem Dienst systemd aus."
       }
     ]

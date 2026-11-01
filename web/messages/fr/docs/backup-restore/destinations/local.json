@@ -18,11 +18,11 @@
   },
   "targetConfig": {
     "heading": "Configuration du répertoire cible",
-    "intro": "La destination locale est un <strong>unique répertoire cible enregistré durablement</strong> — pas une liste. ProxMenux stocke le choix de l'opérateur chez <code>/usr/local/share/proxmenux/local-target.conf</code> et le lit sur chaque sauvegarde. Lorsqu'aucune cible n'a été configurée, le <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> par défaut est utilisé (le même répertoire que Proxmox utilise pour ses propres sorties <code>vzdump</code>). La cible est configurée à partir de <em>Configurer les destinations de sauvegarde → Destinations locales</em>:",
+    "intro": "La destination locale est un <strong>unique répertoire cible enregistré durablement</strong> — pas une liste. ProxMenux stocke le choix de l’opérateur chez <code>/usr/local/share/proxmenux/local-target.conf</code> et le lit sur chaque sauvegarde. Lorsqu’aucune cible n’a été configurée, le <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> par défaut est utilisé (le même répertoire que Proxmox utilise pour ses propres sorties <code>vzdump</code>). La cible est configurée à partir de <em>Configurer les destinations de sauvegarde → Local archive targets → Manage local backup target</em>:",
     "options": [
       "<strong>Utilisez par défaut (<code>/var/lib/vz/dump</code>).</strong> Le stockage local Proxmox. Présent sur chaque install Proxmox ; l'archive se trouve à côté des sorties vzdump et est captée automatiquement par l'onglet Sauvegardes du moniteur.",
-      "<strong>Entrez un chemin personnalisé.</strong> Tout chemin absolu du système de fichiers peut être utilisé : un montage NFS, un partage SMB monté via <code>fstab</code>, un jeu de données ZFS dédié, un deuxième disque interne. ProxMenux valide que le chemin existe et est un répertoire avant de l’enregistrer.",
-      "<strong>Choisissez un lecteur USB.</strong> Ouvre le sous-menu USB (ci-dessous), qui détecte les appareils amovibles et propose de monter ou de formater un périphérique."
+      "<strong>Utilisez un chemin personnalisé.</strong> Tout chemin absolu du système de fichiers peut être utilisé : un montage NFS, un partage SMB monté via <code>fstab</code>, un jeu de données ZFS dédié, un deuxième disque interne. ProxMenux valide que le chemin existe et est un répertoire avant de l’enregistrer.",
+      "<strong>Utilisez un disque USB.</strong> Ouvre le sous-menu USB (ci-dessous), qui détecte les appareils amovibles et propose de monter ou de formater un périphérique."
     ]
   },
   "usbFlow": {
@@ -38,7 +38,7 @@
       {
         "state": "non monté",
         "shown": "Taille · étiquette · [fstype] · (non monté — sera monté)",
-        "action": "Un système de fichiers est présent mais n'est pas monté. Lors de la confirmation, ProxMenux exécute <code>hb_mount_usb_partition</code> : crée <code>/mnt/backup-LABEL</code> (ou un chemin basé sur UUID s'il n'y a pas d'étiquette), monte la partition et persiste le point de montage comme cible locale."
+        "action": "Un système de fichiers est présent mais n’est pas monté. Lors de la confirmation, ProxMenux exécute <code>hb_mount_usb_partition</code> : crée <code>/mnt/proxmenux-backup-LABEL</code> (UUID ou nom du périphérique s’il n’y a pas d’étiquette), monte la partition et persiste le point de montage comme cible locale."
       },
       {
         "state": "vide",
@@ -63,7 +63,7 @@
   },
   "sidecar": {
     "heading": "Le sidecar JSON",
-    "intro": "Chaque sauvegarde locale réussie produit un fichier compagnon : <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, écrit à côté de l'archive par <code>hb_write_archive_sidecar</code>. Ce petit fichier JSON permet au ProxMenux Monitor d'identifier l'archive comme une sauvegarde d'hôte ProxMenux même s'il est déplacé, rebaptisé ou archivé ailleurs.",
+    "intro": "Chaque sauvegarde locale réussie produit un fichier compagnon : <code>hostcfg-HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, écrit à côté de l’archive par <code>hb_write_archive_sidecar</code>. Ce petit fichier JSON permet au ProxMenux Monitor d’identifier l’archive comme une sauvegarde d’hôte ProxMenux même s’il est déplacé, rebaptisé ou archivé ailleurs.",
     "contentTitle": "Contenu du sidecar",
     "contentBody": "Le sidecar stocke la version du schéma, que la sauvegarde soit issue d'une opération interactive ou d'un travail programmé (<code>kind</code>), l'ID de travail pour les opérations programmées, le mode de profil utilisé (<code>default</code> ou <code>custom</code>), le nom d'hôte source, le nom de base d'archive original, un horodatage de création ISO-8601 et la taille des archives en octets.",
     "whyBody": "L'onglet Sauvegardes du moniteur scanne les répertoires locaux configurés pour les sidecars <code>*.proxmenux.json</code> — pas pour les fichiers <code>*.tar.zst</code> — parce qu'un <code>.tar.zst</code> sans sidecar pourrait ne pas être une sauvegarde ProxMenux du tout. Le scan est rapide (les fichiers JSON sont minuscules) et l'appariement est stable à travers les renoms de l'archive aussi longtemps que le sidecar est renommé pour correspondre."

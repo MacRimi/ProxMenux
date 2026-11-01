@@ -21,8 +21,8 @@
     "rows": [
       {
         "entry": "ProxMenux Scripts (TUI)",
-        "path": "menu → Utilities → Host Config Backup",
-        "detail": "Processus fondé sur des boîtes de dialogue, adapté à SSH. Le menu principal présente directement les six options. Utilise <code>backup_menu</code> dans <code>backup_host.sh</code>."
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Processus fondé sur des boîtes de dialogue, adapté à SSH. L’entrée du menu principal ouvre Host Config Backup / Restore ; Backup host configuration mène aux six options. Utilise <code>backup_menu</code> dans <code>backup_host.sh</code>."
       },
       {
         "entry": "ProxMenux Monitor (interface utilisateur Web)",
@@ -83,7 +83,7 @@
   "profiles": {
     "heading": "Profil par défaut vs personnalisé",
     "defaultTitle": "Profil par défaut",
-    "defaultBody": "Le profil par défaut est la liste prédéfinie de <code>hb_default_profile_paths</code> (documentée dans <em>Comment ça marche</em> sous <em>Catégories de chemins</em>) plus chaque entrée dans le fichier supplémentaire persistant <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. L'utilisateur confirme les options de destination et de chiffrement et la sauvegarde se déroule sans autre sélection de chemin.",
+    "defaultBody": "Le profil par défaut est la liste prédéfinie de <code>hb_default_profile_paths</code> (documentée dans <em>Comment ça marche</em> sous <em>Catégories de chemins</em>) plus chaque entrée dans le fichier supplémentaire persistant <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. L’utilisateur choisit les options de destination et de chiffrement et la sauvegarde se déroule sans autre sélection de chemin.",
     "customTitle": "Profil personnalisé",
     "customBody": "Le profil personnalisé ouvre une liste à cocher avec tous les chemins du profil par défaut (décochés) et tous les ajouts persistants (précochés, avec le préfixe <code>[+]</code>). L’utilisateur coche les chemins pour cette exécution et peut cliquer sur <em>Ajouter un chemin personnalisé</em> pour ajouter un chemin absolu. Tout chemin ainsi ajouté est enregistré dans <code>backup-extra-paths.txt</code> afin que les sauvegardes suivantes l’incluent automatiquement. Décocher un ajout persistant l’exclut de cette exécution sans le supprimer du fichier — la suppression se fait séparément par <em>Gérer les chemins personnalisés</em>, en dehors du processus de sauvegarde.",
     "customPickerAlt": "Liste de contrôle de profil personnalisé montrant les chemins de profil par défaut (non coché) et les extras persistants (pré coché avec un préfixe [+]), ainsi que des boutons pour ajouter un nouveau chemin ou confirmer la sélection.",
@@ -124,7 +124,7 @@
   },
   "included": {
     "heading": "Ce qui entre et ce qui reste en dehors",
-    "intro": "Chaque chemin dans le profil résolu (par défaut + suppléments persistants + sélection en mode personnalisé) est copié avec <code>rsync -aAXH --numeric-ids</code>. Une liste d'exclusion partagée s'applique à chaque chemin, et deux répertoires comportent d'autres exclusions spécifiques au chemin.",
+    "intro": "Chaque chemin dans le profil résolu (par défaut + suppléments persistants + sélection en mode personnalisé) est copié avec <code>rsync -aAXH --numeric-ids</code>. Il n’y a pas de liste d’exclusion globale ; quelques répertoires comportent des exclusions spécifiques au chemin.",
     "rootTitle": "Exclusions de <code>/root/</code>",
     "rootBody": "<code>/root/</code> fait partie du profil par défaut, de sorte que les scripts utilisateur et la configuration se trouvent dans l'archive. Les sous-chemins volatils sont abandonnés:",
     "rootItems": [
@@ -153,16 +153,16 @@
       "<strong><code>/home/USER</code></strong> — pas dans le profil par défaut. Ajoutez-le comme un chemin personnalisé lorsqu'un système transporte des répertoires d'utilisateur qui doivent survivre à une restauration."
     ],
     "customPathsTitle": "Comment les chemins personnalisés sont gérés",
-    "customPathsBody": "Un chemin personnalisé ajouté en ligne en mode personnalisé ou maintenu dans <code>backup-extra-paths.txt</code> passe par le même pipeline <code>rsync</code> que les chemins de profil par défaut. Les exclusions globales s'appliquent. Si le chemin personnalisé se trouve sous <code>/root/</code> ou <code>/usr/local/share/proxmenux/</code>, les exclusions spécifiques au chemin ci-dessus s'appliquent toujours. Chaque chemin archivé — par défaut ou personnalisé — est enregistré dans <code>metadata/paths_archived.txt</code>. Les chemins qui n'existent pas sur la source sont enregistrés dans <code>metadata/missing_paths.txt</code> sans arrêter la sauvegarde."
+    "customPathsBody": "Un chemin personnalisé ajouté en ligne en mode personnalisé ou maintenu dans <code>backup-extra-paths.txt</code> passe par le même pipeline <code>rsync</code> que les chemins de profil par défaut. Si le chemin personnalisé se trouve sous <code>/root/</code> ou <code>/usr/local/share/proxmenux/</code>, les exclusions spécifiques au chemin ci-dessus s’appliquent toujours. Chaque chemin archivé — par défaut ou personnalisé — est enregistré dans <code>metadata/selected_paths.txt</code>. Les chemins qui n’existent pas sur la source sont enregistrés dans <code>metadata/missing_paths.txt</code> sans arrêter la sauvegarde, et les chemins dont la copie échoue dans <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Structure des archives",
     "intro": "Le répertoire de préparation temporaire produit par chaque moteur suit la même disposition quelle que soit la destination. L'archive tarball, PBS <code>.pxar</code> ou Borg stocke cet arbre dans son intégralité.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Résumé de la confirmation",
-    "body": "Avant que le moteur n'écrive quoi que ce soit à la destination, ProxMenux affiche une boîte de dialogue de résumé avec la destination, l’identifiant de sauvegarde ou le nom de l’archive, l'état de chiffrement et la liste des chemins copiés. Annuler ici avorte la sauvegarde proprement — le répertoire temporaire est supprimé par le gestionnaire <code>trap</code> défini dans la fonction backend et aucune donnée partielle n'arrive à destination."
+    "body": "Avant que le moteur n’écrive quoi que ce soit à la destination, ProxMenux affiche dans le terminal un résumé avec la destination, l’identifiant de sauvegarde ou le nom de l’archive, l’état de chiffrement et la liste des chemins copiés. Il n’y a ni étape de confirmation ni d’annulation à ce stade ; la copie démarre juste après. Si la sauvegarde échoue ou est interrompue, le répertoire temporaire est supprimé par le gestionnaire <code>trap</code> défini dans la fonction backend et aucune donnée partielle n’arrive à destination."
   },
   "writing": {
     "heading": "Écrire à la destination",

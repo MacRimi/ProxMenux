@@ -21,8 +21,8 @@
     "rows": [
       {
         "entry": "ProxMenux Scripts (TUI)",
-        "path": "menu → Utilities → Host Config Backup",
-        "detail": "Dialogbasierter Flow, SSH-freundlich. Das Hauptmenü präsentiert die sechs Optionen direkt. Verwendet <code>backup_menu</code> in <code>backup_host.sh</code>."
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Dialogbasierter Flow, SSH-freundlich. Der Hauptmenüeintrag öffnet Host Config Backup / Restore; Backup host configuration führt zu den sechs Optionen. Verwendet <code>backup_menu</code> in <code>backup_host.sh</code>."
       },
       {
         "entry": "ProxMenux Monitor (Weboberfläche)",
@@ -83,7 +83,7 @@
   "profiles": {
     "heading": "Standardprofil und benutzerdefiniertes Profil",
     "defaultTitle": "Standardprofil",
-    "defaultBody": "Das Standardprofil ist die kuratierte Liste aus <code>hb_default_profile_paths</code> (dokumentiert in <em>Funktionsweise</em> unter <em>Pfadkategorien</em>) sowie jeder Eintrag in der persistenten Extras-Datei <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. Der Benutzer bestätigt die Ziel- und Verschlüsselungsoptionen und das Backup verläuft ohne weitere Pfadauswahl.",
+    "defaultBody": "Das Standardprofil ist die kuratierte Liste aus <code>hb_default_profile_paths</code> (dokumentiert in <em>Funktionsweise</em> unter <em>Pfadkategorien</em>) sowie jeder Eintrag in der persistenten Extras-Datei <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. Der Benutzer wählt das Ziel und die Verschlüsselungsoptionen aus und das Backup verläuft ohne weitere Pfadauswahl.",
     "customTitle": "Benutzerdefiniertes Profil",
     "customBody": "Das benutzerdefinierte Profil öffnet eine Checkliste mit allen Pfaden des Standardprofils (nicht markiert) und allen persistenten Extras (vormarkiert, mit dem Präfix <code>[+]</code>). Der Benutzer markiert die Pfade für diesen Durchlauf und kann über <em>Benutzerdefinierten Pfad hinzufügen</em> einen neuen absoluten Pfad ergänzen. Jeder dabei hinzugefügte Pfad wird in <code>backup-extra-paths.txt</code> gespeichert, damit künftige Backups ihn automatisch berücksichtigen. Das Abwählen eines persistenten Extras gilt nur für diesen Durchlauf und löscht es nicht aus der Datei — dafür gibt es außerhalb des Backup-Ablaufs die separate Aktion <em>Benutzerdefinierte Pfade verwalten</em>.",
     "customPickerAlt": "Benutzerdefinierte Profil-Checkliste mit den Standard-Profilpfaden (nicht markiert) und persistenten Extras (vormarkiert mit einem [+]-Präfix) sowie Schaltflächen, um einen neuen Pfad hinzuzufügen oder die Auswahl zu bestätigen.",
@@ -124,7 +124,7 @@
   },
   "included": {
     "heading": "Was reingeht und was draußen bleibt",
-    "intro": "Jeder Pfad im aufgelösten Profil (Standard + persistente Extras + Custom-Mode-Auswahl) wird mit <code>rsync -aAXH --numeric-ids</code> kopiert. Eine gemeinsame Ausschlussliste gilt für jeden Pfad, und zwei Verzeichnisse tragen zusätzliche pfadspezifische Ausschlüsse.",
+    "intro": "Jeder Pfad im aufgelösten Profil (Standard + persistente Extras + Custom-Mode-Auswahl) wird mit <code>rsync -aAXH --numeric-ids</code> kopiert. Es gibt keine globale Ausschlussliste; einige Verzeichnisse tragen pfadspezifische Ausschlüsse.",
     "rootTitle": "<code>/root/</code> Ausschlüsse",
     "rootBody": "<code>/root/</code> ist Teil des Standardprofils, sodass Benutzerskripte und Konfigurationen im Archiv landen. Flüchtige Subpfade werden fallen gelassen:",
     "rootItems": [
@@ -153,16 +153,16 @@
       "<strong><code>/home/USER</code></strong> — nicht im Standardprofil. Fügen Sie es als benutzerdefinierten Pfad hinzu, wenn ein System Heimverzeichnisse des Benutzers trägt, die eine Wiederherstellung überleben müssen."
     ],
     "customPathsTitle": "Wie benutzerdefinierte Pfade gehandhabt werden",
-    "customPathsBody": "Ein benutzerdefinierter Pfad, der im benutzerdefinierten Modus hinzugefügt wurde oder in <code>backup-extra-paths.txt</code> persistiert wurde, durchläuft dieselbe <code>rsync</code>-Pipeline wie Standardprofilpfade. Globale Ausschlüsse gelten. Wenn der benutzerdefinierte Pfad unter <code>/root/</code> oder <code>/usr/local/share/proxmenux/</code> liegt, gelten die oben genannten pfadspezifischen Ausschlüsse weiterhin. Jeder archivierte Pfad – standardmäßig oder benutzerdefiniert – wird in <code>metadata/paths_archived.txt</code> aufgezeichnet. Pfade, die in der Quelle nicht vorhanden sind, werden in <code>metadata/missing_paths.txt</code> aufgezeichnet, ohne das Backup zu stoppen."
+    "customPathsBody": "Ein benutzerdefinierter Pfad, der im benutzerdefinierten Modus hinzugefügt wurde oder in <code>backup-extra-paths.txt</code> persistiert wurde, durchläuft dieselbe <code>rsync</code>-Pipeline wie Standardprofilpfade. Wenn der benutzerdefinierte Pfad unter <code>/root/</code> oder <code>/usr/local/share/proxmenux/</code> liegt, gelten die oben genannten pfadspezifischen Ausschlüsse weiterhin. Jeder archivierte Pfad – standardmäßig oder benutzerdefiniert – wird in <code>metadata/selected_paths.txt</code> aufgezeichnet. Pfade, die in der Quelle nicht vorhanden sind, werden in <code>metadata/missing_paths.txt</code> aufgezeichnet, ohne das Backup zu stoppen, und Pfade, deren Kopieren fehlschlägt, in <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Archivstruktur",
     "intro": "Das von jedem Backend erstellte Staging-Verzeichnis folgt unabhängig vom Ziel dem gleichen Layout. Das Tarball-, PBS <code>.pxar</code> oder Borg-Archiv speichert diesen Baum wortwörtlich.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Bestätigungszusammenfassung",
-    "body": "Bevor das Backend etwas an das Ziel schreibt, zeigt ProxMenux einen zusammenfassenden Dialog mit dem Ziel, der Backup-ID oder dem Archivnamen, dem Verschlüsselungsstatus und der Liste der zu kopierenden Pfade an. Das Abbrechen hier bricht das Backup sauber ab - das Staging-Verzeichnis wird durch den <code>trap</code>-Hook entfernt, der auf der Backend-Funktion eingestellt ist, und keine Teildaten erreichen das Ziel."
+    "body": "Bevor das Backend etwas an das Ziel schreibt, gibt ProxMenux im Terminal eine Zusammenfassung mit dem Ziel, der Backup-ID oder dem Archivnamen, dem Verschlüsselungsstatus und der Liste der zu kopierenden Pfade aus. An dieser Stelle gibt es keinen Bestätigungs- oder Abbruchschritt; das Kopieren beginnt unmittelbar danach. Wenn das Backup fehlschlägt oder unterbrochen wird, wird das Staging-Verzeichnis durch den <code>trap</code>-Hook entfernt, der auf der Backend-Funktion eingestellt ist, und keine Teildaten erreichen das Ziel."
   },
   "writing": {
     "heading": "Schreiben an den Bestimmungsort",

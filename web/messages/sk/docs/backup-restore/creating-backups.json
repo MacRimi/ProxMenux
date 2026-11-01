@@ -21,8 +21,8 @@
     "rows": [
       {
         "entry": "ProxMenux Scripts (TUI)",
-        "path": "menu → Utilities → Host Config Backup",
-        "detail": "Dialógový tok, SSH-priateľský. Hlavné menu predstavuje šesť možností priamo. Používa <code>backup_menu</code> v <code>backup_host.sh</code>."
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Dialógový tok, SSH-priateľský. Položka hlavného menu otvára Host Config Backup / Restore; Backup host configuration vedie k šiestim možnostiam. Používa <code>backup_menu</code> v <code>backup_host.sh</code>."
       },
       {
         "entry": "ProxMenux Monitor (webové rozhranie)",
@@ -83,7 +83,7 @@
   "profiles": {
     "heading": "Štandardný vs vlastný profil",
     "defaultTitle": "Predvolený profil",
-    "defaultBody": "Predvolený profil je pripravený zoznam z <code>hb_default_profile_paths</code> (opísaný v časti <em>Ako to funguje</em> pod nadpisom <em>Kategórie ciest</em>) spolu so všetkými položkami zo súboru trvalých doplnkov <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. Používateľ potvrdí cieľ a možnosti šifrovania a záloha pokračuje bez ďalšieho výberu ciest.",
+    "defaultBody": "Predvolený profil je pripravený zoznam z <code>hb_default_profile_paths</code> (opísaný v časti <em>Ako to funguje</em> pod nadpisom <em>Kategórie ciest</em>) spolu so všetkými položkami zo súboru trvalých doplnkov <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. Používateľ vyberie cieľ a možnosti šifrovania a záloha pokračuje bez ďalšieho výberu ciest.",
     "customTitle": "Vlastný profil",
     "customBody": "Vlastný profil otvorí zoznam so všetkými cestami predvoleného profilu (nezaškrtnuté) a všetkými trvalými doplnkami (vopred zaškrtnuté, s predponou <code>[+]</code>). Používateľ zaškrtne cesty pre toto spustenie a cez <em>Pridať vlastnú cestu</em> môže doplniť novú absolútnu cestu. Takto pridaná cesta sa uloží do <code>backup-extra-paths.txt</code>, aby ju budúce zálohy zahrnuli automaticky bez opätovného pridávania. Odškrtnutie trvalého doplnku ho vynechá len pri tomto spustení, ale neodstráni ho zo súboru — na odstránenie slúži samostatná akcia <em>Spravovať vlastné cesty</em> mimo postupu zálohovania.",
     "customPickerAlt": "Vlastný kontrolný zoznam profilu zobrazujúci predvolené cesty profilu (nezaškrtnuté) a trvalé doplnky (vopred zaškrtnuté s predponou [+]) plus tlačidlá na pridanie novej cesty alebo potvrdenie výberu.",
@@ -124,7 +124,7 @@
   },
   "included": {
     "heading": "Čo ide dnu a čo zostane vonku",
-    "intro": "Každá cesta v určenom profile (predvolené + trvalé doplnky + výber vo vlastnom režime) je skopírovaná s <code>rsync -aAXH --numeric-ids</code>. Spoločný zoznam vylúčení sa vzťahuje na každú cestu a dva adresáre majú dodatočné výnimky špecifické pre jednotlivé trasy.",
+    "intro": "Každá cesta v určenom profile (predvolené + trvalé doplnky + výber vo vlastnom režime) je skopírovaná s <code>rsync -aAXH --numeric-ids</code>. Neexistuje globálny zoznam vylúčení; niekoľko adresárov má vylúčenia špecifické pre danú cestu.",
     "rootTitle": "Výnimky <code>/root/</code>",
     "rootBody": "<code>/root/</code> je súčasťou predvoleného profilu, aby sa do archívu zahrnuli používateľské skripty a konfigurácia. Dočasné podcesty sa vynechajú:",
     "rootItems": [
@@ -153,16 +153,16 @@
       "<strong><code>/home/USER</code></strong> Nie v štandardnom profile. Pridať ako vlastnú cestu, keď systém nesie užívateľské domovské adresáre, ktoré musia prežiť obnovenie."
     ],
     "customPathsTitle": "Ako sa spracúvajú vlastné cesty",
-    "customPathsBody": "Vlastná cesta pridaná priamo vo vlastnom režime alebo uložená v <code>backup-extra-paths.txt</code> prechádza rovnakým postupom <code>rsync</code> ako cesty predvoleného profilu. Platia globálne vylúčenia. Ak sa vlastná cesta nachádza pod <code>/root/</code> alebo <code>/usr/local/share/proxmenux/</code>, naďalej platia aj uvedené vylúčenia pre konkrétnu cestu. Každá archivovaná cesta — predvolená aj vlastná — sa zaznamená v <code>metadata/paths_archived.txt</code>. Cesty, ktoré v zdroji neexistujú, sa zapíšu do <code>metadata/missing_paths.txt</code> bez zastavenia zálohy."
+    "customPathsBody": "Vlastná cesta pridaná priamo vo vlastnom režime alebo uložená v <code>backup-extra-paths.txt</code> prechádza rovnakým postupom <code>rsync</code> ako cesty predvoleného profilu. Ak sa vlastná cesta nachádza pod <code>/root/</code> alebo <code>/usr/local/share/proxmenux/</code>, naďalej platia aj uvedené vylúčenia pre konkrétnu cestu. Každá archivovaná cesta — predvolená aj vlastná — sa zaznamená v <code>metadata/selected_paths.txt</code>. Cesty, ktoré v zdroji neexistujú, sa zapíšu do <code>metadata/missing_paths.txt</code> bez zastavenia zálohy a cesty, ktoré sa nepodarilo skopírovať, do <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Štruktúra archívu",
     "intro": "Dočasný prípravný adresár vytvorený každým backendom má rovnaké usporiadanie bez ohľadu na miesto určenia. Archív tarball, PBS <code>.pxar</code> alebo Borg uchováva tento strom doslovne.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Zhrnutie potvrdenia",
-    "body": "Pred zápisom akýchkoľvek údajov do cieľa ProxMenux zobrazí súhrnný dialóg s cieľom, ID zálohy alebo názvom archívu, stavom šifrovania a zoznamom kopírovaných ciest. Zrušenie v tomto bode zálohovanie bezpečne ukončí — obslužný mechanizmus <code>trap</code> nastavený vo funkcii backendu odstráni dočasný prípravný adresár a do cieľa sa nedostanú žiadne čiastočné údaje."
+    "body": "Pred zápisom akýchkoľvek údajov do cieľa ProxMenux vypíše v termináli súhrn s cieľom, ID zálohy alebo názvom archívu, stavom šifrovania a zoznamom kopírovaných ciest. V tomto bode nie je krok potvrdenia ani zrušenia; kopírovanie sa začne hneď potom. Ak záloha zlyhá alebo sa preruší, obslužný mechanizmus <code>trap</code> nastavený vo funkcii backendu odstráni dočasný prípravný adresár a do cieľa sa nedostanú žiadne čiastočné údaje."
   },
   "writing": {
     "heading": "Písanie na miesto určenia",

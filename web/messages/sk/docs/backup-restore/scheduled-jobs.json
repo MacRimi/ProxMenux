@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Správa úloh",
-    "intro": "Menu rozvrhu (Scripts TUI) a záložka Monitor Backup odhaľujú rovnaké akcie na akejkoľvek práci.",
+    "intro": "Menu plánovača v Scripts TUI (Backup scheduler and retention) ponúka Run now, Enable / Disable a Delete, plus zoznam úloh so stavom posledného spustenia. Edit a View log sú dostupné iba na záložke Monitor Backups.",
     "rows": [
       {
         "action": "Spustiť teraz",
@@ -112,7 +112,7 @@
         "detail": "Nový režim: časovač sa ovláda cez <code>systemctl enable/disable --now</code>. Režim pripojenia: zmení príznak <code>ENABLED</code> v súbore env úlohy — hook ho zohľadní pri ďalšom spustení PVE."
       },
       {
-        "action": "Upraviť",
+        "action": "Upraviť (iba Monitor)",
         "detail": "Znovu otvorí destináciu, rozvrh, profil a retenčný postup a prepíše pracovné súbory. Zachováva ID práce."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Odstráni súbor env úlohy, súbor ciest, časovač a službu systemd (nový režim) a vypne pripojenie k hooku (režim pripojenia). Existujúce archívy v cieli nemení."
       },
       {
-        "action": "Zobraziť záznam",
+        "action": "Zobraziť záznam (iba Monitor)",
         "detail": "Priebežne zobrazuje <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — jeden protokolový súbor na beh. Spúšťací skript tiež vydáva kompaktný stavový riadok na journald pod systemd služby."
       }
     ]

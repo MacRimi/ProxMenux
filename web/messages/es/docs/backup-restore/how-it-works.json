@@ -20,7 +20,7 @@
     "heading": "Layout del archivo",
     "intro": "Cada archivo respeta el mismo layout con independencia del destino. El subdirectorio <code>metadata/</code> contiene los bloques estructurados; el subdirectorio <code>rootfs/</code> contiene el backup del sistema de ficheros.",
     "treeCaption": "El directorio de staging generado durante un backup. Todos los destinos reciben el mismo árbol (adaptado a su formato nativo: tar para local, chunks PBS para PBS, segmentos borg para Borg).",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel + método pmxcfs\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel + método pmxcfs\n│   ├── selected_paths.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "El bloque rootfs",
@@ -176,7 +176,7 @@
         "stage": "3",
         "name": "Preparación de pending",
         "reads": "rootfs/ (rutas reboot + dangerous)",
-        "action": "<code>_rs_prepare_pending_restore</code> deja las rutas de riesgo preparadas bajo <code>/var/lib/proxmenux/pending-restore/</code>, escribe <code>plan.env</code>, <code>apply-on-boot.list</code> y <code>rs-skip-paths.txt</code>, y habilita <code>proxmenux-restore-onboot.service</code> para que dispare en el siguiente arranque."
+        "action": "<code>_rs_prepare_pending_restore</code> deja las rutas de riesgo preparadas bajo <code>/var/lib/proxmenux/restore-pending/&lt;restore_id&gt;/</code> (enlazado como <code>current</code>), escribe <code>plan.env</code>, <code>apply-on-boot.list</code> y <code>rs-skip-paths.txt</code>, y habilita <code>proxmenux-restore-onboot.service</code> para que dispare en el siguiente arranque."
       },
       {
         "stage": "3b",

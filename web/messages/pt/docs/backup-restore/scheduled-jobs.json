@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Gestão de tarefas",
-    "intro": "O menu de agendamento (Scripts TUI) e a aba Monitor Backups expõem as mesmas ações em qualquer trabalho.",
+    "intro": "O menu de agendamento no Scripts TUI (Backup scheduler and retention) oferece Run now, Enable / Disable e Delete, além de uma lista de trabalhos com o estado da última execução. Edit e View log só estão disponíveis na aba Monitor Backups.",
     "rows": [
       {
         "action": "Executar agora",
@@ -112,7 +112,7 @@
         "detail": "Novo modo: <code>systemctl enable/disable --now</code> o temporizador. Modo Anexar: altera o sinalizador <code>ENABLED</code> no env de trabalho — o script gancho honra-o na próxima execução PVE."
       },
       {
-        "action": "Editar",
+        "action": "Editar (apenas no Monitor)",
         "detail": "Abre novamente o destino, agenda, perfil e avisos de retenção e reescreve os arquivos de trabalho. Preserva a identificação do trabalho."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Remove o env do trabalho, o arquivo de caminhos, o temporizador e o serviço systemd (modo novo) e desativa a associação ao hook (modo de anexação). Não altera os arquivos já existentes no destino."
       },
       {
-        "action": "Ver registo",
+        "action": "Ver registo (apenas no Monitor)",
         "detail": "Mostra em tempo real <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — um arquivo de log por execução. O executor também emite uma linha de status compacta para journald no serviço systemd."
       }
     ]
