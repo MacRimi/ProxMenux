@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Otvorenie nástroja",
-    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong>. Zobrazí sa podponuka so štyrmi možnosťami:",
+    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Add NFS share as Proxmox Storage</strong>. Zobrazí sa podponuka so štyrmi možnosťami (plus Exit):",
     "imageAlt": "Ponuka NFS hostiteľa — Pripojiť / Zobraziť / Odstrániť / Testovať pripojenie"
   },
   "howRuns": {
@@ -124,17 +124,17 @@
   },
   "view": {
     "heading": "Zobraziť nakonfigurované úložiská NFS",
-    "body": "Vypíše položky NFS v Proxmoxe (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) so serverom, exportom, typmi obsahu, cestou pripojenia a aktuálnym stavom. <strong>Poznámka:</strong> zobrazí iba úložiská registrované cez pvesm, nie samostatné pripojenia fstab. Tie overte pomocou <code>findmnt -t nfs</code> alebo <code>grep nfs /etc/fstab</code>."
+    "body": "Vypíše úložiská NFS registrované v Proxmoxe (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) so serverom, exportom, typmi obsahu, cestou pripojenia a aktuálnym stavom, nasledované pripojeniami NFS z <code>/etc/fstab</code> hostiteľa so serverom, exportom, cestou, voľbami a informáciou, či je každé pripojené."
   },
   "remove": {
     "heading": "Odstrániť úložisko NFS",
-    "body": "Po potvrdení so serverom, exportom a obsahom spustí <code>pvesm remove &lt;storage-id&gt;</code>. Odstráni iba registráciu v Proxmoxe; <strong>vzdialený server NFS nemení</strong> a súbory neodstráni. Samostatné pripojenie fstab odstráňte ručnou úpravou <code>/etc/fstab</code> a príkazom <code>umount &lt;path&gt;</code>.",
+    "body": "Výber uvádza úložiská Proxmox (<code>[pvesm]</code>) aj pripojenia fstab hostiteľa (<code>[fstab]</code>). Pre úložisko Proxmox po potvrdení so serverom, exportom a obsahom spustí <code>pvesm remove &lt;storage-id&gt;</code>. Pri pripojení fstab odpojí cestu, zálohuje <code>/etc/fstab</code> do <code>/etc/fstab.proxmenux.bak</code>, odstráni riadok a zmaže adresár pripojenia, ak je prázdny. <strong>Vzdialený server NFS sa nikdy nemení</strong>, žiadne súbory sa neodstránia.",
     "warnTitle": "Zálohovanie závislostí najprv",
     "warnBody": "Ak VM, CT alebo úlohy zálohovania odkazujú na ID tohto úložiska, po odstránení budú odkazovať na neexistujúce úložisko. Proxmox ohlási chybu, ale odkazy neodstráni. Najprv ich presuňte alebo odstráňte a až potom odstráňte úložisko."
   },
   "test": {
     "heading": "Test NFS konektivita",
-    "body": "Spustí diagnostický prechod cez každý NFS skladovanie registrované v Proxmoxe: kontroluje, či <code>showmount</code> je k dispozícii, <code>rpcbind</code> beží, pings každý server, sondy port 2049, volá <code>showmount -e</code>, a nakoniec uvádza Proxmox vlastný názor (<code>pvesm status</code>). Dobrá prvá zastávka, keď úložisko ukazuje ako <em>neaktívny</em> v Proxmoxe UI."
+    "body": "Spustí diagnostický prechod cez každé úložisko NFS registrované v Proxmoxe a každé pripojenie NFS v <code>/etc/fstab</code> hostiteľa: kontroluje, či je k dispozícii <code>showmount</code>, či beží <code>rpcbind</code>, pingne každý server, preverí port 2049, zavolá <code>showmount -e</code> a nakoniec uvedie vlastný pohľad Proxmoxu (<code>pvesm status</code>). Dobrá prvá zastávka, keď úložisko v rozhraní Proxmox ukazuje <em>inactive</em>."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",

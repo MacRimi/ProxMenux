@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Avinstallera NFS server",
-    "body": "Fullständig rensning efter bekräftelse: stoppar och inaktiverar <code>nfs-kernel-server</code> och <code>rpcbind</code>, tömmer <code>/etc/exports</code>, tar bort NFS-paketen med <code>apt-get purge</code>, gruppen <code>sharedfiles</code> och användarna <code>remap_*</code> samt avslutar kvarvarande processer. De <strong>exporterade mapparna raderas inte</strong>; endast NFS-konfigurationen och paketen tas bort.",
+    "body": "Fullständig rensning efter bekräftelse: stoppar och inaktiverar <code>nfs-kernel-server</code> och <code>rpcbind</code>, tömmer <code>/etc/exports</code>, kör <code>apt-get purge</code> på <code>nfs-kernel-server</code> och <code>nfs-common</code>, tar bort användarna <code>remap_*</code> och gruppen <code>sharedfiles</code> (endast om inga vanliga användare fortfarande är medlemmar, vilket oftast inte är fallet) samt avslutar kvarvarande processer. De <strong>exporterade mapparna raderas inte</strong>; endast NFS-konfigurationen och paketen tas bort.",
     "warnTitle": "Skriptet stannar vid exportlinjen, inte vid data",
     "warnBody": "Både <em>Ta bort export</em> och <em>Avinstallera NFS-server</em> tar bort exportkonfigurationen. Data i den delade mappen bevaras. Om även data ska tas bort, gör det uttryckligen med <code>rm -rf</code> efter att skriptet har avslutats och säkerhetskopiera först om någon kan behöva dem."
   },

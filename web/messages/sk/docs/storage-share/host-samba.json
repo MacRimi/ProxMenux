@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Otvorenie nástroja",
-    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Mount Samba Share on Host</strong>. Zobrazí sa podponuka so štyrmi možnosťami:",
+    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Add Samba share as Proxmox Storage</strong>. Zobrazí sa podponuka so štyrmi možnosťami (plus Exit):",
     "imageAlt": "Ponuka Samba hostiteľa — Pripojiť / Zobraziť / Odstrániť / Testovať pripojenie"
   },
   "howRuns": {

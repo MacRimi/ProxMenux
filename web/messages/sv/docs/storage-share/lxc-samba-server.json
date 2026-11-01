@@ -30,12 +30,12 @@
     "headerAction": "Vad manuset gör",
     "bindType": "Bind-mount från värd",
     "bindTypeSubRich": "Detekteras via <code>mount</code>-utgång",
-    "bindActionRich": "Skapar grupp <code>sharedfiles</code> (standard GID 999, dynamisk om det tas), lägger till Samba-användaren till den, sedan <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID - nya filer ärver gruppen). Om användaren fortfarande inte kan skriva gäller <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "bindActionRich": "Skapar grupp <code>sharedfiles</code> (standard GID 101000, dynamisk om det tas) och lägger till Samba-användaren till den. Sedan kontrollerar den filsystemet: där <code>chown</code> fungerar körs <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID, nya filer ärver gruppen), och där ACL stöds tillämpas åtkomst- och standard-ACL (<code>u:&lt;user&gt;:rwx,g:sharedfiles:rwx</code>, rekursivt). På vfat / exfat / ntfs hoppas båda över och det skrivs ut hur du monterar om med rätt uid/gid. Skrivåtkomst verifieras i slutet.",
     "localType": "Lokal mapp i CT",
     "localTypeSub": "Ingen bind-montering upptäckt",
     "localActionRich": "Standard ägande: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Ingen delad grupp behövdes eftersom ingen annan CT skriver till den här mappen. Falls tillbaka till <code>setfacl</code> om skrivåtkomst fortfarande saknas.",
-    "gidTitle": "GID för \"sharedfiles\" skiljer sig från NFS-serverflödet",
-    "gidBody": "Samba server script använder GID <strong>999</strong> för <code>sharedfiles</code>, medan <nfsLink>NFS server flow</nfsLink> använder GID <strong>101000</strong>. Om du kör båda servrarna i samma CT och vill ha en gemensam grupp över båda protokollen, redigera en av dem för att matcha den andra efter installationen (t.ex. <code>groupmod -g 101000 sharedfiles</code>) och sätt ägare på de berörda mapparna igen. Detta är en känd inkonsekvens i de nuvarande skripten."
+    "gidTitle": "GID för \"sharedfiles\" är samma som i NFS-serverflödet",
+    "gidBody": "Samba server script skapar <code>sharedfiles</code> med GID <strong>101000</strong>, samma GID som <nfsLink>NFS server flow</nfsLink> använder, så att båda protokollen delar en grupp. Om en annan grupp redan har GID 101000 i CT skapar skriptet i stället <code>sharedfiles</code> med en dynamisk GID. Kontrollera det med <code>getent group sharedfiles</code>."
   },
   "opening": {
     "heading": "Öppna verktyget",
@@ -47,7 +47,7 @@
   },
   "modes": {
     "heading": "De tre delningslägena",
-    "intro": "Varje läge skriver en annan stanza till <code>smb.conf</code>. Alla tre inkluderar <code>valid users = &lt;username&gt;</code> (ingen anonym), <code>force group = sharedfiles</code> (så nya filer tillhör den delade gruppen) och <code>veto files = /lost+found/</code> (döljer det från kunder).",
+    "intro": "Varje läge skriver en annan stanza till <code>smb.conf</code>. Alla tre inkluderar en <code>comment</code>, <code>valid users = &lt;username&gt;</code> (ingen anonym), <code>force user = &lt;username&gt;</code> och <code>force group = sharedfiles</code> (så att skrivningar får konsekvent ägarskap) och <code>veto files = /lost+found/</code> (döljer det från kunder).",
     "headerMode": "Läge",
     "headerBlock": "Block skriven till smb.conf",
     "rwMode": "Läsning och skrivning",
@@ -107,7 +107,7 @@
     "groupTitle": "Filer skrivna av kunden visas med fel grupp på servern",
     "groupBody": "Skriptet sätter <code>force group = sharedfiles</code> i delningsblocket, så nya filer bör vara grupp <code>sharedfiles</code>. Om de inte är det kan SGID-biten på föräldrakatalogen ha gått förlorad (någon körde <code>chmod</code> för hand). Tillämpa igen: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
     "bothTitle": "Dela samma mapp över både NFS och Samba",
-    "bothBody": "ProxMenux använder olika GID för <code>sharedfiles</code> i varje manus (Samba: 999, NFS: 101000). Om du tjänar samma mapp via båda, besluta om en GID och anpassa båda. Den enklaste fixen: efter att ha kört båda skripten, redigera den mindre GID:"
+    "bothBody": "Båda skripten använder GID 101000 för <code>sharedfiles</code>, så en mapp som delas över båda protokollen kräver inget extra steg. Om Samba-skriptet föll tillbaka till en dynamisk GID eftersom 101000 var upptaget, frigör den GID:n och anpassa gruppen för hand:"
   },
   "related": {
     "heading": "Relaterad",

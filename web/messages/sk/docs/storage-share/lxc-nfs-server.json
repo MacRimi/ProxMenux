@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Odinštalovať server NFS",
-    "body": "Úplné čistenie po potvrdení: zastaví a vypne <code>nfs-kernel-server</code> a <code>rpcbind</code>, vyprázdni <code>/etc/exports</code>, odstráni balíky NFS pomocou <code>apt-get purge</code>, skupinu <code>sharedfiles</code> aj používateľov <code>remap_*</code> a ukončí zvyšné procesy. <strong>Exportované priečinky sa neodstránia</strong>; odstráni sa iba konfigurácia NFS a balíky.",
+    "body": "Úplné čistenie po potvrdení: zastaví a vypne <code>nfs-kernel-server</code> a <code>rpcbind</code>, vyprázdni <code>/etc/exports</code>, odstráni <code>nfs-kernel-server</code> a <code>nfs-common</code> pomocou <code>apt-get purge</code>, odstráni používateľov <code>remap_*</code> a skupinu <code>sharedfiles</code> (iba ak jej nie sú členmi žiadni bežní používatelia, čo zvyčajne neplatí) a ukončí zvyšné procesy. <strong>Exportované priečinky sa neodstránia</strong>; odstráni sa iba konfigurácia NFS a balíky.",
     "warnTitle": "Skript sa zastaví na exportnom riadku, nie na dátach",
     "warnBody": "<em>Odstrániť export</em> a <em>Odinštalovať server NFS</em> odstráni konfiguráciu exportu. Údaje o exportovanom priečinku sa zachovajú. Ak chcete odstrániť aj údaje, urobte to explicitne pomocou <code>rm -rf</code> po dokončení skriptu – a ak by ich ešte niekto mohol potrebovať, najprv si ich zálohujte."
   },

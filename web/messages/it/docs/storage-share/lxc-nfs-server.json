@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Disinstallare il server NFS",
-    "body": "Pulizia completa dopo conferma: arresta e disabilita <code>nfs-kernel-server</code> e <code>rpcbind</code>, svuota <code>/etc/exports</code>, rimuove i pacchetti NFS con <code>apt-get purge</code>, elimina il gruppo <code>sharedfiles</code> e gli utenti <code>remap_*</code> e termina i processi residui. Le <strong>cartelle esportate non vengono eliminate</strong>; vengono rimossi soltanto configurazione e pacchetti NFS.",
+    "body": "Pulizia completa dopo conferma: arresta e disabilita <code>nfs-kernel-server</code> e <code>rpcbind</code>, svuota <code>/etc/exports</code>, esegue <code>apt-get purge</code> di <code>nfs-kernel-server</code> e <code>nfs-common</code>, elimina gli utenti <code>remap_*</code> e il gruppo <code>sharedfiles</code> (solo se nessun utente normale ne è ancora membro, cosa che di solito non accade) e termina i processi residui. Le <strong>cartelle esportate non vengono eliminate</strong>; vengono rimossi soltanto configurazione e pacchetti NFS.",
     "warnTitle": "Lo script si ferma alla linea di esportazione, non ai dati",
     "warnBody": "<em>Elimina esportazione</em> e <em>Disinstalla server NFS</em> rimuovono la configurazione. I dati della cartella esportata vengono conservati. Per eliminarli, usa esplicitamente <code>rm -rf</code> dopo la fine dello script e prima esegui un backup se potrebbero ancora servire."
   },

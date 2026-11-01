@@ -68,9 +68,9 @@
   },
   "unmount": {
     "heading": "Smonta la condivisione NFS",
-    "body": "Combina i montaggi live e le voci fstab in un unico elenco, ti consente di sceglierne uno e <strong>rimuove la riga corrispondente da <code>/etc/fstab</code></strong>. Lo script <em>non</em> esegue <code>umount</code> sul montaggio live, invece ti dice che è necessario un riavvio CT affinché lo smontaggio abbia effetto.",
-    "warnTitle": "Lo script rimuove le voci da fstab, senza smontare i filesystem attivi",
-    "warnBody": "È una scelta voluta: <code>umount</code> fallisce con “device busy” se un processo nel CT usa ancora il montaggio. Rimuovere la voce da fstab impedisce che venga ripristinato al prossimo avvio del CT. Se vuoi smontarlo <em>subito</em> e sei certo che non sia in uso, esegui manualmente <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> dopo la fine dello script."
+    "body": "Combina i montaggi live e le voci fstab in un unico elenco, ti consente di sceglierne uno, <strong>rimuove la riga corrispondente da <code>/etc/fstab</code></strong> e lo smonta all’interno del CT con <code>umount</code>. Se il montaggio è occupato, ripiega su un <code>umount -l</code> differito.",
+    "warnTitle": "Se lo smontaggio fallisce, riavvia il CT",
+    "warnBody": "Quando sia <code>umount</code> sia <code>umount -l</code> falliscono, lo script ti avvisa di riavviare l’LXC per rilasciare il montaggio. La voce fstab è già stata rimossa, quindi il montaggio non ritorna al prossimo avvio del CT."
   },
   "test": {
     "heading": "Test di connettività NFS",

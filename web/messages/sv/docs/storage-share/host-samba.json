@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Öppna verktyget",
-    "body": "Öppna <strong>Storage &amp; Share Manager → Mount Samba Share on Host</strong> i ProxMenux huvudmeny. Undermenyn har fyra alternativ:",
+    "body": "Öppna <strong>Storage &amp; Share Manager → Add Samba share as Proxmox Storage</strong> i ProxMenux huvudmeny. Undermenyn har fyra alternativ (plus Exit):",
     "imageAlt": "Samba-värdmeny — Montera / Visa / Ta bort / Testa anslutning"
   },
   "howRuns": {
