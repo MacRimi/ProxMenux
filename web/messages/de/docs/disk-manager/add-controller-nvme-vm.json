@@ -21,13 +21,14 @@
   "iommu": {
     "heading": "IOMMU-Gruppen - warum die gesamte Karte auf einmal geht",
     "body": "Die Isolationsgrenze für PCI-Passthrough ist die <strong>IOMMU-Gruppe</strong>, die kleinste von der IOMMU der CPU isolierbare Einheit. Geräte derselben Gruppe lassen sich nicht voneinander isolieren. Teilt ein SATA-Controller die Gruppe mit einem USB-Controller, muss für SATA-Passthrough möglicherweise auch USB vom Host gelöst werden, oder Passthrough ist nicht möglich. Dabei werden nicht automatisch alle Geräte der Gruppe der VM zugewiesen.",
-    "outro": "ProxMenux zeigt die IOMMU-Gruppe neben jedem Gerät und warnt Sie, wenn eine Gruppe mehr als nur den gewünschten Controller trägt. Sie können weiterhin fortfahren, wenn die zusätzlichen Geräte in der Gruppe akzeptabel sind (z. B. alle Festplattencontroller) oder zurückgehen, wenn dies nicht der Fall ist."
+    "outro": "ProxMenux prüft keine IOMMU-Gruppen. Prüfen Sie vor dem Passthrough einer Karte ihre Gruppe mit den unten stehenden manuellen Befehlen: Enthält die Gruppe mehr als den gewünschten Controller, verlassen die anderen Geräte den Host zusammen mit ihm."
   },
   "prereqs": {
     "heading": "Voraussetzungen",
     "items": [
       "<strong>CPU und Mainboard unterstützen</strong> VT-d (Intel) oder AMD-Vi, und die Funktion ist in der Firmware (BIOS/UEFI) aktiviert. ProxMenux kann die Kernelkonfiguration aktivieren, aber keine Firmware-Einstellung umschalten.",
       "Die Ziel-VM ist vor dem Anschließen von PCI-Geräten <strong>ausgeschaltet</strong>.",
+      "Die Ziel-VM verwendet den Maschinentyp <strong>q35</strong>. ProxMenux lehnt andere Maschinentypen ab.",
       "Der Controller/NVMe <strong> ist nicht derjenige, der das Proxmox Root-Dateisystem</strong> hält. Das Skript verbirgt alles, was vom Host verwendet wird.",
       "Das Gastbetriebssystem hat Treiber für das Controllermodell. Linux unterstützt nahezu jeden HBA ab Werk; unter Windows muss der Herstellertreiber <em>vor</em> dem Start mit angeschlossenem Controller installiert sein."
     ],
@@ -40,46 +41,46 @@
     "list": [
       {
         "title": "Ziel-VM auswählen",
-        "bodyRich": "ProxMenux liest <code>qm list</code> und zeigt alle VMs an. Wählen Sie die VM, die den Controller erhalten soll.",
+        "bodyRich": "ProxMenux liest <code>qm list</code> und zeigt alle VMs mit Status und Maschinentyp an. Wählen Sie die VM, die den Controller erhalten soll. Eine laufende VM oder eine VM, deren Maschinentyp nicht q35 ist, wird abgelehnt.",
         "img": "/disk/nvme-passthrough/vm-selection.png",
         "alt": "VM Auswahldialog",
         "caption": "VM Auswahldialog"
       },
       {
         "title": "IOMMU-Prüfung",
-        "bodyRich": "Wenn IOMMU auf der Kernel-Cmdline nicht aktiviert ist, bietet ProxMenux an, sie zu aktivieren. Es bearbeitet <code>/etc/kernel/cmdline</code> (für systemd-Boot) oder <code>/etc/default/grub</code> (für GRUB) und fügt den richtigen Parameter für Ihren CPU hinzu:",
+        "bodyRich": "Wenn IOMMU nicht aktiv ist, bietet ProxMenux an, sie zu aktivieren. Es bearbeitet <code>/etc/kernel/cmdline</code> (für systemd-Boot) oder <code>/etc/default/grub</code> (für GRUB), fügt die Parameter für Ihren CPU hinzu und führt <code>proxmox-boot-tool refresh</code> oder <code>update-grub</code> aus:",
         "items": [
-          "<code>intel_iommu=on</code> für Intel CPUs.",
-          "<code>amd_iommu=on</code> für AMD CPUs."
+          "<code>intel_iommu=on iommu=pt</code> für Intel CPUs.",
+          "<code>amd_iommu=on iommu=pt</code> für AMD CPUs."
         ],
-        "outro": "Nach dieser Änderung ist ein Neustart erforderlich. Das Skript bietet einen Neustart jetzt oder später an; Passthrough kann erst fortgesetzt werden, wenn die neue Kernel-Kommandozeile aktiv ist.",
+        "outro": "Der Ablauf wird fortgesetzt und die Geräte werden im selben Durchlauf zugewiesen, aber der Host muss neu gestartet werden, bevor die VM startet. Am Ende bietet ProxMenux an, jetzt neu zu starten; wenn Sie ablehnen, starten Sie die VM erst, nachdem der Host neu gestartet wurde.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
         "alt": "Dialog „IOMMU erforderlich“",
         "caption": "IOMMU Erforderlich — Angebot zum Aktivieren und Neustarten"
       },
       {
         "title": "Geräteaufzählung",
-        "body": "ProxMenux listet jeden Speichercontroller (SATA / SAS HBA) und jedes NVMe-Gerät auf dem PCI-Bus auf. Für jedes Gerät zeigt es:",
+        "body": "ProxMenux listet jedes PCI-Gerät der Speicherklasse auf (SATA / SAS / RAID HBAs und NVMe). Für jedes Gerät zeigt es:",
         "items": [
-          "PCI-Adresse (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "PCI-Adresse (<code>0000:00:17.0</code>, <code>0000:01:00.0</code>, ...).",
           "Hersteller- und Gerätebeschreibung.",
-          "IOMMU-Gruppe - und eine ⚠ Warnung, wenn die Gruppe mit anderen, nicht verwandten Geräten geteilt wird.",
-          "Die aktuell am Controller angeschlossenen Laufwerke, damit Sie wissen, welche zur VM wechseln."
+          "<code>Assigned to VM</code>, wenn eine andere VM das Gerät bereits in ihrer Konfiguration hat.",
+          "Eine ⚠-Markierung, wenn ein Laufwerk hinter dem Controller in der Konfiguration einer gestoppten VM oder eines gestoppten CT referenziert wird."
         ],
         "img": "/disk/nvme-passthrough/device-list.png",
         "alt": "Controller / NVMe Geräteaufzählung",
-        "caption": "Controller / NVMe Geräteaufzählung mit IOMMU Gruppeninfo"
+        "caption": "Controller / NVMe Geräteaufzählung"
       },
       {
         "title": "Konflikterkennung",
-        "bodyRich": "Das Skript sperrt eindeutig unsichere Geräte: bereits einer anderen VM über <code>hostpci</code> zugewiesene Geräte, vom Host verwendete Geräte wie den Root-Laufwerkscontroller sowie Geräte in IOMMU-Gruppen, deren andere Mitglieder nicht sicher erkannt werden können. Geeignete Geräte stehen zur Auswahl.",
+        "bodyRich": "Controller mit einem Laufwerk, das das Proxmox-System enthält oder von einer laufenden VM oder einem laufenden CT verwendet wird, werden aus Sicherheitsgründen ausgeblendet und im Dialog aufgelistet, ebenso Geräte, die sich bereits in der Ziel-VM befinden. SR-IOV Virtual Functions und Physical Functions mit aktiven VFs werden nach der Auswahl ausgeschlossen. Hat eine andere VM das Gerät bereits, blockiert ein laufender Besitzer es; bei einem gestoppten Besitzer wählen Sie, ob es dort mit deaktiviertem onboot bleibt, in die Ziel-VM verschoben oder übersprungen wird. Für Laufwerke, die in Konfigurationen gestoppter VMs oder CTs referenziert werden, gibt es eine ähnliche Auswahl: onboot deaktivieren, die Referenzen entfernen oder sie unverändert lassen.",
         "img": "/disk/nvme-passthrough/conflict-warning.png",
         "alt": "Konflikterkennungswarnung",
         "caption": "Konflikterkennung: Gerät mit Angabe des Grundes gesperrt"
       },
       {
         "title": "Zuweisen und abschließen",
-        "bodyRich": "Für jedes gewählte Gerät führt ProxMenux <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code> aus und verwendet den nächsten freien <code>hostpci</code>-Slot. Wurde IOMMU in dieser Sitzung aktiviert, wird vor dem Start der VM an den erforderlichen Neustart erinnert.",
+        "bodyRich": "ProxMenux zeigt eine Zusammenfassung mit einem Kompatibilitätshinweis an (auf manchen Plattformen wird der Host langsamer oder friert ein, wenn die VM startet; alte Firmware und Low-Power-CPUs werden markiert). Nach der Bestätigung führt es für jedes gewählte Gerät <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code> aus und verwendet den nächsten freien <code>hostpci</code>-Slot. Wurde IOMMU in dieser Sitzung aktiviert, bietet es an, den Host neu zu starten.",
         "img": "/disk/nvme-passthrough/assignment.png",
         "alt": "Zusammenfassung der Zuweisung",
         "caption": "Zusammenfassung der Zuweisung: belegte hostpciN-Slots und zugewiesene PCI-Adressen"

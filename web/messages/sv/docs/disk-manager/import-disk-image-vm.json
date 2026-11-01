@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Så körs skriptet",
-    "body": "Flödet har två faser. Fas 1 samlar alla val via dialogrutor: VM, lagring, källkatalog, avbildningar och alternativ för varje avbildning. Fas 2 kör <code>qm importdisk</code> för varje vald avbildning. Innan fas 2 börjar kopieras ingenting och VM-konfigurationen ändras inte."
+    "body": "Flödet har två faser. Fas 1 samlar alla val via dialogrutor: VM, lagring, källkatalog, avbildningar och alternativ för varje avbildning. Fas 2 kör <code>qm importdisk</code> för varje vald avbildning. Fas 2 startar direkt efter den sista frågan per avbildning, utan en separat slutlig bekräftelse; fram till dess kopieras ingenting och VM-konfigurationen ändras inte."
   },
   "prereqs": {
     "heading": "Förutsättningar",

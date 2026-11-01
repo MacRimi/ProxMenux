@@ -16,15 +16,15 @@
   },
   "howRuns": {
     "heading": "Comment fonctionne le script",
-    "body": "Le processus comporte deux phases distinctes : collecte des informations et des choix, puis modification effective de la configuration du conteneur. Rien n’est monté dans le CT avant la confirmation finale.",
-    "summary": "ProxMenux exclut le disque racine, les disques montés et ceux référencés dans une configuration VM/LXC. Les membres actifs de ZFS/LVM/RAID sont masqués ; les anciennes signatures portent un symbole ⚠ pour pouvoir les effacer avant le formatage."
+    "body": "Le processus comporte deux phases distinctes : collecte des informations et des choix, puis modification effective de la configuration du conteneur. Rien n’est modifié sur l’hôte ni dans le CT avant que le dernier dialogue ait reçu une réponse.",
+    "summary": "ProxMenux masque le disque racine et les autres disques montés, les membres ZFS, les membres RAID actifs, les disques utilisés par le LVM de l’hôte et les disques déjà présents dans ce conteneur. Les disques référencés par une autre VM ou un autre CT sont affichés comme ⚠ In use, et les signatures RAID / LVM portent un symbole ⚠."
   },
   "prereqs": {
     "heading": "Préalables",
     "items": [
       "Au moins un conteneur LXC défini sur l'hôte.",
       "Le conteneur est <strong>privilégié</strong>, ou vous acceptez la conversion proposée par le script.",
-      "Au moins un disque physique non utilisé par l'hôte ou tout autre invité."
+      "Au moins un disque physique non utilisé par l’hôte."
     ],
     "warnTitle": "Conteneur privilégié requis",
     "warnBody": "Ce script exige un conteneur <strong>privilégié</strong> pour connecter directement le disque. S’il détecte <code>unprivileged: 1</code>, il propose de modifier <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> sur place. Cela change le modèle de sécurité sans remapper les propriétaires des fichiers existants. Sauvegardez le conteneur et vérifiez les propriétaires avant d’accepter, ou recréez-le en mode privilégié."
@@ -37,31 +37,31 @@
         "title": "Choisir le conteneur cible",
         "img": "/disk/select-container.png",
         "caption": "Menu de sélection des conteneurs",
-        "bodyRich": "ProxMenux liste tous les conteneurs LXC de l’hôte (<code>pct list</code>). Choisissez celui qui recevra le disque. S’il est non privilégié, le script propose de le convertir maintenant."
+        "bodyRich": "ProxMenux liste les conteneurs LXC de l’hôte (<code>pct list</code>), sauf ceux créés à partir d’une image OCI, dont les chemins sont gérés dans le gestionnaire OCI. Choisissez celui qui recevra les disques. S’il est non privilégié, le script propose de le convertir maintenant."
       },
       {
         "title": "Choisir le disque physique",
         "img": "/disk/disk-selection-ct.png",
         "caption": "Disques libres détectés sur l’hôte, avec ⚠ pour les anciennes métadonnées",
-        "bodyRich": "Seuls les candidats sûrs sont affichés. Contrairement au processus pour VM, ce script connecte <strong>un disque par exécution</strong>. Relancez-le pour chaque disque supplémentaire."
+        "bodyRich": "Seuls les candidats sûrs sont affichés, et vous pouvez sélectionner <strong>plusieurs disques</strong> en une seule exécution. Pour chaque disque, une VM ou un CT en cours d’exécution qui l’utilise le fait ignorer, un arrêté demande votre confirmation, et un membre RAID est refusé."
       },
       {
         "title": "Formater ou réutiliser",
-        "intro": "Le script inspecte le disque :",
+        "intro": "Pour chaque disque sélectionné, le script inspecte la première partition :",
         "items": [
-          "S'il porte déjà un système de fichiers supporté (ext4 / xfs / btrfs), vous pouvez le réutiliser tel quel (les fichiers existants sont conservés).",
-          "S'il n'a pas de système de fichiers pris en charge, vous êtes offert pour le formater. Choisir ext4 / xfs / btrfs."
+          "S’il possède déjà un système de fichiers, vous choisissez de l’utiliser tel quel (les fichiers existants sont conservés) ou de le formater.",
+          "S’il n’a pas de système de fichiers, il est formaté : choisissez ext4 / xfs / btrfs. Le formatage demande toujours une confirmation supplémentaire."
         ]
       },
       {
         "title": "Choisir le point de montage",
-        "bodyRich": "Tapez le chemin où le conteneur doit voir le disque, par exemple. <code>/mnt/data</code> ou <code>/mnt/disk_passthrough</code>. C'est le chemin <em>dans le conteneur</em> ; l'hôte voit déjà la partition sous <code>/dev/disk/by-id/…</code>."
+        "bodyRich": "Tapez le chemin où le conteneur doit voir le disque. ProxMenux suggère <code>/mnt/disk_&lt;device&gt;</code> (par exemple <code>/mnt/disk_sdb</code>) et ajoute un suffixe si ce chemin est déjà utilisé. C’est le chemin <em>dans le conteneur</em> ; l’hôte désigne la partition par <code>/dev/disk/by-id/…</code>."
       },
       {
         "title": "Connecter et vérifier",
         "img": "/disk/assignment-ct.png",
         "caption": "Attribution à CT",
-        "bodyRich": "ProxMenux ajoute une nouvelle entrée <code>mpN:</code> à la configuration du conteneur, saute les index déjà utilisés et relise la configuration pour la confirmer. Si le conteneur est en cours d'exécution, le montage est en direct; sinon, il prend effet au prochain départ.",
+        "bodyRich": "ProxMenux ajoute une nouvelle entrée <code>mpN:</code> à la configuration du conteneur, saute les index déjà utilisés et relit la configuration pour la confirmer. Pour xfs et btrfs, il installe aussi <code>xfsprogs</code> ou <code>btrfs-progs</code> dans le conteneur, en proposant de le démarrer s’il est arrêté. Si le conteneur est en cours d’exécution, le montage est exécuté en direct ; sinon, il prend effet au prochain démarrage.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Point de montage créé avec succès",
         "extraCaption": "Point de montage créé et vérifié"
@@ -75,9 +75,9 @@
   "important": {
     "heading": "Considérations importantes",
     "items": [
-      "<strong>Un disque par exécution</strong>. Relancez le script pour chaque disque supplémentaire.",
+      "<strong>Plusieurs disques par exécution</strong> : sélectionnez-les ensemble dans la liste ; chacun reçoit son propre point de montage.",
       "Ne connectez <strong>pas</strong> la même partition à plusieurs conteneurs susceptibles de la monter simultanément : les écritures concurrentes corrompent le système de fichiers.",
-      "<strong>Les anciennes métadonnées</strong> (signature RAID / ZFS / LVM) doivent être effacées manuellement avant que le script ne vous laisse formater, sinon <code>mkfs</code> refuse d'écraser. Utilisez l'outil <wipeLink>Format / Wipe Physical Disk</wipeLink> pour cela."
+      "<strong>Les anciennes métadonnées</strong> : les disques avec des signatures ZFS sont masqués et les membres RAID sont refusés. Effacez d’abord ces métadonnées avec l’outil <wipeLink>Format / Wipe Physical Disk</wipeLink>."
     ]
   },
   "troubleshoot": {

@@ -21,13 +21,14 @@
   "iommu": {
     "heading": "Skupiny IOMMU: prečo treba posudzovať celú kartu",
     "body": "Hranicou izolácie PCI passthrough je <strong>skupina IOMMU</strong>, najmenšia jednotka, ktorú IOMMU procesora dokáže izolovať. Zariadenia v rovnakej skupine nemožno izolovať navzájom. Ak radič SATA zdieľa skupinu s radičom USB, passthrough SATA môže vyžadovať aj uvoľnenie USB z hostiteľa alebo nemusí byť možný. Automaticky nepriradí VM všetky zariadenia skupiny.",
-    "outro": "ProxMenux zobrazuje skupinu IOMMU pri každom zariadení a upozorní, ak skupina obsahuje aj iné zariadenia než požadovaný radič. Môžete pokračovať, ak sú tieto ďalšie zariadenia prijateľné, napríklad ak sú všetky radičmi diskov, alebo sa vrátiť späť."
+    "outro": "ProxMenux nekontroluje skupiny IOMMU. Pred priradením karty skontrolujte jej skupinu ručnými príkazmi nižšie: ak skupina obsahuje viac než radič, ktorý chcete, ostatné zariadenia opustia hostiteľa spolu s ním."
   },
   "prereqs": {
     "heading": "Predpoklady",
     "items": [
       "<strong>CPU a základná doska podporujú</strong> VT-d (Intel) alebo AMD-Vi a funkcia je povolená vo firmvéri (BIOS/UEFI). ProxMenux môže upraviť nastavenie jadra, ale nemôže prepnúť nastavenie firmvéru.",
       "Cieľová VM je pred pripojením zariadení PCI <strong>vypnutá</strong>.",
+      "Cieľová VM používa typ stroja <strong>q35</strong>. ProxMenux ostatné typy strojov odmietne.",
       "Radič/NVMe <strong>nie je ten, na ktorom sa nachádza koreňový súborový systém Proxmox</strong>. Skript skryje všetko, čo hostiteľ používa.",
       "Hosťujúci OS má ovládače pre model radiča. Linux pokrýva prakticky každý HBA hneď po vybalení; Windows potrebuje nainštalovaný ovládač od dodávateľa <em>pred</em> spustením s pripojeným radičom."
     ],
@@ -40,46 +41,46 @@
     "list": [
       {
         "title": "Vyberte cieľovú VM",
-        "bodyRich": "ProxMenux načíta <code>qm list</code> a zobrazí všetky VM. Vyberte tú, ktorej chcete priradiť radič.",
+        "bodyRich": "ProxMenux načíta <code>qm list</code> a zobrazí všetky VM s ich stavom a typom stroja. Vyberte tú, ktorej chcete priradiť radič. Bežiaca VM alebo VM, ktorej typ stroja nie je q35, sa odmietne.",
         "img": "/disk/nvme-passthrough/vm-selection.png",
         "alt": "dialóg výberu VM",
         "caption": "dialóg výberu VM"
       },
       {
         "title": "Kontrola IOMMU",
-        "bodyRich": "Ak IOMMU nie je povolené v príkazovom riadku jadra, ProxMenux ponúkne jeho aktiváciu. Upraví <code>/etc/kernel/cmdline</code> pre systemd-boot alebo <code>/etc/default/grub</code> pre GRUB a pridá správny parameter pre váš CPU:",
+        "bodyRich": "Ak IOMMU nie je aktívne, ProxMenux ponúkne jeho aktiváciu. Upraví <code>/etc/kernel/cmdline</code> pre systemd-boot alebo <code>/etc/default/grub</code> pre GRUB, pridá parametre pre váš CPU a spustí <code>proxmox-boot-tool refresh</code> alebo <code>update-grub</code>:",
         "items": [
-          "<code>intel_iommu=on</code> pre procesory Intel.",
-          "<code>amd_iommu=on</code> pre CPU AMD."
+          "<code>intel_iommu=on iommu=pt</code> pre procesory Intel.",
+          "<code>amd_iommu=on iommu=pt</code> pre CPU AMD."
         ],
-        "outro": "Po tejto zmene je potrebný reštart. Skript ponúkne reštart teraz alebo neskôr; passthrough nemôže pokračovať, kým nie je aktívny nový príkazový riadok jadra.",
+        "outro": "Postup pokračuje a zariadenia sa priradia v tom istom behu, ale hostiteľ sa musí reštartovať pred spustením VM. Na konci ProxMenux ponúkne reštart teraz; ak ho odmietnete, VM nespúšťajte, kým sa hostiteľ nereštartuje.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
         "alt": "Dialóg IOMMU je vyžadované",
         "caption": "IOMMU je vyžadované: ponuka aktivácie a reštartu"
       },
       {
         "title": "Výpis zariadení",
-        "body": "ProxMenux vypíše všetky radiče úložiska (HBA SATA/SAS) a všetky zariadenia NVMe na zbernici PCI. Pri každom zariadení zobrazí:",
+        "body": "ProxMenux vypíše všetky zariadenia PCI triedy úložiska (HBA SATA/SAS/RAID a NVMe). Pri každom zariadení zobrazí:",
         "items": [
-          "Adresa PCI (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "Adresa PCI (<code>0000:00:17.0</code>, <code>0000:01:00.0</code>, ...).",
           "Dodávateľ / popis zariadenia.",
-          "Skupina IOMMU a upozornenie ⚠, ak ju zdieľajú ďalšie nesúvisiace zariadenia.",
-          "Disky aktuálne pripojené k radiču, aby ste vedeli, ktoré s ním prejdú do VM."
+          "<code>Assigned to VM</code>, keď už iná VM má zariadenie vo svojej konfigurácii.",
+          "Značku ⚠, keď je disk za radičom uvedený v konfigurácii zastavenej VM alebo CT."
         ],
         "img": "/disk/nvme-passthrough/device-list.png",
         "alt": "Výpis radičov a zariadení NVMe",
-        "caption": "Výpis radičov a zariadení NVMe s informáciami o skupine IOMMU"
+        "caption": "Výpis radičov a zariadení NVMe"
       },
       {
         "title": "Odhalenie konfliktov",
-        "bodyRich": "Skript zablokuje jednoznačne nebezpečné zariadenia: už priradené inej VM cez <code>hostpci</code> v jej konfigurácii, používané hostiteľom, napríklad radič koreňového disku, alebo zaradené v skupine IOMMU, ktorej ostatných členov nedokáže bezpečne identifikovať. Vhodné zariadenia sú dostupné na výber.",
+        "bodyRich": "Radiče s diskom, ktorý obsahuje systém Proxmox alebo ho používa bežiaca VM či CT, sú z bezpečnostných dôvodov skryté a uvedené v dialógu; to platí aj pre zariadenia, ktoré už sú v cieľovej VM. Virtuálne funkcie SR-IOV a fyzické funkcie s aktívnymi VF sa po výbere vylúčia. Ak zariadenie už má iná VM, bežiaci vlastník ho zablokuje; pri zastavenom vlastníkovi si vyberiete, či ho tam necháte s vypnutým onboot, presuniete do cieľovej VM alebo preskočíte. Disky uvedené v konfiguráciách zastavených VM alebo CT majú podobnú voľbu: vypnúť onboot, odstrániť odkazy alebo ich nechať tak.",
         "img": "/disk/nvme-passthrough/conflict-warning.png",
         "alt": "Upozornenie na zistený konflikt",
         "caption": "Rozpoznanie konfliktu: zariadenie zablokované s uvedením dôvodu"
       },
       {
         "title": "Pripojiť a dokončiť",
-        "bodyRich": "Pre každé vybrané zariadenie ProxMenux spustí <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code> a vyberie ďalší voľný slot <code>hostpci</code>. Ak sa počas tejto relácie aktivovalo IOMMU, pripomenie potrebu reštartu pred spustením VM.",
+        "bodyRich": "ProxMenux zobrazí súhrn s upozornením na kompatibilitu (na niektorých platformách sa hostiteľ pri spustení VM spomalí alebo zamrzne; staré firmvéry a CPU s nízkym príkonom sú označené). Po potvrdení pre každé vybrané zariadenie spustí <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code> a vyberie ďalší voľný slot <code>hostpci</code>. Ak sa počas tejto relácie aktivovalo IOMMU, ponúkne reštart hostiteľa.",
         "img": "/disk/nvme-passthrough/assignment.png",
         "alt": "Prehľad priradenia",
         "caption": "Prehľad priradenia: sloty hostpciN a pripojené adresy PCI"

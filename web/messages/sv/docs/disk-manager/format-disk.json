@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Formatera eller radera en fysisk disk | ProxMenux-dokumentation",
-    "description": "Radera och formatera fysiska diskar på Proxmox VE med ProxMenux. Fyra driftlägen, strikta filter som blockerar systemdiskar, monterade eller använda diskar och dubbel bekräftelse med inmatning av hela sökvägen.",
+    "description": "Radera och formatera fysiska diskar på Proxmox VE med ProxMenux. Fyra driftlägen, systemdiskar dolda, diskar som används av körande gäster blockerade och dubbel bekräftelse med inmatning av hela sökvägen.",
     "ogTitle": "Formatera eller radera en fysisk disk | ProxMenux-dokumentation",
     "ogDescription": "Radera eller formatera en fysisk disk på Proxmox. Säkerhetsfilter, fyra driftlägen och dubbel bekräftelse."
   },
   "header": {
     "title": "Formatera / radera fysisk disk",
-    "description": "Radera eller formatera en fysisk disk på Proxmox-värden. ProxMenux visar bara helt lediga diskar som inte används av systemet, inte refereras av gäster och inte har några monteringar. Innan data förstörs krävs dubbel bekräftelse: ja/nej och inmatning av hela disksökvägen.",
+    "description": "Radera eller formatera en fysisk disk på Proxmox-värden. ProxMenux döljer systemdiskar, varnar om all annan användning innan du bekräftar, blockerar diskar som används av en körande VM eller CT och kräver dubbel bekräftelse (ja/nej och inmatning av hela disksökvägen) innan data förstörs.",
     "section": "Diskhanterare · Verktyg"
   },
   "danger": {
@@ -20,17 +20,17 @@
   },
   "visibility": {
     "heading": "Synlighetsregler",
-    "intro": "Innan menyn ens visas filtrerar ProxMenux disklistan. Endast kandidater som är bevisligen säkra visas:",
+    "intro": "Innan menyn visas filtrerar ProxMenux disklistan. Bara systemdiskar döljs; all annan användning visas så att du kan avgöra själv:",
     "items": [
-      "<strong>Visas</strong>: diskar som <em>inte</em> används av värden (rotpool, swap, monteringar, aktiv ZFS/LVM/RAID) och <em>inte</em> refereras i någon VM/LXC-konfiguration, oavsett om gästen körs eller är stoppad.",
-      "<strong>Döljs</strong>: värd- och systemdiskar.",
-      "<strong>Döljs</strong>: diskar som refereras i en VM/LXC-konfiguration."
+      "<strong>Döljs</strong>: diskar med en systemmontering (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), en aktiv swappartition eller en medlem i ZFS-rotpoolen, samt skrivskyddade enheter.",
+      "<strong>Visas, blockeras vid bekräftelse</strong>: diskar som refereras av en <strong>körande</strong> VM eller CT.",
+      "<strong>Visas med en varning</strong>: diskar som refereras i en stoppad VM- eller LXC-konfiguration, diskar med monterade datapartitioner samt aktiva ZFS / LVM / RAID-medlemmar."
     ],
     "safetyTitle": "Säkerhet vid bekräftelse och utförande",
     "safetyItems": [
       "Diskar med gamla eller aktiva metadata visar detaljerade varningar <em>innan</em> du bekräftar.",
       "Diskar som används av en <strong>körande</strong> VM <strong>blockeras helt</strong> vid bekräftelsen.",
-      "Diskar med monterade partitioner <strong>blockeras helt</strong> vid körningen. En ny kontroll görs direkt innan något skrivs.",
+      "Monterade datapartitioner avmonteras automatiskt vid körningen och alla aktiva ZFS-pooler på disken exporteras. Om en partition inte kan avmonteras avbryts körningen (en ny kontroll görs direkt innan något skrivs).",
       "Två bekräftelser krävs alltid: en <em>ja/nej</em>-dialog och exakt inmatning av hela disksökvägen."
     ]
   },
@@ -64,13 +64,13 @@
         "mode": "4. Fullständigt format",
         "part": "Ny GPT",
         "data": "Förstörd",
-        "useCase": "Redo att använda disk med en enda ny partition och ett nytt filsystem."
+        "useCase": "Redo att använda disk med en enda ny partition och ett nytt filsystem eller en ny ZFS-pool."
       }
     ],
-    "fullFormatOutro": "<strong>Fullständig formatering</strong> fortsätter med två ytterligare dialogrutor:",
+    "fullFormatOutro": "<strong>Fullständig formatering</strong> ställer en fråga till efter bekräftelsen:",
     "fullFormatItems": [
-      "<strong>Filsystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabelt) eller <code>btrfs</code>. Om verktyg som <code>mkfs.btrfs</code> saknas avbryts åtgärden med ett tydligt meddelande.",
-      "<strong>Etikett</strong>: valfri filsystemetikett för identifiering."
+      "<strong>Filsystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabelt), <code>btrfs</code> eller <code>zfs</code>. Om <code>mkfs.exfat</code> saknas installerar ProxMenux <code>exfatprogs</code>; om <code>mkfs.btrfs</code> saknas avbryts åtgärden med ett tips.",
+      "<strong>ZFS-poolnamn</strong> (endast ZFS): föreslås som <code>pool_&lt;disk&gt;</code>. Poolen skapas med <code>ashift=12</code> och <code>lz4</code>-komprimering."
     ]
   },
   "steps": {
@@ -79,23 +79,23 @@
     "list": [
       {
         "title": "Välj en ledig disk",
-        "body": "ProxMenux listar de diskar som klarar filtren ovan. Diskar märkta med ⚠ har gamla metadata som visas i detalj så att du vet vad du är på väg att skriva över."
+        "body": "ProxMenux listar de diskar som klarar filtret ovan, med modell och storlek. All metadata som hittas på disken (ZFS / LVM / RAID-signaturer, monterade partitioner, gästreferenser) visas i bekräftelsesammanfattningen så att du vet vad du är på väg att skriva över."
       },
       {
         "title": "Välj ett operationsläge",
         "bodyRich": "Välj <strong>Radera allt</strong>, <strong>Ta bort FS-etiketter</strong>, <strong>Nollställ alla data</strong> eller <strong>Fullständig formatering</strong> enligt tabellen ovan."
       },
       {
-        "title": "(Endast fullständig formatering) Välj filsystem och etikett",
-        "body": "ext4 / xfs / exfat / btrfs, plus en valfri etikett."
-      },
-      {
         "title": "Bekräfta två gånger",
         "bodyRich": "ProxMenux visar en sammanfattning av åtgärden. Bekräfta i ja/nej-dialogen och <strong>skriv hela disksökvägen</strong> exakt som den visas, exempelvis <code>/dev/sdc</code>. All annan inmatning avbryter."
       },
       {
+        "title": "(Endast fullständig formatering) Välj filsystem",
+        "body": "ext4 / xfs / exfat / btrfs / zfs. För ZFS även poolnamnet."
+      },
+      {
         "title": "Re-validering och utförande",
-        "body": "Direkt före skrivningen kontrollerar skriptet diskens tillstånd igen. Om en partition har monterats eller en VM startats under tiden avbryts körningen. Annars utförs den valda åtgärden och en sammanfattning visas efteråt."
+        "body": "Direkt före skrivningen kontrollerar skriptet diskens tillstånd igen. Det avbryts om disken nu har en systemmontering, en aktiv swappartition eller är medlem i ZFS-rotpoolen, eller om en körande VM eller CT använder den. Monterade datapartitioner avmonteras och aktiva ZFS-pooler på disken exporteras. Sedan utförs den valda åtgärden."
       }
     ]
   },
@@ -105,7 +105,7 @@
   },
   "troubleshoot": {
     "notListedTitle": "Disk som inte anges i menyn",
-    "notListedBody": "Det filtrerades för säkerhet. Vanliga skäl: det är monterat (även på <code>/mnt/tmp</code>), det är en aktiv ZFS / LVM / RAID-medlem, det refereras av en VM eller LXC config, eller det är din Proxmox root disk. Kör <code>lsblk -f</code> och <code>cat /proc/mdstat</code> på värden för att förstå varför.",
+    "notListedBody": "Det filtrerades för säkerhet. Bara systemdiskar döljs: en disk med en systemmontering (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), en aktiv swappartition eller en medlem i ZFS-rotpoolen, eller en skrivskyddad enhet. Datamonteringar, gästreferenser och ZFS / LVM / RAID-medlemskap döljer inte en disk. Kör <code>lsblk -f</code>, <code>swapon --show</code> och <code>zpool status</code> på värden för att förstå varför.",
     "busyTitle": "\"Disk may be busy\" / avmontering misslyckades",
     "busyBody": "Något håller fortfarande en öppen fil på en partition av den disken - oftast en container eller ett skal vars cwd är inuti en monteringspunkt. Identifiera det med <code>lsof | grep /dev/sdX</code> eller <code>fuser -vm /dev/sdX1</code>, stoppa det och sedan köra verktyget igen."
   },

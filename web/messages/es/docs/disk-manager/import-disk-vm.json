@@ -16,8 +16,8 @@
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script",
-    "body": "El flujo tiene dos fases con separación clara entre \"recopilar información y decisiones\" y \"adjuntar realmente discos a la VM\". Hasta la confirmación final, la config de la VM queda intacta.",
-    "summary": "ProxMenux filtra todo lo que no puede pasar de forma segura: el disco raíz, los discos montados en el host, los miembros de un pool ZFS/LVM/RAID activo y los discos ya referenciados por cualquier config de VM/LXC. Los discos con metadatos <em>obsoletos</em> (firmas viejas de ZFS / RAID / LVM que ya no están en uso) se muestran con etiqueta ⚠ pero no se bloquean."
+    "body": "El flujo tiene dos fases con separación clara entre \"recopilar información y decisiones\" y \"adjuntar realmente discos a la VM\". Hasta que se responde el último diálogo, la config de la VM queda intacta; no hay una confirmación final aparte, así que cancela con Esc en cualquier diálogo anterior.",
+    "summary": "ProxMenux filtra todo lo que no puede pasar de forma segura: el disco raíz y otros discos montados en el host, los discos usados por LVM del host, los miembros ZFS (activos u obsoletos), los miembros RAID activos y los discos ya presentes en la config de esta VM. Los discos usados por otra VM o CT se muestran como ⚠ In use, y las firmas RAID / LVM sobrantes llevan una etiqueta ⚠ pero no se bloquean."
   },
   "prereqs": {
     "heading": "Requisitos previos",
@@ -39,7 +39,7 @@
         "title": "Elige el o los discos físicos a adjuntar",
         "img": "/disk/disk-selection.png",
         "caption": "Discos libres detectados en el host (con etiqueta ⚠ para metadatos obsoletos)",
-        "body": "El script escanea cada disco del host y solo muestra los que es seguro adjuntar. La checklist te permite seleccionar uno o varios a la vez. Los discos con firmas viejas de ZFS / LVM / RAID siguen apareciendo, etiquetados con ⚠ para que sepas que necesitan un wipe antes de que el guest pueda formatearlos."
+        "body": "El script escanea cada disco del host y solo muestra los que es seguro adjuntar. La checklist te permite seleccionar uno o varios a la vez. Los discos con firmas viejas de LVM / RAID siguen apareciendo, etiquetados con ⚠ (los discos con firmas ZFS se ocultan) para que sepas que necesitan un wipe antes de que el guest pueda formatearlos."
       },
       {
         "title": "Elige la interfaz de bus",
@@ -65,7 +65,7 @@
     "migrationTitle": "La migración en vivo no es posible",
     "migrationBody": "Una VM con un disco físico conectado directamente está <strong>ligada al host que expone ese disco</strong>. Otro nodo normalmente no dispone de la misma ruta <code>/dev/disk/by-id/…</code> ni de sus datos. Copia y transfiere esos datos por separado, o usa discos virtuales gestionados en almacenamiento compartido o con replicación compatible para facilitar la movilidad. No presupongas que la replicación de almacenamiento de Proxmox cubre este dispositivo.",
     "shareTitle": "No compartas un disco físico entre VMs",
-    "shareBody": "Adjuntar el mismo disco físico a dos VMs a la vez corromperá los datos en la siguiente escritura. ProxMenux detecta esta situación y la bloquea, pero si te saltas el script (un <code>qm set</code> directo), asegúrate de que solo un guest monte el disco."
+    "shareBody": "Adjuntar el mismo disco físico a dos VMs a la vez corromperá los datos en la siguiente escritura. ProxMenux lo bloquea cuando el otro guest está en ejecución y pide confirmación cuando está parado, pero si te saltas el script (un <code>qm set</code> directo), asegúrate de que solo un guest monte el disco."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",

@@ -16,8 +16,8 @@
   },
   "howRuns": {
     "heading": "Como o script é executado",
-    "body": "O fluxo tem duas fases com separação clara entre \"coletar informações e decisões\" e \"realmente anexar discos ao VM\". Até a confirmação final, a configuração VM não é tocada.",
-    "summary": "O ProxMenux exclui candidatos inseguros: disco raiz, discos montados no host, membros ativos ZFS/LVM/RAID e discos referenciados em configurações VM/LXC. Os discos com metadados <em>antigos</em>, ou seja, assinaturas ZFS/RAID/LVM já não utilizadas, aparecem com ⚠ mas não são bloqueados."
+    "body": "O fluxo tem duas fases com separação clara entre \"coletar informações e decisões\" e \"realmente anexar discos ao VM\". Até que o último diálogo seja respondido, a configuração VM não é tocada; não há confirmação final separada, portanto cancele com Esc em qualquer diálogo anterior.",
+    "summary": "O ProxMenux exclui candidatos inseguros: o disco raiz e outros discos montados no host, discos usados pelo LVM do host, membros ZFS (ativos ou antigos), membros RAID ativos e discos que já estão na configuração desta VM. Os discos usados por outra VM ou CT aparecem como ⚠ In use, e as assinaturas RAID / LVM restantes recebem uma etiqueta ⚠ mas não são bloqueadas."
   },
   "prereqs": {
     "heading": "Pré-requisitos",
@@ -39,7 +39,7 @@
         "title": "Escolha o( s) disco( s) físico( s) a anexar",
         "img": "/disk/disk-selection.png",
         "caption": "Discos livres detetados no host, com ⚠ para metadados antigos",
-        "body": "O script examina os discos do host e mostra apenas os que podem ser ligados sem conflitos. Pode selecionar vários. Os discos com assinaturas antigas ZFS/LVM/RAID continuam visíveis com ⚠ para indicar que as assinaturas devem ser apagadas antes de o sistema convidado os formatar."
+        "body": "O script examina os discos do host e mostra apenas os que podem ser ligados sem conflitos. Pode selecionar vários. Os discos com assinaturas antigas LVM/RAID continuam visíveis com ⚠ (os discos com assinaturas ZFS ficam ocultos) para indicar que devem ser apagados antes de o sistema convidado os formatar."
       },
       {
         "title": "Escolha a interface de barramento",
@@ -65,7 +65,7 @@
     "migrationTitle": "A migração ao vivo não é possível",
     "migrationBody": "Uma VM com um disco físico ligado diretamente fica <strong>dependente do host que disponibiliza esse disco</strong>. Outro nó normalmente não tem o mesmo caminho <code>/dev/disk/by-id/…</code> nem os dados. Faça cópias de segurança e transfira os dados separadamente, ou utilize discos virtuais geridos em armazenamento partilhado ou com replicação suportada. Não pressuponha que a replicação do Proxmox abrange este dispositivo.",
     "shareTitle": "Não compartilhar um disco físico entre VMs",
-    "shareBody": "Anexar o mesmo disco físico a duas VMs ao mesmo tempo irá corromper os dados na próxima gravação. ProxMenux detecta esta situação e bloqueia-a, mas se você ignorar o script (direto <code>qm set</code>), certifique-se de que apenas um convidado monta o disco."
+    "shareBody": "Anexar o mesmo disco físico a duas VMs ao mesmo tempo irá corromper os dados na próxima gravação. O ProxMenux bloqueia isso quando o outro convidado está em execução e pede confirmação quando está parado, mas se você ignorar o script (direto <code>qm set</code>), certifique-se de que apenas um convidado monta o disco."
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",

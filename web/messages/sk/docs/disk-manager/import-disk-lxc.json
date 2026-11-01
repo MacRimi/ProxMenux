@@ -16,15 +16,15 @@
   },
   "howRuns": {
     "heading": "Ako beží skript",
-    "body": "Postup má dve oddelené fázy: zhromaždenie informácií a volieb, potom samotnú zmenu konfigurácie kontajnera. Až do záverečného potvrdenia sa v CT nič nepripája.",
-    "summary": "ProxMenux skryje koreňový disk, pripojené disky a disky uvedené v konfiguráciách VM/LXC. Aktívni členovia ZFS/LVM/RAID sú skrytí; staré podpisy sú označené ⚠, aby ste ich mohli pred formátovaním vymazať."
+    "body": "Postup má dve oddelené fázy: zhromaždenie informácií a volieb, potom samotnú zmenu konfigurácie kontajnera. Kým nezodpoviete posledný dialóg, na hostiteľovi ani v CT sa nič nezmení.",
+    "summary": "ProxMenux skryje koreňový disk a ďalšie pripojené disky, členov ZFS, aktívnych členov RAID, disky používané LVM hostiteľa a disky, ktoré už sú v tomto kontajneri. Disky uvedené v inej VM alebo CT sa zobrazia ako ⚠ In use a podpisy RAID / LVM zobrazia značku ⚠."
   },
   "prereqs": {
     "heading": "Predpoklady",
     "items": [
       "Aspoň jeden kontajner LXC definovaný na hostiteľovi.",
       "Kontajner je <strong>privilegovaný</strong>, alebo akceptujete ponuku skriptu na jeho konverziu.",
-      "Aspoň jeden fyzický disk nepoužívaný hostiteľom alebo iným hosťom."
+      "Aspoň jeden fyzický disk nepoužívaný hostiteľom."
     ],
     "warnTitle": "Požadovaný privilegovaný kontajner",
     "warnBody": "Tento skript vyžaduje na priame pripojenie disku <strong>privilegovaný</strong> kontajner. Ak nájde <code>unprivileged: 1</code>, ponúkne priamu úpravu <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Zmení sa bezpečnostný model, ale vlastníctvo existujúcich súborov sa nepremapuje. Pred prijatím kontajner zálohujte a overte vlastníctvo alebo ho znova vytvorte ako privilegovaný."
@@ -37,31 +37,31 @@
         "title": "Vybrať cieľový kontajner",
         "img": "/disk/select-container.png",
         "caption": "Výberové menu kontajnera",
-        "bodyRich": "ProxMenux uvádza každý LXC kontajner na hostiteľa (<code>pct list</code>). Vyberte ten, ktorý dostane disk. Ak je kontajner neprivilegovaný, ponúka sa mu konvertovať teraz."
+        "bodyRich": "ProxMenux uvádza LXC kontajnery na hostiteľovi (<code>pct list</code>), okrem tých vytvorených z obrazu OCI, ktorých cesty sa spravujú v správcovi OCI. Vyberte ten, ktorý dostane disky. Ak je kontajner neprivilegovaný, ponúka sa mu konvertovať teraz."
       },
       {
         "title": "Vyberte fyzický disk",
         "img": "/disk/disk-selection-ct.png",
         "caption": "Voľné disky na hostiteľovi, s označením ⚠ pre staré metadáta",
-        "bodyRich": "Zobrazia sa iba bezpeční kandidáti. Na rozdiel od postupu pre VM tento skript pripojí <strong>jeden disk na spustenie</strong>. Pre každý ďalší disk ho spustite znova."
+        "bodyRich": "Zobrazia sa iba bezpeční kandidáti a v jednom behu môžete vybrať <strong>niekoľko diskov</strong>. Pri každom disku platí: bežiaca VM alebo CT, ktorá ho používa, disk preskočí, zastavená si vyžiada potvrdenie a člen RAID sa odmietne."
       },
       {
         "title": "Formátovať alebo znova použiť",
-        "intro": "Skript kontroluje disk:",
+        "intro": "Pre každý vybraný disk skript skontroluje prvý oddiel:",
         "items": [
-          "Ak už obsahuje podporovaný súborový systém (ext4/xfs/btrfs), možno ho použiť bez zmeny; existujúce súbory sa zachovajú.",
-          "Ak disk nemá podporovaný súborový systém, ponúkne sa formátovanie. Vyberte ext4/xfs/btrfs."
+          "Ak už má súborový systém, vyberiete, či ho použijete bez zmeny (existujúce súbory sa zachovajú), alebo ho naformátujete.",
+          "Ak nemá súborový systém, naformátuje sa: vyberte ext4 / xfs / btrfs. Formátovanie vždy žiada o ďalšie potvrdenie."
         ]
       },
       {
         "title": "Vyberte bod pripojenia",
-        "bodyRich": "Zadajte cestu, kde má kontajner vidieť disk, napríklad <code>/mnt/data</code> alebo <code>/mnt/disk_passthrough</code>. Ide o cestu <em>vnútri</em> kontajnera; hostiteľ už vidí oddiel pod <code>/dev/disk/by-id/…</code>."
+        "bodyRich": "Zadajte cestu, kde má kontajner vidieť disk. ProxMenux navrhne <code>/mnt/disk_&lt;device&gt;</code> (napríklad <code>/mnt/disk_sdb</code>) a pridá príponu, ak je cesta už používaná. Ide o cestu <em>vnútri</em> kontajnera; hostiteľ odkazuje na oddiel cez <code>/dev/disk/by-id/…</code>."
       },
       {
         "title": "Pripojiť a overiť",
         "img": "/disk/assignment-ct.png",
         "caption": "Priradenie ku CT",
-        "bodyRich": "ProxMenux pridá do konfigurácie kontajnera nový záznam <code>mpN:</code>, pričom preskočí už použité indexy. Potom konfiguráciu znovu načíta a overí. Ak kontajner beží, pripojenie sa vykoná za behu; inak sa uplatní pri ďalšom spustení.",
+        "bodyRich": "ProxMenux pridá do konfigurácie kontajnera nový záznam <code>mpN:</code>, pričom preskočí už použité indexy. Potom konfiguráciu znovu načíta a overí. Pre xfs a btrfs tiež nainštaluje <code>xfsprogs</code> alebo <code>btrfs-progs</code> vnútri kontajnera a ak je zastavený, ponúkne jeho spustenie. Ak kontajner beží, pripojenie sa vykoná za behu; inak sa uplatní pri ďalšom spustení.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Bod pripojenia vytvorený úspešne",
         "extraCaption": "Bod pripojenia vytvorený a overený"
@@ -75,9 +75,9 @@
   "important": {
     "heading": "Dôležité úvahy",
     "items": [
-      "<strong>Jeden disk na spustenie</strong>. Znova spustite skript pre každý ďalší disk.",
+      "<strong>Niekoľko diskov na spustenie</strong>: vyberte ich spolu v zozname; každý dostane vlastný bod pripojenia.",
       "<strong>Nepripájajte</strong> rovnaký oddiel k viacerým kontajnerom, ktoré by ho mohli pripojiť súčasne; súbežné zápisy poškodia súborový systém.",
-      "<strong>Staré metadáta</strong> (podpisy RAID / ZFS / LVM) sa musia manuálne vymazať skôr, ako vám skript umožní formátovanie, inak <code>mkfs</code> odmietne prepísať. Použite na to nástroj <wipeLink>Formátovanie / vymazanie fyzického disku</wipeLink>."
+      "<strong>Staré metadáta</strong>: disky s podpismi ZFS sú skryté a členovia RAID sa odmietnu. Najprv tieto metadáta vymažte nástrojom <wipeLink>Formátovanie / vymazanie fyzického disku</wipeLink>."
     ]
   },
   "troubleshoot": {

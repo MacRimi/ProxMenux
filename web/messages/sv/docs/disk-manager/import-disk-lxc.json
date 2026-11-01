@@ -16,15 +16,15 @@
   },
   "howRuns": {
     "heading": "Så körs skriptet",
-    "body": "Flödet har två faser med tydlig åtskillnad mellan \"samla information och beslut\" och \"faktiskt ändra containerkonfig\". Fram till den slutliga bekräftelsen monteras ingenting i CT.",
-    "summary": "ProxMenux filtrerar bort rotdisken, monterade diskar och diskar som refereras i VM/LXC-konfigurationer. Aktiva ZFS/LVM/RAID-medlemmar döljs; gamla signaturer märks med ⚠ så att de kan raderas före formatering."
+    "body": "Flödet har två faser med tydlig åtskillnad mellan \"samla information och beslut\" och \"faktiskt ändra containerkonfig\". Fram till den sista dialogen har besvarats ändras ingenting på värden eller i CT.",
+    "summary": "ProxMenux döljer rotdisken och andra monterade diskar, ZFS-medlemmar, aktiva RAID-medlemmar, diskar som används av värdens LVM och diskar som redan finns i denna container. Diskar som refereras av en annan VM eller CT visas som ⚠ In use, och RAID / LVM-signaturer får en ⚠-etikett."
   },
   "prereqs": {
     "heading": "Förutsättningar",
     "items": [
       "Minst en LXC-container definierad på värden.",
       "Containern är <strong>privilegierad</strong>, eller så accepterar du skriptets erbjudande att konvertera den.",
-      "Minst en fysisk disk som inte används av värden eller någon annan gäst."
+      "Minst en fysisk disk som inte används av värden."
     ],
     "warnTitle": "Privilegierad container krävs",
     "warnBody": "Det här skriptet kräver en <strong>privilegierad</strong> container för direkt diskanslutning. Om det hittar <code>unprivileged: 1</code> erbjuds ändring av <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> på plats. Det ändrar säkerhetsmodellen men mappar inte om befintliga filägare. Säkerhetskopiera containern och kontrollera ägarskapet innan du accepterar, eller återskapa den som privilegierad."
@@ -37,31 +37,31 @@
         "title": "Välj målcontainer",
         "img": "/disk/select-container.png",
         "caption": "Meny för containerval",
-        "bodyRich": "ProxMenux listar varje LXC-container på värden (<code>pct list</code>). Välj den som får disken. Om containern är oprivilegierad erbjuds du att konvertera den nu."
+        "bodyRich": "ProxMenux listar LXC-containrarna på värden (<code>pct list</code>), utom de som skapats från en OCI-avbildning, vars sökvägar hanteras i OCI manager. Välj den som får diskarna. Om containern är oprivilegierad erbjuds du att konvertera den nu."
       },
       {
         "title": "Välj den fysiska disken",
         "img": "/disk/disk-selection-ct.png",
         "caption": "Lediga diskar på värden, med ⚠ för gamla metadata",
-        "bodyRich": "Bara säkra kandidater visas. Till skillnad från VM-flödet ansluter skriptet <strong>en disk per körning</strong>. Kör det igen för varje ytterligare disk."
+        "bodyRich": "Bara säkra kandidater visas, och du kan välja <strong>flera diskar</strong> i en körning. För varje disk hoppas disken över om en körande VM eller CT använder den, en stoppad ber dig bekräfta och en RAID-medlem avvisas."
       },
       {
         "title": "Formatera eller återanvänd",
-        "intro": "Skriptet inspekterar disken:",
+        "intro": "För varje vald disk inspekterar skriptet den första partitionen:",
         "items": [
-          "Om disken redan har ett filsystem som stöds (ext4/xfs/btrfs) kan det återanvändas som det är; befintliga filer bevaras.",
-          "Om disken saknar ett filsystem som stöds erbjuds formatering. Välj ext4/xfs/btrfs."
+          "Om den redan har ett filsystem kan du välja att använda den som den är (befintliga filer bevaras) eller formatera den.",
+          "Om den inte har något filsystem formateras den: välj ext4/xfs/btrfs. Formatering kräver alltid ytterligare en bekräftelse."
         ]
       },
       {
         "title": "Välj monteringspunkten",
-        "bodyRich": "Ange sökvägen där containern ska se disken, exempelvis <code>/mnt/data</code> eller <code>/mnt/disk_passthrough</code>. Det är sökvägen <em>inne i</em> containern; värden ser redan partitionen under <code>/dev/disk/by-id/…</code>."
+        "bodyRich": "Ange sökvägen där containern ska se disken. ProxMenux föreslår <code>/mnt/disk_&lt;device&gt;</code> (till exempel <code>/mnt/disk_sdb</code>) och lägger till ett suffix om sökvägen redan används. Det är sökvägen <em>inne i</em> containern; värden refererar till partitionen via <code>/dev/disk/by-id/…</code>."
       },
       {
         "title": "Anslut och verifiera",
         "img": "/disk/assignment-ct.png",
         "caption": "Tilldelning till CT",
-        "bodyRich": "ProxMenux lägger till en ny <code>mpN:</code>-post i containerkonfigurationen, hoppar över upptagna index och läser konfigurationen igen för att bekräfta. Om containern körs tillämpas monteringen direkt; annars vid nästa start.",
+        "bodyRich": "ProxMenux lägger till en ny <code>mpN:</code>-post i containerkonfigurationen, hoppar över upptagna index och läser konfigurationen igen för att bekräfta. För xfs och btrfs installerar den även <code>xfsprogs</code> eller <code>btrfs-progs</code> inne i containern och erbjuder sig att starta den om den är stoppad. Om containern körs tillämpas monteringen direkt; annars vid nästa start.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Monteringspunkten skapades",
         "extraCaption": "Monteringspunkt skapad och verifierad"
@@ -75,9 +75,9 @@
   "important": {
     "heading": "Viktiga överväganden",
     "items": [
-      "<strong>En disk per körning</strong>. Kör skriptet igen för varje ytterligare disk.",
+      "<strong>Flera diskar per körning</strong>: välj dem tillsammans i checklistan; varje disk får en egen monteringspunkt.",
       "Anslut <strong>inte</strong> samma partition till flera containrar som kan montera den samtidigt; samtidiga skrivningar skadar filsystemet.",
-      "<strong>Gamla metadata</strong> (RAID/ZFS/LVM-signaturer) måste rensas manuellt innan skriptet tillåter formatering, annars vägrar <code>mkfs</code> att skriva över. Använd <wipeLink>Formatera eller radera fysisk disk</wipeLink>."
+      "<strong>Gamla metadata</strong>: diskar med ZFS-signaturer döljs och RAID-medlemmar avvisas. Rensa dessa metadata först med verktyget <wipeLink>Formatera eller radera fysisk disk</wipeLink>."
     ]
   },
   "troubleshoot": {

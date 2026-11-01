@@ -16,15 +16,15 @@
   },
   "howRuns": {
     "heading": "Wie das Skript läuft",
-    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Ändern der Containerkonfiguration\". Bis zur endgültigen Bestätigung wird nichts in den CT eingebaut.",
-    "summary": "ProxMenux blendet das Root-Laufwerk, eingehängte Laufwerke und bereits in VM-/LXC-Konfigurationen referenzierte Laufwerke aus. Aktive ZFS-/LVM-/RAID-Mitglieder werden ausgeblendet; alte Signaturen werden mit ⚠ markiert, damit Sie sie vor dem Formatieren löschen können."
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Ändern der Containerkonfiguration\". Bis der letzte Dialog beantwortet ist, wird auf dem Host und im CT nichts geändert.",
+    "summary": "ProxMenux blendet das Root-Laufwerk und andere eingehängte Laufwerke, ZFS-Mitglieder, aktive RAID-Mitglieder, vom Host-LVM verwendete Laufwerke und Laufwerke aus, die sich bereits in diesem Container befinden. Von einer anderen VM oder einem anderen CT referenzierte Laufwerke werden als ⚠ In use angezeigt, und RAID-/LVM-Signaturen erhalten eine ⚠-Markierung."
   },
   "prereqs": {
     "heading": "Voraussetzungen",
     "items": [
       "Mindestens ein LXC-Container, der auf dem Host definiert ist.",
       "Der Container ist <strong>privilegiert</strong>, oder Sie nehmen das Konvertierungsangebot des Skripts an.",
-      "Mindestens eine physische Festplatte, die vom Host oder einem anderen Gast nicht verwendet wird."
+      "Mindestens eine physische Festplatte, die vom Host nicht verwendet wird."
     ],
     "warnTitle": "Privilegierter Container erforderlich",
     "warnBody": "Dieses Skript benötigt für die direkte Laufwerkszuweisung einen <strong>privilegierten</strong> Container. Bei <code>unprivileged: 1</code> bietet es an, <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> direkt zu ändern. Das ändert das Sicherheitsmodell, ordnet vorhandene Dateieigentümer aber nicht neu zu. Sichern Sie den Container und prüfen Sie die Eigentümer vor der Zustimmung, oder erstellen Sie ihn privilegiert neu."
@@ -37,31 +37,31 @@
         "title": "Wählen Sie den Zielcontainer",
         "img": "/disk/select-container.png",
         "caption": "Auswahlmenü für Container",
-        "bodyRich": "ProxMenux listet jeden LXC-Container auf dem Host auf (<code>pct list</code>). Wählen Sie diejenige, die die Festplatte erhalten wird. Wenn der Container nicht privilegiert ist, wird Ihnen angeboten, ihn jetzt umzuwandeln."
+        "bodyRich": "ProxMenux listet die LXC-Container auf dem Host auf (<code>pct list</code>), außer denen, die aus einem OCI-Image erstellt wurden, deren Pfade im OCI-Manager verwaltet werden. Wählen Sie diejenige, die die Festplatten erhalten wird. Wenn der Container nicht privilegiert ist, wird Ihnen angeboten, ihn jetzt umzuwandeln."
       },
       {
         "title": "Wählen Sie die physische Festplatte",
         "img": "/disk/disk-selection-ct.png",
         "caption": "Freie Festplatten auf dem Host erkannt (mit ⚠ Labels für veraltete Metadaten)",
-        "bodyRich": "Nur sichere Kandidaten werden angezeigt. Anders als bei VMs weist dieses Skript <strong>ein Laufwerk pro Durchlauf</strong> zu. Führen Sie es für jedes weitere Laufwerk erneut aus."
+        "bodyRich": "Nur sichere Kandidaten werden angezeigt, und Sie können in einem Durchlauf <strong>mehrere Laufwerke</strong> auswählen. Für jedes Laufwerk gilt: Wird es von einer laufenden VM oder einem laufenden CT verwendet, wird es übersprungen, bei einer gestoppten VM oder einem gestoppten CT werden Sie um Bestätigung gebeten, und ein RAID-Mitglied wird abgelehnt."
       },
       {
         "title": "Formatieren oder wiederverwenden",
-        "intro": "Das Skript überprüft die Festplatte:",
+        "intro": "Für jedes gewählte Laufwerk überprüft das Skript die erste Partition:",
         "items": [
-          "Wenn es bereits ein unterstütztes Dateisystem (ext4 / xfs / btrfs) trägt, können Sie es so wiederverwenden, wie es ist (bestehende Dateien bleiben erhalten).",
-          "Wenn es kein unterstütztes Dateisystem hat, wird Ihnen angeboten, es zu formatieren. Wählen Sie ext4 / xfs / btrfs."
+          "Wenn es bereits ein Dateisystem hat, wählen Sie, ob Sie es unverändert verwenden (bestehende Dateien bleiben erhalten) oder formatieren.",
+          "Wenn es kein Dateisystem hat, wird es formatiert: Wählen Sie ext4 / xfs / btrfs. Das Formatieren verlangt immer eine weitere Bestätigung."
         ]
       },
       {
         "title": "Wählen Sie den Mount Point",
-        "bodyRich": "Geben Sie den Pfad ein, unter dem der Container das Laufwerk sehen soll, etwa <code>/mnt/data</code> oder <code>/mnt/disk_passthrough</code>. Dies ist der Pfad <em>innerhalb</em> des Containers; der Host sieht die Partition bereits unter <code>/dev/disk/by-id/…</code>."
+        "bodyRich": "Geben Sie den Pfad ein, unter dem der Container das Laufwerk sehen soll. ProxMenux schlägt <code>/mnt/disk_&lt;device&gt;</code> vor (zum Beispiel <code>/mnt/disk_sdb</code>) und hängt ein Suffix an, wenn dieser Pfad bereits belegt ist. Dies ist der Pfad <em>innerhalb</em> des Containers; der Host verweist auf die Partition über <code>/dev/disk/by-id/…</code>."
       },
       {
         "title": "Zuweisen und prüfen",
         "img": "/disk/assignment-ct.png",
         "caption": "Zuordnung zu CT",
-        "bodyRich": "ProxMenux fügt der Containerkonfiguration einen neuen <code>mpN:</code>-Eintrag hinzu, überspringt belegte Indizes und liest die Konfiguration zur Bestätigung erneut. Bei laufendem Container wird die Einhängung sofort angewendet, andernfalls beim nächsten Start.",
+        "bodyRich": "ProxMenux fügt der Containerkonfiguration einen neuen <code>mpN:</code>-Eintrag hinzu, überspringt belegte Indizes und liest die Konfiguration zur Bestätigung erneut. Für xfs und btrfs installiert es außerdem <code>xfsprogs</code> bzw. <code>btrfs-progs</code> im Container und bietet an, ihn zu starten, falls er gestoppt ist. Bei laufendem Container wird die Einhängung sofort angewendet, andernfalls beim nächsten Start.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Mount Point erfolgreich erstellt",
         "extraCaption": "Einhängepunkt erstellt und geprüft"
@@ -75,9 +75,9 @@
   "important": {
     "heading": "Wichtige Überlegungen",
     "items": [
-      "<strong>Ein Laufwerk pro Durchlauf</strong>. Führen Sie das Skript für jedes weitere Laufwerk erneut aus.",
+      "<strong>Mehrere Laufwerke pro Durchlauf</strong>: Wählen Sie sie gemeinsam in der Checkliste aus; jedes erhält einen eigenen Einhängepunkt.",
       "Hängen Sie <strong>nicht</strong> dieselbe Partition an mehrere Container an, die sie gleichzeitig bereitstellen könnten – gleichzeitige Schreibvorgänge beschädigen das Dateisystem.",
-      "<strong>Alte Metadaten</strong> (RAID / ZFS / LVM-Signaturen) müssen manuell gelöscht werden, bevor Sie das Skript formatieren lassen, andernfalls weigert sich <code>mkfs</code> zu überschreiben. Verwenden Sie dafür das <wipeLink>Format / Wipe Physical Disk</wipeLink> Tool."
+      "<strong>Alte Metadaten</strong>: Laufwerke mit ZFS-Signaturen werden ausgeblendet und RAID-Mitglieder abgelehnt. Löschen Sie diese Metadaten zuerst mit dem <wipeLink>Format / Wipe Physical Disk</wipeLink> Tool."
     ]
   },
   "troubleshoot": {

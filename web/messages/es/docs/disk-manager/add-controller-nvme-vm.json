@@ -21,13 +21,14 @@
   "iommu": {
     "heading": "Grupos IOMMU — por qué la tarjeta entera sale a la vez",
     "body": "El límite de aislamiento del passthrough PCI es el <strong>grupo IOMMU</strong>, la unidad más pequeña que puede aislar el IOMMU de la CPU. Los dispositivos del mismo grupo no pueden aislarse entre sí. Si una controladora SATA comparte grupo con una USB, pasar la SATA puede requerir liberar también la USB del host o impedir el passthrough. Esto no asigna automáticamente a la VM todos los dispositivos del grupo.",
-    "outro": "ProxMenux muestra el grupo IOMMU junto a cada dispositivo y te avisa cuando un grupo lleva algo más que la controladora que quieres. Aún así puedes continuar si los dispositivos extra del grupo son aceptables (todas controladoras de disco, por ejemplo), o echar atrás si no lo son."
+    "outro": "ProxMenux no comprueba los grupos IOMMU. Antes de pasar una tarjeta, comprueba su grupo con los comandos manuales de abajo: si el grupo contiene algo más que la controladora que quieres, los demás dispositivos se van del host con ella."
   },
   "prereqs": {
     "heading": "Requisitos previos",
     "items": [
       "La <strong>CPU y la placa base soportan</strong> VT-d (Intel) o AMD-Vi, y está habilitado en el firmware (BIOS/UEFI). ProxMenux puede habilitar la parte del kernel por ti, pero no puede tocar el switch del firmware.",
       "La VM destino está <strong>apagada</strong> antes de adjuntar dispositivos PCI.",
+      "La VM destino usa el tipo de máquina <strong>q35</strong>. ProxMenux rechaza otros tipos de máquina.",
       "La controladora/NVMe <strong>no es la que contiene el filesystem raíz de Proxmox</strong>. El script oculta cualquier cosa en uso por el host.",
       "El SO guest tiene drivers para el modelo de la controladora. Linux cubre prácticamente cualquier HBA por defecto; Windows necesita el driver del fabricante instalado <em>antes</em> de arrancar con la controladora adjuntada."
     ],
@@ -40,46 +41,46 @@
     "list": [
       {
         "title": "Elige la VM destino",
-        "bodyRich": "ProxMenux lee <code>qm list</code> y muestra cada VM. Elige la que recibirá la controladora.",
+        "bodyRich": "ProxMenux lee <code>qm list</code> y muestra cada VM con su estado y tipo de máquina. Elige la que recibirá la controladora. Una VM en ejecución, o cuyo tipo de máquina no sea q35, se rechaza.",
         "img": "/disk/nvme-passthrough/vm-selection.png",
         "alt": "Diálogo de selección de VM",
         "caption": "Diálogo de selección de VM"
       },
       {
         "title": "Comprobación de IOMMU",
-        "bodyRich": "Si IOMMU no está habilitado en la cmdline del kernel, ProxMenux se ofrece a habilitarlo. Edita <code>/etc/kernel/cmdline</code> (para systemd-boot) o <code>/etc/default/grub</code> (para GRUB) y añade el parámetro correcto para tu CPU:",
+        "bodyRich": "Si IOMMU no está activo, ProxMenux se ofrece a habilitarlo. Edita <code>/etc/kernel/cmdline</code> (para systemd-boot) o <code>/etc/default/grub</code> (para GRUB), añade los parámetros para tu CPU y ejecuta <code>proxmox-boot-tool refresh</code> o <code>update-grub</code>:",
         "items": [
-          "<code>intel_iommu=on</code> para CPUs Intel.",
-          "<code>amd_iommu=on</code> para CPUs AMD."
+          "<code>intel_iommu=on iommu=pt</code> para CPUs Intel.",
+          "<code>amd_iommu=on iommu=pt</code> para CPUs AMD."
         ],
-        "outro": "Es necesario reiniciar después de este cambio. El script te pide reiniciar ahora o más tarde; el passthrough no puede continuar hasta que la nueva cmdline del kernel esté activa.",
+        "outro": "El flujo continúa y los dispositivos se asignan en la misma ejecución, pero el host debe reiniciarse antes de que arranque la VM. Al final ProxMenux ofrece reiniciar ahora; si lo rechazas, no arranques la VM hasta que el host se haya reiniciado.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
         "alt": "Diálogo que indica que se requiere IOMMU",
         "caption": "Se requiere IOMMU: propuesta de habilitarlo y reiniciar"
       },
       {
         "title": "Enumeración de dispositivos",
-        "body": "ProxMenux lista cada controladora de almacenamiento (HBA SATA / SAS) y cada dispositivo NVMe del bus PCI. Para cada dispositivo muestra:",
+        "body": "ProxMenux lista cada dispositivo PCI de clase almacenamiento (HBA SATA / SAS / RAID y NVMe). Para cada dispositivo muestra:",
         "items": [
-          "Dirección PCI (<code>00:17.0</code>, <code>01:00.0</code>, …).",
+          "Dirección PCI (<code>0000:00:17.0</code>, <code>0000:01:00.0</code>, …).",
           "Descripción del fabricante / dispositivo.",
-          "Grupo IOMMU — y un aviso ⚠ si el grupo se comparte con otros dispositivos no relacionados.",
-          "Los discos que hay actualmente detrás de la controladora (para que sepas qué la seguirá a la VM)."
+          "<code>Assigned to VM</code> cuando otra VM ya tiene el dispositivo en su config.",
+          "Una marca ⚠ cuando un disco detrás de la controladora está referenciado en la config de una VM o CT parada."
         ],
         "img": "/disk/nvme-passthrough/device-list.png",
         "alt": "Enumeración de dispositivos controladora / NVMe",
-        "caption": "Enumeración de dispositivos controladora / NVMe con info de grupo IOMMU"
+        "caption": "Enumeración de dispositivos controladora / NVMe"
       },
       {
         "title": "Detección de conflictos",
-        "bodyRich": "El script bloquea los dispositivos claramente inseguros: ya asignados a otra VM (vía <code>hostpci</code> en la config de esa VM), en uso por el host (controladora del disco raíz) o en un grupo IOMMU cuyos otros miembros el script no puede identificar de forma segura. Los dispositivos elegibles quedan disponibles para selección.",
+        "bodyRich": "Las controladoras con un disco que contiene el sistema Proxmox o que usa una VM o CT en ejecución se ocultan por seguridad y se listan en el diálogo, igual que los dispositivos que ya están en la VM destino. Las funciones virtuales SR-IOV, y las funciones físicas con VFs activas, se excluyen tras la selección. Si otra VM ya tiene el dispositivo, un propietario en ejecución lo bloquea; con un propietario parado eliges entre mantenerlo allí con onboot deshabilitado, moverlo a la VM destino u omitirlo. Los discos referenciados en configs de VM o CT paradas tienen una elección similar: deshabilitar onboot, quitar las referencias o dejarlas como están.",
         "img": "/disk/nvme-passthrough/conflict-warning.png",
         "alt": "Aviso de detección de conflicto",
         "caption": "Detección de conflictos — dispositivo bloqueado con motivo"
       },
       {
         "title": "Adjuntar y finalizar",
-        "bodyRich": "Para cada dispositivo seleccionado ProxMenux ejecuta <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, eligiendo el siguiente slot <code>hostpci</code> libre. Si se habilitó IOMMU durante esta sesión se te recuerda que reinicies antes de arrancar la VM.",
+        "bodyRich": "ProxMenux muestra un resumen con un aviso de compatibilidad (en algunas plataformas el host se ralentiza o se congela cuando arranca la VM; se señalan firmwares antiguos y CPUs de bajo consumo). Al confirmar, para cada dispositivo seleccionado ejecuta <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, eligiendo el siguiente slot <code>hostpci</code> libre. Si se habilitó IOMMU durante esta sesión, ofrece reiniciar el host.",
         "img": "/disk/nvme-passthrough/assignment.png",
         "alt": "Resumen de asignación",
         "caption": "Resumen de asignación — slots hostpciN y direcciones PCI adjuntadas"

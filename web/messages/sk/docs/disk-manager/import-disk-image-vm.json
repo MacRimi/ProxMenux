@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Ako beží skript",
-    "body": "Postup má dve fázy. Prvá zhromaždí cez dialógy všetky voľby: VM, úložisko, zdrojový adresár, obrazy a možnosti pre každý obraz. Druhá spustí <code>qm importdisk</code> pre každý vybraný obraz. Kým sa druhá fáza nezačne, nič sa nekopíruje a konfigurácia VM sa nemení."
+    "body": "Postup má dve fázy. Prvá zhromaždí cez dialógy všetky voľby: VM, úložisko, zdrojový adresár, obrazy a možnosti pre každý obraz. Druhá spustí <code>qm importdisk</code> pre každý vybraný obraz. Druhá fáza sa začne hneď po poslednej otázke pre jednotlivý obraz, bez samostatného záverečného potvrdenia; dovtedy sa nič nekopíruje a konfigurácia VM sa nemení."
   },
   "prereqs": {
     "heading": "Predpoklady",
