@@ -6084,7 +6084,7 @@
             "noJobs": "Vytvor zálohovaciu úlohu na tomto uzle a vyber VM alebo kontajnery s údajmi, ktoré by sa ťažko obnovovali ručne. Vypnutá úloha nezahŕňa do zálohovania žiadne VM ani kontajnery.",
             "uncovered": "Pre každého z týchto hostí rozhodnite, či obsahuje niečo, čo stojí za to ponechať. Tých, ktorí to obsahujú, pridajte do úlohy; v prípade tých, ktorí to neobsahujú, uveďte to v pravidle, aby sa tu už nezapočítavali.",
             "excludedData": "Otvorte zoznam vylúčených položiek každej úlohy a overte si, či sa medzi vylúčenými údajmi nachádzajú len tie, ktorých stratu si môžete dovoliť. Vylúčenie pridané s cieľom urýchliť úlohu nijako nechráni údaje, ktoré sa tým vynechajú.",
-            "uncoveredExpected": "V rámci tejto politiky sú títo hostia označení ako vyžadujúci zálohovanie, avšak žiadna spustená úloha ich nevyberá. Pridajte ich do úlohy alebo upravte nastavenia politiky tak, aby sa tieto dve veci zhodovali."
+            "uncoveredExpected": "V rámci tejto politiky sú títo hostia označení ako vyžadujúci zálohovanie, avšak žiadna zapnutá úloha ich nevyberá. Pridajte ich do úlohy alebo upravte nastavenia politiky tak, aby sa tieto dve veci zhodovali."
           },
           "explanation": "Záloha chráni len to, čo úloha skutočne vyberie. Táto kontrola spáruje hostí na tomto uzle s úlohami, ktoré sa tu spúšťajú, takže hosť, ktorého nikto nezálohuje, sa zobrazí ako taký, namiesto toho, aby sa predpokladalo, že je zahrnutý v niečom inom."
         },
@@ -6118,7 +6118,7 @@
           "nextStep": {
             "missing": "Nastavte dobu uchovávania pre tieto úlohy alebo pre úložisko, do ktorého sa zapisujú. Proxmox uprednostňuje najskôr nastavenie úlohy, potom nastavenie úložiska a nakoniec predvolené nastavenie uzla.",
             "notDeclared": "Tieto úlohy uchovávajú každú vytvorenú kópiu. V prípade niektorých cieľových umiestnení ide o zámernú voľbu, avšak je potrebné overiť, či má cieľové umiestnenie dostatok miesta na ďalší rast.",
-            "onServer": "Tieto úlohy zapisujú údaje na záložný server, ktorý ich odstraňuje podľa vlastných pravidiel. Údaje, ktoré tam zostanú, nie je možné prečítať z tohto uzla, preto si skontrolujte dobu uchovávania na tom serveri."
+            "onServer": "Tieto úlohy zapisujú údaje na záložný server, ktorý ich odstraňuje podľa vlastných pravidiel. Údaje, ktoré sa podľa týchto pravidiel zachovávajú, nie je možné prečítať z tohto uzla, preto si tam skontrolujte dobu uchovávania."
           },
           "explanation": "Doba uchovávania určuje, koľko kópií sa uchováva a ako dlho. Bez nej sa cieľové úložisko zaplní do tej miery, že prestane prijímať nové kópie, a o zálohe, ktorú nie je možné zapísať, sa dozviete práve v deň, keď ju budete potrebovať."
         },
