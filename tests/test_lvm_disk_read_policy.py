@@ -209,10 +209,16 @@ class QuietDiskIdentityTests(unittest.TestCase):
         self.read = Mock(return_value={"model": "WDC WD40EFRX-68N32N0", "serial": "WD-WCC7K4FV37J0",
                                        "rotation_rate": 5400, "health": "healthy", "temperature": 31})
         self.cache = {}
+        self.backoff = {}
+        import disk_identity
+        sys_block = patch.object(disk_identity, "_SYS_BLOCK", str(root / "sys/block"))
+        sys_block.start()
+        self.addCleanup(sys_block.stop)
         namespace = {"Path": lambda path: root / path.lstrip("/"), "time": __import__("time"),
+                     "disk_identity": disk_identity,
                      "_smart_result_cache": self.cache, "_SMART_RESULT_TTL": 30, "_hdd_in_standby": self.standby,
                      "_get_smart_data_uncached": self.read, "_smart_data_useful": lambda data: data.get("model") != "Unknown",
-                     "_smart_fail_backoff": {}, "_smart_fail_counts": {}, "_smart_probe_cache": {},
+                     "_smart_fail_backoff": self.backoff, "_smart_fail_counts": {}, "_smart_probe_cache": {},
                      "_SMART_FAIL_THRESHOLD": 3, "_SMART_FAIL_BACKOFF_SEC": 3600}
         tree = ast.parse((SCRIPTS / "flask_server.py").read_text())
         nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef)
@@ -239,6 +245,13 @@ class QuietDiskIdentityTests(unittest.TestCase):
         self.standby.assert_not_called()
         self.read.assert_not_called()
         self.assertEqual((data["model"], data["rotation_rate"], data["excluded"]), ("WDC WD40EFRX-68N32N0", -1, True))
+
+    def test_a_disk_smartctl_keeps_failing_on_keeps_its_identity(self):
+        self.backoff["sdb"] = __import__("time").time() + 3600
+        data = self.get("sdb")
+        self.read.assert_not_called()
+        self.assertEqual((data["model"], data["serial"], data["rotation_rate"]),
+                         ("WDC WD40EFRX-68N32N0", "WD-WCC7K4FV37J0", -1))
 
 
 if __name__ == "__main__":

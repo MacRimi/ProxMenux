@@ -323,6 +323,9 @@
         "AceStream HTTP Proxy has no web interface: a media player opens its streams.",
         "HLS stream: port 6878, path /ace/manifest.m3u8?id= followed by the channel ID.",
         "MPEG-TS stream: port 6878, path /ace/getstream?id= followed by the channel ID."
+      ],
+      "non_persistent_image_volumes": [
+        "/home/appuser/.ACEStream"
       ]
     }
   },

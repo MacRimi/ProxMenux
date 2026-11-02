@@ -615,7 +615,7 @@ running on node pve-01
               <tr key={row.stage} className={idx < dispatchRows.length - 1 ? "border-b border-gray-100" : ""}>
                 <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.stage}</strong></td>
                 <td className="px-3 py-2 align-top">{t.rich(`dispatch.rows.${idx}.what`, { code })}</td>
-                <td className="px-3 py-2 align-top">{row.tunable}</td>
+                <td className="px-3 py-2 align-top">{t.rich(`dispatch.rows.${idx}.tunable`, { code })}</td>
               </tr>
             ))}
           </tbody>

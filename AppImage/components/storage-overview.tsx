@@ -804,7 +804,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
             </div>
           )}
           {/* Reallocated only meaningful on rotating disks. */}
-          {disk.reallocated_sectors !== undefined && (disk.rotation_rate ?? 0) > 0 && (
+          {disk.reallocated_sectors !== undefined && resolveDiskType(disk.name, disk.rotation_rate) === "HDD" && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 {t("storage.reallocatedShort")}
@@ -860,12 +860,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
     // Resolve disk class → threshold pair from the user-configurable
     // backend (single source of truth). The semantics: temp BELOW warn
     // is green, between warn and hot is amber, hot or above is red.
-    let cls: keyof DiskTempMap = "HDD"
-    if (diskName?.startsWith("nvme")) {
-      cls = "NVMe"
-    } else if (!rotationRate || rotationRate === 0) {
-      cls = "SSD"
-    }
+    const cls: keyof DiskTempMap = resolveDiskType(diskName ?? "", rotationRate)
     const t = dtThresholds[cls]
     if (temp >= t.hot) return "text-red-500"
     if (temp >= t.warn) return "text-yellow-500"
@@ -896,9 +891,9 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
     return t("storage.duration.daysShort", { days: totalDays })
   }
 
-  const formatRotationRate = (rpm: number | undefined) => {
-    if (!rpm || rpm === 0) return "SSD"
-    return `${rpm.toLocaleString()} RPM`
+  const formatRotationRate = (diskName: string, rpm: number | undefined) => {
+    if (getDiskType(diskName, rpm) !== "HDD") return "SSD"
+    return rpm && rpm > 0 ? `${rpm.toLocaleString()} RPM` : t("common.notAvailable")
   }
 
   // Thin wrapper over the shared classifier so the rest of the file
@@ -2626,7 +2621,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("storage.rotationRate")}</p>
-                    <p className="font-medium">{formatRotationRate(selectedDisk.rotation_rate)}</p>
+                    <p className="font-medium">{formatRotationRate(selectedDisk.name, selectedDisk.rotation_rate)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("storage.powerCycles")}</p>
@@ -2871,14 +2866,12 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
 
   // Determine disk type (SAS detected via backend flag or connection_type)
   const isSasDisk = sd?.is_sas === true || disk.connection_type === 'sas'
-  let diskType = "HDD"
-  if (disk.name.startsWith("nvme")) {
-    diskType = "NVMe"
-  } else if (isSasDisk) {
+  let diskType: string = resolveDiskType(disk.name, disk.rotation_rate)
+  if (diskType !== "NVMe" && isSasDisk) {
     diskType = "SAS"
-  } else if (!disk.rotation_rate || disk.rotation_rate === 0) {
-    diskType = "SSD"
   }
+  const rpm = disk.rotation_rate && disk.rotation_rate > 0 ? disk.rotation_rate : 0
+  const known = (value?: string) => (value && value !== "Unknown" ? value : undefined)
   
   // Health status styling
   const healthStatus = String(testStatus.smart_status || (testStatus.smart_data?.smart_status) || 'unknown')
@@ -3824,11 +3817,11 @@ function pmxPrint(){
   <div class="grid-4">
     <div class="card">
       <div class="card-label">${tSmart("labels.model")}</div>
-      <div class="card-value" style="font-size:11px;">${disk.model || sd?.model || t("app.unknown")}</div>
+      <div class="card-value" style="font-size:11px;">${known(disk.model) || known(sd?.model) || t("app.unknown")}</div>
     </div>
     <div class="card">
       <div class="card-label">${tSmart("labels.serial")}</div>
-      <div class="card-value" style="font-size:11px;font-family:monospace;">${disk.serial || sd?.serial || t("app.unknown")}</div>
+      <div class="card-value" style="font-size:11px;font-family:monospace;">${known(disk.serial) || known(sd?.serial) || t("app.unknown")}</div>
     </div>
     <div class="card">
       <div class="card-label">${tSmart("labels.capacity")}</div>
@@ -3836,7 +3829,7 @@ function pmxPrint(){
     </div>
     <div class="card">
       <div class="card-label">${tSmart("labels.type")}</div>
-      <div class="card-value" style="font-size:11px;">${diskType === 'SAS' ? (disk.rotation_rate ? `SAS ${disk.rotation_rate} RPM` : 'SAS SSD') : diskType === 'HDD' && disk.rotation_rate ? `HDD ${disk.rotation_rate} RPM` : diskType}</div>
+      <div class="card-value" style="font-size:11px;">${diskType === 'SAS' ? (rpm ? `SAS ${rpm} RPM` : disk.rotation_rate === -1 ? 'SAS HDD' : 'SAS SSD') : diskType === 'HDD' && rpm ? `HDD ${rpm} RPM` : diskType}</div>
     </div>
   </div>
   ${(modelFamily || formFactor || sataVersion || ifaceSpeed) ? `

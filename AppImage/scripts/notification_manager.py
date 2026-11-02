@@ -3163,7 +3163,10 @@ class NotificationManager:
                     if not ok:
                         raise ValueError(f"Invalid ai_ollama_url: {err}")
                 if short_key == 'ai_openai_base_url' and str(value):
-                    ok, err = validate_external_url(str(value), allow_loopback=False)
+                    # Custom OpenAI-compatible servers can run on the LAN or
+                    # localhost, just like Ollama. Match test-ai/provider-models;
+                    # unsafe schemes, metadata hosts and link-local stay blocked.
+                    ok, err = validate_external_url(str(value), allow_loopback=True)
                     if not ok:
                         raise ValueError(f"Invalid ai_openai_base_url: {err}")
 

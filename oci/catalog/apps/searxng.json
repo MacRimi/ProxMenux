@@ -85,6 +85,22 @@
           "backup": true,
           "default_size_gb": 8
         }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/etc/searxng",
+        "compose_source_example": "./config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
+        }
       }
     ],
     "ports": [
@@ -127,7 +143,8 @@
             "8080:8080"
           ],
           "volumes": [
-            "./cache:/var/cache/searxng"
+            "./cache:/var/cache/searxng",
+            "./config:/etc/searxng"
           ]
         }
       }
@@ -147,6 +164,17 @@
         "id": "searxng-volume-0",
         "service": "searxng",
         "container_path": "/var/cache/searxng",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "searxng-volume-1",
+        "service": "searxng",
+        "container_path": "/etc/searxng",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -375,6 +403,12 @@
       "volume_preparations": [
         {
           "container_path": "/var/cache/searxng",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/etc/searxng",
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
