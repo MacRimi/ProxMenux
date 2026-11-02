@@ -4029,6 +4029,7 @@
   "Manage local backup target": "Spravovať lokálny cieľ záloh",
   "Manage private image registries.\nSaved credentials let ProxMenux access your private images.": "Správa súkromných registrov obrazov.\nUložené prihlasovacie údaje umožňujú ProxMenuxu pristupovať k vašim súkromným obrazom.",
   "Manage registry accounts as root on the Proxmox node.": "Spravujte účty registra ako root na uzle Proxmox.",
+  "Manage teams of AI agents from a web dashboard.": "Spravujte tímy AI agentov z webového panela.",
   "Managed disks must have backup enabled and a valid size": "Spravované disky musia mať zapnuté zálohovanie a platnú veľkosť",
   "Managed public route include is missing": "Chýba konfiguračný súbor spravovaných verejných trás",
   "Managed public route installation failed": "Nepodarilo sa nastaviť spravované verejné trasy",

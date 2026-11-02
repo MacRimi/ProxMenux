@@ -4029,6 +4029,7 @@
   "Manage local backup target": "Hantera lokalt mål för säkerhetskopiering",
   "Manage private image registries.\nSaved credentials let ProxMenux access your private images.": "Hantera privata bildregister.\nSparade referenser låter ProxMenux komma åt dina privata bilder.",
   "Manage registry accounts as root on the Proxmox node.": "Hantera registerkonton som root på Proxmox-noden.",
+  "Manage teams of AI agents from a web dashboard.": "Hantera team av AI-agenter från en webbpanel.",
   "Managed disks must have backup enabled and a valid size": "Hanterade diskar måste ha backup aktiverad och en giltig storlek",
   "Managed public route include is missing": "Konfigurationsfilen för de hanterade publika rutterna saknas",
   "Managed public route installation failed": "Det gick inte att konfigurera de hanterade publika rutterna",
