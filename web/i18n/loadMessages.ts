@@ -73,6 +73,11 @@ function decodeEntities(value: unknown): unknown {
   return value
 }
 
+// Messages inserted as raw HTML skip ICU, so its quoting goes back to entities.
+export function icuQuotesToHtml(html: string): string {
+  return html.replace(/'<'/g, "&lt;").replace(/'>'/g, "&gt;")
+}
+
 function toCamel(name: string): string {
   return name.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase())
 }
