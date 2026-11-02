@@ -1,5 +1,5 @@
 
-## 2026-11-01
+## 2026-11-02
 
 ### Nueva versión ProxMenux v1.2.8
 

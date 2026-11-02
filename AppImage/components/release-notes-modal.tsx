@@ -19,7 +19,7 @@ interface ReleaseNote {
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
   "1.2.8": {
-    date: "November 1, 2026",
+    date: "November 2, 2026",
     changes: {
       added: [
         "Custom image installs Compose files with several services, one LXC per service on a private network (contributed by @jcastro).",
