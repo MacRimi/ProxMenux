@@ -6118,7 +6118,7 @@
           "nextStep": {
             "missing": "Nastavte dobu uchovávania pre tieto úlohy alebo pre úložisko, do ktorého sa zapisujú. Proxmox uprednostňuje najskôr nastavenie úlohy, potom nastavenie úložiska a nakoniec predvolené nastavenie uzla.",
             "notDeclared": "Tieto úlohy uchovávajú každú vytvorenú kópiu. V prípade niektorých cieľových umiestnení ide o zámernú voľbu, avšak je potrebné overiť, či má cieľové umiestnenie dostatok miesta na ďalší rast.",
-            "onServer": "Tieto úlohy zapisujú údaje na záložný server, ktorý ich odstraňuje podľa vlastných pravidiel. Údaje, ktoré sa podľa týchto pravidiel zachovávajú, nie je možné prečítať z tohto uzla, preto si tam skontrolujte dobu uchovávania."
+            "onServer": "Tieto úlohy zapisujú údaje na záložný server, ktorý ich odstraňuje podľa vlastných pravidiel. Pravidlá uchovávania sa z tohto uzla nedajú zistiť; skontroluj ich priamo na zálohovacom serveri."
           },
           "explanation": "Doba uchovávania určuje, koľko kópií sa uchováva a ako dlho. Bez nej sa cieľové úložisko zaplní do tej miery, že prestane prijímať nové kópie, a o zálohe, ktorú nie je možné zapísať, sa dozviete práve v deň, keď ju budete potrebovať."
         },
