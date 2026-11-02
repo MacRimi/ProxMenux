@@ -197,7 +197,7 @@
               {
                 "label": "Installare un’app e proporla al catalogo",
                 "href": "/docs/oci-manager/contribute-app",
-                "tail": "istruzioni per l’agente, verifiche e pull request."
+                "tail": "Istruzioni per l’agente, verifiche dell’installazione e pull request per il catalogo."
               },
               {
                 "label": "Installazione, aggiornamento e modifica",

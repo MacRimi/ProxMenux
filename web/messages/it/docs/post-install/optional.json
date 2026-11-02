@@ -140,13 +140,13 @@
     "doesLabel": "Cosa fa ProxMenux:",
     "doesItems": [
       "Rileva se il disco root è SSD/NVMe leggendo <code>/sys/block/&lt;dev&gt;/queue/rotational</code>. Su un disco rotazionale il flusso automatizzato chiede prima di installare.",
-      "Installa Log2RAM 1.7.2 dal progetto ufficiale, verificando che il download sia quella versione, e lascia il suo codice invariato. L'email di errore viene disattivata con <code>NOTIFICATION=false</code>, poiché Proxmox VE non include un comando mail.",
+      "Installa Log2RAM 1.7.2 dal progetto ufficiale, verificando che il download sia quella versione, e lascia il suo codice invariato. L’email di errore viene disattivata con <code>NOTIFICATION=false</code>, poiché Proxmox VE non include il comando mail per impostazione predefinita.",
       "Dimensiona il ramdisk in base alla RAM dell’host: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Scrive il valore in <code>SIZE=</code> di <code>/etc/log2ram.conf</code>.",
       "Mantiene su disco il journal (<code>/var/log/journal</code>), i log delle attività di Proxmox VE (<code>/var/log/pve</code>) e, se installato, quelli di Proxmox Backup Server (<code>/var/log/proxmox-backup</code>), in <code>/var/hdd.journal</code>, <code>/var/hdd.pve</code> e <code>/var/hdd.proxmox-backup</code>. Ogni percorso abituale diventa un collegamento alla sua cartella su disco. Lo spostamento avviene all'avvio, prima che parta Log2RAM.",
-      "Scrive il ramdisk su disco con il timer di Log2RAM ogni 1h / 3h / 6h secondo la stessa fascia di RAM, e svuota la cache del disco dopo ogni scrittura, così una sincronizzazione completata sopravvive a un'interruzione di corrente.",
+      "Scrive il ramdisk su disco con il timer di Log2RAM ogni 1h / 3h / 6h secondo la stessa fascia di RAM e, dopo ogni scrittura, sincronizza i dati in cache con il disco, così una sincronizzazione completata sopravvive a un’interruzione di corrente.",
       "Installa un controllo in <code>/etc/cron.d/log2ram-auto-sync</code> eseguito ogni 10 minuti. Quando <code>/var/log</code> supera l'85% del ramdisk, ruota i log, comprime quelli appena ruotati e scrive tutto su disco. Nessun log viene svuotato.",
       "Mantiene il journal di systemd su disco con un limite di 1 GB, in <code>/etc/systemd/journald.conf.d/proxmenux-log2ram.conf</code>. Su un host con Proxmox Backup Server aggiunge <code>/etc/logrotate.d/proxmox-backup-api</code> (rotazione 20 MB × 3) per i suoi log delle API.",
-      "Si registra in <code>installed_tools.json</code> per poter essere annullato da Disinstalla ottimizzazioni. Un aggiornamento da una versione precedente mantiene la dimensione e l'intervallo di sincronizzazione e sposta il journal su disco al successivo avvio."
+      "Si registra in <code>installed_tools.json</code> per consentirne la rimozione da Disinstalla ottimizzazioni. Un aggiornamento da una versione precedente mantiene la dimensione e l’intervallo di sincronizzazione e sposta il journal su disco al successivo avvio."
     ],
     "howUseLabel": "Come usare:",
     "howUseBody": "Nel flusso automatico Log2RAM si installa senza intervento quando rileva un disco di sistema SSD/NVMe. Il flusso personalizzabile chiede la dimensione, l'intervallo di sincronizzazione e se attivare il controllo. Le modifiche hanno effetto al successivo avvio.",
