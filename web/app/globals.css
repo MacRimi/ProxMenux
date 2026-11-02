@@ -83,6 +83,18 @@
 }
 
 
+/* Long commands and paths in running text wrap instead of widening the page
+   on a phone; tables scroll inside their own box. */
+:not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
+.prose table {
+  display: block;
+  overflow-x: auto;
+}
+
+
 button code {
   background-color: transparent;
   color: inherit;
