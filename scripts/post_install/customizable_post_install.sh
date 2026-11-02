@@ -3303,7 +3303,7 @@ _update_existing_log2ram_custom() {
 
 
 configure_log2ram() {
-    local FUNC_VERSION="2.0"
+    local FUNC_VERSION="2.1"
     local existing_log2ram_bin=""
     local watch=false
     pmx_journal_context "configure_log2ram" "$FUNC_VERSION"

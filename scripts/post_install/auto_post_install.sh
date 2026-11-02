@@ -973,7 +973,7 @@ _update_existing_log2ram_auto() {
 
 
 install_log2ram_auto() {
-    local FUNC_VERSION="2.0"
+    local FUNC_VERSION="2.1"
     local existing_log2ram_bin=""
     pmx_journal_context "install_log2ram_auto" "$FUNC_VERSION"
 

@@ -112,19 +112,22 @@ pmx_log2ram_setup() {
     _pmx_log2ram_install_release || return 1
     msg_ok "$(translate "Log2RAM installed:") ${PMX_L2R_TAG}"
 
-    # The journal is not in RAM, so Log2RAM does not rotate it before a sync;
-    # and Proxmox has no mail command for its error notice.
+    # Keep journal-aware syncing through shutdown: the running journal may
+    # still be in RAM. The boot helper disables it only after relocation.
+    # Proxmox has no mail command for the error notice.
     pmx_edit_file /etc/log2ram.conf \
         -e "s/^SIZE=.*/SIZE=${size_mb}M/" \
-        -e "s/^JOURNALD_AWARE=.*/JOURNALD_AWARE=false/" \
-        -e "s/^#\?NOTIFICATION=.*/NOTIFICATION=false/"
+        -e "s/^JOURNALD_AWARE=.*/JOURNALD_AWARE=true/" \
+        -e "s/^#\?NOTIFICATION=.*/NOTIFICATION=false/" || return 1
+    grep -q '^JOURNALD_AWARE=' /etc/log2ram.conf || \
+        printf '\nJOURNALD_AWARE=true\n' | pmx_append_file /etc/log2ram.conf || return 1
     grep -q '^NOTIFICATION=' /etc/log2ram.conf || printf 'NOTIFICATION=false\n' | pmx_append_file /etc/log2ram.conf
 
     mkdir -p /etc/systemd/system/log2ram.service.d /etc/systemd/system/log2ram-daily.timer.d
     pmx_write_file /etc/systemd/system/log2ram.service.d/proxmenux.conf <<EOF
 # ProxMenux: the journal stays on disk, and a sync is on disk when it ends.
 [Service]
-ExecStartPre=-${PMX_L2R_SCRIPTS}/log2ram_keep_on_disk.sh
+ExecStartPre=${PMX_L2R_SCRIPTS}/log2ram_keep_on_disk.sh
 ExecReload=
 ExecReload=/usr/local/bin/log2ram write
 ExecReload=/bin/sync -f /var/hdd.log
