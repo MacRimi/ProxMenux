@@ -130,7 +130,7 @@
     "monitorEmptyBody": "Jailen <code>[proxmenux]</code> läser <code>/var/log/proxmenux-auth.log</code>, som skrivs av Flask-appen ProxMenux Monitor, inte av en journald-logger. Utan Monitor förblir filen tom och jailen utlöses inte. Det är väntat och konfigurationen är ofarlig. Om Monitor körs men loggen är tom kontrollerar du loggningskonfigurationen i Flask.",
     "selfBanTitle": "Jag har blockerat min egen åtkomst",
     "selfBanIntro": "Från en konsol / IPMI / iKVM (eller annan vitlistad IP):",
-    "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
+    "selfBanCode": "fail2ban-client unban <YOUR_IP>\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
     "aptFailTitle": "apt-get misslyckas: ''Unable to locate package fail2ban''",
     "aptFailBody": "Värden saknas Debian repos (gemensamt på barebones Proxmox installationer). Installatören upptäcker detta och skriver <code>/etc/apt/sources.list.d/debian.sources</code> med rätt kodnamn (<code>bookworm</code> / <code>trixie</code>) innan du går tillbaka. Om det fortfarande misslyckas, kontrollera <code>/etc/os-release</code> för <code>VERSION_CODENAME</code> och bekräfta att repo URL är tillgänglig.",
     "lockoutTitle": "SSH låser mig efter installation",

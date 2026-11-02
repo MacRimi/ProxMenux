@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
+import { icuQuotesToHtml } from "@/i18n/loadMessages"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
@@ -135,7 +136,7 @@ export default async function SystemLogsTabPage({
                 className={idx < dataRows.length - 1 ? "border-b border-gray-100" : ""}
               >
                 <td className="px-3 py-2 align-top">{row.subtab}</td>
-                <td className="px-3 py-2 align-top font-mono text-xs" dangerouslySetInnerHTML={{ __html: row.endpoint }} />
+                <td className="px-3 py-2 align-top font-mono text-xs" dangerouslySetInnerHTML={{ __html: icuQuotesToHtml(row.endpoint) }} />
                 <td className="px-3 py-2 align-top">
                   {t.rich(`dataCollected.rows.${idx}.source`, { code })}
                 </td>

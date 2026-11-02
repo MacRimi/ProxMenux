@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
+import { icuQuotesToHtml } from "@/i18n/loadMessages"
 import { DocHeader } from "@/components/ui/doc-header"
 
 export async function generateMetadata({
@@ -114,7 +115,7 @@ export default async function GlossaryPage({
                 </dt>
                 <dd
                   className="text-gray-800 leading-relaxed [&_a]:text-blue-600 [&_a]:hover:underline [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm"
-                  dangerouslySetInnerHTML={{ __html: entry.def }}
+                  dangerouslySetInnerHTML={{ __html: icuQuotesToHtml(entry.def) }}
                 />
               </div>
             ))}
