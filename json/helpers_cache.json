@@ -19363,7 +19363,7 @@
   {
     "name": "PowerDNS",
     "slug": "powerdns",
-    "desc": "The PowerDNS Authoritative Server is a versatile nameserver which supports a large number of backends. These backends can either be plain zone files or be more dynamic in nature. PowerDNS has the concepts of ‘backends’. A backend is a datastore that the server will consult that contains DNS records (and some metadata). The backends range from database backends (MySQL, PostgreSQL) and BIND zone files to co-processes and JSON API’s.",
+    "desc": "<p>PowerDNS Authoritative Server with the Poweradmin web interface. The PowerDNS Authoritative Server is a versatile nameserver which supports a large number of backends. These backends can either be plain zone files or be more dynamic in nature. PowerDNS has the concepts of &lsquo;backends&rsquo;. A backend is a datastore that the server will consult that contains DNS records (and some metadata). The backends range from database backends (MySQL, PostgreSQL) and BIND zone files to co-processes and JSON API&rsquo;s.</p>",
     "script": "ct/powerdns.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/powerdns.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/powerdns.sh",
