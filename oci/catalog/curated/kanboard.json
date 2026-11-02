@@ -94,6 +94,22 @@
           "backup": true,
           "default_size_gb": 8
         }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/etc/nginx/ssl",
+        "compose_source_example": "./ssl",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
+        }
       }
     ],
     "ports": [
@@ -134,7 +150,8 @@
           ],
           "volumes": [
             "./data:/var/www/app/data",
-            "./plugins:/var/www/app/plugins"
+            "./plugins:/var/www/app/plugins",
+            "./ssl:/etc/nginx/ssl"
           ]
         }
       }
@@ -165,6 +182,17 @@
         "id": "kanboard-volume-1",
         "service": "kanboard",
         "container_path": "/var/www/app/plugins",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "kanboard-volume-2",
+        "service": "kanboard",
+        "container_path": "/etc/nginx/ssl",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -390,6 +418,12 @@
           "container_path": "/var/www/app/plugins",
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/etc/nginx/ssl",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
       ],

@@ -164,7 +164,9 @@ class UpdateCheckTests(unittest.TestCase):
             check.check(self.root, self.configs, path=path, progress=lambda *event: events.append(event))
         native.assert_called_once(); notify.assert_not_called(); external.assert_not_called()
         self.assertEqual(events[0], (0, 1)); self.assertEqual(events[-1], (1, 1))
-        self.assertEqual([r['vmid'] for r in self.status()['available']], [110])
+        # The bridge stamps its result with the real clock, so read it at the real time too.
+        available = check.cached(self.root, self.configs, apps=self.apps)['available']
+        self.assertEqual([r['vmid'] for r in available], [110])
         self.assertFalse((self.root / '.update-check.json').exists())
 
     def test_missing_monitor_never_falls_back_to_registry_commands(self):

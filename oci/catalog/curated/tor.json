@@ -60,7 +60,24 @@
       "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
     },
     "environment": [],
-    "volumes": [],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/var/lib/tor",
+        "compose_source_example": "./tor-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
+        }
+      }
+    ],
     "ports": [
       {
         "container_port": 9050,
@@ -103,6 +120,9 @@
           "ports": [
             "9050:9050",
             "8118:8118"
+          ],
+          "volumes": [
+            "./tor-data:/var/lib/tor"
           ]
         }
       }
@@ -119,7 +139,19 @@
       "dependency_external_access": "disabled-unless-service-publishes-ports",
       "prompt_user_for_private_network": false
     },
-    "storage": [],
+    "storage": [
+      {
+        "id": "tor-volume-0",
+        "service": "tor",
+        "container_path": "/var/lib/tor",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
     "orchestration": {
       "reserve_vmids_atomically": 1,
       "start_order": [
@@ -323,7 +355,19 @@
         "SOCKS5 proxy: configure your application with the LXC IP address shown above and port 9050.",
         "HTTP CONNECT proxy: use the same IP address and port 8118. These addresses are proxy settings, not web links.",
         "Only applications configured to use this proxy send their traffic through Tor."
-      ]
+      ],
+      "volume_preparations": [
+        {
+          "container_path": "/var/lib/tor",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "volume_owner": {
+        "uid": 101,
+        "gid": 102
+      }
     }
   },
   "compatibility": {

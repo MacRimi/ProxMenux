@@ -323,7 +323,10 @@
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": true
-      }
+      },
+      "non_persistent_image_volumes": [
+        "/var/log"
+      ]
     },
     "adaptations": [
       {

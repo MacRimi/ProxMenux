@@ -69,6 +69,41 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
         return db_path
 
+    def test_local_compatible_endpoint_can_be_saved_and_reloaded(self):
+        db_path = self._temp_db_patch()
+        # Synthetic addresses cover each RFC1918 range; no network is used.
+        for url in ('http://10.0.0.10:8080/v1', 'http://172.16.0.10:8080/v1',
+                    'http://192.168.1.10:8080/v1', 'http://localhost:8080/v1',
+                    'http://127.0.0.1:8080/v1'):
+            with self.subTest(url=url):
+                manager = self._manager({})
+                result = manager.save_settings({'ai_openai_base_url': url})
+                self.assertTrue(result['success'], result)
+                with sqlite3.connect(db_path) as conn:
+                    saved = conn.execute(
+                        'SELECT setting_value FROM user_settings WHERE setting_key=?',
+                        ('notification.ai_openai_base_url',),
+                    ).fetchone()
+                self.assertEqual(saved, (url,))
+                reloaded = self._manager({})
+                reloaded._load_config()
+                self.assertEqual(reloaded._config['ai_openai_base_url'], url)
+
+    def test_local_compatible_endpoint_keeps_unsafe_urls_blocked(self):
+        db_path = self._temp_db_patch()
+        for url in ('file:///etc/shadow', 'http://169.254.169.254/latest/meta-data/',
+                    'http://metadata.google.internal/', 'http://[fe80::1]/',
+                    'http://0.0.0.0:8080/v1', 'http://224.0.0.1/v1'):
+            with self.subTest(url=url):
+                result = self._manager({}).save_settings({'ai_openai_base_url': url})
+                self.assertFalse(result['success'], result)
+                with sqlite3.connect(db_path) as conn:
+                    saved = conn.execute(
+                        'SELECT setting_value FROM user_settings WHERE setting_key=?',
+                        ('notification.ai_openai_base_url',),
+                    ).fetchone()
+                self.assertIsNone(saved)
+
     def test_custom_openai_endpoint_omits_temperature_for_opaque_alias(self):
         provider = CapturingOpenAIProvider(
             api_key="token",

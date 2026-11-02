@@ -728,8 +728,9 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
             raise ValueError(translate('Required persistent paths cannot be removed'))
     image_paths = set(record['observed']['image']['defaults'].get('Volumes') or {})
     image_paths -= non_persistent_image_volumes(record['template'])
-    if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old) for p in image_paths):
-        raise ValueError(translate('The image declares data paths that are still stored in the rootfs'))
+    in_rootfs = sorted(p for p in image_paths if not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old))
+    if in_rootfs:
+        raise ValueError(f"{translate('The image declares data paths that are still stored in the rootfs')}: {', '.join(in_rootfs)}")
     check = effective_healthcheck(candidate['template'])
     if not check and not coordinated:
         raise ValueError(translate('Updates are not available yet for this application in this beta'))

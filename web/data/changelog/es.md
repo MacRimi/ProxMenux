@@ -23,7 +23,7 @@ Un agradecimiento especial a [@Vaso73](https://github.com/Vaso73), [@f3rs3n](htt
 - **La entrada de Ollama describe lo que ofrece la imagen** ([PR #566](https://github.com/MacRimi/ProxMenux/pull/566), aportado por [@jcastro](https://github.com/jcastro)): su API HTTP en el puerto 11434, con el enlace y la comprobación de arranque en `/api/version`.
 - **Una actualización elimina el snapshot que deja un backup interrumpido** ([#565](https://github.com/MacRimi/ProxMenux/issues/565), reportado por [@kiosvantra](https://github.com/kiosvantra)). Un snapshot hecho por el usuario detiene la actualización, porque un contenedor reconstruido no puede conservarlo.
 - **Un contenedor que ignora la señal de apagado se detiene a los 60 segundos**, como hace `docker stop`, durante una actualización y al recuperar una operación interrumpida.
-- **SearXNG guarda su configuración en su propio volumen**, `/etc/searxng`, de modo que Modificar y las actualizaciones lo aceptan.
+- **Modificar y las actualizaciones aceptan toda aplicación cuya imagen declara una ruta de datos**: SearXNG, Tor, Whoogle y BIND9 la guardan en un volumen propio, Kanboard conserva sus certificados, y Chrony, Jaeger, PlantUML, UrBackup, GoToSocial, AceStream HTTP Proxy y RomM marcan las rutas que no guardan datos. Cuando una instalación aún tiene una de esas rutas dentro del contenedor, el mensaje la nombra.
 
 ## 🖥️ Monitor — actualizaciones de Proxmox y reinicios pendientes
 

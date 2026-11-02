@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-44 of 532 applications in the OCI catalog have been tested for real: 41 in the ProxMenux lab and 3 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+52 of 532 applications in the OCI catalog have been tested for real: 49 in the ProxMenux lab and 3 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -38,6 +38,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Alby Hub ✨ | Finance & Budgeting |
 | Alist | Files & Sharing |
 | aMule | Files & Downloads |
+| Authentik | Authentication & Security |
 | Chromium | Browsers & Web Desktops |
 | CodeProject.AI Server | AI |
 | CopyParty | Files & Sharing |
@@ -50,26 +51,33 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Flexget | *Arr Suite |
 | Frigate | NVR & Cameras |
 | Grafana | Monitoring & Analytics |
+| HAOS One | IoT & Smart Home |
 | Immich | Media |
 | JDownloader | Files & Downloads |
 | Jenkins CI/CD | AI / Coding & Dev-Tools |
 | Linkwarden | Documents & Notes |
+| Mariadb | Databases |
 | Memos | Documents & Notes |
 | MineOS | Gaming & Leisure |
 | Motioneye | NVR & Cameras |
+| Navidrome | Media & Streaming |
 | Nextcloud | Productivity & Workflows |
 | Nextcloud Stack | Productivity & Workflows |
 | OpenList | Files & Sharing |
 | Openssh Server | Remote Access & VPN |
 | Paperless-ngx | Productivity & Workflows |
 | Phpmyadmin | Databases |
+| Prowlarr | *Arr Suite |
 | Qbittorrent | Files & Downloads |
 | Rclone WebUI | Backup & Recovery |
 | Real-Debrid Torrent Client | Files & Downloads |
+| Scanopy | Network & Firewall |
 | ShareCoveX | Files & Sharing |
 | SnapOtter | Media & Streaming |
+| Sonarr | *Arr Suite |
 | Tandoor Recipes | Productivity & Workflows |
 | Thelounge | Communication & Community |
 | Trilium | Documents & Notes |
+| Vaultwarden | Authentication & Security |
 | Wireguard | Remote Access & VPN |
 | WireGuard Easy | Remote Access & VPN |

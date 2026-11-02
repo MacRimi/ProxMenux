@@ -77,7 +77,24 @@
         "source": "upstream-documentation"
       }
     ],
-    "volumes": [],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "./config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
+        }
+      }
+    ],
     "ports": [
       {
         "container_port": 5000,
@@ -117,7 +134,10 @@
           "environment": {
             "WHOOGLE_USER": "admin",
             "WHOOGLE_PASS": "${GENERATED_WHOOGLE_PASS}"
-          }
+          },
+          "volumes": [
+            "./config:/config"
+          ]
         }
       }
     ],
@@ -133,7 +153,19 @@
       "dependency_external_access": "disabled-unless-service-publishes-ports",
       "prompt_user_for_private_network": false
     },
-    "storage": [],
+    "storage": [
+      {
+        "id": "whoogle-volume-0",
+        "service": "whoogle",
+        "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
     "orchestration": {
       "reserve_vmids_atomically": 1,
       "start_order": [
@@ -378,6 +410,18 @@
           "bytes": 24,
           "prompt": false
         }
+      },
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "volume_owner": {
+        "uid": 927,
+        "gid": 927
       }
     },
     "catalog": {

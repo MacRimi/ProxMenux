@@ -23,7 +23,7 @@ A special thank you goes to [@Vaso73](https://github.com/Vaso73), [@f3rs3n](http
 - **The Ollama entry describes what the image provides** ([PR #566](https://github.com/MacRimi/ProxMenux/pull/566), contributed by [@jcastro](https://github.com/jcastro)): its HTTP API on port 11434, with its link and startup check on `/api/version`.
 - **An update clears the snapshot an interrupted backup leaves** ([#565](https://github.com/MacRimi/ProxMenux/issues/565), reported by [@kiosvantra](https://github.com/kiosvantra)). A snapshot made by the user stops the update, because a rebuilt container cannot keep it.
 - **A container that ignores the shutdown signal is stopped after 60 seconds**, as `docker stop` does, during an update and when an interrupted operation is recovered.
-- **SearXNG keeps its configuration in its own volume**, `/etc/searxng`, so Modify and updates accept it.
+- **Modify and updates accept every application whose image declares a data path**: SearXNG, Tor, Whoogle and BIND9 keep it in a volume of its own, Kanboard keeps its certificates, and Chrony, Jaeger, PlantUML, UrBackup, GoToSocial, AceStream HTTP Proxy and RomM mark the paths that hold no data. When an installation still keeps such a path in the container, the message names it.
 
 ## 🖥️ Monitor — Proxmox updates and pending reboots
 

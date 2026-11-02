@@ -219,6 +219,11 @@ def service_template(parent, service, main=False):
             own_preparations.append(entry)
     if own_preparations:
         single['proxmox'].setdefault('installer_profile', {})['volume_preparations'] = own_preparations
+    # Image paths the oci-compose states hold no data; an image that does not
+    # declare one of them is not affected by it.
+    transient = parent.get('proxmox', {}).get('installer_profile', {}).get('non_persistent_image_volumes')
+    if transient:
+        single['proxmox'].setdefault('installer_profile', {})['non_persistent_image_volumes'] = list(transient)
     return single
 
 
@@ -784,10 +789,11 @@ def apply_stack_support(template):
             template['status'] = 'generated-review-required'
         return
     template['proxmox'].pop('generic_stack_review',None)
-    preserved_preparations = template['proxmox'].get('installer_profile',{}).get('volume_preparations')
+    profile = template['proxmox'].get('installer_profile',{})
     template['proxmox']['installer_profile'] = {'stack_driver':'generic-multi-lxc-stack'}
-    if preserved_preparations:
-        template['proxmox']['installer_profile']['volume_preparations'] = preserved_preparations
+    for key in ('volume_preparations', 'non_persistent_image_volumes'):
+        if profile.get(key):
+            template['proxmox']['installer_profile'][key] = profile[key]
     template['compatibility']['untranslated_blockers'] = []
     template['compatibility']['automatic_install_candidate'] = True
     template['status'] = 'generated-unvalidated'
