@@ -4029,6 +4029,7 @@
   "Manage local backup target": "Lokales Backup-Ziel verwalten",
   "Manage private image registries.\nSaved credentials let ProxMenux access your private images.": "Private Bildregister verwalten.\nGespeicherte Anmeldeinformationen ermöglichen ProxMenux den Zugriff auf Ihre privaten Bilder.",
   "Manage registry accounts as root on the Proxmox node.": "Registrierungskonten als Root auf dem Proxmox-Knoten verwalten.",
+  "Manage teams of AI agents from a web dashboard.": "Verwalte Teams von KI-Agenten über ein Web-Dashboard.",
   "Managed disks must have backup enabled and a valid size": "Managed Disks müssen Backup aktiviert und eine gültige Größe haben",
   "Managed public route include is missing": "Die Konfigurationsdatei für die verwalteten öffentlichen Routen fehlt",
   "Managed public route installation failed": "Die verwalteten öffentlichen Routen konnten nicht eingerichtet werden",
