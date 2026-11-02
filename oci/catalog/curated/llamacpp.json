@@ -73,6 +73,13 @@
         "required": true,
         "sensitive": false,
         "source": "docker-compose"
+      },
+      {
+        "name": "LLAMA_ARG_MODELS_DIR",
+        "example": "/models",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
       }
     ],
     "volumes": [
@@ -89,7 +96,7 @@
         "default": "managed-volume",
         "managed_volume": {
           "backup": true,
-          "default_size_gb": 8
+          "default_size_gb": 32
         }
       }
     ],
@@ -135,7 +142,8 @@
           ],
           "environment": [
             "LLAMA_ARG_N_GPU_LAYERS=999",
-            "LLAMA_ARG_CONTEXT_SIZE=8192"
+            "LLAMA_ARG_CONTEXT_SIZE=8192",
+            "LLAMA_ARG_MODELS_DIR=/models"
           ],
           "devices": [
             "/dev/dri:/dev/dri"
@@ -229,8 +237,8 @@
     "defaults": {
       "unprivileged": true,
       "ostype": "auto-from-image",
-      "cores": 2,
-      "memory_mb": 1024,
+      "cores": 4,
+      "memory_mb": 8192,
       "swap_mb": 512,
       "rootfs_size_gb": 8,
       "rootfs_storage": "local-lvm",
@@ -420,7 +428,13 @@
             ]
           }
         ]
-      }
+      },
+      "completion_notes": [
+        "llama.cpp shows every GGUF model saved in /models in its web UI and loads the one you choose.",
+        "To add a model, open the console of the container in Proxmox and download it into /models, for example:",
+        "curl -L -o /models/gemma-3-1b-it-Q4_K_M.gguf https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf",
+        "Then restart the container so the new model appears in the list."
+      ]
     },
     "adaptations": [
       {
