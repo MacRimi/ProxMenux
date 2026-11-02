@@ -507,8 +507,11 @@ def normalize(record):
     names = set()
     def add_environment(value):
         name, equals, content = value.partition('=')
-        if not equals or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name) or name in names:
+        if not equals or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name):
             raise ValueError(translate('Ambiguous or invalid environment variable'))
+        # A variable set twice takes its last value, as it does in LXC.
+        if name in names:
+            environment[:] = [item for item in environment if item['name'] != name]
         names.add(name)
         environment.append({'name': name, 'value': content})
     for line in config.splitlines():

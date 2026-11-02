@@ -216,6 +216,14 @@ export async function DocPage({
           </div>
         )
 
+      case "agentPrompt":
+        return (
+          <div key={index} className="mb-6 overflow-hidden rounded-lg border border-blue-200 bg-white">
+            {data.title && <div className="border-b border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-gray-900">{t(`${base}.title`)}</div>}
+            <pre className="whitespace-pre-wrap break-words bg-white p-4 text-sm leading-6 text-gray-800">{t(`${base}.body`)}</pre>
+          </div>
+        )
+
       case "codeGrid":
         return (
           <div key={index} className="mb-6 grid gap-4 lg:grid-cols-2">

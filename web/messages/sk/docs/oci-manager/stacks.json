@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Aplikácie s viacerými kontajnermi | ProxMenux",
-    "description": "Ako OCI manager Apps mení aplikáciu s databázou a vyrovnávacou pamäťou na koordinované natívne LXC: plán, súkromná sieť, hook závislostí, overenie a transakčné aktualizácie."
+    "description": "Ako OCI manager Apps inštaluje aplikáciu s databázou a vyrovnávacou pamäťou do samostatných natívnych LXC: plán, súkromná sieť, riadiaci skript závislostí, overenie a aktualizácia s obnovou pri zlyhaní."
   },
   "header": {
     "title": "Aplikácie s viacerými kontajnermi",
@@ -22,7 +22,7 @@
           "mermaid": {
             "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
             "labels": {
-              "plan": "Stack plán",
+              "plan": "Plán inštalácie",
               "app": "Aplikácia LXC",
               "appNet": "LAN + súkromné",
               "db": "PostgreSQL LXC",
@@ -38,7 +38,7 @@
       "title": "1. Plán ešte pred vytvorením kontajnerov",
       "blocks": [
         {
-          "p": "Počas spracovania definície Compose sa nevytvára žiadny LXC. Najprv vznikne úplný plán so všetkými členmi, obrazmi, VMID, sieťami, cestami, tajnými údajmi, poradím a kontrolami stavu. Ak plán nie je konzistentný, inštalácia sa nezačne."
+          "p": "Počas spracovania definície Compose sa nevytvára žiadny LXC. Najprv vznikne úplný plán so všetkými kontajnermi, obrazmi, VMID, sieťami, cestami, citlivými údajmi, poradím spúšťania a kontrolami stavu služieb. Ak plán nie je konzistentný, inštalácia sa nezačne."
         },
         {
           "table": {
@@ -49,9 +49,9 @@
             ],
             "rows": [
               [
-                "Členovia",
+                "Kontajnery aplikácie",
                 "Hlavná aplikácia, databáza, vyrovnávacia pamäť, strojové učenie a iné závislosti",
-                "Jedinečné VMID, známe úlohy a presne jeden hlavný člen"
+                "Jedinečné VMID, známe úlohy kontajnerov a presne jeden hlavný kontajner"
               ],
               [
                 "Obrazy",
@@ -60,7 +60,7 @@
               ],
               [
                 "Sieť",
-                "Súkromný most, podsieť, pevná adresa pre každú službu a prístup LAN pre hlavného člena",
+                "Súkromný most, podsieť, pevná adresa pre každú službu a prístup LAN pre hlavný kontajner",
                 "Žiadna zrážka s existujúcimi mostmi alebo podsietami a žiadna opakovaná adresa"
               ],
               [
@@ -69,13 +69,13 @@
                 "Žiadne prekrývanie ciest, dostupné úložisko a deklarované oprávnenia"
               ],
               [
-                "Tajomstvá",
+                "Citlivé údaje",
                 "Heslo databázy, aplikačné kľúče a počiatočné prihlasovacie údaje",
-                "Generované raz a podané iba členom, ktorí ich používajú"
+                "Vygenerujú sa iba raz a odovzdajú sa len kontajnerom, ktoré ich používajú"
               ],
               [
                 "Životný cyklus",
-                "Poradie spúšťania, poradie zastavovania a kontrola stavu každého člena",
+                "Poradie spúšťania, poradie zastavovania a kontrola stavu služby v každom kontajneri",
                 "Hlavná aplikácia sa spúšťa posledná a zastavuje prvá"
               ]
             ]
@@ -85,14 +85,14 @@
     },
     {
       "id": "create",
-      "title": "2. Vytváranie jednotlivých členov",
+      "title": "2. Vytváranie jednotlivých kontajnerov",
       "blocks": [
         {
           "steps": {
             "items": [
               {
                 "title": "Rezervujte každý VMID",
-                "body": "Súpis Proxmox VE a inštančný register sú kontrolované. Existujúce CT nie je prijaté a zmluva, ktorá stále patrí do inej inštancie, sa opätovne nepoužíva."
+                "body": "Skontroluje sa zoznam VM a kontajnerov Proxmox VE aj evidencia inštalácií. Inštalátor neprevezme existujúci kontajner a nepoužije konfiguráciu, ktorá stále patrí inej inštancii aplikácie."
               },
               {
                 "title": "Pripravte každý obraz",
@@ -100,11 +100,11 @@
               },
               {
                 "title": "Vytvoriť každý rootfs",
-                "body": "Importujú sa oficiálne metadáta OCI a pridá sa identita inštancie ProxMenux a rola člena."
+                "body": "Importujú sa oficiálne metadáta OCI a pridá sa identita inštancie ProxMenux aj úloha kontajnera v aplikácii."
               },
               {
                 "title": "Súkromná sieť",
-                "body": "Vytvorí sa most a podsieť a každý člen dostane pevnú adresu; iba hlavný člen navyše dostane rozhranie LAN."
+                "body": "Vytvorí sa sieťový most a podsieť. Každý kontajner dostane pevnú adresu; iba hlavný kontajner navyše dostane rozhranie LAN."
               },
               {
                 "title": "Perzistencia",
@@ -112,11 +112,11 @@
               },
               {
                 "title": "Prostredie",
-                "body": "Zapíšu sa interné koncové body, zdieľané tajné údaje a premenné služieb. Aplikácia pristupuje k svojim závislostiam cez ich vyhradené súkromné adresy."
+                "body": "Zapíšu sa interné adresy služieb, zdieľané citlivé údaje a premenné služieb. Aplikácia pristupuje k svojim závislostiam cez ich vyhradené súkromné adresy."
               },
               {
                 "title": "Záznam",
-                "body": "Každý člen zaznamenáva svoju natívnu konfiguráciu, rootfs zmeny, ktoré aktualizácie musia reprodukovať a jeho vzťah k stohu."
+                "body": "Pre každý kontajner sa uloží jeho natívna konfigurácia, úpravy rootfs, ktoré treba zachovať pri aktualizáciách, a príslušnosť k aplikácii."
               }
             ]
           }
@@ -164,7 +164,7 @@
               [
                 "Hlavná aplikácia",
                 "Koncový bod jeho šablóny, napríklad <code>/api/server/ping</code> v Immich",
-                "Celý zásobník pracuje prostredníctvom aplikácie, ktorá používa závislosti"
+                "Hlavná aplikácia funguje spolu so službami, od ktorých závisí"
               ]
             ]
           }
@@ -172,17 +172,17 @@
         {
           "calloutWarning": {
             "title": "Spustený neznamená funkčný",
-            "body": "Stav spustené len hovorí, že proces LXC existuje. Tam, kde služba ponúka lepšiu kontrolu, sa používa exec alebo HTTP kontrola s časovým limitom. Ak člen zastaví alebo zlyhá jeho kontrola, zásobník nie je deklarovaný ako nainštalovaný."
+            "body": "Stav spustené znamená iba to, že proces LXC existuje. Ak služba umožňuje presnejšie overenie, použije sa kontrola príkazom exec alebo cez HTTP s časovým limitom. Ak sa niektorý kontajner zastaví alebo neprejde kontrolou, aplikácia sa neoznačí ako nainštalovaná."
           }
         }
       ]
     },
     {
       "id": "hook",
-      "title": "4. Hook závislostí",
+      "title": "4. Riadiaci skript závislostí (hook)",
       "blocks": [
         {
-          "p": "Hook sa nastaví iba na hlavnom kontajneri zostavy so závislosťami. Proxmox VE uchováva skript ako snippet a spúšťa ho ako <code>hookscript</code> daného CT. Recept zostavy nie je zapísaný v skripte: nachádza sa v samostatnom súkromnom kontrakte."
+          "p": "Riadiaci skript závislostí (hook) sa nastaví iba na hlavnom kontajneri aplikácie so závislými službami. Proxmox VE ho uchováva ako snippet a spúšťa ho ako <code>hookscript</code> daného CT. Postup spúšťania aplikácie nie je zapísaný v skripte: je súčasťou samostatnej súkromnej konfigurácie inštalácie."
         },
         {
           "codeGrid": {
@@ -192,7 +192,7 @@
                 "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
               },
               {
-                "title": "Súkromná zmluva (príklad)",
+                "title": "Súkromná konfigurácia inštalácie (príklad)",
                 "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
               }
             ]
@@ -206,21 +206,21 @@
           }
         },
         {
-          "p": "Skript je rovnaký pre každý zásobník. VMID, názvy, kontrolné typy a timeouty pochádzajú zo súkromného kontraktu <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> každého zásobníka."
+          "p": "Skript je rovnaký pre všetky aplikácie s viacerými kontajnermi. VMID, názvy, typy kontrol a časové limity načíta zo súkromnej konfigurácie príslušnej aplikácie v <code>/etc/pve/priv/proxmenux-stack-VMID.json</code>."
         },
         {
           "steps": {
             "items": [
               {
                 "title": "Proxmox VE zavolá pre-start",
-                "body": "Pred spustením hlavného CT sa hook spustí s jeho VMID a fázou životného cyklu."
+                "body": "Pred spustením hlavného CT sa riadiacemu skriptu odovzdá jeho VMID a fáza životného cyklu."
               },
               {
-                "title": "Zámok na zásobník",
+                "title": "Zámok pre celú aplikáciu",
                 "body": "<code>flock</code> na <code>/run/lock/proxmenux-stack-VMID.lock</code> zabraňuje dvom štartovým sekvenciám súčasne."
               },
               {
-                "title": "Zmluva je prečítaná a overená",
+                "title": "Načítanie a overenie uloženej konfigurácie",
                 "body": "Požaduje sa známa schéma, numerické závislosti, etikety, exec, http alebo kontrola chodu a pozitívny timeout."
               },
               {
@@ -240,8 +240,8 @@
         },
         {
           "calloutInfo": {
-            "title": "Háčik nezastaví závislosť",
-            "body": "Fázy post-start, pre-stop a post-stop nič nevykonávajú. Zastavenie hlavného CT ponechá PostgreSQL, Redis, Valkey alebo strojové učenie spustené. Hook určuje poradie spúšťania; nemení viaceré LXC na jeden proces."
+            "title": "Riadiaci skript nezastavuje závislé služby",
+            "body": "Fázy post-start, pre-stop a post-stop nič nevykonávajú. Po zastavení hlavného CT zostanú PostgreSQL, Redis, Valkey alebo služba strojového učenia spustené. Riadiaci skript určuje poradie spúšťania; nemení viaceré LXC na jeden proces."
           }
         },
         {
@@ -253,14 +253,14 @@
             ],
             "rows": [
               [
-                "Závislý zásobník",
+                "Aplikácia so závislými službami",
                 "Immich, Nextcloud, aplikácia s PostgreSQL",
-                "Hook hlavného CT spustí závislosti a čaká na ich pripravenosť."
+                "Riadiaci skript hlavného CT spustí závislé služby a čaká na ich pripravenosť."
               ],
               [
                 "Súprava aplikácií",
                 "Súprava Arr",
-                "Žiadny hlavný člen: každý LXC sleduje svoje vlastné <code>onboot</code>"
+                "Bez hlavného kontajnera: každý LXC používa vlastné nastavenie <code>onboot</code>"
               ],
               [
                 "Samostatná aplikácia",
@@ -274,19 +274,19 @@
     },
     {
       "id": "stack-checks",
-      "title": "5. Kontrola stohu ako celku",
+      "title": "5. Kontrola celej aplikácie",
       "blocks": [
         {
           "list": {
             "items": [
               "Každý VMID existuje, je jedinečný a udržiava očakávanú inštančnú identitu.",
-              "Každý kontrakt patrí do rovnakej zostavy, zachováva svoju rolu a zaznamenanú natívnu konfiguráciu.",
-              "Hlavný člen je posledný v <code>start_order</code> a prvý v <code>stop_order</code>.",
-              "Nechýba žiadny člen, zväzok ani úprava rootfs.",
-              "Hook odkazuje na oficiálny snippet, jeho obsah sa nezmenil a jeho kontrakt zodpovedá receptu zostavy.",
+              "Každá uložená konfigurácia patrí tej istej aplikácii a zachováva úlohu kontajnera aj jeho zaznamenanú natívnu konfiguráciu.",
+              "Hlavný kontajner je posledný v <code>start_order</code> a prvý v <code>stop_order</code>.",
+              "Nechýba žiadny kontajner, zväzok ani úprava rootfs.",
+              "Riadiaci skript odkazuje na oficiálny snippet, jeho obsah sa nezmenil a jeho konfigurácia zodpovedá postupu spúšťania aplikácie.",
               "Zistené obrazy a hodnoty digest zodpovedajú pripraveným archívom OCI.",
-              "Zariadenia, profily GPU, pripojenia, tajomstvá a koncové body stále zodpovedajú zmluvám.",
-              "Keď všetky závislosti prejdú kontrolou, koncový bod hlavnej aplikácie overí integráciu medzi členmi."
+              "Zariadenia, profily GPU, pripojenia, citlivé údaje a adresy služieb stále zodpovedajú uloženým konfiguráciám.",
+              "Keď všetky závislé služby prejdú kontrolou, kontrola na adrese hlavnej aplikácie overí spoluprácu jej kontajnerov."
             ]
           }
         }
@@ -294,35 +294,35 @@
     },
     {
       "id": "manage",
-      "title": "Správa nainštalovaného zásobníka",
-      "intro": "V časti <strong>Spravovať nainštalované aplikácie OCI</strong> vedie každý člen k celej zostave. Ponuka obsahuje <strong>Aktualizovať všetky kontajnery aplikácie</strong>, <strong>Upraviť dodatočné cesty a zariadenia</strong>, <strong>Znova vytvoriť všetky kontajnery s uloženou konfiguráciou</strong> a <strong>Odstrániť: vymazať aplikáciu a jej kontajnery</strong>. Opätovné vytvorenie zostaví každý kontajner z pôvodného obrazu podľa uloženého digestu bez hľadania novšieho obrazu. Používa rovnaké kroky ako aktualizácia a ponúka sa pre aktualizovateľné zostavy.",
+      "title": "Správa nainštalovanej aplikácie",
+      "intro": "V časti <strong>Spravovať nainštalované aplikácie OCI</strong> sa z ktoréhokoľvek kontajnera aplikácie otvorí správa celej aplikácie. Ponuka obsahuje <strong>Aktualizovať všetky kontajnery aplikácie</strong>, <strong>Upraviť dodatočné cesty a zariadenia</strong>, <strong>Znova vytvoriť všetky kontajnery s uloženou konfiguráciou</strong> a <strong>Odstrániť: vymazať aplikáciu a jej kontajnery</strong>. Opätovné vytvorenie zostaví každý kontajner z pôvodného obrazu podľa uloženého digestu bez hľadania novšieho obrazu. Používa rovnaké kroky ako aktualizácia a ponúka sa pre aplikácie s viacerými kontajnermi, ktoré podporujú aktualizáciu.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Každý člen",
-                "body": "Zmluva člena menuje hlavné VMID a kompletný zoznam členov."
+                "title": "Ktorýkoľvek kontajner aplikácie",
+                "body": "Uložená konfigurácia kontajnera obsahuje VMID hlavného kontajnera a úplný zoznam kontajnerov aplikácie."
               },
               {
-                "title": "Stack je reprodukovateľný",
-                "body": "Overia sa identity, kontrakty, hook, úpravy a koordinované opätovné vykonanie daného receptu."
+                "title": "Aplikáciu možno znova vytvoriť",
+                "body": "Overia sa identity kontajnerov, uložené konfigurácie, riadiaci skript, úpravy a možnosť zopakovať celý postup vytvorenia aplikácie."
               },
               {
                 "title": "Prvé obrazy",
                 "body": "Aplikácia sa nezastaví, kým sa každý digest neurčí, nestiahne a neoverí."
               },
               {
-                "title": "Zastaviť súčasti a zálohovať celú zostavu",
-                "body": "Overené natívne zálohy sa vytvoria pri zastavenej zostave, aby aplikácia a databázy zodpovedali rovnakému okamihu."
+                "title": "Zastaviť kontajnery a zálohovať celú aplikáciu",
+                "body": "Natívne zálohy sa vytvoria a overia pri zastavených kontajneroch, aby aplikácia a databázy zodpovedali rovnakému okamihu."
               },
               {
-                "title": "Aktualizovať a skontrolovať každého člena",
-                "body": "Adaptácia, sieť, pripojenia, tajomstvá a zariadenia sa používajú opäť pred kontrolou stavu každého člena."
+                "title": "Aktualizovať a skontrolovať každý kontajner",
+                "body": "Pred kontrolou stavu služby v každom kontajneri sa znova použijú potrebné úpravy, sieť, pripojenia, citlivé údaje a zariadenia."
               },
               {
-                "title": "Publikovať alebo obnoviť všetko",
-                "body": "Nové zmluvy sa uverejňujú iba vtedy, keď každý člen prejde. Ak jeden zlyhá, každý člen je obnovený."
+                "title": "Potvrdiť výsledok alebo všetko obnoviť",
+                "body": "Nové konfigurácie sa uložia ako platné až po úspešnej kontrole všetkých kontajnerov. Ak niektorý zlyhá, obnovia sa všetky kontajnery aplikácie."
               }
             ]
           }
@@ -350,8 +350,8 @@
         },
         {
           "calloutWarning": {
-            "title": "Zostava bez koordinovaného opätovného vykonania sa neaktualizuje",
-            "body": "Ak sa príprava zásobníka nedá reprodukovať, aktualizácia sa zamietne pred zastavením zásobníka. Aplikácia funguje tak, ako je."
+            "title": "Aktualizácia vyžaduje možnosť znova vytvoriť celú aplikáciu",
+            "body": "Ak sa postup prípravy aplikácie nedá zopakovať, aktualizácia sa odmietne ešte pred zastavením jej kontajnerov. Aplikácia zostane bežať bez zmeny."
           }
         }
       ]
@@ -361,24 +361,24 @@
       "title": "6. Keď niečo zlyhá",
       "blocks": [
         {
-          "p": "Ak počas inštalácie nastane chyba, zastavia a odstránia sa neúplné kontajnery vytvorené touto operáciou aj súkromný most, ak ho operácia vytvorila. Zostava sa nezverejní ako platná, kým neskončí celý postup."
+          "p": "Ak počas inštalácie nastane chyba, zastavia a odstránia sa neúplné kontajnery vytvorené touto operáciou aj súkromný most, ak ho operácia vytvorila. Inštalácia aplikácie sa označí ako platná až po dokončení celého postupu."
         },
         {
-          "p": "Aktualizácia je transakčná: všetky obrazy sú pripravené ako prvé, potom stack zastaví, každý člen je zálohovaný a záloha overená, a len potom je každý rootfs nahradený. Členovia začínajú jeden po druhom so zdravotnou kontrolou; ak jeden zlyhá, každý člen je obnovený z rovnakého súboru záloh, takže databáza a aplikácia nikdy nepatria do rôznych momentov."
+          "p": "Aktualizácia sa vykonáva ako jeden celok: najprv sa pripravia všetky obrazy, potom sa zastavia kontajnery aplikácie. Každý kontajner sa zálohuje a jeho záloha sa overí. Až potom sa nahradia systémové disky rootfs. Kontajnery sa spúšťajú postupne a každý prejde kontrolou stavu služby. Ak niektorý zlyhá, všetky kontajnery sa obnovia z jednej sady záloh, aby databáza aj aplikácia zodpovedali rovnakému okamihu."
         },
         {
           "mermaid": {
             "chartCode": "flowchart TB\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
             "labels": {
               "prepare": "Pripravte každý obraz",
-              "stop": "Stop, hlavný člen prvý",
+              "stop": "Zastaviť, hlavný kontajner ako prvý",
               "backup": "Overená záloha každého CT",
               "replace": "Nahradiť rootfs",
               "healthy": "Sú všetky funkčné?",
               "yes": "Áno",
               "no": "Nie",
-              "commit": "Zverejniť kontrakty",
-              "rollback": "Obnoviť každého člena"
+              "commit": "Uložiť platné konfigurácie",
+              "rollback": "Obnoviť všetky kontajnery"
             }
           }
         }
@@ -386,14 +386,14 @@
     },
     {
       "id": "not-assumed",
-      "title": "Čo zásobník nezahŕňa",
+      "title": "Čo správa aplikácie nezahŕňa",
       "blocks": [
         {
           "list": {
             "items": [
-              "Súprava nainštalovaná v jednom postupe, napríklad súprava Arr, nie je zostavou so závislosťami: jej kontajnery nemajú určené vzájomné poradie spúšťania.",
+              "Súprava nainštalovaná v jednom postupe, napríklad súprava Arr, sa líši od aplikácie so závislými službami: jej kontajnery nemajú určené vzájomné poradie spúšťania.",
               "Súkromná sieť nenahrádza autentifikáciu, TLS ani konfiguráciu každej aplikácie.",
-              "Zálohovanie jedného LXC neobsahuje most, hák ani zmluvy zvyšku zásobníka.",
+              "Záloha jedného LXC neobsahuje sieťový most, riadiaci skript ani uložené konfigurácie ostatných kontajnerov aplikácie.",
               "Prowlarr, Sonarr alebo Radarr neprijímajú žiadne indexátory, profily alebo poskytovateľov z ProxMenux."
             ]
           }

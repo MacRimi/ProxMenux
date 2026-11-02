@@ -874,7 +874,7 @@ export function NotificationSettings() {
     // Flatten per-provider API keys
     if (cfg.ai_api_keys) {
       for (const [provider, key] of Object.entries(cfg.ai_api_keys)) {
-        if (key) {
+        if (key || provider === "ollama") {
           flat[`ai_api_key_${provider}`] = key
         }
       }
@@ -2305,6 +2305,12 @@ export function NotificationSettings() {
                             
                             // Restore previously saved model for the new provider (if any)
                             const savedModel = config.ai_models?.[v] || ''
+                            setShowSecrets(p => ({ ...p, ai_key: false }))
+                            setRevealedSecrets(p => {
+                              const next = { ...p }
+                              delete next.ai_key
+                              return next
+                            })
                             
                             updateConfig(p => ({ 
                               ...p, 
@@ -2364,11 +2370,13 @@ export function NotificationSettings() {
                         </div>
                       )}
                       
-                      {/* API Key (not shown for Ollama) */}
-                      {config.ai_provider !== "ollama" && (
+                      {/* Ollama gateways may require a key; native servers do not. */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.apiKey")}</Label>
+                            <Label htmlFor="notification-ai-api-key" className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.apiKey")}</Label>
+                            {config.ai_provider === "ollama" && (
+                              <span className="text-xs text-muted-foreground">({t("settings.notifications.ui.optional")})</span>
+                            )}
                             {AI_PROVIDERS.find(p => p.value === config.ai_provider)?.keyUrl && (
                               <a
                                 href={AI_PROVIDERS.find(p => p.value === config.ai_provider)?.keyUrl}
@@ -2382,9 +2390,10 @@ export function NotificationSettings() {
                           </div>
                           <div className="flex items-center gap-2">
                         <Input
+                          id="notification-ai-api-key"
                           type={showSecrets["ai_key"] ? "text" : "password"}
                           className="h-9 text-sm font-mono"
-                          placeholder="sk-..."
+                          placeholder={config.ai_provider === "ollama" ? "" : "sk-..."}
                           value={secretValue("ai_key", config.ai_api_keys?.[config.ai_provider] || "")}
                           onChange={e => updateConfig(p => ({
                             ...p,
@@ -2402,8 +2411,12 @@ export function NotificationSettings() {
                               {showSecrets["ai_key"] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
+                          {config.ai_provider === "ollama" && (
+                            <p className="text-xs text-muted-foreground">
+                              {t("settings.notifications.ai.ollamaApiKeyHint")}
+                            </p>
+                          )}
                         </div>
-                      )}
                       
                       {/* Model - selector with Load button for all providers */}
                       <div className="space-y-2">

@@ -7,6 +7,16 @@ from typing import Optional
 from .base import AIProvider, AIProviderError
 
 
+def ollama_headers(api_key: str = "") -> dict:
+    """Authenticate protected Ollama gateways without requiring a key locally."""
+    if not isinstance(api_key, str) or len(api_key) > 512 or '\r' in api_key or '\n' in api_key:
+        raise AIProviderError("Invalid Ollama API key")
+    headers = {'Content-Type': 'application/json'}
+    if api_key.strip():
+        headers['Authorization'] = f'Bearer {api_key.strip()}'
+    return headers
+
+
 class OllamaProvider(AIProvider):
     """Ollama provider for local AI execution."""
     
@@ -18,7 +28,7 @@ class OllamaProvider(AIProvider):
         """Initialize Ollama provider.
         
         Args:
-            api_key: Not used for Ollama (local execution)
+            api_key: Optional Bearer token for an authenticated Ollama gateway
             model: Model name (user must select from loaded models)
             base_url: Ollama server URL (default: http://localhost:11434)
         """
@@ -57,9 +67,7 @@ class OllamaProvider(AIProvider):
             }
         }
         
-        headers = {
-            'Content-Type': 'application/json',
-        }
+        headers = ollama_headers(self.api_key)
         
         # Cloud models (e.g., kimi-k2.5:cloud, minimax-m2.7:cloud) need longer timeout
         # because requests go through: ProxMenux -> Ollama -> Cloud Provider -> back
@@ -96,7 +104,8 @@ class OllamaProvider(AIProvider):
         # First check if server is running
         try:
             url = f"{self.base_url.rstrip('/')}/api/tags"
-            req = urllib.request.Request(url, method='GET', headers={'User-Agent': 'ProxMenux/1.0'})
+            headers = {'User-Agent': 'ProxMenux/1.0', **ollama_headers(self.api_key)}
+            req = urllib.request.Request(url, method='GET', headers=headers)
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
                 
@@ -122,6 +131,13 @@ class OllamaProvider(AIProvider):
                         'message': f"Model '{self.model}' not found. Available: {', '.join(display_models)}{'...' if len(full_model_names) > 5 else ''}",
                         'model': self.model
                     }
+        except urllib.error.HTTPError as error:
+            message = (
+                f"HTTP {error.code}: Ollama authentication failed. Check the optional API key."
+                if error.code in (401, 403)
+                else f"HTTP {error.code}: Ollama request failed"
+            )
+            return {'success': False, 'message': message, 'model': self.model}
         except urllib.error.URLError:
             return {
                 'success': False,

@@ -2,6 +2,7 @@
 is translated into the same template the catalog applications use."""
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -20,7 +21,7 @@ from .catalog import TIME_SETTINGS
 from .cli import install_template
 from .i18n import source_text
 from .installer import ADVANCED_MODE, DEFAULT_MODE
-from .converter import ConversionError
+from .converter import ConversionError, _image_contract
 from .i18n import N_, translate
 from .registry_auth import RegistryError, refuses_access, validate_image
 from .ui import UserCancelled
@@ -31,6 +32,18 @@ def _valid_image_reference(reference: str) -> bool:
         return True
     except RegistryError:
         return False
+
+
+def _registry_lookup(reference: str) -> str:
+    """Use the pull engine's repository/digest form only for registry transport.
+
+    Skopeo rejects Docker's valid tag@digest spelling. The written reference
+    remains the recipe identity; its tag is removed only from the query.
+    """
+    if not _valid_image_reference(reference):
+        raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
+    image = _image_contract(reference)
+    return image['repository'] + '@' + image['digest'] if image.get('digest') else reference
 
 
 MAX_COMPOSE_BYTES = 256 * 1024
@@ -53,8 +66,8 @@ class _Dumper(yaml.SafeDumper):
         return super().increase_indent(flow, False)
 
 
-def _dump(document: dict[str, Any]) -> str:
-    return yaml.dump(document, Dumper=_Dumper, default_flow_style=False, sort_keys=True)
+def _dump(document: dict[str, Any], *, sort_keys: bool = True) -> str:
+    return yaml.dump(document, Dumper=_Dumper, default_flow_style=False, sort_keys=sort_keys)
 
 
 def _services(compose: dict[str, Any]) -> dict[str, Any]:
@@ -107,22 +120,14 @@ def _check_mounts(service: dict[str, Any]) -> None:
 def _keep_reference(template: dict[str, Any], reference: str) -> None:
     """The catalog normalizes every image to its latest tag; an image given by
     hand keeps the tag or the digest that was written."""
-    repository, _, digest = reference.partition('@')
-    tag = ''
-    if ':' in repository.rsplit('/', 1)[-1]:
-        repository, _, tag = repository.rpartition(':')
-    image = template['container_contract']['image']
-    image['reference'] = reference if (tag or digest) else f'{repository}:latest'
-    image['repository'] = repository
-    image['tag'] = tag or ('' if digest else 'latest')
-    image['digest'] = f'@{digest}' if digest else None
-    if tag or digest:
+    image = _image_contract(reference)
+    if image.get('digest') or ':' in reference.split('@', 1)[0].rsplit('/', 1)[-1]:
         image['pull_policy'] = 'resolve-written-reference-to-architecture-digest-at-install'
+    template['container_contract']['image'] = image
 
 
-def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]:
-    """The template of a Compose file with a single service. The metadata the
-    importer expects is taken from the service itself."""
+def template_from_compose(text: str, title: str | None = None, *, interpolated: bool = False, image_entrypoints: dict[str, list[str]] | None = None, input_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Translate a Compose application through the native single or stack installer."""
     try:
         compose = yaml.safe_load(text)
     except yaml.YAMLError as error:
@@ -131,9 +136,7 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
         raise ConversionError(translate('The Compose file does not contain a Compose document'))
     services = _services(compose)
     if len(services) > 1:
-        raise ConversionError(
-            f"{translate('The Compose file describes several services:')} {', '.join(services)}. "
-            f"{translate('Only one service at a time can be installed this way.')}")
+        return _template_from_stack(compose, title, interpolated=interpolated, image_entrypoints=image_entrypoints, input_metadata=input_metadata)
     name = next(iter(services))
     service = services[name] or {}
     if not service.get('image'):
@@ -181,12 +184,132 @@ def template_from_compose(text: str, title: str | None = None) -> dict[str, Any]
     return template
 
 
+def _template_from_stack(compose: dict[str, Any], title: str | None, *, interpolated: bool = False, image_entrypoints: dict[str, list[str]] | None = None, input_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Reuse the catalog stack compiler, keeping explicitly selected image versions."""
+    from .stack import apply_stack_support, normalized_mounts
+
+    services = _services(compose)
+    singles = {}
+    for name, service in services.items():
+        if not isinstance(service, dict):
+            raise ConversionError(f"{translate('The service declares no image:')} {name}")
+        singles[name] = template_from_compose(_dump({'services': {name: service}}), title)
+    metadata = compose.get('x-casaos', {})
+    if metadata is None:
+        metadata = {}
+    if not isinstance(metadata, dict):
+        raise ConversionError('x-casaos.main no identifica un servicio valido')
+    main = metadata.get('main') or next(
+        (name for name, service in services.items() if _published_port(service)), next(iter(services)))
+    if not isinstance(main, str) or main not in services:
+        raise ConversionError('x-casaos.main no identifica un servicio valido')
+    document = copy.deepcopy(compose)
+    document['x-casaos'] = {**metadata, 'main': main,
+                           'title': {'en_US': title or main}}
+    port = _published_port(services[main])
+    if port:
+        document['x-casaos'].update(port_map=port, scheme='http', index='/')
+    identifier = normalize_app_id(str(compose.get('name') or title or main))
+    template = convert_casaos_compose(_dump(document), 'local', '',
+                                     f'local/{identifier}/docker-compose.yml', '')
+    template['proxmox']['custom_compose_stack'] = True
+    template['proxmox']['custom_compose_interpolated'] = interpolated
+    template['proxmox']['stack_image_entrypoints'] = copy.deepcopy(image_entrypoints or {})
+    if (input_metadata or {}).get('selinux_labels'):
+        template['proxmox']['custom_compose_selinux_labels'] = True
+    _keep_reference(template, str(services[main]['image']))
+    # Catalog imports use latest. A pasted Compose must keep every written tag/digest.
+    for service in template['compose_stack']['services']:
+        reference = singles[service['name']]['container_contract']['image']['reference']
+        service['image'] = reference
+        service['compose']['image'] = reference
+        if 'environment' in services[service['name']]:
+            service['compose']['environment'] = copy.deepcopy(services[service['name']]['environment'])
+        service['compose']['volumes'] = [
+            mount for mount in normalized_mounts(service['compose'].get('volumes', []))
+            if mount['target'] not in TIME_SETTINGS]
+    template['container_contract']['original_compose'] = _dump({
+        **template['compose_stack']['top_level'],
+        'services': {service['name']: service['compose'] for service in template['compose_stack']['services']}})
+    for service in template['container_contract']['related_services']:
+        service['image'] = singles[service['name']]['container_contract']['image']['reference']
+    preparations = list({entry['container_path']: entry for single in singles.values()
+                         for entry in single['proxmox'].get('installer_profile', {}).get('volume_preparations', [])}.values())
+    template['proxmox'].setdefault('installer_profile', {})['volume_preparations'] = preparations
+    apply_stack_support(template)
+    # Keep compiler diagnostics visible at the custom-image boundary.
+    if template['proxmox'].get('generic_stack_review'):
+        template['compatibility']['automatic_install_candidate'] = False
+        template['compatibility']['untranslated_blockers'] = template['proxmox']['generic_stack_review']
+    return template
+
+
+def enrich_image_defaults(ui, document: dict[str, Any], *, image_entrypoints: dict[str, list[str]] | None = None) -> dict[str, Any]:
+    """Read implicit ports/health checks from OCI metadata, never an app-name table."""
+    from .stack import kind
+    document = copy.deepcopy(document)
+    inspected = {}
+    services = _services(document)
+    for name, service in services.items():
+        if not isinstance(service, dict) or not service.get('image'):
+            continue  # The converter supplies the normal validation diagnostic.
+        health = service.get('healthcheck')
+        inherit_health = isinstance(health, dict) and not health.get('disable') and 'test' not in health
+        application = kind(str(service['image'])) == 'application'
+        internal = application and not service.get('ports') and not service.get('expose')
+        command = service.get('command')
+        arguments = shlex.split(command) if isinstance(command, str) else command or []
+        option_command = bool(arguments and isinstance(arguments[0], str) and arguments[0].startswith('-'))
+        if not internal and not inherit_health and not (application and health is None) and not option_command:
+            continue
+        reference = str(service['image'])
+        if not _valid_image_reference(reference):
+            raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
+        if reference not in inspected:
+            command = ['skopeo', 'inspect', '--config', f'docker://{_registry_lookup(reference)}']
+            result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=120)
+            if result.returncode and _registry_refused(reference):
+                from .registry_accounts import offer_sign_in
+                if offer_sign_in(ui, reference, translate('Image that is not in the catalog')):
+                    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=120)
+            if result.returncode:
+                raise ConversionError(f"{translate('The image could not be read from its registry:')} {reference}")
+            try:
+                inspected[reference] = (json.loads(result.stdout).get('config') or {})
+            except (ValueError, AttributeError):
+                raise ConversionError(f"{translate('The image could not be read from its registry:')} {reference}") from None
+        defaults = inspected[reference]
+        if image_entrypoints is not None:
+            entrypoint = defaults.get('Entrypoint') or []
+            if isinstance(entrypoint, list) and all(isinstance(arg, str) for arg in entrypoint):
+                image_entrypoints[reference] = entrypoint
+        if internal and service.get('entrypoint') is None and service.get('command') is None:
+            ports = [port for port in (defaults.get('ExposedPorts') or {})
+                     if str(port).endswith('/tcp') or '/' not in str(port)]
+            if ports:
+                service['expose'] = sorted(ports)
+        # Compose healthcheck overrides inherit the image's test unless disabled.
+        if (health is None or inherit_health) and (defaults.get('Healthcheck') or {}).get('Test'):
+            source = defaults['Healthcheck']
+            effective = {'test': source['Test']}
+            for old, new in [('Interval', 'interval'), ('Timeout', 'timeout'), ('StartPeriod', 'start_period')]:
+                if source.get(old):
+                    effective[new] = str(source[old])+'ns'
+            if source.get('Retries'):
+                effective['retries'] = source['Retries']
+            effective.update(health or {})
+            service['healthcheck'] = effective
+        elif inherit_health:
+            service.pop('healthcheck', None)
+    return document
+
+
 def compose_from_image(reference: str, title: str | None = None) -> str:
     """A Compose file written from what the image declares: its ports, its
     persistent paths and its variables."""
     if not _valid_image_reference(reference):
         raise ConversionError(f"{translate('This is not a valid image reference:')} {reference}")
-    result = subprocess.run(['skopeo', 'inspect', '--config', f'docker://{reference}'],
+    result = subprocess.run(['skopeo', 'inspect', '--config', f'docker://{_registry_lookup(reference)}'],
                             capture_output=True, text=True, check=False, timeout=120)
     if result.returncode != 0:
         raise ConversionError(f"{translate('The image could not be read from its registry:')} "
@@ -492,6 +615,7 @@ def read_definition(ui) -> tuple[str, str]:
     """The Compose file of the application and where it came from, or an
     oci-compose, named by OCI_COMPOSE."""
     from .cli import MENU_SIZE
+    ui._compose_source_dir = None
     source = ui.choose(translate('How is the image described?'), [
         ('paste', translate('Paste its Compose file in the terminal')),
         ('file', translate('Read its Compose file from a file of this host')),
@@ -515,8 +639,9 @@ def read_definition(ui) -> tuple[str, str]:
     if source == 'paste':
         return _read_pasted(ui), translate('pasted Compose file')
     if source == 'file':
-        return _read_file(ui.ask(translate('Path of the Compose file'), '/root/docker-compose.yml')), \
-            translate('Compose file of this host')
+        path = ui.ask(translate('Path of the Compose file'), '/root/docker-compose.yml')
+        ui._compose_source_dir = Path(path).expanduser().resolve().parent
+        return _read_file(path), translate('Compose file of this host')
     if source == 'url':
         return _read_url(ui.ask(translate('Address of the Compose file'), '')), translate('downloaded Compose file')
     if source == 'run':
@@ -589,7 +714,7 @@ def ignored_settings(text: str) -> list[str]:
             notes.append(translate('The container takes its time zone from Proxmox, so the time files '
                                    'of the host are not attached to it.'))
             break
-    if compose.get('networks') or compose.get('volumes'):
+    if len(compose.get('services') or {}) == 1 and (compose.get('networks') or compose.get('volumes')):
         notes.append(translate('The container gets its own address and its own volumes, so the networks '
                                'and volumes declared in the file are not used.'))
     return notes
@@ -598,7 +723,7 @@ def ignored_settings(text: str) -> list[str]:
 def registry_report(reference: str) -> tuple[bool, str]:
     """Whether the image really exists in its registry, and for which
     architectures. A name written by hand is easy to get wrong."""
-    result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{reference}'],
+    result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{_registry_lookup(reference)}'],
                             capture_output=True, text=True, check=False, timeout=120)
     if result.returncode != 0:
         return False, f"{translate('Could not inspect the image in its registry:')} {reference}"
@@ -609,7 +734,7 @@ def registry_report(reference: str) -> tuple[bool, str]:
     manifests = document.get('manifests')
     if not manifests:
         # The image publishes a single manifest: its architecture is in the image itself.
-        detail = subprocess.run(['skopeo', 'inspect', f'docker://{reference}'],
+        detail = subprocess.run(['skopeo', 'inspect', f'docker://{_registry_lookup(reference)}'],
                                 capture_output=True, text=True, check=False, timeout=120)
         try:
             architecture = json.loads(detail.stdout).get('Architecture') if detail.returncode == 0 else None
@@ -627,9 +752,9 @@ def registry_report(reference: str) -> tuple[bool, str]:
 def _registry_refused(reference: str) -> bool:
     """Whether the registry answered that the image needs an account."""
     try:
-        result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{reference}'],
+        result = subprocess.run(['skopeo', 'inspect', '--raw', f'docker://{_registry_lookup(reference)}'],
                                 capture_output=True, text=True, check=False, timeout=120)
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired, ConversionError):
         return False
     return result.returncode != 0 and refuses_access(result.stderr)
 
@@ -642,6 +767,13 @@ def describe(template: dict[str, Any]) -> str:
     profile = proxmox.get('installer_profile', {}) or {}
     security = proxmox.get('security_profile', {}) or {}
     lines = [f"{translate('Image') + ':':<14} {contract['image']['reference']}"]
+    if proxmox.get('custom_compose_selinux_labels'):
+        lines += [translate('SELinux volume labels are not applied on this Proxmox host.')]
+
+    services = (template.get('compose_stack') or {}).get('services') or []
+    if len(services) > 1:
+        lines += ['', translate('Containers of the application:')]
+        lines += [f"  {service['name']}: {service['image']}" for service in services]
     endpoints = template.get('first_run', {}).get('endpoints') or []
     if endpoints:
         # The address is read from the published port; the image does not say
@@ -677,9 +809,11 @@ def describe(template: dict[str, Any]) -> str:
                   for volume in volumes]
     environment = contract.get('environment') or []
     if environment:
-        lines += ['', translate('Variables the installation asks for:')]
+        # A stack takes its values from the Compose file; none is asked here.
+        lines += ['', translate('Variables the installation asks for:') if len(services) <= 1 else
+                  f"{translate('Variables')} ({template['compose_stack']['main_service']}):"]
         lines += [f"  {item['name']}"
-                  + (f" = {item['example']}" if item.get('example') and not item['sensitive'] else '')
+                  + (f" = {item['example']}" if item.get('example') and not item['sensitive'] and len(services) <= 1 else '')
                   + ('' if item.get('required', True) else f" ({translate('optional')})")
                   for item in environment]
     devices = profile.get('device_requests') or []
@@ -720,13 +854,17 @@ def _ask_secrets(template: dict[str, Any]) -> list[str]:
 
 
 def _name(ui, template: dict[str, Any]) -> str:
-    default = normalize_app_id(source_text(template['catalog_ui'].get('title'))
+    stack = template.get('compose_stack') if len((template.get('compose_stack') or {}).get('services') or []) > 1 else None
+    default = normalize_app_id((stack or {}).get('project_name') or source_text(template['catalog_ui'].get('title'))
                                or template['container_contract'].get('container_name') or 'oci-app')
     name = normalize_app_id(ui.ask(translate('Name for this application'), default))
     if not name:
         raise UserCancelled(translate('No name was given'))
     template['catalog_ui']['title'] = {'en_US': name}
     template['container_contract']['container_name'] = name
+    if stack:
+        # The containers of the stack are named after it.
+        stack['project_name'] = name
     return name
 
 
@@ -741,16 +879,34 @@ def _explore(ui) -> None:
     else:
         notes = [line.partition(':')[2].strip() for line in text.splitlines() if line.startswith('#note:')]
         notes += ignored_settings(text)
-        template = template_from_compose(text)
+        try:
+            document = yaml.safe_load(text)
+        except yaml.YAMLError as error:
+            raise ConversionError(f"{translate('The Compose file is not valid YAML:')} {error}") from error
+        multiple = isinstance(document, dict) and len(document.get('services') or {}) > 1
+        if multiple:
+            from .compose_input import prepare
+            input_metadata = {}
+            document = prepare(ui, document, getattr(ui, '_compose_source_dir', None), metadata=input_metadata)
+            text = _dump(document, sort_keys=False)
+        template = template_from_compose(text, interpolated=True, input_metadata=input_metadata) if multiple else template_from_compose(text)
     title = translate('Image that is not in the catalog')
     summary = describe(template) + (describe_oci_compose(template) if written else '')
-    reference = template['container_contract']['image']['reference']
-    available, report = registry_report(reference)
-    if not available and _registry_refused(reference):
-        from .registry_accounts import offer_sign_in
-        if offer_sign_in(ui, reference, title):
-            available, report = registry_report(reference)
-    summary += '\n\n' + report
+    stack_services = (template.get('compose_stack') or {}).get('services') or []
+    references = list(dict.fromkeys(service['image'] for service in stack_services)) if len(stack_services) > 1 else [template['container_contract']['image']['reference']]
+    available = True
+    reports = []
+    for reference in references:
+        accessible, report = registry_report(reference)
+        if not accessible and _registry_refused(reference):
+            from .registry_accounts import offer_sign_in
+            if offer_sign_in(ui, reference, title):
+                accessible, report = registry_report(reference)
+        available = available and accessible
+        if accessible and len(references) > 1:
+            report = f'{reference}: {report}'
+        reports.append(report)
+        summary += '\n\n' + report
     if notes:
         summary += '\n\n' + '\n'.join(notes)
     if not available:
@@ -758,11 +914,18 @@ def _explore(ui) -> None:
                            'try again later. For a private image, sign in from Registry accounts in the OCI menu.')
         ui.message(f'{summary}\n\n{advice}', title)
         return
+    if not written and multiple:
+        image_entrypoints = {}
+        document = enrich_image_defaults(ui, document, image_entrypoints=image_entrypoints)
+        template = template_from_compose(_dump(document, sort_keys=False), interpolated=True, image_entrypoints=image_entrypoints, input_metadata=input_metadata)
+        summary = describe(template) + ''.join('\n\n'+report for report in reports)
+        if notes:
+            summary += '\n\n'+'\n'.join(notes)
     if not template.get('compatibility', {}).get('automatic_install_candidate'):
         ui.message(f"{translate('This image cannot be installed as it is described:')}\n\n{summary}", title)
         return
     # An oci-compose already says which of its values are secret and which it generates.
-    secrets = [] if written else _ask_secrets(template)
+    secrets = [] if written or len(stack_services) > 1 else _ask_secrets(template)
     if secrets:
         summary += ('\n\n' + translate('These values are asked during the installation:') + ' '
                     + ', '.join(secrets))

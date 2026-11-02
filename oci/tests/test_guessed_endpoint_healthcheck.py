@@ -38,7 +38,7 @@ class GuessedEndpointCheckTests(unittest.TestCase):
             fake = Path(directory) / 'curl'
             fake.write_text(f'#!/bin/sh\nprintf %s {code}\nexit {exit_code}\n')
             fake.chmod(0o755)
-            script = (probe_function() + '\nCURL_ARGS=()\nHC_URL=http://192.0.2.1:3306/\n'
+            script = (probe_function() + '\noci_curl() { shift; curl "$@"; }\nCURL_ARGS=()\nHC_URL=http://192.0.2.1:3306/\n'
                       f'HC_ANY_STATUS={any_status}\nHC_ACCEPT_NON_HTTP={accept_non_http}\nhealthcheck_probe\n')
             env = {**os.environ, 'PATH': f'{directory}:{os.environ["PATH"]}'}
             return subprocess.run(['bash', '-c', script], env=env, capture_output=True).returncode

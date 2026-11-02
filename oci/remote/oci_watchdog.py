@@ -124,7 +124,8 @@ def watched(root):
         try:
             vmid = int(path.parent.name)
             record = instances.read(root, vmid)
-            if record.get('status') != 'installed' or record.get('deployment', {}).get('watchdog') is not True:
+            if (record.get('status') != 'installed' or record.get('deployment', {}).get('watchdog') is not True
+                    or record.get('deployment', {}).get('execution_mode') == 'one-shot'):
                 continue
             if record.get('pending_stack_transaction') or record.get('pending_transaction'):
                 continue
@@ -326,7 +327,8 @@ def set_watchdog(root, vmid, enabled):
         vmids = application(root, vmid)
         for member in vmids:
             record = instances.read(root, member)
-            record.setdefault('deployment', {})['watchdog'] = bool(enabled)
+            deployment = record.setdefault('deployment', {})
+            deployment['watchdog'] = bool(enabled) and deployment.get('execution_mode') != 'one-shot'
             instances.write(instances.location(root, member), record)
             oci_carried_record.carry(root, member, mount_stopped=False)
     if enabled:

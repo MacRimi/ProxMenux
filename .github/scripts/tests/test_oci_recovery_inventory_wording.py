@@ -29,6 +29,10 @@ TRANSACTION = ROOT / 'oci/remote/oci_stack_transaction.py'
 
 
 def extracted(path, name, scope):
+    if name == 'remove':
+        # Operational cache cleanup is exercised by the engine tests; keep wording tests inert.
+        scope.setdefault('compose_jobs', SimpleNamespace(forget_completed=lambda *args: None))
+        scope.setdefault('public_routes', SimpleNamespace(remove=lambda *args: None))
     node = next(n for n in ast.parse(path.read_text()).body
                 if isinstance(n, ast.FunctionDef) and n.name == name)
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), scope)
@@ -71,6 +75,9 @@ class InventoryMessages(unittest.TestCase):
         self.assertNotIn('Host directories that are kept, with their content:', text)
 
     def test_removal_notice_qualifies_saved_record_source(self):
+        # Extracted operational functions must never inspect the real pmxcfs.
+        host = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        inert_path = lambda value: host / Path(value).name if str(value).startswith('/etc/pve/') else Path(value)
         events = []
         scope = {'members_of': lambda root, vmid: (101, {}, [101]),
                  'instances': SimpleNamespace(read=lambda root, vmid: {'installation_id': 'owned'},
@@ -81,7 +88,7 @@ class InventoryMessages(unittest.TestCase):
                  'remove_owned_host_firewall': lambda primary: True,
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
-                 'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
+                 'Path': inert_path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'work_backup': SimpleNamespace(forget=lambda root, vmid: None),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),

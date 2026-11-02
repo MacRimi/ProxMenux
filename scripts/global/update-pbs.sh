@@ -110,10 +110,9 @@ update_pbs() {
         return 0
     fi
 
-    menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
-    menu_text+="$(translate "Do you want to proceed with the system update?")"
     local proceed=0
-    whiptail --title "$(translate "Proxmox Backup Server Update")" --scrolltext --yesno "$menu_text" 24 78 || proceed=1
+    pmx_confirm_update "$(translate "Proxmox Backup Server Update")" "$menu_text" "$upgradable_list" \
+        "$(translate "Do you want to proceed with the system update?")" || proceed=1
 
     clear
     show_proxmenux_logo

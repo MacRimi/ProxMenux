@@ -45,6 +45,23 @@ export SCRIPT_TITLE="Proxmox system update"
 
 NECESSARY_REBOOT=1
 
+_pmx_acquire_host_update_lock() {
+    # /run is root-owned; do not follow an unexpected link or truncate a
+    # pre-existing file. The inherited descriptor also covers Menu/API/CLI.
+    local path="$1"
+    if [[ -L "$path" || ( -e "$path" && ! -f "$path" ) ]]; then
+        msg_error "$(translate 'Host update lock is unavailable.')"
+        return 75
+    fi
+    exec {PROXMENUX_HOST_UPDATE_LOCK_FD}>> "$path" || return 75
+    if ! flock -n "$PROXMENUX_HOST_UPDATE_LOCK_FD"; then
+        msg_error "$(translate 'A host update is already running. Reconnect to it instead of starting another.')"
+        return 75
+    fi
+}
+
+_pmx_acquire_host_update_lock /run/proxmenux-host-update.lock || exit "$?"
+
 # Suppress the Monitor's `service_fail` notifications while apt is running.
 # PVE services (pve-cluster, pveproxy, pvedaemon, corosync…) get killed and
 # restarted as part of the upgrade — those events are expected, not real
@@ -120,6 +137,18 @@ check_reboot() {
     )
     if [ -n "$newest_kernel" ] && [ "$newest_kernel" != "$running_kernel" ]; then
         NECESSARY_REBOOT=1
+    fi
+
+    # Detached web jobs finish without waiting for a final keystroke and
+    # never reboot the host. CLI callers retain their explicit prompt below.
+    if [[ "${PROXMENUX_HOST_UPDATE_JOB:-}" == "1" && "${EXECUTION_MODE:-}" == "web" ]]; then
+        if [[ "$NECESSARY_REBOOT" -eq 1 ]]; then
+            msg_warn "$(translate 'Reboot Required')"
+            msg_info2 "$(translate 'You can reboot later manually.')"
+        else
+            msg_ok "$(translate 'All changes applied. No reboot required.')"
+        fi
+        return 0
     fi
 
     if [[ "$NECESSARY_REBOOT" -eq 1 ]]; then

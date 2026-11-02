@@ -94,6 +94,7 @@
       "ociStorageNetwork": "Données, chemins et réseau",
       "ociHardware": "Périphériques et accélération",
       "ociStacks": "Applications à plusieurs conteneurs",
+      "ociContributeApp": "Installer une application et contribuer au catalogue",
       "ociLifecycle": "Installer, mettre à jour et modifier",
       "ociMonitor": "Dans ProxMenux Monitor",
       "proxmenuxScripts": "ProxMenux Scripts",

@@ -1,4 +1,23 @@
 {
+  "catalog_ui": {
+    "description": {
+      "en_US": "Ollama runs large language models locally through a command-line interface and an HTTP API. The Ollama server does not include an interactive Web UI; pair it with a frontend such as Open WebUI if you want browser-based chat.\n\nIt supports many models, including Llama, Mistral, Gemma, and Qwen, and provides an API for applications and integrations. Local models run on your own hardware; cloud models require an internet connection.\n\n**Key Features:**\n- **Local model execution**: Run supported models on your own hardware\n- **Model management**: Pull, run, and manage models with the CLI or API\n- **API integration**: Connect other applications to the Ollama server\n- **Privacy options**: Keep inference local when using local models\n\n**Learn More:**\n- [Ollama Official Website](https://ollama.com/)\n- [Ollama GitHub Repository](https://github.com/ollama/ollama)\n- [Model Library](https://ollama.com/library)\n"
+    },
+    "launch": {
+      "path": "/api/version"
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Ollama API (no Web UI)",
+        "scheme": "http",
+        "port": 11434,
+        "path": "/api/version",
+        "source": "ollama-http-api"
+      }
+    ]
+  },
   "proxmox": {
     "deployment_profile": {
       "variant": "hardware-selectable",
@@ -52,8 +71,59 @@
             ]
           },
           {
+            "id": "vulkan",
+            "label": "Intel/AMD (Vulkan)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ollama/ollama:latest",
+              "registry": "docker.io",
+              "repository": "ollama/ollama",
+              "tag": "latest",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ],
+            "environment": [
+              {
+                "name": "OLLAMA_IGPU_ENABLE",
+                "value": "1"
+              }
+            ]
+          },
+          {
             "id": "rocm",
             "label": "AMD (ROCm)",
+            "amd_gfx_targets": [
+              90008,
+              90010,
+              90402,
+              90500,
+              100300,
+              110000,
+              110001,
+              110002,
+              110500,
+              110501,
+              120000,
+              120001
+            ],
             "architectures": [
               "amd64"
             ],
@@ -88,6 +158,12 @@
                 "gid_strategy": "host-device-gid",
                 "kind": "character-device",
                 "container_path_strategy": "same-as-host"
+              }
+            ],
+            "environment": [
+              {
+                "name": "OLLAMA_IGPU_ENABLE",
+                "value": "1"
               }
             ]
           }

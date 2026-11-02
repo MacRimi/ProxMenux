@@ -141,7 +141,7 @@
               ],
               [
                 "Actualizaciones programadas",
-                "La imagen se actualiza a la hora elegida solo cuando el registro publica una nueva y, opcionalmente, solo cuando tiene 1, 3, 7 o 14 días. Un contenedor con cambios hechos fuera de ProxMenux se salta y se notifica."
+                "La imagen se actualiza a la hora elegida solo cuando el registro publica una nueva y, opcionalmente, solo cuando tiene 1, 3, 7 o 14 días. Los ajustes cambiados en Proxmox se conservan."
               ]
             ]
           }

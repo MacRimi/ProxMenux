@@ -1402,9 +1402,11 @@ class JournalWatcher:
         if syslog_id != 'kernel' and priority > 3:
             return
         
+        # The kernel writes "dev sdf1, logical block ...": the name stops
+        # at the comma, and a partition is recorded on its disk.
         io_patterns = [
-            r'blk_update_request: I/O error.*dev (\S+)',
-            r'Buffer I/O error on device (\S+)',
+            r'blk_update_request: I/O error.*dev ([^\s,]+)',
+            r'Buffer I/O error on dev(?:ice)? ([^\s,]+)',
             r'SCSI error.*sd(\w)',
             r'(ata\d+)[\.\d]*:.*error',
         ]

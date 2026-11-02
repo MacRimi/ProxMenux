@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (adapté aux SSD, automatique)",
-      "what": "Réduit l’usure SSD/NVMe en déplaçant /var/log dans un disque RAM tmpfs synchronisé régulièrement vers le disque. Installation depuis le projet amont si le disque racine est SSD ou NVMe. Taille selon la RAM de l’hôte (128M / 256M / 512M), synchronisation périodique et protection automatique qui purge les anciens journaux à 80% et tronque les journaux très actifs à 92% avant écriture. Adapte les limites journald au disque RAM. Détails dans <link>Log2RAM</link>.",
+      "what": "Réduit l'usure du SSD/NVMe en déplaçant /var/log vers un ramdisk tmpfs écrit sur le disque selon un calendrier. Installé depuis le projet officiel lorsque le disque système est un SSD ou un NVMe. Dimensionne le ramdisk selon la RAM de l'hôte (128M / 256M / 512M) et ajoute une surveillance qui fait tourner et écrit les journaux lorsque le ramdisk dépasse 85 %. Le journal et les journaux de tâches de Proxmox VE et de Proxmox Backup Server restent sur le disque. Tous les détails dans <link>Log2RAM</link>.",
       "category": "Stockage",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Valeurs par défaut adaptées au matériel",
-  "hardwareBody": "Le script examine le matériel avant de configurer l’hôte. Par défaut, Log2RAM s’installe uniquement si le disque racine est SSD ou NVMe ; il demande confirmation sinon. La taille du disque RAM dépend de la RAM totale (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Quand Log2RAM est actif, les limites journald sont adaptées au disque RAM pour éviter de le remplir.",
+  "hardwareBody": "Le script examine le matériel avant de configurer l’hôte. Par défaut, Log2RAM s’installe uniquement si le disque racine est SSD ou NVMe ; il demande confirmation sinon. La taille du disque RAM dépend de la RAM totale (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Lorsque Log2RAM est actif, le journal reste sur le disque avec sa propre limite.",
   "upgrade": {
     "heading": "Mettre à jour les listes de paquets et le système",
     "intro": "La première étape du parcours automatisé est la mise à niveau Proxmox. Pour un hôte en fonctionnement au sein de la même version majeure, Proxmox recommande :",

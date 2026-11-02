@@ -141,7 +141,11 @@ class UpdateCancellationTests(CancellationFixture):
         self.write.assert_not_called()
 
     def test_existing_unattended_review_age_busy_and_missing_codes_are_preserved(self):
-        with patch.object(reconcile, 'propose', return_value={'details': ['external change']}), redirect_stdout(io.StringIO()):
+        def declined(unattended, *_args, **_kwargs):
+            unattended.declined = 'review'
+            return False
+        with patch.object(reconcile, 'propose', return_value={'details': ['external change'], 'review': True}), \
+                patch.object(menu.UnattendedUI, 'review', declined), redirect_stdout(io.StringIO()):
             self.assertEqual(menu.direct_management(ROOT / 'oci', 110, 'update', unattended=True), 4)
         with patch.object(menu, '_image_too_recent', return_value=True), redirect_stdout(io.StringIO()):
             self.assertEqual(menu.direct_management(ROOT / 'oci', 110, 'update', unattended=True, min_image_age_days=3), 5)

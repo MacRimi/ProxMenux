@@ -228,6 +228,29 @@ oci_log_tail() {
   tail -n "${1:-15}" "$OCI_LOG" | sed "s/^/${_OCI_TAB}  /"
 }
 
+# The host may have no route to the VLAN of an interface: there curl runs
+# inside the network of the container.
+oci_curl() {
+  local vmid=$1
+  shift
+  if grep -Eq '^net[0-9]+:.*,tag=' "/etc/pve/lxc/${vmid}.conf" 2>/dev/null; then
+    nsenter --net="/proc/$(lxc-info -n "$vmid" -pH)/ns/net" curl "$@"
+  else
+    curl "$@"
+  fi
+}
+
+# tag= option of an access interface from the given network key of the
+# deployment, in OCI_VLAN_OPTION. Returns 1 when the tag is not valid.
+oci_vlan_option() {
+  local tag
+  OCI_VLAN_OPTION=""
+  tag=$(jq -r --arg key "$1" '.network[$key] // empty' "$DEPLOYMENT_FILE")
+  [[ -z $tag ]] && return 0
+  [[ $tag =~ ^[0-9]+$ ]] && (( tag >= 1 && tag <= 4094 )) || return 1
+  OCI_VLAN_OPTION=",tag=${tag}"
+}
+
 # ip= and gw= options of an access interface, DHCP or a static IPv4 with an
 # optional gateway, in OCI_ACCESS_NET. Returns 1 when a value is not valid.
 oci_access_net() {

@@ -116,10 +116,10 @@
             "items": [
               "When the registry still serves the installed digest, nothing is downloaded and the instance is not touched.",
               "The new image is verified layer by layer before the CT stops. A download that arrives damaged is fetched a second time; an image already cached that fails the check is downloaded again.",
-              "Settings changed in Proxmox VE after the installation (memory, swap, cores, CPU limit, CPU priority, start with the node) are kept and carried into the new contract.",
+              "Settings changed in Proxmox VE after the installation are kept and carried into the new contract: variables, memory, swap, cores, CPU limit and priority, start with the node, hostname, start command, network options, VLAN tag, DNS, time zone, features, protection, disk sizes and added lxc.* lines. A variable removed there leaves the contract and, if the image defines it, the new container has the value of the image. A disk or device added there is saved in the contract: the menu shows it for review, and a scheduled update accepts it.",
               "The LAN interface that the Arr suite and multi-container applications add (<code>net1</code>) and the start order (<code>startup</code>) are given back to the new container as they are.",
               "A host directory is recognised by its path and by the filesystem it is on, not by the device name the host gives its disk, so a USB or network disk that comes back under another name is still the same directory. When its disk is not connected, the update stops before the CT is stopped and names the directory that is missing.",
-              "Any other difference between the CT and its contract stops the update before the CT is stopped."
+              "A change that cannot be carried over, such as a data volume removed, another architecture or a snapshot made by the user, stops the update before the CT is stopped."
             ]
           }
         },

@@ -125,7 +125,7 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Zastaví a zakáže službu a časovač. Čistí úlohy cron, jednotky systemd, binárne súbory, konfiguračné súbory a adresár /var/log.hdd. Tiež odinštaluje balík apt, ak bol nainštalovaný týmto spôsobom."
+            "restores": "Vypne službu a časovač a odstráni konfiguráciu ProxMenux pre Log2RAM. Pri ďalšom vypnutí Log2RAM zapíše /var/log na disk; pri ďalšom štarte sa journal a logy úloh vrátia do /var/log a súbory Log2RAM sa odstránia."
           },
           {
             "tool": "Automatický TRIM ZFS",

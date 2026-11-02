@@ -287,6 +287,7 @@ reload_services() {
     systemctl is-active --quiet proxmox-backup-proxy 2>/dev/null && {
         systemctl reload proxmox-backup-proxy 2>/dev/null || systemctl restart proxmox-backup-proxy 2>/dev/null || true
     }
+    return 0
 }
 
 main() {

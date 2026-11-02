@@ -50,7 +50,7 @@
               },
               {
                 "title": "Súhrn",
-                "body": "Pred vytvorením CT sa zobrazí úplné mapovanie ciest a uloží sa do kontraktu inštancie."
+                "body": "Pred vytvorením CT sa zobrazí úplné mapovanie ciest a uloží sa do konfigurácie inštalácie."
               }
             ]
           }
@@ -132,7 +132,7 @@
           "flow": {
             "nodes": [
               {
-                "label": "Kontrakt",
+                "label": "Uložená konfigurácia",
                 "detail": "/config"
               },
               {
@@ -205,7 +205,7 @@
     {
       "id": "network",
       "title": "Adresy a siete",
-      "intro": "Aplikácia s jedným kontajnerom potrebuje adresu. Aplikácia s viacerými kontajnermi potrebuje aj stabilnú sieť medzi svojimi členmi.",
+      "intro": "Aplikácia s jedným kontajnerom potrebuje adresu. Aplikácia s viacerými kontajnermi potrebuje aj stabilnú sieť na komunikáciu medzi svojimi kontajnermi.",
       "blocks": [
         {
           "cards": {
@@ -218,10 +218,13 @@
               {
                 "icon": "waypoints",
                 "title": "Aplikácia s viacerými kontajnermi",
-                "body": "Vyhľadá sa voľná podsieť a vytvorí sa trvalý súkromný sieťový most. Každý člen — aplikácia, databáza a vyrovnávacia pamäť — v ňom dostane pevnú adresu."
+                "body": "Vyhľadá sa voľná podsieť a vytvorí sa trvalý súkromný sieťový most. Každý kontajner — hlavná aplikácia, databáza alebo vyrovnávacia pamäť — v ňom dostane pevnú adresu."
               }
             ]
           }
+        },
+        {
+          "p": "Prístupové rozhranie môže mať značku VLAN. Pokročilá inštalácia ju ponúkne pri nastavení adresy a cez Upraviť ju možno zmeniť alebo odstrániť pri aplikácii s jedným kontajnerom. Značka nastavená v Proxmoxe sa zachová. Pri použití značky ProxMenux overuje aplikáciu zvnútra jej kontajnera, takže server nemusí mať prístup do tejto VLAN."
         },
         {
           "flow": {
@@ -243,7 +246,7 @@
           }
         },
         {
-          "p": "Kontrakt zostavy uchováva sieťový most, podsieť, adresy a vzťahy medzi službami. Pri aktualizácii aplikácie sa pre všetkých členov znovu použije rovnaká topológia. ProxMenux Monitor otvára hlavný kontajner na jeho adrese v LAN, nie na adrese v súkromnej sieti."
+          "p": "Uložená konfigurácia aplikácie uchováva sieťový most, podsieť, adresy a vzťahy medzi službami. Pri aktualizácii sa pre všetky kontajnery aplikácie znovu použije rovnaké usporiadanie siete. ProxMenux Monitor otvára hlavný kontajner na jeho adrese v LAN, nie na adrese v súkromnej sieti."
         }
       ]
     },
@@ -277,7 +280,7 @@
               [
                 "Rootfs OCI",
                 "Áno",
-                "V zálohe CT; možno ho tiež znovu vytvoriť z obrazu a kontraktu"
+                "V zálohe CT; možno ho tiež znovu vytvoriť z obrazu a uloženej konfigurácie"
               ],
               [
                 "Disk kontajnera s <code>backup=1</code>",
@@ -290,14 +293,14 @@
                 "Záloha úložiska hostiteľa"
               ],
               [
-                "Kontrakt inštancie",
+                "Uložená konfigurácia inštalácie",
                 "Áno, kópia uložená v CT",
                 "<code>/.proxmenux/oci-record.json</code> v CT; ďalšie kópie hostiteľa a klastra sa uchovávajú samostatne"
               ],
               [
                 "Aplikácia s viacerými kontajnermi",
-                "Každý člen vo vlastnej zálohe",
-                "Zálohy všetkých členov spolu s kontraktom zostavy a jej sieťovým mostom na hostiteľovi"
+                "Každý kontajner vo vlastnej zálohe",
+                "Zálohy všetkých kontajnerov spolu s uloženou konfiguráciou aplikácie a jej sieťovým mostom na hostiteľovi"
               ]
             ]
           }

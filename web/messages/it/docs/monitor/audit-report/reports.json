@@ -115,7 +115,7 @@
           }
         },
         {
-          "p": "In base al profilo, il documento include identità del nodo e data della valutazione, sintesi, riepilogo per area, struttura di hardware, rete e archiviazione, protezione dei guest, risultati con evidenze, fonti illeggibili e ambito e politica applicati."
+          "p": "Il documento include, secondo quanto previsto da ciascun profilo, l’identità del nodo e la data della valutazione, la sintesi dei risultati, un riepilogo per area, la struttura di hardware, rete e archiviazione, la protezione dei guest, i risultati con le relative evidenze, le fonti che non è stato possibile leggere e l’ambito e i criteri applicati."
         }
       ]
     },

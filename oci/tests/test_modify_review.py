@@ -27,6 +27,23 @@ def installation():
     return result,config
 
 
+class SnapshotSectionGuardTests(unittest.TestCase):
+    def test_ipv6_listen_address_in_oci_entrypoint_is_not_a_snapshot(self):
+        saved, config = installation()
+        config += b"entrypoint: entrypoint.sh php -S '[::]:8080' -t /var/www/html\n"
+        saved['observed'].update(config=config.decode(), config_sha256=transaction.sha(config))
+        with patch.object(transaction, 'external_changes', return_value={}):
+            transaction.preflight(saved, copy.deepcopy(saved), config)
+
+    def test_actual_proxmox_snapshot_section_is_still_refused(self):
+        saved, config = installation()
+        config += b"\n[before-upgrade]\nmemory: 512\n"
+        saved['observed'].update(config=config.decode(), config_sha256=transaction.sha(config))
+        with patch.object(transaction, 'external_changes', return_value={}), \
+                self.assertRaisesRegex(ValueError, 'advanced Proxmox settings'):
+            transaction.preflight(saved, copy.deepcopy(saved), config)
+
+
 class FallbackTests(unittest.TestCase):
     def test_all_installer_adaptations_fall_back_before_any_native_write(self):
         saved,config=installation()

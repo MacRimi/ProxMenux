@@ -116,10 +116,10 @@
             "items": [
               "Cuando el registro sigue sirviendo el digest instalado, no se descarga nada y la instancia no se toca.",
               "La imagen nueva se verifica capa a capa antes de detener el CT. Una descarga que llega dañada se repite una vez; una imagen ya almacenada que no supera la comprobación se descarga de nuevo.",
-              "Los ajustes cambiados en Proxmox VE después de la instalación (memoria, swap, núcleos, límite de CPU, prioridad de CPU, arranque con el nodo) se conservan y pasan al contrato nuevo.",
+              "Los ajustes cambiados en Proxmox VE después de la instalación se conservan y pasan al contrato nuevo: variables, memoria, swap, núcleos, límite y prioridad de CPU, arranque con el nodo, nombre del host, comando de arranque, opciones de red, etiqueta VLAN, DNS, zona horaria, features, protección, tamaños de disco y líneas lxc.* añadidas. Una variable eliminada allí sale del contrato y, si la imagen la define, el contenedor nuevo tiene el valor de la imagen. Un disco o dispositivo añadido allí se guarda en el contrato: el menú lo muestra para revisarlo, y una actualización programada lo acepta.",
               "La interfaz de la LAN que añaden la suite Arr y las aplicaciones multicontenedor (<code>net1</code>) y el orden de arranque (<code>startup</code>) se devuelven tal cual al contenedor nuevo.",
               "Un directorio del host se reconoce por su ruta y por el sistema de ficheros en el que está, no por el nombre de dispositivo que el host da a su disco, así que un disco USB o de red que vuelve con otro nombre sigue siendo el mismo directorio. Si su disco no está conectado, la actualización se detiene antes de parar el CT e indica qué directorio falta.",
-              "Cualquier otra diferencia entre el CT y su contrato detiene la actualización antes de detener el CT."
+              "Un cambio que no se puede conservar, como un volumen de datos eliminado, otra arquitectura o una instantánea hecha por el usuario, detiene la actualización antes de detener el CT."
             ]
           }
         },

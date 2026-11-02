@@ -351,6 +351,19 @@ class Switch(unittest.TestCase):
         return {int(path.parent.name): json.loads(path.read_text())["deployment"].get("watchdog")
                 for path in root.glob("*/oci-compose.json")}
 
+    def test_completed_jobs_never_receive_or_use_watchdog(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=self.registry(folder)
+            path=root/'102'/'oci-compose.json'
+            record=json.loads(path.read_text())
+            record['deployment'].update(execution_mode='one-shot',watchdog=True)
+            path.write_text(json.dumps(record))
+            self.assertNotIn(102,watchdog.watched(root))
+            with patch.object(watchdog,'ensure_service'),patch('oci_carried_record.carry'):
+                watchdog.set_watchdog(root,101,True)
+            self.assertEqual(self.flags(root)[101],True)
+            self.assertEqual(self.flags(root)[102],False)
+
     def test_every_container_of_the_application_takes_the_choice_and_keeps_the_rest_of_its_record(self):
         from unittest.mock import patch
         import oci_carried_record

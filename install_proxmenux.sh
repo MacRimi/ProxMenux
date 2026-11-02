@@ -903,6 +903,8 @@ install_normal_version() {
         bash "$BASE_DIR/oci/engine/remote/stack_dependency_hook.sh" --refresh >/dev/null 2>&1 || true
         systemctl try-restart proxmenux-oci-watchdog.service >/dev/null 2>&1 || true
     fi
+    # A host backup job saved with a schedule systemd rejects never runs.
+    bash "$BASE_DIR/scripts/backup_restore/backup_scheduler.sh" --repair-schedules >/dev/null 2>&1 || true
     chmod +x "$BASE_DIR/install_proxmenux.sh"
     msg_ok "Necessary files created."
 

@@ -126,6 +126,14 @@
     "tandoor": {
       "status": "laboratory-validated"
     },
+    "teslamate": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-10-29",
+        "digest": "c85b3d447502683ed7bf12fb478e0dae9a985fe975ac22cccb64faeb4c4a5d31",
+        "scenario": "MS03/amd64: default and advanced install, browser login, volumes/restart, Modify, 4.3 to 4.4 update, controlled rollback, native backup/restore to new VMIDs and removal. No vehicle tokens used."
+      }
+    },
     "thelounge": {
       "status": "laboratory-validated"
     },

@@ -265,7 +265,7 @@
           "list": {
             "items": [
               "Um Dockerfile sem imagem publicada: primeiro é necessário construir a imagem e publicá-la num registo OCI.",
-              "Um ficheiro Compose com vários serviços: é bloqueado porque esta opção instala um único serviço por contentor, mesmo que vários serviços utilizem a mesma imagem.",
+              "Os ficheiros Compose com vários serviços usam um LXC nativo por serviço. Cada aplicação web precisa da sua própria porta publicada; os volumes com a mesma origem podem partilhar um diretório do anfitrião. As opções não suportadas, as redes externas e os serviços sem uma verificação de saúde compatível continuam a bloquear a instalação.",
               "<code>configs</code>, segredos externos ou formatos de dispositivo que não possam ser adaptados sem ambiguidade.",
               "Substituições de shell como <code>$(command)</code>: é necessário escrever diretamente o valor resultante.",
               "Opções <code>docker run</code> não reconhecidas e <code>--env-file</code>: utilize antes um ficheiro Compose com valores explícitos."

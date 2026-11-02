@@ -274,14 +274,17 @@ class PBSManagerTests(unittest.TestCase):
         names = ("_check_pve_services", "_check_vms_cts_optimized", "_check_vms_cts_with_persistence",
                  "_check_proxmox_storages", "_check_proxmox_storage", "_check_lxc_disk_usage",
                  "_check_vm_disk_usage", "_check_lxc_mount_capacity", "_check_pve_storage_capacity")
-        functions = [node for node in ast.walk(source) if isinstance(node, ast.FunctionDef) and node.name in names]
+        functions = [node for node in ast.walk(source) if isinstance(node, ast.FunctionDef)
+                     and node.name in (*names, "_service_state")]
         persistence = mock.Mock(); persistence.is_error_active.return_value = False
         run = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout="active\n"))
         namespace = {"Dict": dict, "Any": object, "Optional": __import__('typing').Optional,
                      "PBS_SERVICES": pbs.PBS_SERVICES, "health_persistence": persistence,
-                     "subprocess": SimpleNamespace(run=run), "os": __import__('os')}
+                     "subprocess": SimpleNamespace(run=run), "os": __import__('os'), "time": __import__('time')}
         exec(compile(ast.Module(body=functions, type_ignores=[]), '<health-pbs-test>', 'exec'), namespace)
         instance = SimpleNamespace(platform_type="pbs", PVE_SERVICES=["pveproxy", "pvedaemon", "pvestatd", "pve-cluster"])
+        instance.SERVICE_TRANSIENT_STATES, instance.SERVICE_SETTLE_SECONDS = (), 0
+        instance._service_state = lambda service: namespace["_service_state"](instance, service)
         services = namespace["_check_pve_services"](instance)
         self.assertEqual(services["status"], "OK")
         self.assertEqual([call.args[0][2] for call in run.call_args_list], list(pbs.PBS_SERVICES))

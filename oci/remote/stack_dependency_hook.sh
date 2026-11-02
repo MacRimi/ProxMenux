@@ -4,6 +4,7 @@ set -Eeuo pipefail
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 HOOK_NAME=proxmenux-stack-dependencies.sh
+COMPOSE_JOB_HELPER=/var/lib/vz/snippets/proxmenux-compose-jobs.py
 # Longest wait for a dependency that is being backed up, and for any other lock.
 BACKUP_LOCK_WAIT=${PROXMENUX_STACK_BACKUP_LOCK_WAIT:-14400}
 OTHER_LOCK_WAIT=${PROXMENUX_STACK_OTHER_LOCK_WAIT:-300}
@@ -12,6 +13,8 @@ RESTART_GRACE=${PROXMENUX_STACK_RESTART_GRACE:-20}
 POLL=${PROXMENUX_STACK_POLL:-5}
 # Earlier published versions of this script, replaced on update.
 PREVIOUS_RELEASES=(
+  4bc477bcc35e229d1c964c9372838f0973cbe6f1e3e41f0fb486e9b724247310
+  243b0dca81b1b155ca169a4d0e11cdb8ca55974c65ede6a4a9be8f4d536a141e
   c28b69acd7cc8e66d3aec3e8b2ec86bda0e4f91193ec78549f1965f2c859c0d1
   02c50ef17f2411ef22f4d382c51b34a7a0974a446d4a155ecb63fb1e805a7c59
 )
@@ -58,10 +61,39 @@ install_hook() {
     (all(.dependencies[];
       (.vmid | type == "number") and
       (.label | type == "string") and
-      (.healthcheck.type | IN("exec", "http", "running")) and
-      (.healthcheck.timeout_seconds | type == "number")
+      (.healthcheck.type | IN("exec", "http", "running", "tcp", "completed")) and
+      (.healthcheck.timeout_seconds | type == "number") and
+      (if .healthcheck.type == "tcp" then
+        (.healthcheck.host | type == "string") and
+        (.healthcheck.host | test("^([0-9]{1,3}\\.){3}[0-9]{1,3}$")) and
+        (.healthcheck.host | split(".") | all(.[]; tonumber < 256)) and
+        (.healthcheck.port | type == "number") and
+        (.healthcheck.port > 0 and .healthcheck.port < 65536 and .healthcheck.port == (.healthcheck.port | floor))
+       elif .healthcheck.type == "completed" then
+        (.healthcheck.job | type == "object") and
+        (.healthcheck.job.installation_id | type == "string") and
+        (.healthcheck.job.installation_id | test("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")) and
+        (.healthcheck.job.image_digest | type == "string") and
+        (.healthcheck.job.image_digest | test("^sha256:[0-9a-f]{64}$")) and
+        (.healthcheck.job.expected_config_fingerprint | type == "string") and
+        (.healthcheck.job.expected_config_fingerprint | test("^[0-9a-f]{64}$")) and
+        (.healthcheck.job.timeout_seconds == .healthcheck.timeout_seconds) and
+        (.healthcheck.timeout_seconds >= 30 and .healthcheck.timeout_seconds <= 3600 and .healthcheck.timeout_seconds == (.healthcheck.timeout_seconds | floor))
+       else true end)
     ))
   ' "$source_config" >/dev/null || die "Invalid dependency contract"
+
+  if jq -e 'any(.dependencies[]; .healthcheck.type == "completed")' "$source_config" >/dev/null; then
+    local helper_source helper_temporary
+    helper_source="$(dirname -- "$0")/oci_compose_jobs.py"
+    [[ -f $helper_source && ! -L $helper_source ]] || die "Native OCI job helper is missing"
+    install -d -m 0755 "$(dirname -- "$COMPOSE_JOB_HELPER")"
+    helper_temporary=$(mktemp "${COMPOSE_JOB_HELPER}.XXXXXX")
+    if ! install -m 0755 "$helper_source" "$helper_temporary" || ! mv -f -- "$helper_temporary" "$COMPOSE_JOB_HELPER"; then
+      rm -f -- "$helper_temporary"
+      die "Could not install the persistent native OCI job helper"
+    fi
+  fi
 
   storage=$(find_snippet_storage)
   hook_volume="${storage}:snippets/${HOOK_NAME}"
@@ -144,6 +176,20 @@ dependency_is_healthy() {
       url=$(jq -r '.url' <<<"$healthcheck")
       curl -fsS --max-time 3 "$url" >/dev/null 2>&1
       ;;
+    tcp)
+      local host port
+      host=$(jq -r '.host' <<<"$healthcheck")
+      port=$(jq -r '.port' <<<"$healthcheck")
+      python3 - "$host" "$port" <<'PYTCP' >/dev/null 2>&1
+import ipaddress, socket, sys
+host = str(ipaddress.IPv4Address(sys.argv[1]))
+port = int(sys.argv[2])
+if not 0 < port < 65536:
+    raise ValueError('Invalid TCP port')
+with socket.create_connection((host, port), timeout=3):
+    pass
+PYTCP
+      ;;
     *) return 1 ;;
   esac
 }
@@ -166,6 +212,20 @@ start_dependencies() {
       || die "Invalid dependency in $config"
     pct config "$id" >/dev/null 2>&1 \
       || die "Dependency $label (CT $id) does not exist"
+
+    if [[ $(jq -r '.type' <<<"$healthcheck") == completed ]]; then
+      [[ -f $COMPOSE_JOB_HELPER && ! -L $COMPOSE_JOB_HELPER ]] || die "Native OCI job helper is missing"
+      local helper_owner helper_mode
+      helper_owner=$(stat -c '%u' "$COMPOSE_JOB_HELPER")
+      helper_mode=$(stat -c '%a' "$COMPOSE_JOB_HELPER")
+      [[ $helper_owner == 0 && $helper_mode =~ ^[0-7]{3,4}$ ]] && (( (8#$helper_mode & 8#022) == 0 )) \
+        || die "Native OCI job helper is not owned safely by root"
+      printf 'Waiting for completed job %s (CT %s)...\n' "$label" "$id"
+      python3 -I "$COMPOSE_JOB_HELPER" ensure "$id" --spec-json "$(jq -c '.job' <<<"$healthcheck")" >/dev/null 9>&- \
+        || die "Job $label (CT $id) did not complete successfully"
+      printf 'Dependency %s (CT %s): ready.\n' "$label" "$id"
+      continue
+    fi
 
     is_running "$id" || wait_for_release "$id" "$label"
     if ! is_running "$id"; then

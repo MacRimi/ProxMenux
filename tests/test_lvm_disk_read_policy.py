@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import Mock, patch
@@ -34,11 +35,37 @@ class LvmScopeTests(unittest.TestCase):
         self.modules.start()
         self.addCleanup(self.modules.stop)
 
+    lvmconfig = types.SimpleNamespace(returncode=0, stdout='global_filter=["r|/dev/zd.*|","r|/dev/rbd.*|"]\nfilter="a|.*|"\n')
+
     def args(self, inventory=INVENTORY, code=0):
-        with patch.object(scope.subprocess, "run", return_value=types.SimpleNamespace(returncode=code, stdout=inventory)) as run:
+        def run(command, **_):
+            if command[0] == "lvmconfig":
+                return self.lvmconfig
+            return types.SimpleNamespace(returncode=code, stdout=inventory)
+        with patch.object(scope.subprocess, "run", side_effect=run) as mocked:
             args = scope.lvm_device_args(self.standby)
-        self.assertEqual(run.call_args.args[0], ["lsblk", "-J", "-l", "-o", "KNAME,TYPE,PKNAME,FSTYPE"])
+        self.assertEqual(mocked.call_args_list[0].args[0], ["lsblk", "-J", "-l", "-o", "KNAME,TYPE,PKNAME,FSTYPE"])
         return args
+
+    def test_volumes_lvm_filters_reject_are_not_named(self):
+        # A guest's volume group on a zvol is hidden by the Proxmox
+        # global_filter, which an explicit --devices list would bypass.
+        inventory = lsblk(("nvme0n1", "disk", None, None), ("nvme0n1p1", "part", "nvme0n1", "LVM2_member"),
+                          ("sda", "disk", None, None), ("sda1", "part", "sda", "LVM2_member"),
+                          ("zd48", "disk", None, None), ("zd48p3", "part", "zd48", "LVM2_member"),
+                          ("rbd0", "disk", None, None), ("rbd0p1", "part", "rbd0", "LVM2_member"))
+        self.assertEqual(self.args(inventory), ["--devices", "/dev/nvme0n1p1"])
+        self.excluded = {"sda", "nvme0n1"}
+        self.assertIsNone(self.args(inventory))
+
+    def test_an_unreadable_lvm_filter_skips_the_restricted_scan(self):
+        for output in (types.SimpleNamespace(returncode=5, stdout=""),
+                       types.SimpleNamespace(returncode=0, stdout='global_filter=["x|/dev/zd.*|"]\n'),
+                       types.SimpleNamespace(returncode=0, stdout='filter=["r|[|"]\n')):
+            self.lvmconfig = output
+            self.assertIsNone(self.args())
+        self.excluded = set()
+        self.assertEqual(self.args(), [])
 
     def test_excluded_disks_and_their_partitions_are_not_in_the_scan(self):
         self.assertEqual(self.args(), ["--devices", "/dev/nvme0n1p1,/dev/sdb1"])
@@ -98,13 +125,6 @@ class LvmScopeTests(unittest.TestCase):
         self.excluded = set()
         self.assertEqual(self.args(inventory), [])
 
-    def test_the_scan_settles_its_own_reads_on_the_disks_it_read(self):
-        self.excluded = {"sda"}
-        settled = Mock()
-        self.disk_module.settle_own_reads = settled
-        self.args()
-        scope.settle_scan_reads()
-        settled.assert_called_once_with({"nvme0n1", "sdb"})
 
 
 class LvmReaderTests(unittest.TestCase):
@@ -134,6 +154,14 @@ class LvmReaderTests(unittest.TestCase):
         self.assertTrue(result["skipped"])
         self.assertEqual([call.args[0] for call in run.call_args_list], [["which", "lvs"]])
 
+    def test_health_accepts_a_volume_group_without_active_volumes(self):
+        run = Mock(side_effect=[types.SimpleNamespace(returncode=0),
+                                types.SimpleNamespace(returncode=0, stdout="  data pve twi---tz--\n")])
+        function = self.extract("health_monitor.py", "_check_lvm", "HealthMonitor", {
+            "Dict": dict, "Any": object, "subprocess": types.SimpleNamespace(run=run), "_lvm_device_args": lambda: [],
+        })
+        self.assertEqual(function(None), {"status": "OK", "volumes": 0})
+
     def test_storage_skips_pvs_when_no_scan_is_permitted(self):
         tree = ast.parse((SCRIPTS / "flask_server.py").read_text())
         function = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "get_system_disks")
@@ -145,6 +173,72 @@ class LvmReaderTests(unittest.TestCase):
 
     def test_module_is_shipped(self):
         self.assertIn('cp "$SCRIPT_DIR/lvm_device_scope.py" "$APP_DIR/usr/bin/"', (SCRIPTS / "build_appimage.sh").read_text())
+
+
+class DiskReadPolicyTests(unittest.TestCase):
+    """Only the exclusions in Settings keep a disk from being read."""
+
+    def test_a_disk_without_activity_is_still_read_unless_excluded(self):
+        import disk_temperature_history as dth
+        with patch.object(dth, "_excluded_disk_names", return_value={"sdc"}):
+            self.assertEqual(dth.disk_read_policy("sdb"), dth.READ)
+            self.assertEqual(dth.disk_read_policy("sdb"), dth.READ)
+            self.assertEqual(dth.disk_read_policy("sdc"), dth.EXCLUDED)
+
+
+class QuietDiskIdentityTests(unittest.TestCase):
+    """A rotational disk is read on schedule; a parked one is not woken and
+    is still shown by its model, serial and type."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        root = Path(folder.name)
+        for name, value in (("sys/block/sdb/device/model", "WDC WD40EFRX-68N\n"), ("sys/block/sdb/dev", "8:16\n"),
+                            ("sys/block/sdb/queue/rotational", "1\n"),
+                            ("run/udev/data/b8:16", "E:ID_MODEL=WDC_WD40EFRX-68N32N0\nE:ID_SERIAL_SHORT=WD-WCC7K4FV37J0\n")):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(value)
+        self.policy = "read"
+        self.disk_module = types.ModuleType("disk_temperature_history")
+        self.disk_module.disk_read_policy = lambda disk: self.policy
+        modules = patch.dict(sys.modules, disk_temperature_history=self.disk_module)
+        modules.start()
+        self.addCleanup(modules.stop)
+        self.standby = Mock(return_value=False)
+        self.read = Mock(return_value={"model": "WDC WD40EFRX-68N32N0", "serial": "WD-WCC7K4FV37J0",
+                                       "rotation_rate": 5400, "health": "healthy", "temperature": 31})
+        self.cache = {}
+        namespace = {"Path": lambda path: root / path.lstrip("/"), "time": __import__("time"),
+                     "_smart_result_cache": self.cache, "_SMART_RESULT_TTL": 30, "_hdd_in_standby": self.standby,
+                     "_get_smart_data_uncached": self.read, "_smart_data_useful": lambda data: data.get("model") != "Unknown",
+                     "_smart_fail_backoff": {}, "_smart_fail_counts": {}, "_smart_probe_cache": {},
+                     "_SMART_FAIL_THRESHOLD": 3, "_SMART_FAIL_BACKOFF_SEC": 3600}
+        tree = ast.parse((SCRIPTS / "flask_server.py").read_text())
+        nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+                 and n.name in ("_smart_default_payload", "_smart_identity_payload", "get_smart_data")]
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), "flask_server.py", "exec"), namespace)
+        self.get = namespace["get_smart_data"]
+
+    def test_a_spinning_disk_is_read(self):
+        data = self.get("sdb")
+        self.assertEqual((data["model"], data["rotation_rate"], data["health"], data["temperature"]),
+                         ("WDC WD40EFRX-68N32N0", 5400, "healthy", 31))
+        self.read.assert_called_once()
+
+    def test_a_parked_disk_is_not_woken_and_keeps_its_identity(self):
+        self.standby.return_value = True
+        data = self.get("sdb")
+        self.read.assert_not_called()
+        self.assertEqual((data["model"], data["serial"], data["rotation_rate"], data["standby"]),
+                         ("WDC WD40EFRX-68N32N0", "WD-WCC7K4FV37J0", -1, True))
+
+    def test_an_excluded_disk_receives_no_command(self):
+        self.policy = "excluded"
+        data = self.get("sdb")
+        self.standby.assert_not_called()
+        self.read.assert_not_called()
+        self.assertEqual((data["model"], data["rotation_rate"], data["excluded"]), ("WDC WD40EFRX-68N32N0", -1, True))
 
 
 if __name__ == "__main__":

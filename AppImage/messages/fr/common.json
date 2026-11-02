@@ -827,7 +827,63 @@
     "temperatureCriticalCount": "Températures critiques : {count}",
     "temperatureUnavailable": "Températures indisponibles",
     "temperatureIncomplete": "Données de température incomplètes",
-    "temperatureUnavailableCount": "Indisponible : {count}"
+    "temperatureUnavailableCount": "Indisponible : {count}",
+    "zfs": {
+      "classes": {
+        "normal": "Données",
+        "special": "Spécial",
+        "dedup": "Déduplication",
+        "log": "Journal",
+        "cache": "Cache",
+        "spare": "Pièce de rechange"
+      },
+      "poolDetails": "Disposition du pool, état du nettoyage et santé de l'appareil",
+      "detailsUnavailable": "La disposition détaillée du pool nécessite OpenZFS 2.3 ou une version ultérieure.",
+      "status": "Statut",
+      "action": "Action",
+      "capacity": "Capacité",
+      "fragmentation": "Fragmentation",
+      "dedupRatio": "taux de déduplication",
+      "layout": "Mise en page",
+      "singleDisk": "Disque unique",
+      "stripe": "Rayure",
+      "mirror": "Miroir",
+      "raidz": "RAIDZ{parity}",
+      "draid": "dRAID{parity}",
+      "diskCountOne": "disque {count}",
+      "diskCountMany": "disques {count}",
+      "errorsReported": "erreurs signalées",
+      "scanTitle": "Gommage / Réargent",
+      "scrub": "Gommage",
+      "resilver": "Réargent",
+      "neverScrubbed": "Jamais nettoyé",
+      "scanRunning": "{kind} en cours ({percent}%)",
+      "scanCanceled": "{kind} annulé",
+      "scanFinished": "{kind} terminé {date}",
+      "started": "commencé",
+      "ended": "Terminé",
+      "repaired": "Réparé",
+      "scanErrors": "erreurs d'analyse",
+      "dataErrors": "erreurs de données {count}",
+      "noDataErrors": "aucune erreur de données connue",
+      "device": "Appareil",
+      "disk": "Disque",
+      "state": "État",
+      "readErrors": "lire les erreurs",
+      "writeErrors": "Ecrire des erreurs",
+      "checksumErrors": "Erreurs de somme de contrôle",
+      "readShort": "R",
+      "writeShort": "W",
+      "checksumShort": "CK",
+      "slowIos": "E/S lentes",
+      "via": "via {name}",
+      "totalSize": "Taille totale",
+      "fragShort": "Frag."
+    },
+    "storageController": "Contrôleur de stockage",
+    "noController": "Aucun contrôleur détecté",
+    "diskCountOne": "disque {count}",
+    "diskCountMany": "disques {count}"
   },
   "details": {
     "temperature": {
@@ -2312,6 +2368,7 @@
         "testing": "Essai…",
         "testConnection": "Tester la connexion",
         "ollamaUrl": "URL d'Ollama",
+        "ollamaApiKeyHint": "Laissez ce champ vide pour un serveur Ollama standard. Si votre proxy ou passerelle exige une clé, elle est envoyée dans Authorization: Bearer. Ce champ n'active pas l'authentification sur le serveur.",
         "getKey": "Obtenir la clé",
         "loadModelsPlaceholder": "Cliquez sur Charger pour récupérer les modèles",
         "selectModel": "Sélectionnez le modèle",
@@ -2575,6 +2632,10 @@
           "title": "Espace disque - rootfs LXC",
           "description": "Disque racine par conteneur, évalué par rapport à la taille rootfs de PVE."
         },
+        "vm_disk": {
+          "title": "Espace disque - VM",
+          "description": "Systèmes de fichiers des VM en cours d'exécution, tels que les signale l'agent invité QEMU, disques en passthrough compris. Les VM sans agent invité ne sont pas évaluées."
+        },
         "lxc_mount": {
           "title": "Points de montage LXC",
           "description": "Capacité des points de montage à l’intérieur des CT en cours d’exécution (mp0, mp1, NFS, montages de liaison). Exclut les rootfs ; qui est couvert ci-dessus."
@@ -2609,8 +2670,12 @@
       "excluded": "Exclusion",
       "notConnected": "Non connecté",
       "saveFailed": "Impossible d'enregistrer les exclusions du disque.",
-      "help": "Un disque exclu n'obtient aucune température programmée ou SMART lit — pas même une requête en mode de puissance — donc il est laissé tout seul. Ouverture de ses détails SMART le lit encore.",
-      "idleHelp": "Les disques mécaniques sans activité sont déjà laissés seuls automatiquement jusqu'à ce que quelque chose les utilise à nouveau."
+      "help": "Un disque exclu n'obtient aucune température programmée ou SMART lit — pas même une requête en mode de puissance — donc il est laissé tout seul. Ouverture de ses détails SMART le lit encore."
+    },
+    "storageDisplay": {
+      "title": "Affichage du stockage",
+      "description": "modifier la disposition des disques sur la page Stockage",
+      "groupByController": "Regrouper les disques physiques par contrôleur de stockage"
     }
   },
   "login": {
@@ -3732,7 +3797,14 @@
       "auditReviewDate": "Audit & Report — une constatation acceptée peut porter une date de révision qui la fait réapparaître sans retirer la décision, et la comparaison indique si une constatation s'est aggravée, améliorée ou maintenue (avec @Vaso73).",
       "ociCatalog": "OCI manager Apps (Technology Preview) — une nouvelle entrée du menu ProxMenux installe les applications à partir de leurs images de conteneur officielles en tant que LXC Proxmox natifs, sans moteur Docker. Le catalogue réunit 514 applications.",
       "pbsSupport": "ProxMenux sur Proxmox Backup Server — il s'installe avec la même commande et ouvre son propre menu, avec post-installation et un Monitor qui affiche la santé, les datastores et les tâches du serveur (contribution de @jcastro).",
-      "menuSearch": "Recherche dans le menu principal — un nom ou une partie du nom trouve une option de ProxMenux, une application OCI ou un Helper-Script, et l'ouvre sur son premier écran."
+      "menuSearch": "Recherche dans le menu principal — un nom ou une partie du nom trouve une option de ProxMenux, une application OCI ou un Helper-Script, et l'ouvre sur son premier écran.",
+      "composeStacks": "Fichiers Compose à plusieurs services — Custom image installe un LXC par service sur un réseau privé, démarrés selon leurs dépendances. Les mises à jour, les sauvegardes et la suppression s’appliquent à toute l’application.",
+      "keepProxmoxChanges": "Les mises à jour OCI conservent ce que vous modifiez dans Proxmox — variables, commande de démarrage, options réseau, DNS, features, tailles de disque et lignes lxc.* restent sur le conteneur reconstruit, y compris lors des mises à jour planifiées et sur chaque membre d’une pile.",
+      "ociVlan": "Étiquette VLAN pour les applications OCI — l’installation avancée la demande à côté de l’adresse, et Modifier la change sur une application à conteneur unique. L’hôte n’a pas besoin d’accéder à ce VLAN.",
+      "ociNewApps": "Nouveautés du catalogue OCI — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX et dix autres applications, et Ollama et llama.cpp fonctionnent sur les GPU intégrés Intel et AMD.",
+      "hostUpdateJob": "Des mises à jour Proxmox qui continuent après la déconnexion — la mise à jour s’exécute comme une tâche sur le serveur et se rouvre à la reconnexion. Un redémarrage en attente s’affiche après un nouveau noyau, avec un bouton qui vérifie d’abord l’hôte.",
+      "storageDetails": "Détails du stockage — les pools ZFS affichent leur structure, leur scrub et l’état de leurs périphériques, et chaque disque indique son contrôleur, y compris sur la page Matériel. Les seuils de disque des VM arrivent dans les Paramètres.",
+      "log2ramV2": "Log2RAM 2.0 — le journal et les journaux de tâches de Proxmox restent sur disque avec leur historique, et seuls les journaux qui changent sans cesse vont en RAM. Les hôtes qui l’utilisent déjà se mettent à jour avec ProxMenux."
     }
   },
   "network": {
@@ -4089,7 +4161,9 @@
       "interface": "Interface",
       "rotationRate": "Taux de rotation",
       "classCode": "Code de classe",
-      "serial": "En série"
+      "serial": "En série",
+      "storageController": "Contrôleur de stockage",
+      "attachedDisks": "disques connectés"
     },
     "values": {
       "cores": "{count} cœurs",
@@ -5237,7 +5311,8 @@
       "certificates": "Certificats",
       "login_attempts": "Tentatives de connexion",
       "fail2ban": "Échec2Ban",
-      "proxmox_storages": "Stockage Proxmox"
+      "proxmox_storages": "Stockage Proxmox",
+      "reboot_required": "Redémarrage requis"
     },
     "details": {
       "allOperational": "Tous les systèmes opérationnels",
@@ -5316,7 +5391,8 @@
       "securityCheckUnavailable": "Contrôle de sécurité indisponible : {error}",
       "certificateExpired": "Certificat expiré",
       "certificateExpiresDays": "Expiration du certificat (jours) : {days}",
-      "certificateInconclusive": "Vérification du certificat non concluante"
+      "certificateInconclusive": "Vérification du certificat non concluante",
+      "noPendingUpdates": "aucune mise à jour en attente"
     },
     "time": {
       "justNow": "tout à l' heure",
@@ -5353,7 +5429,53 @@
       "years": "{count} ans",
       "24hours": "24 heures",
       "7days": "7 jours"
-    }
+    },
+    "restart": {
+      "button": "Redémarrer le serveur",
+      "title": "Redémarrer le serveur {server} ?",
+      "impact": "Le redémarrage interrompt temporairement le serveur, les machines virtuelles, les conteneurs et leurs services.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer le redémarrage",
+      "blocked": "Le redémarrage sera disponible une fois la mise à jour de l'hôte terminée.",
+      "accepted": "demande de redémarrage acceptée.Vérifiez que le serveur revient en ligne.",
+      "unconfirmed": "La demande de redémarrage n'a pas pu être vérifiée.Vérifiez le serveur avant de réessayer."
+    },
+    "versions": {
+      "title": "mise à jour ProxMenux",
+      "installed": "version installée",
+      "latest": "version disponible",
+      "lastKnown": "Dernière version disponible connue",
+      "available": "mise à jour disponible",
+      "current": "ProxMenux est à jour",
+      "currentVersion": "La version {version} est à jour",
+      "unknown": "Impossible de vérifier la version disponible",
+      "unverified": "non vérifié",
+      "stable": "Canal stable",
+      "beta": "canal Beta",
+      "checked": "Dernière vérification réussie : {time}"
+    },
+    "hostUpdate": {
+      "running": "La mise à jour de l'hôte se poursuit même si vous vous déconnectez.Rouvrez-le après vous être connecté.",
+      "finished": "La dernière mise à jour de l'hôte est terminée.Son résultat est disponible.",
+      "attention": "La mise à jour de l'hôte nécessite votre attention.Cela n’a pas été arrêté ;reconnectez-vous pour l’inspecter.",
+      "view": "Afficher la mise à jour",
+      "viewResult": "Afficher le résultat",
+      "hideResult": "Masquer le résultat",
+      "resultTitle": "Résultat de la mise à jour de l'hôte",
+      "resultReadOnly": "sortie enregistrée d’une mise à jour terminée.L'ouvrir n'exécute pas une autre mise à jour.",
+      "resultUnavailable": "Le résultat enregistré n'a pas pu être chargé.Aucune mise à jour n'a été lancée.",
+      "retryResult": "Recharger le résultat",
+      "loadingResult": "Chargement du résultat enregistré…",
+      "closeResult": "Fermer le résultat",
+      "noReboot": "Aucun redémarrage requis",
+      "rebootMarker": "Le système d’exploitation nécessite un redémarrage.",
+      "rebootUnknown": "impossible de déterminer si un redémarrage est requis.",
+      "rebootKernel": "Un redémarrage est nécessaire pour activer {installed}.En cours d'exécution : {running}."
+    },
+    "updateSystem": "Mettre à jour le système",
+    "packagePlanNote": "Le plan comprend également de nouveaux packages, tels qu'un nouveau noyau.L'aperçu ne compte que les mises à jour des packages existants.",
+    "snapshotUnavailable": "Les nouveaux résultats de santé ne sont pas encore disponibles.",
+    "lastKnownResults": "Affichage des derniers résultats disponibles avec leur heure de vérification d'origine."
   },
   "profilePage": {
     "loading": "Chargement du profil…",
@@ -7647,7 +7769,11 @@
         "unconfirmedBody": "Le résultat de la sauvegarde n’est pas confirmé.",
         "warningTitle": "{hostname}: Sauvegarde terminée avec avertissements",
         "warningBody": "Sauvegarde terminée avec avertissements.",
-        "diagnosticsOmitted": "Lignes ou texte de diagnostic omis : {count}. Rapport original conservé."
+        "diagnosticsOmitted": "Lignes ou texte de diagnostic omis : {count}. Rapport original conservé.",
+        "quotaCause": "Un quota de stockage a empêché la sauvegarde de se terminer.",
+        "quotaAffected": "Sauvegardes {ids} : un quota de stockage a empêché leur achèvement.",
+        "quotaCheck": "Vérifiez le quota du stockage de sauvegarde {storage} avant de réessayer.",
+        "causeMissing": "Sauvegardes {ids} : le résumé ne précise pas la cause ; consultez les journaux complets de ces tâches."
       }
     }
   },

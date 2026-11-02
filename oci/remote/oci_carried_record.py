@@ -31,7 +31,7 @@ import sys
 import uuid
 
 import oci_instances as instances
-from oci_installation_state import sha
+from oci_installation_state import sha, parse_config
 from oci_ui import translate
 
 DIRECTORY = '.proxmenux'
@@ -40,6 +40,7 @@ KIND = 'proxmenux.oci-carried-record'
 STAMP = 'carried.sha256'
 CONFIG_CACHE = 'carried-config.json'
 LOCAL_CONFIGS = Path('/etc/pve/lxc')
+ROOTFS = Path('/var/lib/lxc')
 LIMIT = 16 * 1024 * 1024
 STACK_CONTRACT = '/etc/pve/priv/proxmenux-stack-{}.json'
 NVIDIA_HOOK = re.compile(r'/usr/local/lib/proxmenux/oci/nvidia-mount-([a-f0-9]{64})\.sh')
@@ -398,6 +399,75 @@ def carry(root, vmid, mount_stopped=True, verify=False, adopted=False):
     except OSError:
         return 'skipped'
     return outcome
+
+
+def carry_backup(root, vmid, original_record, validated_config_text):
+    """Require a verified original record inside a stopped CT before vzdump.
+
+    A coordinated transaction has already marked the host registry pending.
+    The explicit original is the validated plan record, never that pending
+    record or an untrusted copy from inside the guest. Unlike best-effort
+    carry(), any missing copy, configuration drift or I/O failure aborts backup.
+    """
+    failure = translate('The carried record could not be verified before the backup')
+    if isinstance(validated_config_text, bytes):
+        validated_config_text = validated_config_text.decode('utf-8')
+    if (not isinstance(original_record, dict) or original_record.get('vmid') != vmid
+            or original_record.get('status') != 'installed'
+            or original_record.get('pending_transaction') or original_record.get('pending_stack_transaction')
+            or not isinstance(validated_config_text, str)):
+        raise ValueError(failure)
+    identity = original_record.get('installation_id')
+    if not identity or instances.identity(validated_config_text.encode()) != identity:
+        raise ValueError(failure)
+
+    def checked_stopped():
+        status = _run('pct', 'status', str(int(vmid)))
+        if status.returncode or status.stdout.strip() != 'status: stopped':
+            raise ValueError(failure)
+
+    def checked_configuration():
+        result = _run('pct', 'config', str(int(vmid)))
+        if result.returncode or instances.identity(result.stdout.encode()) != identity:
+            raise ValueError(failure)
+        def projection(text):
+            if re.search(r'^\[[^]\r\n]+\]\s*$', text, re.MULTILINE):
+                raise ValueError(failure)
+            values = parse_config(text.encode())
+            # The identity is checked independently; notes and maintenance
+            # locks do not change the image, mounts, network, user or devices.
+            values.pop('description', None)
+            lock = values.pop('lock', None)
+            if lock not in (None, 'backup', 'mounted'):
+                raise ValueError(failure)
+            return values
+        if projection(result.stdout) != projection(validated_config_text):
+            raise ValueError(failure)
+        return result.stdout
+
+    checked_stopped()
+    config = checked_configuration()
+    if _host_directory_missing(vmid) or _run('pct', 'mount', str(int(vmid))).returncode:
+        raise ValueError(failure)
+    try:
+        checked_stopped()
+        checked_configuration()
+        rootfs = ROOTFS / str(int(vmid)) / 'rootfs'
+        value = bundle(original_record, config)
+        value['saved_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        value['generation'] = uuid.uuid4().hex
+        write_copy(rootfs, value, mapped_root(config))
+        copied = read_copy(rootfs)
+        if copied != value or digest(copied) != digest(value):
+            raise ValueError(failure)
+        checked_stopped()
+        checked_configuration()
+    finally:
+        if _run('pct', 'unmount', str(int(vmid))).returncode:
+            raise ValueError(failure)
+    instances.write(instances.location(root, vmid).parent / STAMP,
+                    {'digest': digest(value), 'generation': value['generation']})
+    return {'status': 'carried', 'generation': value['generation'], 'digest': digest(value)}
 
 
 def registered(root):

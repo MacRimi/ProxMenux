@@ -224,6 +224,9 @@
           }
         },
         {
+          "p": "La interfaz de acceso puede llevar una etiqueta VLAN. La instalación avanzada la pregunta junto a la dirección, y Modificar la cambia o la elimina en una aplicación de un contenedor. Una etiqueta puesta en Proxmox se conserva. Con etiqueta, ProxMenux comprueba la aplicación desde dentro de su contenedor, así que el host no necesita acceso a esa VLAN."
+        },
+        {
           "flow": {
             "nodes": [
               {

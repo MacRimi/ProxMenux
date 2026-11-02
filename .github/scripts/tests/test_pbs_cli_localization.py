@@ -167,7 +167,7 @@ class UpdateCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='pbs-update-i18n-') as folder:
             body=function('scripts/global/update-pbs.sh','update_pbs')
             for old,new in [('/var/log/',folder+'/log/'),('/tmp/proxmenux_screen_capture_',folder+'/tmp/proxmenux_screen_capture_'),('/var/run/',folder+'/run/'),('/boot/',folder+'/boot/')]: body=body.replace(old,new)
-            script=UPDATE_HARNESS+function('scripts/utils.sh','translate')+body+'\nupdate_pbs\n'
+            script=UPDATE_HARNESS+function('scripts/utils.sh','translate')+function('scripts/global/common-functions.sh','pmx_confirm_update')+body+'\nupdate_pbs\n'
             result=subprocess.run(['bash','-c',script],capture_output=True,text=True,timeout=15,
                                   env={**os.environ,'REPO':str(ROOT),'FIXTURE':folder,'CASE':case,'LANGUAGE':language,'SUITE':suite})
             files={str(p.relative_to(folder)):p.read_text() for p in Path(folder).rglob('*') if p.is_file()}

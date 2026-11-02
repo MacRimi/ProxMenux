@@ -1,9 +1,13 @@
 """The watchdog of an OCI application is reachable from the Monitor and worded in every language."""
 import ast
+import copy
 import json
 from pathlib import Path
 import re
 from unittest import TestCase
+from unittest.mock import Mock
+from types import SimpleNamespace
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[3]
 LOCALES = ('en', 'es', 'de', 'fr', 'it', 'pt', 'sk', 'sv')
@@ -65,8 +69,44 @@ class OciWatchdogInstaller(TestCase):
         self.assertLess(install.index('deployment = build_deployment(candidate, wizard, mode)'), asked)
         self.assertLess(asked, install.index('approved = wizard.review('))
         self.assertLess(install.index('watchdog = bool(deployment.pop("watchdog", False))'), install.index('run_remote_install('))
-        self.assertIn('set_watchdog(PROJECT_ROOT, sorted(vmids), True)', install)
+        self._assert_jobs_are_excluded_from_installed_watchdog()
         self.assertIn('row(translate("Watchdog"), _yes_no(plan["watchdog"]))', self.CLI)
+
+    def _assert_jobs_are_excluded_from_installed_watchdog(self):
+        node = next(item for item in ast.parse(self.CLI).body
+                    if isinstance(item, ast.FunctionDef) and item.name == 'install_template')
+        class InertImports(ast.NodeTransformer):
+            def visit_ImportFrom(self, item):
+                return None
+        node = InertImports().visit(node)
+        deployment = {'services': [
+            {'name': 'migration', 'deployment': {'execution_mode': 'one-shot'}},
+            {'name': 'database', 'deployment': {}},
+            {'name': 'worker', 'deployment': {}}]}
+        result = {'vmid': 4800, 'stack_vmids': {'web': 4800, 'migration': 4801,
+                                              'database': 4802, 'worker': 4803}}
+        set_watchdog = Mock(return_value=True)
+        class UI:
+            def confirm(self, *args, **kwargs): return True
+            def review(self, *args, **kwargs): return True
+            def close(self): pass
+        def install(project, template, plan, target):
+            self.assertNotIn('watchdog', plan)
+            return result
+        scope = {'Any': Any, 'copy': copy, 'BacktrackUI': lambda ui: ui,
+                 'RestartWizard': RuntimeError, 'InstallError': ValueError,
+                 'build_deployment': lambda *args: copy.deepcopy(deployment),
+                 'watchdog_default': lambda *args: False,
+                 'translate': lambda value: value, '_deployment_summary_text': lambda *args: '',
+                 'PROJECT_ROOT': Path('/inert'), 'source_text': lambda value: 'test', 'APP_TITLE': 'test',
+                 'console': SimpleNamespace(**{name: lambda *args: None for name in
+                     ('show_logo', 'msg_title', 'msg_error', 'msg_ok', 'msg_warn', 'wait_for_enter')}),
+                 'run_remote_install': install, 'carry_records': lambda *args, **kwargs: None,
+                 'images': SimpleNamespace(offer_removal=lambda *args: (False, None)),
+                 '_print_installation_summary': lambda *args: None, 'set_watchdog': set_watchdog}
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), 'cli.py', 'exec'), scope)
+        scope['install_template'](UI(), {'catalog_ui': {'title': {'en_US': 'test'}}}, 'test', 'advanced')
+        set_watchdog.assert_called_once_with(Path('/inert'), [4800, 4802, 4803], True)
 
     def test_both_management_menus_offer_it(self):
         self.assertEqual(self.MENU.count("('watchdog', "), 2)

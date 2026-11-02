@@ -32,7 +32,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -45,5 +44,6 @@ jobs:
           AUTHOR: ${{ github.event.pull_request.user.login }}
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          git fetch --no-tags --depth=1 origin "$BASE"
           git show "$BASE:oci/catalog/verification.json" > "$RUNNER_TEMP/base.json" 2>/dev/null || : > "$RUNNER_TEMP/base.json"
           python3 .github/scripts/oci_validation.py authors --base "$RUNNER_TEMP/base.json" --author "$AUTHOR"

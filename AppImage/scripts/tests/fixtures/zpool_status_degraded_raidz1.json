@@ -1,0 +1,140 @@
+{
+ "output_version": {
+  "command": "zpool status",
+  "vers_major": 0,
+  "vers_minor": 1
+ },
+ "pools": {
+  "pmx-test": {
+   "name": "pmx-test",
+   "state": "DEGRADED",
+   "txg": 8,
+   "spa_version": 5000,
+   "zpl_version": 5,
+   "status": "One or more devices has been taken offline by the administrator.\n\tSufficient replicas exist for the pool to continue functioning in a\n\tdegraded state.\n",
+   "action": "Online the device using 'zpool online' or replace the device with\n\t'zpool replace'.\n",
+   "vdevs": {
+    "pmx-test": {
+     "name": "pmx-test",
+     "vdev_type": "root",
+     "class": "normal",
+     "state": "DEGRADED",
+     "alloc_space": 265216,
+     "total_space": 738197504,
+     "def_space": 491651072,
+     "read_errors": 0,
+     "write_errors": 0,
+     "checksum_errors": 0,
+     "vdevs": {
+      "raidz1-0": {
+       "name": "raidz1-0",
+       "vdev_type": "raidz",
+       "class": "normal",
+       "state": "DEGRADED",
+       "alloc_space": 265216,
+       "total_space": 738197504,
+       "def_space": 491651072,
+       "rep_dev_size": 738197504,
+       "read_errors": 0,
+       "write_errors": 0,
+       "checksum_errors": 0,
+       "vdevs": {
+        "/root/zfstest/d1.img": {
+         "name": "/root/zfstest/d1.img",
+         "vdev_type": "file",
+         "path": "/root/zfstest/d1.img",
+         "class": "normal",
+         "state": "ONLINE",
+         "rep_dev_size": 250784427,
+         "phys_space": 268435456,
+         "read_errors": 0,
+         "write_errors": 0,
+         "checksum_errors": 0,
+         "slow_ios": 0,
+         "guid": 1001
+        },
+        "/root/zfstest/d2.img": {
+         "name": "/root/zfstest/d2.img",
+         "vdev_type": "file",
+         "path": "/root/zfstest/d2.img",
+         "class": "normal",
+         "state": "OFFLINE",
+         "rep_dev_size": 250784427,
+         "phys_space": 268435456,
+         "read_errors": 0,
+         "write_errors": 0,
+         "checksum_errors": 0,
+         "slow_ios": 0,
+         "guid": 1001
+        },
+        "/root/zfstest/d3.img": {
+         "name": "/root/zfstest/d3.img",
+         "vdev_type": "file",
+         "path": "/root/zfstest/d3.img",
+         "class": "normal",
+         "state": "ONLINE",
+         "rep_dev_size": 250784427,
+         "phys_space": 268435456,
+         "read_errors": 0,
+         "write_errors": 0,
+         "checksum_errors": 0,
+         "slow_ios": 0,
+         "guid": 1001
+        }
+       },
+       "guid": 1001
+      }
+     },
+     "guid": 1001
+    }
+   },
+   "logs": {
+    "/root/zfstest/d4.img": {
+     "name": "/root/zfstest/d4.img",
+     "vdev_type": "file",
+     "path": "/root/zfstest/d4.img",
+     "class": "log",
+     "state": "ONLINE",
+     "total_space": 251658240,
+     "def_space": 251658240,
+     "rep_dev_size": 256376832,
+     "phys_space": 268435456,
+     "read_errors": 0,
+     "write_errors": 0,
+     "checksum_errors": 0,
+     "slow_ios": 0,
+     "guid": 1001
+    }
+   },
+   "l2cache": {
+    "/root/zfstest/d5.img": {
+     "name": "/root/zfstest/d5.img",
+     "vdev_type": "file",
+     "path": "/root/zfstest/d5.img",
+     "class": "l2cache",
+     "state": "ONLINE",
+     "total_space": 263716352,
+     "rep_dev_size": 268435456,
+     "phys_space": 268435456,
+     "read_errors": 0,
+     "write_errors": 0,
+     "checksum_errors": 0,
+     "slow_ios": 0,
+     "guid": 1001
+    }
+   },
+   "spares": {
+    "/root/zfstest/d6.img": {
+     "name": "/root/zfstest/d6.img",
+     "vdev_type": "file",
+     "path": "/root/zfstest/d6.img",
+     "class": "spare",
+     "state": "AVAIL",
+     "guid": 1001
+    }
+   },
+   "error_count": 0,
+   "pool_guid": 1000
+  }
+ }
+}

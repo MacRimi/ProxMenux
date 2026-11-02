@@ -27,7 +27,11 @@ def edit_network(deployment, ui):
     network = deployment['network']
     bridge = ask_bridge(ui, translate('Access bridge'), network['bridge'])
     ipv4, gateway = access.ask_ipv4(ui, bridge, network.get('ipv4'), network.get('gateway'))
+    vlan_tag = access.ask_vlan_tag(ui, network.get('vlan_tag'))
     network.update(bridge=bridge, ipv4=ipv4, gateway=gateway)
+    network.pop('vlan_tag', None)
+    if vlan_tag:
+        network['vlan_tag'] = vlan_tag
 
 
 def edit_acceleration(candidate, ui, confirm=True):
@@ -119,7 +123,8 @@ def modification_options(candidate):
         ('cores', row(translate('CPU cores'), resources['cores'])),
         ('memory', row(translate('RAM in MiB'), resources['memory_mb'])),
         ('network', row(translate('Network'),
-                        f"{network.get('bridge', '-')} · {'DHCP' if address == 'dhcp' else address}")),
+                        f"{network.get('bridge', '-')} · {'DHCP' if address == 'dhcp' else address}"
+                        + (f" · VLAN {network['vlan_tag']}" if network.get('vlan_tag') else ''))),
         # Only the paths added by hand: the application's own volumes are not extra.
         ('paths', row(translate('Extra paths'), sum(1 for m in deployment.get('mounts', []) if m.get('custom')))),
     ]

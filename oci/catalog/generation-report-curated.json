@@ -28,6 +28,7 @@
     "poznote",
     "rclone",
     "roonserver",
+    "scanopy",
     "statping",
     "stremio",
     "strfry",
@@ -35,7 +36,7 @@
     "tandoor",
     "tor"
   ],
-  "generated_count": 34,
+  "generated_count": 35,
   "failed": [],
   "failed_count": 0
 }

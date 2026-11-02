@@ -224,6 +224,9 @@
           }
         },
         {
+          "p": "L’interfaccia di accesso può avere un tag VLAN. L’installazione avanzata lo richiede insieme all’indirizzo; per un’applicazione con un solo container, Modifica consente di cambiarlo o rimuoverlo. Un tag impostato in Proxmox viene conservato. Se è presente un tag, ProxMenux verifica l’applicazione dall’interno del suo container, quindi l’host non deve avere accesso a quella VLAN."
+        },
+        {
           "flow": {
             "nodes": [
               {

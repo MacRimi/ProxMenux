@@ -827,7 +827,63 @@
     "temperatureCriticalCount": "Critical temperatures: {count}",
     "temperatureUnavailable": "Temperaturer otillgängliga",
     "temperatureIncomplete": "Temperaturdata är ofullständig",
-    "temperatureUnavailableCount": "Ej tillgänglig: {count}"
+    "temperatureUnavailableCount": "Ej tillgänglig: {count}",
+    "zfs": {
+      "classes": {
+        "normal": "Data",
+        "special": "Special",
+        "dedup": "Dedup",
+        "log": "Logga",
+        "cache": "Cache",
+        "spare": "Spare"
+      },
+      "poolDetails": "Poollayout, skrubbstatus och enhetens hälsa",
+      "detailsUnavailable": "Detaljerad poollayout kräver OpenZFS 2.3 eller senare.",
+      "status": "Status",
+      "action": "Action",
+      "capacity": "Kapacitet",
+      "fragmentation": "Fragmentering",
+      "dedupRatio": "Dedup Ratio",
+      "layout": "Layout",
+      "singleDisk": "Enkel disk",
+      "stripe": "Stripe",
+      "mirror": "Spegel",
+      "raidz": "RAIDZ{parity}",
+      "draid": "dRAID{parity}",
+      "diskCountOne": "{count} disk",
+      "diskCountMany": "{count} diskar",
+      "errorsReported": "Fel rapporterade",
+      "scanTitle": "Scrub / Resilver",
+      "scrub": "Skrubba",
+      "resilver": "Resilver",
+      "neverScrubbed": "Aldrig skrubbad",
+      "scanRunning": "{kind} pågår ({percent}%)",
+      "scanCanceled": "{kind} avbruten",
+      "scanFinished": "{kind} färdig {date}",
+      "started": "Startat",
+      "ended": "Färdig",
+      "repaired": "Reparerad",
+      "scanErrors": "Skanningsfel",
+      "dataErrors": "{count} datafel",
+      "noDataErrors": "Inga kända datafel",
+      "device": "Enhet",
+      "disk": "Disk",
+      "state": "Stat",
+      "readErrors": "Läsfel",
+      "writeErrors": "Skrivfel",
+      "checksumErrors": "Kontrollsummefel",
+      "readShort": "R",
+      "writeShort": "W",
+      "checksumShort": "CK",
+      "slowIos": "Långsamma I/O",
+      "via": "via {name}",
+      "totalSize": "Total storlek",
+      "fragShort": "Frag."
+    },
+    "storageController": "Storage Controller",
+    "noController": "Ingen kontroller upptäckt",
+    "diskCountOne": "{count} disk",
+    "diskCountMany": "{count} diskar"
   },
   "details": {
     "temperature": {
@@ -2312,6 +2368,7 @@
         "testing": "Testning…",
         "testConnection": "Testa anslutningen",
         "ollamaUrl": "Ollama URL",
+        "ollamaApiKeyHint": "Lämna tomt för en vanlig Ollama-server. Om din proxy eller gateway kräver en nyckel skickas den som Authorization: Bearer. Fältet aktiverar inte autentisering på servern.",
         "getKey": "Få nyckel",
         "loadModelsPlaceholder": "Klicka på Ladda för att hämta modeller",
         "selectModel": "Välj modell",
@@ -2575,6 +2632,10 @@
           "title": "Diskutrymme - LXC rootfs",
           "description": "Rotskiva per behållare, utvärderad mot rootfs-storleken från PVE."
         },
+        "vm_disk": {
+          "title": "Diskutrymme - VM",
+          "description": "Filsystem i körande VM så som QEMU-gästagenten rapporterar dem, inklusive genomsläppta diskar. VM utan gästagent utvärderas inte."
+        },
         "lxc_mount": {
           "title": "LXC fästpunkter",
           "description": "Kapacitet för monteringspunkter inuti körda CT: er (mp0, mp1, NFS, bind mounts). Utesluter rootfs; som täcks ovan."
@@ -2609,8 +2670,12 @@
       "excluded": "Exkluderad",
       "notConnected": "Inte ansluten",
       "saveFailed": "Kunde inte spara diskutslag.",
-      "help": "En exkluderad disk får ingen schemalagd temperatur eller SMART läser - inte ens en power-mode fråga - så det lämnas helt ensam. Öppna SMART-detaljerna läser det fortfarande.",
-      "idleHelp": "Mekaniska diskar utan aktivitet lämnas redan ensam automatiskt tills något använder dem igen."
+      "help": "En exkluderad disk får ingen schemalagd temperatur eller SMART läser - inte ens en power-mode fråga - så det lämnas helt ensam. Öppna SMART-detaljerna läser det fortfarande."
+    },
+    "storageDisplay": {
+      "title": "Storage Display",
+      "description": "Ändra hur diskar läggs ut på sidan Lagring",
+      "groupByController": "Group physical disks by storage controller"
     }
   },
   "login": {
@@ -3732,7 +3797,14 @@
       "auditReviewDate": "Audit & Report — ett accepterat fynd kan ha ett granskningsdatum som tar upp det igen utan att beslutet dras tillbaka, och jämförelsen visar om ett fynd blev värre, blev bättre eller låg kvar (med @Vaso73).",
       "ociCatalog": "OCI manager Apps (Technology Preview) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller 514 applikationer.",
       "pbsSupport": "ProxMenux på Proxmox Backup Server — installeras med samma kommando och öppnar en egen meny, med efterinstallation och en Monitor som visar serverns hälsa, datalager och uppgifter (bidrag från @jcastro).",
-      "menuSearch": "Sökning i huvudmenyn — ett namn eller en del av det hittar ett ProxMenux-alternativ, en OCI-applikation eller ett Helper-Script och öppnar det på dess första skärm."
+      "menuSearch": "Sökning i huvudmenyn — ett namn eller en del av det hittar ett ProxMenux-alternativ, en OCI-applikation eller ett Helper-Script och öppnar det på dess första skärm.",
+      "composeStacks": "Compose-filer med flera tjänster — Custom image installerar en LXC per tjänst på ett privat nätverk, startade i beroendeordning. Uppdateringar, säkerhetskopior och borttagning gäller hela programmet.",
+      "keepProxmoxChanges": "OCI-uppdateringar behåller det du ändrar i Proxmox — variabler, startkommando, nätverksalternativ, DNS, features, diskstorlekar och lxc.*-rader finns kvar i den återskapade containern, även vid schemalagda uppdateringar och för varje medlem i en stack.",
+      "ociVlan": "VLAN-tagg för OCI-program — den avancerade installationen frågar efter den bredvid adressen, och Ändra byter den för ett enskilt program. Värden behöver ingen åtkomst till det VLAN:et.",
+      "ociNewApps": "Nytt i OCI-katalogen — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX och tio program till, och Ollama och llama.cpp körs på integrerade GPU:er från Intel och AMD.",
+      "hostUpdateJob": "Proxmox-uppdateringar som fortsätter efter utloggning — uppdateringen körs som ett jobb på servern och öppnas igen när du loggar in. Efter en ny kärna visas en väntande omstart, med en knapp som först kontrollerar värden.",
+      "storageDetails": "Lagringsdetaljer — ZFS-pooler visar sin struktur, scrub och enheternas hälsa, och varje disk visar sin lagringskontroller, även på sidan Hårdvara. Tröskelvärden för VM-diskar finns nu i Inställningar.",
+      "log2ramV2": "Log2RAM 2.0 — journalen och Proxmox uppgiftsloggar stannar på disken med sin historik, och bara loggar som ändras hela tiden går till RAM. Värdar som redan använder det uppdateras med ProxMenux."
     }
   },
   "network": {
@@ -4089,7 +4161,9 @@
       "interface": "Gränssnitt",
       "rotationRate": "Rotationshastighet",
       "classCode": "Klasskod",
-      "serial": "Serie"
+      "serial": "Serie",
+      "storageController": "Storage Controller",
+      "attachedDisks": "Attached Disks"
     },
     "values": {
       "cores": "{count} kärnor",
@@ -5237,7 +5311,8 @@
       "certificates": "Certifikat",
       "login_attempts": "Inloggningsförsök",
       "fail2ban": "Fail2Ban",
-      "proxmox_storages": "Proxmox lagring"
+      "proxmox_storages": "Proxmox lagring",
+      "reboot_required": "Omstart krävs"
     },
     "details": {
       "allOperational": "Alla system i drift",
@@ -5316,7 +5391,8 @@
       "securityCheckUnavailable": "Säkerhetskontroll inte tillgänglig: {error}",
       "certificateExpired": "Certifikatet har gått ut",
       "certificateExpiresDays": "Certifikats utgång (dagar): {days}",
-      "certificateInconclusive": "Certifikatkontrollen gav inget säkert resultat"
+      "certificateInconclusive": "Certifikatkontrollen gav inget säkert resultat",
+      "noPendingUpdates": "Inga väntande uppdateringar"
     },
     "time": {
       "justNow": "just nu",
@@ -5353,7 +5429,53 @@
       "years": "{count} år",
       "24hours": "24 timmar",
       "7days": "7 dagar"
-    }
+    },
+    "restart": {
+      "button": "Starta om servern",
+      "title": "Starta om servern {server}?",
+      "impact": "Omstart avbryts tillfälligt servern, virtuella maskiner, behållare och deras tjänster.",
+      "cancel": "Avbryt",
+      "confirm": "Bekräfta omstart",
+      "blocked": "Omstart kommer att vara tillgänglig när värduppdateringen är klar.",
+      "accepted": "Begäran om omstart accepteras.Kontrollera att servern återgår online.",
+      "unconfirmed": "Omstartsbegäran kunde inte verifieras.Kontrollera servern innan du försöker igen."
+    },
+    "versions": {
+      "title": "ProxMenux uppdatering",
+      "installed": "Installerad version",
+      "latest": "Tillgänglig version",
+      "lastKnown": "Senast kända tillgängliga version",
+      "available": "Uppdatering tillgänglig",
+      "current": "ProxMenux är uppdaterad",
+      "currentVersion": "Version {version} är uppdaterad",
+      "unknown": "Det gick inte att verifiera den tillgängliga versionen",
+      "unverified": "Ej verifierad",
+      "stable": "Stabil kanal",
+      "beta": "Beta kanal",
+      "checked": "Senaste lyckade kontroll: {time}"
+    },
+    "hostUpdate": {
+      "running": "Värduppdateringen fortsätter även om du loggar ut.Öppna den igen efter att ha loggat in.",
+      "finished": "Den senaste värduppdateringen har slutförts.Resultatet är tillgängligt.",
+      "attention": "Värduppdateringen behöver uppmärksamhet.Det har inte stoppats;återanslut för att inspektera den.",
+      "view": "Visa uppdatering",
+      "viewResult": "Visa resultat",
+      "hideResult": "Dölj resultatet",
+      "resultTitle": "Värduppdateringsresultat",
+      "resultReadOnly": "Sparad utdata från en slutförd uppdatering.Att öppna den kör inte en annan uppdatering.",
+      "resultUnavailable": "Det sparade resultatet kunde inte laddas.Ingen uppdatering startades.",
+      "retryResult": "Ladda om resultatet",
+      "loadingResult": "Laddar sparat resultat...",
+      "closeResult": "Stäng resultat",
+      "noReboot": "Ingen omstart krävs",
+      "rebootMarker": "Operativsystemet kräver en omstart.",
+      "rebootUnknown": "Kunde inte avgöra om en omstart krävs.",
+      "rebootKernel": "En omstart krävs för att aktivera {installed}.Körs för närvarande: {running}."
+    },
+    "updateSystem": "Uppdatera systemet",
+    "packagePlanNote": "Planen innehåller också nya paket, till exempel en ny kärna.Översikten räknar endast uppdateringar av befintliga paket.",
+    "snapshotUnavailable": "Nya hälsoresultat är inte tillgängliga ännu.",
+    "lastKnownResults": "Visar de senaste tillgängliga resultaten med deras ursprungliga kontrolltid."
   },
   "profilePage": {
     "loading": "Laddar profil...",
@@ -7647,7 +7769,11 @@
         "unconfirmedBody": "Säkerhetskopieringens resultat är inte bekräftat.",
         "warningTitle": "{hostname}: Säkerhetskopiering klar med varningar",
         "warningBody": "Säkerhetskopiering klar med varningar.",
-        "diagnosticsOmitted": "Utelämnade diagnosrader eller text: {count}. Originalrapporten bevaras."
+        "diagnosticsOmitted": "Utelämnade diagnosrader eller text: {count}. Originalrapporten bevaras.",
+        "quotaCause": "En lagringskvot hindrade säkerhetskopieringen från att slutföras.",
+        "quotaAffected": "Säkerhetskopior {ids}: en lagringskvot hindrade dem från att slutföras.",
+        "quotaCheck": "Kontrollera kvoten för säkerhetskopieringslagringen {storage} innan du försöker igen.",
+        "causeMissing": "Säkerhetskopior {ids}: sammanfattningen anger inte orsaken; kontrollera de fullständiga loggarna för dessa uppgifter."
       }
     }
   },

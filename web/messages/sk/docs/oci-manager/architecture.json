@@ -48,7 +48,7 @@
               },
               {
                 "icon": "braces",
-                "title": "Kontrakt kontajnera",
+                "title": "Konfigurácia kontajnera",
                 "body": "Entrypoint, Cmd, prostredie, používateľ, pracovný adresár, signál na zastavenie, porty a zväzky."
               },
               {
@@ -96,7 +96,7 @@
               [
                 "Používateľ",
                 "VMID, úložisko, sieť",
-                "Kontrakt inštancie"
+                "Uložená konfigurácia inštalácie"
               ]
             ]
           }
@@ -136,7 +136,7 @@
               },
               {
                 "title": "Zaznamenať konfiguráciu",
-                "body": "Výsledná konfigurácia sa uloží do kontraktu inštancie, ktorý sa používa pri aktualizáciách a opätovnom vytvorení."
+                "body": "Výsledná konfigurácia sa uloží do záznamu o inštalácii, ktorý sa používa pri aktualizáciách a opätovnom vytvorení kontajnera."
               }
             ]
           }

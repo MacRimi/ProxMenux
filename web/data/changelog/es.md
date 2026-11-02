@@ -1,3 +1,78 @@
+
+## 2026-11-02
+
+### Nueva versión ProxMenux v1.2.8
+
+![ProxMenux 1.2.8](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_128.png)
+
+ProxMenux 1.2.8 es una versión correctiva y breve, construida a partir de lo que los usuarios han reportado tras la 1.2.7. **OCI manager Apps** es lo que más avanza: archivos Compose con varios servicios, actualizaciones que conservan lo que cambias en Proxmox, una etiqueta VLAN para la interfaz de acceso y diecisiete aplicaciones nuevas. **Log2RAM 2.0** mantiene el journal y los registros de Proxmox en disco, y ProxMenux Monitor añade los detalles de los pools ZFS, las controladoras de almacenamiento y las actualizaciones de Proxmox que continúan al cerrar la sesión.
+
+Un agradecimiento especial a [@Vaso73](https://github.com/Vaso73), [@f3rs3n](https://github.com/f3rs3n), [@jcastro](https://github.com/jcastro) y [@DrOwl](https://github.com/DrOwl) por sus contribuciones y revisiones, y a todos los que han reportado un problema o sugerido una aplicación.
+
+---
+
+## 📦 OCI manager Apps
+
+- **Custom image instala archivos Compose con varios servicios** ([PR #550](https://github.com/MacRimi/ProxMenux/pull/550), aportado por [@jcastro](https://github.com/jcastro)): un LXC por servicio en una red privada, arrancados por orden de dependencias, como las aplicaciones multicontenedor del catálogo. Se conservan las referencias de imagen, los archivos de entorno, las dependencias, los datos compartidos y las tareas de un solo uso, y las actualizaciones, los backups, la recuperación tras una restauración y la eliminación funcionan sobre toda la pila.
+- **Tus propias variables se quedan en el contenedor OCI.** Si añades o cambias una variable en las opciones del contenedor en Proxmox, se conserva: se guarda en el oci-compose de la aplicación y la actualización sigue adelante con ella, manual o programada, igual que en Docker. Funciona en aplicaciones sueltas y en cada miembro de una pila. Una variable que define la imagen y que hayas eliminado vuelve con el valor de la imagen.
+- **Las actualizaciones conservan el resto de lo que cambias en Proxmox**: el comando de arranque, las opciones de red, el DNS, el nombre del host, las features, la protección, los tamaños de disco, los directorios del host añadidos y las líneas `lxc.*` siguen en el contenedor reconstruido, también en las actualizaciones programadas.
+- **La interfaz de acceso admite una etiqueta VLAN** ([#565](https://github.com/MacRimi/ProxMenux/issues/565), pedida por [@xistoso](https://github.com/xistoso)): la instalación avanzada la pregunta junto a la dirección, y Modificar la cambia o la elimina en una aplicación de un contenedor. Con etiqueta, la aplicación se comprueba desde dentro de su contenedor, así que el host no necesita acceso a esa VLAN.
+- **Ollama y llama.cpp funcionan en GPU integradas Intel y AMD**: un nuevo perfil Vulkan usa la GPU a través de su nodo de renderizado, y en las iGPU Radeon como la 680M y la 780M se ofrece el perfil ROCm como experimental.
+- **Diecisiete aplicaciones nuevas.** Como pilas: Authentik ([PR #563](https://github.com/MacRimi/ProxMenux/pull/563)), TeslaMate ([PR #555](https://github.com/MacRimi/ProxMenux/pull/555)), Umami ([PR #541](https://github.com/MacRimi/ProxMenux/pull/541)) y Scanopy ([sugerida](https://github.com/MacRimi/ProxMenux/discussions/440) por [@gabglus](https://github.com/gabglus)), cuyo daemon escanea la red desde un LXC sin privilegios. Como contenedores únicos: Zigbee2MQTT ([PR #545](https://github.com/MacRimi/ProxMenux/pull/545)), con el adaptador como dispositivo USB opcional, Scrypted ([PR #546](https://github.com/MacRimi/ProxMenux/pull/546)), NetAlertX ([PR #547](https://github.com/MacRimi/ProxMenux/pull/547)), y Activepieces, Bytebase, Campfire, Chhoto URL, Ech0, Kopia, Metabase, OpenHabitTracker, Restic REST Server y Watcharr ([PR #538](https://github.com/MacRimi/ProxMenux/pull/538)). Todas menos Scanopy son aportaciones de [@jcastro](https://github.com/jcastro).
+- **Las pilas nuevas reciben nombres de contenedor legibles** ([PR #555](https://github.com/MacRimi/ProxMenux/pull/555), aportado por [@jcastro](https://github.com/jcastro)), como `teslamate`, `teslamate-db` y `teslamate-grafana`.
+- **La entrada de Ollama describe lo que ofrece la imagen** ([PR #566](https://github.com/MacRimi/ProxMenux/pull/566), aportado por [@jcastro](https://github.com/jcastro)): su API HTTP en el puerto 11434, con el enlace y la comprobación de arranque en `/api/version`.
+- **Una actualización elimina el snapshot que deja un backup interrumpido** ([#565](https://github.com/MacRimi/ProxMenux/issues/565), reportado por [@kiosvantra](https://github.com/kiosvantra)). Un snapshot hecho por el usuario detiene la actualización, porque un contenedor reconstruido no puede conservarlo.
+- **Un contenedor que ignora la señal de apagado se detiene a los 60 segundos**, como hace `docker stop`, durante una actualización y al recuperar una operación interrumpida.
+
+## 🖥️ Monitor — actualizaciones de Proxmox y reinicios pendientes
+
+- **La actualización de Proxmox se ejecuta como una tarea en el servidor** ([PR #551](https://github.com/MacRimi/ProxMenux/pull/551), aportado por [@Vaso73](https://github.com/Vaso73)): al cerrar el terminal o la sesión sigue en marcha, y al volver a entrar se abre la misma actualización. Una actualización terminada se abre como resultado de solo lectura.
+- **Se muestra un reinicio pendiente cuando el kernel en uso es más antiguo que el instalado**, también tras actualizaciones hechas fuera del Monitor. El botón de reinicio comprueba el host, las actualizaciones activas y los bloqueos de paquetes antes de reiniciar.
+- **La fila de la versión de ProxMenux** se mantiene compacta cuando la versión instalada es la última y muestra las dos cuando hay una más nueva.
+
+## 💽 Monitor — almacenamiento
+
+- **Los pools ZFS muestran su estructura y su estado** ([PR #561](https://github.com/MacRimi/ProxMenux/pull/561), aportado por [@DrOwl](https://github.com/DrOwl)): vdevs y sus miembros, el último scrub o resilver, errores por dispositivo, fragmentación y ratio de deduplicación, con OpenZFS 2.3 o posterior.
+- **Cada disco muestra la controladora de almacenamiento a la que está conectado** ([PR #562](https://github.com/MacRimi/ProxMenux/pull/562), aportado por [@DrOwl](https://github.com/DrOwl)), en sus detalles y en la página de Hardware. Almacenamiento puede agrupar los discos físicos por controladora, una opción de Ajustes.
+- **Umbrales de disco de VM en Ajustes** ([#543](https://github.com/MacRimi/ProxMenux/issues/543), sugerido por [@byte21516](https://github.com/byte21516)).
+- **Todos los discos se supervisan salvo los excluidos en Ajustes**: un disco mecánico sin actividad sigue mostrando su tipo, modelo, número de serie, temperatura y datos SMART ([#542](https://github.com/MacRimi/ProxMenux/issues/542), reportado por [@ovikiss](https://github.com/ovikiss); [#553](https://github.com/MacRimi/ProxMenux/issues/553), reportado por [@peterurbanec](https://github.com/peterurbanec)). Un disco en Exclusiones de discos no recibe nada, así que puede apagarse con su propio temporizador, y un disco que ya está en reposo sigue dormido.
+
+## 📝 Log2RAM 2.0
+
+- **El journal y los registros de tareas de Proxmox VE y Proxmox Backup Server se quedan en disco** ([#540](https://github.com/MacRimi/ProxMenux/issues/540), reportado por [@shtefko](https://github.com/shtefko)), así que conservan su historial. Log2RAM guarda los registros que cambian constantemente, como el registro de accesos de pveproxy.
+- **Una vigilancia revisa el disco en RAM cada 10 minutos**: al pasar del 85 % rota los registros, comprime los recién rotados y lo escribe todo en disco. No se vacía ningún registro.
+- **Cada sincronización se fuerza a disco**, de modo que una sincronización terminada sobrevive a un corte de luz. Un Log2RAM instalado pasa a este diseño al actualizar ProxMenux, y el cambio se aplica en el siguiente arranque.
+
+## 🔔 Notificaciones
+
+- **Ollama (Local) admite una clave de API opcional** para servidores tras un proxy o una puerta de enlace con autenticación. La clave se guarda cifrada y se muestra enmascarada, y la prueba de conexión distingue un fallo de autenticación de un servidor al que no se llega.
+
+## 🛠️ Correcciones
+
+- **Los trabajos de backup del host se ejecutan según su programación**: el menú comprueba la programación al crear un trabajo, y al actualizar ProxMenux se reparan los trabajos guardados cuyo temporizador systemd no aceptaba, como `daily 02:00`.
+- **Un servicio que se recarga o se reinicia cuenta como en marcha** ([#567](https://github.com/MacRimi/ProxMenux/issues/567), reportado por [@Joshua1264](https://github.com/Joshua1264)): un reinicio dispone de unos segundos para terminar, y no se saca ninguna conclusión mientras se actualizan paquetes. Un servicio que ha fallado o que nunca termina de arrancar se sigue notificando.
+- **La vista de GPU Intel termina `intel_gpu_top` con cada lectura** ([#568](https://github.com/MacRimi/ProxMenux/issues/568), reportado por [@FromTheCToTheG](https://github.com/FromTheCToTheG)), lo que además hace la lectura medio segundo más rápida.
+- **El uso de disco de una VM cuenta todos los sistemas de archivos del invitado** ([#559](https://github.com/MacRimi/ProxMenux/issues/559), con el arreglo propuesto por [@TheFoxCraft](https://github.com/TheFoxCraft)), también en invitados cuyo agente no indica el nombre del dispositivo, como Alpine.
+- **La comprobación de LVM mantiene el filtro de Proxmox para zvols e imágenes RBD** en hosts cuyos únicos grupos de volúmenes pertenecen a sus VM ([#552](https://github.com/MacRimi/ProxMenux/issues/552), reportado por [@osipovdm-dot](https://github.com/osipovdm-dot)).
+- **Un grupo de volúmenes sin volúmenes activos se considera correcto**, como un disco de otra instalación, VM o CT detenidos o un LVM compartido. Un almacenamiento que Proxmox no puede usar se sigue avisando desde la comprobación de almacenamiento.
+- **El instalador de NVIDIA se detiene antes de tocar el driver si Secure Boot está activado** ([#571](https://github.com/MacRimi/ProxMenux/issues/571), reportado por [@Balethorn](https://github.com/Balethorn)), porque el kernel rechazaría el módulo sin firmar, y cualquier fallo del instalador queda en pantalla con su motivo.
+- **Bitwarden reconoce el campo 2FA en el inicio de sesión del Monitor** ([#570](https://github.com/MacRimi/ProxMenux/issues/570), reportado por [@shtefko](https://github.com/shtefko)): la pista del código de backup mantiene su texto y su lugar, fuera del grupo del campo.
+- **Secure Gateway se instala en hosts Proxmox sobre BTRFS** ([#564](https://github.com/MacRimi/ProxMenux/issues/564), reportado por [@78v5](https://github.com/78v5)): la plantilla de Alpine va a un almacenamiento activo que admite plantillas de contenedor.
+- **Un error de E/S de disco del kernel se registra en su disco**, con su número de serie, también cuando el error nombra una partición.
+- **El Monitor se instala como aplicación (PWA) desde el navegador**: sirve su propio manifiesto de aplicación web y su service worker, con los iconos de 192 y 512 px que exige Chrome.
+- **Los títulos del eje Y se mantienen dentro de los gráficos de la vista general** ([PR #539](https://github.com/MacRimi/ProxMenux/pull/539), aportado por [@f3rs3n](https://github.com/f3rs3n)).
+- **El catálogo de seguimiento de versiones de aplicaciones se genera desde los repositorios actuales de Helper-Scripts**.
+- **La confirmación de actualización del sistema se abre con Sí seleccionado**, en el post-install y en los scripts de actualización de Proxmox VE 8 y VE 9, y la lista de paquetes se mantiene alineada.
+
+## 🙏 Agradecimientos
+
+- **[@jcastro](https://github.com/jcastro)** — la importación de archivos Compose con varios servicios, probada en pilas reales, dieciséis de las aplicaciones nuevas y la guía para proponer aplicaciones al catálogo OCI.
+- **[@Vaso73](https://github.com/Vaso73)** — la tarea de actualización de Proxmox en el servidor y la detección de reinicios pendientes, probadas con una actualización y un reinicio reales, y la traducción al eslovaco.
+- **[@DrOwl](https://github.com/DrOwl)** — el mapa de controladoras de almacenamiento y los detalles de los pools ZFS.
+- **[@f3rs3n](https://github.com/f3rs3n)** — los gráficos de la vista general y la traducción al italiano.
+- **Carlos Cáceres** — el informe y el ejemplo de configuración que dieron pie a la clave de API para Ollama local.
+- **Todos los que han reportado un problema o sugerido una aplicación**, citados junto a cada cambio.
+
 ## 2026-10-26
 
 ### Nueva versión ProxMenux v1.2.7

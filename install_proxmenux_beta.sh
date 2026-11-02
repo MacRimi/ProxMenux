@@ -793,6 +793,8 @@ install_beta() {
         bash "$BASE_DIR/oci/engine/remote/stack_dependency_hook.sh" --refresh >/dev/null 2>&1 || true
         systemctl try-restart proxmenux-oci-watchdog.service >/dev/null 2>&1 || true
     fi
+    # A host backup job saved with a schedule systemd rejects never runs.
+    bash "$BASE_DIR/scripts/backup_restore/backup_scheduler.sh" --repair-schedules >/dev/null 2>&1 || true
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     [ -f "$BASE_DIR/install_proxmenux.sh" ]      && chmod +x "$BASE_DIR/install_proxmenux.sh"
     [ -f "$BASE_DIR/install_proxmenux_beta.sh" ] && chmod +x "$BASE_DIR/install_proxmenux_beta.sh"

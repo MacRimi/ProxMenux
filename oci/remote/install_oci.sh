@@ -361,10 +361,10 @@ cleanup_canonical_inputs() {
 healthcheck_probe() {
   local code status=0
   if [[ ${HC_ANY_STATUS:-false} == true ]]; then
-    code=$(curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
+    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
     (( status == 0 )) && [[ $code =~ ^[1-4][0-9][0-9]$ ]] && return 0
   else
-    curl "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
+    oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
     (( status == 0 )) && return 0
   fi
   # A port taken from the compose file may serve a database or SSH: an answer
@@ -994,6 +994,11 @@ prepare_nvidia_driver_links() {
 
 source "$SCRIPT_DIR/oci_nvidia_setup.sh"
 
+oci_valid_extra_hostname() {
+  # Compose network aliases may contain underscores; each entry stays one hosts-file token.
+  [[ ${#1} -le 253 && $1 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]
+}
+
 apply_extra_hosts() {
   local count rootfs hosts_file temporary address hostname bridge_address failed=0
   count=$(jq '.extra_hosts? // [] | length' "$DEPLOYMENT_FILE")
@@ -1021,7 +1026,7 @@ apply_extra_hosts() {
           || { oci_log "Could not resolve host-gateway on $BRIDGE"; failed=1; break; }
         address=$bridge_address
       fi
-      [[ $hostname =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] \
+      oci_valid_extra_hostname "$hostname" \
         || { oci_log "Invalid extra hostname: $hostname"; failed=1; break; }
       [[ $address =~ ^[0-9A-Fa-f:.]+$ ]] \
         || { oci_log "Invalid extra host address: $address"; failed=1; break; }
@@ -1039,12 +1044,13 @@ apply_extra_hosts() {
 }
 
 # Settings an update gives back to the rebuilt container before it starts:
-# the LAN leg of a suite or stack member, its start order and current tags.
+# the LAN leg of a suite or stack member, its start order and current tags,
+# and what the user set in Proxmox.
 apply_kept_settings() {
   local key value
   while IFS=$'\t' read -r key value; do
     [[ -n $key ]] || continue
-    [[ $key == net1 || $key == startup || $key == tags ]] \
+    [[ $key =~ ^(net[01]|startup|tags|features|nameserver|searchdomain|timezone|cpulimit|cmode|console|tty|hookscript|entrypoint)$ ]] \
       || die "$(translate "Unsupported kept setting:") $key"
     if [[ $key == tags && -z $value ]]; then
       oci_quiet pct set "$VMID" --delete tags
@@ -1052,6 +1058,13 @@ apply_kept_settings() {
       oci_quiet pct set "$VMID" "--$key" "$value"
     fi || die "$(translate "Could not restore the container setting:") $key"
   done < <(jq -r '.kept_proxmox_settings // {} | to_entries[] | [.key, .value] | @tsv' "$DEPLOYMENT_FILE")
+  while IFS= read -r value; do
+    [[ -n $value ]] || continue
+    [[ $value =~ ^lxc\.[A-Za-z0-9._-]+:\  ]] \
+      || die "$(translate "Unsupported kept setting:") $value"
+    printf '%s\n' "$value" >>"$CONF" \
+      || die "$(translate "Could not restore the container setting:") $value"
+  done < <(jq -r '.custom_lxc // [] | .[]' "$DEPLOYMENT_FILE")
 }
 
 apply_runtime_user() {
@@ -1709,6 +1722,8 @@ NET="name=eth0,bridge=${BRIDGE},firewall=${FIREWALL},host-managed=1,ip=${IPV4},t
 if [[ -n $GATEWAY ]]; then
   NET="${NET},gw=${GATEWAY}"
 fi
+oci_vlan_option vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+NET="${NET}${OCI_VLAN_OPTION}"
 if [[ -n $MAC_ADDRESS ]]; then
   [[ $MAC_ADDRESS =~ ^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$ ]] \
     || die "$(translate "Invalid MAC address:") $MAC_ADDRESS"
@@ -2101,6 +2116,16 @@ ensure_runtime_home
 apply_rlimits
 apply_host_monitor
 apply_kept_settings
+
+# Recreated stack members retain their owned pre-init routes. Append rather
+# than replacing lxc.include: other managed runtime includes must survive.
+if jq -e '.stack_public_routes != null' "$DEPLOYMENT_FILE" >/dev/null; then
+  ROUTE_INCLUDE=$(python3 "${SCRIPT_DIR}/oci_stack_public_routes.py" install "$VMID" \
+    --deployment "$DEPLOYMENT_FILE" --installation-id "$INSTANCE_ID") \
+    || die "$(translate "Managed public route installation failed")"
+  [[ -n "$ROUTE_INCLUDE" ]] || die "$(translate "Managed public route include is missing")"
+  grep -Fxq "$ROUTE_INCLUDE" "$CONF" || printf '%s\n' "$ROUTE_INCLUDE" >>"$CONF"
+fi
 
 while IFS= read -r REPAIR_ENCODED; do
   [[ -n $REPAIR_ENCODED ]] || continue

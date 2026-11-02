@@ -20,8 +20,7 @@ AFTER = 'The recovery did not complete. Review the log and choose "{choice}" aga
 REGISTRY_ADVICE = ('Check the image reference and registry access. If the registry is unavailable, '
                    'try again later. For a private image, sign in from Registry accounts in the OCI menu.')
 NEW_KEYS = (
-    'The Compose file describes several services:',
-    'Only one service at a time can be installed this way.',
+    'Containers of the application:',
     'No docker run command was given',
     'Image selection was cancelled',
     'Could not inspect the image in its registry:',
@@ -77,15 +76,19 @@ class OciWordingTests(TestCase):
             setattr(module, '_cache', {NEW_KEYS[0]: 'Several services (translated):'})
             self.assertEqual(module.translate(NEW_KEYS[0]), 'Several services (translated):')
 
-    def test_multiple_services_named_not_images(self):
+    def test_multiple_services_keep_their_names_and_enter_stack_conversion(self):
+        # Reusing one image twice still creates two distinct Compose services.
+        document = {'services': {'alpha': {'image': 'same:latest'},
+                                 'beta': {'image': 'same:latest'}}}
+        converted = object()
+        stack = Mock(return_value=converted)
         template = function(CUSTOM, 'template_from_compose',
-            _services=lambda doc: doc['services'], _check_mounts=lambda _: None)
-        with self.assertRaises(ConversionError) as caught:
-            template(json.dumps({'services': {'alpha': {'image': 'same:latest'},
-                                              'beta': {'image': 'same:latest'}}}))
-        self.assertEqual(str(caught.exception),
-                         'The Compose file describes several services: alpha, beta. '
-                         'Only one service at a time can be installed this way.')
+            _services=lambda doc: doc['services'], _template_from_stack=stack)
+        self.assertIs(template(json.dumps(document)), converted)
+        stack.assert_called_once()
+        self.assertEqual(stack.call_args.args, (document, None))
+        self.assertFalse(stack.call_args.kwargs['interpolated'])
+        self.assertIsNone(stack.call_args.kwargs.get('image_entrypoints'))
 
     def test_empty_paste_is_specific_and_nonempty_unchanged(self):
         for title, expected in ((None, 'No Compose file was given'),
@@ -108,7 +111,8 @@ class OciWordingTests(TestCase):
     def test_registry_nonzero_and_success_command_unchanged(self):
         result = SimpleNamespace(returncode=1, stdout='', stderr='connection timed out')
         run = Mock(return_value=result)
-        report = function(CUSTOM, 'registry_report', subprocess=SimpleNamespace(run=run))
+        report = function(CUSTOM, 'registry_report', subprocess=SimpleNamespace(run=run),
+                          _registry_lookup=lambda reference: reference)
         self.assertEqual(report('example:latest'),
                          (False, 'Could not inspect the image in its registry: example:latest'))
         run.assert_called_once_with(['skopeo', 'inspect', '--raw', 'docker://example:latest'],

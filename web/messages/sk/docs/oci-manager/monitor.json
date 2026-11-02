@@ -77,7 +77,7 @@
               "Keď register zverejní nový digest, na karte sa zobrazí <strong>Nový obraz</strong> s jeho dátumom a digest, aj keď sa verzia aplikácie vo vnútri nezmenila: prestavba na aktualizovanej báze je aktualizáciou.",
               "Keď sa hodnoty digest zhodujú, karta zobrazí <strong>Verzia</strong>.",
               "Karta odkazuje na úložisko obrazu: jeho projekt GitHub alebo jeho stránku Docker Hub pre oficiálny obraz.",
-              "Prístupové spojenie používa LAN adresu kontajnera, aj pre hlavného člena viackontajnerovej aplikácie, ktorá má druhú adresu vo svojej súkromnej sieti.",
+              "Prístupové spojenie používa LAN adresu kontajnera, aj pri hlavnom kontajneri aplikácie s viacerými kontajnermi, ktorá má druhú adresu vo svojej súkromnej sieti.",
               "Tlačidlo <strong>Obnoviť údaje</strong> znovu načíta záznam aj register obrazov. Možnosti vyhľadávania alebo registrácie ďalších aplikácií sa neponúkajú: kontajner obsahuje presne aplikáciu zo svojho záznamu."
             ]
           }
@@ -108,7 +108,7 @@
             "rows": [
               [
                 "Aktualizácia",
-                "Aktualizácia z časti <lifecycleLink>Spravovať nainštalované aplikácie OCI</lifecycleLink> pre tento kontajner v termináli Monitor. Možno ju spustiť aj bez nového obrazu; vtedy sa nič nezmení. Vo viackontajnerovej aplikácii aktualizuje všetkých členov."
+                "Aktualizácia z časti <lifecycleLink>Spravovať nainštalované aplikácie OCI</lifecycleLink> pre tento kontajner v termináli Monitor. Možno ju spustiť aj bez nového obrazu; vtedy sa nič nezmení. Pri aplikácii s viacerými kontajnermi aktualizuje všetky jej kontajnery."
               ],
               [
                 "Upraviť",
@@ -120,13 +120,13 @@
               ],
               [
                 "Obnoviť (obnovený kontajner)",
-                "Zobrazí sa pri kontajneri obnovenom zo zálohy, ktorý na tomto hostiteľovi nemá kontrakt, v časti <strong>Obnovená aplikácia OCI</strong>. Otvorí <lifecycleLink>obnovu</lifecycleLink> v termináli Monitor; po registrácii sa zobrazia možnosti Aktualizovať a Upraviť."
+                "Zobrazí sa pri kontajneri obnovenom zo zálohy, ktorý na tomto hostiteľovi nemá uloženú konfiguráciu, v časti <strong>Obnovená aplikácia OCI</strong>. Otvorí <lifecycleLink>obnovu</lifecycleLink> v termináli Monitor; po registrácii sa zobrazia možnosti Aktualizovať a Upraviť."
               ]
             ]
           }
         },
         {
-          "p": "Externé zmeny, hostiteľské adresáre a multikontajnerové aplikácie sú spracované ako v ponuke OCI. Vo viackontajnerovej aplikácii sa tlačidlá a možnosti zobrazia len na hlavnom kontajneri; ostatní členovia zobrazujú svoj obraz, poznámku, že sú aktualizované z hlavného kontajnera a tlačidlo, ktoré ho otvára. Keď sa terminál uzavrie, obraz, záznam a pripojenia sa znovu prečítajú."
+          "p": "Externé zmeny, adresáre hostiteľa a aplikácie s viacerými kontajnermi sa spracujú rovnako ako v ponuke OCI. Pri aplikácii s viacerými kontajnermi sa tlačidlá a možnosti zobrazia len na hlavnom kontajneri. Ostatné kontajnery zobrazujú svoj obraz, poznámku o aktualizácii cez hlavný kontajner a tlačidlo na jeho otvorenie. Keď sa terminál zatvorí, obraz, záznam a pripojenia sa znova načítajú."
         },
         {
           "table": {
@@ -141,7 +141,7 @@
               ],
               [
                 "Plánované aktualizácie",
-                "Obraz sa aktualizuje v zvolenom čase iba vtedy, keď register publikuje nový obraz; voliteľne až po jeho dosiahnutí veku 1, 3, 7 alebo 14 dní. Kontajner so zmenami mimo ProxMenux sa preskočí a nahlási."
+                "Obraz sa aktualizuje v zvolenom čase iba vtedy, keď register zverejní nový obraz; voliteľne až po uplynutí 1, 3, 7 alebo 14 dní od jeho vydania. Nastavenia zmenené v Proxmoxe sa zachovajú."
               ]
             ]
           }

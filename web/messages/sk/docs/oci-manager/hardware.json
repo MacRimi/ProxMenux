@@ -66,7 +66,7 @@
               [
                 "Výber užívateľa",
                 "iba CPU, Intel/AMD, OpenCL, NVIDIA alebo voliteľné zariadenie",
-                "Výber je uložený v inštančnej zmluve"
+                "Výber sa uloží do konfigurácie inštalácie"
               ]
             ]
           }
@@ -161,7 +161,7 @@
                 "body": "Existencia, typ, povolený výrobca, povolenia a GID sú kontrolované. Nesúlad zastaví operáciu."
               },
               {
-                "title": "Zapíše sa kontrakt",
+                "title": "Uloží sa konfigurácia inštalácie",
                 "body": "Cesta, režim, GID, zápis a profil sa zaznamenávajú pre aktualizácie a opätovné vytvorenia."
               },
               {
@@ -240,7 +240,7 @@
               [
                 "USB, sériové, FUSE",
                 "Jediné zariadenie, validovaný strom alebo funkcia LXC",
-                "Zmluva o ňu žiada"
+                "Vyžaduje ho uložená konfigurácia"
               ]
             ]
           }
@@ -372,7 +372,7 @@
               [
                 "<code>/dev/kvm</code>",
                 "Potvrdená položka <code>devN</code>",
-                "Ponúkané iba vtedy, keď o to zmluva požiada"
+                "Ponúka sa iba vtedy, keď to vyžaduje uložená konfigurácia"
               ]
             ]
           }

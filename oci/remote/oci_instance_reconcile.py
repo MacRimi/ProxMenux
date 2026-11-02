@@ -94,15 +94,11 @@ ENVIRONMENT_KEYS = ('env', 'lxc.environment.runtime')
 
 def _environment(record, config):
     """Variables changed in Proxmox since the last operation. Values are
-    applied but never listed: they may be passwords."""
+    applied but never listed: they may be passwords. A variable the image
+    defines and the user removed comes back with its value, as in Docker."""
     before = native_modify.environment(record['observed']['config'].encode())
     now = native_modify.environment(config)
-    defaults = {item.split('=', 1)[0] for item in record['observed']['image'].get('defaults', {}).get('Env', [])
-                if '=' in item}
     removed = sorted(before.keys() - now.keys())
-    # An image default comes back with a new container; its absence cannot be kept.
-    if any(name in defaults for name in removed):
-        raise ValueError(f"{translate('These manual changes cannot be adopted safely:')} env")
     changed = sorted(name for name in now if before.get(name) != now[name])
     return {name: now[name] for name in changed}, removed
 
@@ -126,14 +122,30 @@ def _adopt_environment(deployment, values, removed):
     return details
 
 
-def propose(record, config):
-    if (record.get('status') != 'installed' or record.get('stack') or record.get('stack_member')
-            or record.get('native_stack_intent') or record.get('deployment', {}).get('stack_managed')):
+def _storage_change(key, value, deployment, vmid):
+    """A disk resized or moved in Proxmox: the record follows it."""
+    if key == 'rootfs':
+        storage = value.split(':', 1)[0]
+        size = dict(part.split('=', 1) for part in value.split(',')[1:] if '=' in part).get('size')
+        deployment['rootfs'].update(storage=storage, size_gb=_managed_size(size))
+        return
+    current = _mount(key, value, vmid)
+    for mount in deployment.get('mounts', []):
+        if mount.get('container_path') == current['container_path']:
+            mount.update({field: current[field] for field in ('source', 'size_gb', 'read_only')})
+
+
+def propose(record, config, member=False):
+    if (record.get('status') != 'installed' or (not member and (
+            record.get('stack') or record.get('stack_member') or record.get('native_stack_intent')
+            or record.get('deployment', {}).get('stack_managed')))):
         raise ValueError(translate('Only an installed standalone OCI instance can adopt external changes'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; nothing was adopted'))
-    before = parse_config(record['observed']['config'].encode())
-    current = parse_config(config)
+    if transaction.nested_mounts.stale(config):
+        transaction.nested_mounts.follow(record['vmid'])
+        config = instances.command('pct', 'config', str(record['vmid']))
+    before, current = transaction.settings(record['observed']['config'].encode()), transaction.settings(config)
     changed = sorted(key for key in before.keys() | current.keys() if before.get(key) != current.get(key))
     # Notes do not describe a mount, device or runtime setting. The OCI marker
     # was checked above, so a presentation-only change needs no adoption.
@@ -143,16 +155,41 @@ def propose(record, config):
     if any(key in ENVIRONMENT_KEYS for key in changed):
         changed = [key for key in changed if key not in ENVIRONMENT_KEYS]
         environment = _environment(record, config)
+    custom = transaction.custom_lxc(record, config)
+    custom_keys = {line.split(': ', 1)[0] for line in (*custom, *record['deployment'].get('custom_lxc', []))}
+    custom_changed = sorted(custom) != sorted(record['deployment'].get('custom_lxc', []))
+    changed = [key for key in changed if key not in custom_keys]
     new_keys = [key for key in changed if key not in before and re.fullmatch(r'(mp|dev)[0-9]+', key)]
-    unsupported = [key for key in changed if key not in new_keys and key not in transaction.ADOPTABLE
-                   and key not in transaction.KEPT_AS_IS]
+    storage = [key for key in changed if key in current and key in before and re.fullmatch(r'rootfs|mp[0-9]+', key)]
+    detached = [key for key in changed if key not in current and (
+        re.fullmatch(r'dev[0-9]+', key) or (re.fullmatch(r'mp[0-9]+', key) and before[key].startswith('/')))]
+    unsupported = [key for key in changed if key not in new_keys and key not in storage and key not in detached
+                   and key != 'net0'
+                   and key not in transaction.ADOPTABLE and key not in transaction.KEPT_AS_IS]
     if unsupported:
         raise ValueError(f"{translate('These manual changes cannot be adopted safely:')} {', '.join(unsupported)}")
-    if not new_keys and environment is None:
+    if not member and not (new_keys or storage or detached or custom_changed or environment is not None
+                           or {'net0', 'hostname', 'entrypoint'} & set(changed)):
         return None
     candidate = copy.deepcopy(record)
     deployment = candidate['deployment']
+    if custom:
+        deployment['custom_lxc'] = custom
+    else:
+        deployment.pop('custom_lxc', None)
     details = _adopt_environment(deployment, *environment) if environment else []
+    for key in storage:
+        _storage_change(key, current[key], deployment, record['vmid'])
+    # A host directory or a device taken away in Proxmox holds no data of the container.
+    for key in detached:
+        fields = dict(part.split('=', 1) for part in before[key].split(',') if '=' in part)
+        if key.startswith('mp'):
+            deployment['mounts'] = [mount for mount in deployment.get('mounts', [])
+                                    if mount.get('container_path') != fields.get('mp')]
+        else:
+            path = fields.get('path') or before[key].split(',', 1)[0]
+            deployment['devices'] = [device for device in deployment.get('devices', [])
+                                     if device.get('host_path') != path]
     for key in new_keys:
         if key.startswith('mp'):
             mount = _mount(key, current[key], record['vmid'])
@@ -164,12 +201,14 @@ def propose(record, config):
             deployment.setdefault('devices', []).append(device)
             kind = 'GPU' if gpu_devices.gpu_path(device['host_path']) else 'USB/Coral/NPU'
             details.append(f"{key}: {device['host_path']} ({kind})")
-    skipped = [*new_keys, *(ENVIRONMENT_KEYS if environment else ())]
+    skipped = [*new_keys, *storage, *detached, *custom_keys, *(ENVIRONMENT_KEYS if environment else ())]
     filtered = b'\n'.join(line for line in config.splitlines()
                           if not any(line.startswith(key.encode() + b': ') for key in skipped))
-    if environment:
+    if environment or storage or detached or custom_keys:
         filtered += b''.join(b'\n' + line for line in record['observed']['config'].encode().splitlines()
-                             if any(line.startswith(key.encode() + b': ') for key in ENVIRONMENT_KEYS))
+                             if any(line.startswith(key.encode() + b': ')
+                                    for key in (*storage, *detached, *custom_keys,
+                                                *(ENVIRONMENT_KEYS if environment else ()))))
     filtered += b'\n'
     for key, value in transaction.external_changes(record, filtered).items():
         section, name = transaction.ADOPTABLE[key]
@@ -179,31 +218,36 @@ def propose(record, config):
     candidate['observed']['config_sha256'] = sha(config)
     candidate['observed']['gpu_devices'] = gpu_devices.capture(config)
     candidate['observed']['host_bind_sources'] = host_mounts.capture_sources(config)
-    transaction.preflight(candidate, copy.deepcopy(candidate), config)
-    return {'candidate': candidate, 'details': details,
+    transaction.preflight(candidate, copy.deepcopy(candidate), config, coordinated=member)
+    # A disk or a device is reviewed; the rest is what the user already decided.
+    return {'candidate': candidate, 'details': details, 'review': bool(new_keys),
             'previous_record_hash': sha(instances.location(instances.ROOT, record['vmid']).read_bytes()),
             'config_sha256': sha(config)}
 
 
 def commit(root, vmid, proposal):
     with instances.locked(root):
-        record = instances.read(root, vmid)
-        path = instances.location(root, vmid)
-        if sha(path.read_bytes()) != proposal['previous_record_hash']:
-            raise ValueError(translate('The OCI contract changed while reviewing; nothing was adopted'))
-        config = instances.command('pct', 'config', str(vmid))
-        if sha(config) != proposal['config_sha256']:
-            raise ValueError(translate('The LXC changed while reviewing; nothing was adopted'))
-        checked = propose(record, config)
-        if checked is None or checked['details'] != proposal['details']:
-            raise ValueError(translate('The proposed changes no longer match; nothing was adopted'))
-        candidate = checked['candidate']
-        observed = instances.observe(vmid, record['installation_id'], record['observed']['archive_path'],
-                                     record['observed']['resolved_registry_digest'], record['observed']['image'])
-        if observed['config_sha256'] != proposal['config_sha256']:
-            raise ValueError(translate('The LXC changed during verification; nothing was adopted'))
-        candidate['observed'] = observed
-        history = path.parent / 'history'
-        instances.write(history / f'before-reconciliation-{uuid.uuid4().hex}.json', record)
-        instances.write(path, candidate)
-        return candidate
+        return commit_locked(root, vmid, proposal)
+
+
+def commit_locked(root, vmid, proposal, member=False):
+    record = instances.read(root, vmid)
+    path = instances.location(root, vmid)
+    if sha(path.read_bytes()) != proposal['previous_record_hash']:
+        raise ValueError(translate('The OCI contract changed while reviewing; nothing was adopted'))
+    config = instances.command('pct', 'config', str(vmid))
+    if sha(config) != proposal['config_sha256']:
+        raise ValueError(translate('The LXC changed while reviewing; nothing was adopted'))
+    checked = propose(record, config, member)
+    if checked is None or checked['details'] != proposal['details']:
+        raise ValueError(translate('The proposed changes no longer match; nothing was adopted'))
+    candidate = checked['candidate']
+    observed = instances.observe(vmid, record['installation_id'], record['observed']['archive_path'],
+                                 record['observed']['resolved_registry_digest'], record['observed']['image'])
+    if observed['config_sha256'] != proposal['config_sha256']:
+        raise ValueError(translate('The LXC changed during verification; nothing was adopted'))
+    candidate['observed'] = observed
+    history = path.parent / 'history'
+    instances.write(history / f'before-reconciliation-{uuid.uuid4().hex}.json', record)
+    instances.write(path, candidate)
+    return candidate

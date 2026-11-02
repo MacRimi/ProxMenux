@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (SSD-bewusst, auto)",
-      "what": "Reduziert SSD-/NVMe-Verschleiß durch Verschieben von /var/log in eine tmpfs-RAM-Disk mit regelmäßiger Synchronisierung auf Datenträger. Installation aus dem Upstream-Projekt bei SSD oder NVMe als Systemplatte. Die Größe richtet sich nach dem Host-RAM (128M / 256M / 512M). Ein Schutz leert alte Journale ab 80% Belegung und kürzt stark wachsende Logs ab 92% vor dem Schreiben. Regelmäßige Synchronisierung wird geplant und journald an den verfügbaren Platz angepasst. Details unter <link>Log2RAM</link>.",
+      "what": "Reduziert SSD-/NVMe-Verschleiß durch Verschieben von /var/log in eine tmpfs-RAM-Disk, die nach Zeitplan auf den Datenträger geschrieben wird. Installation aus dem Upstream-Projekt bei SSD oder NVMe als Systemplatte. Die Größe richtet sich nach dem Host-RAM (128M / 256M / 512M); eine Überwachung rotiert und schreibt die Logs, wenn die RAM-Disk 85 % überschreitet. Das Journal und die Task-Logs von Proxmox VE und Proxmox Backup Server bleiben auf dem Datenträger. Alle Details unter <link>Log2RAM</link>.",
       "category": "Speicher",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Hardwareabhängige Standardwerte",
-  "hardwareBody": "Das Skript liest die Host-Hardware vor dem Anwenden von Einstellungen. Log2RAM ist standardmäßig nur auf SSD / NVMe Root-Festplatten installiert (es wird aufgefordert, wenn die Erkennung etwas anderes sagt). Die Ramdisk-Größe von Log2RAM wird aus der Gesamt-RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>) ausgewählt. Die Journald-Limits werden an die Ramdisk-Größe angepasst, wenn Log2RAM aktiv ist, um ein Ausfüllen zu vermeiden.",
+  "hardwareBody": "Das Skript liest die Host-Hardware vor dem Anwenden von Einstellungen. Log2RAM ist standardmäßig nur auf SSD / NVMe Root-Festplatten installiert (es wird aufgefordert, wenn die Erkennung etwas anderes sagt). Die Ramdisk-Größe von Log2RAM wird aus der Gesamt-RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>) ausgewählt. Bei aktivem Log2RAM bleibt das Journal mit eigener Grenze auf dem Datenträger.",
   "upgrade": {
     "heading": "Paketlisten und System aktualisieren",
     "intro": "Der erste Schritt der automatisierten Nachinstallation ist das Proxmox-Upgrade. Für einen laufenden Host innerhalb derselben Hauptversion empfiehlt Proxmox selbst:",

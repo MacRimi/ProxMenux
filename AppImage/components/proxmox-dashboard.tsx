@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -185,10 +185,18 @@ function MonitorDashboard({ product }: { product: Product }) {
     }
   }, [])
 
+  const healthRequest = useRef<AbortController | null>(null)
   // Fetch health info count independently (for initial load and refresh)
-  const fetchHealthInfoCount = useCallback(async () => {
+  const fetchHealthInfoCount = useCallback(async (cachedOnly = false) => {
+    if (cachedOnly && healthRequest.current) return
+    healthRequest.current?.abort()
+    const controller = new AbortController()
+    healthRequest.current = controller
+    const timeout = cachedOnly ? setTimeout(() => controller.abort(), 10000) : undefined
     try {
-      const response = await fetchApi("/api/health/full")
+      const response = await fetchApi(cachedOnly ? "/api/health/full?cached=1" : "/api/health/full", { signal: controller.signal })
+      if (healthRequest.current !== controller) return
+      if (!response?.health?.details) throw new Error("Invalid health snapshot")
       let calculatedInfoCount = 0
       
       if (response && response.health?.details) {
@@ -218,7 +226,10 @@ function MonitorDashboard({ product }: { product: Product }) {
       
       setInfoCount(calculatedInfoCount)
     } catch (error) {
-      // Silently fail - infoCount will remain at 0
+      // Preserve the last known count; a failed poll is not a healthy result.
+    } finally {
+      if (timeout !== undefined) clearTimeout(timeout)
+      if (healthRequest.current === controller) healthRequest.current = null
     }
   }, [])
 
@@ -269,20 +280,29 @@ function MonitorDashboard({ product }: { product: Product }) {
   fetchHealthInfoCount()
   fetchUpdateStatus()
 
-    // Overview polls health every 30 s; the other tabs every 60 s.
+    // Header reboot information stays current on every tab, without full audits.
+    const refreshHealth = () => {
+      if (document.visibilityState === "visible") void fetchHealthInfoCount(true)
+    }
     let interval: ReturnType<typeof setInterval> | null = null
     let healthInterval: ReturnType<typeof setInterval> | null = null
     if (activeTab === "overview") {
       interval = setInterval(fetchSystemData, 30000) // 30 segundos
-      healthInterval = setInterval(fetchHealthInfoCount, 30000) // Also refresh info count
     } else {
       interval = setInterval(fetchSystemData, 60000) // 60 segundos
-      healthInterval = setInterval(fetchHealthInfoCount, 60000) // Also refresh info count
     }
 
+    healthInterval = setInterval(refreshHealth, 30000)
+    window.addEventListener("focus", refreshHealth)
+    document.addEventListener("visibilitychange", refreshHealth)
     return () => {
       if (interval) clearInterval(interval)
       if (healthInterval) clearInterval(healthInterval)
+      window.removeEventListener("focus", refreshHealth)
+      document.removeEventListener("visibilitychange", refreshHealth)
+      const controller = healthRequest.current
+      healthRequest.current = null
+      controller?.abort()
     }
   }, [fetchSystemData, fetchHealthInfoCount, fetchUpdateStatus, activeTab])
 
@@ -391,6 +411,7 @@ function MonitorDashboard({ product }: { product: Product }) {
   const refreshData = async () => {
     setIsRefreshing(true)
     await fetchSystemData()
+    await fetchHealthInfoCount()
     setComponentKey((prev) => prev + 1)
     await new Promise((resolve) => setTimeout(resolve, 500))
     setIsRefreshing(false)

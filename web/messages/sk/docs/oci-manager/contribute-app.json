@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Nainštalovať aplikáciu a pridať ju do katalógu OCI | ProxMenux",
+    "description": "Opakovane použiteľné zadanie pre agenta: nainštalovať aplikáciu na vlastný server cez OCI manager Apps, overiť ju a pripraviť príspevok do katalógu pre ostatných."
+  },
+  "header": {
+    "title": "Nainštalovať aplikáciu a pridať ju do katalógu OCI",
+    "description": "Praktické zadanie, ktoré môžete odovzdať svojmu agentovi: nasadí požadovanú aplikáciu, overí ju na vašom systéme Proxmox a pripraví opakovane použiteľnú položku katalógu OCI v ProxMenuxe aj pre ostatných.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "title": "Jedno zadanie, dva výsledky",
+      "blocks": [
+        {
+          "p": "Tento návod použite, ak chcete, aby agent nainštaloval požadovanú aplikáciu na vami zvolený server Proxmox a navrhol ju do katalógu OCI v ProxMenuxe. Návod je určený pre rôznych používateľov, servery Proxmox, architektúry CPU, úložiská a hardvér. Nepredpokladá konkrétny počítač ani domáce laboratórium."
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "server",
+                "title": "Vaša aplikácia",
+                "body": "Požadovaná služba je nainštalovaná a overená na vami zvolenom systéme Proxmox. Táto inštancia a jej údaje zostanú zachované, kým nepožiadate o ich odstránenie."
+              },
+              {
+                "icon": "boxes",
+                "title": "Položka katalógu",
+                "body": "Agent overí pôvodný obraz aplikácie, pripraví preň súbor oci-compose, otestuje ho v rozsahu dostupných možností systému a pripraví pull request pre ostatných používateľov ProxMenuxu."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Test na jednom systéme nepotvrdzuje podporu všade",
+            "body": "Agent musí zistiť skutočnú verziu Proxmoxu, architektúru CPU, úložisko, sieť a dostupné zariadenia. Musí uviesť, ktoré kombinácie boli otestované. Podporu inej architektúry, GPU, NPU, zariadenia USB alebo typu úložiska nikdy nesmie len predpokladať."
+          }
+        },
+        {
+          "p": "Položka katalógu sa automaticky nezobrazí ako overená so značkou ✓ v zoznamoch inštalátora. Túto značku možno získať až samostatným <validation>validačným postupom</validation> projektu. Úspešné stiahnutie obrazu alebo spustenie kontajnera nestačí na tvrdenie, že aplikácia funguje."
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "title": "Skopírujte toto zadanie svojmu agentovi",
+      "blocks": [
+        {
+          "p": "Ak údaje v hranatých zátvorkách poznáte, nahraďte ich. Zvyšné údaje má agent zistiť kontrolou zvoleného systému Proxmox a aktuálneho repozitára. Následne vám oznámi, ktoré rozhodnutia vyžadujú váš vstup."
+        },
+        {
+          "agentPrompt": {
+            "title": "Opakovane použiteľné zadanie",
+            "body": "Chcem nainštalovať [NÁZOV APLIKÁCIE] na mnou zvolený systém Proxmox pomocou OCI manager Apps. Ak je na to vhodná, chcem tiež pripraviť príspevok do katalógu OCI v ProxMenuxe, aby si ju mohli nainštalovať aj ostatní používatelia.\n\nPôvodný projekt alebo obraz (ak je známy): [ODKAZ ALEBO NEZNÁME]\nSystém Proxmox, ktorý sa má použiť: [ZVOLENÝ SERVER ALEBO NEZNÁME]\nOsobitné požiadavky (ak sú známe): [ÚDAJE, SIEŤ, GPU/USB, HTTPS ALEBO ŽIADNE]\n\nPostupuj podľa týchto krokov:\n1. Skontroluj zvolený server Proxmox a uveď jeho verziu Proxmox VE, architektúru, dostupné úložiská, možnosti siete a príslušné zariadenia. Nepredpokladaj konkrétnu architektúru ani hardvér.\n2. Prever pôvodný projekt a obraz, aktuálny katalóg ProxMenux, otvorené pull requesty a najnovšie pokyny správcu projektu. Nepridávaj duplicitnú položku. Aplikácie sa do katalógu navrhujú v diskusii #440 (https://github.com/MacRimi/ProxMenux/discussions/440): ak tam aplikácia ešte nie je, navrhni ju spolu s obrazom, registrom, v ktorom je zverejnený, a kategóriou. Ak existuje obraz zverejnený vývojárom aplikácie, katalóg používa ten; jeho vydavateľa označ presne.\n3. Požadovanú aplikáciu nainštaluj cez OCI manager Apps. Pred potvrdením skontroluj obraz, zdroje, dátové cesty, sieť a premenné. Chráň existujúce služby a údaje. Po testovaní ponechaj túto požadovanú aplikáciu nainštalovanú, kým nepožiadam o jej odstránenie.\n4. Over, že služba skutočne odpovedá a funguje jej prihlásenie alebo úvodné nastavenie. Zaznamenaj, čo si pozoroval; netvrď, že fungujú neotestované funkcie.\n5. Priprav oci-compose pre položku katalógu podľa oci/README.md a súborov v oci/examples/ a priprav ikonu. Ak aplikácia vyžaduje viac služieb, opíš a otestuj celú zostavu podľa aktuálneho postupu ProxMenuxu; nevynechaj potrebné databázy, vyrovnávacie pamäte ani vnútornú sieť.\n6. Spusť kontroly repozitára vrátane `cd oci && python3 -m unittest discover -s tests -p 'test_*.py'` ako používateľ bez oprávnení root v kópii repozitára, nikdy nie na produkčnom serveri, a tiež príslušné kontroly katalógu, dokumentácie a prekladov bez pripojenia na sieť. Oprav zlyhania spôsobené touto zmenou a kontroly zopakuj.\n7. Kandidáta do katalógu podľa možností over na dočasných testovacích inštanciách. Moju ponechanú aplikáciu ani jej údaje nepoužívaj na deštruktívne testy aktualizácie, obnovy alebo odstránenia. Chýbajúci hardvér a neotestované prípady uveď pravdivo.\n8. Priprav úzko zameraný pull request s názvom aplikácie, obrazom, ikonou, stručnými výsledkami testov a obmedzeniami a prilož otestovaný oci-compose k návrhu v diskusii #440. Skontroluj všetky povinné výsledky CI a komentáre správcu projektu. Pull request nezlučuj.\n9. Upratuj iba dočasné testovacie kontajnery a virtuálne stroje, dočasné súbory a testovacie zálohy vytvorené pri tejto práci. Zachovaj moju požadovanú inštaláciu, jej údaje aj všetky nesúvisiace kontajnery, virtuálne stroje a zálohy.\n\nPred nezvratnou zmenou, sprístupnením služby verejne alebo odstránením čohokoľvek, čo môže obsahovať moje údaje, zastav a opýtaj sa ma. Heslá, tokeny ani súkromnú konfiguráciu nevkladaj do repozitára ani pull requestu. Na záver uveď URL aplikácie alebo údaje na pripojenie, odkaz na pull request, skutočne overené kontroly, vykonané upratanie a zostávajúce obmedzenia."
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Prihlasovacie údaje chráňte",
+            "body": "Prihlasovacie údaje registrov a tajné hodnoty aplikácie zadávajte iba v príslušnom lokálnom rozhraní. V katalógu, snímkach obrazovky, záznamoch a pull requeste musia byť tieto hodnoty zakryté, nikdy nesmú obsahovať skutočné heslá alebo tokeny."
+          }
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Čo má agent zistiť najprv",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Skontrolovať požadovaný server",
+                "body": "Zaznamenať verziu Proxmox VE a architektúru servera. Zistiť dostupné úložiská, sieťové mosty, prideľovanie adries a príslušné zariadenia GPU, NPU alebo USB. V manifeste registra overiť obraz aplikácie pre danú architektúru. Manifest pre amd64 nepotvrdzuje podporu arm64 ani naopak."
+              },
+              {
+                "title": "Preveriť aplikáciu a katalóg",
+                "body": "Prečítať dokumentáciu vývojára a príklad nasadenia. Skontrolovať <proposals>návrhy do katalógu OCI</proposals>, <roadmap>plán projektu</roadmap>, <catalog>katalóg</catalog> a otvorené pull requesty, aby sa predišlo duplicitám a rešpektovali sa aktuálne rozhodnutia o návrhu; aplikáciu najprv navrhnúť tam. Ak existuje obraz zverejnený vývojárom, katalóg používa ten; pri komunitnom obraze treba overiť a uviesť jeho vydavateľa."
+              },
+              {
+                "title": "Pochopiť celé nasadenie",
+                "body": "Zaznamenať obrazy, príkazy, porty, premenné prostredia, zväzky, používateľa a oprávnenia, kontroly stavu, správanie pri prvom spustení, prihlasovacie údaje, závislosti a voliteľný hardvér. Pri aplikácii s viacerými službami zahrnúť aj potrebnú databázu, vyrovnávaciu pamäť a vnútornú sieť. Upozorniť na správanie Compose, ktoré nemá bezpečný ekvivalent v Proxmoxe, namiesto jeho tichého vynechania."
+              },
+              {
+                "title": "Overiť a stiahnuť obraz",
+                "body": "Použiť postup Skopeo v OCI manager Apps na overenie odkazu na obraz, jeho stiahnutie a kontrolu vrstiev. Pri zlyhaní zistiť skutočnú príčinu: prihlasovacie údaje, chýbajúci obraz alebo značka, nepodporovaná architektúra, problém so sieťou alebo obmedzenie počtu požiadaviek registrom."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Nainštalovať a overiť požadovanú aplikáciu",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Na nasadenie použite OCI manager Apps. Ak je potrebný testovací VMID, vyberte nepoužitý. Úložisko, sieťový most, adresu a zdroje nastavte podľa zvoleného servera a požiadavky používateľa.",
+              "Pred potvrdením skontrolujte obraz, zdroje, trvalé dátové cesty, sieť a premenné. Tajné hodnoty nechajte skryté. Pri pokročilej inštalácii porovnajte zvolený VMID, CPU, RAM, úložisko, sieťový most, premenné a podporované mapovania zariadení s výsledkom `pct config`.",
+              "Použite spôsob získania prihlasovacích údajov, ktorý aplikácia skutočne poskytuje: zadanie používateľom, vygenerovanie inštalátorom, výpis pri prvom spustení alebo postup uvedený v dokumentácii obrazu. Overte funkčnosť prihlasovacích údajov a v dôkazoch ich zakryte.",
+              "Overte skutočnú službu. Pri webovej aplikácii otvorte zobrazenú URL a potvrďte, že sa načíta stránka alebo prihlásenie. Pri inej službe overte očakávaný protokol a port. HTTPS alebo reverzný proxy použite iba vtedy, keď sú potrebné na požadovaný test alebo nasadenie.",
+              "Ak ich inštalátor ponúka, otestujte zväzky spravované Proxmoxom aj adresáre hostiteľa. Vytvorte údaje aplikácie a overte, že zostávajú na očakávanom mieste s požadovanými oprávneniami.",
+              "Reštartujte aplikáciu alebo zostavu a potvrďte, že sa znova spustí so svojimi údajmi a funkčnými prihlasovacími údajmi. Testujte iba skutočne dostupný hardvér; inak zaznamenajte chýbajúce zariadenie a jeho integráciu označte ako neoverenú."
+            ]
+          }
+        },
+        {
+          "calloutDanger": {
+            "title": "Chráňte inštaláciu, ktorú si chce používateľ ponechať",
+            "body": "Obnova zo zálohy, návrat po nefunkčnom obraze a odstránenie môžu byť deštruktívne. Tieto kontroly vykonávajte iba na dočasných testovacích inštanciách alebo po výslovnom naplánovaní ochrany požadovanej inštalácie a jej údajov. Požadovanú aplikáciu nikdy neodstraňujte v rámci bežného upratovania."
+          }
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "title": "Pripraviť a overiť položku katalógu",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Postupujte podľa návodu na oci-compose v <readme>oci/README.md</readme> a súborov v `oci/examples/`. Pridajte jedinečný identifikátor, správnu kategóriu, uvedenie pôvodného autora, odkazy na dokumentáciu, podporované architektúry, správny odkaz na obraz a ikonu aplikácie. Overte, že ikona patrí správnemu produktu a správne sa zobrazuje.",
+              "Zachovajte správanie obrazu pri spustení, porty, prostredie a trvalé dátové cesty. Tajné hodnoty označte ako citlivé. Vlastníctvo údajov a oprávnenia nastavte podľa dôkazov z pôvodného projektu, nie odhadom.",
+              "Použite konzervatívne predvolené hodnoty a voliteľné nastavenia sprístupňujte uvážene. Podporu GPU, NPU, USB alebo architektúry uvádzajte iba vtedy, keď ju aktuálny postup ProxMenuxu podporuje a požiadavka je zdokumentovaná.",
+              "Pri aplikácii s viacerými službami zahrňte všetky potrebné služby a zachovajte závislosti, súkromnú sieť, kontroly stavu, trvalé dátové cesty a koordinované operácie. Zložitú zostavu alebo zmenu spoločného enginu oddeľte, ak ju tak správcovia projektu dokážu bezpečnejšie posúdiť.",
+              "Spustite celú testovaciu sadu enginu OCI ako používateľ bez oprávnení root v kópii repozitára, aj keď ju CI nespúšťa. Vykonajte príslušné kontroly schém, katalógu, dokumentácie, prekladov a validačných záznamov. Generovanú stránku `oci/VALIDATION.md` nikdy neupravujte ručne: znova ju vytvorí `python3 .github/scripts/oci_validation.py render`."
+            ]
+          }
+        },
+        {
+          "shell": {
+            "code": "cd oci && python3 -m unittest discover -s tests -p 'test_*.py'"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lifecycle",
+      "title": "Kontroly životného cyklu na dočasnej testovacej inštancii",
+      "blocks": [
+        {
+          "p": "Na kontroly, ktoré aplikáciu aktualizujú, obnovujú alebo odstraňujú, použite samostatnú testovaciu inštanciu. Otestujte možnosti, ktoré aplikácia skutočne podporuje a testovací server poskytuje. Pri každom riadku uveďte PASS, FAIL, BLOCKED, NOT APPLICABLE alebo NOT TESTED a priložte pozorovateľný dôkaz."
+        },
+        {
+          "table": {
+            "headers": [
+              "Kontrola",
+              "Čo sa považuje za úspech"
+            ],
+            "rows": [
+              [
+                "Stiahnutie obrazu",
+                "Skopeo overí požadovaný odkaz na obraz aj jeho vrstvy. Pri zlyhaní je určená príčina."
+              ],
+              [
+                "Predvolená inštalácia",
+                "Potvrdzovací súhrn je presný; LXC alebo celá zostava sa spustí, má sieťové pripojenie a prejde kontrolami prvého spustenia."
+              ],
+              [
+                "Pokročilé nastavenia",
+                "Vybrané hodnoty VMID, CPU, RAM, úložiska, sieťového mosta, premenných a podporovaných zariadení zodpovedajú uloženej konfigurácii Proxmoxu."
+              ],
+              [
+                "Prihlasovacie údaje a odozva",
+                "Zobrazené alebo nastavené prihlasovacie údaje fungujú. Webová stránka alebo prihlásenie sa načíta, prípadne odpovedá očakávaná služba bez webového rozhrania."
+              ],
+              [
+                "Trvalé údaje",
+                "Spravované úložisko a adresáre hostiteľa sa správajú podľa dokumentácie; vytvorené údaje pretrvajú reštart so správnymi oprávneniami."
+              ],
+              [
+                "Reštart",
+                "Aplikácia alebo zostava sa automaticky spustí a zachová si údaje aj konfiguráciu."
+              ],
+              [
+                "Zálohovanie a obnova",
+                "Záloha Proxmoxu obnovená do iného dočasného VMID sa spustí, odpovedá a zobrazí sa v časti Spravovať nainštalované aplikácie OCI."
+              ],
+              [
+                "Aktualizácia a návrat",
+                "Aktualizácia obrazu zachová údaje, prihlasovacie údaje, sieť, zariadenia a nastavenia Proxmoxu. Ak je to bezpečné, otestuje sa návrat k pôvodnému stavu; inak sa označí NOT TESTED."
+              ],
+              [
+                "Upraviť",
+                "Podporované nastavenie sa zmení, predchádzajúce nastavenia zostanú zachované a aplikácia stále odpovedá. Zmeny nesúvisiace s obrazom nemajú zbytočne vyvolať jeho stiahnutie ani opätovné vytvorenie aplikácie."
+              ],
+              [
+                "Odstránenie",
+                "Časť Spravovať nainštalované aplikácie OCI odstráni testovacie LXC, disky a záznamy. Dátové adresáre hostiteľa zostanú zachované. Odstraňujú sa iba zálohy vytvorené pre dočasné testovacie VMID."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Jasne uveďte hardvérové obmedzenia",
+            "body": "Ak sa rozhranie aplikácie spustí, ale chýba voliteľná kamera, koordinátor, GPU, NPU alebo zariadenie USB, kontrola rozhrania môže byť úspešná, zatiaľ čo integrácia daného hardvéru zostáva NOT TESTED. Uveďte potrebné zariadenie aj schopnosti servera."
+          }
+        }
+      ]
+    },
+    {
+      "id": "pr",
+      "title": "Pripraviť pull request a odovzdať výsledok",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Ukázať, čo sa skutočne otestovalo",
+                "body": "Uveďte názov aplikácie, identifikátor v katalógu, obraz a digest, verziu Proxmox VE, architektúru, režim inštalácie, úložisko, sieť, profil zariadení a skutočnú kontrolu odozvy. Zhrňte výsledky životného cyklu a vypíšte zablokované, nedostupné a neotestované prípady. Priložte ikonu a výsledok testov enginu OCI."
+              },
+              {
+                "title": "Skontrolovať spätnú väzbu projektu",
+                "body": "Po otvorení pull requestu skontrolujte všetky povinné kontroly CI na jeho aktuálnej verzii. Prečítajte komentáre a posúdenia správcov projektu, vykonajte požadované zmeny a zopakujte dotknuté kontroly. Pull request neoznačujte za pripravený, ak niektorá povinná kontrola zlyháva alebo zostáva nevyriešená požadovaná zmena. Nezlučujte ho."
+              },
+              {
+                "title": "Upratať iba dočasné zdroje",
+                "body": "Odstráňte dočasné testovacie kontajnery a virtuálne stroje, súbory a testovacie zálohy vytvorené pri tejto práci. Zachovajte inštanciu aplikácie, ktorú si používateľ chcel ponechať, jej údaje aj všetky nesúvisiace kontajnery, virtuálne stroje a zálohy. Upratanie overte podľa testovacích VMID zaznamenaných pri tomto behu."
+              },
+              {
+                "title": "Odovzdať výsledok",
+                "body": "Používateľovi odovzdajte funkčnú adresu aplikácie alebo údaje na pripojenie, odkaz na pull request, skutočne pozorované výsledky kontrol a CI, zoznam odstránených dočasných zdrojov a prípadné obmedzenia. Do pull requestu ani záverečnej správy nikdy nevkladajte tajné údaje."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
