@@ -115,9 +115,15 @@
     ],
     "unpackerr": [
       "/data"
+    ],
+    "spoolman": [
+      "/home/app/.local/share/spoolman"
     ]
   },
   "sizes": {
+    "krusader": {
+      "/config": 4
+    },
     "sharecovex": {
       "/config": 1
     }
