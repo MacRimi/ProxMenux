@@ -15,6 +15,7 @@ import subprocess
 from typing import Any, Dict, List
 
 _LSBLK_TIMEOUT = 5
+_SYS_BLOCK = "/sys/block"
 _FIELD_RE = re.compile(r'(\w+)="([^"]*)"')
 _SKIP_PREFIXES = ("loop", "zd", "nbd", "ram", "sr")
 
@@ -67,6 +68,27 @@ def list_physical_disks() -> List[Dict[str, Any]]:
             "rotational": fields.get("ROTA", "").strip() == "1",
         })
     return disks
+
+
+def rotation_rate(name: str, reported: Any = None) -> int:
+    """The rotation every view of a disk shows: the RPM smartctl reported,
+    0 meaning solid state, or else the kernel's flag, where -1 is a spinning
+    disk of unknown speed. What smartctl reported wins, because USB-SATA
+    bridges mark every disk behind them as rotational."""
+    if isinstance(reported, int) and not isinstance(reported, bool) and reported >= 0:
+        return reported
+    try:
+        with open(f"{_SYS_BLOCK}/{name}/queue/rotational") as flag:
+            return -1 if flag.read().strip() == "1" else 0
+    except OSError:
+        return 0
+
+
+def media_type(name: str, rate: int) -> str:
+    """NVMe, SSD or HDD, from a rotation as ``rotation_rate`` returns it."""
+    if name.startswith("nvme"):
+        return "NVMe"
+    return "HDD" if rate else "SSD"
 
 
 def names_for_keys(keys) -> set:

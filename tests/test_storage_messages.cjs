@@ -55,12 +55,15 @@ console.log('PASS: saved-data badge guards and actual provider fallback/translat
 const report = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'openSmartReport');
 assert.ok(report);
 let reportHtml;
+const diskTypeModule = {};
+new Function('exports', compile(read('AppImage/lib/disk-type.ts')))(diskTypeModule);
 const openReport = new Function('window', 'Blob', 'URL', 'setTimeout', 'getDiskTempThresholdsSync', 'getNvmeSmartAttributeKey',
+  'resolveDiskType',
   compile('const APP_VERSION = "fixture";\n' + emit(report, source)) + '\nreturn openSmartReport;')(
   {location: {origin: 'http://fixture.invalid'}, open() {}},
   class { constructor(parts) { reportHtml = parts.join(''); } },
   {createObjectURL() { return 'blob:fixture'; }, revokeObjectURL() {}}, () => {},
-  () => ({warning: 55, critical: 65}), () => undefined);
+  () => ({warning: 55, critical: 65}), () => undefined, diskTypeModule.getDiskType);
 const expectedReport = {
   passedAssessment: 'The supplied SMART status is PASSED. This status alone does not establish that every attribute is within range or that the disk is free of faults. Power-on time shown: {uptime}. Temperature shown: {temperature}. {sectors}',
   noReallocatedSectorsReported: 'The supplied reallocated-sector value is zero or unavailable; this does not establish that there are no bad sectors.',
@@ -107,5 +110,15 @@ translated.recommendations = {passedTitle: 'TRANSLATED_REC_TITLE', passedText: '
 const localized = renderReport({}, 'passed', 'synthetic', {...catalogs, synthetic: {storage: {smartReport: translated}}});
 for (const [, value] of leaves(translated)) assert.ok(localized.includes(value.split(' {')[0]), value);
 assert.ok(renderReport({name: 'nvme0n1'}, 'passed', 'en', catalogs, {nvme_raw: {critical_warning: 0, media_errors: 7}}).includes(expectedReport.passedMeaning));
+// One classifier for the report and the Storage page: a disk the kernel marks
+// rotational without an RPM is an HDD, and a real model wins over "Unknown".
+const typeCard = html => html.match(/labels\.type[^]*?card-value[^>]*>([^<]*)</)?.[1] ?? html.match(/>Type<\/div>\s*<div class="card-value"[^>]*>([^<]*)</)?.[1];
+assert.equal(typeCard(renderReport({rotation_rate: -1})), 'HDD');
+assert.equal(typeCard(renderReport({rotation_rate: 7200})), 'HDD 7200 RPM');
+assert.equal(typeCard(renderReport({rotation_rate: 0})), 'SSD');
+assert.ok(!renderReport({rotation_rate: -1}).includes('-1 RPM'));
+assert.equal(typeCard(renderReport({rotation_rate: -1, connection_type: 'sas'})), 'SAS HDD');
+const unknownModel = renderReport({model: 'Unknown', serial: 'Unknown'}, 'passed', 'en', catalogs, {model: 'WDC WD7500BPVT', serial: 'WX11A1234'});
+assert.ok(unknownModel.includes('WDC WD7500BPVT') && unknownModel.includes('WX11A1234'));
 if (process.env.STORAGE_REPORT_HTML) fs.writeFileSync(process.env.STORAGE_REPORT_HTML, renderReport());
 console.log('PASS: actual printable report, passed/failed/unknown/warning, missing/zero/nonzero sectors, NVMe errors and provider fallback');

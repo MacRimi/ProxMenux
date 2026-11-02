@@ -52,6 +52,7 @@ import time
 import threading
 import urllib.parse
 import uuid
+import disk_identity
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -5263,11 +5264,7 @@ def _smart_identity_payload(disk_name):
                 base['serial'] = value.strip()
     except OSError:
         pass
-    try:
-        if Path(f'/sys/block/{disk_name}/queue/rotational').read_text().strip() == '1':
-            base['rotation_rate'] = -1  # HDD, RPM unknown
-    except OSError:
-        pass
+    base['rotation_rate'] = disk_identity.rotation_rate(disk_name)
     return base
 
 
@@ -5327,7 +5324,8 @@ def get_smart_data(disk_name):
 
     retry_at = _smart_fail_backoff.get(disk_name, 0)
     if retry_at > now:
-        return dict(cached[1]) if cached else _smart_default_payload()
+        # smartctl keeps failing: show what the host knows of the disk.
+        return dict(cached[1]) if cached else _smart_identity_payload(disk_name)
 
     result = _get_smart_data_uncached(disk_name)
 
@@ -5801,6 +5799,11 @@ def _get_smart_data_uncached(disk_name):
             # print(f"[v0] Health: CRITICAL (SMART failed)")
             pass
         
+        # Without an answer from smartctl, the kernel's flag; the temperature
+        # class below depends on it.
+        if not smart_data['_rotation_known']:
+            smart_data['rotation_rate'] = disk_identity.rotation_rate(disk_name)
+
         # Temperature-based health (only if we have a valid temperature)
         # Thresholds differ by disk class (HDD/SSD/NVMe/SAS) and are
         # user-configurable via health_thresholds; the values below are
@@ -5831,27 +5834,6 @@ def _get_smart_data_uncached(disk_name):
                 smart_data['health'] = 'critical'
             elif temp > warn:
                 smart_data['health'] = 'warning'
-
-        # Fallback: ask the kernel only when smartctl had no opinion.
-        # USB-SATA enclosures (ASM105x family etc.) advertise
-        # rotational=1 to the kernel even when there's an SSD behind
-        # them, so trusting /sys here without first checking what
-        # smartctl said would flip a correctly-identified SSD back to
-        # HDD. The previous condition (`rotation_rate == 0`) couldn't
-        # tell "smartctl confirmed SSD" from "smartctl never spoke",
-        # which is what bit the OCZ-SOLID2 behind an ASM105x dock on
-        # the lab host (sdd showed as HDD in the UI while smartctl
-        # was reporting it as SSD).
-        if not smart_data['_rotation_known']:
-            try:
-                rotational_path = f"/sys/block/{disk_name}/queue/rotational"
-                if os.path.exists(rotational_path):
-                    with open(rotational_path, 'r') as f:
-                        rotational = int(f.read().strip())
-                        if rotational == 1:
-                            smart_data['rotation_rate'] = -1  # HDD, RPM unknown
-            except Exception:
-                pass
     except FileNotFoundError:
         # print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
         pass
@@ -11523,7 +11505,7 @@ def api_smart_status(disk_name):
                 'temperature': temp,
                 'power_on_hours': poh,
                 'power_cycles': cycles,
-                'rotation_rate': data.get('rotation_rate', 0),
+                'rotation_rate': disk_identity.rotation_rate(disk_name, data.get('rotation_rate')),
                 'form_factor': form_factor,
                 'physical_block_size': physical_block_size,
                 'trim_supported': trim_supported,

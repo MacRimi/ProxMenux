@@ -23,6 +23,7 @@ A special thank you goes to [@Vaso73](https://github.com/Vaso73), [@f3rs3n](http
 - **The Ollama entry describes what the image provides** ([PR #566](https://github.com/MacRimi/ProxMenux/pull/566), contributed by [@jcastro](https://github.com/jcastro)): its HTTP API on port 11434, with its link and startup check on `/api/version`.
 - **An update clears the snapshot an interrupted backup leaves** ([#565](https://github.com/MacRimi/ProxMenux/issues/565), reported by [@kiosvantra](https://github.com/kiosvantra)). A snapshot made by the user stops the update, because a rebuilt container cannot keep it.
 - **A container that ignores the shutdown signal is stopped after 60 seconds**, as `docker stop` does, during an update and when an interrupted operation is recovered.
+- **SearXNG keeps its configuration in its own volume**, `/etc/searxng`, so Modify and updates accept it.
 
 ## 🖥️ Monitor — Proxmox updates and pending reboots
 
@@ -59,6 +60,7 @@ A special thank you goes to [@Vaso73](https://github.com/Vaso73), [@f3rs3n](http
 - **Bitwarden recognizes the 2FA field on the Monitor login** ([#570](https://github.com/MacRimi/ProxMenux/issues/570), reported by [@shtefko](https://github.com/shtefko)): the backup code hint keeps its text and place, outside the group of the field.
 - **Secure Gateway installs on Proxmox hosts on BTRFS** ([#564](https://github.com/MacRimi/ProxMenux/issues/564), reported by [@78v5](https://github.com/78v5)): the Alpine template goes to an active storage that holds container templates.
 - **A disk I/O error from the kernel is recorded on its disk**, with its serial number, also when the error names a partition.
+- **Every view of a disk shows the same type**: the Storage page, the disk details, the SMART report and the Audit & Report inventory take it from one source. A hard disk smartctl cannot read keeps its type, model and serial number, and a hard disk that reports no speed shows as HDD.
 - **The Monitor installs as an app (PWA) from the browser**: it serves its own web app manifest and service worker, with the 192 and 512 px icons Chrome requires.
 - **The Y-axis titles stay inside the overview charts** ([PR #539](https://github.com/MacRimi/ProxMenux/pull/539), contributed by [@f3rs3n](https://github.com/f3rs3n)).
 - **The application version-tracking catalog builds from the current Helper-Scripts repositories**.

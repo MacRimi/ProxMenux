@@ -23,6 +23,7 @@ Un agradecimiento especial a [@Vaso73](https://github.com/Vaso73), [@f3rs3n](htt
 - **La entrada de Ollama describe lo que ofrece la imagen** ([PR #566](https://github.com/MacRimi/ProxMenux/pull/566), aportado por [@jcastro](https://github.com/jcastro)): su API HTTP en el puerto 11434, con el enlace y la comprobación de arranque en `/api/version`.
 - **Una actualización elimina el snapshot que deja un backup interrumpido** ([#565](https://github.com/MacRimi/ProxMenux/issues/565), reportado por [@kiosvantra](https://github.com/kiosvantra)). Un snapshot hecho por el usuario detiene la actualización, porque un contenedor reconstruido no puede conservarlo.
 - **Un contenedor que ignora la señal de apagado se detiene a los 60 segundos**, como hace `docker stop`, durante una actualización y al recuperar una operación interrumpida.
+- **SearXNG guarda su configuración en su propio volumen**, `/etc/searxng`, de modo que Modificar y las actualizaciones lo aceptan.
 
 ## 🖥️ Monitor — actualizaciones de Proxmox y reinicios pendientes
 
@@ -59,6 +60,7 @@ Un agradecimiento especial a [@Vaso73](https://github.com/Vaso73), [@f3rs3n](htt
 - **Bitwarden reconoce el campo 2FA en el inicio de sesión del Monitor** ([#570](https://github.com/MacRimi/ProxMenux/issues/570), reportado por [@shtefko](https://github.com/shtefko)): la pista del código de backup mantiene su texto y su lugar, fuera del grupo del campo.
 - **Secure Gateway se instala en hosts Proxmox sobre BTRFS** ([#564](https://github.com/MacRimi/ProxMenux/issues/564), reportado por [@78v5](https://github.com/78v5)): la plantilla de Alpine va a un almacenamiento activo que admite plantillas de contenedor.
 - **Un error de E/S de disco del kernel se registra en su disco**, con su número de serie, también cuando el error nombra una partición.
+- **Todas las vistas de un disco muestran el mismo tipo**: la página de almacenamiento, el detalle del disco, el informe SMART y el inventario de Audit & Report lo toman de una sola fuente. Un disco duro que smartctl no consigue leer conserva su tipo, modelo y número de serie, y un disco duro que no informa de su velocidad aparece como HDD.
 - **El Monitor se instala como aplicación (PWA) desde el navegador**: sirve su propio manifiesto de aplicación web y su service worker, con los iconos de 192 y 512 px que exige Chrome.
 - **Los títulos del eje Y se mantienen dentro de los gráficos de la vista general** ([PR #539](https://github.com/MacRimi/ProxMenux/pull/539), aportado por [@f3rs3n](https://github.com/f3rs3n)).
 - **El catálogo de seguimiento de versiones de aplicaciones se genera desde los repositorios actuales de Helper-Scripts**.
