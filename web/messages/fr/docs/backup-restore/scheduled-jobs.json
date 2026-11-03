@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Gestion des tâches",
-    "intro": "Le menu planificateur (Scripts TUI) et l'onglet Sauvegardes Monitor exposent les mêmes actions sur n'importe quel travail.",
+    "intro": "Le menu planificateur du Scripts TUI (Backup scheduler and retention) propose Run now, Enable / Disable et Delete, ainsi qu’une liste des travaux avec l’état de leur dernière exécution. Edit et View log ne sont disponibles que dans l’onglet Sauvegardes de Monitor.",
     "rows": [
       {
         "action": "Exécuter maintenant",
@@ -112,7 +112,7 @@
         "detail": "Nouveau mode : <code>systemctl enable/disable --now</code> la minuterie. Attache le mode : retourne le drapeau <code>ENABLED</code> dans le travail env — le script hook l'honore au prochain déclenchement PVE."
       },
       {
-        "action": "Modifier",
+        "action": "Modifier (Monitor uniquement)",
         "detail": "Rouvre les champs de destination, calendrier, profil et rétention et réécrit les fichiers de la tâche. Conserve son identifiant."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Supprime le fichier env, la liste des chemins et le minuteur et service systemd (nouvelle tâche), et désactive l’association au hook (mode d’association). Les archives déjà présentes à destination restent intactes."
       },
       {
-        "action": "Voir le journal",
+        "action": "Voir le journal (Monitor uniquement)",
         "detail": "Affiche en continu <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> : un fichier journal par exécution. Le programme d'exécution émet également une ligne d'état compacte à journald sous le service systemd."
       }
     ]

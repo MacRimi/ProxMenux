@@ -50,7 +50,7 @@
     "heading": "Duas interfaces, um back-end",
     "intro": "Cada etapa do fluxo de trabalho de backup e restauração está disponível em dois pontos de entrada. Ambos chamam a mesma biblioteca shell, produzem arquivos idênticos e leem o mesmo registro de tarefas.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "menu → Utilitários →\nBackup/restauração de host\n\nFluxo baseado em diálogo,\nSSH amigável, programável\npara uso não supervisionado.",
+    "cliDetail": "menu →\nBackup/restauração de host\n\nFluxo baseado em diálogo,\nSSH amigável, programável\npara uso não supervisionado.",
     "webLabel": "ProxMenux Monitor (Web UI)",
     "webDetail": "Aba Backups na\ninterface web do Monitor.\n\nRestauração com um clique,\nacompanhamento dos logs ao vivo,\nintegração com notificações e o\nvisualizador de diferenças da reversão."
   },

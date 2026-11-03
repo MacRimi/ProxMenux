@@ -58,7 +58,6 @@ export default async function CreatingBackupsPage({
       matrix: { rows: MatrixRow[] }
       commonPipeline: { steps: StepRow[] }
       included: {
-        globalItems: string[]
         rootItems: string[]
         proxmenuxItems: string[]
         notInProfileItems: string[]
@@ -71,7 +70,6 @@ export default async function CreatingBackupsPage({
   const entryRows = cb.entryPoints.rows
   const matrixRows = cb.matrix.rows
   const pipelineSteps = cb.commonPipeline.steps
-  const globalItems = cb.included.globalItems
   const rootItems = cb.included.rootItems
   const proxmenuxItems = cb.included.proxmenuxItems
   const notInProfileItems = cb.included.notInProfileItems
@@ -284,19 +282,6 @@ export default async function CreatingBackupsPage({
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("included.intro", { code })}
       </p>
-
-      <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-900">
-        {t.rich("included.globalTitle", { code })}
-      </h3>
-
-      <ul className="mb-6 space-y-1">
-        {globalItems.map((_, idx) => (
-          <li key={idx} className="text-gray-800 leading-relaxed pl-1">
-            <span className="text-gray-400 mr-2">•</span>
-            {t.rich(`included.globalItems.${idx}`, { code })}
-          </li>
-        ))}
-      </ul>
 
       <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-900">
         {t.rich("included.rootTitle", { code })}

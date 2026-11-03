@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Gestión de trabajos",
-    "intro": "El menú del scheduler (TUI de Scripts) y la pestaña Backups del Monitor exponen las mismas acciones sobre cualquier trabajo.",
+    "intro": "El menú del scheduler en la TUI de Scripts (Backup scheduler and retention) ofrece Run now, Enable / Disable y Delete, además de una lista de trabajos con el estado de su última ejecución. Edit y View log solo están disponibles en la pestaña Backups del Monitor.",
     "rows": [
       {
         "action": "Run now",
@@ -112,7 +112,7 @@
         "detail": "Modo Nuevo: <code>systemctl enable/disable --now</code> sobre el timer. Modo adjunto: cambia el flag <code>ENABLED</code> en el env del trabajo — el script-hook lo respeta en el siguiente disparo de PVE."
       },
       {
-        "action": "Edit",
+        "action": "Edit (solo en Monitor)",
         "detail": "Reabre los prompts de destino, horario, perfil y retención y reescribe los ficheros del trabajo. Preserva el ID del trabajo."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Elimina el env del trabajo, el fichero de rutas, el timer + service systemd (modo Nuevo) y desactiva el binding del hook (modo adjunto). No toca los archivos ya presentes en el destino."
       },
       {
-        "action": "View log",
+        "action": "View log (solo en Monitor)",
         "detail": "Muestra en streaming <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — un fichero de log por ejecución. El runner también emite una línea de estado compacta a journald bajo el service systemd."
       }
     ]

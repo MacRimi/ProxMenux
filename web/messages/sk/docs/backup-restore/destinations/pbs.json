@@ -33,7 +33,7 @@
       {
         "source": "ProxMenux manuálna konfigurácia",
         "path": "/usr/local/share/proxmenux/pbs-manual-configs.txt + pbs-pass-NAME.txt + pbs-fingerprint-NAME.txt",
-        "content": "Pridáva sa cez <em>Nastaviť ciele záloh → Ciele PBS → Pridať PBS</em>. Zadáva sa názov, používateľské meno (<code>root@pam</code> alebo <code>user@pbs!token</code>), hostiteľ alebo IP adresa, dátové úložisko a heslo. Pri prázdnom hesle sa výzva zopakuje: inak by sa prázdna hodnota potichu uložila a každá ďalšia záloha by zlyhala s nejasnou chybou overenia. Táto možnosť slúži pre PBS, ktorý nie je zaregistrovaný ako úložisko Proxmoxu."
+        "content": "Pridáva sa cez <em>Nastaviť ciele záloh → Ciele Proxmox Backup Server (PBS) → + Pridať nový PBS ručne</em>. Zadáva sa názov, používateľské meno (<code>root@pam</code> alebo <code>user@pbs!token</code>), hostiteľ alebo IP adresa, dátové úložisko a heslo. Pri prázdnom hesle sa výzva zopakuje: inak by sa prázdna hodnota potichu uložila a každá ďalšia záloha by zlyhala s nejasnou chybou overenia. Táto možnosť slúži pre PBS, ktorý nie je zaregistrovaný ako úložisko Proxmoxu."
       }
     ],
     "menuTitle": "Výberové menu",

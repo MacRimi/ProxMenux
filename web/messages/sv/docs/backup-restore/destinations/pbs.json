@@ -33,7 +33,7 @@
       {
         "source": "ProxMenux manuell konfig",
         "path": "/usr/local/share/proxmenux/pbs-manual-configs.txt + pbs-pass-NAME.txt + pbs-fingerprint-NAME.txt",
-        "content": "Läggs till via <em>Konfigurera säkerhetskopieringsmål → PBS-mål → Lägg till PBS</em>. Du anger namn, användarnamn (<code>root@pam</code> eller <code>user@pbs!token</code>), värd eller IP-adress, datalager och lösenord. Om lösenordet lämnas tomt visas frågan igen; annars skulle en tom uppgift sparas utan varning och alla senare säkerhetskopior misslyckas med ett otydligt autentiseringsfel. Detta används när PBS-målet inte är registrerat som Proxmox-lagring."
+        "content": "Läggs till via <em>Konfigurera säkerhetskopieringsmål → Proxmox Backup Server (PBS)-mål → + Lägg till ny PBS manuellt</em>. Du anger namn, användarnamn (<code>root@pam</code> eller <code>user@pbs!token</code>), värd eller IP-adress, datalager och lösenord. Om lösenordet lämnas tomt visas frågan igen; annars skulle en tom uppgift sparas utan varning och alla senare säkerhetskopior misslyckas med ett otydligt autentiseringsfel. Detta används när PBS-målet inte är registrerat som Proxmox-lagring."
       }
     ],
     "menuTitle": "Urvalsmenyn",
