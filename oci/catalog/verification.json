@@ -22,9 +22,6 @@
     "authentik": {
       "status": "laboratory-validated"
     },
-    "authelia": {
-      "status": "laboratory-validated"
-    },
     "chromium": {
       "status": "laboratory-validated"
     },
