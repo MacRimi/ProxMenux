@@ -25844,7 +25844,7 @@
     ],
     "port": 0,
     "website": "",
-    "documentation": "https://community-scripts.org/docs/tools/update-apps",
+    "documentation": "https://community-scripts.org/docs/tools/pve/update-apps",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": true,
     "privileged": false,
