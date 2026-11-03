@@ -19,10 +19,15 @@ if (!is_file($dir . '/config.php') && !is_file($dir . '/autoconfig.php')) {
     $path = $dir . '/autoconfig.php';
     if (file_put_contents($path, "<?php\n\$AUTOCONFIG = " . var_export($settings, true) . ";\n", LOCK_EX) === false) { throw new RuntimeException('Cannot write the Nextcloud database configuration'); }
     chmod($path, 0600);
+    // Existing installations skip LinuxServer's first-run ownership setup.
+    if (!chown($path, fileowner($dir)) || !chgrp($path, filegroup($dir))) { throw new RuntimeException('Cannot set Nextcloud configuration ownership'); }
 }
 $path = $dir . '/proxmenux-redis.config.php';
-if (!is_file($path)) {
+// Installed instances keep their existing cache configuration unchanged.
+if (!is_file($path) && !is_file($dir . '/config.php')) {
     $settings = ['filelocking.enabled' => true, 'memcache.local' => '\OC\Memcache\APCu', 'memcache.locking' => '\OC\Memcache\Redis', 'redis' => ['host' => 'redis', 'port' => 6379, 'timeout' => 0.0]];
     if (file_put_contents($path, "<?php\n\$CONFIG = " . var_export($settings, true) . ";\n", LOCK_EX) === false) { throw new RuntimeException('Cannot write the Nextcloud Redis configuration'); }
     chmod($path, 0600);
+    // Existing installations skip LinuxServer's first-run ownership setup.
+    if (!chown($path, fileowner($dir)) || !chgrp($path, filegroup($dir))) { throw new RuntimeException('Cannot set Nextcloud configuration ownership'); }
 }

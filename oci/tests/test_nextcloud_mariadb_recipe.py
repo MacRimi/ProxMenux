@@ -137,5 +137,49 @@ class NextcloudMariaDBTests(unittest.TestCase):
             self.assertFalse(autoconfig.exists())
             self.assertFalse((folder / 'CAN_INSTALL').exists())
 
+    @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid() == 0 and shutil.which('php'),
+                         'Linux root is needed to reproduce existing-volume ownership')
+    def test_existing_config_volume_can_read_new_redis_configuration_as_its_app_user(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            root.chmod(0o755)
+            folder = root / 'config'
+            folder.mkdir(mode=0o755)
+            os.chown(folder, 1001, 1001)
+            installed = folder / 'autoconfig.php'
+            installed.write_text('<?php $CONFIG = ["installed" => true];')
+            installed.chmod(0o640)
+            os.chown(installed, 1001, 1001)
+            source = (ROOT / 'examples/nextcloud-mariadb-bootstrap.php').read_text()
+            source = source.replace('/config/www/nextcloud/config', str(folder))
+            subprocess.run(['php'], input=source.encode(), check=True, capture_output=True)
+            redis = folder / 'proxmenux-redis.config.php'
+            self.assertEqual((redis.stat().st_uid, redis.stat().st_gid), (1001, 1001))
+            self.assertEqual(redis.stat().st_mode & 0o777, 0o600)
+            def app_user():
+                os.setgroups([])
+                os.setgid(1001)
+                os.setuid(1001)
+            result = subprocess.check_output(['php', '-r',
+                'require $argv[1]; echo json_encode($CONFIG);', str(redis)], preexec_fn=app_user)
+            self.assertEqual(json.loads(result)['redis']['host'], 'redis')
+            self.assertEqual(installed.read_text(), '<?php $CONFIG = ["installed" => true];')
+            self.assertFalse((folder / 'config.php').exists())
+
+    @unittest.skipUnless(shutil.which('php'), 'PHP CLI needed for the installed-instance contract')
+    def test_existing_installation_does_not_override_user_cache_settings(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / 'config'
+            folder.mkdir()
+            config = folder / 'config.php'
+            content = '<?php $CONFIG = ["installed" => true, "redis" => ["host" => "user-cache", "timeout" => 3]];'
+            config.write_text(content)
+            source = (ROOT / 'examples/nextcloud-mariadb-bootstrap.php').read_text()
+            source = source.replace('/config/www/nextcloud/config', str(folder))
+            subprocess.run(['php'], input=source.encode(), check=True, capture_output=True)
+            self.assertEqual(config.read_text(), content)
+            self.assertFalse((folder / 'proxmenux-redis.config.php').exists())
+            self.assertFalse((folder / 'autoconfig.php').exists())
+
 if __name__ == '__main__':
     unittest.main()
