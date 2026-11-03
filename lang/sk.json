@@ -9014,5 +9014,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Tento kontajner spravuje vysoká dostupnosť. Odstráňte ct:{vmid} z HA (Dátové centrum → HA alebo ha-manager remove ct:{vmid}), zopakujte operáciu a potom ho znova pridajte do HA s rovnakými nastaveniami."
 }

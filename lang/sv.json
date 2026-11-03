@@ -9012,5 +9012,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Den här containern hanteras av hög tillgänglighet. Ta bort ct:{vmid} från HA (Datacenter → HA, eller ha-manager remove ct:{vmid}), upprepa åtgärden och lägg sedan tillbaka den i HA med samma inställningar.",
+  "Krusader Web UI": "Krusaders webbgränssnitt",
+  "Z-Wave JS UI admin login": "Administratörsinloggning för Z-Wave JS UI"
 }

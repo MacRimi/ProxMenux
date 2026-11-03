@@ -233,6 +233,8 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         # the route before changing anything; actual validation/API failures
         # must not silently switch to a destructive fallback.
         transaction.preflight(record, desired, config)
+        # Refused before the image is downloaded, not after.
+        transaction.refuse_high_availability(vmid)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None
         check = lambda: work_backup.locate(

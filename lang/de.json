@@ -9014,5 +9014,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Dieser Container wird von der Hochverfügbarkeit verwaltet. Entfernen Sie ct:{vmid} aus HA (Rechenzentrum → HA oder ha-manager remove ct:{vmid}), wiederholen Sie den Vorgang und fügen Sie ihn mit denselben Einstellungen wieder zu HA hinzu."
 }

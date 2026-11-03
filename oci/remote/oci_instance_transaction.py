@@ -621,6 +621,17 @@ def without_public_routes(config, vmid):
     return b'\n'.join(line for line in config.splitlines() if not public_routes.own(line, vmid)) + b'\n'
 
 
+def refuse_high_availability(vmid):
+    """Recreating a container that HA manages would race the HA manager, which
+    restarts or relocates it in the middle of the replacement."""
+    resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
+    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
+        raise ValueError(translate(
+            'This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, '
+            'or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.'
+        ).replace('{vmid}', str(vmid)))
+
+
 def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
@@ -1202,9 +1213,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                                             runtime_settings.file_binds(before))
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
-    resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
-    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
-        raise ValueError(translate('High availability resources are not supported by this profile'))
+    refuse_high_availability(vmid)
     archive = archive.resolve(strict=True)
     check_archive(archive)
     image = image_from_archive(str(archive))
