@@ -115,6 +115,10 @@
     ],
     "unpackerr": [
       "/data"
+    ],
+    "airdcpp-webclient": [
+      "/Downloads",
+      "/Share"
     ]
   },
   "sizes": {

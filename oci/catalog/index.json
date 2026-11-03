@@ -18798,6 +18798,37 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "image-authelia"
+    },
+    {
+      "id": "airdcpp-webclient",
+      "provider": "gangefors",
+      "template_family": "curated-profile",
+      "title": "AirDC++ Web Client",
+      "repository": "https://github.com/gangefors/docker-airdcpp-webclient",
+      "description": "AirDC++ Web Client using the community-maintained gangefors image. Configuration, downloads and shared content use separate persistent paths.",
+      "website": "https://airdcpp-web.github.io/",
+      "icon": "https://raw.githubusercontent.com/airdcpp-web/airdcpp-webui/eeeea5025a5e720f38dac53ced8e002940f00a74/resources/images/logo.svg",
+      "architectures": [
+        "amd64"
+      ],
+      "updated_at": "2026-10-25",
+      "main_image": "docker.io/gangefors/airdcpp-webclient:latest",
+      "category": "downloads",
+      "category_label": "Files & Downloads",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/airdcpp-webclient.json",
+      "template_id": "image-airdcpp-webclient",
+      "template": "apps/airdcpp-webclient.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false
     }
   ],
   "discovery": {

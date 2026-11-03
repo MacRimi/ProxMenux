@@ -8978,5 +8978,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "AirDC++ administrator": "AirDC++-administratör",
+  "Direct Connect file sharing with a web interface": "Fildelning via Direct Connect med webbgränssnitt"
 }
