@@ -1,10 +1,17 @@
 """Catalog delivery is atomic, offline-safe, and never acknowledges unseen apps."""
 import json
+import errno
+import http.server
+import itertools
 from pathlib import Path
 import shutil
 import sys
 import tempfile
+import threading
+import time
 import unittest
+import urllib.error
+import urllib.parse
 from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -302,6 +309,272 @@ class CatalogRefreshTests(unittest.TestCase):
         from proxmenux_oci.cli import _catalog_options
         options = dict(_catalog_options(Catalog(self.root))[-1])
         self.assertEqual(options['catalog-refresh'], 'Refresh catalog')
+
+    def test_sequence_new_app_failed_update_retry_and_withdrawal(self):
+        self.sync()
+        old = Catalog(self.root)
+        status = refresh.CatalogRefresh(self.root, old)
+        status.mark_seen()
+        self.revision = 'b' * 40
+        self.add_app()
+        self.assertTrue(self.sync())
+        self.assertIn('sample-added', refresh.visible_recipes(Catalog(self.root)))
+        self.assertNotIn('sample-added', refresh.visible_recipes(old))  # Wizard remains pinned.
+        next_visit = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        self.assertIn('New applications since your last visit: 1', next_visit.describe())
+        next_visit.mark_seen()
+        self.revision = 'c' * 40
+        recipe_path = self.item['curated_path'].removeprefix('catalog/')
+        good = self.files[recipe_path]
+        self.files[recipe_path] = b'{invalid-json'
+        with self.assertRaises(ValueError):
+            self.sync()
+        self.assertEqual(refresh.current_catalog(self.root).name, 'b' * 40)
+        self.files[recipe_path] = good
+        self.assertTrue(self.sync())
+        index = json.loads(self.files['index.json'])
+        index['applications'] = [self.item]
+        self.files['index.json'] = json.dumps(index).encode()
+        for name in ('apps/sample-added.json', 'curated/sample-added.json'):
+            self.files.pop(name)
+        self.revision = 'd' * 40
+        self.assertTrue(self.sync())
+        current = Catalog(self.root)
+        self.assertNotIn('sample-added', refresh.visible_recipes(current))
+        self.assertFalse((current.catalog_dir / 'curated/sample-added.json').exists())
+        self.assertIn('New applications since your last visit: 0',
+                      refresh.CatalogRefresh(self.root, current).describe())
+
+    def test_http_errors_and_timeouts_keep_snapshot_then_retry_succeeds(self):
+        self.sync()
+        old = refresh.current_catalog(self.root)
+        errors = [TimeoutError('timeout'), urllib.error.URLError('DNS unavailable')]
+        errors += [urllib.error.HTTPError('https://api.github.com', code, 'test', {}, None)
+                   for code in (403, 404, 429, 500, 503)]
+        for error in errors:
+            if isinstance(error, urllib.error.HTTPError): self.addCleanup(error.close)
+        self.revision = 'b' * 40
+        for error in errors:
+            with self.subTest(error=str(error)), self.assertRaises(Exception):
+                refresh.synchronize(self.root, 'main', Mock(side_effect=error))
+            self.assertEqual(refresh.current_catalog(self.root), old)
+        self.assertTrue(self.sync())
+
+    def test_failed_file_transfer_does_not_publish_partial_download(self):
+        self.sync(); old = refresh.current_catalog(self.root)
+        self.revision = 'b' * 40; self.add_app()
+        def interrupted(url, etag=None):
+            if 'raw.githubusercontent' in url:
+                raise TimeoutError('Connection lost during download')
+            return self.fetch(url, etag)
+        with self.assertRaises(TimeoutError):
+            refresh.synchronize(self.root, 'main', interrupted)
+        self.assertEqual(refresh.current_catalog(self.root), old)
+        self.assertFalse(list((refresh.cache_root(self.root) / 'snapshots').glob('.download-*')))
+        self.assertTrue(self.sync())
+
+    def test_disk_full_and_pointer_permission_failure_preserve_previous_revision_and_etag(self):
+        for error in (OSError(errno.ENOSPC, 'Disk full'), PermissionError('Read only')):
+            with self.subTest(error=error):
+                self.sync()
+                pointer = refresh.cache_root(self.root) / 'main-current.json'
+                before = pointer.read_bytes()
+                old = refresh.current_catalog(self.root)
+                self.revision = 'b' * 40
+                real = refresh.write_json
+                def fail(path, value):
+                    if Path(path) == pointer:
+                        raise error
+                    return real(path, value)
+                with patch.object(refresh, 'write_json', side_effect=fail), self.assertRaises(OSError):
+                    self.sync()
+                self.assertEqual(pointer.read_bytes(), before)
+                self.assertEqual(refresh.current_catalog(self.root), old)
+                self.assertTrue(self.sync())
+                self.revision = 'c' * 40
+
+    def test_manual_force_repairs_corrupted_recipe_at_same_revision(self):
+        self.sync()
+        old = refresh.current_catalog(self.root)
+        recipe = old / self.item['curated_path'].removeprefix('catalog/')
+        recipe.write_text('{}')
+        self.requests.clear()
+        self.assertTrue(refresh.synchronize(self.root, 'main', self.fetch, force=True))
+        self.assertIsNone(self.requests[0][1])
+        self.assertNotEqual(refresh.current_catalog(self.root), old)
+        self.assertEqual(Catalog(self.root).compose(self.item['id'])['id'], self.item['template_id'])
+        self.assertFalse(refresh.synchronize(self.root, 'main', self.fetch, force=True))
+
+    def test_corrupt_cached_index_can_be_repaired_by_automatic_refresh(self):
+        self.sync()
+        old = refresh.current_catalog(self.root)
+        (old / 'index.json').write_text('{broken')
+        self.assertTrue(self.sync())
+        self.assertNotEqual(refresh.current_catalog(self.root), self.root / 'catalog')
+        self.assertEqual(Catalog(self.root).compose(self.item['id'])['id'], self.item['template_id'])
+
+    def test_second_session_result_cannot_hide_successful_update(self):
+        status = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        self.sync()
+        status.process = Mock(returncode=0)
+        status.process.poll.return_value = 0
+        # Another session checked the newly installed revision and found no change.
+        refresh.write_json(refresh.cache_root(self.root) / 'main-result.json',
+                           {'ok': True, 'changed': False})
+        self.assertTrue(status.consume())
+
+    def test_crashed_worker_does_not_trust_stale_success(self):
+        status = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        status.process = Mock(returncode=1); status.process.poll.return_value = 1
+        refresh.write_json(refresh.cache_root(self.root) / 'main-result.json',
+                           {'ok': True, 'changed': True})
+        self.assertFalse(status.consume())
+        self.assertTrue(status.failed)
+
+    def test_force_manual_refresh_passes_flag_to_worker(self):
+        status = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        with patch.object(refresh.subprocess, 'Popen') as spawn:
+            self.assertTrue(status.start(force=True))
+            self.assertIn('--force', spawn.call_args.args[0])
+
+    def test_duplicate_manifest_path_symlink_and_truncated_tree_are_rejected(self):
+        for change in ('duplicate', 'symlink', 'truncated'):
+            def bad_tree(url, etag=None):
+                body, tag = self.fetch(url, etag)
+                if '/git/trees/' in url:
+                    tree = json.loads(body)
+                    if change == 'duplicate': tree['tree'].append(tree['tree'][0])
+                    elif change == 'symlink': tree['tree'][0]['mode'] = '120000'
+                    else: tree['truncated'] = True
+                    body = json.dumps(tree).encode()
+                return body, tag
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                refresh.synchronize(self.root, 'main', bad_tree)
+            self.assertEqual(refresh.current_catalog(self.root), self.root / 'catalog')
+
+    def test_bad_channel_config_falls_back_without_crashing_menu(self):
+        config = self.root.parent / 'catalog-source.json'
+        for value in ([], None, 'invalid', {'channel': 'other'}, {'beta_program': 'invalid'}):
+            config.write_text(json.dumps(value))
+            self.assertEqual(refresh.channel_for(self.root), 'main')
+
+    def test_full_disk_during_file_write_leaves_no_partial_catalog(self):
+        self.sync(); old = refresh.current_catalog(self.root)
+        self.revision = 'b' * 40; self.add_app()
+        real = Path.write_bytes
+        def full(path, data):
+            if any(part.startswith('.download-') for part in path.parts):
+                raise OSError(errno.ENOSPC, 'Disk full')
+            return real(path, data)
+        with patch.object(Path, 'write_bytes', new=full), self.assertRaises(OSError):
+            self.sync()
+        self.assertEqual(refresh.current_catalog(self.root), old)
+        self.assertFalse(list((refresh.cache_root(self.root) / 'snapshots').glob('.download-*')))
+
+    def test_orphaned_download_is_removed_before_retry(self):
+        partial = refresh.cache_root(self.root) / 'snapshots/.download-crashed'
+        partial.mkdir(parents=True); (partial/'partial.json').write_text('{}')
+        synchronize = refresh.synchronize
+        with patch.object(refresh, 'synchronize', side_effect=lambda *a, **kw:
+                          synchronize(self.root, 'main', self.fetch)):
+            refresh.worker(self.root, 'main')
+        self.assertFalse(partial.exists())
+        self.assertTrue(refresh.read_json(refresh.cache_root(self.root)/'main-result.json')['ok'])
+
+    def test_request_rejects_oversized_response_and_handles_304(self):
+        context = Mock()
+        context.__enter__ = Mock(return_value=Mock(read=Mock(return_value=b'oversized')))
+        context.__exit__ = Mock(return_value=False)
+        with patch.object(refresh.urllib.request, 'urlopen', return_value=context), self.assertRaises(ValueError):
+            refresh.request('https://api.github.com/test', limit=2)
+        error = urllib.error.HTTPError('https://api.github.com', 304, 'unchanged', {}, None)
+        with patch.object(refresh.urllib.request, 'urlopen', side_effect=error):
+            self.assertEqual(refresh.request('https://api.github.com/test', etag='old'), (None, 'old'))
+
+    def test_unwritable_seen_state_does_not_crash_menu(self):
+        status = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        with patch.object(refresh, 'write_json', side_effect=PermissionError('Read only')):
+            status.mark_seen()
+        self.assertTrue(status.failed)
+
+    def test_concurrent_workers_serialize_the_catalog_transaction(self):
+        barrier = threading.Barrier(2)
+        guard = threading.Lock()
+        active = maximum = 0
+        errors = []
+        def operation(*args, **kwargs):
+            nonlocal active, maximum
+            with guard:
+                active += 1; maximum = max(maximum, active)
+            time.sleep(0.03)
+            with guard: active -= 1
+            return False
+        def run():
+            try:
+                barrier.wait(timeout=2)
+                refresh.worker(self.root, 'main')
+            except Exception as error:
+                errors.append(error)
+        with patch.object(refresh, 'synchronize', side_effect=operation):
+            threads = [threading.Thread(target=run) for _ in range(2)]
+            for thread in threads: thread.start()
+            for thread in threads: thread.join(timeout=3)
+        self.assertFalse(errors)
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual(maximum, 1)
+
+    def test_download_deadline_preserves_previous_catalog(self):
+        self.sync(); old = refresh.current_catalog(self.root)
+        self.revision = 'b' * 40; self.add_app()
+        with patch.object(refresh.time, 'monotonic', side_effect=itertools.chain([0], itertools.repeat(100))), \
+                self.assertRaises(TimeoutError):
+            self.sync()
+        self.assertEqual(refresh.current_catalog(self.root), old)
+
+    def test_http_end_to_end_new_release_outage_retry_manual_refresh_and_repair(self):
+        owner = self
+        unavailable = False
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_GET(self):
+                if unavailable:
+                    self.send_error(503); return
+                etag = '"' + owner.revision + '"'
+                if self.headers.get('If-None-Match') == etag:
+                    self.send_response(304); self.end_headers(); return
+                host = ('https://api.github.com' if self.path.startswith('/repos/')
+                        else 'https://raw.githubusercontent.com')
+                body, _ = owner.fetch(host + self.path)
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(body)))
+                self.send_header('ETag', etag)
+                self.end_headers(); self.wfile.write(body)
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        def fetch(url, etag=None):
+            original = urllib.parse.urlsplit(url)
+            path = original.path + ('?' + original.query if original.query else '')
+            return refresh.request(f'http://127.0.0.1:{server.server_port}' + path, etag)
+        try:
+            self.assertTrue(refresh.synchronize(self.root, 'main', fetch))
+            self.assertFalse(refresh.synchronize(self.root, 'main', fetch))
+            first = refresh.current_catalog(self.root)
+            unavailable = True
+            self.revision = 'b' * 40; self.add_app()
+            with self.assertRaises(urllib.error.HTTPError):
+                refresh.synchronize(self.root, 'main', fetch)
+            self.assertEqual(refresh.current_catalog(self.root), first)
+            unavailable = False
+            self.assertTrue(refresh.synchronize(self.root, 'main', fetch))
+            current = Catalog(self.root)
+            self.assertEqual(len(refresh.visible_recipes(current)), 2)
+            self.assertFalse(refresh.synchronize(self.root, 'main', fetch, force=True))
+            (current.catalog_dir / 'curated/sample-added.json').write_text('{}')
+            self.assertTrue(refresh.synchronize(self.root, 'main', fetch, force=True))
+            self.assertEqual(Catalog(self.root).compose('sample-added')['id'], 'image-sample-added')
+        finally:
+            server.shutdown(); server.server_close(); thread.join(timeout=2)
 
 
 if __name__ == "__main__":

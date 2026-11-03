@@ -626,7 +626,7 @@ def interactive(catalog: Catalog) -> int:
                     from .management import interactive_management
                     interactive_management(PROJECT_ROOT, ui)
                 elif selection == "catalog-refresh":
-                    catalog_refresh.start()
+                    catalog_refresh.start(force=True)
                 elif selection == "updates":
                     if not updates.active:
                         if state['available']:

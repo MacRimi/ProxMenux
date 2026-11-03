@@ -6,6 +6,10 @@ catalog, and changed recipes. Returning from a search or installation does not
 start another download. A running wizard keeps the catalog it started with.
 The menu also offers **Refresh catalog** to check again manually or retry after
 a connection failure. Selecting it during a refresh does not start a second worker.
+Manual refresh bypasses the conditional check and verifies the complete manifest,
+allowing it to repair damaged cached files even when the upstream revision has not
+changed. A repaired snapshot gets a separate immutable directory so existing
+readers retain their original snapshot until they return to the menu.
 
 The worker checks the latest commit affecting `oci/catalog` in the official
 MacRimi/ProxMenux repository. GitHub's ETag avoids repeated transfers. When the
@@ -20,6 +24,8 @@ the engine replaced by the normal ProxMenux updater. The bundled catalog remains
 the fallback. A network failure, incomplete manifest, invalid recipe, different
 template schema or unsupported catalog engine API leaves the previous catalog
 active. The private `CHANNEL-result.json` records the diagnostic.
+The revision, snapshot and ETag are committed together in one atomic pointer;
+failure to publish it cannot acknowledge an update that was not applied.
 
 The channel follows `install_branch`, an active beta program or `beta_version.txt`;
 otherwise it is `main`. A host can explicitly select `main` or `develop` with

@@ -14,12 +14,15 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import urllib.error
 import urllib.request
+import uuid
 
 from .i18n import translate
 
@@ -46,11 +49,12 @@ def channel_for(root):
             root.parent if root.name == "oci" else root)
     for name in ("oci/catalog-source.json", "config.json"):
         try:
-            value = json.loads((base / name).read_text())
+            value = read_json(base / name)
             channel = value.get("channel") or value.get("install_branch")
             if channel in ("main", "develop"):
                 return channel
-            if (value.get("beta_program") or {}).get("status") == "active":
+            beta = value.get("beta_program")
+            if isinstance(beta, dict) and beta.get("status") == "active":
                 return "develop"
         except (OSError, ValueError, TypeError):
             pass
@@ -99,7 +103,10 @@ def current_catalog(root, channel=None):
     if (isinstance(revision, str) and SHA.fullmatch(revision)
             and value.get("schema_hash") == schema_hash(root)
             and value.get("engine_api") == CATALOG_API):
-        path = cache_root(root) / "snapshots" / revision
+        snapshot = value.get("snapshot", revision)
+        if not isinstance(snapshot, str) or not re.fullmatch(revision + r"(?:-[0-9a-f]{12})?", snapshot):
+            return root / "catalog"
+        path = cache_root(root) / "snapshots" / snapshot
         index = read_json(path / "index.json")
         if (index.get("kind") == "proxmenux.oci-catalog-index"
                 and isinstance(index.get("applications"), list) and index["applications"]):
@@ -122,6 +129,7 @@ def request(url, etag=None, limit=MAX_FILE):
                 raise ValueError("Catalog response exceeds the size limit")
             return body, response.headers.get("ETag")
     except urllib.error.HTTPError as error:
+        error.close()
         if error.code == 304:
             return None, etag
         raise
@@ -171,15 +179,15 @@ def validate_snapshot(root, directory):
             validator.validate(catalog._compose_item(item))
 
 
-def synchronize(root, channel, fetch=request):
+def synchronize(root, channel, fetch=request, force=False):
     """Download changed JSON files into a private snapshot, then publish once."""
     root = Path(root)
     cache = cache_root(root)
     cache.mkdir(parents=True, exist_ok=True)
-    metadata_path = cache / f"{channel}-remote.json"
-    previous = read_json(metadata_path)
+    pointer = cache / f"{channel}-current.json"
+    previous = read_json(pointer)
     active = current_catalog(root, channel)
-    etag = previous.get("etag") if active != root / "catalog" else None
+    etag = previous.get("etag") if active != root / "catalog" and not force else None
     url = f"https://api.github.com/repos/{REPOSITORY}/commits?sha={channel}&path=oci/catalog&per_page=1"
     body, etag = fetch(url, etag)
     if body is None:
@@ -188,8 +196,8 @@ def synchronize(root, channel, fetch=request):
     revision = commits[0]["sha"]
     if not isinstance(revision, str) or not SHA.fullmatch(revision):
         raise ValueError("Invalid catalog revision")
-    if active.name == revision:
-        write_json(metadata_path, {"etag": etag})
+    if previous.get("revision") == revision and active != root / "catalog" and not force:
+        write_json(pointer, {**previous, "etag": etag})
         return False
     body, _ = fetch(f"https://api.github.com/repos/{REPOSITORY}/git/trees/{revision}?recursive=1")
     tree = json.loads(body)
@@ -211,6 +219,8 @@ def synchronize(root, channel, fetch=request):
             raise ValueError("Invalid catalog manifest entry")
         if type(entry.get("size")) is not int or not 0 <= entry["size"] <= MAX_FILE:
             raise ValueError("Invalid catalog file size")
+        if relative in entries:
+            raise ValueError("Duplicate catalog manifest path")
         entries[relative] = entry
     if schema != git_blob((root / "schemas/oci-template.schema.json").read_bytes()):
         raise ValueError("Catalog schema changed; update ProxMenux first")
@@ -222,8 +232,11 @@ def synchronize(root, channel, fetch=request):
     snapshots.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".download-", dir=snapshots) as name:
         staging = Path(name)
+        deadline = time.monotonic() + 90
 
         def download(pair):
+            if time.monotonic() > deadline:
+                raise TimeoutError("Catalog download exceeded its time limit")
             relative, entry = pair
             old = active / relative
             data = old.read_bytes() if old.is_file() else b""
@@ -236,28 +249,40 @@ def synchronize(root, channel, fetch=request):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
 
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        pool = ThreadPoolExecutor(max_workers=4)
+        try:
             list(pool.map(download, entries.items()))
+        finally:
+            pool.shutdown(wait=True, cancel_futures=True)
         validate_snapshot(root, staging)
-        destination = snapshots / revision
+        destination = (active if previous.get("revision") == revision and active != root / "catalog"
+                       else snapshots / revision)
         if destination.exists():
-            # Revalidate an existing immutable snapshot after an interrupted publication.
-            validate_snapshot(root, destination)
-        else:
+            intact = all((destination / relative).is_file()
+                         and not (destination / relative).is_symlink()
+                         and git_blob((destination / relative).read_bytes()) == entry["sha"]
+                         for relative, entry in entries.items())
+            existing = {str(p.relative_to(destination)) for p in destination.rglob("*.json")}
+            if not intact or existing != set(entries):
+                # Repair without removing a snapshot another wizard may still hold.
+                destination = snapshots / (revision + "-" + uuid.uuid4().hex[:12])
+        if not destination.exists():
             os.replace(staging, destination)
-        write_json(cache / f"{channel}-current.json", {"revision": revision,
+        write_json(pointer, {"revision": revision, "snapshot": destination.name, "etag": etag,
                    "schema_hash": schema_hash(root), "engine_api": CATALOG_API})
-        write_json(metadata_path, {"etag": etag})
-    return True
+    return destination != active
 
 
-def worker(root, channel):
+def worker(root, channel, force=False):
     cache = cache_root(root)
     cache.mkdir(parents=True, exist_ok=True)
     with (cache / "refresh.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
-            changed = synchronize(root, channel)
+            for partial in (cache / "snapshots").glob(".download-*"):
+                if partial.is_dir() and not partial.is_symlink():
+                    shutil.rmtree(partial)
+            changed = synchronize(root, channel, force=force)
             write_json(cache / f"{channel}-result.json", {"ok": True, "changed": changed})
         except Exception as error:
             write_json(cache / f"{channel}-result.json", {"ok": False, "error": str(error)[:400]})
@@ -300,6 +325,7 @@ class CatalogRefresh:
         self.channel = channel_for(root)
         self.seen_path = cache_root(root) / f"{self.channel}-seen.json"
         self.recipes = visible_recipes(catalog)
+        self.displayed_directory = catalog.catalog_dir
         baseline = read_json(self.seen_path).get("recipes")
         self.baseline = baseline if isinstance(baseline, dict) else self.recipes.copy()
         self.process = None
@@ -310,14 +336,17 @@ class CatalogRefresh:
         self.start()
         return self
 
-    def start(self):
+    def start(self, force=False):
         if self.active:
             return False
         self._finished = False
         self.failed = False
         environment = dict(os.environ, PYTHONPATH=str(self.root / "src"))
         try:
-            self.process = subprocess.Popen([sys.executable, "-m", __name__, str(self.root), self.channel],
+            command = [sys.executable, "-m", __name__, str(self.root), self.channel]
+            if force:
+                command.append("--force")
+            self.process = subprocess.Popen(command,
                                             env=environment, stdin=subprocess.DEVNULL,
                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                             start_new_session=True)
@@ -348,7 +377,11 @@ class CatalogRefresh:
         self._finished = True
         result = read_json(cache_root(self.root) / f"{self.channel}-result.json")
         self.failed = self.process.returncode != 0 or not result.get("ok")
-        return not self.failed and bool(result.get("changed"))
+        directory = current_catalog(self.root, self.channel)
+        changed = directory != self.displayed_directory
+        if changed:
+            self.displayed_directory = directory
+        return changed
 
     def describe(self):
         text = translate("Available applications: {count}").format(count=len(self.recipes))
@@ -374,5 +407,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
     parser.add_argument("channel", choices=("main", "develop"))
+    parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    worker(args.root, args.channel)
+    worker(args.root, args.channel, args.force)
