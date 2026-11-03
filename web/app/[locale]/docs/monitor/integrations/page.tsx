@@ -556,7 +556,8 @@ proxmenux_token_header: "Bearer <your_actual_api_token_here>"`}
       - name: "ProxMenux Monitor Update"
         unique_id: proxmenux_monitor_update
         value_template: >
-          {{ 'update available' if (value_json.stable or value_json.beta) else 'up to date' }}
+          {{ 'update available' if (value_json.update_available.stable or value_json.update_available.beta) else 'up to date' }}
+        json_attributes_path: "$.update_available"
         json_attributes:
           - stable
           - stable_version

@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Asistente de IA",
-    "description": "La reescritura opcional con IA convierte las plantillas de notificación admitidas en mensajes claros, con detalle por canal, trece idiomas en la interfaz, prompts personalizados, una biblioteca comunitaria pública y contexto adicional. Los informes <code>backup_complete</code> y <code>backup_fail</code> omiten la IA por completo.",
+    "description": "La reescritura opcional con IA convierte las plantillas de notificación admitidas en mensajes claros, con detalle por canal, trece idiomas en la interfaz, prompts personalizados, una biblioteca comunitaria pública y contexto adicional. Los informes backup_complete y backup_fail nunca se reescriben; con las sugerencias de IA activadas, la IA solo añade una explicación cuando un backup informa de errores.",
     "section": "Monitor de ProxMenux"
   },
   "intro": {
@@ -83,7 +83,7 @@
     "intro1": "Cada proveedor comercial cobra por <em>token</em>, así que merece la pena entender qué es un token antes de elegir un plan. Un token son aproximadamente cuatro caracteres de texto en inglés o unas tres cuartas partes de una palabra. La frase <em>\"Backup completed on storage local-bak\"</em> son unos ocho tokens. Un extracto corto de journal de diez líneas puede ser 200-400 tokens según la densidad técnica.",
     "intro2": "Se facturan dos cosas en cada llamada:",
     "items": [
-      "<strong>Tokens de entrada</strong>: incluyen las instrucciones del sistema y el mensaje de usuario: severidad, título, texto de la plantilla y contexto adicional. La cantidad depende del prompt y del evento. Cada canal reescrito puede consumir sus propios tokens de entrada; los informes de backup completado y fallido omiten la IA.",
+      "<strong>Tokens de entrada</strong>: incluyen las instrucciones del sistema y el mensaje de usuario: severidad, título, texto de la plantilla y contexto adicional. La cantidad depende del prompt y del evento. Cada canal reescrito puede consumir sus propios tokens de entrada; los informes de backup completado y fallido solo consumen tokens cuando la IA explica errores del backup.",
       "<strong>Tokens de salida</strong> — lo que el modelo escribe de vuelta. El Monitor lo limita con <code>max_tokens</code> (mira la tabla de abajo). El límite es un <em>tope</em>, no un cargo: si el modelo produce 250 tokens con un tope de 1500, pagas 250."
     ],
     "capsIntro": "Estos son los topes reales que aplica el dispatcher, tomados directamente de <code>AI_DETAIL_TOKENS</code> en <code>notification_templates.py</code>:",
@@ -118,7 +118,7 @@
     "imageCaption": "El modal in-app — seis tarjetas, una por proveedor, con las mismas descripciones documentadas abajo.",
     "groq": {
       "heading": "Groq",
-      "tagline": "Muy rápido, nivel gratuito generoso (30 req/min). Ideal para empezar.",
+      "tagline": "Muy rápido, con un nivel gratuito generoso. Un buen punto de partida.",
       "items": [
         "Clave API: <a>console.groq.com/keys</a>",
         "Ejemplos de la lista de modelos incluida: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
@@ -234,7 +234,7 @@
   },
   "detailLevel": {
     "heading": "Nivel de detalle por canal",
-    "intro": "Cada uno de los cuatro canales (Telegram, Discord, Gotify, Email) tiene su propio dropdown de nivel de detalle. Hay tres valores disponibles, mapeados a topes específicos de tokens de salida y a instrucciones específicas en el prompt por defecto:",
+    "intro": "Cada uno de los seis canales (Telegram, Discord, Gotify, Email, Pushover, Apprise) tiene su propio dropdown de nivel de detalle. Hay tres valores disponibles, mapeados a topes específicos de tokens de salida y a instrucciones específicas en el prompt por defecto:",
     "headerLevel": "Nivel",
     "headerLabel": "Etiqueta UI",
     "headerCap": "Tope de salida",
@@ -261,7 +261,7 @@
     ],
     "defaultsIntro": "Valores por defecto que el Monitor aplica en la primera instalación:",
     "defaults": [
-      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Telegram, Discord, Gotify, Pushover, Apprise</strong> — <code>standard</code>.",
       "<strong>Email</strong> — <code>detailed</code>. Email es el canal donde típicamente quieres la foto completa para archivo."
     ],
     "emailTitle": "El nivel de detalle de Email añade el original",
@@ -280,7 +280,7 @@
   },
   "templates": {
     "heading": "Una nota sobre templates",
-    "body1": "La IA recibe una plantilla ya generada, no datos de evento sin procesar. Tipos como <code>vm_start</code>, <code>auth_fail</code> y <code>health_degraded</code> tienen plantillas en <code>notification_templates.py</code>. La IA reescribe los textos admitidos; <code>backup_complete</code> y <code>backup_fail</code> conservan sus informes deterministas y omiten la IA.",
+    "body1": "La IA recibe una plantilla ya generada, no datos de evento sin procesar. Tipos como <code>vm_start</code>, <code>auth_fail</code> y <code>health_degraded</code> tienen plantillas en <code>notification_templates.py</code>. La IA reescribe los textos admitidos; <code>backup_complete</code> y <code>backup_fail</code> conservan sus informes deterministas; con las sugerencias de IA activadas, la IA solo añade una explicación cuando el backup informa de errores.",
     "body2": "Dos implicaciones prácticas: la IA nunca ve un hostname o VMID que tenga que inventar — esos campos los pone la template antes de la reescritura. Y si la IA está desactivada, el cuerpo templated es lo que se despacha directamente. La página de <link>Notifications</link> documenta la pipeline de despacho completa y es la referencia cruzada correcta para todo lo que le pasa a un evento antes de llegar a esta capa."
   },
   "privacy": {

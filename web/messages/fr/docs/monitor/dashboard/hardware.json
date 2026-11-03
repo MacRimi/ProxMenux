@@ -168,7 +168,7 @@
   "ups": {
     "heading": "Statut UPS",
     "subHeading": "(conditionnel)",
-    "body": "Apparaît avec un serveur NUT (Network UPS Tools) configuré et joignable. Affiche état (secteur / batterie / charge / batterie faible), niveau de batterie, autonomie estimée, taux de charge de l'onduleur, tension d'entrée, modèle et firmware. Les données alimentent aussi <em>Sécurité et certificats</em> du moniteur de santé : le passage sur batterie est immédiatement signalé."
+    "body": "Apparaît avec un serveur NUT (Network UPS Tools) configuré et joignable. Affiche état (secteur / batterie / charge / batterie faible), niveau de batterie, autonomie estimée, taux de charge de l’onduleur, tension d’entrée, modèle et firmware."
   },
   "dataCollected": {
     "heading": "Comment les données sont collectées",

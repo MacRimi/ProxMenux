@@ -18,7 +18,7 @@
       "<strong>Totalt antal poster</strong> — antal loggposter i det aktiva filtrets tidsintervall.",
       "<strong>Fel</strong> — antal poster med allvarlighetsgrad ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Varningar</strong> — antal poster med allvarlighetsgrad 4 (<code>warning</code>).",
-      "<strong>Säkerhetskopieringar</strong> — antal vzdump-/PBS-uppgifter i samma tidsintervall."
+      "<strong>Säkerhetskopieringar</strong>: antal säkerhetskopieringsarkiv på de konfigurerade lagringarna för säkerhetskopiering."
     ]
   },
   "subtabs": {
@@ -26,10 +26,10 @@
     "logsTitle": "Loggar",
     "logsIntro": "Systemjournalen hämtas på servern med <code>journalctl</code>. Följande filter finns i verktygsfältet:",
     "logsFilters": [
-      "<strong>Allvarlighetsgrad</strong> — emerg / alert / crit / err / warning / notice / info / debug, eller valfri kombination.",
-      "<strong>Time range</strong> - sista 5 min / 15 min / 1 h / 6 h / 24 h / 7 d / custom.",
-      "<strong>Fritextsökning</strong> — delsträng eller reguljärt uttryck (<code>journalctl --grep</code>).",
-      "<strong>Enhetsfilter</strong> — begränsa till en viss systemd-enhet (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+      "<strong>Level</strong>: Alla nivåer, Fel, Varning eller Info.",
+      "<strong>Time range</strong>: 1 dag / 3 dagar / 1 vecka / 2 veckor / 1 månad, eller ett eget antal dagar (upp till 90).",
+      "<strong>Fritextsökning</strong>: skiftlägesokänslig delsträng över meddelande, tjänst, PID, värdnamn och enhet, tillämpad i webbläsaren.",
+      "<strong>Service filter</strong>: begränsa till en tjänst (journalens <code>SYSLOG_IDENTIFIER</code>)."
     ],
     "logsRowsAfter": "Varje rad visar tidsstämpel, svårighetsgrad, källenhet och meddelandet. Långa meddelanden kollapsar med en \"visa mer\" växel. Den är <strong>Ladda ner</strong> Åtgärder buntar det aktuella filtret i en enda <code>.txt</code> fil via <code>GET /api/logs/download</code> - användbar när du vill dela en bit av tidskrift med någon.",
     "logDetailsModalTitle": "Dialogrutan Loggdetaljer",
@@ -50,10 +50,10 @@
     "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "På en ny Proxmox-installation använder journald som standard <code>MaxLevelStore=warning</code>, vilket kastar bort info-meddelanden. Monitor upptäcker detta vid start och lägger till en kompletterande konfiguration (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) med gränsen <code>info</code>, så att informationsmeddelanden och allvarligare meddelanden sparas. Detta omfattar inte debug.",
     "backupsTitle": "Säkerhetskopieringar",
-    "backupsBody": "Proxmox uppgiftshistorik filtrerad till säkerhetskopieringar. En rad per uppgift (<code>vzdump</code>, PBS-överföringar, Garbage Collect, Verify) med status (OK / WARNINGS / ERROR), berörd gäst, källagring, varaktighet och UPID. Klicka på en rad för att läsa hela uppgiftsloggen via <code>GET /api/task-log/&lt;upid&gt;</code> — samma data som i <em>Datacenter → Tasks</em>, begränsade till säkerhetskopieringar.",
+    "backupsBody": "Säkerhetskopieringsarkiven på varje lagring som kan hålla säkerhetskopior (dir, NFS, CIFS, PBS), lästa med <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Korten överst visar antal VM:ar och LXC samt total storlek; nedanför visas en rad per arkiv med typ, lagring, storlek och datum. Återställning sker i Proxmox webbgränssnitt.",
     "notificationsTitle": "Aviseringar",
-    "notificationsBody1": "Alla aviseringar som Monitor skickar: Telegram, Discord, e-post, Gotify, ntfy, Slack, Teams och webhook. Varje rad visar tidsstämpel, kanal, händelsetyp, allvarlighetsgrad, genererad rubrik och text samt, om AI är aktiverat, ett reglage för att jämföra AI-versionen med originalet.",
-    "notificationsBody2": "Använd fliken för att kontrollera att en kanal levererar aviseringar och jämföra AI-versionen med grundmallen. Kanaler ställs in på den detaljerade sidan <link>Aviseringar</link>."
+    "notificationsBody1": "Proxmox aviseringsaktivitet: journalrader från Proxmox-tjänster som nämner aviseringar, e-post, webhooks eller larm, målen i /etc/pve/notifications.cfg samt säkerhetskopieringsuppgifter från klustrets uppgiftslista. Rader för säkerhetskopieringsuppgifter kan ladda ner hela uppgiftsloggen. Historiken över vad Monitor själv har skickat finns under Inställningar → Aviseringar → Aviseringshistorik.",
+    "notificationsBody2": "Använd fliken för att kontrollera vad Proxmox egna aviseringssystem gör. Kanalinställningar för Monitor finns på den detaljerade sidan <link>Aviseringar</link>."
   },
   "dataCollected": {
     "heading": "Hur data samlas in",
@@ -64,7 +64,7 @@
       {
         "subtab": "Loggar (livefilter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl --output json --since &lt;range&gt;</code> med filter för allvarlighetsgrad, enhet och sökning på servern."
+        "source": "Fliken hämtar <code>/api/logs?since_days=N</code>; filter för nivå, tjänst och text tillämpas i webbläsaren. API:et tar även emot <code>priority</code> och <code>service</code>, som fliken ännu inte använder."
       },
       {
         "subtab": "Ladda ner",
@@ -74,17 +74,17 @@
       {
         "subtab": "Säkerhetskopieringar",
         "endpoint": "/api/backups",
-        "source": "PVE-uppgiftshistorik filtrerad efter <code>vzdump</code>, PBS-överföringar, Garbage Collect och Verify."
+        "source": "Säkerhetskopieringsarkiv listade från varje lagring för säkerhetskopior med <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Detaljer för en säkerhetskopieringsuppgift",
+        "subtab": "Uppgiftslogg för säkerhetskopiering (Aviseringar)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Hela uppgiftsloggen läses som oformaterad text från <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },
       {
-        "subtab": "Aviseringshistorik",
-        "endpoint": "/api/notifications/history",
-        "source": "SQLite-tabellen <code>notification_history</code> fylls av sändningsslingan."
+        "subtab": "Aviseringar",
+        "endpoint": "/api/notifications",
+        "source": "<code>journalctl --grep</code> över Proxmox-enheter, <code>/etc/pve/notifications.cfg</code> och säkerhetskopieringsuppgifter från <code>pvesh get /cluster/tasks</code>."
       }
     ],
     "apiIntro": "Både livefiltret och nedladdningarna kan också nås via API:",

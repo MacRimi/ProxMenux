@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Rozšírené systémové údaje pre hlavičku panela: celkové metriky a čas spustenia."
+        "use": "Ľahké informácie hlavičky: názov hostiteľa, uptime a vyrovnávací stav zdravia. Verejné, token nie je potrebný."
       },
       {
         "endpoint": "/api/hardware",
@@ -401,7 +401,7 @@
       {
         "endpoint": "/api/logs",
         "method": "GET",
-        "use": "Filtrované záznamy systémového denníka. Parametre: <code>?level=&service=&limit=</code>."
+        "use": "Filtrované záznamy systémového denníka. Parametre: <code>?priority=&service=&limit=&since_days=</code> (<code>priority</code> 0-7, <code>since_days</code> do 90)."
       },
       {
         "endpoint": "/api/logs/download",
@@ -411,7 +411,7 @@
       {
         "endpoint": "/api/events",
         "method": "GET",
-        "use": "Interný tok udalostí používaný aj na oznámenia."
+        "use": "Nedávne úlohy a udalosti klastra Proxmox z <code>pvesh get /cluster/tasks</code>. Parameter: <code>?limit=</code> (predvolene 50)."
       },
       {
         "endpoint": "/api/task-log/<upid>",
@@ -462,7 +462,7 @@
       {
         "endpoint": "/api/notifications/send",
         "method": "POST",
-        "use": "Vytvorí vlastnú udalosť. Telo: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+        "use": "Vytvorí vlastnú udalosť. Telo: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"message\":\"...\",\"data\":'{''}''}'</code>."
       },
       {
         "endpoint": "/api/notifications/test-ai",

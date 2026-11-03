@@ -46,7 +46,7 @@
     "thresholdsIntro": "Cada anillo, barra y minigráfico usa la misma escala: <green/> <strong>verde</strong> por debajo de Advertencia, <amber/> <strong>ámbar</strong> entre Advertencia y Crítico, <red/> <strong>rojo</strong> desde Crítico. Valores recomendados incluidos con ProxMenux:",
     "thresholdsItems": [
       "<strong>Uso de CPU</strong>: advertencia 85 %, crítico 95 %.",
-      "<strong>Memoria</strong>: advertencia 85 %, crítico 95 %. Swap también activa Crítico al 5 % de uso; un host Proxmox sano debería usarlo rara vez.",
+      "<strong>Memoria</strong>: advertencia 85 %, crítico 95 %. Swap activa Crítico solo cuando el uso de swap supera el 80 % y la RAM disponible está por debajo del 15 %.",
       "<strong>Temperatura de CPU</strong>: advertencia 80 °C, crítico 90 °C."
     ],
     "thresholdsOutro": "Los valores se configuran por host; <link>Ajustes → Umbrales del monitor de salud</link> documenta y centraliza su ajuste.",
@@ -58,7 +58,7 @@
     "intro": "Las tarjetas Uso de CPU y Memoria son pulsables. Abren una lista ordenable con los 25 procesos principales, por uso de CPU desde la primera tarjeta o por memoria residente desde la segunda.",
     "listTitle": "El diálogo con la lista",
     "listItems": [
-      "<strong>Actualización automática</strong>: la lista se actualiza cada 5 segundos mientras está abierta y deja de consultar datos al cerrar.",
+      "<strong>Actualización automática</strong>: la lista se actualiza cada 3 segundos mientras está abierta y deja de consultar datos al cerrar.",
       "<strong>Filtro</strong>: el buscador acota la lista por comando, usuario o PID.",
       "<strong>Barra en línea</strong> — la columna de la métrica principal dibuja una barra pequeña escalada al mayor valor de la lista filtrada, para que el orden siga siendo visible aunque ningún proceso esté cerca del 100 %.",
       "<strong>Layout móvil</strong> — por debajo de 640 px las columnas PID y User se ocultan para que Command, CPU % y Memory sigan cabiendo en la pantalla de un teléfono sin scroll horizontal."
@@ -79,7 +79,7 @@
   },
   "middle": {
     "heading": "Medio: gráficas de métricas del nodo",
-    "body1": "Bajo las tarjetas está <code>NodeMetricsCharts</code>, con gráficas históricas de CPU, memoria y E/S de disco del almacén RRD de Proxmox mediante <code>/api/node/metrics</code>. El selector permite <em>1 hora / 24 horas / 7 días / 30 días / 1 año</em>; la resolución baja al ampliar el intervalo para mantener la fluidez.",
+    "body1": "Bajo las tarjetas está <code>NodeMetricsCharts</code>, con gráficas históricas de CPU, memoria y E/S de disco del almacén RRD de Proxmox mediante <code>/api/node/metrics</code>. El selector permite <em>1 hora / 24 horas / 7 días / 30 días</em>; la resolución baja al ampliar el intervalo para mantener la fluidez.",
     "body2": "Son las mismas gráficas que la UI web de Proxmox renderiza para un nodo, simplemente consolidadas en el tema oscuro del Monitor y alineadas con el resto de paneles."
   },
   "bottom": {

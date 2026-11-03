@@ -18,7 +18,7 @@
   },
   "reaching": {
     "heading": "Raggiungere la dashboard",
-    "intro": "ProxMenux Monitor si lega a <code>0.0.0.0:8008</code>. Ci sono tre modi comuni per raggiungerlo:",
+    "intro": "ProxMenux Monitor è in ascolto sulla porta TCP 8008 su tutte le interfacce (<code>::</code>, IPv4 e IPv6). Ci sono tre modi comuni per raggiungerlo:",
     "outro": "L’accesso diretto corrisponde all’unità systemd predefinita. Proxy inverso e Secure Gateway sono descritti più avanti. Per fidarsi degli IP client in <code>X-Forwarded-For</code> servono PROXMENUX_TRUST_PROXY=1 e un proxy sotto il tuo controllo. La sola presenza di <code>X-Forwarded-Proto</code> o <code>X-Forwarded-Host</code> non attiva la fiducia nel proxy. Sulle porte 80/443 il frontend usa URL <code>/api/*</code> relativi; su qualsiasi altra porta chiama la porta 8008 sullo stesso nome host."
   },
   "firstLaunch": {
@@ -158,7 +158,7 @@
     "authJsonTitle": "auth.json — ciò che contiene e come è protetto",
     "authJsonBody": "I dati di autenticazione sono in <code>/root/.config/proxmenux-monitor/auth.json</code>, modalità <code>0600</code>, proprietario <code>root</code>. Contiene <em>hash</em> PBKDF2 e <em>segreti crittografici</em> (<code>jwt_secret</code>, <code>totp_secret</code>), mai la password in chiaro. Cifra le destinazioni di backup o replica e non inserire questo file nel controllo di versione.",
     "rotateTitle": "La rotazione di jwt_secret invalida tutti i JWT esistenti",
-    "rotateBody": "Se <code>auth.json</code> viene ricreato o ripristinato con un segreto diverso, cambia <code>jwt_secret</code>. I vecchi JWT di sessione e API falliscono con \"Invalid or expired token\". L’interfaccia li segnala come <strong>Non valido — rigenerare</strong>. Revocali e sostituiscili anche in Home Assistant, script e altri client.",
+    "rotateBody": "Se <code>auth.json</code> viene ricreato o ripristinato con un segreto diverso, cambia <code>jwt_secret</code>. I vecchi JWT di sessione e API falliscono con \"Invalid or expired token\". L’interfaccia segna in rosso i token API interessati, con un badge che indica di revocarli e generarne di nuovi. Sostituiscili anche in Home Assistant, script e altri client.",
     "recoverTitle": "Recuperare una password persa",
     "recoverIntro": "Il recupero della password richiede accesso alla shell dell’host. ProxMenux offre una reimpostazione guidata nel menu di configurazione, senza modificare manualmente <code>auth.json</code>:",
     "survivesTitle": "Cosa sopravvive al reset",
@@ -284,11 +284,11 @@
     "heading": "Token API di lunga durata",
     "intro": "Le sessioni scadono dopo 24 ore. Per Homepage, Home Assistant, Grafana o Uptime Kuma crea un <strong>token API</strong> valido 365 giorni. Il JWT usa lo stesso segreto di firma; il campo <code>token_name</code> permette di identificarlo e revocarlo singolarmente.",
     "imageAlt": "Pannello di token API con nome, prefisso, data e scadenza",
-    "imageCaption": "Elenco token nelle impostazioni: nome, prefisso con ultimi quattro caratteri di identificazione, date di creazione e scadenza, revoca.",
+    "imageCaption": "Elenco token in Amministratore → Sicurezza: nome, prefisso con ultimi quattro caratteri di identificazione, date di creazione e scadenza, revoca.",
     "generateTitle": "Generare un token",
     "generateIntro": "Dal cruscotto:",
     "generateSteps": [
-      "Apri <strong>Sicurezza → Token di accesso API</strong>.",
+      "Apri <strong>Amministratore → Sicurezza → Token API</strong> e premi <strong>Genera nuovo token</strong>.",
       "Assegna un nome descrittivo, <em>ad esempio \"Home Assistant\"</em>.",
       "Reinserisci la password e, con 2FA attivo, il codice attuale a sei cifre.",
       "Premi <strong>Genera token</strong>. Compare <strong>una sola volta</strong>: copialo subito."
@@ -310,7 +310,7 @@
     "intro": "Due percorsi per TLS:",
     "items": [
       "<strong>Proxy inverso consigliato.</strong> Termina TLS su Nginx / Caddy / Traefik e inoltra HTTP al processo Flask sulla porta 8008. Esempi sotto.",
-      "<strong>HTTPS diretto nell’AppImage.</strong> Configura un certificato con <code>POST /api/ssl/configure</code> (interfaccia: <strong>Impostazioni → SSL</strong>). HTTPS usa <code>gevent.pywsgi</code> con il gestore standard; flask-sock gestisce WebSocket per WSS. I percorsi sono salvati nella configurazione SSL."
+      "<strong>HTTPS diretto nell’AppImage.</strong> Configura un certificato con <code>POST /api/ssl/configure</code> (interfaccia: <strong>Amministratore → Sicurezza → SSL/HTTPS</strong>). HTTPS usa <code>gevent.pywsgi</code> con il gestore standard; flask-sock gestisce WebSocket per WSS. I percorsi sono salvati nella configurazione SSL."
     ],
     "calloutTitle": "Limitazioni dirette HTTPS",
     "calloutBody": "Monitor può usare un certificato gestito da Proxmox o file personalizzati. Non emette certificati ACME. Per emissione e rinnovo automatici usa Proxmox ACME o un proxy Caddy, Traefik o Nginx e assicurati che i certificati rinnovati vengano caricati."

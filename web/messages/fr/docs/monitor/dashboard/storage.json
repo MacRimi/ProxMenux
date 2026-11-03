@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Soutenu par trois sources",
-    "body": "Les stockages Proxmox viennent de <code>pvesm status</code>, ZFS de <code>zpool status</code>, les disques de <code>lsblk</code> + <code>smartctl</code> et les champs NVMe de <code>nvme</code>. L’onglet s’actualise environ toutes les 60 secondes ; ouvrir le détail demande une lecture SMART."
+    "body": "Les stockages Proxmox viennent de <code>pvesm status</code>, ZFS de <code>zpool status</code>, les disques de <code>lsblk</code> + <code>smartctl</code> et les champs NVMe de <code>nvme</code>. L’onglet s’actualise environ toutes les 30 secondes ; ouvrir le détail demande une lecture SMART."
   },
   "thresholds": {
     "title": "Couleurs et seuils appliqués ici",

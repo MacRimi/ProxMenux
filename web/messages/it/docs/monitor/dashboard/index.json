@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminale",
-        "owns": "Shell dell'host o di qualsiasi VM/CT nel browser, con <code>xterm.js</code> tramite WebSocket."
+        "owns": "Shell nel browser sull’host Proxmox, con <code>xterm.js</code> tramite WebSocket. Le console LXC si aprono dalla scheda VM e LXC."
       },
       {
         "name": "Sicurezza",

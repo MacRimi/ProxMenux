@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "KI-Assistent",
-    "description": "Die optionale KI formuliert geeignete Benachrichtigungsvorlagen verständlich um: mit Detailstufen pro Kanal, dreizehn Oberflächensprachen, eigenen Prompts, öffentlicher Community-Bibliothek und zusätzlichem Kontext. Die Backup-Berichte <code>backup_complete</code> und <code>backup_fail</code> umgehen die KI vollständig.",
+    "description": "Die optionale KI formuliert geeignete Benachrichtigungsvorlagen verständlich um: mit Detailstufen pro Kanal, dreizehn Oberflächensprachen, eigenen Prompts, öffentlicher Community-Bibliothek und zusätzlichem Kontext. Die Backup-Berichte backup_complete und backup_fail werden nie umgeschrieben; mit aktivierten KI-Vorschlägen fügt die KI nur eine Erklärung an, wenn ein Backup Fehler meldet.",
     "section": "ProxMenux-Monitor"
   },
   "intro": {
@@ -83,7 +83,7 @@
     "intro1": "Kommerzielle Anbieter rechnen nach <em>Token</em> ab. Ein Token entspricht grob vier englischen Zeichen oder drei Vierteln eines Wortes. Der englische Satz <em>\"Backup completed on storage local-bak\"</em> hat ungefähr acht Token. Zehn Journalzeilen können je nach technischem Inhalt 200–400 Token umfassen.",
     "intro2": "Zwei Dinge werden bei jedem Anruf in Rechnung gestellt:",
     "items": [
-      "<strong>Eingabe-Token</strong> umfassen Systemprompt und Benutzernachricht: Schweregrad, Titel, Vorlagentext und Kontext. Die Anzahl hängt vom tatsächlichen Prompt und Ereignis ab. Jeder umgeschriebene Kanal kann eigene Eingabe-Token verbrauchen; Backup-Abschluss- und Fehlerberichte umgehen die KI.",
+      "<strong>Eingabe-Token</strong> umfassen Systemprompt und Benutzernachricht: Schweregrad, Titel, Vorlagentext und Kontext. Die Anzahl hängt vom tatsächlichen Prompt und Ereignis ab. Jeder umgeschriebene Kanal kann eigene Eingabe-Token verbrauchen; Backup-Abschluss- und Fehlerberichte verbrauchen nur Token, wenn die KI Backup-Fehler erklärt.",
       "<strong>Ausgabe-Token</strong> sind die Modellantwort. Monitor begrenzt sie mit <code>max_tokens</code>. Die Grenze ist ein <em>Höchstwert</em>, kein fester Verbrauch: Erzeugt das Modell 250 Token bei einem Limit von 1500, werden 250 berechnet."
     ],
     "capsIntro": "Dies sind die tatsächlichen Obergrenzen, die der Dispatcher anwendet, direkt aus <code>AI_DETAIL_TOKENS</code> in <code>notification_templates.py</code> entnommen:",
@@ -118,7 +118,7 @@
     "imageCaption": "Informationsfenster mit sechs Karten, einer je Anbieter, und den unten beschriebenen Angaben.",
     "groq": {
       "heading": "Groq",
-      "tagline": "Sehr schnelle, großzügige freie Stufe (30 req/min). Ideal zum Starten.",
+      "tagline": "Sehr schnell, mit großzügiger freier Stufe. Ein guter Einstieg.",
       "items": [
         "API-Schlüssel: <a>console.groq.com/keys</a>",
         "Beispiele aus der mitgelieferten Modellliste: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
@@ -234,7 +234,7 @@
   },
   "detailLevel": {
     "heading": "Detailebene pro Kanal",
-    "intro": "Telegram, Discord, Gotify und E-Mail haben jeweils eine eigene Auswahl der Detailstufe. Drei Werte steuern im Standardprompt sowohl das Ausgabe-Token-Limit als auch die Detailvorgaben:",
+    "intro": "Jeder der sechs Kanäle (Telegram, Discord, Gotify, E-Mail, Pushover, Apprise) hat eine eigene Auswahl der Detailstufe. Drei Werte steuern im Standardprompt sowohl das Ausgabe-Token-Limit als auch die Detailvorgaben:",
     "headerLevel": "Ebene",
     "headerLabel": "UI-Kennzeichnung",
     "headerCap": "Ausgabegrenze",
@@ -261,7 +261,7 @@
     ],
     "defaultsIntro": "Standardwerte bei der ersten Installation:",
     "defaults": [
-      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Telegram, Discord, Gotify, Pushover, Apprise</strong>: <code>standard</code>.",
       "<strong>Email</strong> — <code>detailed</code>. E-Mail ist der Kanal, in dem Sie normalerweise das vollständige Bild für die Archivierung wünschen."
     ],
     "emailTitle": "E-Mail-Detailebene fügt das Original hinzu",
@@ -280,7 +280,7 @@
   },
   "templates": {
     "heading": "Ein Hinweis auf Vorlagen",
-    "body1": "Die KI erhält formatierten Vorlagentext statt roher Ereignisdaten. Typen wie <code>vm_start</code>, <code>auth_fail</code> und <code>health_degraded</code> haben Vorlagen in <code>notification_templates.py</code>. Die KI formuliert geeignete Texte um; <code>backup_complete</code> und <code>backup_fail</code> behalten deterministische Berichte und umgehen die KI.",
+    "body1": "Die KI erhält formatierten Vorlagentext statt roher Ereignisdaten. Typen wie <code>vm_start</code>, <code>auth_fail</code> und <code>health_degraded</code> haben Vorlagen in <code>notification_templates.py</code>. Die KI formuliert geeignete Texte um; <code>backup_complete</code> und <code>backup_fail</code> behalten deterministische Berichte; mit aktivierten KI-Vorschlägen fügt die KI nur eine Erklärung an, wenn das Backup Fehler meldet.",
     "body2": "Zwei praktische Implikationen: Die KI sieht nie einen Hostnamen oder VMID, den sie erfinden muss - diese Felder werden von der Vorlage vor dem Umschreiben platziert. Und wenn AI deaktiviert ist, wird der vorgefertigte Körper direkt versandt. Die <link>Notifications</link>-Seite dokumentiert die Versandpipeline vollständig und ist der richtige Querverweis für alles, was mit einem Ereignis passiert, bevor es diese Ebene erreicht."
   },
   "privacy": {

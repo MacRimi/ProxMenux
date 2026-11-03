@@ -117,7 +117,7 @@
       "<strong>Destinazione</strong> — storage (PBS-Cloud, PBS-Local, NFS-Backup, …), colorato secondo lo stato.",
       "<strong>Dimensione</strong> — dimensione finale del backup su disco."
     ],
-    "backupsOutro": "<strong>+ Crea backup</strong> avvia un backup sullo storage indicato come “Backup target” in Proxmox. Il ripristino si esegue nell'interfaccia web Proxmox; Monitor mostra i backup recenti del guest e permette di crearne.",
+    "backupsOutro": "Il pulsante <strong>+ Crea backup</strong> in alto a destra apre una finestra per scegliere storage, modalità (snapshot / suspend / stop), protezione e note prima di avviare un vzdump. Il ripristino si esegue nell'interfaccia web Proxmox; Monitor mostra la vista “questo guest ha un backup recente?”, non il flusso di recupero.",
     "firewallTitle": "Scheda 7 — Firewall",
     "firewallIntro": "Legge il log firewall Proxmox del guest direttamente dall'host, senza servizi aggiuntivi né richieste periodiche. La scheda è sempre presente; il contenuto dipende dalla attivazione del firewall e dalla registrazione dei pacchetti da parte di una regola.",
     "firewallItems": [

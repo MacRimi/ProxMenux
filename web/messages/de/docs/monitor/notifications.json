@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Optionales AI-Rewrite",
-    "body1": "Geeignete Ereignisse können vor dem Versand durch ein LLM umgeschrieben werden. backup_complete und backup_fail sind ausgenommen. KI ist standardmäßig aus und läuft im Versandthread. Bei Fehler oder Zeitüberschreitung wird der Vorlagentext verwendet.",
+    "body1": "Geeignete Ereignisse können vor dem Versand durch ein LLM umgeschrieben werden. backup_complete und backup_fail werden nicht umgeschrieben; mit aktivierten KI-Vorschlägen fügt die KI nur eine Erklärung an, wenn ein Backup Fehler meldet. KI ist standardmäßig aus und läuft im Versandthread. Bei Fehler oder Zeitüberschreitung wird der Vorlagentext verwendet.",
     "body2": "Unterstützt OpenAI, Anthropic, Google Gemini, Groq, OpenRouter und lokales Ollama. Pro Kanal: Detailgrad (<code>brief</code>, <code>standard</code>, <code>detailed</code>), Sprache, Anweisungsmodus (<code>default</code> oder <code>custom</code>) und eigene Anweisung. Anleitung und Beispiele unter <link>KI-Assistent</link>.",
     "privacyTitle": "Datenschutzerklärung",
     "privacyBody": "KI-Anfragen können Titel, Schweregrad, Text, System-/Benutzeranweisungen und Kontext mit Hostnamen, IPs, Benutzernamen, Fehlern und Journalzeilen enthalten. Sie gehen an den gewählten Endpunkt. Ollama bleibt nur mit lokalem Server und lokalem Modell lokal; entfernte Server oder Cloudmodelle übertragen Daten nach außen. Bei lokalen Anforderungen KI deaktivieren oder kontrollierten lokalen Server und Modell nutzen."

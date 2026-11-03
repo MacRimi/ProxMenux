@@ -153,8 +153,8 @@
     "pillTitle": "Indikatorn följer den allvarligaste kategorin",
     "pillBody": "Sidhuvudets färg följer högsta allvarlighetsgrad: CRITICAL → rött, annars WARNING → gult, annars INFO → blått, annars grönt. Samma logik styr punkten i faviconen och PWA-märket.",
     "updateNowTitle": "Uppdatera nu knappen i Översiktsrubriken",
-    "updateNowBody1": "När <em>Systemuppdateringar</em> visar väntande uppdateringar visas <strong>Uppdatera nu</strong> bredvid statusindikatorn. Fönstret kör samma värdflöde som <em>ProxMenux → Settings post-install Proxmox → Proxmox System Update</em>: rensning av paketkällor, <code>apt full-upgrade</code> via <code>update-pve-safe.sh</code>, DKMS-ombyggnad av hanterade drivrutiner vid ny kärna, autoremove/autoclean och fråga om omstart när kärnan ändrats. Förloppet visas löpande.",
-    "updateNowBody2": "När körningen är klar anropar stängningen <code>GET /api/health/details?refresh=1</code> och ogiltigförklarar endpointens cache. Väntande uppdateringar och allvarlighetsgrad räknas om från det nya paketläget, så märket försvinner utan att invänta nästa cykel. På en uppdaterad värd är knappen dold."
+    "updateNowBody1": "När <em>Systemuppdateringar</em> visar väntande uppdateringar visas <strong>Uppdatera nu</strong> bredvid statusindikatorn. Fönstret kör samma värdflöde som <em>ProxMenux → Verktyg och verktyg → Proxmox systemuppdatering</em>: rensning av paketkällor, <code>apt full-upgrade</code> via <code>update-pve-safe.sh</code>, DKMS-ombyggnad av hanterade drivrutiner vid ny kärna, autoremove/autoclean och fråga om omstart när kärnan ändrats. Förloppet visas löpande.",
+    "updateNowBody2": "När körningen är klar anropar stängningen <code>GET /api/health/full?refresh=1</code> och ogiltigförklarar endpointens cache. Väntande uppdateringar och allvarlighetsgrad räknas om från det nya paketläget, så märket försvinner utan att invänta nästa cykel. På en uppdaterad värd är knappen dold."
   },
   "dismiss": {
     "heading": "Avfärda larm och ange undertryckningstid",

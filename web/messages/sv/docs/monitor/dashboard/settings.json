@@ -41,7 +41,7 @@
     "heading": "Nätverksenheter",
     "imageAlt": "Kortet Nätverksenheter med visningsvalet inställt på Byte",
     "imageCaption": "Välj mellan bitar per sekund och byte per sekund för varje nätverkshastighet som visas i instrumentpanelen.",
-    "body": "Visar nätverkshastighet i <strong>bitar per sekund</strong> (Mbps/Gbps) eller <strong>byte per sekund</strong> (MB/s/GB/s). Bitar är standard som i specifikationer för nätverkskort och internet; filöverföringar använder ofta byte. Diagram, etiketter och tips ändras direkt utan omladdning."
+    "body": "Välj hur nätverkshastighet visas i panelen: <strong>bitar per sekund</strong> (Mbps / Gbps) eller <strong>byte per sekund</strong> (MB/s / GB/s). Byte är standard, som de flesta filöverföringsverktyg visar; bitar är vad nätverkskortstillverkare och internetleverantörer använder. Valet sparas i webbläsaren, så varje webbläsare har sitt eget. Inställningen påverkar alla diagram, etiketter och tips som visar nätverkshastighet och ändras direkt utan omladdning."
   },
   "health": {
     "heading": "Hälsoövervakare",
@@ -203,7 +203,7 @@
     "heading": "Identifiering av LXC-uppdateringar",
     "imageAlt": "Kort för LXC-uppdateringar med reglage för att söka väntande paket i körande Debian-, Ubuntu- och Alpine-containrar",
     "imageCaption": "Reglage för regelbundna kontroller med <code>apt list --upgradable</code> / <code>apk list -u</code> i körande CT. Påslaget som standard. Motsvarande aviseringsreglage under Aviseringar → Tjänster visas när detektering är på.",
-    "intro": "Reglaget mellan Gränser och Aviseringar styr LXC-kontrollen. Påslaget frågar det pakethanterarna i körande CT; Hårdvara visar resultat och matar <code>lxc_updates_available</code>. Avstängt stoppar det sina <code>pct exec</code>-anrop och tar bort LXC-poster från <code>managed_installs.json</code>; <code>/api/managed-installs</code> slutar visa statusen utan att vänta 24 timmar.",
+    "intro": "Ett särskilt reglage för LXC-uppdateringskontrollen, placerat mellan Gränser och Aviseringar. Påslaget går ProxMenux igenom varje körande CT på värden och frågar pakethanteraren i containern efter väntande uppdateringar; resultaten visas i antalsmärkena på fliken VM och LXC och matar aviseringen <code>lxc_updates_available</code>. Avstängt stoppar kontrollen helt (inga <code>pct exec</code>-anrop) och befintliga LXC-poster i <code>managed_installs.json</code> tas bort direkt, så att panelen och <code>/api/managed-installs</code> slutar visa LXC-uppdateringsstatus utan att vänta på nästa 24-timmarscykel.",
     "whatRunsTitle": "Vad kontrollen kör",
     "whatRunsIntro": "För varje CT i tillståndet <code>running</code> med en pakethanterare som stöds:",
     "whatRunsItems": [
@@ -249,7 +249,7 @@
     "body1": "Här aktiveras ProxMenux Monitor-aviseringar och AI-omformulering. <em>Aktivera aviseringar</em> startar sändning i bakgrunden, registrerar ett Proxmox VE-webhookmål för dess händelser och öppnar kanalformuläret för Telegram, Discord, e-post, Gotify och fler. AI-omformulering finns i ett utfällbart avancerat avsnitt i samma panel.",
     "body2": "Alternativen förklaras på egna sidor: kanaler, händelsereglage, formaterade meddelanden, visningsnamn, sändning med dubblettfilter, väntetid, gruppering och tysta timmar, PVE-webhook, AI-leverantörer och instruktionslägen:",
     "items": [
-      "<notifLink>Aviseringar</notifLink>: kanaler (Telegram, Discord, Gotify, e-post och applösenord för Gmail / Microsoft, ntfy, Slack, Teams och allmän webhook), händelsekategorier, formaterade meddelanden, visningsnamn, sändning, PVE-webhook, historik och API.",
+      "<notifLink>Aviseringar</notifLink>: kanaler (Telegram, Discord, Gotify, e-post och applösenord för Gmail / Microsoft, Pushover samt Apprise för ntfy, Slack, Teams och andra tjänster), händelsekategorier, formaterade meddelanden, visningsnamn, sändning, PVE-webhook, historik och API.",
       "<aiLink>AI-assistent</aiLink>: leverantörer (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), modeller, standardinstruktioner eller egna instruktioner, utmatningsspråk, detaljnivå per kanal och AI-förslag."
     ]
   },
@@ -294,8 +294,8 @@
       },
       {
         "card": "Nätverksenheter",
-        "endpoint": "/api/settings",
-        "source": "Sparas i panelens SQLite-tabell för inställningar."
+        "endpoint": "localStorage",
+        "source": "Webbläsarinställning, <code>proxmenux-network-unit</code>."
       },
       {
         "card": "Tider i Health Monitor",
@@ -304,7 +304,7 @@
       },
       {
         "card": "Undantag för lagring och gränssnitt",
-        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "endpoint": "/api/health/storage-exclusions, /api/health/interface-exclusions",
         "source": "SQLite-tabellerna <code>excluded_storages</code> och <code>excluded_interfaces</code>."
       },
       {

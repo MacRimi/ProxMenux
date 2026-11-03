@@ -168,7 +168,7 @@
   "ups": {
     "heading": "Estado del SAI",
     "subHeading": "(condicional)",
-    "body": "Aparece si hay un servidor NUT (Network UPS Tools) configurado y accesible. Muestra estado (en línea / batería / cargando / batería baja), carga de batería, autonomía estimada, porcentaje de carga soportada, tensión de entrada, modelo y firmware. Alimenta también <em>Seguridad y certificados</em> del monitor de salud: el paso a batería se señala inmediatamente."
+    "body": "Aparece si hay un servidor NUT (Network UPS Tools) configurado y accesible. Muestra estado (en línea / batería / cargando / batería baja), carga de batería, autonomía estimada, porcentaje de carga soportada, tensión de entrada, modelo y firmware."
   },
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",

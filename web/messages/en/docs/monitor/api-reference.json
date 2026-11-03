@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Extended system snapshot used by the dashboard header (overall metrics + boot time)."
+        "use": "Lightweight header info: hostname, uptime and cached health status. Public, no token needed."
       },
       {
         "endpoint": "/api/hardware",
@@ -401,7 +401,7 @@
       {
         "endpoint": "/api/logs",
         "method": "GET",
-        "use": "Filtered journal entries. Query: <code>?level=&service=&limit=</code>."
+        "use": "Filtered journal entries. Query: <code>?priority=&service=&limit=&since_days=</code> (<code>priority</code> 0-7, <code>since_days</code> up to 90)."
       },
       {
         "endpoint": "/api/logs/download",
@@ -411,7 +411,7 @@
       {
         "endpoint": "/api/events",
         "method": "GET",
-        "use": "Internal event stream — the same one that feeds notifications."
+        "use": "Recent Proxmox cluster tasks and events from <code>pvesh get /cluster/tasks</code>. Query: <code>?limit=</code> (default 50)."
       },
       {
         "endpoint": "/api/task-log/<upid>",
@@ -462,7 +462,7 @@
       {
         "endpoint": "/api/notifications/send",
         "method": "POST",
-        "use": "Emit a custom event. Body: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+        "use": "Emit a custom event. Body: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"message\":\"...\",\"data\":'{''}''}'</code>."
       },
       {
         "endpoint": "/api/notifications/test-ai",

@@ -12,13 +12,13 @@
   },
   "intro": {
     "title": "Was diese Seite abdeckt",
-    "body": "So wechseln Sie Monitor unter Einstellungen → Sicherheit von HTTP auf HTTPS, welche Dateien die Zertifikatsquellen verwenden, wie die Proxmox-Option mit Let’s Encrypt umgeht und wie Sie eigene Pfade für außerhalb von Proxmox verwaltete Zertifikate festlegen."
+    "body": "So wechseln Sie Monitor unter Admin → Sicherheit von HTTP auf HTTPS, welche Dateien die Zertifikatsquellen verwenden, wie die Proxmox-Option mit Let’s Encrypt umgeht und wie Sie eigene Pfade für außerhalb von Proxmox verwaltete Zertifikate festlegen."
   },
   "wheresetting": {
     "heading": "Wo Sie die Einstellung finden",
-    "body": "Öffnen Sie Monitor und gehen Sie zu <strong>Einstellungen → Sicherheit → HTTPS / SSL</strong>. Der Bereich zeigt HTTP oder HTTPS und bei noch deaktiviertem HTTPS die erkannten Zertifikatsquellen.",
-    "imageAlt": "Einstellungen → Sicherheit → HTTPS / SSL mit deaktiviertem HTTPS, erkanntem Proxmox-Zertifikat (Inhaber, Aussteller, Ablauf) und der Option für ein eigenes Zertifikat",
-    "caption": "Bereich Einstellungen → Sicherheit → HTTPS / SSL vor der Aktivierung. Monitor zeigt das von Proxmox verwendete Zertifikat und bietet es zur Auswahl mit einem Klick an."
+    "body": "Öffnen Sie Monitor und gehen Sie zu <strong>Admin → Sicherheit → SSL / HTTPS</strong>. Der Bereich zeigt HTTP oder HTTPS und bei noch deaktiviertem HTTPS die erkannten Zertifikatsquellen.",
+    "imageAlt": "Bereich Admin → Sicherheit → SSL / HTTPS mit deaktiviertem HTTPS, erkanntem Proxmox-Zertifikat (Inhaber, Aussteller, Ablauf) und der Option für ein eigenes Zertifikat",
+    "caption": "Bereich Admin → Sicherheit → SSL / HTTPS vor der Aktivierung. Monitor zeigt das von Proxmox verwendete Zertifikat und bietet es zur Auswahl mit einem Klick an."
   },
   "twoways": {
     "heading": "Zwei Möglichkeiten, HTTPS zu aktivieren",
@@ -117,7 +117,7 @@
   },
   "switchToHttps": {
     "heading": "Schalten Sie den Monitor auf HTTPS",
-    "bodyRich": "Sobald <code>/etc/pve/local/pveproxy-ssl.pem</code> von Let's Encrypt signiert ist, öffnen Sie <strong>Einstellungen → Sicherheit → HTTPS / SSL</strong>, prüfen als Aussteller <em>Let's Encrypt</em> statt der lokalen Proxmox-CA und wählen <strong>Proxmox-Zertifikat verwenden</strong>. Monitor startet neu und der nächste Aufruf nutzt HTTPS auf 8008 mit öffentlich vertrauenswürdiger Zertifikatskette. Spätere ACME-Erneuerungen werden bei der nächsten neuen TLS-Verbindung geprüft und ausgewählt, ohne regelmäßige Abfrage oder Dienstneustart zur Erneuerung. <strong>Zertifikat aktualisieren</strong> bleibt unter Sicherheit für Diagnose und Wiederherstellung verfügbar."
+    "bodyRich": "Sobald <code>/etc/pve/local/pveproxy-ssl.pem</code> von Let's Encrypt signiert ist, öffnen Sie <strong>Admin → Sicherheit → SSL / HTTPS</strong>, prüfen als Aussteller <em>Let's Encrypt</em> statt der lokalen Proxmox-CA und wählen <strong>Proxmox-Zertifikat verwenden</strong>. Monitor startet neu und der nächste Aufruf nutzt HTTPS auf 8008 mit öffentlich vertrauenswürdiger Zertifikatskette. Spätere ACME-Erneuerungen werden bei der nächsten neuen TLS-Verbindung geprüft und ausgewählt, ohne regelmäßige Abfrage oder Dienstneustart zur Erneuerung. <strong>Zertifikat aktualisieren</strong> bleibt unter Sicherheit für Diagnose und Wiederherstellung verfügbar."
   },
   "custom": {
     "heading": "Benutzerdefiniertes Zertifikat — wann es sinnvoll ist",

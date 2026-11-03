@@ -168,7 +168,7 @@
   "ups": {
     "heading": "UPS-Status",
     "subHeading": "(bedingt)",
-    "body": "Erscheint bei konfiguriertem und erreichbarem NUT-Server (Network UPS Tools). Sichtbar sind Status (Netzbetrieb/Batteriebetrieb/Laden/Batterie schwach), Batterieladung, Restlaufzeit, Last, Eingangsspannung, Modell und Firmware. Dieselben Daten fließen in <em>Sicherheit und Zertifikate</em> der Zustandsüberwachung ein; Batteriebetrieb wird sofort gemeldet."
+    "body": "Erscheint bei konfiguriertem und erreichbarem NUT-Server (Network UPS Tools). Sichtbar sind Status (Netzbetrieb/Batteriebetrieb/Laden/Batterie schwach), Batterieladung, Restlaufzeit, Last, Eingangsspannung, Modell und Firmware."
   },
   "dataCollected": {
     "heading": "Wie die Daten gesammelt werden",

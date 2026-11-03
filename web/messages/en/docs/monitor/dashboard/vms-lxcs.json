@@ -117,7 +117,7 @@
       "<strong>Destination tag</strong> — the storage where it lives (PBS-Cloud, PBS-Local, NFS-Backup, …) coloured by status.",
       "<strong>Size</strong> — final on-disk size of the backup."
     ],
-    "backupsOutro": "The <strong>+ Create Backup</strong> button at the top right kicks off a new run on the storage marked as \"Backup target\" in the Proxmox storage config. Restore lives in the Proxmox web UI — the Monitor exposes the \"is this guest backed up recently?\" view, not the recovery flow.",
+    "backupsOutro": "The <strong>+ Create Backup</strong> button at the top right opens a dialog to choose the storage, mode (snapshot / suspend / stop), protection and notes before starting a vzdump. Restore lives in the Proxmox web UI — the Monitor exposes the \"is this guest backed up recently?\" view, not the recovery flow.",
     "firewallTitle": "Tab 7 — Firewall",
     "firewallIntro": "Reads the per-guest Proxmox firewall log straight from the host (no extra service, no polling). The tab is always present in the navigation strip; the panel decides what to render depending on whether the firewall is enabled for that guest and whether any rule is actually logging:",
     "firewallItems": [

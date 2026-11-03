@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Uppbackad av tre källor",
-    "body": "Proxmox-lagring hämtas från <code>pvesm status</code>, ZFS från <code>zpool status</code>, diskar från <code>lsblk</code> + <code>smartctl</code> och NVMe-fält från <code>nvme</code>. Fliken uppdateras ungefär var 60:e sekund; detaljvyn begär en SMART-avläsning."
+    "body": "Proxmox-lagring hämtas från <code>pvesm status</code>, ZFS från <code>zpool status</code>, diskar från <code>lsblk</code> + <code>smartctl</code> och NVMe-fält från <code>nvme</code>. Fliken uppdateras ungefär var 30:e sekund; detaljvyn begär en SMART-avläsning."
   },
   "thresholds": {
     "title": "Statusfärger och trösklar som tillämpas här",

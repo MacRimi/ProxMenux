@@ -117,7 +117,7 @@
       "<strong>Etiqueta de destino</strong> — el almacenamiento donde vive (PBS-Cloud, PBS-Local, NFS-Backup, …) coloreada por estado.",
       "<strong>Tamaño</strong>: tamaño final en disco del backup."
     ],
-    "backupsOutro": "<strong>+ Crear backup</strong> inicia un backup en el almacenamiento marcado «Backup target» en Proxmox. Para restaurar usa la interfaz web de Proxmox; Monitor muestra los backups recientes del invitado y permite crearlos.",
+    "backupsOutro": "<strong>+ Crear backup</strong> abre un diálogo para elegir el almacenamiento, el modo (snapshot / suspend / stop), la protección y las notas antes de iniciar un vzdump. Para restaurar usa la interfaz web de Proxmox; Monitor muestra los backups recientes del invitado y permite crearlos.",
     "firewallTitle": "Pestaña 7 — Cortafuegos",
     "firewallIntro": "Lee el registro del cortafuegos de cada invitado directamente del host, sin servicio extra ni consultas periódicas. La pestaña siempre aparece; el contenido depende de que el cortafuegos esté activado y de que alguna regla registre paquetes.",
     "firewallItems": [

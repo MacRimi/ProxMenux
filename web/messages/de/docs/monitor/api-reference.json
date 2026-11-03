@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Erweiterte Systemdaten der Dashboard-Kopfzeile: Gesamtmetriken und Startzeitpunkt."
+        "use": "Schlanke Kopfzeileninfos: Hostname, Betriebszeit und zwischengespeicherter Gesundheitsstatus. Öffentlich, kein Token nötig."
       },
       {
         "endpoint": "/api/hardware",
@@ -401,7 +401,7 @@
       {
         "endpoint": "/api/logs",
         "method": "GET",
-        "use": "Gefilterte Journaleinträge. Anfrage: <code>?level=&service=&limit=</code>."
+        "use": "Gefilterte Journaleinträge. Anfrage: <code>?priority=&service=&limit=&since_days=</code> (<code>priority</code> 0-7, <code>since_days</code> bis zu 90)."
       },
       {
         "endpoint": "/api/logs/download",
@@ -411,7 +411,7 @@
       {
         "endpoint": "/api/events",
         "method": "GET",
-        "use": "Interner Ereignisstrom - derselbe, der Benachrichtigungen füttert."
+        "use": "Aktuelle Proxmox-Cluster-Tasks und -Ereignisse aus <code>pvesh get /cluster/tasks</code>. Anfrage: <code>?limit=</code> (Standard 50)."
       },
       {
         "endpoint": "/api/task-log/<upid>",
@@ -462,7 +462,7 @@
       {
         "endpoint": "/api/notifications/send",
         "method": "POST",
-        "use": "Erzeugt ein eigenes Ereignis. Anfrageinhalt: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+        "use": "Erzeugt ein eigenes Ereignis. Anfrageinhalt: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"message\":\"...\",\"data\":'{''}''}'</code>."
       },
       {
         "endpoint": "/api/notifications/test-ai",

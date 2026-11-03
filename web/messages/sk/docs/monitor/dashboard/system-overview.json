@@ -46,7 +46,7 @@
     "thresholdsIntro": "Prstence, ukazovatele a minigrafy používajú rovnakú škálu: <green/> <strong>zelená</strong> pod prahom Upozornenie, <amber/> <strong>jantárová</strong> medzi Upozornenie a Kritické, <red/> <strong>červená</strong> od prahu Kritické vyššie. Odporúčané predvolené hodnoty ProxMenux:",
     "thresholdsItems": [
       "<strong>Využitie CPU</strong> — upozornenie 85 %, kritické 95 %.",
-      "<strong>Pamäť</strong> — upozornenie 85 %, kritické 95 %. Swap tiež vyvolá kritický stav pri 5 % využitia; správne fungujúci hostiteľ Proxmox by ho mal používať len zriedka.",
+      "<strong>Pamäť</strong>: upozornenie 85 %, kritické 95 %. Swap vyvolá kritický stav, iba ak využitie swapu presiahne 80 % a dostupná RAM klesne pod 15 %.",
       "<strong>Teplota CPU</strong> — upozornenie 80 °C, kritické 90 °C."
     ],
     "thresholdsOutro": "Hodnoty možno nastaviť pre každého hostiteľa. <link>Nastavenia → Prahy monitora stavu</link> sú hlavný zdroj a vysvetľujú ich úpravu.",
@@ -58,7 +58,7 @@
     "intro": "Karty Využitie CPU a Pamäť otvárajú triediteľný zoznam 25 najnáročnejších procesov: podľa využitia CPU pri otvorení z CPU alebo podľa rezidentnej pamäte pri otvorení z Pamäte.",
     "listTitle": "Dialóg zoznamu",
     "listItems": [
-      "<strong>Automatické obnovenie</strong> — zoznam sa aktualizuje každých 5 sekúnd, kým je okno otvorené; po zatvorení sa dotazy zastavia.",
+      "<strong>Automatické obnovenie</strong> — zoznam sa aktualizuje každé 3 sekundy, kým je okno otvorené; po zatvorení sa dotazy zastavia.",
       "<strong>Filter</strong> — vyhľadávanie obmedzí zoznam podľa príkazu, používateľa alebo PID.",
       "<strong>Ukazovateľ v riadku</strong> — stĺpec hlavnej metriky kreslí malý ukazovateľ škálovaný podľa najvyššej hodnoty vo filtrovanom zozname. Poradie zostáva zrejmé, aj keď žiadny proces nie je blízko 100 %.",
       "<strong>Mobilné rozloženie</strong> — pod 640 px sa skryjú stĺpce PID a Používateľ, aby sa Príkaz, CPU % a Pamäť zmestili na telefón bez vodorovného posúvania."
@@ -79,7 +79,7 @@
   },
   "middle": {
     "heading": "Stred: grafy metrík uzla",
-    "body1": "Pod kartami zobrazuje <code>NodeMetricsCharts</code> históriu CPU, pamäte a diskového I/O z úložiska RRD Proxmox cez <code>/api/node/metrics</code>. Volič ponúka <em>1 hodina / 24 hodín / 7 dní / 30 dní / 1 rok</em>. Pri dlhšom období klesá rozlíšenie údajov, aby bol graf plynulý.",
+    "body1": "Pod kartami zobrazuje <code>NodeMetricsCharts</code> históriu CPU, pamäte a diskového I/O z úložiska RRD Proxmox cez <code>/api/node/metrics</code>. Volič ponúka <em>1 hodina / 24 hodín / 7 dní / 30 dní</em>. Pri dlhšom období klesá rozlíšenie údajov, aby bol graf plynulý.",
     "body2": "Rovnaké grafy ako vo webovom rozhraní Proxmox pre uzol, začlenené do tmavej témy Monitora a zarovnané s ostatnými panelmi."
   },
   "bottom": {

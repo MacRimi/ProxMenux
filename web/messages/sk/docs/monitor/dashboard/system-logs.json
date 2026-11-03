@@ -18,7 +18,7 @@
       "<strong>Celkový počet záznamov</strong> — počet položiek v časovom rozsahu aktívneho filtra.",
       "<strong>Chyby</strong> — počet záznamov so závažnosťou ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Upozornenia</strong> — počet záznamov so závažnosťou 4 (<code>warning</code>).",
-      "<strong>Zálohy</strong> — počet záznamov úloh vzdump / PBS v rovnakom časovom rozsahu."
+      "<strong>Zálohy</strong>: počet záložných archívov na nastavených úložiskách záloh."
     ]
   },
   "subtabs": {
@@ -26,10 +26,10 @@
     "logsTitle": "Logy",
     "logsIntro": "Systémový žurnál, ktorý server načítava cez <code>journalctl</code>. Na paneli nástrojov sú tieto filtre:",
     "logsFilters": [
-      "<strong>Závažnosť</strong> — emerg / alert / crit / err / warning / notice / info / debug alebo ľubovoľná kombinácia.",
-      "<strong>Časový rozsah</strong> Posledná 5 min/ 15 min/ 1 h / 6 h / 24 h / 7 d / vlastné.",
-      "<strong>Voľné vyhľadávanie textu</strong> — podreťazec alebo regulárny výraz (<code>journalctl --grep</code>).",
-      "<strong>Filter jednotky</strong> — obmedzí výsledky na konkrétnu jednotku systemd (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+      "<strong>Úroveň</strong>: Všetky úrovne, Chyba, Upozornenie alebo Info.",
+      "<strong>Časový rozsah</strong>: 1 deň / 3 dni / 1 týždeň / 2 týždne / 1 mesiac alebo vlastný počet dní (do 90).",
+      "<strong>Voľné vyhľadávanie textu</strong>: podreťazec bez rozlišovania veľkosti písmen v správe, službe, PID, názve hostiteľa a jednotke, uplatnený v prehliadači.",
+      "<strong>Filter služby</strong>: obmedzí výsledky na jednu službu (<code>SYSLOG_IDENTIFIER</code> denníka)."
     ],
     "logsRowsAfter": "Každý riadok zobrazuje časovú pečiatku, označenie závažnosti, zdrojovú jednotku a správu. Dlhé správy sa zbalia s prepínačom „zobraziť viac“. Akcia <strong>Stiahnuť</strong> vytvorí z aktuálneho filtra jeden súbor <code>.txt</code> cez <code>GET /api/logs/download</code>, vhodný na zdieľanie časti žurnálu s ďalšou osobou.",
     "logDetailsModalTitle": "Okno Podrobnosti záznamu",
@@ -50,10 +50,10 @@
     "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "Na novej inštalácii Proxmox používa journald predvolene <code>MaxLevelStore=warning</code>, čím zahadzuje správy info. Monitor to pri štarte rozpozná a pridá doplnkovú konfiguráciu (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) s prahom <code>info</code>, aby sa uchovávali informačné a závažnejšie správy. Správy debug to nezahŕňa.",
     "backupsTitle": "Zálohy",
-    "backupsBody": "História úloh Proxmox obmedzená na zálohovanie. Jeden riadok na úlohu (<code>vzdump</code>, prenosy PBS, čistenie nepoužívaných dát a overenie), so stavom (OK / WARNINGS / ERROR), hosťovským systémom, zdrojovým úložiskom, trvaním a UPID. Kliknutím na riadok načítate úplný záznam úlohy cez <code>GET /api/task-log/&lt;upid&gt;</code> — rovnaké údaje ako v <em>Datacenter → Úlohy</em>, obmedzené na zálohy.",
+    "backupsBody": "Záložné archívy na každom úložisku schopnom ukladať zálohy (dir, NFS, CIFS, PBS), načítané cez <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Karty hore ukazujú počty VM a LXC a celkovú veľkosť; pod nimi je jeden riadok na archív s typom, úložiskom, veľkosťou a dátumom. Obnova sa vykonáva vo webovom rozhraní Proxmox.",
     "notificationsTitle": "Oznámenia",
-    "notificationsBody1": "Všetky oznámenia odoslané Monitorom: Telegram, Discord, e-mail, Gotify, ntfy, Slack, Teams a webhook. Každý riadok uvádza časovú pečiatku, kanál, typ udalosti, závažnosť, vytvorený názov a telo a pri zapnutej AI prepínač na porovnanie jej prepracovanej verzie s originálom.",
-    "notificationsBody2": "Na tejto karte overíte doručovanie oznámení cez kanál a porovnáte prepracovanie AI s pôvodnou šablónou. Kanály sa nastavujú na podrobnej stránke <link>Oznámenia</link>."
+    "notificationsBody1": "Aktivita oznámení Proxmox: riadky denníka zo služieb Proxmox, ktoré spomínajú oznámenia, e-mail, webhooky alebo upozornenia, ciele v /etc/pve/notifications.cfg a úlohy zálohovania zo zoznamu úloh klastra. Riadky úloh zálohovania umožňujú stiahnuť úplný záznam úlohy. História toho, čo odoslal samotný Monitor, je v Nastavenia → Notifikácie → História upozornení.",
+    "notificationsBody2": "Táto karta slúži na kontrolu, čo robí vlastný systém oznámení Proxmoxu. Kanály Monitora sa nastavujú na podrobnej stránke <link>Oznámenia</link>."
   },
   "dataCollected": {
     "heading": "Spôsob zberu údajov",
@@ -64,7 +64,7 @@
       {
         "subtab": "Záznamy (živý filter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl --output json --since &lt;range&gt;</code> s filtrami závažnosti, jednotky a vyhľadávania použitými na serveri."
+        "source": "Karta načíta <code>/api/logs?since_days=N</code>; filtre úrovne, služby a textu sa uplatňujú v prehliadači. API prijíma aj <code>priority</code> a <code>service</code>, ktoré karta zatiaľ nepoužíva."
       },
       {
         "subtab": "Stiahnuť",
@@ -74,17 +74,17 @@
       {
         "subtab": "Zálohy",
         "endpoint": "/api/backups",
-        "source": "História úloh PVE filtrovaná podľa <code>vzdump</code>, prenosov PBS, čistenia nepoužívaných dát a overenia."
+        "source": "Záložné archívy zo zoznamu každého úložiska záloh cez <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Podrobnosti úlohy zálohovania",
+        "subtab": "Záznam úlohy zálohovania (Notifikácie)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Plný textový záznam úloh čítaný z <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },
       {
-        "subtab": "História oznámení",
-        "endpoint": "/api/notifications/history",
-        "source": "Tabuľka SQLite <code>notification_history</code>, ktorú plní odosielacia slučka."
+        "subtab": "Oznámenia",
+        "endpoint": "/api/notifications",
+        "source": "<code>journalctl --grep</code> nad jednotkami Proxmox, <code>/etc/pve/notifications.cfg</code> a úlohy zálohovania z <code>pvesh get /cluster/tasks</code>."
       }
     ],
     "apiIntro": "Živý filter aj sťahovanie sú dostupné cez API:",

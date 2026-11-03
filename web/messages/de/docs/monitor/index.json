@@ -113,13 +113,13 @@
   "api": {
     "heading": "REST API und Integrationen",
     "intro": "REST-Endpunkte liefern Überwachungsdaten als JSON über HTTP/HTTPS für Homepage, Home Assistant, Uptime Kuma und eigene Skripte. Grafana kann den separaten Prometheus-Textexporter unter <code>/api/prometheus</code> nutzen. Anfragen sind mit <code>curl</code> möglich.",
-    "tokens": "Langlebige API-Tokens (365 Tage) werden aus <strong>Einstellungen → API Zugriffstokens</strong> oder über <code>POST /api/auth/generate-api-token</code> generiert.",
+    "tokens": "Langlebige API-Tokens (365 Tage) werden aus <strong>Admin → Sicherheit → API-Tokens</strong> oder über <code>POST /api/auth/generate-api-token</code> generiert.",
     "bearer": "Token werden als <code>Authorization: Bearer …</code> gesendet. Auch <code>/api/health</code> erwartet den Bearer-Header, daher benötigen Verfügbarkeitsprüfungen ein read_only-Token. Unter <code>/api/auth/*</code> liegen sowohl öffentliche Setup-/Login-/Statusrouten als auch geschützte Routen der Konto-/Tokenverwaltung; nicht alle sind anonym.",
     "catalog": "Der vollständige Endpunktkatalog, Anleitungen zur Token-Rotation und Best Practices für die Sicherheit finden Sie in der <linkApi>API-Referenz</linkApi>; Vorgefertigte Beispiele für Homepage, Home Assistant, Grafana, Uptime Kuma und ein generisches cURL-Muster finden Sie in <linkIntegrations>Integrationen</linkIntegrations>."
   },
   "serviceControl": {
     "heading": "Dienststeuerung",
-    "intro": "Der Monitor wird wie jeder systemd-Dienst verwaltet. Zusätzlich gibt es zwei Einträge in der ProxMenux-Textoberfläche unter <em>Einstellungen</em>:",
+    "intro": "Der Monitor wird wie jeder systemd-Dienst verwaltet. Zusätzlich gibt es drei Einträge in der ProxMenux-Textoberfläche unter <em>Einstellungen</em>:",
     "codeComment": "# Manuelle Steuerung",
     "footer": "Siehe <link>Einstellungen → ProxMenux Monitor</link> für die Umschaltung im Menü und den Statusüberprüfungsablauf."
   },

@@ -46,7 +46,7 @@
     "thresholdsIntro": "Anneaux, barres et mini-courbes suivent la même échelle : <green/> <strong>vert</strong> sous le seuil Avertissement, <amber/> <strong>ambre</strong> entre Avertissement et Critique, <red/> <strong>rouge</strong> à partir de Critique. Valeurs recommandées fournies avec ProxMenux :",
     "thresholdsItems": [
       "<strong>Utilisation CPU</strong> — avertissement 85 %, critique 95 %.",
-      "<strong>Mémoire</strong> — avertissement 85 %, critique 95 %. Le swap déclenche aussi le niveau Critique à 5 % d'utilisation ; un hôte Proxmox sain devrait rarement y recourir.",
+      "<strong>Mémoire</strong> : avertissement 85 %, critique 95 %. Le swap ne déclenche le niveau Critique que lorsque son utilisation dépasse 80 % et que la RAM disponible est inférieure à 15 %.",
       "<strong>Température CPU</strong> — avertissement 80 °C, critique 90 °C."
     ],
     "thresholdsOutro": "Les valeurs sont configurables par hôte. <link>Paramètres → Seuils du moniteur de santé</link> centralise leur réglage et explique comment les adapter.",
@@ -58,7 +58,7 @@
     "intro": "Les cartes CPU et Mémoire ouvrent une liste triable des 25 processus les plus consommateurs : par utilisation CPU depuis la carte CPU, ou par mémoire résidente depuis la carte Mémoire.",
     "listTitle": "La boîte de dialogue liste",
     "listItems": [
-      "<strong>Actualisation automatique</strong> — la liste se met à jour toutes les 5 secondes tant que la fenêtre est ouverte ; les requêtes cessent à sa fermeture.",
+      "<strong>Actualisation automatique</strong> — la liste se met à jour toutes les 3 secondes tant que la fenêtre est ouverte ; les requêtes cessent à sa fermeture.",
       "<strong>Filtre</strong> — la recherche limite la liste par commande, utilisateur ou PID.",
       "<strong>Barre en ligne</strong> — la colonne métrique primaire dessine une petite barre à l'échelle de la valeur la plus élevée de la liste filtrée, de sorte que le classement reste visible même si aucun processus n'est proche de 100 %.",
       "<strong>Disposition mobile</strong> — sous 640 px, les colonnes PID et Utilisateur sont masquées pour garder Commande, CPU % et Mémoire sans défilement horizontal."
@@ -79,7 +79,7 @@
   },
   "middle": {
     "heading": "Centre : graphiques des métriques du nœud",
-    "body1": "Sous les cartes, <code>NodeMetricsCharts</code> affiche les historiques CPU, mémoire et E/S disque du stockage RRD de Proxmox via <code>/api/node/metrics</code>. Le sélecteur propose <em>1 heure / 24 heures / 7 jours / 30 jours / 1 an</em>. La résolution diminue pour les grandes périodes afin de conserver un affichage fluide.",
+    "body1": "Sous les cartes, <code>NodeMetricsCharts</code> affiche les historiques CPU, mémoire et E/S disque du stockage RRD de Proxmox via <code>/api/node/metrics</code>. Le sélecteur propose <em>1 heure / 24 heures / 7 jours / 30 jours</em>. La résolution diminue pour les grandes périodes afin de conserver un affichage fluide.",
     "body2": "Les mêmes graphiques que l'interface web Proxmox pour un nœud, intégrés au thème sombre de Monitor et alignés avec les autres panneaux."
   },
   "bottom": {

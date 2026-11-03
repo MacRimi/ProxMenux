@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Podporované tromi zdrojmi",
-    "body": "Úložiská Proxmox pochádzajú z <code>pvesm status</code>, ZFS zo <code>zpool status</code>, disky z <code>lsblk</code> + <code>smartctl</code> a polia NVMe z <code>nvme</code>. Karta sa obnovuje približne každých 60 sekúnd; otvorenie detailu vyžiada načítanie SMART."
+    "body": "Úložiská Proxmox pochádzajú z <code>pvesm status</code>, ZFS zo <code>zpool status</code>, disky z <code>lsblk</code> + <code>smartctl</code> a polia NVMe z <code>nvme</code>. Karta sa obnovuje približne každých 30 sekúnd; otvorenie detailu vyžiada načítanie SMART."
   },
   "thresholds": {
     "title": "Farby stavu a prahové hodnoty, ktoré sa tu uplatňujú",

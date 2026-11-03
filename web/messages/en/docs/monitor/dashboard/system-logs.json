@@ -18,7 +18,7 @@
       "<strong>Total Entries</strong> — number of log records inside the active filter window.",
       "<strong>Errors</strong> — count of severity ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Warnings</strong> — count of severity 4 (<code>warning</code>).",
-      "<strong>Backups</strong> — count of vzdump / PBS task entries in the same window."
+      "<strong>Backups</strong>: number of backup archives on the configured backup storages."
     ]
   },
   "subtabs": {
@@ -26,10 +26,10 @@
     "logsTitle": "Logs",
     "logsIntro": "The system journal, served by <code>journalctl</code> on the backend. Filters available in the toolbar:",
     "logsFilters": [
-      "<strong>Severity</strong> — emerg / alert / crit / err / warning / notice / info / debug, or any combination.",
-      "<strong>Time range</strong> — last 5 min / 15 min / 1 h / 6 h / 24 h / 7 d / custom.",
-      "<strong>Free-text search</strong> — substring or regex (<code>journalctl --grep</code>).",
-      "<strong>Unit filter</strong> — restrict to a specific systemd unit (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+      "<strong>Level</strong>: All levels, Error, Warning or Info.",
+      "<strong>Time range</strong>: 1 day / 3 days / 1 week / 2 weeks / 1 month, or a custom number of days (up to 90).",
+      "<strong>Free-text search</strong>: case-insensitive substring over message, service, PID, hostname and unit, applied in the browser.",
+      "<strong>Service filter</strong>: restrict to one service (the journal <code>SYSLOG_IDENTIFIER</code>)."
     ],
     "logsRowsAfter": "Each row shows timestamp, severity badge, source unit and the message. Long messages collapse with a \"show more\" toggle. The <strong>Download</strong> action bundles the current filter into a single <code>.txt</code> file via <code>GET /api/logs/download</code> — useful when you want to share a slice of journal with someone.",
     "logDetailsModalTitle": "Log Details modal",
@@ -50,10 +50,10 @@
     "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "On a fresh Proxmox install, journald defaults to <code>MaxLevelStore=warning</code>, which silently drops info-level messages. The Monitor detects this on startup and adds a drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) raising the threshold to <code>info</code> so informational and more severe messages are stored. This does not include debug messages.",
     "backupsTitle": "Backups",
-    "backupsBody": "Proxmox task history filtered to backup-related entries. One row per task (<code>vzdump</code>, PBS transfers, Garbage Collect, Verify) with the status (OK / WARNINGS / ERROR), guest involved, source storage, duration and the UPID. Click a row to load the full task log via <code>GET /api/task-log/&lt;upid&gt;</code> — the same data Proxmox exposes through <em>Datacenter → Tasks</em>, scoped to backups.",
+    "backupsBody": "The backup archives on every backup-capable storage (dir, NFS, CIFS, PBS), read with <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Cards at the top show the VM and LXC counts and the total size; below, one row per archive with type, storage, size and date. Restore lives in the Proxmox web UI.",
     "notificationsTitle": "Notifications",
-    "notificationsBody1": "Every notification dispatched by the Monitor — Telegram, Discord, Email, Gotify, ntfy, Slack, Teams, webhook. Each row: timestamp, channel, event type, severity, the rendered title, the rendered body, and (if AI is enabled) a toggle to view the AI rewrite next to the original.",
-    "notificationsBody2": "Use this tab to verify a channel is actually delivering and to compare what the AI rewrite produced vs the template baseline. Channel configuration lives in the <link>Notifications</link> deep page."
+    "notificationsBody1": "Proxmox notification activity: journal lines from Proxmox services that mention notifications, email, webhooks or alerts, the targets in /etc/pve/notifications.cfg, and backup tasks from the cluster task list. Backup task rows can download the full task log. The history of what the Monitor itself dispatched lives in Settings → Notifications → Notification history.",
+    "notificationsBody2": "Use this tab to check what Proxmox's own notification system is doing. Monitor channel configuration lives in the <link>Notifications</link> deep page."
   },
   "dataCollected": {
     "heading": "How the data is collected",
@@ -64,7 +64,7 @@
       {
         "subtab": "Logs (live filter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl --output json --since &lt;range&gt;</code> with severity / unit / search filters applied server-side."
+        "source": "The tab requests <code>/api/logs?since_days=N</code>; level, service and text filters run in the browser. The API also accepts <code>priority</code> and <code>service</code>, which the tab does not use yet."
       },
       {
         "subtab": "Download",
@@ -74,17 +74,17 @@
       {
         "subtab": "Backups",
         "endpoint": "/api/backups",
-        "source": "PVE task history filtered by <code>vzdump</code>, PBS transfers, Garbage Collect, Verify."
+        "source": "Backup archives listed from each backup storage with <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Backup task drill-in",
+        "subtab": "Backup task log (Notifications)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Plain-text full task log read from <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },
       {
-        "subtab": "Notifications history",
-        "endpoint": "/api/notifications/history",
-        "source": "SQLite <code>notification_history</code> table fed by the dispatch loop."
+        "subtab": "Notifications",
+        "endpoint": "/api/notifications",
+        "source": "<code>journalctl --grep</code> over Proxmox units, <code>/etc/pve/notifications.cfg</code> and backup tasks from <code>pvesh get /cluster/tasks</code>."
       }
     ],
     "apiIntro": "Both the live filter and the downloads are also reachable via the API:",

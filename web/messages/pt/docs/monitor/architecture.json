@@ -64,7 +64,7 @@
     "items": [
       "<strong><code>User=root</code></strong>: o serviço usa privilégios root para SMART, <code>pvesh</code> e gestão ZFS. Os processos do terminal web herdam estas permissões.",
       "<strong><code>Restart=on-failure</code></strong> com espera de dez segundos: o serviço reinicia automaticamente após uma saída com erro.",
-      "<strong><code>After=network.target</code></strong>: ordena o arranque após esse alvo; não garante IP atribuído, DNS ou ligação externa."
+      "<strong><code>After=network.target pve-cluster.service</code></strong>: ordena o arranque após o alvo de rede e o sistema de ficheiros do cluster Proxmox; não garante IP atribuído, DNS ou ligação externa."
     ],
     "inspectTitle": "Consultar a unidade atual"
   },

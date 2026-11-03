@@ -41,7 +41,7 @@
     "heading": "Unidades de red",
     "imageAlt": "Tarjeta Unidades de red con el selector de visualización en Bytes",
     "imageCaption": "Elige bits por segundo o bytes por segundo para todas las velocidades de red del panel.",
-    "body": "Muestra la velocidad de red en <strong>bits por segundo</strong> (Mbps/Gbps) o <strong>bytes por segundo</strong> (MB/s/GB/s). Por defecto se usan bits, como en las especificaciones de interfaces y proveedores; las transferencias de archivos suelen usar bytes. El cambio se aplica de inmediato a gráficos, etiquetas y ayudas, sin recargar."
+    "body": "Muestra la velocidad de red en <strong>bits por segundo</strong> (Mbps/Gbps) o <strong>bytes por segundo</strong> (MB/s/GB/s). Por defecto se usan bytes, como en la mayoría de herramientas de transferencia de archivos; los bits son lo que usan fabricantes de interfaces y proveedores. La elección se guarda en el navegador, así que cada navegador conserva la suya. El cambio se aplica de inmediato a gráficos, etiquetas y ayudas, sin recargar."
   },
   "health": {
     "heading": "Monitor de salud",
@@ -203,7 +203,7 @@
     "heading": "Detección de actualización de LXC",
     "imageAlt": "Tarjeta de detección de actualizaciones LXC con interruptor para buscar paquetes pendientes en contenedores Debian, Ubuntu y Alpine en ejecución",
     "imageCaption": "Interruptor del análisis periódico con <code>apt list --upgradable</code> / <code>apk list -u</code> en los CT en ejecución. Viene activado. El interruptor de aviso en Notificaciones → Servicios aparece mientras la detección está activa.",
-    "intro": "El interruptor entre Umbrales y Notificaciones controla el análisis LXC. Al activarlo, consulta los gestores de paquetes de CT en ejecución; los resultados aparecen en Hardware y alimentan <code>lxc_updates_available</code>. Al desactivarlo, cesan sus llamadas <code>pct exec</code> y se eliminan las entradas LXC de <code>managed_installs.json</code>, por lo que <code>/api/managed-installs</code> deja de mostrar ese estado sin esperar 24 h.",
+    "intro": "El interruptor entre Umbrales y Notificaciones controla el análisis LXC. Al activarlo, consulta los gestores de paquetes de CT en ejecución; los resultados aparecen en VM y LXC y alimentan <code>lxc_updates_available</code>. Al desactivarlo, cesan sus llamadas <code>pct exec</code> y se eliminan las entradas LXC de <code>managed_installs.json</code>, por lo que <code>/api/managed-installs</code> deja de mostrar ese estado sin esperar 24 h.",
     "whatRunsTitle": "Qué ejecuta el análisis",
     "whatRunsIntro": "Para cada CT en estado <code>running</code> con un gestor de paquetes compatible:",
     "whatRunsItems": [
@@ -249,7 +249,7 @@
     "body1": "Aquí se activan las notificaciones de ProxMenux Monitor y la reformulación con IA. <em>Activar notificaciones</em> inicia el proceso de envío en segundo plano, registra un destino webhook de Proxmox VE para incorporar sus eventos y abre el formulario de canales: Telegram, Discord, correo, Gotify y otros. La reformulación con IA está en una sección avanzada desplegable del mismo panel.",
     "body2": "Sus opciones se explican en páginas propias: canales, controles por evento, mensajes enriquecidos, nombre visible, envío (duplicados, espera, agrupación y horario de silencio), webhook PVE, proveedores de IA y modos de instrucciones:",
     "items": [
-      "<notifLink>Notificaciones</notifLink>: configuración de canales (Telegram, Discord, Gotify, correo y contraseñas de aplicación de Gmail / Microsoft, ntfy, Slack, Teams y webhook genérico), categorías por evento, mensajes enriquecidos, nombre visible, envío, webhook PVE, historial y API.",
+      "<notifLink>Notificaciones</notifLink>: configuración de canales (Telegram, Discord, Gotify, correo y contraseñas de aplicación de Gmail / Microsoft, Pushover y Apprise para ntfy, Slack, Teams y otros servicios), categorías por evento, mensajes enriquecidos, nombre visible, envío, webhook PVE, historial y API.",
       "<aiLink>Asistente de IA</aiLink>: proveedores (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), modelos, instrucciones predeterminadas o personalizadas, idioma de salida, detalle por canal y sugerencias de IA."
     ]
   },
@@ -294,8 +294,8 @@
       },
       {
         "card": "Unidades de red",
-        "endpoint": "/api/settings",
-        "source": "Guardado en la tabla de ajustes SQLite del panel."
+        "endpoint": "localStorage",
+        "source": "Preferencia del navegador <code>proxmenux-network-unit</code>."
       },
       {
         "card": "Duraciones de Health Monitor",
@@ -304,7 +304,7 @@
       },
       {
         "card": "Exclusiones de almacenamiento / interfaz",
-        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "endpoint": "/api/health/storage-exclusions, /api/health/interface-exclusions",
         "source": "Tablas SQLite <code>excluded_storages</code> y <code>excluded_interfaces</code>."
       },
       {

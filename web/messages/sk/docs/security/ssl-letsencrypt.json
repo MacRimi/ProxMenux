@@ -12,13 +12,13 @@
   },
   "intro": {
     "title": "Čo táto stránka obsahuje",
-    "body": "Ako prepnúť Monitor z HTTP na HTTPS v paneli Nastavenia → Zabezpečenie, na aké súbory ukazujú zdroje certifikátov, ako sa správa možnosť Proxmox s certifikátom Let’s Encrypt a ako nastaviť vlastné cesty pri správe certifikátov mimo Proxmox."
+    "body": "Ako prepnúť Monitor z HTTP na HTTPS v paneli Správa → Bezpečnosť, na aké súbory ukazujú zdroje certifikátov, ako sa správa možnosť Proxmox s certifikátom Let’s Encrypt a ako nastaviť vlastné cesty pri správe certifikátov mimo Proxmox."
   },
   "wheresetting": {
     "heading": "Kde nájdete nastavenie",
-    "body": "Otvorte Monitor a prejdite na <strong>Nastavenia → Zabezpečenie → HTTPS / SSL</strong>. Panel zobrazuje HTTP alebo HTTPS a pri vypnutom HTTPS rozpoznané zdroje certifikátov.",
-    "imageAlt": "Nastavenia → Zabezpečenie → HTTPS / panel SSL na monitore zobrazujúci vypnutý stav HTTPS, automaticky zistený certifikát Proxmox (predmet, vydavateľ, expirácia) a možnosť Použiť vlastný certifikát",
-    "caption": "Panel Nastavenia → Zabezpečenie → HTTPS / SSL pred aktiváciou. Monitor zobrazí certifikát používaný Proxmoxom a umožní ho vybrať jedným kliknutím."
+    "body": "Otvorte Monitor a prejdite na <strong>Správa → Bezpečnosť → SSL / HTTPS</strong>. Panel zobrazuje HTTP alebo HTTPS a pri vypnutom HTTPS rozpoznané zdroje certifikátov.",
+    "imageAlt": "Panel Správa → Bezpečnosť → SSL / HTTPS na monitore zobrazujúci vypnutý stav HTTPS, automaticky zistený certifikát Proxmox (predmet, vydavateľ, expirácia) a možnosť Použiť vlastný certifikát",
+    "caption": "Panel Správa → Bezpečnosť → SSL / HTTPS pred aktiváciou. Monitor zobrazí certifikát používaný Proxmoxom a umožní ho vybrať jedným kliknutím."
   },
   "twoways": {
     "heading": "Dva spôsoby, ako umožniť HTTPS",
@@ -117,7 +117,7 @@
   },
   "switchToHttps": {
     "heading": "Prepnúť monitor na HTTPS",
-    "bodyRich": "Keď je <code>/etc/pve/local/pveproxy-ssl.pem</code> podpísaný Let's Encrypt, otvorte <strong>Nastavenia → Zabezpečenie → HTTPS / SSL</strong>, overte vydavateľa <em>Let's Encrypt</em> namiesto miestnej CA Proxmox a kliknite na <strong>Použiť certifikát Proxmox</strong>. Monitor sa reštartuje a ďalšie načítanie použije HTTPS na 8008 s verejne dôveryhodným reťazcom. Ďalšie obnovy ACME sa overia a vyberú pri nasledujúcom novom spojení TLS bez pravidelného dopytovania alebo reštartu služby pri obnove. <strong>Aktualizovať certifikát</strong> zostáva v Zabezpečení dostupné na diagnostiku a obnovu."
+    "bodyRich": "Keď je <code>/etc/pve/local/pveproxy-ssl.pem</code> podpísaný Let's Encrypt, otvorte <strong>Správa → Bezpečnosť → SSL / HTTPS</strong>, overte vydavateľa <em>Let's Encrypt</em> namiesto miestnej CA Proxmox a kliknite na <strong>Použiť certifikát Proxmox</strong>. Monitor sa reštartuje a ďalšie načítanie použije HTTPS na 8008 s verejne dôveryhodným reťazcom. Ďalšie obnovy ACME sa overia a vyberú pri nasledujúcom novom spojení TLS bez pravidelného dopytovania alebo reštartu služby pri obnove. <strong>Aktualizovať certifikát</strong> v časti Bezpečnosť umožňuje ručne skontrolovať a znovu načítať certifikát bez reštartu Monitora."
   },
   "custom": {
     "heading": "Vlastný certifikát — kedy ho použiť",

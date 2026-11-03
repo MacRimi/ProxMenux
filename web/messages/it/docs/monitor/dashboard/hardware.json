@@ -168,7 +168,7 @@
   "ups": {
     "heading": "Stato UPS",
     "subHeading": "(condizionale)",
-    "body": "Appare con un server NUT (Network UPS Tools) configurato e raggiungibile. Mostra stato (rete / batteria / ricarica / batteria scarica), carica della batteria, autonomia stimata, percentuale di carico, tensione di ingresso, modello e firmware. I dati alimentano anche <em>Sicurezza e certificati</em> del monitor di integrità: il passaggio a batteria viene segnalato subito."
+    "body": "Appare con un server NUT (Network UPS Tools) configurato e raggiungibile. Mostra stato (rete / batteria / ricarica / batteria scarica), carica della batteria, autonomia stimata, percentuale di carico, tensione di ingresso, modello e firmware."
   },
   "dataCollected": {
     "heading": "Come vengono raccolti i dati",

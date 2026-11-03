@@ -64,7 +64,7 @@
     "items": [
       "<strong><code>User=root</code></strong>: služba používa oprávnenia root na SMART, <code>pvesh</code> a správu ZFS. Procesy webového terminálu dedia tieto oprávnenia.",
       "<strong><code>Restart=on-failure</code></strong> s odstupom desať sekúnd: po chybovom ukončení sa služba automaticky reštartuje.",
-      "<strong><code>After=network.target</code></strong>: zaradí štart po tomto cieli; nezaručuje pridelenú IP, DNS ani vonkajšie spojenie."
+      "<strong><code>After=network.target pve-cluster.service</code></strong>: zaradí štart po sieťovom cieli a súborovom systéme klastra Proxmox; nezaručuje pridelenú IP, DNS ani vonkajšie spojenie."
     ],
     "inspectTitle": "Kontrola aktuálnej jednotky"
   },

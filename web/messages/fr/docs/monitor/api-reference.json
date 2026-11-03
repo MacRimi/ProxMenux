@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Données système étendues de l’en-tête : métriques générales et heure de démarrage."
+        "use": "Informations d’en-tête légères : nom d’hôte, durée de fonctionnement et état de santé en cache. Public, aucun jeton requis."
       },
       {
         "endpoint": "/api/hardware",
@@ -401,7 +401,7 @@
       {
         "endpoint": "/api/logs",
         "method": "GET",
-        "use": "Entrées de journaux filtrées. Demande: <code>?level=&service=&limit=</code>."
+        "use": "Entrées de journaux filtrées. Demande : <code>?priority=&service=&limit=&since_days=</code> (<code>priority</code> 0-7, <code>since_days</code> jusqu’à 90)."
       },
       {
         "endpoint": "/api/logs/download",
@@ -411,7 +411,7 @@
       {
         "endpoint": "/api/events",
         "method": "GET",
-        "use": "Flux d'événements internes — le même qui alimente les notifications."
+        "use": "Tâches et événements récents du cluster Proxmox issus de <code>pvesh get /cluster/tasks</code>. Demande : <code>?limit=</code> (50 par défaut)."
       },
       {
         "endpoint": "/api/task-log/<upid>",
@@ -462,7 +462,7 @@
       {
         "endpoint": "/api/notifications/send",
         "method": "POST",
-        "use": "Émet un événement personnalisé. Corps : <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+        "use": "Émet un événement personnalisé. Corps : <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"message\":\"...\",\"data\":'{''}''}'</code>."
       },
       {
         "endpoint": "/api/notifications/test-ai",

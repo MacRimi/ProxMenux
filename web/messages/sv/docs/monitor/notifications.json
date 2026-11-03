@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Valfri AI-omskrivning",
-    "body1": "Lämpliga händelser kan skrivas om av en språkmodell före leverans. Säkerhetskopieringsresultaten backup_complete och backup_fail undantas. AI är avstängt som standard och körs i sändningstråden när det aktiveras. Vid fel eller tidsgräns används malltexten.",
+    "body1": "Lämpliga händelser kan skrivas om av en språkmodell före leverans. Säkerhetskopieringsresultaten backup_complete och backup_fail skrivs inte om; med AI-förslag påslaget lägger AI bara till en förklaring när en säkerhetskopiering rapporterar fel. AI är avstängt som standard och körs i sändningstråden när det aktiveras. Vid fel eller tidsgräns används malltexten.",
     "body2": "Sex leverantörer stöds: OpenAI, Anthropic, Google Gemini, Groq, OpenRouter och lokal Ollama. Per kanal väljs detaljnivå (<code>brief</code>, <code>standard</code>, <code>detailed</code>), språk, instruktionsläge (<code>default</code> eller <code>custom</code>) och egna instruktioner. Sidan <link>AI-assistent</link> visar konfiguration, bilder och exempel.",
     "privacyTitle": "Integritetsinformation",
     "privacyBody": "AI-anrop kan innehålla titel, allvarlighetsgrad, meddelandetext, systeminstruktioner, egna instruktioner och insamlad kontext med värdnamn, IP-adresser, användarnamn, fel och journalrader. De skickas till vald server. Ollama är lokalt endast med både lokal server och lokal modell; en fjärrserver eller molnmodell skickar data utanför värden. Stäng av omskrivning eller använd en kontrollerad lokal server och modell om innehållet måste stanna i nätverket."

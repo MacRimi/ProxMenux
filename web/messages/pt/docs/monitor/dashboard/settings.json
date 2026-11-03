@@ -41,7 +41,7 @@
     "heading": "Unidades de rede",
     "imageAlt": "Cartão Unidades de rede com o seletor de apresentação em Bytes",
     "imageCaption": "Escolha entre bits por segundo e bytes por segundo para cada taxa de rede exibida no painel.",
-    "body": "Mostra a velocidade em <strong>bits por segundo</strong> (Mbps/Gbps) ou <strong>bytes por segundo</strong> (MB/s/GB/s). Bits são a predefinição, como nas especificações de placas e fornecedores; as transferências de ficheiros usam frequentemente bytes. Gráficos, etiquetas e ajudas mudam de imediato sem recarregar."
+    "body": "Escolha como a velocidade de rede é mostrada no painel: <strong>bits por segundo</strong> (Mbps / Gbps) ou <strong>bytes por segundo</strong> (MB/s / GB/s). Bytes é a predefinição, como a maioria das ferramentas de transferência de ficheiros; bits é como os fabricantes de placas de rede e os ISP etiquetam os seus produtos. A escolha fica guardada no navegador, por isso cada navegador mantém a sua. Afeta todos os gráficos, etiquetas e ajudas que mostram a taxa de rede, de imediato e sem recarregar."
   },
   "health": {
     "heading": "Monitor de Saúde",
@@ -203,7 +203,7 @@
     "heading": "Detecção de atualização LXC",
     "imageAlt": "Cartão de deteção de atualizações LXC com interruptor para procurar pacotes pendentes em contentores Debian, Ubuntu e Alpine ativos",
     "imageCaption": "Interruptor da análise periódica com <code>apt list --upgradable</code> / <code>apk list -u</code> nos CT ativos. Vem ligado. A opção correspondente em Notificações → Serviços aparece com a deteção ativa.",
-    "intro": "O interruptor entre Limites e Notificações controla a análise LXC. Ativo, consulta os gestores de pacotes dos CT em execução; Hardware mostra os resultados e alimenta <code>lxc_updates_available</code>. Desativado, para as chamadas <code>pct exec</code> e remove entradas LXC de <code>managed_installs.json</code>; <code>/api/managed-installs</code> deixa de mostrar esse estado sem esperar 24 h.",
+    "intro": "O interruptor entre Limites e Notificações controla a análise LXC. Ativo, consulta os gestores de pacotes dos CT em execução; o separador VMs e LXCs mostra os resultados nos contadores e alimenta <code>lxc_updates_available</code>. Desativado, para as chamadas <code>pct exec</code> e remove entradas LXC de <code>managed_installs.json</code>; <code>/api/managed-installs</code> deixa de mostrar esse estado sem esperar 24 h.",
     "whatRunsTitle": "O que a análise executa",
     "whatRunsIntro": "Para cada CT no estado <code>running</code> com um gestor de pacotes suportado:",
     "whatRunsItems": [
@@ -249,7 +249,7 @@
     "body1": "Aqui se ativam as notificações do ProxMenux Monitor e a reformulação com IA. <em>Ativar notificações</em> inicia o envio em segundo plano, regista um destino webhook Proxmox VE para integrar os seus eventos e abre os canais: Telegram, Discord, email, Gotify e outros. A reformulação com IA está numa secção avançada expansível do mesmo painel.",
     "body2": "As opções são explicadas em páginas próprias: canais, controlos por evento, mensagens formatadas, nome apresentado, envio com eliminação de duplicados, intervalo, agregação e horas de silêncio, webhook PVE, fornecedores de IA e modos de instruções:",
     "items": [
-      "<notifLink>Notificações</notifLink>: configuração dos canais (Telegram, Discord, Gotify, email e palavras-passe de aplicação Gmail / Microsoft, ntfy, Slack, Teams e webhook genérico), categorias de eventos, mensagens formatadas, nome apresentado, envio, webhook PVE, histórico e API.",
+      "<notifLink>Notificações</notifLink>: configuração dos canais (Telegram, Discord, Gotify, email e palavras-passe de aplicação Gmail / Microsoft, Pushover e Apprise para ntfy, Slack, Teams e outros serviços), categorias de eventos, mensagens formatadas, nome apresentado, envio, webhook PVE, histórico e API.",
       "<aiLink>Assistente de IA</aiLink>: fornecedores (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), modelos, instruções predefinidas ou personalizadas, idioma de saída, detalhe por canal e sugestões de IA."
     ]
   },
@@ -294,8 +294,8 @@
       },
       {
         "card": "Unidades de rede",
-        "endpoint": "/api/settings",
-        "source": "Guardado na tabela SQLite de definições do painel."
+        "endpoint": "localStorage",
+        "source": "Preferência do navegador <code>proxmenux-network-unit</code>."
       },
       {
         "card": "Durações do Health Monitor",
@@ -304,7 +304,7 @@
       },
       {
         "card": "Exclusões de armazenamento / interface",
-        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "endpoint": "/api/health/storage-exclusions, /api/health/interface-exclusions",
         "source": "Tabelas de SQLite <code>excluded_storages</code> e <code>excluded_interfaces</code>."
       },
       {

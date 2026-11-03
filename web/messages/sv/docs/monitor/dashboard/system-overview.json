@@ -46,7 +46,7 @@
     "thresholdsIntro": "Ringar, staplar och minidiagram använder samma skala: <green/> <strong>grön</strong> under Varning, <amber/> <strong>bärnstensfärgad</strong> mellan Varning och Kritisk, <red/> <strong>röd</strong> från Kritisk och uppåt. Rekommenderade standardvärden i ProxMenux:",
     "thresholdsItems": [
       "<strong>CPU-användning</strong> — varning 85 %, kritisk 95 %.",
-      "<strong>Minne</strong> — varning 85 %, kritisk 95 %. Swap utlöser också Kritisk vid 5 % användning; en välfungerande Proxmox-värd bör sällan behöva använda swap.",
+      "<strong>Minne</strong>: varning 85 %, kritisk 95 %. Swap utlöser Kritisk endast när swapanvändningen är över 80 % och tillgängligt RAM är under 15 %.",
       "<strong>CPU-temperatur</strong> — varning 80 °C, kritisk 90 °C."
     ],
     "thresholdsOutro": "Alla värden kan ställas in per värd. <link>Inställningar → Tröskelvärden för hälsokontrollen</link> är den centrala referensen och förklarar hur de anpassas.",
@@ -58,7 +58,7 @@
     "intro": "Korten CPU-användning och Minne öppnar en sorterbar lista över de 25 största processerna: efter CPU-användning från CPU-kortet eller resident minne från minneskortet.",
     "listTitle": "Listdialogrutan",
     "listItems": [
-      "<strong>Automatisk uppdatering</strong> — listan uppdateras var 5:e sekund medan dialogrutan är öppen och slutar hämta data när den stängs.",
+      "<strong>Automatisk uppdatering</strong> — listan uppdateras var 3:e sekund medan dialogrutan är öppen och slutar hämta data när den stängs.",
       "<strong>Filter</strong> — sökfältet begränsar listan efter kommando, användare eller PID.",
       "<strong>Staplar i raderna</strong> — huvudkolumnens stapel skalas mot det högsta värdet i den filtrerade listan. Rangordningen förblir tydlig även när ingen process är nära 100 %.",
       "<strong>Mobil layout</strong> — under 640 px döljs PID och Användare, så att Kommando, CPU % och Minne får plats utan horisontell rullning."
@@ -79,7 +79,7 @@
   },
   "middle": {
     "heading": "Mitten: diagram med nodens mätvärden",
-    "body1": "Under korten visar <code>NodeMetricsCharts</code> historik för CPU, minne och disk-I/O från Proxmox RRD-lager via <code>/api/node/metrics</code>. Välj <em>1 timme / 24 timmar / 7 dagar / 30 dagar / 1 år</em>. Upplösningen sänks för längre perioder så att diagrammet förblir följsamt.",
+    "body1": "Under korten visar <code>NodeMetricsCharts</code> historik för CPU, minne och disk-I/O från Proxmox RRD-lager via <code>/api/node/metrics</code>. Välj <em>1 timme / 24 timmar / 7 dagar / 30 dagar</em>. Upplösningen sänks för längre perioder så att diagrammet förblir följsamt.",
     "body2": "Samma diagram som Proxmox webbgränssnitt visar för en nod, infogade i Monitors mörka tema och placerade i linje med övriga paneler."
   },
   "bottom": {
