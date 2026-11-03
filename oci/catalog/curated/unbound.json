@@ -1,0 +1,292 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-unbound",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Unbound"
+    },
+    "tagline": {
+      "en_US": "A validating, recursive DNS resolver for your private network."
+    },
+    "description": {
+      "en_US": "Run the community-maintained klutchell image of Unbound as a DNS resolver on its own Proxmox LXC. It listens on TCP and UDP port 53 and can load optional custom configuration files."
+    },
+    "category": "adblock",
+    "category_label": "Adblock & DNS",
+    "author": "Kyle Harding",
+    "developer": "Kyle Harding (klutchell)",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unbound.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64",
+      "armhf"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": null,
+      "path": "/"
+    },
+    "website": "https://unbound.net/",
+    "documentation": "https://github.com/klutchell/unbound-docker#readme",
+    "repository": "https://github.com/klutchell/unbound-docker",
+    "tips": [
+      "Unbound has no web interface. Use the LXC IP as a DNS server on TCP and UDP port 53.",
+      "The default image config listens on all interfaces and accepts clients from private IPv4 ranges. Keep it behind your trusted LAN firewall; do not expose recursive DNS publicly.",
+      "The original GitHub repository has moved to klutchell/unbound-docker; the published Docker Hub image remains klutchell/unbound:main. The image is an unofficial community image, not published by NLnet Labs.",
+      "Optional custom .conf files go under /etc/unbound/custom.conf.d and must be readable by UID/GID 101:102 or world-readable."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "klutchell",
+    "repository": "https://github.com/klutchell/unbound-docker",
+    "revision": "1efbea960bf9462b6fb6dd71aa702ad32d6820d7",
+    "default_branch": "main",
+    "image_repository_url": "https://hub.docker.com/r/klutchell/unbound",
+    "readme_pushed_at": "2026-11-02T14:31:22Z",
+    "compose_sha256": "faf73a93c1f7d4d43f1eb61ba2e62a4418bd501f0c827b080ea9897964e75848",
+    "generated_at": "2026-11-02T21:21:54+00:00",
+    "readme_raw_url": "https://raw.githubusercontent.com/klutchell/unbound-docker/main/README.md"
+  },
+  "container_contract": {
+    "service_name": "unbound",
+    "container_name": "unbound",
+    "image": {
+      "reference": "klutchell/unbound:main",
+      "registry": "docker.io",
+      "repository": "klutchell/unbound",
+      "tag": "main",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/etc/unbound/custom.conf.d",
+        "compose_source_example": "./config",
+        "read_only": false,
+        "required": false,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 53,
+        "published_example": 53,
+        "protocol": "udp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 53,
+        "published_example": 53,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: unbound\nservices:\n  unbound:\n    image: klutchell/unbound:main\n    container_name: unbound\n    restart: unless-stopped\n    ports:\n      - 53:53/udp\n      - 53:53/tcp\n    volumes:\n      - ./config:/etc/unbound/custom.conf.d\n"
+  },
+  "compose_stack": {
+    "project_name": "unbound",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "unbound",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "unbound",
+        "image": "klutchell/unbound:main",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "klutchell/unbound:main",
+          "container_name": "unbound",
+          "restart": "unless-stopped",
+          "ports": [
+            "53:53/udp",
+            "53:53/tcp"
+          ],
+          "volumes": [
+            "./config:/etc/unbound/custom.conf.d"
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "name": "unbound"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "unbound-volume-0",
+        "service": "unbound",
+        "container_path": "/etc/unbound/custom.conf.d",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": "Host directory containing optional custom Unbound .conf files",
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "unbound"
+      ],
+      "stop_order": [
+        "unbound"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 512,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 120
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/etc/unbound/custom.conf.d",
+          "owner_strategy": "mapped-root",
+          "remove_lost_found": true,
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "type": "running",
+        "timeout_seconds": 90,
+        "stability_seconds": 20
+      }
+    },
+    "catalog": {
+      "replaces_discovered_ids": []
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "container_name",
+      "image",
+      "ports",
+      "restart",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "This single-image Compose contract maps to one unprivileged Proxmox LXC. The optional custom-config directory can use a Proxmox-managed volume or a host directory; the image defaults work with an empty directory."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "image_resolution": "passed-skopeo-16-layers",
+    "clean_install": "passed-default-install-and-first-start-healthcheck",
+    "advanced_install": "pending",
+    "service_health": "passed-recursion-and-custom-local-data-over-udp-and-tcp",
+    "restart_persistence": "passed-custom-zone-after-pct-reboot",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending-update-check-not-run",
+    "modification": "pending-manager-ui-unresponsive-no-changes-applied",
+    "managed_volume": "passed-config-volume-1g",
+    "host_bind": "pending",
+    "removal": "passed-manager-remove-ct-disks-and-record-cleaned"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

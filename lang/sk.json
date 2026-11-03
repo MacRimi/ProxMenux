@@ -8981,5 +8981,19 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "A validating, recursive DNS resolver for your private network.": "Validujúci rekurzívny DNS resolver pre vašu súkromnú sieť.",
+  "Controller path on the Proxmox host; prefer /dev/serial/by-id/...": "Cesta ku kontroléru na hostiteľovi Proxmox; uprednostnite /dev/serial/by-id/...",
+  "Initial Z-Wave JS UI admin password": "Počiatočné heslo správcu Z-Wave JS UI",
+  "KDE's twin-panel file manager in a browser-based desktop.": "Dvojpanelový správca súborov KDE v pracovnej ploche dostupnej cez webový prehliadač.",
+  "KitchenOwl": "KitchenOwl",
+  "Krusader Web UI": "Webové rozhranie Krusaderu",
+  "Manage a Z-Wave network from a web dashboard and WebSocket gateway.": "Spravujte sieť Z-Wave cez webový panel a bránu WebSocket.",
+  "Open the web address and follow KitchenOwl’s onboarding to create the first account; no default account is configured.": "Otvorte webovú adresu a podľa pokynov KitchenOwl vytvorte prvý účet; predvolený účet nie je nastavený.",
+  "Pass through a Z-Wave USB or serial controller": "Pripojiť USB alebo sériový radič Z-Wave",
+  "Self-hosted grocery list and recipe manager": "Správca nákupných zoznamov a receptov, ktorý si môžete prevádzkovať sami.",
+  "Spoolman web interface": "Webové rozhranie Spoolmanu",
+  "Track 3D printer filament spools and usage.": "Sledujte cievky filamentu pre 3D tlačiareň a ich spotrebu.",
+  "Z-Wave JS UI": "Z-Wave JS UI",
+  "Z-Wave JS UI admin login": "Prihlásenie správcu Z-Wave JS UI"
 }
