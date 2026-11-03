@@ -1,5 +1,7 @@
 """The LinuxServer/MariaDB variant keeps its complete private stack and safe bootstrap."""
 import json
+import base64
+import re
 import os
 from pathlib import Path
 import shutil
@@ -76,6 +78,8 @@ class NextcloudMariaDBTests(unittest.TestCase):
                                  {'nextcloud': 2048, 'db': 1024, 'redis': 512})
                 runtime = services['nextcloud']['template']['proxmox']['installer_profile']['runtime']
                 self.assertIn('exec /init', runtime['compose_entrypoint'][2])
+                self.assertNotIn('\n', runtime['compose_entrypoint'][2])
+                self.assertNotIn('\r', runtime['compose_entrypoint'][2])
 
     def test_nas_mount_is_separate_from_configuration_database_and_cache(self):
         plan = self.plan(DEFAULT_MODE, {'Where to store nextcloud: /data': 'host-bind',
@@ -95,10 +99,19 @@ class NextcloudMariaDBTests(unittest.TestCase):
         entry = next(s for s in self.template['compose_stack']['services'] if s['name'] == 'nextcloud')['compose']['entrypoint']
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp) / 'config'
-            script = entry[2].replace('/config/www/nextcloud/config', str(folder)).replace('exec /init', 'exit 0')
+            image_config = Path(temp) / 'image-config'
+            image_config.mkdir()
+            defaults = {'CAN_INSTALL': '', '.htaccess': 'deny all', 'config.sample.php': '<?php // sample'}
+            for name, content in defaults.items(): (image_config / name).write_text(content)
+            payload = re.search(r'printf %s ([A-Za-z0-9+/=]+) \| base64 -d \| php', entry[2]).group(1)
+            source = base64.b64decode(payload).decode()
+            self.assertEqual(source, (ROOT / 'examples/nextcloud-mariadb-bootstrap.php').read_text())
+            test_source = source.replace('/config/www/nextcloud/config', str(folder)).replace('/app/www/src/config', str(image_config))
+            script = entry[2].replace(payload, base64.b64encode(test_source.encode()).decode()).replace('exec /init', 'exit 0')
             password = "test-'quote\\backslash$not-a-real-secret\nline"
             env = dict(os.environ, MYSQL_HOST='db', MYSQL_DATABASE='nextcloud', MYSQL_USER='nextcloud', MYSQL_PASSWORD=password)
             subprocess.run(['/bin/sh', '-ec', script], env=env, check=True, capture_output=True)
+            for name, content in defaults.items(): self.assertEqual((folder / name).read_text(), content)
             autoconfig = folder / 'autoconfig.php'
             redis = folder / 'proxmenux-redis.config.php'
             for path in (autoconfig, redis):
@@ -118,9 +131,11 @@ class NextcloudMariaDBTests(unittest.TestCase):
             subprocess.run(['/bin/sh', '-ec', script], env=dict(env, MYSQL_PASSWORD='changed'), check=True, capture_output=True)
             for path, content in saved.items(): self.assertEqual(path.read_bytes(), content)
             autoconfig.unlink()
+            (folder / 'CAN_INSTALL').unlink()
             (folder / 'config.php').write_text('<?php $CONFIG = ["installed" => true];')
             subprocess.run(['/bin/sh', '-ec', script], env=env, check=True, capture_output=True)
             self.assertFalse(autoconfig.exists())
+            self.assertFalse((folder / 'CAN_INSTALL').exists())
 
 if __name__ == '__main__':
     unittest.main()
