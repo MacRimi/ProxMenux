@@ -61,6 +61,12 @@
         "badge": "Vždy k dispozícii"
       },
       {
+        "icon": "Languages",
+        "href": "/docs/settings/change-language",
+        "title": "Zmeniť jazyk",
+        "description": "Prepnite rozhranie ProxMenux medzi ôsmimi jazykmi. Voľba sa uloží do config.json a menu sa načíta znova v novom jazyku."
+      },
+      {
         "icon": "Info",
         "href": "/docs/settings/show-version-information",
         "title": "Zobraziť informácie o verzii",
@@ -70,7 +76,7 @@
         "icon": "Trash2",
         "href": "/docs/settings/uninstall-proxmenux",
         "title": "Odinštalovať ProxMenux",
-        "description": "Odstrániť ProxMenux a (voliteľne) jeho závislosti. Tiež obnovuje zálohy /root/.bashrc a /etc/motd vytvorené v čase inštalácie."
+        "description": "Odstráni ProxMenux a (voliteľne) jeho závislosti. Obnoví tiež zálohy /root/.bashrc a /etc/motd vytvorené Post-Install."
       }
     ]
   },

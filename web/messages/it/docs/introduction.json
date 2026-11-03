@@ -21,11 +21,11 @@
     "intro": "ProxMenux comprende due componenti nello stesso albero dei sorgenti. Il programma di installazione li distribuisce entrambi sull’host: Scripts offre l’interfaccia da terminale e Monitor la dashboard web:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "La CLI/TUI originale, da avviare con <code>menu</code>. Nove aree coprono ottimizzazioni dopo l’installazione, VM e container LXC, passthrough di GPU e Coral TPU, dischi, archiviazione, rete, sicurezza e utilità, con una raccolta di comandi di riferimento. Funziona nei terminali locali, SSH e web."
+      "body": "La CLI/TUI originale, da avviare con <code>menu</code>. Aree funzionali che coprono ottimizzazioni dopo l’installazione, creazione di VM e LXC, passthrough di GPU e Coral TPU, dischi, archiviazione, app OCI, rete, sicurezza, utilità, backup e ripristino dell’host, Proxmox VE Helper Scripts, con una raccolta di comandi di riferimento. Funziona nei terminali locali, SSH e web."
     },
     "monitor": {
       "title": "ProxMenux Monitor",
-      "body": "Dashboard web sul proprio server, distribuita come AppImage. Metriche dell’host in tempo reale, monitoraggio proattivo, notifiche, riformulazione facoltativa tramite IA con sei fornitori, terminale web integrato e API REST. Si attiva dal menu Scripts, in Impostazioni → ProxMenux Monitor."
+      "body": "Dashboard web sul proprio server, distribuita come AppImage. Metriche dell’host in tempo reale, monitoraggio proattivo, notifiche, riformulazione facoltativa tramite IA con sei fornitori, terminale web integrato e API REST. Il programma di installazione la configura come servizio che parte all’avvio; si attiva, disattiva o controlla dal menu Scripts (Impostazioni → ProxMenux Monitor)."
     },
     "calloutTitle": "Cosa gestisce ProxMenux",
     "calloutIntro": "Tre strati, tutti raggiungibili dallo stesso progetto:",
@@ -37,7 +37,7 @@
   },
   "scriptsSection": {
     "heading": "ProxMenux Scripts — che cosa si ottiene",
-    "intro": "Nove aree funzionali, ognuna con il proprio sottomenu in <code>menu</code> e una pagina dedicata nella documentazione. Seleziona una scheda per aprire direttamente la panoramica della sezione.",
+    "intro": "Le principali aree funzionali, ognuna con il proprio sottomenu in <code>menu</code> e una pagina dedicata nella documentazione. Seleziona una scheda per aprire direttamente la panoramica della sezione.",
     "items": [
       {
         "title": "Dopo l'installazione",

@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Påverkar ProxMenux-installationen bara - inte dina VM / CT / lagringsutrymme",
-    "body": "Avinstallationen tar bort ProxMenux-skripten, menystartaren, den valfria Monitor-tjänsten och säkerhetskopior av systemfiler som ProxMenux skapade vid installationen. <strong>Den ändrar inte dina virtuella maskiner, containrar, lagring, nätverkskonfiguration, Fail2Ban, NVIDIA-drivrutiner eller annat som du installerat via ProxMenux.</strong> De förblir som de är."
+    "body": "Avinstallationen tar bort ProxMenux-skripten, menystartaren och Monitor-tjänsten, och återställer säkerhetskopiorna av /root/.bashrc och /etc/motd som efterinstallationen tog, om de finns. <strong>Den ändrar inte dina virtuella maskiner, containrar, lagring, nätverkskonfiguration, Fail2Ban, NVIDIA-drivrutiner eller annat som du installerat via ProxMenux.</strong> De förblir som de är."
   },
   "flow": {
     "heading": "Avinstallationsförloppet",

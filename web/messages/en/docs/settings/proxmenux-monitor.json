@@ -33,7 +33,7 @@
   },
   "warnConditional": {
     "title": "Settings options only visible when Monitor is installed",
-    "body": "The two menu entries described below only appear in Settings if <code>proxmenux-monitor.service</code> is registered with systemd. If you don't see them, the Monitor wasn't installed (it's optional during ProxMenux install). To add it later, reinstall ProxMenux with the latest version and pick the Monitor option."
+    "body": "The three menu entries described below only appear in Settings if <code>proxmenux-monitor.service</code> is registered with systemd. The installer always sets it up, so if you don't see them the Monitor step failed during install. Run the official installer again to retry it."
   },
   "toggle": {
     "heading": "Activate / Deactivate",
@@ -92,8 +92,8 @@
   },
   "troubleshoot": {
     "heading": "Troubleshooting",
-    "missingTitle": "Both menu options are missing",
-    "missingBody": "The Monitor isn't registered with systemd. Confirm with <code>systemctl list-unit-files | grep proxmenux-monitor</code> — if there's no output, reinstall ProxMenux from the official installer with the latest version and pick the Monitor option during install.",
+    "missingTitle": "The Monitor menu options are missing",
+    "missingBody": "The Monitor isn't registered with systemd. Confirm with <code>systemctl list-unit-files | grep proxmenux-monitor</code> — if there's no output, run the official installer again; it installs the Monitor on every run.",
     "unreachableTitle": "Service activated but the URL is unreachable",
     "unreachableBody": "The Settings status output gives you the IP. Confirm:",
     "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",

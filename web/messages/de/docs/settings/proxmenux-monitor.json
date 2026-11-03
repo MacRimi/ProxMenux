@@ -33,7 +33,7 @@
   },
   "warnConditional": {
     "title": "Einstellungen Optionen nur sichtbar, wenn Monitor installiert ist",
-    "body": "Die beiden unten beschriebenen Menüeinträge erscheinen nur in den Einstellungen, wenn <code>proxmenux-monitor.service</code> bei systemd registriert ist. Wenn Sie sie nicht sehen, wurde der Monitor nicht installiert (er ist während der ProxMenux-Installation optional). Um es später hinzuzufügen, installieren Sie ProxMenux mit der neuesten Version neu und wählen Sie die Option Monitor aus."
+    "body": "Die drei unten beschriebenen Menüeinträge erscheinen nur in den Einstellungen, wenn <code>proxmenux-monitor.service</code> bei systemd registriert ist. Der Installer richtet ihn immer ein; wenn Sie sie nicht sehen, ist der Monitor-Schritt bei der Installation fehlgeschlagen. Führen Sie den offiziellen Installer erneut aus, um ihn zu wiederholen."
   },
   "toggle": {
     "heading": "Aktivieren/Deaktivieren",
@@ -92,8 +92,8 @@
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",
-    "missingTitle": "Beide Menüoptionen fehlen",
-    "missingBody": "Der Monitor ist nicht bei systemd registriert. Bestätigen Sie mit <code>systemctl list-unit-files | grep proxmenux-monitor</code> - wenn keine Ausgabe vorhanden ist, installieren Sie ProxMenux mit der neuesten Version erneut vom offiziellen Installer und wählen Sie während der Installation die Option Monitor aus.",
+    "missingTitle": "Die Monitor-Menüoptionen fehlen",
+    "missingBody": "Der Monitor ist nicht bei systemd registriert. Bestätigen Sie mit <code>systemctl list-unit-files | grep proxmenux-monitor</code> - wenn keine Ausgabe vorhanden ist, führen Sie den offiziellen Installer erneut aus; er installiert den Monitor bei jedem Durchlauf.",
     "unreachableTitle": "Service aktiviert, aber die URL ist nicht erreichbar",
     "unreachableBody": "Die Einstellungsstatusausgabe gibt Ihnen die IP. Bestätigung:",
     "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",

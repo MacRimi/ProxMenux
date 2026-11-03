@@ -21,11 +21,11 @@
     "intro": "ProxMenux has two components in the same source tree. The installer deploys both on the host: Scripts provides the terminal interface, and Monitor provides the web dashboard:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "The original CLI/TUI you launch with <code>menu</code>. Nine functional areas covering post-install optimizations, VM and LXC creation, GPU and Coral TPU passthrough, disks, storage, network, security, utilities, plus a curated commands reference. Runs in any terminal — local, SSH or web."
+      "body": "The original CLI/TUI you launch with <code>menu</code>. Functional areas covering post-install optimizations, VM and LXC creation, GPU and Coral TPU passthrough, disks, storage, OCI apps, network, security, utilities, host backup and restore, Proxmox VE Helper Scripts, plus a curated commands reference. Runs in any terminal — local, SSH or web."
     },
     "monitor": {
       "title": "ProxMenux Monitor",
-      "body": "Self-hosted web dashboard (AppImage). Real-time host metrics, a proactive Health Monitor, notifications, an optional AI rewrite hook (six providers), an integrated web terminal and a REST API. Enable from the Scripts menu (Settings → ProxMenux Monitor)."
+      "body": "Self-hosted web dashboard (AppImage). Real-time host metrics, a proactive Health Monitor, notifications, an optional AI rewrite hook (six providers), an integrated web terminal and a REST API. The installer sets it up as a service that starts on boot; activate, deactivate or check it from the Scripts menu (Settings → ProxMenux Monitor)."
     },
     "calloutTitle": "What ProxMenux acts on",
     "calloutIntro": "Three layers, all reachable from the same project:",
@@ -37,7 +37,7 @@
   },
   "scriptsSection": {
     "heading": "ProxMenux Scripts — what you get",
-    "intro": "Nine functional areas, each with its own menu inside <code>menu</code> and a detail page in the documentation. Click any card to jump straight to that section's overview.",
+    "intro": "The main functional areas, each with its own menu inside <code>menu</code> and a detail page in the documentation. Click any card to jump straight to that section's overview.",
     "items": [
       {
         "title": "Post-Install",

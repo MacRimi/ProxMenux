@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Ovplyvní iba inštaláciu ProxMenux — nie vaše VM / CT / úložisko",
-    "body": "Odinštalovanie odstráni skripty ProxMenux, spúšťač menu, voliteľnú službu Monitor a zálohy systémových súborov, ktoré ProxMenux vytvoril počas inštalácie. <strong>Nemení vaše VM, kontajnery, úložisko, konfiguráciu siete, Fail2Ban, ovládač NVIDIA ani nič iné nainštalované cez ProxMenux.</strong> Tieto súčasti zostanú nezmenené."
+    "body": "Odinštalovanie odstráni skripty ProxMenux, spúšťač menu, službu Monitor a obnoví zálohy /root/.bashrc a /etc/motd vytvorené Post-Install, ak existujú. <strong>Nemení vaše VM, kontajnery, úložisko, konfiguráciu siete, Fail2Ban, ovládač NVIDIA ani nič iné nainštalované cez ProxMenux.</strong> Tieto súčasti zostanú nezmenené."
   },
   "flow": {
     "heading": "Postup odinštalovania",
