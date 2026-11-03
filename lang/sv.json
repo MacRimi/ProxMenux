@@ -605,6 +605,7 @@
   "Audit socket disabled or not required": "Granskningsuttaget inaktiverat eller inte nödvändigt",
   "Auth key is required.": "Auth-nyckel krävs.",
   "Auth:": "Auth:",
+  "Authelia Web UI": "Authelias webbgränssnitt",
   "Authelia administrator": "Authelia administratör",
   "Authelia session cookie domain for this portal (for example example.com)": "Authelia sessionscookiedomän för denna portal (till exempel example.com)",
   "Authentication": "Autentisering",
