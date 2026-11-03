@@ -557,13 +557,7 @@ def _search(catalog: Catalog, ui, applications: list[dict[str, Any]]) -> None:
               keep_order=True)
 
 
-def interactive(catalog: Catalog) -> int:
-    from .ui import MenuRefresh
-    from .updates import UpdateCheck, select_updates
-    ui = interactive_ui()
-    if not catalog.index_path.exists():
-        ui.message(translate("The OCI catalog is not installed. Update ProxMenux and try again."))
-        return 1
+def _catalog_options(catalog):
     applications = _installable(catalog.load_index()["applications"])
     categories: dict[str, list[dict[str, Any]]] = {}
     labels: dict[str, str] = {}
@@ -577,17 +571,34 @@ def interactive(catalog: Catalog) -> int:
         ("search", translate("Search applications")),
         ("all", f"{translate('All applications'):<35} ({len(applications):>3})"),
         ("manage", translate("Manage installed OCI applications")),
+        ("catalog-refresh", translate("Refresh catalog")),
         ("registries", translate("Registry accounts")),
         ("custom", translate("Install an image that is not in the catalog")),
         ("", ""),
     ] + [(number, f"{translate(labels[key]):<35} ({len(categories[key]):>3})")
          for number, key in category_by_index.items()]
+    return applications, categories, labels, category_by_index, options
+
+
+def interactive(catalog: Catalog) -> int:
+    from .ui import MenuRefresh
+    from .catalog_refresh import CatalogRefresh, visible_recipes
+    from .updates import UpdateCheck, select_updates
+    ui = interactive_ui()
+    if not catalog.index_path.exists():
+        ui.message(translate("The OCI catalog is not installed. Update ProxMenux and try again."))
+        return 1
+    applications, categories, labels, category_by_index, options = _catalog_options(catalog)
     selection = "search"
-    with UpdateCheck(PROJECT_ROOT) as updates:
+    with CatalogRefresh(PROJECT_ROOT, catalog) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
         while True:
+            if catalog_refresh.consume():
+                catalog = Catalog(PROJECT_ROOT)
+                applications, categories, labels, category_by_index, options = _catalog_options(catalog)
+                catalog_refresh.recipes = visible_recipes(catalog)
             state = updates.status()
             entries = ReadableTags(options[:3] + [('updates', updates.label(state))] + options[3:])
-            text = translate("Select a category or search for applications:")
+            text = catalog_refresh.describe() + "\n\n" + translate("Select a category or search for applications:")
             if notice := updates.notice(state):
                 text += '\n\n' + notice
             if updates.active and not getattr(ui, 'live_refresh', False):
@@ -595,10 +606,13 @@ def interactive(catalog: Catalog) -> int:
                 updates.wait()
                 continue
             try:
-                kwargs = {'refresh': updates.changed} if updates.active else {}
+                kwargs = ({'refresh': lambda: updates.changed() or catalog_refresh.changed()}
+                          if updates.active or catalog_refresh.active else {})
                 selected = ui.choose(text, entries, selection, size=MENU_SIZE, **kwargs)
             except MenuRefresh:
                 continue
+            finally:
+                catalog_refresh.mark_seen()
             if selected is None:
                 return 0
             selection = selected
@@ -611,6 +625,8 @@ def interactive(catalog: Catalog) -> int:
                 elif selection == "manage":
                     from .management import interactive_management
                     interactive_management(PROJECT_ROOT, ui)
+                elif selection == "catalog-refresh":
+                    catalog_refresh.start(force=True)
                 elif selection == "updates":
                     if not updates.active:
                         if state['available']:
