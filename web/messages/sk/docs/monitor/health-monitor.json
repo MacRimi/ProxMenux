@@ -153,7 +153,7 @@
     "pillTitle": "Indikátor zodpovedá najzávažnejšej kategórii",
     "pillBody": "Farba hlavičky zodpovedá najvyššej závažnosti: CRITICAL → červená, inak WARNING → žltá, inak INFO → modrá, inak zelená. Rovnaká logika riadi bod vo favikone aj odznak PWA.",
     "updateNowTitle": "Aktualizovať teraz tlačidlo v hlavičke Prehľad",
-    "updateNowBody1": "Ak <em>Aktualizácie systému</em> hlásia čakajúce aktualizácie, pri indikátore sa zobrazí <strong>Aktualizovať teraz</strong>. Okno vykoná postup z <em>ProxMenux → Utilities and Tools → Proxmox System Update</em>: čistenie repozitárov, <code>apt full-upgrade</code> cez <code>update-pve-safe.sh</code>, opätovné zostavenie spravovaných ovládačov DKMS pri novom jadre, autoremove/autoclean a ponuku reštartu pri zmene jadra. Priebeh sa zobrazuje priebežne.",
+    "updateNowBody1": "Ak <em>Aktualizácie systému</em> hlásia čakajúce aktualizácie, pri indikátore sa zobrazí <strong>Aktualizovať teraz</strong>. Okno vykoná postup z <em>ProxMenux → Nástroje → Aktualizácia systému Proxmox</em>: čistenie repozitárov, <code>apt full-upgrade</code> cez <code>update-pve-safe.sh</code>, opätovné zostavenie spravovaných ovládačov DKMS pri novom jadre, autoremove/autoclean a ponuku reštartu pri zmene jadra. Priebeh sa zobrazuje priebežne.",
     "updateNowBody2": "Po dokončení zatvorenie okna zavolá <code>GET /api/health/full?refresh=1</code> a zneplatní vyrovnávaciu pamäť koncového bodu. Čakajúce aktualizácie a závažnosť sa prepočítajú podľa nového stavu balíkov. Odznak zmizne bez čakania na ďalší cyklus. Ak je hostiteľ aktuálny, tlačidlo je skryté."
   },
   "dismiss": {

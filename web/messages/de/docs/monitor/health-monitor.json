@@ -153,7 +153,7 @@
     "pillTitle": "Die Statusanzeige folgt der schwerwiegendsten Kategorie",
     "pillBody": "Die Farbe im Dashboard-Kopf folgt dem höchsten Schweregrad: CRITICAL → rot, sonst WARNING → gelb, sonst INFO → blau, sonst grün. Dieselbe Logik steuert den Punkt im Favicon und das PWA-Symbol.",
     "updateNowTitle": "Schaltfläche Jetzt Aktualisieren im Overview-Header",
-    "updateNowBody1": "Meldet <em>Systemupdates</em> ausstehende Updates, erscheint neben der Statusanzeige <strong>Jetzt aktualisieren</strong>. Der Dialog startet denselben Hostablauf wie <em>ProxMenux → Utilities and Tools → Proxmox System Update</em>: Repository-Bereinigung, <code>apt full-upgrade</code> über <code>update-pve-safe.sh</code>, DKMS-Neubau verwalteter Treiber bei neuem Kernel, autoremove/autoclean und gegebenenfalls eine Neustartabfrage. Der Fortschritt wird laufend angezeigt.",
+    "updateNowBody1": "Meldet <em>Systemupdates</em> ausstehende Updates, erscheint neben der Statusanzeige <strong>Jetzt aktualisieren</strong>. Der Dialog startet denselben Hostablauf wie <em>ProxMenux → Dienstprogramme und Tools → Proxmox-Systemupdate</em>: Repository-Bereinigung, <code>apt full-upgrade</code> über <code>update-pve-safe.sh</code>, DKMS-Neubau verwalteter Treiber bei neuem Kernel, autoremove/autoclean und gegebenenfalls eine Neustartabfrage. Der Fortschritt wird laufend angezeigt.",
     "updateNowBody2": "Nach Abschluss ruft das Schließen des Dialogs <code>GET /api/health/full?refresh=1</code> auf und verwirft damit den Cache dieses Endpunkts. Ausstehende Updates und Statusanzeige werden anhand des neuen Paketstands neu berechnet. Der Hinweis verschwindet ohne Warten auf den nächsten Zyklus. Auf einem aktuellen Host bleibt die Schaltfläche verborgen."
   },
   "dismiss": {

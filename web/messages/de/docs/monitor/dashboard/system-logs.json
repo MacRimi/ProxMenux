@@ -26,7 +26,7 @@
     "logsTitle": "Protokolle",
     "logsIntro": "Das Systemjournal wird auf dem Server mit <code>journalctl</code> abgerufen. Die Werkzeugleiste bietet folgende Filter :",
     "logsFilters": [
-      "<strong>Stufe</strong>: alle, Fehler, Warnung oder Info.",
+      "<strong>Stufe</strong>: Alle Ebenen, Fehler, Warnung oder Info.",
       "<strong>Zeitbereich</strong>: 1 Tag / 3 Tage / 1 Woche / 2 Wochen / 1 Monat oder eine benutzerdefinierte Anzahl von Tagen (bis zu 90).",
       "<strong>Freitextsuche</strong>: Teilzeichenfolge ohne Beachtung der Groß-/Kleinschreibung über Nachricht, Dienst, PID, Hostname und Unit, im Browser angewendet.",
       "<strong>Dienstfilter</strong>: auf einen Dienst beschränken (der Journal-<code>SYSLOG_IDENTIFIER</code>)."

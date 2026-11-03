@@ -26,7 +26,7 @@
     "logsTitle": "Registros",
     "logsIntro": "El journal del sistema, obtenido en el servidor con <code>journalctl</code>. La barra de herramientas ofrece estos filtros:",
     "logsFilters": [
-      "<strong>Nivel</strong>: all, error, warning o info.",
+      "<strong>Nivel</strong>: Todos los niveles, Error, Advertencia o Info.",
       "<strong>Rango temporal</strong>: 1 día / 3 días / 1 semana / 2 semanas / 1 mes, o un número personalizado de días (hasta 90).",
       "<strong>Búsqueda de texto libre</strong>: subcadena sin distinguir mayúsculas de minúsculas sobre mensaje, servicio, PID, hostname y unidad, aplicada en el navegador.",
       "<strong>Filtro de servicio</strong>: restringe a un servicio (el <code>SYSLOG_IDENTIFIER</code> del journal)."

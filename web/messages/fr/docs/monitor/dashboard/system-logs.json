@@ -26,7 +26,7 @@
     "logsTitle": "Journaux",
     "logsIntro": "Le journal système, obtenu sur le serveur avec <code>journalctl</code>. Filtres disponibles dans la barre d'outils :",
     "logsFilters": [
-      "<strong>Niveau</strong> : tous, error, warning ou info.",
+      "<strong>Niveau</strong> : Tous niveaux, Erreur, Avertissement ou Informations.",
       "<strong>Délais</strong> : 1 jour / 3 jours / 1 semaine / 2 semaines / 1 mois, ou un nombre de jours sur mesure (jusqu’à 90).",
       "<strong>Recherche libre</strong> : sous-chaîne insensible à la casse dans le message, le service, le PID, le nom d’hôte et l’unité, appliquée dans le navigateur.",
       "<strong>Filtre par service</strong> : limite les résultats à un service (le <code>SYSLOG_IDENTIFIER</code> du journal)."

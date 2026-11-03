@@ -26,7 +26,7 @@
     "logsTitle": "Loggar",
     "logsIntro": "Systemjournalen hämtas på servern med <code>journalctl</code>. Följande filter finns i verktygsfältet:",
     "logsFilters": [
-      "<strong>Level</strong>: all, error, warning eller info.",
+      "<strong>Level</strong>: Alla nivåer, Fel, Varning eller Info.",
       "<strong>Time range</strong>: 1 dag / 3 dagar / 1 vecka / 2 veckor / 1 månad, eller ett eget antal dagar (upp till 90).",
       "<strong>Fritextsökning</strong>: skiftlägesokänslig delsträng över meddelande, tjänst, PID, värdnamn och enhet, tillämpad i webbläsaren.",
       "<strong>Service filter</strong>: begränsa till en tjänst (journalens <code>SYSLOG_IDENTIFIER</code>)."

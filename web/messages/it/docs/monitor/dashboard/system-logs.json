@@ -26,7 +26,7 @@
     "logsTitle": "Log",
     "logsIntro": "Il journal di sistema, letto sul server con <code>journalctl</code>. Filtri disponibili nella barra degli strumenti:",
     "logsFilters": [
-      "<strong>Livello</strong>: all, error, warning o info.",
+      "<strong>Livello</strong>: Tutti i livelli, Errore, Avviso o Informazioni.",
       "<strong>Intervallo di tempo</strong>: 1 giorno / 3 giorni / 1 settimana / 2 settimane / 1 mese, oppure un numero personalizzato di giorni (fino a 90).",
       "<strong>Ricerca libera</strong>: sottostringa senza distinzione tra maiuscole e minuscole su messaggio, servizio, PID, hostname e unità, applicata nel browser.",
       "<strong>Filtro per servizio</strong>: limita a un servizio (il <code>SYSLOG_IDENTIFIER</code> del journal)."
@@ -77,7 +77,7 @@
         "source": "Archivi di backup elencati da ogni storage di backup con <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Log delle attività di backup (Notifications)",
+        "subtab": "Log delle attività di backup (Notifiche)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Log completo dell'attività in testo semplice, letto da <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },

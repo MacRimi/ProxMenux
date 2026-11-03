@@ -26,7 +26,7 @@
     "logsTitle": "Logs",
     "logsIntro": "The system journal, served by <code>journalctl</code> on the backend. Filters available in the toolbar:",
     "logsFilters": [
-      "<strong>Level</strong>: all, error, warning or info.",
+      "<strong>Level</strong>: All levels, Error, Warning or Info.",
       "<strong>Time range</strong>: 1 day / 3 days / 1 week / 2 weeks / 1 month, or a custom number of days (up to 90).",
       "<strong>Free-text search</strong>: case-insensitive substring over message, service, PID, hostname and unit, applied in the browser.",
       "<strong>Service filter</strong>: restrict to one service (the journal <code>SYSLOG_IDENTIFIER</code>)."

@@ -153,7 +153,7 @@
     "pillTitle": "O indicador reflete a categoria mais grave",
     "pillBody": "A cor do cabeçalho reflete a gravidade máxima: CRITICAL → vermelho, senão WARNING → amarelo, senão INFO → azul, senão verde. A mesma lógica controla o ponto do favicon e o distintivo PWA.",
     "updateNowTitle": "Atualizar agora no cabeçalho Visão geral",
-    "updateNowBody1": "Se <em>Atualizações do sistema</em> indicar atualizações pendentes, surge <strong>Atualizar agora</strong> junto do indicador. A janela executa o fluxo de <em>ProxMenux → Utilities and Tools → Proxmox System Update</em>: limpeza de repositórios, <code>apt full-upgrade</code> através de <code>update-pve-safe.sh</code>, reconstrução DKMS dos controladores geridos com um novo kernel, autoremove/autoclean e pedido de reinício se o kernel mudar. O progresso aparece em direto.",
+    "updateNowBody1": "Se <em>Atualizações do sistema</em> indicar atualizações pendentes, surge <strong>Atualizar agora</strong> junto do indicador. A janela executa o fluxo de <em>ProxMenux → Utilitários e ferramentas → Atualização do sistema Proxmox</em>: limpeza de repositórios, <code>apt full-upgrade</code> através de <code>update-pve-safe.sh</code>, reconstrução DKMS dos controladores geridos com um novo kernel, autoremove/autoclean e pedido de reinício se o kernel mudar. O progresso aparece em direto.",
     "updateNowBody2": "No fim, fechar a janela chama <code>GET /api/health/full?refresh=1</code> e invalida a cache do endpoint. As atualizações pendentes e a gravidade são recalculadas a partir do novo estado dos pacotes; o distintivo desaparece sem esperar pelo próximo ciclo. Se o anfitrião já estiver atualizado, o botão fica oculto."
   },
   "dismiss": {

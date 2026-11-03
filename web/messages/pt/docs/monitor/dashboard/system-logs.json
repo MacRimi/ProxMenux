@@ -26,7 +26,7 @@
     "logsTitle": "Registros",
     "logsIntro": "O journal do sistema, obtido no servidor com <code>journalctl</code>. Filtros disponíveis na barra de ferramentas:",
     "logsFilters": [
-      "<strong>Nível</strong>: todos, erro, aviso ou informação.",
+      "<strong>Nível</strong>: Todos os níveis, Erro, Aviso ou Informações.",
       "<strong>Intervalo de tempo</strong>: 1 dia / 3 dias / 1 semana / 2 semanas / 1 mês, ou um número personalizado de dias (até 90).",
       "<strong>Pesquisa livre</strong>: subcadeia sem distinção entre maiúsculas e minúsculas sobre mensagem, serviço, PID, nome do host e unidade, aplicada no navegador.",
       "<strong>Filtro por serviço</strong>: restringe a um serviço (o <code>SYSLOG_IDENTIFIER</code> do diário)."
@@ -77,7 +77,7 @@
         "source": "Arquivos de backup listados de cada armazenamento de backup com <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Registo de tarefa de backup (Notifications)",
+        "subtab": "Registo de tarefa de backup (Notificações)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Registo completo da tarefa em texto simples, lido de <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },

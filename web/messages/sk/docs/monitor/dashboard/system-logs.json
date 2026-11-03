@@ -26,7 +26,7 @@
     "logsTitle": "Logy",
     "logsIntro": "Systémový žurnál, ktorý server načítava cez <code>journalctl</code>. Na paneli nástrojov sú tieto filtre:",
     "logsFilters": [
-      "<strong>Úroveň</strong>: všetko, error, warning alebo info.",
+      "<strong>Úroveň</strong>: Všetky úrovne, Chyba, Upozornenie alebo Info.",
       "<strong>Časový rozsah</strong>: 1 deň / 3 dni / 1 týždeň / 2 týždne / 1 mesiac alebo vlastný počet dní (do 90).",
       "<strong>Voľné vyhľadávanie textu</strong>: podreťazec bez rozlišovania veľkosti písmen v správe, službe, PID, názve hostiteľa a jednotke, uplatnený v prehliadači.",
       "<strong>Filter služby</strong>: obmedzí výsledky na jednu službu (<code>SYSLOG_IDENTIFIER</code> denníka)."
@@ -77,7 +77,7 @@
         "source": "Záložné archívy zo zoznamu každého úložiska záloh cez <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Záznam úlohy zálohovania (Notifications)",
+        "subtab": "Záznam úlohy zálohovania (Notifikácie)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Plný textový záznam úloh čítaný z <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },
