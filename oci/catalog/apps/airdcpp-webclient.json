@@ -506,7 +506,7 @@
       "startup_healthcheck": {
         "scheme": "http",
         "port": 5600,
-        "path": "/",
+        "path": "/index.html",
         "timeout_seconds": 180,
         "request_timeout_seconds": 5,
         "stability_seconds": 4,

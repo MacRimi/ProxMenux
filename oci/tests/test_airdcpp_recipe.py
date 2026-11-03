@@ -27,6 +27,7 @@ class AirDCppRecipeTests(unittest.TestCase):
         for path in ('/Downloads','/Share'):
             self.assertIn('host-bind', paths[path]['installation_choice'])
         self.assertEqual(restored['catalog_ui']['architectures'], ['amd64'])
+        self.assertEqual(restored['proxmox']['installer_profile']['startup_healthcheck']['path'], '/index.html')
         self.assertEqual(restored['proxmox']['image_metadata_policy']['entrypoint'], 'import-from-oci-image')
 
     def test_wizards_preserve_managed_configuration_and_use_selected_shared_directories(self):
