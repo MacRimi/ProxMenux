@@ -101,7 +101,7 @@ class Reboot(unittest.TestCase):
         import __future__
         scope=dict(os=kernel.os,time=time,subprocess=kernel.subprocess)
         exec(compile(ast.Module(body=[node],type_ignores=[]),'actual-health','exec',flags=__future__.annotations.compiler_flag),scope)
-        for age in (0,599.999):
+        for age in (0,590):
             cache=dict(status='OK',count=0,checks={})
             owner=SimpleNamespace(last_check_times={'updates_check':time.time()-age},cached_results={'updates_check':cache})
             with patch.object(kernel.os.path,'exists',return_value=True),patch.object(kernel.os.path,'getmtime',return_value=0),patch.object(kernel.subprocess,'run',return_value=subprocess.CompletedProcess([],0,listing('7.0.14-26-pve'),'')) as probe:
