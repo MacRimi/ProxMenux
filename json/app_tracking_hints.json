@@ -5993,7 +5993,7 @@
     "github_source": "releases",
     "installed_via": "file",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wiki-js.webp",
-    "repo": "requarks/wiki-v2",
+    "repo": "requarks/wiki",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://js.wiki/"
   },
