@@ -161,6 +161,9 @@
     ],
     "wordcraft": [
       "/storage"
+    ],
+    "nextcloud-mariadb": [
+      "/data"
     ]
   },
   "sizes": {
