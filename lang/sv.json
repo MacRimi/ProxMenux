@@ -411,6 +411,7 @@
   "After the reboot, you will only be able to access the Proxmox host via:": "Efter omstarten kommer du bara att kunna komma åt Proxmox-värden via:",
   "After this LXC → VM switch, reboot the host so the new binding state is applied cleanly.": "Efter denna LXC → VM-switch, starta om värden så att det nya bindningsläget tillämpas korrekt.",
   "Agentless monitoring and observability platform.": "Agentlös plattform för övervakning och observerbarhet.",
+  "AirDC++ administrator": "AirDC++-administratör",
   "Airsonic Advanced web interface": "Airsonic Advanced webbgränssnitt",
   "Airsonic-advanced is a free, web-based media streamer, providing ubiquitious access to your music. Use it to share your music with friends, or to listen to your own music while at work. You can stream to multiple players simultaneously, for instance to one player in your kitchen and another in your living room.": "Airsonic-advanced är en gratis, webbaserad media streamer, som ger ubiquitious tillgång till din musik. Använd den för att dela din musik med vänner, eller för att lyssna på din egen musik på jobbet. Du kan strömma till flera spelare samtidigt, till exempel till en spelare i ditt kök och en annan i ditt vardagsrum.",
   "Aliases added to .bashrc": "Alias har lagts till i .bashrc",
@@ -1930,6 +1931,7 @@
   "Dgraph": "Dgraph",
   "Diff: current system vs backup (--- system  +++ backup)": "Diff: nuvarande system vs säkerhetskopia (--- system +++ säkerhetskopia)",
   "Different host. Backup from:": "Annorlunda värd. Säkerhetskopiering från:",
+  "Direct Connect file sharing with a web interface": "Fildelning via Direct Connect med webbgränssnitt",
   "Direct conversion completed for container": "Direkt konvertering slutförd för container",
   "Directory Exists": "Katalog finns",
   "Directory Not Empty": "Katalog inte tom",
@@ -8978,7 +8980,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "AirDC++ administrator": "AirDC++-administratör",
-  "Direct Connect file sharing with a web interface": "Fildelning via Direct Connect med webbgränssnitt"
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }

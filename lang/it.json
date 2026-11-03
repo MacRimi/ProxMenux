@@ -411,6 +411,7 @@
   "After the reboot, you will only be able to access the Proxmox host via:": "Dopo il riavvio, potrai accedere all'host Proxmox solo tramite:",
   "After this LXC → VM switch, reboot the host so the new binding state is applied cleanly.": "Dopo questo passaggio LXC → VM, riavviare l’host in modo che il nuovo stato di associazione venga applicato correttamente.",
   "Agentless monitoring and observability platform.": "Piattaforma di monitoraggio e osservabilità senza agent.",
+  "AirDC++ administrator": "Amministratore AirDC++",
   "Airsonic Advanced web interface": "Interfaccia web Airsonic Advanced",
   "Airsonic-advanced is a free, web-based media streamer, providing ubiquitious access to your music. Use it to share your music with friends, or to listen to your own music while at work. You can stream to multiple players simultaneously, for instance to one player in your kitchen and another in your living room.": "Airsonic-advanced è un servizio gratuito di streaming multimediale via web che permette di accedere alla propria musica ovunque. Puoi condividerla con gli amici o ascoltarla mentre lavori. Puoi riprodurla contemporaneamente su più dispositivi, per esempio in cucina e in soggiorno.",
   "Aliases added to .bashrc": "Alias aggiunti a .bashrc",
@@ -1931,6 +1932,7 @@
   "Dgraph": "Dgraph",
   "Diff: current system vs backup (--- system  +++ backup)": "Differenza: sistema attuale vs backup (--- sistema +++ backup)",
   "Different host. Backup from:": "Host diverso. Backup da:",
+  "Direct Connect file sharing with a web interface": "Condivisione di file Direct Connect con interfaccia web",
   "Direct conversion completed for container": "Conversione diretta completata per il container",
   "Directory Exists": "Directory esistente",
   "Directory Not Empty": "Directory non vuota",
@@ -8979,7 +8981,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "AirDC++ administrator": "Amministratore AirDC++",
-  "Direct Connect file sharing with a web interface": "Condivisione di file Direct Connect con interfaccia web"
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
 }
