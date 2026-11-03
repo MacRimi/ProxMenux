@@ -187,6 +187,24 @@ def _split_short_mount(value: str) -> tuple[str | None, str, str | None]:
     return ":".join(parts[:-2]), parts[-2], parts[-1]
 
 
+# Host device nodes a Compose file may bind as a volume. They are passed to
+# the LXC as devices: a mount at that path would hide the device.
+DEVICE_NODE_BINDS = ("/dev/net/tun", "/dev/fuse", "/dev/kvm")
+
+
+def _device_bind(item: Any) -> str | None:
+    """The `source:target` of a volume that binds a host device node."""
+    if isinstance(item, dict):
+        if item.get("type", "bind") != "bind":
+            return None
+        source, target = item.get("source"), item.get("target")
+    else:
+        source, target, _ = _split_short_mount(str(item))
+    if str(source or "") in DEVICE_NODE_BINDS and str(target or "") == str(source):
+        return f"{source}:{target}"
+    return None
+
+
 def _mount_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
     if value is None:
         return []
@@ -194,6 +212,8 @@ def _mount_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
         raise ConversionError("volumes must be a list")
     result: list[dict[str, Any]] = []
     for index, item in enumerate(value):
+        if _device_bind(item):
+            continue
         if isinstance(item, dict):
             source = item.get("source")
             target = item.get("target")
@@ -606,6 +626,10 @@ def _device_installer_profile(
 ) -> tuple[dict[str, Any], list[str]]:
     optional = optional or set()
     raw_devices = service.get("devices")
+    volumes = service.get("volumes")
+    device_binds = [bind for bind in map(_device_bind, volumes) if bind] if isinstance(volumes, list) else []
+    if device_binds and (raw_devices is None or isinstance(raw_devices, list)):
+        raw_devices = [*(raw_devices or []), *device_binds]
     requests: list[dict[str, Any]] = []
     blockers: list[str] = []
     nvidia_requested = _nvidia_requested(service)

@@ -68,7 +68,7 @@
         "source": "docker-compose"
       },
       {
-        "name": "LLAMA_ARG_CONTEXT_SIZE",
+        "name": "LLAMA_ARG_CTX_SIZE",
         "example": "8192",
         "required": true,
         "sensitive": false,
@@ -142,7 +142,7 @@
           ],
           "environment": [
             "LLAMA_ARG_N_GPU_LAYERS=999",
-            "LLAMA_ARG_CONTEXT_SIZE=8192",
+            "LLAMA_ARG_CTX_SIZE=8192",
             "LLAMA_ARG_MODELS_DIR=/models"
           ],
           "devices": [
@@ -341,6 +341,28 @@
                   "0x8086",
                   "0x1002"
                 ]
+              }
+            ],
+            "environment": [
+              {
+                "name": "LLAMA_ARG_FLASH_ATTN",
+                "value": "off"
+              },
+              {
+                "name": "LLAMA_ARG_UBATCH",
+                "value": "32"
+              },
+              {
+                "name": "LLAMA_ARG_BATCH",
+                "value": "128"
+              },
+              {
+                "name": "GGML_VK_DISABLE_F16",
+                "value": "1"
+              },
+              {
+                "name": "GGML_VK_DISABLE_ASYNC",
+                "value": "1"
               }
             ]
           },

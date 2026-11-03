@@ -289,7 +289,7 @@ def main():
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         transaction.report_error(error, f'update-{args.vmid}')
         journal = transaction.pending_journal()
-        if journal and not transaction.recover_untouched(instances.ROOT, journal):
+        if journal and not transaction.recover_failed_update(instances.ROOT, journal):
             transaction.recovery_hint()
         return 1
 

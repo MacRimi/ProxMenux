@@ -51,6 +51,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or pull request replaces the run in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Preserve this check ID for existing branch protection rules. This suite
   # includes menu, download and scheduler regressions as well as i18n tests.
