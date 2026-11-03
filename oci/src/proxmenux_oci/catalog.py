@@ -56,9 +56,13 @@ def is_multi_container(template: dict[str, Any]) -> bool:
 
 
 class Catalog:
-    def __init__(self, root: Path, source: GitHubSource | None = None) -> None:
+    def __init__(self, root: Path, source: GitHubSource | None = None, *,
+                 catalog_dir: Path | None = None) -> None:
         self.root = root
-        self.catalog_dir = root / "catalog"
+        from .catalog_refresh import current_catalog
+        self.catalog_dir = catalog_dir if catalog_dir is not None else current_catalog(root)
+        self._include_local = catalog_dir is None and self.catalog_dir != root / "catalog"
+        self.local_app_ids: set[str] = set()
         self.apps_dir = self.catalog_dir / "apps"
         self.curated_dir = self.catalog_dir / "curated"
         self.overlays_dir = self.catalog_dir / "overlays"
@@ -345,6 +349,16 @@ class Catalog:
         payload = json.loads(self.index_path.read_text(encoding="utf-8"))
         self._enrich_index_from_templates(payload)
         self._apply_verification_to_index(payload)
+        if self._include_local:
+            from .catalog_refresh import source_settings
+            requested = source_settings(self.root).get("local_apps", [])
+            if isinstance(requested, list) and requested:
+                bundled = Catalog(self.root, catalog_dir=self.root / "catalog").load_index()
+                present = {item["id"] for item in payload["applications"]}
+                local = [item for item in bundled["applications"]
+                         if item["id"] in requested and item["id"] not in present]
+                self.local_app_ids = {item["id"] for item in local}
+                payload["applications"].extend(local)
         return payload
 
     def categories(self) -> dict[str, Any]:
@@ -588,7 +602,7 @@ class Catalog:
                 item["id"],
             )
         elif item.get("template_family") == "curated-profile":
-            template = json.loads((self.root / item["curated_path"]).read_text(encoding="utf-8"))
+            template = json.loads((self._curated_path(item)).read_text(encoding="utf-8"))
         else:
             raise ConversionError(f"Proveedor no soportado: {provider}")
         catalog_id = item["id"]
@@ -641,7 +655,7 @@ class Catalog:
                 )
             elif item.get("template_family") == "curated-profile":
                 template = json.loads(
-                    (self.root / item["curated_path"]).read_text(encoding="utf-8")
+                    (self._curated_path(item)).read_text(encoding="utf-8")
                 )
             else:
                 raise ConversionError(f"Proveedor no soportado: {item_provider}")
@@ -785,13 +799,27 @@ class Catalog:
         if errors:
             raise ConversionError(f"La plantilla generada no cumple el esquema: {'; '.join(errors)}")
 
+    def _curated_path(self, item: dict[str, Any]) -> Path:
+        path = Path(item["curated_path"])
+        if path.parts and path.parts[0] == "catalog":
+            return self.catalog_dir / path.relative_to("catalog")
+        # Older local profiles may use an engine-relative path. Downloaded
+        # catalogs are checked separately and must use catalog/curated paths.
+        return self.root / path
+
     def compose(self, app_id: str) -> dict[str, Any]:
         """The installable template, built only from the files shipped with
         ProxMenux: the curated profile or the pre-generated template, with its
         overlay applied. Nothing is downloaded and nothing is written."""
-        item = self.find_item(app_id)
+        return self._compose_item(self.find_item(app_id))
+
+    def _compose_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Compose an already loaded item when validating a complete snapshot."""
+        app_id = item["id"]
+        if app_id in self.local_app_ids:
+            return Catalog(self.root, catalog_dir=self.root / "catalog").compose(app_id)
         if item.get("template_family") == "curated-profile":
-            path = self.root / item["curated_path"]
+            path = self._curated_path(item)
         else:
             path = self.apps_dir / f"{item['id']}.json"
         if not path.exists():

@@ -33,6 +33,7 @@ initialize_cache
 ensure_oci_dependencies() {
     local -a missing=()
     python3 -c 'import yaml' >/dev/null 2>&1 || missing+=("python3-yaml")
+    python3 -c 'import jsonschema' >/dev/null 2>&1 || missing+=("python3-jsonschema")
     command -v skopeo >/dev/null 2>&1 || missing+=("skopeo")
     [[ ${#missing[@]} -eq 0 ]] && return 0
 

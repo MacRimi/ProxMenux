@@ -8967,5 +8967,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Available applications: {count}": "Tillgängliga appar: {count}",
+  "New applications since your last visit: {count}": "Nya appar sedan ditt senaste besök: {count}",
+  "Updated recipes since your last visit: {count}": "Uppdaterade recept sedan ditt senaste besök: {count}",
+  "Refreshing the application catalog...": "Uppdaterar appkatalogen...",
+  "Catalog refresh unavailable; using the local catalog.": "Katalogen kunde inte uppdateras; den lokala katalogen används.",
+  "Refresh catalog": "Uppdatera katalogen"
 }

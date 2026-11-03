@@ -8967,5 +8967,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Available applications: {count}": "Dostupné aplikácie: {count}",
+  "New applications since your last visit: {count}": "Nové aplikácie od vašej poslednej návštevy: {count}",
+  "Updated recipes since your last visit: {count}": "Aktualizované recepty od vašej poslednej návštevy: {count}",
+  "Refreshing the application catalog...": "Aktualizuje sa katalóg aplikácií...",
+  "Catalog refresh unavailable; using the local catalog.": "Katalóg sa nepodarilo aktualizovať; používa sa miestna kópia.",
+  "Refresh catalog": "Aktualizovať katalóg"
 }

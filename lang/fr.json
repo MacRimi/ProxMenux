@@ -8966,5 +8966,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "Available applications: {count}": "Applications disponibles : {count}",
+  "New applications since your last visit: {count}": "Nouvelles applications depuis votre dernière visite : {count}",
+  "Updated recipes since your last visit: {count}": "Recettes mises à jour depuis votre dernière visite : {count}",
+  "Refreshing the application catalog...": "Mise à jour du catalogue des applications...",
+  "Catalog refresh unavailable; using the local catalog.": "Impossible de mettre à jour le catalogue ; le catalogue local est utilisé.",
+  "Refresh catalog": "Actualiser le catalogue"
 }
