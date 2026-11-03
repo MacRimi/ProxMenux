@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Hantera jobb",
-    "intro": "Schemaläggarmenyn (Scripts TUI) och fliken Monitor Backups avslöjar samma åtgärder på något jobb.",
+    "intro": "Schemaläggarmenyn i Scripts TUI (Backup scheduler och retention) erbjuder Run now, Enable / Disable och Delete, samt en lista över jobb med status för senaste körning. Edit och View log finns bara på fliken Monitor Backups.",
     "rows": [
       {
         "action": "Kör nu",
@@ -112,7 +112,7 @@
         "detail": "Nytt läge: <code>systemctl enable/disable --now</code> timern. Bifoga läge: vänder <code>ENABLED</code> flaggan i jobbenv - krokskriptet respekterar den vid nästa PVE-körning."
       },
       {
-        "action": "Redigera",
+        "action": "Redigera (endast Monitor)",
         "detail": "Öppnar åter dialogerna för destination, schema, profil och bevarande och skriver om jobbfilerna. Jobb-ID:t behålls."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Tar bort jobbets env-fil, sökvägsfilen och systemd-timern med tjänsten (nytt läge) samt inaktiverar hookkopplingen (kopplingsläge). Arkiv som redan finns på destinationen påverkas inte."
       },
       {
-        "action": "Visa logg",
+        "action": "Visa logg (endast Monitor)",
         "detail": "Strömmar <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — en loggfil per körning. Körningsskriptet sänder också ut en kompakt statusrad till journald under tjänsten systemd."
       }
     ]

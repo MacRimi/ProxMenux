@@ -20,7 +20,7 @@
     "heading": "Disposição do arquivo",
     "intro": "Cada arquivo segue o mesmo layout de árvore, independentemente do destino. O subdiretório <code>metadata/</code> contém as cargas estruturadas; o subdiretório <code>rootfs/</code> contém a cópia do sistema de arquivos.",
     "treeCaption": "O diretório de preparação criado durante o backup. Todos os destinos recebem a mesma árvore no formato nativo: tar para backups locais, blocos PBS para PBS e segmentos Borg para Borg.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "A carga útil do rootfs",
@@ -176,7 +176,7 @@
         "stage": "3",
         "name": "Preparações pendentes",
         "reads": "rootfs/ (reboot + caminhos perigosos)",
-        "action": "<code>_rs_prepare_pending_restore</code> prepara os caminhos de risco em <code>/var/lib/proxmenux/pending-restore/</code>, grava <code>plan.env</code>, <code>apply-on-boot.list</code> e <code>rs-skip-paths.txt</code> e ativa <code>proxmenux-restore-onboot.service</code> para a próxima inicialização."
+        "action": "<code>_rs_prepare_pending_restore</code> prepara os caminhos de risco em <code>/var/lib/proxmenux/restore-pending/&lt;restore_id&gt;/</code> (vinculado como <code>current</code>), grava <code>plan.env</code>, <code>apply-on-boot.list</code> e <code>rs-skip-paths.txt</code> e ativa <code>proxmenux-restore-onboot.service</code> para a próxima inicialização."
       },
       {
         "stage": "3b",

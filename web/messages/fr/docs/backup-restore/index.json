@@ -50,7 +50,7 @@
     "heading": "Deux interfaces, un backend",
     "intro": "Chaque étape du workflow de sauvegarde et de restauration est disponible à partir de deux points d'entrée. Les deux appellent la même bibliothèque shell, produisent des archives identiques et lisent le même registre de tâches.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "menu → Utilitaires →\nSauvegarde / Restauration de l'hôte\n\nFlux basé sur le dialogue,\nCompatible avec SSH, scriptable\npour une utilisation sans surveillance.",
+    "cliDetail": "menu →\nSauvegarde et restauration de l’hôte\n\nFlux basé sur le dialogue,\nCompatible avec SSH, scriptable\npour une utilisation sans surveillance.",
     "webLabel": "ProxMenux Monitor (Web UI)",
     "webDetail": "Onglet Sauvegardes dans\nl’interface web de Monitor.\n\nRestauration en un clic, suivi\ndes journaux en direct, intégré\naux notifications et à la vue\ndes différences de retour arrière."
   },

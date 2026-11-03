@@ -18,11 +18,11 @@
   },
   "targetConfig": {
     "heading": "Nastavenie cieľového adresára",
-    "intro": "Miestny cieľ je <strong>jeden trvalý cieľový adresár</strong> — nie zoznam. ProxMenux ukladá voľbu operátora na <code>/usr/local/share/proxmenux/local-target.conf</code> a číta ju pri každej zálohe. Ak nie je nakonfigurovaný žiadny cieľ, použije sa predvolený <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (rovnaký adresár, ktorý Proxmox používa pre svoje vlastné výstupy <code>vzdump</code>). Cieľ sa konfiguruje z <em>Konfigurovať ciele zálohovania → Lokálne ciele</em>:",
+    "intro": "Miestny cieľ je <strong>jeden trvalý cieľový adresár</strong> — nie zoznam. ProxMenux ukladá voľbu operátora na <code>/usr/local/share/proxmenux/local-target.conf</code> a číta ju pri každej zálohe. Ak nie je nakonfigurovaný žiadny cieľ, použije sa predvolený <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (rovnaký adresár, ktorý Proxmox používa pre svoje vlastné výstupy <code>vzdump</code>). Cieľ sa konfiguruje z <em>Konfigurovať ciele zálohovania → Lokálne archívne ciele → Spravovať lokálny cieľ zálohy</em>:",
     "options": [
       "<strong>Použiť predvolené (<code>/var/lib/vz/dump</code>).</strong> Lokálne úložisko Proxmox. Prítomný pri každej inštalácii Proxmox; archív sa nachádza vedľa výstupov vzdump a automaticky ho preberá karta Zálohy monitora.",
-      "<strong>Zadajte vlastnú cestu.</strong> Môžete použiť akúkoľvek absolútnu cestu súborového systému: pripojenie NFS, zdieľanie SMB pripojené cez <code>fstab</code>, vyhradený súbor údajov ZFS, druhý interný disk. ProxMenux overí, že cesta existuje a je adresárom, pred jej uložením.",
-      "<strong>Vyberte jednotku USB.</strong> Otvorí podponuku USB (nižšie), ktorá detekuje vymeniteľné zariadenia a ponúka pripojenie alebo formátovanie."
+      "<strong>Použite vlastnú cestu.</strong> Môžete použiť akúkoľvek absolútnu cestu súborového systému: pripojenie NFS, zdieľanie SMB pripojené cez <code>fstab</code>, vyhradený súbor údajov ZFS, druhý interný disk. ProxMenux overí, že cesta existuje a je adresárom, pred jej uložením.",
+      "<strong>Použite disk USB.</strong> Otvorí podponuku USB (nižšie), ktorá detekuje vymeniteľné zariadenia a ponúka pripojenie alebo formátovanie."
     ]
   },
   "usbFlow": {
@@ -38,7 +38,7 @@
       {
         "state": "odmontované",
         "shown": "Veľkosť · menovka · [fstype] · (nepripojený — bude pripojený)",
-        "action": "Súborový systém je prítomný, ale nie je namontovaný. Po potvrdení, ProxMenux spustí <code>hb_mount_usb_partition</code>: vytvorí <code>/mnt/backup-LABEL</code> (alebo cestu založenú na UUID, ak nie je označenie), pripojí partíciu a uloží bod pripojenia ako miestny cieľ."
+        "action": "Súborový systém je prítomný, ale nie je namontovaný. Po potvrdení, ProxMenux spustí <code>hb_mount_usb_partition</code>: vytvorí <code>/mnt/proxmenux-backup-LABEL</code> (UUID alebo názov zariadenia, ak nie je označenie), pripojí partíciu a uloží bod pripojenia ako miestny cieľ."
       },
       {
         "state": "prázdny",
@@ -63,7 +63,7 @@
   },
   "sidecar": {
     "heading": "Sprievodný súbor JSON",
-    "intro": "Každá úspešná lokálna záloha produkuje sesterský súbor: <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, zapísaný vedľa archívu funkciou <code>hb_write_archive_sidecar</code>. Tento malý súbor JSON umožňuje ProxMenux Monitor identifikovať archív ako zálohu ProxMenux hostiteľa, aj keď je neskôr presunutý, premenovaný alebo archivovaný inde.",
+    "intro": "Každá úspešná lokálna záloha produkuje sesterský súbor: <code>hostcfg-HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, zapísaný vedľa archívu funkciou <code>hb_write_archive_sidecar</code>. Tento malý súbor JSON umožňuje ProxMenux Monitor identifikovať archív ako zálohu ProxMenux hostiteľa, aj keď je neskôr presunutý, premenovaný alebo archivovaný inde.",
     "contentTitle": "Obsah sprievodného súboru",
     "contentBody": "Sprievodný súbor obsahuje verziu schémy, údaj o tom, či záloha vznikla interaktívne alebo plánovanou úlohou (<code>kind</code>), ID úlohy pri plánovaných spusteniach, použitý režim profilu (<code>default</code> alebo <code>custom</code>), názov zdrojového hostiteľa, pôvodný názov súboru archívu, časovú pečiatku vytvorenia ISO-8601 a veľkosť archívu v bajtoch.",
     "whyBody": "Karta Backups v Monitore prehľadáva nakonfigurované lokálne adresáre a hľadá sprievodné súbory <code>*.proxmenux.json</code>, nie súbory <code>*.tar.zst</code>, pretože <code>.tar.zst</code> bez sprievodného súboru nemusí byť zálohou ProxMenux. Hľadanie je rýchle (súbory JSON sú malé) a párovanie zostane platné aj po premenovaní archívu, ak sa zodpovedajúco premenuje aj sprievodný súbor."

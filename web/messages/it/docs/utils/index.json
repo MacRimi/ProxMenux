@@ -38,7 +38,7 @@
       "body": "Mantieni l’host in buone condizioni con strumenti CLI, aggiornamenti regolari e il passaggio di versione principale quando necessario.",
       "bullets": [
         "Installatore di utilità di sistema (25 strumenti CLI)",
-        "Aggiornamento del sistema Proxmox (apt + dist-upgrade)",
+        "Aggiornamento del sistema Proxmox (apt + full-upgrade)",
         "Passaggio di versione principale PVE 8 → PVE 9"
       ]
     },
@@ -58,11 +58,11 @@
   },
   "isoSection": {
     "heading": "Creazione ISO",
-    "body": "Crea una nuova ISO di installazione di Windows aggiornata direttamente sull’host Proxmox. Lo script automatizza l’intero processo UUP Dump: installazione delle dipendenze (aria2c, cabextract, wimlib-imagex, …), download parallelo dei file di aggiornamento tramite aria2 e conversione in una singola ISO avviabile. La ISO viene salvata in <code>/var/lib/vz/template/iso</code>, pronta da collegare a una VM.",
+    "body": "Crea una nuova ISO di installazione di Windows aggiornata direttamente sull’host Proxmox. Lo script automatizza l’intero processo UUP Dump: installazione delle dipendenze (aria2c, cabextract, wimlib-imagex, …), download parallelo dei file di aggiornamento tramite aria2 e conversione in una singola ISO avviabile. La ISO viene salvata nello storage ISO di Proxmox rilevato (alternativa <code>/var/lib/vz/template/iso</code>), pronta da collegare a una VM.",
     "options": [
       {
         "title": "Creatore di ISO UUP Dump",
-        "description": "Crea una ISO di installazione di Windows aggiornata da un link condiviso di UUP Dump. Dipendenze, download e conversione sono completamente automatizzati; la ISO risultante viene salvata in /var/lib/vz/template/iso, pronta per creare una VM.",
+        "description": "Crea una ISO di installazione di Windows aggiornata da un link condiviso di UUP Dump. Dipendenze, download e conversione sono completamente automatizzati; la ISO risultante viene salvata nello storage ISO di Proxmox rilevato, pronta per creare una VM.",
         "href": "/docs/utils/UUp-Dump-ISO-Creator"
       }
     ]
@@ -78,7 +78,7 @@
       },
       {
         "title": "Aggiornamento sistema Proxmox",
-        "description": "Controllo dei repository + apt update + apt dist-upgrade, con conferma prima del riavvio. Rileva la versione principale di PVE (8 o 9), mantiene i repository configurati e chiede conferma prima di passare un host senza abbonamento al repository no-subscription, quindi esegue autoremove.",
+        "description": "Controllo dei repository + apt update + apt full-upgrade, con conferma prima del riavvio. Rileva la versione principale di PVE (8 o 9), mantiene i repository configurati e chiede conferma prima di passare un host senza abbonamento al repository no-subscription, quindi esegue autoremove.",
         "href": "/docs/utils/system-update"
       },
       {

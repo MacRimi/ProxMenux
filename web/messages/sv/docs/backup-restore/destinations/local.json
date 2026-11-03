@@ -18,11 +18,11 @@
   },
   "targetConfig": {
     "heading": "Konfigurera målkatalogen",
-    "intro": "Det lokala målet är en <strong>enda sparad målkatalog</strong> — inte en lista. ProxMenux sparar användarens val i <code>/usr/local/share/proxmenux/local-target.conf</code> och läser det vid varje säkerhetskopiering. Om inget mål har konfigurerats används standardvärdet <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (samma katalog som Proxmox använder för sina egna <code>vzdump</code>-utdata). Målet konfigureras via <em>Konfigurera säkerhetskopieringsmål → Lokala mål</em>:",
+    "intro": "Det lokala målet är en <strong>enda sparad målkatalog</strong> — inte en lista. ProxMenux sparar användarens val i <code>/usr/local/share/proxmenux/local-target.conf</code> och läser det vid varje säkerhetskopiering. Om inget mål har konfigurerats används standardvärdet <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (samma katalog som Proxmox använder för sina egna <code>vzdump</code>-utdata). Målet konfigureras via <em>Konfigurera säkerhetskopieringsmål → Lokala arkivmål → Hantera lokalt säkerhetskopieringsmål</em>:",
     "options": [
       "<strong>Använd standard (<code>/var/lib/vz/dump</code>).</strong> Proxmox lokal lagring. Finns på varje Proxmox-installation; arkivet sitter bredvid vzdump-utdata och hämtas av fliken Monitor's Backups automatiskt.",
-      "<strong>Ange en anpassad sökväg.</strong> Alla absoluta filsystemsökvägar kan användas: en NFS-montering, en SMB-delning monterad via <code>fstab</code>, ett särskilt ZFS-dataset eller en andra intern disk. ProxMenux kontrollerar att sökvägen finns och är en katalog innan valet sparas.",
-      "<strong>Välj en USB-enhet.</strong> Öppnar USB-undermenyn (nedan), som upptäcker flyttbara enheter och erbjuder sig att montera eller formatera en."
+      "<strong>Använd en anpassad sökväg.</strong> Alla absoluta filsystemsökvägar kan användas: en NFS-montering, en SMB-delning monterad via <code>fstab</code>, ett särskilt ZFS-dataset eller en andra intern disk. ProxMenux kontrollerar att sökvägen finns och är en katalog innan valet sparas.",
+      "<strong>Använd en USB-disk.</strong> Öppnar USB-undermenyn (nedan), som upptäcker flyttbara enheter och erbjuder sig att montera eller formatera en."
     ]
   },
   "usbFlow": {
@@ -38,7 +38,7 @@
       {
         "state": "ej monterad",
         "shown": "Storlek · etikett · [fstype] · (ej monterad — kommer att monteras)",
-        "action": "Ett filsystem är närvarande men inte monterat. På bekräftelse kör ProxMenux <code>hb_mount_usb_partition</code>: skapar <code>/mnt/backup-LABEL</code> (eller en UUID-baserad väg om det inte finns någon etikett), monterar partitionen och sparar monteringspunkten som det lokala målet."
+        "action": "Ett filsystem är närvarande men inte monterat. På bekräftelse kör ProxMenux <code>hb_mount_usb_partition</code>: skapar <code>/mnt/proxmenux-backup-LABEL</code> (UUID eller enhetsnamn om det inte finns någon etikett), monterar partitionen och sparar monteringspunkten som det lokala målet."
       },
       {
         "state": "tom",
@@ -63,7 +63,7 @@
   },
   "sidecar": {
     "heading": "JSON-sidofilen",
-    "intro": "Varje framgångsrik lokal backup producerar en följeslagare fil: <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, skriven bredvid arkivet av <code>hb_write_archive_sidecar</code>. Denna lilla JSON-fil låter ProxMenux Monitor identifiera arkivet som en ProxMenux-värdbackup även om det senare flyttas, bytas namn eller arkiveras någon annanstans.",
+    "intro": "Varje framgångsrik lokal backup producerar en följeslagare fil: <code>hostcfg-HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, skriven bredvid arkivet av <code>hb_write_archive_sidecar</code>. Denna lilla JSON-fil låter ProxMenux Monitor identifiera arkivet som en ProxMenux-värdbackup även om det senare flyttas, bytas namn eller arkiveras någon annanstans.",
     "contentTitle": "Sidofilens innehåll",
     "contentBody": "Sidofilen lagrar schemaversionen, om säkerhetskopian kom från en interaktiv körning eller ett schemalagt jobb (<code>kind</code>), jobb-ID för schemalagda körningar, det profilläge som används (<code>default</code> eller <code>custom</code>), källvärdnamnet, den ursprungliga arkivbasnamnet, en tidsstämpel för skapandet i ISO-8601-format och arkivstorleken i byte.",
     "whyBody": "Monitors Backups-flik söker igenom konfigurerade lokala kataloger efter <code>*.proxmenux.json</code>-sidofiler, inte efter <code>*.tar.zst</code>-filer, eftersom en <code>.tar.zst</code> utan sidofil kanske inte är en ProxMenux-säkerhetskopia. Sökningen är snabb (JSON-filer är små) och kopplingen fungerar även efter namnbyte om sidofilen får ett motsvarande nytt namn."

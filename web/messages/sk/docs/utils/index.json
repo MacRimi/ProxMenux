@@ -38,7 +38,7 @@
       "body": "Udržiavajte hostiteľa v dobrom stave pomocou nástrojov CLI, pravidelných aktualizácií a prechodu na novú hlavnú verziu, keď príde čas.",
       "bullets": [
         "Inštalátor systémových nástrojov (25 nástrojov CLI)",
-        "Aktualizácia systému Proxmox (apt + dist-upgrade)",
+        "Aktualizácia systému Proxmox (apt + full-upgrade)",
         "Prechod z PVE 8 na PVE 9"
       ]
     },
@@ -58,11 +58,11 @@
   },
   "isoSection": {
     "heading": "Tvorba ISO",
-    "body": "Vytvorte nový, aktuálny inštalačný obraz ISO systému Windows priamo na hostiteľovi Proxmox. Skript automatizuje celý postup UUP Dump: inštaláciu závislostí (aria2c, cabextract, wimlib-imagex, …), paralelné sťahovanie aktualizačných súborov cez aria2 a konverziu na jeden zavádzací obraz ISO. Ten sa uloží do <code>/var/lib/vz/template/iso</code> a je pripravený na pripojenie k VM.",
+    "body": "Vytvorte nový, aktuálny inštalačný obraz ISO systému Windows priamo na hostiteľovi Proxmox. Skript automatizuje celý postup UUP Dump: inštaláciu závislostí (aria2c, cabextract, wimlib-imagex, …), paralelné sťahovanie aktualizačných súborov cez aria2 a konverziu na jeden zavádzací obraz ISO. Ten sa uloží do zisteného úložiska ISO Proxmoxu (záložne <code>/var/lib/vz/template/iso</code>) a je pripravený na pripojenie k VM.",
     "options": [
       {
         "title": "Tvorba ISO cez UUP Dump",
-        "description": "Vytvorte aktuálny inštalačný obraz ISO systému Windows zo zdieľaného odkazu UUP Dump. Závislosti, sťahovanie aj konverzia sú plne automatizované. Výsledný obraz ISO sa uloží do /var/lib/vz/template/iso a je pripravený na vytvorenie VM.",
+        "description": "Vytvorte aktuálny inštalačný obraz ISO systému Windows zo zdieľaného odkazu UUP Dump. Závislosti, sťahovanie aj konverzia sú plne automatizované. Výsledný obraz ISO sa uloží do zisteného úložiska ISO Proxmoxu a je pripravený na vytvorenie VM.",
         "href": "/docs/utils/UUp-Dump-ISO-Creator"
       }
     ]
@@ -78,7 +78,7 @@
       },
       {
         "title": "Aktualizácia systému Proxmox",
-        "description": "Kontrola repozitárov + apt update + apt dist-upgrade s potvrdením pred reštartom. Rozpozná hlavnú verziu PVE (8 alebo 9), zachová nakonfigurované repozitáre a pred prepnutím hostiteľa bez predplatného na repozitár no-subscription požiada o potvrdenie. Potom spustí autoremove.",
+        "description": "Kontrola repozitárov + apt update + apt full-upgrade s potvrdením pred reštartom. Rozpozná hlavnú verziu PVE (8 alebo 9), zachová nakonfigurované repozitáre a pred prepnutím hostiteľa bez predplatného na repozitár no-subscription požiada o potvrdenie. Potom spustí autoremove.",
         "href": "/docs/utils/system-update"
       },
       {
