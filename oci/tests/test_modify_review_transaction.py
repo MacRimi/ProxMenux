@@ -11,7 +11,7 @@ import socket
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'remote'))
 import oci_instances as instances
@@ -129,6 +129,37 @@ class UpdateRetainedDiskTests(unittest.TestCase):
         self.assertEqual(instances.read(self.root,115)['observed']['image'],self.saved['observed']['image'])
         self.assertEqual(json.loads(self.journal().read_text())['phase'],'rolled-back')
 
+    def test_update_command_recovers_a_failed_replacement_without_manual_recovery(self):
+        import oci_update_current as update
+        self.fail_install = True
+        with patch.object(update, 'update', side_effect=lambda *a: self.apply()), \
+                patch.object(instances, 'ROOT', self.root), \
+                patch.object(update, 'os', Mock(geteuid=lambda: 0)), \
+                patch.object(sys, 'argv', ['oci_update_current.py', '115']), \
+                patch.object(transaction, 'report_error'), \
+                patch.object(transaction, 'recovery_hint') as hint:
+            self.assertEqual(update.main(), 1)
+        self.assert_retained()
+        self.assertEqual(instances.read(self.root,115)['status'], 'installed')
+        self.assertEqual(instances.read(self.root,115)['observed']['image'],self.saved['observed']['image'])
+        self.assertEqual(json.loads(self.journal().read_text())['phase'],'rolled-back')
+        hint.assert_not_called()
+
+    def test_update_command_keeps_the_recovery_hint_when_rollback_is_blocked(self):
+        import oci_update_current as update
+        self.fail_install = True
+        with patch.object(update, 'update', side_effect=lambda *a: self.apply()), \
+                patch.object(instances, 'ROOT', self.root), \
+                patch.object(update, 'os', Mock(geteuid=lambda: 0)), \
+                patch.object(sys, 'argv', ['oci_update_current.py', '115']), \
+                patch.object(transaction, 'report_error'), \
+                patch.object(transaction, 'recover', side_effect=ValueError('configuration changed')), \
+                patch.object(transaction, 'recovery_hint') as hint:
+            self.assertEqual(update.main(), 1)
+        hint.assert_called_once_with()
+        self.assertEqual(instances.read(self.root,115)['status'], 'updating')
+        self.assertNotEqual(json.loads(self.journal().read_text())['phase'],'rolled-back')
+
     def test_recovery_after_parking_data_returns_the_original_unused_disks(self):
         with self.assertRaisesRegex(RuntimeError,'Lab interruption'):self.apply(interrupt_after='data-parked')
         transaction.recover(self.root,self.journal());self.assert_retained()
@@ -143,6 +174,33 @@ class UpdateRetainedDiskTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'invalid runtime'):self.apply()
             transaction.recover(self.root,self.journal())
         self.assert_retained()
+
+
+class AutomaticRecoveryGuardTests(unittest.TestCase):
+    def test_committed_rolled_back_and_coordinated_journals_are_not_recovered(self):
+        for state in ({'phase':'committed'}, {'phase':'rolled-back'},
+                      {'phase':'installing-candidate','coordinated':True}):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory)/'instances'; journal=Path(directory)/'journal.json'
+                journal.write_text(json.dumps(state))
+                with patch.object(transaction,'recover') as recover:
+                    self.assertFalse(transaction.recover_failed_update(root,journal))
+                recover.assert_not_called()
+
+    def test_missing_and_malformed_journals_leave_recovery_pending(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)/'instances'; journal=Path(directory)/'journal.json'
+            with patch.object(transaction,'recover') as recover, patch.object(transaction,'log'):
+                self.assertFalse(transaction.recover_failed_update(root,journal))
+                journal.write_text('{')
+                self.assertFalse(transaction.recover_failed_update(root,journal))
+            recover.assert_not_called()
+
+    def test_a_busy_registry_does_not_start_recovery(self):
+        with patch.object(instances,'locked',side_effect=BlockingIOError('busy')), \
+                patch.object(transaction,'recover') as recover, patch.object(transaction,'log'):
+            self.assertFalse(transaction.recover_failed_update(Path('/unused'),Path('/unused/journal')))
+        recover.assert_not_called()
 
 
 if __name__=='__main__':unittest.main()
