@@ -8966,5 +8966,18 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "Computer-aided design and drafting in your browser": "Conception assistée par ordinateur et dessin technique dans le navigateur",
+  "Presentations and slide decks in your browser": "Présentations et diaporamas dans le navigateur",
+  "Page layout and publishing in your browser": "Mise en page et publication dans le navigateur",
+  "Motion graphics and compositing in your browser": "Animation graphique et compositing dans le navigateur",
+  "Interface design and prototyping in your browser": "Conception d’interfaces et prototypage dans le navigateur",
+  "Video editing in your browser": "Montage vidéo dans le navigateur",
+  "Spreadsheets in your browser": "Tableur dans le navigateur",
+  "Photo library and RAW development in your browser": "Photothèque et développement RAW dans le navigateur",
+  "Read and edit PDF documents in your browser": "Lire et modifier des documents PDF dans le navigateur",
+  "Photo editing in your browser": "Retouche photo dans le navigateur",
+  "Audio recording and mixing in your browser": "Enregistrement et mixage audio dans le navigateur",
+  "Vector illustration in your browser": "Illustration vectorielle dans le navigateur",
+  "Word processing in your browser": "Traitement de texte dans le navigateur"
 }

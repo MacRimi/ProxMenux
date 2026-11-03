@@ -115,6 +115,45 @@
     ],
     "unpackerr": [
       "/data"
+    ],
+    "cadcraft": [
+      "/storage"
+    ],
+    "deckcraft": [
+      "/storage"
+    ],
+    "designcraft": [
+      "/storage"
+    ],
+    "effectcraft": [
+      "/storage"
+    ],
+    "figcraft": [
+      "/storage"
+    ],
+    "filmcraft": [
+      "/storage"
+    ],
+    "gridcraft": [
+      "/storage"
+    ],
+    "lightcraft": [
+      "/storage"
+    ],
+    "pdfcraft": [
+      "/storage"
+    ],
+    "photocraft": [
+      "/storage"
+    ],
+    "soundcraft": [
+      "/storage"
+    ],
+    "vectorcraft": [
+      "/storage"
+    ],
+    "wordcraft": [
+      "/storage"
     ]
   },
   "sizes": {

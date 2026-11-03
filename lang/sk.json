@@ -8967,5 +8967,18 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Computer-aided design and drafting in your browser": "Počítačom podporované navrhovanie a technické kreslenie v prehliadači",
+  "Presentations and slide decks in your browser": "Prezentácie a snímky v prehliadači",
+  "Page layout and publishing in your browser": "Zalomenie strán a publikovanie v prehliadači",
+  "Motion graphics and compositing in your browser": "Animovaná grafika a kompoziting v prehliadači",
+  "Interface design and prototyping in your browser": "Návrh rozhraní a prototypov v prehliadači",
+  "Video editing in your browser": "Strih videa v prehliadači",
+  "Spreadsheets in your browser": "Tabuľkový procesor v prehliadači",
+  "Photo library and RAW development in your browser": "Fotoknižnica a vyvolávanie RAW v prehliadači",
+  "Read and edit PDF documents in your browser": "Čítanie a úprava dokumentov PDF v prehliadači",
+  "Photo editing in your browser": "Úprava fotografií v prehliadači",
+  "Audio recording and mixing in your browser": "Nahrávanie a mixovanie zvuku v prehliadači",
+  "Vector illustration in your browser": "Vektorová ilustrácia v prehliadači",
+  "Word processing in your browser": "Spracovanie textu v prehliadači"
 }
