@@ -3809,6 +3809,7 @@
   "Kopia Web UI": "Kopia-webbgränssnitt",
   "Kopia Web UI login": "Inloggning till Kopias webbgränssnitt",
   "Krita is a professional FREE and open source painting program. It is made by artists that want to see affordable art tools for everyone.": "Krita är ett professionellt gratis och öppen källkod målning program. Den är gjord av konstnärer som vill se prisvärda konstverktyg för alla.",
+  "Krusader Web UI": "Krusaders webbgränssnitt",
   "LAN access to the kept containers (stack configuration incomplete):": "LAN tillgång till de bevarade behållarna (stack konfiguration ofullständig):",
   "LAN address applied to the application URLs": "LAN-adress tillämpad på ansökningsadresserna",
   "LLDAP": "LLDAP",
@@ -7500,6 +7501,7 @@
   "This container does not have apt-get. NFS client installation only supports Debian/Ubuntu containers.": "Den här behållaren har inte apt-get. NFS-klientinstallation stöder endast Debian/Ubuntu-behållare.",
   "This container does not have apt-get. Samba client installation only supports Debian/Ubuntu containers.": "Den här behållaren har inte apt-get. Samba-klientinstallationen stöder endast Debian/Ubuntu-behållare.",
   "This container has no GPU configured. Coral TPU works best alongside hardware video decoding (Quick Sync, VA-API, NVENC) for apps like Frigate.": "Den här behållaren har ingen GPU konfigurerad. Coral TPU fungerar bäst tillsammans med hårdvaruvideoavkodning (Quick Sync, VA-API, NVENC) för appar som Frigate.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Den här containern hanteras av hög tillgänglighet. Ta bort ct:{vmid} från HA (Datacenter → HA, eller ha-manager remove ct:{vmid}), upprepa åtgärden och lägg sedan tillbaka den i HA med samma inställningar.",
   "This container is not a member of a multi-container application": "Den här behållaren är inte medlem i ett program för flera behållare",
   "This container is not a registered OCI instance.": "Denna behållare är inte en registrerad OCI-instans.",
   "This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.": "Den här behållaren återställdes eller kom tillbaka från en annan värd efter att dess post på denna värd skrevs. Öppna den här menyn igen för att återställa den; ingenting ändrades.",
@@ -8360,6 +8362,7 @@
   "Your next YouTube media manager": "Din nästa YouTube Media Manager",
   "Your_spotify is a self-hosted application that tracks what you listen and offers you a dashboard to explore statistics about it! It's composed of a web server which polls the Spotify API every now and then and a web application on which you can explore your statistics.": "Your_spotify är en egen värd program som spårar vad du lyssnar och erbjuder dig en instrumentpanel för att utforska statistik om det! Den består av en webbserver som undersöker Spotify API då och då och en webbapplikation där du kan utforska din statistik.",
   "Z-Wave JS UI": "Z-Wave JS UI",
+  "Z-Wave JS UI admin login": "Administratörsinloggning för Z-Wave JS UI",
   "ZFS ARC config removed (kernel defaults will apply on reboot)": "ZFS ARC-konfigurationen togs bort (kärnans standardinställningar gäller vid omstart)",
   "ZFS ARC maximum configured:": "ZFS ARC maximalt konfigurerat:",
   "ZFS ARC optimization completed": "ZFS ARC-optimering slutförd",
@@ -9012,8 +9015,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Den här containern hanteras av hög tillgänglighet. Ta bort ct:{vmid} från HA (Datacenter → HA, eller ha-manager remove ct:{vmid}), upprepa åtgärden och lägg sedan tillbaka den i HA med samma inställningar.",
-  "Krusader Web UI": "Krusaders webbgränssnitt",
-  "Z-Wave JS UI admin login": "Administratörsinloggning för Z-Wave JS UI"
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }

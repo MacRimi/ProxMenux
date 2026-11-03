@@ -7502,6 +7502,7 @@
   "This container does not have apt-get. NFS client installation only supports Debian/Ubuntu containers.": "Tento kontajner nemá apt-get. Inštalácia NFS klienta je podporovaná iba v Debian/Ubuntu kontajneroch.",
   "This container does not have apt-get. Samba client installation only supports Debian/Ubuntu containers.": "Tento kontajner nemá apt-get. Inštalácia Samba klienta je podporovaná iba v Debian/Ubuntu kontajneroch.",
   "This container has no GPU configured. Coral TPU works best alongside hardware video decoding (Quick Sync, VA-API, NVENC) for apps like Frigate.": "Tento kontajner nemá nastavenú GPU. Coral TPU funguje najlepšie spolu s hardvérovým dekódovaním videa (Quick Sync, VA-API, NVENC) v aplikáciách ako Frigate.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Tento kontajner spravuje vysoká dostupnosť. Odstráňte ct:{vmid} z HA (Dátové centrum → HA alebo ha-manager remove ct:{vmid}), zopakujte operáciu a potom ho znova pridajte do HA s rovnakými nastaveniami.",
   "This container is not a member of a multi-container application": "Tento kontajner nie je členom aplikácie s viacerými kontajnermi",
   "This container is not a registered OCI instance.": "Tento kontajner nie je registrovanou inštanciou OCI.",
   "This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.": "Tento kontajner bol obnovený alebo sa vrátil z iného hostiteľa po napísaní jeho záznamu na tomto hostiteľovi. Znova otvorte túto ponuku a obnovte ju; nič sa nezmenilo.",
@@ -9014,6 +9015,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Tento kontajner spravuje vysoká dostupnosť. Odstráňte ct:{vmid} z HA (Dátové centrum → HA alebo ha-manager remove ct:{vmid}), zopakujte operáciu a potom ho znova pridajte do HA s rovnakými nastaveniami."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }

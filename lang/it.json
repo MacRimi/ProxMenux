@@ -7501,6 +7501,7 @@
   "This container does not have apt-get. NFS client installation only supports Debian/Ubuntu containers.": "Questo container non ha apt-get. L'installazione del client NFS supporta solo i container Debian/Ubuntu.",
   "This container does not have apt-get. Samba client installation only supports Debian/Ubuntu containers.": "Questo container non ha apt-get. L'installazione del client Samba supporta solo i container Debian/Ubuntu.",
   "This container has no GPU configured. Coral TPU works best alongside hardware video decoding (Quick Sync, VA-API, NVENC) for apps like Frigate.": "Questo container non ha una GPU configurata. Coral TPU funziona meglio insieme alla decodifica video hardware (Quick Sync, VA-API, NVENC) per app come Frigate.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Questo container è gestito dall'alta disponibilità. Rimuovi ct:{vmid} da HA (Datacenter → HA, oppure ha-manager remove ct:{vmid}), ripeti l'operazione e aggiungilo di nuovo a HA con le stesse impostazioni.",
   "This container is not a member of a multi-container application": "Questo container non fa parte di un’applicazione con più container",
   "This container is not a registered OCI instance.": "Questo container non è un’istanza OCI registrata.",
   "This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.": "Questo contenitore è stato ripristinato o è tornato da un altro host dopo la scrittura del suo record su questo host. Apri nuovamente questo menu per recuperarlo; non è stato modificato nulla.",
@@ -9014,6 +9015,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Questo container è gestito dall'alta disponibilità. Rimuovi ct:{vmid} da HA (Datacenter → HA, oppure ha-manager remove ct:{vmid}), ripeti l'operazione e aggiungilo di nuovo a HA con le stesse impostazioni."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
 }

@@ -7501,6 +7501,7 @@
   "This container does not have apt-get. NFS client installation only supports Debian/Ubuntu containers.": "Este contêiner não possui o apt-get. A instalação do cliente NFS suporta apenas contêineres Debian/Ubuntu.",
   "This container does not have apt-get. Samba client installation only supports Debian/Ubuntu containers.": "Este contêiner não possui o apt-get. A instalação do cliente Samba suporta apenas contêineres Debian/Ubuntu.",
   "This container has no GPU configured. Coral TPU works best alongside hardware video decoding (Quick Sync, VA-API, NVENC) for apps like Frigate.": "Este contêiner não tem GPU configurada. Coral TPU funciona melhor com decodificação de vídeo de hardware (Quick Sync, VA-API, NVENC) para aplicativos como Frigate.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Este contentor é gerido pela alta disponibilidade. Remova ct:{vmid} da HA (Datacenter → HA, ou ha-manager remove ct:{vmid}), repita a operação e volte a adicioná-lo à HA com as mesmas definições.",
   "This container is not a member of a multi-container application": "Este contêiner não é membro de um aplicativo de vários contêineres",
   "This container is not a registered OCI instance.": "Este contêiner não é uma instância OCI registrada.",
   "This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.": "Este contêiner foi restaurado ou voltou de outro host depois que seu registro neste host foi gravado. Abra este menu novamente para recuperá-lo; nada foi alterado.",
@@ -9014,6 +9015,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Os dados do disco NÃO serão apagados.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ O disco será desmontado e removido de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ A entrada /etc/fstab será removida.",
-  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado.",
-  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Este contentor é gerido pela alta disponibilidade. Remova ct:{vmid} da HA (Datacenter → HA, ou ha-manager remove ct:{vmid}), repita a operação e volte a adicioná-lo à HA com as mesmas definições."
+  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado."
 }

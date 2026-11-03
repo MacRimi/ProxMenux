@@ -7501,6 +7501,7 @@
   "This container does not have apt-get. NFS client installation only supports Debian/Ubuntu containers.": "Dieser Container verfügt nicht über apt-get. Die NFS-Client-Installation unterstützt nur Debian/Ubuntu-Container.",
   "This container does not have apt-get. Samba client installation only supports Debian/Ubuntu containers.": "Dieser Container verfügt nicht über apt-get. Die Samba-Client-Installation unterstützt nur Debian/Ubuntu-Container.",
   "This container has no GPU configured. Coral TPU works best alongside hardware video decoding (Quick Sync, VA-API, NVENC) for apps like Frigate.": "Für diesen Container ist keine GPU konfiguriert. Coral TPU funktioniert am besten zusammen mit der Hardware-Videodekodierung (Quick Sync, VA-API, NVENC) für Apps wie Frigate.",
+  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Dieser Container wird von der Hochverfügbarkeit verwaltet. Entfernen Sie ct:{vmid} aus HA (Rechenzentrum → HA oder ha-manager remove ct:{vmid}), wiederholen Sie den Vorgang und fügen Sie ihn mit denselben Einstellungen wieder zu HA hinzu.",
   "This container is not a member of a multi-container application": "Dieser Container ist kein Mitglied einer Multi-Container-Anwendung",
   "This container is not a registered OCI instance.": "Dieser Container ist keine registrierte OCI-Instanz.",
   "This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; nothing was changed.": "Dieser Container wurde wiederhergestellt oder kam von einem anderen Host zurück, nachdem sein Datensatz auf diesem Host geschrieben wurde. Öffnen Sie dieses Menü erneut, um ihn zu registrieren; es wurde nichts geändert.",
@@ -9014,6 +9015,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
-  "This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.": "Dieser Container wird von der Hochverfügbarkeit verwaltet. Entfernen Sie ct:{vmid} aus HA (Rechenzentrum → HA oder ha-manager remove ct:{vmid}), wiederholen Sie den Vorgang und fügen Sie ihn mit denselben Einstellungen wieder zu HA hinzu."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
 }
