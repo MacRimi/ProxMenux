@@ -284,14 +284,14 @@
     "heading": "API-token med lång giltighetstid",
     "intro": "Sessioner löper ut efter 24 timmar. Skapa ett separat <strong>API-token</strong> giltigt i 365 dagar för Homepage, Home Assistant, Grafana eller Uptime Kuma. JWT:t använder samma signeringshemlighet; fältet <code>token_name</code> gör att det kan identifieras och återkallas separat.",
     "imageAlt": "API-tokenlista med namn, prefix, datum för skapande och utgångsdatum",
-    "imageCaption": "Listan över API-token under Admin → Säkerhet visar namn, prefix (de fyra sista tecknen visas för identifiering), skapande- och utgångsdatum samt återkallelse.",
+    "imageCaption": "Listan över API-token under Administration → Säkerhet visar namn, prefix (de fyra sista tecknen visas för identifiering), skapande- och utgångsdatum samt återkallelse.",
     "generateTitle": "Generera en token",
     "generateIntro": "Från panelen:",
     "generateSteps": [
-      "Öppna <strong>Säkerhet → API-åtkomsttoken</strong>.",
+      "Öppna <strong>Administration → Säkerhet → API-tokens</strong> och välj <strong>Generera ny token</strong>.",
       "Skriv ett beskrivande namn (<em>t.ex. \"Home Assistant\"</em>).",
       "Skriv in ditt lösenord. Om 2FA är på, även den nuvarande 6-siffriga koden.",
-      "Välj <strong>Generera ny token</strong> och sedan <strong>Generera token</strong>. Det visas <strong>endast en gång</strong>: kopiera direkt."
+      "Välj <strong>Generera token</strong>. Den visas <strong>endast en gång</strong>: kopiera direkt."
     ],
     "generateCli": "Från kommandoraden:",
     "useTitle": "Använd en token",
@@ -310,7 +310,7 @@
     "intro": "Två vägar till TLS:",
     "items": [
       "<strong>Omvänd proxy rekommenderas.</strong> Avsluta TLS på Nginx / Caddy / Traefik och vidarebefordra HTTP till Flask på port 8008. Exempel nedan.",
-      "<strong>Direkt HTTPS i AppImage.</strong> Ange certifikat via <code>POST /api/ssl/configure</code> (gränssnitt: <strong>Admin → Säkerhet → SSL / HTTPS</strong>). HTTPS använder <code>gevent.pywsgi</code> med standardhanteraren; flask-sock hanterar WebSocket för WSS. Certifikatsökvägar sparas i SSL-konfigurationen."
+      "<strong>Direkt HTTPS i AppImage.</strong> Ange certifikat via <code>POST /api/ssl/configure</code> (gränssnitt: <strong>Administration → Säkerhet → SSL / HTTPS</strong>). HTTPS använder <code>gevent.pywsgi</code> med standardhanteraren; flask-sock hanterar WebSocket för WSS. Certifikatsökvägar sparas i SSL-konfigurationen."
     ],
     "calloutTitle": "Direkt HTTPS begränsningar",
     "calloutBody": "Monitor kan använda ett certifikat hanterat av Proxmox eller egna certifikatsfiler. Det utfärdar inte ACME-certifikat självt. Använd Proxmox ACME eller Caddy, Traefik eller Nginx för automatisk utfärdning och förnyelse, och se till att förnyade certifikat läses in."

@@ -288,10 +288,10 @@
     "generateTitle": "Generieren Sie ein Token",
     "generateIntro": "Aus dem Dashboard:",
     "generateSteps": [
-      "Unter <strong>Registerkarte Sicherheit → Abschnitt API-Tokens</strong> öffnen.",
+      "Öffnen Sie <strong>Admin → Sicherheit → API-Tokens</strong> und klicken Sie auf <strong>Neues Token generieren</strong>.",
       "Beschreibenden Namen angeben, <em>z. B. „Home Assistant“</em>.",
       "Geben Sie Ihr Passwort erneut ein. Wenn 2FA eingeschaltet ist, auch der aktuelle 6-stellige Code.",
-      "<strong>Neues Token erstellen</strong> wählen, danach <strong>Token erstellen</strong>. Es erscheint <strong>nur einmal</strong>; sofort kopieren."
+      "Klicken Sie auf <strong>Token generieren</strong>. Das Token erscheint <strong>nur einmal</strong>: Kopieren Sie es sofort."
     ],
     "generateCli": "Aus der Kommandozeile:",
     "useTitle": "Verwenden Sie ein Token",

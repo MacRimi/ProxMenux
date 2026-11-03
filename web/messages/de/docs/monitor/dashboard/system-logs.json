@@ -52,7 +52,7 @@
     "backupsTitle": "Sicherungen",
     "backupsBody": "Die Backup-Archive auf jedem backupfähigen Speicher (dir, NFS, CIFS, PBS), gelesen mit <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Karten oben zeigen die Anzahl der VMs und LXCs sowie die Gesamtgröße; darunter steht eine Zeile pro Archiv mit Typ, Speicher, Größe und Datum. Die Wiederherstellung erfolgt in der Proxmox-Weboberfläche.",
     "notificationsTitle": "Benachrichtigungen",
-    "notificationsBody1": "Proxmox-Benachrichtigungsaktivität: Journalzeilen von Proxmox-Diensten, die Benachrichtigungen, E-Mail, Webhooks oder Alarme erwähnen, die Ziele in /etc/pve/notifications.cfg und Backup-Aufgaben aus der Cluster-Aufgabenliste. Bei Zeilen von Backup-Aufgaben kann das vollständige Aufgabenprotokoll heruntergeladen werden. Der Verlauf dessen, was der Monitor selbst versendet hat, befindet sich unter Settings → Notifications → Notification history.",
+    "notificationsBody1": "Proxmox-Benachrichtigungsaktivität: Journalzeilen von Proxmox-Diensten, die Benachrichtigungen, E-Mail, Webhooks oder Alarme erwähnen, die Ziele in /etc/pve/notifications.cfg und Backup-Aufgaben aus der Cluster-Aufgabenliste. Bei Zeilen von Backup-Aufgaben kann das vollständige Aufgabenprotokoll heruntergeladen werden. Der Verlauf dessen, was der Monitor selbst versendet hat, befindet sich unter Einstellungen → Benachrichtigungen → Benachrichtigungsverlauf.",
     "notificationsBody2": "Hier prüfen Sie, was das eigene Benachrichtigungssystem von Proxmox tut. Die Kanäle des Monitors konfigurieren Sie auf der Detailseite <link>Benachrichtigungen</link>."
   },
   "dataCollected": {
@@ -64,7 +64,7 @@
       {
         "subtab": "Protokolle (Live-Filter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> mit serverseitig angewendeten Filtern für Priorität, Dienst und Tagesbereich; die Textsuche läuft im Browser."
+        "source": "Der Tab ruft <code>/api/logs?since_days=N</code> ab; Stufe, Dienst und Textsuche werden im Browser gefiltert. Die API akzeptiert auch <code>priority</code> und <code>service</code>, die der Tab noch nicht nutzt."
       },
       {
         "subtab": "Herunterladen",

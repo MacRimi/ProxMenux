@@ -64,7 +64,7 @@
       {
         "subtab": "Logs (live filter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> with priority, service and day-range filters applied server-side; text search runs in the browser."
+        "source": "The tab requests <code>/api/logs?since_days=N</code>; level, service and text filters run in the browser. The API also accepts <code>priority</code> and <code>service</code>, which the tab does not use yet."
       },
       {
         "subtab": "Download",

@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminal",
-        "owns": "Shell dans le navigateur sur l’hôte Proxmox, avec <code>xterm.js</code> via WebSockets. Les consoles LXC s’ouvrent depuis l’onglet VMs & LXCs."
+        "owns": "Shell dans le navigateur sur l’hôte Proxmox, avec <code>xterm.js</code> via WebSockets. Les consoles LXC s’ouvrent depuis l’onglet VM et LXC."
       },
       {
         "name": "Sécurité",

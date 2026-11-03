@@ -203,7 +203,7 @@
     "heading": "LXC-Update-Erkennung",
     "imageAlt": "LXC-Update-Erkennung mit Schalter zur Suche nach Paketupdates in laufenden Debian-, Ubuntu- und Alpine-Containern",
     "imageCaption": "Schalter für regelmäßige Prüfungen mit <code>apt list --upgradable</code> / <code>apk list -u</code> in laufenden CTs. Standardmäßig aktiviert. Der zugehörige Schalter unter Benachrichtigungen → Dienste erscheint bei aktiver Erkennung.",
-    "intro": "Der Schalter zwischen Schwellen und Benachrichtigungen steuert den LXC-Scan. Aktiv fragt er Paketmanager laufender CTs ab; VMs & LXCs zeigt Ergebnisse und <code>lxc_updates_available</code> erhält sie. Deaktiviert stoppt er seine <code>pct exec</code>-Aufrufe und entfernt LXC-Einträge aus <code>managed_installs.json</code>; <code>/api/managed-installs</code> meldet den Status dann ohne 24-Stunden-Wartezeit nicht mehr.",
+    "intro": "Der Schalter zwischen Schwellen und Benachrichtigungen steuert den LXC-Scan. Aktiv fragt er Paketmanager laufender CTs ab; VMs und LXCs zeigt Ergebnisse und <code>lxc_updates_available</code> erhält sie. Deaktiviert stoppt er seine <code>pct exec</code>-Aufrufe und entfernt LXC-Einträge aus <code>managed_installs.json</code>; <code>/api/managed-installs</code> meldet den Status dann ohne 24-Stunden-Wartezeit nicht mehr.",
     "whatRunsTitle": "Was die Prüfung ausführt",
     "whatRunsIntro": "Für jeden CT im Zustand <code>running</code> mit unterstütztem Paketmanager:",
     "whatRunsItems": [

@@ -12,13 +12,13 @@
   },
   "intro": {
     "title": "Vad denna sida täcker",
-    "body": "Hur man byter Monitor från HTTP till HTTPS i panelen Admin → Säkerhet, vad varje certifikatkälla faktiskt pekar på på disken, hur Proxmox-alternativet beter sig när värden har en Let's Encrypt-cert och hur man ställer in anpassade vägar om du hanterar certer utanför Proxmox."
+    "body": "Hur man byter Monitor från HTTP till HTTPS i panelen Administration → Säkerhet, vad varje certifikatkälla faktiskt pekar på på disken, hur Proxmox-alternativet beter sig när värden har en Let's Encrypt-cert och hur man ställer in anpassade vägar om du hanterar certer utanför Proxmox."
   },
   "wheresetting": {
     "heading": "Var inställningen finns",
-    "body": "Öppna Monitor och gå till <strong>Admin → Säkerhet → SSL / HTTPS</strong>. Panelen visar HTTP eller HTTPS och, om HTTPS inte aktiverats, de upptäckta certifikatkällorna.",
-    "imageAlt": "Panelen Admin → Säkerhet → SSL / HTTPS i Monitorn som visar HTTPS-off-tillståndet, det automatiska upptäckta Proxmox-certifikatet (ämne, emittent, utgång) och alternativet Använd anpassat certifikat",
-    "caption": "Panelen Admin → Säkerhet → SSL / HTTPS före aktivering. Monitor visar certifikatet som Proxmox använder och låter dig välja det med ett klick."
+    "body": "Öppna Monitor och gå till <strong>Administration → Säkerhet → SSL / HTTPS</strong>. Panelen visar HTTP eller HTTPS och, om HTTPS inte aktiverats, de upptäckta certifikatkällorna.",
+    "imageAlt": "Panelen Administration → Säkerhet → SSL / HTTPS i Monitorn som visar HTTPS-off-tillståndet, det automatiska upptäckta Proxmox-certifikatet (ämne, emittent, utgång) och alternativet Använd anpassat certifikat",
+    "caption": "Panelen Administration → Säkerhet → SSL / HTTPS före aktivering. Monitor visar certifikatet som Proxmox använder och låter dig välja det med ett klick."
   },
   "twoways": {
     "heading": "Två sätt att aktivera HTTPS",
@@ -117,7 +117,7 @@
   },
   "switchToHttps": {
     "heading": "Byt Monitor till HTTPS",
-    "bodyRich": "När <code>/etc/pve/local/pveproxy-ssl.pem</code> signerats av Let's Encrypt öppnar du <strong>Admin → Säkerhet → SSL / HTTPS</strong>, kontrollerar att utfärdaren är <em>Let's Encrypt</em> och inte Proxmox lokala CA och klickar på <strong>Använd Proxmox-certifikat</strong>. Monitor startar om och nästa sidladdning använder HTTPS på 8008 med en offentligt betrodd certifikatkedja. Senare ACME-förnyelser valideras och väljs vid nästa nya TLS-anslutning, utan återkommande avfrågning eller omstart vid förnyelse. <strong>Uppdatera certifikat</strong> finns kvar under Säkerhet för diagnos och återställning."
+    "bodyRich": "När <code>/etc/pve/local/pveproxy-ssl.pem</code> signerats av Let's Encrypt öppnar du <strong>Administration → Säkerhet → SSL / HTTPS</strong>, kontrollerar att utfärdaren är <em>Let's Encrypt</em> och inte Proxmox lokala CA och klickar på <strong>Använd Proxmox-certifikat</strong>. Monitor startar om och nästa sidladdning använder HTTPS på 8008 med en offentligt betrodd certifikatkedja. Senare ACME-förnyelser valideras och väljs vid nästa nya TLS-anslutning, utan återkommande avfrågning eller omstart vid förnyelse. <strong>Uppdatera certifikat</strong> finns kvar under Säkerhet för diagnos och återställning."
   },
   "custom": {
     "heading": "Anpassat certifikat - när du ska använda det",

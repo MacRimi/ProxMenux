@@ -284,14 +284,14 @@
     "heading": "API tokeny (dlhodobé)",
     "intro": "Relácie prehliadača platia 24 hodín. Pre Homepage, Home Assistant, Grafana či Uptime Kuma vytvorte samostatný <strong>token API</strong> platný 365 dní. JWT používa rovnaký podpisový kľúč; pole <code>token_name</code> umožňuje sledovať a jednotlivo zrušiť token.",
     "imageAlt": "Panel tokenov API znázorňujúci zoznam tokenov s názvom, predponou, vytvoreným dátumom a expiráciou",
-    "imageCaption": "Zoznam tokenov API v Admin → Security: názov, predpona s poslednými štyrmi identifikačnými znakmi, dátum vytvorenia a platnosť, možnosť zrušenia.",
+    "imageCaption": "Zoznam tokenov API v Správa → Bezpečnosť: názov, predpona s poslednými štyrmi identifikačnými znakmi, dátum vytvorenia a platnosť, možnosť zrušenia.",
     "generateTitle": "Generovať token",
     "generateIntro": "Z panelu:",
     "generateSteps": [
-      "Otvorte sekciu <strong>karta Security → API Tokens</strong>.",
+      "Otvorte <strong>Správa → Bezpečnosť → API tokeny</strong> a kliknite na <strong>Vytvoriť nový token</strong>.",
       "Zadajte opisný názov, <em>napríklad \"Home Assistant\"</em>.",
       "Zadajte svoje heslo. Ak je zapnutá 2FA, aj súčasný 6-miestny kód.",
-      "Kliknite na <strong>Generate new token</strong> a potom na <strong>Generate token</strong>. Token sa zobrazí <strong>iba raz</strong>: hneď ho skopírujte."
+      "Kliknite na <strong>Vytvoriť token</strong>. Token sa zobrazí <strong>iba raz</strong>: hneď ho skopírujte."
     ],
     "generateCli": "Z príkazového riadku:",
     "useTitle": "Použitie tokenu",
@@ -310,7 +310,7 @@
     "intro": "Dve cesty k TLS:",
     "items": [
       "<strong>Odporúčaný reverzný proxy.</strong> Ukončite TLS na Nginx / Caddy / Traefik a posielajte HTTP procesu Flask na port 8008. Príklady sú nižšie.",
-      "<strong>Priame HTTPS v AppImage.</strong> Certifikát nastavte cez <code>POST /api/ssl/configure</code> (rozhranie: <strong>Admin → Security → SSL / HTTPS</strong>). HTTPS používa <code>gevent.pywsgi</code> so štandardným handlerom; flask-sock obsluhuje WebSocket pre WSS. Cesty certifikátov sa uložia v konfigurácii SSL."
+      "<strong>Priame HTTPS v AppImage.</strong> Certifikát nastavte cez <code>POST /api/ssl/configure</code> (rozhranie: <strong>Správa → Bezpečnosť → SSL / HTTPS</strong>). HTTPS používa <code>gevent.pywsgi</code> so štandardným handlerom; flask-sock obsluhuje WebSocket pre WSS. Cesty certifikátov sa uložia v konfigurácii SSL."
     ],
     "calloutTitle": "Priame obmedzenia HTTPS",
     "calloutBody": "Monitor môže použiť certifikát spravovaný Proxmoxom alebo vlastné súbory. Sám certifikáty ACME nevydáva. Na automatické vydávanie a obnovu použite Proxmox ACME alebo proxy Caddy, Traefik či Nginx a zabezpečte načítanie obnovených certifikátov."

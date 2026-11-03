@@ -284,14 +284,14 @@
     "heading": "Token API di lunga durata",
     "intro": "Le sessioni scadono dopo 24 ore. Per Homepage, Home Assistant, Grafana o Uptime Kuma crea un <strong>token API</strong> valido 365 giorni. Il JWT usa lo stesso segreto di firma; il campo <code>token_name</code> permette di identificarlo e revocarlo singolarmente.",
     "imageAlt": "Pannello di token API con nome, prefisso, data e scadenza",
-    "imageCaption": "Elenco token in Admin → Security: nome, prefisso con ultimi quattro caratteri di identificazione, date di creazione e scadenza, revoca.",
+    "imageCaption": "Elenco token in Amministratore → Sicurezza: nome, prefisso con ultimi quattro caratteri di identificazione, date di creazione e scadenza, revoca.",
     "generateTitle": "Generare un token",
     "generateIntro": "Dal cruscotto:",
     "generateSteps": [
-      "Apri la sezione <strong>scheda Security → API Tokens</strong>.",
+      "Apri <strong>Amministratore → Sicurezza → Token API</strong> e premi <strong>Genera nuovo token</strong>.",
       "Assegna un nome descrittivo, <em>ad esempio \"Home Assistant\"</em>.",
       "Reinserisci la password e, con 2FA attivo, il codice attuale a sei cifre.",
-      "Premi <strong>Generate new token</strong>, poi <strong>Generate token</strong>. Compare <strong>una sola volta</strong>: copialo subito."
+      "Premi <strong>Genera token</strong>. Compare <strong>una sola volta</strong>: copialo subito."
     ],
     "generateCli": "Dalla riga di comando:",
     "useTitle": "Usare un token",
@@ -310,7 +310,7 @@
     "intro": "Due percorsi per TLS:",
     "items": [
       "<strong>Proxy inverso consigliato.</strong> Termina TLS su Nginx / Caddy / Traefik e inoltra HTTP al processo Flask sulla porta 8008. Esempi sotto.",
-      "<strong>HTTPS diretto nell’AppImage.</strong> Configura un certificato con <code>POST /api/ssl/configure</code> (interfaccia: <strong>Admin → Security → SSL / HTTPS</strong>). HTTPS usa <code>gevent.pywsgi</code> con il gestore standard; flask-sock gestisce WebSocket per WSS. I percorsi sono salvati nella configurazione SSL."
+      "<strong>HTTPS diretto nell’AppImage.</strong> Configura un certificato con <code>POST /api/ssl/configure</code> (interfaccia: <strong>Amministratore → Sicurezza → SSL/HTTPS</strong>). HTTPS usa <code>gevent.pywsgi</code> con il gestore standard; flask-sock gestisce WebSocket per WSS. I percorsi sono salvati nella configurazione SSL."
     ],
     "calloutTitle": "Limitazioni dirette HTTPS",
     "calloutBody": "Monitor può usare un certificato gestito da Proxmox o file personalizzati. Non emette certificati ACME. Per emissione e rinnovo automatici usa Proxmox ACME o un proxy Caddy, Traefik o Nginx e assicurati che i certificati rinnovati vengano caricati."

@@ -117,7 +117,7 @@
       "<strong>Destino</strong> — armazenamento (PBS-Cloud, PBS-Local, NFS-Backup, …), colorido conforme o estado.",
       "<strong>Tamanho</strong> — tamanho final em disco da cópia."
     ],
-    "backupsOutro": "O botão <strong>+ Create Backup</strong>, no canto superior direito, abre uma janela para escolher o armazenamento, o modo (snapshot / suspend / stop), a proteção e as notas antes de iniciar um vzdump. O restauro faz-se na interface web Proxmox; o Monitor mostra se o sistema tem cópias recentes, mas não o fluxo de recuperação.",
+    "backupsOutro": "O botão <strong>+ Criar backup</strong>, no canto superior direito, abre uma janela para escolher o armazenamento, o modo (snapshot / suspend / stop), a proteção e as notas antes de iniciar um vzdump. O restauro faz-se na interface web Proxmox; o Monitor mostra se o sistema tem cópias recentes, mas não o fluxo de recuperação.",
     "firewallTitle": "Página 7 — Firewall",
     "firewallIntro": "Lê o registo do firewall Proxmox de cada sistema diretamente do host, sem serviço adicional nem consultas periódicas. O separador está sempre presente; o conteúdo depende da ativação do firewall e de uma regra registar pacotes.",
     "firewallItems": [

@@ -41,7 +41,7 @@
     "heading": "Unità rete",
     "imageAlt": "Scheda Unità di rete con il selettore di visualizzazione su Byte",
     "imageCaption": "Scegli tra bit al secondo e byte al secondo per ogni velocità di rete visualizzata nel cruscotto.",
-    "body": "Scegli come viene mostrata la velocità di rete nella dashboard: <strong>bit al secondo</strong> (Mbps / Gbps) o <strong>byte al secondo</strong> (MB/s / GB/s). I byte sono il valore predefinito, come nella maggior parte degli strumenti di trasferimento file; i bit sono quelli con cui produttori di schede e provider etichettano i prodotti. La scelta è salvata nel browser, quindi ogni browser mantiene la propria. Grafici, etichette e suggerimenti cambiano subito senza ricaricare."
+    "body": "Mostra la velocità in <strong>bit al secondo</strong> (Mbps/Gbps) o <strong>byte al secondo</strong> (MB/s/GB/s). I byte sono predefiniti, come nei trasferimenti di file; schede e provider usano spesso i bit. La scelta viene salvata nel browser. Grafici, etichette e suggerimenti cambiano subito senza ricaricare."
   },
   "health": {
     "heading": "Monitoraggio integrità",
@@ -203,7 +203,7 @@
     "heading": "Rilevamento aggiornamenti LXC",
     "imageAlt": "Scheda di rilevamento aggiornamenti LXC con interruttore per cercare pacchetti in attesa nei container Debian, Ubuntu e Alpine attivi",
     "imageCaption": "Interruttore dell’analisi periodica con <code>apt list --upgradable</code> / <code>apk list -u</code> nei CT attivi. È acceso per impostazione predefinita. L’opzione in Notifiche → Servizi appare mentre il rilevamento è attivo.",
-    "intro": "L’interruttore tra Soglie e Notifiche controlla l’analisi LXC. Attivo, interroga i gestori di pacchetti dei CT in esecuzione; i risultati compaiono nei conteggi della scheda VMs & LXCs e alimentano <code>lxc_updates_available</code>. Disattivo, ferma le chiamate <code>pct exec</code> e rimuove subito le voci LXC da <code>managed_installs.json</code>; la dashboard e <code>/api/managed-installs</code> smettono di riportare lo stato senza attendere il ciclo di 24 ore.",
+    "intro": "L’interruttore tra Soglie e Notifiche controlla l’analisi LXC. Attivo, interroga i gestori di pacchetti dei CT in esecuzione; la scheda VM e LXC mostra i risultati e alimenta <code>lxc_updates_available</code>. Disattivo, ferma le chiamate <code>pct exec</code> e rimuove le voci LXC da <code>managed_installs.json</code>; <code>/api/managed-installs</code> smette di riportare lo stato senza attendere 24 ore.",
     "whatRunsTitle": "Cosa esegue l’analisi",
     "whatRunsIntro": "Per ogni CT in stato <code>running</code> con un gestore di pacchetti supportato:",
     "whatRunsItems": [

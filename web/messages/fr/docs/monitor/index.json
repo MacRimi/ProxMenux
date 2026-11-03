@@ -113,7 +113,7 @@
   "api": {
     "heading": "REST API et intégrations",
     "intro": "Les points d’accès REST exposent les mesures en JSON par HTTP/HTTPS pour Homepage, Home Assistant, Uptime Kuma et les scripts. Grafana peut utiliser l’exporteur texte Prometheus séparé sur <code>/api/prometheus</code>. Les requêtes peuvent être faites avec <code>curl</code>.",
-    "tokens": "Les jetons API à longue durée de vie (365 jours) sont générés à partir de <strong>Admin → Sécurité → Jetons API</strong> ou via <code>POST /api/auth/generate-api-token</code>.",
+    "tokens": "Les jetons API à longue durée de vie (365 jours) sont générés à partir de <strong>Administrateur → Sécurité → Jetons API</strong> ou via <code>POST /api/auth/generate-api-token</code>.",
     "bearer": "Envoyez les jetons via <code>Authorization: Bearer …</code>. <code>/api/health</code> attend aussi l’en-tête Bearer : les sondes de disponibilité ont donc besoin d’un jeton read_only. Sous <code>/api/auth/*</code> se trouvent à la fois des routes publiques de configuration/connexion/état et des routes protégées de gestion du compte et des jetons ; elles ne sont pas toutes anonymes.",
     "catalog": "Le catalogue complet des points d'accès, les conseils de rotation des jetons et les bonnes pratiques de sécurité se trouvent dans la <linkApi>référence API</linkApi>. Des exemples pour Homepage, Home Assistant, Grafana et Uptime Kuma, ainsi qu'un modèle générique cURL, sont proposés dans les <linkIntegrations>intégrations</linkIntegrations>."
   },

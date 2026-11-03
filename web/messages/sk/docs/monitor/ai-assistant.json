@@ -165,7 +165,7 @@
     },
     "ollama": {
       "heading": "Ollama (miestne)",
-      "tagline": "Používa modely na vašom serveri Ollama. Plne lokálne, súkromné a bezplatné na prevádzku.",
+      "tagline": "Používa modely sprístupnené nastaveným serverom Ollama. Lokálne modely bežia na ňom; cloudové modely Ollama posielajú požiadavky cloudovému poskytovateľovi. Lokálna prevádzka nemá poplatok za hostované API, ale využíva vlastný hardvér a elektrinu.",
       "items": [
         "Kľúč API netreba. Pole <em>Ollama URL</em> nastavte na svoj server, predvolene <code>http://localhost:11434</code>, alebo na hostiteľa s vašou inštanciou Ollama.",
         "Modely sa <strong>nefiltrujú.</strong> Monitor načíta modely stiahnuté pomocou <code>ollama pull &lt;model&gt;</code>. Ponuku naplní z <code>GET /api/tags</code> na serveri Ollama.",

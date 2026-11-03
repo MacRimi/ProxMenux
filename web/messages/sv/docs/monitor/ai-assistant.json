@@ -165,7 +165,7 @@
     },
     "ollama": {
       "heading": "Ollama (lokal)",
-      "tagline": "Använder modeller på din Ollama-server. Helt lokalt, privat och gratis att köra.",
+      "tagline": "Använder modeller som din konfigurerade Ollama-server visar. Lokala modeller körs där; Ollamas molnmodeller vidarebefordrar anrop till en molnleverantör. Lokal körning undviker avgifter för ett hostat API men använder egen hårdvara och el.",
       "items": [
         "Ingen API nyckel. Ställ in <em>Ollama URL</em>-fältet till din server (standard <code>http://localhost:11434</code> eller vilken värd som helst kör din Ollama-instans).",
         "Modellerna <strong>filtreras inte.</strong> Monitor läser modeller som hämtats med <code>ollama pull &lt;model&gt;</code>. Listrutan hämtas från <code>GET /api/tags</code> på din Ollama-server.",

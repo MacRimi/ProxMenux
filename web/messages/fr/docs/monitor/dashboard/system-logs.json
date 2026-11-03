@@ -52,7 +52,7 @@
     "backupsTitle": "Sauvegardes",
     "backupsBody": "Les archives de sauvegarde de chaque stockage compatible avec les sauvegardes (dir, NFS, CIFS, PBS), lues avec <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Les cartes en haut indiquent le nombre de VM et de LXC et la taille totale ; en dessous, une ligne par archive avec type, stockage, taille et date. La restauration se fait dans l’interface web de Proxmox.",
     "notificationsTitle": "Notifications",
-    "notificationsBody1": "Activité des notifications Proxmox : lignes de journal des services Proxmox qui mentionnent des notifications, des e-mails, des webhooks ou des alertes, les cibles de /etc/pve/notifications.cfg et les tâches de sauvegarde de la liste des tâches du cluster. Les lignes de tâche de sauvegarde permettent de télécharger le journal complet de la tâche. L’historique de ce que Monitor lui-même a envoyé se trouve dans Settings → Notifications → Notification history.",
+    "notificationsBody1": "Activité des notifications Proxmox : lignes de journal des services Proxmox qui mentionnent des notifications, des e-mails, des webhooks ou des alertes, les cibles de /etc/pve/notifications.cfg et les tâches de sauvegarde de la liste des tâches du cluster. Les lignes de tâche de sauvegarde permettent de télécharger le journal complet de la tâche. L’historique de ce que Monitor lui-même a envoyé se trouve dans Paramètres → Notifications → Historique des notifications.",
     "notificationsBody2": "Cet onglet permet de vérifier ce que fait le système de notification propre à Proxmox. Les canaux de Monitor se configurent sur la page détaillée <link>Notifications</link>."
   },
   "dataCollected": {
@@ -64,7 +64,7 @@
       {
         "subtab": "Journaux (filtre en direct)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> avec des filtres de priorité, de service et de plage de jours appliqués sur le serveur ; la recherche de texte s’exécute dans le navigateur."
+        "source": "L’onglet demande <code>/api/logs?since_days=N</code> ; les filtres de niveau, de service et de texte s’appliquent dans le navigateur. L’API accepte aussi <code>priority</code> et <code>service</code>, que l’onglet n’utilise pas encore."
       },
       {
         "subtab": "Télécharger",

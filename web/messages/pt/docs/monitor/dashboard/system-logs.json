@@ -52,7 +52,7 @@
     "backupsTitle": "Cópias de segurança",
     "backupsBody": "Os arquivos de backup em cada armazenamento com capacidade de backup (dir, NFS, CIFS, PBS), lidos com <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Os cartões no topo mostram o número de VMs e LXC e o tamanho total; abaixo, uma linha por arquivo com tipo, armazenamento, tamanho e data. A restauração está na interface web do Proxmox.",
     "notificationsTitle": "Notificações",
-    "notificationsBody1": "Atividade de notificações do Proxmox: linhas do diário dos serviços Proxmox que mencionam notificações, email, webhooks ou alertas, os destinos em /etc/pve/notifications.cfg e as tarefas de backup da lista de tarefas do cluster. As linhas de tarefas de backup permitem descarregar o registo completo da tarefa. O histórico do que o próprio Monitor enviou está em Settings → Notifications → Notification history.",
+    "notificationsBody1": "Atividade de notificações do Proxmox: linhas do diário dos serviços Proxmox que mencionam notificações, email, webhooks ou alertas, os destinos em /etc/pve/notifications.cfg e as tarefas de backup da lista de tarefas do cluster. As linhas de tarefas de backup permitem descarregar o registo completo da tarefa. O histórico do que o próprio Monitor enviou está em Configurações → Notificações → Histórico de notificações.",
     "notificationsBody2": "Utilize este separador para verificar o que o próprio sistema de notificações do Proxmox está a fazer. Os canais do Monitor configuram-se na página detalhada <link>Notificações</link>."
   },
   "dataCollected": {
@@ -64,7 +64,7 @@
       {
         "subtab": "Registos (filtro em direto)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> com filtros de prioridade, serviço e intervalo de dias aplicados no servidor; a pesquisa de texto é feita no navegador."
+        "source": "O separador pede <code>/api/logs?since_days=N</code>; os filtros de nível, serviço e texto são aplicados no navegador. A API também aceita <code>priority</code> e <code>service</code>, que o separador ainda não usa."
       },
       {
         "subtab": "Transferir",

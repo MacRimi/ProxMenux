@@ -52,7 +52,7 @@
     "backupsTitle": "Säkerhetskopieringar",
     "backupsBody": "Säkerhetskopieringsarkiven på varje lagring som kan hålla säkerhetskopior (dir, NFS, CIFS, PBS), lästa med <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Korten överst visar antal VM:ar och LXC samt total storlek; nedanför visas en rad per arkiv med typ, lagring, storlek och datum. Återställning sker i Proxmox webbgränssnitt.",
     "notificationsTitle": "Aviseringar",
-    "notificationsBody1": "Proxmox aviseringsaktivitet: journalrader från Proxmox-tjänster som nämner aviseringar, e-post, webhooks eller larm, målen i /etc/pve/notifications.cfg samt säkerhetskopieringsuppgifter från klustrets uppgiftslista. Rader för säkerhetskopieringsuppgifter kan ladda ner hela uppgiftsloggen. Historiken över vad Monitor själv har skickat finns under Settings → Notifications → Notification history.",
+    "notificationsBody1": "Proxmox aviseringsaktivitet: journalrader från Proxmox-tjänster som nämner aviseringar, e-post, webhooks eller larm, målen i /etc/pve/notifications.cfg samt säkerhetskopieringsuppgifter från klustrets uppgiftslista. Rader för säkerhetskopieringsuppgifter kan ladda ner hela uppgiftsloggen. Historiken över vad Monitor själv har skickat finns under Inställningar → Aviseringar → Aviseringshistorik.",
     "notificationsBody2": "Använd fliken för att kontrollera vad Proxmox egna aviseringssystem gör. Kanalinställningar för Monitor finns på den detaljerade sidan <link>Aviseringar</link>."
   },
   "dataCollected": {
@@ -64,7 +64,7 @@
       {
         "subtab": "Loggar (livefilter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> med filter för prioritet, tjänst och antal dagar tillämpade på servern; textsökning körs i webbläsaren."
+        "source": "Fliken hämtar <code>/api/logs?since_days=N</code>; filter för nivå, tjänst och text tillämpas i webbläsaren. API:et tar även emot <code>priority</code> och <code>service</code>, som fliken ännu inte använder."
       },
       {
         "subtab": "Ladda ner",

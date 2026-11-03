@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminal",
-        "owns": "Shell no navegador no host Proxmox, com <code>xterm.js</code> sobre WebSockets. As consolas LXC abrem a partir do separador VMs & LXCs."
+        "owns": "Shell no navegador no host Proxmox, com <code>xterm.js</code> sobre WebSockets. As consolas LXC abrem a partir do separador VMs e LXCs."
       },
       {
         "name": "Segurança",

@@ -165,7 +165,7 @@
     },
     "ollama": {
       "heading": "Ollama (Local)",
-      "tagline": "Uses models on your Ollama server. Fully local, private and free to run.",
+      "tagline": "Uses models exposed by your configured Ollama server. Local models execute there; Ollama cloud models forward requests to a cloud provider. Local execution avoids a hosted API charge but still uses your hardware and electricity.",
       "items": [
         "No API key. Set the <em>Ollama URL</em> field to your server (default <code>http://localhost:11434</code> or whatever host runs your Ollama instance).",
         "Models: <strong>not filtered.</strong> The Monitor reads whichever models you have pulled on the Ollama side via <code>ollama pull &lt;model&gt;</code>. The dropdown is populated from <code>GET /api/tags</code> on your Ollama server.",

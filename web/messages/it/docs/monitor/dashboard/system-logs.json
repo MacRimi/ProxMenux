@@ -52,7 +52,7 @@
     "backupsTitle": "Backup",
     "backupsBody": "Gli archivi di backup su ogni storage che supporta i backup (dir, NFS, CIFS, PBS), letti con <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Le schede in alto mostrano il numero di VM e LXC e la dimensione totale; sotto, una riga per archivio con tipo, storage, dimensione e data. Il ripristino si esegue nell’interfaccia web di Proxmox.",
     "notificationsTitle": "Notifiche",
-    "notificationsBody1": "Attività di notifica di Proxmox: righe del journal dei servizi Proxmox che citano notifiche, e-mail, webhook o avvisi, le destinazioni in /etc/pve/notifications.cfg e le attività di backup dall’elenco delle attività del cluster. Le righe delle attività di backup permettono di scaricare il log completo. La cronologia di ciò che Monitor stesso ha inviato si trova in Settings → Notifications → Notification history.",
+    "notificationsBody1": "Attività di notifica di Proxmox: righe del journal dei servizi Proxmox che citano notifiche, e-mail, webhook o avvisi, le destinazioni in /etc/pve/notifications.cfg e le attività di backup dall’elenco delle attività del cluster. Le righe delle attività di backup permettono di scaricare il log completo. La cronologia di ciò che Monitor stesso ha inviato si trova in Impostazioni → Notifiche → Cronologia delle notifiche.",
     "notificationsBody2": "Usa questa scheda per verificare cosa fa il sistema di notifiche di Proxmox. I canali di Monitor si configurano nella pagina dettagliata <link>Notifiche</link>."
   },
   "dataCollected": {
@@ -64,7 +64,7 @@
       {
         "subtab": "Registri (filtro in tempo reale)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> con filtri per priorità, servizio e intervallo di giorni applicati sul server; la ricerca testuale viene eseguita nel browser."
+        "source": "La scheda richiede <code>/api/logs?since_days=N</code>; i filtri per livello, servizio e testo vengono applicati nel browser. L’API accetta anche <code>priority</code> e <code>service</code>, che la scheda non usa ancora."
       },
       {
         "subtab": "Scarica",

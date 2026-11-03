@@ -203,7 +203,7 @@
     "heading": "Detecção de atualização LXC",
     "imageAlt": "Cartão de deteção de atualizações LXC com interruptor para procurar pacotes pendentes em contentores Debian, Ubuntu e Alpine ativos",
     "imageCaption": "Interruptor da análise periódica com <code>apt list --upgradable</code> / <code>apk list -u</code> nos CT ativos. Vem ligado. A opção correspondente em Notificações → Serviços aparece com a deteção ativa.",
-    "intro": "O interruptor entre Limites e Notificações controla a análise LXC. Ativo, consulta os gestores de pacotes dos CT em execução; o separador VMs & LXCs mostra os resultados nos contadores e alimenta <code>lxc_updates_available</code>. Desativado, para as chamadas <code>pct exec</code> e remove entradas LXC de <code>managed_installs.json</code>; <code>/api/managed-installs</code> deixa de mostrar esse estado sem esperar 24 h.",
+    "intro": "O interruptor entre Limites e Notificações controla a análise LXC. Ativo, consulta os gestores de pacotes dos CT em execução; o separador VMs e LXCs mostra os resultados nos contadores e alimenta <code>lxc_updates_available</code>. Desativado, para as chamadas <code>pct exec</code> e remove entradas LXC de <code>managed_installs.json</code>; <code>/api/managed-installs</code> deixa de mostrar esse estado sem esperar 24 h.",
     "whatRunsTitle": "O que a análise executa",
     "whatRunsIntro": "Para cada CT no estado <code>running</code> com um gestor de pacotes suportado:",
     "whatRunsItems": [

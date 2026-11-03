@@ -113,7 +113,7 @@
   "api": {
     "heading": "REST API e integrazioni",
     "intro": "Gli endpoint REST espongono dati di monitoraggio JSON via HTTP/HTTPS per Homepage, Home Assistant, Uptime Kuma e script. Grafana può usare l’esportatore testuale Prometheus separato su <code>/api/prometheus</code>. Le richieste possono usare <code>curl</code>.",
-    "tokens": "I token API a lunga durata (365 giorni) vengono generati in <strong>Admin → Security → API Tokens</strong> o tramite <code>POST /api/auth/generate-api-token</code>.",
+    "tokens": "I token API a lunga durata (365 giorni) vengono generati in <strong>Amministratore → Sicurezza → Token API</strong> o tramite <code>POST /api/auth/generate-api-token</code>.",
     "bearer": "Invia i token con <code>Authorization: Bearer …</code>. Anche <code>/api/health</code> richiede l’intestazione Bearer, quindi i controlli di disponibilità necessitano di un token read_only. Sotto <code>/api/auth/*</code> ci sono sia rotte pubbliche di configurazione/login/stato sia rotte protette per account e token; non sono tutte anonime.",
     "catalog": "Catalogo degli endpoint, rotazione dei token e sicurezza sono nel <linkApi>Riferimento API</linkApi>; esempi per Homepage, Home Assistant, Grafana, Uptime Kuma e cURL sono in <linkIntegrations>Integrazioni</linkIntegrations>."
   },

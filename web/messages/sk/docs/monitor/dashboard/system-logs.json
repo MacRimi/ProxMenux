@@ -52,7 +52,7 @@
     "backupsTitle": "Zálohy",
     "backupsBody": "Záložné archívy na každom úložisku schopnom ukladať zálohy (dir, NFS, CIFS, PBS), načítané cez <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Karty hore ukazujú počty VM a LXC a celkovú veľkosť; pod nimi je jeden riadok na archív s typom, úložiskom, veľkosťou a dátumom. Obnova sa vykonáva vo webovom rozhraní Proxmox.",
     "notificationsTitle": "Oznámenia",
-    "notificationsBody1": "Aktivita oznámení Proxmox: riadky denníka zo služieb Proxmox, ktoré spomínajú oznámenia, e-mail, webhooky alebo upozornenia, ciele v /etc/pve/notifications.cfg a úlohy zálohovania zo zoznamu úloh klastra. Riadky úloh zálohovania umožňujú stiahnuť úplný záznam úlohy. História toho, čo odoslal samotný Monitor, je v Settings → Notifications → Notification history.",
+    "notificationsBody1": "Aktivita oznámení Proxmox: riadky denníka zo služieb Proxmox, ktoré spomínajú oznámenia, e-mail, webhooky alebo upozornenia, ciele v /etc/pve/notifications.cfg a úlohy zálohovania zo zoznamu úloh klastra. Riadky úloh zálohovania umožňujú stiahnuť úplný záznam úlohy. História toho, čo odoslal samotný Monitor, je v Nastavenia → Notifikácie → História upozornení.",
     "notificationsBody2": "Táto karta slúži na kontrolu, čo robí vlastný systém oznámení Proxmoxu. Kanály Monitora sa nastavujú na podrobnej stránke <link>Oznámenia</link>."
   },
   "dataCollected": {
@@ -64,7 +64,7 @@
       {
         "subtab": "Záznamy (živý filter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl</code> s filtrami priority, služby a rozsahu dní uplatnenými na serveri; vyhľadávanie textu prebieha v prehliadači."
+        "source": "Karta načíta <code>/api/logs?since_days=N</code>; filtre úrovne, služby a textu sa uplatňujú v prehliadači. API prijíma aj <code>priority</code> a <code>service</code>, ktoré karta zatiaľ nepoužíva."
       },
       {
         "subtab": "Stiahnuť",

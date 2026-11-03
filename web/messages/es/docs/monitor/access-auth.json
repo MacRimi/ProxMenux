@@ -284,14 +284,14 @@
     "heading": "API tokens (larga duración)",
     "intro": "Las sesiones de navegador caducan tras 24 horas. Para integraciones desatendidas (widgets de Homepage, sensores de Home Assistant, scrapers de Grafana, probes de Uptime Kuma…) generas un <strong>API token</strong> aparte que vive 365 días. El token es un JWT firmado con el mismo secret que el token de sesión, pero su claim <code>token_name</code> facilita rastrearlo y revocarlo individualmente.",
     "imageAlt": "Panel de API tokens mostrando la lista de tokens con nombre, prefijo, fecha de creación y caducidad",
-    "imageCaption": "La lista de API tokens bajo Admin → Security — nombre, prefijo (se muestran los últimos 4 caracteres para identificación), fechas de creación y caducidad, acción de revocar.",
+    "imageCaption": "La lista de API tokens bajo Administración → Seguridad — nombre, prefijo (se muestran los últimos 4 caracteres para identificación), fechas de creación y caducidad, acción de revocar.",
     "generateTitle": "Generar un token",
     "generateIntro": "Desde el panel:",
     "generateSteps": [
-      "Abre la sección <strong>Seguridad → API Tokens</strong>.",
+      "Abre <strong>Administración → Seguridad → Tokens API</strong> y pulsa <strong>Generar nuevo token</strong>.",
       "Escribe un nombre descriptivo (<em>p. ej. \"Home Assistant\"</em>).",
       "Vuelve a introducir tu contraseña. Si el 2FA está activado, también el código actual de 6 dígitos.",
-      "Pulsa <strong>Generar nuevo token</strong> y después <strong>Generar token</strong>. Se muestra <strong>una sola vez</strong>: cópialo al momento."
+      "Pulsa <strong>Generar token</strong>. El token aparece <strong>una sola vez</strong>: cópialo de inmediato."
     ],
     "generateCli": "Desde la línea de comandos:",
     "useTitle": "Usar un token",
@@ -310,7 +310,7 @@
     "intro": "Dos rutas hacia TLS:",
     "items": [
       "<strong>Reverse proxy (recomendado).</strong> Termina TLS en Nginx / Caddy / Traefik y reenvía HTTP en el puerto 8008 al proceso Flask. Snippets más abajo.",
-      "<strong>HTTPS directo en AppImage.</strong> Configura un certificado con <code>POST /api/ssl/configure</code> (interfaz: <strong>Admin → Security → SSL / HTTPS</strong>). HTTPS usa <code>gevent.pywsgi</code> con su manejador estándar; flask-sock gestiona la conexión WebSocket para WSS. Las rutas de los certificados se guardan en la configuración SSL."
+      "<strong>HTTPS directo en AppImage.</strong> Configura un certificado con <code>POST /api/ssl/configure</code> (interfaz: <strong>Administración → Seguridad → SSL/HTTPS</strong>). HTTPS usa <code>gevent.pywsgi</code> con su manejador estándar; flask-sock gestiona la conexión WebSocket para WSS. Las rutas de los certificados se guardan en la configuración SSL."
     ],
     "calloutTitle": "Limitaciones del HTTPS directo",
     "calloutBody": "Monitor puede usar un certificado gestionado por Proxmox o archivos de certificados propios. No emite certificados ACME. Para emitirlos y renovarlos automáticamente, usa ACME de Proxmox o un proxy inverso como Caddy, Traefik o Nginx y asegúrate de cargar los certificados renovados."

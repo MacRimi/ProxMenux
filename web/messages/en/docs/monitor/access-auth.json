@@ -288,10 +288,10 @@
     "generateTitle": "Generate a token",
     "generateIntro": "From the dashboard:",
     "generateSteps": [
-      "Navigate to <strong>the Security tab → API Tokens</strong> section.",
+      "Open <strong>Admin → Security → API Tokens</strong> and click <strong>Generate new token</strong>.",
       "Type a descriptive name (<em>e.g. \"Home Assistant\"</em>).",
       "Re-enter your password. If 2FA is on, also the current 6-digit code.",
-      "Click <strong>Generate new token</strong>, then <strong>Generate token</strong>. The token appears <strong>once</strong> — copy it immediately."
+      "Click <strong>Generate token</strong>. The token appears <strong>once</strong>: copy it immediately."
     ],
     "generateCli": "From the command line:",
     "useTitle": "Use a token",

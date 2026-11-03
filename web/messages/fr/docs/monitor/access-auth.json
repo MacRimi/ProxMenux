@@ -284,14 +284,14 @@
     "heading": "Jetons API de longue durée",
     "intro": "Les sessions expirent après 24 heures. Pour Homepage, Home Assistant, Grafana ou Uptime Kuma, créez un <strong>jeton API</strong> valable 365 jours. Ce JWT utilise le même secret de signature ; le champ <code>token_name</code> permet de le suivre et de le révoquer individuellement.",
     "imageAlt": "Panneau de jetons API montrant la liste de jetons avec nom, préfixe, date de création et expiration",
-    "imageCaption": "Liste des jetons d’API sous Admin → Sécurité : nom, préfixe avec quatre derniers caractères d’identification, dates de création et d’expiration, action de révocation.",
+    "imageCaption": "Liste des jetons d’API sous Administrateur → Sécurité : nom, préfixe avec quatre derniers caractères d’identification, dates de création et d’expiration, action de révocation.",
     "generateTitle": "Générer un jeton",
     "generateIntro": "Dans le tableau de bord:",
     "generateSteps": [
-      "Ouvrez <strong>l’onglet Sécurité → section Jetons d’API</strong>.",
+      "Ouvrez <strong>Administrateur → Sécurité → Jetons API</strong> et cliquez sur <strong>Générer un nouveau jeton</strong>.",
       "Tapez un nom descriptif (<em>p.ex. \"Home Assistant\"</em>).",
       "Entrez de nouveau votre mot de passe. Si 2FA est activé, aussi le code à chiffres 6 actuel.",
-      "Cliquez sur <strong>Générer un nouveau jeton</strong>, puis sur <strong>Générer le jeton</strong>. Il s’affiche <strong>une seule fois</strong> : copiez-le immédiatement."
+      "Cliquez sur <strong>Générer un jeton</strong>. Le jeton n’apparaît <strong>qu’une fois</strong> : copiez-le immédiatement."
     ],
     "generateCli": "Depuis la ligne de commande :",
     "useTitle": "Utiliser un jeton",
@@ -310,7 +310,7 @@
     "intro": "Deux chemins vers TLS:",
     "items": [
       "<strong>Proxy inverse recommandé.</strong> Terminez TLS sur Nginx / Caddy / Traefik et transmettez HTTP au processus Flask sur le port 8008. Exemples ci-dessous.",
-      "<strong>HTTPS direct dans l’AppImage.</strong> Configurez un certificat via <code>POST /api/ssl/configure</code> (interface : <strong>Admin → Sécurité → SSL / HTTPS</strong>). HTTPS utilise <code>gevent.pywsgi</code> avec son gestionnaire standard ; flask-sock gère WebSocket pour WSS. Les chemins des certificats sont enregistrés dans la configuration SSL."
+      "<strong>HTTPS direct dans l’AppImage.</strong> Configurez un certificat via <code>POST /api/ssl/configure</code> (interface : <strong>Administrateur → Sécurité → SSL / HTTPS</strong>). HTTPS utilise <code>gevent.pywsgi</code> avec son gestionnaire standard ; flask-sock gère WebSocket pour WSS. Les chemins des certificats sont enregistrés dans la configuration SSL."
     ],
     "calloutTitle": "Limites directes de HTTPS",
     "calloutBody": "Monitor peut utiliser un certificat géré par Proxmox ou des fichiers personnalisés. Il n’émet pas lui-même de certificats ACME. Pour l’émission et le renouvellement automatiques, utilisez Proxmox ACME ou un proxy inverse Caddy, Traefik ou Nginx et veillez au chargement des certificats renouvelés."

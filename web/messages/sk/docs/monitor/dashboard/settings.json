@@ -41,7 +41,7 @@
     "heading": "Jednotky siete",
     "imageAlt": "Karta Jednotky siete s výberom zobrazenia na Bajty",
     "imageCaption": "Vyberte bity alebo bajty za sekundu pre všetky sieťové rýchlosti v prehľade.",
-    "body": "Zvoľte, ako sa na paneli zobrazuje sieťová priepustnosť: v <strong>bitoch za sekundu</strong> (Mbps/Gbps) alebo <strong>bajtoch za sekundu</strong> (MB/s/GB/s). Predvolené sú bajty, ako ich uvádza väčšina nástrojov na prenos súborov; bity používajú výrobcovia sieťových kariet a poskytovatelia pri označovaní svojich produktov. Voľba sa ukladá v prehliadači, takže každý prehliadač má vlastnú. Nastavenie platí pre všetky grafy, štítky a pomôcky so sieťovou rýchlosťou a uplatní sa ihneď, bez obnovenia."
+    "body": "Zobrazuje priepustnosť v <strong>bitoch za sekundu</strong> (Mbps/Gbps) alebo <strong>bajtoch za sekundu</strong> (MB/s/GB/s). Predvolené sú bajty. Voľba sa ukladá v prehliadači. Grafy, štítky a pomôcky sa zmenia ihneď bez obnovenia."
   },
   "health": {
     "heading": "Monitor zdravia",
@@ -203,7 +203,7 @@
     "heading": "Kontrola aktualizácií v LXC",
     "imageAlt": "Karta zisťovania aktualizácií LXC s prepínačom hľadania balíkov v spustených kontajneroch Debian, Ubuntu a Alpine",
     "imageCaption": "Prepínač pravidelnej kontroly cez <code>apt list --upgradable</code> / <code>apk list -u</code> v spustených CT. Predvolene zapnutý. Súvisiaci prepínač v Oznámenia → Služby sa zobrazuje pri zapnutej detekcii.",
-    "intro": "Prepínač medzi Prahmi monitora stavu a kartou Oznámenia riadi kontrolu aktualizácií LXC. Zapnutý prejde všetky bežiace CT a spýta sa správcu balíkov v kontajneri na čakajúce aktualizácie; výsledky sa zobrazia v počtoch na karte VMs & LXCs a vstupujú do oznámenia <code>lxc_updates_available</code>. Vypnutý kontrolu úplne zastaví (žiadne volania <code>pct exec</code>) a všetky existujúce záznamy LXC v <code>managed_installs.json</code> sa okamžite odstránia, takže panel aj koncový bod <code>/api/managed-installs</code> prestanú hlásiť stav aktualizácií LXC bez čakania na ďalší 24-hodinový cyklus.",
+    "intro": "Prepínač medzi prahmi monitora stavu a kartou Oznámenia riadi kontrolu aktualizácií LXC. Zapnutý zisťuje čakajúce aktualizácie balíkov v spustených CT; výsledky sa zobrazujú na karte VM a LXC a používajú sa v oznámení <code>lxc_updates_available</code>. Vypnutý zastaví volania <code>pct exec</code> a odstráni záznamy LXC z <code>managed_installs.json</code>; <code>/api/managed-installs</code> prestane hlásiť stav bez čakania na ďalší 24-hodinový cyklus.",
     "whatRunsTitle": "Čo kontrola spúšťa",
     "whatRunsIntro": "Pre každý CT v stave <code>running</code> s podporovaným správcom balíkov:",
     "whatRunsItems": [

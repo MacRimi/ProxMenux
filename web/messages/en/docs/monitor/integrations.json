@@ -20,7 +20,7 @@
     "heading": "Authentication: the one thing every recipe needs",
     "intro": "Most endpoints used by these integrations are authenticated. You have two ways to satisfy that requirement.",
     "optAtitle": "Option A — API token (recommended for integrations)",
-    "optAbody1": "Open the dashboard and go to <strong>Admin → Security → API Tokens</strong>. Click <em>Generate token</em>, give it a name (e.g. <em>homepage</em>, <em>home-assistant</em>, <em>prometheus</em>), and copy the token — it's shown <em>once</em>. Long-lived (one-year expiry by default), individually revocable, and what you should be using for any non-browser client.",
+    "optAbody1": "Open the dashboard and go to <strong>Admin → Security → API Tokens</strong>. Click <em>Generate new token</em>, give it a name (e.g. <em>homepage</em>, <em>home-assistant</em>, <em>prometheus</em>), enter your password (and the 2FA code if enabled), then click <em>Generate token</em> and copy the token: it's shown <em>once</em>. Long-lived (one-year expiry by default), individually revocable, and what you should be using for any non-browser client.",
     "optAbody2": "From that point every request is just:",
     "optBtitle": "Option B — login flow (username + password)",
     "optBbody": "Useful for scripts that authenticate as a human user. The returned token is short-lived; most integrations should prefer Option A.",

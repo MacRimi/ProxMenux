@@ -165,7 +165,7 @@
     },
     "ollama": {
       "heading": "Ollama (local)",
-      "tagline": "Utilise les modèles de votre serveur Ollama. Entièrement local, privé et gratuit à exécuter.",
+      "tagline": "Utilise les modèles du serveur Ollama configuré. Les modèles locaux s’exécutent sur ce serveur ; les modèles cloud transmettent les requêtes à un fournisseur externe. L’exécution locale évite les frais d’API hébergée, mais utilise votre matériel et votre électricité.",
       "items": [
         "Pas de clé API. Définissez le champ <em>Ollama URL</em> sur votre serveur (par défaut <code>http://localhost:11434</code> ou quel que soit l'hôte exécute votre instance Ollama).",
         "Modèles: <strong>non filtré.</strong> Le moniteur lit les modèles que vous avez tirés sur le côté Ollama via <code>ollama pull &lt;model&gt;</code>. Le menu déroulant est peuplé de <code>GET /api/tags</code> sur votre serveur Ollama.",
