@@ -116,6 +116,10 @@
     "unpackerr": [
       "/data"
     ],
+    "airdcpp-webclient": [
+      "/Downloads",
+      "/Share"
+    ],
     "spoolman": [
       "/home/app/.local/share/spoolman"
     ]
