@@ -239,6 +239,26 @@ def recover_untouched(root, journal):
         return False
 
 
+def recover_failed_update(root, journal):
+    """Attempt the guarded rollback after an update/Modify command fails.
+
+    Unlike recovery of an untouched guest, replacement failures may have
+    parked its volumes or removed its root disk. The existing recovery
+    journal validates ownership, configuration and backup before restoring.
+    Stack transactions remain the responsibility of their coordinator.
+    """
+    try:
+        with instances.locked(root):
+            state = json.loads(Path(journal).read_text())
+            if state.get('coordinated') or state.get('phase') in TERMINAL:
+                return False
+            recover(root, Path(journal))
+            return True
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        log(f'automatic update recovery failed: {error}')
+        return False
+
+
 def fit(text):
     """A step line that is rewritten in place must not wrap."""
     width = max(shutil.get_terminal_size((80, 24)).columns - 8, 30)
