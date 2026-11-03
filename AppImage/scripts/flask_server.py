@@ -99,6 +99,7 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
+from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
@@ -13411,6 +13412,7 @@ def api_create_backup(vmid):
                 pass
             unit = f'proxmenux-vzdump-{vmid}-{uuid.uuid4().hex[:8]}'
             out_path = os.path.join(run_dir, f'vzdump-{unit}.out')
+            since = int(time.time()) - 1
             launch = subprocess.run(
                 ['systemd-run', f'--unit={unit}', '--collect', '--quiet',
                  f'--description=ProxMenux backup of {vm_type.upper()} {vmid}',
@@ -13438,7 +13440,21 @@ def api_create_backup(vmid):
                                        capture_output=True, text=True).stdout.strip()
                 if state not in ('active', 'activating'):
                     break
+                # pvesh prints the UPID only once the backup has ended.
+                upid = active_vzdump(node, since)
+                if upid:
+                    break
                 time.sleep(0.3)
+            if upid is None:
+                # A short backup can finish between two reads.
+                try:
+                    with open(out_path, encoding='utf-8', errors='replace') as handle:
+                        buf = handle.read()
+                except OSError:
+                    pass
+                m = upid_re.search(buf)
+                if m:
+                    upid = m.group(0).rstrip(':')
             if upid is None:
                 tail = buf.strip() or 'pvesh exited without producing a UPID'
                 return jsonify({

@@ -24,7 +24,10 @@ class VmBackupJobsWiring(TestCase):
         source = ROUTES.read_text()
         self.assertNotIn('shell=True', source)
         self.assertNotIn('os.system', source)
-        self.assertEqual(source.count('subprocess.run('), 1)
+        # pvesh, and the transient unit a backup started by hand runs in.
+        programs = re.findall(r'subprocess\.run\(\s*\[\s*"([a-z-]+)"', source)
+        self.assertEqual(len(programs), source.count('subprocess.run('))
+        self.assertEqual(set(programs), {'pvesh', 'systemd-run', 'systemctl'})
         self.assertIn('subprocess.run(["pvesh", *args]', source)
 
     def test_the_monitor_ships_and_registers_it(self):
