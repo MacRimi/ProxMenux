@@ -18766,6 +18766,38 @@
       "requires_security_confirmation": false,
       "hidden": true,
       "template_id": "image-ztnet"
+    },
+    {
+      "id": "authelia",
+      "provider": "authelia",
+      "template_family": "curated-profile",
+      "title": "Authelia",
+      "repository": "https://github.com/authelia/authelia",
+      "description": "An open-source authentication and authorization server for protecting web applications. This single-image profile provides a local SQLite database and file notifications; configure your domain, reverse proxy and access rules before protecting other services.",
+      "website": "https://www.authelia.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/authelia.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": "2026-09-17",
+      "main_image": "docker.io/authelia/authelia:4.39.28",
+      "category": "security",
+      "category_label": "Authentication & Security",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/authelia.json",
+      "template": "apps/authelia.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-authelia"
     }
   ],
   "discovery": {
