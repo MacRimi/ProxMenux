@@ -8992,5 +8992,18 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Computer-aided design and drafting in your browser": "CAD och teknisk ritning i webbläsaren",
+  "Presentations and slide decks in your browser": "Presentationer och bildspel i webbläsaren",
+  "Page layout and publishing in your browser": "Sidlayout och publicering i webbläsaren",
+  "Motion graphics and compositing in your browser": "Rörlig grafik och komposition i webbläsaren",
+  "Interface design and prototyping in your browser": "Gränssnittsdesign och prototyper i webbläsaren",
+  "Video editing in your browser": "Videoredigering i webbläsaren",
+  "Spreadsheets in your browser": "Kalkylblad i webbläsaren",
+  "Photo library and RAW development in your browser": "Fotobibliotek och RAW-framkallning i webbläsaren",
+  "Read and edit PDF documents in your browser": "Läs och redigera PDF-dokument i webbläsaren",
+  "Photo editing in your browser": "Fotoredigering i webbläsaren",
+  "Audio recording and mixing in your browser": "Ljudinspelning och mixning i webbläsaren",
+  "Vector illustration in your browser": "Vektorillustration i webbläsaren",
+  "Word processing in your browser": "Ordbehandling i webbläsaren"
 }
