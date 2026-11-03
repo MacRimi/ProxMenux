@@ -624,7 +624,11 @@ def without_public_routes(config, vmid):
 def refuse_high_availability(vmid):
     """Recreating a container that HA manages would race the HA manager, which
     restarts or relocates it in the middle of the replacement."""
-    resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
+    try:
+        answer = run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json')
+    except FileNotFoundError:
+        return  # Not a Proxmox VE node: there is no HA manager to race.
+    resources = json.loads(answer)
     if any(r.get('sid') == f'ct:{vmid}' for r in resources):
         raise ValueError(translate(
             'This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, '
@@ -641,6 +645,9 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
         raise ValueError(translate('Stack members are updated together with their stack'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; the container is not replaced'))
+    if not in_place and not coordinated:
+        # A stack checks its members itself; an in-place edit keeps the container.
+        refuse_high_availability(record['vmid'])
     for key, value in (external_changes(record, config, adopt=not coordinated) if baseline else {}).items():
         section, name = ADOPTABLE[key]
         recorded = deployment.get(section, {}) if section else deployment
@@ -1213,7 +1220,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                                             runtime_settings.file_binds(before))
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
-    refuse_high_availability(vmid)
+    if coordinated:
+        refuse_high_availability(vmid)
     archive = archive.resolve(strict=True)
     check_archive(archive)
     image = image_from_archive(str(archive))
