@@ -432,6 +432,10 @@
     "metabase": "monitoring",
     "kopia": "backup",
     "restic-rest-server": "backup",
-    "netalertx": "monitoring"
+    "netalertx": "monitoring",
+    "kitchenowl": "productivity",
+    "unbound": "adblock",
+    "spoolman": "tools",
+    "zwave-js-ui": "smarthome"
   }
 }

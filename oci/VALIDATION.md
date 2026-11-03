@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-52 of 546 applications in the OCI catalog have been tested for real: 49 in the ProxMenux lab and 3 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+52 of 554 applications in the OCI catalog have been tested for real: 49 in the ProxMenux lab and 3 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 

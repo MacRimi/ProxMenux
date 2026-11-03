@@ -25,6 +25,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or pull request replaces the run in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest

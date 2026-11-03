@@ -116,6 +116,13 @@
     "unpackerr": [
       "/data"
     ],
+    "airdcpp-webclient": [
+      "/Downloads",
+      "/Share"
+    ],
+    "spoolman": [
+      "/home/app/.local/share/spoolman"
+    ],
     "cadcraft": [
       "/storage"
     ],
@@ -157,6 +164,9 @@
     ]
   },
   "sizes": {
+    "krusader": {
+      "/config": 4
+    },
     "sharecovex": {
       "/config": 1
     }
