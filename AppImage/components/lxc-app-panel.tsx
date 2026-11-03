@@ -391,32 +391,34 @@ const EMPTY_APP: AppConfig = {
   logo_url: "",
 }
 
-// selfh.st publishes a `-light` variant of the logos that are dark, for dark
-// backgrounds. These two ship a light logo by default, so the light theme
-// takes their `-dark` variant.
-const SELFHST_LIGHT_BY_DEFAULT = new Set(["frigate", "portainer"])
-
-function selfhstThemeLogos(src: string) {
-  const match = src.match(/^(https:\/\/cdn\.jsdelivr\.net\/gh\/selfhst\/icons@[^/]+\/webp\/)([a-z0-9-]+?)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/i)
-  if (!match) return null
-  const [, base, name] = match
-  return {
-    lightTheme: `${base}${name}${SELFHST_LIGHT_BY_DEFAULT.has(name.toLowerCase()) ? "-dark" : ""}.webp`,
-    darkTheme: `${base}${name}-light.webp`,
-  }
+const SELFHST_WEBP_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp"
+const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: string }> = {
+  frigate: {
+    lightTheme: `${SELFHST_WEBP_BASE}/frigate-dark.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/frigate-light.webp`,
+  },
+  "llama-cpp": {
+    lightTheme: `${SELFHST_WEBP_BASE}/llama-cpp.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/llama-cpp-light.webp`,
+  },
+  portainer: {
+    lightTheme: `${SELFHST_WEBP_BASE}/portainer-dark.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/portainer-light.webp`,
+  },
+  tailscale: {
+    lightTheme: `${SELFHST_WEBP_BASE}/tailscale.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/tailscale-light.webp`,
+  },
+  vaultwarden: {
+    lightTheme: `${SELFHST_WEBP_BASE}/vaultwarden.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/vaultwarden-light.webp`,
+  },
 }
 
-// A logo without the variant keeps the recorded one.
-function FallbackLogo({ src, fallback, className }: { src: string; fallback: string; className: string }) {
-  const [failed, setFailed] = useState(false)
-  useEffect(() => setFailed(false), [src])
-  return (
-    <img src={failed ? fallback : src} alt="" className={className}
-         onError={(e) => {
-           if (!failed && fallback !== src) setFailed(true)
-           else e.currentTarget.style.display = "none"
-         }} />
-  )
+function selfhstThemeLogos(src: string) {
+  if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
+  const match = src.toLowerCase().match(/\/(frigate|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 
 const LOCAL_LOGO_CACHE_PATH = /^\/api\/vms\/[1-9]\d*\/apps\/logo-cache\/[a-f0-9]{32}$/
@@ -462,8 +464,8 @@ export function ThemeAwareLogo({ src, className }: { src: string; className: str
   }
   return (
     <>
-      <FallbackLogo src={themed.lightTheme} fallback={src} className={`${className} block dark:hidden`} />
-      <FallbackLogo src={themed.darkTheme} fallback={src} className={`${className} hidden dark:block`} />
+      <img src={themed.lightTheme} alt="" className={`${className} block dark:hidden`} onError={hideBroken} />
+      <img src={themed.darkTheme} alt="" className={`${className} hidden dark:block`} onError={hideBroken} />
     </>
   )
 }
