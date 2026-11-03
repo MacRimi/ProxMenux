@@ -51,7 +51,7 @@
     "intro": "Obidva smery prechádzajú rovnakým inštalačným programom — <strong>nie sú</strong> špeciálnymi postupmi odinštalovania a preinštalovania. Každý smer jednoducho spúšťa vlastný inštalačný program kanála, ktorý je navrhnutý tak, aby bol idempotentný a bezpečný na opätovné spustenie cez existujúcu inštaláciu. Praktické dôsledky:",
     "items": [
       "Existujúca konfigurácia, prihlásenie do ProxMenux Monitor (<code>auth.json</code>), kanály oznámení, register úprav po inštalácii a vlastné prahové hodnoty zostávajú nezmenené. Prepnutie kanála vymení iba strom skriptov a binárny AppImage.",
-      "Inštalátor počas prepnutia reštartuje službu Monitor, takže Monitor, ktorý ste deaktivovali, sa spustí znova (pri štarte systému zostane vypnutý). V prípade potreby ho v Nastaveniach deaktivujte znova.",
+      "Inštalátor počas prepnutia reštartuje službu Monitor, takže Monitor, ktorý ste deaktivovali, sa spustí znova. V prípade potreby ho v Nastaveniach deaktivujte znova.",
       "Súbor <code>auth.json</code>, tokeny API a tajomstvo JWT ProxMenux Monitor sa pri zmene kanála zachovajú. Relácie sa neodhlásia.",
       "Kanály môžete prepínať ľubovoľne často; dialóg vždy prijme zmenu a znova spustí inštalátor. Reštart Proxmoxu nie je potrebný.",
       "Prepnutie kanála nahrádza skripty ProxMenux a nemožno ho vykonať v termináli Monitora v prehliadači: PTY by sa počas aktualizácie ukončil a dialóg by uviazol. V tomto termináli sa namiesto toho zobrazí informačné okno s oficiálnym jednoriadkovým príkazom pre zvolený kanál. Spustite ho cez SSH alebo konzolu hostiteľa Proxmox."

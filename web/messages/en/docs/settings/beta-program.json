@@ -51,7 +51,7 @@
     "intro": "Both directions go through the same installer — they are <strong>not</strong> special-cased uninstall + reinstall flows. Each direction simply runs the channel's own installer, which is designed to be idempotent and safe to re-execute over an existing install. Practical consequences:",
     "items": [
       "Your existing config, ProxMenux Monitor login (<code>auth.json</code>), notification channels, post-install registry, custom thresholds — none of those are touched. The channel switch only swaps the script tree and the binary AppImage.",
-      "The installer restarts the Monitor service during the switch, so a Monitor you had deactivated runs again (it stays disabled at boot). Deactivate it again from Settings if needed.",
+      "The installer restarts the Monitor service during the switch, so a Monitor you had deactivated runs again. Deactivate it again from Settings if needed.",
       "ProxMenux Monitor <code>auth.json</code>, API tokens and the JWT secret are preserved across channel changes. Sessions don't get logged out.",
       "You can flip channels as many times as you like — the dialog will accept it every time and rerun the installer. No restart of Proxmox is required.",
       "The channel switch installer replaces ProxMenux's own script tree, so it cannot run inside the Monitor's browser terminal (that PTY would be torn down mid-update and leave the dialog stranded). If you launch the option from there, the confirmation is replaced by an informational msgbox showing the canonical one-line installer for the target channel; run that command from an SSH session or the Proxmox host console."

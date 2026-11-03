@@ -51,7 +51,7 @@
     "intro": "Ambas direcciones pasan por el mismo instalador — <strong>no</strong> son flujos especiales de desinstalación + reinstalación. Cada dirección simplemente ejecuta el instalador propio del canal, que está diseñado para ser idempotente y seguro de reejecutar sobre una instalación existente. Consecuencias prácticas:",
     "items": [
       "Tu configuración existente, login de ProxMenux Monitor (<code>auth.json</code>), canales de notificación, registro post-instalación, umbrales personalizados — nada de eso se toca. El cambio de canal solo intercambia el árbol de scripts y el AppImage binario.",
-      "El instalador reinicia el servicio Monitor durante el cambio, así que un Monitor que habías desactivado vuelve a ejecutarse (sigue deshabilitado en el arranque). Desactívalo de nuevo desde Ajustes si hace falta.",
+      "El instalador reinicia el servicio Monitor durante el cambio, así que un Monitor que habías desactivado vuelve a ejecutarse. Desactívalo de nuevo desde Ajustes si hace falta.",
       "El <code>auth.json</code>, los tokens de API y el secreto JWT de ProxMenux Monitor se preservan entre cambios de canal. Las sesiones no se cierran.",
       "Puedes saltar de canal tantas veces como quieras — el diálogo lo aceptará cada vez y volverá a ejecutar el instalador. No hace falta reiniciar Proxmox.",
       "El instalador de cambio de canal sustituye el árbol de scripts de ProxMenux, por lo que no puede ejecutarse desde el terminal del navegador de Monitor: la PTY se cerraría a mitad de la actualización y dejaría el diálogo bloqueado. Si lo abres desde allí, aparece un cuadro informativo con el comando oficial de una línea del canal elegido. Ejecútalo desde SSH o la consola del host Proxmox."

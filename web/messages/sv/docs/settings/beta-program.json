@@ -51,7 +51,7 @@
     "intro": "Båda riktningarna går igenom samma installationsprogram – de är <strong>inte</strong> specialcase avinstallations- + ominstallationsflöden. Varje riktning kör helt enkelt kanalens eget installationsprogram, som är designat för att vara idempotent och säkert att köra om över en befintlig installation. Praktiska konsekvenser:",
     "items": [
       "Din befintliga konfig, ProxMenux Monitor inloggning (<code>auth.json</code>), meddelandekanaler, post-install registret, anpassade trösklar - ingen av dem berörs. Kanalbrytaren byter bara skriptträdet och den binära AppImage.",
-      "Installationsprogrammet startar om Monitor-tjänsten under bytet, så en Monitor som du hade inaktiverat körs igen (den förblir inaktiverad vid uppstart). Inaktivera den igen i Inställningar vid behov.",
+      "Installationsprogrammet startar om Monitor-tjänsten under bytet, så en Monitor som du hade inaktiverat körs igen. Inaktivera den igen i Inställningar vid behov.",
       "ProxMenux Monitors <code>auth.json</code>, API-token och JWT-hemlighet bevaras vid kanalbyten. Sessionerna loggas inte ut.",
       "Du kan vända kanaler så många gånger du vill - dialogrutan accepterar det varje gång och kör installationsprogrammet. Ingen omstart av Proxmox krävs.",
       "Kanalbytet ersätter ProxMenux-skripten och kan inte köras i Monitors webbläsarterminal: PTY:n skulle stängas mitt i uppdateringen och lämna dialogen avbruten. Där visas i stället ett informationsfönster med det officiella enradsinstallationskommandot för målkanalen. Kör det via SSH eller Proxmox-värdens konsol."

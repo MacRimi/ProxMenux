@@ -53,7 +53,7 @@
     "calloutBody": "Möchten Sie neue Funktionen vor der offiziellen Veröffentlichung testen und die endgültige Version mitgestalten? Das Beta-Programm von ProxMenux bietet frühzeitigen Zugriff auf Neuerungen einschließlich aktueller Monitor-Builds aus dem Zweig <code>develop</code>. Beta-Versionen können Fehler oder unvollständige Funktionen enthalten. Ihre Rückmeldungen helfen, diese vor der stabilen Veröffentlichung zu beheben.",
     "intro": "Installieren Sie die Beta-Version anstelle der stabilen mit:",
     "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh)\"",
-    "outro": "Die Beta ist freiwillig und muss ausdrücklich über den Beta-Installer installiert werden. Sobald eine stabile Version erscheint, bietet der nächste Start von <code>menu</code> sie mit der regulären Update-Abfrage an. Zum Verlassen des Beta-Kanals wählen Sie unter Einstellungen <betalink>Release-Kanal wechseln</betalink> und dann Stable."
+    "outro": "Die Beta ist freiwillig und muss ausdrücklich über den Beta-Installer installiert werden. Sobald eine stabile Version erscheint, bietet der nächste Start von <code>menu</code> sie mit der regulären Update-Abfrage an. Zum Verlassen des Beta-Kanals wählen Sie unter Einstellungen <betalink>Veröffentlichungskanal ändern</betalink> und dann Stable."
   },
   "updating": {
     "heading": "Aktualisierung",
