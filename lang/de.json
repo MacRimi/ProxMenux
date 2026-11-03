@@ -411,6 +411,7 @@
   "After the reboot, you will only be able to access the Proxmox host via:": "Nach dem Neustart können Sie nur noch auf den Proxmox-Host zugreifen über:",
   "After this LXC → VM switch, reboot the host so the new binding state is applied cleanly.": "Starten Sie nach diesem Wechsel von LXC → VM den Host neu, damit der neue Bindungsstatus sauber angewendet wird.",
   "Agentless monitoring and observability platform.": "Agentenlose Plattform für Monitoring und Observability.",
+  "AirDC++ administrator": "AirDC++-Administrator",
   "Airsonic Advanced web interface": "Airsonic Advanced Web-Schnittstelle",
   "Airsonic-advanced is a free, web-based media streamer, providing ubiquitious access to your music. Use it to share your music with friends, or to listen to your own music while at work. You can stream to multiple players simultaneously, for instance to one player in your kitchen and another in your living room.": "Airsonic-advanced ist ein kostenloser, webbasierter Medienstreamer, der ubiquitious Zugang zu Ihrer Musik bietet. Verwenden Sie es, um Ihre Musik mit Freunden zu teilen oder Ihre eigene Musik während der Arbeit zu hören. Sie können zu mehreren Spielern gleichzeitig streamen, zum Beispiel zu einem Spieler in Ihrer Küche und einem anderen in Ihrem Wohnzimmer.",
   "Aliases added to .bashrc": "Aliase wurden zu .bashrc hinzugefügt",
@@ -1931,6 +1932,7 @@
   "Dgraph": "Dgraph",
   "Diff: current system vs backup (--- system  +++ backup)": "Unterschied: aktuelles System vs. Backup (--- System +++ Backup)",
   "Different host. Backup from:": "Anderer Gastgeber. Backup von:",
+  "Direct Connect file sharing with a web interface": "Direct-Connect-Dateifreigabe mit Weboberfläche",
   "Direct conversion completed for container": "Direkte Konvertierung für Container abgeschlossen",
   "Directory Exists": "Verzeichnis existiert",
   "Directory Not Empty": "Verzeichnis nicht leer",
@@ -8979,7 +8981,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
-  "AirDC++ administrator": "AirDC++-Administrator",
-  "Direct Connect file sharing with a web interface": "Direct-Connect-Dateifreigabe mit Weboberfläche"
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
 }
