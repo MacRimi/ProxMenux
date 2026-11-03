@@ -128,7 +128,7 @@
         "body": "Le dépôt Enterprise est activé sans abonnement actif. Avant <code>apt-get update</code>, le script propose le passage à no-subscription. Si vous avez refusé, relancez la mise à jour et acceptez, ou désactivez Enterprise dans <em>Node → Updates → Repositories</em> et activez no-subscription."
       },
       {
-        "title": "dist-upgrade reste bloqué sur \"Configuring grub-pc\"",
+        "title": "full-upgrade reste bloqué sur \"Configuring grub-pc\"",
         "body": "Si une question interactive GRUB est visible, elle demande les appareils où installer le chargeur de démarrage. L’option <code>--force-confold</code> concerne les fichiers de configuration, pas ce choix d’appareils. Sélectionnez les disques de démarrage appropriés avec <kbd>Tab</kbd> + <kbd>Space</kbd>, puis OK. Vous pouvez configurer ce choix à l’avance avec <code>dpkg-reconfigure grub-pc</code>."
       },
       {

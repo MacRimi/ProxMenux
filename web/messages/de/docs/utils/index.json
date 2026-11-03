@@ -38,7 +38,7 @@
       "body": "Halten Sie den Host in gutem Zustand: mit CLI-Werkzeugen, regelmäßigen Aktualisierungen und dem Versionsupgrade, wenn es ansteht.",
       "bullets": [
         "Installationsprogramm für Systemwerkzeuge (25 CLI-Werkzeuge)",
-        "Proxmox-Systemaktualisierung (apt + dist-upgrade)",
+        "Proxmox-Systemaktualisierung (apt + full-upgrade)",
         "Versionsupgrade PVE 8 → PVE 9"
       ]
     },
@@ -58,11 +58,11 @@
   },
   "isoSection": {
     "heading": "ISO-Erstellung",
-    "body": "Erstellen Sie direkt auf dem Proxmox-Host eine neue, aktuelle Windows-Installations-ISO. Das Skript automatisiert den gesamten UUP-Dump-Ablauf: Installation der Abhängigkeiten (aria2c, cabextract, wimlib-imagex, …), paralleler Download der Aktualisierungsdateien mit aria2 und Umwandlung in eine bootfähige ISO. Diese wird unter <code>/var/lib/vz/template/iso</code> gespeichert und kann einer VM zugewiesen werden.",
+    "body": "Erstellen Sie direkt auf dem Proxmox-Host eine neue, aktuelle Windows-Installations-ISO. Das Skript automatisiert den gesamten UUP-Dump-Ablauf: Installation der Abhängigkeiten (aria2c, cabextract, wimlib-imagex, …), paralleler Download der Aktualisierungsdateien mit aria2 und Umwandlung in eine bootfähige ISO. Diese wird im erkannten Proxmox-ISO-Speicher gespeichert (Ausweichziel <code>/var/lib/vz/template/iso</code>) und kann einer VM zugewiesen werden.",
     "options": [
       {
         "title": "UUP-Dump-ISO-Erstellung",
-        "description": "Erstellen Sie eine aktuelle Windows-Installations-ISO über einen Freigabelink von UUP Dump. Abhängigkeiten, Download und Umwandlung werden vollständig automatisch abgewickelt. Die fertige ISO wird unter /var/lib/vz/template/iso für die VM-Erstellung gespeichert.",
+        "description": "Erstellen Sie eine aktuelle Windows-Installations-ISO über einen Freigabelink von UUP Dump. Abhängigkeiten, Download und Umwandlung werden vollständig automatisch abgewickelt. Die fertige ISO wird im erkannten Proxmox-ISO-Speicher für die VM-Erstellung gespeichert.",
         "href": "/docs/utils/UUp-Dump-ISO-Creator"
       }
     ]
@@ -78,7 +78,7 @@
       },
       {
         "title": "Proxmox-Systemupdate",
-        "description": "Repository-Prüfung + apt update + apt dist-upgrade mit Rückfrage vor dem Neustart. Erkennt die PVE-Hauptversion (8 oder 9), behält die konfigurierten Repositories bei und fragt nach, bevor ein Host ohne Abonnement auf das no-subscription-Repository umgestellt wird. Anschließend wird autoremove ausgeführt.",
+        "description": "Repository-Prüfung + apt update + apt full-upgrade mit Rückfrage vor dem Neustart. Erkennt die PVE-Hauptversion (8 oder 9), behält die konfigurierten Repositories bei und fragt nach, bevor ein Host ohne Abonnement auf das no-subscription-Repository umgestellt wird. Anschließend wird autoremove ausgeführt.",
         "href": "/docs/utils/system-update"
       },
       {
