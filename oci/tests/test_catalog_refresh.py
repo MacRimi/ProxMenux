@@ -97,6 +97,18 @@ class CatalogRefreshTests(unittest.TestCase):
         status.recipes = refresh.visible_recipes(catalog)
         self.assertIn("New applications since your last visit: 0", status.describe())
 
+    def test_compatibility_gate_uses_effective_menu_visibility(self):
+        self.add_app()
+        self.future_profile("sample-added")
+        index = json.loads(self.files["index.json"])
+        added = next(x for x in index["applications"] if x["id"] == "sample-added")
+        added.update(hidden=True, automatic_install_candidate=False)
+        self.files["index.json"] = json.dumps(index).encode()
+        # The app template makes this stale index entry visible/installable;
+        # use the same rule as Catalog.load_index(), not the raw index flags.
+        self.sync()
+        self.assertNotIn("sample-added", refresh.visible_recipes(Catalog(self.root)))
+
     def test_incompatible_existing_app_retains_complete_previous_contract(self):
         self.sync()
         old = Catalog(self.root).compose(self.item["id"])

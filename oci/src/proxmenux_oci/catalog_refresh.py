@@ -167,11 +167,13 @@ def filter_compatible_recipes(root, directory, previous):
     candidate = Catalog(Path(root), catalog_dir=directory)
     old = Catalog(Path(root), catalog_dir=previous)
     old_items = {item["id"]: item for item in old.load_index()["applications"]}
+    effective_items = {item["id"]: item for item in candidate.load_index()["applications"]}
     index = json.loads((directory / "index.json").read_text())
     accepted = []
     old_fingerprints = None
     for item in index["applications"]:
-        if item.get("hidden") or not item.get("automatic_install_candidate"):
+        effective = effective_items[item["id"]]
+        if effective.get("hidden") or not effective.get("automatic_install_candidate"):
             accepted.append(item)
             continue
         template = candidate._compose_item(item)
