@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import weakref
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,8 +60,10 @@ class Catalog:
     def __init__(self, root: Path, source: GitHubSource | None = None, *,
                  catalog_dir: Path | None = None) -> None:
         self.root = root
-        from .catalog_refresh import current_catalog
-        self.catalog_dir = catalog_dir if catalog_dir is not None else current_catalog(root)
+        from .catalog_refresh import pin_catalog
+        self.catalog_dir, lease = pin_catalog(root, catalog_dir)
+        if lease is not None:
+            self._snapshot_lease = weakref.finalize(self, lease.close)
         self._include_local = catalog_dir is None and self.catalog_dir != root / "catalog"
         self.local_app_ids: set[str] = set()
         self.apps_dir = self.catalog_dir / "apps"
@@ -825,6 +828,9 @@ class Catalog:
         if not path.exists():
             raise ConversionError(f"No template is available for '{app_id}'")
         template = json.loads(path.read_text(encoding="utf-8"))
+        if item.get("_retained_recipe"):
+            self.validate(template, required=False)
+            return template
         self._apply_overlay(item["id"], template)
         self._apply_category(item["id"], template["catalog_ui"])
         self._apply_volume_policy(item["id"], template["container_contract"],

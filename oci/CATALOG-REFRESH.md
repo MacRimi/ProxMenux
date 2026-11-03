@@ -9,7 +9,12 @@ a connection failure. Selecting it during a refresh does not start a second work
 Manual refresh bypasses the conditional check and verifies the complete manifest,
 allowing it to repair damaged cached files even when the upstream revision has not
 changed. A repaired snapshot gets a separate immutable directory so existing
-readers retain their original snapshot until they return to the menu.
+readers retain their original snapshot until they return to the menu. Each
+Catalog reader holds an OS file-lock lease. Every worker run, including unchanged
+checks and failed downloads, prunes snapshots that are neither a channel's active
+snapshot nor leased by an open reader. Reader exit or a crash releases its lease
+automatically. Snapshot selection, publication and pruning share a short local
+lock; opening a menu never waits for the worker's network lock.
 
 The worker checks the latest commit affecting `oci/catalog` in the official
 MacRimi/ProxMenux repository. GitHub's ETag avoids repeated transfers. When the
@@ -45,6 +50,16 @@ are counted, using the same rule as the existing menu. A downloaded catalog is
 acknowledged only after the menu displays it. Exiting during a download therefore
 preserves its news for the next visit. The new-app count remains visible throughout
 the current visit and becomes zero on the next visit after acknowledgement.
+
+Downloaded recipes are also checked against the top-level `installer_profile`
+keys used by the engine's bundled apps, curated recipes and overlays. A new app
+using an unknown key is silently excluded; an existing app retains its previous
+compatible, fully composed recipe and its matching settings. Hidden entries do
+not contribute to the available/new counters, and retaining an old recipe does
+not count it as an update. When a ProxMenux update adds support for that key, the
+next background check re-evaluates the catalog even at the same remote revision.
+This is a conservative key-presence gate, not validation of new values or nested
+options of an already known key. Changes in meaning still require `engine_api`.
 
 Catalog maintainers must increase `catalog/compatibility.json`'s `engine_api` when
 recipes require incompatible runtime capabilities. The consumer currently

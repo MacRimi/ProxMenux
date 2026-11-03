@@ -1,5 +1,6 @@
 """Catalog delivery is atomic, offline-safe, and never acknowledges unseen apps."""
 import json
+import gc
 import errno
 import http.server
 import itertools
@@ -73,6 +74,155 @@ class CatalogRefreshTests(unittest.TestCase):
         index = json.loads(self.files["index.json"])
         index["applications"].append(item)
         self.files["index.json"] = json.dumps(index).encode()
+
+    def future_profile(self, app_id):
+        index = json.loads(self.files["index.json"])
+        item = next(x for x in index["applications"] if x["id"] == app_id)
+        path = item["curated_path"].removeprefix("catalog/")
+        recipe = json.loads(self.files[path])
+        recipe.setdefault("proxmox", {}).setdefault("installer_profile", {})["future_engine_key"] = True
+        self.files[path] = json.dumps(recipe).encode()
+
+    def test_new_unknown_profile_key_is_silent_and_not_counted(self):
+        self.sync()
+        baseline = Catalog(self.root)
+        status = refresh.CatalogRefresh(self.root, baseline)
+        self.revision = "b" * 40
+        self.add_app()
+        self.future_profile("sample-added")
+        self.assertTrue(self.sync())
+        catalog = Catalog(self.root)
+        self.assertNotIn("sample-added", refresh.visible_recipes(catalog))
+        self.assertEqual(set(refresh.visible_recipes(catalog)), set(status.recipes))
+        status.recipes = refresh.visible_recipes(catalog)
+        self.assertIn("New applications since your last visit: 0", status.describe())
+
+    def test_incompatible_existing_app_retains_complete_previous_contract(self):
+        self.sync()
+        old = Catalog(self.root).compose(self.item["id"])
+        old_visible = refresh.visible_recipes(Catalog(self.root))
+        self.revision = "b" * 40
+        self.future_profile(self.item["id"])
+        # A new policy must not mutate the retained contract.
+        policy = json.loads(self.files["volume-policy.json"])
+        policy["shared_paths"] = [v["container_path"] for v in old["container_contract"].get("volumes", [])]
+        self.files["volume-policy.json"] = json.dumps(policy).encode()
+        self.sync()
+        self.assertEqual(Catalog(self.root).compose(self.item["id"]), old)
+        self.assertEqual(refresh.visible_recipes(Catalog(self.root)), old_visible)
+        # A later incompatible revision still retains the same original contract.
+        self.revision = "c" * 40
+        self.sync()
+        self.assertEqual(Catalog(self.root).compose(self.item["id"]), old)
+
+    def test_engine_capability_update_rechecks_same_revision_without_etag(self):
+        self.add_app()
+        self.future_profile("sample-added")
+        self.sync()
+        self.assertNotIn("sample-added", refresh.visible_recipes(Catalog(self.root)))
+        bundled = self.root / "catalog" / self.item["curated_path"].removeprefix("catalog/")
+        value = json.loads(bundled.read_text())
+        value.setdefault("proxmox", {}).setdefault("installer_profile", {})["future_engine_key"] = True
+        bundled.write_text(json.dumps(value))
+        self.requests.clear()
+        self.assertTrue(self.sync())
+        self.assertIsNone(self.requests[0][1])
+        self.assertIn("sample-added", refresh.visible_recipes(Catalog(self.root)))
+
+    def test_known_profile_key_accepts_new_values(self):
+        self.add_app()
+        path = "curated/sample-added.json"
+        value = json.loads(self.files[path])
+        self.assertIn("completion_notes", refresh.supported_profile_keys(self.root))
+        value["proxmox"]["installer_profile"]["completion_notes"].append("A new supported setting")
+        self.files[path] = json.dumps(value).encode()
+        self.sync()
+        self.assertIn("sample-added", refresh.visible_recipes(Catalog(self.root)))
+
+    def test_all_incompatible_apps_can_produce_empty_visible_catalog(self):
+        self.future_profile(self.item["id"])
+        # No compatible old recipe exists on this host.
+        path = self.root / "catalog" / self.item["curated_path"].removeprefix("catalog/")
+        value = json.loads(path.read_text())
+        value["proxmox"]["installer_profile"].pop("future_engine_key", None)
+        # Use a new ID instead of retaining the bundled application.
+        self.add_app()
+        self.future_profile("sample-added")
+        index = json.loads(self.files["index.json"])
+        index["applications"] = [x for x in index["applications"] if x["id"] == "sample-added"]
+        self.files["index.json"] = json.dumps(index).encode()
+        self.sync()
+        self.assertNotEqual(refresh.current_catalog(self.root), self.root / "catalog")
+        self.assertEqual(refresh.visible_recipes(Catalog(self.root)), {})
+
+    def test_pruning_preserves_active_and_leased_snapshots_then_reclaims_reader(self):
+        self.sync()
+        old = Catalog(self.root)
+        old_directory = old.catalog_dir
+        self.revision = "b" * 40
+        self.add_app()
+        self.sync()
+        refresh.prune_snapshots(self.root)
+        self.assertTrue(old_directory.exists())
+        self.assertEqual(old.compose(self.item["id"])["id"], self.item["template_id"])
+        del old
+        gc.collect()
+        refresh.prune_snapshots(self.root)
+        self.assertFalse(old_directory.exists())
+        self.assertTrue(refresh.current_catalog(self.root).exists())
+
+    def test_pruning_preserves_both_channels_and_unlinks_orphan_lease(self):
+        self.sync()
+        main = refresh.current_catalog(self.root, "main")
+        self.revision = "b" * 40
+        refresh.synchronize(self.root, "develop", self.fetch)
+        orphan = refresh.cache_root(self.root) / "snapshots" / ("c" * 40)
+        orphan.mkdir()
+        refresh.prune_snapshots(self.root)
+        self.assertTrue(main.exists())
+        self.assertTrue(refresh.current_catalog(self.root, "develop").exists())
+        self.assertFalse(orphan.exists())
+        self.assertFalse((refresh.cache_root(self.root) / "leases" / orphan.name).exists())
+
+    def test_worker_prunes_even_when_no_change_or_network_failure(self):
+        self.sync()
+        for error in (None, OSError("offline")):
+            orphan = refresh.cache_root(self.root) / "snapshots" / ("c" * 40)
+            orphan.mkdir()
+            with patch.object(refresh, "synchronize", side_effect=error, return_value=False):
+                refresh.worker(self.root, "main")
+            self.assertFalse(orphan.exists())
+
+    def test_reader_process_exit_releases_lease_without_pid_cleanup(self):
+        import subprocess
+        self.sync()
+        directory = refresh.current_catalog(self.root)
+        code = ("import fcntl,sys,time; "
+                "f=open(sys.argv[1], 'a'); fcntl.flock(f,fcntl.LOCK_SH); "
+                "print('ready',flush=True); time.sleep(30)")
+        leases = refresh.cache_root(self.root) / "leases"
+        leases.mkdir(exist_ok=True)
+        child = subprocess.Popen([sys.executable, "-c", code, str(leases / directory.name)],
+                                 stdout=subprocess.PIPE, text=True)
+        self.addCleanup(child.stdout.close)
+        self.addCleanup(lambda: child.poll() is None and child.kill())
+        self.assertEqual(child.stdout.readline().strip(), "ready")
+        self.revision = "b" * 40
+        self.sync()
+        refresh.prune_snapshots(self.root)
+        self.assertTrue(directory.exists())
+        child.kill()
+        child.wait(timeout=3)
+        refresh.prune_snapshots(self.root)
+        self.assertFalse(directory.exists())
+
+    def test_menu_pin_does_not_wait_for_network_worker_lock(self):
+        self.sync()
+        lock = (refresh.cache_root(self.root) / "refresh.lock").open("a")
+        self.addCleanup(lock.close)
+        refresh.fcntl.flock(lock, refresh.fcntl.LOCK_EX)
+        catalog = Catalog(self.root)
+        self.assertEqual(catalog.compose(self.item["id"])["id"], self.item["template_id"])
 
     def test_complete_catalog_is_selected_atomically_without_redownloading_unchanged_files(self):
         self.assertTrue(self.sync())

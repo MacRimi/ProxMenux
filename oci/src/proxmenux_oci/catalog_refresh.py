@@ -7,6 +7,7 @@ never downloaded. An installed engine always retains its bundled fallback.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 import fcntl
 import hashlib
@@ -95,6 +96,113 @@ def schema_hash(root):
     return hashlib.sha256((Path(root) / "schemas/oci-template.schema.json").read_bytes()).hexdigest()
 
 
+def bundle_hash(root):
+    # Cheap menu-time engine-update detection; no scan of the bundled recipes.
+    return hashlib.sha256((Path(root) / "catalog/index.json").read_bytes()).hexdigest()
+
+
+@contextmanager
+def snapshot_lock(root):
+    cache = cache_root(root)
+    cache.mkdir(parents=True, exist_ok=True)
+    with (cache / "snapshots.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def pin_catalog(root, directory=None):
+    """Select and lease atomically against pruning; no network/worker wait."""
+    explicit = directory
+    directory = Path(directory) if directory is not None else current_catalog(root)
+    if (directory.parent != cache_root(root) / "snapshots"
+            or not re.fullmatch(r"[0-9a-f]{40}(?:-[0-9a-f]{12})?", directory.name)):
+        return directory, None
+    with snapshot_lock(root):
+        directory = Path(explicit) if explicit is not None else current_catalog(root)
+        snapshots = cache_root(root) / "snapshots"
+        if directory.parent != snapshots or not directory.is_dir():
+            return directory, None
+        leases = cache_root(root) / "leases"
+        leases.mkdir(exist_ok=True)
+        lease = (leases / directory.name).open("a")
+        fcntl.flock(lease, fcntl.LOCK_SH)
+        return directory, lease
+
+
+def prune_snapshots(root):
+    """Retain channel pointers and live readers; locks survive PID reuse/crashes."""
+    cache = cache_root(root)
+    with snapshot_lock(root):
+        keep = {read_json(p).get("snapshot", read_json(p).get("revision"))
+                for p in cache.glob("*-current.json")}
+        leases = cache / "leases"
+        leases.mkdir(exist_ok=True)
+        for directory in (cache / "snapshots").glob("*"):
+            if (not SHA.fullmatch(directory.name.split("-")[0])
+                    or directory.name in keep or directory.is_symlink() or not directory.is_dir()):
+                continue
+            lease_path = leases / directory.name
+            with lease_path.open("a") as lease:
+                try:
+                    fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    continue
+                shutil.rmtree(directory)
+                lease_path.unlink(missing_ok=True)
+
+
+def supported_profile_keys(root):
+    keys = set()
+    for folder in ("apps", "curated", "overlays"):
+        for path in (Path(root) / "catalog" / folder).glob("*.json"):
+            value = json.loads(path.read_text())
+            keys.update(value.get("proxmox", {}).get("installer_profile", {}))
+    return keys
+
+
+def filter_compatible_recipes(root, directory, previous):
+    """Silently defer new engine capabilities, retaining compatible old apps."""
+    from .catalog import Catalog
+    supported = supported_profile_keys(root)
+    candidate = Catalog(Path(root), catalog_dir=directory)
+    old = Catalog(Path(root), catalog_dir=previous)
+    old_items = {item["id"]: item for item in old.load_index()["applications"]}
+    index = json.loads((directory / "index.json").read_text())
+    accepted = []
+    old_fingerprints = None
+    for item in index["applications"]:
+        if item.get("hidden") or not item.get("automatic_install_candidate"):
+            accepted.append(item)
+            continue
+        template = candidate._compose_item(item)
+        profile = template.get("proxmox", {}).get("installer_profile", {})
+        if set(profile) <= supported:
+            accepted.append(item)
+            continue
+        fallback = old_items.get(item["id"])
+        if fallback is None:
+            continue
+        template = old._compose_item(fallback)
+        if not set(template.get("proxmox", {}).get("installer_profile", {})) <= supported:
+            continue
+        # Materialize the previously composed contract: its old overlay/volume
+        # policy must not be combined with a newly downloaded incompatible one.
+        app_id = item["id"]
+        for folder in ("apps", "curated"):
+            path = directory / folder / f"{app_id}.json"
+            path.parent.mkdir(exist_ok=True)
+            write_json(path, template)
+        (directory / "overlays" / f"{app_id}.json").unlink(missing_ok=True)
+        if old_fingerprints is None:
+            old_fingerprints = visible_recipes(old)
+        fallback = dict(fallback, _retained_recipe_hash=old_fingerprints.get(app_id), template_family="curated-profile",
+                        curated_path=f"catalog/curated/{app_id}.json",
+                        _retained_recipe=True)
+        accepted.append(fallback)
+    index["applications"] = accepted
+    write_json(directory / "index.json", index)
+
+
 def current_catalog(root, channel=None):
     root = Path(root)
     channel = channel or channel_for(root)
@@ -102,14 +210,15 @@ def current_catalog(root, channel=None):
     revision = value.get("revision", "")
     if (isinstance(revision, str) and SHA.fullmatch(revision)
             and value.get("schema_hash") == schema_hash(root)
-            and value.get("engine_api") == CATALOG_API):
+            and value.get("engine_api") == CATALOG_API
+            and value.get("bundle_hash") == bundle_hash(root)):
         snapshot = value.get("snapshot", revision)
         if not isinstance(snapshot, str) or not re.fullmatch(revision + r"(?:-[0-9a-f]{12})?", snapshot):
             return root / "catalog"
         path = cache_root(root) / "snapshots" / snapshot
         index = read_json(path / "index.json")
         if (index.get("kind") == "proxmenux.oci-catalog-index"
-                and isinstance(index.get("applications"), list) and index["applications"]):
+                and isinstance(index.get("applications"), list)):
             return path
     return root / "catalog"
 
@@ -146,7 +255,7 @@ def catalog_path(name):
     return path
 
 
-def validate_snapshot(root, directory):
+def validate_snapshot(root, directory, *, allow_empty=False):
     from .catalog import Catalog
     from jsonschema import Draft202012Validator
     compatibility = (json.loads((directory / "compatibility.json").read_text())
@@ -171,7 +280,7 @@ def validate_snapshot(root, directory):
             if not curated.startswith("catalog/"):
                 raise ValueError("Invalid curated recipe path")
             catalog_path(curated.removeprefix("catalog/"))
-    if not ids:
+    if not ids and not allow_empty:
         raise ValueError("The remote catalog is empty")
     catalog = Catalog(Path(root), catalog_dir=directory)
     for item in catalog.load_index()["applications"]:
@@ -187,6 +296,8 @@ def synchronize(root, channel, fetch=request, force=False):
     pointer = cache / f"{channel}-current.json"
     previous = read_json(pointer)
     active = current_catalog(root, channel)
+    capabilities = hashlib.sha256(json.dumps(sorted(supported_profile_keys(root))).encode()).hexdigest()
+    force = force or previous.get("profile_capabilities") != capabilities
     etag = previous.get("etag") if active != root / "catalog" and not force else None
     url = f"https://api.github.com/repos/{REPOSITORY}/commits?sha={channel}&path=oci/catalog&per_page=1"
     body, etag = fetch(url, etag)
@@ -255,21 +366,26 @@ def synchronize(root, channel, fetch=request, force=False):
         finally:
             pool.shutdown(wait=True, cancel_futures=True)
         validate_snapshot(root, staging)
+        filter_compatible_recipes(root, staging, active)
+        validate_snapshot(root, staging, allow_empty=True)
         destination = (active if previous.get("revision") == revision and active != root / "catalog"
                        else snapshots / revision)
         if destination.exists():
+            staged_files = {str(p.relative_to(staging)) for p in staging.rglob("*.json")}
             intact = all((destination / relative).is_file()
                          and not (destination / relative).is_symlink()
-                         and git_blob((destination / relative).read_bytes()) == entry["sha"]
-                         for relative, entry in entries.items())
+                         and (destination / relative).read_bytes() == (staging / relative).read_bytes()
+                         for relative in staged_files)
             existing = {str(p.relative_to(destination)) for p in destination.rglob("*.json")}
-            if not intact or existing != set(entries):
+            if not intact or existing != staged_files:
                 # Repair without removing a snapshot another wizard may still hold.
                 destination = snapshots / (revision + "-" + uuid.uuid4().hex[:12])
-        if not destination.exists():
-            os.replace(staging, destination)
-        write_json(pointer, {"revision": revision, "snapshot": destination.name, "etag": etag,
-                   "schema_hash": schema_hash(root), "engine_api": CATALOG_API})
+        with snapshot_lock(root):
+            if not destination.exists():
+                os.replace(staging, destination)
+            write_json(pointer, {"revision": revision, "snapshot": destination.name, "etag": etag,
+                       "schema_hash": schema_hash(root), "engine_api": CATALOG_API,
+                       "bundle_hash": bundle_hash(root), "profile_capabilities": capabilities})
     return destination != active
 
 
@@ -286,6 +402,8 @@ def worker(root, channel, force=False):
             write_json(cache / f"{channel}-result.json", {"ok": True, "changed": changed})
         except Exception as error:
             write_json(cache / f"{channel}-result.json", {"ok": False, "error": str(error)[:400]})
+        finally:
+            prune_snapshots(root)
 
 
 def visible_recipes(catalog):
@@ -294,6 +412,9 @@ def visible_recipes(catalog):
     policies = {}
     for item in catalog.load_index()["applications"]:
         if item.get("hidden") or not item.get("automatic_install_candidate"):
+            continue
+        if item.get("_retained_recipe") and item.get("_retained_recipe_hash"):
+            result[item["id"]] = item["_retained_recipe_hash"]
             continue
         directory = catalog.root / "catalog" if item["id"] in catalog.local_app_ids else catalog.catalog_dir
         if item.get("template_family") == "curated-profile":
