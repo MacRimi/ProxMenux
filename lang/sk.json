@@ -9016,6 +9016,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "NVIDIA (Selkies rendering and NVENC)": "NVIDIA (vykresľovanie Selkies a NVENC)"
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }
