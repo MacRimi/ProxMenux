@@ -44,9 +44,9 @@
     "provider": "stirling-pdf",
     "repository": "https://github.com/Stirling-Tools/Stirling-PDF",
     "revision": "e7f6b5fe482945fca3527cc2f4035df717a526cf26c1ebd3e5a272ec140132f0",
-    "image_repository_url": "https://docker.stirlingpdf.com/stirlingtools/stirling-pdf",
+    "image_repository_url": "https://ghcr.io/stirling-tools/stirling-pdf",
     "readme_pushed_at": "",
-    "compose_sha256": "6fa4793bff33f54b73a99364f26f3b69313a7c39dcd787c836d4f01f75e55146",
+    "compose_sha256": "9c68478ad9b0d9c9ffdc29917de8d33afbaae66a703daa4c02e0c148ecfb8a10",
     "generated_at": "2026-10-25T16:06:01+00:00",
     "readme_raw_url": "https://docs.stirlingpdf.com/Server/Install/Docker/"
   },
@@ -54,9 +54,9 @@
     "service_name": "stirling-pdf",
     "container_name": "stirling-pdf",
     "image": {
-      "reference": "docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest",
-      "registry": "docker.stirlingpdf.com",
-      "repository": "docker.stirlingpdf.com/stirlingtools/stirling-pdf",
+      "reference": "ghcr.io/stirling-tools/stirling-pdf:latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/stirling-tools/stirling-pdf",
       "tag": "latest",
       "digest": null,
       "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
@@ -123,7 +123,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "{\n  \"name\": \"stirling-pdf\",\n  \"services\": {\n    \"stirling-pdf\": {\n      \"image\": \"docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"8080:8080\"\n      ],\n      \"volumes\": [\n        \"stirling-config:/configs\",\n        \"stirling-storage:/storage\"\n      ],\n      \"environment\": {\n        \"PUID\": \"1000\",\n        \"PGID\": \"1000\"\n      },\n      \"deploy\": {\n        \"resources\": {\n          \"limits\": {\n            \"memory\": \"4g\"\n          }\n        }\n      }\n    }\n  }\n}"
+    "original_compose": "{\n  \"name\": \"stirling-pdf\",\n  \"services\": {\n    \"stirling-pdf\": {\n      \"image\": \"ghcr.io/stirling-tools/stirling-pdf:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"8080:8080\"\n      ],\n      \"volumes\": [\n        \"stirling-config:/configs\",\n        \"stirling-storage:/storage\"\n      ],\n      \"environment\": {\n        \"PUID\": \"1000\",\n        \"PGID\": \"1000\"\n      },\n      \"deploy\": {\n        \"resources\": {\n          \"limits\": {\n            \"memory\": \"4g\"\n          }\n        }\n      }\n    }\n  }\n}"
   },
   "compose_stack": {
     "project_name": "stirling-pdf",
@@ -134,7 +134,7 @@
     "services": [
       {
         "name": "stirling-pdf",
-        "image": "docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest",
+        "image": "ghcr.io/stirling-tools/stirling-pdf:latest",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -142,7 +142,7 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest",
+          "image": "ghcr.io/stirling-tools/stirling-pdf:latest",
           "restart": "unless-stopped",
           "ports": [
             "8080:8080"
