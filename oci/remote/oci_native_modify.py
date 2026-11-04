@@ -185,7 +185,7 @@ def plan(record, candidate, config):
             info = inventory[path]
             mode = info['mode'] if device.get('mode') == 'preserve-host' else int(device.get('mode', '0660'), 8)
             values[key] = (f"path={path},mode={mode:04o},uid={int(device.get('uid', 0))},"
-                           f"gid={info['gid'] if device['gid_strategy'] == 'host-device-gid' else 0},"
+                           f"gid={devices.container_gid(device, info)},"
                            f"deny-write={1 if device.get('deny_write') else 0}")
     if 'mounts' in changed:
         actual = transaction.mounts(config)

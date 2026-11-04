@@ -9014,5 +9014,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "Invalid container device GID": "GID de périphérique du conteneur invalide",
+  "The container device settings changed since the last recorded operation": "La configuration du périphérique du conteneur a changé depuis la dernière opération enregistrée",
+  "The recorded container device GID does not match its configuration": "Le GID enregistré du périphérique du conteneur ne correspond pas à sa configuration"
 }

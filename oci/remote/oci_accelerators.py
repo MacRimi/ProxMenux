@@ -40,6 +40,14 @@ def drm_plan(deployment):
     return dict(deployment, devices=[d for d in deployment.get('devices', []) if d.get('kind') != 'nvidia-runtime'])
 
 
+def container_gid(device, host_value):
+    return drm.container_gid(device, host_value)
+
+
+def preserve_recorded_container_gids(record, candidate, config):
+    drm.preserve_recorded_container_gids(record, candidate, config)
+
+
 def planned(deployment):
     result = drm.planned(drm_plan(deployment))
     if nvidia.enabled(deployment):

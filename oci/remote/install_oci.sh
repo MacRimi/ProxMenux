@@ -926,7 +926,7 @@ set_lxc_directive() {
 
 add_device() {
   local host_path=$1 expected_type=$2 mode_spec=$3 gid_strategy=$4 deny_write=$5
-  local device_uid=${6:-}
+  local device_uid=${6:-} container_gid=${7:-}
   local mode gid dev_value
   [[ $host_path == /dev/* && $host_path != *[[:space:]]* && $host_path != *","* ]] \
     || die "$(translate "Invalid device path:") $host_path"
@@ -950,7 +950,12 @@ add_device() {
       || die "$(translate "Invalid device UID:") $device_uid"
     dev_value="${dev_value},uid=${device_uid}"
   fi
-  if [[ $gid_strategy == host-device-gid ]]; then
+  if [[ -n $container_gid ]]; then
+    [[ $container_gid =~ ^[0-9]{1,10}$ ]] && (( container_gid < 4294967295 )) \
+      || die "$(translate "Invalid container device GID"): $container_gid"
+    gid=$container_gid
+    dev_value="${dev_value},gid=${gid}"
+  elif [[ $gid_strategy == host-device-gid ]]; then
     gid=$(stat -c '%g' "$host_path")
     dev_value="${dev_value},gid=${gid}"
   elif [[ $gid_strategy != none ]]; then
@@ -965,7 +970,7 @@ add_device() {
 }
 
 add_character_device() {
-  add_device "$1" character "$2" "$3" "$4" "${5:-}"
+  add_device "$1" character "$2" "$3" "$4" "${5:-}" "${6:-}"
 }
 
 prepare_nvidia_driver_links() {
@@ -2030,6 +2035,7 @@ while IFS= read -r DEVICE_ENCODED; do
   DEVICE=$(printf '%s' "$DEVICE_ENCODED" | base64 -d)
   DEVICE_KIND=$(jq -r '.kind // "character-device"' <<<"$DEVICE")
   DEVICE_GID_ENV=$(jq -r '.append_host_device_gid_to_environment // empty' <<<"$DEVICE")
+  CONTAINER_GID=$(jq -r '.container_gid // empty' <<<"$DEVICE")
   if [[ $DEVICE_KIND == nvidia-runtime ]]; then
     NVIDIA_GID_ENV=$DEVICE_GID_ENV
     if (( NVIDIA_RUNTIME_CONFIGURED == 0 )); then
@@ -2049,13 +2055,13 @@ while IFS= read -r DEVICE_ENCODED; do
   case "$DEVICE_KIND" in
     character-device)
       DEVICE_UID=$(jq -r '.uid // empty' <<<"$DEVICE")
-      add_character_device "$HOST_PATH" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "$DEVICE_UID"
+      add_character_device "$HOST_PATH" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "$DEVICE_UID" "$CONTAINER_GID"
       if [[ -n $DEVICE_GID_ENV ]]; then
         append_deployment_environment_csv "$DEVICE_GID_ENV" "$(stat -c '%g' "$HOST_PATH")"
       fi
       ;;
     block-device)
-      add_device "$HOST_PATH" block "$MODE" "$GID_STRATEGY" "$DENY_WRITE"
+      add_device "$HOST_PATH" block "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "" "$CONTAINER_GID"
       if [[ -n $DEVICE_GID_ENV ]]; then
         append_deployment_environment_csv "$DEVICE_GID_ENV" "$(stat -c '%g' "$HOST_PATH")"
       fi
@@ -2065,7 +2071,7 @@ while IFS= read -r DEVICE_ENCODED; do
       FOUND_TREE_DEVICE=0
       while IFS= read -r TREE_DEVICE; do
         [[ -n $TREE_DEVICE ]] || continue
-        add_character_device "$TREE_DEVICE" "$MODE" "$GID_STRATEGY" "$DENY_WRITE"
+        add_character_device "$TREE_DEVICE" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "" "$CONTAINER_GID"
         FOUND_TREE_DEVICE=1
       done < <(find "$HOST_PATH" -print 2>/dev/null | while IFS= read -r path; do
         [[ -c $path ]] && printf '%s\n' "$path"
