@@ -64,6 +64,11 @@ class OvsTopology(unittest.TestCase):
         self.assertIsNone(data['bonds']['uplink']['bond_active_slave'])
         self.assertEqual(data['ports']['eno2']['bond_master'], 'uplink')
 
+    def test_zero_vlan_tag_is_preserved(self):
+        tables = fixture()
+        tables[1]['data'][3][4] = 0
+        self.assertEqual(ovs.parse_topology(*tables)['ports']['vlan100']['ovs_tag'], 0)
+
     def test_no_ovs_does_not_spawn_any_process(self):
         with patch.object(ovs.shutil, 'which', return_value=None), patch.object(ovs.subprocess, 'run') as run:
             self.assertEqual(ovs.get_topology(), {})

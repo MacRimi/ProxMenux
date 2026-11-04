@@ -31,7 +31,7 @@ def _rows(table):
 
 
 def _list(value):
-    return value if isinstance(value, list) else [value] if value else []
+    return value if isinstance(value, list) else [] if value is None or value == '' else [value]
 
 
 def parse_topology(bridges, ports, interfaces):
