@@ -1188,21 +1188,15 @@ def _check_oci_app(entry: dict) -> dict:
 
 # ── NVIDIA driver checker ──
 #
-# Source of truth for what's available upstream:
-#   `https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt`
-#       returns the single newest version, e.g. "580.105.08"
-#   `https://download.nvidia.com/XFree86/Linux-x86_64/`
-#       HTML directory listing — we scrape it for per-branch latest
-#       (so a user on 570.x gets 570.x's latest, without an automatic
-#       cross-branch upgrade).
-#
-# Cache TTL is 7 days because NVIDIA's release cadence on each branch
-# is roughly monthly. The cache is in-memory only; AppImage restarts
-# refresh it for free.
+# The driver update is the version the NVIDIA installer itself would
+# recommend on this host: it filters by the running kernel, NVIDIA's
+# maintained branches, the PCI IDs of the host's GPUs and the NVENC patch,
+# and keeps the installed branch when it can. Asking the installer means the
+# Monitor never announces a version the installer then refuses. The installer
+# keeps its own caches of NVIDIA's pages for 24 hours.
 
-_NVIDIA_BASE = "https://download.nvidia.com/XFree86/Linux-x86_64"
-_NVIDIA_CACHE_TTL = 7 * 86400
-_nvidia_cache: dict[str, Any] = {"versions": [], "fetched_at": 0}
+_NVIDIA_INSTALLER = "/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh"
+_NVIDIA_CHECK_TIMEOUT = 300
 
 
 def _version_tuple(v: str) -> tuple:
@@ -1219,64 +1213,46 @@ def _version_tuple(v: str) -> tuple:
     return tuple(out[:3])
 
 
-def _fetch_nvidia_versions(force: bool = False) -> list[str]:
-    """Return the cached list of all upstream versions, or fetch fresh."""
-    now = time.time()
-    if not force and _nvidia_cache["versions"] and \
-       now - _nvidia_cache["fetched_at"] < _NVIDIA_CACHE_TTL:
-        return _nvidia_cache["versions"]
+def _nvidia_recommended_version(current: str) -> tuple[Optional[str], Optional[str]]:
+    """The version the installer recommends for this host, or an error."""
     try:
-        req = urllib.request.Request(
-            _NVIDIA_BASE + "/",
-            headers={"User-Agent": "ProxMenux-Monitor/1.0"},
+        # An older installer would ignore the option and open its menu.
+        with open(_NVIDIA_INSTALLER, encoding="utf-8", errors="replace") as handle:
+            if "--recommended-version" not in handle.read():
+                return None, "the NVIDIA installer on this host is older than ProxMenux Monitor"
+        done = subprocess.run(
+            ["bash", _NVIDIA_INSTALLER, "--recommended-version", current],
+            capture_output=True, text=True, timeout=_NVIDIA_CHECK_TIMEOUT,
+            # The host's curl and Python, not the AppImage's libraries.
+            env={k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "LD_LIBRARY_PATH")},
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            html = resp.read().decode("utf-8", errors="replace")
-    except Exception as e:
-        print(f"[ProxMenux] NVIDIA version fetch failed: {e}")
-        return _nvidia_cache.get("versions", [])
-    versions = sorted(
-        {m.group(1) for m in re.finditer(
-            r"""href=['"](\d+\.\d+(?:\.\d+)?)/?['"]""", html)},
-        key=_version_tuple,
-        reverse=True,
-    )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, f"the NVIDIA installer could not be run: {e}"
+    versions = [line.strip() for line in done.stdout.splitlines()
+                if re.fullmatch(r"\d+\.\d+(\.\d+)?", line.strip())]
     if versions:
-        _nvidia_cache["versions"] = versions
-        _nvidia_cache["fetched_at"] = now
-    return versions
+        return versions[-1], None
+    if done.returncode == 0:
+        return None, None
+    return None, "the NVIDIA installer could not read the version list"
 
 
 def _check_nvidia_xfree86(entry: dict) -> dict:
-    """Report same-branch bugfix upgrades for the installed driver."""
+    """Report the update the NVIDIA installer would recommend."""
     current = entry.get("current_version")
     if not current or not re.match(r"^\d+\.\d+(\.\d+)?$", current):
         return {"available": False, "latest": None,
                 "last_check": _now_iso(), "error": "no installed version"}
 
-    versions = _fetch_nvidia_versions()
-    if not versions:
-        return {"available": False, "latest": None,
-                "last_check": _now_iso(),
-                "error": "could not parse upstream version listing"}
-
-    current_branch = current.split(".")[0]
-    same_branch = [v for v in versions if v.split(".")[0] == current_branch]
-    same_branch_latest = same_branch[0] if same_branch else None
-
-    available = False
-    latest: Optional[str] = None
-    if same_branch_latest and \
-            _version_tuple(same_branch_latest) > _version_tuple(current):
-        latest = same_branch_latest
-        available = True
-
+    recommended, error = _nvidia_recommended_version(current)
+    available = bool(recommended) and _version_tuple(recommended) > _version_tuple(current)
+    same_branch = bool(recommended) and recommended.split(".")[0] == current.split(".")[0]
     return {
         "available": available,
-        "latest": latest,
+        "latest": recommended if available else None,
         "last_check": _now_iso(),
-        "error": None,
-        "_upgrade_kind": "patch" if available else None,
+        "error": error,
+        "_upgrade_kind": ("patch" if same_branch else "branch") if available else None,
     }
 
 
@@ -1842,13 +1818,9 @@ def check_for_updates(force: bool = False) -> list[dict]:
     UI reads ``get_active_items()`` to render the inline "update
     available" line.
 
-    ``force`` invalidates the per-source caches (currently only the
-    NVIDIA versions list — OCI keeps its own internal cache).
+    ``force`` is kept for callers; the NVIDIA installer and OCI keep
+    their own caches.
     """
-    if force:
-        _nvidia_cache["versions"] = []
-        _nvidia_cache["fetched_at"] = 0
-
     updates_available: list[dict] = []
     successful_lxc_checks: list[tuple[int, int]] = []
     with _lock:

@@ -2004,23 +2004,22 @@ show_install_overview() {
   hybrid_yesno "$(translate 'NVIDIA GPU Driver Installation')" "$overview" 24 90
 }
 
-show_version_menu() {
+# The versions this host is offered and the one recommended. The version
+# menu and ProxMenux Monitor both use it, so the Monitor announces an update
+# only when the installer would recommend it. Sets NVIDIA_OFFERED_VERSIONS,
+# NVIDIA_RECOMMENDED_VERSION and the NVENC patch notes; fails when NVIDIA's
+# version list cannot be read.
+compute_nvidia_offer() {
   local latest versions_list
-  local kernel_version
-  kernel_version=$(uname -r)
-
-  show_proxmenux_logo
-  msg_title "$(translate 'NVIDIA GPU Driver Installation')"
-  msg_info "$(translate 'Fetching NVIDIA driver versions supported by your GPU...')"
+  NVIDIA_OFFERED_VERSIONS=""
+  NVIDIA_RECOMMENDED_VERSION=""
+  NVIDIA_PATCH_FILTERED=false
+  NVIDIA_PATCH_FILTER_NOTE=""
 
   latest=$(download_latest_version 2>/dev/null)
   versions_list=$(list_available_versions 2>/dev/null)
 
   if [[ -z "$latest" ]] && [[ -z "$versions_list" ]]; then
-    stop_spinner
-    hybrid_msgbox "$(translate 'Error')" \
-      "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
-    DRIVER_VERSION="cancel"
     return 1
   fi
   
@@ -2116,6 +2115,47 @@ show_version_menu() {
   if [[ -z "$latest" && -n "$current_list" ]]; then
     latest=$(printf '%s\n' "$current_list" | head -n1 | tr -d '[:space:]')
   fi
+
+  NVIDIA_OFFERED_VERSIONS="$current_list"
+  NVIDIA_RECOMMENDED_VERSION="$latest"
+  NVIDIA_PATCH_FILTERED="$patch_filtered"
+  NVIDIA_PATCH_FILTER_NOTE="$patch_filter_note"
+}
+
+# For ProxMenux Monitor: the version the menu would recommend on this host for
+# the driver in use (passed in, or read from nvidia-smi), with no interface and
+# no change to the host. Prints nothing when none is recommended.
+print_recommended_version() {
+  detect_nvidia_gpus
+  $NVIDIA_GPU_PRESENT || return 1
+  CURRENT_DRIVER_VERSION="${1:-}"
+  if [[ -z "$CURRENT_DRIVER_VERSION" ]] && command -v nvidia-smi >/dev/null 2>&1; then
+    CURRENT_DRIVER_VERSION=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1)
+  fi
+  compute_nvidia_offer || return 2
+  [[ -z "$NVIDIA_RECOMMENDED_VERSION" ]] || printf '%s\n' "$NVIDIA_RECOMMENDED_VERSION"
+}
+
+show_version_menu() {
+  local latest versions_list
+  local kernel_version
+  kernel_version=$(uname -r)
+
+  show_proxmenux_logo
+  msg_title "$(translate 'NVIDIA GPU Driver Installation')"
+  msg_info "$(translate 'Fetching NVIDIA driver versions supported by your GPU...')"
+
+  if ! compute_nvidia_offer; then
+    stop_spinner
+    hybrid_msgbox "$(translate 'Error')" \
+      "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
+    DRIVER_VERSION="cancel"
+    return 1
+  fi
+  local current_list="$NVIDIA_OFFERED_VERSIONS"
+  local patch_filtered="$NVIDIA_PATCH_FILTERED"
+  local patch_filter_note="$NVIDIA_PATCH_FILTER_NOTE"
+  latest="$NVIDIA_RECOMMENDED_VERSION"
 
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
   menu_text+="$(translate 'Versions shown belong to maintained NVIDIA branches that list your GPU PCI ID and are new enough to build against the running kernel. DKMS compilation is the final validation. The recommended version keeps the current branch, or uses the NVIDIA Production Branch on a fresh install.')"
@@ -2546,6 +2586,10 @@ auto_reinstall_from_state() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   if [[ "${1:-}" == "--auto-reinstall" ]]; then
     auto_reinstall_from_state
+    exit $?
+  fi
+  if [[ "${1:-}" == "--recommended-version" ]]; then
+    print_recommended_version "${2:-}"
     exit $?
   fi
   main
