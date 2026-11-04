@@ -100,10 +100,12 @@ class AppImageArchitectureTests(unittest.TestCase):
             missing = subprocess.run(['sh', str(adapter), '--version'], capture_output=True, text=True)
             self.assertEqual(missing.returncode, 127)
             self.assertIn('Install the native borgbackup package', missing.stderr)
-            native.write_text('#!/bin/sh\nprintf "native %s" "$*"\n')
+            native.write_text('#!/bin/sh\nprintf "native %s|%s|%s|%s" "$*" "${PYTHONPATH-unset}" "${PYTHONHOME-unset}" "${LD_LIBRARY_PATH-unset}"\n')
             native.chmod(0o755)
-            installed = subprocess.run(['sh', str(adapter), 'list', 'fixture-repo'], capture_output=True, text=True, check=True)
-            self.assertEqual(installed.stdout, 'native list fixture-repo')
+            installed = subprocess.run(['sh', str(adapter), 'list', 'fixture-repo'],
+                env={**os.environ, 'PYTHONPATH': '/fixture/appimage/python', 'PYTHONHOME': '/fixture/appimage/home',
+                     'LD_LIBRARY_PATH': '/fixture/appimage/lib'}, capture_output=True, text=True, check=True)
+            self.assertEqual(installed.stdout, 'native list fixture-repo|unset|unset|unset')
 
     def test_arm_host_backup_never_selects_cached_amd64_borg_or_downloads_it(self):
         source = (ROOT / 'scripts/backup_restore/lib_host_backup_common.sh').read_text()
