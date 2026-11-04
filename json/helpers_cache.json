@@ -2135,6 +2135,37 @@
     "os": "debian"
   },
   {
+    "name": "Bark Server",
+    "slug": "bark-server",
+    "desc": "Bark Server is the self-hosted backend for the Bark iOS app. It receives push requests over a simple HTTP API and forwards them to Apple's APNs, so scripts and home-automation flows can send custom notifications to your own iPhone. Device keys are stored locally in an embedded key-value database, so no external database is required.",
+    "script": "ct/bark-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bark-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bark-server.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Verify the server with: curl http://<IP>:8080/ping — it returns {\"code\":200,\"message\":\"pong\"}."
+    ],
+    "warnings": [
+      "Bark Server has no authentication by default, set BARK_SERVER_BASIC_AUTH_USER / BARK_SERVER_BASIC_AUTH_PASSWORD to enable HTTP Basic auth."
+    ],
+    "port": 8080,
+    "website": "https://bark.day.app/",
+    "documentation": "https://bark.day.app/",
+    "logo": "https://bark.day.app/logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Baserow",
     "slug": "baserow",
     "desc": "Baserow is an open-source no-code database platform for building databases, applications, automations, and AI agents without code.",
@@ -6910,6 +6941,40 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Factorio",
+    "slug": "factorio",
+    "desc": "Factorio headless multiplayer server using the current stable Linux release.",
+    "script": "ct/factorio.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/factorio.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/factorio.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "Connect using the Factorio client to <container IP>:34197. Clients need the same Factorio version and mods as the server.",
+      "Saves are stored in /opt/factorio/saves. The service loads the most recent save on restart."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://factorio.com/",
+    "documentation": "https://wiki.factorio.com/Multiplayer",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/factorio.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
