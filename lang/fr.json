@@ -9014,5 +9014,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "NVIDIA (Selkies rendering and NVENC)": "NVIDIA (rendu Selkies et NVENC)"
 }
