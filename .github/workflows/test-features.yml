@@ -22,6 +22,8 @@ on:
       - 'tests/test_vm_backup_jobs_api.py'
       - 'tests/test_backup_storage_retention.cjs'
       - 'tests/test_figurine_installation.py'
+      - 'scripts/gpu_tpu/nvidia_installer.sh'
+      - 'tests/test_nvidia*.py'
       - 'scripts/post_install/customizable_post_install.sh'
       - 'AppImage/scripts/post_install_versions.py'
       - 'AppImage/scripts/flask_proxmenux_routes.py'
@@ -168,6 +170,21 @@ jobs:
         env:
           NODE_PATH: ${{ github.workspace }}/.github/ci/offline-node/node_modules
         run: node tests/test_backup_storage_retention.cjs
+
+  nvidia-installer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check NVIDIA parser, cache and Secure Boot regressions
+        run: |
+          bash -n scripts/gpu_tpu/nvidia_installer.sh
+          python3 -B -m unittest discover -s tests -p 'test_nvidia*.py' -v
 
   installer-and-release:
     runs-on: ubuntu-latest

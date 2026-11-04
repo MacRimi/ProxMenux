@@ -866,11 +866,9 @@ KEYLASE_PATCH_URL="https://raw.githubusercontent.com/keylase/nvidia-patch/master
 NVIDIA_BRANCHES_CACHE="/var/cache/proxmenux/nvidia_stable_branches.txt"
 NVIDIA_PRODUCTION_HEAD_CACHE="/var/cache/proxmenux/nvidia_production_head.txt"
 NVIDIA_BRANCH_HEADS_CACHE="/var/cache/proxmenux/nvidia_branch_heads.txt"
-# v2: the first generation of these files scraped the whole page and so
-# included the legacy table (see _nvidia_supported_ids_from_page). Those
-# files say a branch supports GPUs it has dropped, so they are left
-# behind rather than reused.
-NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_v2_"
+# v3: discard older caches, which either included legacy GPUs (v1) or
+# omitted devices listed only with subsystem qualifiers (v2).
+NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_v3_"
 NVIDIA_BRANCHES_TTL_SECONDS=$((24 * 3600))
 NVIDIA_BRANCHES_URL="https://www.nvidia.com/en-us/drivers/unix/"
 
@@ -975,13 +973,17 @@ get_nvidia_branch_head() {
 # card NVIDIA ever shipped — which is how a Quadro P1000 came to be
 # offered the 595 branch that refuses it at probe time, after compiling
 # and installing perfectly. Everything from that heading on is cut away.
+# NVIDIA identifies each GPU row as devidXXXX or devidXXXX_VENDOR_SUBDEVICE.
+# Read the primary device ID from that identifier, not an exact four-digit
+# table cell: T400/T1000 variants have three IDs in the cell. Subsystem IDs
+# and GPU names such as A100 must not become independent supported devices.
 _nvidia_supported_ids_from_page() {
   awk '
     /legacy GPUs that are no longer supported/ { exit }
     { print }
   ' \
-    | grep -aoiE '<td>[0-9A-F]{4}</td>' \
-    | grep -aoiE '[0-9A-F]{4}' \
+    | grep -aoiE '<tr[[:space:]]+id="devid[0-9A-F]{4}([_][0-9A-F]{4})*"' \
+    | sed -E 's/.*devid([0-9A-Fa-f]{4}).*/\1/' \
     | tr 'A-F' 'a-f' \
     | sort -u
 }
