@@ -40,7 +40,18 @@ class USBIPTests(unittest.TestCase):
                            ("SERVER_RUN_DIR", "server-run"), ("UNIT_DIR", "units"), ("SYSFS", "sysfs")):
             setattr(self.m, attr, self.root / path)
             getattr(self.m, attr).mkdir()
-        self.m.MATCH_BUSID = self.root / "match_busid"
+        class MatchTable:
+            # Mirror the kernel contract, not regular-file write semantics:
+            # del(ALLOC)=REMOV, del(ADDED/REMOV) retains the named slot.
+            def __init__(self):
+                self.slots = {}
+            def write_text(self, value):
+                action, busid = value.split()
+                if self.slots.get(busid) == "ALLOC":
+                    self.slots[busid] = "REMOV"
+            def read_text(self):
+                return " ".join(self.slots)
+        self.m.MATCH_BUSID = MatchTable()
         self.account = SimpleNamespace(pw_uid=1234, pw_gid=1234)
         self.calls = []
         self.key = self.root / "id_ed25519"
@@ -80,8 +91,10 @@ class USBIPTests(unittest.TestCase):
         self.calls.append(args)
         if args[:2] == ["usbip", "bind"]:
             self.set_driver(args[-1], "usbip-host")
+            self.m.MATCH_BUSID.slots[args[-1]] = "ALLOC"
         elif args[:2] == ["usbip", "unbind"]:
             self.set_driver(args[-1], "usb")
+            self.m.MATCH_BUSID.slots.pop(args[-1], None)
         return ""
 
     def test_storage_composite_interfaces_and_hubs_are_never_exported(self):
@@ -109,7 +122,7 @@ class USBIPTests(unittest.TestCase):
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertNotEqual(self.m.RUN_DIR, self.m.SERVER_RUN_DIR)
 
-    def test_serial_moves_to_another_port_without_unbinding_a_replacement(self):
+    def test_port_move_fails_closed_when_kernel_retains_old_slot(self):
         selected = self.selected(self.device())
         config = self.config([selected])
         owned = {}
@@ -118,10 +131,11 @@ class USBIPTests(unittest.TestCase):
             shutil.rmtree(self.m.SYSFS / "1-2")
             self.device(serial="other-device", driver="usbip-host")
             self.device(busid="2-4")
-            self.m.reconcile_exports(config, owned)
-        self.assertEqual(owned[EXPORT]["busid"], "2-4")
-        self.assertEqual(self.calls, [["usbip", "bind", "--busid", "1-2"], ["usbip", "bind", "--busid", "2-4"]])
-        self.assertEqual(self.m.catalog()[0]["busid"], "2-4")
+            errors = self.m.reconcile_exports(config, owned)
+        self.assertIn("blocked", errors[EXPORT])
+        self.assertEqual(owned[EXPORT]["busid"], "1-2")
+        self.assertEqual(self.calls, [["usbip", "bind", "--busid", "1-2"]])
+        self.assertIsNone(self.m.catalog()[0]["busid"])
 
     def test_no_serial_requires_same_busid_and_ambiguous_serial_is_rejected(self):
         selected = self.selected(self.device(serial=""))
@@ -170,7 +184,7 @@ class USBIPTests(unittest.TestCase):
         self.assertEqual(self.m.status()["server_status"]["errors"], {EXPORT: "bind failed"})
         self.assertEqual(self.m.catalog()[0]["status"], "waiting")
 
-    def test_unplug_clears_owned_stale_match_before_waiting(self):
+    def test_unplugged_kernel_match_is_disarmed_but_not_falsely_forgotten(self):
         selected = self.selected(self.device())
         config = self.config([selected])
         owned = {}
@@ -178,9 +192,9 @@ class USBIPTests(unittest.TestCase):
             self.m.reconcile_exports(config, owned)
             shutil.rmtree(self.m.SYSFS / "1-2")
             errors = self.m.reconcile_exports(config, owned)
-        self.assertEqual(owned, {})
-        self.assertIn(EXPORT, errors)
-        self.assertEqual(self.m.MATCH_BUSID.read_text(), "del 1-2")
+        self.assertEqual(owned[EXPORT]["busid"], "1-2")
+        self.assertIn("blocked", errors[EXPORT])
+        self.assertEqual(self.m.MATCH_BUSID.slots["1-2"], "REMOV")
         self.assertEqual(len(self.calls), 1)
 
     def test_failed_stale_cleanup_does_not_forget_or_replace_ownership(self):
@@ -189,9 +203,9 @@ class USBIPTests(unittest.TestCase):
         owned = {EXPORT: selected}
         shutil.rmtree(self.m.SYSFS / "1-2")
         self.device(busid="2-4")
-        with patch.object(Path, "write_text", side_effect=PermissionError), patch.object(self.m, "run") as command:
+        with patch.object(self.m, "disarm_match", side_effect=self.m.USBIPError("disarm failed")), patch.object(self.m, "run") as command:
             errors = self.m.reconcile_exports(config, owned)
-        self.assertIn("stale", errors[EXPORT])
+        self.assertIn("disarm", errors[EXPORT])
         self.assertEqual(owned[EXPORT]["busid"], "1-2")
         command.assert_not_called()
 

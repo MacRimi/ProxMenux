@@ -162,6 +162,16 @@ def state_path():
     return SERVER_RUN_DIR / "exports.json"
 
 
+def disarm_match(busid):
+    try:
+        MATCH_BUSID.write_text(f"del {busid}")
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        if exc.errno != errno.ENODEV:
+            raise USBIPError("Could not disarm the USB/IP match") from exc
+
+
 def release_export(identifier, owned, devices):
     previous = owned[identifier]
     current = next((d for d in devices if d["busid"] == previous["busid"]), None)
@@ -170,15 +180,16 @@ def release_export(identifier, owned, devices):
     if current and same_device(previous, current) and current["driver"] == "usbip-host":
         run(["usbip", "unbind", "--busid", current["busid"]])
     else:
-        # usbip unbind requires a present device. Delete our stale match even
-        # after unplug, without unbinding a replacement or a foreign export.
+        # A successful 'del' write does not prove removal on every kernel:
+        # upstream retains ADDED/REMOV table slots after physical unplug.
+        # Never forget ownership or bind a new port while that slot survives.
+        disarm_match(previous["busid"])
         try:
-            MATCH_BUSID.write_text(f"del {previous['busid']}")
+            remaining = MATCH_BUSID.read_text().split()
         except FileNotFoundError:
-            pass  # An unloaded driver has no persistent match table.
-        except OSError as exc:
-            if exc.errno != errno.ENODEV:
-                raise USBIPError("Could not remove the stale USB/IP match") from exc
+            remaining = []
+        if previous["busid"] in remaining:
+            raise USBIPError("Kernel retained the unplugged USB/IP match; automatic reconnect is blocked pending safe cleanup")
     del owned[identifier]
     atomic_json(state_path(), owned)
 
@@ -207,11 +218,15 @@ def reconcile_exports(config, owned):
             if device["driver"] == "usbip-host":
                 if not previous:
                     raise USBIPError("Device is already exported outside ProxMenux; it was not adopted")
+                disarm_match(device["busid"])
                 continue
             # Record intent before binding, so a crash cannot orphan our export.
             owned[identifier] = {k: device[k] for k in ("busid", "vendor", "product", "serial")}
             atomic_json(state_path(), owned)
             run(["usbip", "bind", "--busid", device["busid"]])
+            # ALLOC -> REMOV rejects future probes without interrupting this
+            # live export. Do not leave a reusable automatic port match armed.
+            disarm_match(device["busid"])
         except USBIPError as exc:
             errors[identifier] = str(exc)
     atomic_json(SERVER_RUN_DIR / "status.json", {"errors": errors, "updated": time.time()})

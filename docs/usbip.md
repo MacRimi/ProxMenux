@@ -22,11 +22,15 @@ requested in [#350](https://github.com/MacRimi/ProxMenux/issues/350).
    journalctl -u proxmenux-usbip-server.service
    ```
 
-The server reloads saved selections every three seconds. After unplug or a port
-change it removes the recorded stale `match_busid` entry even when the original
-device is absent; a replacement device is never explicitly unbound. This is
-polling-based detection, not an atomic guarantee against very fast port reuse. Devices with a unique
-serial number can return on a different physical USB port after reconnecting.
+The server reloads saved selections every three seconds. A live exported device's
+match is immediately marked for removal so the kernel rejects a later automatic
+probe on that port. Physical unplug/replug remains an **unresolved limitation**:
+upstream Linux can retain the match-table slot even after a successful `del`
+write. The manager verifies disappearance before forgetting ownership or binding
+a new port, and otherwise fails closed with a visible cleanup error. It never
+calls `rebind` on an absent device or reloads a module affecting foreign exports.
+Automatic reconnect after physical USB removal is therefore not yet guaranteed;
+this PR needs maintainer review and a safe kernel-supported cleanup policy.
 Without a serial number, the vendor/product and original bus ID must match;
 the manager will not guess which identical dongle to bind. Duplicate serial
 numbers are rejected as ambiguous. USB hubs and mass-storage devices, including
@@ -120,7 +124,7 @@ python3 "$MANAGER" status
 The client has an enabled systemd service per device. It reconnects the SSH
 tunnel and reattaches the device after a network interruption or restart. On
 each new attach it resolves the **saved export ID** to the server's current bus
-ID, so a serial-bearing dongle can move ports. The client keeps an ownership
+ID; physical port movement is subject to the kernel cleanup limitation above. The client keeps an ownership
 record of the exact imported kernel port, local bus ID and remote endpoint;
 cleanup detaches only a matching owned import. Removing a connection disables
 its service, releases its device and removes its saved configuration.
