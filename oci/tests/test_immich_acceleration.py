@@ -92,16 +92,21 @@ class ImmichAccelerationTests(unittest.TestCase):
             self.assertIn("No usable GPU", ui.messages[0])
             self.assertEqual(result, ("cpu", "cpu"), mode)
 
-    def test_an_amd_host_that_cannot_run_rocm_offers_video_only_and_says_why(self, *_):
-        for blocker, text in (("kfd", "/dev/kfd"), ("space", "40 GB"), ("generation", "no support for the AMD GPU")):
+    def test_an_amd_host_that_cannot_run_rocm_offers_video_only(self, *_):
+        # What the host can fix is said; a GPU generation ROCm does not run is not.
+        for blocker, text in (("kfd", "/dev/kfd"), ("space", "40 GB"), ("generation", None)):
             with patch("proxmenux_oci.installer.host.rocm_blocker", return_value=blocker), \
                     patch("proxmenux_oci.installer.host.amd_gpu_name", return_value="Lucienne (gfx90c)"):
                 ui, result, _ = self.plan(AMD, DEFAULT_MODE)
             self.assertEqual(ui.options[PROMPT], ["cpu", "amd-video"], blocker)
             self.assertEqual(ui.defaults[PROMPT], "amd-video", blocker)
             self.assertEqual(result, ("vaapi", "cpu"), blocker)
-            self.assertTrue(any(text in message and "Recognition is not offered" in message
-                                for message in ui.messages), blocker)
+            if text:
+                self.assertTrue(any(text in message and "Recognition is not offered" in message
+                                    for message in ui.messages), blocker)
+            else:
+                self.assertFalse(any("ROCm" in message or "Recognition" in message
+                                     for message in ui.messages), blocker)
 
     def test_a_gpu_rocm_supports_is_proposed_whole(self, *_):
         for target in (100300, 110501, None):
