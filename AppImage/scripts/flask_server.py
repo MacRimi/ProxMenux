@@ -53,6 +53,7 @@ import threading
 import urllib.parse
 import uuid
 import disk_identity
+import ovs_topology
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -6258,6 +6259,9 @@ def _iface_master(iface_name):
 # Chain: veth/tap → fwbr (intermediate) → fwpr (peer) → vmbr (real).
 def _resolve_bridge_owner(iface_name):
     import re
+    ovs_owners = ovs_topology.get_topology().get('owners', {})
+    if iface_name in ovs_owners:
+        return ovs_owners[iface_name]
     master = _iface_master(iface_name)
     if not master:
         return None
@@ -6266,7 +6270,7 @@ def _resolve_bridge_owner(iface_name):
         fwpr = re.sub(r'i(\d+)$', r'p\1', fwpr)
         try:
             if os.path.exists(f'/sys/class/net/{fwpr}'):
-                real = _iface_master(fwpr)
+                real = ovs_owners.get(fwpr) or _iface_master(fwpr)
                 if real:
                     return real
         except Exception:
@@ -6350,6 +6354,10 @@ def get_interface_type(interface_name):
         # Skip other virtual interfaces
         if interface_name.startswith(('tun', 'vnet', 'docker', 'virbr')):
             return 'skip'
+
+        ovs_type = ovs_topology.get_topology().get('types', {}).get(interface_name)
+        if ovs_type:
+            return ovs_type
 
         # Check if it's a bond — sysfs first (name-agnostic), then the
         # "bondN" convention as fallback when /sys isn't readable.
@@ -6590,6 +6598,7 @@ def get_network_info():
             pass
         
         vm_lxc_map = get_vm_lxc_names()
+        ovs = ovs_topology.get_topology()
         
         # Get network interfaces
         net_if_addrs = psutil.net_if_addrs()
@@ -6724,8 +6733,10 @@ def get_network_info():
             # vmbr so a guest behind the Proxmox firewall still lands
             # under its true bridge in the Network Flow diagram.
             master = _resolve_bridge_owner(interface_name)
+            master = ovs.get('owners', {}).get(interface_name) or master
             if master:
                 interface_info['bridge_owner'] = master
+            interface_info.update(ovs.get('ports', {}).get(interface_name, {}))
 
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
@@ -6738,6 +6749,12 @@ def get_network_info():
 
             if interface_type == 'bridge':
                 bridge_info = get_bridge_info(interface_name)
+                if interface_name in ovs.get('bridges', {}):
+                    bridge_info['members'] = ovs['bridges'][interface_name]
+                    bridge_info['physical_interface'] = next((member for member in bridge_info['members']
+                        if member in ovs.get('bonds', {}) or _is_physical_dev(member)), None)
+                    bridge_info['bond_slaves'] = ovs.get('bonds', {}).get(bridge_info['physical_interface'], {}).get('bond_slaves', [])
+                    interface_info['network_backend'] = 'ovs'
                 interface_info['bridge_members'] = bridge_info['members']
                 interface_info['bridge_physical_interface'] = bridge_info['physical_interface']
                 interface_info['bridge_physical_duplex'] = bridge_info['physical_duplex']
@@ -6757,6 +6774,22 @@ def get_network_info():
                 network_data['interfaces'].append(interface_info)
                 if interface_type == 'bond':
                     network_data['bond_interfaces'].append(interface_info)
+
+        # An OVS bond is an OVSDB port, not a kernel network interface.
+        for name, detail in ovs.get('bonds', {}).items():
+            slaves = [item for item in network_data['physical_interfaces']
+                      if item['name'] in detail['bond_slaves']]
+            network_data['bond_interfaces'] = [item for item in network_data['bond_interfaces'] if item['name'] != name]
+            bond_interface = {
+                'name': name, 'type': 'bond', 'addresses': [],
+                'status': 'up' if any(item['status'] == 'up' for item in slaves) else 'down',
+                # OVSDB membership does not reveal active-backup capacity.
+                'speed': 0, 'duplex': 'unknown', 'mtu': 0, 'mac_address': None,
+                'rx_Bps': sum(item.get('rx_Bps', 0) for item in slaves),
+                'tx_Bps': sum(item.get('tx_Bps', 0) for item in slaves), **detail}
+            network_data['bond_interfaces'].append(bond_interface)
+            network_data['interfaces'] = [item for item in network_data['interfaces'] if item['name'] != name]
+            network_data['interfaces'].append(bond_interface)
 
         network_data['physical_active_count'] = physical_active_count
         network_data['physical_total_count'] = physical_total_count
@@ -6808,6 +6841,11 @@ def get_network_info():
                     bridges_per_nic.setdefault(slave, []).append(bridge['name'])
             else:
                 bridges_per_nic.setdefault(phys, []).append(bridge['name'])
+        for name, members in ovs.get('bridges', {}).items():
+            for member in members:
+                for nic in ovs.get('bonds', {}).get(member, {}).get('bond_slaves', [member]):
+                    if name not in bridges_per_nic.setdefault(nic, []):
+                        bridges_per_nic[nic].append(name)
         for phy in network_data['physical_interfaces']:
             if phy['name'] in bridges_per_nic:
                 phy['used_by_bridges'] = bridges_per_nic[phy['name']]
