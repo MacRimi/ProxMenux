@@ -64,7 +64,7 @@
     "items": [
       "<strong><code>User=root</code></strong> — the supported service runs with root privileges for host operations such as SMART access, <code>pvesh</code> and ZFS management. Its web-terminal processes inherit those privileges.",
       "<strong><code>Restart=on-failure</code></strong> with a 10-second back-off — non-zero exits relaunch automatically.",
-      "<strong><code>After=network.target</code></strong> — orders startup after that target; it does not guarantee an assigned IP, DNS or external connectivity."
+      "<strong><code>After=network.target pve-cluster.service</code></strong>: orders startup after the network target and the Proxmox cluster filesystem; it does not guarantee an assigned IP, DNS or external connectivity."
     ],
     "inspectTitle": "Inspect the live unit"
   },

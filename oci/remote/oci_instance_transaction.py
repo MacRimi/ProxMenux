@@ -239,6 +239,26 @@ def recover_untouched(root, journal):
         return False
 
 
+def recover_failed_update(root, journal):
+    """Attempt the guarded rollback after an update/Modify command fails.
+
+    Unlike recovery of an untouched guest, replacement failures may have
+    parked its volumes or removed its root disk. The existing recovery
+    journal validates ownership, configuration and backup before restoring.
+    Stack transactions remain the responsibility of their coordinator.
+    """
+    try:
+        with instances.locked(root):
+            state = json.loads(Path(journal).read_text())
+            if state.get('coordinated') or state.get('phase') in TERMINAL:
+                return False
+            recover(root, Path(journal))
+            return True
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        log(f'automatic update recovery failed: {error}')
+        return False
+
+
 def fit(text):
     """A step line that is rewritten in place must not wrap."""
     width = max(shutil.get_terminal_size((80, 24)).columns - 8, 30)
@@ -415,13 +435,22 @@ def probe_http(args):
     return result.stdout, result.returncode
 
 
+def setup_then_web_port(template, check):
+    """AdGuard Home answers its setup wizard on 3000 and, once set up, its web UI
+    on 80. A check on 3000, derived or saved with an installation, takes 80 too."""
+    if (template.get('id') == 'image-adguard-home' and check.get('port') == 3000
+            and not check.get('alternative_ports')):
+        return dict(check, alternative_ports=[80])
+    return check
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
     profile = template.get('proxmox', {}).get('installer_profile', {})
     check = profile.get('startup_healthcheck')
     if check:
-        return check
+        return setup_then_web_port(template, check)
     if profile.get('haos_healthcheck'):
         # Home Assistant OS has a check of its own: Supervisor, Core and the
         # services it runs inside. The installer runs it on the new container.
@@ -433,6 +462,7 @@ def effective_healthcheck(template):
             check = {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
                      'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
                      'verify_tls': False, 'accept_any_status': True}
+            check = setup_then_web_port(template, check)
             # A port taken from the compose file because the recipe names no
             # web address may serve a database or SSH: any answer counts.
             if endpoint.get('source') == GUESSED_ENDPOINT:
@@ -601,6 +631,21 @@ def without_public_routes(config, vmid):
     return b'\n'.join(line for line in config.splitlines() if not public_routes.own(line, vmid)) + b'\n'
 
 
+def refuse_high_availability(vmid):
+    """Recreating a container that HA manages would race the HA manager, which
+    restarts or relocates it in the middle of the replacement."""
+    try:
+        answer = run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json')
+    except FileNotFoundError:
+        return  # Not a Proxmox VE node: there is no HA manager to race.
+    resources = json.loads(answer)
+    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
+        raise ValueError(translate(
+            'This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, '
+            'or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.'
+        ).replace('{vmid}', str(vmid)))
+
+
 def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
@@ -610,6 +655,9 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
         raise ValueError(translate('Stack members are updated together with their stack'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; the container is not replaced'))
+    if not in_place and not coordinated:
+        # A stack checks its members itself; an in-place edit keeps the container.
+        refuse_high_availability(record['vmid'])
     for key, value in (external_changes(record, config, adopt=not coordinated) if baseline else {}).items():
         section, name = ADOPTABLE[key]
         recorded = deployment.get(section, {}) if section else deployment
@@ -885,10 +933,12 @@ def healthcheck(vmid, template):
             time.sleep(2)
         log(f'container {vmid} kept running for {stability}s')
         return None
-    scheme, port, path = check['scheme'], int(check['port']), check['path']
+    scheme, path = check['scheme'], check['path']
+    # Any of the ports answering means the application is up.
+    ports = [int(check['port']), *(int(p) for p in check.get('alternative_ports') or [])]
     timeout = int(check.get('timeout_seconds', 120))
     stability = int(check.get('stability_seconds', 0))
-    if (scheme not in ('http', 'https') or not 1 <= port <= 65535
+    if (scheme not in ('http', 'https') or not all(1 <= port <= 65535 for port in ports)
             or not path.startswith('/') or any(c.isspace() for c in path)
             or not 0 <= stability < timeout <= 3600):
         raise ValueError(translate('Invalid health check'))
@@ -909,10 +959,13 @@ def healthcheck(vmid, template):
                 args += ['-w', '%{http_code}']
             if not check.get('verify_tls', False):
                 args.append('-k')
-            answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
-            ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
-            if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
-                ok = True
+            for port in ports:
+                answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
+                ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
+                if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
+                    ok = True
+                if ok:
+                    break
         if ok:
             stable_since = stable_since or time.monotonic()
             if time.monotonic() - stable_since >= stability:
@@ -1182,9 +1235,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                                             runtime_settings.file_binds(before))
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
-    resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
-    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
-        raise ValueError(translate('High availability resources are not supported by this profile'))
+    if coordinated:
+        refuse_high_availability(vmid)
     archive = archive.resolve(strict=True)
     check_archive(archive)
     image = image_from_archive(str(archive))

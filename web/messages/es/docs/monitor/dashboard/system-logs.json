@@ -18,7 +18,7 @@
       "<strong>Entradas totales</strong>: número de registros dentro del intervalo del filtro activo.",
       "<strong>Errores</strong>: número de entradas con severidad ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Advertencias</strong>: número de entradas con severidad 4 (<code>warning</code>).",
-      "<strong>Backups</strong>: número de entradas de tareas vzdump / PBS en el mismo intervalo."
+      "<strong>Backups</strong>: número de archivos de backup en los almacenamientos de backup configurados."
     ]
   },
   "subtabs": {
@@ -26,10 +26,10 @@
     "logsTitle": "Registros",
     "logsIntro": "El journal del sistema, obtenido en el servidor con <code>journalctl</code>. La barra de herramientas ofrece estos filtros:",
     "logsFilters": [
-      "<strong>Severidad</strong>: emerg / alert / crit / err / warning / notice / info / debug o cualquier combinación.",
-      "<strong>Rango temporal</strong> — últimos 5 min / 15 min / 1 h / 6 h / 24 h / 7 d / personalizado.",
-      "<strong>Búsqueda de texto libre</strong>: subcadena o expresión regular (<code>journalctl --grep</code>).",
-      "<strong>Filtro de unidad</strong>: restringe a una unidad systemd concreta (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+      "<strong>Nivel</strong>: Todos los niveles, Error, Advertencia o Info.",
+      "<strong>Rango temporal</strong>: 1 día / 3 días / 1 semana / 2 semanas / 1 mes, o un número personalizado de días (hasta 90).",
+      "<strong>Búsqueda de texto libre</strong>: subcadena sin distinguir mayúsculas de minúsculas sobre mensaje, servicio, PID, hostname y unidad, aplicada en el navegador.",
+      "<strong>Filtro de servicio</strong>: restringe a un servicio (el <code>SYSLOG_IDENTIFIER</code> del journal)."
     ],
     "logsRowsAfter": "Cada fila muestra timestamp, insignia de severidad, unidad de origen y el mensaje. Los mensajes largos se colapsan con un conmutador \"mostrar más\". La acción <strong>Download</strong> empaqueta el filtro actual en un único archivo <code>.txt</code> vía <code>GET /api/logs/download</code> — útil cuando quieres compartir un trozo del journal con alguien.",
     "logDetailsModalTitle": "Modal Log Details",
@@ -50,10 +50,10 @@
     "maxLevelStoreTitle": "MaxLevelStore de journald",
     "maxLevelStoreBody": "En una instalación nueva de Proxmox, journald usa por defecto <code>MaxLevelStore=warning</code>, que descarta los mensajes info. Monitor lo detecta al arrancar y añade un archivo de configuración complementario (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) con el umbral <code>info</code> para conservar los mensajes informativos y los de mayor gravedad. Esto no incluye debug.",
     "backupsTitle": "Backups",
-    "backupsBody": "Historial de tareas de Proxmox filtrado a las entradas relacionadas con backup. Una fila por tarea (<code>vzdump</code>, transferencias PBS, Garbage Collect, Verify) con el estado (OK / WARNINGS / ERROR), el guest implicado, el almacenamiento de origen, la duración y el UPID. Pulsa una fila para cargar el log completo de la tarea vía <code>GET /api/task-log/&lt;upid&gt;</code> — los mismos datos que Proxmox expone a través de <em>Datacenter → Tasks</em>, acotado a backups.",
+    "backupsBody": "Los archivos de backup de cada almacenamiento con capacidad de backup (dir, NFS, CIFS, PBS), leídos con <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Las tarjetas de arriba muestran el número de VMs y LXC y el tamaño total; debajo, una fila por archivo con tipo, almacenamiento, tamaño y fecha. La restauración se hace en la interfaz web de Proxmox.",
     "notificationsTitle": "Notificaciones",
-    "notificationsBody1": "Todas las notificaciones enviadas por Monitor: Telegram, Discord, correo electrónico, Gotify, ntfy, Slack, Teams y webhook. Cada fila muestra fecha y hora, canal, tipo de evento, severidad, título y cuerpo generados y, si la IA está activa, un selector para comparar su reescritura con el original.",
-    "notificationsBody2": "Usa esta pestaña para verificar la entrega de un canal y comparar la reescritura de IA con la plantilla base. Los canales se configuran en la página detallada de <link>Notificaciones</link>."
+    "notificationsBody1": "Actividad de notificaciones de Proxmox: líneas del journal de servicios de Proxmox que mencionan notificaciones, correo, webhooks o alertas, los destinos de /etc/pve/notifications.cfg y las tareas de backup de la lista de tareas del cluster. Las filas de tareas de backup permiten descargar el log completo de la tarea. El historial de lo que el propio Monitor envió está en Ajustes → Notificaciones → Historial de notificaciones.",
+    "notificationsBody2": "Usa esta pestaña para comprobar qué está haciendo el propio sistema de notificaciones de Proxmox. Los canales del Monitor se configuran en la página detallada de <link>Notificaciones</link>."
   },
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
@@ -64,7 +64,7 @@
       {
         "subtab": "Logs (filtro en vivo)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl --output json --since &lt;range&gt;</code> con filtros de severidad, unidad y búsqueda aplicados en el servidor."
+        "source": "La pestaña pide <code>/api/logs?since_days=N</code>; los filtros de nivel, servicio y texto se aplican en el navegador. La API también acepta <code>priority</code> y <code>service</code>, que la pestaña todavía no usa."
       },
       {
         "subtab": "Descargar",
@@ -74,17 +74,17 @@
       {
         "subtab": "Backups",
         "endpoint": "/api/backups",
-        "source": "Historial de tareas PVE filtrado por <code>vzdump</code>, transferencias PBS, Garbage Collect, Verify."
+        "source": "Archivos de backup listados desde cada almacenamiento de backup con <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Detalles de una tarea de backup",
+        "subtab": "Log de tareas de backup (Notificaciones)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Log completo de la tarea en texto plano leído de <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },
       {
-        "subtab": "Historial de notificaciones",
-        "endpoint": "/api/notifications/history",
-        "source": "Tabla SQLite <code>notification_history</code>, alimentada por el bucle de envío."
+        "subtab": "Notificaciones",
+        "endpoint": "/api/notifications",
+        "source": "<code>journalctl --grep</code> sobre unidades de Proxmox, <code>/etc/pve/notifications.cfg</code> y tareas de backup de <code>pvesh get /cluster/tasks</code>."
       }
     ],
     "apiIntro": "Tanto el filtro en vivo como las descargas también son accesibles vía API:",

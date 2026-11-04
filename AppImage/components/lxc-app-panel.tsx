@@ -405,6 +405,10 @@ const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: strin
     lightTheme: `${SELFHST_WEBP_BASE}/portainer-dark.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/portainer-light.webp`,
   },
+  tailscale: {
+    lightTheme: `${SELFHST_WEBP_BASE}/tailscale.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/tailscale-light.webp`,
+  },
   vaultwarden: {
     lightTheme: `${SELFHST_WEBP_BASE}/vaultwarden.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/vaultwarden-light.webp`,
@@ -413,7 +417,7 @@ const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: strin
 
 function selfhstThemeLogos(src: string) {
   if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
-  const match = src.toLowerCase().match(/\/(frigate|llama-cpp|portainer|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  const match = src.toLowerCase().match(/\/(frigate|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 

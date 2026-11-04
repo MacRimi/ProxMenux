@@ -46,7 +46,7 @@
     "thresholdsIntro": "Anelli, barre e minigrafici usano la stessa scala: <green/> <strong>verde</strong> sotto Avviso, <amber/> <strong>ambra</strong> tra Avviso e Critico, <red/> <strong>rosso</strong> da Critico in poi. Valori predefiniti consigliati inclusi in ProxMenux:",
     "thresholdsItems": [
       "<strong>Utilizzo CPU</strong> — avviso 85 %, critico 95 %.",
-      "<strong>Memoria</strong> — avviso 85 %, critico 95 %. Anche lo swap attiva Critico al 5 % di utilizzo; un host Proxmox sano dovrebbe usarlo raramente.",
+      "<strong>Memoria</strong>: avviso 85 %, critico 95 %. Lo swap attiva Critico solo quando l’uso dello swap supera l’80 % e la RAM disponibile è inferiore al 15 %.",
       "<strong>Temperatura CPU</strong> — avviso 80 °C, critico 90 °C."
     ],
     "thresholdsOutro": "Ogni valore è configurabile per host. <link>Impostazioni → Soglie del monitor di integrità</link> centralizza le impostazioni e spiega come regolarle.",
@@ -58,7 +58,7 @@
     "intro": "Le schede Utilizzo CPU e Memoria aprono un elenco ordinabile dei 25 processi principali: per utilizzo CPU dalla scheda CPU e per memoria residente dalla scheda Memoria.",
     "listTitle": "La finestra di dialogo elenco",
     "listItems": [
-      "<strong>Aggiornamento automatico</strong> — l'elenco si aggiorna ogni 5 secondi finché la finestra è aperta e interrompe le richieste alla chiusura.",
+      "<strong>Aggiornamento automatico</strong> — l'elenco si aggiorna ogni 3 secondi finché la finestra è aperta e interrompe le richieste alla chiusura.",
       "<strong>Filtro</strong> — la ricerca limita l'elenco per comando, utente o PID.",
       "<strong>Barra nella riga</strong> — la colonna della metrica principale disegna una piccola barra scalata al massimo valore nell'elenco filtrato. La graduatoria resta evidente anche se nessun processo si avvicina al 100 %.",
       "<strong>Disposizione mobile</strong> — sotto 640 px le colonne PID e Utente si nascondono, così Comando, CPU % e Memoria restano visibili senza scorrimento orizzontale."
@@ -79,7 +79,7 @@
   },
   "middle": {
     "heading": "Centro: grafici delle metriche del nodo",
-    "body1": "Sotto le schede, <code>NodeMetricsCharts</code> mostra grafici storici di CPU, memoria e I/O disco dal database RRD di Proxmox tramite <code>/api/node/metrics</code>. Il selettore offre <em>1 ora / 24 ore / 7 giorni / 30 giorni / 1 anno</em>. La risoluzione diminuisce con periodi più ampi per mantenere fluido il grafico.",
+    "body1": "Sotto le schede, <code>NodeMetricsCharts</code> mostra grafici storici di CPU, memoria e I/O disco dal database RRD di Proxmox tramite <code>/api/node/metrics</code>. Il selettore offre <em>1 ora / 24 ore / 7 giorni / 30 giorni</em>. La risoluzione diminuisce con periodi più ampi per mantenere fluido il grafico.",
     "body2": "Sono gli stessi grafici dell'interfaccia web Proxmox per un nodo, integrati nel tema scuro di Monitor e allineati agli altri pannelli."
   },
   "bottom": {

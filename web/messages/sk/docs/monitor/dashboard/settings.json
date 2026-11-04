@@ -41,7 +41,7 @@
     "heading": "Jednotky siete",
     "imageAlt": "Karta Jednotky siete s výberom zobrazenia na Bajty",
     "imageCaption": "Vyberte bity alebo bajty za sekundu pre všetky sieťové rýchlosti v prehľade.",
-    "body": "Zobrazuje priepustnosť v <strong>bitoch za sekundu</strong> (Mbps/Gbps) alebo <strong>bajtoch za sekundu</strong> (MB/s/GB/s). Predvolené sú bity ako v špecifikáciách kariet a poskytovateľov; prenosy súborov často používajú bajty. Grafy, štítky a pomôcky sa zmenia ihneď bez obnovenia."
+    "body": "Zobrazuje priepustnosť v <strong>bitoch za sekundu</strong> (Mbps/Gbps) alebo <strong>bajtoch za sekundu</strong> (MB/s/GB/s). Predvolené sú bajty. Voľba sa ukladá v prehliadači. Grafy, štítky a pomôcky sa zmenia ihneď bez obnovenia."
   },
   "health": {
     "heading": "Monitor zdravia",
@@ -203,7 +203,7 @@
     "heading": "Kontrola aktualizácií v LXC",
     "imageAlt": "Karta zisťovania aktualizácií LXC s prepínačom hľadania balíkov v spustených kontajneroch Debian, Ubuntu a Alpine",
     "imageCaption": "Prepínač pravidelnej kontroly cez <code>apt list --upgradable</code> / <code>apk list -u</code> v spustených CT. Predvolene zapnutý. Súvisiaci prepínač v Oznámenia → Služby sa zobrazuje pri zapnutej detekcii.",
-    "intro": "Prepínač medzi Prahmi a Oznámeniami riadi kontrolu LXC. Zapnutý zisťuje balíky spustených CT; Hardvér zobrazuje výsledky a vstupujú do <code>lxc_updates_available</code>. Vypnutý zastaví volania <code>pct exec</code> a odstráni záznamy LXC z <code>managed_installs.json</code>; <code>/api/managed-installs</code> prestane hlásiť stav bez čakania 24 hodín.",
+    "intro": "Prepínač medzi prahmi monitora stavu a kartou Oznámenia riadi kontrolu aktualizácií LXC. Zapnutý zisťuje čakajúce aktualizácie balíkov v spustených CT; výsledky sa zobrazujú na karte VM a LXC a používajú sa v oznámení <code>lxc_updates_available</code>. Vypnutý zastaví volania <code>pct exec</code> a odstráni záznamy LXC z <code>managed_installs.json</code>; <code>/api/managed-installs</code> prestane hlásiť stav bez čakania na ďalší 24-hodinový cyklus.",
     "whatRunsTitle": "Čo kontrola spúšťa",
     "whatRunsIntro": "Pre každý CT v stave <code>running</code> s podporovaným správcom balíkov:",
     "whatRunsItems": [
@@ -249,7 +249,7 @@
     "body1": "Tu zapnete oznámenia ProxMenux Monitor a preformulovanie pomocou AI. <em>Zapnúť oznámenia</em> spustí odosielanie na pozadí, zaregistruje cieľ webhooku Proxmox VE na príjem jeho udalostí a otvorí nastavenia kanálov Telegram, Discord, email, Gotify a ďalších. AI je v rozbaľovacej rozšírenej časti toho istého panela.",
     "body2": "Možnosti vysvetľujú samostatné stránky: kanály, prepínače udalostí, formátované správy, zobrazované meno, odosielanie s odstránením duplicít, odstupom, zoskupením a tichým časom, webhook PVE, poskytovatelia AI a režimy pokynov:",
     "items": [
-      "<notifLink>Oznámenia</notifLink>: nastavenie kanálov (Telegram, Discord, Gotify, email a heslá aplikácií Gmail / Microsoft, ntfy, Slack, Teams a všeobecný webhook), kategórie udalostí, formátované správy, zobrazované meno, odosielanie, webhook PVE, história a API.",
+      "<notifLink>Oznámenia</notifLink>: nastavenie kanálov (Telegram, Discord, Gotify, e-mail a heslá aplikácií Gmail / Microsoft, Pushover a Apprise pre ntfy, Slack, Teams a ďalšie služby), kategórie udalostí, formátované správy, zobrazované meno, odosielanie, webhook PVE, história a API.",
       "<aiLink>Asistent AI</aiLink>: poskytovatelia (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), modely, predvolené alebo vlastné pokyny, jazyk výstupu, podrobnosť pre kanály a návrhy AI."
     ]
   },
@@ -294,8 +294,8 @@
       },
       {
         "card": "Jednotky siete",
-        "endpoint": "/api/settings",
-        "source": "Uložené v tabuľke nastavení SQLite panela."
+        "endpoint": "localStorage",
+        "source": "Predvoľba prehliadača <code>proxmenux-network-unit</code>."
       },
       {
         "card": "Trvanie v Health Monitor",
@@ -304,7 +304,7 @@
       },
       {
         "card": "Vylúčenie úložiska / rozhrania",
-        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "endpoint": "/api/health/storage-exclusions, /api/health/interface-exclusions",
         "source": "SQLite tabuľky <code>excluded_storages</code> a <code>excluded_interfaces</code>."
       },
       {

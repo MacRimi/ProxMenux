@@ -168,7 +168,7 @@
   "ups": {
     "heading": "Status do no-break",
     "subHeading": "(condicional)",
-    "body": "Aparece com um servidor NUT (Network UPS Tools) configurado e acessível. Mostra estado (rede / bateria / carregamento / bateria fraca), carga da bateria, autonomia estimada, percentagem de carga suportada, tensão de entrada, modelo e firmware. Alimenta também <em>Segurança e certificados</em> do monitor de saúde: a passagem a bateria é assinalada imediatamente."
+    "body": "Aparece com um servidor NUT (Network UPS Tools) configurado e acessível. Mostra estado (rede / bateria / carregamento / bateria fraca), carga da bateria, autonomia estimada, percentagem de carga suportada, tensão de entrada, modelo e firmware."
   },
   "dataCollected": {
     "heading": "Como os dados são coletados",

@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Backed by three sources",
-    "body": "Proxmox storages come from <code>pvesm status</code>; ZFS state from <code>zpool status</code>; physical disks from <code>lsblk</code> + <code>smartctl</code> (and <code>nvme</code> for NVMe-specific fields). The tab refreshes every ~60 seconds; the per-disk drill-in triggers a fresh SMART read on demand."
+    "body": "Proxmox storages come from <code>pvesm status</code>; ZFS state from <code>zpool status</code>; physical disks from <code>lsblk</code> + <code>smartctl</code> (and <code>nvme</code> for NVMe-specific fields). The tab refreshes every ~30 seconds; the per-disk drill-in triggers a fresh SMART read on demand."
   },
   "thresholds": {
     "title": "Status colours and thresholds applied here",

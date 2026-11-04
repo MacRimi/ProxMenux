@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Dati di sistema estesi usati nell’intestazione: metriche generali e ora di avvio."
+        "use": "Informazioni leggere di intestazione: hostname, uptime e stato di integrità in cache. Pubblico, nessun token necessario."
       },
       {
         "endpoint": "/api/hardware",
@@ -401,7 +401,7 @@
       {
         "endpoint": "/api/logs",
         "method": "GET",
-        "use": "Le voci del diario filtrate. Query: <code>?level=&service=&limit=</code>."
+        "use": "Le voci del diario filtrate. Query: <code>?priority=&service=&limit=&since_days=</code> (<code>priority</code> 0-7, <code>since_days</code> fino a 90)."
       },
       {
         "endpoint": "/api/logs/download",
@@ -411,7 +411,7 @@
       {
         "endpoint": "/api/events",
         "method": "GET",
-        "use": "Flusso di eventi interno — lo stesso che alimenta le notifiche."
+        "use": "Attività ed eventi recenti del cluster Proxmox da <code>pvesh get /cluster/tasks</code>. Query: <code>?limit=</code> (predefinito 50)."
       },
       {
         "endpoint": "/api/task-log/<upid>",
@@ -462,7 +462,7 @@
       {
         "endpoint": "/api/notifications/send",
         "method": "POST",
-        "use": "Genera un evento personalizzato. Corpo: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+        "use": "Genera un evento personalizzato. Corpo: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"message\":\"...\",\"data\":'{''}''}'</code>."
       },
       {
         "endpoint": "/api/notifications/test-ai",

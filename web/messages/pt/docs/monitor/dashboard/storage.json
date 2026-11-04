@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Apoiado por três fontes",
-    "body": "Os armazenamentos Proxmox vêm de <code>pvesm status</code>, ZFS de <code>zpool status</code>, discos de <code>lsblk</code> + <code>smartctl</code> e campos NVMe de <code>nvme</code>. O separador atualiza-se aproximadamente a cada 60 segundos; abrir o detalhe pede uma leitura SMART."
+    "body": "Os armazenamentos Proxmox vêm de <code>pvesm status</code>, ZFS de <code>zpool status</code>, discos de <code>lsblk</code> + <code>smartctl</code> e campos NVMe de <code>nvme</code>. O separador atualiza-se aproximadamente a cada 30 segundos; abrir o detalhe pede uma leitura SMART."
   },
   "thresholds": {
     "title": "Cor do estado e limiares aplicados aqui",

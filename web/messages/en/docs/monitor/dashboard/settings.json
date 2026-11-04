@@ -41,7 +41,7 @@
     "heading": "Network Units",
     "imageAlt": "Network Units card with Network Unit Display dropdown set to Bytes",
     "imageCaption": "Choose between bits per second and bytes per second for every network rate displayed in the dashboard.",
-    "body": "Choose how network throughput is displayed across the dashboard: <strong>bits per second</strong> (Mbps / Gbps) or <strong>bytes per second</strong> (MB/s / GB/s). Bits is the default because it's what NIC vendors and ISPs label their products with; bytes is what most file-transfer tools report. The setting affects every chart, badge and tooltip that shows network rate — applied immediately, no reload needed."
+    "body": "Choose how network throughput is displayed across the dashboard: <strong>bits per second</strong> (Mbps / Gbps) or <strong>bytes per second</strong> (MB/s / GB/s). Bytes is the default, as most file-transfer tools report; bits is what NIC vendors and ISPs label their products with. The choice is stored in the browser, so each browser keeps its own. The setting affects every chart, badge and tooltip that shows network rate — applied immediately, no reload needed."
   },
   "health": {
     "heading": "Health Monitor",
@@ -203,7 +203,7 @@
     "heading": "LXC Update Detection",
     "imageAlt": "LXC Update Detection card with a single switch — when enabled, the Monitor periodically scans running Debian/Ubuntu/Alpine LXC containers for pending package updates.",
     "imageCaption": "The toggle for the periodic <code>apt list --upgradable</code> / <code>apk list -u</code> scan across every running CT. Default is ON. The matching notification toggle in Notifications → Services only appears while detection is enabled.",
-    "intro": "A dedicated toggle for the LXC update scan, sitting between the Health Monitor Thresholds and the Notifications card. When ON, ProxMenux walks every running CT on the host and queries the in-container package manager for pending updates; results land in the Hardware tab badge counts and feed the <code>lxc_updates_available</code> notification. When OFF, the scan stops entirely (no <code>pct exec</code> calls) and any existing LXC entries in <code>managed_installs.json</code> are purged immediately, so the dashboard and the <code>/api/managed-installs</code> endpoint stop reporting LXC update state without waiting for the next 24h cycle.",
+    "intro": "A dedicated toggle for the LXC update scan, sitting between the Health Monitor Thresholds and the Notifications card. When ON, ProxMenux walks every running CT on the host and queries the in-container package manager for pending updates; results land in the VMs & LXCs tab badge counts and feed the <code>lxc_updates_available</code> notification. When OFF, the scan stops entirely (no <code>pct exec</code> calls) and any existing LXC entries in <code>managed_installs.json</code> are purged immediately, so the dashboard and the <code>/api/managed-installs</code> endpoint stop reporting LXC update state without waiting for the next 24h cycle.",
     "whatRunsTitle": "What the scan actually runs",
     "whatRunsIntro": "For each CT in <code>running</code> state with a supported package manager:",
     "whatRunsItems": [
@@ -249,7 +249,7 @@
     "body1": "This section of the Settings tab is where ProxMenux Monitor notifications and the AI rewriter are turned on. Pressing <em>Enable Notifications</em> starts the dispatch background thread, registers a Proxmox VE webhook target on the host so PVE-emitted events flow into the same pipeline, and unfolds the channel form so you can connect Telegram, Discord, Email, Gotify and the rest. The AI rewriter sits inside the same panel as a collapsible advanced section.",
     "body2": "Both surfaces have a lot of moving parts — channels, per-event toggles, Rich messages, the Display Name, the dispatch pipeline (dedup, cooldown, aggregation, quiet hours), the PVE webhook integration, AI providers, prompt modes — and live on their own dedicated pages rather than being repeated here:",
     "items": [
-      "<notifLink>Notifications</notifLink> — channel walk-throughs (Telegram, Discord, Gotify, Email + Gmail / Microsoft app passwords, ntfy, Slack, Teams, generic webhook), per-event categories, Rich messages, Display Name, dispatch pipeline, PVE webhook integration, history and API.",
+      "<notifLink>Notifications</notifLink> — channel walk-throughs (Telegram, Discord, Gotify, Email + Gmail / Microsoft app passwords, Pushover, and Apprise for ntfy, Slack, Teams and other services), per-event categories, Rich messages, Display Name, dispatch pipeline, PVE webhook integration, history and API.",
       "<aiLink>AI Assistant</aiLink> — providers (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), model selection, prompt modes (default / custom), output language, per-channel detail levels and AI suggestions."
     ]
   },
@@ -294,8 +294,8 @@
       },
       {
         "card": "Network Units",
-        "endpoint": "/api/settings",
-        "source": "Persisted in the dashboard's SQLite settings table."
+        "endpoint": "localStorage",
+        "source": "Browser preference <code>proxmenux-network-unit</code>."
       },
       {
         "card": "Health Monitor durations",
@@ -304,7 +304,7 @@
       },
       {
         "card": "Storage / interface exclusions",
-        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "endpoint": "/api/health/storage-exclusions, /api/health/interface-exclusions",
         "source": "SQLite tables <code>excluded_storages</code> and <code>excluded_interfaces</code>."
       },
       {

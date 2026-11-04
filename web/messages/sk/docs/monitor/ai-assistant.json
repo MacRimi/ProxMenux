@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "AI asistent",
-    "description": "Voliteľný prepis AI mení vhodné šablóny oznámení na zrozumiteľné správy s detailmi podľa kanála, trinástimi jazykmi rozhrania, vlastnými promptmi, verejnou komunitnou knižnicou a doplneným kontextom. Správy <code>backup_complete</code> a <code>backup_fail</code> AI úplne obchádzajú.",
+    "description": "Voliteľný prepis AI mení vhodné šablóny oznámení na zrozumiteľné správy s detailmi podľa kanála, trinástimi jazykmi rozhrania, vlastnými promptmi, verejnou komunitnou knižnicou a doplneným kontextom. Správy backup_complete a backup_fail sa nikdy neprepisujú; so zapnutými AI návrhmi AI len pridá vysvetlenie, keď záloha hlási chyby.",
     "section": "ProxMenux Monitor"
   },
   "intro": {
@@ -83,7 +83,7 @@
     "intro1": "Komerční poskytovatelia účtujú za <em>token</em>. Token zodpovedá približne štyrom znakom anglického textu alebo trom štvrtinám slova. Anglická veta <em>\"Backup completed on storage local-bak\"</em> má približne osem tokenov. Desať riadkov denníka môže podľa technického obsahu zabrať 200–400 tokenov.",
     "intro2": "Pri každom hovore sú fakturované dve veci:",
     "items": [
-      "<strong>Vstupné tokeny</strong> zahŕňajú systémový prompt a používateľskú správu: závažnosť, názov, text šablóny a doplnený kontext. Počet závisí od skutočného promptu a udalosti. Každý prepisovaný kanál môže spotrebovať vlastné vstupné tokeny; správy o dokončení alebo zlyhaní zálohy AI obchádzajú.",
+      "<strong>Vstupné tokeny</strong> zahŕňajú systémový prompt a používateľskú správu: závažnosť, názov, text šablóny a doplnený kontext. Počet závisí od skutočného promptu a udalosti. Každý prepisovaný kanál môže spotrebovať vlastné vstupné tokeny; správy o dokončení alebo zlyhaní zálohy spotrebujú tokeny len vtedy, keď AI vysvetľuje chyby zálohy.",
       "<strong>Výstupné tokeny</strong> – čo model odpíše. Monitor to uzatvára pomocou <code>max_tokens</code> (pozri tabuľku nižšie). Limit je <em>limit</em>, nie poplatok: ak model vyrába 250 tokeny s limitom 1500, zaplatíte za 250."
     ],
     "capsIntro": "Toto sú skutočné limity, ktoré používa dispečer, prevzaté priamo z <code>AI_DETAIL_TOKENS</code> v <code>notification_templates.py</code>:",
@@ -118,7 +118,7 @@
     "imageCaption": "Modál v aplikácii – šesť kariet, jedna na poskytovateľa, s rovnakými popismi zdokumentovanými nižšie.",
     "groq": {
       "heading": "Groq",
-      "tagline": "Veľmi rýchla, veľkorysá voľná úroveň (30 req/min). Ideálne začať.",
+      "tagline": "Veľmi rýchla, s veľkorysou bezplatnou úrovňou. Dobré miesto na začiatok.",
       "items": [
         "Kľúč API: <a>console.groq.com/keys</a>",
         "Príklady z dodaného zoznamu modelov: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
@@ -234,7 +234,7 @@
   },
   "detailLevel": {
     "heading": "Úroveň detailov pre každý kanál",
-    "intro": "Telegram, Discord, Gotify a e-mail majú vlastnú ponuku úrovne detailov. Tri hodnoty určujú limit výstupných tokenov a pokyny predvoleného promptu:",
+    "intro": "Každý zo šiestich kanálov (Telegram, Discord, Gotify, e-mail, Pushover, Apprise) má vlastnú ponuku úrovne detailov. Tri hodnoty určujú limit výstupných tokenov a pokyny predvoleného promptu:",
     "headerLevel": "Úroveň",
     "headerLabel": "Štítok UI",
     "headerCap": "Výstupný strop",
@@ -261,7 +261,7 @@
     ],
     "defaultsIntro": "Predvolené hodnoty pri prvej inštalácii:",
     "defaults": [
-      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Telegram, Discord, Gotify, Pushover, Apprise</strong> — <code>standard</code>.",
       "<strong>E-mail</strong> — <code>detailed</code>. E-mail je kanál, kde zvyčajne chcete úplný obraz pre archív."
     ],
     "emailTitle": "Podrobný e-mail pripája pôvodnú správu",
@@ -280,7 +280,7 @@
   },
   "templates": {
     "heading": "Poznámka k šablónam",
-    "body1": "AI dostáva text vytvorený zo šablóny, nie surové údaje udalosti. Typy ako <code>vm_start</code>, <code>auth_fail</code> a <code>health_degraded</code> majú šablóny v <code>notification_templates.py</code>. AI prepisuje vhodné výstupy; <code>backup_complete</code> a <code>backup_fail</code> si ponechávajú deterministické správy bez AI.",
+    "body1": "AI dostáva text vytvorený zo šablóny, nie surové údaje udalosti. Typy ako <code>vm_start</code>, <code>auth_fail</code> a <code>health_degraded</code> majú šablóny v <code>notification_templates.py</code>. AI prepisuje vhodné výstupy; <code>backup_complete</code> a <code>backup_fail</code> si ponechávajú deterministické správy; so zapnutými AI návrhmi AI len pridá vysvetlenie, keď záloha hlási chyby.",
     "body2": "Názvy hostiteľov a VMID vloží šablóna ešte pred prepisom; AI ich nemusí vymýšľať. Pri vypnutej AI sa odošle priamo text šablóny. Stránka <link>Oznámenia</link> opisuje celý postup odosielania a kroky pred touto vrstvou."
   },
   "privacy": {

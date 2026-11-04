@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Assistant IA",
-    "description": "La reformulation IA facultative transforme les modèles de notification admissibles en messages clairs : niveaux de détail par canal, treize langues dans l’interface, instructions personnalisées, bibliothèque communautaire publique et contexte enrichi. Les rapports <code>backup_complete</code> et <code>backup_fail</code> ignorent entièrement l’IA.",
+    "description": "La reformulation IA facultative transforme les modèles de notification admissibles en messages clairs : niveaux de détail par canal, treize langues dans l’interface, instructions personnalisées, bibliothèque communautaire publique et contexte enrichi. Les rapports backup_complete et backup_fail ne sont jamais reformulés ; avec les suggestions d’IA activées, l’IA ajoute seulement une explication lorsqu’une sauvegarde signale des erreurs.",
     "section": "Moniteur ProxMenux"
   },
   "intro": {
@@ -83,7 +83,7 @@
     "intro1": "Les fournisseurs commerciaux facturent les <em>tokens</em>. Un token représente environ quatre caractères anglais ou trois quarts de mot. La phrase anglaise <em>\"Backup completed on storage local-bak\"</em> compte environ huit tokens. Dix lignes de journal peuvent représenter 200 à 400 tokens selon leur contenu technique.",
     "intro2": "Deux choses sont facturées à chaque appel :",
     "items": [
-      "<strong>Tokens d’entrée</strong> : instructions système et message utilisateur, avec gravité, titre, texte du modèle et contexte enrichi. Leur nombre dépend des instructions et de l’événement. Chaque canal reformulé peut consommer ses propres tokens ; les rapports de sauvegarde terminée ou échouée ignorent l’IA.",
+      "<strong>Tokens d’entrée</strong> : instructions système et message utilisateur, avec gravité, titre, texte du modèle et contexte enrichi. Leur nombre dépend des instructions et de l’événement. Chaque canal reformulé peut consommer ses propres tokens ; les rapports de sauvegarde terminée ou échouée ne consomment des tokens que lorsque l’IA explique des erreurs de sauvegarde.",
       "<strong>Tokens de sortie</strong> : la réponse du modèle. Monitor les limite avec <code>max_tokens</code>. Le plafond est une <em>limite</em>, pas une consommation fixe : pour 250 tokens produits avec un plafond de 1500, vous payez 250."
     ],
     "capsIntro": "Ce sont les plafonds réels que le régulateur applique, pris directement à partir de <code>AI_DETAIL_TOKENS</code> dans <code>notification_templates.py</code>:",
@@ -118,7 +118,7 @@
     "imageCaption": "La fenêtre de l’application : six fiches, une par fournisseur, avec les descriptions ci-dessous.",
     "groq": {
       "heading": "Groq",
-      "tagline": "Très rapide, généreux niveau libre (30 req/min). Idéal pour commencer.",
+      "tagline": "Très rapide, avec un généreux niveau gratuit. Un bon point de départ.",
       "items": [
         "Clé API : <a>console.groq.com/keys</a>",
         "Exemples de la liste de modèles fournie : <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
@@ -234,7 +234,7 @@
   },
   "detailLevel": {
     "heading": "Niveau de détail par canal",
-    "intro": "Telegram, Discord, Gotify et e-mail ont chacun un choix de détail. Trois valeurs déterminent le plafond de tokens et les instructions du mode par défaut :",
+    "intro": "Chacun des six canaux (Telegram, Discord, Gotify, e-mail, Pushover, Apprise) a son propre choix de détail. Trois valeurs déterminent le plafond de tokens et les instructions du mode par défaut :",
     "headerLevel": "Niveau",
     "headerLabel": "Étiquette UI",
     "headerCap": "Limite de production",
@@ -261,7 +261,7 @@
     ],
     "defaultsIntro": "Valeurs par défaut à la première installation :",
     "defaults": [
-      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Telegram, Discord, Gotify, Pushover, Apprise</strong> — <code>standard</code>.",
       "<strong>Courriel</strong> — <code>detailed</code>. Le courriel est le canal où vous voulez généralement l'image complète pour l'archivage."
     ],
     "emailTitle": "Le niveau de détail du courriel ajoute l'original",
@@ -280,7 +280,7 @@
   },
   "templates": {
     "heading": "Note sur les modèles",
-    "body1": "L’IA reçoit le texte d’un modèle, pas les données brutes de l’événement. <code>vm_start</code>, <code>auth_fail</code> et <code>health_degraded</code> ont des modèles dans <code>notification_templates.py</code>. L’IA reformule les sorties admissibles ; <code>backup_complete</code> et <code>backup_fail</code> conservent leurs rapports déterministes sans IA.",
+    "body1": "L’IA reçoit le texte d’un modèle, pas les données brutes de l’événement. <code>vm_start</code>, <code>auth_fail</code> et <code>health_degraded</code> ont des modèles dans <code>notification_templates.py</code>. L’IA reformule les sorties admissibles ; <code>backup_complete</code> et <code>backup_fail</code> conservent leurs rapports déterministes ; avec les suggestions d’IA activées, l’IA ajoute seulement une explication lorsque la sauvegarde signale des erreurs.",
     "body2": "Deux implications pratiques: l'IA ne voit jamais un nom d'hôte ou VMID qu'il doit inventer — ces champs sont placés par le modèle avant la réécriture. Et si l'IA est désactivé, le corps modèle est ce qui est envoyé directement. La page <link>Notifications</link> documente le pipeline d'expédition en entier et est la bonne référence pour tout ce qui arrive à un événement avant qu'il atteigne ce calque."
   },
   "privacy": {

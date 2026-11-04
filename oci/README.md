@@ -1117,3 +1117,9 @@ have not been tested. No custom supervisor or image entrypoint is introduced.
 DeepSeek OCR remains deferred at the user's request: registry inspection on
 2026-09-14 found only `v2.2.0` for both IceWhaleTech images and no `latest` tag.
 No fixed-version exception or deployment has been introduced.
+
+## Automatic catalog refresh
+
+OCI Manager opens with its local catalog and checks for new applications and recipes
+in the background. **Refresh catalog** repeats the check manually. See
+[Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility.

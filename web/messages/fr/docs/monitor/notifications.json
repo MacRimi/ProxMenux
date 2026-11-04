@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Réécriture optionnelle de l'IA",
-    "body1": "Les événements admissibles peuvent être réécrits par un LLM. backup_complete et backup_fail sont exclus. L’IA est désactivée par défaut et s’exécute dans le thread d’envoi. En cas d’erreur ou délai dépassé, le texte du modèle est utilisé.",
+    "body1": "Les événements admissibles peuvent être réécrits par un LLM. backup_complete et backup_fail ne sont pas reformulés ; avec les suggestions d’IA activées, l’IA ajoute seulement une explication lorsqu’une sauvegarde signale des erreurs. L’IA est désactivée par défaut et s’exécute dans le thread d’envoi. En cas d’erreur ou délai dépassé, le texte du modèle est utilisé.",
     "body2": "OpenAI, Anthropic, Google Gemini, Groq, OpenRouter et Ollama local sont disponibles. Par canal : détail (<code>brief</code>, <code>standard</code>, <code>detailed</code>), langue, mode d’instructions (<code>default</code> ou <code>custom</code>) et instructions propres. Guide et exemples : <link>Assistant IA</link>.",
     "privacyTitle": "Note de confidentialité",
     "privacyBody": "La requête IA peut inclure titre, gravité, texte, instructions système/personnelles et contexte : noms d’hôte, IP, utilisateurs, erreurs et journaux. Elle part vers le serveur choisi. Ollama reste local seulement avec serveur et modèle locaux ; serveur distant ou modèle cloud transmettent les données hors de l’hôte. Désactivez l’IA ou utilisez serveur et modèle locaux contrôlés si le contenu doit rester dans le réseau."

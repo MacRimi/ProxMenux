@@ -20,7 +20,7 @@
     "heading": "Arkivlayout",
     "intro": "Varje arkiv följer samma trädlayout oavsett destination. <code>metadata/</code> underkatalog håller de strukturerade nyttolasterna; <code>rootfs/</code> underkatalog håller filsystemet kopiera.",
     "treeCaption": "Förberedelsekatalogen som skapas vid säkerhetskopiering. Alla mål får samma träd i sitt eget format: tar för lokala mål, PBS-block för PBS och Borg-segment för Borg.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "Innehållet i rootfs",
@@ -176,7 +176,7 @@
         "stage": "3",
         "name": "Förbered uppskjutna ändringar",
         "reads": "rootfs/ (omstart + farliga vägar)",
-        "action": "<code>_rs_prepare_pending_restore</code> förbereder riskfyllda sökvägar under <code>/var/lib/proxmenux/pending-restore/</code>, skriver <code>plan.env</code>, <code>apply-on-boot.list</code> och <code>rs-skip-paths.txt</code> och aktiverar <code>proxmenux-restore-onboot.service</code> för nästa start."
+        "action": "<code>_rs_prepare_pending_restore</code> förbereder riskfyllda sökvägar under <code>/var/lib/proxmenux/restore-pending/&lt;restore_id&gt;/</code> (länkad som <code>current</code>), skriver <code>plan.env</code>, <code>apply-on-boot.list</code> och <code>rs-skip-paths.txt</code> och aktiverar <code>proxmenux-restore-onboot.service</code> för nästa start."
       },
       {
         "stage": "3b",

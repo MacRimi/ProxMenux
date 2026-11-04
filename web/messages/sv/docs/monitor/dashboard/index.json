@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminal",
-        "owns": "Skal till värden eller valfri VM/CT i webbläsaren, med <code>xterm.js</code> över WebSockets."
+        "owns": "Skal i webbläsaren på Proxmox-värden, med <code>xterm.js</code> över WebSockets. LXC-konsoler öppnas från fliken VM och LXC."
       },
       {
         "name": "Säkerhet",

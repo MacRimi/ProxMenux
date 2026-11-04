@@ -33,7 +33,7 @@
   },
   "warnConditional": {
     "title": "Možnosti nastavenia iba viditeľné pri inštalácii monitora",
-    "body": "V Nastaveniach sa zobrazujú dva nižšie uvedené položky menu, len ak je <code>proxmenux-monitor.service</code> registrovaný systemd. Ak ich nevidíte, monitor nebol nainštalovaný (je voliteľný počas inštalácie ProxMenux). Ak chcete pridať neskôr, preinštalujte ProxMenux s najnovšou verziou a vyberte možnosť Monitor."
+    "body": "Tri nižšie uvedené položky menu sa v Nastaveniach zobrazujú, len ak je <code>proxmenux-monitor.service</code> registrovaný v systemd. Inštalátor ho nastaví vždy, takže ak ich nevidíte, krok Monitora počas inštalácie zlyhal. Spustite oficiálny inštalátor znova a skúste to opäť."
   },
   "toggle": {
     "heading": "Aktivovať / deaktivovať",
@@ -92,8 +92,8 @@
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",
-    "missingTitle": "Obe možnosti menu chýbajú",
-    "missingBody": "Monitor nie je registrovaný na systemd. Potvrďte <code>systemctl list-unit-files | grep proxmenux-monitor</code> Ak nie je výstup, preinštalujte ProxMenux od oficiálneho inštalátora s najnovšou verziou a vyberte možnosť Monitor počas inštalácie.",
+    "missingTitle": "Možnosti menu Monitora chýbajú",
+    "missingBody": "Monitor nie je registrovaný v systemd. Potvrďte <code>systemctl list-unit-files | grep proxmenux-monitor</code> — ak nie je žiadny výstup, spustite oficiálny inštalátor znova; Monitor inštaluje pri každom spustení.",
     "unreachableTitle": "Služba aktivovaná, ale URL je nedostupná",
     "unreachableBody": "Stavový výstup Nastavenia vám dáva IP. Potvrdiť:",
     "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",

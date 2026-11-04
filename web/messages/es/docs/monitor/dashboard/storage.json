@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Respaldado por tres fuentes",
-    "body": "Los almacenamientos Proxmox proceden de <code>pvesm status</code>; ZFS, de <code>zpool status</code>; los discos físicos, de <code>lsblk</code> + <code>smartctl</code>, y <code>nvme</code> para campos específicos. La pestaña se actualiza aproximadamente cada 60 segundos; abrir el detalle solicita una lectura SMART."
+    "body": "Los almacenamientos Proxmox proceden de <code>pvesm status</code>; ZFS, de <code>zpool status</code>; los discos físicos, de <code>lsblk</code> + <code>smartctl</code>, y <code>nvme</code> para campos específicos. La pestaña se actualiza aproximadamente cada 30 segundos; abrir el detalle solicita una lectura SMART."
   },
   "thresholds": {
     "title": "Colores de estado y umbrales aplicados aquí",

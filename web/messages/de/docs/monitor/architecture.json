@@ -64,7 +64,7 @@
     "items": [
       "<strong><code>User=root</code></strong>: Der Dienst verwendet Root-Rechte für Host-Operationen wie SMART, <code>pvesh</code> und ZFS-Verwaltung. Die Webterminal-Prozesse erben diese Rechte.",
       "<strong><code>Restart=on-failure</code></strong> mit zehn Sekunden Wartezeit: Nach fehlerhaftem Ende startet der Dienst automatisch neu.",
-      "<strong><code>After=network.target</code></strong>: ordnet den Start nach diesem Ziel ein; garantiert keine IP-Adresse, DNS oder externe Verbindung."
+      "<strong><code>After=network.target pve-cluster.service</code></strong>: ordnet den Start nach dem Netzwerk-Target und dem Proxmox-Cluster-Dateisystem ein; garantiert keine IP-Adresse, DNS oder externe Verbindung."
     ],
     "inspectTitle": "Aktuelle Unit prüfen"
   },

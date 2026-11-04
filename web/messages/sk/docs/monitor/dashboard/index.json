@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminál",
-        "owns": "Shell hostiteľa alebo ľubovoľnej VM/CT v prehliadači pomocou <code>xterm.js</code> cez WebSockets."
+        "owns": "Shell v prehliadači na hostiteľovi Proxmox pomocou <code>xterm.js</code> cez WebSockets. Konzoly LXC sa otvárajú z karty VM a LXC."
       },
       {
         "name": "Zabezpečenie",

@@ -232,6 +232,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         # An unsupported native edit still uses the existing installer. Decide
         # the route before changing anything; actual validation/API failures
         # must not silently switch to a destructive fallback.
+        # Also refuses a container that HA manages, before the image is downloaded.
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None
@@ -289,7 +290,7 @@ def main():
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         transaction.report_error(error, f'update-{args.vmid}')
         journal = transaction.pending_journal()
-        if journal and not transaction.recover_untouched(instances.ROOT, journal):
+        if journal and not transaction.recover_failed_update(instances.ROOT, journal):
             transaction.recovery_hint()
         return 1
 

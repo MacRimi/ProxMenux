@@ -30,20 +30,21 @@ keep_on_disk() {
     local place="$LOG_DIR/$name" disk="$ROOT/var/hdd.$name"
 
     if [ -L "$place" ]; then
-        [ -d "$disk" ] || mkdir -p "$disk"
+        [ "$(readlink "$place")" = "/var/hdd.$name" ] || return 1
+        [ -d "$disk" ] || mkdir -p "$disk" || return 1
         return 0
     fi
     # The journal is always kept on disk; any other folder only where it exists.
     if [ ! -d "$place" ]; then
         [ "$name" = journal ] || return 0
-        mkdir -p "$disk"
+        mkdir -p "$disk" || return 1
         chown root:systemd-journal "$disk" 2>/dev/null || true
         chmod 2755 "$disk"
     elif [ ! -e "$disk" ]; then
         mv "$place" "$disk" || return 1
     else
         cp -a "$place/." "$disk/" || return 1
-        rm -rf "${place:?}"
+        rm -rf "${place:?}" || return 1
     fi
     ln -s "/var/hdd.$name" "$place"
 }
@@ -70,4 +71,8 @@ for name in $KEPT_ON_DISK; do
         keep_on_disk "$name" || status=1
     fi
 done
+# Only a completed boot migration makes it safe to skip journal rotation.
+if [ "$status" = 0 ] && [ "${PMX_L2R_REVERT:-0}" != 1 ]; then
+    sed -i 's/^JOURNALD_AWARE=.*/JOURNALD_AWARE=false/' "$ROOT/etc/log2ram.conf" || status=1
+fi
 exit "$status"

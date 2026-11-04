@@ -18,7 +18,7 @@
       "<strong>Einträge insgesamt</strong> — Anzahl der Protokolleinträge im aktiven Filterzeitraum.",
       "<strong>Fehler</strong> — Anzahl der Einträge mit Schweregrad ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Warnungen</strong> — Anzahl der Einträge mit Schweregrad 4 (<code>warning</code>).",
-      "<strong>Sicherungen</strong> — Anzahl der vzdump-/PBS-Aufgabeneinträge im selben Zeitraum."
+      "<strong>Sicherungen</strong>: Anzahl der Backup-Archive auf den konfigurierten Backup-Speichern."
     ]
   },
   "subtabs": {
@@ -26,10 +26,10 @@
     "logsTitle": "Protokolle",
     "logsIntro": "Das Systemjournal wird auf dem Server mit <code>journalctl</code> abgerufen. Die Werkzeugleiste bietet folgende Filter :",
     "logsFilters": [
-      "<strong>Schweregrad</strong> — emerg / alert / crit / err / warning / notice / info / debug oder eine beliebige Kombination.",
-      "<strong>Zeitbereich</strong> — zuletzt 5 min. / 15 min. / 1 h / 6 h / 24 h / 7 d / Custom.",
-      "<strong>Freitextsuche</strong> — Teilzeichenfolge oder regulärer Ausdruck (<code>journalctl --grep</code>).",
-      "<strong>Unit-Filter</strong> — auf eine bestimmte systemd-Unit beschränken (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+      "<strong>Stufe</strong>: Alle Ebenen, Fehler, Warnung oder Info.",
+      "<strong>Zeitbereich</strong>: 1 Tag / 3 Tage / 1 Woche / 2 Wochen / 1 Monat oder eine benutzerdefinierte Anzahl von Tagen (bis zu 90).",
+      "<strong>Freitextsuche</strong>: Teilzeichenfolge ohne Beachtung der Groß-/Kleinschreibung über Nachricht, Dienst, PID, Hostname und Unit, im Browser angewendet.",
+      "<strong>Dienstfilter</strong>: auf einen Dienst beschränken (der Journal-<code>SYSLOG_IDENTIFIER</code>)."
     ],
     "logsRowsAfter": "Jede Zeile zeigt Zeitstempel, Schweregradabzeichen, Quelleinheit und die Nachricht. Lange Nachrichten brechen mit einem \"mehr anzeigen\"-Schalter zusammen. Die Aktion <strong>Download</strong> bündelt den aktuellen Filter über <code>GET /api/logs/download</code> in einer einzigen <code>.txt</code>-Datei – nützlich, wenn Sie ein Stück Journal mit jemandem teilen möchten.",
     "logDetailsModalTitle": "Dialog Protokolldetails",
@@ -50,10 +50,10 @@
     "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "Bei einer neuen Proxmox-Installation verwendet journald standardmäßig <code>MaxLevelStore=warning</code> und verwirft dadurch Info-Meldungen. Monitor erkennt dies beim Start und ergänzt eine Drop-in-Datei (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) mit dem Grenzwert <code>info</code>. So werden Informationsmeldungen und schwerwiegendere Meldungen gespeichert; debug ist darin nicht enthalten.",
     "backupsTitle": "Sicherungen",
-    "backupsBody": "Proxmox-Taskhistorie gefiltert auf Backup-bezogene Einträge. Eine Zeile pro Aufgabe (<code>vzdump</code>, PBS-Transfers, Garbage Collect, Verify) mit dem Status (OK / WARNINGS / ERROR), beteiligter Gast, Quellspeicher, Dauer und UPID. Klicken Sie auf eine Zeile, um das vollständige Aufgabenprotokoll über <code>GET /api/task-log/&lt;upid&gt;</code> zu laden - die gleichen Daten, die Proxmox über <em>Datacenter → Tasks</em>, die auf Backups beschränkt sind, freigibt.",
+    "backupsBody": "Die Backup-Archive auf jedem backupfähigen Speicher (dir, NFS, CIFS, PBS), gelesen mit <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Karten oben zeigen die Anzahl der VMs und LXCs sowie die Gesamtgröße; darunter steht eine Zeile pro Archiv mit Typ, Speicher, Größe und Datum. Die Wiederherstellung erfolgt in der Proxmox-Weboberfläche.",
     "notificationsTitle": "Benachrichtigungen",
-    "notificationsBody1": "Alle von Monitor versendeten Benachrichtigungen: Telegram, Discord, E-Mail, Gotify, ntfy, Slack, Teams und Webhook. Jede Zeile zeigt Zeitstempel, Kanal, Ereignistyp, Schweregrad, erzeugten Titel und Nachrichtentext sowie bei aktivierter KI einen Schalter zum Vergleich der KI-Fassung mit dem Original.",
-    "notificationsBody2": "Hier prüfen Sie, ob ein Kanal tatsächlich Nachrichten zustellt, und vergleichen die KI-Fassung mit der ursprünglichen Vorlage. Die Kanäle konfigurieren Sie auf der Detailseite <link>Benachrichtigungen</link>."
+    "notificationsBody1": "Proxmox-Benachrichtigungsaktivität: Journalzeilen von Proxmox-Diensten, die Benachrichtigungen, E-Mail, Webhooks oder Alarme erwähnen, die Ziele in /etc/pve/notifications.cfg und Backup-Aufgaben aus der Cluster-Aufgabenliste. Bei Zeilen von Backup-Aufgaben kann das vollständige Aufgabenprotokoll heruntergeladen werden. Der Verlauf dessen, was der Monitor selbst versendet hat, befindet sich unter Einstellungen → Benachrichtigungen → Benachrichtigungsverlauf.",
+    "notificationsBody2": "Hier prüfen Sie, was das eigene Benachrichtigungssystem von Proxmox tut. Die Kanäle des Monitors konfigurieren Sie auf der Detailseite <link>Benachrichtigungen</link>."
   },
   "dataCollected": {
     "heading": "Wie die Daten gesammelt werden",
@@ -64,7 +64,7 @@
       {
         "subtab": "Protokolle (Live-Filter)",
         "endpoint": "/api/logs",
-        "source": "<code>journalctl --output json --since &lt;range&gt;</code> mit serverseitigen Filtern für Schweregrad, Unit und Suche."
+        "source": "Der Tab ruft <code>/api/logs?since_days=N</code> ab; Stufe, Dienst und Textsuche werden im Browser gefiltert. Die API akzeptiert auch <code>priority</code> und <code>service</code>, die der Tab noch nicht nutzt."
       },
       {
         "subtab": "Herunterladen",
@@ -74,17 +74,17 @@
       {
         "subtab": "Sicherungen",
         "endpoint": "/api/backups",
-        "source": "PVE-Taskhistorie gefiltert nach <code>vzdump</code>, PBS-Transfers, Garbage Collect, Verify."
+        "source": "Backup-Archive, aufgelistet aus jedem Backup-Speicher mit <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
       },
       {
-        "subtab": "Details einer Sicherungsaufgabe",
+        "subtab": "Protokoll der Sicherungsaufgabe (Benachrichtigungen)",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Vollständiges Aufgabenprotokoll im Klartext aus <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },
       {
-        "subtab": "Meldeverlauf",
-        "endpoint": "/api/notifications/history",
-        "source": "Die SQLite-Tabelle <code>notification_history</code> wird von der Versandschleife gefüllt."
+        "subtab": "Benachrichtigungen",
+        "endpoint": "/api/notifications",
+        "source": "<code>journalctl --grep</code> über Proxmox-Units, <code>/etc/pve/notifications.cfg</code> und Backup-Aufgaben aus <code>pvesh get /cluster/tasks</code>."
       }
     ],
     "apiIntro": "Live-Filter und Downloads sind auch über die API erreichbar:",

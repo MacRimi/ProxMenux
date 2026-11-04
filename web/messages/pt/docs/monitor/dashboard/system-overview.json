@@ -46,7 +46,7 @@
     "thresholdsIntro": "Anéis, barras e minigráficos usam a mesma escala: <green/> <strong>verde</strong> abaixo de Aviso, <amber/> <strong>âmbar</strong> entre Aviso e Crítico, <red/> <strong>vermelho</strong> a partir de Crítico. Valores recomendados incluídos no ProxMenux:",
     "thresholdsItems": [
       "<strong>Utilização CPU</strong> — aviso 85 %, crítico 95 %.",
-      "<strong>Memória</strong> — aviso 85 %, crítico 95 %. O swap também ativa Crítico a 5 % de utilização; um host Proxmox saudável deverá utilizá-lo raramente.",
+      "<strong>Memória</strong>: aviso 85 %, crítico 95 %. O swap só ativa Crítico quando a utilização de swap está acima de 80 % e a RAM disponível abaixo de 15 %.",
       "<strong>Temperatura CPU</strong> — aviso 80 °C, crítico 90 °C."
     ],
     "thresholdsOutro": "Os valores são configuráveis por host. <link>Definições → Limiares do monitor de saúde</link> centraliza os ajustes e explica como os adaptar.",
@@ -58,7 +58,7 @@
     "intro": "Os cartões Utilização CPU e Memória abrem uma lista ordenável dos 25 processos principais: por utilização CPU no primeiro caso e por memória residente no segundo.",
     "listTitle": "A janela da lista",
     "listItems": [
-      "<strong>Atualização automática</strong> — a lista atualiza a cada 5 segundos enquanto a janela está aberta e deixa de consultar ao fechar.",
+      "<strong>Atualização automática</strong> — a lista atualiza a cada 3 segundos enquanto a janela está aberta e deixa de consultar ao fechar.",
       "<strong>Filtro</strong> — a pesquisa limita a lista por comando, utilizador ou PID.",
       "<strong>Barra inline</strong> — a coluna métrica primária desenha uma barra pequena escalonada para o valor mais alto da lista filtrada, então a classificação permanece visível mesmo quando nenhum processo está perto de 100 %.",
       "<strong>Disposição móvel</strong> — abaixo de 640 px, PID e Utilizador ficam ocultos, para Comando, CPU % e Memória caberem sem deslocamento horizontal."
@@ -79,7 +79,7 @@
   },
   "middle": {
     "heading": "Centro: gráficos de métricas do nó",
-    "body1": "Sob os cartões, <code>NodeMetricsCharts</code> apresenta históricos de CPU, memória e E/S de disco do armazenamento RRD do Proxmox através de <code>/api/node/metrics</code>. O seletor oferece <em>1 hora / 24 horas / 7 dias / 30 dias / 1 ano</em>. A resolução diminui em períodos maiores para manter o gráfico fluido.",
+    "body1": "Sob os cartões, <code>NodeMetricsCharts</code> apresenta históricos de CPU, memória e E/S de disco do armazenamento RRD do Proxmox através de <code>/api/node/metrics</code>. O seletor oferece <em>1 hora / 24 horas / 7 dias / 30 dias</em>. A resolução diminui em períodos maiores para manter o gráfico fluido.",
     "body2": "Os mesmos gráficos da interface web do Proxmox para um nó, integrados no tema escuro do Monitor e alinhados com os outros painéis."
   },
   "bottom": {

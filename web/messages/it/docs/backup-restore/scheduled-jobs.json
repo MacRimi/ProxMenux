@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Gestione dei lavori",
-    "intro": "Il menu scheduler (Script TUI) e la scheda Monitor Backups espongono le stesse azioni su qualsiasi lavoro.",
+    "intro": "Il menu scheduler nella TUI degli script (Backup scheduler and retention) offre Run now, Enable / Disable e Delete, oltre a un elenco dei lavori con lo stato dell'ultima esecuzione. Modifica e Visualizza log sono disponibili solo nella scheda Monitor Backups.",
     "rows": [
       {
         "action": "Esegui ora",
@@ -112,7 +112,7 @@
         "detail": "Nuova modalità: <code>systemctl enable/disable --now</code> il timer. Modalità di aggancio: cambia il flag <code>ENABLED</code> nel job env — lo script gancio lo onora alla prossima esecuzione PVE."
       },
       {
-        "action": "Modifica",
+        "action": "Modifica (solo Monitor)",
         "detail": "Riapre le richieste di destinazione, pianificazione, profilo e ritenzione e riscrive i file di lavoro. Conserva l'ID del lavoro."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Rimuove il job env, il file dei percorsi, il timer + servizio systemd (Nuova modalità), e disabilita il binding del gancio (Modalità allegato). Non tocca archivi già sulla destinazione."
       },
       {
-        "action": "Visualizza log",
+        "action": "Visualizza log (solo Monitor)",
         "detail": "Mostra in tempo reale <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code>: un file di registro per esecuzione. Lo script di esecuzione emette anche una riga di stato compatta a journald sotto il servizio systemd."
       }
     ]

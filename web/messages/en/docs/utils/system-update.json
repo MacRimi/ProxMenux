@@ -128,7 +128,7 @@
         "body": "The Enterprise repository is enabled and the host has no active subscription. The worker offers the switch to no-subscription before <code>apt-get update</code>; when it was declined, run the update again and accept it, or disable the Enterprise source in <em>Node → Updates → Repositories</em> and enable the no-subscription one."
       },
       {
-        "title": "dist-upgrade hangs at \"Configuring grub-pc\"",
+        "title": "full-upgrade hangs at \"Configuring grub-pc\"",
         "body": "If an interactive GRUB prompt is visible, it asks which devices should receive the boot loader. The <code>--force-confold</code> option applies to configuration-file decisions, not to this device selection. Use <kbd>Tab</kbd> + <kbd>Space</kbd> to select the appropriate boot disks, then OK. You can configure this selection beforehand with <code>dpkg-reconfigure grub-pc</code>."
       },
       {

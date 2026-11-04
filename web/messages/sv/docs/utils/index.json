@@ -38,7 +38,7 @@
       "body": "Håll värden frisk: CLI-verktyg, regelbundna uppdateringar och storversionsuppgraderingen när det är dags.",
       "bullets": [
         "Installationsprogram för systemverktyg (25 CLI-verktyg)",
-        "Proxmox systemuppdatering (apt + dist-upgrade)",
+        "Proxmox systemuppdatering (apt + full-upgrade)",
         "Uppgradering av huvudversion PVE 8 → PVE 9"
       ]
     },
@@ -58,11 +58,11 @@
   },
   "isoSection": {
     "heading": "Skapa ISO-filer",
-    "body": "Skapa en ny och aktuell Windows-installations-ISO direkt på Proxmox-värden. Skriptet automatiserar hela UUP Dump-flödet: installation av beroenden (aria2c, cabextract, wimlib-imagex, …), parallell nedladdning av uppdateringsfiler med aria2 och konvertering till en enda startbar ISO. Den sparas i <code>/var/lib/vz/template/iso</code> och är redo att anslutas till en VM.",
+    "body": "Skapa en ny och aktuell Windows-installations-ISO direkt på Proxmox-värden. Skriptet automatiserar hela UUP Dump-flödet: installation av beroenden (aria2c, cabextract, wimlib-imagex, …), parallell nedladdning av uppdateringsfiler med aria2 och konvertering till en enda startbar ISO. Den sparas i den identifierade Proxmox ISO-lagringen (reserv: <code>/var/lib/vz/template/iso</code>) och är redo att anslutas till en VM.",
     "options": [
       {
         "title": "UUP Dump ISO-skapare",
-        "description": "Skapa en aktuell Windows-installations-ISO från en delad UUP Dump-länk. Beroenden, nedladdning och konvertering hanteras helt automatiskt. Den färdiga ISO-filen sparas i /var/lib/vz/template/iso, redo för att skapa en VM.",
+        "description": "Skapa en aktuell Windows-installations-ISO från en delad UUP Dump-länk. Beroenden, nedladdning och konvertering hanteras helt automatiskt. Den färdiga ISO-filen sparas i den identifierade Proxmox ISO-lagringen, redo för att skapa en VM.",
         "href": "/docs/utils/UUp-Dump-ISO-Creator"
       }
     ]
@@ -78,7 +78,7 @@
       },
       {
         "title": "Proxmox systemuppdatering",
-        "description": "Kontroll av paketförråd + apt update + apt dist-upgrade med bekräftelse före omstart. Identifierar PVE-huvudversionen (8 eller 9), behåller konfigurerade paketförråd och frågar innan en värd utan abonnemang byter till no-subscription-förrådet. Därefter körs autoremove.",
+        "description": "Kontroll av paketförråd + apt update + apt full-upgrade med bekräftelse före omstart. Identifierar PVE-huvudversionen (8 eller 9), behåller konfigurerade paketförråd och frågar innan en värd utan abonnemang byter till no-subscription-förrådet. Därefter körs autoremove.",
         "href": "/docs/utils/system-update"
       },
       {

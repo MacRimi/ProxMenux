@@ -41,7 +41,7 @@
     "heading": "Netzwerkeinheiten",
     "imageAlt": "Karte Netzwerkeinheiten mit der Anzeigeauswahl Bytes",
     "imageCaption": "Wählen Sie zwischen Bits pro Sekunde und Bytes pro Sekunde für jede im Dashboard angezeigte Netzwerkrate.",
-    "body": "Zeigt den Netzwerkdurchsatz in <strong>Bits pro Sekunde</strong> (Mbps/Gbps) oder <strong>Bytes pro Sekunde</strong> (MB/s/GB/s). Standard sind Bits wie bei Netzwerkkarten und Internetanbietern; Dateiübertragungen verwenden oft Bytes. Diagramme, Labels und Hinweise ändern sich sofort ohne Neuladen."
+    "body": "Zeigt den Netzwerkdurchsatz in <strong>Bytes pro Sekunde</strong> (MB/s/GB/s) oder <strong>Bits pro Sekunde</strong> (Mbps/Gbps). Standard sind Bytes wie bei den meisten Dateiübertragungswerkzeugen; Bits verwenden Netzwerkkartenhersteller und Internetanbieter. Die Auswahl wird im Browser gespeichert, jeder Browser behält also seine eigene. Diagramme, Labels und Hinweise ändern sich sofort ohne Neuladen."
   },
   "health": {
     "heading": "Gesundheitsmonitor",
@@ -203,7 +203,7 @@
     "heading": "LXC-Update-Erkennung",
     "imageAlt": "LXC-Update-Erkennung mit Schalter zur Suche nach Paketupdates in laufenden Debian-, Ubuntu- und Alpine-Containern",
     "imageCaption": "Schalter für regelmäßige Prüfungen mit <code>apt list --upgradable</code> / <code>apk list -u</code> in laufenden CTs. Standardmäßig aktiviert. Der zugehörige Schalter unter Benachrichtigungen → Dienste erscheint bei aktiver Erkennung.",
-    "intro": "Der Schalter zwischen Schwellen und Benachrichtigungen steuert den LXC-Scan. Aktiv fragt er Paketmanager laufender CTs ab; Hardware zeigt Ergebnisse und <code>lxc_updates_available</code> erhält sie. Deaktiviert stoppt er seine <code>pct exec</code>-Aufrufe und entfernt LXC-Einträge aus <code>managed_installs.json</code>; <code>/api/managed-installs</code> meldet den Status dann ohne 24-Stunden-Wartezeit nicht mehr.",
+    "intro": "Der Schalter zwischen Schwellen und Benachrichtigungen steuert den LXC-Scan. Aktiv fragt er Paketmanager laufender CTs ab; VMs und LXCs zeigt Ergebnisse und <code>lxc_updates_available</code> erhält sie. Deaktiviert stoppt er seine <code>pct exec</code>-Aufrufe und entfernt LXC-Einträge aus <code>managed_installs.json</code>; <code>/api/managed-installs</code> meldet den Status dann ohne 24-Stunden-Wartezeit nicht mehr.",
     "whatRunsTitle": "Was die Prüfung ausführt",
     "whatRunsIntro": "Für jeden CT im Zustand <code>running</code> mit unterstütztem Paketmanager:",
     "whatRunsItems": [
@@ -249,7 +249,7 @@
     "body1": "Hier aktivieren Sie ProxMenux-Monitor-Benachrichtigungen und die KI-Umformulierung. <em>Benachrichtigungen aktivieren</em> startet den Hintergrundversand, registriert ein Proxmox-VE-Webhook-Ziel für dessen Ereignisse und öffnet die Kanaleinstellungen für Telegram, Discord, E-Mail, Gotify und weitere Dienste. Die KI-Umformulierung liegt im selben Bereich unter aufklappbaren erweiterten Einstellungen.",
     "body2": "Eigene Seiten erklären die Optionen: Kanäle, Ereignisschalter, formatierte Nachrichten, Anzeigename, Versand mit Duplikatfilter, Wartezeiten, Bündelung und Ruhezeiten, PVE-Webhook, KI-Anbieter und Prompt-Modi:",
     "items": [
-      "<notifLink>Benachrichtigungen</notifLink>: Kanaleinrichtung (Telegram, Discord, Gotify, E-Mail mit Gmail-/Microsoft-App-Passwörtern, ntfy, Slack, Teams und allgemeiner Webhook), Ereigniskategorien, formatierte Nachrichten, Anzeigename, Versand, PVE-Webhook, Verlauf und API.",
+      "<notifLink>Benachrichtigungen</notifLink>: Kanaleinrichtung (Telegram, Discord, Gotify, E-Mail mit Gmail-/Microsoft-App-Passwörtern, Pushover und Apprise für ntfy, Slack, Teams und weitere Dienste), Ereigniskategorien, formatierte Nachrichten, Anzeigename, Versand, PVE-Webhook, Verlauf und API.",
       "<aiLink>KI-Assistent</aiLink>: Anbieter (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), Modelle, Standard- oder eigene Prompts, Ausgabesprache, Detailgrad je Kanal und KI-Vorschläge."
     ]
   },
@@ -294,8 +294,8 @@
       },
       {
         "card": "Netzwerkeinheiten",
-        "endpoint": "/api/settings",
-        "source": "In der SQLite-Einstellungstabelle des Dashboards gespeichert."
+        "endpoint": "localStorage",
+        "source": "Browser-Einstellung <code>proxmenux-network-unit</code>."
       },
       {
         "card": "Health-Monitor-Zeitdauern",
@@ -304,7 +304,7 @@
       },
       {
         "card": "Speicher-/Schnittstellenausschlüsse",
-        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "endpoint": "/api/health/storage-exclusions, /api/health/interface-exclusions",
         "source": "SQLite Tabellen <code>excluded_storages</code> und <code>excluded_interfaces</code>."
       },
       {

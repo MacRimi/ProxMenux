@@ -61,6 +61,12 @@
         "badge": "Siempre disponible"
       },
       {
+        "icon": "Languages",
+        "href": "/docs/settings/change-language",
+        "title": "Cambiar idioma",
+        "description": "Cambia la interfaz de ProxMenux entre ocho idiomas. La elección se guarda en config.json y el menú se recarga en el nuevo idioma."
+      },
+      {
         "icon": "Info",
         "href": "/docs/settings/show-version-information",
         "title": "Mostrar información de versión",
@@ -70,7 +76,7 @@
         "icon": "Trash2",
         "href": "/docs/settings/uninstall-proxmenux",
         "title": "Desinstalar ProxMenux",
-        "description": "Elimina ProxMenux y (opcionalmente) sus dependencias. También restaura los backups de /root/.bashrc y /etc/motd creados en el momento de la instalación."
+        "description": "Elimina ProxMenux y (opcionalmente) sus dependencias. También restaura los backups de /root/.bashrc y /etc/motd creados por Post-Install."
       }
     ]
   },

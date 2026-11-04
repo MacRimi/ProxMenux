@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Reescrita IA opcional",
-    "body1": "Eventos elegíveis podem ser reescritos por um LLM. Resultados de cópias (backup_complete e backup_fail) ficam excluídos. IA está desativada por predefinição e, quando ativa, trabalha no thread de envio. Se a chamada falhar ou expirar, usa o texto original do modelo.",
+    "body1": "Eventos elegíveis podem ser reescritos por um LLM. Resultados de cópias (backup_complete e backup_fail) não são reformulados; com as sugestões de IA ativadas, a IA apenas acrescenta uma explicação quando uma cópia reporta erros. IA está desativada por predefinição e, quando ativa, trabalha no thread de envio. Se a chamada falhar ou expirar, usa o texto original do modelo.",
     "body2": "Seis fornecedores: OpenAI, Anthropic, Google Gemini, Groq, OpenRouter e Ollama. Cada canal escolhe detalhe (<code>brief</code>, <code>standard</code>, <code>detailed</code>), idioma, modo do prompt (<code>default</code>/<code>custom</code>) e prompt personalizado. Veja <link>Assistente IA</link> para configuração e exemplos.",
     "privacyTitle": "Nota de privacidade",
     "privacyBody": "Os pedidos IA podem incluir título, gravidade, texto, prompt e contexto: nomes de anfitrião, IP, utilizadores, erros e linhas do registo. Seguem para o endpoint escolhido. Ollama só permanece local com servidor e modelo ambos locais; servidores remotos ou modelos cloud enviam dados para fora do anfitrião. Para os manter na rede, desative a reescrita ou use endpoint e modelo locais controlados."

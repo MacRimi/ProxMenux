@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Reescritura con IA opcional",
-    "body1": "Los eventos aptos pueden reescribirse con un LLM. Los resultados backup_complete y backup_fail lo omiten. La IA está desactivada por defecto y se ejecuta en el hilo de envío. Si falla o agota el tiempo, se usa la plantilla original.",
+    "body1": "Los eventos aptos pueden reescribirse con un LLM. Los resultados backup_complete y backup_fail no se reescriben; con las sugerencias de IA activadas, la IA solo añade una explicación cuando un backup informa de errores. La IA está desactivada por defecto y se ejecuta en el hilo de envío. Si falla o agota el tiempo, se usa la plantilla original.",
     "body2": "Admite OpenAI, Anthropic, Google Gemini, Groq, OpenRouter y Ollama local, con detalle por canal (<code>brief</code>, <code>standard</code>, <code>detailed</code>), idioma, modo de instrucciones (<code>default</code> o <code>custom</code>) e instrucciones propias. Guía y ejemplos en <link>Asistente de IA</link>.",
     "privacyTitle": "Nota de privacidad",
     "privacyBody": "La petición de IA puede incluir título, severidad, texto, instrucciones del sistema o propias y contexto, con nombres de host, IP, usuarios, errores y registros. Se envía al destino elegido. Ollama solo procesa localmente con servidor y modelo locales; un servidor remoto o modelo en la nube envía datos fuera del host. Desactiva la reescritura o usa un servidor y modelo locales controlados si el contenido debe permanecer en la red."

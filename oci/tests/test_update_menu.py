@@ -280,11 +280,20 @@ class MainMenuTests(unittest.TestCase):
                     checker.running = False; checker.done = True
                     raise MenuRefresh()
                 return None
-        with patch.object(cli, 'interactive_ui', return_value=UI()), \
+        catalog_refresh = Mock(active=False, failed=False)
+        catalog_refresh.consume.return_value = False
+        catalog_refresh.label.return_value = 'Refresh catalog'
+        catalog_context = Mock()
+        catalog_context.__enter__ = Mock(return_value=catalog_refresh)
+        catalog_context.__exit__ = Mock(return_value=False)
+        with patch('proxmenux_oci.catalog_refresh.CatalogRefresh', return_value=catalog_context), \
+                patch.object(cli, 'interactive_ui', return_value=UI()), \
                 patch.object(updates, 'UpdateCheck', return_value=checker):
             self.assertEqual(cli.interactive(cli.Catalog(ROOT)), 0)
-        self.assertEqual(seen, ['Check for updates', 'Checking for updates (0/2)',
-                               'Checking for updates (1/2)', 'Updates available (2)'])
+        # A count lines up with the counts of the categories; progress does not.
+        self.assertEqual(seen[:3], ['Check for updates', 'Checking for updates (0/2)',
+                                   'Checking for updates (1/2)'])
+        self.assertRegex(seen[3], r'^Updates available {2,}\(  2\)$')
 
 
 class TranslationTests(unittest.TestCase):

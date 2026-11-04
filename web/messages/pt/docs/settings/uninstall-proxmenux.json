@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Afecta apenas a instalação ProxMenux — não as suas VMs / CTs / armazenamento",
-    "body": "A desinstalação remove os scripts do ProxMenux, o lançador do menu, o serviço Monitor opcional e as cópias de segurança dos ficheiros de sistema criadas pelo ProxMenux na instalação. <strong>Não altera as suas VMs, contentores, armazenamento, configuração de rede, Fail2Ban, controlador NVIDIA ou qualquer outro elemento instalado através do ProxMenux.</strong> Estes permanecem como estão."
+    "body": "A desinstalação remove os scripts do ProxMenux, o lançador do menu, o serviço Monitor e restaura os backups de /root/.bashrc e /etc/motd feitos pela pós-instalação, se existirem. <strong>Não altera as suas VMs, contentores, armazenamento, configuração de rede, Fail2Ban, controlador NVIDIA ou qualquer outro elemento instalado através do ProxMenux.</strong> Estes permanecem como estão."
   },
   "flow": {
     "heading": "Processo de desinstalação",

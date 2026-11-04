@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Supportato da tre fonti",
-    "body": "Gli storage Proxmox provengono da <code>pvesm status</code>, ZFS da <code>zpool status</code>, i dischi da <code>lsblk</code> + <code>smartctl</code> e i campi NVMe da <code>nvme</code>. La scheda si aggiorna circa ogni 60 secondi; aprire il dettaglio richiede una lettura SMART."
+    "body": "Gli storage Proxmox provengono da <code>pvesm status</code>, ZFS da <code>zpool status</code>, i dischi da <code>lsblk</code> + <code>smartctl</code> e i campi NVMe da <code>nvme</code>. La scheda si aggiorna circa ogni 30 secondi; aprire il dettaglio richiede una lettura SMART."
   },
   "thresholds": {
     "title": "Colori e soglie di stato applicate qui",

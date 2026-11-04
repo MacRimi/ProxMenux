@@ -64,7 +64,7 @@
     "items": [
       "<strong><code>User=root</code></strong>: tjänsten använder root-behörighet för SMART, <code>pvesh</code> och ZFS-hantering. Webbterminalens processer ärver behörigheten.",
       "<strong><code>Restart=on-failure</code></strong> med tio sekunders väntan: tjänsten startas om automatiskt efter ett fel.",
-      "<strong><code>After=network.target</code></strong>: ordnar start efter målet; garanterar inte tilldelad IP, DNS eller extern anslutning."
+      "<strong><code>After=network.target pve-cluster.service</code></strong>: ordnar start efter nätverksmålet och Proxmox klusterfilsystem; garanterar inte tilldelad IP, DNS eller extern anslutning."
     ],
     "inspectTitle": "Granska aktuell enhet"
   },

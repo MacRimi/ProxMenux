@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Assistente de IA",
-    "description": "A reformulação opcional por IA transforma as notificações elegíveis em mensagens claras, com detalhe por canal, treze idiomas na interface, prompts personalizados, biblioteca comunitária pública e contexto adicional. Os relatórios <code>backup_complete</code> e <code>backup_fail</code> não passam pela IA.",
+    "description": "A reformulação opcional por IA transforma as notificações elegíveis em mensagens claras, com detalhe por canal, treze idiomas na interface, prompts personalizados, biblioteca comunitária pública e contexto adicional. Os relatórios backup_complete e backup_fail nunca são reformulados; com as sugestões de IA ativadas, a IA apenas acrescenta uma explicação quando uma cópia reporta erros.",
     "section": "Monitor do ProxMenux"
   },
   "intro": {
@@ -83,7 +83,7 @@
     "intro1": "Os fornecedores comerciais cobram por <em>token</em>. Um token corresponde aproximadamente a quatro caracteres ingleses ou três quartos de uma palavra. A frase inglesa <em>\"Backup completed on storage local-bak\"</em> tem cerca de oito tokens. Dez linhas de log podem ocupar 200–400 tokens, conforme o conteúdo técnico.",
     "intro2": "Duas coisas são cobradas em cada chamada:",
     "items": [
-      "<strong>Tokens de entrada</strong>: prompt de sistema e mensagem do utilizador, com gravidade, título, texto do modelo e contexto adicional. A quantidade depende do prompt e do evento. Cada canal reformulado pode consumir os seus tokens; os relatórios de cópia concluída ou falhada não passam pela IA.",
+      "<strong>Tokens de entrada</strong>: prompt de sistema e mensagem do utilizador, com gravidade, título, texto do modelo e contexto adicional. A quantidade depende do prompt e do evento. Cada canal reformulado pode consumir os seus tokens; os relatórios de cópia concluída ou falhada só consomem tokens quando a IA explica erros da cópia.",
       "<strong>Tokens de saída</strong>: a resposta do modelo. O Monitor limita-os com <code>max_tokens</code>. O valor é um <em>limite</em>, não um consumo fixo: se o modelo produzir 250 tokens com limite de 1500, paga por 250."
     ],
     "capsIntro": "Estes são os limites aplicados pelo módulo de envio, definidos em <code>AI_DETAIL_TOKENS</code> em <code>notification_templates.py</code>:",
@@ -118,7 +118,7 @@
     "imageCaption": "O modal no aplicativo — seis cartões, um por provedor, com as mesmas descrições documentadas abaixo.",
     "groq": {
       "heading": "Groq",
-      "tagline": "Nível livre muito rápido e generoso (30 req/min). Ideal para começar.",
+      "tagline": "Muito rápido, com um nível gratuito generoso. Um bom lugar para começar.",
       "items": [
         "Chave API: <a>console.groq.com/keys</a>",
         "Exemplos da lista de modelos incluída: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
@@ -234,7 +234,7 @@
   },
   "detailLevel": {
     "heading": "Nível de detalhe por canal",
-    "intro": "Cada um dos quatro canais (Telegram, Discord, Gotify, Email) tem seu próprio nível de detalhes. Três valores estão disponíveis, mapeados para token caps de saída específicos e para instruções específicas no prompt padrão:",
+    "intro": "Cada um dos seis canais (Telegram, Discord, Gotify, Email, Pushover, Apprise) tem seu próprio nível de detalhes. Três valores estão disponíveis, mapeados para token caps de saída específicos e para instruções específicas no prompt padrão:",
     "headerLevel": "Nível",
     "headerLabel": "Rótulo UI",
     "headerCap": "Limite de saída",
@@ -261,7 +261,7 @@
     ],
     "defaultsIntro": "Predefinições na primeira instalação:",
     "defaults": [
-      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Telegram, Discord, Gotify, Pushover, Apprise</strong> — <code>standard</code>.",
       "<strong>Email</strong> — <code>detailed</code>. Email é o canal onde você normalmente quer a imagem completa para arquivo."
     ],
     "emailTitle": "Nível de detalhes de e- mail adiciona o original",
@@ -280,7 +280,7 @@
   },
   "templates": {
     "heading": "Uma nota sobre modelos",
-    "body1": "A IA recebe o texto já produzido pelo modelo, não dados brutos. Tipos como <code>vm_start</code>, <code>auth_fail</code> e <code>health_degraded</code> têm modelos em <code>notification_templates.py</code>. A IA reformula os textos elegíveis; <code>backup_complete</code> e <code>backup_fail</code> mantêm relatórios determinísticos sem IA.",
+    "body1": "A IA recebe o texto já produzido pelo modelo, não dados brutos. Tipos como <code>vm_start</code>, <code>auth_fail</code> e <code>health_degraded</code> têm modelos em <code>notification_templates.py</code>. A IA reformula os textos elegíveis; <code>backup_complete</code> e <code>backup_fail</code> mantêm relatórios determinísticos; com as sugestões de IA ativadas, a IA apenas acrescenta uma explicação quando a cópia reporta erros.",
     "body2": "Os nomes de máquina e VMID já são preenchidos pelo modelo antes da reformulação. Com IA desativada, o texto do modelo é enviado diretamente. A página <link>Notificações</link> documenta todo o processo de envio e o que acontece antes desta etapa."
   },
   "privacy": {

@@ -18,7 +18,7 @@
   },
   "reaching": {
     "heading": "Cómo llegar al panel",
-    "intro": "ProxMenux Monitor escucha en <code>0.0.0.0:8008</code>. Hay tres formas habituales de llegar a él:",
+    "intro": "ProxMenux Monitor escucha en el TCP 8008 en todas las interfaces (<code>::</code>, IPv4 e IPv6). Hay tres formas habituales de llegar a él:",
     "outro": "El acceso directo corresponde a la unidad systemd predeterminada. El proxy inverso y Secure Gateway se describen más abajo. Para confiar en la IP de <code>X-Forwarded-For</code> se requiere PROXMENUX_TRUST_PROXY=1 y un proxy que controles. La presencia de <code>X-Forwarded-Proto</code> o <code>X-Forwarded-Host</code> no activa esa confianza. En los puertos 80/443 el frontend usa URL relativas <code>/api/*</code>; en cualquier otro puerto llama al puerto 8008 del mismo nombre de host."
   },
   "firstLaunch": {
@@ -158,7 +158,7 @@
     "authJsonTitle": "auth.json — qué contiene y cómo se protege",
     "authJsonBody": "Todo lo que ProxMenux Monitor necesita para autenticarte vive en un único archivo: <code>/root/.config/proxmenux-monitor/auth.json</code>, modo <code>0600</code>, propietario <code>root</code>. El archivo guarda <em>hashes</em> (PBKDF2) y <em>material de firma</em> (<code>jwt_secret</code>, <code>totp_secret</code>) — nunca una contraseña en texto plano. Trátalo como cualquier otro secreto de solo-root: si haces backup o replicas el host, cifra el destino y nunca lo subas a control de versiones.",
     "rotateTitle": "Rotar jwt_secret invalida todos los JWTs existentes",
-    "rotateBody": "Si <code>auth.json</code> se regenera (borrado manual, reinstalación, restauración desde un backup con un secret distinto) el <code>jwt_secret</code> cambia y cada JWT previamente emitido — tanto sesiones interactivas como API tokens de larga duración — falla la verificación con \"Invalid or expired token\". La UI marca los API tokens afectados con un badge <strong>Invalid — regenerate</strong> para que el usuario sepa que tiene que revocarlos y volver a emitirlos; Home Assistant / scripts / cualquier cliente externo necesita un token fresco después de eso.",
+    "rotateBody": "Si <code>auth.json</code> se regenera (borrado manual, reinstalación, restauración desde un backup con un secret distinto) el <code>jwt_secret</code> cambia y cada JWT previamente emitido — tanto sesiones interactivas como API tokens de larga duración — falla la verificación con \"Invalid or expired token\". La UI marca los API tokens afectados en rojo, con un badge que indica que hay que revocarlos y generar otros nuevos; Home Assistant / scripts / cualquier cliente externo necesita un token fresco después de eso.",
     "recoverTitle": "Recuperar una contraseña perdida",
     "recoverIntro": "No hay un flujo online de \"olvidé mi contraseña\" — por diseño, ya que el panel corre en el propio host del usuario y el camino de recuperación es acceso shell a ese host. ProxMenux trae un reset guiado dentro del menú de configuración para que no tengas que editar a mano <code>auth.json</code>:",
     "survivesTitle": "Qué sobrevive al reset",
@@ -284,14 +284,14 @@
     "heading": "API tokens (larga duración)",
     "intro": "Las sesiones de navegador caducan tras 24 horas. Para integraciones desatendidas (widgets de Homepage, sensores de Home Assistant, scrapers de Grafana, probes de Uptime Kuma…) generas un <strong>API token</strong> aparte que vive 365 días. El token es un JWT firmado con el mismo secret que el token de sesión, pero su claim <code>token_name</code> facilita rastrearlo y revocarlo individualmente.",
     "imageAlt": "Panel de API tokens mostrando la lista de tokens con nombre, prefijo, fecha de creación y caducidad",
-    "imageCaption": "La lista de API tokens bajo Settings — nombre, prefijo (se muestran los últimos 4 caracteres para identificación), fechas de creación y caducidad, acción de revocar.",
+    "imageCaption": "La lista de API tokens bajo Administración → Seguridad — nombre, prefijo (se muestran los últimos 4 caracteres para identificación), fechas de creación y caducidad, acción de revocar.",
     "generateTitle": "Generar un token",
     "generateIntro": "Desde el panel:",
     "generateSteps": [
-      "Abre <strong>Seguridad → Tokens de acceso API</strong>.",
+      "Abre <strong>Administración → Seguridad → Tokens API</strong> y pulsa <strong>Generar nuevo token</strong>.",
       "Escribe un nombre descriptivo (<em>p. ej. \"Home Assistant\"</em>).",
       "Vuelve a introducir tu contraseña. Si el 2FA está activado, también el código actual de 6 dígitos.",
-      "Pulsa <strong>Generar token</strong>. Se muestra <strong>una sola vez</strong>: cópialo al momento."
+      "Pulsa <strong>Generar token</strong>. El token aparece <strong>una sola vez</strong>: cópialo de inmediato."
     ],
     "generateCli": "Desde la línea de comandos:",
     "useTitle": "Usar un token",
@@ -310,7 +310,7 @@
     "intro": "Dos rutas hacia TLS:",
     "items": [
       "<strong>Reverse proxy (recomendado).</strong> Termina TLS en Nginx / Caddy / Traefik y reenvía HTTP en el puerto 8008 al proceso Flask. Snippets más abajo.",
-      "<strong>HTTPS directo en AppImage.</strong> Configura un certificado con <code>POST /api/ssl/configure</code> (interfaz: <strong>Ajustes → SSL</strong>). HTTPS usa <code>gevent.pywsgi</code> con su manejador estándar; flask-sock gestiona la conexión WebSocket para WSS. Las rutas de los certificados se guardan en la configuración SSL."
+      "<strong>HTTPS directo en AppImage.</strong> Configura un certificado con <code>POST /api/ssl/configure</code> (interfaz: <strong>Administración → Seguridad → SSL/HTTPS</strong>). HTTPS usa <code>gevent.pywsgi</code> con su manejador estándar; flask-sock gestiona la conexión WebSocket para WSS. Las rutas de los certificados se guardan en la configuración SSL."
     ],
     "calloutTitle": "Limitaciones del HTTPS directo",
     "calloutBody": "Monitor puede usar un certificado gestionado por Proxmox o archivos de certificados propios. No emite certificados ACME. Para emitirlos y renovarlos automáticamente, usa ACME de Proxmox o un proxy inverso como Caddy, Traefik o Nginx y asegúrate de cargar los certificados renovados."

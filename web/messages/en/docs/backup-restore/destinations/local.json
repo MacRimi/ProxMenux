@@ -18,11 +18,11 @@
   },
   "targetConfig": {
     "heading": "Configuring the target directory",
-    "intro": "The local destination is a <strong>single persisted target directory</strong> — not a list. ProxMenux stores the user's choice at <code>/usr/local/share/proxmenux/local-target.conf</code> and reads it on every backup. When no target has been configured, the default <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> is used (the same directory Proxmox uses for its own <code>vzdump</code> outputs). The target is configured from <em>Configure backup destinations → Local destinations</em>:",
+    "intro": "The local destination is a <strong>single persisted target directory</strong> — not a list. ProxMenux stores the user's choice at <code>/usr/local/share/proxmenux/local-target.conf</code> and reads it on every backup. When no target has been configured, the default <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> is used (the same directory Proxmox uses for its own <code>vzdump</code> outputs). The target is configured from <em>Configure backup destinations → Local archive targets → Manage local backup target</em>:",
     "options": [
       "<strong>Use default (<code>/var/lib/vz/dump</code>).</strong> The Proxmox local storage. Present on every Proxmox install; the archive sits next to vzdump outputs and is picked up by the Monitor's Backups tab automatically.",
-      "<strong>Enter a custom path.</strong> Any absolute filesystem path can be used: an NFS mount, an SMB share mounted via <code>fstab</code>, a dedicated ZFS dataset, a second internal disk. ProxMenux validates that the path exists and is a directory before persisting it.",
-      "<strong>Pick a USB drive.</strong> Opens the USB submenu (below), which detects removable devices and offers to mount or format one."
+      "<strong>Use a custom path.</strong> Any absolute filesystem path can be used: an NFS mount, an SMB share mounted via <code>fstab</code>, a dedicated ZFS dataset, a second internal disk. ProxMenux validates that the path exists and is a directory before persisting it.",
+      "<strong>Use a USB disk.</strong> Opens the USB submenu (below), which detects removable devices and offers to mount or format one."
     ]
   },
   "usbFlow": {
@@ -38,7 +38,7 @@
       {
         "state": "unmounted",
         "shown": "Size · label · [fstype] · (not mounted — will be mounted)",
-        "action": "A filesystem is present but not mounted. On confirmation, ProxMenux runs <code>hb_mount_usb_partition</code>: creates <code>/mnt/backup-LABEL</code> (or a UUID-based path if there is no label), mounts the partition and persists the mount point as the local target."
+        "action": "A filesystem is present but not mounted. On confirmation, ProxMenux runs <code>hb_mount_usb_partition</code>: creates <code>/mnt/proxmenux-backup-LABEL</code> (UUID or device name if there is no label), mounts the partition and persists the mount point as the local target."
       },
       {
         "state": "empty",
@@ -63,7 +63,7 @@
   },
   "sidecar": {
     "heading": "The sidecar JSON",
-    "intro": "Every successful local backup produces a companion file: <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, written next to the archive by <code>hb_write_archive_sidecar</code>. This small JSON file lets the ProxMenux Monitor identify the archive as a ProxMenux host backup even if it is later moved, renamed or archived elsewhere.",
+    "intro": "Every successful local backup produces a companion file: <code>hostcfg-HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, written next to the archive by <code>hb_write_archive_sidecar</code>. This small JSON file lets the ProxMenux Monitor identify the archive as a ProxMenux host backup even if it is later moved, renamed or archived elsewhere.",
     "contentTitle": "Sidecar contents",
     "contentBody": "The sidecar stores the schema version, whether the backup came from an interactive run or a scheduled job (<code>kind</code>), the job ID for scheduled runs, the profile mode used (<code>default</code> or <code>custom</code>), the source hostname, the original archive basename, an ISO-8601 creation timestamp and the archive size in bytes.",
     "whyBody": "The Monitor's Backups tab scans configured local directories for <code>*.proxmenux.json</code> sidecars — not for <code>*.tar.zst</code> files — because a <code>.tar.zst</code> without a sidecar might not be a ProxMenux backup at all. The scan is fast (JSON files are tiny) and the pairing is stable across renames of the archive as long as the sidecar is renamed to match."

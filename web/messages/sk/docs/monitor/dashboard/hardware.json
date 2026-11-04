@@ -168,7 +168,7 @@
   "ups": {
     "heading": "Stav UPS",
     "subHeading": "(podmienečné)",
-    "body": "Zobrazí sa pri nastavenom a dostupnom serveri NUT (Network UPS Tools). Ukazuje stav (sieť / batéria / nabíjanie / slabá batéria), nabitie batérie, odhad výdrže, percento zaťaženia, vstupné napätie, model a firmvér. Rovnaké údaje používa <em>Bezpečnosť a certifikáty</em> monitora stavu; prechod na batériu sa hneď zobrazí."
+    "body": "Zobrazí sa pri nastavenom a dostupnom serveri NUT (Network UPS Tools). Ukazuje stav (sieť / batéria / nabíjanie / slabá batéria), nabitie batérie, odhad výdrže, percento zaťaženia, vstupné napätie, model a firmvér."
   },
   "dataCollected": {
     "heading": "Spôsob zberu údajov",

@@ -168,7 +168,7 @@
   "ups": {
     "heading": "UPS-status",
     "subHeading": "(villkorligt)",
-    "body": "Visas när en NUT-server (Network UPS Tools) är konfigurerad och nåbar. Visar status (nät / batteri / laddning / låg batterinivå), batterinivå, uppskattad drifttid, belastningsprocent, ingångsspänning, modell och firmware. Samma data används i <em>Säkerhet och certifikat</em> i hälsokontrollen; batteridrift uppmärksammas direkt."
+    "body": "Visas när en NUT-server (Network UPS Tools) är konfigurerad och nåbar. Visar status (nät / batteri / laddning / låg batterinivå), batterinivå, uppskattad drifttid, belastningsprocent, ingångsspänning, modell och firmware."
   },
   "dataCollected": {
     "heading": "Hur data samlas in",

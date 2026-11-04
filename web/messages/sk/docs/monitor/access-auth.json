@@ -18,7 +18,7 @@
   },
   "reaching": {
     "heading": "Prístup k panelu",
-    "intro": "ProxMenux Monitor sa viaže na <code>0.0.0.0:8008</code>. Existujú tri bežné spôsoby, ako ju dosiahnuť:",
+    "intro": "ProxMenux Monitor počúva na TCP 8008 na všetkých rozhraniach (<code>::</code>, IPv4 aj IPv6). Existujú tri bežné spôsoby, ako ho dosiahnuť:",
     "outro": "Priamy prístup zodpovedá predvolenej jednotke systemd. Reverzný proxy a Secure Gateway sú opísané nižšie. Dôvera v IP klientov z <code>X-Forwarded-For</code> vyžaduje PROXMENUX_TRUST_PROXY=1 a proxy pod vašou kontrolou. Samotná prítomnosť <code>X-Forwarded-Proto</code> alebo <code>X-Forwarded-Host</code> dôveru v proxy nezapne. Na portoch 80/443 frontend používa relatívne URL <code>/api/*</code>; na akomkoľvek inom porte volá port 8008 na rovnakom názve hostiteľa."
   },
   "firstLaunch": {
@@ -158,7 +158,7 @@
     "authJsonTitle": "auth.json — obsah a ochrana",
     "authJsonBody": "Údaje overenia sú v <code>/root/.config/proxmenux-monitor/auth.json</code>, režim <code>0600</code>, vlastník <code>root</code>. Súbor obsahuje <em>hashe</em> PBKDF2 a <em>tajné kryptografické údaje</em> (<code>jwt_secret</code>, <code>totp_secret</code>), nikdy heslo v otvorenom texte. Cieľ zálohovania alebo replikácie šifrujte a súbor nikdy nepridávajte do systému správy verzií.",
     "rotateTitle": "Výmena jwt_secret zneplatní všetky existujúce JWT",
-    "rotateBody": "Pri novom vytvorení alebo obnove <code>auth.json</code> s iným kľúčom sa zmení <code>jwt_secret</code>. Staré JWT relácií aj API zlyhajú s \"Invalid or expired token\". Rozhranie ich označí <strong>Neplatný — vytvoriť znova</strong>. Zrušte ich a nahraďte aj v Home Assistant, skriptoch a ostatných klientoch.",
+    "rotateBody": "Pri novom vytvorení alebo obnove <code>auth.json</code> s iným kľúčom sa zmení <code>jwt_secret</code>. Staré JWT relácií aj API zlyhajú s \"Invalid or expired token\". Rozhranie ich označí červenou a štítkom, ktorý vás vyzve ich zrušiť a vytvoriť nové; zrušte ich a nahraďte aj v Home Assistant, skriptoch a ostatných klientoch.",
     "recoverTitle": "Obnovenie strateného hesla",
     "recoverIntro": "Obnova hesla vyžaduje prístup k shellu hostiteľa. ProxMenux ponúka sprievodcu resetovaním v konfiguračnej ponuke, aby ste nemuseli ručne upravovať <code>auth.json</code>:",
     "survivesTitle": "Čo prežíva reset",
@@ -284,14 +284,14 @@
     "heading": "API tokeny (dlhodobé)",
     "intro": "Relácie prehliadača platia 24 hodín. Pre Homepage, Home Assistant, Grafana či Uptime Kuma vytvorte samostatný <strong>token API</strong> platný 365 dní. JWT používa rovnaký podpisový kľúč; pole <code>token_name</code> umožňuje sledovať a jednotlivo zrušiť token.",
     "imageAlt": "Panel tokenov API znázorňujúci zoznam tokenov s názvom, predponou, vytvoreným dátumom a expiráciou",
-    "imageCaption": "Zoznam tokenov v nastaveniach: názov, predpona s poslednými štyrmi identifikačnými znakmi, dátum vytvorenia a platnosť, možnosť zrušenia.",
+    "imageCaption": "Zoznam tokenov API v Správa → Bezpečnosť: názov, predpona s poslednými štyrmi identifikačnými znakmi, dátum vytvorenia a platnosť, možnosť zrušenia.",
     "generateTitle": "Generovať token",
     "generateIntro": "Z panelu:",
     "generateSteps": [
-      "Otvorte <strong>Zabezpečenie → Prístupové tokeny API</strong>.",
+      "Otvorte <strong>Správa → Bezpečnosť → API tokeny</strong> a kliknite na <strong>Vytvoriť nový token</strong>.",
       "Zadajte opisný názov, <em>napríklad \"Home Assistant\"</em>.",
       "Zadajte svoje heslo. Ak je zapnutá 2FA, aj súčasný 6-miestny kód.",
-      "Kliknite na <strong>Vytvoriť token</strong>. Zobrazí sa <strong>iba raz</strong>: hneď ho skopírujte."
+      "Kliknite na <strong>Vytvoriť token</strong>. Token sa zobrazí <strong>iba raz</strong>: hneď ho skopírujte."
     ],
     "generateCli": "Z príkazového riadku:",
     "useTitle": "Použitie tokenu",
@@ -310,7 +310,7 @@
     "intro": "Dve cesty k TLS:",
     "items": [
       "<strong>Odporúčaný reverzný proxy.</strong> Ukončite TLS na Nginx / Caddy / Traefik a posielajte HTTP procesu Flask na port 8008. Príklady sú nižšie.",
-      "<strong>Priame HTTPS v AppImage.</strong> Certifikát nastavte cez <code>POST /api/ssl/configure</code> (rozhranie: <strong>Nastavenia → SSL</strong>). HTTPS používa <code>gevent.pywsgi</code> so štandardným handlerom; flask-sock obsluhuje WebSocket pre WSS. Cesty certifikátov sa uložia v konfigurácii SSL."
+      "<strong>Priame HTTPS v AppImage.</strong> Certifikát nastavte cez <code>POST /api/ssl/configure</code> (rozhranie: <strong>Správa → Bezpečnosť → SSL / HTTPS</strong>). HTTPS používa <code>gevent.pywsgi</code> so štandardným handlerom; flask-sock obsluhuje WebSocket pre WSS. Cesty certifikátov sa uložia v konfigurácii SSL."
     ],
     "calloutTitle": "Priame obmedzenia HTTPS",
     "calloutBody": "Monitor môže použiť certifikát spravovaný Proxmoxom alebo vlastné súbory. Sám certifikáty ACME nevydáva. Na automatické vydávanie a obnovu použite Proxmox ACME alebo proxy Caddy, Traefik či Nginx a zabezpečte načítanie obnovených certifikátov."

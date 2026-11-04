@@ -151,6 +151,7 @@ class NativeApplyTests(unittest.TestCase):
             self.commands.append(args)
             if args[:2]==('pct','status'):return b'status: running' if self.state['running'] else b'status: stopped'
             if args[:2]==('pct','start'):self.state['running']=True
+            if args[:3]==('pvesh','get','/cluster/ha/resources'):return b'[]'
             return b''
         def stop(vmid):self.state['running']=False
         def setter(vmid,identity,expected,values,delete=()):

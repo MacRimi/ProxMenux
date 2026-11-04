@@ -21,11 +21,11 @@
     "intro": "ProxMenux tiene dos componentes en el mismo árbol de código fuente. El instalador despliega ambos en el host: Scripts ofrece la interfaz de terminal y Monitor el panel web:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "La CLI/TUI original que se lanza con <code>menu</code>. Nueve áreas funcionales que cubren optimizaciones post-instalación, creación de VMs y LXC, passthrough de GPU y Coral TPU, discos, almacenamiento, red, seguridad, utilidades, además de una referencia curada de comandos. Funciona en cualquier terminal — local, SSH o web."
+      "body": "La CLI/TUI original que se lanza con <code>menu</code>. Áreas funcionales que cubren optimizaciones post-instalación, creación de VMs y LXC, passthrough de GPU y Coral TPU, discos, almacenamiento, aplicaciones OCI, red, seguridad, utilidades, backup y restauración del host, Proxmox VE Helper Scripts, además de una referencia curada de comandos. Funciona en cualquier terminal — local, SSH o web."
     },
     "monitor": {
       "title": "ProxMenux Monitor",
-      "body": "Panel web autoalojado (AppImage). Métricas del host en tiempo real, un monitor de salud proactivo, notificaciones, un gancho opcional de reescritura con IA (seis proveedores), un terminal web integrado y una API REST. Actívalo desde el menú de Scripts (Settings → ProxMenux Monitor)."
+      "body": "Panel web autoalojado (AppImage). Métricas del host en tiempo real, un monitor de salud proactivo, notificaciones, un gancho opcional de reescritura con IA (seis proveedores), un terminal web integrado y una API REST. El instalador lo configura como un servicio que arranca con el sistema; actívalo, desactívalo o consúltalo desde el menú de Scripts (Settings → ProxMenux Monitor)."
     },
     "calloutTitle": "Sobre qué actúa ProxMenux",
     "calloutIntro": "Tres capas, todas accesibles desde el mismo proyecto:",
@@ -37,7 +37,7 @@
   },
   "scriptsSection": {
     "heading": "ProxMenux Scripts — qué incluye",
-    "intro": "Nueve áreas funcionales, cada una con su propio menú dentro de <code>menu</code> y una página de detalle en la documentación. Pulsa cualquier tarjeta para ir directamente al resumen de esa sección.",
+    "intro": "Las principales áreas funcionales, cada una con su propio menú dentro de <code>menu</code> y una página de detalle en la documentación. Pulsa cualquier tarjeta para ir directamente al resumen de esa sección.",
     "items": [
       {
         "title": "Post-instalación",

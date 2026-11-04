@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Nepovinné prepísanie AI",
-    "body1": "Vhodné udalosti môže prepísať LLM. backup_complete a backup_fail sa neprepisujú. AI je predvolene vypnutá a beží v odosielacom vlákne. Pri chybe alebo časovom limite sa použije pôvodný text.",
+    "body1": "Vhodné udalosti môže prepísať LLM. backup_complete a backup_fail sa neprepisujú; so zapnutými AI návrhmi AI len pridá vysvetlenie, keď záloha hlási chyby. AI je predvolene vypnutá a beží v odosielacom vlákne. Pri chybe alebo časovom limite sa použije pôvodný text.",
     "body2": "Podporuje OpenAI, Anthropic, Google Gemini, Groq, OpenRouter a miestne Ollama. Pre kanál: podrobnosť (<code>brief</code>, <code>standard</code>, <code>detailed</code>), jazyk, režim pokynov (<code>default</code> alebo <code>custom</code>) a vlastné pokyny. Návod a príklady sú v <link>Asistent AI</link>.",
     "privacyTitle": "Poznámka o ochrane osobných údajov",
     "privacyBody": "Požiadavka AI môže obsahovať názov, závažnosť, text, systémové/vlastné pokyny a kontext s názvami hostiteľov, IP, používateľmi, chybami a denníkmi. Posiela sa zvolenému serveru. Ollama zostáva miestne len s miestnym serverom aj modelom; vzdialený server alebo cloudový model odosiela údaje mimo hostiteľa. Ak musia zostať v sieti, vypnite AI alebo použite riadený miestny server a model."

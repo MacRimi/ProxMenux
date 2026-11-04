@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Unterstützt durch drei Quellen",
-    "body": "Proxmox-Speicher stammen aus <code>pvesm status</code>, ZFS aus <code>zpool status</code>, physische Laufwerke aus <code>lsblk</code> + <code>smartctl</code> und NVMe-Felder aus <code>nvme</code>. Die Seite aktualisiert sich etwa alle 60 Sekunden; die Detailansicht fordert eine SMART-Abfrage an."
+    "body": "Proxmox-Speicher stammen aus <code>pvesm status</code>, ZFS aus <code>zpool status</code>, physische Laufwerke aus <code>lsblk</code> + <code>smartctl</code> und NVMe-Felder aus <code>nvme</code>. Die Seite aktualisiert sich etwa alle 30 Sekunden; die Detailansicht fordert eine SMART-Abfrage an."
   },
   "thresholds": {
     "title": "Hier angewendete Statusfarben und -schwellen",

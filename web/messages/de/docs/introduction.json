@@ -21,11 +21,11 @@
     "intro": "ProxMenux umfasst zwei Komponenten im selben Quellbaum. Der Installer installiert beide auf dem Host: Scripts stellt die Terminaloberfläche bereit, Monitor das Webdashboard:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "Die ursprüngliche CLI/TUI, die Sie mit <code>menu</code> starten. Neun Funktionsbereiche für Optimierungen nach der Installation, VMs und LXC-Container, GPU- und Coral-TPU-Durchreichung, Datenträger, Speicher, Netzwerk, Sicherheit und Hilfsprogramme sowie eine sorgfältig zusammengestellte Befehlsreferenz. Läuft in lokalen Terminals, per SSH und im Webterminal."
+      "body": "Die ursprüngliche CLI/TUI, die Sie mit <code>menu</code> starten. Funktionsbereiche für Optimierungen nach der Installation, VMs und LXC-Container, GPU- und Coral-TPU-Durchreichung, Datenträger, Speicher, OCI-Apps, Netzwerk, Sicherheit, Hilfsprogramme, Host-Sicherung und -Wiederherstellung, Proxmox VE Helper Scripts sowie eine sorgfältig zusammengestellte Befehlsreferenz. Läuft in lokalen Terminals, per SSH und im Webterminal."
     },
     "monitor": {
       "title": "ProxMenux Monitor",
-      "body": "Selbst gehostetes Webdashboard als AppImage. Hostmetriken in Echtzeit, proaktive Zustandsüberwachung, Benachrichtigungen, optionale KI-Umformulierung mit sechs Anbietern, integriertes Webterminal und REST-API. Aktivierung im Scripts-Menü unter Einstellungen → ProxMenux Monitor."
+      "body": "Selbst gehostetes Webdashboard als AppImage. Hostmetriken in Echtzeit, proaktive Zustandsüberwachung, Benachrichtigungen, optionale KI-Umformulierung mit sechs Anbietern, integriertes Webterminal und REST-API. Der Installer richtet es als Dienst ein, der beim Systemstart läuft; aktivieren, deaktivieren oder prüfen Sie ihn im Scripts-Menü unter Einstellungen → ProxMenux Monitor."
     },
     "calloutTitle": "Was ProxMenux verwaltet",
     "calloutIntro": "Drei Schichten, die alle aus dem gleichen Projekt erreichbar sind:",
@@ -37,7 +37,7 @@
   },
   "scriptsSection": {
     "heading": "ProxMenux Scripts - was Sie bekommen",
-    "intro": "Neun Funktionsbereiche mit jeweils eigenem Menü innerhalb von <code>menu</code> und einer Detailseite in der Dokumentation. Klicken Sie auf eine beliebige Karte, um direkt zur Übersicht dieses Abschnitts zu springen.",
+    "intro": "Die wichtigsten Funktionsbereiche mit jeweils eigenem Menü innerhalb von <code>menu</code> und einer Detailseite in der Dokumentation. Klicken Sie auf eine beliebige Karte, um direkt zur Übersicht dieses Abschnitts zu springen.",
     "items": [
       {
         "title": "Nach der Installation",

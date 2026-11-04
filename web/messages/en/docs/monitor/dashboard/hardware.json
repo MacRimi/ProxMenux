@@ -168,7 +168,7 @@
   "ups": {
     "heading": "UPS Status",
     "subHeading": "(conditional)",
-    "body": "Renders when a NUT (Network UPS Tools) server is configured and reachable. Shows: state (online / on battery / charging / low battery), battery charge percentage, runtime estimate, load percentage, input voltage, model and firmware. The same data feeds the <em>Security & Certificates</em> category of the Health Monitor — a UPS that goes on-battery surfaces immediately."
+    "body": "Renders when a NUT (Network UPS Tools) server is configured and reachable. Shows: state (online / on battery / charging / low battery), battery charge percentage, runtime estimate, load percentage, input voltage, model and firmware."
   },
   "dataCollected": {
     "heading": "How the data is collected",

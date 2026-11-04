@@ -117,7 +117,7 @@
       "<strong>Destination</strong> — stockage (PBS-Cloud, PBS-Local, NFS-Backup, …), coloré selon son état.",
       "<strong>Taille</strong> — taille finale sur disque de la sauvegarde."
     ],
-    "backupsOutro": "<strong>+ Créer une sauvegarde</strong> lance une sauvegarde sur le stockage marqué « Backup target » dans Proxmox. La restauration se fait dans l'interface web Proxmox ; Monitor montre les sauvegardes récentes de l'invité et permet d'en créer.",
+    "backupsOutro": "Le bouton <strong>+ Créer une sauvegarde</strong> en haut à droite ouvre une fenêtre pour choisir le stockage, le mode (snapshot / suspend / stop), la protection et les notes avant de lancer un vzdump. La restauration se fait dans l’interface web Proxmox ; Monitor montre les sauvegardes récentes de l’invité, pas le processus de récupération.",
     "firewallTitle": "Onglet 7 — Pare-feu",
     "firewallIntro": "Lit le journal du pare-feu Proxmox de l'invité directement sur l'hôte, sans service ni requêtes périodiques supplémentaires. L'onglet est toujours présent ; son contenu dépend de l'activation du pare-feu et de la journalisation effective d'une règle.",
     "firewallItems": [

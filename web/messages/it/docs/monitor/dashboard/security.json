@@ -183,7 +183,7 @@
       },
       {
         "card": "SSL/HTTPS",
-        "endpoint": "/api/auth/ssl/*",
+        "endpoint": "/api/ssl/*",
         "source": "<code>openssl x509</code> su <code>/etc/pve/local/pve-ssl.pem</code> + <code>/etc/proxmenux/ssl_config.json</code>."
       },
       {

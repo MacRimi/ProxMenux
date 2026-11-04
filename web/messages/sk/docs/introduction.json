@@ -21,11 +21,11 @@
     "intro": "ProxMenux má dve súčasti v spoločnom zdrojovom strome. Inštalátor nainštaluje obe na hostiteľa: Scripts poskytuje terminálové rozhranie a Monitor webový panel:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "Pôvodné rozhranie CLI/TUI, ktoré spustíte príkazom <code>menu</code>. Deväť oblastí pokrýva optimalizácie po inštalácii, VM a kontajnery LXC, priame priradenie GPU a Coral TPU, disky, úložiská, sieť, zabezpečenie a nástroje, spolu s prehľadom vybraných príkazov. Funguje v lokálnom termináli, cez SSH aj vo webovom termináli."
+      "body": "Pôvodné rozhranie CLI/TUI, ktoré spustíte príkazom <code>menu</code>. Funkčné oblasti pokrývajú optimalizácie po inštalácii, VM a kontajnery LXC, priame priradenie GPU a Coral TPU, disky, úložiská, aplikácie OCI, sieť, zabezpečenie, nástroje, zálohovanie a obnovu hostiteľa, Proxmox VE Helper Scripts, spolu s prehľadom vybraných príkazov. Funguje v lokálnom termináli, cez SSH aj vo webovom termináli."
     },
     "monitor": {
       "title": "ProxMenux Monitor",
-      "body": "Webový panel na vlastnom serveri, distribuovaný ako AppImage. Metriky hostiteľa v reálnom čase, proaktívne monitorovanie stavu, upozornenia, voliteľné preformulovanie pomocou AI so šiestimi poskytovateľmi, integrovaný webový terminál a REST API. Zapnete ho v ponuke Scripts cez Nastavenia → ProxMenux Monitor."
+      "body": "Webový panel na vlastnom serveri, distribuovaný ako AppImage. Metriky hostiteľa v reálnom čase, proaktívne monitorovanie stavu, upozornenia, voliteľné preformulovanie pomocou AI so šiestimi poskytovateľmi, integrovaný webový terminál a REST API. Inštalátor ho nastaví ako službu spúšťanú pri štarte; zapnete, vypnete alebo skontrolujete ho v ponuke Scripts cez Nastavenia → ProxMenux Monitor."
     },
     "calloutTitle": "Čo ProxMenux spravuje",
     "calloutIntro": "Tri vrstvy, všetky dosiahnuteľné z toho istého projektu:",
@@ -37,7 +37,7 @@
   },
   "scriptsSection": {
     "heading": "ProxMenux Scripts — čo ponúka",
-    "intro": "Deväť funkčných oblastí, každá s vlastnou ponukou v <code>menu</code> a podrobnou stránkou v dokumentácii. Kliknutím na kartu otvoríte prehľad príslušnej oblasti.",
+    "intro": "Hlavné funkčné oblasti, každá s vlastnou ponukou v <code>menu</code> a podrobnou stránkou v dokumentácii. Kliknutím na kartu otvoríte prehľad príslušnej oblasti.",
     "items": [
       {
         "title": "Po inštalácii",

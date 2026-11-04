@@ -32,7 +32,11 @@ initialize_cache
 
 ensure_oci_dependencies() {
     local -a missing=()
-    python3 -c 'import yaml' >/dev/null 2>&1 || missing+=("python3-yaml")
+    # One Python start when both are present; each is checked only if not.
+    if ! python3 -c 'import yaml, jsonschema' >/dev/null 2>&1; then
+        python3 -c 'import yaml' >/dev/null 2>&1 || missing+=("python3-yaml")
+        python3 -c 'import jsonschema' >/dev/null 2>&1 || missing+=("python3-jsonschema")
+    fi
     command -v skopeo >/dev/null 2>&1 || missing+=("skopeo")
     [[ ${#missing[@]} -eq 0 ]] && return 0
 
@@ -56,12 +60,15 @@ ensure_oci_dependencies() {
     stop_spinner
 }
 
-# Proxmox VE runs OCI images as LXC containers from 9.1 on.
+# Proxmox VE runs OCI images as LXC containers from 9.1 on. The package
+# database answers at once; pveversion takes about half a second.
+pve_manager_version() {
+    dpkg-query -W -f='${Version}' pve-manager 2>/dev/null | grep -oE '^[0-9]+(\.[0-9]+)+' | head -1
+}
+
 pve_supports_oci() {
-    local version major minor
-    version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1)
-    major=${version%%.*}
-    minor=${version#*.}
+    local major minor
+    IFS=. read -r major minor _ <<< "$(pve_manager_version)"
     [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ ]] || return 1
     (( major > 9 || (major == 9 && minor >= 1) ))
 }
@@ -70,7 +77,7 @@ if ! pve_supports_oci; then
     show_proxmenux_logo
     msg_title "$(translate "OCI manager Apps (Technology Preview)")"
     msg_error "$(translate "OCI containers require Proxmox VE 9.1 or later.")"
-    PVE_VERSION=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9.]+' | head -1)
+    PVE_VERSION=$(pve_manager_version)
     [[ -n $PVE_VERSION ]] && msg_info2 "$(translate "Current version:") $PVE_VERSION"
     if [[ -t 0 ]]; then
         echo

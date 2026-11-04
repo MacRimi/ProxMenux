@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Managing jobs",
-    "intro": "The scheduler menu (Scripts TUI) and the Monitor Backups tab expose the same actions on any job.",
+    "intro": "The scheduler menu in the Scripts TUI (Backup scheduler and retention) offers Run now, Enable / Disable and Delete, plus a list of jobs with their last run status. Edit and View log are only available in the Monitor Backups tab.",
     "rows": [
       {
         "action": "Run now",
@@ -112,7 +112,7 @@
         "detail": "New mode: <code>systemctl enable/disable --now</code> the timer. Attach mode: flips the <code>ENABLED</code> flag in the job env — the hook script honours it on the next PVE fire."
       },
       {
-        "action": "Edit",
+        "action": "Edit (Monitor only)",
         "detail": "Reopens the destination, schedule, profile and retention prompts and rewrites the job files. Preserves the job ID."
       },
       {
@@ -120,7 +120,7 @@
         "detail": "Removes the job env, paths file, systemd timer + service (New mode), and disables the hook binding (Attach mode). Does not touch archives already on the destination."
       },
       {
-        "action": "View log",
+        "action": "View log (Monitor only)",
         "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — one log file per run. The runner also emits a compact status line to journald under the systemd service."
       }
     ]

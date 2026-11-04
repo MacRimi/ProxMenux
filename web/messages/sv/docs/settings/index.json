@@ -61,6 +61,12 @@
         "badge": "Alltid tillgänglig"
       },
       {
+        "icon": "Languages",
+        "href": "/docs/settings/change-language",
+        "title": "Byt språk",
+        "description": "Byt ProxMenux gränssnitt mellan åtta språk. Valet sparas i config.json och menyn laddas om på det nya språket."
+      },
+      {
         "icon": "Info",
         "href": "/docs/settings/show-version-information",
         "title": "Visa versionsinformation",
@@ -70,7 +76,7 @@
         "icon": "Trash2",
         "href": "/docs/settings/uninstall-proxmenux",
         "title": "Avinstallera ProxMenux",
-        "description": "Ta bort ProxMenux och (valfritt) dess beroenden. Återställer också /root/.bashrc och /etc/motd säkerhetskopior skapade vid installationstid."
+        "description": "Ta bort ProxMenux och (valfritt) dess beroenden. Återställer även säkerhetskopiorna av /root/.bashrc och /etc/motd som skapades av efterinstallationen."
       }
     ]
   },

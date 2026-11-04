@@ -117,7 +117,7 @@
       "<strong>Destination</strong> — lagring (PBS-Cloud, PBS-Local, NFS-Backup, …), färgad efter status.",
       "<strong>Storlek</strong> — kopians slutliga storlek på disk."
     ],
-    "backupsOutro": "<strong>+ Skapa säkerhetskopia</strong> startar en kopiering på lagringen markerad ”Backup target” i Proxmox. Återställning görs i Proxmox webbgränssnitt; Monitor visar gästens senaste kopior och kan skapa nya.",
+    "backupsOutro": "Knappen <strong>+ Skapa säkerhetskopia</strong> uppe till höger öppnar en dialog där du väljer lagring, läge (snapshot / suspend / stop), skydd och anteckningar innan en vzdump startas. Återställning görs i Proxmox webbgränssnitt; Monitor visar vyn ”har den här gästen säkerhetskopierats nyligen?”, inte återställningsflödet.",
     "firewallTitle": "Tab 7 - Brandvägg",
     "firewallIntro": "Läser gästens Proxmox-brandväggslogg direkt från värden utan extra tjänst eller periodiska hämtningar. Fliken finns alltid; innehållet beror på om brandväggen är aktiv och någon regel loggar paket.",
     "firewallItems": [

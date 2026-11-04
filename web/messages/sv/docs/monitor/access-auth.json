@@ -18,7 +18,7 @@
   },
   "reaching": {
     "heading": "Öppna instrumentpanelen",
-    "intro": "ProxMenux Monitor binder till <code>0.0.0.0:8008</code>. Det finns tre vanliga sätt att nå den:",
+    "intro": "ProxMenux Monitor lyssnar på TCP 8008 på alla gränssnitt (<code>::</code>, IPv4 och IPv6). Det finns tre vanliga sätt att nå den:",
     "outro": "Direktåtkomst motsvarar standardenheten för systemd. Omvänd proxy och Secure Gateway beskrivs nedan. Förtroende för klient-IP i <code>X-Forwarded-For</code> kräver PROXMENUX_TRUST_PROXY=1 och en proxy du kontrollerar. Enbart förekomsten av <code>X-Forwarded-Proto</code> eller <code>X-Forwarded-Host</code> aktiverar inte proxyförtroende. På portarna 80/443 använder frontend relativa <code>/api/*</code>-URL:er; på alla andra portar anropas port 8008 på samma värdnamn."
   },
   "firstLaunch": {
@@ -158,7 +158,7 @@
     "authJsonTitle": "auth.json — innehåll och skydd",
     "authJsonBody": "Autentiseringsuppgifterna finns i <code>/root/.config/proxmenux-monitor/auth.json</code>, med läge <code>0600</code> och ägare <code>root</code>. Filen innehåller PBKDF2-<em>hashar</em> och <em>kryptografiska hemligheter</em> (<code>jwt_secret</code>, <code>totp_secret</code>), aldrig lösenord i klartext. Kryptera mål för säkerhetskopiering eller replikering och lägg aldrig filen i versionshantering.",
     "rotateTitle": "Byte av jwt_secret gör alla befintliga JWT ogiltiga",
-    "rotateBody": "Om <code>auth.json</code> återskapas eller återställs med en annan hemlighet ändras <code>jwt_secret</code>. Gamla sessions- och API-JWT misslyckas med \"Invalid or expired token\". Gränssnittet visar <strong>Ogiltigt — skapa på nytt</strong>. Återkalla och ersätt berörda token även i Home Assistant, skript och andra klienter.",
+    "rotateBody": "Om <code>auth.json</code> återskapas eller återställs med en annan hemlighet ändras <code>jwt_secret</code>. Gamla sessions- och API-JWT misslyckas med \"Invalid or expired token\". Gränssnittet markerar berörda API-token med rött och en etikett som uppmanar dig att återkalla dem och skapa nya. Home Assistant, skript och andra externa klienter behöver en ny token efteråt.",
     "recoverTitle": "Återställa ett förlorat lösenord",
     "recoverIntro": "Lösenordsåterställning kräver skalåtkomst till värden. ProxMenux har en guidad återställning i konfigurationsmenyn så att du slipper redigera <code>auth.json</code> manuellt:",
     "survivesTitle": "Vad överlever återställningen",
@@ -284,14 +284,14 @@
     "heading": "API-token med lång giltighetstid",
     "intro": "Sessioner löper ut efter 24 timmar. Skapa ett separat <strong>API-token</strong> giltigt i 365 dagar för Homepage, Home Assistant, Grafana eller Uptime Kuma. JWT:t använder samma signeringshemlighet; fältet <code>token_name</code> gör att det kan identifieras och återkallas separat.",
     "imageAlt": "API-tokenlista med namn, prefix, datum för skapande och utgångsdatum",
-    "imageCaption": "Listan i inställningarna visar namn, prefix med de fyra sista tecknen för identifiering, skapande- och utgångsdatum samt återkallelse.",
+    "imageCaption": "Listan över API-token under Administration → Säkerhet visar namn, prefix (de fyra sista tecknen visas för identifiering), skapande- och utgångsdatum samt återkallelse.",
     "generateTitle": "Generera en token",
     "generateIntro": "Från panelen:",
     "generateSteps": [
-      "Öppna <strong>Säkerhet → API-åtkomsttoken</strong>.",
+      "Öppna <strong>Administration → Säkerhet → API-tokens</strong> och välj <strong>Generera ny token</strong>.",
       "Skriv ett beskrivande namn (<em>t.ex. \"Home Assistant\"</em>).",
       "Skriv in ditt lösenord. Om 2FA är på, även den nuvarande 6-siffriga koden.",
-      "Välj <strong>Generera token</strong>. Det visas <strong>endast en gång</strong>: kopiera direkt."
+      "Välj <strong>Generera token</strong>. Den visas <strong>endast en gång</strong>: kopiera direkt."
     ],
     "generateCli": "Från kommandoraden:",
     "useTitle": "Använd en token",
@@ -310,7 +310,7 @@
     "intro": "Två vägar till TLS:",
     "items": [
       "<strong>Omvänd proxy rekommenderas.</strong> Avsluta TLS på Nginx / Caddy / Traefik och vidarebefordra HTTP till Flask på port 8008. Exempel nedan.",
-      "<strong>Direkt HTTPS i AppImage.</strong> Ange certifikat via <code>POST /api/ssl/configure</code> (gränssnitt: <strong>Inställningar → SSL</strong>). HTTPS använder <code>gevent.pywsgi</code> med standardhanteraren; flask-sock hanterar WebSocket för WSS. Certifikatsökvägar sparas i SSL-konfigurationen."
+      "<strong>Direkt HTTPS i AppImage.</strong> Ange certifikat via <code>POST /api/ssl/configure</code> (gränssnitt: <strong>Administration → Säkerhet → SSL / HTTPS</strong>). HTTPS använder <code>gevent.pywsgi</code> med standardhanteraren; flask-sock hanterar WebSocket för WSS. Certifikatsökvägar sparas i SSL-konfigurationen."
     ],
     "calloutTitle": "Direkt HTTPS begränsningar",
     "calloutBody": "Monitor kan använda ett certifikat hanterat av Proxmox eller egna certifikatsfiler. Det utfärdar inte ACME-certifikat självt. Använd Proxmox ACME eller Caddy, Traefik eller Nginx för automatisk utfärdning och förnyelse, och se till att förnyade certifikat läses in."

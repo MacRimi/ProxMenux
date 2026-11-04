@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Utökade systemdata för panelens sidhuvud: övergripande mätvärden och starttid."
+        "use": "Lättviktig sidhuvudinformation: värdnamn, drifttid och cachad hälsostatus. Offentlig, ingen token behövs."
       },
       {
         "endpoint": "/api/hardware",
@@ -401,7 +401,7 @@
       {
         "endpoint": "/api/logs",
         "method": "GET",
-        "use": "Filtrerade journalposter. Query: <code>?level=&service=&limit=</code>"
+        "use": "Filtrerade journalposter. Query: <code>?priority=&service=&limit=&since_days=</code> (<code>priority</code> 0-7, <code>since_days</code> upp till 90)."
       },
       {
         "endpoint": "/api/logs/download",
@@ -411,7 +411,7 @@
       {
         "endpoint": "/api/events",
         "method": "GET",
-        "use": "Intern händelseström - samma som matar meddelanden."
+        "use": "Senaste Proxmox-klusteruppgifter och händelser från <code>pvesh get /cluster/tasks</code>. Query: <code>?limit=</code> (standard 50)."
       },
       {
         "endpoint": "/api/task-log/<upid>",
@@ -462,7 +462,7 @@
       {
         "endpoint": "/api/notifications/send",
         "method": "POST",
-        "use": "Skapar en egen händelse. Begärans innehåll: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+        "use": "Skapar en egen händelse. Begärans innehåll: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"message\":\"...\",\"data\":'{''}''}'</code>."
       },
       {
         "endpoint": "/api/notifications/test-ai",

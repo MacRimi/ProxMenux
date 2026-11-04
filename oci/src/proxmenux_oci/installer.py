@@ -962,15 +962,14 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
         return software
     # Recognition on an AMD GPU depends on ROCm: it is offered when the host
     # can run it, marked as experimental on a GPU ROCm does not support
-    # officially, and left out, with the reason, when it cannot.
+    # officially, and left out when it cannot. A GPU of a generation ROCm does
+    # not run is simply not offered; what the host can fix is explained.
     amd_blocker = host.rocm_blocker(rootfs_storage) if found["amd"] else None
     amd_experimental = (found["amd"] and not amd_blocker
                         and host.rocm_support(found.get("amd_gfx_target")) == "experimental")
-    if amd_blocker:
+    if amd_blocker in ("kfd", "space"):
         reason = (translate("The AMD driver does not offer its compute interface (/dev/kfd) on this host.")
                   if amd_blocker == "kfd" else
-                  f"{translate('The ROCm image has no support for the AMD GPU of this host:')} {host.amd_gpu_name()}."
-                  if amd_blocker == "generation" else
                   translate("The storage has less than 40 GB free for the ROCm image."))
         real.message(f"{reason}\n\n{translate('Recognition is not offered on the AMD GPU; video transcoding is.')}")
     mark = f" — {translate('experimental on this GPU')}" if amd_experimental else ""
@@ -1916,11 +1915,6 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
             found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) == "experimental"}
         options = [(item["id"], item["label"]) for item in usable]
         asked = advanced or not installer_profile.get("selkies")
-        if asked and found["amd"] and any(item.get("amd_gfx_targets") and item not in usable and host.rocm_support(
-                found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) is None for item in profiles):
-            # Its owner may expect the GPU to be offered: say why it is not.
-            ui.message(f"{translate('The ROCm image of this application has no support for the AMD GPU of this host:')} "
-                       f"{host.amd_gpu_name()}. {translate('Its ROCm profile is not offered.')}")
         if asked and len(usable) < len(profiles) and len(usable) == 1:
             # Nothing but the CPU is left: say why there is nothing to choose.
             ui.message(translate("No usable GPU was found on this host. The application will be installed "

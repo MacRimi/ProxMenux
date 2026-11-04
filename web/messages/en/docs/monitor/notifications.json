@@ -314,7 +314,7 @@
   },
   "aiRewrite": {
     "heading": "Optional AI rewrite",
-    "body1": "Eligible events can be rewritten by an LLM before delivery. Backup results (backup_complete and backup_fail) bypass this rewrite. AI is off by default and runs in the dispatch thread when enabled. If the call fails or times out, the original template text is used.",
+    "body1": "Eligible events can be rewritten by an LLM before delivery. Backup results (backup_complete and backup_fail) are not rewritten; with AI Suggestions on, the AI only appends an explanation when a backup reports errors. AI is off by default and runs in the dispatch thread when enabled. If the call fails or times out, the original template text is used.",
     "body2": "Six providers are supported (OpenAI, Anthropic, Google Gemini, Groq, OpenRouter and local Ollama), with per-channel detail level (<code>brief</code>, <code>standard</code>, <code>detailed</code>), output language, prompt mode (<code>default</code> or <code>custom</code>) and an optional custom prompt. Full configuration walk-through, captures and prompt examples live in the dedicated <link>AI Assistant</link> page.",
     "privacyTitle": "Privacy note",
     "privacyBody": "AI requests can include the title, severity, rendered body, system/custom prompt and collected context, including hostnames, IPs, usernames, errors and journal lines. They go to the selected endpoint. Ollama keeps processing local only with both a local server and a local model; a remote server or cloud model sends data outside the host. Disable rewriting or use a controlled local endpoint and model when event content must stay on the network."

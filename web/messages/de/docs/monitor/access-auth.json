@@ -18,7 +18,7 @@
   },
   "reaching": {
     "heading": "Dashboard öffnen",
-    "intro": "ProxMenux Monitor lauscht auf <code>0.0.0.0:8008</code>. Drei übliche Zugriffswege:",
+    "intro": "ProxMenux Monitor lauscht auf TCP 8008 auf allen Schnittstellen (<code>::</code>, IPv4 und IPv6). Drei übliche Zugriffswege:",
     "outro": "Direktzugriff entspricht der Standard-systemd-Unit. Reverse-Proxy und Secure Gateway werden unten beschrieben. Das Vertrauen in Client-IPs aus <code>X-Forwarded-For</code> erfordert PROXMENUX_TRUST_PROXY=1 und einen von Ihnen kontrollierten Proxy. <code>X-Forwarded-Proto</code> oder <code>X-Forwarded-Host</code> allein aktivieren das Proxy-Vertrauen nicht. Auf den Ports 80/443 verwendet das Frontend relative <code>/api/*</code>-URLs; auf jedem anderen Port ruft es Port 8008 unter demselben Hostnamen auf."
   },
   "firstLaunch": {
@@ -158,7 +158,7 @@
     "authJsonTitle": "auth.json - was es enthält und wie es geschützt ist",
     "authJsonBody": "Die Authentifizierungsdaten liegen in <code>/root/.config/proxmenux-monitor/auth.json</code>, mit Modus <code>0600</code> und Eigentümer <code>root</code>. Die Datei enthält <em>Hashes</em> (PBKDF2) und <em>geheimes Schlüsselmaterial</em> (<code>jwt_secret</code>, <code>totp_secret</code>), niemals das Klartextpasswort. Sichern oder replizieren Sie den Host nur auf ein verschlüsseltes Ziel und nehmen Sie diese Datei niemals in die Versionsverwaltung auf.",
     "rotateTitle": "Ein Wechsel von jwt_secret macht bestehende JWTs ungültig",
-    "rotateBody": "Wird <code>auth.json</code> neu erstellt oder mit einem anderen Geheimnis wiederhergestellt, ändert sich <code>jwt_secret</code>. Bisherige Sitzungs- und API-Tokens scheitern dann mit „Invalid or expired token“. Die Oberfläche kennzeichnet betroffene Tokens mit <strong>Ungültig — neu erstellen</strong>. Widerrufen und ersetzen Sie sie auch in Home Assistant, Skripten und anderen Clients.",
+    "rotateBody": "Wird <code>auth.json</code> neu erstellt oder mit einem anderen Geheimnis wiederhergestellt, ändert sich <code>jwt_secret</code>. Bisherige Sitzungs- und API-Tokens scheitern dann mit „Invalid or expired token“. Die Oberfläche markiert betroffene API-Tokens rot, mit einem Badge, das zum Widerrufen und Neuerstellen auffordert. Danach benötigen auch Home Assistant, Skripte und andere externe Clients ein neues Token.",
     "recoverTitle": "Wiederherstellen eines verlorenen Passworts",
     "recoverIntro": "Es gibt keinen Online-Fluss für \"Passwort vergessen\" - von Grund auf, da das Dashboard auf dem eigenen Host des Betreibers läuft und der Wiederherstellungspfad Shell-Zugriff auf diesen Host ist. ProxMenux liefert einen geführten Reset im Konfigurationsmenü, sodass Sie <code>auth.json</code> nicht von Hand bearbeiten müssen:",
     "survivesTitle": "Was den Reset überlebt",
@@ -284,14 +284,14 @@
     "heading": "API-Token (langlebig)",
     "intro": "Browsersitzungen laufen nach 24 Stunden ab. Für Homepage-Widgets, Home Assistant, Grafana oder Uptime Kuma erstellen Sie ein separates <strong>API-Token</strong> mit 365 Tagen Laufzeit. Es verwendet dasselbe Signaturgeheimnis; die Angabe <code>token_name</code> erlaubt die Zuordnung und den einzelnen Widerruf.",
     "imageAlt": "API-Token-Panel zeigt die Token-Liste mit Name, Präfix, erstelltem Datum und Ablauf",
-    "imageCaption": "Die API-Tokenliste unter Einstellungen — Name, Präfix (die letzten 4-Zeichen werden zur Identifizierung angezeigt), erstellt und Ablaufdatum, Widerrufsaktion.",
+    "imageCaption": "Die API-Tokenliste unter Admin → Sicherheit: Name, Präfix (die letzten 4 Zeichen werden zur Identifizierung angezeigt), Erstellungs- und Ablaufdatum, Widerrufsaktion.",
     "generateTitle": "Generieren Sie ein Token",
     "generateIntro": "Aus dem Dashboard:",
     "generateSteps": [
-      "Unter <strong>Sicherheit → API-Zugriffstokens</strong> öffnen.",
+      "Öffnen Sie <strong>Admin → Sicherheit → API-Tokens</strong> und klicken Sie auf <strong>Neues Token generieren</strong>.",
       "Beschreibenden Namen angeben, <em>z. B. „Home Assistant“</em>.",
       "Geben Sie Ihr Passwort erneut ein. Wenn 2FA eingeschaltet ist, auch der aktuelle 6-stellige Code.",
-      "<strong>Token erstellen</strong> wählen. Es erscheint <strong>nur einmal</strong>; sofort kopieren."
+      "Klicken Sie auf <strong>Token generieren</strong>. Das Token erscheint <strong>nur einmal</strong>: Kopieren Sie es sofort."
     ],
     "generateCli": "Aus der Kommandozeile:",
     "useTitle": "Verwenden Sie ein Token",
@@ -310,7 +310,7 @@
     "intro": "Zwei Wege zu TLS:",
     "items": [
       "<strong>Reverse-Proxy (empfohlen).</strong> Beenden Sie TLS auf Nginx / Caddy / Traefik und leiten Sie HTTP auf Port 8008 zum Flask-Prozess weiter. Snippets unten.",
-      "<strong>Direktes HTTPS in der AppImage.</strong> Zertifikat über <code>POST /api/ssl/configure</code> einrichten (Oberfläche: <strong>Einstellungen → SSL</strong>). HTTPS verwendet <code>gevent.pywsgi</code> mit dem Standardhandler; flask-sock übernimmt WebSocket-Verbindungen für WSS. Zertifikatspfade stehen in der SSL-Konfiguration."
+      "<strong>Direktes HTTPS in der AppImage.</strong> Zertifikat über <code>POST /api/ssl/configure</code> einrichten (Oberfläche: <strong>Admin → Sicherheit → SSL / HTTPS</strong>). HTTPS verwendet <code>gevent.pywsgi</code> mit dem Standardhandler; flask-sock übernimmt WebSocket-Verbindungen für WSS. Zertifikatspfade stehen in der SSL-Konfiguration."
     ],
     "calloutTitle": "Direkte HTTPS-Beschränkungen",
     "calloutBody": "Der Monitor kann ein von Proxmox verwaltetes Zertifikat oder eigene Zertifikatsdateien verwenden. Er stellt selbst keine ACME-Zertifikate aus. Für automatische Ausstellung und Erneuerung Proxmox ACME oder einen Reverse-Proxy wie Caddy, Traefik oder Nginx verwenden; erneuerte Zertifikate müssen geladen werden."

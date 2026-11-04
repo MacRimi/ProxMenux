@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "AI-assistent",
-    "description": "Valfri AI-omskrivning gör lämpliga aviseringsmallar till tydliga meddelanden med detaljnivå per kanal, tretton språk i gränssnittet, egna promptar, ett offentligt communitybibliotek och berikad kontext. Rapporterna <code>backup_complete</code> och <code>backup_fail</code> går helt förbi AI.",
+    "description": "Valfri AI-omskrivning gör lämpliga aviseringsmallar till tydliga meddelanden med detaljnivå per kanal, tretton språk i gränssnittet, egna promptar, ett offentligt communitybibliotek och berikad kontext. Rapporterna backup_complete och backup_fail skrivs aldrig om; med AI-förslag påslaget lägger AI bara till en förklaring när en säkerhetskopiering rapporterar fel.",
     "section": "ProxMenux-övervakning"
   },
   "intro": {
@@ -83,7 +83,7 @@
     "intro1": "Kommersiella leverantörer tar betalt per <em>token</em>. En token motsvarar ungefär fyra engelska tecken eller tre fjärdedelar av ett ord. Den engelska frasen <em>\"Backup completed on storage local-bak\"</em> är omkring åtta token. Tio loggrader kan vara 200–400 token beroende på det tekniska innehållet.",
     "intro2": "Två saker faktureras på varje samtal:",
     "items": [
-      "<strong>Indatatoken</strong> omfattar systemprompt och användarmeddelande med allvarlighetsgrad, rubrik, malltext och berikad kontext. Antalet beror på prompt och händelse. Varje omskriven kanal kan förbruka egna indatatoken; rapporter om slutförd eller misslyckad säkerhetskopiering går förbi AI.",
+      "<strong>Indatatoken</strong> omfattar systemprompt och användarmeddelande med allvarlighetsgrad, rubrik, malltext och berikad kontext. Antalet beror på prompt och händelse. Varje omskriven kanal kan förbruka egna indatatoken; rapporter om slutförd eller misslyckad säkerhetskopiering förbrukar bara token när AI förklarar fel i säkerhetskopieringen.",
       "<strong>Utdatatoken</strong> är modellens svar. Monitor begränsar dem med <code>max_tokens</code>. Taket är en <em>gräns</em>, inte fast förbrukning: ger modellen 250 token med gränsen 1500 betalar du för 250."
     ],
     "capsIntro": "Dessa är de gränser som sändningsmodulen använder, direkt från <code>AI_DETAIL_TOKENS</code> i <code>notification_templates.py</code>:",
@@ -118,7 +118,7 @@
     "imageCaption": "Informationsrutan i appen: sex kort, ett per leverantör, med beskrivningarna nedan.",
     "groq": {
       "heading": "Groq",
-      "tagline": "Mycket snabb, generös fri nivå (30 req/min). Perfekt att börja.",
+      "tagline": "Mycket snabb, med en generös fri nivå. Ett bra ställe att börja.",
       "items": [
         "API-nyckel: <a>console.groq.com/keys</a>",
         "Exempel från den medföljande modellistan: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>openai/gpt-oss-120b</code>.",
@@ -234,7 +234,7 @@
   },
   "detailLevel": {
     "heading": "Detaljnivå per kanal",
-    "intro": "Telegram, Discord, Gotify och e-post har varsin detaljväljare. Tre värden styr gränsen för utdatatoken och instruktionerna i standardprompten:",
+    "intro": "Var och en av de sex kanalerna (Telegram, Discord, Gotify, e-post, Pushover, Apprise) har en egen detaljväljare. Tre värden styr gränsen för utdatatoken och instruktionerna i standardprompten:",
     "headerLevel": "Nivå",
     "headerLabel": "UI-märkning",
     "headerCap": "Utdatagräns",
@@ -261,7 +261,7 @@
     ],
     "defaultsIntro": "Standarder som Monitorn tillämpar på första installationen:",
     "defaults": [
-      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Telegram, Discord, Gotify, Pushover, Apprise</strong> — <code>standard</code>.",
       "<strong>E-post</strong> — <code>detailed</code>. E-post är den kanal där du vanligtvis vill ha hela bilden för arkiv."
     ],
     "emailTitle": "Detaljerad e-post lägger till originalet",
@@ -280,7 +280,7 @@
   },
   "templates": {
     "heading": "En anteckning på mallar",
-    "body1": "AI får färdig malltext, inte rå händelsedata. Typer som <code>vm_start</code>, <code>auth_fail</code> och <code>health_degraded</code> har mallar i <code>notification_templates.py</code>. AI skriver om lämpliga mallutdata; <code>backup_complete</code> och <code>backup_fail</code> behåller deterministiska rapporter utan AI.",
+    "body1": "AI får färdig malltext, inte rå händelsedata. Typer som <code>vm_start</code>, <code>auth_fail</code> och <code>health_degraded</code> har mallar i <code>notification_templates.py</code>. AI skriver om lämpliga mallutdata; <code>backup_complete</code> och <code>backup_fail</code> behåller deterministiska rapporter; med AI-förslag påslaget lägger AI bara till en förklaring när säkerhetskopieringen rapporterar fel.",
     "body2": "Två praktiska konsekvenser: AI ser aldrig ett värdnamn eller VMID det måste uppfinna - dessa fält placeras av mallen innan omskrivningen. Och om AI är inaktiverad är den mallade kroppen det som skickas direkt. <link>Notifications</link>-sidan dokumenterar sändningspipeline i sin helhet och är rätt korsreferens för allt som händer en händelse innan det når detta lager."
   },
   "privacy": {

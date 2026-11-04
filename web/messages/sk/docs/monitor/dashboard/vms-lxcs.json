@@ -117,7 +117,7 @@
       "<strong>Cieľ</strong> — úložisko (PBS-Cloud, PBS-Local, NFS-Backup, …), farebne podľa stavu.",
       "<strong>Veľkosť</strong> — konečná veľkosť zálohy na disku."
     ],
-    "backupsOutro": "<strong>+ Vytvoriť zálohu</strong> spustí zálohu na úložisku označenom „Backup target“ v Proxmoxe. Obnova sa vykonáva vo webovom rozhraní Proxmox; Monitor ukazuje nedávne zálohy systému a umožňuje vytvoriť nové.",
+    "backupsOutro": "Tlačidlo <strong>+ Vytvoriť zálohu</strong> vpravo hore otvorí dialóg na výber úložiska, režimu (snapshot / suspend / stop), ochrany a poznámok pred spustením vzdump. Obnova sa vykonáva vo webovom rozhraní Proxmox; Monitor ukazuje pohľad „bola táto VM nedávno zálohovaná?“, nie postup obnovy.",
     "firewallTitle": "Karta 7 — Firewall",
     "firewallIntro": "Číta záznam firewallu Proxmox daného systému priamo z hostiteľa, bez ďalšej služby a pravidelných dotazov. Karta je vždy prítomná; obsah závisí od zapnutia firewallu a od toho, či pravidlo zaznamenáva pakety.",
     "firewallItems": [
