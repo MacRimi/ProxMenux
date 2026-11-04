@@ -18045,7 +18045,7 @@
     "notes": [
       "First visit will prompt you to create an account",
       "Tesseract OCR is pre-installed for all languages",
-      "Documents are stored in /opt/papra/app-data/documents",
+      "Documents are stored in /opt/papra_data/documents",
       "Ingestion folder available at /opt/papra_data/ingestion for automatic document import"
     ],
     "warnings": [
