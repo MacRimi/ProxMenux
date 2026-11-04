@@ -6,6 +6,9 @@ on:
       - '.github/workflows/test-appimage-native.yml'
       - 'AppImage/scripts/build_appimage.sh'
       - 'AppImage/scripts/appimage_arch.sh'
+      - 'AppImage/scripts/borg_native_arm.sh'
+      - '.github/scripts/smoke_native_apprun.sh'
+      - '.github/scripts/check_appimage_elf.py'
       - 'AppImage/scripts/AppRun'
       - 'tests/test_appimage_arch.py'
   workflow_dispatch:
@@ -45,6 +48,8 @@ jobs:
         run: sudo apt-get update
       - name: Build native AppImage without publishing it
         run: bash AppImage/scripts/build_appimage.sh
+      - name: Reject foreign ELF payloads
+        run: python .github/scripts/check_appimage_elf.py /tmp/proxmenux_build/ProxMenux.AppDir '${{ matrix.arch }}'
       - name: Extract native AppImage without FUSE
         run: |
           mkdir /tmp/proxmenux-native-extract
@@ -59,11 +64,15 @@ jobs:
       - name: Import bundled Python 3.11 native WebSocket runtime
         env:
           PYTHONPATH: /tmp/proxmenux-native-extract/squashfs-root/usr/lib/python3/vendor/cp311:/tmp/proxmenux-native-extract/squashfs-root/usr/lib/python3/dist-packages
-        run: python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from PIL import Image; from gevent import pywsgi; print(gevent.__version__)'
+        run: |
+          python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from PIL import Image; from gevent import pywsgi; print(gevent.__version__)'
+          bash .github/scripts/smoke_native_apprun.sh /tmp/proxmenux-native-extract/squashfs-root
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - name: Import bundled Python 3.13 native WebSocket runtime
         env:
           PYTHONPATH: /tmp/proxmenux-native-extract/squashfs-root/usr/lib/python3/vendor/cp313:/tmp/proxmenux-native-extract/squashfs-root/usr/lib/python3/dist-packages
-        run: python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from PIL import Image; from gevent import pywsgi; print(gevent.__version__)'
+        run: |
+          python -c 'import gevent, greenlet, geventwebsocket, zope.interface; from PIL import Image; from gevent import pywsgi; print(gevent.__version__)'
+          bash .github/scripts/smoke_native_apprun.sh /tmp/proxmenux-native-extract/squashfs-root

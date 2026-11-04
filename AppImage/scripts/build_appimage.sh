@@ -37,6 +37,14 @@ echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitor
 # denied → build aborted before doing any actual work).
 APPIMAGETOOL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/appimagetool-${PMX_APPIMAGE_ARCH}"
 
+APPIMAGETOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${PMX_APPIMAGE_ARCH}.AppImage"
+if [ "$PMX_APPIMAGE_ARCH" = aarch64 ]; then
+    # The old AppImageKit ARM build does not accept ARCH=aarch64 reliably.
+    # Use a versioned tool; leave the existing AMD64 tool unchanged.
+    APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-aarch64.AppImage"
+    APPIMAGETOOL_CACHE="${APPIMAGETOOL_CACHE}-1.9.1"
+fi
+
 # Architecture-specific caches never reuse an executable from a different CPU.
 
 # Clean and create work directory
@@ -52,7 +60,7 @@ if [ -s "$APPIMAGETOOL_CACHE" ]; then
 fi
 if [ ! -s "$WORK_DIR/appimagetool" ]; then
     echo "📥 Downloading appimagetool..."
-    wget --tries=3 --timeout=60 "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${PMX_APPIMAGE_ARCH}.AppImage" -O "$WORK_DIR/appimagetool" || true
+    wget --tries=3 --timeout=60 "$APPIMAGETOOL_URL" -O "$WORK_DIR/appimagetool" || true
     if [ ! -s "$WORK_DIR/appimagetool" ]; then
         echo "❌ Failed to download appimagetool" >&2
         exit 1
@@ -60,6 +68,10 @@ if [ ! -s "$WORK_DIR/appimagetool" ]; then
     chmod +x "$WORK_DIR/appimagetool"
     mkdir -p "$(dirname "$APPIMAGETOOL_CACHE")"
     cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
+fi
+
+if [ "$PMX_APPIMAGE_ARCH" = aarch64 ]; then
+    echo "f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158  $WORK_DIR/appimagetool" | sha256sum -c -
 fi
 
 # Create directory structure
@@ -240,6 +252,7 @@ fi
 # hb_ensure_borg used to download on demand — kept in lockstep so both
 # code paths see the same version semantics. SHA256 is the upstream
 # release checksum; bump both together.
+if [ "$PMX_APPIMAGE_ARCH" = x86_64 ]; then
 BORG_VERSION="1.2.8"
 BORG_URL="https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linux64"
 BORG_SHA256="cfa50fb704a93d3a4fa258120966345fddb394f960dca7c47fcb774d0172f40b"
@@ -273,6 +286,12 @@ if [ "$DOWNLOAD_OK" = "1" ]; then
 else
     echo "❌ borg download failed from $BORG_URL"
     exit 1
+fi
+
+else
+    echo "⚠️  No official Borg 1.2.8 ARM64 standalone binary; using native-host adapter"
+    cp "$SCRIPT_DIR/borg_native_arm.sh" "$APP_DIR/usr/bin/borg"
+    chmod +x "$APP_DIR/usr/bin/borg"
 fi
 
 # Copy Next.js build

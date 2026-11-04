@@ -1,5 +1,6 @@
 """Exercise native architecture wiring without building or changing the host."""
-import json
+import importlib.util
+import struct
 import os
 from pathlib import Path
 import shutil
@@ -17,6 +18,23 @@ class AppImageArchitectureTests(unittest.TestCase):
             'source "$1"; pmx_appimage_arch "$2" || exit; '
             'printf "%s|%s|%s" "$PMX_APPIMAGE_ARCH" "$PMX_APPIMAGE_TRIPLET" "$PMX_APPIMAGE_SUFFIX"',
             'fixture', str(SCRIPTS / 'appimage_arch.sh'), machine], capture_output=True, text=True)
+
+    def test_elf_audit_rejects_foreign_binary_without_executing_it(self):
+        spec = importlib.util.spec_from_file_location('appimage_elf_check', ROOT / '.github/scripts/check_appimage_elf.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as folder:
+            binary = Path(folder) / 'fixture-elf'
+            header = bytearray(20)
+            header[:6] = b'\x7fELF\x02\x01'
+            header[18:20] = struct.pack('<H', 183)
+            binary.write_bytes(header)
+            self.assertEqual(module.check(folder, 'aarch64'), 1)
+            with self.assertRaisesRegex(ValueError, 'Foreign ELF machine 183'):
+                module.check(folder, 'x86_64')
+            binary.write_text('#!/bin/sh\nexit 127\n')
+            with self.assertRaisesRegex(ValueError, 'No native ELF files'):
+                module.check(folder, 'aarch64')
 
     def test_supported_native_architectures_and_aliases(self):
         for machine in ['x86_64', 'amd64']:
@@ -71,6 +89,40 @@ class AppImageArchitectureTests(unittest.TestCase):
                     capture_output=True, text=True, check=True)
                 self.assertIn(str(app / ('usr/lib/' + machine + '-linux-gnu')), result.stdout)
                 self.assertIn(str(app / 'usr/lib/python3/vendor/cp311'), result.stdout)
+
+
+    def test_arm_borg_adapter_reports_unavailable_or_uses_native_host_package(self):
+        source = (SCRIPTS / 'borg_native_arm.sh').read_text()
+        with tempfile.TemporaryDirectory() as folder:
+            native = Path(folder) / 'borg'
+            adapter = Path(folder) / 'adapter'
+            adapter.write_text(source.replace('/usr/bin/borg', str(native)))
+            missing = subprocess.run(['sh', str(adapter), '--version'], capture_output=True, text=True)
+            self.assertEqual(missing.returncode, 127)
+            self.assertIn('Install the native borgbackup package', missing.stderr)
+            native.write_text('#!/bin/sh\nprintf "native %s" "$*"\n')
+            native.chmod(0o755)
+            installed = subprocess.run(['sh', str(adapter), 'list', 'fixture-repo'], capture_output=True, text=True, check=True)
+            self.assertEqual(installed.stdout, 'native list fixture-repo')
+
+    def test_arm_host_backup_never_selects_cached_amd64_borg_or_downloads_it(self):
+        source = (ROOT / 'scripts/backup_restore/lib_host_backup_common.sh').read_text()
+        function = source[source.index('hb_ensure_borg() {'):source.index('\nhb_borg_init_if_needed()')]
+        with tempfile.TemporaryDirectory() as folder:
+            cached = Path(folder) / 'borg'
+            cached.write_text('#!/bin/sh\nexit 0\n')
+            cached.chmod(0o755)
+            script = (function + '\n'
+                'command() { if [ "$*" = "-v borg" ]; then return 1; fi; builtin command "$@"; }; '
+                'uname() { echo aarch64; }; hb_translate() { printf "%s" "$1"; }; '
+                'msg_error() { printf "%s" "$1" >&2; }; '
+                'wget() { echo UNEXPECTED_DOWNLOAD >&2; return 99; }; '
+                'HB_STATE_DIR="$1"; hb_ensure_borg')
+            result = subprocess.run(['bash', '-c', script, 'fixture', folder], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('Native Borg is unavailable.', result.stderr)
+        self.assertNotIn('UNEXPECTED_DOWNLOAD', result.stderr)
+        self.assertEqual(result.stdout, '')
 
 
 if __name__ == '__main__':
