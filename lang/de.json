@@ -4313,6 +4313,7 @@
   "NVIDIA (CUDA; official GPU image)": "NVIDIA (CUDA; offizielles GPU-Bild)",
   "NVIDIA (NVDEC/CUDA)": "NVIDIA (NVDEC/CUDA)",
   "NVIDIA (NVENC/NVDEC)": "NVIDIA (NVENC/NVDEC)",
+  "NVIDIA (Selkies rendering and NVENC)": "NVIDIA (Selkies-Rendering und NVENC)",
   "NVIDIA Actions": "NVIDIA-Aktionen",
   "NVIDIA CPU hiding already configured": "NVIDIA-CPU-Ausblendung bereits konfiguriert",
   "NVIDIA Container Toolkit": "NVIDIA Container Toolkit",
