@@ -361,9 +361,8 @@ class CatalogRefreshTests(unittest.TestCase):
         next_visit = refresh.CatalogRefresh(self.root, Catalog(self.root))
         self.assertIn("New applications since your last visit: 1", next_visit.describe())
 
-    def test_main_menu_redraws_totals_and_news_after_background_refresh(self):
+    def test_the_download_never_closes_the_open_menu_and_shows_on_the_next_draw(self):
         from proxmenux_oci import cli, updates
-        from proxmenux_oci.ui import MenuRefresh
         status = refresh.CatalogRefresh(self.root, Catalog(self.root))
         status.process = Mock(returncode=0)
         status.process.poll.return_value = None
@@ -374,14 +373,16 @@ class CatalogRefreshTests(unittest.TestCase):
             def choose(self, text, entries, default, **kwargs):
                 screens.append((text, dict(entries)))
                 if len(screens) == 1:
+                    # The catalog finishes downloading while the menu is open:
+                    # nothing may close it, so no refresh is watched.
+                    owner.assertNotIn('refresh', kwargs)
+                    owner.assertNotIn('Refreshing the application catalog', text)
                     owner.add_app()
                     owner.sync()
                     refresh.write_json(refresh.cache_root(owner.root) / 'main-result.json',
                                        {"ok": True, "changed": True})
                     status.process.poll.return_value = 0
-                    self_refreshed = kwargs['refresh']()
-                    owner.assertTrue(self_refreshed)
-                    raise MenuRefresh()
+                    return 'search'  # any action brings the user back to the menu
                 return None
         checker = Mock(active=False)
         checker.status.return_value = {"available": []}
@@ -396,6 +397,7 @@ class CatalogRefreshTests(unittest.TestCase):
                 patch.object(refresh, 'CatalogRefresh', return_value=status), \
                 patch.object(cli, 'PROJECT_ROOT', self.root), \
                 patch.object(cli, 'interactive_ui', return_value=UI()), \
+                patch.object(cli, '_search'), \
                 patch.object(updates, 'UpdateCheck', return_value=checker_context):
             self.assertEqual(cli.interactive(Catalog(self.root)), 0)
         self.assertIn('Available applications: 1', screens[0][0])
@@ -447,7 +449,8 @@ class CatalogRefreshTests(unittest.TestCase):
             with patch.object(refresh.threading, "Thread") as thread:
                 with status:
                     self.assertTrue(status.active)
-                    self.assertIn("Refreshing", status.describe())
+                    # The download is transparent: the open menu does not announce it.
+                    self.assertNotIn("Refreshing", status.describe())
                 thread.return_value.start.assert_called_once()
                 spawn.return_value.wait.assert_not_called()
 

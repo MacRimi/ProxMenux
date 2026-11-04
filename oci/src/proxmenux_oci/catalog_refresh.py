@@ -513,9 +513,7 @@ class CatalogRefresh:
         text += "\n" + translate("New applications since your last visit: {count}").format(count=added)
         if updated:
             text += "\n" + translate("Updated recipes since your last visit: {count}").format(count=updated)
-        if self.active:
-            text += "\n" + translate("Refreshing the application catalog...")
-        elif self.failed:
+        if self.failed:
             text += "\n" + translate("Catalog refresh unavailable; using the local catalog.")
         return text
 

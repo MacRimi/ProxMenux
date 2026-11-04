@@ -606,8 +606,9 @@ def interactive(catalog: Catalog) -> int:
                 updates.wait()
                 continue
             try:
-                kwargs = ({'refresh': lambda: updates.changed() or catalog_refresh.changed()}
-                          if updates.active or catalog_refresh.active else {})
+                # The catalog downloads behind the open menu without closing it:
+                # a new catalog is shown the next time the menu is drawn.
+                kwargs = {'refresh': updates.changed} if updates.active else {}
                 selected = ui.choose(text, entries, selection, size=MENU_SIZE, **kwargs)
             except MenuRefresh:
                 continue
