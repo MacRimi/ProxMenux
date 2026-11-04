@@ -23530,6 +23530,45 @@
     "os": "debian"
   },
   {
+    "name": "SUB/WAVE",
+    "slug": "subwave",
+    "desc": "SUB/WAVE turns your own music library into a self-hosted internet radio station. An AI DJ picks the tracks from Navidrome, talks between them with a local or cloud voice and runs shows, jingles and listener requests, while everyone hears the same Icecast stream.",
+    "script": "ct/subwave.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/subwave.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/subwave.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Open http://<IP>/onboarding and sign in with the admin password from ~/subwave.creds inside the container."
+    ],
+    "warnings": [
+      "SUB/WAVE needs a Navidrome (Subsonic) server with your music and an LLM (Ollama, any OpenAI-compatible server or a cloud API key); the onboarding wizard connects both."
+    ],
+    "port": 80,
+    "website": "https://getsubwave.com/",
+    "documentation": "https://getsubwave.com/manual",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sub-wave.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "SuggestArr",
     "slug": "suggestarr",
     "desc": "SuggestArr watches what you actually play on Jellyfin, Plex or Emby, looks up similar titles on TMDB, and automatically files requests for them in Jellyseerr or Overseerr. It turns your viewing history into an automatically growing library without manual searching.",
