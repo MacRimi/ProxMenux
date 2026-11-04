@@ -4455,6 +4455,7 @@
   "New Search": "Nouvelle recherche",
   "New VM:": "Nouvelle VM :",
   "New Virtual Machine": "Nouvelle machine virtuelle",
+  "New applications ({count})": "Nouvelles applications ({count})",
   "New applications since your last visit: {count}": "Nouvelles applications depuis votre dernière visite : {count}",
   "New backup job": "Nouveau travail de sauvegarde",
   "New backups on this host will be unencrypted until a new keyfile is set up.": "Les nouvelles sauvegardes sur cet hôte ne seront pas chiffrées jusqu'à ce qu'un nouveau fichier de clés soit configuré.",
@@ -9015,6 +9016,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
-  "New applications ({count})": "Nouvelles applications ({count})"
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
 }

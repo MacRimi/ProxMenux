@@ -4455,6 +4455,7 @@
   "New Search": "Ny sökning",
   "New VM:": "Ny VM:",
   "New Virtual Machine": "Ny virtuell maskin",
+  "New applications ({count})": "Nya program ({count})",
   "New applications since your last visit: {count}": "Nya appar sedan ditt senaste besök: {count}",
   "New backup job": "Nytt säkerhetskopia jobb",
   "New backups on this host will be unencrypted until a new keyfile is set up.": "Nya säkerhetskopior på denna värd kommer att vara okrypterade tills en ny nyckelfil ställs in.",
@@ -9016,6 +9017,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "New applications ({count})": "Nya program ({count})"
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }
