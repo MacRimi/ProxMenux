@@ -450,10 +450,15 @@ class CatalogRefresh:
         self.recipes = visible_recipes(catalog)
         self.displayed_directory = catalog.catalog_dir
         baseline = read_json(self.seen_path).get("recipes")
-        self.baseline = baseline if isinstance(baseline, dict) else self.recipes.copy()
         self.process = None
         self.failed = False
         self._finished = False
+        if isinstance(baseline, dict):
+            self.baseline = baseline
+        else:
+            # The first visit sets what counts as already known.
+            self.baseline = self.recipes.copy()
+            self.mark_seen()
 
     def __enter__(self):
         self.start()
@@ -480,8 +485,8 @@ class CatalogRefresh:
         return True
 
     def __exit__(self, *args):
-        # The worker can finish downloading after the user leaves. Its result
-        # is not marked seen until a later menu actually displays that catalog.
+        # The worker can finish downloading after the user leaves. Its new
+        # applications stay new until the user opens their list.
         if self.process and self.process.poll() is not None:
             self.process.wait()
         elif self.process:
@@ -506,22 +511,26 @@ class CatalogRefresh:
             self.displayed_directory = directory
         return changed
 
-    def describe(self):
-        text = translate("Available applications: {count}").format(count=len(self.recipes))
-        added = len(self.recipes.keys() - self.baseline.keys())
-        updated = sum(self.recipes[key] != self.baseline[key] for key in self.recipes.keys() & self.baseline.keys())
-        text += "\n" + translate("New applications since your last visit: {count}").format(count=added)
-        if updated:
-            text += "\n" + translate("Updated recipes since your last visit: {count}").format(count=updated)
-        if self.failed:
-            text += "\n" + translate("Catalog refresh unavailable; using the local catalog.")
-        return text
+    def new_ids(self):
+        """The applications added since the user last opened the list of new ones."""
+        return sorted(self.recipes.keys() - self.baseline.keys())
+
+    def label(self):
+        added = len(self.new_ids())
+        return (translate("New applications ({count})").format(count=added) if added
+                else translate("Refresh catalog"))
+
+    def wait(self):
+        if self.process is not None and not self._finished:
+            self.process.wait()
 
     def mark_seen(self):
+        """Opening the list of new applications makes them known."""
+        self.baseline = self.recipes.copy()
         try:
             write_json(self.seen_path, {"recipes": self.recipes})
         except OSError:
-            self.failed = True
+            pass
 
 
 if __name__ == "__main__":

@@ -95,7 +95,7 @@ class CatalogRefreshTests(unittest.TestCase):
         self.assertNotIn("sample-added", refresh.visible_recipes(catalog))
         self.assertEqual(set(refresh.visible_recipes(catalog)), set(status.recipes))
         status.recipes = refresh.visible_recipes(catalog)
-        self.assertIn("New applications since your last visit: 0", status.describe())
+        self.assertEqual(status.new_ids(), [])
 
     def test_compatibility_gate_uses_effective_menu_visibility(self):
         self.add_app()
@@ -330,24 +330,27 @@ class CatalogRefreshTests(unittest.TestCase):
         self.assertFalse(refresh.read_json(refresh.cache_root(self.root) / "main-result.json")["ok"])
         self.assertEqual(refresh.current_catalog(self.root), self.root / "catalog")
 
-    def test_first_visit_has_zero_new_apps_and_second_visit_clears_acknowledged_news(self):
+    def test_first_visit_has_no_new_apps_and_opening_their_list_acknowledges_them(self):
         status = refresh.CatalogRefresh(self.root, Catalog(self.root))
-        self.assertIn("New applications since your last visit: 0", status.describe())
+        self.assertEqual((status.new_ids(), status.label()), ([], "Refresh catalog"))
         status.recipes["new-app"] = "new-recipe-hash"
-        self.assertIn("New applications since your last visit: 1", status.describe())
-        status.mark_seen()
+        self.assertEqual((status.new_ids(), status.label()), (["new-app"], "New applications (1)"))
+        # A new application stays new on later visits until its list is opened.
+        later = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        later.recipes = status.recipes.copy()
+        self.assertEqual(later.new_ids(), ["new-app"])
+        later.mark_seen()
         same = refresh.CatalogRefresh(self.root, Catalog(self.root))
         same.recipes = status.recipes.copy()
-        self.assertIn("New applications since your last visit: 0", same.describe())
+        self.assertEqual(same.new_ids(), [])
 
-    def test_new_app_count_is_not_net_growth_and_modified_recipes_are_separate(self):
+    def test_new_apps_are_counted_by_id_not_net_growth_or_changed_recipes(self):
         status = refresh.CatalogRefresh(self.root, Catalog(self.root))
         original = self.item["id"]
         status.baseline = {original: "old-recipe", "removed-app": "hash"}
         status.recipes["new-app"] = "hash"
-        self.assertIn("Available applications: 2", status.describe())
-        self.assertIn("New applications since your last visit: 1", status.describe())
-        self.assertIn("Updated recipes since your last visit: 1", status.describe())
+        self.assertEqual(status.new_ids(), ["new-app"])
+        self.assertEqual(status.label(), "New applications (1)")
 
     def test_exit_before_download_finishes_does_not_acknowledge_remote_apps(self):
         status = refresh.CatalogRefresh(self.root, Catalog(self.root))
@@ -359,7 +362,7 @@ class CatalogRefreshTests(unittest.TestCase):
         self.add_app()
         self.sync()
         next_visit = refresh.CatalogRefresh(self.root, Catalog(self.root))
-        self.assertIn("New applications since your last visit: 1", next_visit.describe())
+        self.assertEqual(len(next_visit.new_ids()), 1)
 
     def test_the_download_never_closes_the_open_menu_and_shows_on_the_next_draw(self):
         from proxmenux_oci import cli, updates
@@ -400,12 +403,14 @@ class CatalogRefreshTests(unittest.TestCase):
                 patch.object(cli, '_search'), \
                 patch.object(updates, 'UpdateCheck', return_value=checker_context):
             self.assertEqual(cli.interactive(Catalog(self.root)), 0)
-        self.assertIn('Available applications: 1', screens[0][0])
-        self.assertIn('Available applications: 2', screens[1][0])
-        self.assertIn('New applications since your last visit: 1', screens[1][0])
+        # The header is one line; the catalog entry names the new application.
+        self.assertEqual(screens[0][0], cli.translate('Select a category or search for applications:'))
+        self.assertEqual(screens[0][1]['refresh'], cli.translate('Refresh catalog'))
+        self.assertRegex(screens[1][1]['refresh'], r' {2,}\(  1\)$')
         self.assertIn('(  2)', screens[1][1]['all'])
         next_visit = original_class(self.root, Catalog(self.root))
-        self.assertIn('New applications since your last visit: 0', next_visit.describe())
+        # Seeing the menu does not acknowledge it: only opening the list does.
+        self.assertEqual(len(next_visit.new_ids()), 1)
 
     def test_explicit_local_apps_survive_refresh_without_preventing_upstream_removal(self):
         # This app is a local preview, not a member of the upstream manifest.
@@ -450,7 +455,7 @@ class CatalogRefreshTests(unittest.TestCase):
                 with status:
                     self.assertTrue(status.active)
                     # The download is transparent: the open menu does not announce it.
-                    self.assertNotIn("Refreshing", status.describe())
+                    self.assertEqual(status.label(), "Refresh catalog")
                 thread.return_value.start.assert_called_once()
                 spawn.return_value.wait.assert_not_called()
 
@@ -473,7 +478,7 @@ class CatalogRefreshTests(unittest.TestCase):
     def test_manual_refresh_is_offered_in_the_main_menu(self):
         from proxmenux_oci.cli import _catalog_options
         options = dict(_catalog_options(Catalog(self.root))[-1])
-        self.assertEqual(options['catalog-refresh'], 'Refresh catalog')
+        self.assertEqual(options['refresh'], 'Refresh catalog')
 
     def test_sequence_new_app_failed_update_retry_and_withdrawal(self):
         self.sync()
@@ -486,7 +491,7 @@ class CatalogRefreshTests(unittest.TestCase):
         self.assertIn('sample-added', refresh.visible_recipes(Catalog(self.root)))
         self.assertNotIn('sample-added', refresh.visible_recipes(old))  # Wizard remains pinned.
         next_visit = refresh.CatalogRefresh(self.root, Catalog(self.root))
-        self.assertIn('New applications since your last visit: 1', next_visit.describe())
+        self.assertEqual(len(next_visit.new_ids()), 1)
         next_visit.mark_seen()
         self.revision = 'c' * 40
         recipe_path = self.item['curated_path'].removeprefix('catalog/')
@@ -507,8 +512,7 @@ class CatalogRefreshTests(unittest.TestCase):
         current = Catalog(self.root)
         self.assertNotIn('sample-added', refresh.visible_recipes(current))
         self.assertFalse((current.catalog_dir / 'curated/sample-added.json').exists())
-        self.assertIn('New applications since your last visit: 0',
-                      refresh.CatalogRefresh(self.root, current).describe())
+        self.assertEqual(refresh.CatalogRefresh(self.root, current).new_ids(), [])
 
     def test_http_errors_and_timeouts_keep_snapshot_then_retry_succeeds(self):
         self.sync()
@@ -660,7 +664,7 @@ class CatalogRefreshTests(unittest.TestCase):
         status = refresh.CatalogRefresh(self.root, Catalog(self.root))
         with patch.object(refresh, 'write_json', side_effect=PermissionError('Read only')):
             status.mark_seen()
-        self.assertTrue(status.failed)
+        self.assertFalse(status.failed)
 
     def test_concurrent_workers_serialize_the_catalog_transaction(self):
         barrier = threading.Barrier(2)
