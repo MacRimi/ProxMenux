@@ -210,7 +210,9 @@ class InputAndCancellationTests(StorageFixture):
             catalog_check=catalog_checker.return_value.__enter__.return_value
             catalog_check.active=False;catalog_check.consume.return_value=False
             catalog_check.describe.return_value=''
+            catalog_check.label.return_value=i18n.translate('Refresh catalog')
             check=checker.return_value.__enter__.return_value
             check.active=False;check.notice.return_value='';check.status.return_value={'available':[]}
+            check.label.return_value=i18n.translate('Check for updates')
             self.assertEqual(cli.interactive(self.catalog),0)
         ui.message.assert_called_once_with('Operáciu sa nepodarilo dokončiť:\n\nfiction-detail')
