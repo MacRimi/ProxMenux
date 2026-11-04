@@ -249,8 +249,18 @@ LogLevel VERBOSE
                     except subprocess.TimeoutExpired:
                         os.killpg(process.pid, signal.SIGKILL)
                         process.wait(timeout=5)
-                subprocess.run(["pkill", "-u", str(account.pw_uid)], check=False)
-                subprocess.run(["userdel", username], check=True)
+                subprocess.run(["pkill", "-KILL", "-u", str(account.pw_uid)], check=False)
+                # PAM/sshd children need to exit and be reaped before userdel.
+                for attempt in range(50):
+                    cleanup = subprocess.run(["userdel", username], capture_output=True, text=True)
+                    if cleanup.returncode == 0:
+                        break
+                    if cleanup.returncode != 8:
+                        raise AssertionError(cleanup.stderr)
+                    time.sleep(0.1)
+                else:
+                    subprocess.run(["ps", "-fu", username], check=False)
+                    raise AssertionError(cleanup.stderr)
     return 0
 
 
