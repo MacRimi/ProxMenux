@@ -15593,7 +15593,7 @@
         "arm64"
       ],
       "updated_at": null,
-      "main_image": "docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest",
+      "main_image": "ghcr.io/stirling-tools/stirling-pdf:latest",
       "category": "documents",
       "category_label": "Documents & Notes",
       "replaces_discovered_ids": [],
