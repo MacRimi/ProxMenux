@@ -435,13 +435,22 @@ def probe_http(args):
     return result.stdout, result.returncode
 
 
+def setup_then_web_port(template, check):
+    """AdGuard Home answers its setup wizard on 3000 and, once set up, its web UI
+    on 80. A check on 3000, derived or saved with an installation, takes 80 too."""
+    if (template.get('id') == 'image-adguard-home' and check.get('port') == 3000
+            and not check.get('alternative_ports')):
+        return dict(check, alternative_ports=[80])
+    return check
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
     profile = template.get('proxmox', {}).get('installer_profile', {})
     check = profile.get('startup_healthcheck')
     if check:
-        return check
+        return setup_then_web_port(template, check)
     if profile.get('haos_healthcheck'):
         # Home Assistant OS has a check of its own: Supervisor, Core and the
         # services it runs inside. The installer runs it on the new container.
@@ -453,6 +462,7 @@ def effective_healthcheck(template):
             check = {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
                      'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
                      'verify_tls': False, 'accept_any_status': True}
+            check = setup_then_web_port(template, check)
             # A port taken from the compose file because the recipe names no
             # web address may serve a database or SSH: any answer counts.
             if endpoint.get('source') == GUESSED_ENDPOINT:
@@ -923,10 +933,12 @@ def healthcheck(vmid, template):
             time.sleep(2)
         log(f'container {vmid} kept running for {stability}s')
         return None
-    scheme, port, path = check['scheme'], int(check['port']), check['path']
+    scheme, path = check['scheme'], check['path']
+    # Any of the ports answering means the application is up.
+    ports = [int(check['port']), *(int(p) for p in check.get('alternative_ports') or [])]
     timeout = int(check.get('timeout_seconds', 120))
     stability = int(check.get('stability_seconds', 0))
-    if (scheme not in ('http', 'https') or not 1 <= port <= 65535
+    if (scheme not in ('http', 'https') or not all(1 <= port <= 65535 for port in ports)
             or not path.startswith('/') or any(c.isspace() for c in path)
             or not 0 <= stability < timeout <= 3600):
         raise ValueError(translate('Invalid health check'))
@@ -947,10 +959,13 @@ def healthcheck(vmid, template):
                 args += ['-w', '%{http_code}']
             if not check.get('verify_tls', False):
                 args.append('-k')
-            answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
-            ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
-            if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
-                ok = True
+            for port in ports:
+                answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
+                ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
+                if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
+                    ok = True
+                if ok:
+                    break
         if ok:
             stable_since = stable_since or time.monotonic()
             if time.monotonic() - stable_since >= stability:

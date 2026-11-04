@@ -358,19 +358,32 @@ cleanup_canonical_inputs() {
 
 # A derived check accepts any HTTP answer below 500: the application is up,
 # even when its first page is a redirect or asks for a login.
-healthcheck_probe() {
-  local code status=0
+healthcheck_probe_url() {
+  local url=$1 code status=0
   if [[ ${HC_ANY_STATUS:-false} == true ]]; then
-    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
+    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$url" 2>/dev/null) || status=$?
     (( status == 0 )) && [[ $code =~ ^[1-4][0-9][0-9]$ ]] && return 0
   else
-    oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
+    oci_curl "$VMID" "${CURL_ARGS[@]}" "$url" >/dev/null 2>&1 || status=$?
     (( status == 0 )) && return 0
   fi
   # A port taken from the compose file may serve a database or SSH: an answer
   # in another protocol (HTTP/0.9, weird or empty reply, reset) means it is up.
   [[ ${HC_ACCEPT_NON_HTTP:-false} == true ]] \
     && (( status == 1 || status == 8 || status == 52 || status == 56 ))
+}
+
+# Any of the addresses answering means the application is up; HC_URL keeps the
+# one that answered.
+healthcheck_probe() {
+  local url
+  for url in "${HC_URLS[@]}"; do
+    if healthcheck_probe_url "$url"; then
+      HC_URL=$url
+      return 0
+    fi
+  done
+  return 1
 }
 
 cleanup_failed_install() {
@@ -2333,6 +2346,12 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
     || die "$(translate "The stability period must be shorter than the healthcheck timeout")"
   [[ -n $IP ]] || die "$(translate "The healthcheck cannot run without an IP address")"
   HC_URL="${HC_SCHEME}://${IP}:${HC_PORT}${HC_PATH}"
+  HC_URLS=("$HC_URL")
+  while IFS= read -r HC_ALT_PORT; do
+    [[ $HC_ALT_PORT =~ ^[0-9]+$ && $HC_ALT_PORT -ge 1 && $HC_ALT_PORT -le 65535 ]] \
+      || die "$(translate "Invalid healthcheck port")"
+    HC_URLS+=("${HC_SCHEME}://${IP}:${HC_ALT_PORT}${HC_PATH}")
+  done < <(jq -r '.alternative_ports[]? | tostring' <<<"$STARTUP_HEALTHCHECK")
   HC_ANY_STATUS=$(jq -r '.accept_any_status // false' <<<"$STARTUP_HEALTHCHECK")
   HC_ACCEPT_NON_HTTP=$(jq -r '.accept_non_http // false' <<<"$STARTUP_HEALTHCHECK")
   if [[ $HC_ANY_STATUS == true ]]; then
