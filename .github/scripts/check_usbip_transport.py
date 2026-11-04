@@ -80,6 +80,10 @@ def main():
         root = Path(directory)
         os.chown(root, 0, account.pw_gid)
         root.chmod(0o750)
+        fixture_source = root / "usbip_manager.py"
+        fixture_source.write_bytes(SOURCE.read_bytes())
+        fixture_source.chmod(0o644)
+        subprocess.run(["usermod", "--home", str(root), username], check=True)
         log = root / "transport.log"
         with log.open("w") as log_handle:
             try:
@@ -108,14 +112,14 @@ socketserver.ThreadingTCPServer(('0.0.0.0', 3240), Echo).serve_forever()
                 runner.write_text(f"""import importlib.util
 from pathlib import Path
 import subprocess
-spec = importlib.util.spec_from_file_location('usbip_manager', {str(SOURCE)!r})
+spec = importlib.util.spec_from_file_location('usbip_manager', {str(fixture_source)!r})
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 m.CONFIG_DIR = Path({str(config)!r})
 m.SERVER_RUN_DIR = Path({str(server_run)!r})
 m.SYSFS = Path({str(root / 'no-usb-devices')!r})
 m.TRANSPORT_USER = {username!r}
-m.TRANSPORT_HOME = Path('/nonexistent')
+m.TRANSPORT_HOME = Path({str(root)!r})
 subprocess.run(['ip', 'link', 'set', 'lo', 'up'], check=True)
 m.serve()
 """)
@@ -141,15 +145,18 @@ m.serve()
 
                 for name in ("host", "client", "wrong-client"):
                     subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(root / name)], check=True)
-                authorized = root / "authorized_keys"
+                ssh_dir = root / ".ssh"
+                ssh_dir.mkdir(mode=0o750)
+                os.chown(ssh_dir, 0, account.pw_gid)
+                authorized = ssh_dir / "authorized_keys"
                 gate = root / "gate.py"
                 gate.write_text(f"""import importlib.util
 from pathlib import Path
-spec = importlib.util.spec_from_file_location('usbip_manager', {str(SOURCE)!r})
+spec = importlib.util.spec_from_file_location('usbip_manager', {str(fixture_source)!r})
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 m.TRANSPORT_USER = {username!r}
-m.TRANSPORT_HOME = Path('/nonexistent')
+m.TRANSPORT_HOME = Path({str(root)!r})
 m.SERVER_RUN_DIR = Path({str(server_run)!r})
 m.REMOTE_SOCKET = {str(unix_path)!r}
 m.transport()
@@ -233,7 +240,6 @@ LogLevel VERBOSE
             finally:
                 if tunnel:
                     tunnel.terminate()
-                subprocess.run(["userdel", username], check=True)
                 for process in reversed(processes):
                     if process.poll() is None:
                         os.killpg(process.pid, signal.SIGTERM)
@@ -243,6 +249,8 @@ LogLevel VERBOSE
                     except subprocess.TimeoutExpired:
                         os.killpg(process.pid, signal.SIGKILL)
                         process.wait(timeout=5)
+                subprocess.run(["pkill", "-u", str(account.pw_uid)], check=False)
+                subprocess.run(["userdel", username], check=True)
     return 0
 
 
