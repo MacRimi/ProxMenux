@@ -165,22 +165,16 @@ def get_event_frequency(error_id: str = None, error_key: str = None,
     try:
         cursor = conn.cursor()
 
-        # Try to find the error
-        if error_id:
+        # Try to find the error. The errors table keys a row by error_key.
+        if error_id or error_key:
             cursor.execute('''
-                SELECT first_seen, last_seen, occurrences, category
-                FROM errors WHERE error_key = ? OR error_id = ?
-                ORDER BY last_seen DESC LIMIT 1
-            ''', (error_id, error_id))
-        elif error_key:
-            cursor.execute('''
-                SELECT first_seen, last_seen, occurrences, category
+                SELECT first_seen, last_seen, occurrence_count, category
                 FROM errors WHERE error_key = ?
                 ORDER BY last_seen DESC LIMIT 1
-            ''', (error_key,))
+            ''', (error_id or error_key,))
         elif category:
             cursor.execute('''
-                SELECT first_seen, last_seen, occurrences, category
+                SELECT first_seen, last_seen, occurrence_count, category
                 FROM errors WHERE category = ? AND resolved_at IS NULL
                 ORDER BY last_seen DESC LIMIT 1
             ''', (category,))
