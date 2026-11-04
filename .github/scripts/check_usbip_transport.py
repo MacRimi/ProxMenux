@@ -41,16 +41,18 @@ def wait_until(test, processes, log, timeout=15):
 
 
 def echo(sock):
-    payload = bytes(range(256)) * 1024
+    # Exercise the production protocol gate through the real SSH stream. Empty
+    # fixture selection must produce an empty native DEVLIST, never raw echo.
+    import struct
     sock.settimeout(10)
-    sock.sendall(payload)
+    sock.sendall(struct.pack("!HHI", 0x0111, 0x8005, 0))
     received = bytearray()
-    while len(received) < len(payload):
-        chunk = sock.recv(65536)
+    while len(received) < 12:
+        chunk = sock.recv(12 - len(received))
         if not chunk:
             break
         received.extend(chunk)
-    assert bytes(received) == payload, "SSH/Unix/TCP forwarding corrupted the stream"
+    assert bytes(received) == struct.pack("!HHII", 0x0111, 5, 0, 0), received
 
 
 def main():
@@ -83,6 +85,8 @@ def main():
         fixture_source = root / "usbip_manager.py"
         fixture_source.write_bytes(SOURCE.read_bytes())
         fixture_source.chmod(0o644)
+        for name in ("usbip_protocol.py", "usbip_lifetime.py"):
+            (root / name).write_bytes((SOURCE.parent / name).read_bytes())
         subprocess.run(["usermod", "--home", str(root), username], check=True)
         log = root / "transport.log"
         with log.open("w") as log_handle:
@@ -96,11 +100,15 @@ def main():
 import socketserver
 class Echo(socketserver.BaseRequestHandler):
     def handle(self):
-        while True:
-            data = self.request.recv(65536)
-            if not data:
+        import struct
+        data = b''
+        while len(data) < 8:
+            block = self.request.recv(8 - len(data))
+            if not block:
                 return
-            self.request.sendall(data)
+            data += block
+        if data == struct.pack('!HHI', 0x0111, 0x8005, 0):
+            self.request.sendall(struct.pack('!HHII', 0x0111, 5, 0, 0))
 socketserver.ThreadingTCPServer.allow_reuse_address = True
 socketserver.ThreadingTCPServer(('0.0.0.0', 3240), Echo).serve_forever()
 """)
@@ -236,7 +244,7 @@ LogLevel VERBOSE
                 assert f"127.0.0.1:{local_port}" in listener and f"0.0.0.0:{local_port}" not in listener, listener
                 print("PASS: private namespace, dedicated-group Unix socket, no host USB/IP listener")
                 print("PASS: unknown/wrong keys, shell commands and arbitrary forwarding rejected; dedicated key accepted")
-                print("PASS: 256 KiB binary stream across real SSH -> Unix socket -> socat -> private TCP")
+                print("PASS: native USB/IP DEVLIST across real SSH -> Unix protocol gate -> private TCP")
             finally:
                 if tunnel:
                     tunnel.terminate()

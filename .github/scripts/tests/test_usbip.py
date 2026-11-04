@@ -137,6 +137,30 @@ class USBIPTests(unittest.TestCase):
         self.assertEqual(self.calls, [["usbip", "bind", "--busid", "1-2"]])
         self.assertIsNone(self.m.catalog()[0]["busid"])
 
+    def test_retained_slot_is_rejected_before_detaching_reconnected_local_usb(self):
+        device = self.device()
+        selected = self.selected(device)
+        config = self.config([selected])
+        self.m.MATCH_BUSID.slots[device["busid"]] = "REMOV"
+        with patch.object(self.m, "run", side_effect=self.usb):
+            errors = self.m.reconcile_exports(config, {EXPORT: selected}, {})
+        self.assertIn("local driver", errors[EXPORT])
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.m.inventory()[0]["driver"], "usb")
+
+    def test_imported_usb_does_not_shadow_physical_original(self):
+        device = self.device()
+        imported = self.m.SYSFS / "2-1"
+        imported.symlink_to(self.m.SYSFS / "1-2", target_is_directory=True)
+        target = self.root / "vhci_hcd.0" / "2-1"
+        target.parent.mkdir()
+        shutil.copytree(self.m.SYSFS / "1-2", target, symlinks=True)
+        imported.unlink()
+        imported.symlink_to(target, target_is_directory=True)
+        devices = self.m.inventory()
+        self.assertEqual(len(devices), 1)
+        self.assertEqual(self.m.resolve_device(device, devices)["busid"], "1-2")
+
     def test_no_serial_requires_same_busid_and_ambiguous_serial_is_rejected(self):
         selected = self.selected(self.device(serial=""))
         shutil.rmtree(self.m.SYSFS / "1-2")
@@ -170,7 +194,8 @@ class USBIPTests(unittest.TestCase):
         with patch.object(self.m, "run", side_effect=self.usb):
             self.m.reconcile_exports(self.m.load_config(), owned)
             self.assertEqual(self.calls, [])
-            self.m.remove_export(EXPORT)
+            with patch.object(self.m.time, "sleep", side_effect=lambda _: self.m.reconcile_exports(self.m.load_config(), owned)):
+                self.m.remove_export(EXPORT)
             self.m.reconcile_exports(self.m.load_config(), owned)
         self.assertEqual(self.calls, [["usbip", "unbind", "--busid", "1-2"]])
 

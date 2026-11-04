@@ -123,6 +123,10 @@ def inventory():
     for path in sorted(SYSFS.glob("*")):
         if not BUSID.fullmatch(path.name):
             continue
+        # Imported devices cannot be re-exported by usbip-host. Exclude them
+        # before identity matching so a local client cannot shadow its source.
+        if any(parent.name.startswith("vhci_hcd") for parent in path.resolve().parents):
+            continue
         vendor, product = attribute(path, "idVendor"), attribute(path, "idProduct")
         if not re.fullmatch(r"[a-fA-F0-9]{4}", vendor) or not re.fullmatch(r"[a-fA-F0-9]{4}", product):
             continue
@@ -172,11 +176,33 @@ def disarm_match(busid):
             raise USBIPError("Could not disarm the USB/IP match") from exc
 
 
-def release_export(identifier, owned, devices):
+def release_export(identifier, owned, devices, leases=None):
     previous = owned[identifier]
     current = next((d for d in devices if d["busid"] == previous["busid"]), None)
     if not BUSID.fullmatch(previous.get("busid", "")):
         raise USBIPError("Invalid owned USB bus ID")
+    if leases is not None:
+        # A restart may have lost the old pins. Recover only a currently present,
+        # identity-matching, bound object; never pin a replacement by pathname.
+        if (current and same_device(previous, current) and current["driver"] == "usbip-host"
+                and (identifier not in leases or not leases[identifier].ready)):
+            from usbip_lifetime import Lease
+            recovered = Lease(SYSFS, current["busid"], current)
+            try:
+                recovered.confirm(disarm_match)
+            except BaseException:
+                recovered.close()
+                raise
+            old = leases.pop(identifier, None)
+            if old:
+                old.close()
+            leases[identifier] = recovered
+        if identifier in leases:
+            leases[identifier].release(MATCH_BUSID, lambda busid: run(["usbip", "unbind", "--busid", busid]))
+            del leases[identifier]
+            del owned[identifier]
+            atomic_json(state_path(), owned)
+            return
     if current and same_device(previous, current) and current["driver"] == "usbip-host":
         run(["usbip", "unbind", "--busid", current["busid"]])
     else:
@@ -194,18 +220,19 @@ def release_export(identifier, owned, devices):
     atomic_json(state_path(), owned)
 
 
-def reconcile_exports(config, owned):
+def reconcile_exports(config, owned, leases=None):
     devices = inventory()
     desired = {item["id"]: item for item in config["exports"]} if config["server"] else {}
     errors = {}
     for identifier in list(owned):
         previous = owned[identifier]
         current = next((d for d in devices if d["busid"] == previous["busid"]), None)
-        if identifier not in desired or current is None or not same_device(previous, current):
-            try:
-                release_export(identifier, owned, devices)
-            except USBIPError as exc:
-                errors[identifier] = str(exc)
+        try:
+            removed = leases is not None and identifier in leases and leases[identifier].poll_removed()
+            if identifier not in desired or current is None or not same_device(previous, current) or removed:
+                release_export(identifier, owned, devices, leases)
+        except (USBIPError, OSError, RuntimeError) as exc:
+            errors[identifier] = str(exc)
     for identifier, selected in desired.items():
         if identifier in errors:
             continue
@@ -213,21 +240,33 @@ def reconcile_exports(config, owned):
             device = resolve_device(selected, devices)
             previous = owned.get(identifier)
             if previous and (previous["busid"] != device["busid"] or not same_device(previous, device)):
-                release_export(identifier, owned, devices)
+                release_export(identifier, owned, devices, leases)
                 previous = None
             if device["driver"] == "usbip-host":
                 if not previous:
                     raise USBIPError("Device is already exported outside ProxMenux; it was not adopted")
+                if leases is not None and (identifier not in leases or not leases[identifier].ready):
+                    raise USBIPError("Recovered export has no lifetime pin; stop sharing while the original USB remains connected, or restart the host")
                 disarm_match(device["busid"])
                 continue
+            if device["busid"] in MATCH_BUSID.read_text().split():
+                raise USBIPError("Kernel retained this USB/IP slot; cleanup must finish before binding so the local driver is preserved")
+            if leases is not None:
+                from usbip_lifetime import Lease
+                if identifier in leases:
+                    leases.pop(identifier).close()
+                leases[identifier] = Lease(SYSFS, device["busid"], device)
             # Record intent before binding, so a crash cannot orphan our export.
             owned[identifier] = {k: device[k] for k in ("busid", "vendor", "product", "serial")}
             atomic_json(state_path(), owned)
             run(["usbip", "bind", "--busid", device["busid"]])
             # ALLOC -> REMOV rejects future probes without interrupting this
             # live export. Do not leave a reusable automatic port match armed.
-            disarm_match(device["busid"])
-        except USBIPError as exc:
+            if leases is None:
+                disarm_match(device["busid"])
+            else:
+                leases[identifier].confirm(disarm_match)
+        except (USBIPError, OSError, ValueError, RuntimeError) as exc:
             errors[identifier] = str(exc)
     atomic_json(SERVER_RUN_DIR / "status.json", {"errors": errors, "updated": time.time()})
     return errors
@@ -235,9 +274,13 @@ def reconcile_exports(config, owned):
 
 def catalog():
     config, devices, owned = load_config(), inventory(), read_json(state_path(), {})
+    errors = read_json(SERVER_RUN_DIR / "status.json", {}).get("errors", {})
     exports = []
     for selected in config["exports"]:
         row = dict(selected, status="waiting", busid=None)
+        if selected["id"] in errors:
+            exports.append(dict(row, error=errors[selected["id"]]))
+            continue
         try:
             current = resolve_device(selected, devices)
             if config["server"] and selected["id"] in owned and current["driver"] == "usbip-host" and (
@@ -601,11 +644,25 @@ def serve():
     socket_path = SERVER_RUN_DIR / "usbip.sock"
     socket_path.unlink(missing_ok=True)
     owned = read_json(state_path(), {})
+    leases = {}
+    from usbip_protocol import Gate
+    def claim(busid):
+        # Re-read selection for every import, including deselection between polls.
+        config = load_config()
+        if not config["server"]:
+            return None
+        for selected in config["exports"]:
+            identifier = selected["id"]
+            lease = leases.get(identifier)
+            previous = owned.get(identifier)
+            if (lease and lease.ready and previous and previous["busid"] == busid
+                    and same_device(selected, previous)):
+                return dict(previous, id=identifier)
+        return None
     daemon = proxy = None
     try:
         daemon = subprocess.Popen(["usbipd", "--ipv4", "--tcp-port", "3240"])
-        proxy = subprocess.Popen(["socat", f"UNIX-LISTEN:{socket_path},mode=0660,group={account.pw_gid},fork",
-                                  "TCP:127.0.0.1:3240"])
+        proxy = Gate(socket_path, account.pw_gid, claim, SYSFS)
         with stop_event() as stopped:
             previous_errors = None
             while not stopped.is_set():
@@ -614,7 +671,7 @@ def serve():
                 config = load_config()
                 if not config["server"]:
                     break
-                errors = reconcile_exports(config, owned)
+                errors = reconcile_exports(config, owned, leases)
                 publish_catalog()
                 if errors != previous_errors:
                     for identifier, error in errors.items():
@@ -622,13 +679,15 @@ def serve():
                     previous_errors = errors
                 stopped.wait(3)
     finally:
+        stop_child(proxy)
         devices = inventory()
         for identifier in list(owned):
             try:
-                release_export(identifier, owned, devices)
-            except USBIPError as exc:
+                release_export(identifier, owned, devices, leases)
+            except (USBIPError, OSError, RuntimeError) as exc:
                 print(f"Could not release export {identifier}: {exc}", file=sys.stderr, flush=True)
-        stop_child(proxy)
+        for lease in leases.values():
+            lease.close()
         stop_child(daemon)
         socket_path.unlink(missing_ok=True)
         (SERVER_RUN_DIR / "catalog.json").unlink(missing_ok=True)
@@ -689,7 +748,7 @@ def update_server(enabled):
                 remove_unit(SERVER_UNIT)
                 # Retry cleanup even if the worker had previously crashed.
                 owned = read_json(state_path(), {})
-                errors = reconcile_exports(config, owned)
+                errors = reconcile_exports(config, owned, {})
                 if errors:
                     raise USBIPError("Server stopped, but some device bindings could not be released; check status and retry disable")
         except USBIPError:
@@ -731,7 +790,15 @@ def remove_export(identifier):
             raise USBIPError("Export not found")
         config["exports"] = [e for e in config["exports"] if e["id"] != identifier]
         atomic_json(CONFIG_DIR / "config.json", config)
-        # The server loop releases only its own binding within three seconds.
+    requested = time.time()
+    deadline = time.monotonic() + 10
+    while identifier in read_json(state_path(), {}):
+        status = read_json(SERVER_RUN_DIR / "status.json", {})
+        if status.get("updated", 0) >= requested and identifier in status.get("errors", {}):
+            raise USBIPError("Selection removed, but release is incomplete: " + status["errors"][identifier])
+        if time.monotonic() >= deadline:
+            raise USBIPError("Selection removed; USB release has not been confirmed. Check server status")
+        time.sleep(.1)
 
 
 def add_import(remote, export_id, local_port):
