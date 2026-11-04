@@ -9,7 +9,6 @@
   "Select the USB device to share:": "Selecciona el dispositivo USB que quieres compartir:",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "El dispositivo USB dejará de estar disponible para las aplicaciones y los invitados locales. Solo puede usarlo un cliente remoto a la vez. ¿Compartirlo?",
   "Select a saved USB/IP device:": "Selecciona un dispositivo USB/IP guardado:",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "El cliente debe confiar en la clave SSH del servidor y tener una clave de root autorizada en él. Comprueba primero el acceso SSH normal. ProxMenux no cambiará el acceso SSH ni aceptará claves de servidor desconocidas.",
   "USB/IP server IP address or DNS hostname:": "Dirección IP o nombre DNS del servidor USB/IP:",
   "Server SSH port:": "Puerto SSH del servidor:",
   "Absolute path of the client SSH private key:": "Ruta absoluta de la clave privada SSH del cliente:",
@@ -8232,5 +8231,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Autoriza primero una clave pública dedicada del cliente en el servidor. La cuenta restringida de USB/IP no puede abrir una shell ni redirigir otros sockets. Verifica la clave del servidor antes de conectarte; las claves desconocidas se rechazan.",
+  "Authorize a client SSH public key": "Autorizar una clave pública SSH de un cliente",
+  "Path to the client SSH public key on this server:": "Ruta de la clave pública SSH del cliente en este servidor:"
 }

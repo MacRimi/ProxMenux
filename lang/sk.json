@@ -8255,11 +8255,13 @@
   "Share selected USB devices through SSH, or connect this Linux machine to a USB/IP server.": "Zdieľajte vybrané USB zariadenia cez SSH alebo pripojte tento počítač Linux k serveru USB/IP.",
   "Stop sharing a USB device": "Ukončiť zdieľanie USB zariadenia",
   "Stop sharing this device? An attached remote client will disconnect.": "Ukončiť zdieľanie tohto zariadenia? Pripojený vzdialený klient bude odpojený.",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "Klient už musí dôverovať SSH hostiteľskému kľúču servera a na serveri musí byť povolený SSH kľúč pre root. Najprv otestujte bežné SSH pripojenie. ProxMenux nezmení SSH prístup ani neprijme neznáme hostiteľské kľúče.",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "Vybrané USB zariadenie prestane byť dostupné miestnym aplikáciám a hosťom. Naraz ho môže používať iba jeden vzdialený klient. Zdieľať toto zariadenie?",
   "USB/IP configuration updated. Open status to check the connection.": "Konfigurácia USB/IP bola aktualizovaná. Otvorte stav a skontrolujte pripojenie.",
   "USB/IP over SSH": "USB/IP cez SSH",
   "USB/IP server IP address or DNS hostname:": "IP adresa alebo DNS názov hostiteľa servera USB/IP:",
   "Unused local loopback TCP port for this device:": "Voľný miestny TCP port spätnej slučky pre toto zariadenie:",
-  "View USB/IP status": "Zobraziť stav USB/IP"
+  "View USB/IP status": "Zobraziť stav USB/IP",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Najprv na serveri povoľte samostatný verejný kľúč klienta. Obmedzený účet USB/IP nemôže spustiť shell ani presmerovať iné sockety. Pred pripojením overte hostiteľský kľúč servera; neznáme kľúče sa odmietnu.",
+  "Authorize a client SSH public key": "Povoliť verejný SSH kľúč klienta",
+  "Path to the client SSH public key on this server:": "Cesta k verejnému SSH kľúču klienta na tomto serveri:"
 }

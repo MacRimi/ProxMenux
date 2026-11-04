@@ -8254,11 +8254,13 @@
   "Share selected USB devices through SSH, or connect this Linux machine to a USB/IP server.": "Condividi i dispositivi USB selezionati tramite SSH oppure collega questa macchina Linux a un server USB/IP.",
   "Stop sharing a USB device": "Interrompi la condivisione di un dispositivo USB",
   "Stop sharing this device? An attached remote client will disconnect.": "Interrompere la condivisione di questo dispositivo? Il client remoto collegato verrà disconnesso.",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "Il client deve già considerare attendibile la chiave host SSH del server e una chiave SSH per root deve essere autorizzata sul server. Prova prima una normale connessione SSH. ProxMenux non modificherà l'accesso SSH e non accetterà chiavi host sconosciute.",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "Il dispositivo USB selezionato non sarà più disponibile per le applicazioni e gli ospiti locali. Può usarlo un solo client remoto alla volta. Condividere questo dispositivo?",
   "USB/IP configuration updated. Open status to check the connection.": "Configurazione USB/IP aggiornata. Apri lo stato per verificare la connessione.",
   "USB/IP over SSH": "USB/IP tramite SSH",
   "USB/IP server IP address or DNS hostname:": "Indirizzo IP o nome host DNS del server USB/IP:",
   "Unused local loopback TCP port for this device:": "Porta TCP locale di loopback inutilizzata per questo dispositivo:",
-  "View USB/IP status": "Visualizza lo stato USB/IP"
+  "View USB/IP status": "Visualizza lo stato USB/IP",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Autorizza prima una chiave pubblica dedicata del client sul server. L’account USB/IP con accesso limitato non può avviare una shell né inoltrare altri socket. Verifica la chiave host del server prima di connetterti; le chiavi sconosciute vengono rifiutate.",
+  "Authorize a client SSH public key": "Autorizza la chiave pubblica SSH di un client",
+  "Path to the client SSH public key on this server:": "Percorso della chiave pubblica SSH del client su questo server:"
 }

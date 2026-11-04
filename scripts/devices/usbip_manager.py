@@ -2,17 +2,22 @@
 """Manage selected USB/IP exports and Linux clients over authenticated SSH.
 
 The server unit has a private network namespace. OpenSSH reaches its root-only
-filesystem Unix socket; usbipd never listens in the host's network namespace.
+filesystem Unix socket through a dedicated forced-command account; usbipd never
+listens in the host's network namespace.
 Only this module's recorded devices and imported ports are released on stop.
 """
 
 import argparse
 from contextlib import contextmanager
 import copy
+import errno
 import fcntl
 import ipaddress
 import json
 import os
+import pwd
+import socketserver
+import threading
 from pathlib import Path
 import re
 import signal
@@ -34,6 +39,9 @@ REMOTE_SCRIPT = "/usr/local/share/proxmenux/scripts/devices/usbip_manager.py"
 REMOTE_SOCKET = "/run/proxmenux-usbip-server/usbip.sock"
 SERVER_UNIT = "proxmenux-usbip-server.service"
 MARKER = "# Managed by ProxMenux USB/IP"
+TRANSPORT_USER = "proxmenux-usbip"
+TRANSPORT_HOME = Path("/var/lib/proxmenux-usbip")
+MATCH_BUSID = Path("/sys/bus/usb/drivers/usbip-host/match_busid")
 BUSID = re.compile(r"[0-9]+-[0-9]+(?:\.[0-9]+)*\Z")
 IDENTIFIER = re.compile(r"[a-f0-9]{12}\Z")
 
@@ -157,8 +165,20 @@ def state_path():
 def release_export(identifier, owned, devices):
     previous = owned[identifier]
     current = next((d for d in devices if d["busid"] == previous["busid"]), None)
+    if not BUSID.fullmatch(previous.get("busid", "")):
+        raise USBIPError("Invalid owned USB bus ID")
     if current and same_device(previous, current) and current["driver"] == "usbip-host":
         run(["usbip", "unbind", "--busid", current["busid"]])
+    else:
+        # usbip unbind requires a present device. Delete our stale match even
+        # after unplug, without unbinding a replacement or a foreign export.
+        try:
+            MATCH_BUSID.write_text(f"del {previous['busid']}")
+        except FileNotFoundError:
+            pass  # An unloaded driver has no persistent match table.
+        except OSError as exc:
+            if exc.errno != errno.ENODEV:
+                raise USBIPError("Could not remove the stale USB/IP match") from exc
     del owned[identifier]
     atomic_json(state_path(), owned)
 
@@ -168,12 +188,16 @@ def reconcile_exports(config, owned):
     desired = {item["id"]: item for item in config["exports"]} if config["server"] else {}
     errors = {}
     for identifier in list(owned):
-        if identifier not in desired:
+        previous = owned[identifier]
+        current = next((d for d in devices if d["busid"] == previous["busid"]), None)
+        if identifier not in desired or current is None or not same_device(previous, current):
             try:
                 release_export(identifier, owned, devices)
             except USBIPError as exc:
                 errors[identifier] = str(exc)
     for identifier, selected in desired.items():
+        if identifier in errors:
+            continue
         try:
             device = resolve_device(selected, devices)
             previous = owned.get(identifier)
@@ -220,7 +244,7 @@ def systemd_quote(value):
 def unit_text(role, identifier=None):
     command = f"{systemd_quote(sys.executable)} {systemd_quote(SCRIPT)}"
     if role == "server":
-        extra = "PrivateNetwork=yes\nRuntimeDirectory=proxmenux-usbip-server\nRuntimeDirectoryMode=0700\nRuntimeDirectoryPreserve=yes\n"
+        extra = "PrivateNetwork=yes\nRuntimeDirectory=proxmenux-usbip-server\nRuntimeDirectoryMode=0750\nRuntimeDirectoryPreserve=yes\n"
         start = f"{command} serve"
         module = "usbip-host"
     else:
@@ -315,12 +339,12 @@ def ssh_args(remote):
             "-o", "IdentitiesOnly=yes", "-o", "ForwardAgent=no", "-o", "ControlMaster=no",
             "-o", "ControlPath=none", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=15",
             "-o", "ServerAliveCountMax=3", "-o", "ExitOnForwardFailure=yes",
-            "-p", str(remote["ssh_port"]), "-i", remote["key"], "-l", "root"]
+            "-p", str(remote["ssh_port"]), "-i", remote["key"], "-l", TRANSPORT_USER]
 
 
 def remote_catalog(remote):
     # The remote command is fixed. All user input stays in separate local argv.
-    output = run(ssh_args(remote) + ["--", remote["host"], f"python3 {REMOTE_SCRIPT} catalog"])
+    output = run(ssh_args(remote) + ["--", remote["host"], "catalog"])
     try:
         result = json.loads(output)
         if not isinstance(result, list) or len(result) > 64:
@@ -336,8 +360,130 @@ def remote_catalog(remote):
 
 
 def tunnel_args(selected):
-    return ssh_args(selected) + ["-N", "-L", f"127.0.0.1:{selected['local_port']}:{REMOTE_SOCKET}",
-                                 "--", selected["host"]]
+    # No forwarding channels or shell commands: the server key forces the
+    # unprivileged transport gate, which accepts only catalog or stream.
+    return ssh_args(selected) + ["--", selected["host"], "stream"]
+
+
+class LoopbackTunnel:
+    """Keep the TCP port reserved from bind until cleanup (no probe/bind race)."""
+    def __init__(self, selected):
+        self.processes = set()
+        self.lock = threading.Lock()
+        tunnel = self
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                process = None
+                try:
+                    with tunnel.lock:
+                        if tunnel.closed:
+                            return
+                        process = subprocess.Popen(tunnel_args(selected),
+                                                   stdin=self.request, stdout=self.request)
+                        tunnel.processes.add(process)
+                    process.wait()
+                finally:
+                    with tunnel.lock:
+                        if process:
+                            tunnel.processes.discard(process)
+        class Server(socketserver.ThreadingTCPServer):
+            daemon_threads = True
+        self.closed = False
+        try:
+            self.server = Server(("127.0.0.1", selected["local_port"]), Handler)
+        except OSError as exc:
+            raise USBIPError("Local tunnel port is already in use") from exc
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def poll(self):
+        return 0 if self.closed or not self.thread.is_alive() else None
+
+    def terminate(self):
+        with self.lock:
+            self.closed = True
+            processes = list(self.processes)
+        self.server.shutdown()
+        self.server.server_close()
+        for process in processes:
+            stop_child(process)
+        self.thread.join(timeout=5)
+
+    def wait(self, timeout=5):
+        self.thread.join(timeout)
+        return 0
+
+
+def transport_account():
+    try:
+        account = pwd.getpwnam(TRANSPORT_USER)
+    except KeyError as exc:
+        raise USBIPError("Authorize a dedicated USB/IP client key on the server first") from exc
+    if account.pw_uid == 0 or account.pw_gid == 0 or account.pw_dir != str(TRANSPORT_HOME):
+        raise USBIPError("Unsafe USB/IP transport account")
+    return account
+
+
+def authorize_key(path):
+    # Root-owned home and forced-command keys: this account cannot replace its
+    # own policy, log in with a cluster root key, or open SSH forwarding channels.
+    key = Path(path).read_text().strip()
+    fields = key.split()
+    if len(fields) < 2 or fields[0] not in ("ssh-ed25519", "ssh-rsa", "ecdsa-sha2-nistp256"):
+        raise USBIPError("Provide an SSH public key without authorized_keys options")
+    import base64
+    try:
+        base64.b64decode(fields[1], validate=True)
+    except ValueError as exc:
+        raise USBIPError("Invalid SSH public key") from exc
+    created = False
+    try:
+        pwd.getpwnam(TRANSPORT_USER)
+    except KeyError:
+        run(["useradd", "--system", "--user-group", "--home-dir", str(TRANSPORT_HOME),
+             "--shell", "/bin/sh", "--password", "*", TRANSPORT_USER])
+        created = True
+    account = transport_account()
+    # Never adopt a pre-existing home or policy owned by another administrator.
+    marker = TRANSPORT_HOME / ".proxmenux-owned"
+    if not created and not marker.is_file():
+        raise USBIPError("Refusing to adopt an existing USB/IP transport home")
+    TRANSPORT_HOME.mkdir(mode=0o750, parents=True, exist_ok=True)
+    marker.touch(mode=0o600)
+    ssh_dir = TRANSPORT_HOME / ".ssh"
+    ssh_dir.mkdir(mode=0o750, exist_ok=True)
+    policy = ssh_dir / "authorized_keys"
+    line = f'restrict,command="/usr/bin/python3 {REMOTE_SCRIPT} transport" {fields[0]} {fields[1]}\n'
+    for directory in (TRANSPORT_HOME, ssh_dir):
+        os.chown(directory, 0, account.pw_gid)
+        directory.chmod(0o750)
+    existing = policy.read_text() if policy.exists() else ""
+    if line not in existing.splitlines(keepends=True):
+        fd = os.open(policy, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o640)
+        with os.fdopen(fd, "a") as handle:
+            os.fchown(handle.fileno(), 0, account.pw_gid)
+            os.fchmod(handle.fileno(), 0o640)
+            handle.write(line)
+
+
+def transport():
+    account = transport_account()
+    if os.geteuid() != account.pw_uid:
+        raise USBIPError("Transport requires the dedicated unprivileged account")
+    command = os.environ.get("SSH_ORIGINAL_COMMAND", "")
+    if command == "catalog":
+        print((SERVER_RUN_DIR / "catalog.json").read_text())
+    elif command == "stream":
+        os.execvp("socat", ["socat", "STDIO", f"UNIX-CONNECT:{REMOTE_SOCKET}"])
+    else:
+        raise USBIPError("Only USB/IP catalog and stream requests are permitted")
+
+
+def publish_catalog():
+    path = SERVER_RUN_DIR / "catalog.json"
+    atomic_json(path, catalog())
+    os.chown(path, 0, transport_account().pw_gid)
+    path.chmod(0o640)
 
 
 def parse_ports(output):
@@ -434,14 +580,16 @@ def stop_event():
 def serve():
     require_private_network()
     SERVER_RUN_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
-    SERVER_RUN_DIR.chmod(0o700)
+    account = transport_account()
+    os.chown(SERVER_RUN_DIR, 0, account.pw_gid)
+    SERVER_RUN_DIR.chmod(0o750)
     socket_path = SERVER_RUN_DIR / "usbip.sock"
     socket_path.unlink(missing_ok=True)
     owned = read_json(state_path(), {})
     daemon = proxy = None
     try:
         daemon = subprocess.Popen(["usbipd", "--ipv4", "--tcp-port", "3240"])
-        proxy = subprocess.Popen(["socat", f"UNIX-LISTEN:{socket_path},mode=0600,fork",
+        proxy = subprocess.Popen(["socat", f"UNIX-LISTEN:{socket_path},mode=0660,group={account.pw_gid},fork",
                                   "TCP:127.0.0.1:3240"])
         with stop_event() as stopped:
             previous_errors = None
@@ -452,6 +600,7 @@ def serve():
                 if not config["server"]:
                     break
                 errors = reconcile_exports(config, owned)
+                publish_catalog()
                 if errors != previous_errors:
                     for identifier, error in errors.items():
                         print(f"Export {identifier}: {error}", file=sys.stderr, flush=True)
@@ -467,6 +616,7 @@ def serve():
         stop_child(proxy)
         stop_child(daemon)
         socket_path.unlink(missing_ok=True)
+        (SERVER_RUN_DIR / "catalog.json").unlink(missing_ok=True)
 
 
 def connect(identifier):
@@ -487,7 +637,7 @@ def connect(identifier):
                     if tunnel is None or tunnel.poll() is not None:
                         release_import(owner)
                         stop_child(tunnel)
-                        tunnel = subprocess.Popen(tunnel_args(selected), stdin=subprocess.DEVNULL)
+                        tunnel = LoopbackTunnel(selected)
                         if stopped.wait(1):
                             break
                         if tunnel.poll() is not None:
@@ -518,6 +668,7 @@ def update_server(enabled):
         atomic_json(CONFIG_DIR / "config.json", config)
         try:
             if enabled:
+                transport_account()
                 enable_unit(SERVER_UNIT, unit_text("server"))
             else:
                 remove_unit(SERVER_UNIT)
@@ -633,7 +784,7 @@ def status():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("inventory", "catalog", "status", "server-enable", "server-disable", "serve"):
+    for name in ("inventory", "catalog", "status", "server-enable", "server-disable", "serve", "transport"):
         commands.add_parser(name)
     for name in ("add-export", "remove-export", "remove-import", "connect"):
         commands.add_parser(name).add_argument("identifier")
@@ -645,12 +796,18 @@ def main():
         if name == "add-import":
             cmd.add_argument("--export-id", required=True)
             cmd.add_argument("--local-port", type=int, default=33240)
+    commands.add_parser("authorize-key").add_argument("path")
     args = parser.parse_args()
     try:
+        if args.command == "transport":
+            transport()
+            return 0
         if os.geteuid() != 0:
             raise USBIPError("Run this manager as root")
         output = None
-        if args.command == "inventory":
+        if args.command == "authorize-key":
+            authorize_key(args.path)
+        elif args.command == "inventory":
             output = inventory()
         elif args.command == "catalog":
             output = catalog()

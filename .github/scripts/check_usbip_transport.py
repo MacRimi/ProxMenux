@@ -67,12 +67,19 @@ def main():
         raise AssertionError("Expected the host namespace to be rejected")
 
     processes = []
+    tunnel = None
+    username = f"pmx-usbip-test-{os.getpid()}"
+    subprocess.run(["useradd", "--system", "--user-group", "--home-dir", "/nonexistent", "--shell", "/bin/sh", "--password", "*", username], check=True)
+    account = pwd.getpwnam(username)
+    manager.TRANSPORT_USER = username
     # StrictModes checks every ancestor of AuthorizedKeysFile. A private
     # subdirectory of /tmp still fails because /tmp itself is world writable.
     # Keep the disposable fixture below root's home without changing its SSH
     # configuration, account settings or existing authorized_keys.
-    with tempfile.TemporaryDirectory(prefix="pmx-usbip-", dir=pwd.getpwuid(os.geteuid()).pw_dir) as directory:
+    with tempfile.TemporaryDirectory(prefix="pmx-usbip-", dir="/var/lib") as directory:
         root = Path(directory)
+        os.chown(root, 0, account.pw_gid)
+        root.chmod(0o750)
         log = root / "transport.log"
         with log.open("w") as log_handle:
             try:
@@ -107,6 +114,8 @@ spec.loader.exec_module(m)
 m.CONFIG_DIR = Path({str(config)!r})
 m.SERVER_RUN_DIR = Path({str(server_run)!r})
 m.SYSFS = Path({str(root / 'no-usb-devices')!r})
+m.TRANSPORT_USER = {username!r}
+m.TRANSPORT_HOME = Path('/nonexistent')
 subprocess.run(['ip', 'link', 'set', 'lo', 'up'], check=True)
 m.serve()
 """)
@@ -117,8 +126,8 @@ m.serve()
                 unix_path = server_run / "usbip.sock"
                 wait_until(lambda: unix_path.exists(), [server], log)
                 assert os.readlink(f"/proc/{server.pid}/ns/net") != os.readlink("/proc/self/ns/net")
-                assert stat.S_IMODE(server_run.stat().st_mode) == 0o700
-                assert stat.S_IMODE(unix_path.stat().st_mode) == 0o600
+                assert stat.S_IMODE(server_run.stat().st_mode) == 0o750
+                assert stat.S_IMODE(unix_path.stat().st_mode) == 0o660
                 # Linux /proc/net reflects the caller's network namespace.
                 listening = subprocess.check_output(["ss", "-H", "-ltn", "sport", "=", ":3240"], text=True)
                 assert not listening.strip(), "Raw USB/IP TCP leaked into the host network namespace"
@@ -133,8 +142,22 @@ m.serve()
                 for name in ("host", "client", "wrong-client"):
                     subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(root / name)], check=True)
                 authorized = root / "authorized_keys"
-                authorized.write_text((root / "client.pub").read_text())
-                authorized.chmod(0o600)
+                gate = root / "gate.py"
+                gate.write_text(f"""import importlib.util
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('usbip_manager', {str(SOURCE)!r})
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+m.TRANSPORT_USER = {username!r}
+m.TRANSPORT_HOME = Path('/nonexistent')
+m.SERVER_RUN_DIR = Path({str(server_run)!r})
+m.REMOTE_SOCKET = {str(unix_path)!r}
+m.transport()
+""")
+                gate.chmod(0o644)
+                authorized.write_text(f'restrict,command="{sys.executable} {gate}" ' + (root / "client.pub").read_text())
+                os.chown(authorized, 0, account.pw_gid)
+                authorized.chmod(0o640)
                 known = root / "known_hosts"
                 known.write_text("")
                 known.chmod(0o600)
@@ -145,12 +168,12 @@ ListenAddress 127.0.0.1
 HostKey {root / 'host'}
 PidFile {root / 'sshd.pid'}
 AuthorizedKeysFile {authorized}
-PermitRootLogin prohibit-password
+PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 UsePAM yes
 StrictModes yes
-AllowUsers root
+AllowUsers {username}
 AllowTcpForwarding local
 AllowStreamLocalForwarding local
 LogLevel VERBOSE
@@ -168,7 +191,7 @@ LogLevel VERBOSE
                 def check_ssh(selected):
                     args = manager.ssh_args(selected)
                     args[1:1] = extra
-                    return subprocess.run(args + ["--", selected["host"], "true"], capture_output=True, text=True, timeout=15)
+                    return subprocess.run(args + ["--", selected["host"], "catalog"], capture_output=True, text=True, timeout=15)
                 unknown = check_ssh(remote)
                 assert unknown.returncode != 0 and "Host key verification failed" in unknown.stderr, unknown.stderr
                 host_public = (root / "host.pub").read_text().split()
@@ -177,11 +200,26 @@ LogLevel VERBOSE
                 assert wrong.returncode != 0 and "Permission denied" in wrong.stderr, wrong.stderr
                 accepted = check_ssh(remote)
                 assert accepted.returncode == 0, accepted.stderr + "\n" + log.read_text()
-                manager.REMOTE_SOCKET = str(unix_path)
-                args = manager.tunnel_args(remote | {"local_port": local_port})
-                args[1:1] = extra
-                tunnel = subprocess.Popen(args, stdout=log_handle, stderr=log_handle, start_new_session=True)
-                processes.append(tunnel)
+                forbidden = manager.ssh_args(remote)
+                forbidden[1:1] = extra
+                denied = subprocess.run(forbidden + ["--", remote["host"], "id"], capture_output=True, text=True, timeout=15)
+                assert denied.returncode != 0, "Forced command allowed a shell command"
+                forwarded = subprocess.run(forbidden + ["-W", "127.0.0.1:22", "--", remote["host"]], capture_output=True, text=True, timeout=15)
+                assert forwarded.returncode != 0 and "prohibited" in forwarded.stderr, forwarded.stderr
+                original = manager.ssh_args
+                def fixture_ssh(selected):
+                    args = original(selected)
+                    args[1:1] = extra
+                    return args
+                manager.ssh_args = fixture_ssh
+                tunnel = manager.LoopbackTunnel(remote | {"local_port": local_port})
+                with socket.socket() as attacker:
+                    try:
+                        attacker.bind(("127.0.0.1", local_port))
+                    except OSError:
+                        pass
+                    else:
+                        raise AssertionError("Another process stole the tunnel port")
                 def tunnel_ready():
                     with socket.create_connection(("127.0.0.1", local_port), timeout=1) as connection:
                         echo(connection)
@@ -189,10 +227,13 @@ LogLevel VERBOSE
                 wait_until(tunnel_ready, processes, log)
                 listener = subprocess.check_output(["ss", "-H", "-ltn", "sport", "=", f":{local_port}"], text=True)
                 assert f"127.0.0.1:{local_port}" in listener and f"0.0.0.0:{local_port}" not in listener, listener
-                print("PASS: private namespace, root-only Unix socket, no host USB/IP listener")
-                print("PASS: unknown host key and wrong client key rejected; valid key accepted")
+                print("PASS: private namespace, dedicated-group Unix socket, no host USB/IP listener")
+                print("PASS: unknown/wrong keys, shell commands and arbitrary forwarding rejected; dedicated key accepted")
                 print("PASS: 256 KiB binary stream across real SSH -> Unix socket -> socat -> private TCP")
             finally:
+                if tunnel:
+                    tunnel.terminate()
+                subprocess.run(["userdel", username], check=True)
                 for process in reversed(processes):
                     if process.poll() is None:
                         os.killpg(process.pid, signal.SIGTERM)

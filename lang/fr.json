@@ -8253,11 +8253,13 @@
   "Share selected USB devices through SSH, or connect this Linux machine to a USB/IP server.": "Partagez les périphériques USB sélectionnés via SSH ou connectez cette machine Linux à un serveur USB/IP.",
   "Stop sharing a USB device": "Arrêter le partage d'un périphérique USB",
   "Stop sharing this device? An attached remote client will disconnect.": "Arrêter le partage de ce périphérique ? Tout client distant attaché sera déconnecté.",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "Le client doit déjà faire confiance à la clé d'hôte SSH du serveur, et une clé SSH pour root doit y être autorisée. Testez d'abord une connexion SSH normale. ProxMenux ne modifiera pas l'accès SSH et n'acceptera pas de clés d'hôte inconnues.",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "Le périphérique USB sélectionné ne sera plus disponible pour les applications et les invités locaux. Un seul client distant peut l'utiliser à la fois. Partager ce périphérique ?",
   "USB/IP configuration updated. Open status to check the connection.": "Configuration USB/IP mise à jour. Ouvrez l'état pour vérifier la connexion.",
   "USB/IP over SSH": "USB/IP via SSH",
   "USB/IP server IP address or DNS hostname:": "Adresse IP ou nom d'hôte DNS du serveur USB/IP :",
   "Unused local loopback TCP port for this device:": "Port TCP local de bouclage inutilisé pour ce périphérique :",
-  "View USB/IP status": "Afficher l'état USB/IP"
+  "View USB/IP status": "Afficher l'état USB/IP",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Autorisez d’abord une clé publique dédiée au client sur le serveur. Le compte USB/IP restreint ne peut ni ouvrir de shell ni rediriger d’autres sockets. Vérifiez la clé d’hôte du serveur avant la connexion ; les clés inconnues sont refusées.",
+  "Authorize a client SSH public key": "Autoriser la clé publique SSH d’un client",
+  "Path to the client SSH public key on this server:": "Chemin de la clé publique SSH du client sur ce serveur :"
 }

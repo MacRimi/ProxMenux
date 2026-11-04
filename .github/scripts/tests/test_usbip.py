@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -39,6 +40,8 @@ class USBIPTests(unittest.TestCase):
                            ("SERVER_RUN_DIR", "server-run"), ("UNIT_DIR", "units"), ("SYSFS", "sysfs")):
             setattr(self.m, attr, self.root / path)
             getattr(self.m, attr).mkdir()
+        self.m.MATCH_BUSID = self.root / "match_busid"
+        self.account = SimpleNamespace(pw_uid=1234, pw_gid=1234)
         self.calls = []
         self.key = self.root / "id_ed25519"
         self.key.write_text("test-key")
@@ -167,6 +170,99 @@ class USBIPTests(unittest.TestCase):
         self.assertEqual(self.m.status()["server_status"]["errors"], {EXPORT: "bind failed"})
         self.assertEqual(self.m.catalog()[0]["status"], "waiting")
 
+    def test_unplug_clears_owned_stale_match_before_waiting(self):
+        selected = self.selected(self.device())
+        config = self.config([selected])
+        owned = {}
+        with patch.object(self.m, "run", side_effect=self.usb):
+            self.m.reconcile_exports(config, owned)
+            shutil.rmtree(self.m.SYSFS / "1-2")
+            errors = self.m.reconcile_exports(config, owned)
+        self.assertEqual(owned, {})
+        self.assertIn(EXPORT, errors)
+        self.assertEqual(self.m.MATCH_BUSID.read_text(), "del 1-2")
+        self.assertEqual(len(self.calls), 1)
+
+    def test_failed_stale_cleanup_does_not_forget_or_replace_ownership(self):
+        selected = self.selected(self.device())
+        config = self.config([selected])
+        owned = {EXPORT: selected}
+        shutil.rmtree(self.m.SYSFS / "1-2")
+        self.device(busid="2-4")
+        with patch.object(Path, "write_text", side_effect=PermissionError), patch.object(self.m, "run") as command:
+            errors = self.m.reconcile_exports(config, owned)
+        self.assertIn("stale", errors[EXPORT])
+        self.assertEqual(owned[EXPORT]["busid"], "1-2")
+        command.assert_not_called()
+
+    def test_authorized_key_is_restricted_and_policy_stays_root_owned(self):
+        self.m.TRANSPORT_HOME = self.root / "transport-home"
+        account = SimpleNamespace(pw_uid=1234, pw_gid=1234, pw_dir=str(self.m.TRANSPORT_HOME))
+        public = self.root / "client.pub"
+        public.write_text("ssh-ed25519 AAAA test-client")
+        with patch.object(self.m.pwd, "getpwnam", side_effect=[KeyError(), account]), patch.object(
+            self.m, "run"
+        ) as command, patch.object(self.m.os, "chown"), patch.object(self.m.os, "fchown"):
+            self.m.authorize_key(public)
+        command.assert_called_once()
+        self.assertEqual(command.call_args.args[0][0], "useradd")
+        policy = self.m.TRANSPORT_HOME / ".ssh/authorized_keys"
+        self.assertEqual(policy.stat().st_mode & 0o777, 0o640)
+        self.assertEqual(policy.read_text(), 'restrict,command="/usr/bin/python3 ' + self.m.REMOTE_SCRIPT + ' transport" ssh-ed25519 AAAA\n')
+        with patch.object(self.m.pwd, "getpwnam", return_value=account), patch.object(
+            self.m.os, "chown"
+        ), patch.object(self.m.os, "fchown"):
+            self.m.authorize_key(public)
+        self.assertEqual(len(policy.read_text().splitlines()), 1)
+
+    def test_authorize_never_adopts_an_existing_foreign_account(self):
+        self.m.TRANSPORT_HOME = self.root / "foreign-home"
+        account = SimpleNamespace(pw_uid=1234, pw_gid=1234, pw_dir=str(self.m.TRANSPORT_HOME))
+        public = self.root / "client.pub"
+        public.write_text("ssh-ed25519 AAAA test-client")
+        with patch.object(self.m.pwd, "getpwnam", return_value=account), patch.object(self.m, "run") as command:
+            with self.assertRaisesRegex(self.m.USBIPError, "existing"):
+                self.m.authorize_key(public)
+        command.assert_not_called()
+        self.assertFalse(self.m.TRANSPORT_HOME.exists())
+
+    def test_forced_command_rejects_shell_and_wrong_identity(self):
+        for command in ("id", "catalog; id", "", "stream --socket /run/other.sock"):
+            with patch.object(self.m, "transport_account", return_value=self.account), patch.object(
+                self.m.os, "geteuid", return_value=1234
+            ), patch.dict(os.environ, {"SSH_ORIGINAL_COMMAND": command}), patch.object(self.m.os, "execvp") as execute:
+                with self.assertRaisesRegex(self.m.USBIPError, "Only USB/IP"):
+                    self.m.transport()
+                execute.assert_not_called()
+        with patch.object(self.m, "transport_account", return_value=self.account), patch.object(self.m.os, "geteuid", return_value=0):
+            with self.assertRaisesRegex(self.m.USBIPError, "unprivileged"):
+                self.m.transport()
+
+    def test_forced_command_catalog_and_stream_are_fixed(self):
+        (self.m.SERVER_RUN_DIR / "catalog.json").write_text("[]")
+        with patch.object(self.m, "transport_account", return_value=self.account), patch.object(self.m.os, "geteuid", return_value=1234):
+            with patch.dict(os.environ, {"SSH_ORIGINAL_COMMAND": "catalog"}), patch("builtins.print") as output:
+                self.m.transport()
+                output.assert_called_once_with("[]")
+            with patch.dict(os.environ, {"SSH_ORIGINAL_COMMAND": "stream"}), patch.object(self.m.os, "execvp") as execute:
+                self.m.transport()
+                execute.assert_called_once_with("socat", ["socat", "STDIO", "UNIX-CONNECT:" + self.m.REMOTE_SOCKET])
+
+    def test_loopback_port_is_held_until_tunnel_stops(self):
+        with socket.socket() as unused:
+            unused.bind(("127.0.0.1", 0))
+            port = unused.getsockname()[1]
+        tunnel = self.m.LoopbackTunnel(self.remote | {"local_port": port})
+        try:
+            with socket.socket() as attacker:
+                with self.assertRaises(OSError):
+                    attacker.bind(("127.0.0.1", port))
+            with self.assertRaisesRegex(self.m.USBIPError, "in use"):
+                self.m.LoopbackTunnel(self.remote | {"local_port": port})
+        finally:
+            tunnel.terminate()
+        self.assertEqual(tunnel.poll(), 0)
+
     def test_namespace_guard_fails_before_spawning_a_listener(self):
         with patch.object(self.m.os, "readlink", return_value="net:[1]"), patch.object(self.m.subprocess, "Popen") as process:
             with self.assertRaisesRegex(self.m.USBIPError, "PrivateNetwork"):
@@ -200,7 +296,7 @@ class USBIPTests(unittest.TestCase):
             if args[:3] == ["systemctl", "enable", "--now"]:
                 raise self.m.USBIPError("start failed")
             return ""
-        with patch.object(self.m, "run", side_effect=fail_start), patch("shutil.which", return_value="/sbin/modprobe"):
+        with patch.object(self.m, "transport_account", return_value=self.account), patch.object(self.m, "run", side_effect=fail_start), patch("shutil.which", return_value="/sbin/modprobe"):
             with self.assertRaisesRegex(self.m.USBIPError, "start failed"):
                 self.m.update_server(True)
         self.assertEqual(self.m.load_config(), previous)
@@ -213,9 +309,12 @@ class USBIPTests(unittest.TestCase):
         for required in ("BatchMode=yes", "StrictHostKeyChecking=yes", "IdentitiesOnly=yes", "ForwardAgent=no",
                          "PasswordAuthentication=no", "ExitOnForwardFailure=yes"):
             self.assertIn(required, args)
-        self.assertIn("127.0.0.1:33240:/run/proxmenux-usbip-server/usbip.sock", args)
+        self.assertIn("proxmenux-usbip", args)
+        self.assertNotIn("root", args)
+        self.assertNotIn("-L", args)
+        self.assertNotIn("-N", args)
         self.assertNotIn("StrictHostKeyChecking=no", args)
-        self.assertEqual(args[-2:], ["--", "usb.example.test"])
+        self.assertEqual(args[-3:], ["--", "usb.example.test", "stream"])
         for host in ("-oProxyCommand=touch /tmp/no", "root@host", "host;id", "host\nother", "$(id)"):
             with self.assertRaises(self.m.USBIPError):
                 self.m.validate_remote(host, 22, str(self.key))

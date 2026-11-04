@@ -8254,11 +8254,13 @@
   "Share selected USB devices through SSH, or connect this Linux machine to a USB/IP server.": "Dela valda USB-enheter via SSH eller anslut denna Linux-dator till en USB/IP-server.",
   "Stop sharing a USB device": "Sluta dela en USB-enhet",
   "Stop sharing this device? An attached remote client will disconnect.": "Sluta dela denna enhet? En ansluten fjärrklient kommer att kopplas från.",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "Klienten måste redan lita på serverns SSH-värdnyckel och en SSH-nyckel för root måste vara auktoriserad där. Testa vanlig SSH först. ProxMenux ändrar inte SSH-åtkomsten och accepterar inte okända värdnycklar.",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "Den valda USB-enheten blir otillgänglig för lokala program och gäster. Bara en fjärrklient kan använda den åt gången. Dela denna enhet?",
   "USB/IP configuration updated. Open status to check the connection.": "USB/IP-konfigurationen har uppdaterats. Öppna status för att kontrollera anslutningen.",
   "USB/IP over SSH": "USB/IP via SSH",
   "USB/IP server IP address or DNS hostname:": "USB/IP-serverns IP-adress eller DNS-värdnamn:",
   "Unused local loopback TCP port for this device:": "Ledig lokal TCP-port på loopback för denna enhet:",
-  "View USB/IP status": "Visa USB/IP-status"
+  "View USB/IP status": "Visa USB/IP-status",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Auktorisera först en separat offentlig klientnyckel på servern. Det begränsade USB/IP-kontot kan inte starta ett skal eller vidarebefordra andra socklar. Verifiera serverns värdnyckel innan du ansluter; okända nycklar avvisas.",
+  "Authorize a client SSH public key": "Auktorisera en klients offentliga SSH-nyckel",
+  "Path to the client SSH public key on this server:": "Sökväg till klientens offentliga SSH-nyckel på den här servern:"
 }

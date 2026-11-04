@@ -8254,11 +8254,13 @@
   "Share selected USB devices through SSH, or connect this Linux machine to a USB/IP server.": "Geben Sie ausgewählte USB-Geräte über SSH frei oder verbinden Sie diesen Linux-Rechner mit einem USB/IP-Server.",
   "Stop sharing a USB device": "USB-Gerätefreigabe beenden",
   "Stop sharing this device? An attached remote client will disconnect.": "Freigabe dieses Geräts beenden? Ein verbundener entfernter Client wird getrennt.",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "Der Client muss dem SSH-Hostschlüssel des Servers bereits vertrauen und dort muss ein SSH-Schlüssel für root autorisiert sein. Testen Sie zuerst eine normale SSH-Verbindung. ProxMenux ändert den SSH-Zugang nicht und akzeptiert keine unbekannten Hostschlüssel.",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "Das ausgewählte USB-Gerät steht lokalen Anwendungen und Gästen nicht mehr zur Verfügung. Nur ein entfernter Client kann es gleichzeitig verwenden. Dieses Gerät freigeben?",
   "USB/IP configuration updated. Open status to check the connection.": "USB/IP-Konfiguration aktualisiert. Öffnen Sie den Status, um die Verbindung zu prüfen.",
   "USB/IP over SSH": "USB/IP über SSH",
   "USB/IP server IP address or DNS hostname:": "IP-Adresse oder DNS-Hostname des USB/IP-Servers:",
   "Unused local loopback TCP port for this device:": "Freier lokaler Loopback-TCP-Port für dieses Gerät:",
-  "View USB/IP status": "USB/IP-Status anzeigen"
+  "View USB/IP status": "USB/IP-Status anzeigen",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Autorisiere zuerst einen eigenen öffentlichen Clientschlüssel auf dem Server. Das eingeschränkte USB/IP-Konto kann keine Shell starten oder andere Sockets weiterleiten. Prüfe vor dem Verbinden den Hostschlüssel des Servers; unbekannte Schlüssel werden abgelehnt.",
+  "Authorize a client SSH public key": "Öffentlichen SSH-Schlüssel eines Clients autorisieren",
+  "Path to the client SSH public key on this server:": "Pfad zum öffentlichen SSH-Schlüssel des Clients auf diesem Server:"
 }

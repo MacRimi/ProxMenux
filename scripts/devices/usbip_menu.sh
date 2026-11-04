@@ -88,7 +88,7 @@ usbip_status() {
           (.exports[] | "EXPORT \(.id)  \(.name)\n  \(.vendor):\(.product)  serial: \(.serial)\n  bus: \(.busid // "waiting")  state: \(.status)\n"),
           (.server_status.errors // {} | to_entries[] | "ERROR \(.key): \(.value)"),
           "\nCLIENTS:",
-          (.imports[] | "\(.id)  root@\(.host):\(.ssh_port)\n  export: \(.export_id)  local tunnel: 127.0.0.1:\(.local_port)\n  running: \(.active)  state: \(.status.state)  \(.status.error // "")\n")' "$raw" >"$output"
+          (.imports[] | "\(.id)  proxmenux-usbip@\(.host):\(.ssh_port)\n  export: \(.export_id)  local tunnel: 127.0.0.1:\(.local_port)\n  running: \(.active)  state: \(.status.state)  \(.status.error // "")\n")' "$raw" >"$output"
     fi
     usbip_dialog --textbox "$output" 26 100
     rm -f "$output" "$raw"
@@ -123,10 +123,10 @@ usbip_add_import() {
     usbip_dependencies client || return
     local host ssh_port key local_port output error selected identifier label
     local -a choices=()
-    usbip_dialog --msgbox "$(translate 'The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.')" 12 85
+    usbip_dialog --msgbox "$(translate 'Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.')" 12 85
     host=$(usbip_dialog --stdout --inputbox "$(translate 'USB/IP server IP address or DNS hostname:')" 9 75) || return
     ssh_port=$(usbip_dialog --stdout --inputbox "$(translate 'Server SSH port:')" 9 70 "22") || return
-    key=$(usbip_dialog --stdout --inputbox "$(translate 'Absolute path of the client SSH private key:')" 9 80 "/root/.ssh/id_ed25519") || return
+    key=$(usbip_dialog --stdout --inputbox "$(translate 'Absolute path of the client SSH private key:')" 9 80 "/root/.ssh/id_usbip") || return
     output=$(mktemp) || return
     error=$(mktemp) || { rm -f "$output"; return; }
     if ! python3 "$MANAGER" remote --host "$host" --ssh-port "$ssh_port" --key "$key" >"$output" 2>"$error"; then
@@ -157,6 +157,7 @@ while true; do
         "6" "$(translate 'Connect a remote USB device')" \
         "7" "$(translate 'Remove a remote USB connection')" \
         "8" "$(translate 'Linux guest setup and migration notes')" \
+        "9" "$(translate 'Authorize a client SSH public key')" \
         "0" "$(translate 'Back')") || break
     case "$option" in
         1) usbip_status ;;
@@ -176,6 +177,10 @@ while true; do
             ;;
         8)
             usbip_dialog --msgbox "$(translate 'Run the client inside the Linux VM that needs the USB device. Install usbip, openssh-client and kmod, then copy usbip_manager.py to the same path as on the server. Configure key authentication and verify the server host key before adding a connection. The client uses the guest kernel and can reconnect after migration while the physical USB device stays on the server. Unprivileged LXC and Home Assistant OS need their own kernel/device or add-on setup. A physical device supports one attached client at a time.')" 19 95
+            ;;
+        9)
+            key=$(usbip_dialog --stdout --inputbox "$(translate 'Path to the client SSH public key on this server:')" 9 85) || continue
+            usbip_action authorize-key "$key"
             ;;
         0) break ;;
     esac

@@ -22,7 +22,10 @@ requested in [#350](https://github.com/MacRimi/ProxMenux/issues/350).
    journalctl -u proxmenux-usbip-server.service
    ```
 
-The server reloads saved selections every three seconds. Devices with a unique
+The server reloads saved selections every three seconds. After unplug or a port
+change it removes the recorded stale `match_busid` entry even when the original
+device is absent; a replacement device is never explicitly unbound. This is
+polling-based detection, not an atomic guarantee against very fast port reuse. Devices with a unique
 serial number can return on a different physical USB port after reconnecting.
 Without a serial number, the vendor/product and original bus ID must match;
 the manager will not guess which identical dongle to bind. Duplicate serial
@@ -44,18 +47,36 @@ listener in the host network namespace**, and this feature does not open a
 firewall port. Running the manager's `serve` command outside a private network
 namespace is rejected before spawning a listener.
 
-The proxy exposes a filesystem Unix socket at
-`/run/proxmenux-usbip-server/usbip.sock`, inside a root-only directory with a
-0600 socket. Existing OpenSSH access forwards it to a loopback-only TCP port
-on the client. The SSH server must permit stream-local forwarding. Unknown or
-changed server host keys, bad SSH credentials and failed forwards are errors;
-the manager never disables host-key checking or changes `sshd_config`.
+The proxy exposes `/run/proxmenux-usbip-server/usbip.sock` to the dedicated
+`proxmenux-usbip` group (0660), inside a root-owned 0750 directory. Root alone
+can read or change the managed device/configuration state. A separate group-readable
+catalog contains only the selected USB device metadata.
 
-The initial implementation uses **existing root SSH key access**. It does not
-create keys or authorize root login. Use this only between machines for which
-that access is already appropriate. Private key contents are never copied into
-the manager configuration. The local tunnel port is accessible to local users
-on the client, so the client machine must be trusted too.
+Before enabling the server, choose **Authorize a client SSH public key** and
+supply the path to a dedicated client's `.pub` file already copied to the server.
+This creates a local system account `proxmenux-usbip` with a disabled password,
+no administrative group membership, and a root-owned home and `authorized_keys`.
+Each managed key uses OpenSSH `restrict` and a fixed forced command. The command
+accepts only `catalog` (read selected devices) and `stream` (connect the one USB/IP
+Unix socket). Shell commands, PTY, agent/X11 forwarding and TCP/Unix forwarding
+are prohibited. This does not use or modify Proxmox's cluster-wide root keys,
+root `authorized_keys`, or SSH server settings. A conflicting pre-existing
+account/home is rejected rather than adopted. Authorize keys before starting
+the server; `useradd` and an existing OpenSSH server are required.
+
+The client holds its loopback TCP listening socket continuously, then launches
+an SSH `stream` session for each connection. It does not release a port probe
+and later ask SSH to bind the same port. Unknown or changed host keys and wrong
+client keys fail closed. Create a dedicated key, not one used for root access.
+Anyone with that key can access **all selected USB/IP exports**; it is not a
+per-device authorization policy. Local users of the client can also connect to
+the loopback port, so use trusted clients. To revoke a client, remove its managed
+line from `/var/lib/proxmenux-usbip/.ssh/authorized_keys` and terminate its active
+connections; deleting a key does not disconnect an existing SSH session.
+
+Old configurations using root keys do not silently keep root access: clients
+now connect only as `proxmenux-usbip`. Authorize a separate key on the server and
+replace the saved client connection if it previously referenced a root key.
 
 ## Linux VM/client
 
@@ -74,11 +95,12 @@ apt-get install usbip openssh-client kmod
 install -D -m 0755 usbip_manager.py /usr/local/share/proxmenux/scripts/devices/usbip_manager.py
 ```
 
-First verify normal root SSH access from the client to the server using the
-intended private key and port. Verify the server host-key fingerprint through
-a trusted channel, then accept it through that normal SSH session. Automated
-connections read root's normal `known_hosts` file. SSH config aliases and
-`ProxyJump` settings are not used; enter the actual address and port.
+Generate a dedicated SSH client key (for example `/root/.ssh/id_usbip`) and
+authorize its public key through the server menu. Verify the server host-key
+fingerprint through a trusted channel and install it in the client's root
+`known_hosts` file. Do not attempt an interactive login: the account intentionally
+rejects a shell. SSH config aliases and `ProxyJump` settings are not used; enter
+the actual address and port.
 
 Then choose **Connect a remote USB device** and provide the server address,
 SSH port and absolute path to an existing private key (0400 or 0600). The menu
@@ -89,9 +111,9 @@ Equivalent standalone commands:
 
 ```sh
 MANAGER=/usr/local/share/proxmenux/scripts/devices/usbip_manager.py
-python3 "$MANAGER" remote --host 192.0.2.10 --ssh-port 22 --key /root/.ssh/id_ed25519
+python3 "$MANAGER" remote --host 192.0.2.10 --ssh-port 22 --key /root/.ssh/id_usbip
 # Substitute the export ID returned by the server:
-python3 "$MANAGER" add-import --host 192.0.2.10 --ssh-port 22 --key /root/.ssh/id_ed25519 --export-id abcdef123456 --local-port 33240
+python3 "$MANAGER" add-import --host 192.0.2.10 --ssh-port 22 --key /root/.ssh/id_usbip --export-id abcdef123456 --local-port 33240
 python3 "$MANAGER" status
 ```
 
@@ -128,11 +150,11 @@ cannot directly connect to this server's isolated daemon.
 Validation includes fake sysfs/USB commands for identity and ownership, service
 rollback and quoting, malformed catalogs, credential failures and reconnects.
 The Linux CI also verifies generated units and exercises actual namespace
-isolation and encrypted SSH forwarding with an echo fixture. Physical device
+isolation and restricted SSH sessions with an echo fixture. Physical device
 and guest-driver compatibility still requires a real deployment test.
 
 Protocol and transport references:
 [Linux USB/IP tools](https://github.com/torvalds/linux/tree/master/tools/usb/usbip),
 [Debian usbip manual](https://manpages.debian.org/trixie/usbip/usbip.8.en.html),
-[OpenSSH local socket forwarding](https://man.openbsd.org/ssh#L),
+[OpenSSH authorized_keys restrictions](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT),
 [systemd PrivateNetwork](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#PrivateNetwork=).

@@ -8254,11 +8254,13 @@
   "Share selected USB devices through SSH, or connect this Linux machine to a USB/IP server.": "Partilhe os dispositivos USB selecionados através de SSH ou ligue esta máquina Linux a um servidor USB/IP.",
   "Stop sharing a USB device": "Parar a partilha de um dispositivo USB",
   "Stop sharing this device? An attached remote client will disconnect.": "Parar a partilha deste dispositivo? O cliente remoto ligado será desligado.",
-  "The client must already trust the server SSH host key and have a root SSH key authorized there. Test normal SSH first. ProxMenux will not change SSH access or accept unknown host keys.": "O cliente já deve confiar na chave de anfitrião SSH do servidor, e uma chave SSH para root deve estar autorizada no servidor. Teste primeiro uma ligação SSH normal. O ProxMenux não altera o acesso SSH nem aceita chaves de anfitrião desconhecidas.",
   "The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?": "O dispositivo USB selecionado ficará indisponível para aplicações e convidados locais. Só um cliente remoto o pode usar de cada vez. Partilhar este dispositivo?",
   "USB/IP configuration updated. Open status to check the connection.": "Configuração USB/IP atualizada. Abra o estado para verificar a ligação.",
   "USB/IP over SSH": "USB/IP através de SSH",
   "USB/IP server IP address or DNS hostname:": "Endereço IP ou nome de anfitrião DNS do servidor USB/IP:",
   "Unused local loopback TCP port for this device:": "Porta TCP local de loopback livre para este dispositivo:",
-  "View USB/IP status": "Ver estado USB/IP"
+  "View USB/IP status": "Ver estado USB/IP",
+  "Authorize a dedicated client public key on the server first. The restricted USB/IP account cannot run a shell or forward other sockets. Verify the server host key before connecting; unknown keys are rejected.": "Autorize primeiro uma chave pública dedicada do cliente no servidor. A conta USB/IP restrita não pode abrir uma shell nem encaminhar outros sockets. Verifique a chave do servidor antes de ligar; as chaves desconhecidas são rejeitadas.",
+  "Authorize a client SSH public key": "Autorizar a chave pública SSH de um cliente",
+  "Path to the client SSH public key on this server:": "Caminho da chave pública SSH do cliente neste servidor:"
 }
