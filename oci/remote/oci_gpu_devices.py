@@ -110,18 +110,18 @@ def container_gid(device, host_value):
 
 
 def _permission_fields(fields):
+    """Everything but the GID, which the user may change in Proxmox."""
     return (fields.get('path'), int(fields.get('mode', '0660'), 8),
-            int(fields.get('uid', 0)), int(fields.get('gid', 0)),
-            fields.get('deny-write', '0'))
+            int(fields.get('uid', 0)), fields.get('deny-write', '0'))
 
 
 def preserve_recorded_container_gids(record, candidate, config):
-    """Carry forward only device GIDs already captured in the saved config.
+    """Keep the GID each device has inside the LXC, including one changed in
+    Proxmox since the last operation, like the other Proxmox changes.
 
-    This is not a host-to-container GID translation. The saved config is the
-    baseline for the GID Proxmox previously assigned inside the LXC. Any
-    unrecorded change is rejected, and the host device is still verified
-    independently by ``verify_baseline``.
+    This is not a host-to-container GID translation: the configured GID is the
+    group Proxmox gives the node inside the container. Other permission changes
+    are still refused, and the host device is verified by ``verify_baseline``.
     """
     saved_config = record.get('observed', {}).get('config')
     if not isinstance(saved_config, str) or not saved_config:
@@ -137,13 +137,10 @@ def preserve_recorded_container_gids(record, candidate, config):
     old_snapshots = planned(record.get('deployment', {}))
     for device in original_devices:
         path = device.get('host_path')
-        if path not in saved or path not in old_snapshots:
+        if path not in current or path not in old_snapshots:
             continue
-        observed_gid = int(saved[path].get('gid', 0))
-        expected_gid = container_gid(device, old_snapshots[path])
-        if observed_gid != expected_gid and 'container_gid' in device:
-            raise ValueError(translate('The recorded container device GID does not match its configuration'))
-        if observed_gid != expected_gid:
+        observed_gid = int(current[path].get('gid', 0))
+        if observed_gid != container_gid(device, old_snapshots[path]):
             device['container_gid'] = observed_gid
 
         for desired in candidate.get('deployment', {}).get('devices', []):

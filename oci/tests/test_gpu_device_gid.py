@@ -39,11 +39,25 @@ class ContainerDeviceGidTests(unittest.TestCase):
         self.assertEqual(devices.check(CURRENT_CONFIG, candidate['deployment'])['/dev/dri/renderD128'], HOST)
 
     @patch.object(devices, 'snapshot', return_value=HOST)
-    def test_unrecorded_guest_gid_change_is_rejected(self, _snapshot):
+    def test_a_guest_gid_changed_in_proxmox_is_kept(self, _snapshot):
+        record = {'deployment': {'devices': [dict(DEPLOYMENT['devices'][0], container_gid=44)]},
+                  'observed': {'config': SAVED_CONFIG}}
+        candidate = {'deployment': {'devices': [dict(DEPLOYMENT['devices'][0])]}}
+        # Written from the Proxmox interface, without `path=`.
+        changed = b'dev0: /dev/dri/renderD128,mode=0660,deny-write=0,gid=45\n'
+
+        devices.preserve_recorded_container_gids(record, candidate, changed)
+
+        self.assertEqual(record['deployment']['devices'][0]['container_gid'], 45)
+        self.assertEqual(candidate['deployment']['devices'][0]['container_gid'], 45)
+        self.assertEqual(devices.check(changed, candidate['deployment'])['/dev/dri/renderD128'], HOST)
+
+    @patch.object(devices, 'snapshot', return_value=HOST)
+    def test_other_permission_changes_are_still_refused(self, _snapshot):
         record = {'deployment': {'devices': [dict(DEPLOYMENT['devices'][0])]},
                   'observed': {'config': SAVED_CONFIG}}
         candidate = {'deployment': {'devices': [dict(DEPLOYMENT['devices'][0])]}}
-        changed = CURRENT_CONFIG.replace(b'gid=44', b'gid=45')
+        changed = CURRENT_CONFIG.replace(b'mode=0660', b'mode=0666')
 
         with self.assertRaisesRegex(ValueError, 'device settings changed'):
             devices.preserve_recorded_container_gids(record, candidate, changed)
