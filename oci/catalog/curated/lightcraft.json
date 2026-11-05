@@ -41,8 +41,8 @@
       "Use a trusted HTTPS reverse proxy for browser access. Port 3001 uses the upstream self-signed certificate; port 3000 is for an HTTP reverse-proxy backend.",
       "The upstream default has no login. Optional CUSTOM_USER and PASSWORD variables enable HTTP basic authentication; do not expose an unauthenticated desktop to untrusted networks.",
       "/config holds settings and desktop state and is included in Proxmox backups. /storage holds documents and supports a managed volume or an explicitly selected host directory; host directories require separate backups.",
-      "The default uses software rendering. GPU acceleration and other CPU architectures are not claimed tested by a CPU-only amd64 installation.",
-      "Without an assigned GPU, an application may ask to switch to CPU rendering. Choose the CPU option; hardware acceleration is not required for the default configuration."
+      "The default installation draws on the CPU. The advanced installation can assign an Intel or AMD GPU, which the desktop, the application and the video stream then use; NVIDIA is offered when the host has its driver and the NVIDIA Container Toolkit.",
+      "Without a GPU, an application may ask to switch to CPU rendering. Choose the CPU option; the application remembers it."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -112,6 +112,14 @@
         "required": false,
         "sensitive": true,
         "source": "upstream-documentation"
+      },
+      {
+        "name": "LC_ALL",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt": "Language/locale (e.g. es_ES.UTF-8; translation of every application is not guaranteed)"
       }
     ],
     "volumes": [
@@ -365,6 +373,111 @@
         "stability_seconds": 8,
         "accept_any_status": true,
         "verify_tls": true
+      },
+      "selkies": {
+        "base": "FROM ghcr.io/linuxserver/baseimage-selkies:ubunturesolute@sha256:6efa3fd775a552938d862f75975d34c418ad26d028ba2c952da58682cfe1cb47",
+        "dockerfile_url": "https://raw.githubusercontent.com/junkerderprovinz/artcraft-apps/32bee0dea9bdaf5310c693210bea0d732a129ae8/Dockerfile",
+        "dockerfile_sha256": "69ab1a81d1696d1bd143a6fa5a121c034ddfb3e83008969340e8cd2413547fe1",
+        "reviewed_on": "2026-11-04",
+        "documentation": "https://docs.linuxserver.io/images/docker-baseimage-selkies/",
+        "nvidia": "available-in-advanced-mode-with-compatible-host-driver-and-toolkit",
+        "validation": "Intel/AMD tested on a Radeon 680M: GL compositor and VAAPI encoding on the render node"
+      },
+      "device_requests": [],
+      "optional_devices": [],
+      "hardware_acceleration": {
+        "prompt": "Selkies desktop and streaming acceleration",
+        "default": "none",
+        "profiles": [
+          {
+            "id": "none",
+            "label": "No GPU (CPU)",
+            "device_requests": [],
+            "environment": [
+              {
+                "name": "AUTO_GPU",
+                "value": "false"
+              }
+            ]
+          },
+          {
+            "id": "vaapi",
+            "label": "Intel/AMD (streaming rendering and encoding)",
+            "device_requests": [
+              {
+                "id": "selkies-render",
+                "kind": "character-device",
+                "path_prompt": "Intel/AMD render node",
+                "host_path_default": "/dev/dri/renderD128",
+                "container_path_strategy": "same-as-host",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ],
+            "environment": [
+              {
+                "name": "PIXELFLUX_WAYLAND",
+                "value": "true"
+              },
+              {
+                "name": "AUTO_GPU",
+                "value": "false"
+              }
+            ],
+            "environment_from_devices": {
+              "DRINODE": [
+                "selkies-render"
+              ],
+              "DRI_NODE": [
+                "selkies-render"
+              ],
+              "ATTACHED_DEVICES_PERMS": [
+                "selkies-render"
+              ]
+            }
+          },
+          {
+            "id": "nvidia",
+            "label": "NVIDIA (Selkies rendering and NVENC)",
+            "device_requests": [
+              {
+                "id": "selkies-nvidia",
+                "kind": "nvidia-runtime",
+                "device_selection": "all-requested-by-compose"
+              }
+            ],
+            "environment": [
+              {
+                "name": "AUTO_GPU",
+                "value": "true"
+              },
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "all"
+              },
+              {
+                "name": "NVIDIA_DRIVER_CAPABILITIES",
+                "value": "compute,video,graphics,utility,display"
+              }
+            ]
+          }
+        ]
+      },
+      "gpu_validation": {
+        "device_inventory": "host-sysfs-and-stat",
+        "application_acceleration": "requires-workload-test",
+        "tone_mapping": "not-implied-by-device-access"
+      },
+      "device_permissions": {
+        "strategy": "linuxserver-native-init",
+        "service_user": "abc",
+        "environment": "ATTACHED_DEVICES_PERMS",
+        "paths": "all-resolved-selected-character-devices"
       }
     },
     "adaptations": [

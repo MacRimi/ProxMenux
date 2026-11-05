@@ -88,8 +88,69 @@ def planned(deployment):
             raise ValueError(translate('Invalid device mode'))
         if device.get('gid_strategy') not in ('none', 'host-device-gid'):
             raise ValueError(translate('Unsupported device GID strategy'))
+        if 'container_gid' in device:
+            container_gid(device, value)
         result[path] = value
     return result
+
+
+def container_gid(device, host_value):
+    """The GID assigned to the device node in the LXC's user namespace.
+
+    A recorded container GID is distinct from the host device's GID. Proxmox
+    maps the configured LXC GID through the container's id map when it creates
+    its passthrough node; the numeric host GID is not automatically translated.
+    """
+    if 'container_gid' in device:
+        gid = device['container_gid']
+        if isinstance(gid, bool) or not isinstance(gid, int) or not 0 <= gid < 4294967295:
+            raise ValueError(translate('Invalid container device GID'))
+        return gid
+    return host_value['gid'] if device['gid_strategy'] == 'host-device-gid' else 0
+
+
+def _permission_fields(fields):
+    return (fields.get('path'), int(fields.get('mode', '0660'), 8),
+            int(fields.get('uid', 0)), int(fields.get('gid', 0)),
+            fields.get('deny-write', '0'))
+
+
+def preserve_recorded_container_gids(record, candidate, config):
+    """Carry forward only device GIDs already captured in the saved config.
+
+    This is not a host-to-container GID translation. The saved config is the
+    baseline for the GID Proxmox previously assigned inside the LXC. Any
+    unrecorded change is rejected, and the host device is still verified
+    independently by ``verify_baseline``.
+    """
+    saved_config = record.get('observed', {}).get('config')
+    if not isinstance(saved_config, str) or not saved_config:
+        return
+    saved = actual_devices(saved_config.encode())
+    current = actual_devices(config)
+    if set(saved) != set(current):
+        return  # check() below reports the device set mismatch.
+    if any(_permission_fields(saved[path]) != _permission_fields(current[path]) for path in saved):
+        raise ValueError(translate('The container device settings changed since the last recorded operation'))
+
+    original_devices = record.get('deployment', {}).get('devices', [])
+    old_snapshots = planned(record.get('deployment', {}))
+    for device in original_devices:
+        path = device.get('host_path')
+        if path not in saved or path not in old_snapshots:
+            continue
+        observed_gid = int(saved[path].get('gid', 0))
+        expected_gid = container_gid(device, old_snapshots[path])
+        if observed_gid != expected_gid and 'container_gid' in device:
+            raise ValueError(translate('The recorded container device GID does not match its configuration'))
+        if observed_gid != expected_gid:
+            device['container_gid'] = observed_gid
+
+        for desired in candidate.get('deployment', {}).get('devices', []):
+            if (desired.get('host_path') == path
+                    and desired.get('gid_strategy') == device.get('gid_strategy')
+                    and 'container_gid' not in desired):
+                desired['container_gid'] = observed_gid
 
 
 def verify(expected):
@@ -98,11 +159,27 @@ def verify(expected):
             raise ValueError(translate('The GPU identity or permissions changed; the container is not modified'))
 
 
+def device_fields(value):
+    """The options of a devN line. Proxmox writes its path either as `path=`
+    or, when the device was added from its own interface, as the first value
+    without a name: `dev0: /dev/dri/renderD128,gid=993`."""
+    fields = {}
+    for index, part in enumerate(value.split(',')):
+        if '=' in part:
+            key, item = part.split('=', 1)
+            fields[key] = item
+        elif index == 0 and part:
+            fields['path'] = part
+        else:
+            raise ValueError(translate('Incomplete device configuration'))
+    return fields
+
+
 def actual_devices(config):
     result = {}
     for key, value in parse_config(config).items():
         if re.fullmatch(r'dev[0-9]+', key):
-            fields = dict(part.split('=', 1) for part in value.split(','))
+            fields = device_fields(value)
             path = fields.get('path')
             if path in result:
                 raise ValueError(translate('Duplicated GPU device in the container'))
@@ -121,7 +198,7 @@ def check(config, deployment):
         value = expected[path]
         requested_mode = device.get('mode', '0660')
         mode = value['mode'] if requested_mode == 'preserve-host' else int(requested_mode, 8)
-        gid = value['gid'] if device['gid_strategy'] == 'host-device-gid' else 0
+        gid = container_gid(device, value)
         if (set(fields) - {'path', 'mode', 'gid', 'uid', 'deny-write'}
                 or int(fields.get('mode', '0660'), 8) != mode
                 or int(fields.get('gid', 0)) != gid
