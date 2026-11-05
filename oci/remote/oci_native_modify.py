@@ -171,7 +171,7 @@ def plan(record, candidate, config):
         else: delete.append('env')
     if 'devices' in changed:
         inventory = devices.planned(new)
-        existing = {v['path']: k for k, v in ((k, dict(p.split('=', 1) for p in v.split(',')))
+        existing = {v['path']: k for k, v in ((k, devices.device_fields(v))
                    for k, v in cfg.items() if re.fullmatch(r'dev[0-9]+', k))}
         used = set(existing.values())
         for path, key in existing.items():
@@ -185,7 +185,7 @@ def plan(record, candidate, config):
             info = inventory[path]
             mode = info['mode'] if device.get('mode') == 'preserve-host' else int(device.get('mode', '0660'), 8)
             values[key] = (f"path={path},mode={mode:04o},uid={int(device.get('uid', 0))},"
-                           f"gid={info['gid'] if device['gid_strategy'] == 'host-device-gid' else 0},"
+                           f"gid={devices.container_gid(device, info)},"
                            f"deny-write={1 if device.get('deny_write') else 0}")
     if 'mounts' in changed:
         actual = transaction.mounts(config)

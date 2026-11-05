@@ -531,6 +531,25 @@ def _app_list(catalog: Catalog, ui, applications: list[dict[str, Any]], title: s
             _app_detail(catalog, ui, index[selection])
 
 
+def _new_applications(catalog: Catalog, ui, applications: list[dict[str, Any]], catalog_refresh) -> bool:
+    """The applications added to the catalog since the user last opened this
+    list, ready to install. Returns whether a catalog refresh was asked for."""
+    options, index, header = _app_menu(applications)
+    options = [("refresh", translate("Refresh catalog")), ("", "")] + options
+    title = translate("New applications ({count})").format(count=len(applications))
+    # Opening the list makes them known: the entry stops counting them.
+    catalog_refresh.mark_seen()
+    selection = None
+    while True:
+        selection = ui.choose(header, options, selection, title=title, size=MENU_SIZE, colors=True)
+        if selection is None:
+            return False
+        if selection == "refresh":
+            return True
+        if selection in index:
+            _app_detail(catalog, ui, index[selection])
+
+
 def _search(catalog: Catalog, ui, applications: list[dict[str, Any]]) -> None:
     query = ui.ask(translate("Name or part of the description of the application"), required=False).strip()
     if not query:
@@ -557,6 +576,29 @@ def _search(catalog: Catalog, ui, applications: list[dict[str, Any]]) -> None:
               keep_order=True)
 
 
+COUNTED_LABEL = re.compile(r"^(.*\S) \((\d+)\)$")
+
+
+def _aligned(entries: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """The counts of the menu in one column, two spaces past the longest entry
+    that has one, whatever the language: "Updates available (28)" lines up
+    with "(554)"."""
+    counted = [COUNTED_LABEL.match(label) for _, label in entries]
+    width = max((len(match[1]) for match in counted if match), default=0) + 2
+    return [(tag, f"{match[1]:<{width}}({int(match[2]):>3})" if match else label)
+            for (tag, label), match in zip(entries, counted)]
+
+
+def _installed_count() -> int | None:
+    """How many OCI containers the manage list shows, read from their saved
+    records. None while another operation holds the registry."""
+    from .management import saved_inventory
+    try:
+        return len(saved_inventory(PROJECT_ROOT))
+    except (BlockingIOError, OSError, ValueError):
+        return None
+
+
 def _catalog_options(catalog):
     applications = _installable(catalog.load_index()["applications"])
     categories: dict[str, list[dict[str, Any]]] = {}
@@ -569,13 +611,13 @@ def _catalog_options(catalog):
     category_by_index = {str(number): key for number, key in enumerate(order, 1)}
     options = [
         ("search", translate("Search applications")),
-        ("all", f"{translate('All applications'):<35} ({len(applications):>3})"),
+        ("all", f"{translate('All applications')} ({len(applications)})"),
         ("manage", translate("Manage installed OCI applications")),
-        ("catalog-refresh", translate("Refresh catalog")),
+        ("refresh", translate("Refresh catalog")),
         ("registries", translate("Registry accounts")),
         ("custom", translate("Install an image that is not in the catalog")),
         ("", ""),
-    ] + [(number, f"{translate(labels[key]):<35} ({len(categories[key]):>3})")
+    ] + [(number, f"{translate(labels[key])} ({len(categories[key])})")
          for number, key in category_by_index.items()]
     return applications, categories, labels, category_by_index, options
 
@@ -590,15 +632,30 @@ def interactive(catalog: Catalog) -> int:
         return 1
     applications, categories, labels, category_by_index, options = _catalog_options(catalog)
     selection = "search"
+    refresh_requested = False
     with CatalogRefresh(PROJECT_ROOT, catalog) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
         while True:
             if catalog_refresh.consume():
                 catalog = Catalog(PROJECT_ROOT)
                 applications, categories, labels, category_by_index, options = _catalog_options(catalog)
                 catalog_refresh.recipes = visible_recipes(catalog)
+            if refresh_requested:
+                # Only a refresh the user asked for says that it failed.
+                refresh_requested = False
+                if catalog_refresh.failed:
+                    ui.message(translate("Catalog refresh unavailable; using the local catalog."))
             state = updates.status()
-            entries = ReadableTags(options[:3] + [('updates', updates.label(state))] + options[3:])
-            text = catalog_refresh.describe() + "\n\n" + translate("Select a category or search for applications:")
+            # The catalog entry names the new applications when there are some.
+            installed = _installed_count()
+            shown = []
+            for tag, label in options:
+                if tag == "refresh":
+                    label = catalog_refresh.label()
+                elif tag == "manage" and installed:
+                    label = f"{label} ({installed})"
+                shown.append((tag, label))
+            entries = ReadableTags(_aligned(shown[:3] + [('updates', updates.label(state))] + shown[3:]))
+            text = translate("Select a category or search for applications:")
             if notice := updates.notice(state):
                 text += '\n\n' + notice
             if updates.active and not getattr(ui, 'live_refresh', False):
@@ -606,13 +663,12 @@ def interactive(catalog: Catalog) -> int:
                 updates.wait()
                 continue
             try:
-                kwargs = ({'refresh': lambda: updates.changed() or catalog_refresh.changed()}
-                          if updates.active or catalog_refresh.active else {})
+                # The catalog downloads behind the open menu without closing it:
+                # a new catalog is shown the next time the menu is drawn.
+                kwargs = {'refresh': updates.changed} if updates.active else {}
                 selected = ui.choose(text, entries, selection, size=MENU_SIZE, **kwargs)
             except MenuRefresh:
                 continue
-            finally:
-                catalog_refresh.mark_seen()
             if selected is None:
                 return 0
             selection = selected
@@ -625,8 +681,14 @@ def interactive(catalog: Catalog) -> int:
                 elif selection == "manage":
                     from .management import interactive_management
                     interactive_management(PROJECT_ROOT, ui)
-                elif selection == "catalog-refresh":
-                    catalog_refresh.start(force=True)
+                elif selection == "refresh":
+                    new = [item for item in applications if item["id"] in set(catalog_refresh.new_ids())]
+                    if not new or _new_applications(catalog, ui, new, catalog_refresh):
+                        # Asked for: wait for it and say if it could not be done.
+                        catalog_refresh.start(force=True)
+                        ui.info(translate("Refreshing the application catalog..."))
+                        catalog_refresh.wait()
+                        refresh_requested = True
                 elif selection == "updates":
                     if not updates.active:
                         if state['available']:

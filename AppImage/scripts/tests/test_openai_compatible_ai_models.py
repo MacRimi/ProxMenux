@@ -20,8 +20,9 @@ class CapturingOpenAIProvider(OpenAIProvider):
         super().__init__(*args, **kwargs)
         self.captured_payload = None
 
-    def _make_request(self, url, payload, headers):
+    def _make_request(self, url, payload, headers, timeout=15):
         self.captured_payload = payload
+        self.captured_timeout = timeout
         return {"choices": [{"message": {"content": "ok"}}]}
 
 
@@ -118,6 +119,14 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.assertNotIn("temperature", provider.captured_payload)
         self.assertNotIn("reasoning_effort", provider.captured_payload)
         self.assertNotIn("max_completion_tokens", provider.captured_payload)
+
+    def test_a_request_waits_as_long_as_the_monitor_allows_a_rewrite(self):
+        # A local model behind an OpenAI-compatible endpoint is slow; the
+        # request must not give up before the Monitor's own limit.
+        provider = CapturingOpenAIProvider(api_key="token", model="gemma-3-1b-it-Q4_K_M",
+                                           base_url="http://192.0.2.22:8080/v1")
+        provider.generate("system", "user", max_tokens=100)
+        self.assertEqual(provider.captured_timeout, notification_manager.AI_REWRITE_TIMEOUT_SECONDS)
 
     def test_official_openai_reasoning_model_still_uses_reasoning_contract(self):
         provider = CapturingOpenAIProvider(
