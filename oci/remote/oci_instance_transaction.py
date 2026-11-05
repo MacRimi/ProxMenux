@@ -745,6 +745,7 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
     if desired['rootfs'] != deployment['rootfs']:
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
     actual = mounts(config)
+    gpu_devices.preserve_recorded_container_gids(record, candidate, config)
     gpu_devices.check(config, deployment)
     if baseline:
         gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)

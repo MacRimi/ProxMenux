@@ -202,7 +202,8 @@ class InputAndCancellationTests(StorageFixture):
 
     def test_real_menu_error_handler_has_slovak_heading_and_preserves_detail(self):
         ui=Mock();ui.choose.side_effect=['custom',None]
-        with patch.object(cli,'interactive_ui',return_value=ui),patch.object(custom,'explore',side_effect=ValueError('fiction-detail')), \
+        with patch.object(cli,'interactive_ui',return_value=ui),patch.object(cli,'_catalog_options',return_value=([],{}, {}, {}, [])), \
+                patch.object(custom,'explore',side_effect=ValueError('fiction-detail')), \
                 patch.object(updates,'UpdateCheck') as checker, \
                 patch.object(catalog_refresh,'CatalogRefresh') as catalog_checker:
             # Keep this wording/error-handler test offline and free of writes.

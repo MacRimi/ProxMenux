@@ -585,7 +585,7 @@ class NativeAdapter:
             if sha(config) != child.get('staged_config_sha256'):
                 raise ValueError(translate('The configuration of a new member changed after it was created'))
             member_tx.check_runtime_mounts(config, original['deployment'])
-            member_tx.gpu_devices.check(config, original['deployment'])
+            member_tx.gpu_devices.check(config, child['candidate_contract']['deployment'])
             child['candidate_host_sources'] = member_tx.candidate_host_sources(journal, child)
             child['validated_config_sha256'] = sha(config)
             instances.write(journal, child)
