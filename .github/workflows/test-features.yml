@@ -7,7 +7,9 @@ on:
       - 'AppImage/scripts/notification_manager.py'
       - 'AppImage/scripts/notification_templates.py'
       - 'AppImage/scripts/ai_context_enrichment.py'
-      - 'AppImage/scripts/ai_providers/base.py'
+      - 'AppImage/scripts/ai_providers/**'
+      - 'AppImage/config/verified_ai_models.json'
+      - 'AppImage/scripts/tests/test_groq_model_recommendations.py'
       - 'AppImage/scripts/tests/test_backup_ai_diagnostics.py'
       - 'AppImage/scripts/notification_channels.py'
       - 'AppImage/components/apprise-service-help.tsx'
@@ -72,7 +74,9 @@ on:
       - 'AppImage/scripts/notification_manager.py'
       - 'AppImage/scripts/notification_templates.py'
       - 'AppImage/scripts/ai_context_enrichment.py'
-      - 'AppImage/scripts/ai_providers/base.py'
+      - 'AppImage/scripts/ai_providers/**'
+      - 'AppImage/config/verified_ai_models.json'
+      - 'AppImage/scripts/tests/test_groq_model_recommendations.py'
       - 'AppImage/scripts/tests/test_backup_ai_diagnostics.py'
       - 'AppImage/scripts/notification_channels.py'
       - 'AppImage/components/apprise-service-help.tsx'
@@ -189,6 +193,19 @@ jobs:
         run: |
           bash -n scripts/gpu_tpu/nvidia_installer.sh
           python3 -B -m unittest discover -s tests -p 'test_nvidia*.py' -v
+
+  ai-model-availability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test model ordering and curated availability without network or credentials
+        run: python -B -m unittest discover -s AppImage/scripts/tests -p test_groq_model_recommendations.py -v
 
   installer-and-release:
     runs-on: ubuntu-latest
