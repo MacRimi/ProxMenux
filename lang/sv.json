@@ -4398,6 +4398,7 @@
   "Name or part of the option or of the application": "Namn eller del av alternativet eller applikationen",
   "Name:": "Namn:",
   "Named accounts need private mode. Stop the container, set public: false in /config/config.js, start it again and create each user with: pct exec <CTID> -- env THELOUNGE_HOME=/config s6-setuidgid abc thelounge add <user>": "Namngivna konton behöver privat läge. Stoppa behållaren, ställ in offentligt: falskt i /config/config.js, starta den igen och skapa varje användare med: pct exec <CTID> - env THELOUNGE_HOME=/config s6-setuidgid abc thelounge addera <user>",
+  "Native Borg is unavailable. Install the native borgbackup package on this host to use Borg backups.": "En inbyggd version av Borg är inte tillgänglig. Installera paketet borgbackup för värdens arkitektur för att använda Borg-säkerhetskopior.",
   "Needed:": "Behövs:",
   "Needs": "Kräver",
   "Neither /etc/kernel/cmdline nor /etc/default/grub found.": "Varken /etc/kernel/cmdline eller /etc/default/grub hittades.",
