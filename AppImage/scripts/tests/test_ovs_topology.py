@@ -30,7 +30,8 @@ def table(headings, *rows):
 
 def fixture():
     # Mixed Linux/OVS host, named bond without a kernel netdev, tagged
-    # internal port, direct guest and guest behind a Proxmox firewall.
+    # internal port, direct guest and guest behind a Proxmox firewall,
+    # which on OVS links its fwbr bridge through the internal port fwlnNoM.
     return (
         table('_uuid,name,ports', ['b1', 'switch0', refs('p0', 'p1', 'p2', 'p3', 'p4', 'p5')]),
         table('_uuid,name,interfaces,bond_mode,tag,trunks',
@@ -39,10 +40,10 @@ def fixture():
               ['p2', 'uplink', refs('i2', 'i3'), 'balance-tcp', ['set', []], ['set', []]],
               ['p3', 'vlan100', uuid('i4'), '', 100, ['set', []]],
               ['p4', 'tap103i0', uuid('i5'), '', 100, ['set', []]],
-              ['p5', 'fwpr115p0', uuid('i6'), '', 10, ['set', []]]),
+              ['p5', 'fwln115o0', uuid('i6'), '', 10, ['set', []]]),
         table('_uuid,name,type', ['i0', 'switch0', 'internal'], ['i1', 'eno1', ''],
               ['i2', 'eno2', ''], ['i3', 'eno3', ''], ['i4', 'vlan100', 'internal'],
-              ['i5', 'tap103i0', ''], ['i6', 'fwpr115p0', 'internal']))
+              ['i5', 'tap103i0', ''], ['i6', 'fwln115o0', 'internal']))
 
 
 class OvsTopology(unittest.TestCase):
@@ -114,7 +115,7 @@ class OvsTopology(unittest.TestCase):
               '_ensure_net_rate_sampler': lambda: None, '_compute_per_nic_rates_live': lambda _: {},
               '_is_bond_master': lambda _: False, '_is_physical_dev': lambda name: name.startswith('eno'),
               '_ethtool_max_speed': lambda _: 1000,
-              '_iface_master': lambda name: {'tap115i0': 'fwbr115i0', 'fwpr115p0': 'ovs-system'}.get(name),
+              '_iface_master': lambda name: {'tap115i0': 'fwbr115i0', 'fwln115o0': 'ovs-system'}.get(name),
               'extract_vmid_from_interface': lambda name: (103 if '103' in name else 115, 'vm'),
               'get_bridge_info': lambda _: {'members': [], 'physical_interface': None,
                                              'physical_duplex': 'unknown', 'bond_slaves': []}}
@@ -123,7 +124,8 @@ class OvsTopology(unittest.TestCase):
 
     def test_api_preserves_linux_bridge_and_assigns_ovs_guests_and_bond(self):
         ns = self.api_namespace()
-        with patch('os.path.exists', return_value=True):
+        # OVS creates no fwpr peer for the firewall bridge.
+        with patch('os.path.exists', side_effect=lambda path: 'fwpr' not in str(path)):
             result = ns['get_network_info']()
         self.assertNotIn('error', result)
         self.assertEqual({i['name'] for i in result['bridge_interfaces']}, {'switch0', 'vmbr1'})

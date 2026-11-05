@@ -6266,13 +6266,17 @@ def _resolve_bridge_owner(iface_name):
     if not master:
         return None
     if master.startswith('fwbr'):
-        fwpr = re.sub(r'^fwbr', 'fwpr', master)
-        fwpr = re.sub(r'i(\d+)$', r'p\1', fwpr)
+        # A Linux bridge reaches the firewall bridge through fwprNpM; an OVS
+        # bridge through its own internal port fwlnNoM.
+        suffix = master[len('fwbr'):]
+        links = (re.sub(r'i(\d+)$', r'p\1', 'fwpr' + suffix),
+                 re.sub(r'i(\d+)$', r'o\1', 'fwln' + suffix))
         try:
-            if os.path.exists(f'/sys/class/net/{fwpr}'):
-                real = ovs_owners.get(fwpr) or _iface_master(fwpr)
-                if real:
-                    return real
+            for link in links:
+                if os.path.exists(f'/sys/class/net/{link}'):
+                    real = ovs_owners.get(link) or _iface_master(link)
+                    if real:
+                        return real
         except Exception:
             pass
     return master
