@@ -408,3 +408,13 @@ jobs:
         run: |
           npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           NODE_PATH="$PWD/.github/ci/offline-node/node_modules" node AppImage/tests/pbs-navigation.cjs
+
+  native-image-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exercise private images with isolated mapped Linux readers
+        run: sudo /usr/bin/python3 -B -m unittest discover -s oci/tests -p test_native_import_access.py -v

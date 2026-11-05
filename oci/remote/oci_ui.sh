@@ -127,7 +127,7 @@ oci_create_container() {
     total_mib=$(python3 "$VERIFY_OCI_ARCHIVE" --extracted-mib "$path" 2>/dev/null || printf '0')
     [[ $total_mib =~ ^[0-9]+$ ]] || total_mib=0
   fi
-  pct create "$vmid" "$archive" "$@" >>"$log" 2>&1 &
+  python3 "${SCRIPT_DIR}/oci_native_import.py" "$vmid" "$archive" "$path" "$@" >>"$log" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
     if mountpoint -q "$rootfs" 2>/dev/null; then
