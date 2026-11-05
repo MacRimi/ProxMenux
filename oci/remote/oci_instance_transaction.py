@@ -472,7 +472,25 @@ def effective_healthcheck(template):
     return {'type': 'running', 'timeout_seconds': 90, 'stability_seconds': 20}
 
 
+# The Tailscale recipe first served its web interface on 0.0.0.0:5252. Once the
+# web client of Tailscale is turned on, tailscaled takes that port on its own
+# address and the container stopped at every start; subnet routes also need
+# forwarding inside the container. A saved recipe with that exact command gets
+# the current one. A command the user set in Proxmox is kept by the record.
+TAILSCALE_PREVIOUS_ENTRYPOINT = ('/bin/sh -c "tailscaled --state=/var/lib/tailscale/tailscaled.state & sleep 10; '
+                                 'tailscale web --listen 0.0.0.0:5252"')
+TAILSCALE_ENTRYPOINT = ('/bin/sh -c \'sysctl -w net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1 >/dev/null 2>&1; tailscaled --state=/var/lib/tailscale/tailscaled.state & i=0; while [ $i -lt 60 ]; do lan=$(ip -4 addr show dev eth0 2>/dev/null | sed -n "s/.*inet \\([0-9.]*\\)\\/.*/\\1/p" | head -n 1); [ -n "$lan" ] && break; i=$((i+1)); sleep 1; done; sleep 10; exec tailscale web --listen "${lan:-0.0.0.0}:5252"\'')
+
+
+def current_recipe(template):
+    runtime = template.get('proxmox', {}).get('installer_profile', {}).get('runtime', {})
+    if (template.get('id') == 'image-tailscale'
+            and runtime.get('compose_entrypoint') == TAILSCALE_PREVIOUS_ENTRYPOINT):
+        runtime['compose_entrypoint'] = TAILSCALE_ENTRYPOINT
+
+
 def with_default_healthcheck(contract):
+    current_recipe(contract['template'])
     check = effective_healthcheck(contract['template'])
     if check and check.get('type') != 'haos':
         contract['template'].setdefault('proxmox', {}).setdefault('installer_profile', {})['startup_healthcheck'] = check
