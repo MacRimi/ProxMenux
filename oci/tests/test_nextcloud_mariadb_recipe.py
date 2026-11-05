@@ -36,6 +36,8 @@ class NextcloudMariaDBTests(unittest.TestCase):
             'db': 'mariadb:10.11', 'redis': 'redis:7-alpine'})
         self.assertEqual(t['first_run']['endpoints'][0]['scheme'], 'https')
         self.assertEqual(t['first_run']['endpoints'][0]['port'], 443)
+        self.assertEqual(t['first_run']['credentials'][0]['password_environment'], 'NEXTCLOUD_ADMIN_PASSWORD')
+        self.assertEqual(t['first_run']['credentials'][0]['username'], 'admin')
         self.assertTrue(t['catalog_ui']['icon'].startswith('https://'))
         self.assertEqual(set(services['nextcloud']['depends_on']), {'db', 'redis'})
         for name in ('db', 'redis'):
@@ -64,6 +66,11 @@ class NextcloudMariaDBTests(unittest.TestCase):
                        for name, s in services.items()}
                 self.assertEqual(env['nextcloud']['MYSQL_PASSWORD'], env['db']['MYSQL_PASSWORD'])
                 self.assertNotEqual(env['db']['MYSQL_PASSWORD'], env['db']['MYSQL_ROOT_PASSWORD'])
+                # The administrator is created by ProxMenux, not by whoever opens the page first.
+                self.assertEqual(len(env['nextcloud']['NEXTCLOUD_ADMIN_PASSWORD']), 64)
+                self.assertNotIn(env['nextcloud']['NEXTCLOUD_ADMIN_PASSWORD'],
+                                 (env['db']['MYSQL_PASSWORD'], env['db']['MYSQL_ROOT_PASSWORD']))
+                self.assertNotIn('NEXTCLOUD_ADMIN_PASSWORD', env['db'])
                 self.assertEqual(env['nextcloud']['MYSQL_HOST'], 'db')
                 self.assertEqual([s['name'] for s in plan['services']], ['db', 'redis', 'nextcloud'])
                 self.assertEqual([s['name'] for s in plan['services'] if s.get('frontend')], ['nextcloud'])
@@ -78,6 +85,9 @@ class NextcloudMariaDBTests(unittest.TestCase):
                                  {'nextcloud': 2048, 'db': 1024, 'redis': 512})
                 runtime = services['nextcloud']['template']['proxmox']['installer_profile']['runtime']
                 self.assertIn('exec /init', runtime['compose_entrypoint'][2])
+                # The private umask of the bootstrap does not reach the application.
+                self.assertTrue(runtime['compose_entrypoint'][2].startswith('(umask 077; '))
+                self.assertTrue(runtime['compose_entrypoint'][2].endswith('| php); exec /init'))
                 self.assertNotIn('\n', runtime['compose_entrypoint'][2])
                 self.assertNotIn('\r', runtime['compose_entrypoint'][2])
 
@@ -109,7 +119,8 @@ class NextcloudMariaDBTests(unittest.TestCase):
             test_source = source.replace('/config/www/nextcloud/config', str(folder)).replace('/app/www/src/config', str(image_config))
             script = entry[2].replace(payload, base64.b64encode(test_source.encode()).decode()).replace('exec /init', 'exit 0')
             password = "test-'quote\\backslash$not-a-real-secret\nline"
-            env = dict(os.environ, MYSQL_HOST='db', MYSQL_DATABASE='nextcloud', MYSQL_USER='nextcloud', MYSQL_PASSWORD=password)
+            env = dict(os.environ, MYSQL_HOST='db', MYSQL_DATABASE='nextcloud', MYSQL_USER='nextcloud', MYSQL_PASSWORD=password,
+                       NEXTCLOUD_ADMIN_PASSWORD='admin-' + password)
             subprocess.run(['/bin/sh', '-ec', script], env=env, check=True, capture_output=True)
             for name, content in defaults.items(): self.assertEqual((folder / name).read_text(), content)
             autoconfig = folder / 'autoconfig.php'
@@ -122,7 +133,7 @@ class NextcloudMariaDBTests(unittest.TestCase):
             self.assertEqual(values['dbpass'], password)
             self.assertEqual(values['dbhost'], 'db')
             self.assertEqual(values['directory'], '/data')
-            self.assertNotIn('adminpass', values)
+            self.assertEqual((values['adminlogin'], values['adminpass']), ('admin', 'admin-' + password))
             cache = json.loads(subprocess.check_output(['php', '-r', 'require $argv[1]; echo json_encode($CONFIG);', str(redis)]))
             self.assertEqual(cache['redis']['host'], 'redis')
             self.assertEqual(cache['memcache.locking'], '\\OC\\Memcache\\Redis')
@@ -136,6 +147,24 @@ class NextcloudMariaDBTests(unittest.TestCase):
             subprocess.run(['/bin/sh', '-ec', script], env=env, check=True, capture_output=True)
             self.assertFalse(autoconfig.exists())
             self.assertFalse((folder / 'CAN_INSTALL').exists())
+
+    @unittest.skipUnless(shutil.which('php'), 'PHP CLI is needed to execute the bootstrap contract')
+    def test_bootstrap_refuses_links_and_needs_the_administrator_password(self):
+        source = (ROOT / 'examples/nextcloud-mariadb-bootstrap.php').read_text()
+        base = dict(os.environ, MYSQL_HOST='db', MYSQL_DATABASE='nextcloud', MYSQL_USER='nextcloud', MYSQL_PASSWORD='x')
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / 'config'
+            folder.mkdir()
+            target = Path(temp) / 'outside'
+            (folder / 'autoconfig.php').symlink_to(target)
+            script = source.replace('/config/www/nextcloud/config', str(folder)).replace('/app/www/src/config', str(Path(temp) / 'none'))
+            done = subprocess.run(['php'], input=script.encode(), env=dict(base, NEXTCLOUD_ADMIN_PASSWORD='y'), capture_output=True)
+            self.assertNotEqual(done.returncode, 0)
+            self.assertFalse(target.exists())
+            (folder / 'autoconfig.php').unlink()
+            done = subprocess.run(['php'], input=script.encode(), env=base, capture_output=True)
+            self.assertNotEqual(done.returncode, 0)
+            self.assertFalse((folder / 'autoconfig.php').exists())
 
     @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid() == 0 and shutil.which('php'),
                          'Linux root is needed to reproduce existing-volume ownership')

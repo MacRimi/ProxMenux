@@ -247,12 +247,19 @@ def relay_child_output(stream):
     return result
 
 
+def http_url(scheme, host, port, path):
+    """Without the default port of its scheme: an application that records its
+    first request, like Nextcloud's trusted domain, sees the host a browser sends."""
+    default = (scheme, int(port)) in (('https', 443), ('http', 80))
+    return f"{scheme}://{host}{'' if default else f':{port}'}{path}"
+
+
 def assign_health_address(service):
     """Bind a generated dependency probe to its allocated private address."""
     check = service['healthcheck']
     if check['type'] == 'http':
         endpoint = check['endpoint']
-        check['url'] = f"{endpoint['scheme']}://{service['ip']}:{endpoint['port']}{endpoint['path']}"
+        check['url'] = http_url(endpoint['scheme'], service['ip'], endpoint['port'], endpoint['path'])
     elif check['type'] == 'tcp':
         check['host'] = service['ip']
 
@@ -383,7 +390,7 @@ def lan_access_urls(services, subnet, strict=True):
             if not candidates:
                 raise RuntimeError(f"{translate('No LAN address was obtained for the service:')} {service['name']}")
             urls.append({'label':service['name'],
-                         'url':f"{endpoint['scheme']}://{candidates[0]}:{endpoint['port']}{endpoint['path']}"})
+                         'url':http_url(endpoint['scheme'], candidates[0], endpoint['port'], endpoint['path'])})
         except Exception:
             if strict:
                 raise

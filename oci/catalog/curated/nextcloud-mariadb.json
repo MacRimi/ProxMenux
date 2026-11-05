@@ -33,7 +33,7 @@
     "documentation": "https://docs.linuxserver.io/images/docker-nextcloud/",
     "repository": "https://github.com/linuxserver/docker-nextcloud",
     "tips": [
-      "Create the administrator in the web setup; MariaDB and /data are prefilled.",
+      "ProxMenux generates the administrator password and shows it at the end of the installation. Change it after the first login.",
       "Use managed storage for /config and MariaDB. A host/NAS directory can be selected for /data and needs a separate backup.",
       "Redis locking is configured automatically. Existing Nextcloud configuration files are preserved.",
       "Use a trusted HTTPS reverse proxy. Upgrade Nextcloud one major version at a time."
@@ -89,6 +89,13 @@
         "example": "nextcloud",
         "required": true,
         "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NEXTCLOUD_ADMIN_PASSWORD",
+        "example": "${GENERATED_ADMIN_PASSWORD}",
+        "required": true,
+        "sensitive": true,
         "source": "docker-compose"
       },
       {
@@ -272,7 +279,7 @@
           "entrypoint": [
             "/bin/sh",
             "-ec",
-            "umask 077; printf %s PD9waHAKLy8gUHJlcGFyZSBhIGZyZXNoIExpbnV4U2VydmVyIE5leHRjbG91ZCB3aXRob3V0IHJlcGxhY2luZyBwZXJzaXN0ZW50IHVzZXIgc2V0dGluZ3MuCiRkaXIgPSAnL2NvbmZpZy93d3cvbmV4dGNsb3VkL2NvbmZpZyc7CmlmICghaXNfZGlyKCRkaXIpICYmICFta2RpcigkZGlyLCAwNzcwLCB0cnVlKSkgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignQ2Fubm90IGNyZWF0ZSB0aGUgTmV4dGNsb3VkIGNvbmZpZyBkaXJlY3RvcnknKTsgfQppZiAoIWlzX2ZpbGUoJGRpciAuICcvY29uZmlnLnBocCcpICYmICFpc19maWxlKCRkaXIgLiAnL2F1dG9jb25maWcucGhwJykpIHsKICAgIGZvcmVhY2ggKFsnTVlTUUxfSE9TVCcsICdNWVNRTF9EQVRBQkFTRScsICdNWVNRTF9VU0VSJywgJ01ZU1FMX1BBU1NXT1JEJ10gYXMgJG5hbWUpIHsKICAgICAgICBpZiAoZ2V0ZW52KCRuYW1lKSA9PT0gZmFsc2UgfHwgZ2V0ZW52KCRuYW1lKSA9PT0gJycpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ01pc3NpbmcgTmV4dGNsb3VkIGRhdGFiYXNlIHNldHRpbmc6ICcgLiAkbmFtZSk7IH0KICAgIH0KICAgIC8vIEtlZXAgdGhlIGRlZmF1bHRzIHRoYXQgTGludXhTZXJ2ZXIgY29waWVzIG9ubHkgaW50byBhbiBlbXB0eSBjb25maWcgZGlyZWN0b3J5LgogICAgJGRlZmF1bHRzID0gJy9hcHAvd3d3L3NyYy9jb25maWcnOwogICAgaWYgKGlzX2RpcigkZGVmYXVsdHMpKSB7CiAgICAgICAgZm9yZWFjaCAobmV3IERpcmVjdG9yeUl0ZXJhdG9yKCRkZWZhdWx0cykgYXMgJGZpbGUpIHsKICAgICAgICAgICAgaWYgKCRmaWxlLT5pc0RvdCgpIHx8ICEkZmlsZS0+aXNGaWxlKCkpIHsgY29udGludWU7IH0KICAgICAgICAgICAgJHRhcmdldCA9ICRkaXIgLiAnLycgLiAkZmlsZS0+Z2V0RmlsZW5hbWUoKTsKICAgICAgICAgICAgaWYgKCFmaWxlX2V4aXN0cygkdGFyZ2V0KSAmJiAhY29weSgkZmlsZS0+Z2V0UGF0aG5hbWUoKSwgJHRhcmdldCkpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCBzZWVkIHRoZSBOZXh0Y2xvdWQgY29uZmlndXJhdGlvbicpOyB9CiAgICAgICAgfQogICAgfQogICAgJHNldHRpbmdzID0gWydkYnR5cGUnID0+ICdteXNxbCcsICdkYmhvc3QnID0+IGdldGVudignTVlTUUxfSE9TVCcpLCAnZGJuYW1lJyA9PiBnZXRlbnYoJ01ZU1FMX0RBVEFCQVNFJyksICdkYnVzZXInID0+IGdldGVudignTVlTUUxfVVNFUicpLCAnZGJwYXNzJyA9PiBnZXRlbnYoJ01ZU1FMX1BBU1NXT1JEJyksICdkaXJlY3RvcnknID0+ICcvZGF0YSddOwogICAgJHBhdGggPSAkZGlyIC4gJy9hdXRvY29uZmlnLnBocCc7CiAgICBpZiAoZmlsZV9wdXRfY29udGVudHMoJHBhdGgsICI8P3BocFxuXCRBVVRPQ09ORklHID0gIiAuIHZhcl9leHBvcnQoJHNldHRpbmdzLCB0cnVlKSAuICI7XG4iLCBMT0NLX0VYKSA9PT0gZmFsc2UpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCB3cml0ZSB0aGUgTmV4dGNsb3VkIGRhdGFiYXNlIGNvbmZpZ3VyYXRpb24nKTsgfQogICAgY2htb2QoJHBhdGgsIDA2MDApOwogICAgLy8gRXhpc3RpbmcgaW5zdGFsbGF0aW9ucyBza2lwIExpbnV4U2VydmVyJ3MgZmlyc3QtcnVuIG93bmVyc2hpcCBzZXR1cC4KICAgIGlmICghY2hvd24oJHBhdGgsIGZpbGVvd25lcigkZGlyKSkgfHwgIWNoZ3JwKCRwYXRoLCBmaWxlZ3JvdXAoJGRpcikpKSB7IHRocm93IG5ldyBSdW50aW1lRXhjZXB0aW9uKCdDYW5ub3Qgc2V0IE5leHRjbG91ZCBjb25maWd1cmF0aW9uIG93bmVyc2hpcCcpOyB9Cn0KJHBhdGggPSAkZGlyIC4gJy9wcm94bWVudXgtcmVkaXMuY29uZmlnLnBocCc7Ci8vIEluc3RhbGxlZCBpbnN0YW5jZXMga2VlcCB0aGVpciBleGlzdGluZyBjYWNoZSBjb25maWd1cmF0aW9uIHVuY2hhbmdlZC4KaWYgKCFpc19maWxlKCRwYXRoKSAmJiAhaXNfZmlsZSgkZGlyIC4gJy9jb25maWcucGhwJykpIHsKICAgICRzZXR0aW5ncyA9IFsnZmlsZWxvY2tpbmcuZW5hYmxlZCcgPT4gdHJ1ZSwgJ21lbWNhY2hlLmxvY2FsJyA9PiAnXE9DXE1lbWNhY2hlXEFQQ3UnLCAnbWVtY2FjaGUubG9ja2luZycgPT4gJ1xPQ1xNZW1jYWNoZVxSZWRpcycsICdyZWRpcycgPT4gWydob3N0JyA9PiAncmVkaXMnLCAncG9ydCcgPT4gNjM3OSwgJ3RpbWVvdXQnID0+IDAuMF1dOwogICAgaWYgKGZpbGVfcHV0X2NvbnRlbnRzKCRwYXRoLCAiPD9waHBcblwkQ09ORklHID0gIiAuIHZhcl9leHBvcnQoJHNldHRpbmdzLCB0cnVlKSAuICI7XG4iLCBMT0NLX0VYKSA9PT0gZmFsc2UpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCB3cml0ZSB0aGUgTmV4dGNsb3VkIFJlZGlzIGNvbmZpZ3VyYXRpb24nKTsgfQogICAgY2htb2QoJHBhdGgsIDA2MDApOwogICAgLy8gRXhpc3RpbmcgaW5zdGFsbGF0aW9ucyBza2lwIExpbnV4U2VydmVyJ3MgZmlyc3QtcnVuIG93bmVyc2hpcCBzZXR1cC4KICAgIGlmICghY2hvd24oJHBhdGgsIGZpbGVvd25lcigkZGlyKSkgfHwgIWNoZ3JwKCRwYXRoLCBmaWxlZ3JvdXAoJGRpcikpKSB7IHRocm93IG5ldyBSdW50aW1lRXhjZXB0aW9uKCdDYW5ub3Qgc2V0IE5leHRjbG91ZCBjb25maWd1cmF0aW9uIG93bmVyc2hpcCcpOyB9Cn0K | base64 -d | php; exec /init"
+            "(umask 077; printf %s PD9waHAKLy8gUHJlcGFyZSBhIGZyZXNoIExpbnV4U2VydmVyIE5leHRjbG91ZCB3aXRob3V0IHJlcGxhY2luZyBwZXJzaXN0ZW50IHVzZXIgc2V0dGluZ3MuCiRkaXIgPSAnL2NvbmZpZy93d3cvbmV4dGNsb3VkL2NvbmZpZyc7CnVtYXNrKDAwNzcpOwppZiAoIWlzX2RpcigkZGlyKSAmJiAhbWtkaXIoJGRpciwgMDc3MCwgdHJ1ZSkpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCBjcmVhdGUgdGhlIE5leHRjbG91ZCBjb25maWcgZGlyZWN0b3J5Jyk7IH0KLy8gVGhlIGRpcmVjdG9yeSBiZWxvbmdzIHRvIHRoZSBhcHBsaWNhdGlvbiB1c2VyLiBDcmVhdGUgZWFjaCBmaWxlIHdpdGhvdXQKLy8gZm9sbG93aW5nIGEgbGluayBwbGFjZWQgdGhlcmUsIGFuZCBnaXZlIGl0IHRvIHRoYXQgdXNlciB3aXRob3V0IGZvbGxvd2luZyBvbmUuCmZ1bmN0aW9uIGNyZWF0ZV9wcml2YXRlKCRwYXRoLCAkY29udGVudCwgJG93bmVyKSB7CiAgICAkaGFuZGxlID0gQGZvcGVuKCRwYXRoLCAneCcpOwogICAgaWYgKCRoYW5kbGUgPT09IGZhbHNlIHx8IGZ3cml0ZSgkaGFuZGxlLCAkY29udGVudCkgIT09IHN0cmxlbigkY29udGVudCkgfHwgIWZjbG9zZSgkaGFuZGxlKSkgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignQ2Fubm90IHdyaXRlICcgLiBiYXNlbmFtZSgkcGF0aCkpOyB9CiAgICBpZiAoJG93bmVyICYmICghbGNob3duKCRwYXRoLCBmaWxlb3duZXIoJG93bmVyKSkgfHwgIWxjaGdycCgkcGF0aCwgZmlsZWdyb3VwKCRvd25lcikpKSkgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignQ2Fubm90IHNldCBOZXh0Y2xvdWQgY29uZmlndXJhdGlvbiBvd25lcnNoaXAnKTsgfQp9CmlmICghaXNfZmlsZSgkZGlyIC4gJy9jb25maWcucGhwJykgJiYgIWlzX2ZpbGUoJGRpciAuICcvYXV0b2NvbmZpZy5waHAnKSkgewogICAgZm9yZWFjaCAoWydNWVNRTF9IT1NUJywgJ01ZU1FMX0RBVEFCQVNFJywgJ01ZU1FMX1VTRVInLCAnTVlTUUxfUEFTU1dPUkQnLCAnTkVYVENMT1VEX0FETUlOX1BBU1NXT1JEJ10gYXMgJG5hbWUpIHsKICAgICAgICBpZiAoZ2V0ZW52KCRuYW1lKSA9PT0gZmFsc2UgfHwgZ2V0ZW52KCRuYW1lKSA9PT0gJycpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ01pc3NpbmcgTmV4dGNsb3VkIHNldHRpbmc6ICcgLiAkbmFtZSk7IH0KICAgIH0KICAgIC8vIEtlZXAgdGhlIGRlZmF1bHRzIHRoYXQgTGludXhTZXJ2ZXIgY29waWVzIG9ubHkgaW50byBhbiBlbXB0eSBjb25maWcgZGlyZWN0b3J5LgogICAgJGRlZmF1bHRzID0gJy9hcHAvd3d3L3NyYy9jb25maWcnOwogICAgaWYgKGlzX2RpcigkZGVmYXVsdHMpKSB7CiAgICAgICAgZm9yZWFjaCAobmV3IERpcmVjdG9yeUl0ZXJhdG9yKCRkZWZhdWx0cykgYXMgJGZpbGUpIHsKICAgICAgICAgICAgaWYgKCRmaWxlLT5pc0RvdCgpIHx8ICEkZmlsZS0+aXNGaWxlKCkpIHsgY29udGludWU7IH0KICAgICAgICAgICAgJHRhcmdldCA9ICRkaXIgLiAnLycgLiAkZmlsZS0+Z2V0RmlsZW5hbWUoKTsKICAgICAgICAgICAgaWYgKCFmaWxlX2V4aXN0cygkdGFyZ2V0KSAmJiAhaXNfbGluaygkdGFyZ2V0KSkgeyBjcmVhdGVfcHJpdmF0ZSgkdGFyZ2V0LCBmaWxlX2dldF9jb250ZW50cygkZmlsZS0+Z2V0UGF0aG5hbWUoKSksIG51bGwpOyB9CiAgICAgICAgfQogICAgfQogICAgLy8gV2l0aCB0aGUgYWRtaW5pc3RyYXRvciBpbmNsdWRlZCwgTmV4dGNsb3VkIGluc3RhbGxzIGl0c2VsZiBvbiB0aGUgZmlyc3QKICAgIC8vIHJlcXVlc3QsIHNvIG5vYm9keSBlbHNlIG9uIHRoZSBuZXR3b3JrIGNhbiBjbGFpbSB0aGUgc2V0dXAgcGFnZS4KICAgICRzZXR0aW5ncyA9IFsnZGJ0eXBlJyA9PiAnbXlzcWwnLCAnZGJob3N0JyA9PiBnZXRlbnYoJ01ZU1FMX0hPU1QnKSwgJ2RibmFtZScgPT4gZ2V0ZW52KCdNWVNRTF9EQVRBQkFTRScpLCAnZGJ1c2VyJyA9PiBnZXRlbnYoJ01ZU1FMX1VTRVInKSwgJ2RicGFzcycgPT4gZ2V0ZW52KCdNWVNRTF9QQVNTV09SRCcpLCAnZGlyZWN0b3J5JyA9PiAnL2RhdGEnLCAnYWRtaW5sb2dpbicgPT4gJ2FkbWluJywgJ2FkbWlucGFzcycgPT4gZ2V0ZW52KCdORVhUQ0xPVURfQURNSU5fUEFTU1dPUkQnKV07CiAgICAvLyBFeGlzdGluZyBpbnN0YWxsYXRpb25zIHNraXAgTGludXhTZXJ2ZXIncyBmaXJzdC1ydW4gb3duZXJzaGlwIHNldHVwLgogICAgY3JlYXRlX3ByaXZhdGUoJGRpciAuICcvYXV0b2NvbmZpZy5waHAnLCAiPD9waHBcblwkQVVUT0NPTkZJRyA9ICIgLiB2YXJfZXhwb3J0KCRzZXR0aW5ncywgdHJ1ZSkgLiAiO1xuIiwgJGRpcik7Cn0KJHBhdGggPSAkZGlyIC4gJy9wcm94bWVudXgtcmVkaXMuY29uZmlnLnBocCc7Ci8vIEluc3RhbGxlZCBpbnN0YW5jZXMga2VlcCB0aGVpciBleGlzdGluZyBjYWNoZSBjb25maWd1cmF0aW9uIHVuY2hhbmdlZC4KaWYgKCFpc19maWxlKCRwYXRoKSAmJiAhaXNfbGluaygkcGF0aCkgJiYgIWlzX2ZpbGUoJGRpciAuICcvY29uZmlnLnBocCcpKSB7CiAgICAkc2V0dGluZ3MgPSBbJ2ZpbGVsb2NraW5nLmVuYWJsZWQnID0+IHRydWUsICdtZW1jYWNoZS5sb2NhbCcgPT4gJ1xPQ1xNZW1jYWNoZVxBUEN1JywgJ21lbWNhY2hlLmxvY2tpbmcnID0+ICdcT0NcTWVtY2FjaGVcUmVkaXMnLCAncmVkaXMnID0+IFsnaG9zdCcgPT4gJ3JlZGlzJywgJ3BvcnQnID0+IDYzNzksICd0aW1lb3V0JyA9PiAwLjBdXTsKICAgIGNyZWF0ZV9wcml2YXRlKCRwYXRoLCAiPD9waHBcblwkQ09ORklHID0gIiAuIHZhcl9leHBvcnQoJHNldHRpbmdzLCB0cnVlKSAuICI7XG4iLCAkZGlyKTsKfQo= | base64 -d | php); exec /init"
           ],
           "environment": {
             "PUID": "${PUID}",
@@ -281,7 +288,8 @@
             "MYSQL_HOST": "db",
             "MYSQL_DATABASE": "nextcloud",
             "MYSQL_USER": "nextcloud",
-            "MYSQL_PASSWORD": "${GENERATED_DB_PASSWORD}"
+            "MYSQL_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "NEXTCLOUD_ADMIN_PASSWORD": "${GENERATED_ADMIN_PASSWORD}"
           },
           "image": "lscr.io/linuxserver/nextcloud:latest",
           "ports": [
@@ -403,6 +411,16 @@
       ],
       "generated_secrets": [
         {
+          "id": "generated-admin-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "nextcloud",
+              "environment_variable": "NEXTCLOUD_ADMIN_PASSWORD"
+            }
+          ]
+        },
+        {
           "id": "generated-db-password",
           "strategy": "generate-cryptographically-random-at-install",
           "bindings": [
@@ -439,7 +457,18 @@
         "source": "linuxserver-nextcloud-documentation"
       }
     ],
-    "credentials": []
+    "credentials": [
+      {
+        "label": "Generated administrator login",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "NEXTCLOUD_ADMIN_PASSWORD",
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
   },
   "proxmox": {
     "runtime": "native-oci-lxc",

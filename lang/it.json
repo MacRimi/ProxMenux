@@ -1644,7 +1644,7 @@
   "Create scheduled backup job": "Crea attività di backup pianificata",
   "Create share directory:": "Crea directory condivisa:",
   "Create shared directory:": "Crea directory condivisa:",
-  "Create the administrator in the web setup; MariaDB and /data are prefilled.": "Crea l’amministratore nella procedura guidata web; MariaDB e /data sono già compilati.",
+  "ProxMenux generates the administrator password and shows it at the end of the installation. Change it after the first login.": "ProxMenux genera la password dell'amministratore e la mostra alla fine dell'installazione. Cambiala dopo il primo accesso.",
   "Create this LXC in privileged mode?": "Creare questo LXC in modalità privilegiata?",
   "Create with create_user in the container console": "Crea l’utente con create_user nella console del container",
   "Create, send and sign documents with a self-hosted web app.": "Crea, invia e firma documenti con un'app web self-hosted.",

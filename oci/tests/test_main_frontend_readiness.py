@@ -18,7 +18,8 @@ class MainFrontendReadiness(unittest.TestCase):
         with patch.object(installer,'run',return_value='10.77.6.30\n172.30.249.70\n'), \
              patch.object(installer,'wait_web') as web:
             url=installer.wait_main_web(service,ipaddress.ip_network('10.77.6.0/24'))
-        self.assertEqual(url,'http://172.30.249.70:80/')
+        # Without the default port: the host a browser sends.
+        self.assertEqual(url,'http://172.30.249.70/')
         self.assertEqual(service['healthcheck']['url'],url)
         self.assertEqual(service['ip'],'10.77.6.30')
         web.assert_called_once_with(service,url)
