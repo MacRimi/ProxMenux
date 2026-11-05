@@ -171,7 +171,7 @@ def plan(record, candidate, config):
         else: delete.append('env')
     if 'devices' in changed:
         inventory = devices.planned(new)
-        existing = {v['path']: k for k, v in ((k, dict(p.split('=', 1) for p in v.split(',')))
+        existing = {v['path']: k for k, v in ((k, devices.device_fields(v))
                    for k, v in cfg.items() if re.fullmatch(r'dev[0-9]+', k))}
         used = set(existing.values())
         for path, key in existing.items():

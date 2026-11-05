@@ -69,7 +69,7 @@ def check(config, deployment):
         filtered = []
         for line in config.splitlines(keepends=True):
             if re.match(rb'dev[0-9]+: ', line):
-                fields = dict(part.split('=', 1) for part in line.decode().strip().split(': ', 1)[1].split(','))
+                fields = drm.device_fields(line.decode().strip().split(': ', 1)[1])
                 if fields.get('path') in value['devices']:
                     continue
             filtered.append(line)

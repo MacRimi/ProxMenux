@@ -98,11 +98,27 @@ def verify(expected):
             raise ValueError(translate('The GPU identity or permissions changed; the container is not modified'))
 
 
+def device_fields(value):
+    """The options of a devN line. Proxmox writes its path either as `path=`
+    or, when the device was added from its own interface, as the first value
+    without a name: `dev0: /dev/dri/renderD128,gid=993`."""
+    fields = {}
+    for index, part in enumerate(value.split(',')):
+        if '=' in part:
+            key, item = part.split('=', 1)
+            fields[key] = item
+        elif index == 0 and part:
+            fields['path'] = part
+        else:
+            raise ValueError(translate('Incomplete device configuration'))
+    return fields
+
+
 def actual_devices(config):
     result = {}
     for key, value in parse_config(config).items():
         if re.fullmatch(r'dev[0-9]+', key):
-            fields = dict(part.split('=', 1) for part in value.split(','))
+            fields = device_fields(value)
             path = fields.get('path')
             if path in result:
                 raise ValueError(translate('Duplicated GPU device in the container'))

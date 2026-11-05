@@ -208,7 +208,8 @@ oci_apply_extra_devices() {
       || die "$(translate "Invalid device path:") $path"
     [[ -c $path ]] || die "$(translate "The character device does not exist:") $path"
     [[ $mode =~ ^0?[0-7]{3}$ ]] || die "$(translate "Invalid device mode:") $mode"
-    pct config "$vmid" | grep -Eq "^dev[0-9]+: (.*,)?path=${path}(,|$)" && continue
+    # Proxmox may write the path without `path=` when it was added from its interface.
+    pct config "$vmid" | grep -Eq "^dev[0-9]+: ((.*,)?path=)?${path}(,|$)" && continue
     index=0
     while pct config "$vmid" | grep -q "^dev${index}:"; do index=$((index + 1)); done
     gid=$(stat -c '%g' "$path")
