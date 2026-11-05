@@ -32,6 +32,11 @@ on:
       - 'AppImage/scripts/flask_proxmenux_routes.py'
       - 'AppImage/scripts/guest_backup_archives.py'
       - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/ovs_topology.py'
+      - 'AppImage/scripts/tests/test_ovs_topology.py'
+      - 'AppImage/components/network-flow.tsx'
+      - 'AppImage/components/network-metrics.tsx'
+      - 'AppImage/tests/ovs-network-flow.cjs'
       - 'AppImage/scripts/jwt_middleware.py'
       - 'AppImage/scripts/build_appimage.sh'
       - 'AppImage/components/guest-backup-list.tsx'
@@ -93,6 +98,11 @@ on:
       - 'AppImage/scripts/flask_proxmenux_routes.py'
       - 'AppImage/scripts/guest_backup_archives.py'
       - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/ovs_topology.py'
+      - 'AppImage/scripts/tests/test_ovs_topology.py'
+      - 'AppImage/components/network-flow.tsx'
+      - 'AppImage/components/network-metrics.tsx'
+      - 'AppImage/tests/ovs-network-flow.cjs'
       - 'AppImage/scripts/jwt_middleware.py'
       - 'AppImage/components/guest-backup-list.tsx'
       - 'AppImage/components/virtual-machines.tsx'
@@ -435,3 +445,23 @@ jobs:
           persist-credentials: false
       - name: Exercise private images with isolated mapped Linux readers
         run: sudo /usr/bin/python3 -B -m unittest discover -s oci/tests -p test_native_import_access.py -v
+
+  network-topology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Test read-only OVS discovery and mixed network API
+        run: python -B -m unittest discover -s AppImage/scripts/tests -p test_ovs_topology.py -v
+      - name: Test both Network Flow layouts
+        run: |
+          npm ci --prefix .github/ci/offline-node --ignore-scripts --no-audit --no-fund
+          NODE_PATH="$PWD/.github/ci/offline-node/node_modules" node AppImage/tests/ovs-network-flow.cjs
