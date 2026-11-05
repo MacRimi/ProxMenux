@@ -3850,14 +3850,8 @@ def serve_next_static(filename):
                 appimage_root = os.path.dirname(base_dir)
         
         static_dir = os.path.join(appimage_root, 'web', '_next')
-        file_path = os.path.join(static_dir, filename)
-        
-        if os.path.exists(file_path):
-            return send_file(file_path)
-        
-        # print(f"[v0] ❌ Next.js static file not found: {file_path}")
-        pass
-        return '', 404
+        # send_from_directory refuses any path that leaves static_dir.
+        return send_from_directory(static_dir, filename)
     except Exception as e:
         # print(f"Error serving Next.js static file {filename}: {e}")
         pass

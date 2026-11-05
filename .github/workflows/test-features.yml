@@ -32,6 +32,7 @@ on:
       - 'AppImage/scripts/flask_proxmenux_routes.py'
       - 'AppImage/scripts/guest_backup_archives.py'
       - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/tests/test_static_path_containment.py'
       - 'AppImage/scripts/ovs_topology.py'
       - 'AppImage/scripts/tests/test_ovs_topology.py'
       - 'AppImage/components/network-flow.tsx'
@@ -98,6 +99,7 @@ on:
       - 'AppImage/scripts/flask_proxmenux_routes.py'
       - 'AppImage/scripts/guest_backup_archives.py'
       - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/tests/test_static_path_containment.py'
       - 'AppImage/scripts/ovs_topology.py'
       - 'AppImage/scripts/tests/test_ovs_topology.py'
       - 'AppImage/components/network-flow.tsx'
@@ -188,6 +190,21 @@ jobs:
         env:
           NODE_PATH: ${{ github.workspace }}/.github/ci/offline-node/node_modules
         run: node tests/test_backup_storage_retention.cjs
+
+  static-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Flask
+        run: python -m pip install 'Flask==3.1.2'
+      - name: Test that the Monitor's own files never leave their folder
+        run: python -B -m unittest discover -s AppImage/scripts/tests -p test_static_path_containment.py -v
 
   nvidia-installer:
     runs-on: ubuntu-latest
