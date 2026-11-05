@@ -128,7 +128,7 @@
         "body": "O repositório Enterprise está ativo, mas o host não tem subscrição ativa. Antes de <code>apt-get update</code>, o script propõe passar a no-subscription. Se recusou, repita a atualização e aceite, ou desative Enterprise em <em>Node → Updates → Repositories</em> e ative no-subscription."
       },
       {
-        "title": "dist-upgrade trava em \"Configuring grub-pc\"",
+        "title": "full-upgrade trava em \"Configuring grub-pc\"",
         "body": "Se aparecer uma pergunta interativa do GRUB, pede os dispositivos onde instalar o gestor de arranque. A opção <code>--force-confold</code> aplica-se aos ficheiros de configuração, não à escolha dos dispositivos. Use <kbd>Tab</kbd> + <kbd>Space</kbd> para selecionar os discos de arranque adequados e depois OK. Pode configurar esta escolha antes com <code>dpkg-reconfigure grub-pc</code>."
       },
       {

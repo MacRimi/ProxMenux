@@ -127,7 +127,7 @@ oci_create_container() {
     total_mib=$(python3 "$VERIFY_OCI_ARCHIVE" --extracted-mib "$path" 2>/dev/null || printf '0')
     [[ $total_mib =~ ^[0-9]+$ ]] || total_mib=0
   fi
-  pct create "$vmid" "$archive" "$@" >>"$log" 2>&1 &
+  python3 "${SCRIPT_DIR}/oci_native_import.py" "$vmid" "$archive" "$path" "$@" >>"$log" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
     if mountpoint -q "$rootfs" 2>/dev/null; then
@@ -208,7 +208,8 @@ oci_apply_extra_devices() {
       || die "$(translate "Invalid device path:") $path"
     [[ -c $path ]] || die "$(translate "The character device does not exist:") $path"
     [[ $mode =~ ^0?[0-7]{3}$ ]] || die "$(translate "Invalid device mode:") $mode"
-    pct config "$vmid" | grep -Eq "^dev[0-9]+: (.*,)?path=${path}(,|$)" && continue
+    # Proxmox may write the path without `path=` when it was added from its interface.
+    pct config "$vmid" | grep -Eq "^dev[0-9]+: ((.*,)?path=)?${path}(,|$)" && continue
     index=0
     while pct config "$vmid" | grep -q "^dev${index}:"; do index=$((index + 1)); done
     gid=$(stat -c '%g' "$path")
@@ -226,6 +227,29 @@ oci_apply_extra_devices() {
 oci_log_tail() {
   [[ -n $OCI_LOG && -s $OCI_LOG ]] || return 0
   tail -n "${1:-15}" "$OCI_LOG" | sed "s/^/${_OCI_TAB}  /"
+}
+
+# The host may have no route to the VLAN of an interface: there curl runs
+# inside the network of the container.
+oci_curl() {
+  local vmid=$1
+  shift
+  if grep -Eq '^net[0-9]+:.*,tag=' "/etc/pve/lxc/${vmid}.conf" 2>/dev/null; then
+    nsenter --net="/proc/$(lxc-info -n "$vmid" -pH)/ns/net" curl "$@"
+  else
+    curl "$@"
+  fi
+}
+
+# tag= option of an access interface from the given network key of the
+# deployment, in OCI_VLAN_OPTION. Returns 1 when the tag is not valid.
+oci_vlan_option() {
+  local tag
+  OCI_VLAN_OPTION=""
+  tag=$(jq -r --arg key "$1" '.network[$key] // empty' "$DEPLOYMENT_FILE")
+  [[ -z $tag ]] && return 0
+  [[ $tag =~ ^[0-9]+$ ]] && (( tag >= 1 && tag <= 4094 )) || return 1
+  OCI_VLAN_OPTION=",tag=${tag}"
 }
 
 # ip= and gw= options of an access interface, DHCP or a static IPv4 with an

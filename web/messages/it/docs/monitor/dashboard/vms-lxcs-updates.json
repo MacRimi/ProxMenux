@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "Aggiornamenti LXC: OS, applicazioni e Docker | ProxMenux",
+    "description": "Configura ed esegui aggiornamenti del sistema operativo, delle applicazioni, di Docker Engine e delle immagini Docker in un container LXC."
+  },
+  "header": {
+    "title": "Aggiornamenti LXC: OS, applicazioni e Docker",
+    "description": "Verificare ogni obiettivo di aggiornamento in un unico luogo, eseguirlo in modo indipendente, o combinare obiettivi selezionati in un'azione di massa controllata."
+  },
+  "intro": {
+    "p1": "La scheda <strong>Aggiornamenti</strong> separa il rilevamento delle versioni dalla loro installazione. Registrazione e tracciamento opzionale sono nella <link>scheda App</link>; i metodi eseguibili si gestiscono qui.",
+    "p2": "Un'app salvata appare in Aggiornamenti anche con un solo link web. Il tracciamento delle versioni è opzionale e il programma di aggiornamento può essere configurato separatamente.",
+    "callout": "Registrare un'app non seleziona il programma di aggiornamento. Se viene rilevato un programma Helper-Scripts corrispondente, scegli e salva <strong>Helper-Scripts</strong> o <strong>Comando personalizzato</strong>. Il rilevamento non garantisce la compatibilità. La scelta è per app, anche quando più app condividono un LXC."
+  },
+  "overview": {
+    "heading": "Cosa contiene la scheda",
+    "lead": "Ogni target disponibile ha la sua sezione e azione:",
+    "items": [
+      "<strong>Pacchetti del sistema</strong> per container Debian, Ubuntu e Alpine.",
+      "Una sezione per ogni <strong>applicazione registrata</strong>, inclusi i record con soli link.",
+      "Una sezione <strong>Docker</strong> quando Docker è registrato, con Docker Engine e immagini contrassegnate raggruppate insieme.",
+      "Una sezione <strong>Aggiornamento in blocco</strong> configurabile, seguita da opzioni di backup, riavvio e pianificazione."
+    ]
+  },
+  "mechanisms": {
+    "heading": "Come viene selezionato un metodo di aggiornamento",
+    "lead": "Il percorso integrato Proxmox VE Helper-Scripts segue il meccanismo ufficiale <helper>update-apps </helper>. Altri tipi di installazione utilizzano il pacchetto corrispondente, Docker o percorso personalizzato.",
+    "officialReference": "Riferimento ufficiale: la <helper>documentazione update-apps di Proxmox VE Helper-Scripts</helper> descrive modalità interattiva e non presidiata, backup, simulazioni, risorse temporanee di compilazione, log e codici di uscita.",
+    "colSource": "Fonte",
+    "colAction": "Azione visualizzata",
+    "colNotes": "Cosa viene eseguito",
+    "rows": [
+      {
+        "source": "Pacchetti APT o APK",
+        "action": "Applicare aggiornamenti del sistema operativo",
+        "notes": "Aggiorna i pacchetti container. Le app registrate installate come pacchetti dpkg o apk sono coperte da questo stesso passaggio."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Applica aggiornamento",
+        "notes": "Dopo la scelta esplicita di Helper-Scripts esegue lo script ufficiale identificato dal wrapper /usr/bin/update convalidato. Un marcatore o una corrispondenza nel catalogo da soli non abilitano mai l'esecuzione."
+      },
+      {
+        "source": "Comando personalizzato",
+        "action": "Esegui programma di aggiornamento",
+        "notes": "Esegue il comando salvato nel LXC e sostituisce qualsiasi programma integrato di aggiornamento di quel record."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Aggiorna Docker Engine",
+        "notes": "Aggiorna solo i pacchetti Docker installati e le dipendenze necessarie. Non modifica altri pacchetti del sistema o i container."
+      },
+      {
+        "source": "Immagine Docker",
+        "action": "Aggiorna immagine",
+        "notes": "Scarica l'immagine selezionata e ricrea il gruppo di servizi Compose o il container autonomo protetto."
+      }
+    ],
+    "callout": "Un comando personalizzato <strong>sostituisce</strong> Helper-Scripts per quell'app. Le esecuzioni manuali, in blocco e pianificate rispettano la scelta salvata. Restano i comandi esistenti e le vecchie selezioni salvate esplicitamente nei piani in blocco o nelle pianificazioni attive; una nuova app non viene mai inclusa da una vecchia pianificazione."
+  },
+  "docker": {
+    "heading": "Docker Engine e immagini Docker",
+    "lead": "Dopo che Docker è registrato sulla scheda App, il suo motore e l'inventario delle immagini appaiono all'interno della stessa sezione <strong>Docker</strong>.",
+    "items": [
+      "Il monitoraggio della versione Docker Engine è separato dal contatore del pacchetto OS e ha il suo pulsante di aggiornamento.",
+      "Le immagini locali dotate di tag vengono confrontate con quelle del rispettivo registro tramite il digest immutabile. <strong>Controlla ora</strong> aggiorna questo inventario senza scaricare immagini né riavviare i container.",
+      "I servizi Compose sono aggiornati dal progetto dichiarato. Le immagini dello stesso gruppo sono gestite insieme per evitare di ricreare il progetto più volte.",
+      "Un contenitore standalone è ricreato dalla sua configurazione attuale. Il flusso protetto mantiene i dati di rollback e ripristina il contenitore precedente se la ricreazione fallisce.",
+      "Ogni immagine è selezionabile separatamente per aggiornamenti manuali, in blocco e pianificati, tranne le dipendenze Compose dichiarate che devono seguire il servizio principale."
+    ],
+    "callout": "I contenitori che funzionano all'interno di Docker non sono indicati come applicazioni LXC indipendenti. Le loro porte web pubblicate possono essere salvate come link sotto la registrazione Docker, mentre gli aggiornamenti delle immagini rimangono nella sezione Docker."
+  },
+  "actions": {
+    "heading": "Azioni individuali e colori di stato",
+    "lead": "Ogni sezione rimane utilizzabile in modo indipendente, indipendentemente dal fatto che sia configurato o meno un aggiornamento collettivo.",
+    "items": [
+      "<strong>Configura</strong> apre la scelta del programma quando non è definito un metodo; <strong>Modifica</strong> cambia una scelta salvata. I pulsanti informativi spiegano le opzioni, collegano la documentazione ufficiale e mostrano un esempio di script personalizzato. Selezionare non esegue l'opzione.",
+      "Con tracciamento versione disattivato ma programma disponibile, appare l'azione neutra <strong>Esegui programma di aggiornamento</strong>. ProxMenux non afferma che ci sia un aggiornamento in attesa.",
+      "Senza un programma Helper-Scripts disponibile, configura un comando personalizzato. Disattivare un metodo non ne seleziona un altro; i piani e le pianificazioni conservano le scelte e segnalano gli obiettivi non disponibili.",
+      "<strong>Aggiorna immagine</strong> agisce solo sull'unità Docker selezionata; non aggiorna Docker Engine né immagini non correlate."
+    ],
+    "statusColState": "Stato conosciuto",
+    "statusColAppearance": "Aspetto",
+    "statusColMeaning": "Significato",
+    "statusRows": [
+      {
+        "state": "Aggiornamento verificato disponibile",
+        "appearance": "Testo viola, icona con freccia verso l’alto e azione viola",
+        "meaning": "Le versioni installate e disponibili o i digest delle immagini differiscono."
+      },
+      {
+        "state": "Aggiornato e verificato",
+        "appearance": "Segno di spunta verde e azione Aggiornato in verde",
+        "meaning": "L'ultimo controllo completato conferma che l'obiettivo è attuale."
+      },
+      {
+        "state": "Versione sconosciuta",
+        "appearance": "Testo neutro e azione neutrale",
+        "meaning": "Il programma di aggiornamento è eseguibile, ma mancano dati di versione per stabilire se il target è aggiornato o ha un aggiornamento disponibile."
+      }
+    ]
+  },
+  "custom": {
+    "heading": "Comandi di aggiornamento personalizzati",
+    "lead": "Usa un comando personalizzato quando manca un programma integrato verificato o quando occorre sostituire la procedura normale.",
+    "items": [
+      "Apri <strong>Configura</strong> se il campo è vuoto, oppure <strong>Modifica</strong> se esiste già un metodo.",
+      "Per un'app integrata o Docker Engine, l'editor mostra il comando attuale. Salvare un contenuto diverso lo rende la sostituzione esplicita per quel record.",
+      "Testare prima la procedura completa nel terminale LXC. Deve essere non interattivo, utilizzare la directory di lavoro corretta e restituire uno stato di uscita non zero su guasto.",
+      "Non includere <code>pct exec</code>; ProxMenux entra già nel contenitore ed esegue il comando come root."
+    ],
+    "exampleLead": "Esempio di una procedura completa di in-container:",
+    "example": "cd /opt/my-app && ./update.sh",
+    "callout": "Un comando come <code>myapp --version</code> legge solo una versione; non è un programma di aggiornamento. I comandi hanno privilegi amministrativi: esamina il contenuto come un comando di shell root."
+  },
+  "bulk": {
+    "heading": "Aggiornamento in blocco",
+    "lead": "La funzione in blocco crea un'azione riutilizzabile per un insieme preciso di obiettivi nel LXC. Si trova dopo le sezioni delle app e Docker e prima di <strong>Opzioni</strong>.",
+    "items": [
+      "I pacchetti del sistema sono obbligatori. Seleziona almeno un'app, Docker Engine o un'unità di immagine Docker aggiuntiva.",
+      "App e unità Docker si selezionano singolarmente. Il servizio principale Compose mostra le dipendenze aggiornate insieme a esso.",
+      "Gli obiettivi rimossi o non disponibili sono contrassegnati come obsoleti e vanno rimossi prima di salvare.",
+      "<strong>Applica aggiornamenti</strong> è viola se un obiettivo ha un aggiornamento verificato, verde se tutti risultano aggiornati e neutro se il risultato è sconosciuto.",
+      "Rimuovere la configurazione di massa non rimuove i singoli metodi di aggiornamento o le impostazioni di aggiornamento programmate."
+    ],
+    "callout": "Aggiornamento Bulk non sostituisce i singoli pulsanti. È una scorciatoia opzionale per una selezione che dovrebbe funzionare insieme."
+  },
+  "options": {
+    "heading": "Opzioni di backup e riavvio",
+    "lead": "Le stesse opzioni valgono per esecuzioni manuali, in blocco e pianificate:",
+    "items": [
+      "<strong>Snapshot prima di applicare</strong> crea un backup vzdump sullo storage selezionato. Se il backup richiesto fallisce, l'aggiornamento non inizia.",
+      "<strong>Riavvia dopo l'applicazione</strong> riavvia il LXC solo dopo un'esecuzione riuscita.",
+      "Le selezioni sono memorizzate per LXC e rimangono indipendenti dall'elenco di destinazione."
+    ]
+  },
+  "scheduled": {
+    "heading": "Aggiornamenti pianificati",
+    "lead": "Gli aggiornamenti programmati utilizzano gli stessi obiettivi eseguibili e le opzioni di sicurezza delle azioni manuali.",
+    "items": [
+      "Scegliere un'espressione preimpostata o cron, quindi selezionare obiettivi esatti: pacchetti OS, app individuali, Docker Engine, unità Docker standalone o gruppi di servizi Compose.",
+      "Il ritardo dopo il rilascio vale solo per app selezionate con tracciamento versione. Le app senza tracciamento eseguono il programma a ogni scadenza.",
+      "Lo stato dell'ultima esecuzione distingue successo, completamento parziale, errore, sospensione di sicurezza e nessun aggiornamento in attesa. Dopo la prima esecuzione pianificata, <strong>Aggiornamenti → Aggiornamenti pianificati → Visualizza log</strong> apre l'output completo del programma di aggiornamento e degli script secondari invocati.",
+      "Dopo ogni esecuzione, ProxMenux controlla il marcatore standard Debian di riavvio richiesto. La scheda Aggiornamenti e la notifica finale segnalano quando serve riavviare; l'avviso si cancella quando quel LXC viene avviato o riavviato.",
+      "Sull'host Proxmox, i log in esecuzione programmata vengono memorizzati in <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> utilizzando il nome <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Gli ultimi dieci registri sono conservati per LXC e i file più vecchi vengono rimossi automaticamente.",
+      "Questa storia conservata si applica agli aggiornamenti programmati. Un aggiornamento manuale visualizza la sua uscita dal vivo nella finestra di esecuzione Monitor e non crea un registro in esecuzione programmata in quella directory.",
+      "Le pianificazioni esterne sull'host rilevate da Proxmox VE Helper-Scripts sono mostrate separatamente per evidenziare automazioni sovrapposte."
+    ],
+    "callout": "Eseguire manualmente ogni metodo selezionato prima di attivare un programma. I comandi programmati non possono rispondere alle richieste."
+  },
+  "completion": {
+    "heading": "Cosa succede dopo un aggiornamento",
+    "lead": "L'aggiornamento non è considerato finito quando il comando terminale semplicemente esce.",
+    "items": [
+      "Lo stesso run registra il suo risultato finale e aggiorna lo stato del pacchetto OS, le versioni delle app registrate e l'inventario Docker come applicabile.",
+      "Le esecuzioni pianificate conservano l'output del terminale e indicano se serve ancora un riavvio per completare le modifiche ai pacchetti.",
+      "La cache LXC viene sostituita con lo stato post-aggiornamento verificato, quindi i badge e i pulsanti non conservano il risultato precedente.",
+      "Quando parte un LXC fermato o ripristinato, l'evento del ciclo di vita aggiorna di nuovo i dati. L'inventario Docker attende che il demone sia pronto senza salvare come definitivo un risultato iniziale vuoto.",
+      "Le notifiche abilitate vengono emesse dall'esecuzione finalizzata, compresi i guasti parziali e i risultati delle immagini raggruppati Docker."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situazioni comuni",
+    "colProblem": "Situazione",
+    "colResolution": "Risoluzione",
+    "rows": [
+      {
+        "problem": "Nessun metodo di aggiornamento è stato identificato",
+        "resolution": "Apri Configura, aggiungi la procedura ufficiale non interattiva e provala manualmente prima di pianificarla."
+      },
+      {
+        "problem": "Viene mostrata una identità Proxmox VE Helper-Scripts ma non esiste azione",
+        "resolution": "Il LXC ha dati di identificazione legacy ma nessun wrapper /usr/bin/update verificato. Aggiungere un metodo personalizzato solo dopo aver confermato la procedura corretta."
+      },
+      {
+        "problem": "Le immagini Docker sono temporaneamente vuote dopo l'avvio o il ripristino",
+        "resolution": "Attendi che Docker sia pronto o premi Controlla ora. Il rilevamento riprova durante l'avvio e non considera definitivo un risultato vuoto transitorio."
+      },
+      {
+        "problem": "Un obiettivo di massa salvato non è più disponibile",
+        "resolution": "Modifica la configurazione in blocco, rimuovi il target obsoleto e seleziona il sostituto attuale, se esiste."
+      },
+      {
+        "problem": "Un comando personalizzato fallisce",
+        "resolution": "Eseguilo nel terminale LXC e verifica percorso, dipendenze, opzioni non interattive e codice di uscita."
+      },
+      {
+        "problem": "Un aggiornamento programmato dice che è necessario un riavvio",
+        "resolution": "Apri Visualizza log per esaminare l'esecuzione completata, poi riavvia quel LXC. ProxMenux cancella l'avviso quando l'evento del ciclo di vita rileva il nuovo avvio."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Sezione pacchetti di sistema operativo con conteggi di aggiornamento in sospeso e di sicurezza",
+      "caption": "La sezione del sistema operativo mantiene gli aggiornamenti dei pacchetti indipendenti dalle azioni di applicazione e Docker."
+    },
+    "options": {
+      "alt": "Opzioni di aggiornamento LXC con backup pre-update e riavvio post-update",
+      "caption": "Le preferenze di backup e riavvio valgono per esecuzioni manuali, in blocco e pianificate."
+    }
+  }
+}

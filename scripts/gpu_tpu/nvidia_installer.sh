@@ -32,6 +32,7 @@ BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 COMPONENTS_STATUS_FILE="$BASE_DIR/components_status.json"
 LOG_FILE="/tmp/nvidia_install.log"
+SECURE_BOOT_EFIVAR="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
 screen_capture="/tmp/proxmenux_nvidia_screen_capture_$$.txt"
 
 NVIDIA_BASE_URL="https://download.nvidia.com/XFree86/Linux-x86_64"
@@ -133,6 +134,29 @@ check_gpu_not_in_vm_passthrough() {
   dialog --backtitle "ProxMenux" \
     --title "$(translate "GPU in VM Passthrough Mode")" \
     --msgbox "$msg" 16 78
+  exit 0
+}
+
+# The variable holds 4 attribute bytes followed by the state.
+secure_boot_enabled() {
+  local state
+  state=$(od -An -t u1 -j4 -N1 "$SECURE_BOOT_EFIVAR" 2>/dev/null)
+  [[ "${state//[[:space:]]/}" == "1" ]]
+}
+
+# The installer builds an unsigned module, which the kernel refuses under
+# Secure Boot. Asked before anything is removed, so the driver stays in place.
+check_secure_boot_for_install() {
+  secure_boot_enabled || return 0
+
+  local msg
+  msg="\n$(translate "Secure Boot is enabled on this host.")\n\n"
+  msg+="$(translate "The kernel only loads signed modules and this installer builds the NVIDIA module unsigned, so the installation would fail.")\n\n"
+  msg+="$(translate "Disable Secure Boot in the UEFI firmware and run the installer again. Nothing has been changed.")"
+
+  dialog --backtitle "ProxMenux" \
+    --title "$(translate "Secure Boot Enabled")" \
+    --msgbox "$msg" 14 78
   exit 0
 }
 
@@ -842,11 +866,9 @@ KEYLASE_PATCH_URL="https://raw.githubusercontent.com/keylase/nvidia-patch/master
 NVIDIA_BRANCHES_CACHE="/var/cache/proxmenux/nvidia_stable_branches.txt"
 NVIDIA_PRODUCTION_HEAD_CACHE="/var/cache/proxmenux/nvidia_production_head.txt"
 NVIDIA_BRANCH_HEADS_CACHE="/var/cache/proxmenux/nvidia_branch_heads.txt"
-# v2: the first generation of these files scraped the whole page and so
-# included the legacy table (see _nvidia_supported_ids_from_page). Those
-# files say a branch supports GPUs it has dropped, so they are left
-# behind rather than reused.
-NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_v2_"
+# v3: discard older caches, which either included legacy GPUs (v1) or
+# omitted devices listed only with subsystem qualifiers (v2).
+NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_v3_"
 NVIDIA_BRANCHES_TTL_SECONDS=$((24 * 3600))
 NVIDIA_BRANCHES_URL="https://www.nvidia.com/en-us/drivers/unix/"
 
@@ -951,13 +973,17 @@ get_nvidia_branch_head() {
 # card NVIDIA ever shipped — which is how a Quadro P1000 came to be
 # offered the 595 branch that refuses it at probe time, after compiling
 # and installing perfectly. Everything from that heading on is cut away.
+# NVIDIA identifies each GPU row as devidXXXX or devidXXXX_VENDOR_SUBDEVICE.
+# Read the primary device ID from that identifier, not an exact four-digit
+# table cell: T400/T1000 variants have three IDs in the cell. Subsystem IDs
+# and GPU names such as A100 must not become independent supported devices.
 _nvidia_supported_ids_from_page() {
   awk '
     /legacy GPUs that are no longer supported/ { exit }
     { print }
   ' \
-    | grep -aoiE '<td>[0-9A-F]{4}</td>' \
-    | grep -aoiE '[0-9A-F]{4}' \
+    | grep -aoiE '<tr[[:space:]]+id="devid[0-9A-F]{4}([_][0-9A-F]{4})*"' \
+    | sed -E 's/.*devid([0-9A-Fa-f]{4}).*/\1/' \
     | tr 'A-F' 'a-f' \
     | sort -u
 }
@@ -1634,6 +1660,16 @@ run_nvidia_installer() {
   return 0
 }
 
+# Keeps the failure on screen: the menu redraws as soon as the script exits.
+show_nvidia_install_failure() {
+  local reason
+  reason=$(grep -a -m1 '^ERROR:' /var/log/nvidia-installer.log 2>/dev/null | sed 's/^ERROR: *//' | cut -c1-300)
+  [[ -n "$reason" ]] || reason=$(grep -a -m1 '^ERROR:' "$LOG_FILE" 2>/dev/null | sed 's/^ERROR: *//' | cut -c1-300)
+
+  hybrid_msgbox "$(translate 'NVIDIA driver not installed')" \
+    "\n$(translate 'The NVIDIA installer stopped with this error:')\n\n${reason}\n\n$(translate 'Log file'): ${LOG_FILE}\n$(translate 'Log file'): /var/log/nvidia-installer.log" 18 78
+}
+
 remove_nvidia_driver() {
   complete_nvidia_uninstall
 }
@@ -1968,23 +2004,22 @@ show_install_overview() {
   hybrid_yesno "$(translate 'NVIDIA GPU Driver Installation')" "$overview" 24 90
 }
 
-show_version_menu() {
+# The versions this host is offered and the one recommended. The version
+# menu and ProxMenux Monitor both use it, so the Monitor announces an update
+# only when the installer would recommend it. Sets NVIDIA_OFFERED_VERSIONS,
+# NVIDIA_RECOMMENDED_VERSION and the NVENC patch notes; fails when NVIDIA's
+# version list cannot be read.
+compute_nvidia_offer() {
   local latest versions_list
-  local kernel_version
-  kernel_version=$(uname -r)
-
-  show_proxmenux_logo
-  msg_title "$(translate 'NVIDIA GPU Driver Installation')"
-  msg_info "$(translate 'Fetching NVIDIA driver versions supported by your GPU...')"
+  NVIDIA_OFFERED_VERSIONS=""
+  NVIDIA_RECOMMENDED_VERSION=""
+  NVIDIA_PATCH_FILTERED=false
+  NVIDIA_PATCH_FILTER_NOTE=""
 
   latest=$(download_latest_version 2>/dev/null)
   versions_list=$(list_available_versions 2>/dev/null)
 
   if [[ -z "$latest" ]] && [[ -z "$versions_list" ]]; then
-    stop_spinner
-    hybrid_msgbox "$(translate 'Error')" \
-      "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
-    DRIVER_VERSION="cancel"
     return 1
   fi
   
@@ -2081,6 +2116,47 @@ show_version_menu() {
     latest=$(printf '%s\n' "$current_list" | head -n1 | tr -d '[:space:]')
   fi
 
+  NVIDIA_OFFERED_VERSIONS="$current_list"
+  NVIDIA_RECOMMENDED_VERSION="$latest"
+  NVIDIA_PATCH_FILTERED="$patch_filtered"
+  NVIDIA_PATCH_FILTER_NOTE="$patch_filter_note"
+}
+
+# For ProxMenux Monitor: the version the menu would recommend on this host for
+# the driver in use (passed in, or read from nvidia-smi), with no interface and
+# no change to the host. Prints nothing when none is recommended.
+print_recommended_version() {
+  detect_nvidia_gpus
+  $NVIDIA_GPU_PRESENT || return 1
+  CURRENT_DRIVER_VERSION="${1:-}"
+  if [[ -z "$CURRENT_DRIVER_VERSION" ]] && command -v nvidia-smi >/dev/null 2>&1; then
+    CURRENT_DRIVER_VERSION=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1)
+  fi
+  compute_nvidia_offer || return 2
+  [[ -z "$NVIDIA_RECOMMENDED_VERSION" ]] || printf '%s\n' "$NVIDIA_RECOMMENDED_VERSION"
+}
+
+show_version_menu() {
+  local latest versions_list
+  local kernel_version
+  kernel_version=$(uname -r)
+
+  show_proxmenux_logo
+  msg_title "$(translate 'NVIDIA GPU Driver Installation')"
+  msg_info "$(translate 'Fetching NVIDIA driver versions supported by your GPU...')"
+
+  if ! compute_nvidia_offer; then
+    stop_spinner
+    hybrid_msgbox "$(translate 'Error')" \
+      "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
+    DRIVER_VERSION="cancel"
+    return 1
+  fi
+  local current_list="$NVIDIA_OFFERED_VERSIONS"
+  local patch_filtered="$NVIDIA_PATCH_FILTERED"
+  local patch_filter_note="$NVIDIA_PATCH_FILTER_NOTE"
+  latest="$NVIDIA_RECOMMENDED_VERSION"
+
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
   menu_text+="$(translate 'Versions shown belong to maintained NVIDIA branches that list your GPU PCI ID and are new enough to build against the running kernel. DKMS compilation is the final validation. The recommended version keeps the current branch, or uses the NVIDIA Production Branch on a fresh install.')"
   menu_text+="\n\n$(translate 'Running kernel:') ${kernel_version} — $(translate 'oldest driver offered:') $(nvidia_kernel_driver_floor)"
@@ -2156,6 +2232,8 @@ main() {
 
   case "$ACTION" in
     install)
+      check_secure_boot_for_install
+
       if ! show_install_overview; then
         exit 0
       fi
@@ -2257,6 +2335,7 @@ main() {
 
       if ! run_nvidia_installer "$installer"; then
         rm -f "$screen_capture"
+        show_nvidia_install_failure
         exit 1
       fi
       
@@ -2448,6 +2527,12 @@ auto_reinstall_from_state() {
     return 0
   fi
 
+  if secure_boot_enabled; then
+    echo "Secure Boot is enabled: the kernel would refuse the unsigned module — skipping host driver reinstall" \
+      | tee -a "$LOG_FILE"
+    return 2
+  fi
+
   DRIVER_VERSION="$recorded_version"
 
   # Same install path as the interactive main() flow, minus all
@@ -2501,6 +2586,10 @@ auto_reinstall_from_state() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   if [[ "${1:-}" == "--auto-reinstall" ]]; then
     auto_reinstall_from_state
+    exit $?
+  fi
+  if [[ "${1:-}" == "--recommended-version" ]]; then
+    print_recommended_version "${2:-}"
     exit $?
   fi
   main

@@ -20,7 +20,7 @@
     "heading": "Layout del archivo",
     "intro": "Cada archivo respeta el mismo layout con independencia del destino. El subdirectorio <code>metadata/</code> contiene los bloques estructurados; el subdirectorio <code>rootfs/</code> contiene el backup del sistema de ficheros.",
     "treeCaption": "El directorio de staging generado durante un backup. Todos los destinos reciben el mismo árbol (adaptado a su formato nativo: tar para local, chunks PBS para PBS, segmentos borg para Borg).",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel + método pmxcfs\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel + método pmxcfs\n│   ├── selected_paths.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "El bloque rootfs",
@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Validación por esquema",
-    "schemaBody": "El manifiesto se valida con <code>scripts/backup_restore/schema/manifest.schema.json</code>. Ejecutar <code>build_manifest.sh --validate</code> activa una validación JSON Schema en Python (requiere <code>python3</code> y <code>jsonschema</code>). Si el módulo no está instalado, se omite la comprobación sin mostrar ningún aviso: esta validación es principalmente una ayuda para el desarrollo, no una dependencia necesaria durante la ejecución."
+    "schemaBody": "ProxMenux incluye una plantilla que describe qué campos debe contener el manifiesto y qué forma tiene cada uno. Cuando se genera un backup se puede comprobar automáticamente que el manifiesto respeta esa plantilla, de modo que si un colector produjera un JSON malformado o con un campo mal escrito se detectaría en el momento. Es una comprobación destinada al desarrollo del propio ProxMenux: si el sistema no la tiene instalada, el backup sigue funcionando con normalidad y el manifiesto se genera igual."
   },
   "applications": {
     "heading": "El inventario de aplicaciones",
@@ -176,7 +176,7 @@
         "stage": "3",
         "name": "Preparación de pending",
         "reads": "rootfs/ (rutas reboot + dangerous)",
-        "action": "<code>_rs_prepare_pending_restore</code> deja las rutas de riesgo preparadas bajo <code>/var/lib/proxmenux/pending-restore/</code>, escribe <code>plan.env</code>, <code>apply-on-boot.list</code> y <code>rs-skip-paths.txt</code>, y habilita <code>proxmenux-restore-onboot.service</code> para que dispare en el siguiente arranque."
+        "action": "<code>_rs_prepare_pending_restore</code> deja las rutas de riesgo preparadas bajo <code>/var/lib/proxmenux/restore-pending/&lt;restore_id&gt;/</code> (enlazado como <code>current</code>), escribe <code>plan.env</code>, <code>apply-on-boot.list</code> y <code>rs-skip-paths.txt</code>, y habilita <code>proxmenux-restore-onboot.service</code> para que dispare en el siguiente arranque."
       },
       {
         "stage": "3b",

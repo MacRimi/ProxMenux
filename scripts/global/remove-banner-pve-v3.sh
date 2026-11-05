@@ -287,6 +287,7 @@ reload_services() {
     systemctl is-active --quiet proxmox-backup-proxy 2>/dev/null && {
         systemctl reload proxmox-backup-proxy 2>/dev/null || systemctl restart proxmox-backup-proxy 2>/dev/null || true
     }
+    return 0
 }
 
 main() {
@@ -312,7 +313,7 @@ EOFAPT
     
     # Verify APT hook syntax
     apt-config dump >/dev/null 2>&1 || { 
-        msg_warn "APT hook syntax issue, removing..."
+        msg_warn "$(translate "APT hook syntax issue, removing...")"
         rm -f "$APT_HOOK"
     }
 }

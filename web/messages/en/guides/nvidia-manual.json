@@ -12,7 +12,7 @@
   },
   "intro": {
     "calloutTitle": "Note",
-    "calloutBody": "This is the manual procedure preserved as a reference. For most users the recommended path is the automated ProxMenux flow: <strong>Install NVIDIA Drivers (Host)</strong> in the <em>GPUs and Coral-TPU</em> menu, and <strong>Add GPU to LXC</strong> (or <strong>Add GPU to VM</strong>) for the per-guest wiring. The automated flow handles the same steps documented here (with extra safety checks: kernel-headers compatibility, IOMMU validation, VFIO conflict resolution). This page is for operators who want to understand each command, or who need to deviate from the standard flow.",
+    "calloutBody": "This is the manual procedure preserved as a reference. For most users the recommended path is the automated ProxMenux flow: <strong>Install NVIDIA Drivers (Host)</strong> in the <em>GPUs and Coral-TPU</em> menu, and <strong>Add GPU to LXC</strong> (or <strong>Add GPU to VM</strong>) for the per-guest wiring. The automated flow handles the same steps documented here (with extra safety checks: kernel-headers compatibility, IOMMU validation, VFIO conflict resolution). This page is for users who want to understand each command, or who need to deviate from the standard flow.",
     "targetNote": "Targeted at <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) and PVE 8 (Bookworm) are no longer covered.",
     "stepsTitle": "What you'll do",
     "steps": [

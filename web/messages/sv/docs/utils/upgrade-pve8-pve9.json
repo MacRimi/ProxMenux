@@ -16,9 +16,9 @@
     "items": [
       "<strong>Verifierade säkerhetskopior</strong> av varje VM och CT (PBS, vzdump, ZFS-ögonblicksbilder — kontrollera även att de går att återställa).",
       "<strong>Åtkomst via konsol / IPMI / iKVM</strong> till värden om SSH kopplas ned under uppgraderingen.",
-      "Värden ska redan vara uppdaterad till aktuell PVE 8.4.x, vilket skriptet kontrollerar.",
+      "Värden ska redan vara på den senaste PVE 8-patchnivån. Skriptet uppdaterar först PVE 8; det kontrollerar inte någon specifik 8.4.x-version.",
       "Ceph (om den finns) på version 19.x Squid.",
-      "Minst <strong>5 GB ledigt</strong> i rotfilsystemet."
+      "Minst <strong>5 GB ledigt</strong> i rotfilsystemet, som Proxmox-guiden rekommenderar. Skriptet själv kontrollerar bara 1 GB i /var/cache/apt/archives."
     ]
   },
   "modeMenu": {
@@ -63,13 +63,13 @@
   },
   "webTerminal": {
     "heading": "Varför webbterminalen blockeras",
-    "body": "Alla tre lägen upptäcker <code>termproxy</code> / <code>vncshell</code> i kedjan av överordnade processer och vägrar starta. Webbterminalen beror på <code>pveproxy</code>, en tjänst som uppdateras under förloppet. När <code>pveproxy</code> startas om avslutas terminalsessionen och skriptet i den. Värden kan då bli endast delvis uppgraderad.",
+    "body": "Lägena Automatic och Interactive upptäcker <code>termproxy</code> / <code>vncshell</code> i kedjan av överordnade processer och vägrar starta, om inte sessionen kommer via SSH eller <code>PVE_ALLOW_WEBTERM=1</code> är satt. Förkontrollen och den manuella guiden ändrar ingenting och kan köras var som helst. Webbterminalen beror på <code>pveproxy</code>, en tjänst som uppdateras under förloppet. När <code>pveproxy</code> startas om avslutas terminalsessionen och skriptet i den. Värden kan då bli endast delvis uppgraderad.",
     "warningTitle": "Använd SSH eller fysisk konsol / IPMI / iKVM",
-    "warningBody": "SSH är det vanligaste valet. Kör det i <code>tmux</code> eller <code>screen</code> så att uppgraderingen klarar korta nätavbrott. Om skriptet upptäcker ett vanligt SSH-skal visas först en påminnelse om tmux/screen."
+    "warningBody": "SSH är det vanligaste valet. Kör det i <code>tmux</code> eller <code>screen</code> så att uppgraderingen klarar korta nätavbrott. Bekräftelsedialogen för uppgraderingen påminner dig om att köra den från konsolen eller från SSH i tmux/screen."
   },
   "auto": {
     "heading": "Automatiskt läge / Utan tillsyn",
-    "intro": "Frågor om paket och konfigurationsfiler använder standardvärdena i tabellen nedan, och ett 401 från Enterprise-källan byter till no-subscription utan att fråga. Bekräftelsen av uppgraderingen, sammanfattningen av PVE 8-uppdateringen, reparationer från förkontrollen och frågan om omstart visas fortfarande.",
+    "intro": "Frågor om paket och konfigurationsfiler använder standardvärdena i tabellen nedan. Bekräftelsen av uppgraderingen, sammanfattningen av PVE 8-uppdateringen, reparationer från förkontrollen och frågan om omstart visas fortfarande.",
     "behaviourHeading": "Beteende i automatiskt läge",
     "behaviourTable": {
       "settingHeader": "Inställning",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Förlopp i automatiskt läge",
-    "flowIntro": "Sex faser i följd. Fas 2 uppdaterar PVE 8-paketen och fas 3 skriver konfigurationen för PVE 9-paketkällorna. Ett fel stoppar förloppet men återställer inte ändringarna; om PVE 8-uppdateringen misslyckas eller avbryts lämnas paketkällorna orörda. Fas 5 kör <code>dist-upgrade</code> till PVE 9.",
-    "flowDiagram": "1. KONTROLLER\nBlockera termproxy / vncshell; bekräfta uppgraderingen; avvisa PVE 9.\n\n2. FÖRBERED PVE 8\nscripts/global/update-pve8.sh\nUppdatera PVE 8-paket; stoppa om uppdateringen misslyckas eller avbryts.\npve8to9 --full (kan erbjuda reparationer).\nKontrollera utrymme och anslutning; Ceph 19.x Squid på hyperkonvergerade noder.\n\n3. ÄNDRA PAKETKÄLLOR\nBookworm → Trixie; skriv deb822-filer .sources.\nKommentera bort gamla .list-filer; apt-get update.\n\n4. KONTROLLERA PVE 9-KANDIDATEN\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStoppa om kandidaten inte är 9.x eller om proxmox-ve skulle tas bort.\n\n5. UPPGRADERA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nUtan prenumeration: inaktivera pve-enterprise.sources.\nLogg: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. KONTROLLERA OCH STARTA OM\nEFI: apt install grub-efi-amd64\npve8to9 --full; granska resultatet och frågan om omstart.",
+    "flowIntro": "Sex faser i följd. Fas 2 byter PVE 8-paketkällorna till no-subscription (Enterprise- och Ceph-listorna inaktiveras, <code>/etc/apt/sources.list</code> skrivs om) innan sammanfattningen av uppdateringen visas och uppdaterar sedan paketen; fas 3 skriver konfigurationen för PVE 9-paketkällorna. Ett fel stoppar förloppet men återställer inte ändringarna; om PVE 8-uppdateringen misslyckas eller avbryts startar inte PVE 9-migreringen, men ändringarna i PVE 8-paketkällorna finns kvar. Fas 5 kör <code>dist-upgrade</code> till PVE 9.",
+    "flowDiagram": "1. KONTROLLER\nBlockera termproxy / vncshell; bekräfta uppgraderingen; avvisa PVE 9.\n\n2. FÖRBERED PVE 8\nscripts/global/update-pve8.sh\nByt PVE 8-paketkällor till no-subscription och skriv om sources.list;\nuppdatera PVE 8-paket; stoppa om uppdateringen misslyckas eller avbryts.\npve8to9 --full (kan erbjuda reparationer).\nKontrollera utrymme och anslutning; Ceph 19.x Squid på hyperkonvergerade noder.\n\n3. ÄNDRA PAKETKÄLLOR\nBookworm → Trixie; skriv deb822-filer .sources.\nKommentera bort gamla .list-filer; apt-get update.\n\n4. KONTROLLERA PVE 9-KANDIDATEN\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStoppa om kandidaten inte är 9.x eller om proxmox-ve skulle tas bort.\n\n5. UPPGRADERA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nUtan prenumeration: inaktivera pve-enterprise.sources.\nLogg: /var/log/pve8-a-pve9-<timestamp>.log\n\n6. KONTROLLERA OCH STARTA OM\nEFI: apt install grub-efi-amd64\npve8to9 --full; granska resultatet och frågan om omstart.",
     "preflightHeading": "Förkontroll: vad som kontrolleras",
     "preflightTable": {
       "checkHeader": "Kontroll",
@@ -158,7 +158,7 @@
   },
   "manual": {
     "heading": "Manuellt uppgraderingsförfarande",
-    "intro": "Detta visar menyalternativet <strong>Manuell uppgraderingsguide</strong>: <wikilink>Proxmox officiella wiki för uppgradering från 8 till 9</wikilink>, uppdelad i fyra faser. Skriptet <em>visar</em> kommandona; du kör dem själv i ett separat root-skal. Varje steg är synligt.",
+    "intro": "Detta följer menyalternativet <strong>Manuell uppgraderingsguide</strong>, baserat på <wikilink>Proxmox officiella wiki för uppgradering från 8 till 9</wikilink> och uppdelat i fyra faser. Tabellen med dpkg-svar lägger till wikins förbehåll för sshd_config och chrony.conf, som menyn visar som ett vanligt Y. Skriptet <em>visar</em> kommandona; du kör dem själv i ett separat root-skal. Ingen automatisering, full insyn.",
     "rootCalloutTitle": "Alla kommandon kräver root",
     "rootCalloutBody": "Använd ett root-skal för kommandona, även för omdirigeringar och here-dokument. Med <code>sudo</code> måste hela kommandot köras med root-behörighet.",
     "phase1Heading": "Fas 1 - Förberedelse",
@@ -230,7 +230,7 @@
   "clusterCeph": {
     "heading": "Kluster och Ceph",
     "clusterCalloutTitle": "Cluster: uppgradera noder en i taget",
-    "clusterCalloutBody": "Identifieras med <code>pvecm status</code>. <strong>Uppgradera inte</strong> flera noder samtidigt. Flytta gästerna, uppgradera noden, starta om och verifiera klustermedlemskapet innan du fortsätter. Under uppgraderingen fungerar livemigrering från äldre till nyare PVE-versioner; motsatt riktning stöds normalt inte. HA-grupper omvandlas automatiskt till HA-regler när alla noder kör PVE 9.",
+    "clusterCalloutBody": "<strong>Uppgradera inte</strong> flera noder samtidigt. Flytta gästerna, uppgradera noden, starta om och verifiera klustermedlemskapet innan du fortsätter. Under uppgraderingen fungerar livemigrering från äldre till nyare PVE-versioner; motsatt riktning stöds normalt inte. HA-grupper omvandlas automatiskt till HA-regler när alla noder kör PVE 9.",
     "cephCalloutTitle": "Ceph: uppgradera Ceph FÖRST, sedan Proxmox",
     "cephCalloutBody": "Ceph måste redan köra 19.x Squid före Proxmox-uppgraderingen. Följ den officiella ordningen Quincy 17 → Reef 18 → Squid 19: uppdatera paket och starta om Ceph-demoner stegvis i dokumenterad ordning. Kontrollera <code>ceph --version</code> före varje Proxmox-nod. Fullständigt förfarande: <cephlink>wikin för uppgradering av Ceph Reef till Squid</cephlink>."
   },
@@ -273,7 +273,7 @@
   },
   "files": {
     "heading": "Filer involverade",
-    "code": "scripts/utilities/upgrade_pve8_to_pve9.sh                         # main upgrade orchestrator\nscripts/utilities/pve8to9_check.sh                                # pre-check (separate menu option)\nscripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh    # 17-step runbook\nscripts/global/update-pve8.sh                                     # PVE 8 worker (final patches)\n/etc/apt/sources.list                                             # bookworm → trixie sed\n/etc/apt/sources.list.d/proxmox.sources                           # created (deb822 PVE 9)\n/etc/apt/sources.list.d/debian.sources                            # created (deb822 trixie)\n/etc/apt/sources.list.d/ceph.sources                              # created if Ceph\n/etc/apt/sources.list.d/*.list                                    # legacy files commented out / removed\n/var/log/pve8-a-pve9-'<'timestamp'>'.log                              # full upgrade log"
+    "code": "scripts/utilities/upgrade_pve8_to_pve9.sh                         # main upgrade orchestrator\nscripts/utilities/pve8to9_check.sh                                # pre-check (separate menu option)\nscripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh    # 17-step runbook\nscripts/global/update-pve8.sh                                     # PVE 8 worker (final patches)\n/etc/apt/sources.list                                             # bookworm → trixie sed\n/etc/apt/sources.list.d/proxmox.sources                           # created (deb822 PVE 9)\n/etc/apt/sources.list.d/ceph.sources                              # created if Ceph\n/etc/apt/sources.list.d/*.list                                    # legacy files commented out / removed\n/var/log/pve8-a-pve9-<timestamp>.log                              # full upgrade log"
   },
   "references": {
     "heading": "Officiella referenser",

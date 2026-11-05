@@ -105,7 +105,7 @@
               [
                 "AMD ROCm",
                 "El nodo de render, <code>/dev/kfd</code> y la generación que declara el driver de cómputo en <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
-                "Una generación para la que la imagen ROCm de la aplicación trae kernels, las GPU RDNA2 que incluye y las posteriores, se ofrece tal cual. Las demás GPU de esas familias, como las Radeon 680M y 780M, se ofrecen como experimentales y nunca son la opción propuesta: ROCm no las soporta oficialmente, la aplicación las presenta como la generación de su familia (<code>HSA_OVERRIDE_GFX_VERSION</code>) y el instalador pide confirmación antes de descargar la imagen, que es más grande. Una GPU anterior, como los gráficos integrados de un Ryzen 5000U, no se ofrece e Immich deja el reconocimiento en la CPU"
+                "Una GPU de una generación que la imagen ROCm de la aplicación soporta (las RDNA2 que nombra y las posteriores) se ofrece tal cual. Las demás GPU de esas familias, como las Radeon 680M y 780M, se ofrecen como experimentales y nunca son la opción propuesta. ROCm no las soporta oficialmente: la aplicación las presenta como la generación de su familia (<code>HSA_OVERRIDE_GFX_VERSION</code>) y el instalador pide confirmación antes de descargar la imagen, que es más grande. Una GPU anterior, como los gráficos integrados de un Ryzen 5000U, no se ofrece, e Immich deja el reconocimiento en la CPU"
               ],
               [
                 "NVIDIA",

@@ -125,7 +125,7 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Stoppt und deaktiviert Dienst und Timer. Entfernt Cron-Jobs, systemd-Units, Programmdateien, Konfiguration und /var/log.hdd. Entfernt auch das apt-Paket, falls darüber installiert."
+            "restores": "Deaktiviert Dienst und Timer und entfernt die ProxMenux-Konfiguration von Log2RAM. Beim nächsten Herunterfahren schreibt Log2RAM /var/log auf den Datenträger; beim nächsten Start kehren das Journal und die Task-Logs nach /var/log zurück und die Log2RAM-Dateien werden entfernt."
           },
           {
             "tool": "Automatisches ZFS-TRIM",

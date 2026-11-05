@@ -22,6 +22,9 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { LxcUpdateJobs } from "./lxc-update-jobs"
+import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
+import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
 import { GuestBackupList } from "./guest-backup-list"
 import type { GuestBackup } from "../lib/guest-backup-archives"
@@ -977,7 +980,9 @@ export function VirtualMachines() {
   // A container restored from a backup carries the mark of its installation
   // and has no record on this host until it is recovered from the menu.
   const [ociRestored, setOciRestored] = useState(false)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover" } | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover"; recoverPrevious?: boolean } | null>(null)
+  const ociCompletionCodeRef = useRef<number | undefined>(undefined)
+  useEffect(() => { ociCompletionCodeRef.current = undefined }, [ociAction])
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -1995,6 +2000,7 @@ export function VirtualMachines() {
   const [applyRestart, setApplyRestart] = useState(false)
   const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
   const [applyRunId, setApplyRunId] = useState<string>("")
+  const [applyResume, setApplyResume] = useState(false)
   const [applyCheckedOs, setApplyCheckedOs] = useState(false)
   const [applyTargetIds, setApplyTargetIds] = useState<string[]>([])
   const [applyTargetLabels, setApplyTargetLabels] = useState<string[]>([])
@@ -2636,6 +2642,7 @@ export function VirtualMachines() {
     setApplyVmid(vmid)
     setApplyTarget(target)
     setApplyRunId(runId)
+    setApplyResume(false)
     setApplyCheckedOs(opts?.checkedOs === true)
     setApplyTargetIds(opts?.targetIds?.length ? opts.targetIds : fallbackTargets)
     setApplyTargetLabels(opts?.targetLabels?.length ? opts.targetLabels : fallbackLabels)
@@ -2656,27 +2663,37 @@ export function VirtualMachines() {
     setApplyStartedAt(Date.now())
     setApplyOpen(true)
   }
-  const handleApplyComplete = async (exitCode = 0) => {
+  const resumeApplyJob = (job: LxcUpdateJob) => {
+    setApplyVmid(job.vmid)
+    setApplyTarget(job.target)
+    setApplyRunId(job.id)
+    setApplyCheckedOs(job.script_path.endsWith("/install_checked_os_updates.sh"))
+    setApplyResume(true)
+    setApplyStartedAt(job.created_at * 1000)
+    setApplyOpen(true)
+  }
+  const handleApplyComplete = async (exitCode = 0, notifyBackend = true) => {
     if (applyVmid == null) return
     const duration = Math.max(0, Math.round((Date.now() - applyStartedAt) / 1000))
-    // The modal fires onComplete on any WS close (success or user cancel).
-    // Report the same run ID so the backend can collapse this compatibility
-    // callback with its authoritative process-completion hook.
+    // Legacy callers may report the same run ID to the compatibility route.
+    // Background Updates only refresh the view after the server's real exit.
     try {
-      await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          success: exitCode === 0,
-          run_id: applyRunId,
-          target: applyTarget,
-          requested_targets: applyTargetIds,
-          target_labels: applyTargetLabels,
-          duration_seconds: duration,
-          ct_name: selectedVM?.name || `CT-${applyVmid}`,
-          refresh_docker_inventory: applyDockerRefresh,
-        }),
-      })
+      if (notifyBackend) {
+        await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            success: exitCode === 0,
+            run_id: applyRunId,
+            target: applyTarget,
+            requested_targets: applyTargetIds,
+            target_labels: applyTargetLabels,
+            duration_seconds: duration,
+            ct_name: selectedVM?.name || `CT-${applyVmid}`,
+            refresh_docker_inventory: applyDockerRefresh,
+          }),
+        })
+      }
     } catch {
       // Non-fatal — the backend process hook owns finalization.
     }
@@ -2694,6 +2711,12 @@ export function VirtualMachines() {
     // performs the requests (the data map is only a render seed), so no
     // invalidation is needed and there is no "Loading applications" flash.
     void fetchLxcApps(applyVmid)
+    // Recovery can be opened from the job banner while another CT is selected.
+    // Refresh the operated guest without changing that other guest's result UI.
+    if (selectedVMRef.current?.vmid !== applyVmid) {
+      void mutate()
+      return
+    }
     // Enter the "Comprobando resultado…" state on the Updates tab.
     // Baseline snapshot lets a downstream useEffect detect when the
     // SWR poll actually delivers the post-apply counts (as opposed
@@ -5227,7 +5250,9 @@ export function VirtualMachines() {
                     null
                   return (
                     <LxcAppPanel
-                      key={`${selectedVM.vmid}-${selectedVM.modal_cache_revision ?? 0}`}
+                      // Refresh server data without destroying an unsaved editor.
+                      key={selectedVM.vmid}
+                      cacheRevision={selectedVM.modal_cache_revision ?? 0}
                       vmid={selectedVM.vmid}
                       ctIp={ctIp}
                       onChange={() => mutate()}
@@ -5513,7 +5538,7 @@ export function VirtualMachines() {
                                 <Button
                                   size="sm"
                                   className={updateBtnCls}
-                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update" })}
+                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update", recoverPrevious: !!ociInstance.pending })}
                                 >
                                   {hasUpdate
                                     ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
@@ -5742,7 +5767,7 @@ export function VirtualMachines() {
                                 onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recover" })}
                               >
                                 <RotateCcw className="h-4 w-4 mr-1.5" />
-                                {t("vmLxc.ociUpdates.recover")}
+                                {t("vmLxc.ociUpdates.registerRestored")}
                               </Button>
                             </div>
                           )}
@@ -7955,6 +7980,8 @@ export function VirtualMachines() {
         />
       )}
 
+      <LxcUpdateJobs activeRunId={applyOpen ? applyRunId : undefined} onResume={resumeApplyJob} />
+
       {/* LXC Update Apply Terminal — streams the apply_updates.sh
           script over WS/PTY (same wiring as the hardware installers).
           The backend finalizes on process exit; the close callback only
@@ -7966,7 +7993,13 @@ export function VirtualMachines() {
             setApplyOpen(false)
             setApplyVmid(null)
           }}
-          onComplete={handleApplyComplete}
+          onComplete={(exitCode) => {
+            markUpdateJobViewed(applyRunId)
+            // The server-owned job is the sole completion authority.
+            void handleApplyComplete(exitCode ?? 1, false)
+          }}
+          backgroundUpdate={{ runId: applyRunId, vmid: applyVmid, resume: applyResume }}
+          cancelledExitCode={130}
           scriptPath={applyCheckedOs
             ? "/usr/local/share/proxmenux/scripts/lxc/install_checked_os_updates.sh"
             : "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"}
@@ -7976,13 +8009,7 @@ export function VirtualMachines() {
           completedWithErrorMessage={(exitCode) =>
             t("vmLxc.updates.terminalCompletedWithError", { code: exitCode })
           }
-          description={
-            applyTarget === "os"
-              ? t("vmLxc.updates.terminalDescriptionOs")
-              : applyTarget === "app"
-                ? t("vmLxc.updates.terminalDescriptionApp")
-                : t("vmLxc.updates.terminalDescriptionBoth")
-          }
+          description={t("vmLxc.updates.backgroundDescription")}
           params={{
             VMID: String(applyVmid),
             RUN_ID: applyRunId,
@@ -8012,6 +8039,7 @@ export function VirtualMachines() {
           onClose={() => {
             const vmid = ociAction.vmid
             setOciAction(null)
+            if (!shouldRefreshOciAfterCompletion(ociCompletionCodeRef.current)) return
             // The image, the digest and the record changed: read them again.
             fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
               .catch(() => undefined)
@@ -8025,7 +8053,10 @@ export function VirtualMachines() {
           }}
           scriptPath="/usr/local/share/proxmenux/scripts/oci/manage_instance.sh"
           scriptName="oci_manage_instance"
-          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate")
+          cancelledExitCode={OCI_CANCELLED_EXIT_CODE}
+          onComplete={(exitCode) => { ociCompletionCodeRef.current = exitCode }}
+          title={ociAction.action === "update" ? t(ociAction.recoverPrevious
+            ? "vmLxc.ociUpdates.terminalTitleRecoverPrevious" : "vmLxc.ociUpdates.terminalTitleUpdate")
             : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
             : t("vmLxc.ociUpdates.terminalTitleModify")}
           description={t("vmLxc.ociUpdates.terminalDescription")}

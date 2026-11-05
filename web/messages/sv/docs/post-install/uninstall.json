@@ -125,7 +125,7 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Stoppar och inaktiverar tjänst och timer. Tar bort cron-jobb, systemd-enheter, binärer, konfiguration och /var/log.hdd. Avinstallerar även apt-paketet om det installerats så."
+            "restores": "Inaktiverar tjänsten och timern och tar bort ProxMenux-konfigurationen för Log2RAM. Vid nästa avstängning skriver Log2RAM /var/log till disken; vid nästa uppstart flyttas journalen och uppgiftsloggarna tillbaka till /var/log och Log2RAM-filerna tas bort."
           },
           {
             "tool": "Automatisk ZFS-TRIM",

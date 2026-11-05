@@ -1,38 +1,67 @@
 {
   "meta": {
     "title": "Prispievatelia | Dokumentácia ProxMenux",
-    "description": "Poďakovanie ľuďom, vďaka ktorým ProxMenux vzniká: testerom, kontrolórom a vývojárom, ktorí sa podieľajú na každom vydaní.",
+    "description": "Za každou verziou sú ľudia, ktorí ProxMenux vyvíjajú, kontrolujú, prekladajú a testujú. Táto stránka ďakuje dnešným prispievateľom aj tým, ktorí pomohli projektu pri prvých krokoch.",
     "ogTitle": "Prispievatelia | Dokumentácia ProxMenux",
-    "ogDescription": "Zoznámte sa s prispievateľmi ProxMenux."
+    "ogDescription": "Za každou verziou sú ľudia, ktorí ProxMenux vyvíjajú, kontrolujú, prekladajú a testujú. Táto stránka ďakuje dnešným prispievateľom aj tým, ktorí pomohli projektu pri prvých krokoch."
   },
   "header": {
     "title": "Prispievatelia",
-    "description": "Projekt ProxMenux rastie vďaka svojim prispievateľom. Táto stránka oceňuje ich prácu: testovanie zostáv pred vydaním, odhaľovanie regresií, kontrolu PR a formovanie nových funkcií.",
+    "description": "Za každou verziou sú ľudia, ktorí ProxMenux vyvíjajú, kontrolujú, prekladajú a testujú. Táto stránka ďakuje dnešným prispievateľom aj tým, ktorí pomohli projektu pri prvých krokoch.",
     "section": "O projekte"
   },
-  "beyond": {
-    "title": "Ďalší prispievatelia",
-    "body": "Mnohí ďalší ľudia prispievajú hlásením chýb, návrhmi funkcií v Discussions, beta testovaním a prekladmi. Úplný zoznam prispievateľov do kódu nájdete v <extlink>grafe prispievateľov na GitHube</extlink>. Táto stránka vyzdvihuje ľudí, ktorí sa najaktívnejšie zapájajú do testovania a kontroly vydaní ProxMenuxu."
+  "active": {
+    "heading": "Vývoj, kontrola a pravidelná spolupráca",
+    "intro": "Vaso73, f3rs3n a jcastro pravidelne prispievajú vylepšeniami, opravami a kontrolami. Ich práca presahuje testovanie verzie: pomáha aj vytvárať a odlaďovať tie nasledujúce.",
+    "people": {
+      "Vaso73": "Vylepšenia a opravy v OCI manager a ProxMenux Monitor, ako aj preklad a kontrola slovenských textov.",
+      "f3rs3n": "Opravy a kontrola správania skriptov a Monitora spolu s priebežným zlepšovaním talianskeho prekladu.",
+      "jcastro": "Vývoj a ladenie funkcií OCI, zálohovania a Monitora, ako aj kontrola dokumentácie a testovanie od začiatkov projektu."
+    }
+  },
+  "code": {
+    "heading": "Ďalšie príspevky do kódu",
+    "intro": "Aj nasledujúci ľudia prispeli zmenami kódu. Odkazy umožňujú spoznať ich prácu; história GitHubu zachytáva príspevky a začlenené pull requesty.",
+    "viewWork": "Zobraziť príspevky",
+    "history": "História príspevkov",
+    "merged": "Všetky začlenené PR"
+  },
+  "community": {
+    "heading": "Komunita, ktorá aj testuje, prekladá a dokumentuje",
+    "body": "Nie každá práca má podobu kódu. Zopakovanie chyby, užitočné protokoly, testovanie iného hardvéru, zrozumiteľnejšie vysvetlenie alebo návrh zlepšenia tiež pomáhajú ProxMenuxu.",
+    "languages": "Osobitná vďaka patrí ľuďom, ktorí kontrolujú texty vo svojom jazyku. Preklady ponúk, Monitora a dokumentácie sprístupňujú projekt ďalším ľuďom a uľahčujú jeho používanie."
   },
   "testers": {
-    "heading": "Testeri a kontrolóri",
-    "intro": "Títo ľudia patrili medzi prvých prispievateľov do projektu. Testovaním, hlásením problémov a návrhmi zlepšení pomohli ProxMenuxu vyrásť do dnešnej podoby.",
-    "roles": {
-      "testing": "Testovanie",
-      "testingReviewer": "Testovanie a kontrola"
-    },
+    "heading": "Vďaka za prvé testy",
+    "intro": "Toto poďakovanie má stále svoje miesto. Títo ľudia pomáhali overovať prvé verzie, testovali projekt na vlastnom vybavení a zdieľali chyby a návrhy, keď ProxMenux začínal rásť.",
     "youtube": "YouTube"
   },
   "contribute": {
-    "heading": "Chceš prispieť?",
-    "intro": "Akýkoľvek príspevok je vítaný – kód, testovanie, dizajn, dokumentácia alebo len zdieľanie nápadov:",
-    "tester": "<strong>Tester</strong> — vyskúšajte <beta>beta kanál</beta> a pred stabilným vydaním nahláste, čo funguje a čo nie.",
-    "developer": "<strong>Vývojár</strong> — Bash, Next.js (TypeScript) a trochu Pythonu pre virtuálne prostredie prekladov (venv). PR na <gh>GitHube</gh> sú vítané.",
-    "designer": "<strong>Dizajnér</strong> — vylepšenia používateľského rozhrania, ikony a snímky obrazovky pre dokumentáciu.",
-    "ideas": "<strong>Nápady</strong> — pred vytvorením požiadavky na novú funkciu otvorte tému v <disc>GitHub Discussions</disc>."
+    "heading": "Aj tvoj príspevok je vítaný",
+    "intro": "Pomôcť môžeš malou opravou, konkrétnym testom alebo kontrolou textu. Nemusíš vytvoriť celú funkciu.",
+    "ways": {
+      "code": {
+        "title": "Kód a kontrola",
+        "body": "Vyvíjaj funkcie, opravuj chyby alebo skontroluj PR. Príručka vysvetľuje, ako pripraviť a navrhnúť zmeny."
+      },
+      "testing": {
+        "title": "Testovanie a diagnostika",
+        "body": "Vyskúšaj beta verzie a zdieľaj postup na zopakovanie problému aj protokoly, ktoré pomôžu pochopiť ho."
+      },
+      "translations": {
+        "title": "Preklady",
+        "body": "Kontroluj správy vo svojom jazyku a pomôž ich udržiavať aktuálne pri pridávaní funkcií."
+      },
+      "docs": {
+        "title": "Dokumentácia a dizajn",
+        "body": "Spresni návod, pridaj snímku obrazovky alebo zlepši rozhranie, aby sa v ňom ostatní ľahšie vyznali."
+      }
+    },
+    "guide": "Príručka pre prispievateľov",
+    "discuss": "Diskutovať s komunitou"
   },
-  "coc": {
-    "title": "Najprv si prečítajte kódex správania",
-    "body": "Pred odoslaním kódu alebo nahlásením problému si prečítajte <coclink>Pravidlá správania a osvedčené postupy</coclink>. Opisujú očakávania týkajúce sa zodpovednosti za kód, oznamovania bezpečnostných chýb a rozsahu PR."
+  "thanks": {
+    "title": "Ďakujeme, že to umožňujete",
+    "body": "Všetkým tu uvedeným aj tým, ktorí pomáhajú v issue, rozhovore či pri teste: ďakujeme za čas venovaný zlepšovaniu ProxMenuxu."
   }
 }

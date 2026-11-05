@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Prehľad: karta Sieť | Dokumentácia ProxMenux",
+    "description": "Karta Sieť uvádza všetky rozhrania hostiteľa: fyzické karty, mosty, bondy, VLAN a virtuálne rozhrania VM/LXC. Detail zobrazuje IP, MAC, stav, členov bondu, prenosy od spustenia a históriu RRD."
+  },
+  "header": {
+    "title": "Prehľad: karta Sieť",
+    "description": "Rozhrania hlásené jadrom — fyzické karty, mosty, bondy, VLAN a virtuálne porty VM/LXC — sú zoskupené do troch kariet. Kliknutím na riadok otvoríte adresy, počítadlá prenosov a historické údaje RRD.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Aktuálne aj historické údaje",
+    "body": "Aktuálny stav pochádza z <code>psutil.net_if_stats()</code> a <code>ip</code>, história prenosov z úložiska RRD Proxmox cez <code>/api/network/&lt;interface&gt;/metrics</code>. Počítadlá sa obnovujú približne každých 5 sekúnd a údaje RRD pre graf sa načítajú podľa potreby."
+  },
+  "topRow": {
+    "heading": "Horný riadok: štyri štatistické karty",
+    "headerCard": "Karta",
+    "headerWhat": "Čo ukazuje",
+    "rows": [
+      {
+        "card": "Sieťové prenosy",
+        "what": "Agregovaná rýchlosť RX / TX na všetkých rozhraniach, formátovaná v správnej jednotke (bps / Kbps / Mbps / Gbps)."
+      },
+      {
+        "card": "Aktívne rozhrania",
+        "what": "Dve počítadlá: <em>Physical X / Y</em> a <em>Bridges X / Y</em>, aktívne z celkového počtu. Prvé miesto na kontrolu, keď niečo prestane fungovať."
+      },
+      {
+        "card": "Stav siete",
+        "what": "Rýchle hodnotenie: V poriadku / Varovanie / Kritické podľa stavu spojenia, dostupnosti brány a integrity mosta. Zodpovedá kategórii <em>Sieťové rozhrania</em> v Health Monitor."
+      },
+      {
+        "card": "Odozva siete",
+        "what": "Čas odozvy brány s malým grafom. Kliknutie otvorí nižšie opísané <strong>okno Odozva siete</strong>: históriu a test ping na požiadanie voči bráne, Cloudflare alebo Google so správou PDF na stiahnutie."
+      }
+    ]
+  },
+  "flow": {
+    "heading": "Diagram sieťových tokov",
+    "intro": "Medzi horným riadkom a tromi kartami zobrazuje <strong>Network Flow</strong> aktuálnu topológiu. Cesty paketov vedú od fyzických kariet cez mosty v strede k VM a kontajnerom. Animované impulzy znázorňujú aktuálne prenosy rx/tx na každom spojení.",
+    "imageAlt": "Diagram toku siete – NIC vľavo, hostiteľ a mosty v strede, VM a LXC vpravo, s animovanými impulzmi na každom pripojení",
+    "imageCaption": "Network Flow — farebne odlíšené uzly plus animované kométy, ktorých smer a hrúbka odrážajú živú premávku.",
+    "elementsTitle": "Čo ukazuje diagram",
+    "elementsIntro": "Každý uzol predstavuje položku z rovnakého inventára ako karty nižšie. Topologické usporiadanie umožňuje ihneď vidieť ich vzťahy:",
+    "elements": [
+      "<strong>Sieťové karty</strong> (oranžové) — fyzické rozhrania s aktívnym spojením; neaktívne sú zobrazené tlmene.",
+      "<strong>Hostiteľ</strong> (oranžový) — hostiteľ Proxmox medzi sieťovými kartami a mostmi. Pevný bod, na ktorý nemožno kliknúť.",
+      "<strong>Mosty</strong> (tyrkysové) — mosty Linux a OVS s aspoň jedným aktívnym hosťovským systémom. Nepoužívané mosty sú skryté, aby diagram zvýraznil skutočné prenosy.",
+      "<strong>LXC</strong> (tyrkysové) — spustené kontajnery pripojené k mostu.",
+      "<strong>VM</strong> (fialové) — spustené virtuálne stroje pripojené k mostu.",
+      "Zastavené VM a kontajnery sú skryté."
+    ],
+    "pulsesTitle": "Čo animácia kóduje",
+    "pulsesBody": "Animované kométy, ktoré cestujú pozdĺž každého okraja predstavujú živú premávku:",
+    "pulses": [
+      "<strong>Smer</strong> — k sieťovej karte znamená <em>tx</em> hosťovského systému, k hosťovi znamená <em>rx</em>.",
+      "<strong>Hrúbka čiary</strong> rastie s rýchlosťou rx+tx hosťovského systému. Bez prenosov zostáva slabá animovaná čiara, pri veľkom prenose je hrubá.",
+      "<strong>Žiara hlavy kométy</strong> — teplý odtieň približne pri 1 MB/s, intenzívny od 30 MB/s. Pomáha rozpoznať hosťovský systém, ktorý najviac vyťažuje sieťovú kartu.",
+      "<strong>Kliknutie</strong> — každý uzol okrem hostiteľa otvorí nižšie opísané okno detailu rozhrania. Kliknutie na hostiteľa nemá žiadny účinok; v tomto zobrazení preň nie je okno."
+    ],
+    "useTitle": "Keď je to užitočné",
+    "useBody": "Karty ukazujú, <em>čo</em> existuje; diagram ukazuje, <em>ako je to prepojené</em> a kadiaľ tečú dáta. Odhalí hostí na rovnakom moste, dva vyťažené systémy na jednej karte ako možné úzke miesto alebo VM, ktorá zaplní spojenie, kým ostatné takmer neprenášajú."
+  },
+  "groups": {
+    "heading": "Tri skupiny rozhraní",
+    "intro": "Tri karty zoskupujú rozhrania podľa úlohy. Hlavička každej uvádza počet aktívnych rozhraní. Farebný štítok označuje <strong>typ</strong> každého rozhrania:",
+    "badges": [
+      "Modrá <strong>Fyzická</strong> – skutočné NIC.",
+      "Zelená <strong>Most</strong> Most Linux alebo most OVS (<code>vmbr*</code>).",
+      "Fialové <strong>Bond</strong> — agregované rozhranie bond / LACP / active-backup.",
+      "Tyrkysové <strong>VLAN</strong> — podrozhranie VLAN (<code>vmbr0.10</code>, <code>eno1.42</code>, …)."
+    ],
+    "clickable": "<strong>Na každý riadok možno kliknúť</strong>: fyzické a virtuálne rozhrania, mosty aj bondy. Nižšie opísaný detail zobrazí základné údaje, IP, počítadlá a históriu RX/TX z úložiska RRD Proxmox.",
+    "physicalTitle": "Fyzické rozhrania",
+    "physicalBody": "Fyzické rozhrania rozpoznané jadrom: <code>eno1</code>, <code>enp4s0</code>, <code>eth0</code>, <code>wlp3s0</code> a ďalšie. Každé zariadenie má riadok s modrým štítkom <strong>Physical</strong> a stavom spojenia. Zobrazujú sa aj <em>členovia bondu</em> s odkazom na príslušný bond.",
+    "bridgeTitle": "Sieťové mosty",
+    "bridgeBody": "Mosty Linux (<code>vmbr0</code>, <code>vmbr1</code>, …) a OVS spravované Proxmoxom. Každý riadok ukazuje zelený štítok <strong>Bridge</strong>, pri jednom porte fyzické rozhranie a stav mosta. Bondy majú fialový štítok <strong>Bond</strong>, podrozhrania VLAN tyrkysový <strong>VLAN</strong>.",
+    "vmTitle": "Rozhrania VM / LXC",
+    "vmBody": "Rozhrania <code>tap*</code> a <code>veth*</code> vytvorené pri spustení hostí, jedno pre každú virtuálnu kartu. Hlavička uvádza <em>X / Y Active</em> a riadky odkazujú na VM/CT v karte VMs a LXCs. Po zastavení hosťa neaktívne záznamy zmiznú pri ďalšom obnovení."
+  },
+  "drillIn": {
+    "heading": "Detail rozhrania",
+    "intro": "Kliknutím na riadok otvoríte okno s piatimi blokmi:",
+    "headerBlock": "Blok",
+    "headerContents": "Obsah",
+    "rows": [
+      {
+        "block": "Základné informácie",
+        "contents": "Názov, typ (fyzické / most / bond / VLAN / vm), MAC adresa, stav (aktívne / neaktívne), MTU a základné fyzické rozhranie pri virtuálnych typoch."
+      },
+      {
+        "block": "Členovia bondu",
+        "contents": "Iba pre bondy: každá členská karta s aktívnym alebo chybovým stavom, režim bondu (active-backup / 802.3ad / balance-alb / …) a primárne rozhranie, ak je nastavené."
+      },
+      {
+        "block": "IP adresy",
+        "contents": "Každá adresa IPv4/IPv6 s dĺžkou predpony. Automaticky nastavené adresy link-local sú uvedené sivou farbou."
+      },
+      {
+        "block": "Historický graf",
+        "contents": "Rýchlosť RX/TX vo vybranom období (1 hodina / 24 hodín / 7 dní / 30 dní / 1 rok), získaná z <code>/api/network/&lt;interface&gt;/metrics</code> (RRD Proxmox)."
+      },
+      {
+        "block": "Premávka od posledného štartu",
+        "contents": "Celkový počet bajtov a paketov RX/TX od posledného spustenia hostiteľa a počítadlá chýb a zahodených paketov."
+      }
+    ],
+    "inactiveTitle": "Detail neaktívnych rozhraní zostáva dostupný",
+    "inactiveBody": "Ak je rozhranie <em>neaktívne</em>, okno zobrazí upozornenie „Neaktívne rozhranie“ bez aktuálnych počítadiel. Konfigurácia s adresami a členmi bondu aj história zostanú viditeľné na určenie príčiny a času poruchy."
+  },
+  "latency": {
+    "heading": "Okno Odozva siete",
+    "intro": "Kliknutím na <em>Odozva siete</em> v hornom riadku otvoríte okno s históriou, testom na požiadanie, tromi cieľmi a správou PDF na stiahnutie.",
+    "targetsTitle": "Ciele",
+    "targetsIntro": "Rozbaľovací zoznam hore vyberá cieľ testu ping:",
+    "targets": [
+      "<strong>Brána</strong> — smerovač LAN. Testuje iba miestny úsek, aby ste mohli skúmať problémy prepínača alebo kabeláže bez vplyvu WAN.",
+      "<strong>Cloudflare (1.1.1.1)</strong> — verejný resolver DNS v sieti anycast. Testuje úsek WAN.",
+      "<strong>Google (8.8.8.8)</strong> — alternatívny verejný cieľ na overenie výsledkov alebo pri regionálnych problémoch Cloudflare."
+    ],
+    "mode1Title": "Režim 1 — Historické zobrazenie",
+    "mode1Alt": "Okno odozvy v historickom režime s cieľom Brána, hodinovým intervalom a zobrazenými predchádzajúcimi meraniami",
+    "mode1Caption": "História odozvy brány za poslednú hodinu. Zberné vlákno teploty a odozvy ukladá merania do databázy každých 60 sekúnd.",
+    "mode1Body1": "Predvolený režim okna. Druhý zoznam vyberá obdobie (<em>1 hodina / 6 hodín / 24 hodín / 3 dni / 7 dní</em>). Nad grafom sú Aktuálna / Minimum / Priemer / Maximum a stav Výborná / Dobrá / Zvýšená / Zlá podľa prahov uvedených nižšie.",
+    "mode1Body2": "Zdrojom sú merania, ktorými Health Monitor zisťuje dlhodobé spomalenie siete. Vlákno na pozadí <code>_temperature_collector_loop</code> meria bránu každých 60 sekúnd a ukladá históriu do lokálnej databázy SQLite.",
+    "mode2Title": "Režim 2 — Test v reálnom čase",
+    "mode2Alt": "Okno odozvy s priebežným pingom na Cloudflare, priebehom 50 % a pribúdajúcimi meraniami v grafe",
+    "mode2Caption": "Dvojminútový test voči Cloudflare s meraním každých päť sekúnd, ktoré sa hneď pridá do grafu. <em>Zastaviť</em> ukončí test skôr; <em>Testovať znova</em> pridá merania do rovnakého súboru údajov.",
+    "mode2Intro": "Prepnutie cieľa na Cloudflare alebo Google spustí na požiadanie ping test. Správanie:",
+    "mode2Items": [
+      "<strong>Trvanie</strong> — dve minúty na test s ukazovateľom priebehu a zostávajúcimi sekundami.",
+      "<strong>Interval</strong> — meranie každých päť sekúnd, 24 meraní na test.",
+      "<strong>Metóda</strong> — ICMP Echo Request (<code>ping</code>), tri po sebe idúce pingy na meranie s priemernou odozvou.",
+      "<strong>Zastaviť</strong> — okamžite ukončí test a zachová doterajšie údaje.",
+      "<strong>Testovať znova</strong> — pridáva merania k existujúcim údajom, aby ste viacerými testami vytvorili dlhšiu históriu.",
+      "<strong>Ukazovateľ aktuálneho stavu</strong> — prehodnocuje sa po každom meraní podľa rovnakých prahov Výborná / Dobrá / Zvýšená / Zlá."
+    ],
+    "thresholdsTitle": "Hraničné hodnoty výkonu",
+    "headerStatus": "Stav",
+    "headerRange": "Rozsah",
+    "headerImpact": "Praktický vplyv",
+    "thresholdRows": [
+      {
+        "status": "Výborná",
+        "range": "< 50 ms",
+        "impact": "Optimálne pre aplikácie v reálnom čase, herné a video hovory."
+      },
+      {
+        "status": "Dobrá",
+        "range": "50 – 100 ms",
+        "impact": "V poriadku pre väčšinu aplikácií, s minimálnym dopadom."
+      },
+      {
+        "status": "Zvýšená",
+        "range": "100 – 200 ms",
+        "impact": "Citeľné oneskorenie. Môže ovplyvniť VoIP a interaktívne aplikácie."
+      },
+      {
+        "status": "Zlá",
+        "range": "> 200 ms",
+        "impact": "Odozva je výrazne zvýšená. Odporúča sa preveriť sieť."
+      }
+    ],
+    "reportTitle": "Správa o latencii siete (PDF)",
+    "reportIntro": "Oba režimy majú pri výbere cieľa tlačidlo <strong>Správa</strong>. Otvorí tlačiteľnú správu z meraní; uložte ju ako PDF cez dialóg tlače prehliadača a priložte ju k žiadosti o podporu u poskytovateľa internetu.",
+    "reportPreviewAlt": "Prvá strana správy PDF o odozve: súhrn, ukazovateľ, štatistiky, graf a vysvetlenie prahov",
+    "reportPreviewCaption": "Prvá strana obsahuje súhrn, ukazovateľ, hlavné štatistiky, časový priebeh odozvy a vysvetlenie prahov. Od strany 2 nasleduje tabuľka meraní a metodika.",
+    "downloadLabel": "Stiahnuť príklad správy o odozve (PDF)",
+    "sectionsIntro": "Správa obsahuje šesť sekcií:",
+    "sections": [
+      "<strong>Súhrn</strong> — ukazovateľ od 0 do viac ako 300 ms so zelenou, žltou a červenou zónou; stav Výborná / Dobrá / Zvýšená / Zlá; cieľ, režim, počet meraní a súhrn straty paketov.",
+      "<strong>Štatistiky odozvy</strong> — štyri ukazovatele pre aktuálnu hodnotu, minimum, priemer a maximum, plus počet meraní, priemerná strata paketov a obdobie testu.",
+      "<strong>Graf odozvy</strong> — plošný graf meraní počas testu s referenciami minima, priemeru a maxima na zvislej osi.",
+      "<strong>Prahy výkonu</strong> — rovnaká štvorstupňová škála ako vyššie s farebnou bodkou pre každý stupeň.",
+      "<strong>Podrobné výsledky</strong> — číslovaná tabuľka s časom, odozvou, stratou paketov a stavom každého merania. Odhalí krátke špičky skryté za priemermi.",
+      "<strong>Metodika</strong> — ICMP Echo Request, tri po sebe idúce pingy na meranie, názov a IP cieľa a záverečné hodnotenie podľa stavu."
+    ],
+    "useCaseTitle": "Príklad použitia: podpora poskytovateľa internetu",
+    "useCaseBody": "Pri spomalení spustite dvojminútový test Cloudflare, predĺžte záznam cez <em>Testovať znova</em> a vyberte <em>Správa</em>. PDF obsahuje všetky merania a metodiku. Môžete ho priložiť k žiadosti o podporu s časmi poruchy; poskytovateľ určuje potrebné dôkazy."
+  },
+  "excluding": {
+    "heading": "Vylúčenie rozhraní z monitorovania",
+    "body1": "Rozhrania možno vylúčiť z monitorovania, napríklad zámerne vypnuté mosty, testovacie rozhrania alebo odstránené karty, ktoré zostali v konfigurácii. Nastavenie je v <code>excluded_interfaces</code>: Health Monitor pre ne nevytvára varovania ani oznámenia a nezahŕňa ich do celkového stavu.",
+    "body2": "V kontextovej ponuke vyberte <em>Vylúčiť z monitorovania</em>. Rozhranie zostane viditeľné s fialovým štítkom <strong>vylúčené</strong>. V rovnakej ponuke môžete monitorovanie opäť zapnúť."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSection": "Časť karty",
+    "headerEndpoint": "Koncový bod",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "section": "Inventár rozhrania",
+        "endpoint": "/api/network",
+        "source": "<code>ip -j addr</code> + <code>ip -j link</code> a zisťovanie bondov a mostov."
+      },
+      {
+        "section": "Súhrnné karty",
+        "endpoint": "/api/network/summary",
+        "source": "Súhrn inventára a počet aktívnych a neaktívnych rozhraní."
+      },
+      {
+        "section": "História RX/TX jednotlivých rozhraní",
+        "endpoint": "/api/network/<iface>/metrics",
+        "source": "Aktuálne počítadlá používajú <code>/proc/net/dev</code>; história grafu pochádza z RRD Proxmox cez pvesh. Rozhrania VM/LXC používajú údaje hosťa, fyzické rozhrania a mosty údaje uzla."
+      },
+      {
+        "section": "Odozva: aktuálna",
+        "endpoint": "/api/network/latency/current",
+        "source": "Krátka séria <code>ping</code> na nastavenú bránu alebo cieľ."
+      },
+      {
+        "section": "Odozva: história",
+        "endpoint": "/api/network/latency/history",
+        "source": "Merania ukladá zberné vlákno teploty a odozvy na pozadí približne každých 60 sekúnd."
+      }
+    ],
+    "codeComment1": "# Overiť stav rozhraní zobrazený v prehľade",
+    "codeComment2": "# Overiť aktuálne meranie odozvy celej trasy"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — kategória Sieť a prahy histórie odozvy."
+      },
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tail": " — koncové body siete a odozvy."
+      },
+      {
+        "label": "Integrácie",
+        "href": "/docs/monitor/integrations",
+        "tail": " — zber Prometheus poskytuje rovnaké sieťové metriky."
+      },
+      {
+        "label": "Index prehľadu",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ostatné karty."
+      },
+      {
+        "label": "ProxMenux → Sieť",
+        "href": "/docs/network",
+        "tail": "— strana akcií: analýza mostov, trvalé názvy rozhraní, zálohovanie a reštart, iperf3."
+      }
+    ]
+  }
+}

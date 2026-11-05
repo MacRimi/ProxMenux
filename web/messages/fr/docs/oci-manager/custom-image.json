@@ -265,7 +265,7 @@
           "list": {
             "items": [
               "Un Dockerfile sans image publiée : l’image doit d’abord être construite et publiée dans un registre OCI.",
-              "Un fichier Compose à plusieurs services : cette option installe un seul service par conteneur, même si plusieurs services utilisent la même image.",
+              "Les fichiers Compose à plusieurs services utilisent un LXC natif par service. Chaque application web doit publier son propre port ; les volumes de même source peuvent partager un répertoire de l’hôte. Les options non prises en charge, les réseaux externes et les services sans contrôle de santé compatible bloquent toujours l’installation.",
               "<code>configs</code>, secrets externes ou formats de périphériques impossibles à adapter sans ambiguïté.",
               "Substitutions shell comme <code>$(command)</code> : il faut saisir directement la valeur résultante.",
               "Options <code>docker run</code> non reconnues et <code>--env-file</code> : utilisez plutôt un fichier Compose aux valeurs explicites."

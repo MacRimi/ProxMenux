@@ -16,9 +16,9 @@
     "items": [
       "<strong>Verified backups</strong> of every VM and CT (PBS, vzdump, ZFS snapshots — and verify they restore).",
       "<strong>Console / IPMI / iKVM access</strong> to the host for when SSH drops mid-upgrade.",
-      "The host already up-to-date on PVE 8.4.x (the script enforces this).",
+      "The host on the latest PVE 8 patch level. The script updates PVE 8 first; it does not check for a specific 8.4.x version.",
       "Ceph (if present) on version 19.x Squid.",
-      "At least <strong>5 GB free</strong> on the root filesystem."
+      "At least <strong>5 GB free</strong> on the root filesystem, as the Proxmox guide recommends. The script itself only checks for 1 GB in /var/cache/apt/archives."
     ]
   },
   "modeMenu": {
@@ -63,13 +63,13 @@
   },
   "webTerminal": {
     "heading": "Why the web terminal is blocked",
-    "body": "All three upgrade modes detect <code>termproxy</code> / <code>vncshell</code> in the parent process chain and refuse to run. Reason: the Proxmox web terminal is served by <code>pveproxy</code>, which is one of the services that gets upgraded mid-flow. As soon as <code>pveproxy</code> restarts, your terminal session dies — and so does the upgrade script that was running inside it. The host is left half-upgraded, no good way to resume.",
+    "body": "The Automatic and Interactive modes detect <code>termproxy</code> / <code>vncshell</code> in the parent process chain and refuse to run, unless the session comes over SSH or <code>PVE_ALLOW_WEBTERM=1</code> is set. The pre-check and the manual guide change nothing and run anywhere. Reason: the Proxmox web terminal is served by <code>pveproxy</code>, which is one of the services that gets upgraded mid-flow. As soon as <code>pveproxy</code> restarts, your terminal session dies — and so does the upgrade script that was running inside it. The host is left half-upgraded, no good way to resume.",
     "warningTitle": "Use SSH or physical / IPMI / iKVM console",
-    "warningBody": "SSH is the most common choice. Open it inside <code>tmux</code> or <code>screen</code> so the upgrade survives a brief network blip. The very first thing the script does is print the tmux/screen reminder if it detects you're in a plain SSH shell."
+    "warningBody": "SSH is the most common choice. Open it inside <code>tmux</code> or <code>screen</code> so the upgrade survives a brief network blip. The upgrade confirmation dialog reminds you to run it from the console or from SSH inside tmux/screen."
   },
   "auto": {
     "heading": "Automatic / Unattended mode",
-    "intro": "Package and configuration-file prompts use the defaults in the table below, and a 401 from the enterprise repository switches to no-subscription without asking. The upgrade confirmation, the PVE 8 update summary, any pre-check repairs and the reboot prompt are still shown.",
+    "intro": "Package and configuration-file prompts use the defaults in the table below. The upgrade confirmation, the PVE 8 update summary, any pre-check repairs and the reboot prompt are still shown.",
     "behaviourHeading": "Auto-mode-specific behaviour",
     "behaviourTable": {
       "settingHeader": "Setting",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Auto-mode flow",
-    "flowIntro": "Six sequential phases. Phase 2 updates the PVE 8 packages and phase 3 writes the PVE 9 repository configuration. A failure stops the flow without rolling those changes back; if the PVE 8 update fails or is cancelled, the repositories are left unchanged. Phase 5 runs the PVE 9 <code>dist-upgrade</code>.",
-    "flowDiagram": "1. CHECKS\nBlock termproxy / vncshell; confirm the upgrade; reject PVE 9.\n\n2. PREPARE PVE 8\nscripts/global/update-pve8.sh\nUpdate PVE 8 packages; stop if the update fails or is cancelled.\npve8to9 --full (may offer repairs).\nCheck space and connectivity; Ceph 19.x Squid on hyper-converged nodes.\n\n3. MIGRATE REPOSITORIES\nBookworm → Trixie; write deb822 .sources files.\nComment legacy .list files; apt-get update.\n\n4. VALIDATE THE PVE 9 CANDIDATE\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStop if the candidate is not 9.x or proxmox-ve would be removed.\n\n5. UPGRADE\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nNo subscription: disable pve-enterprise.sources.\nLog: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. VERIFY AND REBOOT\nEFI: apt install grub-efi-amd64\npve8to9 --full; review results and the reboot prompt.",
+    "flowIntro": "Six sequential phases. Phase 2 switches the PVE 8 repositories to no-subscription (enterprise and Ceph lists disabled, <code>/etc/apt/sources.list</code> rewritten) before it shows the update summary, then updates the packages; phase 3 writes the PVE 9 repository configuration. A failure stops the flow without rolling those changes back; if the PVE 8 update fails or is cancelled, the PVE 9 migration does not start, but the PVE 8 repository changes stay. Phase 5 runs the PVE 9 <code>dist-upgrade</code>.",
+    "flowDiagram": "1. CHECKS\nBlock termproxy / vncshell; confirm the upgrade; reject PVE 9.\n\n2. PREPARE PVE 8\nscripts/global/update-pve8.sh\nSwitch PVE 8 repositories to no-subscription and rewrite sources.list;\nupdate PVE 8 packages; stop if the update fails or is cancelled.\npve8to9 --full (may offer repairs).\nCheck space and connectivity; Ceph 19.x Squid on hyper-converged nodes.\n\n3. MIGRATE REPOSITORIES\nBookworm → Trixie; write deb822 .sources files.\nComment legacy .list files; apt-get update.\n\n4. VALIDATE THE PVE 9 CANDIDATE\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStop if the candidate is not 9.x or proxmox-ve would be removed.\n\n5. UPGRADE\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nNo subscription: disable pve-enterprise.sources.\nLog: /var/log/pve8-a-pve9-<timestamp>.log\n\n6. VERIFY AND REBOOT\nEFI: apt install grub-efi-amd64\npve8to9 --full; review results and the reboot prompt.",
     "preflightHeading": "Pre-flight: what gets checked",
     "preflightTable": {
       "checkHeader": "Check",
@@ -158,7 +158,7 @@
   },
   "manual": {
     "heading": "Manual upgrade procedure",
-    "intro": "This is what the <strong>Manual upgrade guide</strong> menu option displays — a faithful mirror of <wikilink>the official Proxmox 8-to-9 upgrade wiki</wikilink> organised in 4 phases. The script <em>shows</em> these commands; you type them yourself in a separate root shell. No automation — full visibility.",
+    "intro": "This follows what the <strong>Manual upgrade guide</strong> menu option displays, based on <wikilink>the official Proxmox 8-to-9 upgrade wiki</wikilink> and organised in 4 phases. The dpkg answer table adds the wiki's caveats for sshd_config and chrony.conf, which the menu shows as a plain Y. The script <em>shows</em> these commands; you type them yourself in a separate root shell. No automation — full visibility.",
     "rootCalloutTitle": "All commands need root",
     "rootCalloutBody": "Use a root shell for these commands, including redirections and here-documents. If you use <code>sudo</code>, ensure the entire command runs with root privileges.",
     "phase1Heading": "Phase 1 — Preparation",
@@ -230,7 +230,7 @@
   "clusterCeph": {
     "heading": "Cluster & Ceph",
     "clusterCalloutTitle": "Cluster: upgrade nodes one at a time",
-    "clusterCalloutBody": "Detected via <code>pvecm status</code>. <strong>Do not</strong> upgrade more than one node at a time. Move guests off the node, upgrade, reboot and verify cluster membership before proceeding. During the upgrade, live migration from an older PVE version to a newer one works; the reverse direction is generally unsupported. HA groups migrate automatically to HA rules once all nodes run PVE 9.",
+    "clusterCalloutBody": "<strong>Do not</strong> upgrade more than one node at a time. Move guests off the node, upgrade, reboot and verify cluster membership before proceeding. During the upgrade, live migration from an older PVE version to a newer one works; the reverse direction is generally unsupported. HA groups migrate automatically to HA rules once all nodes run PVE 9.",
     "cephCalloutTitle": "Ceph: upgrade Ceph FIRST, then Proxmox",
     "cephCalloutBody": "Ceph must already run 19.x Squid before upgrading Proxmox. Follow the official sequence: Quincy 17 → Reef 18 → Squid 19, updating packages and restarting Ceph daemons in the documented rolling order. Verify <code>ceph --version</code> before upgrading each Proxmox node. Follow the full procedure: <cephlink>Ceph Reef to Squid upgrade wiki</cephlink>."
   },
@@ -273,7 +273,7 @@
   },
   "files": {
     "heading": "Files involved",
-    "code": "scripts/utilities/upgrade_pve8_to_pve9.sh                         # main upgrade orchestrator\nscripts/utilities/pve8to9_check.sh                                # pre-check (separate menu option)\nscripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh    # 17-step runbook\nscripts/global/update-pve8.sh                                     # PVE 8 worker (final patches)\n/etc/apt/sources.list                                             # bookworm → trixie sed\n/etc/apt/sources.list.d/proxmox.sources                           # created (deb822 PVE 9)\n/etc/apt/sources.list.d/debian.sources                            # created (deb822 trixie)\n/etc/apt/sources.list.d/ceph.sources                              # created if Ceph\n/etc/apt/sources.list.d/*.list                                    # legacy files commented out / removed\n/var/log/pve8-a-pve9-'<'timestamp'>'.log                              # full upgrade log"
+    "code": "scripts/utilities/upgrade_pve8_to_pve9.sh                         # main upgrade orchestrator\nscripts/utilities/pve8to9_check.sh                                # pre-check (separate menu option)\nscripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh    # 17-step runbook\nscripts/global/update-pve8.sh                                     # PVE 8 worker (final patches)\n/etc/apt/sources.list                                             # bookworm → trixie sed\n/etc/apt/sources.list.d/proxmox.sources                           # created (deb822 PVE 9)\n/etc/apt/sources.list.d/ceph.sources                              # created if Ceph\n/etc/apt/sources.list.d/*.list                                    # legacy files commented out / removed\n/var/log/pve8-a-pve9-<timestamp>.log                              # full upgrade log"
   },
   "references": {
     "heading": "Official references",

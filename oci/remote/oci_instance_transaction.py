@@ -27,12 +27,13 @@ import uuid
 from urllib.parse import unquote
 
 import oci_instances as instances
-from oci_installation_state import image_from_archive, parse_config, private_directory, sha
+from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
 import oci_nested_mounts as nested_mounts
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
+import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
 import oci_ui
@@ -52,7 +53,7 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
 # Their output is data (and may hold saved secrets); it is never logged.
 DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get'), ('pct', 'df')}
 # Kept across a modification: the watchdog and where the backups are made.
-HOST_PREFERENCES = ('watchdog', 'work_storage')
+HOST_PREFERENCES = ('watchdog', 'work_storage', 'stack_public_routes')
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
 ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
 SPINNER_FRAME = re.compile('^ ?[' + ''.join(oci_ui.FRAMES) + ']')
@@ -238,6 +239,26 @@ def recover_untouched(root, journal):
         return False
 
 
+def recover_failed_update(root, journal):
+    """Attempt the guarded rollback after an update/Modify command fails.
+
+    Unlike recovery of an untouched guest, replacement failures may have
+    parked its volumes or removed its root disk. The existing recovery
+    journal validates ownership, configuration and backup before restoring.
+    Stack transactions remain the responsibility of their coordinator.
+    """
+    try:
+        with instances.locked(root):
+            state = json.loads(Path(journal).read_text())
+            if state.get('coordinated') or state.get('phase') in TERMINAL:
+                return False
+            recover(root, Path(journal))
+            return True
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        log(f'automatic update recovery failed: {error}')
+        return False
+
+
 def fit(text):
     """A step line that is rewritten in place must not wrap."""
     width = max(shutil.get_terminal_size((80, 24)).columns - 8, 30)
@@ -354,12 +375,28 @@ def is_file_bind(mount, files=()):
     return mount['type'] == 'host-bind' and (mount['source'] in files or Path(mount['source']).is_file())
 
 
+# The host paths the installer mounts as the recipe gives them, never asking.
+SYSTEM_BIND_PREFIXES = ('/dev/', '/proc/', '/sys/', '/run/', '/var/run/')
+
+
 def declared_sources(contract):
-    """The host paths the recipe of a host monitor mounts on its own."""
-    if not contract['deployment'].get('host_monitor'):
-        return set()
-    profile = contract['template'].get('proxmox', {}).get('installer_profile', {})
-    return {item['source'] for item in profile.get('host_monitor_mounts', [])}
+    """The host paths the recipe mounts on its own: those of a host monitor,
+    and the system paths of its volumes, such as /run/dbus."""
+    template = contract.get('template') or {}
+    profile = template.get('proxmox', {}).get('installer_profile', {})
+    declared = set()
+    if contract['deployment'].get('host_monitor'):
+        declared |= {item['source'] for item in profile.get('host_monitor_mounts', [])}
+    system = {}
+    for volume in template.get('container_contract', {}).get('volumes', []):
+        source = str(volume.get('compose_source_example') or volume.get('container_path') or '')
+        if 'host-bind' in volume.get('installation_choice', []) and (
+                source.startswith(SYSTEM_BIND_PREFIXES)
+                or str(volume.get('container_path', '')).startswith(SYSTEM_BIND_PREFIXES)):
+            system[volume['container_path']] = source
+    declared |= {mount['source'] for mount in contract['deployment'].get('mounts', [])
+                 if mount['type'] == 'host-bind' and system.get(mount['container_path']) == mount['source']}
+    return declared
 
 
 def profile_keys(deployment):
@@ -398,13 +435,22 @@ def probe_http(args):
     return result.stdout, result.returncode
 
 
+def setup_then_web_port(template, check):
+    """AdGuard Home answers its setup wizard on 3000 and, once set up, its web UI
+    on 80. A check on 3000, derived or saved with an installation, takes 80 too."""
+    if (template.get('id') == 'image-adguard-home' and check.get('port') == 3000
+            and not check.get('alternative_ports')):
+        return dict(check, alternative_ports=[80])
+    return check
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
     profile = template.get('proxmox', {}).get('installer_profile', {})
     check = profile.get('startup_healthcheck')
     if check:
-        return check
+        return setup_then_web_port(template, check)
     if profile.get('haos_healthcheck'):
         # Home Assistant OS has a check of its own: Supervisor, Core and the
         # services it runs inside. The installer runs it on the new container.
@@ -416,6 +462,7 @@ def effective_healthcheck(template):
             check = {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
                      'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
                      'verify_tls': False, 'accept_any_status': True}
+            check = setup_then_web_port(template, check)
             # A port taken from the compose file because the recipe names no
             # web address may serve a database or SSH: any answer counts.
             if endpoint.get('source') == GUESSED_ENDPOINT:
@@ -460,18 +507,85 @@ def candidate_contract(record, operation, proposal=None):
     # of what is being edited: it stays as the record has it now.
     for key in HOST_PREFERENCES:
         if key in record['deployment']:
-            result['deployment'][key] = record['deployment'][key]
+            result['deployment'][key] = copy.deepcopy(record['deployment'][key])
         else:
             result['deployment'].pop(key, None)
     return with_default_healthcheck(result)
 
 
 # Proxmox settings the rebuilt container gets back exactly as they are: the
-# LAN leg ProxMenux adds to a suite or stack member, the start order and tags.
-KEPT_AS_IS = ('net1', 'startup', 'tags')
+# LAN leg ProxMenux adds to a suite or stack member, the start order, the tags
+# and what the user set there. ProxMenux does not decide any of them.
+KEPT_AS_IS = ('net1', 'startup', 'tags', 'features', 'nameserver', 'searchdomain', 'timezone',
+              'cpulimit', 'cmode', 'console', 'tty', 'hookscript', 'protection')
 ADOPTABLE = {'memory': ('resources', 'memory_mb'), 'swap': ('resources', 'swap_mb'),
              'cores': ('resources', 'cores'), 'cpulimit': ('resources', 'cores'),
-             'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot')}
+             'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot'),
+             'hostname': (None, 'hostname'), 'entrypoint': (None, 'custom_entrypoint'),
+             'bridge': ('network', 'bridge'), 'ipv4': ('network', 'ipv4'),
+             'gateway': ('network', 'gateway'), 'firewall': ('network', 'firewall'),
+             'vlan_tag': ('network', 'vlan_tag')}
+
+
+def network_fields(net):
+    """What a network line says that the record of an application keeps."""
+    fields = dict(item.split('=', 1) for item in (net or '').split(',') if '=' in item)
+    tag = fields.get('tag')
+    return {'bridge': fields.get('bridge'), 'ipv4': fields.get('ip'), 'gateway': fields.get('gw'),
+            'firewall': fields.get('firewall', '0') == '1', 'vlan_tag': int(tag) if tag else None}
+
+
+# What the engine writes itself among the lxc.* lines of a container.
+ENGINE_LXC = ('lxc.environment', 'lxc.init.', 'lxc.signal.', 'lxc.console.', 'lxc.hook.', 'lxc.include',
+              'lxc.idmap', 'lxc.mount.auto')
+
+
+def without_backup_snapshot(config):
+    """The configuration without the mark of a snapshot a backup left behind:
+    it is not a setting, and a snapshot of the user is not this one."""
+    return b''.join(line for line in config.splitlines(keepends=True) if line.strip() != b'parent: vzdump')
+
+
+def drop_backup_snapshot(vmid):
+    """A disk with a snapshot cannot be moved. The one an interrupted backup
+    left goes the way Proxmox removes it before its next backup."""
+    config = run('pct', 'config', str(vmid))
+    if without_backup_snapshot(config) != config and 'lock' not in parse_config(config):
+        run('pct', 'delsnapshot', str(vmid), 'vzdump', '--force', '1')
+
+
+def settings(config):
+    """The settings of a configuration to compare with those saved: without
+    that mark, and without the lines that follow the mount points."""
+    return parse_config(nested_mounts.without(without_backup_snapshot(config)))
+
+
+def custom_lxc(record, config):
+    """The raw lxc.* lines the user added in Proxmox: the ones saved before that
+    are still there, and the new ones. A rebuilt container gets them back."""
+    before = record['observed']['config'].splitlines()
+    saved = record['deployment'].get('custom_lxc', [])
+    lines = config.decode().splitlines()
+    return [line for line in lines if line.startswith('lxc.') and ': ' in line
+            and not line.startswith(ENGINE_LXC) and not nested_mounts.own(line)
+            and (line in saved or line not in before)]
+
+
+def kept_settings(record, candidate, cfg):
+    """What a rebuilt container takes from the one it replaces. The network and
+    the features go back as they are unless Modify has just changed them.
+    Protection comes back at the end: a protected container cannot be replaced."""
+    kept = {key: cfg[key] for key in KEPT_AS_IS if key in cfg and key != 'protection'}
+    if 'cores' not in cfg:
+        kept.pop('cpulimit', None)
+    if candidate['deployment'].get('security') != record['deployment'].get('security'):
+        kept.pop('features', None)
+    if 'net0' in cfg and candidate['deployment'].get('network') == record['deployment'].get('network'):
+        kept['net0'] = cfg['net0']
+    # Only a command the user set: the one of the image changes with the image.
+    if candidate['deployment'].get('custom_entrypoint') and 'entrypoint' in cfg:
+        kept['entrypoint'] = cfg['entrypoint']
+    return kept
 
 
 def external_changes(record, config, adopt=True):
@@ -479,7 +593,7 @@ def external_changes(record, config, adopt=True):
     values. Any change the new container cannot keep is refused."""
     if sha(config) == record['observed']['config_sha256']:
         return {}
-    before, now = parse_config(record['observed']['config'].encode()), parse_config(config)
+    before, now = settings(record['observed']['config'].encode()), settings(config)
     changed = sorted(key for key in before.keys() | now.keys() if before.get(key) != now.get(key))
     if ('description' in changed
             and instances.identity(record['observed']['config'].encode()) == record['installation_id']
@@ -487,10 +601,19 @@ def external_changes(record, config, adopt=True):
         changed.remove('description')
     cores_key = 'cpulimit' if 'cpulimit' in before and 'cores' not in before else 'cores'
     values = {}
+    # The network line stays as the user left it: a stack carries it over as
+    # it is, and an application also takes it into its record.
+    if 'net0' in changed:
+        changed.remove('net0')
+        if adopt:
+            old_net, new_net = network_fields(before.get('net0')), network_fields(now.get('net0'))
+            values.update({key: value for key, value in new_net.items() if old_net[key] != value})
     for key in changed if adopt else ():
         value = now.get(key)
         if key == 'onboot':
             values[key] = value == '1'
+        elif key in ('hostname', 'entrypoint') and value:
+            values[key] = value
         elif key == 'cpuunits' and value is None:
             values[key] = None
         elif key in ('memory', 'swap', 'cpuunits', cores_key) and value and re.fullmatch(r'[0-9]+', value):
@@ -503,6 +626,26 @@ def external_changes(record, config, adopt=True):
     return values
 
 
+def without_public_routes(config, vmid):
+    """The managed include is validated separately from sysctl includes."""
+    return b'\n'.join(line for line in config.splitlines() if not public_routes.own(line, vmid)) + b'\n'
+
+
+def refuse_high_availability(vmid):
+    """Recreating a container that HA manages would race the HA manager, which
+    restarts or relocates it in the middle of the replacement."""
+    try:
+        answer = run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json')
+    except FileNotFoundError:
+        return  # Not a Proxmox VE node: there is no HA manager to race.
+    resources = json.loads(answer)
+    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
+        raise ValueError(translate(
+            'This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, '
+            'or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.'
+        ).replace('{vmid}', str(vmid)))
+
+
 def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
@@ -512,12 +655,19 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
         raise ValueError(translate('Stack members are updated together with their stack'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; the container is not replaced'))
+    if not in_place and not coordinated:
+        # A stack checks its members itself; an in-place edit keeps the container.
+        refuse_high_availability(record['vmid'])
     for key, value in (external_changes(record, config, adopt=not coordinated) if baseline else {}).items():
         section, name = ADOPTABLE[key]
         recorded = deployment.get(section, {}) if section else deployment
         target = desired.setdefault(section, {}) if section else desired
         if target.get(name) == recorded.get(name):
             target[name] = value
+    # Lines the user added are carried over and are not part of what is checked.
+    custom = deployment.get('custom_lxc', [])
+    config = b''.join(line for line in without_backup_snapshot(config).splitlines(keepends=True)
+                      if line.decode().rstrip('\n') not in custom)
     cfg = parse_config(config)
     for key in ('lxc.init.uid', 'lxc.init.gid'):
         if key in cfg and not re.fullmatch(r'[0-9]+', cfg[key]):
@@ -539,7 +689,10 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
     files = runtime_settings.file_binds(config)
     if files:
         runtime_keys.add('lxc.mount.entry')
-    runtime_settings.check(config, deployment, record['vmid'])
+    public_routes.check(config, deployment, record['vmid'], record['installation_id'])
+    if deployment.get('stack_public_routes'):
+        runtime_keys.add('lxc.include')
+    runtime_settings.check(without_public_routes(config, record['vmid']), deployment, record['vmid'])
     coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
     preserved_keys = {'nameserver', 'searchdomain', 'timezone', 'protection'} if in_place else set()
     detached = unused_volumes(config)
@@ -551,7 +704,7 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
             or any(not re.fullmatch(r'[A-Za-z0-9_.-]+:[^\s,]+', value) or value in used_volumes
                    for value in detached.values())):
         raise ValueError(translate('The container disks do not match the saved record'))
-    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
+    if re.search(r'^\[[^]\r\n]+\]\s*$', config.decode(), re.MULTILINE) or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
     if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
@@ -592,6 +745,7 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
     if desired['rootfs'] != deployment['rootfs']:
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
     actual = mounts(config)
+    gpu_devices.preserve_recorded_container_gids(record, candidate, config)
     gpu_devices.check(config, deployment)
     if baseline:
         gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
@@ -623,8 +777,9 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
             raise ValueError(translate('Required persistent paths cannot be removed'))
     image_paths = set(record['observed']['image']['defaults'].get('Volumes') or {})
     image_paths -= non_persistent_image_volumes(record['template'])
-    if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old) for p in image_paths):
-        raise ValueError(translate('The image declares data paths that are still stored in the rootfs'))
+    in_rootfs = sorted(p for p in image_paths if not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old))
+    if in_rootfs:
+        raise ValueError(f"{translate('The image declares data paths that are still stored in the rootfs')}: {', '.join(in_rootfs)}")
     check = effective_healthcheck(candidate['template'])
     if not check and not coordinated:
         raise ValueError(translate('Updates are not available yet for this application in this beta'))
@@ -664,7 +819,8 @@ def freeze_host_sources(record, candidate, acknowledge_external_data, files=()):
 
 
 def check_runtime_mounts(config, deployment):
-    runtime_settings.check(config, deployment, deployment['vmid'])
+    public_routes.check(config, deployment, deployment['vmid'])
+    runtime_settings.check(without_public_routes(config, deployment['vmid']), deployment, deployment['vmid'])
     nested_mounts.check(config)
     actual = mounts(config)
     files = runtime_settings.file_binds(config)
@@ -718,7 +874,11 @@ def candidate_host_sources(journal, state):
 
 def stop(vmid):
     if run('pct', 'status', str(vmid)).strip() == b'status: running':
-        run('pct', 'shutdown', str(vmid), '--timeout', '60')
+        try:
+            run('pct', 'shutdown', str(vmid), '--timeout', '60')
+        except RuntimeError:
+            # What `docker stop` does with a process that ignores the signal.
+            run('pct', 'stop', str(vmid))
     if run('pct', 'status', str(vmid)).strip() != b'status: stopped':
         raise ValueError(translate('The container did not stop; its disks are not touched'))
 
@@ -774,10 +934,12 @@ def healthcheck(vmid, template):
             time.sleep(2)
         log(f'container {vmid} kept running for {stability}s')
         return None
-    scheme, port, path = check['scheme'], int(check['port']), check['path']
+    scheme, path = check['scheme'], check['path']
+    # Any of the ports answering means the application is up.
+    ports = [int(check['port']), *(int(p) for p in check.get('alternative_ports') or [])]
     timeout = int(check.get('timeout_seconds', 120))
     stability = int(check.get('stability_seconds', 0))
-    if (scheme not in ('http', 'https') or not 1 <= port <= 65535
+    if (scheme not in ('http', 'https') or not all(1 <= port <= 65535 for port in ports)
             or not path.startswith('/') or any(c.isspace() for c in path)
             or not 0 <= stability < timeout <= 3600):
         raise ValueError(translate('Invalid health check'))
@@ -792,16 +954,19 @@ def healthcheck(vmid, template):
         ok = False
         if ip:
             any_status = check.get('accept_any_status', False)
-            args = ['curl', '-sS' if any_status else '-fsS', '--noproxy', '*', '-o', '/dev/null',
+            args = [*container_curl(vmid, run), '-sS' if any_status else '-fsS', '--noproxy', '*', '-o', '/dev/null',
                     '--max-time', str(check.get('request_timeout_seconds', 5))]
             if any_status:
                 args += ['-w', '%{http_code}']
             if not check.get('verify_tls', False):
                 args.append('-k')
-            answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
-            ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
-            if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
-                ok = True
+            for port in ports:
+                answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
+                ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
+                if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
+                    ok = True
+                if ok:
+                    break
         if ok:
             stable_since = stable_since or time.monotonic()
             if time.monotonic() - stable_since >= stability:
@@ -907,6 +1072,8 @@ def commit(root, journal, state):
     gpu_devices.verify(state.get('desired_gpu_devices', {}))
     gpu_devices.check(config, state['candidate_contract']['deployment'])
     checkpoint(journal, state, 'committing')
+    if state.get('protected'):
+        run('pct', 'set', str(state['vmid']), '--protection', '1')
     result = copy.deepcopy(state['candidate_contract'])
     result.update(status='installed', completed_at=instances.now(),
                   last_transaction=state['id'],
@@ -1061,6 +1228,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         if 'stack' in expected:
             record['stack'] = copy.deepcopy(expected['stack'])
     candidate = candidate_contract(record, operation, proposal)
+    drop_backup_snapshot(vmid)
     before = run('pct', 'config', str(vmid))
     cfg, actual, mac = preflight(record, candidate, before, coordinated)
     description = original_description({'record': record, 'before_config': before.decode()})
@@ -1068,9 +1236,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                                             runtime_settings.file_binds(before))
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
-    resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
-    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
-        raise ValueError(translate('High availability resources are not supported by this profile'))
+    if coordinated:
+        refuse_high_availability(vmid)
     archive = archive.resolve(strict=True)
     check_archive(archive)
     image = image_from_archive(str(archive))
@@ -1114,7 +1281,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
              'external_data_acknowledged': acknowledge_external_data,
              'original_gpu_devices': original_gpu, 'desired_gpu_devices': desired_gpu,
              'was_running': run('pct', 'status', str(vmid)).strip() == b'status: running'}
-    state['kept_config'] = {key: cfg[key] for key in KEPT_AS_IS if key in cfg}
+    state['kept_config'] = kept_settings(record, candidate, cfg)
+    state['protected'] = cfg.get('protection') == '1'
     # The installer adds default tags. Preserve an explicit absence too, so
     # deleting all tags in Proxmox does not bring them back on the next update.
     state['kept_config']['tags'] = cfg.get('tags', '')
@@ -1124,11 +1292,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         state['runtime_deployment']['kept_proxmox_settings'] = state['kept_config']
     if coordinated:
         state['coordinated'] = coordinated
-        state['preserved_stack_config'] = {key: cfg[key] for key in ('net1', 'startup', 'hookscript') if key in cfg}
-        state['preserved_stack_config']['tags'] = cfg.get('tags', '')
-        if operation == 'update':
-            state['preserved_stack_config'].update({key: cfg[key] for key in
-                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits') if key in cfg})
+        state['preserved_stack_config'] = dict(state['kept_config'])
+        if operation == 'update' and 'cpuunits' in cfg:
+            state['preserved_stack_config']['cpuunits'] = cfg['cpuunits']
     checkpoint(journal, state, 'prepared')
     pending = copy.deepcopy(record)
     pending.update(status='updating', pending_transaction=str(journal), transaction_id=state['id'])
@@ -1201,6 +1367,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     firewall = Path(f'/etc/pve/firewall/{vmid}.fw')
     state['firewall_config'] = firewall.read_text() if firewall.exists() else None
     checkpoint(journal, state, 'replacing-root')
+    if state.get('protected'):
+        run('pct', 'set', str(vmid), '--delete', 'protection')
     run('pct', 'destroy', str(vmid))
     checkpoint(journal, state, 'installing-candidate')
     if show:
@@ -1261,28 +1429,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
 
 
 def remove_empty_format_directories(rootfs, deployment):
-    """Remove only empty, unmapped mkfs lost+found on restored managed disks."""
-    root = Path(rootfs)
-    for mount in deployment.get('mounts', []):
-        if mount.get('type') != 'managed-volume' or not mount.get('backup'):
-            continue
-        current = root
-        for part in Path(mount['container_path']).parts[1:]:
-            if part in ('.', '..'):
-                raise ValueError(translate('Invalid restored volume path'))
-            current /= part
-            if current.is_symlink():
-                raise ValueError(translate('Symbolic link in a restored volume path'))
-        candidate = current / 'lost+found'
-        if not candidate.exists() or candidate.is_symlink():
-            continue
-        info = candidate.lstat()
-        if (stat.S_ISDIR(info.st_mode) and info.st_ino == 11
-                and info.st_uid == 0 and info.st_gid == 0
-                and stat.S_IMODE(info.st_mode) == 0o700):
-            if not any(candidate.iterdir()):
-                candidate.rmdir()
-
+    """Keep the recovery entrypoint, sharing the guarded format-dir cleanup."""
+    from oci_managed_volumes import remove_empty_format_directories as clean
+    return clean(rootfs, deployment)
 
 def cleanup_restored_format_dirs(vmid, deployment, installation_id):
     owned(vmid, installation_id)
@@ -1306,6 +1455,7 @@ def complete_recovery(root, journal, state):
         raise ValueError(translate('The configuration changed after the backup was restored; the recovery is not confirmed'))
     cleanup_restored_format_dirs(vmid, state['record']['deployment'], state['record']['installation_id'])
     runtime_settings.restore(state['record']['deployment'], vmid)
+    public_routes.restore(state['record']['deployment'], vmid, state['record']['installation_id'])
     check_runtime_mounts(config, state['record']['deployment'])
     gpu_devices.check(config, state['record']['deployment'])
     if show:
@@ -1342,6 +1492,22 @@ def complete_recovery(root, journal, state):
                          f"CT {state['stage']}")
         if state.get('original_host_sources') or state.get('desired_host_sources'):
             msg_info2(translate('Shared host files are kept as they are; the backup does not restore their content.'))
+
+
+def check_recovery_runtime(config, state):
+    """Validate owned route assets before excluding their include from GPU/sysctl checks."""
+    error = None
+    for key in ('record', 'candidate_contract'):
+        saved = state.get(key) or {}
+        try:
+            public_routes.check(config, saved.get('deployment', {}), state['vmid'],
+                                state['record']['installation_id'])
+            break
+        except public_routes.RouteError as failure:
+            error = failure
+    else:
+        raise error
+    gpu_devices.check_recovery_entries(without_public_routes(config, state['vmid']), state)
 
 
 def recover(root, journal):
@@ -1410,7 +1576,7 @@ def recover(root, journal):
     if current_path.exists():
         stop(vmid)
         current = owned(vmid, record['installation_id'])
-        gpu_devices.check_recovery_entries(current, state)
+        check_recovery_runtime(current, state)
         if unused_volumes(current).keys() - state.get('retained_unused', {}).keys():
             raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
         move_retained_unused(state, to_stage=True)

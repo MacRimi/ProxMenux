@@ -45,6 +45,8 @@ class RemovalCleanupTests(unittest.TestCase):
             patch.object(oci_remove, "MONITOR_APPS", self.apps),
             patch.object(oci_remove, "CLUSTER_RECORDS", self.records),
             patch.object(oci_remove, "HOST_MONITOR_INCLUDES", self.host_monitor),
+            patch.object(oci_remove.public_routes, "DIRECTORY", self.root / "public-routes"),
+            patch.object(runtime_settings, "seccomp_path", lambda vmid: self.cluster / f"{vmid}.proxmenux-seccomp"),
             patch.object(runtime_settings, "include_path", lambda vmid: self.cluster / f"{vmid}.sysctls"),
             patch.object(runtime_settings, "legacy_include_path", lambda vmid: self.legacy / f"{vmid}.proxmenux-sysctls"),
             patch.object(oci_remove.subprocess, "run"),

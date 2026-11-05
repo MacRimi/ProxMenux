@@ -32,11 +32,12 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { fetchApi } from "../lib/api-config"
+import { fetchApi, getApiUrl, getAuthToken } from "../lib/api-config"
 import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } from "../lib/lxc-apps-cache"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
 import { useT } from "@/lib/i18n/provider"
+import { localizeAppEditorError } from "../lib/lxc-app-editor-errors"
 
 // installed_via is optional now — an empty value means "register only,
 // no version tracking, no warnings, just a clickable link". Docker
@@ -125,13 +126,14 @@ interface PortDetail {
 interface NativeDiscovery {
   vmid: number
   status: "not_scanned" | "complete" | "partial" | "error" | "busy"
+  issues?: string[]
   stale: boolean
   candidates: DetectedApp[]
 }
 
 interface DetectedApp {
   discovery_id?: string
-  source?: "native_metadata"
+  source?: "native_metadata" | "docker_metadata"
   installed_version?: string | null
   evidence?: Array<{ kind: string; value: string }>
   slug: string
@@ -355,6 +357,7 @@ interface ManagedAppInfo {
 
 interface Props {
   vmid: number
+  cacheRevision?: number
   ctIp?: string | null
   onChange?: () => void
   managed?: ManagedAppInfo | null
@@ -394,9 +397,17 @@ const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: strin
     lightTheme: `${SELFHST_WEBP_BASE}/frigate-dark.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/frigate-light.webp`,
   },
+  "llama-cpp": {
+    lightTheme: `${SELFHST_WEBP_BASE}/llama-cpp.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/llama-cpp-light.webp`,
+  },
   portainer: {
     lightTheme: `${SELFHST_WEBP_BASE}/portainer-dark.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/portainer-light.webp`,
+  },
+  tailscale: {
+    lightTheme: `${SELFHST_WEBP_BASE}/tailscale.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/tailscale-light.webp`,
   },
   vaultwarden: {
     lightTheme: `${SELFHST_WEBP_BASE}/vaultwarden.webp`,
@@ -406,11 +417,44 @@ const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: strin
 
 function selfhstThemeLogos(src: string) {
   if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
-  const match = src.toLowerCase().match(/\/(frigate|portainer|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  const match = src.toLowerCase().match(/\/(frigate|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 
+const LOCAL_LOGO_CACHE_PATH = /^\/api\/vms\/[1-9]\d*\/apps\/logo-cache\/[a-f0-9]{32}$/
+
+function CachedLocalLogo({ src, className }: { src: string; className: string }) {
+  const [image, setImage] = useState<{ src: string; url: string } | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+    let url: string | null = null
+    const token = getAuthToken()
+    fetch(getApiUrl(src), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal, cache: "no-store",
+    }).then(async response => {
+      if (!response.ok) throw new Error("cached icon unavailable")
+      const blob = await response.blob()
+      const mime = blob.type.split(";", 1)[0].trim().toLowerCase()
+      if (!["image/png", "image/svg+xml"].includes(mime) || blob.size > 262144) {
+        throw new Error("invalid cached icon")
+      }
+      if (!active) return
+      url = URL.createObjectURL(blob)
+      setImage({ src, url })
+    }).catch(() => { if (active) setImage(null) })
+    return () => {
+      active = false
+      controller.abort()
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [src])
+  return image?.src === src ? <img src={image.url} alt="" className={className} /> : null
+}
+
 export function ThemeAwareLogo({ src, className }: { src: string; className: string }) {
+  if (LOCAL_LOGO_CACHE_PATH.test(src)) return <CachedLocalLogo src={src} className={className} />
   const themed = selfhstThemeLogos(src)
   const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = "none"
@@ -463,7 +507,7 @@ function parseArgvInput(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean)
 }
 
-export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }: Props) {
+export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, cacheRevision = 0 }: Props) {
   const t = useT()
   const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
@@ -476,6 +520,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
   const [nativeDiscovery, setNativeDiscovery] = useState<NativeDiscovery | null>(null)
   const nativeRequest = useRef(0)
+  const [dockerDiscovery, setDockerDiscovery] = useState<NativeDiscovery | null>(null)
+  const dockerRequest = useRef(0)
   const targetRef = useRef(vmid)
   targetRef.current = vmid
   const targetGeneration = useRef(0)
@@ -485,26 +531,64 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     targetGeneration.current += 1
   }
   useEffect(() => {
-    const generation = targetGeneration.current
-    const request = ++nativeRequest.current
     setNativeDiscovery(null)
+    setDockerDiscovery(null)
     setEditing(null)
     setDetectionNotice(null)
     setSearchingApplications(false)
     setSaving(false)
+    return () => { targetGeneration.current += 1 }
+  }, [vmid, managed])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = nativeRequest.current
+    let cancelled = false
     if (managed) return
     fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
-      if (targetRef.current === vmid && targetGeneration.current === generation
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
           && nativeRequest.current === request) setNativeDiscovery(result)
     }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
-    return () => { targetGeneration.current += 1 }
+    return () => { cancelled = true }
+  }, [vmid, managed, cacheRevision])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = dockerRequest.current
+    let cancelled = false
+    if (managed) return
+    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`).then(result => {
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
+          && dockerRequest.current === request) setDockerDiscovery(result)
+    }).catch(() => { /* optional cached result; never initiate a scan */ })
+    return () => { cancelled = true }
   }, [vmid, managed])
   const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchingApplications, setSearchingApplications] = useState(false)
   const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
   // Editor state
-  const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig; targetVmid: number } | null>(null)
+  const [editing, setEditingState] = useState<{ appId: string | null; draft: AppConfig; targetVmid: number } | null>(null)
+  const editingRef = useRef(editing)
+  editingRef.current = editing
+  const [iconEndpoint, setIconEndpoint] = useState("")
+  const [discoveringLocalLogo, setDiscoveringLocalLogo] = useState(false)
+  const iconRequest = useRef(0)
+  const iconAbort = useRef<AbortController | null>(null)
+  const setEditing: typeof setEditingState = value => {
+    // Invalidate synchronously, including before React commits a batched edit.
+    iconRequest.current += 1
+    iconAbort.current?.abort()
+    setDiscoveringLocalLogo(false)
+    setEditingState(value)
+  }
+  useEffect(() => {
+    iconRequest.current += 1
+    iconAbort.current?.abort()
+    setDiscoveringLocalLogo(false)
+    return () => {
+      iconRequest.current += 1
+      iconAbort.current?.abort()
+    }
+  }, [editing, vmid, iconEndpoint])
   const [binaryArgsInput, setBinaryArgsInput] = useState("")
   const [commandArgvInput, setCommandArgvInput] = useState("")
   const [saving, setSaving] = useState(false)
@@ -582,7 +666,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       if (isCurrent()) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vmid, managed])
+  }, [vmid, managed, cacheRevision])
 
   useEffect(() => {
     if (managed) return
@@ -653,7 +737,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     if (lower.startsWith("registry unreachable")) {
       return t("vmLxc.appEditor.upstreamErrorRegistry")
     }
-    return msg
+    return localizeAppEditorError(msg, t)
   }
 
   const editorOpen = !!editing && editing.targetVmid === vmid
@@ -692,7 +776,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   // (`extras[]` from the backend). Both use the same DetectedApp
   // shape so the empty state renders them uniformly.
   const detectedList: DetectedApp[] = useMemo(() => {
-    const out: DetectedApp[] = [...(nativeDiscovery?.vmid === vmid ? nativeDiscovery.candidates : [])]
+    const out: DetectedApp[] = [...(nativeDiscovery?.vmid === vmid ? nativeDiscovery.candidates : []),
+      ...(dockerDiscovery?.vmid === vmid ? dockerDiscovery.candidates || [] : [])]
     if (!suggestions) return out
     // A ProxMenux OCI install has no helper slug — nothing was installed by a
     // community script — so its template id identifies it instead.
@@ -718,7 +803,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       }
     }
     return out
-  }, [suggestions, nativeDiscovery, vmid])
+  }, [suggestions, nativeDiscovery, dockerDiscovery, vmid])
 
   // Registered slugs — used to filter the detection list down to
   // what the user hasn't already registered on this CT.
@@ -791,6 +876,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const searchInstalledApplications = async () => {
     const generation = targetGeneration.current
     const request = ++nativeRequest.current
+    ++dockerRequest.current
     const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
       && nativeRequest.current === request
     const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
@@ -804,9 +890,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       if (!isCurrent()) return
       setNativeDiscovery(native)
       if (native.status === "error" || native.status === "busy") {
-        setDetectionNotice({ found: false, text: t("vmLxc.appEditor.nativeScanFailed") })
+        const stopped = native.status === "error" && Array.isArray(native.issues)
+          && native.issues.includes("guest_stopped")
+        setDetectionNotice({ found: false, text: t(stopped
+          ? "vmLxc.appEditor.nativeScanStopped" : "vmLxc.appEditor.nativeScanFailed") })
         return
       }
+      let docker = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`, {
+        method: "POST",
+      })
+      if (!isCurrent()) return
+      setDockerDiscovery(docker)
       const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {
         method: "POST",
       })
@@ -815,6 +909,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       native = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`)
       if (!isCurrent()) return
       setNativeDiscovery(native)
+      docker = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`)
+      if (!isCurrent()) return
+      setDockerDiscovery(docker)
       setSuggestions(result)
       if (sidecar) setLxcAppsCached(vmid, sidecar, result)
 
@@ -823,11 +920,16 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       for (const item of result.extras || []) detected.add(item.slug)
       for (const item of result.docker_workloads || []) detected.add(item.slug)
       for (const item of native.candidates) detected.add(item.slug)
+      for (const item of docker.candidates || []) detected.add(item.slug)
       const visible = [...detected].filter(
         (slug) => !registeredSlugs.has(slug) && !dismissedSlugs.has(slug),
       )
       const newCount = visible.filter((slug) => !before.has(slug)).length
-      if (native.status === "partial") {
+      if (docker.status === "error" || docker.status === "busy") {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.dockerScanFailed") })
+      } else if (docker.status === "partial" || docker.stale) {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.dockerScanPartial") })
+      } else if (native.status === "partial") {
         setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.nativeScanPartial") })
       } else if (newCount === 1) {
         setDetectionNotice({ found: true, text: t("vmLxc.appEditor.oneNewApplicationDetected") })
@@ -1119,7 +1221,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   }
 
   const removeOne = async (appId: string) => {
-    if (!confirm("Remove this application from the CT's App tab?")) return
+    if (!confirm(t("vmLxc.appEditor.confirmRemove"))) return
     setBusyAppId(appId)
     setError(null)
     try {
@@ -1361,6 +1463,40 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       setDetectorTest(null)
       setEditing({ ...editing, draft: { ...draft, ...patch } })
     }
+    const iconPorts = draft.ports.filter(entry => typeof entry.port === "number" && entry.port > 0 && entry.port <= 65535)
+    const endpointKey = (entry: PortEntry) => `${entry.scheme || defaultSchemeFor(entry.port)}:${entry.port}`
+    const selectedIconPort = iconPorts.find(entry => endpointKey(entry) === iconEndpoint) || iconPorts[0]
+    const discoverLocalLogo = async () => {
+      if (!selectedIconPort || discoveringLocalLogo) return
+      const snapshot = editing
+      const generation = targetGeneration.current
+      const requestId = ++iconRequest.current
+      const controller = new AbortController()
+      iconAbort.current = controller
+      const current = () => iconRequest.current === requestId && editingRef.current === snapshot
+        && targetRef.current === vmid && targetGeneration.current === generation
+      setDiscoveringLocalLogo(true)
+      setError(null)
+      try {
+        const result = await fetchApi<{ logo_url: string }>(`/api/vms/${vmid}/apps/logo-discovery`, {
+          method: "POST", signal: controller.signal,
+          body: JSON.stringify({ port: selectedIconPort.port, scheme: selectedIconPort.scheme || defaultSchemeFor(selectedIconPort.port) }),
+        })
+        if (!current()) return
+        if (!LOCAL_LOGO_CACHE_PATH.test(result.logo_url) || !result.logo_url.startsWith(`/api/vms/${vmid}/`)) {
+          throw new Error("invalid icon response")
+        }
+        setEditing(previous => previous === snapshot
+          ? { ...previous, draft: { ...previous.draft, logo_url: result.logo_url } } : previous)
+      } catch (error: unknown) {
+        if (current()) {
+          const code = (error as { body?: { code?: string } })?.body?.code
+          setError(t(code === "local_logo_stopped" ? "vmLxc.appEditor.localLogoStopped" : "vmLxc.appEditor.localLogoUnavailable"))
+        }
+      } finally {
+        if (current()) setDiscoveringLocalLogo(false)
+      }
+    }
     // Editing the Name auto-fills the Package field on packaged
     // methods when it's still empty. Rationale: 90% of the time the
     // dpkg/apk package name mirrors the friendly app name (jellyfin,
@@ -1593,18 +1729,47 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 from https://selfh.st/icons); empty → no logo in the
                 app card header. */}
             <div className="pt-2 border-t border-border/50">
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="app-logo" className="text-xs uppercase tracking-wider text-muted-foreground">
                 {t("vmLxc.appEditor.logoUrlLabel")} <span className="normal-case tracking-normal text-[10px] opacity-70">{t("vmLxc.appEditor.optionalSuffix")}</span>
               </Label>
+              <Button type="button" variant="outline" size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={!selectedIconPort || discoveringLocalLogo || saving}
+                onClick={discoverLocalLogo}>
+                {discoveringLocalLogo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}
+                {t("vmLxc.appEditor.discoverLocalLogo")}
+              </Button>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
               <Input
                 id="app-logo"
-                type="url"
+                type="text"
                 value={draft.logo_url || ""}
                 onChange={(e) => setField({ logo_url: e.target.value })}
                 placeholder={t("vmLxc.appEditor.portLogoPlaceholder")}
                 maxLength={512}
-                className="text-sm mt-2 font-mono"
+                className="text-sm font-mono"
               />
+              {draft.logo_url && LOCAL_LOGO_CACHE_PATH.test(draft.logo_url) &&
+                <ThemeAwareLogo src={draft.logo_url} className="h-8 w-8 shrink-0 object-contain" />}
+              </div>
+                {iconPorts.length > 1 && <select
+                  aria-label={t("vmLxc.appEditor.localLogoPort")}
+                  value={selectedIconPort ? endpointKey(selectedIconPort) : ""}
+                  onChange={event => {
+                    iconRequest.current += 1
+                    iconAbort.current?.abort()
+                    setDiscoveringLocalLogo(false)
+                    setIconEndpoint(event.target.value)
+                  }}
+                  className="mt-2 rounded border bg-background px-2 py-1 text-xs"
+                >
+                  {iconPorts.map(entry => <option key={endpointKey(entry)} value={endpointKey(entry)}>
+                    {endpointKey(entry)}
+                  </option>)}
+                </select>}
+              <p className="text-[10px] text-muted-foreground mt-1">{t("vmLxc.appEditor.localLogoHelp")}</p>
             </div>
 
             {/* Web links — each port becomes a clickable link (built as
@@ -1913,14 +2078,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                           id="app-package"
                           value={draft.package || ""}
                           onChange={(e) => setField({ package: e.target.value })}
-                          placeholder={method === "dpkg" ? "e.g. jellyfin-server" : "e.g. tailscale"}
+                          placeholder={t("vmLxc.appEditor.packageExample", { package: method === "dpkg" ? "jellyfin-server" : "tailscale" })}
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Auto-filled from Name. Verify with{" "}
+                          {t("vmLxc.appEditor.packageHelpBefore")}{" "}
                           <code className="text-foreground/70">
                             {method === "dpkg" ? "dpkg -l | grep <app>" : "apk info | grep <app>"}
                           </code>{" "}
-                          inside the CT.
+                          {t("vmLxc.appEditor.packageHelpAfter")}
                         </div>
                       </div>
                     )}
@@ -1936,8 +2101,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                           className="font-mono text-xs"
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Absolute path. Find it with{" "}
-                          <code className="text-foreground/70">which &lt;app&gt;</code> or{" "}
+                          {t("vmLxc.appEditor.binaryHelpBefore")}{" "}
+                          <code className="text-foreground/70">which &lt;app&gt;</code>{" "}{t("vmLxc.appEditor.binaryHelpOr")}{" "}
                           <code className="text-foreground/70">systemctl show &lt;service&gt; -p ExecStart</code>.
                         </div>
                       </div>
@@ -2402,7 +2567,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                     {detectorTest.installed.version ? (
                       <div className="font-mono text-sm text-emerald-400">{detectorTest.installed.version}</div>
                     ) : (
-                      <div className="text-xs text-amber-300">{detectorTest.installed.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                      <div className="text-xs text-amber-300">{localizeUpstreamError(detectorTest.installed.error) || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
                     )}
                     <div className="mt-1.5 text-[10px] text-muted-foreground break-all">
                       {detectorTest.installed.method || "—"}
@@ -2418,7 +2583,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                     ) : detectorTest.upstream.version ? (
                       <div className="font-mono text-sm text-emerald-400">{detectorTest.upstream.version}</div>
                     ) : (
-                      <div className="text-xs text-amber-300">{detectorTest.upstream.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                      <div className="text-xs text-amber-300">{localizeUpstreamError(detectorTest.upstream.error) || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
                     )}
                     {detectorTest.upstream.type && (
                       <div className="mt-1.5 text-[10px] text-muted-foreground">{detectorTest.upstream.type}</div>
@@ -2431,7 +2596,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
             {error && (
               <div className="text-xs text-red-400 flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
+                <span>{localizeAppEditorError(error, t)}</span>
               </div>
             )}
 
@@ -2522,22 +2687,29 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 ? t("vmLxc.appEditor.versionDetected", { version: d.tracking_suggestion.detected_version || "" })
                 : t("vmLxc.appEditor.detectedInContainer")}
             </div>
-            {d.source === "native_metadata" && (
+            {(d.source === "native_metadata" || d.source === "docker_metadata") && (
               <div className="text-xs text-muted-foreground mt-1 break-all">
                 <div>{d.installed_version
                   ? t("vmLxc.appEditor.versionDetected", { version: d.installed_version })
                   : t("vmLxc.appEditor.nativeVersionUnknown")}</div>
-                {(nativeDiscovery?.stale || nativeDiscovery?.status === "partial") && (
+                {(d.source === "docker_metadata"
+                  ? dockerDiscovery?.stale || dockerDiscovery?.status === "partial"
+                  : nativeDiscovery?.stale || nativeDiscovery?.status === "partial") && (
                   <div className="text-amber-400">{t("vmLxc.appEditor.nativeEvidenceStale")}</div>
                 )}
                 {d.evidence?.map((e, index) => <div key={index}>
-                  {t(e.kind === "tcp_listener" ? "vmLxc.appEditor.nativeEvidencePort"
+                  {t(e.kind === "docker_container" ? "vmLxc.appEditor.dockerEvidenceContainer"
+                    : e.kind === "docker_image" ? "vmLxc.appEditor.dockerEvidenceImage"
+                    : e.kind === "compose_project" ? "vmLxc.appEditor.dockerEvidenceProject"
+                    : e.kind === "tcp_listener" ? (d.source === "docker_metadata"
+                      ? "vmLxc.appEditor.dockerEvidencePort" : "vmLxc.appEditor.nativeEvidencePort")
                     : e.kind === "installation_file" ? "vmLxc.appEditor.nativeEvidenceFile"
                     : e.kind === "process_executable" ? "vmLxc.appEditor.nativeEvidenceProcess"
                     : e.kind === "working_directory" ? "vmLxc.appEditor.nativeEvidenceDirectory"
                     : "vmLxc.appEditor.nativeEvidenceService")}: {e.value}
                 </div>)}
-                <div>{t("vmLxc.appEditor.nativeRegisterOnly")}</div>
+                <div>{t(d.source === "docker_metadata"
+                  ? "vmLxc.appEditor.dockerEndpointReview" : "vmLxc.appEditor.nativeRegisterOnly")}</div>
               </div>
             )}
             {d.tracking_suggestion?.detector_source === "legacy_fallback" && (
@@ -3180,7 +3352,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       {error && (
         <div className="text-xs text-red-400 flex items-start gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <span>{localizeAppEditorError(error, t)}</span>
         </div>
       )}
     </div>

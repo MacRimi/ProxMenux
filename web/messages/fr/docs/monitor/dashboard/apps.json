@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Tableau de bord Apps : un lanceur pour tous les liens web | ProxMenux",
+    "description": "Utilisez le tableau de bord Apps pour ouvrir les Liens Web LXC enregistrés et les liens personnalisés, les organiser par catégorie et revenir à l'invité qui possède chaque service."
+  },
+  "header": {
+    "title": "Tableau de bord : onglet Apps",
+    "description": "Un seul lanceur pour les interfaces web du nœud, qu'elles proviennent d'une application LXC enregistrée ou d'un lien personnalisé.",
+    "section": "ProxMenux Monitor · Tableau de bord"
+  },
+  "intro": {
+    "title": "Un lanceur, pas un installateur d'applications",
+    "body": "L'onglet <strong>Apps</strong> n'installe pas de logiciel et ne découvre pas lui-même les services. Il regroupe les liens sauvegardés dans une grille de recherche. Les liens LXC se configurent dans l'<appTabLink>onglet App</appTabLink> de l'invité ; les liens personnalisés ajoutent services VM, proxies inverses et tableaux de bord externes."
+  },
+  "sources": {
+    "heading": "Ce qui apparaît dans Apps",
+    "intro": "Chaque URL de lancement devient sa propre carte. La source détermine où cette carte est éditée, mais pas comment elle semble pendant l'utilisation normale.",
+    "colSource": "Source",
+    "colAppears": "Ce qui apparaît",
+    "colManagedFrom": "Où elle est gérée",
+    "rows": [
+      {
+        "source": "Application de LXC enregistrée",
+        "appears": "Une carte pour chaque lien Web enregistré sur l'enregistrement de l'application.",
+        "managedFrom": "VMs & LXCs → modale LXC → App"
+      },
+      {
+        "source": "Lien personnalisé lié à un invité",
+        "appears": "URL de service associée à un VM ou LXC.",
+        "managedFrom": "Apps → Modifier"
+      },
+      {
+        "source": "Lien personnalisé sans association",
+        "appears": "Toute destination HTTP(S), y compris un service externe ou derrière un proxy inverse.",
+        "managedFrom": "Apps → Modifier"
+      }
+    ],
+    "relationshipTitle": "Les applications et l'onglet LXC App ont des tâches différentes",
+    "relationshipBody": "L'<appTabLink>onglet App</appTabLink> du LXC gère l'identité, les liens web et le suivi facultatif des versions. <strong>Apps</strong> utilise ces liens pour les ouvrir rapidement. Modifier une carte LXC renvoie donc à la fiche de l'invité sans dupliquer la configuration."
+  },
+  "cards": {
+    "heading": "Comment utiliser une carte",
+    "intro": "La carte entière est la cible de lancement, tandis que ses petites commandes fournissent le contexte sans ouvrir le service.",
+    "items": [
+      "Cliquez sur la carte pour ouvrir son URL dans un nouvel onglet de navigateur.",
+      "Le logo utilise le logo Web Link d'abord et revient au logo de l'application le cas échéant.",
+      "La puce de catégorie utilise la même couleur et la même étiquette que le lien Web correspondant dans l'onglet LXC App.",
+      "L'étiquette de l'invité identifie la VM ou le LXC associé. Un clic ouvre sa fenêtre : les liens LXC ouvrent <strong>App</strong>, ceux des VM <strong>État</strong>.",
+      "Une flèche vers le haut violet signifie que l'application spécifique ou l'image Docker a une mise à jour disponible. Ce n'est pas une mise à jour générale pour tout l'invité."
+    ]
+  },
+  "toolbar": {
+    "heading": "Recherche, filtre et tri",
+    "intro": "La barre d'outils rétrécit une grande collection d'applications sans changer les enregistrements enregistrés.",
+    "items": [
+      "La recherche correspond au nom de l'application, au nom de l'invité, au VMID et à la catégorie.",
+      "Le filtre de catégorie montre une catégorie à la fois ou toutes les applications.",
+      "Triez par <strong>Nom</strong>, <strong>ID</strong> ou <strong>Catégorie</strong>. Le tri par catégorie ajoute des titres entre les groupes de cartes.",
+      "L'ordre est mémorisé dans ce navigateur. Le texte de recherche et le filtre de catégorie sont réinitialisés à la prochaine visite.",
+      "L'onglet Apps reste disponible lorsque la grille est vide, de sorte que le premier lien personnalisé peut être ajouté sans enregistrer d'abord une application LXC."
+    ]
+  },
+  "customLinks": {
+    "heading": "Ajout et édition de liens Web personnalisés",
+    "intro": "Utilisez un lien personnalisé lorsque le service n'est pas représenté par une application LXC enregistrée.",
+    "steps": [
+      "Appuyez sur <strong>Ajouter le lien</strong> depuis la barre d'outils ou l'état vide.",
+      "Saisissez un nom et une URL complète <code>http://</code> ou <code>https://</code>.",
+      "Ajouter un logo, choisir ou créer une catégorie et lier le lien à un VM ou LXC.",
+      "Enregistrez le lien. Sa carte apparaît immédiatement dans la grille.",
+      "Pour modifier ou supprimer un lien personnalisé, cliquez sur <strong>Modifier</strong> puis sur le crayon de sa carte."
+    ],
+    "colField": "Champ",
+    "colRequired": "Requis",
+    "colPurpose": "Objet",
+    "fields": [
+      {
+        "field": "Nom",
+        "required": "Oui",
+        "purpose": "Titre de la carte et terme de recherche."
+      },
+      {
+        "field": "URL",
+        "required": "Oui",
+        "purpose": "La destination complète HTTP(S) ouverte par la carte."
+      },
+      {
+        "field": "URL du logo",
+        "required": "Non",
+        "purpose": "Une image à distance affichée sur la carte."
+      },
+      {
+        "field": "Catégorie",
+        "required": "Non",
+        "purpose": "Ajoute un badge partagé et permet le filtrage de catégorie."
+      },
+      {
+        "field": "Association à l'invité",
+        "required": "Non",
+        "purpose": "Associé le lien avec un VM ou LXC et permet le raccourci invité."
+      }
+    ],
+    "editTitle": "Modifier la source de la vérité",
+    "editBody": "Le mode édition affiche des crayons uniquement pour les liens personnalisés. Pour une carte LXC, ouvrez l'<appTabLink>onglet App</appTabLink> de l'invité et modifiez le lien sauvegardé."
+  },
+  "categories": {
+    "heading": "Catégories et signaux de mise à jour",
+    "intro": "Les catégories organisent les liens ; les indicateurs de mise à jour décrivent le logiciel. Ces fonctions sont volontairement séparées.",
+    "items": [
+      "L'enregistrement LXC assisté par catalogue peut préremplir une catégorie, mais il reste modifiable.",
+      "Les noms de catégorie personnalisés peuvent être créés à partir du même sélecteur, puis réutilisés par le filtre.",
+      "Les couleurs de catégorie sont déterministes et s'adaptent au thème clair ou sombre. Les gammes violet et rouge sont réservées aux états de mise à jour et de danger.",
+      "Pour Docker, ProxMenux associe la carte à son conteneur ou son image et indique les mises à jour de cette image. Celles de Docker Engine restent dans l'<updatesLink>onglet Mises à jour</updatesLink> du LXC."
+    ]
+  },
+  "persistence": {
+    "heading": "Persistance et comportement de cache",
+    "intro": "Le tableau de bord utilise les données déjà disponibles dans Monitor sans analyser à nouveau chaque invité.",
+    "items": [
+      "Les liens personnalisés sont enregistrés de manière atomique dans <code>/etc/proxmenux/custom_links.json</code> et chargés en mémoire au démarrage de Monitor.",
+      "Les liens LXC restent dans la fiche de leur application enregistrée dans Monitor ; le tableau de bord Apps ne les duplique pas dans le fichier des liens personnalisés.",
+      "Création, édition ou suppression d'un lien personnalisé rafraîchit immédiatement la liste in-memory.",
+      "La préférence de tri est locale au navigateur, sans synchronisation entre appareils ou utilisateurs.",
+      "La position supérieure des applications est contrôlée séparément par <settingsLink>Paramètres → Ordre de navigation</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situations communes",
+    "colProblem": "Situation actuelle",
+    "colResolution": "Résolution",
+    "rows": [
+      {
+        "problem": "Une application LXC est enregistrée mais aucune carte n'apparaît",
+        "resolution": "Ouvrez son onglet App et ajoutez au moins un lien Web. Le suivi des versions ne crée pas à lui seul une carte de lanceur."
+      },
+      {
+        "problem": "L'URL ou le logo est faux",
+        "resolution": "Modifier le lien personnalisé dans les applications, ou modifier le lien Web dans l'onglet propriétaire de l'application LXC."
+      },
+      {
+        "problem": "Il manque un service Docker",
+        "resolution": "Modifiez l'application Docker enregistrée et enregistrez le port web publié du service en tant que lien Web."
+      },
+      {
+        "problem": "La flèche pourpre se réfère à la mauvaise mise à jour Docker",
+        "resolution": "Consultez le nom et la description du lien Web afin qu'ils puissent être adaptés au conteneur ou à l'image prévu."
+      },
+      {
+        "problem": "Les applications s'ouvrent en premier lieu au lieu de Aperçu du système",
+        "resolution": "Le premier élément enregistré dans Paramètres → L'ordre de navigation devient l'onglet d'atterrissage. Restaurer l'ordre par défaut ou déplacer Aperçu d'abord."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "Onglet de l'application LXC",
+        "href": "/docs/monitor/dashboard/vms-lxcs/app",
+        "tail": "— enregistrer les applications, les liens Web et le suivi facultatif des versions."
+      },
+      {
+        "label": "Onglet Mises à jour LXC",
+        "href": "/docs/monitor/dashboard/vms-lxcs/updates",
+        "tail": " — configurer et lancer les mises à jour des applications, de Docker Engine et des images."
+      },
+      {
+        "label": "Onglet Paramètres",
+        "href": "/docs/monitor/dashboard/settings#navigation-order",
+        "tail": "— modifier l'ordre de navigation et l'onglet d'atterrissage."
+      }
+    ]
+  }
+}

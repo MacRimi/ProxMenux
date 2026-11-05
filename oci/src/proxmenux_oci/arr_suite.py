@@ -85,6 +85,7 @@ def build_suite(template, ui, mode='advanced'):
         from .custom_mounts import ask_stack_custom_mounts
         ask_stack_custom_mounts(ui, drafts, storage)
     bridge = ask_bridge(ui, translate('Access bridge'), 'vmbr0', mode)
+    vlan_tag = access.ask_vlan_tag(quiet)
     reachable = [app for app in selected if app != 'unpackerr']
     labels, gateway = access.ask_addresses(ui, bridge, [app.capitalize() for app in reachable])
     addresses = dict(zip(reachable, labels.values()))
@@ -148,5 +149,5 @@ def build_suite(template, ui, mode='advanced'):
                 translate('Gluetun/VPN not yet available: this suite does not route downloads through a VPN.')
             ],
             'rootfs_storage':storage,'template_storage':cache,'onboot':onboot,'start_after_create':True,
-            'network':{'frontend_bridge':bridge,'frontend_gateway':gateway,'private_allocation':'automatic','private_bridge':'vmbr10',
+            'network':{'frontend_bridge':bridge,'frontend_gateway':gateway,**({'frontend_vlan_tag':vlan_tag} if vlan_tag else {}),'private_allocation':'automatic','private_bridge':'vmbr10',
                        'private_subnet':'10.77.0.0/24','private_host_address':'10.77.0.1/24'}}

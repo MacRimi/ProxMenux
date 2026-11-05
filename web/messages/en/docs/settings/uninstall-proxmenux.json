@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Affects the ProxMenux install only — not your VMs / CTs / storage",
-    "body": "Uninstalling ProxMenux removes the ProxMenux scripts, the menu launcher, the optional Monitor service and any backups ProxMenux took of system files when you installed it. <strong>It does not touch your VMs, containers, storage, network configuration, Fail2Ban, NVIDIA driver or anything else you installed via ProxMenux.</strong> Those stay as they are."
+    "body": "Uninstalling ProxMenux removes the ProxMenux scripts, the menu launcher, the Monitor service and restores the /root/.bashrc and /etc/motd backups that Post-Install took, if they exist. <strong>It does not touch your VMs, containers, storage, network configuration, Fail2Ban, NVIDIA driver or anything else you installed via ProxMenux.</strong> Those stay as they are."
   },
   "flow": {
     "heading": "The uninstall flow",

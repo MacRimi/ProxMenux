@@ -169,10 +169,8 @@ EOF
         else
             # The package list rides in the same dialog as the summary, so
             # the decision is taken knowing what is about to be replaced.
-            # --scrolltext keeps the buttons reachable however long it is.
-            menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
-            menu_text+="$(translate "Do you want to proceed with the system update?")"
-            if whiptail --title "$(translate "Proxmox Update")" --scrolltext --yesno "$menu_text" 24 78; then
+            if pmx_confirm_update "$(translate "Proxmox Update")" "$menu_text" "$upgradable_list" \
+                "$(translate "Do you want to proceed with the system update?")"; then
                 return 0
             else
                 return 1

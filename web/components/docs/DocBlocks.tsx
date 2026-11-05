@@ -216,6 +216,14 @@ export async function DocPage({
           </div>
         )
 
+      case "agentPrompt":
+        return (
+          <div key={index} className="mb-6 overflow-hidden rounded-lg border border-blue-200 bg-white">
+            {data.title && <div className="border-b border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-gray-900">{t(`${base}.title`)}</div>}
+            <pre className="whitespace-pre-wrap break-words bg-white p-4 text-sm leading-6 text-gray-800">{t(`${base}.body`)}</pre>
+          </div>
+        )
+
       case "codeGrid":
         return (
           <div key={index} className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -280,9 +288,11 @@ export async function DocPage({
                     <h3 className="font-semibold text-gray-900">{t(`${base}.items.${i}.title`)}</h3>
                     <p className="mt-1 text-sm leading-6 text-gray-700">{rich(`${base}.items.${i}.body`)}</p>
                   </div>
-                  <a href={item.href} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100">
-                    <Download className="h-4 w-4" />PDF
-                  </a>
+                  {item.href && (
+                    <a href={item.href} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100">
+                      <Download className="h-4 w-4" />PDF
+                    </a>
+                  )}
                 </div>
                 <dl className="grid text-sm md:grid-cols-[11rem_1fr]">
                   {(item.facts ?? []).map((_: Json, f: number) => (

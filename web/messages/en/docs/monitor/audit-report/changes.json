@@ -28,13 +28,6 @@
             ],
             "caption": "The capture is taken when the operation runs and is consolidated when the Monitor reads the journal."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Changes view of Audit & Report with the entries grouped by post-install option and script",
-            "caption": "The Changes view, with the difference of a file edited by ProxMenux."
-          }
         }
       ]
     },

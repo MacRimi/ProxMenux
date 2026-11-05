@@ -125,7 +125,7 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Arrête et désactive le service et le minuteur. Supprime tâches cron, unités systemd, binaires, configuration et /var/log.hdd. Désinstalle aussi le paquet apt si cette méthode a été utilisée."
+            "restores": "Désactive le service et le minuteur et supprime la configuration ProxMenux de Log2RAM. À l'arrêt suivant, Log2RAM écrit /var/log sur le disque ; au démarrage suivant, le journal et les journaux de tâches reviennent dans /var/log et les fichiers de Log2RAM sont supprimés."
           },
           {
             "tool": "TRIM automatique ZFS",

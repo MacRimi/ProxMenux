@@ -27,7 +27,7 @@
               },
               {
                 "label": "ProxMenux",
-                "detail": "Kontrakt JSON\noverenie a plánovanie"
+                "detail": "Konfigurácia JSON\noverenie a plánovanie"
               },
               {
                 "label": "Proxmox VE",
@@ -123,7 +123,7 @@
               [
                 "Aktualizovať",
                 "Stiahnuť cez <code>pull</code> a znovu vytvoriť",
-                "Nový rootfs so zachovaným kontraktom trvalých údajov."
+                "Nový rootfs so zachovanou konfiguráciou trvalého uloženia údajov."
               ]
             ]
           }
@@ -155,7 +155,7 @@
               {
                 "icon": "refresh",
                 "title": "Uložené",
-                "body": "Digest obrazu, zdroje, cesty, sieť, zariadenia a príslušnosť k zostave sa ukladajú do kontraktu inštancie. Aktualizácie aj opätovné vytvorenie tento kontrakt zachovávajú."
+                "body": "Digest obrazu, zdroje, cesty, sieť, zariadenia a príslušnosť kontajnera k aplikácii sa ukladajú do konfigurácie inštalácie. Aktualizácie aj opätovné vytvorenie túto konfiguráciu zachovávajú."
               }
             ]
           }
@@ -195,9 +195,14 @@
                 "tail": "Aplikácia, databáza a vyrovnávacia pamäť v koordinovaných LXC."
               },
               {
+                "label": "Nainštalovať aplikáciu a pridať ju do katalógu",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "pokyny pre agenta, testy a príspevok do katalógu."
+              },
+              {
                 "label": "Inštalácia, aktualizácia a úpravy",
                 "href": "/docs/oci-manager/lifecycle",
-                "tail": "Kontrakt inštancie a operácie s ním."
+                "tail": "Uložená konfigurácia inštalácie a operácie, ktoré ju používajú."
               },
               {
                 "label": "V ProxMenux Monitor",

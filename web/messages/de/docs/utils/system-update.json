@@ -128,7 +128,7 @@
         "body": "Das Enterprise-Repository ist aktiviert, aber der Host hat kein aktives Abonnement. Das Arbeitsskript bietet vor <code>apt-get update</code> die Umstellung auf no-subscription an. Wurde sie abgelehnt, starten Sie die Aktualisierung erneut und stimmen Sie zu. Alternativ deaktivieren Sie Enterprise unter <em>Node → Updates → Repositories</em> und aktivieren no-subscription."
       },
       {
-        "title": "dist-upgrade bleibt bei \"Configuring grub-pc\" hängen",
+        "title": "full-upgrade bleibt bei \"Configuring grub-pc\" hängen",
         "body": "Falls eine interaktive GRUB-Abfrage erscheint, fragt sie nach den Geräten für den Bootloader. <code>--force-confold</code> gilt für Entscheidungen zu Konfigurationsdateien, nicht für diese Geräteauswahl. Wählen Sie mit <kbd>Tab</kbd> + <kbd>Space</kbd> die passenden Startfestplatten und dann OK. Die Auswahl lässt sich vorher mit <code>dpkg-reconfigure grub-pc</code> konfigurieren."
       },
       {

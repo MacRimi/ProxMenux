@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2, Github } from "lucide-react"
 import { Badge } from "./ui/badge"
@@ -9,6 +9,7 @@ import { NotificationSettings } from "./notification-settings"
 import { HealthThresholds } from "./health-thresholds"
 import { LxcUpdateDetection } from "./lxc-update-detection"
 import { DiskExclusions } from "./disk-exclusions"
+import { optimizationDescription, optimizationToolName } from "../lib/optimization-descriptions"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
@@ -19,6 +20,8 @@ import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
 import { useIsPbs } from "../lib/use-platform"
 import type { LanguageCode } from "../lib/i18n/languages"
 import { NavTabOrderCard } from "./nav-tab-order-card"
+import { StorageDisplayCard } from "./storage-display-card"
+import { optimizationSourceError, optimizationSourceName, type OptimizationSourceError, type OptimizationSourceResponse } from "../lib/optimization-source-errors"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -354,15 +357,31 @@ export function Settings() {
     open: boolean
     loading: boolean
     toolName: string
+    toolKey: string
     version: string
     availableVersion: string
     functionName: string
     source: string
     script: string
-    error: string
+    error: OptimizationSourceError | null
     deprecated: boolean
-  }>({ open: false, loading: false, toolName: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: '', deprecated: false })
+  }>({ open: false, loading: false, toolName: '', toolKey: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: null, deprecated: false })
   const [codeCopied, setCodeCopied] = useState(false)
+  const codeRequest = useRef(0)
+  const closeCodeModal = () => {
+    codeRequest.current += 1
+    setCodeModal(prev => ({ ...prev, open: false }))
+    setCodeCopied(false)
+  }
+  useEffect(() => () => { codeRequest.current += 1 }, [])
+  useEffect(() => {
+    if (!codeModal.open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeCodeModal()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [codeModal.open])
   
   // Health Monitor suppression settings
   const [suppressionCategories, setSuppressionCategories] = useState<SuppressionCategory[]>([])
@@ -580,7 +599,7 @@ export function Settings() {
     if (entries.length === 0) return
     const batch = entries.map(e => `${e.source}:${e.function}:${e.key}`).join("\n")
     const title = entries.length === 1
-      ? t("settings.optimizations.updateOneTitle", { name: entries[0].name })
+      ? t("settings.optimizations.updateOneTitle", { name: optimizationToolName(entries[0].key, entries[0].name, t) })
       : t("settings.optimizations.updateManyTitle", { count: entries.length })
     const description = entries.length === 1
       ? t("settings.optimizations.updateOneDescription", { functionName: entries[0].function, source: entries[0].source })
@@ -663,31 +682,39 @@ export function Settings() {
   }
 
   const viewToolSource = async (tool: ProxMenuxTool) => {
+    const request = ++codeRequest.current
+    setCodeCopied(false)
     setCodeModal({
       open: true,
       loading: true,
       toolName: tool.name,
+      toolKey: tool.key,
       version: tool.version || '1.0',
       availableVersion: tool.available_version || tool.version || '1.0',
       functionName: '',
       source: '',
       script: '',
-      error: '',
+      error: null,
       deprecated: !!tool.deprecated,
     })
     try {
-      const data = await fetchApi(`/api/proxmenux/tool-source/${tool.key}`)
-      if (data.success) {
-        setCodeModal(prev => ({ ...prev, loading: false, functionName: data.function, source: data.source, script: data.script, deprecated: !!data.deprecated }))
+      const data = await fetchApi<OptimizationSourceResponse | null>(`/api/proxmenux/tool-source/${tool.key}`)
+      if (request !== codeRequest.current) return
+      if (data?.success === true && typeof data.source === "string" && data.source.trim()) {
+        const source = data.source
+        setCodeModal(prev => ({ ...prev, loading: false, functionName: typeof data.function === "string" ? data.function : '', source, script: typeof data.script === "string" ? data.script : '', deprecated: !!data.deprecated }))
       } else {
-        setCodeModal(prev => ({ ...prev, loading: false, error: data.error || 'Source code not available' }))
+        setCodeModal(prev => ({ ...prev, loading: false, error: { kind: "unavailable", detail: typeof data?.error === "string" ? data.error : undefined } }))
       }
-    } catch {
-      setCodeModal(prev => ({ ...prev, loading: false, error: 'Failed to load source code' }))
+    } catch (error: any) {
+      if (request !== codeRequest.current) return
+      const detail = typeof error?.body?.error === "string" ? error.body.error : undefined
+      setCodeModal(prev => ({ ...prev, loading: false, error: { kind: "loadFailed", detail } }))
     }
   }
 
   const copySourceCode = async () => {
+    const request = codeRequest.current
     const text = codeModal.source
     let ok = false
 
@@ -721,9 +748,9 @@ export function Settings() {
       }
     }
 
-    if (ok) {
+    if (ok && request === codeRequest.current) {
       setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 2000)
+      setTimeout(() => { if (request === codeRequest.current) setCodeCopied(false) }, 2000)
     }
   }
 
@@ -1206,6 +1233,9 @@ export function Settings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Storage Display: group physical disks by controller */}
+      <StorageDisplayCard />
 
       {/* Health Monitor Settings */}
       <Card>
@@ -1878,7 +1908,7 @@ export function Settings() {
           the matching toggle in NotificationSettings is hidden (the
           preference is preserved in the DB and reappears when detection
           is re-enabled). */}
-      <LxcUpdateDetection />
+      {!isPbs && <LxcUpdateDetection />}
 
       {!isPbs && <>
       {/* GitHub API — optional authentication for app upstream checks. */}
@@ -2117,7 +2147,7 @@ export function Settings() {
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                           hasUpdate ? 'bg-purple-400' : (isDeprecated ? 'bg-amber-500' : 'bg-green-500')
                         }`} />
-                        <span className="text-sm font-medium truncate">{tool.name}</span>
+                        <span className="text-sm font-medium truncate">{optimizationToolName(tool.key, tool.name, t)}</span>
                         {isDeprecated && (
                           <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
                             {t("settings.optimizations.legacy")}
@@ -2133,7 +2163,7 @@ export function Settings() {
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSingleToolUpdate(tool) }}
                               className="text-purple-300 hover:text-purple-200 transition-colors"
-                              title={t("settings.optimizations.updateToolTitle", { name: tool.name, version: tool.available_version || "?" })}
+                              title={t("settings.optimizations.updateToolTitle", { name: optimizationToolName(tool.key, tool.name, t), version: tool.available_version || "?" })}
                             >
                               <ArrowUpCircle className="h-4 w-4" />
                             </button>
@@ -2153,10 +2183,13 @@ export function Settings() {
 
       {/* Code Viewer Modal */}
       {codeModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setCodeModal(prev => ({ ...prev, open: false }))}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ margin: 0 }} onClick={closeCodeModal}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
             className="relative bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("settings.optimizations.sourceDialogTitle", { name: optimizationSourceName(codeModal.toolKey, codeModal.toolName, t) })}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -2165,7 +2198,7 @@ export function Settings() {
                 <Code className={`h-5 w-5 flex-shrink-0 ${codeModal.deprecated ? 'text-amber-500' : 'text-orange-500'}`} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold truncate">{codeModal.toolName}</h3>
+                    <h3 className="text-sm font-semibold truncate">{optimizationSourceName(codeModal.toolKey, codeModal.toolName, t)}</h3>
                     {codeModal.deprecated && (
                       <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
                         {t("settings.optimizations.legacy")}
@@ -2201,7 +2234,8 @@ export function Settings() {
                   </button>
                 )}
                 <button
-                  onClick={() => setCodeModal(prev => ({ ...prev, open: false }))}
+                  onClick={closeCodeModal}
+                  aria-label={t("actions.close")}
                   className="p-1.5 rounded-md hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4" />
@@ -2211,13 +2245,13 @@ export function Settings() {
             {/* Body */}
             <div className="flex-1 overflow-auto p-0">
               {codeModal.loading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-16" role="status" aria-label={t("settings.optimizations.sourceLoading")}>
                   <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full" />
                 </div>
               ) : codeModal.error ? (
                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                   <Code className="h-10 w-10 mb-3 opacity-40" />
-                  <p className="text-sm">{codeModal.error}</p>
+                  <p className="text-sm" role="alert">{optimizationSourceError(codeModal.error, t)}</p>
                 </div>
               ) : (
                 <pre
@@ -2289,13 +2323,13 @@ export function Settings() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{tool.name}</span>
+                        <span className="text-sm font-medium">{optimizationToolName(tool.key, tool.name, t)}</span>
                         <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
                           v{tool.version || '1.0'} → v{tool.available_version || '?'}
                         </span>
                       </div>
                       {tool.description && (
-                        <p className="text-xs text-muted-foreground mt-1 leading-snug">{tool.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-snug">{optimizationDescription(tool.description, t)}</p>
                       )}
                     </div>
                   </label>

@@ -68,11 +68,18 @@
         "source": "docker-compose"
       },
       {
-        "name": "LLAMA_ARG_CONTEXT_SIZE",
+        "name": "LLAMA_ARG_CTX_SIZE",
         "example": "8192",
         "required": true,
         "sensitive": false,
         "source": "docker-compose"
+      },
+      {
+        "name": "LLAMA_ARG_MODELS_DIR",
+        "example": "/models",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
       }
     ],
     "volumes": [
@@ -89,7 +96,7 @@
         "default": "managed-volume",
         "managed_volume": {
           "backup": true,
-          "default_size_gb": 8
+          "default_size_gb": 32
         }
       }
     ],
@@ -135,7 +142,8 @@
           ],
           "environment": [
             "LLAMA_ARG_N_GPU_LAYERS=999",
-            "LLAMA_ARG_CONTEXT_SIZE=8192"
+            "LLAMA_ARG_CTX_SIZE=8192",
+            "LLAMA_ARG_MODELS_DIR=/models"
           ],
           "devices": [
             "/dev/dri:/dev/dri"
@@ -229,8 +237,8 @@
     "defaults": {
       "unprivileged": true,
       "ostype": "auto-from-image",
-      "cores": 2,
-      "memory_mb": 1024,
+      "cores": 4,
+      "memory_mb": 8192,
       "swap_mb": 512,
       "rootfs_size_gb": 8,
       "rootfs_storage": "local-lvm",
@@ -306,8 +314,74 @@
             ]
           },
           {
+            "id": "vulkan",
+            "label": "Intel/AMD (Vulkan)",
+            "architectures": [
+              "amd64"
+            ],
+            "image": {
+              "reference": "ghcr.io/ggml-org/llama.cpp:server-vulkan",
+              "registry": "ghcr.io",
+              "repository": "ghcr.io/ggml-org/llama.cpp",
+              "tag": "server-vulkan",
+              "digest": null,
+              "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+            },
+            "device_requests": [
+              {
+                "id": "gpu-render",
+                "path_prompt": "GPU render device",
+                "host_path_default": "/dev/dri/renderD128",
+                "mode": "0660",
+                "deny_write": false,
+                "gid_strategy": "host-device-gid",
+                "kind": "character-device",
+                "container_path_strategy": "same-as-host",
+                "drm_vendor_ids": [
+                  "0x8086",
+                  "0x1002"
+                ]
+              }
+            ],
+            "environment": [
+              {
+                "name": "LLAMA_ARG_FLASH_ATTN",
+                "value": "off"
+              },
+              {
+                "name": "LLAMA_ARG_UBATCH",
+                "value": "32"
+              },
+              {
+                "name": "LLAMA_ARG_BATCH",
+                "value": "128"
+              },
+              {
+                "name": "GGML_VK_DISABLE_F16",
+                "value": "1"
+              },
+              {
+                "name": "GGML_VK_DISABLE_ASYNC",
+                "value": "1"
+              }
+            ]
+          },
+          {
             "id": "rocm",
             "label": "AMD (ROCm)",
+            "amd_gfx_targets": [
+              90008,
+              90010,
+              90402,
+              100300,
+              110000,
+              110001,
+              110002,
+              110500,
+              110501,
+              120000,
+              120001
+            ],
             "architectures": [
               "amd64"
             ],
@@ -376,7 +450,13 @@
             ]
           }
         ]
-      }
+      },
+      "completion_notes": [
+        "llama.cpp shows every GGUF model saved in /models in its web UI and loads the one you choose.",
+        "To add a model, open the console of the container in Proxmox and download it into /models, for example:",
+        "curl -L -o /models/gemma-3-1b-it-Q4_K_M.gguf https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf",
+        "Then restart the container so the new model appears in the list."
+      ]
     },
     "adaptations": [
       {

@@ -214,7 +214,7 @@ was changed          │  PHASE 2 — Execute                 │
       <p className="mb-4 text-gray-800 leading-relaxed">{t("format.intro")}</p>
       <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-2">
         {formatItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`format.items.${idx}`, { code, strong })}</li>
+          <li key={idx}>{t.rich(`format.items.${idx}`, { code, strong, em })}</li>
         ))}
       </ol>
 

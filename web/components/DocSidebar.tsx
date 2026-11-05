@@ -111,6 +111,7 @@ export const sidebarItems: MenuItem[] = [
       { title: "Data, paths and networking", i18nKey: "ociStorageNetwork", href: "/docs/oci-manager/storage-network" },
       { title: "Devices and acceleration", i18nKey: "ociHardware", href: "/docs/oci-manager/hardware" },
       { title: "Multi-container applications", i18nKey: "ociStacks", href: "/docs/oci-manager/stacks" },
+      { title: "Install an app and contribute it", i18nKey: "ociContributeApp", href: "/docs/oci-manager/contribute-app" },
       { title: "Install, update and recreate", i18nKey: "ociLifecycle", href: "/docs/oci-manager/lifecycle" },
       { title: "In ProxMenux Monitor", i18nKey: "ociMonitor", href: "/docs/oci-manager/monitor" },
     ],
@@ -274,11 +275,7 @@ export const sidebarItems: MenuItem[] = [
           { title: "Overview", i18nKey: "settingsOverview", href: "/docs/settings" },
           { title: "ProxMenux Monitor", i18nKey: "settingsMonitor", href: "/docs/settings/proxmenux-monitor" },
           { title: "Change Release Channel", i18nKey: "settingsBeta", href: "/docs/settings/beta-program" },
-          // "Change Language" is intentionally hidden until the translation
-          // install flow is reactivated. The page file at
-          // /docs/settings/change-language/page.tsx is preserved so we can
-          // restore this entry in a single line edit once the feature ships.
-          // { title: "Change Language", i18nKey: "settingsLanguage", href: "/docs/settings/change-language" },
+          { title: "Change Language", i18nKey: "settingsLanguage", href: "/docs/settings/change-language" },
           { title: "Show Version Information", i18nKey: "settingsVersion", href: "/docs/settings/show-version-information" },
           { title: "Uninstall ProxMenux", i18nKey: "settingsUninstall", href: "/docs/settings/uninstall-proxmenux" },
         ],

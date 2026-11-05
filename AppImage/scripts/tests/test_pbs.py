@@ -82,6 +82,17 @@ class PBSManagerTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        import monitor_links
+        storage = self.root / 'storage.cfg'
+        storage.write_text('')
+        for boundary in (
+            mock.patch.object(pbs, 'get_platform', return_value={'product': 'pve', 'hostname': 'fixture'}),
+            mock.patch.object(pbs.shutil, 'which', return_value=None),
+            mock.patch.object(monitor_links, 'STORAGE_CFG', storage),
+            mock.patch.object(monitor_links, '_own_addresses', return_value=set()),
+        ):
+            boundary.start()
+            self.addCleanup(boundary.stop)
         patch = mock.patch.multiple(auth_manager, CONFIG_DIR=self.root, AUTH_CONFIG_FILE=self.root / "auth.json")
         patch.start(); self.addCleanup(patch.stop)
         auth_manager.save_auth_config({"enabled": True, "username": "admin", "password_hash": "configured",
@@ -152,9 +163,11 @@ class PBSManagerTests(unittest.TestCase):
     def test_local_status_reads_pbs_commands_and_filesystem_capacity(self):
         def run(command, **kwargs):
             self.assertNotIn("shell", kwargs)
-            self.assertEqual(command[0], "proxmox-backup-manager")
+            self.assertIn(command[0], ("proxmox-backup-manager", "proxmox-backup-debug"))
             self.assertEqual(command[-2:], ["--output-format", "json"])
             data = [{"name": "backup", "path": str(self.root)}] if command[1:3] == ["datastore", "list"] else []
+            if command[:4] == ["proxmox-backup-debug", "api", "get", "/admin/verify"]:
+                data = [{"id": "v-1", "store": "backup", "schedule": "daily", "last-run-state": "OK"}]
             return SimpleNamespace(stdout=json.dumps(data), returncode=0)
         with mock.patch.object(pbs, "get_platform", return_value={"product": "pbs", "version": "4.2.5"}), \
                 mock.patch.object(pbs, "_local_services", return_value={key: "active" for key in pbs.PBS_SERVICES}), \
@@ -165,6 +178,81 @@ class PBSManagerTests(unittest.TestCase):
         self.assertEqual(result["errors"], {})
         self.assertEqual(result["datastores"][0]["used"], 30)
         self.assertEqual(set(result["services"]), set(pbs.PBS_SERVICES))
+        # Jobs come from the API, which carries the state of their last run.
+        self.assertEqual(result["verify"][0]["last-run-state"], "OK")
+
+    def test_pbs_installed_next_to_pve_is_read_locally_with_its_own_version(self):
+        def run(command, **kwargs):
+            if command[0] == "dpkg-query":
+                return SimpleNamespace(stdout="4.2.8-1", returncode=0)
+            return SimpleNamespace(stdout="[]", returncode=0)
+        with mock.patch.object(pbs, "get_platform", return_value={"product": "pve", "version": "9.1.4", "hostname": "rimegra"}), \
+                mock.patch.object(pbs.shutil, "which", return_value="/usr/sbin/proxmox-backup-manager"), \
+                mock.patch.object(pbs.Path, "exists", return_value=True), \
+                mock.patch.object(pbs, "_local_services", return_value={key: "active" for key in pbs.PBS_SERVICES}), \
+                mock.patch.object(pbs.subprocess, "run", side_effect=run):
+            self.assertTrue(pbs.local_available())
+            result = pbs.get_status("local")
+        self.assertEqual((result["name"], result["version"]), ("rimegra", "4.2.8-1"))
+        with mock.patch.object(pbs, "get_platform", return_value={"product": "pve"}), \
+                mock.patch.object(pbs.shutil, "which", return_value=None):
+            self.assertFalse(pbs.local_available())
+
+    def test_storage_pbs_without_a_connection_is_offered_with_its_address_and_fingerprint(self):
+        import monitor_links
+        storage = self.root / "storage.cfg"
+        storage.write_text("pbs: Local\n\tserver localhost\n\tdatastore a\n\n"
+                           "pbs: Lab\n\tserver 10.0.0.49\n\tdatastore b\n\tfingerprint AA:BB\n\n"
+                           "pbs: Known\n\tserver pbs.test\n\tdatastore c\n\tport 8007\n")
+        with mock.patch.object(monitor_links, "STORAGE_CFG", storage), \
+                mock.patch.object(monitor_links, "_own_addresses", return_value=set()), \
+                mock.patch.object(pbs, "is_pbs_host", return_value=False), \
+                mock.patch.object(pbs, "local_available", return_value=False), \
+                mock.patch.object(pbs, "_remote_get", return_value=[]):
+            pbs.save_server(self.server)
+            response = self.client.get("/api/pbs/servers", headers=self.headers)
+        self.assertEqual(response.json["detected"],
+                         [{"name": "Lab", "url": "https://10.0.0.49:8007", "fingerprint": "AA:BB"}])
+
+    def test_password_sign_in_keeps_only_a_read_only_token(self):
+        calls = []
+        def request(server, method, endpoint, headers, form=None, rejected="", **kwargs):
+            calls.append((method, endpoint, form))
+            if endpoint == "/access/ticket":
+                return {"ticket": "PBS:root@pam:ticket", "CSRFPreventionToken": "csrf", "username": "root@pam"}
+            if "/token/" in endpoint and method == "POST":
+                self.assertEqual(headers["CSRFPreventionToken"], "csrf")
+                return {"tokenid": "root@pam!proxmenux-1", "value": "generated-secret"}
+            return None
+        login = {"name": "Lab", "url": "https://pbs.test:8007", "fingerprint": "a" * 64,
+                 "username": "root@pam", "password": "fixture-password"}
+        with mock.patch.object(pbs, "_remote_request", side_effect=request), \
+                mock.patch.object(pbs, "_remote_get", return_value=[]):
+            identifier = pbs.connect_with_password(login)
+        self.assertIn(("PUT", "/access/acl", {"path": "/", "role": "Audit", "auth-id": "root@pam!proxmenux-1", "propagate": "1"}),
+                      calls)
+        stored = (self.root / "pbs_servers.json").read_text()
+        self.assertNotIn("fixture-password", stored)
+        self.assertIn("generated-secret", stored)
+        self.assertEqual(pbs.public_servers()[0]["id"], identifier)
+
+    def test_password_sign_in_removes_its_token_when_the_role_cannot_be_granted(self):
+        calls = []
+        def request(server, method, endpoint, headers, form=None, rejected="", **kwargs):
+            calls.append((method, endpoint))
+            if endpoint == "/access/ticket":
+                return {"ticket": "t", "CSRFPreventionToken": "c"}
+            if method == "POST":
+                return {"tokenid": "audit@pbs!proxmenux-1", "value": "secret"}
+            if method == "PUT":
+                raise pbs.PBSError(rejected)
+            return None
+        with mock.patch.object(pbs, "_remote_request", side_effect=request):
+            with self.assertRaisesRegex(pbs.PBSError, "Audit"):
+                pbs.connect_with_password({"name": "Lab", "url": "https://pbs.test:8007", "fingerprint": "",
+                                           "username": "audit@pbs", "password": "x"})
+        self.assertEqual(calls[-1][0], "DELETE")
+        self.assertEqual(pbs.public_servers(), [])
 
     def test_connection_api_requires_full_admin_and_does_not_return_secret(self):
         self.assertEqual(self.client.get("/api/pbs/servers").status_code, 401)
@@ -186,14 +274,17 @@ class PBSManagerTests(unittest.TestCase):
         names = ("_check_pve_services", "_check_vms_cts_optimized", "_check_vms_cts_with_persistence",
                  "_check_proxmox_storages", "_check_proxmox_storage", "_check_lxc_disk_usage",
                  "_check_vm_disk_usage", "_check_lxc_mount_capacity", "_check_pve_storage_capacity")
-        functions = [node for node in ast.walk(source) if isinstance(node, ast.FunctionDef) and node.name in names]
+        functions = [node for node in ast.walk(source) if isinstance(node, ast.FunctionDef)
+                     and node.name in (*names, "_service_state")]
         persistence = mock.Mock(); persistence.is_error_active.return_value = False
         run = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout="active\n"))
         namespace = {"Dict": dict, "Any": object, "Optional": __import__('typing').Optional,
                      "PBS_SERVICES": pbs.PBS_SERVICES, "health_persistence": persistence,
-                     "subprocess": SimpleNamespace(run=run), "os": __import__('os')}
+                     "subprocess": SimpleNamespace(run=run), "os": __import__('os'), "time": __import__('time')}
         exec(compile(ast.Module(body=functions, type_ignores=[]), '<health-pbs-test>', 'exec'), namespace)
         instance = SimpleNamespace(platform_type="pbs", PVE_SERVICES=["pveproxy", "pvedaemon", "pvestatd", "pve-cluster"])
+        instance.SERVICE_TRANSIENT_STATES, instance.SERVICE_SETTLE_SECONDS = (), 0
+        instance._service_state = lambda service: namespace["_service_state"](instance, service)
         services = namespace["_check_pve_services"](instance)
         self.assertEqual(services["status"], "OK")
         self.assertEqual([call.args[0][2] for call in run.call_args_list], list(pbs.PBS_SERVICES))
@@ -274,15 +365,17 @@ class TLSTests(unittest.TestCase):
 
     def test_bad_pin_and_untrusted_ca_send_no_http_credentials(self):
         for fingerprint in ('0' * 64, ''):
-            with self.subTest(fingerprint=fingerprint), self.assertRaises(pbs.PBSError):
+            with self.subTest(fingerprint=fingerprint), self.assertRaises(pbs.PBSError) as caught:
                 pbs._remote_get({**self.connection, "fingerprint": fingerprint}, '/status/datastore-usage')
+            self.assertEqual(caught.exception.code, "pbs_fingerprint_mismatch" if fingerprint else "pbs_connect_failed")
             self.assertEqual(self.requests, [])
 
     def test_bad_credentials_and_redirects_are_rejected(self):
         for status in (401, 403, 302):
             type(self).response_status = status
-            with self.subTest(status=status), self.assertRaises(pbs.PBSError):
+            with self.subTest(status=status), self.assertRaises(pbs.PBSError) as caught:
                 pbs._remote_get(self.connection, '/status/datastore-usage')
+            self.assertEqual(caught.exception.code, "pbs_token_rejected" if status in (401, 403) else "pbs_invalid_response")
 
 
 if __name__ == '__main__':

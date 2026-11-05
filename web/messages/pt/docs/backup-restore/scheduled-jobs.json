@@ -101,7 +101,7 @@
   },
   "management": {
     "heading": "Gestão de tarefas",
-    "intro": "O menu de agendamento (Scripts TUI) e a aba Monitor Backups expõem as mesmas ações em qualquer trabalho.",
+    "intro": "O menu de agendamento no Scripts TUI (Backup scheduler and retention) oferece Run now, Enable / Disable e Delete, além de uma lista de trabalhos com o estado da última execução. Edit e View log só estão disponíveis na aba Monitor Backups.",
     "rows": [
       {
         "action": "Executar agora",
@@ -112,7 +112,7 @@
         "detail": "Novo modo: <code>systemctl enable/disable --now</code> o temporizador. Modo Anexar: altera o sinalizador <code>ENABLED</code> no env de trabalho — o script gancho honra-o na próxima execução PVE."
       },
       {
-        "action": "Editar",
+        "action": "Editar (apenas no Monitor)",
         "detail": "Abre novamente o destino, agenda, perfil e avisos de retenção e reescreve os arquivos de trabalho. Preserva a identificação do trabalho."
       },
       {
@@ -120,14 +120,14 @@
         "detail": "Remove o env do trabalho, o arquivo de caminhos, o temporizador e o serviço systemd (modo novo) e desativa a associação ao hook (modo de anexação). Não altera os arquivos já existentes no destino."
       },
       {
-        "action": "Ver registo",
+        "action": "Ver registo (apenas no Monitor)",
         "detail": "Mostra em tempo real <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — um arquivo de log por execução. O executor também emite uma linha de status compacta para journald no serviço systemd."
       }
     ]
   },
   "notifications": {
     "heading": "Notificações",
-    "body": "Cada execução programada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se os canais de notificação estiverem configurados no Monitor, os trabalhos não vigiados mostram seus resultados da mesma forma que backups manuais – um usuário não precisa verificar o log para saber se um trabalho foi bem sucedido."
+    "body": "Cada execução agendada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se houver canais de notificação configurados no Monitor, as tarefas não vigiadas comunicam os seus resultados da mesma forma que os backups manuais: um utilizador não precisa de consultar o registo para saber se uma tarefa foi bem-sucedida."
   },
   "whereNext": {
     "heading": "Para onde ir a seguir",

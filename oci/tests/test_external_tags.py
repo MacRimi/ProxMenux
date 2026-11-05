@@ -67,13 +67,11 @@ class ExternalTagsTests(unittest.TestCase):
         self.assertEqual(transaction.external_changes(record(), current), {'cores': 4, 'memory': 2048})
 
     def test_tag_changes_do_not_bypass_identity_or_network_checks(self):
-        for current in (config('homelab').replace(MARKER.encode(), b'22222222-2222-4222-8222-222222222222'),
-                        config('homelab').replace(b'bridge=vmbr0', b'bridge=vmbr2')):
-            with self.subTest(config=current):
-                with self.assertRaises(ValueError):
-                    reconcile.propose(record(), current)
-                with self.assertRaises(ValueError):
-                    transaction.external_changes(record(), current)
+        current = config('homelab').replace(MARKER.encode(), b'22222222-2222-4222-8222-222222222222')
+        with self.assertRaises(ValueError):
+            reconcile.propose(record(), current)
+        with self.assertRaises(ValueError):
+            transaction.external_changes(record(), current + b'arch: arm64\n')
 
     def test_new_volume_still_requires_adoption_when_tags_also_change(self):
         saved = record()
@@ -88,6 +86,51 @@ class ExternalTagsTests(unittest.TestCase):
             self.assertEqual(proposal['candidate']['deployment']['mounts'][0]['container_path'], '/data')
             self.assertEqual(len(proposal['details']), 1)
             self.assertEqual(json.loads(path.read_text()), saved)
+
+
+    def test_a_vlan_tag_set_in_proxmox_is_taken_into_the_record(self):
+        for saved_net, current_net, expected in ((b'ip=dhcp\nnet1', b'ip=dhcp,tag=4\nnet1', 4),
+                                                 (b'ip=dhcp,tag=4\nnet1', b'ip=dhcp\nnet1', None)):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as folder:
+                saved = record()
+                before = config('oci;proxmenux').replace(b'ip=dhcp\nnet1', saved_net)
+                saved['observed'].update(config=before.decode(), config_sha256=sha(before))
+                root = Path(folder)
+                path = root / '200/oci-compose.json'
+                path.parent.mkdir()
+                path.write_text(json.dumps(saved))
+                current = before.replace(saved_net, current_net)
+                with patch.object(reconcile.instances, 'ROOT', root):
+                    proposal = reconcile.propose(saved, current)
+                self.assertEqual(proposal['candidate']['deployment']['network']['vlan_tag'], expected)
+                self.assertEqual(proposal['details'], [])
+
+    def test_a_host_directory_taken_away_in_proxmox_leaves_the_record(self):
+        saved = record()
+        before = config('oci;proxmenux') + b'mp0: /srv/share,mp=/share,backup=0\n'
+        saved['observed'].update(config=before.decode(), config_sha256=sha(before))
+        saved['deployment']['mounts'] = [{'type': 'host-bind', 'container_path': '/share', 'source': '/srv/share'}]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / '200/oci-compose.json'
+            path.parent.mkdir()
+            path.write_text(json.dumps(saved))
+            with patch.object(reconcile.instances, 'ROOT', root):
+                proposal = reconcile.propose(saved, config('oci;proxmenux'))
+        self.assertEqual(proposal['candidate']['deployment']['mounts'], [])
+        self.assertFalse(proposal['review'])
+
+    def test_a_data_volume_taken_away_in_proxmox_still_stops_the_update(self):
+        saved = record()
+        before = config('oci;proxmenux') + b'mp0: local-lvm:vm-200-disk-1,mp=/data,size=8G,backup=1\n'
+        saved['observed'].update(config=before.decode(), config_sha256=sha(before))
+        with self.assertRaisesRegex(ValueError, 'mp0'):
+            reconcile.propose(saved, config('oci;proxmenux'))
+
+    def test_a_network_changed_in_proxmox_is_taken_into_the_record(self):
+        current = config('oci;proxmenux').replace(b'bridge=vmbr0', b'bridge=vmbr9')
+        self.assertEqual(transaction.external_changes(record(), current), {'bridge': 'vmbr9'})
+        self.assertEqual(transaction.external_changes(record(), current, adopt=False), {})
 
 
 class Prepared(Exception):

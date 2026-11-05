@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { getAuthToken } from "@/lib/api-config"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -41,6 +41,9 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { HostUpdateJobs, type HostUpdateJob } from "./host-update-jobs"
+import { HostUpdateResult } from "./host-update-result"
+import { RestartAfterUpdate, ProxMenuxVersionCard } from "./host-update-status"
 import { useT } from "@/lib/i18n/provider"
 import { useIsPbs } from "@/lib/use-platform"
 
@@ -126,12 +129,23 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [dismissedItems, setDismissedItems] = useState<DismissedError[]>([])
   const [customSuppressions, setCustomSuppressions] = useState<CustomSuppression[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [snapshotUnavailable, setSnapshotUnavailable] = useState(false)
   const [dismissingKey, setDismissingKey] = useState<string | null>(null)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
+  const [hostJob, setHostJob] = useState<{ runId: string; resume: boolean; kind: "host" } | null>(null)
+  const [hostJobs, setHostJobs] = useState<HostUpdateJob[]>([])
+  const [resultJobId, setResultJobId] = useState<string | null>(null)
+  const healthRequest = useRef<AbortController | null>(null)
+  const previousAutoExpanded = useRef<Set<string>>(new Set())
 
-  const fetchHealthDetails = useCallback(async (force = false) => {
-    setLoading(true)
+  const fetchHealthDetails = useCallback(async (force = false, cachedOnly = false) => {
+    if (cachedOnly && healthRequest.current) return
+    healthRequest.current?.abort()
+    const controller = new AbortController()
+    healthRequest.current = controller
+    const timeout = cachedOnly ? setTimeout(() => controller.abort(), 10000) : undefined
+    if (!cachedOnly) setLoading(true)
     setError(null)
 
     try {
@@ -144,14 +158,26 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         authHeaders["Authorization"] = `Bearer ${token}`
       }
 
-      const response = await fetch(getApiUrl(force ? "/api/health/full?refresh=1" : "/api/health/full"), { headers: authHeaders })
+      const path = cachedOnly ? "/api/health/full?cached=1" : force ? "/api/health/full?refresh=1" : "/api/health/full"
+      const response = await fetch(getApiUrl(path), { headers: authHeaders, signal: controller.signal })
+      if (healthRequest.current !== controller) return
       let infoCount = 0
       
       if (!response.ok) {
+        if (cachedOnly && response.status === 503) {
+          // Completion invalidates the snapshot before the collector refills it.
+          // Keep the dated result, explicitly unavailable; never start an audit.
+          setSnapshotUnavailable(true)
+          return
+        }
+        // Polling cannot fall back to a legacy endpoint that runs a full audit.
+        if (cachedOnly) throw new Error(t("healthStatus.errors.fetchFailed"))
         // Fallback to legacy endpoint
-        const legacyResponse = await fetch(getApiUrl("/api/health/details"), { headers: authHeaders })
+        const legacyResponse = await fetch(getApiUrl("/api/health/details"), { headers: authHeaders, signal: controller.signal })
         if (!legacyResponse.ok) throw new Error(t("healthStatus.errors.fetchFailed"))
         const data = await legacyResponse.json()
+        if (healthRequest.current !== controller) return
+        setSnapshotUnavailable(false)
         setHealthData(data)
         setDismissedItems([])
         setCustomSuppressions([])
@@ -168,6 +194,9 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         }
       } else {
         const fullData: FullHealthData = await response.json()
+        if (healthRequest.current !== controller) return
+        if (!fullData?.health?.details) throw new Error(t("healthStatus.errors.fetchFailed"))
+        setSnapshotUnavailable(false)
         setHealthData(fullData.health)
         setDismissedItems(fullData.dismissed || [])
         setCustomSuppressions(fullData.custom_suppressions || [])
@@ -207,9 +236,16 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       })
       window.dispatchEvent(event)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("healthStatus.errors.unknown"))
+      if (healthRequest.current === controller) {
+        setSnapshotUnavailable(false)
+        setError(err instanceof Error ? err.message : t("healthStatus.errors.unknown"))
+      }
     } finally {
-      setLoading(false)
+      if (timeout !== undefined) clearTimeout(timeout)
+      if (healthRequest.current === controller) {
+        healthRequest.current = null
+        setLoading(false)
+      }
     }
   }, [getApiUrl, t])
 
@@ -225,9 +261,21 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   useEffect(() => {
     if (open) {
       fetchHealthDetails()
-      // Auto-refresh every 5 minutes while modal is open
-      const refreshInterval = setInterval(() => fetchHealthDetails(), 300000)
-      return () => clearInterval(refreshInterval)
+      // Recheck reboot evidence promptly without running APT/full health checks.
+      const refresh = () => {
+        if (document.visibilityState === "visible") void fetchHealthDetails(false, true)
+      }
+      const refreshInterval = setInterval(refresh, 30000)
+      window.addEventListener("focus", refresh)
+      document.addEventListener("visibilitychange", refresh)
+      return () => {
+        clearInterval(refreshInterval)
+        window.removeEventListener("focus", refresh)
+        document.removeEventListener("visibilitychange", refresh)
+        const controller = healthRequest.current
+        healthRequest.current = null
+        controller?.abort()
+      }
     }
   }, [open, fetchHealthDetails])
 
@@ -245,7 +293,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           nonOkCategories.add(key)
         }
       })
-      setExpandedCategories(nonOkCategories)
+      const newlyDegraded = [...nonOkCategories].filter(key => !previousAutoExpanded.current.has(key))
+      previousAutoExpanded.current = nonOkCategories
+      if (newlyDegraded.length) {
+        setExpandedCategories(previous => new Set([...previous, ...newlyDegraded]))
+      }
     }
   }, [healthData])
 
@@ -300,6 +352,10 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
   const translateHealthText = (value?: string): string => {
     if (!value) return ""
+    // Health summaries include the category before the same detail text.
+    if (value.startsWith("Updates: ")) {
+      return `${t("healthStatus.categories.updates")}: ${translateHealthText(value.slice(9))}`
+    }
     const exact: Record<string, string> = {
       "No temperature sensor detected - install lm-sensors if hardware supports it": t("healthStatus.details.noTemperatureSensor"),
       "Sustained high CPU usage": t("healthStatus.details.cpuHighSustained"),
@@ -330,6 +386,10 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "Active": t("healthStatus.details.active"),
       "UP": t("healthStatus.details.up"),
       "Kernel/PVE up to date": t("healthStatus.details.kernelUpToDate"),
+      "No reboot required": t("healthStatus.hostUpdate.noReboot"),
+      "No pending updates": t("healthStatus.details.noPendingUpdates"),
+      "Reboot required by the operating system": t("healthStatus.hostUpdate.rebootMarker"),
+      "Could not determine whether a reboot is required": t("healthStatus.hostUpdate.rebootUnknown"),
       "Proxmox VE is up to date": t("healthStatus.details.proxmoxUpToDate"),
       "No security updates pending": t("healthStatus.details.noSecurityUpdates"),
       "No container startup errors": t("healthStatus.details.noContainerErrors"),
@@ -341,6 +401,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (Object.prototype.hasOwnProperty.call(exact, value)) return exact[value]
 
     let match = value.match(/^Latency ([\d.]+)ms to gateway$/)
+    const reboot = value.match(/^Reboot required: running (.+); installed (.+)$/)
+    if (reboot) return t("healthStatus.hostUpdate.rebootKernel", { running: reboot[1], installed: reboot[2] })
     if (match) return t("healthStatus.details.gatewayLatency", { latency: match[1] })
     match = value.match(/^(\d+) failed login attempts in 24h$/)
     if (match) return t("healthStatus.details.failedLogins", { count: match[1] })
@@ -623,7 +685,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       "smart_health", "io_errors", "zfs_pools", "lvm_volumes", "lvm_check", "connectivity",
       "qmp_communication", "container_startup", "vm_startup", "oom_killer", "cluster_mode",
       "log_error_cascade", "log_error_spike", "log_persistent_errors", "log_critical_errors",
-      "pve_version", "security_updates", "system_age", "pending_updates", "kernel_pve", "uptime",
+      "pve_version", "security_updates", "system_age", "pending_updates", "kernel_pve", "uptime", "reboot_required",
       "certificates", "login_attempts", "fail2ban", "proxmox_storages",
     ])
     if (knownKeys.has(key)) return t(`healthStatus.checks.${key}`)
@@ -632,6 +694,17 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       .replace(/_/g, " ")
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+
+  const translateHealthSummary = (snapshot: HealthDetails): string => {
+    if (snapshot.summary === "Updates") {
+      const reboot = snapshot.details?.updates?.checks?.reboot_required
+      if (reboot?.status === "INFO" && typeof reboot.detail === "string" && reboot.detail) {
+        return translateHealthText(reboot.detail)
+      }
+      return t("healthStatus.categories.updates")
+    }
+    return translateHealthText(snapshot.summary)
   }
 
   const renderChecks = (
@@ -645,6 +718,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         {Object.entries(checks)
           .filter(([, checkData]) => checkData.installed !== false)
           .map(([checkKey, checkData]) => {
+          if (categoryKey === "updates" && checkKey === "reboot_required" && checkData.status === "INFO") {
+            return <RestartAfterUpdate key={checkKey} getApiUrl={getApiUrl}
+              unavailable={loading || snapshotUnavailable || !!error}
+              disabled={hostJobs.some(job => job.state !== "complete")} label={formatCheckLabel(checkKey)}
+              detail={translateHealthText(checkData.detail)} icon={getStatusIcon(checkData.status, "sm")} />
+          }
           const isDismissable = checkData.dismissable === true
           const checkStatus = checkData.status?.toUpperCase() || "OK"
 
@@ -711,6 +790,14 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           </DialogDescription>
         </DialogHeader>
 
+        <HostUpdateJobs open={open} activeId={showUpdateTerminal ? hostJob?.runId : undefined}
+          onJobs={setHostJobs} onSettled={() => { void fetchHealthDetails(true) }}
+          onResume={job => {
+            if (job.state === "complete") { setResultJobId(job.id); return }
+            setHostJob({ runId: job.id, resume: true, kind: "host" })
+            setShowUpdateTerminal(true)
+          }} />
+
         {loading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -724,8 +811,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           </div>
         )}
 
-        {healthData && !loading && (
-          <div className="space-y-4">
+        {snapshotUnavailable && (
+          <div role="status" className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs text-amber-600 dark:text-amber-400">
+            <p>{t("healthStatus.snapshotUnavailable")}</p>
+            {healthData && <p className="mt-1">{t("healthStatus.lastKnownResults")}</p>}
+          </div>
+        )}
+
+        {healthData && (
+          <fieldset disabled={loading} className="space-y-4 min-w-0">
             {/* Overall Stats Summary */}
             <div className={`grid gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-muted/30 border ${stats.info > 0 ? "grid-cols-5" : "grid-cols-4"}`}>
               <div className="text-center">
@@ -760,7 +854,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
             {healthData.summary && healthData.summary !== "All systems operational" && (
               <div className="text-xs sm:text-sm p-3 rounded-lg bg-muted/20 border overflow-hidden max-w-full">
-                <p className="font-medium text-foreground break-words whitespace-pre-wrap">{translateHealthText(healthData.summary)}</p>
+                <p className="font-medium text-foreground break-words whitespace-pre-wrap">{translateHealthSummary(healthData)}</p>
               </div>
             )}
 
@@ -845,18 +939,30 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                             pending prevents the operator from spawning a
                             terminal that would only report "System is
                             already up to date". */}
-                        {key === "updates" && status?.toUpperCase() !== "OK" && (
-                          <div className="flex justify-end px-3 py-2 pt-1">
+                        {key === "updates" && Number(categoryData?.count ?? 0) > 0 && (
+                          <p className="px-2 sm:px-3 mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                            {t("healthStatus.packagePlanNote")}
+                          </p>
+                        )}
+                        {key === "updates" && Number(categoryData?.count ?? 0) > 0 && (
+                          <div className="flex justify-end px-2 sm:px-3 pt-3 pb-1">
                             <Button
                               size="sm"
-                              onClick={() => setShowUpdateTerminal(true)}
-                              className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                              disabled={hostJobs.some(job => job.state !== "complete")}
+                              onClick={() => {
+                                const runId = window.crypto?.randomUUID?.()
+                                  || `host-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+                                setHostJob({ runId, resume: false, kind: "host" })
+                                setShowUpdateTerminal(true)
+                              }}
+                              className="h-10 sm:h-[34px] bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                             >
                               <ArrowUpCircle className="h-4 w-4 mr-1.5" />
-                              {t("healthStatus.updateNow")}
+                              {t("healthStatus.updateSystem")}
                             </Button>
                           </div>
                         )}
+                        {key === "updates" && <ProxMenuxVersionCard getApiUrl={getApiUrl} />}
                       </div>
                     )}
                   </div>
@@ -964,11 +1070,16 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                 {t("healthStatus.lastUpdated", { date: new Date(healthData.timestamp).toLocaleString(document.documentElement.lang) })}
               </div>
             )}
-          </div>
+          </fieldset>
         )}
       </DialogContent>
+      <HostUpdateResult jobId={resultJobId} getApiUrl={getApiUrl} onClose={() => setResultJobId(null)} />
       <ScriptTerminalModal
+        key={hostJob?.runId || "host-update"}
         open={showUpdateTerminal}
+        backgroundUpdate={hostJob || undefined}
+        cancelledExitCode={130}
+        onComplete={() => { void fetchHealthDetails(true) }}
         onClose={() => {
           setShowUpdateTerminal(false)
           // Force a fresh read (cache-busting via ?refresh=1) so the

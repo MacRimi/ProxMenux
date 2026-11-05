@@ -42,8 +42,9 @@ def environment(config):
             entries.extend(line.split(': ', 1)[1].split('\0'))
     for entry in entries:
         name, sep, value = entry.partition('=')
-        if not sep or name in result:
+        if not sep:
             raise ValueError(translate('Duplicate variable in the contract; review it before editing'))
+        # A variable set twice takes its last value, as it does in LXC.
         result[name] = value
     return result
 
@@ -129,7 +130,7 @@ def plan(record, candidate, config):
                 values[native] = str(value)
     if 'network' in changed:
         network = new['network']
-        if set(network) - {'bridge', 'ipv4', 'gateway', 'firewall', 'host_managed', 'mac_address'}:
+        if set(network) - {'bridge', 'ipv4', 'gateway', 'firewall', 'host_managed', 'mac_address', 'vlan_tag'}:
             raise ValueError(translate('Unsupported network settings'))
         if not re.fullmatch(r'[A-Za-z0-9_.:-]+', network['bridge']):
             raise ValueError(translate('Invalid bridge'))
@@ -146,6 +147,11 @@ def plan(record, candidate, config):
         fields.update(bridge=network['bridge'], ip=address)
         if gateway: fields['gw'] = gateway
         else: fields.pop('gw', None)
+        vlan_tag = network.get('vlan_tag')
+        if vlan_tag is not None and (isinstance(vlan_tag, bool) or not isinstance(vlan_tag, int) or not 1 <= vlan_tag <= 4094):
+            raise ValueError(translate('The VLAN tag must be a number from 1 to 4094'))
+        if vlan_tag: fields['tag'] = str(vlan_tag)
+        elif 'vlan_tag' in old['network']: fields.pop('tag', None)
         for key, native in (('firewall', 'firewall'), ('host_managed', 'host-managed')):
             if old['network'].get(key) != network.get(key):
                 fields[native] = '1' if network.get(key) else '0'
@@ -165,7 +171,7 @@ def plan(record, candidate, config):
         else: delete.append('env')
     if 'devices' in changed:
         inventory = devices.planned(new)
-        existing = {v['path']: k for k, v in ((k, dict(p.split('=', 1) for p in v.split(',')))
+        existing = {v['path']: k for k, v in ((k, devices.device_fields(v))
                    for k, v in cfg.items() if re.fullmatch(r'dev[0-9]+', k))}
         used = set(existing.values())
         for path, key in existing.items():
@@ -179,7 +185,7 @@ def plan(record, candidate, config):
             info = inventory[path]
             mode = info['mode'] if device.get('mode') == 'preserve-host' else int(device.get('mode', '0660'), 8)
             values[key] = (f"path={path},mode={mode:04o},uid={int(device.get('uid', 0))},"
-                           f"gid={info['gid'] if device['gid_strategy'] == 'host-device-gid' else 0},"
+                           f"gid={devices.container_gid(device, info)},"
                            f"deny-write={1 if device.get('deny_write') else 0}")
     if 'mounts' in changed:
         actual = transaction.mounts(config)
@@ -365,7 +371,8 @@ def apply(root, record, candidate, config, acknowledge_external_data=False):
                 Path(mount['source']).mkdir(parents=True, exist_ok=True)
         host_mounts.verify_sources(original_sources)
         # Capture newly-created directories before installing their mounts.
-        pinned = {p: host_mounts.validate_source(p) for p in desired_sources}
+        pinned = {p: host_mounts.validate_source(p, declared=value.get('declared', False))
+                  for p, value in desired_sources.items()}
         for path, previous in desired_sources.items():
             if previous['exists'] and not host_mounts.same_source(previous, pinned[path]):
                 raise ValueError(translate('A shared source does not match its recorded identity'))

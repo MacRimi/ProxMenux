@@ -4,7 +4,8 @@ import { CalendarClock, Database } from "lucide-react"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { formatStorage } from "../lib/utils"
-import { useT } from "../lib/i18n/provider"
+import { useT, useI18n } from "../lib/i18n/provider"
+import { PBSProblemMessage } from "./pbs-problem-message"
 
 export interface PBSDatastore {
   name: string
@@ -13,6 +14,7 @@ export interface PBSDatastore {
   used?: number | null
   avail?: number | null
   error?: string
+  error_code?: string
   "backend-type"?: string
   "estimated-full-date"?: number
   "gc-status"?: { upid?: string | null; "removed-bytes"?: number; "pending-bytes"?: number }
@@ -42,7 +44,7 @@ export function DatastoreUsageRow({ store, compact = false }: { store: PBSDatast
         <span className="font-medium text-foreground truncate">{store.name}</span>
         <span className="text-xs text-muted-foreground">—</span>
       </div>
-      <p className="text-xs text-amber-500">{store.error || t("pbs.capacityUnavailable")}</p>
+      <PBSProblemMessage className="text-xs text-amber-500" problem={{ code: store.error_code }} raw={store.error} fallback="pbs.capacityUnavailable" />
     </div>
   }
   const tone = usageTone(percent)
@@ -62,10 +64,11 @@ export function DatastoreUsageRow({ store, compact = false }: { store: PBSDatast
 // Same layout as the "Proxmox storage" cards of the PVE Monitor.
 export function PBSDatastoreCard({ store }: { store: PBSDatastore }) {
   const t = useT()
+  const { language } = useI18n()
   const percent = datastorePercent(store)
   const tone = percent == null ? null : usageTone(percent)
   const fullDate = store["estimated-full-date"]
-  const type = store["backend-type"] || "datastore"
+  const type = store["backend-type"] || t("pbs.datastoreType")
   return <div className={`border rounded-lg p-4 ${store.error ? "border-red-500/50 bg-red-500/5" : ""}`}>
     <div className="flex items-center justify-between gap-2 mb-3">
       <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -99,13 +102,13 @@ export function PBSDatastoreCard({ store }: { store: PBSDatastore }) {
         </div>
       </div>
     ) : (
-      <p className="text-sm text-muted-foreground">{store.error || t("storage.capacityNotReported")}</p>
+      <PBSProblemMessage className="text-sm text-muted-foreground" problem={{ code: store.error_code }} raw={store.error} fallback="pbs.capacityUnavailable" />
     )}
     {(store.path || fullDate !== undefined) && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
       {store.path && <span className="font-mono truncate" title={store.path}>{store.path}</span>}
       {fullDate !== undefined && <span className="flex items-center">
         <CalendarClock className="mr-1.5 h-3.5 w-3.5" />{t("pbs.estimatedFull")}:
-        <span className="ml-1 font-medium text-foreground">{fullDate > 0 ? new Date(fullDate * 1000).toLocaleDateString() : t("pbs.estimatedFullUnknown")}</span>
+        <span className="ml-1 font-medium text-foreground">{fullDate > 0 ? new Date(fullDate * 1000).toLocaleDateString(language) : t("pbs.estimatedFullUnknown")}</span>
       </span>}
     </div>}
   </div>

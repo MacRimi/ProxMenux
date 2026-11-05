@@ -20,7 +20,7 @@
     "heading": "Disposizione dell'archivio",
     "intro": "Ogni archivio segue lo stesso layout albero indipendentemente dalla destinazione. La sottodirectory <code>metadata/</code> contiene i dati strutturati; la sottodirectory <code>rootfs/</code> contiene la copia del filesystem.",
     "treeCaption": "La directory di preparazione creata durante il backup. Tutte le destinazioni ricevono lo stesso albero nel proprio formato nativo: tar per i backup locali, blocchi PBS per PBS e segmenti Borg per Borg.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "La parte rootfs",
@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Validazione schema",
-    "schemaBody": "Il manifesto convalida contro <code>scripts/backup_restore/schema/manifest.schema.json</code>. L'esecuzione di <code>build_manifest.sh --validate</code> attiva una validazione dello schema JSON (richiede <code>python3</code> + <code>jsonschema</code>). Se il modulo non è presente, il controllo è saltato silenziosamente — la validazione è principalmente un aiuto sviluppatore, non una dipendenza runtime."
+    "schemaBody": "ProxMenux include un modello che descrive quali campi deve contenere il manifesto e la forma di ciascuno. Quando viene generato un backup, il manifesto può essere verificato automaticamente rispetto a quel modello, così un collettore che ha prodotto un JSON malformato o un campo scritto in modo errato viene individuato subito. La verifica è pensata per lo sviluppo di ProxMenux stesso: su un sistema in cui non è installata, il backup funziona come di consueto e il manifesto viene generato comunque."
   },
   "applications": {
     "heading": "inventario delle applicazioni",
@@ -176,7 +176,7 @@
         "stage": "3",
         "name": "Preparazione delle modifiche differite",
         "reads": "rootfs/ (riavvio + percorsi pericolosi)",
-        "action": "<code>_rs_prepare_pending_restore</code> prepara i percorsi rischiosi in <code>/var/lib/proxmenux/pending-restore/</code>, scrive <code>plan.env</code>, <code>apply-on-boot.list</code> e <code>rs-skip-paths.txt</code> e abilita <code>proxmenux-restore-onboot.service</code> per il prossimo avvio."
+        "action": "<code>_rs_prepare_pending_restore</code> prepara i percorsi rischiosi in <code>/var/lib/proxmenux/restore-pending/&lt;restore_id&gt;/</code> (collegata come <code>current</code>), scrive <code>plan.env</code>, <code>apply-on-boot.list</code> e <code>rs-skip-paths.txt</code> e abilita <code>proxmenux-restore-onboot.service</code> per il prossimo avvio."
       },
       {
         "stage": "3b",

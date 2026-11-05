@@ -7,6 +7,8 @@ import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network, ChevronRight, Database } from "lucide-react"
 import { DatastoreUsageRow, type PBSDatastore } from "./pbs-datastore-usage"
+import { PBSProblemMessage } from "./pbs-problem-message"
+import { pbsDiagnostic } from "../lib/pbs-messages"
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { TemperatureDetailModal } from "./temperature-detail-modal"
@@ -187,14 +189,20 @@ const getUnitsSettings = (): "Bytes" | "Bits" => {
   return raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes"
 }
 
+interface PBSOverviewStatus {
+  datastores: PBSDatastore[] | null
+  errors?: Record<string, string>
+  error_details?: Record<string, { code: string }>
+}
+
 export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } = {}) {
   const t = useT()
   const { language } = useI18n()
   const isPbs = product === "pbs"
   // On Proxmox Backup Server the datastores take the place of guests and PVE storage.
-  const { data: pbsStatus, error: pbsError } = useSWR<{ datastores: PBSDatastore[] | null }>(
+  const { data: pbsStatus, error: pbsError } = useSWR<PBSOverviewStatus>(
     isPbs ? "/api/pbs/status?server=local" : null,
-    (url: string) => fetchApi<{ datastores: PBSDatastore[] | null }>(url),
+    (url: string) => fetchApi<PBSOverviewStatus>(url),
     { refreshInterval: 60000, revalidateOnFocus: false },
   )
   const datastores = pbsStatus?.datastores ?? null
@@ -545,13 +553,15 @@ export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } 
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {!datastores && !pbsError ? (
+            {!pbsStatus && !pbsError ? (
               <div className="space-y-2 animate-pulse">
                 <div className="h-10 bg-muted rounded w-20"></div>
                 <div className="h-5 bg-muted rounded w-32"></div>
               </div>
             ) : !datastores ? (
-              <p className="text-sm text-amber-500">{t("pbs.loadFailed")}</p>
+              <div role="alert" className="text-sm text-amber-500">
+                <PBSProblemMessage problem={pbsError || pbsStatus?.error_details?.datastores} raw={pbsDiagnostic(pbsError) || pbsStatus?.errors?.datastores} />
+              </div>
             ) : datastores.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("pbs.noDatastores")}</p>
             ) : (
@@ -762,8 +772,12 @@ export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } 
                 {isPbs ? (
                   <div className="space-y-3">
                     <div className="text-xs font-medium text-muted-foreground mb-2">{t("pbs.datastores")}</div>
-                    {!datastores ? (
-                      <div className="text-center py-4 text-muted-foreground text-sm">{pbsError ? t("pbs.loadFailed") : t("pbs.loading")}</div>
+                    {!pbsStatus && !pbsError ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">{t("pbs.loading")}</div>
+                    ) : !datastores ? (
+                      <div role="alert" className="py-4 text-amber-500 text-sm">
+                        <PBSProblemMessage problem={pbsError || pbsStatus?.error_details?.datastores} raw={pbsDiagnostic(pbsError) || pbsStatus?.errors?.datastores} />
+                      </div>
                     ) : datastores.length === 0 ? (
                       <div className="text-center py-4 text-muted-foreground text-sm">{t("pbs.noDatastores")}</div>
                     ) : datastores.map(store => <DatastoreUsageRow key={store.name} store={store} />)}

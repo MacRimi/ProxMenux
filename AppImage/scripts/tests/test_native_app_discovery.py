@@ -533,6 +533,7 @@ class DiscoveryFixtures(unittest.TestCase):
 
     def test_actual_save_first_check_and_recheck_never_probe_or_configure_updater(self):
         with patch.object(lxc_apps, '_APPS_DIR', str(self.root / 'apps')), \
+             patch.object(lxc_apps, '_fetch_tracking_hints', return_value={}), \
              patch.object(lxc_apps, '_pct_exec', side_effect=AssertionError('forbidden guest execution')) as execute, \
              patch.object(lxc_apps, 'fetch_latest_upstream_details', side_effect=AssertionError('forbidden upstream')) as upstream:
             for version in (None, '1.2.3'):
@@ -746,14 +747,41 @@ class Routes(unittest.TestCase):
             scan.assert_not_called()
             read.assert_not_called()
 
+    def test_stopped_scan_route_exposes_reason_and_keeps_cached_evidence(self):
+        item = {'discovery_id': 'native-retained', 'name': 'Retained app',
+                'installation_path': '/opt/retained/server'}
+        previous = {'vmid': 101, 'status': 'complete', 'stale': False,
+                    'scanned_at': time.time(), 'candidates': [item]}
+        native._cache[101] = copy.deepcopy(previous)
+        with patch.object(native, 'scan', side_effect=native.ProbeError('guest_stopped')), \
+             patch.object(lxc_apps, 'load_sidecar', return_value={'apps': []}), \
+             patch.object(lxc_apps, 'get_suggestions') as suggestions, \
+             patch.object(lxc_apps, '_write_sidecar') as write:
+            response = self.client.post('/api/vms/101/apps/native-discovery')
+            self.assertEqual(response.status_code, 200)
+            result = response.get_json()
+            self.assertEqual(result['status'], 'error')
+            self.assertEqual(result['issues'], ['guest_stopped'])
+            self.assertTrue(result['stale'])
+            self.assertEqual(result['candidates'], [item])
+            self.assertEqual(result['scanned_at'], previous['scanned_at'])
+            suggestions.assert_not_called()
+            write.assert_not_called()
+
     def test_actual_lifecycle_marks_last_known_stale_without_scanning(self):
+        import docker_app_discovery as docker
+        docker._cache[101] = {'vmid':101, 'status':'complete', 'stale':False, 'candidates':[], 'scanned_at':time.time()}
+        self.addCleanup(docker._cache.clear)
         native._cache[101] = {'vmid': 101, 'status': 'complete', 'stale': False,
                               'candidates': [], 'scanned_at': time.time()}
         with patch.object(native, 'discover') as scan, \
+             patch.object(docker, 'discover') as docker_scan, \
              patch.object(lxc_apps, 'clear_schedule_reboot_required') as clear:
             for action in ('start', 'reboot', 'stop'):
                 self.globals['_handle_guest_lifecycle']('101', 'lxc', action)
                 self.assertTrue(native.cached(101)['stale'])
+                self.assertTrue(docker.cached(101)['stale'])
+            docker_scan.assert_not_called()
             scan.assert_not_called()
             self.assertEqual(clear.call_count, 2)
 

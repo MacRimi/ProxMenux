@@ -141,7 +141,7 @@
               ],
               [
                 "Aggiornamenti pianificati",
-                "L’immagine viene aggiornata all’ora scelta solo se il registro ne pubblica una nuova, con la possibilità di attendere che abbia 1, 3, 7 o 14 giorni. Un container modificato al di fuori di ProxMenux viene saltato e segnalato."
+                "L’immagine viene aggiornata all’ora scelta solo se il registro ne pubblica una nuova, con la possibilità di attendere che abbia 1, 3, 7 o 14 giorni. Le impostazioni modificate in Proxmox vengono conservate."
               ]
             ]
           }

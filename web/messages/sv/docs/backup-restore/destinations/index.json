@@ -76,7 +76,7 @@
   },
   "sameArchive": {
     "heading": "Arkivlayouten ändras inte med destinationen",
-    "body": "Alla tre destinationerna innehåller samma struktur med <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> som beskrivs i <em>Så fungerar det</em>. Ett uppackat lokalt <code>.tar.zst</code>-arkiv, ett <code>.pxar</code>-arkiv återställt från PBS och ett Borg-arkiv uppackat med <code>borg extract</code> ger samma katalogträd. Återställningskoden (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) läser samma tre datablock utan att behöva veta vilken destination de kommer från."
+    "body": "Var säkerhetskopian än lagras innehåller den alltid samma tre block som beskrivs i <em>Så fungerar det</em>: filsystemet (<code>rootfs/</code>), metadata (<code>metadata/</code>) och manifestet (<code>manifest.json</code>). Att packa upp ett lokalt <code>.tar.zst</code>-arkiv, återställa ett <code>.pxar</code>-arkiv från PBS eller packa upp ett Borg-arkiv ger alltid samma katalogträd. Återställningen läser därför alltid samma filer, oavsett vilken destination säkerhetskopian kommer från."
   },
   "extractStandalone": {
     "heading": "Extrahera en backup utanför ProxMenux",

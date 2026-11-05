@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Översikt: Terminal | ProxMenux-dokumentation",
+    "description": "Skal på Proxmox-värden i webbläsaren: upp till 4 terminaler i rutnätsvy, tangentbordsknappar för mobila enheter (ESC, TAB, pilar, Ctrl-kombinationer), inbyggd kommandoguide med cheat.sh och JWT-skydd."
+  },
+  "header": {
+    "title": "Översikt: Terminal",
+    "description": "En riktig skalsession på Proxmox-värden i webbläsaren. Upp till fyra terminaler samtidigt, tangentbordsknappar för mobila enheter och en inbyggd kommandoguide, med samma tema som resten av översikten.",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "intro": {
+    "title": "En riktig PTY i webbläsaren",
+    "body": "Terminalen skapar en PTY på servern via <code>flask_terminal_routes</code>, kopplar den med WebSocket till <code>xterm.js</code> i webbläsaren och körs som <code>root</code>, systemd-enhetens användare. Som med <code>ssh root@&lt;host&gt;</code> kan du använda <code>vim</code>, <code>tmux</code>, ncurses-verktyg och Proxmox CLI:er (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Varje PTY exporterar <code>PROXMENUX_TERMINAL=monitor</code>. Alla underordnade <code>bash</code>-processer, även en senare start av <code>menu</code>, ärver variabeln så att de känner igen Monitors webbläsarterminal."
+  },
+  "singleAlt": "Terminalfliken i ProxMenux Monitor — en terminalsession som visar Fastfetchs systemöversikt vid inloggning",
+  "singleCaption": "En värd terminal öppen - verktygsfältet ovan visar räkningen (<em>1 / 4 terminaler</em>), <em> + New</em>, <em>Search</em>, <em>Clear</em> och <em>Close</em>. De mobila tangentbordshjälparna visas under terminalen på touch-enheter.",
+  "target": {
+    "heading": "Anslutningsmål",
+    "body1": "Terminalfliken öppnar ett skal på <strong>själva Proxmox-värden</strong>, som vid SSH-inloggning. Varje flik öppnar en ny terminal på värden.",
+    "body2": "För att nå en <strong>LXC-container</strong> från webbläsaren använder du knappen <em>Konsol</em> på varje körande CT-kort på <link>fliken VM och LXC</link>. Den öppnar en dialogruta som kör <code>pct enter &lt;vmid&gt;</code> och använder samma mobilanpassade verktygsfält som beskrivs nedan."
+  },
+  "menuGuard": {
+    "heading": "Skydd vid självuppdatering av menu i terminalen",
+    "body1": "När du bekräftar självuppdateringen ersätter <code>menu</code> sitt skriptträd och laddas om. Det fungerar via SSH eller Proxmox-konsolen, men i webbläsaren skulle skalets PTY stängas och WebSocket avbrytas. Därför läser <code>check_updates_stable</code>, <code>check_updates_beta</code> och <code>apply_release_channel</code> variabeln <code>PROXMENUX_TERMINAL</code> för att känna igen Monitor-kontexten.",
+    "body2": "Då ersätts ja/nej-dialogrutan med ett meddelande med det officiella installationskommandot: <code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> för stable och motsvarande URL för <code>install_proxmenux_beta.sh</code> för beta. Uppdateringen utförs via SSH eller Proxmox-värdens konsol; webbläsarterminalen används bara för att läsa och bekräfta meddelandet."
+  },
+  "fourTerminals": {
+    "heading": "Upp till fyra terminaler samtidigt",
+    "intro": "Fliken låter dig öppna upp till fyra värdterminaler samtidigt. Var och en får sin egen PTY och sin egen WebSocket De är helt oberoende sessioner. Två layouter växlar med ikonerna bredvid knappen \"New\":",
+    "items": [
+      "<strong>Flikvy</strong> — en terminal synlig åt gången, de andra som namngivna flikar överst (<em>Terminal 1</em>, <em>Terminal 2</em>…). Passar när du arbetar med en uppgift och har resten i bakgrunden.",
+      "<strong>Rutnätsvy</strong> — alla öppna terminaler i ett 2×2-rutnät. Du kan bevaka <code>htop</code> i en, <code>iftop</code> i en annan och redigera i en tredje utan att växla flik."
+    ],
+    "outro": "Verktygsfältet visar antalet (<em>1/4 terminaler</em>, <em>4/4 terminaler</em>). <strong>+ Ny</strong> öppnar en flik; det lilla <code>×</code> i flikrubriken stänger den. Den stora röda knappen <strong>Stäng</strong> överst avslutar alla terminaler."
+  },
+  "gridAlt": "ProxMenux Monitor Terminal-fliken - rutnätsvy med fyra värdterminaler som kör ls, nätverkskonfig, iftop och ProxMenux huvudmenyn sida vid sida",
+  "gridCaption": "Rutnätsvy (4 / 4 terminaler) — fyra oberoende PTY:er samtidigt: kataloglista, <code>/etc/network/interfaces</code>, <code>iftop</code> och ProxMenux huvudmeny. Växla mellan rutnät och flikar med layoutreglaget i verktygsfältet.",
+  "keyboard": {
+    "heading": "Tangentbordsknappar för mobila enheter",
+    "intro": "Tangentbord på telefoner och surfplattor saknar ofta ESC, TAB, piltangenter och kombinationer med modifierartangenter. De behövs i <code>vim</code>, <code>nano</code>, <code>htop</code> och TUI-menyer. Terminalfliken visar därför en rad pekknappar under terminalen på små skärmar eller enheter med pekstöd:",
+    "headerButton": "Knapp",
+    "headerSends": "Skickar",
+    "headerUse": "Typisk användning",
+    "rows": [
+      {
+        "button": "ESC",
+        "sends": "\\x1b",
+        "use": "Lämna infogningsläge i <code>vim</code>, avbryt en TUI-dialogruta eller avsluta en sökning."
+      },
+      {
+        "button": "TAB",
+        "sends": "\\t",
+        "use": "Automatisk komplettering av sökvägar och navigering mellan fält i dialog/whiptail."
+      },
+      {
+        "button": "↑ ↓ ← →",
+        "sends": "\\x1bO[ABCD]",
+        "use": "Skalhistorik, markörförflyttning och menynavigering."
+      },
+      {
+        "button": "↵ Retur",
+        "sends": "\\r",
+        "use": "Bekräfta. Vissa skärmtangentbord ersätter Enter med Gå/Klar; den här knappen är entydig."
+      },
+      {
+        "button": "Ctrl ▾",
+        "sends": "Listruta",
+        "useRich": true
+      }
+    ],
+    "ctrlIntro": "Tre kontrollsekvenser:",
+    "ctrlItems": [
+      "<code>Ctrl+C</code> — avbryt kommandot som körs (<code>\\x03</code>).",
+      "<code>Ctrl+X</code> — avsluta <code>nano</code> (<code>\\x18</code>).",
+      "<code>Ctrl+R</code> — sök bakåt i bash-historiken (<code>\\x12</code>)."
+    ],
+    "modalTitle": "Samma verktygsfält i dialogrutan för LXC-konsolen",
+    "modalBody": "Konsolen som öppnas från <link>VM och LXC → Konsol</link> visar samma tangentbordsknappar under dialogrutan. Vid anslutning skriver den automatiskt <code>pct enter &lt;vmid&gt;</code>, så att du kommer direkt in i containern."
+  },
+  "lxcAlt": "LXC-konsolens dialogruta i ProxMenux Monitor — Terminal: ubuntu (ID: 103), med samma mobilanpassade verktygsfält (ESC, TAB, pilar, Enter, Ctrl) under terminalen",
+  "lxcCaption": "LXC-konsolen öppnad från <em>VM och LXC → Konsol</em>. Rubriken visar målcontainern (<em>Terminal: ubuntu (ID: 103)</em>) och samma pekanpassade verktygsfält finns under terminalen.",
+  "search": {
+    "heading": "Sök kommandon — inbyggd snabbguide",
+    "intro": "Den blå knappen <strong>Sök</strong> öppnar ungefärlig kommandosökning. Skriv några bokstäver i ett Linux- eller Proxmox-kommando (<code>ls</code>, <code>tar</code>, <code>qm</code>, <code>pct</code>, <code>zpool</code>, <code>systemctl</code>…) för att se exempel med <em>Skicka till aktiv terminal</em> med ett tryck. Då kan du hitta en flagga utan att byta webbläsarflik.",
+    "modalAlt": "ProxMenux Monitor — dialogrutan Sök kommandon med ungefärlig sökning efter Linux- och Proxmox-kommandon via cheat.sh och flera ls-exempel",
+    "modalCaption": "Sökning efter <code>ls</code> — varje resultat visar kommandot, dess beskrivning och en liten pil för att skicka det till aktiv terminal. Datakällan visas längst ner till höger (<em>Data från cheat.sh</em>).",
+    "aboutLabel": "Om cheat.sh:",
+    "aboutBody": "är en snabbguide med öppen källkod som underhålls av gemenskapen och samlar korta praktiska exempel för hundratals Linux-kommandon, administrationsverktyg och programmeringsspråk. Den skapades för <code>curl cheat.sh/&lt;command&gt;</code> i terminalen men kan även nås i webbläsaren. ProxMenux Monitor vidarebefordrar frågorna genom en proxy på servern så att dialogrutan har samma ursprung som översikten.",
+    "headerSource": "Källa",
+    "headerWhen": "När den används",
+    "headerWhat": "Vad du ser",
+    "onlineLabel": "(online)",
+    "onlineWhen": "När värden har internetåtkomst och cheat.sh proxy svarar.",
+    "onlineWhat": "Flera praktiska exempel per kommando med beskrivningen ovanför. Statuspunkten i dialogrutans rubrik är <green>grön</green>.",
+    "fallbackLabel": "Lokal reservlista",
+    "fallbackWhen": "När cheat.sh är oåtkomlig (offline värd, restriktiv brandvägg, cheat.sh avbrott).",
+    "fallbackWhat": "En medföljande lista med vanliga Linux- och Proxmox-kommandon. Mindre katalog, men alltid tillgänglig. Statuspunkten är <red>röd</red>.",
+    "sendingNote": "<strong>Så fungerar sändning</strong>: pilen bredvid resultatet skickar texten till aktiv terminal (vald flik eller den terminal du senast klickade på i rutnätet). Dialogrutan stängs automatiskt så att du kan trycka på Enter."
+  },
+  "auth": {
+    "heading": "Autentisering",
+    "items": [
+      "Webbläsaren begär först en engångsbiljett via <code>POST /api/terminal/ticket</code> med JWT i <code>Authorization</code>-huvudet. Biljetten skickas sedan när WebSocket öppnas och löper ut efter 5 sekunder. Om autentisering är aktiverad och biljetten saknas eller är ogiltig stängs anslutningen innan en PTY skapas.",
+      "Om Monitor ligger bakom en omvänd proxy måste den vidarebefordra WebSocket-uppgraderingar. Exempel för Nginx / Caddy / Traefik finns på <link>Åtkomst och autentisering</link>."
+    ]
+  },
+  "clipboard": {
+    "heading": "Urklipp, rullningshistorik och storleksändring",
+    "items": [
+      "<strong>Kopiera och klistra in</strong> — använder webbläsarens urklipp. Markera text med mus eller styrplatta och använd systemets kortkommando (<code>Cmd+C</code> på macOS, <code>Ctrl+Shift+C</code> på Linux/Windows). Linux-skrivbord stöder även inklistring med mittenknappen.",
+      "<strong>Rullningshistorik</strong> — rulla med hjul eller två fingrar. xterm.js behåller de senaste flera tusen raderna i minnet.",
+      "<strong>Ändra storlek</strong> — terminalen anpassar PTY-fönstrets storlek när översiktens panel ändras, så att <code>htop</code> och <code>vim</code> visas korrekt.",
+      "<strong>Återanslutning när fliken får fokus</strong> — appbyte på telefon eller surfplatta, särskilt iPad, kan bryta WebSocket. Terminalfliken upptäcker synlighetsändringen och återansluter när du kommer tillbaka, med 15 sekunders tidsgräns för långsamma VPN-anslutningar."
+    ]
+  },
+  "disconnect": {
+    "heading": "Orsaker till frånkoppling",
+    "intro": "De vanligaste orsakerna till att en session slutar och vad man ska göra åt varje:",
+    "headerCause": "Orsak",
+    "headerFix": "Lösning",
+    "rows": [
+      {
+        "cause": "Sessionens JWT har löpt ut när en terminal öppnas eller återansluts (24 timmar).",
+        "fix": "Uppdatera sidan och logga in igen. Terminalen är inte utformad för obevakade sessioner, så JWT-livslängden matchar den vanliga instrumentpanelen inloggning."
+      },
+      {
+        "cause": "Tidsgräns för inaktivitet i den omvända proxyn.",
+        "fix": "Öka <code>proxy_read_timeout</code> i Nginx eller motsvarande i Caddy / Traefik (exempel under Åtkomst och autentisering)."
+      },
+      {
+        "cause": "Telefon eller surfplatta i viloläge.",
+        "fix": "När enheten vaknar återansluts fliken automatiskt (15 sekunders tidsgräns för VPN-anslutningar). Ladda annars om fliken."
+      },
+      {
+        "cause": "Tjänsten startas om på värden.",
+        "fix": "Varje omstart av <code>proxmenux-monitor.service</code> stänger alla PTY:er. Öppna nya terminaler när översikten har laddats om."
+      }
+    ]
+  },
+  "warning": {
+    "title": "Terminalen är ett root-skal på värden",
+    "body": "Terminalen ärver systemd-enhetens användare (<code>root</code>) och har fulla rättigheter på Proxmox-värden. Ställ in användarnamn, lösenord och 2FA under <authLink>Åtkomst och autentisering</authLink> innan du tillåter åtkomst utanför det lokala nätverket. Om autentisering är avstängd kan alla som når port 8008 öppna ett root-skal utan fler frågor eller SSH-inloggningsuppgifter. Använd <gatewayLink>Secure Gateway</gatewayLink> (Tailscale) eller en HTTPS-proxy för extern åtkomst i stället för att öppna porten mot internet."
+  },
+  "whereNext": {
+    "heading": "Nästa steg",
+    "items": [
+      {
+        "label": "Åtkomst och autentisering",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — exempel för omvänd proxy med de WebSocket-uppgraderingsrader som terminalen kräver."
+      },
+      {
+        "label": "Arkitektur",
+        "href": "/docs/monitor/architecture",
+        "tail": " — WebSocket-transport (HTTP via flask-sock och HTTPS / WSS via gevent)."
+      },
+      {
+        "label": "API-referens",
+        "href": "/docs/monitor/api",
+        "tail": " — WebSocket-slutpunkterna /ws/terminal och /ws/script/<sid> tillsammans med resten av API:et."
+      },
+      {
+        "label": "Integrationer → Secure Gateway",
+        "href": "/docs/monitor/integrations",
+        "tail": " — när du vill ha terminal åtkomst utanför LAN utan att exponera port 8008."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — de andra flikarna."
+      }
+    ]
+  }
+}

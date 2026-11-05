@@ -38,7 +38,7 @@
               },
               {
                 "title": "Speicher und Größe",
-                "body": "Ein Container-Datenträger wird mit der angegebenen Größe auf einem Proxmox-VE-Speicher erstellt. Die Standardinstallation verwendet <code>local-lvm</code>. Die erweiterte Installation fragt für jeden Pfad zuerst den Speicher und dann die Größe ab; vorgeschlagen wird der Speicher des rootfs. Der Datenträger erscheint als <code>vm-VMID-disk-N</code> und wird als <code>mpN</code> eingebunden."
+                "body": "Ein Container-Datenträger wird mit der angegebenen Größe auf einem Proxmox-VE-Speicher erstellt. Die Standardinstallation fragt einmal nach dem Speicher für den Container und seine Daten, wenn der Knoten mehr als einen hat; die erweiterte Installation fragt für jeden Pfad unmittelbar vor seiner Größe nach dem Speicher und schlägt den des rootfs vor. Der Datenträger erscheint als <code>vm-VMID-disk-N</code> und wird als <code>mpN</code> eingebunden."
               },
               {
                 "title": "Host-Verzeichnis",
@@ -109,6 +109,9 @@
         },
         {
           "p": "Das rootfs ist den Binärdateien und dem Inhalt des Images vorbehalten. Eine Aktualisierung oder Neuerstellung ersetzt es, ohne eine der beiden Arten von Mountpoints anzutasten."
+        },
+        {
+          "p": "Ein Host-Verzeichnis wird mit allem eingebunden, was der Host darin eingehängt hat. Ein Verzeichnis wie <code>/mnt/pve</code> zeigt seine Netzwerkfreigaben, Datenträger und Datasets im Container, und was der Host dort später ein- oder aushängt, erscheint oder verschwindet, ohne dass der Container neu gestartet wird. Ein schreibgeschützt hinzugefügtes Verzeichnis ist zusammen mit dem, was beim Start des Containers darin eingehängt ist, schreibgeschützt. Ein Dateisystem, das der Host danach einhängt, kommt mit den Berechtigungen an, mit denen der Host es einhängt, und wird beim Neustart des Containers ebenfalls schreibgeschützt."
         }
       ]
     },

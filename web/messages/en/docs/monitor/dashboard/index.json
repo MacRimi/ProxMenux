@@ -50,7 +50,7 @@
       },
       {
         "name": "Terminal",
-        "owns": "Browser shell to host or to any VM/CT, powered by <code>xterm.js</code> over WebSockets."
+        "owns": "Browser shell on the Proxmox host, powered by <code>xterm.js</code> over WebSockets. LXC consoles open from the VMs & LXCs tab."
       },
       {
         "name": "Security",

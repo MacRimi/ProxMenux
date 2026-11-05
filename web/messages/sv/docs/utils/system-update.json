@@ -128,7 +128,7 @@
         "body": "Enterprise-förrådet är aktiverat utan ett aktivt abonnemang. Före <code>apt-get update</code> erbjuder arbetsskriptet ett byte till no-subscription. Om du avböjde kan du köra uppdateringen igen och acceptera, eller inaktivera Enterprise i <em>Node → Updates → Repositories</em> och aktivera no-subscription."
       },
       {
-        "title": "dist-upgrade fastnar vid \"Configuring grub-pc\"",
+        "title": "full-upgrade fastnar vid \"Configuring grub-pc\"",
         "body": "Om en interaktiv GRUB-fråga visas frågar den vilka enheter som ska få starthanteraren. Alternativet <code>--force-confold</code> gäller konfigurationsfiler, inte det här enhetsvalet. Välj lämpliga startdiskar med <kbd>Tab</kbd> + <kbd>Space</kbd> och sedan OK. Du kan konfigurera valet i förväg med <code>dpkg-reconfigure grub-pc</code>."
       },
       {

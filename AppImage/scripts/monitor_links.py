@@ -39,7 +39,10 @@ _refresh_lock = threading.Lock()
 
 
 class LinkError(ValueError):
-    pass
+    def __init__(self, message, *, code="monitor_links_save_failed", params=None):
+        super().__init__(message)
+        self.code = code
+        self.params = params
 
 
 def _load():
@@ -63,19 +66,19 @@ def _save(data):
 def normalize_url(value):
     """Return the origin of an http(s) address, or raise LinkError."""
     if not isinstance(value, str) or not value.strip():
-        raise LinkError("Enter the address of the Monitor.")
+        raise LinkError("Enter the address of the Monitor.", code="monitor_link_address_required")
     text = value.strip()
     if "://" not in text:
         text = "https://" + text
     parsed = urllib.parse.urlsplit(text)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise LinkError("The address must start with http:// or https:// and name a host.")
+        raise LinkError("The address must start with http:// or https:// and name a host.", code="monitor_link_invalid_address")
     if parsed.username or parsed.password:
-        raise LinkError("The address must not contain a user or password.")
+        raise LinkError("The address must not contain a user or password.", code="monitor_link_address_credentials")
     try:
         port = parsed.port
     except ValueError as exc:
-        raise LinkError("The port of the address is not valid.") from exc
+        raise LinkError("The port of the address is not valid.", code="monitor_link_invalid_port") from exc
     host = parsed.hostname
     if ":" in host:
         host = f"[{host}]"
@@ -103,6 +106,32 @@ def _is_private(host):
         return False
     try:
         return bool(addresses) and all(ipaddress.ip_address(a.split("%")[0]).is_private for a in addresses)
+    except ValueError:
+        return False
+
+
+def _own_addresses():
+    addresses = set()
+    try:
+        import psutil
+        for entries in psutil.net_if_addrs().values():
+            for entry in entries:
+                if entry.family in (socket.AF_INET, socket.AF_INET6):
+                    addresses.add(entry.address.split("%")[0])
+    except Exception:
+        pass
+    return addresses
+
+
+def _is_this_host(host):
+    """A PBS installed next to PVE is named localhost or one of the host's own addresses."""
+    try:
+        resolved = {info[4][0].split("%")[0] for info in socket.getaddrinfo(host, None)}
+    except OSError:
+        return False
+    own = _own_addresses()
+    try:
+        return bool(resolved) and all(ipaddress.ip_address(a).is_loopback or a in own for a in resolved)
     except ValueError:
         return False
 
@@ -135,7 +164,7 @@ def _storage_pbs():
             if current is not None:
                 servers.append(current)
             continue
-        option = re.match(r"^\s+(server|port)\s+(\S+)", line)
+        option = re.match(r"^\s+(server|port|fingerprint)\s+(\S+)", line)
         if current is not None and option:
             current[option.group(1)] = option.group(2)
     return [row for row in servers if row.get("server")]
@@ -154,8 +183,17 @@ def _pbs_servers():
                 found.setdefault(host, {"name": row.get("name") or host, "native_url": normalize_url(row["url"])})
     except Exception:
         pass
-    return [{"key": f"pbs:{host}", "name": info["name"], "product": "pbs", "group": "pbs",
-             "host": host, "native_url": info["native_url"]} for host, info in found.items()]
+    servers, local = [], None
+    for host, info in found.items():
+        if _is_this_host(host):
+            # Its web interface is on the address the browser already uses.
+            if local is None:
+                local = {"key": "pbs:local", "name": info["name"], "product": "pbs", "group": "pbs", "local": True}
+                servers.append(local)
+            continue
+        servers.append({"key": f"pbs:{host}", "name": info["name"], "product": "pbs", "group": "pbs",
+                        "host": host, "native_url": info["native_url"]})
+    return servers
 
 
 def _probe(url):
@@ -188,6 +226,8 @@ def _resolve(entry, override):
         return override["url"], "online" if _probe(override["url"]) else "offline"
     if entry.get("url"):
         return entry["url"], "online" if _probe(entry["url"]) else "offline"
+    if entry.get("local"):
+        return None, "local"
     host = entry["host"]
     if not _is_private(host):
         return None, "unknown"
@@ -218,6 +258,7 @@ def list_links(include_hidden=False):
         links.append({"key": entry["key"], "name": entry["name"], "product": entry["product"],
                       "group": entry["group"], "url": url, "status": state,
                       "native_url": entry.get("native_url"), "manual": bool(entry.get("manual")),
+                      "local": bool(entry.get("local")),
                       "hidden": bool(override.get("hidden")), "custom_url": bool(override.get("url"))})
     return {"self": {"name": platform.get("hostname") or socket.gethostname(), "product": platform.get("product")},
             "links": links}
@@ -263,16 +304,16 @@ def start_prewarmer():
 
 def add_link(payload):
     if not isinstance(payload, dict):
-        raise LinkError("Invalid request.")
+        raise LinkError("Invalid request.", code="monitor_link_invalid_request")
     name = str(payload.get("name") or "").strip()[:64]
     url = normalize_url(payload.get("url"))
     product = payload.get("product") if payload.get("product") in PRODUCTS else "pve"
     with _lock:
         data = _load()
         if len(data["manual"]) >= MAX_MANUAL:
-            raise LinkError(f"At most {MAX_MANUAL} nodes can be added.")
+            raise LinkError(f"At most {MAX_MANUAL} nodes can be added.", code="monitor_link_limit", params={"count": MAX_MANUAL})
         if any(row.get("url") == url for row in data["manual"]):
-            raise LinkError("This address is already in the list.")
+            raise LinkError("This address is already in the list.", code="monitor_link_duplicate")
         identifier = secrets.token_hex(6)
         data["manual"].append({"id": identifier, "name": name or urllib.parse.urlsplit(url).hostname,
                                "url": url, "product": product})
@@ -282,13 +323,13 @@ def add_link(payload):
 
 def update_link(key, payload):
     if not isinstance(payload, dict):
-        raise LinkError("Invalid request.")
+        raise LinkError("Invalid request.", code="monitor_link_invalid_request")
     with _lock:
         data = _load()
         if key.startswith("manual:"):
             row = next((r for r in data["manual"] if f"manual:{r.get('id')}" == key), None)
             if row is None:
-                raise LinkError("Node not found.")
+                raise LinkError("Node not found.", code="monitor_link_not_found")
             if "name" in payload:
                 row["name"] = str(payload["name"] or "").strip()[:64] or row["name"]
             if payload.get("url"):
@@ -307,7 +348,7 @@ def update_link(key, payload):
             if not override:
                 data["overrides"].pop(key, None)
         else:
-            raise LinkError("Node not found.")
+            raise LinkError("Node not found.", code="monitor_link_not_found")
         _save(data)
 
 
@@ -316,6 +357,6 @@ def delete_link(key):
         data = _load()
         remaining = [r for r in data["manual"] if f"manual:{r.get('id')}" != key]
         if len(remaining) == len(data["manual"]):
-            raise LinkError("Only nodes added by hand can be removed; detected ones can be hidden.")
+            raise LinkError("Only nodes added by hand can be removed; detected ones can be hidden.", code="monitor_link_detected_remove")
         data["manual"] = remaining
         _save(data)

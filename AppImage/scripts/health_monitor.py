@@ -385,6 +385,10 @@ class HealthMonitor:
     
     # PVE Critical Services
     PVE_SERVICES = ['pveproxy', 'pvedaemon', 'pvestatd', 'pve-cluster']
+    # A restart passes through these for a few seconds; a service that stays
+    # in one of them longer is not restarting, it is failing to.
+    SERVICE_TRANSIENT_STATES = ('activating', 'deactivating')
+    SERVICE_SETTLE_SECONDS = 8
     
     # P2 fix: Pre-compiled regex patterns for performance (avoid re-compiling on every line)
     _BENIGN_RE = None
@@ -2288,9 +2292,6 @@ class HealthMonitor:
                 text=True,
                 timeout=3
             )
-            from lvm_device_scope import settle_scan_reads
-            settle_scan_reads()
-            
             if result.returncode != 0:
                 return {'status': 'WARNING', 'reason': 'lvs command failed'}
             
@@ -2305,21 +2306,8 @@ class HealthMonitor:
                         if 'a' in parts[2]:
                             volumes.append(f'{vg_name}/{lv_name}')
             
-            # If LVM is configured but no active volumes are found, it might be an issue or just not used
-            if not volumes:
-                # Check if any VGs exist to determine if LVM is truly unconfigured or just inactive
-                vg_result = subprocess.run(
-                    ['vgs', *dev_args, '--noheadings', '--options', 'vg_name'],
-                    capture_output=True,
-                    text=True,
-                    timeout=3
-                )
-                settle_scan_reads()
-                if vg_result.returncode == 0 and vg_result.stdout.strip():
-                    return {'status': 'WARNING', 'reason': 'No active LVM volumes detected'}
-                else:
-                    return {'status': 'OK'} # No VGs found, LVM not in use
-            
+            # No active volume is normal for a leftover disk, stopped guests or
+            # shared LVM; the storage check reports a storage Proxmox cannot use.
             return {'status': 'OK', 'volumes': len(volumes)}
             
         except Exception:
@@ -3897,6 +3885,28 @@ class HealthMonitor:
             print(f"[HealthMonitor] VMs/CTs persistence check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'VM/CT check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
     
+    def _service_state(self, service: str) -> str:
+        """The state of a service, once a restart in progress has finished."""
+        deadline = time.time() + self.SERVICE_SETTLE_SECONDS
+        while True:
+            state = subprocess.run(
+                ['systemctl', 'is-active', service],
+                capture_output=True,
+                text=True,
+                timeout=2
+            ).stdout.strip()
+            if state not in self.SERVICE_TRANSIENT_STATES or time.time() >= deadline:
+                return state
+            time.sleep(1)
+
+    def _package_update_running(self) -> bool:
+        """An update stops and restarts the services it replaces."""
+        try:
+            from notification_events import is_apt_active_on_host
+            return is_apt_active_on_host()
+        except Exception:
+            return False
+
     def _check_pve_services(self) -> Dict[str, Any]:
         """
         Check critical Proxmox services with persistence tracking.
@@ -3927,20 +3937,20 @@ class HealthMonitor:
 
             for service in services_to_check:
                 try:
-                    result = subprocess.run(
-                        ['systemctl', 'is-active', service],
-                        capture_output=True,
-                        text=True,
-                        timeout=2
-                    )
-
-                    status = result.stdout.strip()
-                    if result.returncode != 0 or status != 'active':
+                    status = self._service_state(service)
+                    # A service reloading its configuration keeps running.
+                    if status not in ('active', 'reloading'):
                         failed_services.append(service)
                         service_details[service] = status or 'inactive'
                 except Exception:
                     failed_services.append(service)
                     service_details[service] = 'error'
+
+            # During a package update nothing is concluded about these services
+            # in either direction: the next check after it does that.
+            in_update = []
+            if failed_services and self._package_update_running():
+                in_update, failed_services = failed_services, []
 
             # Auto-clear errors for services that are healthy this cycle.
             # Lifted out of the `if failed_services:` branch so it runs
@@ -3949,7 +3959,7 @@ class HealthMonitor:
             # active forever (the dismissed-only path returned before the
             # cleanup loop). Audit Tier 5 — Health stack.
             for svc in services_to_check:
-                if svc not in failed_services:
+                if svc not in failed_services and svc not in in_update:
                     error_key = f'{service_prefix}_service_{svc}'
                     if health_persistence.is_error_active(error_key):
                         health_persistence.clear_error(error_key)
@@ -3965,6 +3975,12 @@ class HealthMonitor:
                         'detail': f'Service is {state}',
                         'error_key': error_key,
                         'dismissable': True,
+                    }
+                elif svc in in_update:
+                    checks[svc] = {
+                        'status': 'OK',
+                        'detail': f"Service is {service_details.get(svc, 'inactive')}",
+                        'error_key': error_key,
                     }
                 else:
                     checks[svc] = {
@@ -4751,6 +4767,10 @@ class HealthMonitor:
         Inst lines and exposes them as an INFO sub-check.
         """
         cache_key = 'updates_check'
+        # Kernel activation is independent of pending APT packages. Check it
+        # even when the package result is cached; this performs no APT call.
+        from kernel_reboot import reboot_status, with_reboot_status
+        reboot = reboot_status()
         current_time = time.time()
         apt_history_path = '/var/log/apt/history.log'
 
@@ -4773,7 +4793,7 @@ class HealthMonitor:
             cache_ts = self.last_check_times[cache_key]
             history_changed = (history_mtime is not None and history_mtime > cache_ts)
             if not history_changed and current_time - cache_ts < 600:
-                return self.cached_results.get(cache_key)
+                return with_reboot_status(self.cached_results.get(cache_key), reboot)
 
         try:
             last_update_days = None
@@ -4803,11 +4823,11 @@ class HealthMonitor:
                 )
             except subprocess.TimeoutExpired:
                 print("[HealthMonitor] apt-get upgrade --dry-run timed out")
-                return {
+                return with_reboot_status({
                     'status': 'UNKNOWN',
                     'reason': 'apt-get timed out - repository may be unreachable',
                     'count': 0, 'checks': {}
-                }
+                }, reboot)
             
             status = 'OK'
             reason = None
@@ -5124,11 +5144,11 @@ class HealthMonitor:
             
             self.cached_results[cache_key] = update_result
             self.last_check_times[cache_key] = current_time
-            return update_result
+            return with_reboot_status(update_result, reboot)
             
         except Exception as e:
             print(f"[HealthMonitor] Updates check failed: {e}")
-            return {'status': 'UNKNOWN', 'reason': f'Updates check unavailable: {str(e)}', 'count': 0, 'checks': {}, 'dismissable': True}
+            return with_reboot_status({'status': 'UNKNOWN', 'reason': f'Updates check unavailable: {str(e)}', 'count': 0, 'checks': {}, 'dismissable': True}, reboot)
     
     def _check_fail2ban_bans(self) -> Dict[str, Any]:
         """

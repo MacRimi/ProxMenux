@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Beeinflusst nur die ProxMenux-Installation - nicht Ihre VMs / CTs / Speicher",
-    "body": "Die Deinstallation entfernt die ProxMenux-Skripte, den Menüstarter, den optionalen Monitor-Dienst und die von ProxMenux bei der Installation angelegten Sicherungen von Systemdateien. <strong>VMs, Container, Speicher, Netzwerkkonfiguration, Fail2Ban, NVIDIA-Treiber und andere über ProxMenux installierte Komponenten bleiben unberührt.</strong> Sie bleiben in ihrem bisherigen Zustand."
+    "body": "Die Deinstallation entfernt die ProxMenux-Skripte, den Menüstarter, den Monitor-Dienst und stellt die von Post-Install erstellten Sicherungen von /root/.bashrc und /etc/motd wieder her, sofern sie existieren. <strong>VMs, Container, Speicher, Netzwerkkonfiguration, Fail2Ban, NVIDIA-Treiber und andere über ProxMenux installierte Komponenten bleiben unberührt.</strong> Sie bleiben in ihrem bisherigen Zustand."
   },
   "flow": {
     "heading": "Ablauf der Deinstallation",

@@ -394,10 +394,12 @@ def verify_token_full(token):
     API JWT 365 días sin scope.
     """
     if not JWT_AVAILABLE or not token:
+        _log_auth_failure_throttled("Session rejected: missing token or verifier unavailable")
         return None, None
     try:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         if token_hash in _get_revoked_tokens_cached():
+            _log_auth_failure_throttled("Session rejected: revoked")
             return None, None
         try:
             payload = jwt.decode(
@@ -409,8 +411,10 @@ def verify_token_full(token):
             payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         return payload.get('username'), payload.get('scope', 'full_admin')
     except jwt.ExpiredSignatureError:
+        _log_auth_failure_throttled("Session rejected: expired")
         return None, None
     except jwt.InvalidTokenError:
+        _log_auth_failure_throttled("Session rejected: invalid")
         return None, None
 
 
@@ -437,9 +441,9 @@ def _log_auth_failure_throttled(msg):
             if _AUTH_LOG_RATE['suppressed']:
                 print(f"[auth] {_AUTH_LOG_RATE['last_msg']} "
                       f"(+{_AUTH_LOG_RATE['suppressed']} more in last "
-                      f"{int(elapsed)}s)")
+                      f"{int(elapsed)}s)", flush=True)
             else:
-                print(f"[auth] {msg}")
+                print(f"[auth] {msg}", flush=True)
             _AUTH_LOG_RATE['last_ts'] = now
             _AUTH_LOG_RATE['suppressed'] = 0
             _AUTH_LOG_RATE['last_msg'] = msg

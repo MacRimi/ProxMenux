@@ -185,7 +185,7 @@ class ModifyDispatchTests(unittest.TestCase):
                 patch.object(management, '_run_lifecycle', side_effect=lifecycle):
             return management.manage_instance(ROOT, ui or Mock(), row, action='modify')
 
-    def test_cancel_does_not_start_a_lifecycle_transaction(self):
+    def test_legacy_none_result_does_not_start_a_lifecycle_transaction(self):
         lifecycle = Mock()
         self.assertFalse(self.call_manager(None, lifecycle))
         lifecycle.assert_not_called()

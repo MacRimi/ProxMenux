@@ -50,7 +50,7 @@
     "heading": "Zwei Schnittstellen, ein Backend",
     "intro": "Alle Schritte der Sicherung und Wiederherstellung sind über zwei Oberflächen erreichbar. Beide rufen dieselbe Shell-Bibliothek auf, erstellen identische Archive und verwenden dasselbe Auftragsverzeichnis.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "Menü → Dienstprogramme →\nHost-Sicherung/Wiederherstellung\n\nDialogbasierter Ablauf,\nSSH-freundlich, skriptfähig\nzur unbeaufsichtigten Nutzung.",
+    "cliDetail": "Menü →\nHost-Sicherung/Wiederherstellung\n\nDialogbasierter Ablauf,\nSSH-freundlich, skriptfähig\nzur unbeaufsichtigten Nutzung.",
     "webLabel": "ProxMenux Monitor (Web UI)",
     "webDetail": "Registerkarte Backups in der\nWeboberfläche von Monitor.\n\nWiederherstellung mit einem Klick,\nlaufende Protokollanzeige, integriert\nmit Benachrichtigungen und der\nAnzeige von Rollback-Differenzen."
   },

@@ -33,7 +33,7 @@
   },
   "warnConditional": {
     "title": "Opzioni delle impostazioni visibili solo quando Monitor è installato",
-    "body": "Le due voci del menu descritte di seguito appaiono solo in Impostazioni se <code>proxmenux-monitor.service</code> è registrato con systemd. Se non li vedi, il Monitor non è stato installato (è opzionale durante l'installazione ProxMenux). Per aggiungerlo in seguito, reinstallare ProxMenux con l'ultima versione e selezionare l'opzione Monitor."
+    "body": "Le tre voci del menu descritte di seguito appaiono solo in Impostazioni se <code>proxmenux-monitor.service</code> è registrato con systemd. Il programma di installazione lo configura sempre, quindi se non le vedi il passaggio del Monitor è fallito durante l'installazione. Esegui di nuovo il programma di installazione ufficiale per riprovare."
   },
   "toggle": {
     "heading": "Attivare / disattivare",
@@ -92,8 +92,8 @@
   },
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
-    "missingTitle": "Entrambe le opzioni di menu mancano",
-    "missingBody": "Il Monitor non è registrato con systemd. Confermare con <code>systemctl list-unit-files | grep proxmenux-monitor</code> — se non c'è uscita, reinstallare ProxMenux dal programma di installazione ufficiale con l'ultima versione e selezionare l'opzione Monitor durante l'installazione.",
+    "missingTitle": "Le opzioni di menu del Monitor mancano",
+    "missingBody": "Il Monitor non è registrato con systemd. Confermare con <code>systemctl list-unit-files | grep proxmenux-monitor</code> — se non c'è uscita, eseguire di nuovo il programma di installazione ufficiale; installa il Monitor a ogni esecuzione.",
     "unreachableTitle": "Servizio attivato ma l'URL non è raggiungibile",
     "unreachableBody": "L'uscita di stato delle impostazioni ti dà l'IP. Conferma:",
     "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",

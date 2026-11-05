@@ -50,7 +50,7 @@
     "heading": "Två gränssnitt, en backend",
     "intro": "Varje steg i arbetsflödet för säkerhetskopiering och återställning är tillgängligt från två ingångspunkter. Båda anropar samma skalbibliotek, producerar identiska arkiv och läser samma jobbregister.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "meny → Verktyg →\nVärdsäkerhetskopiering/återställning\n\nDialogbaserat flöde,\nSSH-vänlig, skriptbar\nför obevakad användning.",
+    "cliDetail": "meny →\nVärdsäkerhetskopiering & återställning\n\nDialogbaserat flöde,\nSSH-vänlig, skriptbar\nför obevakad användning.",
     "webLabel": "ProxMenux Monitor (Webb UI)",
     "webDetail": "Backups-fliken i\nMonitors webbgränssnitt.\n\nÅterställning med ett klick,\nlöpande loggvisning, integrerat\nmed aviseringar och visning\nav skillnader vid återställning."
   },

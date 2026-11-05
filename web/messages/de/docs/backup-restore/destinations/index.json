@@ -76,7 +76,7 @@
   },
   "sameArchive": {
     "heading": "Das Archivlayout ändert sich nicht mit dem Ziel",
-    "body": "Innerhalb eines der drei Ziele ist das gleiche <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> Layout vorhanden, das in <em>Funktionsweise</em> beschrieben wird. Ein aus einem lokalen Archiv extrahierter <code>.tar.zst</code>, ein aus PBS wiederhergestellter <code>.pxar</code> und ein mit <code>borg extract</code> extrahiertes Borg-Archiv ergeben alle einen identischen Verzeichnisbaum. Der Wiederherstellungscodepfad (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) liest die gleichen drei Nutzlasten, ohne zu wissen, von welchem Ziel sie kamen."
+    "body": "Unabhängig davon, wo das Backup gespeichert ist, enthält es immer dieselben drei Blöcke, die in <em>Funktionsweise</em> beschrieben sind: das Dateisystem (<code>rootfs/</code>), die Metadaten (<code>metadata/</code>) und das Manifest (<code>manifest.json</code>). Das Entpacken eines lokalen <code>.tar.zst</code>-Archivs, das Wiederherstellen eines <code>.pxar</code> aus PBS oder das Entpacken eines Borg-Archivs ergeben alle einen identischen Verzeichnisbaum. Die Wiederherstellung liest daher immer dieselben Dateien, unabhängig davon, von welchem Ziel das Backup stammt."
   },
   "extractStandalone": {
     "heading": "Extrahieren eines Backups außerhalb von ProxMenux",

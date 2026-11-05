@@ -130,7 +130,7 @@
     "monitorEmptyBody": "Le <code>[proxmenux]</code> jail lit <code>/var/log/proxmenux-auth.log</code>, qui est écrit par l'application ProxMenux Monitor Flask — et non par un enregistreur journald. Si vous n'exécutez pas le moniteur, le fichier reste vide et le jail ne se déclenche jamais. C'est prévu ; la configuration jail est inoffensive. Si vous exécutez le moniteur et que le journal est vide, vérifiez la configuration de journalisation Flask.",
     "selfBanTitle": "Je me suis bloqué moi-même",
     "selfBanIntro": "À partir d'une console / IPMI / iKVM (ou d'une autre IP sur liste blanche):",
-    "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
+    "selfBanCode": "fail2ban-client unban <YOUR_IP>\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
     "aptFailTitle": "Échec d'apt-get : ''Unable to locate package fail2ban''",
     "aptFailBody": "Les dépôts Debian manquent sur l'hôte (fréquent sur les installations Proxmox minimales). L'installateur crée <code>/etc/apt/sources.list.d/debian.sources</code> avec le bon nom de code (<code>bookworm</code> / <code>trixie</code>), puis réessaie. Si cela échoue encore, vérifiez <code>VERSION_CODENAME</code> dans <code>/etc/os-release</code> et l'accessibilité du dépôt.",
     "lockoutTitle": "SSH me verrouille après l'installation",

@@ -1,21 +1,17 @@
 """An alert dismissed permanently stays dismissed until the user re-enables
 it: not seeing it for a while, the condition recovering or a change of the
 suppression settings does not bring it back."""
-import sqlite3
 import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-# The module opens the database of the host when it is imported.
-_connect = sqlite3.connect
-with patch.object(Path, 'mkdir'), patch('builtins.print'), \
-        patch('sqlite3.connect', side_effect=lambda *args, **kwargs: _connect(':memory:')):
-    import health_persistence as hp_module
+from health_fixture_modules import load_health_persistence
 
 KEY = 'pve_storage_full_local-lvm'
 
@@ -24,14 +20,8 @@ class PermanentDismissalTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        store = hp_module.HealthPersistence.__new__(hp_module.HealthPersistence)
-        for name, value in vars(hp_module.health_persistence).items():
-            setattr(store, name, value)
-        store.data_dir = Path(tmp.name)
-        store.db_path = store.data_dir / 'health_monitor.db'
-        with patch('builtins.print'):
-            store._init_database()
-        self.store = store
+        self.module = load_health_persistence(tmp.name)
+        self.store = self.module.health_persistence
 
     def seen(self):
         return self.store.record_error(KEY, 'storage', 'WARNING', 'PVE storage local-lvm (lvmthin) at 96.0% used',
@@ -50,7 +40,10 @@ class PermanentDismissalTests(unittest.TestCase):
         conn.close()
 
     def cleanup(self):
-        with patch('builtins.print'), patch('subprocess.run', side_effect=OSError('no host tools in the test')):
+        with patch('builtins.print'), \
+                patch('subprocess.run', side_effect=OSError('no host tools in the test')), \
+                patch.dict(sys.modules, {'psutil': ModuleType('psutil')}), \
+                patch.object(self.module, 'open', side_effect=OSError('no host probes in the test'), create=True):
             self.store.cleanup_old_errors()
 
     def test_it_is_still_dismissed_weeks_later(self):

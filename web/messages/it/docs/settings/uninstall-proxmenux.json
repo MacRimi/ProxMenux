@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Riguarda solo l'installazione di ProxMenux, non VM / CT / archiviazione",
-    "body": "La disinstallazione rimuove gli script ProxMenux, il lanciatore del menu, il servizio Monitor facoltativo e i backup dei file di sistema creati da ProxMenux durante l'installazione. <strong>Non modifica VM, container, archiviazione, configurazione di rete, Fail2Ban, driver NVIDIA o qualsiasi altro elemento installato tramite ProxMenux.</strong> Questi rimangono invariati."
+    "body": "La disinstallazione di ProxMenux rimuove gli script ProxMenux, il lanciatore del menu, il servizio Monitor e ripristina i backup di /root/.bashrc e /etc/motd creati da Post-Install, se esistono. <strong>Non modifica VM, container, archiviazione, configurazione di rete, Fail2Ban, driver NVIDIA o qualsiasi altro elemento installato tramite ProxMenux.</strong> Questi rimangono invariati."
   },
   "flow": {
     "heading": "Procedura di disinstallazione",

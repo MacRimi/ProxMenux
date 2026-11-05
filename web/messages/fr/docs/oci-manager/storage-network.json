@@ -38,7 +38,7 @@
               },
               {
                 "title": "Stockage et taille",
-                "body": "Un disque du conteneur est créé sur un stockage Proxmox VE avec la taille indiquée. L’installation par défaut utilise <code>local-lvm</code>. L’installation avancée demande le stockage de chaque chemin juste avant sa taille et propose celui du rootfs. Le disque apparaît sous le nom <code>vm-VMID-disk-N</code> et est rattaché comme <code>mpN</code>."
+                "body": "Un disque du conteneur est créé sur un stockage Proxmox VE avec la taille indiquée. L’installation par défaut demande une seule fois le stockage du conteneur et de ses données lorsque le nœud en possède plusieurs ; l’installation avancée demande le stockage de chaque chemin juste avant sa taille et propose celui du rootfs. Le disque apparaît sous le nom <code>vm-VMID-disk-N</code> et est rattaché comme <code>mpN</code>."
               },
               {
                 "title": "Répertoire de l’hôte",
@@ -109,6 +109,9 @@
         },
         {
           "p": "Le rootfs est réservé aux binaires et au contenu de l’image. Une mise à jour ou une recréation le remplace sans toucher à l’un ou l’autre type de point de montage."
+        },
+        {
+          "p": "Un répertoire de l’hôte est monté avec tout ce que l’hôte a monté à l’intérieur. Un répertoire tel que <code>/mnt/pve</code> affiche ses partages réseau, disques et datasets dans le conteneur, et ce que l’hôte y monte ou démonte par la suite apparaît ou disparaît sans redémarrer le conteneur. Un répertoire ajouté en lecture seule est en lecture seule avec ce qui y est monté au démarrage du conteneur. Un système de fichiers que l’hôte monte ensuite arrive avec les permissions avec lesquelles l’hôte le monte, et passe lui aussi en lecture seule au redémarrage du conteneur."
         }
       ]
     },

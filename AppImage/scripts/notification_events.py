@@ -1402,9 +1402,11 @@ class JournalWatcher:
         if syslog_id != 'kernel' and priority > 3:
             return
         
+        # The kernel writes "dev sdf1, logical block ...": the name stops
+        # at the comma, and a partition is recorded on its disk.
         io_patterns = [
-            r'blk_update_request: I/O error.*dev (\S+)',
-            r'Buffer I/O error on device (\S+)',
+            r'blk_update_request: I/O error.*dev ([^\s,]+)',
+            r'Buffer I/O error on dev(?:ice)? ([^\s,]+)',
             r'SCSI error.*sd(\w)',
             r'(ata\d+)[\.\d]*:.*error',
         ]
@@ -2423,6 +2425,18 @@ class TaskWatcher:
         # Get VM/CT name
         vmname = self._get_vm_name(vmid) if vmid else ''
         
+        # A destroyed guest frees its VMID. It has no notification of its
+        # own, but the cache listener must forget what belonged to it.
+        if task_type in ('vzdestroy', 'qmdestroy'):
+            if status == 'OK' and self._guest_lifecycle_callback:
+                guest_type = 'lxc' if task_type == 'vzdestroy' else 'qemu'
+                try:
+                    self._guest_lifecycle_callback(vmid, guest_type, 'destroy')
+                except Exception as exc:
+                    print(f'[TaskWatcher] guest lifecycle callback failed for '
+                          f'{guest_type} {vmid}: {exc}', flush=True)
+            return
+
         # Map to event type
         event_info = self.TASK_MAP.get(task_type)
         if not event_info:

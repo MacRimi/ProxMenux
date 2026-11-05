@@ -78,6 +78,17 @@
     "heading": "Komunitné skripty",
     "body": "Menu ponúka aj dva skripty tretích strán z projektu <a>community-scripts</a>: <em>Proxmox VE Post Install</em> a <em>Proxmox VE Microcode</em>. Ide o obaly, ktoré stiahnu a spustia pôvodné autorské skripty cez <code>wget | bash</code>. ProxMenux ich neudržiava. Pred spustením si pozrite podrobnosti a otázky dôvery v časti <link>Externé repozitáre</link>."
   },
+  "pbs": {
+    "heading": "Na Proxmox Backup Server",
+    "body": "Na hostiteľovi Proxmox Backup Server sa rovnaká ponuka otvára cez <strong>Nastavenie Proxmoxu po inštalácii</strong> v ponuke PBS. Automatický, Prispôsobiteľný, Nainštalovať dostupné aktualizácie a Odinštalovať optimalizácie fungujú ako na Proxmox VE, s týmito rozdielmi:",
+    "items": [
+      "<strong>Repozitáre a aktualizácia:</strong> keď server nemá predplatné a aktívny je iba repozitár Enterprise pre PBS, ProxMenux sa pred prepnutím na repozitár PBS bez predplatného opýta. Prepnutie prebieha cez API repozitárov samotného servera, rovnaké, aké používa <em>Administration > Repositories</em>. Pri aktívnom predplatnom alebo pri už nastavenom repozitári bez predplatného či testovacom repozitári zostanú zdroje bez zmeny.",
+      "<strong>Prispôsobiteľný zoznam:</strong> možnosti, ktoré platia iba pre Proxmox VE, sa nezobrazujú: hosťovský agent, VFIO IOMMU, Open vSwitch, rýchlosť záloh vzdump, pigz, Appliance Manager, Ceph, vysoká dostupnosť a OVH Real Time Monitoring.",
+      "<strong>Banner predplatného:</strong> záplata sa vzťahuje na webové rozhranie Proxmox Backup Server a Odinštalovať optimalizácie ho obnoví.",
+      "<strong>Figurine:</strong> inštaluje sa bez aliasov Proxmox VE.",
+      "<strong>Komunitné skripty:</strong> sekcia ponúka <em>Proxmox Backup Server Post Install</em> a <em>Proxmox Backup Server Microcode</em> namiesto skriptov pre Proxmox VE."
+    ]
+  },
   "related": {
     "heading": "Súvisiace",
     "items": [

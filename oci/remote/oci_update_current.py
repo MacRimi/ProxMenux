@@ -67,8 +67,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     if required_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', required_digest):
         raise ValueError(translate('Invalid saved image digest'))
     lookup = repository(reference) + '@' + required_digest if required_digest else reference
-    code = ('import json,sys; from oci_installation_state import resolve_candidate; '
-            'print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))')
+    # The reason of a failure reaches the log as one line, not as a traceback.
+    code = ('import json,sys; from oci_installation_state import resolve_candidate\n'
+            'try: print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))\n'
+            'except (RuntimeError, ValueError, OSError) as error: sys.exit(str(error))')
     candidate = json.loads(run_quiet([sys.executable, '-c', code, lookup, architecture],
                                      translate('Could not query the image registry'), capture=True))
     digest = candidate['manifest_digest']
@@ -160,13 +162,16 @@ def kept_settings(changes, deployment):
     """Names of the settings changed in Proxmox that the new container keeps."""
     labels = {'memory': translate('Memory'), 'swap': translate('Swap'), 'cores': translate('CPU cores'),
               'cpulimit': translate('CPU cores'), 'cpuunits': translate('CPU priority'),
-              'onboot': translate('Start with Proxmox')}
+              'onboot': translate('Start with Proxmox'), 'hostname': translate('Hostname'),
+              'entrypoint': translate('Start command'),
+              'bridge': translate('Network'), 'ipv4': translate('Network'), 'gateway': translate('Network'),
+              'firewall': translate('Network'), 'vlan_tag': translate('VLAN tag')}
     kept = []
     for key, value in changes.items():
         section, name = transaction.ADOPTABLE[key]
         if (deployment.get(section, {}) if section else deployment).get(name) == value:
             kept.append(labels[key])
-    return kept
+    return list(dict.fromkeys(kept))
 
 
 def application_name(record, vmid):
@@ -227,6 +232,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         # An unsupported native edit still uses the existing installer. Decide
         # the route before changing anything; actual validation/API failures
         # must not silently switch to a destructive fallback.
+        # Also refuses a container that HA manages, before the image is downloaded.
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None
@@ -284,7 +290,7 @@ def main():
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         transaction.report_error(error, f'update-{args.vmid}')
         journal = transaction.pending_journal()
-        if journal and not transaction.recover_untouched(instances.ROOT, journal):
+        if journal and not transaction.recover_failed_update(instances.ROOT, journal):
             transaction.recovery_hint()
         return 1
 

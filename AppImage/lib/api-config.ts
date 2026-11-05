@@ -2,6 +2,12 @@
  * API Configuration for ProxMenux Monitor
  * Handles API URL generation with automatic proxy detection
  */
+// Resolve wording only for a generic transport failure. Normal responses and
+// backend error payloads keep the transport free of locale-loading work.
+async function apiFailure(...args: Parameters<typeof import("./api-errors").apiFailure>): Promise<string> {
+  const messages = await import("./api-errors")
+  return messages.apiFailure(...args)
+}
 
 /**
  * API Server Port Configuration
@@ -114,7 +120,7 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
             hadToken = true
           }
           if (!hadToken) {
-            throw new Error(`Unauthorized: ${endpoint}`)
+            throw new Error(await apiFailure("unauthorized", { endpoint }))
           }
           try {
             localStorage.removeItem("proxmenux-auth-token")
@@ -131,7 +137,7 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
             window.location.reload()
           }
         }
-        throw new Error(`Unauthorized: ${endpoint}`)
+        throw new Error(await apiFailure("unauthorized", { endpoint }))
       }
       // Try to surface the backend's JSON error payload instead of a
       // bare `500 INTERNAL SERVER ERROR`. The Flask routes consistently
@@ -168,7 +174,7 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
           throw parseErr
         }
       }
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+      throw new Error(await apiFailure("http", { status: response.status, statusText: response.statusText }))
     }
 
     // Check content type to ensure we're getting JSON
@@ -176,13 +182,13 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
     if (!contentType || !contentType.includes("application/json")) {
       const text = await response.text()
       console.error("fetchApi: Expected JSON but got:", contentType, "- Body preview:", text.substring(0, 200))
-      throw new Error(`Expected JSON response but got ${contentType || "unknown content type"}`)
+      throw new Error(await apiFailure("unexpectedContentType", { contentType: contentType || await apiFailure("unknownContentType") }))
     }
 
     try {
       return await response.json()
     } catch (jsonError) {
       console.error("fetchApi: JSON parse error for", endpoint, "-", jsonError)
-      throw new Error(`Invalid JSON response from ${endpoint}`)
+      throw new Error(await apiFailure("invalidJson", { endpoint }))
     }
 }

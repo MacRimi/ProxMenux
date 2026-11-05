@@ -1,4 +1,5 @@
 import json
+import socket
 from pathlib import Path
 import sys
 import tempfile
@@ -24,6 +25,8 @@ class MonitorLinksTests(unittest.TestCase):
             mock.patch.object(links, "LINKS_FILE", self.root / "links.json"),
             mock.patch.object(links, "SSL_CONFIG_FILE", self.root / "ssl.json"),
             mock.patch.object(links, "STORAGE_CFG", storage),
+            mock.patch.object(links, "_own_addresses", return_value=set()),
+            mock.patch.object(links.socket, "getaddrinfo", side_effect=self.fixture_addresses),
             mock.patch.object(links.pbs_manager, "get_platform", return_value={"product": "pve", "hostname": "amd"}),
             mock.patch.object(links.pbs_manager, "public_servers", return_value=[]),
         ]
@@ -38,6 +41,12 @@ class MonitorLinksTests(unittest.TestCase):
                                            return_value=SimpleNamespace(returncode=0, stdout=json.dumps(cluster)))
         self.run_patch.start()
         self.addCleanup(self.run_patch.stop)
+
+    @staticmethod
+    def fixture_addresses(host: str, _port):
+        address = {"localhost": "127.0.0.1", "pbs.example.com": "203.0.113.49"}.get(host, host)
+        family = socket.AF_INET6 if ":" in address else socket.AF_INET
+        return [(family, socket.SOCK_STREAM, 6, "", (address, 0))]
 
     def test_normalize_url_keeps_only_the_origin_and_rejects_credentials(self):
         self.assertEqual(links.normalize_url("192.168.0.49:8008/dashboard?x=1"), "https://192.168.0.49:8008")
@@ -61,6 +70,29 @@ class MonitorLinksTests(unittest.TestCase):
         self.assertEqual(by_key["pbs:pbs.example.com"]["status"], "unknown")
         self.assertEqual(by_key["pbs:pbs.example.com"]["native_url"], "https://pbs.example.com:8443")
         self.assertFalse(any("example.com" in url for url in probed))
+
+    def test_pbs_installed_on_this_host_opens_its_own_interface_and_is_never_probed(self):
+        links.STORAGE_CFG.write_text("pbs: PBS\n\tdatastore PBS\n\tserver localhost\n\n"
+                                     "pbs: Same\n\tdatastore x\n\tserver 10.0.0.55\n\n"
+                                     "pbs: Lab\n\tdatastore store1\n\tserver 10.0.0.49\n")
+        probed = []
+        with mock.patch.object(links, "_own_addresses", return_value={"10.0.0.55"}), \
+                mock.patch.object(links, "_probe", side_effect=lambda url: probed.append(url) or False), \
+                mock.patch.object(links, "_is_private", return_value=True):
+            result = links.list_links()
+        pbs_rows = [row for row in result["links"] if row["group"] == "pbs"]
+        self.assertEqual([row["key"] for row in pbs_rows], ["pbs:local", "pbs:10.0.0.49"])
+        local = pbs_rows[0]
+        self.assertEqual((local["name"], local["local"], local["url"], local["status"]), ("PBS", True, None, "local"))
+        self.assertIsNone(local["native_url"])
+        self.assertFalse(any("localhost" in url or "10.0.0.55" in url for url in probed))
+        self.assertFalse(pbs_rows[1]["local"])
+
+    def test_loopback_names_are_this_host(self):
+        with mock.patch.object(links, "_own_addresses", return_value=set()):
+            self.assertTrue(links._is_this_host("127.0.0.1"))
+            self.assertTrue(links._is_this_host("::1"))
+            self.assertFalse(links._is_this_host("10.0.0.49"))
 
     def test_pbs_host_lists_only_manual_entries(self):
         links.pbs_manager.get_platform.return_value = {"product": "pbs", "hostname": "pbs-lab"}

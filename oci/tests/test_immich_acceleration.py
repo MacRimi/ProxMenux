@@ -3,6 +3,7 @@ transcoding and its recognition: the CPU, or each usable GPU of the host for
 both or for only one of them."""
 
 from pathlib import Path
+import json
 import sys
 import unittest
 from unittest.mock import patch
@@ -91,16 +92,21 @@ class ImmichAccelerationTests(unittest.TestCase):
             self.assertIn("No usable GPU", ui.messages[0])
             self.assertEqual(result, ("cpu", "cpu"), mode)
 
-    def test_an_amd_host_that_cannot_run_rocm_offers_video_only_and_says_why(self, *_):
-        for blocker, text in (("kfd", "/dev/kfd"), ("space", "40 GB"), ("generation", "no support for the AMD GPU")):
+    def test_an_amd_host_that_cannot_run_rocm_offers_video_only(self, *_):
+        # What the host can fix is said; a GPU generation ROCm does not run is not.
+        for blocker, text in (("kfd", "/dev/kfd"), ("space", "40 GB"), ("generation", None)):
             with patch("proxmenux_oci.installer.host.rocm_blocker", return_value=blocker), \
                     patch("proxmenux_oci.installer.host.amd_gpu_name", return_value="Lucienne (gfx90c)"):
                 ui, result, _ = self.plan(AMD, DEFAULT_MODE)
             self.assertEqual(ui.options[PROMPT], ["cpu", "amd-video"], blocker)
             self.assertEqual(ui.defaults[PROMPT], "amd-video", blocker)
             self.assertEqual(result, ("vaapi", "cpu"), blocker)
-            self.assertTrue(any(text in message and "Recognition is not offered" in message
-                                for message in ui.messages), blocker)
+            if text:
+                self.assertTrue(any(text in message and "Recognition is not offered" in message
+                                    for message in ui.messages), blocker)
+            else:
+                self.assertFalse(any("ROCm" in message or "Recognition" in message
+                                     for message in ui.messages), blocker)
 
     def test_a_gpu_rocm_supports_is_proposed_whole(self, *_):
         for target in (100300, 110501, None):
@@ -165,7 +171,18 @@ class ImmichAccelerationTests(unittest.TestCase):
     def test_the_name_of_the_machine_learning_container_is_not_translated(self, *_):
         script = (ROOT / "remote/install_immich_stack.sh").read_text()
         self.assertNotIn('translate "Machine learning"', script)
-        self.assertNotIn('translate("Machine learning")', (ROOT / "src/proxmenux_oci/cli.py").read_text())
+        from proxmenux_oci.cli import _service_kind
+        from proxmenux_oci import i18n
+        service = {'name': 'immich-machine-learning', 'image': 'ghcr.io/immich-app/immich-machine-learning:release'}
+        original = dict(service)
+        with patch.object(i18n, 'language', return_value='sk'), patch.object(i18n, '_cache', json.loads((ROOT.parent / 'lang/sk.json').read_text())):
+            self.assertEqual(_service_kind(service), 'Strojové učenie')
+            _, _, plan = self.plan(NOTHING, DEFAULT_MODE)
+        # Spanish keeps the English name of the service.
+        with patch.object(i18n, 'language', return_value='es'), patch.object(i18n, '_cache', json.loads((ROOT.parent / 'lang/es.json').read_text())):
+            self.assertEqual(_service_kind(service), 'Machine learning')
+        self.assertIn('machine_learning', plan)
+        self.assertEqual(service, original)
 
 
 if __name__ == "__main__":

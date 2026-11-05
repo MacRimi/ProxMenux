@@ -135,7 +135,15 @@
     "original_compose": "---\nservices:\n  prowlarr:\n    image: lscr.io/linuxserver/prowlarr:latest\n    container_name: prowlarr\n    environment:\n      - PUID=1000\n      - PGID=1000\n      - TZ=Etc/UTC\n    volumes:\n      - /path/to/prowlarr/data:/config\n    ports:\n      - 9696:9696\n    restart: unless-stopped\n"
   },
   "first_run": {
-    "endpoints": [],
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 9696,
+        "path": "/",
+        "source": "upstream-linuxserver-readme"
+      }
+    ],
     "credentials": []
   },
   "proxmox": {

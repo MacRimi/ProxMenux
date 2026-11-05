@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (SSD-medveten, auto)",
-      "what": "Minskar SSD-/NVMe-slitage genom att flytta /var/log till en tmpfs-ramdisk med regelbunden synkronisering till disk. Installation från ursprungsprojektet när rotdisken är SSD eller NVMe. Storlek efter värdens RAM (128M / 256M / 512M), periodisk synkronisering och skydd som rensar äldre journaler vid 80% fyllnadsgrad och trunkerar snabbt växande loggar vid 92% före skrivning. Anpassar journald-gränser till ramdisken. Detaljer på <link>Log2RAM</link>.",
+      "what": "Minskar slitaget på SSD/NVMe genom att flytta /var/log till en tmpfs-ramdisk som skrivs till disken enligt ett schema. Installeras från uppströmsprojektet när systemdisken är SSD eller NVMe. Ramdiskens storlek väljs efter värdens RAM (128M / 256M / 512M) och en bevakning roterar och skriver loggarna när ramdisken passerar 85 %. Journalen och uppgiftsloggarna för Proxmox VE och Proxmox Backup Server ligger kvar på disken. Alla detaljer under <link>Log2RAM</link>.",
       "category": "Lagring",
       "categorySlug": "storage"
     },
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Hårdvaruanpassade standardvärden",
-  "hardwareBody": "Skriptet läser värdhårdvaran innan inställningar tillämpas. Log2RAM är bara installerat på SSD / NVMe rotdiskar som standard (den frågar om upptäckten säger något annat). Log2RAM ramdiskstorlek väljs från totalt RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). De journald gränser matchas till ramdiskstorleken när Log2RAM är aktivt, för att undvika att fylla det.",
+  "hardwareBody": "Skriptet läser värdhårdvaran innan inställningar tillämpas. Log2RAM är bara installerat på SSD / NVMe rotdiskar som standard (den frågar om upptäckten säger något annat). Log2RAM ramdiskstorlek väljs från totalt RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). När Log2RAM är aktivt ligger journalen kvar på disken med en egen gräns.",
   "upgrade": {
     "heading": "Uppdatera och uppgradera systemet",
     "intro": "Det första steget i Automated-paketet är Proxmox-uppgraderingen. Proxmox egen uppgraderingsvägledning för en löpande värd (inom samma stora version) är att köra:",

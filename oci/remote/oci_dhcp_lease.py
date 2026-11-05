@@ -20,6 +20,7 @@ import re
 import subprocess
 import sys
 import time
+from oci_ui import translate
 
 CONFIGS = Path('/etc/pve/lxc')
 HOOKS = Path('/var/lib/lxc')
@@ -121,12 +122,13 @@ def check(vmid, settle=0):
         except BlockingIOError:
             return
         for name, version in repair(vmid, settle):
-            print(f'CT {vmid}: DHCP client of {name} (IPv{version}) started again', flush=True)
+            print(translate('CT {vmid}: DHCP client of {name} (IPv{version}) started again').format(
+                vmid=vmid, name=name, version=version), flush=True)
 
 
 def main():
     if len(sys.argv) != 2 or not (sys.argv[1].isdigit() or sys.argv[1] == '--all'):
-        print('usage: oci_dhcp_lease.py <vmid> | --all', file=sys.stderr)
+        print(translate('Usage:') + ' oci_dhcp_lease.py <vmid> | --all', file=sys.stderr)
         return 2
     LOCKS.mkdir(parents=True, exist_ok=True)
     if sys.argv[1] == '--all':

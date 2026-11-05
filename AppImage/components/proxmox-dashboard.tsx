@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -32,6 +32,7 @@ import {
   CheckCircle,
   XCircle,
   Server,
+  ListChecks,
   Menu,
   LayoutDashboard,
   HardDrive,
@@ -116,11 +117,11 @@ function PBSDashboard() {
 }
 
 type Product = "pve" | "pbs"
-type TopTab = TabId | "datastores"
+type TopTab = TabId | "datastores" | "pbs-tasks"
 
 // Proxmox Backup Server has no guests, apps or PVE storage: it keeps the
 // same header, health and administration with its own top-level sections.
-const PBS_TABS: TopTab[] = ["overview", "datastores", "terminal", "admin"]
+const PBS_TABS: TopTab[] = ["overview", "datastores", "pbs-tasks", "terminal", "admin"]
 
 function MonitorDashboard({ product }: { product: Product }) {
   const t = useT()
@@ -184,10 +185,18 @@ function MonitorDashboard({ product }: { product: Product }) {
     }
   }, [])
 
+  const healthRequest = useRef<AbortController | null>(null)
   // Fetch health info count independently (for initial load and refresh)
-  const fetchHealthInfoCount = useCallback(async () => {
+  const fetchHealthInfoCount = useCallback(async (cachedOnly = false) => {
+    if (cachedOnly && healthRequest.current) return
+    healthRequest.current?.abort()
+    const controller = new AbortController()
+    healthRequest.current = controller
+    const timeout = cachedOnly ? setTimeout(() => controller.abort(), 10000) : undefined
     try {
-      const response = await fetchApi("/api/health/full")
+      const response = await fetchApi(cachedOnly ? "/api/health/full?cached=1" : "/api/health/full", { signal: controller.signal })
+      if (healthRequest.current !== controller) return
+      if (!response?.health?.details) throw new Error("Invalid health snapshot")
       let calculatedInfoCount = 0
       
       if (response && response.health?.details) {
@@ -217,7 +226,10 @@ function MonitorDashboard({ product }: { product: Product }) {
       
       setInfoCount(calculatedInfoCount)
     } catch (error) {
-      // Silently fail - infoCount will remain at 0
+      // Preserve the last known count; a failed poll is not a healthy result.
+    } finally {
+      if (timeout !== undefined) clearTimeout(timeout)
+      if (healthRequest.current === controller) healthRequest.current = null
     }
   }, [])
 
@@ -268,20 +280,29 @@ function MonitorDashboard({ product }: { product: Product }) {
   fetchHealthInfoCount()
   fetchUpdateStatus()
 
-    // Overview polls health every 30 s; the other tabs every 60 s.
+    // Header reboot information stays current on every tab, without full audits.
+    const refreshHealth = () => {
+      if (document.visibilityState === "visible") void fetchHealthInfoCount(true)
+    }
     let interval: ReturnType<typeof setInterval> | null = null
     let healthInterval: ReturnType<typeof setInterval> | null = null
     if (activeTab === "overview") {
       interval = setInterval(fetchSystemData, 30000) // 30 segundos
-      healthInterval = setInterval(fetchHealthInfoCount, 30000) // Also refresh info count
     } else {
       interval = setInterval(fetchSystemData, 60000) // 60 segundos
-      healthInterval = setInterval(fetchHealthInfoCount, 60000) // Also refresh info count
     }
 
+    healthInterval = setInterval(refreshHealth, 30000)
+    window.addEventListener("focus", refreshHealth)
+    document.addEventListener("visibilitychange", refreshHealth)
     return () => {
       if (interval) clearInterval(interval)
       if (healthInterval) clearInterval(healthInterval)
+      window.removeEventListener("focus", refreshHealth)
+      document.removeEventListener("visibilitychange", refreshHealth)
+      const controller = healthRequest.current
+      healthRequest.current = null
+      controller?.abort()
     }
   }, [fetchSystemData, fetchHealthInfoCount, fetchUpdateStatus, activeTab])
 
@@ -390,6 +411,7 @@ function MonitorDashboard({ product }: { product: Product }) {
   const refreshData = async () => {
     setIsRefreshing(true)
     await fetchSystemData()
+    await fetchHealthInfoCount()
     setComponentKey((prev) => prev + 1)
     await new Promise((resolve) => setTimeout(resolve, 500))
     setIsRefreshing(false)
@@ -421,6 +443,7 @@ function MonitorDashboard({ product }: { product: Product }) {
     switch (activeTab) {
       case "overview":  return t("navigation.overview")
       case "datastores": return t("pbs.datastores")
+      case "pbs-tasks": return t("pbs.tasksTab")
       case "apps":      return t("navigation.apps")
       case "vms":       return t("navigation.virtualMachines")
       case "storage":   return t("navigation.storage")
@@ -717,6 +740,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                 switch (id) {
                   case "overview": return renderDirect("overview", LayoutDashboard, t("navigation.overview"))
                   case "datastores": return renderDirect("datastores", Database, t("pbs.datastores"))
+                  case "pbs-tasks": return renderDirect("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                   case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
                   case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
                   case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
@@ -726,7 +750,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                 }
               }
               return (
-                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-4" : "grid-cols-7"} bg-card border border-border`}>
+                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-7"} bg-card border border-border`}>
                   {tabOrder.map(renderTop)}
                 </TabsList>
               )
@@ -788,6 +812,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                         switch (id) {
                           case "overview": return btn("overview", LayoutDashboard, t("navigation.overview"))
                           case "datastores": return btn("datastores", Database, t("pbs.datastores"))
+                          case "pbs-tasks": return btn("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                           case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
                           case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
                           case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
@@ -842,7 +867,13 @@ function MonitorDashboard({ product }: { product: Product }) {
 
           {isPbs && (
             <TabsContent value="datastores" className="space-y-4 md:space-y-6 mt-0">
-              <PBSPanel key={`datastores-${componentKey}`} localOnly />
+              <PBSPanel key={`datastores-${componentKey}`} localOnly view="datastores" />
+              <StorageOverview key={`datastore-disks-${componentKey}`} disksOnly />
+            </TabsContent>
+          )}
+          {isPbs && (
+            <TabsContent value="pbs-tasks" className="space-y-4 md:space-y-6 mt-0">
+              <PBSPanel key={`pbs-tasks-${componentKey}`} localOnly view="tasks" />
             </TabsContent>
           )}
 

@@ -195,6 +195,11 @@
                 "tail": "Program, databas och cache i samordnade LXC-containrar."
               },
               {
+                "label": "Installera en app och bidra till katalogen",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "instruktioner för agenten, tester och katalogförslag."
+              },
+              {
                 "label": "Installera, uppdatera och ändra",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Instanskontraktet och dess åtgärder."

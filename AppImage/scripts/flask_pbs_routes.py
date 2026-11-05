@@ -8,6 +8,10 @@ from jwt_middleware import require_auth, require_admin_scope
 pbs_bp = Blueprint("pbs", __name__)
 
 
+def pbs_error(exc, status):
+    return jsonify(error=str(exc), **exc.problem()), status
+
+
 @pbs_bp.after_request
 def no_cache(response):
     response.headers["Cache-Control"] = "no-store"
@@ -24,9 +28,28 @@ def platform():
 @require_auth
 def servers():
     try:
-        return jsonify(servers=pbs.public_servers(), local_available=pbs.is_pbs_host())
+        servers = pbs.public_servers()
+        return jsonify(servers=servers, local_available=pbs.local_available(), detected=_detected(servers))
     except pbs.PBSError as exc:
-        return jsonify(error=str(exc)), 500
+        return pbs_error(exc, 500)
+
+
+def _detected(servers):
+    """PBS storages of this PVE that have no monitoring connection yet."""
+    if pbs.is_pbs_host():
+        return []
+    import monitor_links
+    from urllib.parse import urlsplit
+    known = {urlsplit(row.get("url", "")).hostname for row in servers}
+    found = {}
+    for row in monitor_links._storage_pbs():
+        host = row["server"]
+        if host in known or monitor_links._is_this_host(host):
+            continue
+        port = row.get("port") if str(row.get("port", "")).isdigit() else monitor_links.PBS_UI_PORT
+        url = monitor_links._host_url(host, port, "https")
+        found.setdefault(url, {"name": row["name"], "url": url, "fingerprint": row.get("fingerprint", "")})
+    return list(found.values())
 
 
 def _protected_configuration():
@@ -38,28 +61,42 @@ def _protected_configuration():
 @require_admin_scope
 def save_server():
     if not _protected_configuration():
-        return jsonify(error="Enable local authentication before saving remote PBS credentials."), 409
+        return jsonify(error="Enable local authentication before saving remote PBS credentials.", code="pbs_auth_required"), 409
     try:
         identifier = pbs.save_server(request.get_json(silent=True))
         return jsonify(success=True, id=identifier, servers=pbs.public_servers())
     except pbs.PBSError as exc:
-        return jsonify(error=str(exc)), 400
+        return pbs_error(exc, 400)
     except OSError:
-        return jsonify(error="Could not save PBS connection."), 500
+        return jsonify(error="Could not save PBS connection.", code="pbs_save_failed"), 500
+
+
+@pbs_bp.route("/api/pbs/servers/login", methods=["POST"])
+@require_admin_scope
+def connect_with_password():
+    if not _protected_configuration():
+        return jsonify(error="Enable local authentication before saving remote PBS credentials.", code="pbs_auth_required"), 409
+    try:
+        identifier = pbs.connect_with_password(request.get_json(silent=True))
+        return jsonify(success=True, id=identifier, servers=pbs.public_servers())
+    except pbs.PBSError as exc:
+        return pbs_error(exc, 400)
+    except OSError:
+        return jsonify(error="Could not save PBS connection.", code="pbs_save_failed"), 500
 
 
 @pbs_bp.route("/api/pbs/servers/<identifier>", methods=["DELETE"])
 @require_admin_scope
 def delete_server(identifier):
     if not _protected_configuration():
-        return jsonify(error="Enable local authentication before changing PBS connections."), 409
+        return jsonify(error="Enable local authentication before changing PBS connections.", code="pbs_auth_required"), 409
     try:
         pbs.delete_server(identifier)
         return jsonify(success=True)
     except pbs.PBSError as exc:
-        return jsonify(error=str(exc)), 400
+        return pbs_error(exc, 400)
     except OSError:
-        return jsonify(error="Could not remove PBS connection."), 500
+        return jsonify(error="Could not remove PBS connection.", code="pbs_remove_failed"), 500
 
 
 @pbs_bp.route("/api/pbs/status")
@@ -68,4 +105,4 @@ def status():
     try:
         return jsonify(pbs.get_status(request.args.get("server", "local")))
     except pbs.PBSError as exc:
-        return jsonify(error=str(exc)), 502
+        return pbs_error(exc, 502)

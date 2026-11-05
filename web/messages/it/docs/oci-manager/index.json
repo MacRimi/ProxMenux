@@ -195,6 +195,11 @@
                 "tail": "Applicazione, database e cache in LXC coordinati."
               },
               {
+                "label": "Installare un’app e proporla al catalogo",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "Istruzioni per l’agente, verifiche dell’installazione e pull request per il catalogo."
+              },
+              {
                 "label": "Installazione, aggiornamento e modifica",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Il contratto dell’istanza e le sue operazioni."

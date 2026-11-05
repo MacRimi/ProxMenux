@@ -19,6 +19,16 @@ STATUS_LABELS = {'installed': N_('installed'), 'failed': N_('failed'), 'updating
                  'assembling': N_('assembling')}
 
 
+class CancelledOperation:
+    """An explicit user decline; remains false for menu and batch callers."""
+
+    def __bool__(self):
+        return False
+
+
+CANCELLED = CancelledOperation()
+
+
 def public_row(record, decision):
     return {'vmid': record['vmid'], 'hostname': record.get('deployment', {}).get('hostname',
             f'OCI {record["vmid"]}'),
@@ -151,7 +161,7 @@ def _run_lifecycle(command, title):
     return completed.returncode == 0
 
 
-def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False, heading=None):
+def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False, heading=None, message=None):
     """Leave inside each container the copy of its record that a restore on
     another host needs. It is refreshed after every operation. Returns what
     was found for each container. Every installed application is looked at,
@@ -162,7 +172,7 @@ def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=F
         if heading:
             console.show_logo()
             console.msg_title(heading)
-        console.msg_info(translate('Updating the copy of the record...'))
+        console.msg_info(message or translate('Updating the copy of the record...'))
     try:
         import oci_carried_record
         return oci_carried_record.sync(oci_carried_record.instances.ROOT, vmids, mount_stopped, verify)
@@ -219,7 +229,7 @@ def offer_recovery(project, ui):
             f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first what prevents their registration; an application with such a problem is not registered. A Rclone mount that has to be enabled again does not prevent it, but then the applications are not started automatically.')}"
             f"\n\n{translate('Recover them now?')}")
     if not ui.confirm(text, default=True):
-        return
+        return CANCELLED
     command = [sys.executable, str(project / 'remote/oci_restore_recovery.py'), 'recover']
     for rule in _restored_firewall_rules(project):
         if ui.confirm(translate('CT {vmid} is a host monitor and had a rule in the host firewall. Allow TCP port {port} from {subnet} through the firewall of this host? Existing firewall rules are not changed.').format(
@@ -242,7 +252,9 @@ def direct_recovery(project):
     if not restored_applications(project):
         ui.message(translate('No restored OCI application is waiting to be recovered.'), translate('Restored OCI applications'))
         return EXIT_DONE
-    offer_recovery(project, ui)
+    completed = offer_recovery(project, ui)
+    if completed is CANCELLED:
+        return EXIT_CANCELLED
     return EXIT_DONE if not restored_applications(project) else EXIT_FAILED
 
 
@@ -391,13 +403,15 @@ def _toggle_watchdog(project, ui, vmid, enabled):
     return True
 
 
-def manage_instance(project, ui, row, action=None, lifecycle_args=()):
+def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=None):
     """What the menu does with one instance once it is selected. `action`
     skips the choice of operation, as ProxMenux Monitor does; the extra
-    `lifecycle_args` are passed to the program that performs it."""
+    `lifecycle_args` are passed to the program that performs it. A `heading`
+    shows the check of the container on screen, as one of several updates."""
+    shown = {'shown': True, 'heading': heading, 'message': translate('Checking the container...')} if heading else {}
     # A container that came back from another node or from an older backup
     # carries the record that describes it; the one of this host is not used.
-    if carry_records(project, vmids=[row['vmid']], verify=True).get(row['vmid']) == 'stale':
+    if carry_records(project, vmids=[row['vmid']], verify=True, **shown).get(row['vmid']) == 'stale':
         ui.message(translate('This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; the container was not modified.'),
                    translate('OCI management'))
         return False
@@ -441,12 +455,11 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return False
         if adoption:
             summary = '\n'.join(adoption['details'])
-            # Variables reordered in Proxmox change nothing that needs a decision.
-            if summary and not ui.review(
+            if adoption['review'] and not ui.review(
                     f"{translate('These changes were made in Proxmox outside ProxMenux:')}\n\n{summary}\n\n"
                     + translate('They will be saved in oci-compose before continuing.'),
                     translate('Review external OCI changes'),
-                    question=translate('Include these changes in oci-compose?'), default=False):
+                    question=translate('Include these changes in oci-compose?'), default=True):
                 return False
             try:
                 record = reconcile.commit(instances.ROOT, row['vmid'], adoption)
@@ -456,12 +469,14 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         proposal = None
         if action == 'modify':
             from .recreation import edit_recreation
-            proposal = edit_recreation(record, ui)
+            proposal = edit_recreation(record, ui, cancelled_result=CANCELLED)
+            if proposal is CANCELLED:
+                return CANCELLED
             if proposal is None:
                 return False
-        elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
+        elif not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
-            return False
+            return CANCELLED
         # Opening/cancelling a confirmation needs no disk or storage probes.
         # Both accepted operations retain this check before the backend starts.
         if not _work_backup_ready(project, ui, row['vmid']):
@@ -496,11 +511,11 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
     action = ui.choose(translate('Interrupted operation'), [('status', translate('View status')),
                                                         ('recover', translate('Recover the previous installation'))], 'status')
     if action is None:
-        return False
+        return CANCELLED
     if action == 'recover' and not ui.review(
             translate('If the container had already been changed, its previous native backup is restored. Shared host directories are not reverted. The disks of the failed attempt are removed when the cleanup succeeds.'),
             translate('Recover OCI'), question=translate('Recover now?'), default=True):
-        return False
+        return CANCELLED
     return _run_lifecycle([sys.executable, str(project / 'remote/oci_instance_transaction.py'),
                            action, str(row['vmid'])],
                           translate('Recover OCI') if action == 'recover' else translate('OCI management'))
@@ -550,13 +565,15 @@ def _removal_summary(project, vmid):
     bridge = oci_remove.private_bridge(primary)
     text = []
     if len(members) > 1 and vmid == primary_id:
-        text += [f"{application} {translate('runs in')} {len(members)} {translate('containers')}. "
-                 f"{translate('All of them are targeted for removal.')}", '']
+        sentence = translate('{application} runs in {count} containers.').format(
+            application=application, count=len(members))
+        text += [f"{sentence} {translate('All of them are targeted for removal.')}", '']
     elif len(members) > 1:
         alone = translate('It cannot be removed on its own, because the application would stop '
                           'working: continuing targets the whole application for removal.')
-        text += [f"CT {vmid} {translate('is one of the')} {len(members)} "
-                 f"{translate('containers of')} {application}. {alone}", '']
+        sentence = translate('CT {vmid} is one of the {count} containers of {application}.').format(
+            vmid=vmid, count=len(members), application=application)
+        text += [f"{sentence} {alone}", '']
     text += [translate('Containers targeted for removal:'), *lines, '',
              translate('Container data targeted for deletion:'), *volumes]
     if bridge and not oci_remove.bridge_in_use(bridge, set(members)):
@@ -640,7 +657,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                                        'the OCI management menu.')
                              .format(count=len(members), vmid=primary_id), translate('Recreate OCI stack'),
                              question=translate('Recreate the whole stack?'), default=False):
-                return False
+                return CANCELLED
         else:
             if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
                                        'If there are new versions, all images are downloaded and verified, the application '
@@ -648,11 +665,11 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                                        'fails after a container was changed, the backups are restored. An operation that stops '
                                        'halfway is recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
                     translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
-                return False
+                return CANCELLED
     else:
         if not ui.review(translate('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.'), translate('Recover OCI stack'),
                 question=translate('Recover or complete the operation?'), default=True):
-            return False
+            return CANCELLED
         import json
         members = json.loads(Path(pending).read_text())['plan']['members']
     if not pending and not _work_backup_ready(project, ui, primary_id):
@@ -676,7 +693,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
 
 class UnattendedUI:
     """The answers of a scheduled run: a step with a positive default goes on,
-    and one that needs a person (adopting external changes) stops the run."""
+    and one that needs a person stops the run."""
     unattended = True
 
     def __init__(self):
@@ -705,6 +722,7 @@ class UnattendedUI:
 
 # Exit codes of `manage`, read by ProxMenux Monitor.
 EXIT_DONE, EXIT_FAILED, EXIT_NOT_OCI, EXIT_BUSY, EXIT_NEEDS_REVIEW, EXIT_TOO_RECENT = 0, 1, 2, 3, 4, 5
+EXIT_CANCELLED = 6  # Explicit interactive cancellation; never a successful update.
 
 
 def _image_too_recent(project, vmid, min_age_days):
@@ -763,4 +781,6 @@ def direct_management(project, vmid, action, lifecycle_args=(), unattended=False
         return EXIT_BUSY
     if unattended and ui.declined:
         return EXIT_NEEDS_REVIEW
+    if completed is CANCELLED and not unattended:
+        return EXIT_CANCELLED
     return EXIT_DONE if completed else EXIT_FAILED

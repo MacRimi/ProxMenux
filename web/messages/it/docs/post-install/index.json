@@ -78,6 +78,17 @@
     "heading": "Script della community",
     "body": "Il menu offre anche due script di terze parti del progetto <a>community-scripts</a>: <em>Proxmox VE Post Install</em> e <em>Proxmox VE Microcode</em>. Sono wrapper che scaricano ed eseguono gli script originali tramite <code>wget | bash</code>. ProxMenux non li mantiene. Vedi <link>Repository esterni</link> per dettagli e valutazioni sull’affidabilità prima di eseguirli."
   },
+  "pbs": {
+    "heading": "Su Proxmox Backup Server",
+    "body": "Su un host Proxmox Backup Server, lo stesso menu si apre da <strong>Impostazioni post-installazione Proxmox</strong> nel menu PBS. Automatizzato, Personalizzabile, Applica aggiornamenti disponibili e Disinstalla ottimizzazioni funzionano come su Proxmox VE, con queste differenze:",
+    "items": [
+      "<strong>Repository e aggiornamento:</strong> quando il server non ha un abbonamento ed è attivo solo il repository Enterprise di PBS, ProxMenux chiede conferma prima di passare al repository no-subscription di PBS. Il cambio passa per l'API dei repository del server stesso, la stessa usata da <em>Administration > Repositories</em>. Con un abbonamento attivo, o con un repository no-subscription o di test già configurato, le sorgenti restano invariate.",
+      "<strong>Elenco personalizzabile:</strong> le opzioni valide solo per Proxmox VE non vengono mostrate: guest agent, VFIO IOMMU, Open vSwitch, velocità dei backup vzdump, pigz, Appliance Manager, Ceph, alta disponibilità e OVH Real Time Monitoring.",
+      "<strong>Banner dell'abbonamento:</strong> la patch si applica all'interfaccia web di Proxmox Backup Server e Disinstalla ottimizzazioni la ripristina.",
+      "<strong>Figurine:</strong> si installa senza gli alias di Proxmox VE.",
+      "<strong>Script della community:</strong> la sezione offre <em>Proxmox Backup Server Post Install</em> e <em>Proxmox Backup Server Microcode</em> al posto degli script di Proxmox VE."
+    ]
+  },
   "related": {
     "heading": "Correlati",
     "items": [

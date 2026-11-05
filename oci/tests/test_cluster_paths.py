@@ -1,5 +1,6 @@
 """A migrated container finds what it needs on any node of a cluster."""
 
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -50,6 +51,7 @@ class SysctlIncludeTests(unittest.TestCase):
     def config(self, include):
         return f"arch: amd64\nlxc.include: {include}\n".encode()
 
+    @unittest.skipUnless(os.geteuid() == 0, "the sysctl include must belong to root")
     def test_cluster_path_and_the_path_of_earlier_installs_are_accepted(self):
         runtime_settings.check(self.config(self.new), DEPLOYMENT, 101)
         runtime_settings.check(self.config(self.old), DEPLOYMENT, 101)
@@ -58,6 +60,7 @@ class SysctlIncludeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             runtime_settings.check(self.config(self.root / "elsewhere"), DEPLOYMENT, 101)
 
+    @unittest.skipUnless(os.geteuid() == 0, "the sysctl include must belong to root")
     def test_recovery_accepts_both_paths_only(self):
         state = {"vmid": 101, "record": {"deployment": DEPLOYMENT}}
         runtime_settings.check_recovery(self.config(self.new), state)

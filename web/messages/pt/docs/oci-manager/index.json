@@ -195,6 +195,11 @@
                 "tail": "Aplicação, base de dados e cache em LXC coordenados."
               },
               {
+                "label": "Instalar uma aplicação e contribuir para o catálogo",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "instruções para o agente, testes e pull request."
+              },
+              {
                 "label": "Instalar, atualizar e modificar",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "O contrato da instância e as respetivas operações."

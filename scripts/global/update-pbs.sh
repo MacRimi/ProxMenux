@@ -52,7 +52,7 @@ update_pbs() {
     local available_space
     available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
-        msg_error "$(translate "Insufficient disk space. Available: ${available_space}MB")"
+        msg_error "$(translate "Insufficient disk space. Available:") ${available_space}MB"
         return 1
     fi
 
@@ -110,10 +110,9 @@ update_pbs() {
         return 0
     fi
 
-    menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
-    menu_text+="$(translate "Do you want to proceed with the system update?")"
     local proceed=0
-    whiptail --title "$(translate "Proxmox Backup Server Update")" --scrolltext --yesno "$menu_text" 24 78 || proceed=1
+    pmx_confirm_update "$(translate "Proxmox Backup Server Update")" "$menu_text" "$upgradable_list" \
+        "$(translate "Do you want to proceed with the system update?")" || proceed=1
 
     clear
     show_proxmenux_logo
@@ -149,7 +148,7 @@ update_pbs() {
     rm -f "$screen_capture"
 
     if [ $upgrade_exit_code -ne 0 ]; then
-        msg_error "$(translate "System upgrade failed. Check log: $log_file")"
+        msg_error "$(translate "System upgrade failed. Check log:") $log_file"
         echo "Finished: $(date -Iseconds) — upgrade failed (exit $upgrade_exit_code)" >> "$log_file"
         return 1
     fi

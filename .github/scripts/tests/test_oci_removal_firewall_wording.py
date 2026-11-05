@@ -20,7 +20,7 @@ INSTALL = ROOT / 'oci/remote/install_oci.sh'
 PREVIEW = 'Private network targeted for release if no other guest uses it:'
 CONFIRM = 'Remove the application? Its container disks are deleted, and only a backup can bring them back.'
 RESULT = 'Removal command finished; review any warnings above.'
-BRIDGE = 'Private network release attempted:'
+BRIDGE = 'Private network of the application released:'
 BRIDGE_FAILURE = 'Could not complete private network release:'
 SUCCESS = 'The application was removed'
 FIREWALL = 'Could not verify removal of the managed host firewall rule.'
@@ -35,6 +35,10 @@ KEYS = (PREVIEW, CONFIRM, RESULT, BRIDGE, BRIDGE_FAILURE, SUCCESS, FIREWALL, POR
 
 
 def extract(path, name, scope):
+    if name == 'remove':
+        # Operational cache cleanup is exercised by the engine tests; keep wording tests inert.
+        scope.setdefault('compose_jobs', SimpleNamespace(forget_completed=lambda *args: None))
+        scope.setdefault('public_routes', SimpleNamespace(remove=lambda *args: None))
     node = next(n for n in ast.parse(path.read_text()).body if isinstance(n, ast.FunctionDef) and n.name == name)
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), scope)
     return scope[name]
@@ -257,7 +261,7 @@ class RemovalWordings(unittest.TestCase):
         self.assertIn(('warn', FIREWALL), events)
         self.assertEqual(events[-1], ('ok', RESULT))
 
-    def test_ignored_bridge_command_failures_do_not_claim_release(self):
+    def test_a_failed_bridge_release_warns_instead_of_claiming_it(self):
         events = []
         scope = {'members_of': lambda root, vmid: (101, {}, [101]),
                  'instances': SimpleNamespace(read=lambda root, vmid: {'installation_id': 'owned'},
@@ -274,11 +278,12 @@ class RemovalWordings(unittest.TestCase):
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: None),
                  'guest_node': lambda vmid: None, 'remove_host_state': lambda vmid: None, 'release_shared_host_files': lambda hookscripts: None, 're': re,
                  'translate': lambda text: text, 'msg_info': lambda text: None,
-                 'msg_ok': lambda text: events.append(('ok', text)), 'msg_warn': lambda text: None}
+                 'msg_ok': lambda text: events.append(('ok', text)),
+                 'msg_warn': lambda text: events.append(('warn', text))}
         extract(REMOVE, 'remove', scope)(Path('/inert'), 101)
         self.assertIn(('attempt', 'vmbr9'), events)
-        self.assertIn(('ok', BRIDGE + ' vmbr9'), events)
-        self.assertNotIn(('ok', 'Private network of the application released: vmbr9'), events)
+        self.assertIn(('warn', BRIDGE_FAILURE + ' vmbr9'), events)
+        self.assertNotIn(('ok', BRIDGE + ' vmbr9'), events)
 
     def test_invalid_managed_firewall_metadata_warns_instead_of_silent_clean(self):
         events = []

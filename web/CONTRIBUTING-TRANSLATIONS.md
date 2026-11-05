@@ -323,6 +323,23 @@ registers a renderer for them.
 
 ---
 
+## Language style: Spanish (es)
+
+The same criterion applies to the Monitor (`AppImage/messages/es`), the terminal menus (`lang/es.json`) and the documentation (`web/messages/es`). It is Spain Spanish, written with rigour but without formality.
+
+- **Address the reader as *tú*, never *usted*:** «Introduce la ruta», «Comprueba la conexión», «Déjalo vacío», «tus backups».
+- **Buttons, menu options, tab names and short action labels use the infinitive, without address:** «Guardar», «Eliminar la GPU de la configuración», «Activar 2FA», «Añadir GPU a un LXC». A full instruction sentence uses *tú*: «Selecciona una opción».
+- **Status messages say what happened:** «Backup creado», «No se necesitan cambios».
+- **Spain vocabulary:** *pulsar* (not *presionar*), *introducir* (not *ingresar*), *volver* (not *regresar*), *elegir* or *seleccionar*, *hacer clic*, *añadir* (not *agregar*), *fallo* (not *falla* as a noun), *usuario* (not *operador*), *monitorización* (not *monitoreo*). The key is **Intro**, not *Enter* or *Entrar*.
+- **Destructive actions use *eliminar*,** not *quitar*.
+- **Activate and deactivate:** an action or switch of the user is *activar/desactivar*; a technical state can stay *habilitado/deshabilitado*.
+- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Helper-Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
+- **Translated:** *pila* (stack), *puente* (bridge), *pasarela* (gateway) when they are common nouns; *Secure Gateway* is a product name and stays as it is.
+- **One canonical form for repeated phrases,** for example «Pulsa Intro para volver al menú…».
+- **Documentation quotes screen texts exactly as the Spanish interface shows them,** and page titles end in «Documentación de ProxMenux».
+
+---
+
 ## Adding a new locale
 
 If you want to add a language that isn't in the project yet:

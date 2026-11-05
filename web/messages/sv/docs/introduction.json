@@ -21,11 +21,11 @@
     "intro": "ProxMenux har två delar i samma källkodsträd. Installationsprogrammet installerar båda på värdsystemet: Scripts ger terminalgränssnittet och Monitor webbpanelen:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "Det ursprungliga CLI/TUI som du startar med <code>menu</code>. Nio områden täcker optimeringar efter installation, virtuella maskiner och LXC-containrar, GPU- och Coral TPU-genomkoppling, diskar, lagring, nätverk, säkerhet och verktyg samt en utvald kommandoreferens. Fungerar i lokala terminaler, via SSH och i webbterminaler."
+      "body": "Det ursprungliga CLI/TUI som du startar med <code>menu</code>. Områden som täcker optimeringar efter installation, skapande av virtuella maskiner och LXC-containrar, GPU- och Coral TPU-genomkoppling, diskar, lagring, OCI-appar, nätverk, säkerhet, verktyg, säkerhetskopiering och återställning av värden, Proxmox VE Helper Scripts samt en utvald kommandoreferens. Fungerar i lokala terminaler, via SSH och i webbterminaler."
     },
     "monitor": {
       "title": "ProxMenux Monitor",
-      "body": "Webbpanel på den egna servern, distribuerad som AppImage. Värdsystemets mätvärden i realtid, proaktiv övervakning, aviseringar, valfri AI-omformulering med sex leverantörer, inbyggd webbterminal och REST-API. Aktiveras i Scripts-menyn under Inställningar → ProxMenux Monitor."
+      "body": "Webbpanel på den egna servern, distribuerad som AppImage. Värdsystemets mätvärden i realtid, proaktiv övervakning, aviseringar, valfri AI-omformulering med sex leverantörer, inbyggd webbterminal och REST-API. Installationsprogrammet sätter upp den som en tjänst som startar vid uppstart; aktivera, inaktivera eller kontrollera den i Scripts-menyn under Inställningar → ProxMenux Monitor."
     },
     "calloutTitle": "Vad ProxMenux hanterar",
     "calloutIntro": "Tre lager, alla tillgängliga från samma projekt:",
@@ -37,7 +37,7 @@
   },
   "scriptsSection": {
     "heading": "ProxMenux Scripts - vad du får",
-    "intro": "Nio funktionella områden, var och en med sin egen meny i <code>menu</code> och en detaljsida i dokumentationen. Klicka på vilket kort som helst för att hoppa direkt till det avsnittets översikt.",
+    "intro": "De huvudsakliga funktionella områdena, var och ett med sin egen meny i <code>menu</code> och en detaljsida i dokumentationen. Klicka på vilket kort som helst för att hoppa direkt till det avsnittets översikt.",
     "items": [
       {
         "title": "Efter installationen",

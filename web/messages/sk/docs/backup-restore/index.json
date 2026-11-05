@@ -50,7 +50,7 @@
     "heading": "Dve rozhrania, jeden backend",
     "intro": "Každý krok pracovného postupu zálohovania a obnovy je dostupný z dvoch vstupných bodov. Oba volajú rovnakú knižnicu shellu, vytvárajú identické archívy a čítajú rovnaký register úloh.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "menu → Nástroje →\nZálohovanie / obnovenie hostiteľa\n\nDialógový tok,\nSSH priateľský, skriptovateľný\nna použitie bez dozoru.",
+    "cliDetail": "menu →\nHost Backup & Restore\n\nDialógový tok,\nSSH priateľský, skriptovateľný\nna použitie bez dozoru.",
     "webLabel": "ProxMenux Monitor (Web UI)",
     "webDetail": "Karta Backups vo\nwebovom rozhraní Monitor.\n\nObnova jedným kliknutím,\npriebežný výpis záznamov,\nprepojenie s upozorneniami\na zobrazením rozdielov rollbacku."
   },

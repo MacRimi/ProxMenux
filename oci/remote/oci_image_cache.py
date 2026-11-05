@@ -10,6 +10,7 @@ import sys
 import time
 
 import oci_instances as instances
+from oci_ui import translate
 
 # Names given by the OCI installers and by updates; other archives are never touched.
 NAME = re.compile(r'(?:proxmenux-update-[a-z0-9]+-[0-9a-f]{64}'
@@ -82,10 +83,10 @@ def main(arguments):
     command = arguments[0] if arguments else 'prune'
     if command == 'prune':
         for path, size in prune():
-            print(f'removed unused image archive: {path} ({size} bytes)')
+            print(translate('removed unused image archive: {path} ({size} bytes)').format(path=path, size=size))
         return 0
     if command not in ('list', 'remove') or not all(a.isdigit() for a in arguments[1:]):
-        print('usage: oci_image_cache.py [prune | list VMID... | remove VMID...]', file=sys.stderr)
+        print(translate('Usage:') + ' oci_image_cache.py [prune | list VMID... | remove VMID...]', file=sys.stderr)
         return 2
     with instances.locked(instances.ROOT):
         archives = archives_of([int(a) for a in arguments[1:]])
@@ -103,5 +104,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv[1:]))
     except (OSError, ValueError, BlockingIOError) as error:
-        print(f'image cache: {error}', file=sys.stderr)
+        print(f"{translate('Image cache')}: {error}", file=sys.stderr)
         sys.exit(1)

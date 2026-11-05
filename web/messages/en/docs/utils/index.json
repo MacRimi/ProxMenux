@@ -38,7 +38,7 @@
       "body": "Keep the host healthy: CLI tooling, regular updates, and the major-version upgrade when it's time.",
       "bullets": [
         "System Utilities Installer (25 CLI tools)",
-        "Proxmox System Update (apt + dist-upgrade)",
+        "Proxmox System Update (apt + full-upgrade)",
         "PVE 8 → PVE 9 major upgrade"
       ]
     },
@@ -58,11 +58,11 @@
   },
   "isoSection": {
     "heading": "ISO creation",
-    "body": "Build a fresh, up-to-date Windows installation ISO directly on the Proxmox host. The script automates the whole UUP Dump flow: dependency install (aria2c, cabextract, wimlib-imagex, …), parallelised download of the update files via aria2, and conversion into a single bootable ISO that lands in <code>/var/lib/vz/template/iso</code> ready to attach to a VM.",
+    "body": "Build a fresh, up-to-date Windows installation ISO directly on the Proxmox host. The script automates the whole UUP Dump flow: dependency install (aria2c, cabextract, wimlib-imagex, …), parallelised download of the update files via aria2, and conversion into a single bootable ISO saved to the detected Proxmox ISO storage (fallback <code>/var/lib/vz/template/iso</code>), ready to attach to a VM.",
     "options": [
       {
         "title": "UUP Dump ISO Creator",
-        "description": "Build an up-to-date Windows installation ISO from a UUP Dump shared link. Dependencies, download and conversion fully automated; the resulting ISO lands in /var/lib/vz/template/iso ready for VM creation.",
+        "description": "Build an up-to-date Windows installation ISO from a UUP Dump shared link. Dependencies, download and conversion fully automated; the resulting ISO is saved to the detected Proxmox ISO storage, ready for VM creation.",
         "href": "/docs/utils/UUp-Dump-ISO-Creator"
       }
     ]
@@ -78,7 +78,7 @@
       },
       {
         "title": "Proxmox System Update",
-        "description": "Repository check + apt update + apt dist-upgrade with reboot prompt. Detects the PVE major version (8 or 9), keeps the configured repositories and asks before switching a host without subscription to no-subscription, then runs autoremove.",
+        "description": "Repository check + apt update + apt full-upgrade with reboot prompt. Detects the PVE major version (8 or 9), keeps the configured repositories and asks before switching a host without subscription to no-subscription, then runs autoremove.",
         "href": "/docs/utils/system-update"
       },
       {
