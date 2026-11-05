@@ -3596,6 +3596,7 @@
   "Invalid check package:": "Neplatný kontrolný balík:",
   "Invalid configuration path:": "Neplatná konfiguračná dráha:",
   "Invalid consume/export volumes": "Neplatné dátové zväzky consume a export",
+  "Invalid container device GID": "Neplatné GID zariadenia v kontajneri",
   "Invalid container path:": "Neplatná trasa kontajnera:",
   "Invalid credential file path:": "Neplatná cesta súboru s prihlasovacími údajmi:",
   "Invalid declarative entrypoint": "Neplatný deklaratívny vstupný bod",
@@ -7021,6 +7022,7 @@
   "The container could not be removed automatically:": "Kontajner sa nepodarilo automaticky odstrániť:",
   "The container could not be started:": "Kontajner sa nepodarilo spustiť:",
   "The container creation does not match the prepared instance": "Vytvorenie kontajnera nezodpovedá pripravenej inštancii",
+  "The container device settings changed since the last recorded operation": "Nastavenia zariadenia v kontajneri sa od poslednej zaznamenanej operácie zmenili",
   "The container devices do not match the saved record": "Zariadenie kontajnera nezodpovedá uloženému záznamu",
   "The container did not stop to update its persistent configuration:": "Kontajner sa nezastavil na aktualizáciu svojich trvalých nastavení:",
   "The container did not stop; its disks are not touched": "Kontajner sa nezastavil; jeho disky nie sú dotknuté",
@@ -7302,6 +7304,7 @@
   "The record no longer belongs to this operation": "Záznam už nepatrí tejto operácii",
   "The record of a member was replaced; the assembly is not resumed": "Záznam kontajnera bol nahradený; zostavovanie nebude pokračovať",
   "The record or diagnosis could not be completed; no update was run.": "Záznam alebo diagnóza nemohla byť dokončená; žiadna aktualizácia nebola spustená.",
+  "The recorded container device GID does not match its configuration": "Zaznamenané GID zariadenia v kontajneri sa nezhoduje s jeho konfiguráciou",
   "The recovery did not complete. Review the log and choose \"Recover\" again for this container in the OCI management menu.": "Obnova sa nedokončila. Skontrolujte záznam a v ponuke Správca OCI aplikácií pri tomto kontajneri znova vyberte \"Obnoviť\".",
   "The recovery did not complete. Review the log and choose \"{choice}\" again for this container in the OCI management menu.": "Obnova sa nedokončila. Skontrolujte záznam a v ponuke Správca OCI aplikácií pri tomto kontajneri znova vyberte \"{choice}\".",
   "The registry authentication file is invalid; it was not changed.": "Súbor s prihlasovacími údajmi registrov je neplatný; nebol zmenený.",
@@ -9017,8 +9020,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "Invalid container device GID": "Neplatné GID zariadenia v kontajneri",
-  "The container device settings changed since the last recorded operation": "Nastavenia zariadenia v kontajneri sa od poslednej zaznamenanej operácie zmenili",
-  "The recorded container device GID does not match its configuration": "Zaznamenané GID zariadenia v kontajneri sa nezhoduje s jeho konfiguráciou"
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }

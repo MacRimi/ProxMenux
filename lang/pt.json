@@ -3596,6 +3596,7 @@
   "Invalid check package:": "Pacote de verificação inválido:",
   "Invalid configuration path:": "Caminho de configuração inválido:",
   "Invalid consume/export volumes": "Volumes de consumo/exportação inválidos",
+  "Invalid container device GID": "GID do dispositivo do contentor inválido",
   "Invalid container path:": "Localização do contentor inválida:",
   "Invalid credential file path:": "Caminho do arquivo credential inválido:",
   "Invalid declarative entrypoint": "Ponto de entrada declarativo inválido",
@@ -7020,6 +7021,7 @@
   "The container could not be removed automatically:": "O recipiente não pôde ser removido automaticamente:",
   "The container could not be started:": "Não foi possível iniciar o recipiente:",
   "The container creation does not match the prepared instance": "A criação do recipiente não corresponde à instância preparada",
+  "The container device settings changed since the last recorded operation": "As definições do dispositivo do contentor mudaram desde a última operação registada",
   "The container devices do not match the saved record": "Os dispositivos do contentor não correspondem ao registo gravado",
   "The container did not stop to update its persistent configuration:": "O recipiente não parou para atualizar sua configuração persistente:",
   "The container did not stop; its disks are not touched": "O recipiente não parou; os seus discos não são tocados",
@@ -7301,6 +7303,7 @@
   "The record no longer belongs to this operation": "O registro já não pertence a esta operation",
   "The record of a member was replaced; the assembly is not resumed": "O registro de um membro foi substituído; a assembléia não é retomada",
   "The record or diagnosis could not be completed; no update was run.": "O registro ou diagnóstico não pôde ser concluído; nenhuma atualização foi realizada.",
+  "The recorded container device GID does not match its configuration": "O GID registado do dispositivo do contentor não corresponde à configuração",
   "The recovery did not complete. Review the log and choose \"Recover\" again for this container in the OCI management menu.": "A recuperação não terminou. Reveja o log e escolha \"Recover\" novamente para este recipiente no menu de gerenciamento OCI.",
   "The recovery did not complete. Review the log and choose \"{choice}\" again for this container in the OCI management menu.": "A recuperação não foi concluída. Revise o log e escolha \"{choice}\" novamente para este contêiner no menu de gerenciamento OCI.",
   "The registry authentication file is invalid; it was not changed.": "O arquivo de autenticação do registro é inválido;não foi alterado.",
@@ -9017,8 +9020,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Os dados do disco NÃO serão apagados.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ O disco será desmontado e removido de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ A entrada /etc/fstab será removida.",
-  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado.",
-  "Invalid container device GID": "GID do dispositivo do contentor inválido",
-  "The container device settings changed since the last recorded operation": "As definições do dispositivo do contentor mudaram desde a última operação registada",
-  "The recorded container device GID does not match its configuration": "O GID registado do dispositivo do contentor não corresponde à configuração"
+  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado."
 }
