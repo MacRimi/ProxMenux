@@ -358,19 +358,32 @@ cleanup_canonical_inputs() {
 
 # A derived check accepts any HTTP answer below 500: the application is up,
 # even when its first page is a redirect or asks for a login.
-healthcheck_probe() {
-  local code status=0
+healthcheck_probe_url() {
+  local url=$1 code status=0
   if [[ ${HC_ANY_STATUS:-false} == true ]]; then
-    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
+    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$url" 2>/dev/null) || status=$?
     (( status == 0 )) && [[ $code =~ ^[1-4][0-9][0-9]$ ]] && return 0
   else
-    oci_curl "$VMID" "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
+    oci_curl "$VMID" "${CURL_ARGS[@]}" "$url" >/dev/null 2>&1 || status=$?
     (( status == 0 )) && return 0
   fi
   # A port taken from the compose file may serve a database or SSH: an answer
   # in another protocol (HTTP/0.9, weird or empty reply, reset) means it is up.
   [[ ${HC_ACCEPT_NON_HTTP:-false} == true ]] \
     && (( status == 1 || status == 8 || status == 52 || status == 56 ))
+}
+
+# Any of the addresses answering means the application is up; HC_URL keeps the
+# one that answered.
+healthcheck_probe() {
+  local url
+  for url in "${HC_URLS[@]}"; do
+    if healthcheck_probe_url "$url"; then
+      HC_URL=$url
+      return 0
+    fi
+  done
+  return 1
 }
 
 cleanup_failed_install() {
@@ -926,7 +939,7 @@ set_lxc_directive() {
 
 add_device() {
   local host_path=$1 expected_type=$2 mode_spec=$3 gid_strategy=$4 deny_write=$5
-  local device_uid=${6:-}
+  local device_uid=${6:-} container_gid=${7:-}
   local mode gid dev_value
   [[ $host_path == /dev/* && $host_path != *[[:space:]]* && $host_path != *","* ]] \
     || die "$(translate "Invalid device path:") $host_path"
@@ -950,7 +963,12 @@ add_device() {
       || die "$(translate "Invalid device UID:") $device_uid"
     dev_value="${dev_value},uid=${device_uid}"
   fi
-  if [[ $gid_strategy == host-device-gid ]]; then
+  if [[ -n $container_gid ]]; then
+    [[ $container_gid =~ ^[0-9]{1,10}$ ]] && (( container_gid < 4294967295 )) \
+      || die "$(translate "Invalid container device GID"): $container_gid"
+    gid=$container_gid
+    dev_value="${dev_value},gid=${gid}"
+  elif [[ $gid_strategy == host-device-gid ]]; then
     gid=$(stat -c '%g' "$host_path")
     dev_value="${dev_value},gid=${gid}"
   elif [[ $gid_strategy != none ]]; then
@@ -965,7 +983,7 @@ add_device() {
 }
 
 add_character_device() {
-  add_device "$1" character "$2" "$3" "$4" "${5:-}"
+  add_device "$1" character "$2" "$3" "$4" "${5:-}" "${6:-}"
 }
 
 prepare_nvidia_driver_links() {
@@ -2030,6 +2048,7 @@ while IFS= read -r DEVICE_ENCODED; do
   DEVICE=$(printf '%s' "$DEVICE_ENCODED" | base64 -d)
   DEVICE_KIND=$(jq -r '.kind // "character-device"' <<<"$DEVICE")
   DEVICE_GID_ENV=$(jq -r '.append_host_device_gid_to_environment // empty' <<<"$DEVICE")
+  CONTAINER_GID=$(jq -r '.container_gid // empty' <<<"$DEVICE")
   if [[ $DEVICE_KIND == nvidia-runtime ]]; then
     NVIDIA_GID_ENV=$DEVICE_GID_ENV
     if (( NVIDIA_RUNTIME_CONFIGURED == 0 )); then
@@ -2049,13 +2068,13 @@ while IFS= read -r DEVICE_ENCODED; do
   case "$DEVICE_KIND" in
     character-device)
       DEVICE_UID=$(jq -r '.uid // empty' <<<"$DEVICE")
-      add_character_device "$HOST_PATH" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "$DEVICE_UID"
+      add_character_device "$HOST_PATH" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "$DEVICE_UID" "$CONTAINER_GID"
       if [[ -n $DEVICE_GID_ENV ]]; then
         append_deployment_environment_csv "$DEVICE_GID_ENV" "$(stat -c '%g' "$HOST_PATH")"
       fi
       ;;
     block-device)
-      add_device "$HOST_PATH" block "$MODE" "$GID_STRATEGY" "$DENY_WRITE"
+      add_device "$HOST_PATH" block "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "" "$CONTAINER_GID"
       if [[ -n $DEVICE_GID_ENV ]]; then
         append_deployment_environment_csv "$DEVICE_GID_ENV" "$(stat -c '%g' "$HOST_PATH")"
       fi
@@ -2065,7 +2084,7 @@ while IFS= read -r DEVICE_ENCODED; do
       FOUND_TREE_DEVICE=0
       while IFS= read -r TREE_DEVICE; do
         [[ -n $TREE_DEVICE ]] || continue
-        add_character_device "$TREE_DEVICE" "$MODE" "$GID_STRATEGY" "$DENY_WRITE"
+        add_character_device "$TREE_DEVICE" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "" "$CONTAINER_GID"
         FOUND_TREE_DEVICE=1
       done < <(find "$HOST_PATH" -print 2>/dev/null | while IFS= read -r path; do
         [[ -c $path ]] && printf '%s\n' "$path"
@@ -2333,6 +2352,12 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
     || die "$(translate "The stability period must be shorter than the healthcheck timeout")"
   [[ -n $IP ]] || die "$(translate "The healthcheck cannot run without an IP address")"
   HC_URL="${HC_SCHEME}://${IP}:${HC_PORT}${HC_PATH}"
+  HC_URLS=("$HC_URL")
+  while IFS= read -r HC_ALT_PORT; do
+    [[ $HC_ALT_PORT =~ ^[0-9]+$ && $HC_ALT_PORT -ge 1 && $HC_ALT_PORT -le 65535 ]] \
+      || die "$(translate "Invalid healthcheck port")"
+    HC_URLS+=("${HC_SCHEME}://${IP}:${HC_ALT_PORT}${HC_PATH}")
+  done < <(jq -r '.alternative_ports[]? | tostring' <<<"$STARTUP_HEALTHCHECK")
   HC_ANY_STATUS=$(jq -r '.accept_any_status // false' <<<"$STARTUP_HEALTHCHECK")
   HC_ACCEPT_NON_HTTP=$(jq -r '.accept_non_http // false' <<<"$STARTUP_HEALTHCHECK")
   if [[ $HC_ANY_STATUS == true ]]; then

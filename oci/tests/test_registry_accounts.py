@@ -132,7 +132,8 @@ class RegistryMenuTests(unittest.TestCase):
             refresher = refresh_type.return_value.__enter__.return_value
             refresher.active = False
             refresher.consume.return_value = False
-            refresher.describe.return_value = ''
+            refresher.failed = False
+            refresher.label.return_value = 'Refresh catalog'
             self.assertEqual(cli.interactive(catalog), 0)
         open_accounts.assert_called_once_with(ui)
 

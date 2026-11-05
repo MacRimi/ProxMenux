@@ -111,6 +111,8 @@ Selecting an application, or giving a definition, opens the same sequence.
 4. **Resolve.** The registry is queried, the architecture of the host is selected and the digest the tag points to at that moment is fixed.
 5. **Download and verify.** Skopeo downloads the image as an OCI archive. Every layer is checked against its digest before anything is created.
 6. **Build.** `pct create` builds the rootfs from the archive and imports `Entrypoint`, `Cmd`, `Env`, `User`, `WorkingDir` and `StopSignal` from the image.
+
+   Proxmox reads the image inside the container's user namespace. Readable template-storage archives use the existing path without a copy. If a verified archive or its parents are private, the native create wrapper makes a temporary root-owned copy under `/var/tmp`, readable only by the mapped root group, and removes it after creation, failure or a catchable interruption. The cached image, storage directories, registry credentials and caller permissions stay unchanged. Reflinks are used where available; otherwise this uncommon path needs temporary space for one image copy. Only the `pct create` child receives the normal Proxmox creation umask.
 7. **Connect.** The volumes are added as mount points, then the devices, the environment, the network and the security settings the oci-compose declares.
 8. **Prepare.** Each new volume is made ready for the first start: `lost+found` is removed and the directory is given to the user the application writes with. The files the oci-compose asks to write are written.
 9. **Start and check.** The container starts, an address is waited for, the settings that need the running application are applied, and the service is checked. A failed first start is reported as a failed installation.

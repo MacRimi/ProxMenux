@@ -202,15 +202,17 @@ class InputAndCancellationTests(StorageFixture):
 
     def test_real_menu_error_handler_has_slovak_heading_and_preserves_detail(self):
         ui=Mock();ui.choose.side_effect=['custom',None]
-        with patch.object(cli,'interactive_ui',return_value=ui),patch.object(custom,'explore',side_effect=ValueError('fiction-detail')), \
+        with patch.object(cli,'interactive_ui',return_value=ui),patch.object(cli,'_catalog_options',return_value=([],{}, {}, {}, [])), \
+                patch.object(custom,'explore',side_effect=ValueError('fiction-detail')), \
                 patch.object(updates,'UpdateCheck') as checker, \
                 patch.object(catalog_refresh,'CatalogRefresh') as catalog_checker:
             # Keep this wording/error-handler test offline and free of writes.
             # The real background worker has its own catalog lifecycle tests.
             catalog_check=catalog_checker.return_value.__enter__.return_value
             catalog_check.active=False;catalog_check.consume.return_value=False
-            catalog_check.describe.return_value=''
+            catalog_check.failed=False;catalog_check.label.return_value='Refresh catalog'
             check=checker.return_value.__enter__.return_value
             check.active=False;check.notice.return_value='';check.status.return_value={'available':[]}
+            check.label.return_value='Check for updates'
             self.assertEqual(cli.interactive(self.catalog),0)
         ui.message.assert_called_once_with('Operáciu sa nepodarilo dokončiť:\n\nfiction-detail')
