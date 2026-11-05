@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - GPU, TPU and USB/IP Menu
+# ProxMenux - GPU and TPU Menu
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -26,7 +26,7 @@ initialize_cache
 
 while true; do
     OPTION=$(dialog --colors --backtitle "ProxMenux" \
-        --title "$(translate "GPUs, Coral-TPU and USB/IP Menu")" \
+        --title "$(translate "GPUs and Coral-TPU Menu")" \
         --menu "\n$(translate "Select an option:")" 26 80 16 \
             ""  "\Zb\Z4                         HOST\Zn" \
             "1"         "$(translate "Install/Update NVIDIA Drivers (Host + LXC)")" \

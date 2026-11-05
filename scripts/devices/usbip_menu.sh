@@ -101,11 +101,11 @@ usbip_add_export() {
         [[ -n "$busid" ]] && choices+=("$busid" "$label")
     done < <(python3 "$MANAGER" inventory | jq -r '.[] | select(.blocked == "" and .driver != "usbip-host") | [.busid, "\(.name) [\(.vendor):\(.product)] serial: \(.serial)"] | @tsv')
     if [[ ${#choices[@]} -eq 0 ]]; then
-        usbip_dialog --msgbox "$(translate 'No eligible USB devices found. Hubs and mass storage are excluded.')" 10 75
+        usbip_dialog --msgbox "$(translate 'No eligible USB devices found. Hubs, mass storage and network adapters are excluded.')" 10 75
         return
     fi
     chosen=$(usbip_dialog --stdout --menu "$(translate 'Select the USB device to share:')" 22 100 12 "${choices[@]}") || return
-    usbip_dialog --yesno "$(translate 'The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?')\n\n$chosen" 12 80 || return
+    usbip_dialog --yesno "$(translate 'The selected USB device will become unavailable to local applications and guests. Only one remote client can use it at a time. Share this device?')\n\n$(translate 'If the USB/IP service stops unexpectedly, stop sharing while the device is still connected to release it. In rare cases only a host reboot releases it.')\n\n$chosen" 14 80 || return
     usbip_action add-export "$chosen"
 }
 

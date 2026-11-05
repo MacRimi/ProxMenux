@@ -42,6 +42,7 @@ MARKER = "# Managed by ProxMenux USB/IP"
 TRANSPORT_USER = "proxmenux-usbip"
 TRANSPORT_HOME = Path("/var/lib/proxmenux-usbip")
 MATCH_BUSID = Path("/sys/bus/usb/drivers/usbip-host/match_busid")
+NET_SYSFS = Path("/sys/class/net")
 BUSID = re.compile(r"[0-9]+-[0-9]+(?:\.[0-9]+)*\Z")
 IDENTIFIER = re.compile(r"[a-f0-9]{12}\Z")
 
@@ -118,6 +119,21 @@ def attribute(path, name):
         return ""
 
 
+def network_interfaces(path):
+    """Kernel network interfaces provided by this USB device. On many mini PCs
+    a USB adapter is the management link: sharing it would cut the host off."""
+    device = path.resolve()
+    names = []
+    for interface in NET_SYSFS.glob("*"):
+        try:
+            source = (interface / "device").resolve(strict=True)
+        except OSError:
+            continue
+        if source == device or device in source.parents:
+            names.append(interface.name)
+    return sorted(names)
+
+
 def inventory():
     devices = []
     for path in sorted(SYSFS.glob("*")):
@@ -137,6 +153,8 @@ def inventory():
         blocked = "USB hubs cannot be shared" if "09" in classes else (
             "USB mass storage cannot be shared" if "08" in classes else (
                 "USB class could not be read" if not re.fullmatch(r"[a-f0-9]{2}", attribute(path, "bDeviceClass").lower()) else ""))
+        if not blocked and network_interfaces(path):
+            blocked = "USB network adapters cannot be shared"
         try:
             driver = (path / "driver").resolve(strict=True).name
         except OSError:
@@ -446,6 +464,9 @@ class LoopbackTunnel:
                             tunnel.processes.discard(process)
         class Server(socketserver.ThreadingTCPServer):
             daemon_threads = True
+            # A restarted worker binds again while earlier connections are in
+            # TIME_WAIT. Linux still refuses a port another socket listens on.
+            allow_reuse_address = True
         self.closed = False
         try:
             self.server = Server(("127.0.0.1", selected["local_port"]), Handler)
@@ -817,6 +838,7 @@ def add_import(remote, export_id, local_port):
                i["ssh_port"] == remote["ssh_port"] and i["export_id"] == export_id) for i in config["imports"]):
             raise USBIPError("This remote device or local port is already configured")
         with socket.socket() as check:
+            check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 check.bind(("127.0.0.1", local_port))
             except OSError as exc:

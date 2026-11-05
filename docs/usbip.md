@@ -1,6 +1,6 @@
 # USB/IP over SSH
 
-Open **Hardware: GPUs, Coral-TPU and USB/IP → USB/IP over SSH** to share a
+Open **Hardware: GPUs and Coral-TPU → USB/IP over SSH** to share a
 selected USB device or connect this Linux machine to a device on another host.
 The same menu is available through the main menu search (`usbip`, `zigbee`,
 `bluetooth` or `printer`). This implements the host and Linux client setup
@@ -44,7 +44,8 @@ releases managed bindings before dropping the references.
 Without a serial number, the vendor/product and original bus ID must match;
 the manager will not guess which identical dongle to bind. Duplicate serial
 numbers are rejected as ambiguous. USB hubs and mass-storage devices, including
-composite devices with a storage interface, are excluded.
+composite devices with a storage interface, are excluded. So are USB network
+adapters: on many mini PCs one is the management link of the host.
 
 **Stop sharing** removes one saved selection and waits for confirmed release.
 A cleanup error or timeout is reported instead of claiming that eject succeeded.

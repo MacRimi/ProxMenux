@@ -37,7 +37,8 @@ class USBIPTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.m = load()
         for attr, path in (("CONFIG_DIR", "config"), ("RUN_DIR", "client-run"),
-                           ("SERVER_RUN_DIR", "server-run"), ("UNIT_DIR", "units"), ("SYSFS", "sysfs")):
+                           ("SERVER_RUN_DIR", "server-run"), ("UNIT_DIR", "units"), ("SYSFS", "sysfs"),
+                           ("NET_SYSFS", "net")):
             setattr(self.m, attr, self.root / path)
             getattr(self.m, attr).mkdir()
         class MatchTable:
@@ -63,6 +64,15 @@ class USBIPTests(unittest.TestCase):
         value = {"server": server, "exports": exports or [], "imports": imports or []}
         self.m.atomic_json(self.m.CONFIG_DIR / "config.json", value)
         return value
+
+    def test_a_usb_network_adapter_is_not_offered(self):
+        self.device("1-3", serial="nic-1")
+        (self.m.NET_SYSFS / "enx001122").mkdir()
+        (self.m.NET_SYSFS / "enx001122" / "device").symlink_to(self.m.SYSFS / "1-3" / "1-3:1.0")
+        self.assertEqual(next(d for d in self.m.inventory() if d["busid"] == "1-3")["blocked"],
+                         "USB network adapters cannot be shared")
+        self.device("1-4", serial="zigbee-9")
+        self.assertEqual(next(d for d in self.m.inventory() if d["busid"] == "1-4")["blocked"], "")
 
     def device(self, busid="1-2", serial="zigbee-123", device_class="00", interface="03", driver="usb"):
         path = self.m.SYSFS / busid

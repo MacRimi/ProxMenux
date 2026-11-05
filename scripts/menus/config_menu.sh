@@ -109,6 +109,16 @@ remove_usbip_sharing() {
         pmx_remove_file "$unit"
     done
     systemctl daemon-reload >/dev/null 2>&1 || true
+    # The transport account holds the authorized client keys. Remove it only
+    # when ProxMenux created it, so a reinstall does not revive old clients.
+    local home=/var/lib/proxmenux-usbip
+    if getent passwd proxmenux-usbip >/dev/null && [[ -f "$home/.proxmenux-owned" ]]; then
+        pkill -KILL -u proxmenux-usbip >/dev/null 2>&1 || true
+        pmx_record_execution "Remove USB/IP transport account" "userdel proxmenux-usbip"
+        userdel proxmenux-usbip >/dev/null 2>&1 || true
+        getent group proxmenux-usbip >/dev/null && groupdel proxmenux-usbip >/dev/null 2>&1
+        rm -rf "$home"
+    fi
     if [[ -d /etc/proxmenux/usbip ]]; then
         pmx_record_execution "Remove USB/IP configuration" "rm -rf /etc/proxmenux/usbip"
         rm -rf /etc/proxmenux/usbip
