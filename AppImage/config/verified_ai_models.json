@@ -110,12 +110,10 @@
       "openai/gpt-oss-120b",
       "meta-llama/llama-3.1-8b-instruct",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "poolside/laguna-s-2.1:free"
+      "google/gemma-4-26b-a4b-it:free"
     ],
     "recommended": "meta-llama/llama-3.3-70b-instruct",
-    "_note": "Curated manually from the 249+ models OpenRouter serves — the auto-verifier passes ~200 today but only a subset are practical for notification translation. Includes the 11 previously-curated paid models plus 22 new mainstream additions (gpt-5.1, claude-opus-4.8, sonnet-5, grok-4.3/4.20, kimi-k2, deepseek-v3.2, nova, cohere-a, sonar, ...) and 6 `:free` variants re-added manually — the free tier is intentionally supported per user request even though today's rate limits blocked some of them from passing the test. Reviewed 2026-10-26: three `:free` variants no longer served by OpenRouter were dropped."
+    "_note": "Curated manually from the 249+ models OpenRouter serves — the auto-verifier passes ~200 today but only a subset are practical for notification translation. Includes the 11 previously-curated paid models plus 22 new mainstream additions (gpt-5.1, claude-opus-4.8, sonnet-5, grok-4.3/4.20, kimi-k2, deepseek-v3.2, nova, cohere-a, sonar, ...) and 6 `:free` variants re-added manually — the free tier is intentionally supported per user request even though today's rate limits blocked some of them from passing the test. Reviewed 2026-10-26: three `:free` variants no longer served by OpenRouter were dropped. Availability reviewed 2026-11-04 against the public models endpoint: expired poolside/laguna-s-2.1:free and unlisted nvidia/nemotron-3-super-120b-a12b:free removed. This availability check is not a new inference verification; no untested models were added."
   },
   "ollama": {
     "_note": "Ollama models are local, we don't filter them. User manages their own models.",

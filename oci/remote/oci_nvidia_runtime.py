@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 import stat
 import subprocess
 
-from oci_gpu_devices import actual_devices
+from oci_gpu_devices import actual_devices, device_fields
 from oci_ui import translate
 
 KEY = '_nvidia_runtime'
@@ -104,7 +104,7 @@ def refresh_plan(config, previous, current=None, same_gpu=True):
         if line.startswith('dev') and ': ' in line:
             key, properties = line.split(': ', 1)
             if key[3:].isdigit():
-                fields = dict(part.split('=', 1) for part in properties.split(','))
+                fields = device_fields(properties)
                 if fields.get('path') in previous['devices']:
                     continue
         kept.append(line)

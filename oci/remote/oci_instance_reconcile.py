@@ -58,9 +58,10 @@ def _mount(key, value, vmid):
 
 def _device(key, value):
     parts = value.split(',')
-    if any('=' not in part for part in parts):
-        raise ValueError(f'{key}: {translate("Incomplete device configuration")}')
-    fields = dict(part.split('=', 1) for part in parts)
+    try:
+        fields = gpu_devices.device_fields(value)
+    except ValueError:
+        raise ValueError(f'{key}: {translate("Incomplete device configuration")}') from None
     if len(fields) != len(parts) or set(fields) - {'path', 'mode', 'gid', 'uid', 'deny-write'}:
         raise ValueError(f'{key}: {translate("Unsupported device options")}')
     path = fields.get('path')

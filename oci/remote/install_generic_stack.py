@@ -14,11 +14,13 @@ import os
 from pathlib import Path
 import re
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
 import time
 import urllib.request
+import urllib.error
 import urllib.parse
 import uuid
 import xml.etree.ElementTree as ET
@@ -662,24 +664,35 @@ def attach_mounts(service, temporary):
     oci_nested_mounts.follow(vmid)
 
 
-def web_answers(vmid, url, opener):
+def web_answers(vmid, url, opener, verify_tls=False):
     from oci_installation_state import container_curl
     curl = container_curl(vmid, lambda *args: run(*args).encode())
     if curl != ['curl']:
-        run(*curl, '-fsS', '--noproxy', '*', '-o', '/dev/null', '--max-time', '4', url)
+        tls_args = [] if verify_tls else ['--insecure']
+        run(*curl, '-fsS', '--noproxy', '*', '-o', '/dev/null', '--max-time', '4', *tls_args, url)
         return True
-    with opener.open(url,timeout=4) as response:
-        return response.status<400
+    try:
+        with opener.open(url,timeout=4) as response:
+            return response.status<400
+    except urllib.error.HTTPError as error:
+        error.close()
+        raise
 
 
 def wait_web(primary, url):
     deadline = time.monotonic()+primary['healthcheck']['timeout_seconds']
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    # Match the single-container installer and recovery probes: image-generated
+    # certificates are valid for local readiness, with strict TLS available.
+    verify_tls = primary['healthcheck'].get('verify_tls', False)
+    handlers = [urllib.request.ProxyHandler({})]
+    if not verify_tls:
+        handlers.append(urllib.request.HTTPSHandler(context=ssl._create_unverified_context()))
+    opener = urllib.request.build_opener(*handlers)
     while True:
         if run('pct','status',primary['vmid']).strip()!='status: running':
             raise RuntimeError(f"{translate('The container stopped:')} {primary['name']} (CT {primary['vmid']})")
         try:
-            if web_answers(primary['vmid'], url, opener):
+            if web_answers(primary['vmid'], url, opener, verify_tls=verify_tls):
                 check = primary['healthcheck']
                 if check.get('type') == 'exec':
                     remaining = max(1, deadline-time.monotonic())

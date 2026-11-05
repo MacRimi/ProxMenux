@@ -397,6 +397,10 @@ const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: strin
     lightTheme: `${SELFHST_WEBP_BASE}/frigate-dark.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/frigate-light.webp`,
   },
+  "hermes-agent": {
+    lightTheme: `${SELFHST_WEBP_BASE}/hermes-agent.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/hermes-agent-light.webp`,
+  },
   "llama-cpp": {
     lightTheme: `${SELFHST_WEBP_BASE}/llama-cpp.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/llama-cpp-light.webp`,
@@ -415,9 +419,16 @@ const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: strin
   },
 }
 
+// Earlier catalog icons that now have a themed selfhst equivalent.
+const THEMED_LOGO_ALIASES: Record<string, string> = {
+  "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/hermes.webp": "hermes-agent",
+}
+
 function selfhstThemeLogos(src: string) {
+  const alias = THEMED_LOGO_ALIASES[src.toLowerCase()]
+  if (alias) return SELFHST_THEME_LOGOS[alias]
   if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
-  const match = src.toLowerCase().match(/\/(frigate|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  const match = src.toLowerCase().match(/\/(frigate|hermes-agent|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 

@@ -6150,7 +6150,7 @@
       "repository": "https://hub.docker.com/r/nousresearch/hermes-agent",
       "description": "Hermes Agent is a self-improving AI agent from Nous Research, designed to be a long-running collaborator rather than a one-off chatbot.\nIts built-in learning loop combines persistent memory, cross-session recall, and reusable skills so it can keep context and improve recurring workflows over time.\nWith a unified gateway, rich toolsets, and a browser-based dashboard, Hermes fits research, automation, cross-platform communication, and ongoing operational work.\n\n**Main Features:**\n- Built-in learning loop with persistent memory, session search, and reusable skills\n- One gateway for CLI, Telegram, Discord, Slack, WhatsApp, Signal, and more\n- Tool-driven workflows with terminal access, web search, browser automation, file editing, and MCP integration\n- Automation and coordination with cron jobs, subagents, the web dashboard, and an OpenAI-compatible API\n\n**Learn More:**\n- [Hermes Agent Official Website](https://hermes-agent.nousresearch.com/)\n- [Hermes Agent GitHub](https://github.com/NousResearch/hermes-agent)\n- [Hermes Agent Documentation](https://hermes-agent.nousresearch.com/docs/)\n",
       "website": "https://hermes-agent.nousresearch.com/",
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/hermes.webp",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hermes-agent.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -15593,7 +15593,7 @@
         "arm64"
       ],
       "updated_at": null,
-      "main_image": "docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest",
+      "main_image": "ghcr.io/stirling-tools/stirling-pdf:latest",
       "category": "documents",
       "category_label": "Documents & Notes",
       "replaces_discovered_ids": [],

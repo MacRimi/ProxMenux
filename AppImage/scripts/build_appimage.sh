@@ -8,6 +8,8 @@ set -e
 WORK_DIR="/tmp/proxmenux_build"
 APP_DIR="$WORK_DIR/ProxMenux.AppDir"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/appimage_arch.sh"
+pmx_appimage_arch "$(uname -m)" || exit 1
 DIST_DIR="$SCRIPT_DIR/../dist"
 APPIMAGE_ROOT="$SCRIPT_DIR/.."
 
@@ -24,7 +26,7 @@ ZOPE_EVENT_VERSION="6.2"
 GEVENT_WEBSOCKET_VERSION="0.10.1"
 
 VERSION=$(node -p "require('$APPIMAGE_ROOT/package.json').version")
-APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
+APPIMAGE_NAME="ProxMenux-${VERSION}${PMX_APPIMAGE_SUFFIX}.AppImage"
 
 echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitoring tools..."
 
@@ -33,16 +35,17 @@ echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitor
 # under the non-root GitHub Actions runner — previously hardcoded to
 # /var/cache/, which the CI user can't write to (mkdir Permission
 # denied → build aborted before doing any actual work).
-APPIMAGETOOL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/appimagetool"
+APPIMAGETOOL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/appimagetool-${PMX_APPIMAGE_ARCH}"
 
-# Preserve a cached copy of appimagetool across builds. wget -q has bitten
-# us repeatedly when GitHub momentarily rate-limits or the runner has no
-# network — the result is a 0-byte file that passes the `[ -f ]` check on
-# the next run and breaks the build silently.
-if [ -f "$WORK_DIR/appimagetool" ] && [ -s "$WORK_DIR/appimagetool" ]; then
-    mkdir -p "$(dirname "$APPIMAGETOOL_CACHE")"
-    cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
+APPIMAGETOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${PMX_APPIMAGE_ARCH}.AppImage"
+if [ "$PMX_APPIMAGE_ARCH" = aarch64 ]; then
+    # The old AppImageKit ARM build does not accept ARCH=aarch64 reliably.
+    # Use a versioned tool; leave the existing AMD64 tool unchanged.
+    APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-aarch64.AppImage"
+    APPIMAGETOOL_CACHE="${APPIMAGETOOL_CACHE}-1.9.1"
 fi
+
+# Architecture-specific caches never reuse an executable from a different CPU.
 
 # Clean and create work directory
 rm -rf "$WORK_DIR"
@@ -57,7 +60,7 @@ if [ -s "$APPIMAGETOOL_CACHE" ]; then
 fi
 if [ ! -s "$WORK_DIR/appimagetool" ]; then
     echo "📥 Downloading appimagetool..."
-    wget --tries=3 --timeout=60 "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O "$WORK_DIR/appimagetool" || true
+    wget --tries=3 --timeout=60 "$APPIMAGETOOL_URL" -O "$WORK_DIR/appimagetool" || true
     if [ ! -s "$WORK_DIR/appimagetool" ]; then
         echo "❌ Failed to download appimagetool" >&2
         exit 1
@@ -65,6 +68,17 @@ if [ ! -s "$WORK_DIR/appimagetool" ]; then
     chmod +x "$WORK_DIR/appimagetool"
     mkdir -p "$(dirname "$APPIMAGETOOL_CACHE")"
     cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
+fi
+
+APPIMAGETOOL_ARGS=()
+if [ "$PMX_APPIMAGE_ARCH" = aarch64 ]; then
+    echo "f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158  $WORK_DIR/appimagetool" | sha256sum -c -
+    # Without --runtime-file, appimagetool 1.9.1 embeds the unpinned
+    # `continuous` runtime. Use a released runtime checked by its digest.
+    RUNTIME_URL="https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-aarch64"
+    wget --tries=3 --timeout=60 "$RUNTIME_URL" -O "$WORK_DIR/runtime-aarch64"
+    echo "00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444  $WORK_DIR/runtime-aarch64" | sha256sum -c -
+    APPIMAGETOOL_ARGS=(--runtime-file "$WORK_DIR/runtime-aarch64")
 fi
 
 # Create directory structure
@@ -126,6 +140,7 @@ cd "$SCRIPT_DIR"
 # Copy Flask server
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/ovs_topology.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/zram_metrics.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_auth_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_auth_routes.py not found"
 cp "$SCRIPT_DIR/auth_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  auth_manager.py not found"
@@ -245,6 +260,7 @@ fi
 # hb_ensure_borg used to download on demand — kept in lockstep so both
 # code paths see the same version semantics. SHA256 is the upstream
 # release checksum; bump both together.
+if [ "$PMX_APPIMAGE_ARCH" = x86_64 ]; then
 BORG_VERSION="1.2.8"
 BORG_URL="https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linux64"
 BORG_SHA256="cfa50fb704a93d3a4fa258120966345fddb394f960dca7c47fcb774d0172f40b"
@@ -280,6 +296,12 @@ else
     exit 1
 fi
 
+else
+    echo "⚠️  No official Borg 1.2.8 ARM64 standalone binary; using native-host adapter"
+    cp "$SCRIPT_DIR/borg_native_arm.sh" "$APP_DIR/usr/bin/borg"
+    chmod +x "$APP_DIR/usr/bin/borg"
+fi
+
 # Copy Next.js build
 echo "📋 Copying web dashboard..."
 if [ -d "$APPIMAGE_ROOT/out" ]; then
@@ -310,6 +332,7 @@ fi
 echo "📋 Copying AppRun script..."
 if [ -f "$SCRIPT_DIR/AppRun" ]; then
     cp "$SCRIPT_DIR/AppRun" "$APP_DIR/AppRun"
+    cp "$SCRIPT_DIR/appimage_arch.sh" "$APP_DIR/usr/bin/appimage_arch.sh"
     chmod +x "$APP_DIR/AppRun"
     echo "✅ AppRun script copied successfully"
 else
@@ -379,7 +402,7 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
 # Phase 3b: Install the complete gevent/WSS runtime separately for every
 # supported host ABI.  Keeping each dependency tree isolated avoids mixing
 # CPython-specific modules from the build runner with those loaded by PVE.
-# The two --platform values allow gevent's manylinux_2_28 wheels and the
+# The three --platform values allow gevent's manylinux_2_28 wheels and the
 # backwards-compatible manylinux2014 zope.interface wheels to be resolved in
 # one deterministic installation.
 install_gevent_runtime() {
@@ -394,9 +417,9 @@ install_gevent_runtime() {
         --target "$target" \
         --upgrade \
         --only-binary=:all: \
-        --platform manylinux_2_28_x86_64 \
-        --platform manylinux_2_27_x86_64 \
-        --platform manylinux2014_x86_64 \
+        --platform "manylinux_2_28_${PMX_APPIMAGE_ARCH}" \
+        --platform "manylinux_2_27_${PMX_APPIMAGE_ARCH}" \
+        --platform "manylinux2014_${PMX_APPIMAGE_ARCH}" \
         --implementation cp \
         --python-version "$python_version" \
         --abi "$abi" \
@@ -547,7 +570,7 @@ if [ -d "$APP_DIR/bin" ]; then
 fi
 
 echo "🔍 Sanity check (ldd + presence of libfreeipmi)"
-export LD_LIBRARY_PATH="$APP_DIR/lib:$APP_DIR/lib/x86_64-linux-gnu:$APP_DIR/usr/lib:$APP_DIR/usr/lib/x86_64-linux-gnu"
+export LD_LIBRARY_PATH="$APP_DIR/lib:$APP_DIR/lib/${PMX_APPIMAGE_TRIPLET}:$APP_DIR/usr/lib:$APP_DIR/usr/lib/${PMX_APPIMAGE_TRIPLET}"
 
 if ! find "$APP_DIR/usr/lib" "$APP_DIR/lib" -maxdepth 3 -name 'libfreeipmi.so.17*' | grep -q .; then
   echo "❌ libfreeipmi.so.17 not found inside AppDir (ipmitool will fail)"
@@ -608,7 +631,7 @@ echo "🔨 Building unified AppImage v${VERSION}..."
 cd "$WORK_DIR"
 export NO_CLEANUP=1
 export APPIMAGE_EXTRACT_AND_RUN=1
-ARCH=x86_64 ./appimagetool --no-appstream --verbose "$APP_DIR" "$APPIMAGE_NAME"
+ARCH="$PMX_APPIMAGE_ARCH" ./appimagetool --no-appstream --verbose "${APPIMAGETOOL_ARGS[@]}" "$APP_DIR" "$APPIMAGE_NAME"
 
 # Move to dist directory
 mv "$APPIMAGE_NAME" "$DIST_DIR/"
