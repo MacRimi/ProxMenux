@@ -5516,6 +5516,7 @@
     "iosDescription": "Aggiungi il Monitor alla schermata iniziale per un accesso rapido.",
     "androidDescription": "Aggiungi il Monitor come app in modo che si apra come una normale applicazione.",
     "addToHomeScreen": "Aggiungi alla schermata Home",
+    "installApp": "Installa app",
     "ios": {
       "stepShareBefore": "Tocca il pulsante",
       "share": "Condividi",
@@ -5528,10 +5529,17 @@
     "android": {
       "stepOpenMenu": "Apri il menu del browser",
       "stepConfirm": "conferma toccando",
-      "install": "Installa"
+      "install": "Installa",
+      "or": "oppure"
     },
     "notNow": "Non adesso",
-    "neverAgain": "Non mostrare più"
+    "neverAgain": "Non mostrare più",
+    "insecure": {
+      "description": "Tramite HTTP non cifrato, Chrome può solo aggiungere una scorciatoia alla schermata Home.",
+      "howTo": "Per installare il Monitor come app, aprilo tramite HTTPS con un certificato valido: un certificato ACME di Proxmox in Amministratore → Sicurezza, un reverse proxy o Tailscale.",
+      "docs": "Come configurare HTTPS",
+      "shortcut": "Nel frattempo, puoi aggiungere una scorciatoia:"
+    }
   },
   "vmMetrics": {
     "title": "Metriche — {name}",
@@ -5681,6 +5689,7 @@
     }
   },
   "terminal": {
+    "rotateHint": "Ruota il telefono in orizzontale per vedere per intero i menu di ProxMenux.",
     "connected": "Collegato",
     "disconnected": "Disconnesso",
     "terminalCount": "{count} / 4 terminali",

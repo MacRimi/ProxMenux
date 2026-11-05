@@ -5516,6 +5516,7 @@
     "iosDescription": "Lägg till monitorn på din startskärm för snabb åtkomst.",
     "androidDescription": "Lägg till Monitor som en app så att den öppnas som en vanlig applikation.",
     "addToHomeScreen": "Lägg till på startskärmen",
+    "installApp": "Installera app",
     "ios": {
       "stepShareBefore": "Tryck på",
       "share": "Dela",
@@ -5528,10 +5529,17 @@
     "android": {
       "stepOpenMenu": "Öppna webbläsarmenyn",
       "stepConfirm": "bekräfta genom att trycka på",
-      "install": "Installera"
+      "install": "Installera",
+      "or": "eller"
     },
     "notNow": "Inte nu",
-    "neverAgain": "Visa inte igen"
+    "neverAgain": "Visa inte igen",
+    "insecure": {
+      "description": "Över okrypterad HTTP kan Chrome bara lägga till en genväg på startskärmen.",
+      "howTo": "För att installera Monitor som en app, öppna den över HTTPS med ett giltigt certifikat: ett ACME-certifikat från Proxmox under Administration → Säkerhet, en omvänd proxy eller Tailscale.",
+      "docs": "Så konfigurerar du HTTPS",
+      "shortcut": "Under tiden kan du lägga till en genväg:"
+    }
   },
   "vmMetrics": {
     "title": "Mätvärden — {name}",
@@ -5681,6 +5689,7 @@
     }
   },
   "terminal": {
+    "rotateHint": "Vrid telefonen till liggande läge för att se ProxMenux-menyerna i sin helhet.",
     "connected": "Ansluten",
     "disconnected": "Frånkopplad",
     "terminalCount": "{count} / 4 terminaler",

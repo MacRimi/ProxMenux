@@ -7,6 +7,7 @@ import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap,
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
+import { ONBOARDING_CLOSED_EVENT } from "./onboarding-carousel"
 
 interface ReleaseNote {
   date: string
@@ -533,11 +534,15 @@ export function useVersionCheck() {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
 
   useEffect(() => {
-    const lastSeenVersion = localStorage.getItem("proxmenux-last-seen-version")
-
-    if (lastSeenVersion !== APP_VERSION) {
-      setShowReleaseNotes(true)
+    if (localStorage.getItem("proxmenux-last-seen-version") === APP_VERSION) return
+    const show = () => setShowReleaseNotes(true)
+    if (localStorage.getItem("proxmenux-onboarding-seen")) {
+      show()
+      return
     }
+    // The welcome tour opens first; the notes follow once it is closed.
+    window.addEventListener(ONBOARDING_CLOSED_EVENT, show, { once: true })
+    return () => window.removeEventListener(ONBOARDING_CLOSED_EVENT, show)
   }, [])
 
   return { showReleaseNotes, setShowReleaseNotes }

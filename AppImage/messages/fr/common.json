@@ -5516,6 +5516,7 @@
     "iosDescription": "Ajoutez le moniteur à votre écran d'accueil pour un accès rapide.",
     "androidDescription": "Ajoutez le moniteur en tant qu'application pour qu'il s'ouvre comme une application normale.",
     "addToHomeScreen": "Ajouter à l'écran d'accueil",
+    "installApp": "Installer l'application",
     "ios": {
       "stepShareBefore": "Appuyez sur le",
       "share": "Partager",
@@ -5528,10 +5529,17 @@
     "android": {
       "stepOpenMenu": "Ouvrez le menu du navigateur",
       "stepConfirm": "confirmer en appuyant sur",
-      "install": "Installer"
+      "install": "Installer",
+      "or": "ou"
     },
     "notNow": "Pas maintenant",
-    "neverAgain": "Ne plus montrer"
+    "neverAgain": "Ne plus montrer",
+    "insecure": {
+      "description": "En HTTP non chiffré, Chrome peut seulement ajouter un raccourci à l'écran d'accueil.",
+      "howTo": "Pour installer le moniteur comme application, ouvrez-le en HTTPS avec un certificat valide : un certificat ACME de Proxmox dans Administrateur → Sécurité, un proxy inverse ou Tailscale.",
+      "docs": "Configurer HTTPS",
+      "shortcut": "En attendant, vous pouvez ajouter un raccourci :"
+    }
   },
   "vmMetrics": {
     "title": "Métriques — {name}",
@@ -5681,6 +5689,7 @@
     }
   },
   "terminal": {
+    "rotateHint": "Tournez le téléphone à l'horizontale pour voir les menus de ProxMenux en entier.",
     "connected": "Connecté",
     "disconnected": "Déconnecté",
     "terminalCount": "{count} / 4 bornes",

@@ -545,7 +545,7 @@ curl -X DELETE http://<host>:8008/api/auth/api-tokens/<token-id> \\
         {t.rich("apiTokens.outro", { apiLink, intLink })}
       </p>
 
-      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("https.heading")}</h2>
+      <h2 id="https" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("https.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("https.intro")}</p>
       <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
         {httpsItems.map((_, idx) => (

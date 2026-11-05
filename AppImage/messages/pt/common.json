@@ -5516,6 +5516,7 @@
     "iosDescription": "Adicione o monitor à sua tela inicial para acesso rápido.",
     "androidDescription": "Adicione o Monitor como um aplicativo para que ele abra como um aplicativo normal.",
     "addToHomeScreen": "Adicionar à tela inicial",
+    "installApp": "Instalar app",
     "ios": {
       "stepShareBefore": "Toque no",
       "share": "Compartilhar",
@@ -5528,10 +5529,17 @@
     "android": {
       "stepOpenMenu": "Abra o menu do navegador",
       "stepConfirm": "confirme tocando",
-      "install": "Instalar"
+      "install": "Instalar",
+      "or": "ou"
     },
     "notNow": "Agora não",
-    "neverAgain": "Não mostre novamente"
+    "neverAgain": "Não mostre novamente",
+    "insecure": {
+      "description": "Por HTTP sem criptografia, o Chrome só pode adicionar um atalho à tela inicial.",
+      "howTo": "Para instalar o Monitor como aplicativo, abra-o por HTTPS com um certificado válido: um certificado ACME do Proxmox em Administrador → Segurança, um proxy reverso ou o Tailscale.",
+      "docs": "Como configurar o HTTPS",
+      "shortcut": "Enquanto isso, você pode adicionar um atalho:"
+    }
   },
   "vmMetrics": {
     "title": "Métricas — {name}",
@@ -5681,6 +5689,7 @@
     }
   },
   "terminal": {
+    "rotateHint": "Gire o celular na horizontal para ver os menus do ProxMenux por completo.",
     "connected": "Conectado",
     "disconnected": "Desconectado",
     "terminalCount": "{count} / 4 terminais",

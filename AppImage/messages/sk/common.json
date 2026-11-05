@@ -5515,6 +5515,7 @@
     "iosDescription": "Pridajte Monitor na plochu, aby bol rýchlo poruke.",
     "androidDescription": "Pridajte Monitor ako aplikáciu, aby sa otváral ako bežná appka.",
     "addToHomeScreen": "Pridať na plochu",
+    "installApp": "Inštalovať aplikáciu",
     "ios": {
       "stepShareBefore": "Ťuknite na",
       "share": "Zdieľať",
@@ -5527,10 +5528,17 @@
     "android": {
       "stepOpenMenu": "Otvorte menu prehliadača",
       "stepConfirm": "potom potvrďte ťuknutím na",
-      "install": "Inštalovať"
+      "install": "Inštalovať",
+      "or": "alebo"
     },
     "notNow": "Teraz nie",
-    "neverAgain": "Už nezobrazovať"
+    "neverAgain": "Už nezobrazovať",
+    "insecure": {
+      "description": "Cez nešifrované HTTP môže Chrome pridať na plochu iba odkaz.",
+      "howTo": "Ak chcete Monitor nainštalovať ako aplikáciu, otvorte ho cez HTTPS s platným certifikátom: certifikát ACME z Proxmoxu v Správa → Bezpečnosť, reverzný proxy alebo Tailscale.",
+      "docs": "Ako nastaviť HTTPS",
+      "shortcut": "Zatiaľ môžete pridať odkaz:"
+    }
   },
   "vmMetrics": {
     "title": "Metriky — {name}",
@@ -5680,6 +5688,7 @@
     }
   },
   "terminal": {
+    "rotateHint": "Otočte telefón na šírku, aby ste videli celé ponuky ProxMenux.",
     "connected": "Pripojené",
     "disconnected": "Odpojené",
     "terminalCount": "{count} zo 4 terminálov",

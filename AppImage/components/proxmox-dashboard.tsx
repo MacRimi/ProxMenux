@@ -489,7 +489,9 @@ function MonitorDashboard({ product }: { product: Product }) {
       )}
 
       <header
-        className="border-b border-border bg-card sticky top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
+        // On a short screen (a phone turned sideways) the header and the bar below
+        // scroll with the page instead of covering half of it.
+        className="border-b border-border bg-card sticky [@media(max-height:500px)]:static top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
         onClick={() => setShowHealthModal(true)}
       >
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
@@ -635,7 +637,7 @@ function MonitorDashboard({ product }: { product: Product }) {
       </header>
 
       <div
-        className={`sticky z-40 bg-background
+        className={`sticky [@media(max-height:500px)]:static z-40 bg-background
           top-[120px] lg:top-[76px]
           transition-all duration-700 ease-in-out
           ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0 pointer-events-none"}
