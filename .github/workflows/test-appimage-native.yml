@@ -45,7 +45,8 @@ jobs:
           test "$(uname -m)" = '${{ matrix.arch }}'
           python -B -m unittest discover -s tests -p test_appimage_arch.py -v
       - name: Refresh package indexes for bundled monitoring tools
-        run: sudo apt-get update
+        # Third-party runner repositories occasionally fail; the build reports missing tools.
+        run: sudo apt-get update || true
       - name: Build native AppImage without publishing it
         run: bash AppImage/scripts/build_appimage.sh
       - name: Reject foreign ELF payloads

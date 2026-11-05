@@ -70,8 +70,15 @@ if [ ! -s "$WORK_DIR/appimagetool" ]; then
     cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
 fi
 
+APPIMAGETOOL_ARGS=()
 if [ "$PMX_APPIMAGE_ARCH" = aarch64 ]; then
     echo "f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158  $WORK_DIR/appimagetool" | sha256sum -c -
+    # Without --runtime-file, appimagetool 1.9.1 embeds the unpinned
+    # `continuous` runtime. Use a released runtime checked by its digest.
+    RUNTIME_URL="https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-aarch64"
+    wget --tries=3 --timeout=60 "$RUNTIME_URL" -O "$WORK_DIR/runtime-aarch64"
+    echo "00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444  $WORK_DIR/runtime-aarch64" | sha256sum -c -
+    APPIMAGETOOL_ARGS=(--runtime-file "$WORK_DIR/runtime-aarch64")
 fi
 
 # Create directory structure
@@ -623,7 +630,7 @@ echo "🔨 Building unified AppImage v${VERSION}..."
 cd "$WORK_DIR"
 export NO_CLEANUP=1
 export APPIMAGE_EXTRACT_AND_RUN=1
-ARCH="$PMX_APPIMAGE_ARCH" ./appimagetool --no-appstream --verbose "$APP_DIR" "$APPIMAGE_NAME"
+ARCH="$PMX_APPIMAGE_ARCH" ./appimagetool --no-appstream --verbose "${APPIMAGETOOL_ARGS[@]}" "$APP_DIR" "$APPIMAGE_NAME"
 
 # Move to dist directory
 mv "$APPIMAGE_NAME" "$DIST_DIR/"
