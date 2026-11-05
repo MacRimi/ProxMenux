@@ -373,6 +373,18 @@ healthcheck_probe_url() {
     && (( status == 1 || status == 8 || status == 52 || status == 56 ))
 }
 
+# The address of the check, without the default port of its scheme: an
+# application that records its first request, like Nextcloud's trusted domain,
+# then sees the same host a browser sends.
+healthcheck_url() {
+  local port=$1
+  if [[ ( $HC_SCHEME == https && $port == 443 ) || ( $HC_SCHEME == http && $port == 80 ) ]]; then
+    printf '%s://%s%s' "$HC_SCHEME" "$IP" "$HC_PATH"
+  else
+    printf '%s://%s:%s%s' "$HC_SCHEME" "$IP" "$port" "$HC_PATH"
+  fi
+}
+
 # Any of the addresses answering means the application is up; HC_URL keeps the
 # one that answered.
 healthcheck_probe() {
@@ -2351,12 +2363,12 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
   (( HC_STABILITY < HC_TIMEOUT )) \
     || die "$(translate "The stability period must be shorter than the healthcheck timeout")"
   [[ -n $IP ]] || die "$(translate "The healthcheck cannot run without an IP address")"
-  HC_URL="${HC_SCHEME}://${IP}:${HC_PORT}${HC_PATH}"
+  HC_URL=$(healthcheck_url "$HC_PORT")
   HC_URLS=("$HC_URL")
   while IFS= read -r HC_ALT_PORT; do
     [[ $HC_ALT_PORT =~ ^[0-9]+$ && $HC_ALT_PORT -ge 1 && $HC_ALT_PORT -le 65535 ]] \
       || die "$(translate "Invalid healthcheck port")"
-    HC_URLS+=("${HC_SCHEME}://${IP}:${HC_ALT_PORT}${HC_PATH}")
+    HC_URLS+=("$(healthcheck_url "$HC_ALT_PORT")")
   done < <(jq -r '.alternative_ports[]? | tostring' <<<"$STARTUP_HEALTHCHECK")
   HC_ANY_STATUS=$(jq -r '.accept_any_status // false' <<<"$STARTUP_HEALTHCHECK")
   HC_ACCEPT_NON_HTTP=$(jq -r '.accept_non_http // false' <<<"$STARTUP_HEALTHCHECK")

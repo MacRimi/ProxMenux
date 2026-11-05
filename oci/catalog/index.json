@@ -19414,6 +19414,38 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false
+    },
+    {
+      "id": "nextcloud-mariadb",
+      "provider": "linuxserver",
+      "template_family": "curated-profile",
+      "title": "Nextcloud MariaDB",
+      "repository": "https://github.com/linuxserver/docker-nextcloud",
+      "description": "LinuxServer Nextcloud, MariaDB 10.11 and Redis 7 in three native OCI LXC containers. /config and /data are separate; user files can use a host/NAS directory while database state stays in local managed storage.",
+      "website": "https://nextcloud.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "lscr.io/linuxserver/nextcloud:latest",
+      "category": "productivity",
+      "category_label": "Productivity & Workflows",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/nextcloud-mariadb.json",
+      "template_id": "image-nextcloud-mariadb",
+      "template": "apps/nextcloud-mariadb.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false
     }
   ],
   "discovery": {
