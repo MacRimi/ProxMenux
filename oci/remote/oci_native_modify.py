@@ -17,6 +17,7 @@ import oci_instance_transaction as transaction
 import oci_resource_modify as resources
 import oci_gpu_devices as devices
 import oci_host_mounts as host_mounts
+import oci_mount_idmap as mount_idmap
 from oci_installation_state import parse_config, sha
 from oci_ui import translate, msg_info, msg_ok, msg_warn
 
@@ -102,7 +103,7 @@ def changes(record, candidate, config):
                 fields = {k for k in original.keys() | mount.keys() if original.get(k) != mount.get(k)}
                 native_fields = {'read_only', 'backup', 'create_if_missing'}
                 if original['type'] == mount['type'] == 'host-bind':
-                    native_fields.add('source')
+                    native_fields.update(('source', 'idmap'))
                 if fields - native_fields:
                     return None
     return changed
@@ -203,6 +204,9 @@ def plan(record, candidate, config):
                     source = host_mounts.valid_path(mount['source'])
                     if not Path(source).is_dir() and not mount.get('create_if_missing'):
                         raise ValueError(translate('The host directory does not exist'))
+                fields.pop('idmap', None)
+                if mapping := mount_idmap.normalize_idmap(mount.get('idmap')):
+                    fields['idmap'] = mapping
                 fields.update(mp=target, backup='1' if mount['backup'] else '0',
                               ro='1' if mount.get('read_only') else '0')
                 values[actual[target]['key']] = source+','+','.join(k+'='+v for k, v in fields.items())
@@ -221,6 +225,8 @@ def plan(record, candidate, config):
                         raise ValueError(translate('The host directory does not exist'))
             values[key] = (f"{source},mp={target},backup={1 if mount['backup'] else 0},"
                            f"ro={1 if mount.get('read_only') else 0}")
+            if mapping := mount_idmap.normalize_idmap(mount.get('idmap')):
+                values[key] += ',idmap=' + mapping
     return {'values': values, 'delete': delete, 'restart': bool(changed - {'resources'}),
             'changed': sorted(changed)}
 
@@ -368,7 +374,7 @@ def apply(root, record, candidate, config, acknowledge_external_data=False):
         host_mounts.verify_sources(desired_sources)
         for mount in candidate['deployment'].get('mounts', []):
             if mount['type'] == 'host-bind' and mount.get('create_if_missing'):
-                Path(mount['source']).mkdir(parents=True, exist_ok=True)
+                mount_idmap.create_host_directory(mount, candidate['deployment'], candidate['template'], config)
         host_mounts.verify_sources(original_sources)
         # Capture newly-created directories before installing their mounts.
         pinned = {p: host_mounts.validate_source(p, declared=value.get('declared', False))

@@ -8,6 +8,7 @@ import uuid
 import oci_instances as instances
 import oci_gpu_devices as gpu_devices
 import oci_host_mounts as host_mounts
+import oci_mount_idmap as mount_idmap
 import oci_instance_transaction as transaction
 import oci_native_modify as native_modify
 from oci_installation_state import parse_config, sha
@@ -31,7 +32,7 @@ def _mount(key, value, vmid):
     if not source or not parts or any('=' not in part for part in parts):
         raise ValueError(f'{key}: {translate("Incomplete mount configuration")}')
     options = dict(part.split('=', 1) for part in parts)
-    if len(options) != len(parts) or set(options) - {'mp', 'size', 'backup', 'ro'}:
+    if len(options) != len(parts) or set(options) - {'mp', 'size', 'backup', 'ro', 'idmap'}:
         raise ValueError(f'{key}: {translate("Unsupported mount options")}')
     target = host_mounts.valid_path(options.get('mp'))
     read_only = options.get('ro', '0') == '1'
@@ -43,7 +44,10 @@ def _mount(key, value, vmid):
         host_mounts.validate_source(source)
         return {'type': 'host-bind', 'container_path': target, 'source': source,
                 'size_gb': None, 'backup': False, 'read_only': read_only,
-                'create_if_missing': False}
+                'create_if_missing': False,
+                **({'idmap': mount_idmap.normalize_idmap(options['idmap'])} if options.get('idmap') else {})}
+    if options.get('idmap'):
+        raise ValueError(translate('Mount ID mapping currently supports host directory mounts only'))
     if options.get('backup') != '1' or ':' not in source:
         raise ValueError(f'{key}: {translate("Proxmox volume adoption requires backup=1 and a volume ID")}')
     storage, volume = source.split(':', 1)
@@ -134,6 +138,9 @@ def _storage_change(key, value, deployment, vmid):
     for mount in deployment.get('mounts', []):
         if mount.get('container_path') == current['container_path']:
             mount.update({field: current[field] for field in ('source', 'size_gb', 'read_only')})
+            mount.pop('idmap', None)
+            if current.get('idmap'):
+                mount['idmap'] = current['idmap']
 
 
 def propose(record, config, member=False):
@@ -143,6 +150,8 @@ def propose(record, config, member=False):
         raise ValueError(translate('Only an installed standalone OCI instance can adopt external changes'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; nothing was adopted'))
+    if transaction.nested_mounts.idmapped_overlays(config):
+        raise ValueError(translate('An ID-mapped mount is shadowed by a recursive bind. Revert the manual mapping and apply it through OCI Modify.'))
     if transaction.nested_mounts.stale(config):
         transaction.nested_mounts.follow(record['vmid'])
         config = instances.command('pct', 'config', str(record['vmid']))

@@ -1766,6 +1766,10 @@ if [[ $UNPRIVILEGED_FLAG == 0 ]]; then
   # Import with the standard idmap, unshift once while stopped, then switch the config.
   CREATE_UNPRIVILEGED_FLAG=1
 fi
+if jq -e 'any(.mounts[]?; .idmap != null and .idmap != "")' "$DEPLOYMENT_FILE" >/dev/null; then
+  oci_quiet python3 "$SCRIPT_DIR/oci_mount_idmap.py" validate --deployment "$DEPLOYMENT_FILE" --template "$TEMPLATE_FILE" --archive "$ARCHIVE_PATH" \
+    || die "$(translate "Could not validate the mount ID mapping")"
+fi
 CREATE_ARGS=(
   "$VMID" "$ARCHIVE_VOLUME"
   --hostname "$HOSTNAME"
@@ -1970,6 +1974,16 @@ fi
 while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSING GRANT_ACCESS; do
   [[ -n $TYPE ]] || continue
   [[ $TARGET == /* && $TARGET != *","* ]] || die "$(translate "Invalid container path:") $TARGET"
+  IDMAP=$(jq -r --arg target "$TARGET" '[.mounts[] | select(.container_path == $target) | .idmap] | first // empty' "$DEPLOYMENT_FILE")
+  IDMAP_OPT=""
+  [[ -z $IDMAP ]] || IDMAP_OPT=",idmap=${IDMAP}"
+  MOUNT_BIND_UID=$HOST_BIND_UID
+  MOUNT_BIND_GID=$HOST_BIND_GID
+  if [[ -n $IDMAP && ! -e $SOURCE && $CREATE_IF_MISSING == true ]]; then
+    OWNERS=$(python3 "$SCRIPT_DIR/oci_mount_idmap.py" owners --deployment "$DEPLOYMENT_FILE" --template "$TEMPLATE_FILE" --config "$CONF" --target "$TARGET") \
+      || die "$(translate "Could not validate the mount ID mapping")"
+    IFS=$'\t' read -r MOUNT_BIND_UID MOUNT_BIND_GID <<<"$OWNERS"
+  fi
   RO_OPT=""
   [[ $READ_ONLY == true ]] && RO_OPT=",ro=1"
   if [[ $TYPE == managed-volume ]]; then
@@ -1999,8 +2013,8 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
   elif [[ $TYPE == host-bind ]]; then
     [[ $SOURCE == /* && $SOURCE != *","* ]] || die "$(translate "Invalid host path:") $SOURCE"
     if [[ ! -e $SOURCE && $CREATE_IF_MISSING == true ]]; then
-      install -d -m 0775 -o "$HOST_BIND_UID" -g "$HOST_BIND_GID" "$SOURCE"
-      oci_log "Shared directory created: $SOURCE (uid=$HOST_BIND_UID gid=$HOST_BIND_GID)"
+      install -d -m 0775 -o "$MOUNT_BIND_UID" -g "$MOUNT_BIND_GID" "$SOURCE"
+      oci_log "Shared directory created: $SOURCE (uid=$MOUNT_BIND_UID gid=$MOUNT_BIND_GID)"
       MOUNT_NOTES+=("$(translate "Shared directory created:") $SOURCE")
     fi
     [[ -e $SOURCE ]] || die "$(translate "The host bind source does not exist:") $SOURCE"
@@ -2018,7 +2032,7 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
         python3 "${SCRIPT_DIR}/oci_instance_transaction.py" --root "$INSTANCE_ROOT" \
           pin-host-source "$VMID" --journal "$PROXMENUX_OCI_TRANSACTION" --source "$SOURCE"
       fi
-      MP_VALUE="${SOURCE},mp=${TARGET},backup=0${RO_OPT}"
+      MP_VALUE="${SOURCE},mp=${TARGET},backup=0${RO_OPT}${IDMAP_OPT}"
     elif [[ -f $SOURCE ]]; then
       [[ $SOURCE != *[[:space:]]* && $TARGET != *[[:space:]]* ]] \
         || die "$(translate "File bind mounts do not support spaces:") $SOURCE -> $TARGET"

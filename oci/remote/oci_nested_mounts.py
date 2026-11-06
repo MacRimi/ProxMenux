@@ -39,6 +39,10 @@ def groups(config):
             continue
         source, *rest = value.split(',')
         options = dict(item.split('=', 1) for item in rest if '=' in item)
+        # PVE applies the per-mount user namespace. A raw rbind above it
+        # would shadow that mapping and expose unmapped filesystem IDs.
+        if options.get('idmap'):
+            continue
         target = options.get('mp', '').strip('/')
         if (not target or UNSAFE.search(source) or UNSAFE.search(target) or source == '/'
                 or any(source == tree or source.startswith(tree + '/') for tree in SYSTEM_TREES)):
@@ -49,6 +53,18 @@ def groups(config):
         else:
             found[target] = [f'lxc.mount.entry: {source} {target} none rbind,rslave,create=dir 0 0']
     return [found[target] for target in sorted(found)]
+
+
+def idmapped_overlays(config):
+    """A raw recursive bind still covering PVE's ID-mapped mount point."""
+    targets=set()
+    for key,value in parse_config(config).items():
+        if re.fullmatch(r'mp[0-9]+',key):
+            opts=dict(item.split('=',1) for item in value.split(',')[1:] if '=' in item)
+            if opts.get('idmap'):
+                targets.add(opts.get('mp','').strip('/'))
+    return any(match and match[2] in targets
+               for match in (ENTRY.fullmatch(line) for line in config.decode().splitlines()))
 
 
 def without(config):

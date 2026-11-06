@@ -574,6 +574,8 @@ def normalize(record):
     for key, value in mount_lines:
         source = value.split(',', 1)[0]
         opts = options(value)
+        if opts.get('idmap'):
+            raise ValueError(translate('Mount ID mapping currently supports standalone OCI applications only'))
         target = opts.get('mp', '')
         if (not target.startswith('/') or target == '/' or '..' in Path(target).parts
                 or str(Path(target)) != target or any(target == other or target.startswith(other + '/')

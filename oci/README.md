@@ -449,6 +449,63 @@ The variables the image itself defines are imported with it and are not written 
 
 Where a path goes follows one rule. A path that holds content of the user, such as `/media`, `/downloads`, `/music` or `/backups`, is offered as a container disk or as a host directory, and the installation asks which. The list is in `catalog/volume-policy.json`. Every other path is state of the application and goes to a container disk without asking. Writing `"installation_choice": ["managed-volume", "host-bind"]` or `"default": "host-bind"` on a volume offers the host directory for a path that is not in that list.
 
+### Host directory ID mappings
+
+On Proxmox hosts that support per-mount `idmap`, an advanced installation can
+configure **Mount user mapping (idmap)** for host directories. The same setting
+is available in **Modify**. It is optional: an installation without a mapping
+continues to use the normal unprivileged container IDs.
+
+The first supported profile is a standalone, unprivileged, single-image
+application with directory bind mounts on a supported local filesystem.
+Managed volumes, application stacks, system mounts, directories containing
+nested host mounts and NFS directories are not supported by this profile.
+The container must use Proxmox's default unprivileged user namespace.
+A host that cannot apply a saved mapping
+refuses the operation instead of dropping the mapping.
+
+For example, a container that writes as `0:0` can share a directory owned by
+host user/group `2000:2000`:
+
+```json
+{
+  "type": "host-bind",
+  "source": "/srv/shared/downloads",
+  "container_path": "/downloads",
+  "backup": false,
+  "read_only": false,
+  "create_if_missing": true,
+  "idmap": "u:0:2000:1;g:0:2000:1"
+}
+```
+
+The Proxmox mount entry includes
+`idmap=u:0:2000:1;g:0:2000:1`. A file written by container root is owned by
+`2000:2000` on the host. For an application running as `1000:1000`, use
+`u:1000:2000:1;g:1000:2000:1` instead. The editor offers root/container-user
+presets and a custom mapping; the final review shows the selected mapping.
+
+For images that support them, `PUID`/`PGID` select the application's user
+inside its container; `idmap`
+controls how that user corresponds to owners on this mount. An ACL grants
+access but does not change the ownership of newly created files. An idmap
+does not recursively change ownership or alter the container's global
+`lxc.idmap`.
+
+A new host directory is created with the mapped application UID/GID only
+when both are explicitly covered by the mapping. An existing directory
+keeps its owners and contents. Overlapping ranges, host UID/GID zero,
+unsupported application identities and incompatible filesystems are
+rejected before the operation changes the container. Review the effective
+application user when using an image with its own `USER` or an entrypoint
+that changes users.
+
+The mapping is saved in `deployment.mounts` and preserved during image
+updates, modification, recreation and restore of the OCI record. A Proxmox
+backup still **does not contain host-directory data**: on another host,
+restore or mount that directory separately at the recorded source path,
+and ensure that the filesystem and Proxmox support the saved idmap.
+
 **`restart`**. With `unless-stopped`, `always` or `on-failure`, the watchdog is proposed by default: an application that stops on its own is started again.
 Its running history belongs to the installation UUID, not just the VMID. Before
 restarting a guest, it rechecks the saved record and the live ProxMenux identity

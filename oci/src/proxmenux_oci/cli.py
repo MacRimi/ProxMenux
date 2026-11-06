@@ -277,6 +277,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                           f"{translate('Host directory (not included in Proxmox backups)')}: {mount['source']}")
                 if mount['type'] == 'managed-volume' and mount.get('backup'):
                     target += f" ({translate('in backups')})"
+                if mount.get('idmap'):
+                    target += f" · idmap={mount['idmap']}"
                 lines.append(f"    {mount['container_path']} → {target}")
         for key, label in (("media", N_("Library")), ("application", N_("Application data")), ("transfer", N_("Consume/export"))):
             storage = plan.get(key)
@@ -294,6 +296,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                           else f"{translate('Container volume')} {mount.get('size_gb', '-')} GB {on} {mount['source']}")
                 if mount.get("read_only"):
                     target += f" ({translate('read-only')})"
+                if mount.get('idmap'):
+                    target += f" · idmap={mount['idmap']}"
                 lines.append(f"  {mount['container_path']} → {target}")
         if plan.get("extra_devices"):
             row(translate("Devices"), ", ".join(device["host_path"] for device in plan["extra_devices"]))
@@ -320,6 +324,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     target += f" ({translate('in backups')})"
             if mount.get("read_only"):
                 target += f" ({translate('read-only')})"
+            if mount.get('idmap'):
+                target += f" · idmap={mount['idmap']}"
             lines.append(f"  {mount['container_path']} → {target}")
     network = plan.get("network", {})
     if plan.get("host_monitor"):

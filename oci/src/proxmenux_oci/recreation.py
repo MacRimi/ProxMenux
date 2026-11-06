@@ -128,6 +128,9 @@ def modification_options(candidate):
         # Only the paths added by hand: the application's own volumes are not extra.
         ('paths', row(translate('Extra paths'), sum(1 for m in deployment.get('mounts', []) if m.get('custom')))),
     ]
+    from . import mount_idmap
+    if not candidate.get('stack') and mount_idmap.eligible(deployment) and mount_idmap.backend().supported():
+        options.append(('idmap', translate('Mount user mapping (idmap)')))
     if profile.get('shared_directories'):
         options.append(('shares', translate('Shared directories')))
     if profile.get('hardware_acceleration'):
@@ -160,6 +163,13 @@ def edit_setting(candidate, ui, setting):
         resources['memory_mb'] = positive_integer(ui, translate('RAM in MiB'), resources['memory_mb'], 128)
     elif setting == 'network':
         edit_network(deployment, ui)
+    elif setting == 'idmap':
+        from . import mount_idmap
+        if candidate.get('stack') or not mount_idmap.eligible(deployment):
+            raise ValueError(translate('Mount user mapping is only available for standalone unprivileged containers'))
+        mount_idmap.backend().ensure_supported()
+        mount_idmap.configure(ui, deployment, profile,
+                              config=candidate.get('observed', {}).get('config', '').encode())
     elif setting == 'shares':
         from .installer import ask_shared_directories
         deployment['mounts'] += ask_shared_directories(
