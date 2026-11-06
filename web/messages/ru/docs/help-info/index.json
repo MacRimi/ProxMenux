@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Справочник команд Proxmox — qm, pct, vzdump, zpool, pveversion | ProxMenux",
+    "description": "Подборка основных команд Proxmox VE и Linux по темам: проверка системы, управление виртуальными машинами и LXC (qm / pct), хранилища и диски, сеть, обновления, проброс GPU, ZFS, резервное копирование и восстановление, а также повседневные инструменты командной строки.",
+    "ogTitle": "Справочник команд Proxmox — qm, pct, vzdump, zpool",
+    "ogDescription": "Подборка наиболее полезных команд Proxmox VE и Linux по темам: система, виртуальные машины и контейнеры, хранилища, сеть, обновления, проброс GPU, ZFS, резервное копирование и инструменты командной строки.",
+    "twitterTitle": "Справочник команд Proxmox | ProxMenux",
+    "twitterDescription": "Подборка наиболее полезных команд Proxmox VE и Linux, сгруппированных по темам."
+  },
+  "header": {
+    "title": "Справка и информация",
+    "description": "Тематическая подборка полезных команд Linux и Proxmox VE. Девять категорий охватывают всё — от быстрой проверки с помощью pveversion до многострочных команд zfs send/receive. Подборка дополняет разделы ProxMenux, посвящённые GPU, дискам и общим ресурсам, и служит единым справочником.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Что это такое",
+    "body": "Справочник команд, которые действительно используются на хосте Proxmox, сгруппированных по темам. В ProxMenux можно выбрать номер, чтобы сразу выполнить команду, или вставить собственную команду в строку ввода; на этом сайте каждая категория представлена таблицей, из которой можно копировать команды."
+  },
+  "opening": {
+    "heading": "Открытие меню",
+    "body": "В главном меню ProxMenux нажмите <kbd>h</kbd>. Вы увидите следующее:",
+    "imageAlt": "Меню справки и информации с 9 категориями команд"
+  },
+  "categories": {
+    "heading": "Девять категорий",
+    "options": [
+      {
+        "icon": "Terminal",
+        "href": "/docs/help-info/system-commands",
+        "title": "Полезные системные команды",
+        "description": "pveversion, uptime, free, journalctl, hostnamectl, информация о текущем пользователе, аудит lynis, fastfetch."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/vm-ct-commands",
+        "title": "Управление ВМ и контейнерами",
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, снимки, клонирование."
+      },
+      {
+        "icon": "HardDrive",
+        "href": "/docs/help-info/storage-commands",
+        "title": "Хранилища и диски",
+        "description": "lsblk, blkid, smartctl, информация о монтировании, pvesm status, команды LVM."
+      },
+      {
+        "icon": "Network",
+        "href": "/docs/help-info/network-commands",
+        "title": "Сетевые команды",
+        "description": "ip / ss / nmcli, проверка сетевых мостов, ping / traceroute, запросы DNS, fail2ban-client."
+      },
+      {
+        "icon": "Package",
+        "href": "/docs/help-info/update-commands",
+        "title": "Обновления и пакеты",
+        "description": "apt update / dist-upgrade, apt-cache policy, запросы dpkg, проверка файлов репозиториев."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/gpu-commands",
+        "title": "Проброс GPU",
+        "description": "Проверки с помощью lspci / dmesg, проверка включения IOMMU, привязка к vfio-pci, использование GPU на хосте."
+      },
+      {
+        "icon": "Database",
+        "href": "/docs/help-info/zfs-commands",
+        "title": "Управление ZFS",
+        "description": "Команды zpool / zfs для просмотра состояния, работы с наборами данных и снимками, отправки и приёма данных, настройки ARC и выполнения TRIM."
+      },
+      {
+        "icon": "Archive",
+        "href": "/docs/help-info/backup-commands",
+        "title": "Резервное копирование и восстановление",
+        "description": "vzdump, qmrestore / pct restore, вспомогательные средства Proxmox Backup Server, операции со снимками."
+      },
+      {
+        "icon": "Wrench",
+        "href": "/docs/help-info/tools-commands",
+        "title": "Системные инструменты командной строки",
+        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — инструменты для повседневного администрирования."
+      }
+    ]
+  },
+  "tip": {
+    "title": "Доступно через глобальный поиск",
+    "body": "Все команды на этих страницах проиндексированы для поиска по документации. Если вы помните флаг или фрагмент команды, но не помните, на какой он странице, воспользуйтесь строкой поиска вверху — вы перейдёте прямо к нужной записи."
+  }
+}

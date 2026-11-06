@@ -708,7 +708,7 @@ change_language() {
     local new_language
     new_language=$(dialog --clear --backtitle "$BACKTITLE" \
                           --title "$(translate "Change Language")" \
-                          --menu "$(translate "Select a new language for the menu:")" 22 60 8 \
+                          --menu "$(translate "Select a new language for the menu:")" 22 60 9 \
                           "en" "$(translate "English")" \
                           "de" "$(translate "German")" \
                           "es" "$(translate "Spanish")" \
@@ -716,7 +716,8 @@ change_language() {
                           "it" "$(translate "Italian")" \
                           "pt" "$(translate "Portuguese")" \
                           "sk" "Slovenčina" \
-                          "sv" "Svenska" 3>&1 1>&2 2>&3)
+                          "sv" "Svenska" \
+                          "ru" "Русский" 3>&1 1>&2 2>&3)
     
     if [ -z "$new_language" ]; then
         dialog --clear --backtitle "$BACKTITLE" \

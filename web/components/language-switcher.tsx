@@ -35,6 +35,7 @@ export function LanguageSwitcher() {
     pt: t("pt"),
     sk: t("sk"),
     sv: t("sv"),
+    ru: t("ru"),
   }
 
   return (

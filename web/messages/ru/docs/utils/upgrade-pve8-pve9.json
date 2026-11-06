@@ -1,0 +1,335 @@
+{
+  "meta": {
+    "title": "Обновление PVE 8 до PVE 9 | Документация ProxMenux",
+    "description": "Три способа обновить Proxmox VE 8 до 9 (Debian Bookworm до Trixie + PVE 8 до 9): автоматически без участия пользователя, интерактивно или вручную по шагам официальной процедуры Proxmox. Предварительная проверка pve8to9, переход на новые репозитории, dist-upgrade с безопасными настройками по умолчанию, проверка после обновления. Запуск из веб-терминала запрещён.",
+    "ogTitle": "Обновление PVE 8 до PVE 9 | Документация ProxMenux",
+    "ogDescription": "Три способа перехода с Proxmox VE 8 на 9: автоматический, интерактивный и ручной."
+  },
+  "header": {
+    "title": "Обновление PVE 8 до PVE 9",
+    "description": "Выполняет обновление Proxmox VE с версии 8 до 9 по официальной процедуре Proxmox (Debian Bookworm до Trixie + PVE 8 до 9). Доступны три способа обновления — автоматический, интерактивный и ручной пошаговый, — а также отдельная предварительная проверка готовности без запуска обновления. Запуск из веб-терминала запрещён, поскольку потеря соединения во время обновления оставляет хост в неработоспособном состоянии.",
+    "section": "Утилиты"
+  },
+  "dangerCallout": {
+    "title": "Обновление до следующей основной версии вносит разрушительные изменения и необратимо",
+    "intro": "Эта операция перезаписывает базовую систему Debian (Bookworm → Trixie) и стек Proxmox непосредственно на хосте. <strong>Возможности отката нет</strong>. Перед началом убедитесь, что выполнены следующие условия:",
+    "items": [
+      "<strong>Проверенные резервные копии</strong> всех ВМ и контейнеров (PBS, vzdump, снимки ZFS — обязательно проверьте возможность восстановления).",
+      "<strong>Доступ к хосту через консоль / IPMI / iKVM</strong> на случай обрыва соединения SSH во время обновления.",
+      "На хосте установлены последние исправления для PVE 8. Скрипт сначала обновляет PVE 8; он не проверяет наличие конкретной версии 8.4.x.",
+      "Ceph (если используется) обновлён до версии 19.x Squid.",
+      "Не менее <strong>5 ГБ свободного места</strong> в корневой файловой системе, как рекомендует руководство Proxmox. Сам скрипт проверяет лишь наличие 1 ГБ свободного места в /var/cache/apt/archives."
+    ]
+  },
+  "modeMenu": {
+    "heading": "Меню выбора режима",
+    "intro": "При выборе этого пункта открывается меню с четырьмя вариантами: «Автоматический», «Интерактивный», «Предварительная проверка» и «Руководство по обновлению вручную». Три из них <em>выполняют</em> обновление или показывают, как его выполнить; отдельная предварительная проверка <em>проверяет</em> готовность и может предложить исправления.",
+    "imageAlt": "Меню выбора режима обновления PVE с версии 8 до 9 с вариантами «Автоматический», «Интерактивный», «Предварительная проверка» и «Руководство по обновлению вручную»"
+  },
+  "threeWays": {
+    "heading": "Три способа обновления",
+    "intro": "Автоматический и интерактивный режимы выполняют одну и ту же процедуру обновления, включая предварительные проверки и проверку после обновления. Они различаются обработкой запросов dpkg во время <code>dist-upgrade</code>. Руководство по обновлению вручную показывает команды, которые нужно выполнить, включая проверки; за выполнение каждого шага отвечаете вы.",
+    "auto": {
+      "title": "Автоматический / Без участия пользователя",
+      "summary": "Задаёт <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. Для изменённых файлов конфигурации dpkg использует действие по умолчанию, если оно доступно; в противном случае <strong>сохраняет текущий файл</strong> (<code>--force-confold</code>).",
+      "items": [
+        "Самый быстрый вариант — без запросов dpkg во время обновления",
+        "Лучше всего подходит для стандартных установок без изменённых файлов конфигурации",
+        "Риск: изменённая вами конфигурация сохраняется без уведомления и может перекрывать новые настройки по умолчанию"
+      ]
+    },
+    "interactive": {
+      "title": "Интерактивный",
+      "summary": "Та же процедура, но пользователь отвечает на каждый запрос dpkg о конфликтах файлов конфигурации. Медленнее, зато с максимальной прозрачностью.",
+      "items": [
+        "Вы видите каждый конфликт конфигурации и принимаете решение",
+        "Лучше всего подходит, если вы изменяли <code>/etc/lvm</code>, <code>/etc/ssh</code> и т. д.",
+        "Сверяйтесь с таблицей рекомендуемых ответов в приведённой ниже процедуре обновления вручную"
+      ]
+    },
+    "manual": {
+      "title": "Руководство по обновлению вручную",
+      "summary": "Показывает процедуру из 17 шагов в режиме только для чтения, точно следуя официальной вики Proxmox по обновлению. Выполняйте команды вручную в отдельной командной оболочке.",
+      "items": [
+        "Максимальный контроль — каждую команду вводите вы",
+        "Лучше всего подходит, если вы хотите изучить процедуру или ничему не доверяете",
+        "Скрипт показывает шаги; ничего не выполняется автоматически"
+      ]
+    }
+  },
+  "precheckCallout": {
+    "title": "Также доступна отдельная предварительная проверка",
+    "body": "Пункт 3 — <strong>Выполнить проверку PVE перед обновлением с 8 до 9</strong> — запускает официальную проверку Proxmox <code>pve8to9 --full</code>, предлагает исправить распространённые проблемы, препятствующие обновлению, с пошаговыми подсказками, а затем <strong>завершает работу</strong>. Используйте его перед обновлением или после исправлений вручную. Автоматический и интерактивный режимы также выполняют эту проверку; руководство по обновлению вручную предлагает выполнить её самостоятельно."
+  },
+  "webTerminal": {
+    "heading": "Почему запуск из веб-терминала заблокирован",
+    "body": "Автоматический и интерактивный режимы обнаруживают <code>termproxy</code> / <code>vncshell</code> в цепочке родительских процессов и отказываются запускаться, если только сеанс не установлен через SSH или не задана <code>PVE_ALLOW_WEBTERM=1</code>. Предварительная проверка и руководство по обновлению вручную ничего не изменяют и запускаются в любой среде. Причина: веб-терминал Proxmox обслуживается <code>pveproxy</code> — одной из служб, обновляемых в ходе процедуры. Как только <code>pveproxy</code> перезапускается, сеанс терминала обрывается, а вместе с ним прекращает работу и запущенный в нём скрипт обновления. Хост остаётся частично обновлённым, без надёжного способа продолжить обновление.",
+    "warningTitle": "Используйте SSH или физическую консоль / IPMI / iKVM",
+    "warningBody": "SSH — наиболее распространённый вариант. Запустите его внутри <code>tmux</code> или <code>screen</code>, чтобы обновление не прервалось при кратковременном сетевом сбое. Диалог подтверждения обновления напоминает, что его следует запускать из консоли или через SSH внутри tmux/screen."
+  },
+  "auto": {
+    "heading": "Автоматический режим / режим без участия пользователя",
+    "intro": "Для запросов при установке пакетов и обработке файлов конфигурации используются значения по умолчанию из таблицы ниже. Подтверждение обновления, сводка обновления PVE 8, все предлагаемые исправления по результатам предварительных проверок и запрос на перезагрузку по-прежнему отображаются.",
+    "behaviourHeading": "Особенности автоматического режима",
+    "behaviourTable": {
+      "settingHeader": "Параметр",
+      "effectHeader": "Результат",
+      "rows": [
+        {
+          "settingRich": "<code>ASSUME_YES=1</code>",
+          "effectRich": "Внутренний флаг — скрипт сам отвечает на свои вопросы «да/нет», например о переходе на no-subscription после ошибки 401"
+        },
+        {
+          "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
+          "effectRich": "apt / dpkg выполняются без отображения запросов debconf"
+        },
+        {
+          "settingRich": "<code>--force-confdef</code>",
+          "effectRich": "Для неизменённых файлов конфигурации: установить новую версию от сопровождающего пакета"
+        },
+        {
+          "settingRich": "<code>--force-confold</code>",
+          "effectRich": "Для изменённых файлов: использовать действие dpkg по умолчанию, если оно доступно; иначе <strong>сохранить вашу версию</strong>."
+        }
+      ]
+    },
+    "flowHeading": "Порядок работы в автоматическом режиме",
+    "flowIntro": "Шесть последовательных этапов. На этапе 2 репозитории PVE 8 переключаются на no-subscription (списки enterprise и Ceph отключаются, <code>/etc/apt/sources.list</code> перезаписывается) до отображения сводки обновления, затем обновляются пакеты; на этапе 3 записывается конфигурация репозиториев PVE 9. При сбое выполнение останавливается без отката этих изменений; если обновление PVE 8 завершается ошибкой или отменяется, переход на PVE 9 не начинается, но изменения репозиториев PVE 8 сохраняются. На этапе 5 выполняется PVE 9 <code>dist-upgrade</code>.",
+    "flowDiagram": "1. ПРОВЕРКИ\nЗаблокировать termproxy / vncshell; подтвердить обновление; запретить выполнение на PVE 9.\n\n2. ПОДГОТОВКА PVE 8\nscripts/global/update-pve8.sh\nПереключить репозитории PVE 8 на no-subscription и перезаписать sources.list;\nобновить пакеты PVE 8; остановиться при ошибке или отмене обновления.\npve8to9 --full (могут быть предложены исправления).\nПроверить свободное место и сетевое подключение; Ceph 19.x Squid на гиперконвергентных узлах.\n\n3. ПЕРЕХОД НА НОВЫЕ РЕПОЗИТОРИИ\nBookworm → Trixie; записать файлы .sources в формате deb822.\nЗакомментировать устаревшие файлы .list; apt-get update.\n\n4. ПРОВЕРКА КАНДИДАТА PVE 9\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nОстановиться, если версия кандидата не 9.x или предполагается удаление proxmox-ve.\n\n5. ОБНОВЛЕНИЕ\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nПри отсутствии подписки: отключить pve-enterprise.sources.\nЖурнал: /var/log/pve8-a-pve9-<timestamp>.log\n\n6. ПРОВЕРКА И ПЕРЕЗАГРУЗКА\nEFI: apt install grub-efi-amd64\npve8to9 --full; просмотреть результаты и запрос на перезагрузку.",
+    "preflightHeading": "Предварительная проверка: что проверяется",
+    "preflightTable": {
+      "checkHeader": "Проверка",
+      "whyHeader": "Почему это важно",
+      "rows": [
+        {
+          "checkRich": "<strong>Блокировка веб-терминала</strong>",
+          "whyRich": "Предотвращает завершение командной оболочки, в которой выполняется обновление, в ходе самого обновления"
+        },
+        {
+          "checkRich": "<strong>Уже установлена версия 9.x</strong>",
+          "whyRich": "Прерывает выполнение, если на узле уже установлена PVE 9 (обновление не требуется)"
+        },
+        {
+          "checkRich": "<strong>Последняя версия PVE 8.4.x</strong>",
+          "whyRich": "Сначала обновляет PVE 8 до последнего уровня исправлений с помощью модуля обновления PVE 8; у старых версий 8.x другие предварительные требования к обновлению"
+        },
+        {
+          "checkRich": "<strong>pve8to9 --full</strong>",
+          "whyRich": "Собственная проверка готовности к обновлению от Proxmox; результаты FAIL блокируют обновление до устранения проблем"
+        },
+        {
+          "checkRich": "<strong>Свободное место на диске</strong>",
+          "whyRich": "≥ 1024 МБ свободного места в <code>/var/cache/apt/archives</code> (для загруженных файлов .deb)"
+        },
+        {
+          "checkRich": "<strong>Сетевое подключение</strong>",
+          "whyRich": "Проверка доступности <code>download.proxmox.com</code> с помощью ping — если узел недоступен, начинать нет смысла"
+        },
+        {
+          "checkRich": "<strong>Ceph 19.x Squid</strong>",
+          "whyRich": "Если Ceph установлен, его версия уже должна быть 19.x. PVE 9 не может работать с Ceph 17/18. Существуют флаги обхода проверки (<code>--ignore-ceph-check</code>, <code>--warn-ceph-check</code>), но используйте их только в том случае, если понимаете, что делаете"
+        }
+      ]
+    },
+    "distUpgradeHeading": "Команда dist-upgrade (автоматический режим)",
+    "distUpgradeCode": "apt-get -y \\\n    -o Dpkg::Options::='--force-confdef' \\\n    -o Dpkg::Options::='--force-confold' \\\n    dist-upgrade",
+    "distUpgradeOutro": "Вывод передаётся в stdout в реальном времени и одновременно записывается в <code>/var/log/pve8-a-pve9-&lt;timestamp&gt;.log</code> через tee. Вы видите всё — подавляются только запросы подтверждения и выбора.",
+    "postHeading": "Действия после обновления (автоматический режим)",
+    "postItems": [
+      "<strong>Узлы с EFI:</strong> устанавливается <code>grub-efi-amd64</code> (известная проблема, описанная в документации Proxmox: при обновлении этот пакет не устанавливается автоматически, а без него следующая загрузка завершится сбоем).",
+      "<strong>Репозиторий Enterprise без подписки.</strong> При обновлении pve-manager 9 добавляет <code>pve-enterprise.sources</code>; в режиме без подписки скрипт задаёт для него значение <code>Enabled: false</code>.",
+      "<strong>Повторный запуск <code>pve8to9 --full</code>.</strong> Выявляет оставшиеся проблемы, которые обновление не устранило. Если обнаружены ошибки FAIL, появляется то же меню пошагового исправления, что и при предварительной проверке.",
+      "<strong>Запрос на перезагрузку.</strong> «РЕКОМЕНДУЕТСЯ перезагрузить систему сейчас, чтобы загрузить новое ядро и службы. Перезагрузить сейчас?» Отказывайтесь только при наличии конкретной причины — работа со старым ядром после крупного обновления сопряжена с риском."
+    ]
+  },
+  "interactive": {
+    "heading": "Интерактивный режим",
+    "intro": "Общий порядок действий такой же, как в <autolink>автоматическом режиме</autolink>: те же предварительные проверки, тот же переход на новые репозитории и та же проверка после обновления. Единственное отличие — на этапе <code>dist-upgrade</code>: <strong>вы самостоятельно отвечаете на каждый запрос dpkg при конфликте файлов конфигурации</strong>. ProxMenux выполняет обновление через обычный <code>apt-get dist-upgrade</code> без флагов <code>--force-conf*</code>.",
+    "distUpgradeHeading": "Команда dist-upgrade (интерактивный режим)",
+    "distUpgradeCode": "apt-get dist-upgrade\n# (user answers each dpkg config-file conflict prompt as it appears)",
+    "whenHeading": "Когда стоит выбрать интерактивный режим",
+    "whenItems": [
+      "Вы изменили <code>/etc/lvm/lvm.conf</code>, <code>/etc/ssh/sshd_config</code>, <code>/etc/default/grub</code> или любой другой файл конфигурации, затрагиваемый обновлением.",
+      "Вы хотите точно знать, какие пакеты вызывают конфликты конфигурации, и принимать решение отдельно для каждого файла.",
+      "Вы обновляете узел в рабочей среде, где любые скрытые изменения недопустимы."
+    ],
+    "promptCalloutTitle": "Как отвечать на каждый запрос",
+    "promptCalloutBody": "Здесь также применима таблица рекомендуемых ответов из процедуры ручного обновления — см. раздел <dpkglink>Рекомендуемые ответы на запросы dpkg</dpkglink> в описании ручного обновления ниже. При любом запросе введите <strong>D</strong>, чтобы просмотреть различия перед принятием решения, или <strong>Z</strong>, чтобы перейти в командную оболочку."
+  },
+  "manual": {
+    "heading": "Процедура ручного обновления",
+    "intro": "Эта процедура соответствует содержимому пункта меню <strong>Руководство по ручному обновлению</strong>, основана на <wikilink>официальном руководстве по обновлению Proxmox с версии 8 до 9 в вики</wikilink> и разделена на 4 этапа. Таблица ответов на запросы dpkg дополнена оговорками из вики для sshd_config и chrony.conf, для которых в меню указан просто ответ Y. Скрипт <em>показывает</em> эти команды; вы вводите их самостоятельно в отдельной командной оболочке с правами root. Никакой автоматизации — всё под вашим контролем.",
+    "rootCalloutTitle": "Все команды требуют прав root",
+    "rootCalloutBody": "Выполняйте эти команды в командной оболочке с правами root, включая перенаправления и here-документы. Если вы используете <code>sudo</code>, убедитесь, что вся команда выполняется с правами root.",
+    "phase1Heading": "Этап 1 — Подготовка",
+    "phase1Intro": "Обновите хост до последней версии PVE 8.4.x, проверьте версию и Ceph (если используется), выполните предварительную проверку средствами Proxmox и запустите терминальный мультиплексор, чтобы сеанс сохранился при обрыве соединения.",
+    "phase1Code": "# Step 1 — Update PVE 8 to the latest 8.4+\napt update && apt dist-upgrade -y\n\n# Step 2 — Verify version (must be 8.4.1 or newer)\npveversion\n\n# Step 2.1 — Hyper-converged Ceph: must already be on 19.x Squid\nceph --version\n# If older, follow https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid\n\n# Step 3 — Run the official upgrade-readiness check\npve8to9 --full\n# If it warns about systemd-boot meta-package, remove it:\n#   apt remove systemd-boot\n\n# Step 4 — Start tmux or screen (so SSH disconnect doesn't kill the upgrade)\ntmux new-session -s upgrade\n# or\nscreen -S upgrade",
+    "phase2Heading": "Этап 2 — Миграция репозиториев",
+    "phase2Intro": "Во всех репозиториях Debian и Proxmox замените кодовое имя Bookworm на Trixie и переведите источники Proxmox на новый формат deb822. <strong>Выберите шаг 7 ИЛИ шаг 8</strong> в зависимости от наличия подписки Enterprise. Пропустите шаг 9, если не используете Ceph.",
+    "phase2Code": "# Step 5 — Debian: bookworm → trixie\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list\n\n# Step 6 — Same for the legacy enterprise list (only if you use enterprise)\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list.d/pve-enterprise.list\n\n# Step 7 — Add the new PVE 9 enterprise repo (deb822) — Enterprise users only\ncat > /etc/apt/sources.list.d/pve-enterprise.sources << EOF\nTypes: deb\nURIs: https://enterprise.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-enterprise\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8 — OR add the no-subscription repo (most home / lab users)\ncat > /etc/apt/sources.list.d/proxmox.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8.1 — Refresh and verify proxmox-ve candidate is 9.x\napt update && apt policy | sed -n '1,120p'\n\n# Step 9 — Update Ceph repo (only if you run Ceph)\ncat > /etc/apt/sources.list.d/ceph.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/ceph-squid\nSuites: trixie\nComponents: no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 10 — Remove old .list files now superseded by deb822 .sources\nrm -f /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/ceph.list\n\n# Step 11 — Final apt update\napt update",
+    "phase3Heading": "Этап 3 — Обновление с помощью dist-upgrade",
+    "phase3Intro": "Непосредственно обновление. Шаг 12 необязателен, но рекомендуется: он подавляет поток сообщений аудита во время обновления. Шаг 13 занимает больше всего времени — отвечайте на каждый запрос dpkg в соответствии с таблицей ниже. Шаг 13.1 предназначен только для систем с EFI и соответствует официальному списку известных проблем.",
+    "phase3Code": "# Step 12 — Disable kernel audit messages (optional)\nsystemctl disable --now systemd-journald-audit.socket\n\n# Step 13 — The main upgrade (this takes a while)\napt dist-upgrade\n# (answer prompts using the table below)\n\n# Step 13.1 — EFI hosts: install grub for EFI (per known issues)\n[ -d /sys/firmware/efi ] && apt install grub-efi-amd64",
+    "dpkgHeading": "Рекомендуемые ответы на запросы dpkg",
+    "dpkgIntro": "Эти ответы рекомендуются в официальном руководстве Proxmox. <strong>Y</strong> = установить новую версию от сопровождающего пакета (ваш файл будет перезаписан); <strong>N</strong> = сохранить текущий файл. Если сомневаетесь, всегда сначала просматривайте различия:",
+    "dpkgTable": {
+      "fileHeader": "Файл / запрос",
+      "answerHeader": "Рекомендуемый ответ",
+      "whyHeader": "Причина",
+      "rows": [
+        {
+          "fileRich": "/etc/issue",
+          "answerRich": "<strong>N</strong> (сохранить текущий файл)",
+          "whyRich": "Привычное приветственное сообщение",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/lvm/lvm.conf",
+          "answerRich": "<strong>Y</strong> (версия от сопровождающего пакета)",
+          "whyRich": "Для PVE 9 требуются новые настройки LVM по умолчанию",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/ssh/sshd_config",
+          "answerRich": "<strong>Y</strong>, если изменения затрагивают только настройки по умолчанию; сначала проверьте файлы с пользовательскими изменениями",
+          "whyRich": "Проверьте локальные настройки SSH и перед заменой файла убедитесь, что доступ сохранится. Изменения в стандартном файле включают переименованные параметры и комментарии.",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/default/grub",
+          "answerRich": "<strong>N</strong>, если файл был изменён",
+          "whyRich": "Здесь хранятся параметры загрузки (IOMMU, проброс PCI)",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/chrony/chrony.conf",
+          "answerRich": "<strong>Y</strong>, если файл не изменялся; сначала сохраните локальные настройки",
+          "whyRich": "В Trixie обновлены настройки синхронизации времени по умолчанию. Перед принятием нового файла перенесите локальные настройки в каталоги chrony conf.d / sources.d.",
+          "fileFont": true
+        },
+        {
+          "fileRich": "Перезапуск служб во время обновления",
+          "answerRich": "<strong>Yes</strong> (по умолчанию)",
+          "whyRich": "Позволяет обойтись без перезагрузки системы для большинства служб",
+          "fileFont": false
+        },
+        {
+          "fileRich": "<code>apt-listchanges</code>",
+          "answerRich": "Нажмите <kbd>q</kbd>",
+          "whyRich": "Просто закрывает программу постраничного просмотра — показанная информация представляет собой сводку изменений",
+          "fileFont": false
+        }
+      ]
+    },
+    "inspectCalloutTitle": "Разбор конкретного конфликта dpkg",
+    "inspectCalloutBody": "В любом запросе введите <strong>D</strong>, чтобы посмотреть различия между вашим текущим файлом и версией сопровождающего пакета, или <strong>Z</strong>, чтобы перейти в командную оболочку и принять решение позже. Оба варианта всегда безопаснее, чем действовать наугад.",
+    "phase4Heading": "Этап 4 — После обновления",
+    "phase4Intro": "Убедитесь, что обновление прошло без ошибок, перезагрузите систему для загрузки ядра PVE 9, проверьте новую версию и при желании переведите оставшиеся немногочисленные файлы <code>.list</code> старого формата в deb822.",
+    "phase4Code": "# Step 14 — Re-run the readiness check (should be much cleaner now)\npve8to9 --full\n\n# Step 15 — Reboot to load the new kernel and PVE 9 daemons\nreboot\n\n# Step 16 — After reboot, confirm PVE 9.x\npveversion\n# Should show pve-manager/9.x.x\n\n# Step 17 — Optional: modernise the remaining legacy .list files to deb822\napt modernize-sources\n# (keeps .list backups as .bak)"
+  },
+  "clusterCeph": {
+    "heading": "Кластер и Ceph",
+    "clusterCalloutTitle": "Кластер: обновляйте узлы по одному",
+    "clusterCalloutBody": "<strong>Не обновляйте</strong> несколько узлов одновременно. Перенесите гостевые системы с узла, обновите его, перезагрузите и проверьте его членство в кластере, прежде чем продолжать. Во время обновления живая миграция со старой версии PVE на новую работает; обратное направление обычно не поддерживается. Группы HA автоматически преобразуются в правила HA, когда все узлы работают под управлением PVE 9.",
+    "cephCalloutTitle": "Ceph: СНАЧАЛА обновите Ceph, затем Proxmox",
+    "cephCalloutBody": "Перед обновлением Proxmox Ceph уже должен работать на версии 19.x Squid. Следуйте официальной последовательности: Quincy 17 → Reef 18 → Squid 19, обновляя пакеты и поочерёдно перезапуская демоны Ceph в порядке, указанном в документации. Проверяйте <code>ceph --version</code> перед обновлением каждого узла Proxmox. Следуйте полной процедуре: <cephlink>Ceph — обновление с Reef до Squid в вики</cephlink>."
+  },
+  "troubleshooting": {
+    "heading": "Устранение неполадок",
+    "items": [
+      {
+        "title": "Скрипт прерывает работу: «Этот скрипт нельзя запускать из веб-терминала Proxmox»",
+        "bodyRich": "Откройте SSH (или используйте консоль / IPMI / iKVM) и повторите запуск оттуда. Сначала выполните <code>tmux new -s pveupgrade</code>, если хотите, чтобы кратковременный обрыв сети не прервал работу."
+      },
+      {
+        "title": "pve8to9 сообщает FAIL, а вариант 1 автоматического исправления выдаёт «команда не найдена»",
+        "bodyRich": "Если в ошибке упоминается <code>configure_repositories</code>, копия скрипта устарела: в текущем варианте исправления используются cleanup_duplicate_repos и ensure_repositories. Обновите эту копию или выберите вариант 2, чтобы просмотреть команды для ручного выполнения. <code>apt-get update</code> обновляет списки пакетов, но не устраняет все проблемы, блокирующие обновление."
+      },
+      {
+        "title": "Пробный запуск apt сообщает: «proxmox-ve будет УДАЛЁН»",
+        "bodyRich": "Новые репозитории недоступны или замена кодового имени не сработала. Проверьте <code>cat /etc/apt/sources.list.d/proxmox.sources</code> — в строке <code>Suites:</code> должно быть указано <code>trixie</code>, а не <code>bookworm</code>. Также убедитесь, что <code>apt-cache policy proxmox-ve</code> показывает версию 9.x из нового репозитория в качестве кандидата на установку."
+      },
+      {
+        "title": "dist-upgrade завершается ошибкой в процессе выполнения",
+        "bodyRich": "Выполните <code>apt-get -f install</code>, чтобы исправить нарушенные зависимости, затем повторите обновление. Если это не поможет, проверьте журнал <code>/var/log/pve8-a-pve9-&lt;timestamp&gt;.log</code> — последние строки обычно указывают на проблемный пакет. Не перезагружайте систему, пока <code>dpkg -l | grep ^iU</code> не перестанет выводить данные (то есть пока не останется частично установленных пакетов)."
+      },
+      {
+        "title": "Узел с EFI не загружается после перезагрузки",
+        "bodyRich": "Установка <code>grub-efi-amd64</code> после обновления устраняет эту проблему. Если вы пропустили этот шаг или он завершился ошибкой, загрузитесь с установочного ISO Proxmox в режиме восстановления, смонтируйте корневую файловую систему, войдите в неё через chroot и выполните <code>apt-get install grub-efi-amd64 &amp;&amp; update-grub</code>."
+      },
+      {
+        "title": "Графический интерфейс не загружается после обновления",
+        "bodyRich": "Выполните <code>systemctl status pveproxy</code> и <code>systemctl restart pveproxy</code>. Если проблема сохраняется, проверьте <code>journalctl -u pveproxy -b</code>, чтобы узнать точную ошибку."
+      },
+      {
+        "title": "Сеть не работает после перезагрузки",
+        "bodyRich": "Убедитесь, что <code>/etc/network/interfaces</code> по-прежнему ссылается на существующие устройства и что <code>ifupdown2</code> установлен: <code>apt install ifupdown2</code>. Если имена интерфейсов изменились, см. <netlink>Постоянные имена интерфейсов</netlink>."
+      },
+      {
+        "title": "Расщепление кластера (split-brain) после обновления одного узла",
+        "bodyRich": "Во время обновления поддерживаются смешанные кластеры с PVE 8 и PVE 9. Живая миграция со старых версий на новые работает; обратное направление, как правило, не поддерживается. Если обновлённый узел отображается как недоступный, проверьте <code>corosync</code> и конфигурацию QDevice и сети. Выполните <code>pvecm status</code> на каждом узле, чтобы убедиться в наличии кворума."
+      }
+    ]
+  },
+  "files": {
+    "heading": "Используемые файлы",
+    "code": "scripts/utilities/upgrade_pve8_to_pve9.sh                         # main upgrade orchestrator\nscripts/utilities/pve8to9_check.sh                                # pre-check (separate menu option)\nscripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh    # 17-step runbook\nscripts/global/update-pve8.sh                                     # PVE 8 worker (final patches)\n/etc/apt/sources.list                                             # bookworm → trixie sed\n/etc/apt/sources.list.d/proxmox.sources                           # created (deb822 PVE 9)\n/etc/apt/sources.list.d/ceph.sources                              # created if Ceph\n/etc/apt/sources.list.d/*.list                                    # legacy files commented out / removed\n/var/log/pve8-a-pve9-<timestamp>.log                              # full upgrade log"
+  },
+  "references": {
+    "heading": "Официальные источники",
+    "intro": "Процедура ручного обновления в скрипте точно соответствует этим официальным источникам. Если во время реального обновления возникают сомнения, следуйте официальной вики: ProxMenux помогает выполнить процедуру, но источником достоверной информации является Proxmox.",
+    "items": [
+      {
+        "href": "https://pve.proxmox.com/wiki/Upgrade_from_8_to_9",
+        "title": "Обновление с версии 8 до 9",
+        "desc": "Основная страница вики Proxmox об обновлении с версии 8 до 9. Авторитетный источник для каждой команды в приведённой выше процедуре ручного обновления."
+      },
+      {
+        "href": "https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid",
+        "title": "Обновление Ceph до Squid (19.x)",
+        "desc": "Обязательный предварительный шаг для гиперконвергентных узлов Ceph. Перед обновлением до PVE 9 необходимо обновить Ceph до версии 19.x Squid."
+      },
+      {
+        "href": "https://pve.proxmox.com/wiki/Roadmap",
+        "title": "План развития Proxmox VE",
+        "desc": "Примечания к выпуску PVE 9 и изменения по сравнению с 8.x — прочитайте перед обновлением, чтобы знать, чего ожидать."
+      },
+      {
+        "href": "https://www.debian.org/releases/trixie/releasenotes",
+        "title": "Примечания к выпуску Debian Trixie",
+        "desc": "PVE 9 поставляется на базе Debian Trixie. Прочитайте примечания к выпуску Debian, чтобы узнать об изменениях базовой ОС, которые также затрагивают ваш хост."
+      },
+      {
+        "href": "https://forum.proxmox.com/forums/proxmox-ve-installation-and-configuration.16/",
+        "title": "Форум по установке Proxmox VE",
+        "desc": "Если во время обновления что-то пойдёт не так, сначала поищите информацию на этом форуме — скорее всего, кто-то уже столкнулся с такой же нетипичной ситуацией."
+      },
+      {
+        "href": "https://pve.proxmox.com/wiki/Backup_and_Restore",
+        "title": "Резервное копирование и восстановление",
+        "desc": "Обновление до новой основной версии необратимо. Перед началом убедитесь, что резервные копии создаются регулярно и надлежащим образом."
+      }
+    ]
+  },
+  "video": {
+    "heading": "Видеоинструкция",
+    "intro": "Хотите сначала посмотреть весь процесс обновления от начала до конца, прежде чем выполнять его самостоятельно? В этом видеоруководстве показан процесс обновления с помощью ProxMenux в реальном времени.",
+    "title": "ProxMenux — пошаговое руководство по обновлению Proxmox VE с версии 8 до 9",
+    "caption": "Внешнее видео на YouTube. Воспроизводится в режиме повышенной конфиденциальности (файлы cookie не используются, пока вы не запустите воспроизведение)."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Обновление системы Proxmox",
+        "tail": " — для регулярных обновлений в пределах одной основной версии (8.4.1 → 8.4.5 и т. д.)."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Обзор утилит",
+        "tail": " — вернуться к обзору раздела."
+      }
+    ]
+  }
+}

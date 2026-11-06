@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Команды Proxmox для работы с хранилищами и дисками — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
+    "description": "Справочник команд для работы с хранилищами и дисками в Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm status, qm importdisk и qemu-img convert для операций с дисками виртуальных машин.",
+    "ogTitle": "Команды Proxmox для работы с хранилищами и дисками — lsblk, LVM, pvesm, qm importdisk",
+    "ogDescription": "Справочник команд для работы с хранилищами и дисками в Proxmox VE — просмотр сведений о дисках, LVM, точки монтирования, управление хранилищами Proxmox, импорт дисков виртуальных машин и преобразование образов.",
+    "twitterTitle": "Команды Proxmox для работы с хранилищами | ProxMenux",
+    "twitterDescription": "Команды для просмотра сведений о дисках и точках монтирования, управления LVM и хранилищами Proxmox, импорта и преобразования дисков виртуальных машин."
+  },
+  "header": {
+    "title": "Хранилища и диски",
+    "description": "Подборка справочных команд для просмотра сведений о хранилищах на узлах Proxmox: блочные устройства, разделы, точки монтирования, тома LVM, конфигурация хранилищ Proxmox и несколько операций с дисками виртуальных машин (importdisk, qemu-img convert).",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Быстрый обзор дисков",
+    "body": "<code>lsblk</code> показывает блочные устройства и разделы в виде дерева. Просмотрите постоянные идентификаторы с помощью <code>ls -lh /dev/disk/by-id/</code>: для одного и того же диска они обычно остаются неизменными после перезагрузок и изменения порядка устройств. Замена диска или изменение способа, которым контроллер предоставляет его идентификационные данные, может изменить путь by-id этого диска."
+  },
+  "commandGroups": [
+    {
+      "title": "Сведения о дисках",
+      "commands": [
+        {
+          "command": "lsblk",
+          "description": "Показать список блочных устройств и разделов"
+        },
+        {
+          "command": "fdisk -l",
+          "description": "Показать список дисков с подробными сведениями"
+        },
+        {
+          "command": "blkid",
+          "description": "Показать UUID и тип файловой системы блочных устройств"
+        },
+        {
+          "command": "ls -lh /dev/disk/by-id/",
+          "description": "Показать постоянные идентификаторы дисков"
+        },
+        {
+          "command": "parted -l",
+          "description": "Подробная схема разделов с информацией GPT"
+        }
+      ]
+    },
+    {
+      "title": "Использование хранилищ",
+      "commands": [
+        {
+          "command": "df -h",
+          "description": "Показать использование дискового пространства по точкам монтирования"
+        },
+        {
+          "command": "du -sh /path",
+          "description": "Показать размер каталога"
+        },
+        {
+          "command": "mount | grep ^/dev",
+          "description": "Показать смонтированные устройства хранения"
+        },
+        {
+          "command": "cat /proc/mounts",
+          "description": "Показать все активные монтирования по данным ядра"
+        }
+      ]
+    },
+    {
+      "title": "Управление LVM",
+      "commands": [
+        {
+          "command": "pvdisplay",
+          "description": "Показать физические тома (LVM)"
+        },
+        {
+          "command": "vgdisplay",
+          "description": "Показать группы томов (LVM)"
+        },
+        {
+          "command": "lvdisplay",
+          "description": "Показать логические тома (LVM)"
+        },
+        {
+          "command": "pvs",
+          "description": "Краткая информация о физических томах"
+        },
+        {
+          "command": "vgs",
+          "description": "Краткая информация о группах томов"
+        },
+        {
+          "command": "lvs",
+          "description": "Краткая информация о логических томах"
+        }
+      ]
+    },
+    {
+      "title": "Хранилища Proxmox",
+      "commands": [
+        {
+          "command": "cat /etc/pve/storage.cfg",
+          "description": "Показать конфигурацию хранилищ Proxmox"
+        },
+        {
+          "command": "pvesm status",
+          "description": "Показать состояние всех пулов хранения"
+        },
+        {
+          "command": "pvesm status --enabled 1",
+          "description": "Показать список настроенных и включённых хранилищ"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Показать содержимое указанного хранилища"
+        },
+        {
+          "command": "pvesm scan nfs <server>",
+          "description": "Обнаружить экспортируемые ресурсы NFS на сервере"
+        }
+      ]
+    },
+    {
+      "title": "Операции с дисками",
+      "commands": [
+        {
+          "command": "qm importdisk <vmid> <image_path> <storage>",
+          "description": "Импортировать образ диска как неиспользуемый диск ВМ; подключить его отдельно"
+        },
+        {
+          "command": "qm set <vmid> -<bus><index> <disk_path>",
+          "description": "Назначить физический диск ВМ (в режиме прямого проброса)"
+        },
+        {
+          "command": "qemu-img convert -O <format> <input> <output>",
+          "description": "Преобразовать формат образа диска, когда он не используется"
+        }
+      ]
+    },
+    {
+      "title": "Состояние дисков по SMART",
+      "commands": [
+        {
+          "command": "smartctl --scan",
+          "description": "Показать список устройств на хосте с поддержкой SMART"
+        },
+        {
+          "command": "smartctl -i /dev/<disk>",
+          "description": "Основные сведения об устройстве (модель, прошивка, серийный номер)"
+        },
+        {
+          "command": "smartctl -H /dev/<disk>",
+          "description": "Быстрая проверка состояния — общий результат PASSED / FAILED"
+        },
+        {
+          "command": "smartctl -A /dev/<disk>",
+          "description": "Только атрибуты SMART (необработанные значения, пороговые значения)"
+        },
+        {
+          "command": "smartctl -a /dev/<disk>",
+          "description": "Полная информация SMART — сведения + атрибуты + журнал самотестирования"
+        },
+        {
+          "command": "smartctl -t short /dev/<disk>",
+          "description": "Запустить короткое самотестирование (~2 минуты, выполняется в фоновом режиме)"
+        },
+        {
+          "command": "smartctl -t long /dev/<disk>",
+          "description": "Запустить длительное самотестирование (занимает несколько часов, выполняется в фоновом режиме)"
+        },
+        {
+          "command": "smartctl -l selftest /dev/<disk>",
+          "description": "Просмотреть журнал самотестирования (результаты предыдущих тестов)"
+        },
+        {
+          "command": "smartctl -X /dev/<disk>",
+          "description": "Прервать выполняющееся самотестирование"
+        }
+      ]
+    },
+    {
+      "title": "Состояние дисков NVMe",
+      "commands": [
+        {
+          "command": "nvme list",
+          "description": "Показать список устройств NVMe, видимых ядру"
+        },
+        {
+          "command": "nvme smart-log /dev/<nvme>",
+          "description": "Журнал SMART для NVMe (температура, износ, ошибки)"
+        },
+        {
+          "command": "nvme id-ctrl /dev/<nvme>",
+          "description": "Сведения о контроллере (модель, прошивка, возможности)"
+        },
+        {
+          "command": "nvme error-log /dev/<nvme>",
+          "description": "Последние записи журнала ошибок NVMe"
+        }
+      ]
+    }
+  ],
+  "lvmTip": {
+    "title": "Краткие и полные команды LVM",
+    "bodyRich": "Доступны обе формы. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> выводят компактные таблицы с одной строкой на каждый физический том, группу томов или логический том соответственно. <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> предоставляют более подробный многострочный вывод. Краткие формы удобны для повседневных проверок."
+  },
+  "smartInfo": {
+    "title": "SMART для SATA/SAS и NVMe",
+    "bodyRich": "<strong>Диски SATA / SAS, включая SSD,</strong> можно проверять с помощью <code>smartctl</code> из пакета <code>smartmontools</code> (установлен по умолчанию в Proxmox). Укажите устройство, например <code>/dev/sda</code> или <code>/dev/sdb</code>. <strong>Диски NVMe</strong> используют другой собственный протокол. <code>smartctl</code> также поддерживает их, а <code>nvme</code> из пакета <code>nvme-cli</code> позволяет выполнять специфичные для NVMe запросы о контроллере, пространствах имён и состоянии. Если пакет отсутствует, установите его с помощью <code>apt install nvme-cli</code>."
+  },
+  "selfTestWarn": {
+    "title": "Самотестирование выполняется в фоновом режиме",
+    "bodyRich": "На поддерживаемых накопителях <code>smartctl -t short /dev/&lt;disk&gt;</code> и <code>smartctl -t long /dev/&lt;disk&gt;</code> запускают фоновые тесты и сразу возвращают управление. Проверяйте ход выполнения с помощью <code>smartctl -a /dev/&lt;disk&gt;</code> (ищите строку «Self-test routine in progress») или дождитесь завершения и просмотрите <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Короткие тесты обычно занимают около двух минут; длительные могут занимать несколько часов. Диск остаётся доступным для использования, но тестирование может снизить производительность ввода-вывода."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Управление ZFS",
+        "tail": " — команды zpool / zfs для хранилищ на базе ZFS."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Диспетчер дисков",
+        "tail": " — интерактивные процедуры ProxMenux для прямого проброса дисков, импорта, форматирования и SMART."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

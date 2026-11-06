@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Команды резервного копирования Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Справочник команд резервного копирования и восстановления Proxmox VE: vzdump для ВМ и контейнеров LXC, qmrestore для ВМ, pct restore для контейнеров, резервное копирование по расписанию в /etc/pve/jobs.cfg, скрипты-хуки и исключаемые пути.",
+    "ogTitle": "Команды резервного копирования Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Справочник команд vzdump, qmrestore и pct restore для резервного копирования и восстановления ВМ Proxmox и контейнеров LXC.",
+    "twitterTitle": "Команды резервного копирования Proxmox | ProxMenux",
+    "twitterDescription": "Команды vzdump, qmrestore и pct restore для резервного копирования и восстановления ВМ и контейнеров Proxmox."
+  },
+  "header": {
+    "title": "Резервное копирование и восстановление",
+    "description": "Подборка команд vzdump, qmrestore и pct restore для резервного копирования в Proxmox. Включает настройку расписания, расширенные параметры, такие как скрипты-хуки, исключаемые пути и приоритет ввода-вывода, а также управление файлами резервных копий.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Три режима резервного копирования",
+    "body": "Для ВМ режим <strong>snapshot</strong> выполняет резервное копирование без остановки и не требует поддержки снимков на уровне хранилища. Режим <strong>suspend</strong> приостанавливает ВМ перед резервным копированием без остановки и не обязательно повышает согласованность данных. Режим <strong>stop</strong> сначала завершает работу ВМ; если ВМ до этого работала, её работа может возобновиться после начала резервного копирования. Для LXC поведение отличается: режим snapshot требует хранилища с поддержкой снимков, suspend использует два прохода rsync, а stop оставляет контейнер остановленным на всё время резервного копирования."
+  },
+  "commandGroups": [
+    {
+      "title": "Резервное копирование ВМ",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Создать резервную копию определённой ВМ или контейнера"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Создать резервную копию ВМ в указанном хранилище"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Создать резервную копию в режиме snapshot (для ВМ)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Приостановить ВМ перед резервным копированием без остановки (устаревший режим suspend)"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Выключить ВМ перед началом резервного копирования"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Создать резервные копии всех ВМ и контейнеров"
+        },
+        {
+          "command": "vzdump --all --exclude <vmid1>,<vmid2>",
+          "description": "Создать резервные копии всех ВМ, кроме указанных"
+        }
+      ]
+    },
+    {
+      "title": "Параметры резервного копирования",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Использовать сжатие zstd для резервной копии"
+        },
+        {
+          "command": "vzdump <vmid> --compress gzip --pigz <threads>",
+          "description": "Использовать pigz в многопоточном режиме"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage> --notes-template <text>",
+          "description": "Добавить примечания к резервной копии"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Отправить уведомление по электронной почте"
+        },
+        {
+          "command": "vzdump <vmid> --prune-backups keep-last=<n>",
+          "description": "Хранить только n резервных копий для каждой ВМ"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Не исключать временные файлы"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Подавить вывод сообщений"
+        }
+      ]
+    },
+    {
+      "title": "Восстановление из резервных копий",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Восстановить ВМ из резервной копии"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Восстановить в указанное хранилище"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Восстановить ВМ с новыми случайно сгенерированными MAC-адресами"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Восстановить контейнер из резервной копии"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Восстановить контейнер в указанное хранилище"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>:<size-GiB>",
+          "description": "Восстановить с выделением корневого диска заданного размера в выбранном хранилище"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Восстановить как непривилегированный контейнер"
+        }
+      ]
+    },
+    {
+      "title": "Управление резервными копиями",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Показать список резервных копий в расположении по умолчанию"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Найти резервные копии ВМ"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Найти резервные копии контейнеров"
+        },
+        {
+          "command": "pvesm list <storage> --content backup",
+          "description": "Показать список резервных копий в указанном хранилище"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Удалить файл резервной копии"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Показать конфигурацию резервного копирования"
+        }
+      ]
+    },
+    {
+      "title": "Резервное копирование по расписанию",
+      "commands": [
+        {
+          "command": "cat /etc/pve/jobs.cfg",
+          "description": "Показать расписание резервного копирования"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Изменить конфигурацию резервного копирования"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Вывести список таймеров systemd"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Проверить состояние службы cron"
+        },
+        {
+          "command": "pvenode task list --typefilter vzdump",
+          "description": "Вывести список завершённых задач резервного копирования"
+        },
+        {
+          "command": "pvenode task log <upid>",
+          "description": "Показать журнал задачи резервного копирования по UPID"
+        }
+      ]
+    },
+    {
+      "title": "Расширенные операции",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Принудительно выполнить восстановление с перезаписью существующей ВМ"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Указать другой каталог для резервного копирования"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Запустить скрипт-хук во время резервного копирования"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Исключить указанные пути из резервного копирования"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Задать приоритет ввода-вывода для процесса резервного копирования"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Ожидать снятия блокировки"
+        },
+        {
+          "command": "qm importdisk <vmid> <disk-image> <storage>",
+          "description": "Импортировать файл образа диска (например, raw, qcow2 или vmdk) как неиспользуемый диск, а не архив резервной копии vzdump"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Проверяйте восстановление из резервных копий",
+    "bodyRich": "Периодически восстанавливайте резервную копию с помощью <code>qmrestore --unique</code>, используя неиспользуемый тестовый VMID, запускайте ВМ в изолированной тестовой сети и проверяйте её содержимое. Параметр unique создаёт новые MAC-адреса; он не изменяет статические IP-адреса или настройки приложений. Таким же образом проверяйте восстановление контейнеров с помощью <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Управление ВМ и контейнерами",
+        "tail": " — команды управления жизненным циклом qm и pct."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Хранилища и диски",
+        "tail": " — управление хранилищами с помощью pvesm."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

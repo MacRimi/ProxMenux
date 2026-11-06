@@ -30,7 +30,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk", "sv")
+DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk", "sv", "ru")
 DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
 # googletrans and the public Google endpoint used by this workflow do not
 # support Cloud Translation glossaries. Protect product names, package names

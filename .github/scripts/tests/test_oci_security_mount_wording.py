@@ -103,7 +103,7 @@ class SecurityMountWording(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         paths = sorted((ROOT / 'lang').glob('*.json'))
-        self.assertEqual(len(paths), 7)
+        self.assertEqual(len(paths), 8)
         for path in paths:
             cache = json.loads(path.read_text())
             setattr(module, '_language', path.stem)

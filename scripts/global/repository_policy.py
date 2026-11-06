@@ -49,7 +49,7 @@ def cli_error(error, product):
         return str(error)
     try:
         language = json.loads((BASE / 'config.json').read_text()).get('language', 'en')
-        if language not in ('sk', 'de', 'es', 'fr', 'it', 'pt', 'sv'):
+        if language not in ('sk', 'de', 'es', 'fr', 'it', 'pt', 'sv', 'ru'):
             return str(error)
         catalog = json.loads((BASE / 'lang' / f'{language}.json').read_text())
         message = catalog.get(error.template)

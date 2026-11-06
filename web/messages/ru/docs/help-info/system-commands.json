@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "title": "Системные команды Proxmox VE — pveversion, uptime, journalctl, systemctl | ProxMenux",
+    "description": "Системные команды Proxmox VE и Linux для просмотра версий, времени работы, памяти, служб, журналов и пользователей, а также инструменты аудита и сводной информации. Включена команда перезапуска службы; не все примеры предназначены только для чтения.",
+    "ogTitle": "Системные команды Proxmox VE — pveversion, uptime, journalctl, systemctl",
+    "ogDescription": "Системные команды Proxmox VE и Linux для просмотра версии, времени работы, служб, журналов и сведений о пользователях, включая инструменты управления службами и аудита.",
+    "twitterTitle": "Системные команды Proxmox VE | ProxMenux",
+    "twitterDescription": "Основные команды для проверки системы Proxmox VE — версия, состояние, службы, журналы, сведения о пользователях."
+  },
+  "header": {
+    "title": "Полезные системные команды",
+    "description": "Команды для проверки узла Proxmox: версия, ядро, время работы, память, состояние веб-интерфейса, последние записи журналов и пользователи, вошедшие в систему, а также инструменты аудита и сводной информации. Большинство команд лишь проверяют состояние, но systemctl restart pveproxy перезапускает прокси веб-интерфейса, а инструменты аудита могут записывать отчёты и журналы.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Что это такое",
+    "body": "Тот же нумерованный список, который ProxMenux показывает при выборе пункта <em>Полезные системные команды</em>. Используйте кнопку «Копировать», чтобы скопировать любую команду, или найдите её в списке, чтобы вспомнить точный флаг."
+  },
+  "commandGroups": [
+    {
+      "title": "Сведения о системе",
+      "commands": [
+        {
+          "command": "pveversion",
+          "description": "Показать версию Proxmox"
+        },
+        {
+          "command": "pveversion -v",
+          "description": "Подробные сведения о версии Proxmox"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Имя узла и сведения о ядре"
+        },
+        {
+          "command": "uname -a",
+          "description": "Сведения о ядре и архитектуре"
+        },
+        {
+          "command": "cat /etc/os-release",
+          "description": "Сведения о выпуске ОС"
+        }
+      ]
+    },
+    {
+      "title": "Состояние системы",
+      "commands": [
+        {
+          "command": "uptime",
+          "description": "Время непрерывной работы системы"
+        },
+        {
+          "command": "uptime -p",
+          "description": "Время непрерывной работы в удобном для чтения формате"
+        },
+        {
+          "command": "free -h",
+          "description": "Использование оперативной памяти и подкачки"
+        },
+        {
+          "command": "who -b",
+          "description": "Время последней загрузки системы"
+        },
+        {
+          "command": "last -x | grep shutdown",
+          "description": "Предыдущие выключения системы"
+        }
+      ]
+    },
+    {
+      "title": "Управление службами",
+      "commands": [
+        {
+          "command": "systemctl status pveproxy",
+          "description": "Проверить состояние веб-интерфейса Proxmox"
+        },
+        {
+          "command": "systemctl restart pveproxy",
+          "description": "Перезапустить прокси веб-интерфейса"
+        },
+        {
+          "command": "journalctl -xe",
+          "description": "Системные ошибки и журналы"
+        },
+        {
+          "command": "dmesg -T | tail -n 50",
+          "description": "Последние 50 строк журнала ядра"
+        }
+      ]
+    },
+    {
+      "title": "Информация о пользователях",
+      "commands": [
+        {
+          "command": "whoami",
+          "description": "Текущий пользователь"
+        },
+        {
+          "command": "id",
+          "description": "UID, GID и группы текущего пользователя"
+        },
+        {
+          "command": "who",
+          "description": "Пользователи, вошедшие в систему"
+        },
+        {
+          "command": "w",
+          "description": "Активность пользователей и время непрерывной работы системы"
+        },
+        {
+          "command": "uptime && w",
+          "description": "Время непрерывной работы системы и вошедшие в неё пользователи"
+        },
+        {
+          "command": "cut -d: -f1,3,4 /etc/passwd",
+          "description": "Все пользователи с их UID и GID"
+        },
+        {
+          "command": "getent passwd | column -t -s :",
+          "description": "Удобочитаемая таблица пользователей (UID, оболочка и т. д.)"
+        }
+      ]
+    },
+    {
+      "title": "Средства аудита и сводной информации",
+      "commands": [
+        {
+          "command": "lynis audit system",
+          "description": "Выполнить полный аудит безопасности системы"
+        },
+        {
+          "command": "fastfetch",
+          "description": "Показать сводную информацию о системе в формате ASCII"
+        }
+      ]
+    }
+  ],
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/help-info/update-commands",
+        "label": "Обновления и пакеты",
+        "tail": " — команды обновления apt и pve."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Системные инструменты командной строки",
+        "tail": " — htop, btop, ncdu и другие инструменты."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

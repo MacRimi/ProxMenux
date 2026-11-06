@@ -136,6 +136,7 @@ class FencingWordingTests(unittest.TestCase):
             'pt': ('{hostname}: evento do cluster comunicado', 'Foi comunicado um evento do cluster:\n{reason}', 'Evento do cluster', 'Eventos do cluster'),
             'sk': ('{hostname}: hlásená udalosť klastra', 'Bola hlásená udalosť klastra:\n{reason}', 'Udalosť klastra', 'Udalosti klastra'),
             'sv': ('{hostname}: klusterhändelse rapporterad', 'En klusterhändelse har rapporterats:\n{reason}', 'Klusterhändelse', 'Klusterhändelser'),
+            'ru': ('{hostname}: получено сообщение о событии в кластере', 'Получено сообщение о событии в кластере:\n{reason}', 'Событие в кластере', 'События кластера'),
         }
         self.assertEqual(set(self.catalogs), {'en', *expected})
         for lang, (title, body, label, settings) in expected.items():

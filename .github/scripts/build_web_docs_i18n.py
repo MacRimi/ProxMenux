@@ -24,7 +24,7 @@ from build_translation_cache import (  # noqa: E402
 )
 
 
-DEFAULT_LANGUAGES = ("es", "de", "fr", "it", "pt", "sk", "sv")
+DEFAULT_LANGUAGES = ("es", "de", "fr", "it", "pt", "sk", "sv", "ru")
 DEFAULT_CONTEXT = (
     "Context: ProxMenux technical documentation for Proxmox VE users. "
     "Preserve product names, commands, paths, variables and placeholders. Translate:"

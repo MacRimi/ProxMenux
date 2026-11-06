@@ -11,6 +11,7 @@ serves every published page under locale-prefixed URLs:
 - `/pt/<path>` — Portuguese
 - `/sk/<path>` — Slovak, with English fallback where needed
 - `/sv/<path>` — Swedish
+- `/ru/<path>` — Russian
 
 We use [`next-intl`](https://next-intl.dev) for the i18n plumbing. Anyone
 can translate the docs without writing TypeScript: most of the work is

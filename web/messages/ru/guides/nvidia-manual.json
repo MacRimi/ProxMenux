@@ -1,0 +1,165 @@
+{
+  "meta": {
+    "title": "Установка драйверов NVIDIA на Proxmox VE 9 (вручную) | Руководства ProxMenux",
+    "description": "Ручная установка и настройка драйверов NVIDIA на хосте Proxmox VE 9, а также настройка LXC, необходимая для предоставления доступа к GPU одному или нескольким контейнерам. Рассматриваются установка драйверов, служба сохранения состояния GPU, необязательный патч NVENC и настройка каждого контейнера.",
+    "ogTitle": "Установка драйверов NVIDIA на Proxmox VE 9 (вручную)",
+    "ogDescription": "Ручная установка драйвера NVIDIA на PVE 9 — драйвер на хосте, служба сохранения состояния драйвера, необязательный патч NVENC и настройка подключения LXC для каждого контейнера."
+  },
+  "header": {
+    "title": "Установка драйверов видеокарты NVIDIA на Proxmox VE 9 (вручную)",
+    "description": "Ручная установка и настройка драйверов NVIDIA на хосте Proxmox VE 9, а также настройка LXC, необходимая для предоставления доступа к GPU одному или нескольким контейнерам. Рассматриваются установка драйверов, служба сохранения состояния GPU, необязательный патч NVENC и настройка каждого контейнера.",
+    "section": "Руководства"
+  },
+  "intro": {
+    "calloutTitle": "Примечание",
+    "calloutBody": "Эта ручная процедура сохранена в качестве справочного материала. Большинству пользователей рекомендуется автоматизированная процедура ProxMenux: <strong>Установить драйверы NVIDIA (хост)</strong> в меню <em>Графические процессоры и Coral-TPU</em>, а для подключения к каждой гостевой системе — <strong>Добавить GPU в LXC</strong> (или <strong>Добавить GPU в ВМ</strong>). Автоматизированная процедура выполняет те же действия, которые описаны здесь, с дополнительными проверками безопасности: совместимости заголовочных файлов ядра, корректности настройки IOMMU и разрешением конфликтов VFIO. Эта страница предназначена для пользователей, которые хотят понять каждую команду или которым необходимо отступить от стандартной процедуры.",
+    "targetNote": "Инструкция предназначена для <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) и PVE 8 (Bookworm) больше не рассматриваются.",
+    "stepsTitle": "Что вы сделаете",
+    "steps": [
+      "Подготовьте хост Proxmox VE 9 (добавьте nouveau в чёрный список, настройте репозитории и установите необходимые компоненты).",
+      "Установите драйвер NVIDIA на хост.",
+      "Установите службу NVIDIA Persistence.",
+      "(Необязательно) Примените патч keylase, чтобы снять ограничение на количество одновременных сеансов NVENC на потребительских видеокартах.",
+      "Настройте доступ к GPU для одного или нескольких контейнеров LXC и установите соответствующий драйвер в каждом из них."
+    ]
+  },
+  "prepareHost": {
+    "heading": "1. Подготовка хоста (PVE 9)",
+    "blacklistHeading": "1.1 Добавление nouveau в чёрный список",
+    "blacklistBody": "Проверьте, добавлен ли уже драйвер <code>nouveau</code> с открытым исходным кодом в чёрный список:",
+    "blacklistCheckCode": "cat /etc/modprobe.d/blacklist.conf",
+    "blacklistAdd": "Если <code>blacklist nouveau</code> отсутствует в списке, добавьте его и перезагрузите хост:",
+    "blacklistAddCode": "echo \"blacklist nouveau\" >> /etc/modprobe.d/blacklist.conf\nupdate-initramfs -u -k all\nreboot",
+    "blacklistImageAlt": "Проверка чёрного списка",
+    "reposHeading": "1.2 Проверка репозиториев (PVE 9 / Trixie)",
+    "reposBody": "Инструменты постустановочной настройки могли уже настроить репозитории. Сначала проверьте существующие источники пакетов и пропустите изменения, которые уже внесены; не создавайте дублирующие записи.",
+    "reposOtherwise": "В противном случае, если у вас стандартная установка PVE 9 без корпоративной подписки:",
+    "reposEditCode": "nano /etc/apt/sources.list.d/proxmox.sources",
+    "reposPveBody": "Убедитесь, что в нём указан источник пакетов no-subscription для Trixie:",
+    "reposPveCode": "Types: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg",
+    "reposDebianBody": "А также источники пакетов Debian в <code>/etc/apt/sources.list.d/debian.sources</code>:",
+    "reposDebianCode": "Types: deb\nURIs: http://deb.debian.org/debian/\nSuites: trixie trixie-updates\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.debian.org/debian-security/\nSuites: trixie-security\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg",
+    "updateHeading": "1.3 Обновление системы и установка необходимых компонентов",
+    "updateCode": "apt update && apt dist-upgrade -y",
+    "buildToolsBody": "Установите инструменты сборки и заголовочные файлы ядра, необходимые для компиляции модуля ядра NVIDIA:",
+    "buildToolsCode": "apt-get install -y git\napt-get install -qqy pve-headers-$(uname -r) gcc make"
+  },
+  "installDriver": {
+    "heading": "2. Установка драйвера NVIDIA на хост",
+    "pickHeading": "2.1 Выбор версии драйвера",
+    "pickBody": "Выберите ветку драйвера, поддерживающую вашу видеокарту и используемое ядро. Самая новая ветка может не поддерживать старые модели видеокарт; проверьте список поддерживаемых продуктов NVIDIA для выбранного выпуска:",
+    "pickUrlCode": "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt",
+    "nvencCallout": "Если вы планируете применить патч NVENC (шаг 4), сначала убедитесь, что патч поддерживает выбранную версию драйвера: <patchLink>github.com/keylase/nvidia-patch</patchLink>",
+    "nvencCalloutTitle": "Обратите внимание",
+    "pickReplace": "Замените <code>latest.txt</code> в URL на номер версии, чтобы найти файл установщика с окончанием <code>.run</code>. Полный список драйверов доступен по адресу:",
+    "pickListCode": "https://download.nvidia.com/XFree86/Linux-x86_64/",
+    "pickImageAlt": "Загрузка драйвера NVIDIA",
+    "pickVersionNote": "Во всей оставшейся части этого руководства заменяйте <code>'<'VERSION'>'</code> на фактическую версию (например, <code>580.95.05</code>).",
+    "downloadHeading": "2.2 Загрузка и запуск установщика",
+    "downloadCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run",
+    "firstPassBody": "Запустите установщик. Приведённый ниже параметр позволяет при необходимости отключить <code>nouveau</code>; для завершения установки может потребоваться перезагрузка:",
+    "firstPassCode": "./NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none --disable-nouveau\nreboot",
+    "secondPassBody": "После перезагрузки хоста снова запустите установщик, чтобы скомпилировать и установить модуль ядра:",
+    "secondPassCode": "/opt/nvidia/NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none",
+    "modulesHeading": "2.3 Загрузка модулей NVIDIA при запуске системы",
+    "modulesBody": "Отредактируйте конфигурацию modules-load:",
+    "modulesEditCode": "nano /etc/modules-load.d/modules.conf",
+    "modulesAddBody": "Добавьте модули NVIDIA, необходимые для использования на хосте или в LXC. Модули VFIO предназначены для проброса устройств в виртуальные машины и не требуются для этой конфигурации LXC:",
+    "modulesAddCode": "nvidia\nnvidia_uvm",
+    "modulesSaveBody": "Сохраните изменения (<code>Ctrl+X</code>) и пересоздайте initramfs:",
+    "modulesSaveCode": "update-initramfs -u -k all",
+    "udevHeading": "2.4 Создание правил udev",
+    "udevBody": "Чтобы узлы устройств <code>/dev/nvidia*</code> создавались при загрузке модулей:",
+    "udevEditCode": "nano /etc/udev/rules.d/70-nvidia.rules",
+    "udevRulesCode": "# /etc/udev/rules.d/70-nvidia.rules\nKERNEL==\"nvidia\", RUN+=\"/bin/bash -c '/usr/bin/nvidia-smi -L'\"\nKERNEL==\"nvidia_uvm\", RUN+=\"/bin/bash -c '/usr/bin/nvidia-modprobe -c0 -u'\"",
+    "udevSaveBody": "Сохраните изменения (<code>Ctrl+X</code>)."
+  },
+  "persistence": {
+    "heading": "3. Служба поддержания инициализированного состояния драйвера NVIDIA",
+    "body": "Демон поддержания инициализированного состояния сохраняет GPU инициализированным, когда его не использует ни одно другое приложение. Это сокращает задержки при повторной инициализации и сохраняет состояние инициализации GPU между обращениями клиентов:",
+    "installCode": "cd /opt/nvidia\ngit clone https://github.com/NVIDIA/nvidia-persistenced.git\ncd nvidia-persistenced/init\n./install.sh\nreboot",
+    "verifyBody": "После перезагрузки убедитесь, что драйвер загружен, а служба работает:",
+    "verifySmiCode": "nvidia-smi",
+    "smiImageAlt": "Вывод NVIDIA SMI",
+    "verifyServiceCode": "systemctl status nvidia-persistenced",
+    "serviceImageAlt": "Состояние службы поддержания инициализированного состояния NVIDIA"
+  },
+  "nvenc": {
+    "heading": "4. (Необязательно) Снятие ограничения на количество одновременных сеансов NVENC",
+    "body": "Ограничения на количество сеансов NVENC зависят от модели GPU и версии драйвера; сверяйтесь с матрицей поддержки NVIDIA, а не исходите из фиксированного ограничения для каждого поколения GPU. Патч keylase снимает программное ограничение для поддерживаемых версий драйвера. Он может быть полезен для задач кодирования, таких как транскодирование в Plex или Jellyfin.",
+    "code": "cd /opt/nvidia\ngit clone https://github.com/keylase/nvidia-patch.git\ncd nvidia-patch\n./patch.sh",
+    "imageAlt": "Применение патча NVIDIA",
+    "after": "Патч необходимо применять повторно после каждого обновления драйвера. Репозиторий keylase также содержит <code>patch-fbc.sh</code> для снятия ограничения FBC (захвата буфера кадров), если это необходимо."
+  },
+  "lxcSetup": {
+    "heading": "5. Настройка контейнера LXC для использования GPU",
+    "identifyHeading": "5.1 Определение номеров устройств",
+    "identifyBody": "На хосте:",
+    "identifyCode": "ls -l /dev/nv*",
+    "identifyImageAlt": "Список устройств NVIDIA",
+    "identifyNote": "Запишите старшие номера устройств (major) — они различаются в разных системах. Типичные значения:",
+    "tableHeaders": {
+      "device": "Устройство",
+      "major": "Типичный старший номер"
+    },
+    "tableRows": [
+      {
+        "device": "<code>/dev/nvidia0</code>, <code>/dev/nvidiactl</code>",
+        "major": "195"
+      },
+      {
+        "device": "<code>/dev/nvidia-uvm</code>, <code>/dev/nvidia-uvm-tools</code>",
+        "major": "509 (может отличаться)"
+      },
+      {
+        "device": "<code>/dev/dri/*</code>",
+        "major": "226"
+      },
+      {
+        "device": "<code>/dev/nvidia-modeset</code>",
+        "major": "195 (общий с nvidia)"
+      }
+    ],
+    "editHeading": "5.2 Отредактируйте конфигурацию LXC",
+    "editBody": "Если контейнер запущен, сначала остановите его. Откройте его файл конфигурации (замените <code>'<'CTID'>'</code> на ID контейнера):",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
+    "editConfigBody": "Закомментируйте все существующие строки <code>lxc.cgroup2.devices.allow</code> или <code>/dev/dri</code>, которые вызывают конфликты, затем добавьте настройки подключения NVIDIA (скорректируйте старшие номера устройств в соответствии с выводом <code>ls -l /dev/nv*</code> на <strong>вашем</strong> хосте):",
+    "editConfigCode": "lxc.cgroup2.devices.allow: c 195:* rwm\nlxc.cgroup2.devices.allow: c 509:* rwm\nlxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file\nlxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file",
+    "editConfigImageAlt": "Конфигурация LXC",
+    "editSave": "Сохраните изменения (<code>Ctrl+X</code>) и запустите контейнер.",
+    "installCtHeading": "5.3 Установите драйвер внутри контейнера",
+    "installCtCalloutTitle": "Важно",
+    "installCtCalloutBody": "Эта часть выполняется <strong>внутри</strong> контейнера, а не на хосте.",
+    "installCtBody": "Модуль ядра уже загружен хостом — контейнеру нужны только библиотеки пользовательского пространства, соответствующие той же версии драйвера:",
+    "installCtCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run\n./NVIDIA-Linux-x86_64-VERSION.run --no-kernel-module",
+    "installCtAfter": "Внимательно прочитайте запросы установщика и ограничьте установку библиотеками пользовательского пространства. Не собирайте и не устанавливайте модуль ядра внутри LXC.",
+    "installCtImageAlt": "Установка драйвера NVIDIA",
+    "verifyCtHeading": "5.4 Проверьте работу внутри контейнера",
+    "verifyCtSmiCode": "nvidia-smi",
+    "verifyCtSmiImageAlt": "NVIDIA SMI в LXC",
+    "verifyCtLsCode": "ls -l /dev/nv*",
+    "verifyCtLsImageAlt": "Устройства NVIDIA в LXC",
+    "verifyCtAfter": "Вы должны увидеть GPU в списке, а также узлы устройств, смонтированные в файловую систему контейнера.",
+    "workloadHeading": "5.5 Убедитесь, что реальная рабочая нагрузка использует GPU",
+    "workloadBody": "Включите аппаратное ускорение NVIDIA в Plex или Jellyfin, запустите перекодирование видео и проверьте на панели управления приложения или в его журналах, действительно ли используется GPU. Сама по себе установка драйвера не включает ускорение в приложении.",
+    "workloadImage1Alt": "Plex использует GPU NVIDIA",
+    "workloadImage2Alt": "Plex использует GPU NVIDIA — активный сеанс",
+    "repeatNote": "Повторите действия из <strong>раздела 5</strong> для каждого дополнительного контейнера, которому нужен доступ к GPU. При обновлении драйвера на хосте обновляйте библиотеки драйвера в пользовательском пространстве всех контейнеров до соответствующей версии."
+  },
+  "docker": {
+    "heading": "6. (Необязательно) NVIDIA Docker внутри LXC",
+    "body": "Если Docker уже работает внутри LXC, установите там <code>nvidia-container-toolkit</code>, чтобы предоставить его контейнерам Docker доступ к GPU. Сначала убедитесь, что доступ к GPU из LXC работает. Следующие команды предназначены для установки Docker, работающей с правами root:",
+    "code": "apt-get update\napt-get install -y ca-certificates curl gnupg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor --yes -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' > /etc/apt/sources.list.d/nvidia-container-toolkit.list\napt-get update\napt-get install -y nvidia-container-toolkit\nnvidia-ctk runtime configure --runtime=docker\nsystemctl restart docker",
+    "after": "Эти команды настраивают репозиторий NVIDIA, устанавливают набор инструментов, настраивают среду выполнения Docker и перезапускают Docker. Права доступа к устройствам LXC и ограничения cgroup по-прежнему действуют; проверьте использование GPU с помощью тестовой рабочей нагрузки."
+  },
+  "troubleshoot": {
+    "heading": "Устранение неполадок",
+    "items": [
+      "<strong><code>nvidia-smi</code> работает на хосте, но в контейнере сообщает «Устройства не найдены»:</strong> проверьте монтирование устройств, права доступа и соответствие библиотек драйвера. Если версии различаются, установите в контейнере <code>'<'VERSION'>'</code> той же версии, что и на хосте, с помощью <code>--no-kernel-module</code>.",
+      "<strong>Не удаётся скомпилировать драйвер:</strong> изучите журнал сборки. Сообщение «Предварительно скомпилированный интерфейс ядра не найден» может лишь означать, что установщику необходимо выполнить компиляцию локально. Установите заголовочные файлы, соответствующие <code>uname -r</code>, с помощью <code>apt-get install pve-headers-$(uname -r)</code> либо установите эквивалентный пакет proxmox-headers для этого ядра.",
+      "<strong>Ограничение числа сеансов NVENC сохраняется:</strong> убедитесь, что исправление поддерживает используемую версию драйвера. Обновление драйвера может перезаписать внесённые исправлением изменения. Для поддерживаемой версии повторно примените <code>./patch.sh</code> из <code>/opt/nvidia/nvidia-patch</code> и изучите вывод.",
+      "<strong>GPU перестаёт отвечать после простоя:</strong> проверьте <code>systemctl status nvidia-persistenced</code> и включите службу, если её использование предусмотрено. Также изучите журналы ядра и драйвера; остановленный демон поддержания состояния — не единственная возможная причина.",
+      "<strong>Контейнер запускается, но <code>ls /dev/nv*</code> не показывает устройства NVIDIA:</strong> проверьте записи bind-монтирования и пути к устройствам на хосте. Используйте <code>ls -l /dev/nv*</code> на хосте, чтобы проверить основные номера устройств NVIDIA, затем проверьте правила <code>lxc.cgroup2.devices.allow</code> и права доступа."
+    ]
+  }
+}

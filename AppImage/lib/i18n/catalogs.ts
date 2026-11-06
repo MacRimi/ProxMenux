@@ -6,6 +6,7 @@ import itMessages from "../../messages/it/common.json"
 import ptMessages from "../../messages/pt/common.json"
 import skMessages from "../../messages/sk/common.json"
 import svMessages from "../../messages/sv/common.json"
+import ruMessages from "../../messages/ru/common.json"
 import type { LanguageCode } from "./languages"
 
 type MessageTree = Record<string, unknown>
@@ -20,4 +21,5 @@ export const MESSAGE_CATALOG: Record<LanguageCode, MessageTree> = {
   pt: ptMessages as MessageTree,
   sk: skMessages as MessageTree,
   sv: svMessages as MessageTree,
+  ru: ruMessages as MessageTree,
 }

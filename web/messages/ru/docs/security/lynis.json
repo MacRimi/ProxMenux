@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Lynis | Документация ProxMenux",
+    "description": "Установите Lynis из официального репозитория CISOfy GitHub (всегда последнюю версию), выполните аудит системы с оценкой защищённости от 0 до 100 и обновляйте через git pull. По замыслу работает только в режиме чтения — никогда не изменяет систему.",
+    "ogTitle": "Lynis | Документация ProxMenux",
+    "ogDescription": "Установка и запуск средства аудита безопасности Lynis на Proxmox VE. Установка из исходного репозитория GitHub, аудит и обновление."
+  },
+  "header": {
+    "title": "Lynis",
+    "description": "Клонирует последнюю версию Lynis из официального репозитория CISOfy GitHub, делает её доступной через /usr/local/bin/lynis и предлагает в меню запуск аудита, обновление, переустановку и удаление. Средство аудита по замыслу работает только в режиме чтения — никогда не изменяет систему, а лишь формирует отчёты.",
+    "section": "Безопасность"
+  },
+  "intro": {
+    "title": "Что делает этот инструмент",
+    "body": "Устанавливает Lynis (средство аудита безопасности с открытым исходным кодом от CISOfy) из исходного репозитория GitHub в <code>/opt/lynis</code> и создаёт скрипт-обёртку по пути <code>/usr/local/bin/lynis</code>, чтобы команда была доступна через <code>PATH</code>. При запуске обнаруживает существующую установку и вместо установки показывает меню управления (аудит / обновление / переустановка / удаление)."
+  },
+  "manageMenu": {
+    "heading": "Меню управления (после установки)",
+    "intro": "После установки Lynis каждый последующий запуск открывает меню управления вместо повторного запуска установщика. Из этого меню можно запустить аудит, обновить Lynis через git pull, переустановить или удалить его:",
+    "imageAlt": "Меню управления Lynis с пунктами аудита, обновления, переустановки и удаления"
+  },
+  "whyUpstream": {
+    "heading": "Почему исходный репозиторий GitHub, а не apt",
+    "intro": "В Debian Lynis доступен через apt, но пакет обычно отстаёт от исходного проекта на несколько основных версий. Новые проверки, исправления для защиты от новых векторов атак и уточнённые рекомендации появляются только в репозитории GitHub. Сам Lynis — самодостаточный скрипт командной оболочки: компиляция не требуется, а для установки из зависимостей нужен только <code>git</code>. Поэтому клонирование репозитория — стандартный способ установки, рекомендованный самой CISOfy.",
+    "headerSource": "Источник",
+    "headerPath": "Вариант установки",
+    "headerUpdate": "Способ обновления",
+    "headerFresh": "Актуальность версии",
+    "rows": [
+      {
+        "sourceRich": "<strong>ProxMenux (этот скрипт)</strong>",
+        "path": "/opt/lynis/",
+        "update": "git pull (из меню)",
+        "fresh": "Последняя версия исходного проекта"
+      },
+      {
+        "sourceRich": "<strong>Debian apt</strong>",
+        "path": "/usr/bin/lynis",
+        "update": "apt upgrade",
+        "fresh": "Часто отстаёт на месяцы или годы"
+      }
+    ]
+  },
+  "install": {
+    "heading": "Как выполняется установка",
+    "node1Label": "github.com/CISOfy/lynis",
+    "node1Detail": "git clone\n(сначала установите git, если он отсутствует)",
+    "node2Label": "/opt/lynis/",
+    "node2Detail": "полный репозиторий\nвключая скрипт ./lynis",
+    "node3Label": "/usr/local/bin/lynis",
+    "node3Detail": "скрипт-обёртка:\ncd /opt/lynis && ./lynis $@",
+    "outro": "Скрипт-обёртка необходим: Lynis требует запуска из собственного каталога, поскольку использует относительные пути для загрузки плагинов и данных профиля. Обёртка скрывает эту особенность, позволяя запускать <code>lynis audit system</code> из любого каталога."
+  },
+  "detection": {
+    "heading": "Пути обнаружения",
+    "intro": "Перед отображением меню скрипт проверяет три расположения, чтобы определить, установлен ли уже Lynis:",
+    "items": [
+      "<code>/usr/local/bin/lynis</code> — скрипт-обёртка, установленный с помощью ProxMenux",
+      "<code>/opt/lynis/lynis</code> — прямой путь (на случай, если скрипт-обёртка был удалён)",
+      "<code>/usr/bin/lynis</code> — версия, установленная через apt, если пользователь ранее установил её таким способом"
+    ],
+    "outro": "Если найден любой из этих вариантов, открывается меню управления. Скрипт <strong>не удаляет</strong> Lynis, установленный через apt, — он удаляет только ту версию, которой управляет сам (<code>/opt/lynis</code> и скрипт-обёртку)."
+  },
+  "audit": {
+    "heading": "Запуск аудита",
+    "intro": "В меню управления выберите <strong>Запустить аудит безопасности сейчас</strong>. Это равнозначно выполнению следующей команды:",
+    "code": "lynis audit system --no-colors",
+    "outro": "Аудит занимает от 30 секунд до нескольких минут в зависимости от размера хоста. Результаты выводятся непосредственно в терминал — индикатора ожидания нет. Lynis выводит отдельные разделы для каждой категории проверок, отмечая результат каждого теста как <ok>[ ОК ]</ok>, <warn>[ ПРЕДУПРЕЖДЕНИЕ ]</warn> или <sugg>[ РЕКОМЕНДАЦИЯ ]</sugg>. Итоговая сводка содержит основные показатели:",
+    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
+  },
+  "report": {
+    "heading": "Чтение отчёта",
+    "intro": "Два важных раздела — <strong>Предупреждения</strong> (проблемы, которые следует устранить в ближайшее время) и <strong>Рекомендации</strong> (советы по усилению защиты). У каждого пункта есть идентификатор проверки, например <code>SSH-7408</code>, — он пригодится для поиска обоснования и способа устранения проблемы в документации Lynis.",
+    "headerMarker": "Метка",
+    "headerMeaning": "Значение",
+    "headerAction": "Действие",
+    "rows": [
+      {
+        "markerRich": "<strong>ОК</strong>",
+        "meaning": "Тест пройден",
+        "action": "Ничего не требуется"
+      },
+      {
+        "markerRich": "<strong>ПРЕДУПРЕЖДЕНИЕ</strong>",
+        "meaning": "Обнаружена реальная проблема, рекомендуется её устранить",
+        "action": "Прочитайте описание проверки и запланируйте устранение проблемы"
+      },
+      {
+        "markerRich": "<strong>РЕКОМЕНДАЦИЯ</strong>",
+        "meaning": "Есть возможность усилить защиту",
+        "action": "Примените рекомендацию, если она соответствует вашей модели угроз"
+      }
+    ],
+    "outro": "Сам Lynis записывает полный отчёт и машиночитаемые данные в <code>/var/log/lynis.log</code> и <code>/var/log/lynis-report.dat</code>."
+  },
+  "pairFail2ban": {
+    "title": "Совместное использование с Fail2Ban",
+    "body": "SSH-7408 (MaxAuthTries) — одно из самых распространённых предупреждений. Установка <link>Fail2Ban</link> из ProxMenux автоматически устраняет его, поскольку установщик задаёт <code>MaxAuthTries=3</code> на этапе усиления защиты SSH. После этого запустите Lynis ещё раз, чтобы убедиться, что предупреждение исчезло."
+  },
+  "update": {
+    "heading": "Обновить Lynis",
+    "body": "В меню управления пункт <strong>Обновить Lynis до последней версии</strong> запускает <code>git pull --quiet</code> в каталоге <code>/opt/lynis</code>. Если каталог существует, но не является локальной копией Git-репозитория (например, файлы были скопированы вручную), скрипт выполняет полную переустановку."
+  },
+  "reinstall": {
+    "heading": "Переустановка / удаление",
+    "headerAction": "Действие",
+    "headerWhat": "Назначение",
+    "rows": [
+      {
+        "actionRich": "<strong>Переустановить</strong>",
+        "whatRich": "Удаляет <code>/opt/lynis</code>, заново клонирует репозиторий из GitHub и повторно создаёт скрипт-обёртку. Используйте этот вариант, если локальная копия репозитория повреждена."
+      },
+      {
+        "actionRich": "<strong>Удалить</strong>",
+        "whatRich": "Удаляет <code>/opt/lynis</code> и <code>/usr/local/bin/lynis</code>. Журналы в <code>/var/log/lynis*</code> сохраняются, поскольку содержат историю аудита. Установленный через apt экземпляр Lynis в <code>/usr/bin/lynis</code> остаётся нетронутым."
+      }
+    ]
+  },
+  "cli": {
+    "heading": "Полезные параметры командной строки",
+    "intro": "После установки Lynis можно запускать непосредственно из командной оболочки с дополнительными параметрами, недоступными в меню:",
+    "code": "lynis show version            # version + build date\nlynis show commands           # list every available command\nlynis show details TEST-ID    # explain a specific control\nlynis audit system --quick    # skip slow tests (e.g. malware scan)\nlynis audit system --pentest  # treat host as untrusted (more aggressive)\nlynis update info             # check if a newer Lynis is available\n\n# Filter the report log for just the warnings\ngrep \"Warning\" /var/log/lynis.log\n\n# Same, for suggestions only\ngrep \"Suggestion\" /var/log/lynis.log"
+  },
+  "troubleshoot": {
+    "heading": "Устранение неполадок",
+    "cloneTitle": "Ошибка git clone во время установки",
+    "cloneBody": "Хосту необходимы доступ к сети и работающий DNS для подключения к <code>github.com</code>. Выполните в консоли <code>curl -sI https://github.com</code> и <code>git ls-remote https://github.com/CISOfy/lynis.git</code>, чтобы увидеть конкретную ошибку (DNS, TLS, прокси, URL репозитория). Если требуется прокси, задайте <code>https_proxy</code> в окружении перед повторным запуском меню.",
+    "notFoundTitle": "После установки появляется ошибка «lynis: command not found»",
+    "notFoundIntro": "Скрипт-обёртка по пути <code>/usr/local/bin/lynis</code> не был создан либо был удалён. Самое быстрое решение — переустановка через меню. Исправление вручную:",
+    "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
+    "sshTitle": "Audit выводит «Предупреждение: тест SSH-7408 — параметр MaxAuthTries задан неверно»",
+    "sshIntro": "Служба SSH допускает слишком много попыток аутентификации на одно соединение. Установите <link>Fail2Ban</link> из ProxMenux (при этом <code>MaxAuthTries=3</code> задаётся автоматически) либо отредактируйте <code>/etc/ssh/sshd_config</code> вручную:",
+    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "scoreTitle": "Оценка снизилась после обновления Proxmox",
+    "scoreBody": "Сначала выполните <code>lynis update info</code> — обновление Lynis могло добавить новые проверки, выявляющие проблемы в существующей конфигурации. Обновите Lynis через меню, повторите аудит и устраните выявленные новые проблемы."
+  },
+  "files": {
+    "heading": "Записываемые файлы",
+    "code": "/opt/lynis/                   # full Lynis git checkout\n/usr/local/bin/lynis          # wrapper script (cd + exec)\n/var/log/lynis.log            # human-readable audit log (Lynis itself)\n/var/log/lynis-report.dat     # machine-readable report (Lynis itself)"
+  },
+  "sample": {
+    "heading": "Пример отчёта",
+    "intro": "ProxMenux Monitor формирует по результатам каждого запуска Lynis многостраничный PDF, доступный на <link>вкладке «Безопасность»</link> панели мониторинга. Первая страница содержит краткую сводку: оценку защищённости, сведения о системе и обзор состояния безопасности. На последующих страницах перечислены все предупреждения с пояснениями и все рекомендации, упорядоченные по степени влияния, а также перечень пакетов, использованный при аудите.",
+    "imageAlt": "Первая страница PDF-отчёта Lynis Security Audit — краткая сводка с индексом защищённости 71/100, блоком сведений о системе и обзором состояния безопасности, включающим межсетевой экран, сканер вредоносного ПО и количество установленных пакетов",
+    "captionPrefix": "Первая страница примера отчёта. Полный PDF (",
+    "captionLink": "пример",
+    "captionSuffix": ") далее содержит подробные предупреждения, рекомендации и список установленных пакетов.",
+    "cli": "В командной строке те же данные доступны в <code>/var/log/lynis-report.dat</code> (машиночитаемый файл с плоской структурой) и <code>/var/log/lynis.log</code> (журнал выполнения, предназначенный для чтения человеком). PDF создаётся по запросу с помощью ProxMenux Monitor — запуск <code>lynis</code> из командной строки не создаёт PDF."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/monitor/dashboard/security",
+        "label": "Вкладка ProxMenux Monitor → Безопасность",
+        "tail": " — запускайте аудит, просматривайте предыдущие отчёты и скачивайте PDF прямо из панели управления."
+      },
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": " — реализует рекомендуемую Lynis защиту SSH от атак перебором."
+      },
+      {
+        "href": "/docs/security",
+        "label": "Обзор безопасности",
+        "tail": " — вернуться к обзору раздела."
+      }
+    ]
+  }
+}

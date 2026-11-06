@@ -8,7 +8,7 @@ on:
     inputs:
       languages:
         description: 'Comma-separated locales'
-        default: 'es,de,fr,it,pt,sk,sv'
+        default: 'es,de,fr,it,pt,sk,sv,ru'
       section:
         description: 'File or directory below web/messages/en'
         default: '.'
@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           LANGUAGES="${{ github.event.inputs.languages }}"
-          LANGUAGES="${LANGUAGES:-es,de,fr,it,pt,sk,sv}"
+          LANGUAGES="${LANGUAGES:-es,de,fr,it,pt,sk,sv,ru}"
           SECTION="${{ github.event.inputs.section }}"
           SECTION="${SECTION:-.}"
           MAX_FILES="${{ github.event.inputs.max_files }}"
@@ -86,7 +86,7 @@ jobs:
           python .github/scripts/build_web_docs_i18n.py \
             --source-dir web/messages/en \
             --messages-dir web/messages \
-            --languages "${{ github.event.inputs.languages || 'es,de,fr,it,pt,sk,sv' }}" \
+            --languages "${{ github.event.inputs.languages || 'es,de,fr,it,pt,sk,sv,ru' }}" \
             --check
 
       - name: Commit and push changes

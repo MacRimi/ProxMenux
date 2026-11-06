@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "Команды ZFS в Proxmox — zpool, zfs snapshot, send/receive, scrub | ProxMenux",
+    "description": "Справочник по командам управления ZFS в Proxmox VE: zpool create / status / history, zfs list / get / set, снимки, clone, zfs send и receive, scrub, clear, replace, zpool iostat, сводка по ARC.",
+    "ogTitle": "Команды ZFS в Proxmox — zpool, zfs snapshot, send/receive, scrub",
+    "ogDescription": "Справочник по командам zpool и zfs в Proxmox VE — пулы, наборы данных, снимки, репликация, обслуживание.",
+    "twitterTitle": "Команды ZFS в Proxmox | ProxMenux",
+    "twitterDescription": "Команды zpool и zfs для Proxmox VE: пулы, наборы данных, снимки, репликация, обслуживание."
+  },
+  "header": {
+    "title": "Управление ZFS",
+    "description": "Подборка справочных сведений по командам zpool и zfs: проверка пулов, создание, чтение, изменение и удаление наборов данных, снимки, clone и send/receive (инкрементальные и рекурсивные операции), scrub / clear / replace для обслуживания, а также статистика ввода-вывода и сводка по ARC.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Две группы команд",
+    "body": "<code>zpool *</code> управляет пулами хранения (физический уровень — диски, vdev, избыточность). <code>zfs *</code> управляет наборами данных и снимками внутри этих пулов (логический уровень — файловые системы, тома, снимки, свойства)."
+  },
+  "commandGroups": [
+    {
+      "title": "Информация о пулах",
+      "commands": [
+        {
+          "command": "zpool list",
+          "description": "Вывести список всех пулов ZFS"
+        },
+        {
+          "command": "zpool status",
+          "description": "Показать подробные сведения о состоянии и работоспособности пула"
+        },
+        {
+          "command": "zpool status -v",
+          "description": "Показать расширенные сведения о состоянии пула, включая ошибки"
+        },
+        {
+          "command": "zpool history",
+          "description": "Показать историю команд для всех пулов"
+        },
+        {
+          "command": "zpool history <pool>",
+          "description": "Показать историю команд для указанного пула"
+        },
+        {
+          "command": "zpool get all <pool>",
+          "description": "Показать все свойства пула"
+        }
+      ]
+    },
+    {
+      "title": "Управление наборами данных",
+      "commands": [
+        {
+          "command": "zfs list",
+          "description": "Вывести список всех наборов данных ZFS"
+        },
+        {
+          "command": "zfs list -r <pool>",
+          "description": "Рекурсивно вывести список всех наборов данных в пуле"
+        },
+        {
+          "command": "zfs create <pool>/<dataset>",
+          "description": "Создать новый набор данных"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>",
+          "description": "Удалить набор данных"
+        },
+        {
+          "command": "zfs rename <pool>/<dataset> <pool>/<new-name>",
+          "description": "Переименовать набор данных"
+        },
+        {
+          "command": "zfs get all <pool>/<dataset>",
+          "description": "Показать все свойства набора данных"
+        },
+        {
+          "command": "zfs set compression=on <pool>/<dataset>",
+          "description": "Включить сжатие для набора данных"
+        }
+      ]
+    },
+    {
+      "title": "Управление снимками",
+      "commands": [
+        {
+          "command": "zfs list -t snapshot",
+          "description": "Показать список всех снимков"
+        },
+        {
+          "command": "zfs list -t snapshot -r <pool>",
+          "description": "Показать список всех снимков в пуле"
+        },
+        {
+          "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
+          "description": "Создать снимок"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>@<snapshot-name>",
+          "description": "Удалить снимок"
+        },
+        {
+          "command": "zfs rollback <pool>/<dataset>@<snapshot-name>",
+          "description": "Выполнить откат к снимку"
+        },
+        {
+          "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Установить удержание снимка"
+        },
+        {
+          "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Снять удержание снимка"
+        }
+      ]
+    },
+    {
+      "title": "Клонирование, отправка и приём",
+      "commands": [
+        {
+          "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
+          "description": "Создать клон из снимка"
+        },
+        {
+          "command": "zfs send <pool>/<dataset>@<snapshot> > backup.zfs",
+          "description": "Отправить снимок в файл"
+        },
+        {
+          "command": "zfs receive <pool>/<dataset> < backup.zfs",
+          "description": "Принять снимок из файла"
+        },
+        {
+          "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
+          "description": "Отправить инкрементальный снимок"
+        },
+        {
+          "command": "zfs send -R <pool>/<dataset>@<snapshot> > full-recursive.zfs",
+          "description": "Отправить рекурсивный снимок"
+        }
+      ]
+    },
+    {
+      "title": "Обслуживание и исправление ошибок",
+      "commands": [
+        {
+          "command": "zpool scrub <pool>",
+          "description": "Запустить проверку целостности данных в пуле"
+        },
+        {
+          "command": "zpool scrub -s <pool>",
+          "description": "Остановить выполняющуюся проверку целостности данных"
+        },
+        {
+          "command": "zpool clear <pool>",
+          "description": "Сбросить счётчики ошибок в пуле"
+        },
+        {
+          "command": "zpool clear <pool> <device>",
+          "description": "Сбросить ошибки на определённом устройстве"
+        },
+        {
+          "command": "zpool replace <pool> <old-device> <new-device>",
+          "description": "Заменить неисправное устройство"
+        },
+        {
+          "command": "zpool offline <pool> <device>",
+          "description": "Отключить устройство"
+        },
+        {
+          "command": "zpool online <pool> <device>",
+          "description": "Вернуть устройство в рабочий режим"
+        }
+      ]
+    },
+    {
+      "title": "Производительность и мониторинг",
+      "commands": [
+        {
+          "command": "zpool iostat",
+          "description": "Показать статистику ввода-вывода для пулов"
+        },
+        {
+          "command": "zpool iostat -v",
+          "description": "Показать подробную статистику ввода-вывода"
+        },
+        {
+          "command": "zpool iostat 5",
+          "description": "Показывать статистику ввода-вывода каждые 5 секунд"
+        },
+        {
+          "command": "arc_summary",
+          "description": "Показать статистику ARC (если соответствующая утилита установлена)"
+        },
+        {
+          "command": "zfs get compressratio <pool>/<dataset>",
+          "description": "Показать коэффициент сжатия"
+        },
+        {
+          "command": "zfs get used,available,referenced <pool>/<dataset>",
+          "description": "Показать использование дискового пространства"
+        }
+      ]
+    }
+  ],
+  "bestPractices": {
+    "title": "Рекомендации по эксплуатации",
+    "bodyRich": "Запланируйте регулярный запуск <code>zpool scrub</code> для проверки контрольных сумм и проверяйте результаты. Поддерживайте запас свободного места: влияние почти заполненного пула зависит от рабочей нагрузки и схемы организации. Используйте <code>zpool replace</code> для замены вышедшего из строя устройства и следуйте процедуре для соответствующего типа vdev. Отсоединение с последующим добавлением не является равноценной процедурой замены и может изменить топологию или привести к потере избыточности."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Хранилища и диски",
+        "tail": " — общие команды для работы с блочными устройствами и LVM."
+      },
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Резервное копирование и восстановление",
+        "tail": " — vzdump, qmrestore."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

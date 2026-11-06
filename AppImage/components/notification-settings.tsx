@@ -214,6 +214,7 @@ const NOTIFICATION_LANGUAGES = [
   { value: "pt", label: "Português" },
   { value: "sk", label: "Slovenčina" },
   { value: "sv", label: "Svenska" },
+  { value: "ru", label: "Русский" },
 ]
 
 function normalizeNotificationLanguage(notificationLanguage?: string, legacyAiLanguage?: string): string {

@@ -62,7 +62,7 @@ except ImportError:
 DB_PATH = Path('/usr/local/share/proxmenux/health_monitor.db')
 SETTINGS_PREFIX = 'notification.'
 ENCRYPTION_KEY_FILE = Path('/usr/local/share/proxmenux/.notification_key')
-RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv')
+RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv', 'ru')
 ALLOWED_AI_LANGUAGES = (
     'en', 'sk', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'sv', 'no',
     'ja', 'zh', 'ko', 'pl', 'nl', 'tr', 'ar',
