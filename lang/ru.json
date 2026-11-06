@@ -9063,5 +9063,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Lastboard": "Lastboard",
+  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Панель на собственном сервере с закладками, виджетами, мониторингом доступности и интеграцией с Proxmox.",
+  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Создайте первую учётную запись администратора в мастере первоначальной настройки веб-интерфейса. Интеграция с Docker необязательна."
 }
