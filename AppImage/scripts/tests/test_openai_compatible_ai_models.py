@@ -120,13 +120,31 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.assertNotIn("reasoning_effort", provider.captured_payload)
         self.assertNotIn("max_completion_tokens", provider.captured_payload)
 
-    def test_a_request_waits_as_long_as_the_monitor_allows_a_rewrite(self):
-        # A local model behind an OpenAI-compatible endpoint is slow; the
-        # request must not give up before the Monitor's own limit.
+    def test_a_local_request_waits_longer_but_ends_before_the_monitor_limit(self):
+        # A local model behind an OpenAI-compatible endpoint is slow: its request
+        # gets more than a cloud one and still ends before the rewrite limit.
         provider = CapturingOpenAIProvider(api_key="token", model="gemma-3-1b-it-Q4_K_M",
                                            base_url="http://192.0.2.22:8080/v1")
         provider.generate("system", "user", max_tokens=100)
-        self.assertEqual(provider.captured_timeout, notification_manager.AI_REWRITE_TIMEOUT_SECONDS)
+        self.assertGreater(provider.captured_timeout, notification_manager.AI_REWRITE_TIMEOUT_SECONDS)
+        self.assertLess(provider.captured_timeout, notification_manager.LOCAL_AI_REWRITE_TIMEOUT_SECONDS)
+
+    def test_a_cloud_request_keeps_the_short_limit(self):
+        provider = CapturingOpenAIProvider(api_key="token", model="gpt-5-mini")
+        provider.generate("system", "user", max_tokens=100)
+        self.assertLess(provider.captured_timeout, notification_manager.LOCAL_AI_REWRITE_TIMEOUT_SECONDS)
+        self.assertLessEqual(provider.captured_timeout, notification_manager.AI_REWRITE_TIMEOUT_SECONDS)
+
+    def test_the_rewrite_limit_follows_where_the_model_runs(self):
+        limit = notification_manager._ai_rewrite_timeout
+        local = notification_manager.LOCAL_AI_REWRITE_TIMEOUT_SECONDS
+        cloud = notification_manager.AI_REWRITE_TIMEOUT_SECONDS
+        self.assertEqual(limit({'ai_provider': 'ollama', 'ai_ollama_url': 'http://localhost:11434'}), local)
+        self.assertEqual(limit({'ai_provider': 'openai', 'ai_openai_base_url': 'http://192.0.2.22:8080/v1'}), local)
+        self.assertEqual(limit({'ai_provider': 'openai', 'ai_openai_base_url': ''}), cloud)
+        self.assertEqual(limit({'ai_provider': 'openai', 'ai_openai_base_url': 'https://api.openai.com/v1'}), cloud)
+        for provider in ('groq', 'gemini', 'anthropic', 'openrouter'):
+            self.assertEqual(limit({'ai_provider': provider}), cloud)
 
     def test_official_openai_reasoning_model_still_uses_reasoning_contract(self):
         provider = CapturingOpenAIProvider(

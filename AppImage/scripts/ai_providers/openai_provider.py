@@ -24,9 +24,10 @@ class OpenAIProvider(AIProvider):
     """
     
     NAME = "openai"
-    # The Monitor gives any rewrite 25 s; a local model behind an
-    # OpenAI-compatible endpoint may need all of it.
+    # The Monitor gives a cloud rewrite 25 s and one on the user's own server
+    # 60 s; each request ends a little before its limit.
     REQUEST_TIMEOUT_SECONDS = 25
+    LOCAL_REQUEST_TIMEOUT_SECONDS = 55
     REQUIRES_API_KEY = True
     DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions"
     DEFAULT_MODELS_URL = "https://api.openai.com/v1/models"
@@ -229,7 +230,9 @@ class OpenAIProvider(AIProvider):
         }
         
         api_url = self._get_api_url()
-        result = self._make_request(api_url, payload, headers, timeout=self.REQUEST_TIMEOUT_SECONDS)
+        local = bool(self.base_url) and 'api.openai.com' not in self.base_url
+        timeout = self.LOCAL_REQUEST_TIMEOUT_SECONDS if local else self.REQUEST_TIMEOUT_SECONDS
+        result = self._make_request(api_url, payload, headers, timeout=timeout)
 
         try:
             return result['choices'][0]['message']['content'].strip()

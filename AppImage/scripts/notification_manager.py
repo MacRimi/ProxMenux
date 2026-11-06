@@ -805,6 +805,18 @@ class BurstAggregator:
 # on the rewrite at AI_REWRITE_TIMEOUT_SECONDS and ship the non-AI version.
 # Audit Tier 3.2 #2.
 AI_REWRITE_TIMEOUT_SECONDS = 25
+# A model on the user's own hardware (Ollama, or an OpenAI-compatible server
+# at their own address) is much slower than a cloud API. A notification that
+# arrives a little later but translated is worth more than one in English.
+LOCAL_AI_REWRITE_TIMEOUT_SECONDS = 60
+
+
+def _ai_rewrite_timeout(ai_config):
+    provider = str((ai_config or {}).get('ai_provider') or '')
+    base_url = str((ai_config or {}).get('ai_openai_base_url') or '').strip()
+    if provider == 'ollama' or (provider == 'openai' and base_url and 'api.openai.com' not in base_url):
+        return LOCAL_AI_REWRITE_TIMEOUT_SECONDS
+    return AI_REWRITE_TIMEOUT_SECONDS
 
 # A small dedicated pool so an in-flight AI call never starves the dispatch
 # thread itself. One worker is enough — events serialize through the dispatch
@@ -835,8 +847,8 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
 
 # ─── Notification Manager ─────────────────────────────────────────
 
-def _format_backup_with_ai_bounded(*args, **kwargs):
-    result = _format_with_ai_bounded(format_backup_diagnostics_with_ai, *args, **kwargs)
+def _format_backup_with_ai_bounded(*args, timeout=AI_REWRITE_TIMEOUT_SECONDS, **kwargs):
+    result = _format_with_ai_bounded(format_backup_diagnostics_with_ai, *args, timeout=timeout, **kwargs)
     if result is not None:
         return result
     return format_backup_diagnostics_with_ai(*args, **kwargs, fallback_only=True)
@@ -1488,6 +1500,7 @@ class NotificationManager:
                         ai_result = _format_backup_with_ai_bounded(
                             ch_title, ch_body, severity, channel_ai_config,
                             event_type=event_type, data=data,
+                            timeout=_ai_rewrite_timeout(channel_ai_config),
                             detail_level=detail_level, use_emojis=use_rich_format,
                         )
                     else:
@@ -1508,6 +1521,7 @@ class NotificationManager:
                         ai_result = _format_with_ai_bounded(
                             format_with_ai_full,
                             ch_title, ch_body, severity, channel_ai_config,
+                            timeout=_ai_rewrite_timeout(channel_ai_config),
                             detail_level=detail_level,
                             journal_context=enriched_context,
                             use_emojis=use_rich_format,
@@ -2590,6 +2604,7 @@ class NotificationManager:
                     ai_result = _format_backup_with_ai_bounded(
                         title, message, severity, channel_ai_config,
                         event_type=event_type, data=data,
+                        timeout=_ai_rewrite_timeout(channel_ai_config),
                         detail_level=detail_level, use_emojis=use_rich_format,
                     )
                     ch_title = title
