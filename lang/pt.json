@@ -9104,5 +9104,10 @@
   "Create the first administrator account in the web setup wizard, then connect your media server.": "Crie a primeira conta de administrador no assistente de configuração web e depois ligue o seu servidor multimédia.",
   "Unmanic": "Unmanic",
   "Automatically convert and optimize your media library with a plugin-based workflow.": "Converta e otimize automaticamente a sua biblioteca multimédia com um fluxo de trabalho baseado em extensões.",
-  "Open the web interface to configure libraries and plugins. Hardware acceleration is optional.": "Abra a interface web para configurar as bibliotecas e as extensões. A aceleração por hardware é opcional."
+  "Open the web interface to configure libraries and plugins. Hardware acceleration is optional.": "Abra a interface web para configurar as bibliotecas e as extensões. A aceleração por hardware é opcional.",
+  "Synchronize TRaSH Guides quality profiles, custom formats and naming settings with Sonarr and Radarr.": "Sincroniza os perfis de qualidade, formatos personalizados e definições de nomes dos TRaSH Guides com o Sonarr e o Radarr.",
+  "Recyclarr has no web interface. It runs its scheduled synchronization in the background.": "O Recyclarr não tem interface web. Executa as sincronizações agendadas em segundo plano.",
+  "Edit /config/recyclarr.yml with your Sonarr or Radarr URL and API key before the first synchronization.": "Antes da primeira sincronização, edite /config/recyclarr.yml com o URL e a chave API do Sonarr ou do Radarr.",
+  "The default configuration is created only if it is missing; existing files are preserved.": "A configuração predefinida só é criada se não existir; os ficheiros existentes são preservados.",
+  "The official image does not support PUID or PGID variables. The container runs as UID/GID 1000:1000.": "A imagem oficial não suporta as variáveis PUID ou PGID. O contentor é executado com UID/GID 1000:1000."
 }
