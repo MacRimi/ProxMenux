@@ -826,7 +826,7 @@ _ai_rewrite_pool = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS, **kwargs):
+def _format_with_ai_bounded(format_fn, *args, timeout=None, **kwargs):
     """Run an AI rewrite with a hard wall-clock timeout.
 
     Returns the rewriter's result on success, or `None` on timeout / exception.
@@ -834,6 +834,10 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
     is not cancelled — Python can't cancel an in-flight HTTP call cleanly —
     but its result is discarded and the dispatch thread proceeds.
     """
+    if timeout is None:
+        # Both rewriters take the AI configuration as their fourth argument.
+        ai_config = args[3] if len(args) > 3 and isinstance(args[3], dict) else {}
+        timeout = _ai_rewrite_timeout(ai_config)
     future = _ai_rewrite_pool.submit(format_fn, *args, **kwargs)
     try:
         return future.result(timeout=timeout)
@@ -847,8 +851,8 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
 
 # ─── Notification Manager ─────────────────────────────────────────
 
-def _format_backup_with_ai_bounded(*args, timeout=AI_REWRITE_TIMEOUT_SECONDS, **kwargs):
-    result = _format_with_ai_bounded(format_backup_diagnostics_with_ai, *args, timeout=timeout, **kwargs)
+def _format_backup_with_ai_bounded(*args, **kwargs):
+    result = _format_with_ai_bounded(format_backup_diagnostics_with_ai, *args, **kwargs)
     if result is not None:
         return result
     return format_backup_diagnostics_with_ai(*args, **kwargs, fallback_only=True)
@@ -1500,7 +1504,6 @@ class NotificationManager:
                         ai_result = _format_backup_with_ai_bounded(
                             ch_title, ch_body, severity, channel_ai_config,
                             event_type=event_type, data=data,
-                            timeout=_ai_rewrite_timeout(channel_ai_config),
                             detail_level=detail_level, use_emojis=use_rich_format,
                         )
                     else:
@@ -1521,7 +1524,6 @@ class NotificationManager:
                         ai_result = _format_with_ai_bounded(
                             format_with_ai_full,
                             ch_title, ch_body, severity, channel_ai_config,
-                            timeout=_ai_rewrite_timeout(channel_ai_config),
                             detail_level=detail_level,
                             journal_context=enriched_context,
                             use_emojis=use_rich_format,
@@ -2604,7 +2606,6 @@ class NotificationManager:
                     ai_result = _format_backup_with_ai_bounded(
                         title, message, severity, channel_ai_config,
                         event_type=event_type, data=data,
-                        timeout=_ai_rewrite_timeout(channel_ai_config),
                         detail_level=detail_level, use_emojis=use_rich_format,
                     )
                     ch_title = title
