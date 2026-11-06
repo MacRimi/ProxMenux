@@ -3034,6 +3034,27 @@ class PollingCollector:
     
     # ── Health errors (independent of suppression) ─────────────
     
+    _STORAGE_EVENT_PREFIXES = (
+        ('lxc_disk_', 'lxc_disk_low'),
+        ('vm_disk_', 'vm_disk_low'),
+        ('lxc_mount_', 'lxc_mount_low'),
+        ('pve_storage_full_', 'pve_storage_full'),
+        ('zfs_pool_full_', 'zfs_pool_full'),
+        ('disk_space_', 'disk_space_low'),
+        ('storage_unavailable_', 'storage_unavailable'),
+        ('mount_stale_', 'mount_stale'),
+        ('mount_readonly_', 'mount_readonly'),
+    )
+
+    def _alert_event_type(self, category: str, error_key: str) -> str:
+        """The event an active health error is reported as. Storage errors
+        use the specific template their key prefix names."""
+        if category == 'storage':
+            for prefix, event_type in self._STORAGE_EVENT_PREFIXES:
+                if error_key.startswith(prefix):
+                    return event_type
+        return self._CATEGORY_TO_EVENT_TYPE.get(category, 'system_problem')
+
     def _check_persistent_health(self):
         """Read ALL active errors from health_persistence and decide
         whether each one warrants a notification right now.
@@ -3149,36 +3170,8 @@ class PollingCollector:
                 if error_is_stale:
                     continue
             
-            # Map to our event type
-            event_type = self._CATEGORY_TO_EVENT_TYPE.get(category, 'system_problem')
+            event_type = self._alert_event_type(category, error_key)
             entity, eid = self._ENTITY_MAP.get(category, ('node', ''))
-
-            # Refine the storage event_type from the error_key prefix.
-            # The category-only mapping was sending every storage error
-            # through the generic `storage_unavailable` template — the
-            # specialised templates (lxc_disk_low, mount_stale, etc.)
-            # were never reached. Sprint 14.5 adds three new prefixes
-            # (lxc_mount_, pve_storage_full_, zfs_pool_full_) and at the
-            # same time fixes the dispatch for the existing ones.
-            if category == 'storage':
-                if error_key.startswith('lxc_disk_'):
-                    event_type = 'lxc_disk_low'
-                elif error_key.startswith('vm_disk_'):
-                    event_type = 'vm_disk_low'
-                elif error_key.startswith('lxc_mount_'):
-                    event_type = 'lxc_mount_low'
-                elif error_key.startswith('pve_storage_full_'):
-                    event_type = 'pve_storage_full'
-                elif error_key.startswith('zfs_pool_full_'):
-                    event_type = 'zfs_pool_full'
-                elif error_key.startswith('disk_space_'):
-                    event_type = 'disk_space_low'
-                elif error_key.startswith('storage_unavailable_'):
-                    event_type = 'storage_unavailable'
-                elif error_key.startswith('mount_stale_'):
-                    event_type = 'mount_stale'
-                elif error_key.startswith('mount_readonly_'):
-                    event_type = 'mount_readonly'
             
             # ── Disk I/O notification policy ──
             # Disk I/O errors are ALWAYS notified (even when SMART says Passed)
@@ -3411,6 +3404,8 @@ class PollingCollector:
                 'first_seen': first_seen,
                 'duration': duration_label,
                 'is_recovery': True,
+                # A channel only hears of a recovery whose alert it accepts.
+                'alert_event_type': self._alert_event_type(category, key),
             }
             # Spread the original details blob so the resolved notification
             # can use the same {storage_name}/{vm_name}/{device} placeholders

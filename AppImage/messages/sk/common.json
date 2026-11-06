@@ -2209,6 +2209,7 @@
         "smart_test_complete": "SMART test bol dokončený",
         "smart_test_failed": "SMART test zlyhal",
         "gpu_mode_switch": "Režim GPU bol zmenený",
+        "custom": "Upozornenia zo skriptov a API",
         "gpu_passthrough_blocked": "GPU passthrough bol zablokovaný",
         "pci_passthrough_conflict": "Konflikt PCIe zariadenia",
         "load_high": "Vysoká záťaž systému",
@@ -7374,6 +7375,11 @@
           "title": "{hostname}: {pve_title}",
           "body": "Informácie o balíkoch od ich tvorcov preposlané systémom Proxmox VE cez apt-listchanges. Nasledujúci text pochádza od správcu balíka a nie je odporúčaním ProxMenux.\n\n{reason}",
           "label": "Oznámenia o balíkoch apt-listchanges"
+        },
+        "custom": {
+          "title": "{title}",
+          "body": "{message}",
+          "label": "Upozornenia zo skriptov a API"
         },
         "webhook_test": {
           "title": "{hostname}: Prijatý test webhooku",

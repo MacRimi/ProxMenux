@@ -2208,6 +2208,7 @@
         "smart_test_complete": "Test SMART completato",
         "smart_test_failed": "Test SMART non riuscito",
         "gpu_mode_switch": "Modalità GPU cambiata",
+        "custom": "Notifiche da script e API",
         "gpu_passthrough_blocked": "Passthrough GPU bloccato",
         "pci_passthrough_conflict": "Conflitto dispositivo PCIe",
         "load_high": "Carico sistema elevato",
@@ -7375,6 +7376,11 @@
           "title": "{hostname}: {pve_title}",
           "body": "Informazioni sul pacchetto upstream inoltrate da Proxmox VE tramite apt-listchanges. Il testo seguente proviene dal manutentore del pacchetto e non è una raccomandazione ProxMenux.\n\n{reason}",
           "label": "Avvisi pacchetti apt-listchanges"
+        },
+        "custom": {
+          "title": "{title}",
+          "body": "{message}",
+          "label": "Notifiche da script e API"
         },
         "webhook_test": {
           "title": "{hostname}: test webhook ricevuto",

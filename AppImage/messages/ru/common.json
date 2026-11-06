@@ -2367,6 +2367,7 @@
         "smart_test_complete": "Тест SMART завершён",
         "smart_test_failed": "Тест SMART завершился ошибкой",
         "gpu_mode_switch": "Режим GPU переключён",
+        "custom": "Уведомления скриптов и API",
         "gpu_passthrough_blocked": "Проброс GPU заблокирован",
         "pci_passthrough_conflict": "Конфликт устройств PCIe",
         "load_high": "Высокая нагрузка на систему",
@@ -7527,6 +7528,11 @@
           "title": "{hostname}: {pve_title}",
           "body": "Информация от разработчиков пакетов, пересылаемая Proxmox VE через apt-listchanges. Следующий текст предоставлен сопровождающим пакета и не является рекомендацией ProxMenux.\n\n{reason}",
           "label": "Уведомления apt-listchanges о пакетах"
+        },
+        "custom": {
+          "title": "{title}",
+          "body": "{message}",
+          "label": "Уведомления скриптов и API"
         },
         "webhook_test": {
           "title": "{hostname}: Получен тестовый запрос вебхука",

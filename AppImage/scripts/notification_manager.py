@@ -43,6 +43,7 @@ from notification_templates import (
     render_template, format_with_ai, format_with_ai_full, enrich_with_emojis, TEMPLATES,
     EVENT_GROUPS, CATEGORY_EMOJI, EVENT_EMOJI, get_event_types_by_group,
     get_default_enabled_events, runtime_message, format_backup_diagnostics_with_ai,
+    health_linked_event,
 )
 from notification_events import (
     JournalWatcher, TaskWatcher, PollingCollector, NotificationEvent,
@@ -1295,6 +1296,10 @@ class NotificationManager:
     
     def _dispatch_event(self, event: NotificationEvent):
         """Shared dispatch pipeline: cooldown -> rate limit -> render -> send."""
+        # Every route, including the direct shutdown/reboot notice, stops here
+        # when the user has turned notifications off.
+        if not self._enabled:
+            return
         # Event sources may supply the local kernel hostname themselves.
         # Normalize it here so every delivery path honours the configured
         # notification display name, including newly added event producers.
@@ -1374,6 +1379,70 @@ class NotificationManager:
                 event.fingerprint, claim_token, delivered=delivered,
             )
     
+    def _filter_event(self, event_type: str, data: Optional[Dict] = None) -> tuple:
+        """The event type and category whose switches decide a delivery.
+
+        A hidden burst summary stands for its originating event. A type with
+        no template (scripts, API) uses the visible ``custom`` switch.
+        """
+        template = TEMPLATES.get(event_type)
+        if template is None or event_type == 'other':
+            return 'custom', TEMPLATES['custom']['group']
+        if template.get('hidden', False):
+            source_event_type = str((data or {}).get('event_type', '') or '')
+            if source_event_type in TEMPLATES:
+                return source_event_type, TEMPLATES[source_event_type].get('group', 'other')
+        return event_type, template.get('group', 'other')
+
+    def _channel_allows(self, ch_name: str, event_type: str,
+                        data: Optional[Dict] = None, group: Optional[str] = None) -> bool:
+        """Whether this channel's category and event switches accept the event.
+
+        A recovery reaches only the channels that accept the original alert.
+        """
+        filter_event_type, event_group = self._filter_event(event_type, data)
+        for category in {event_group, group or event_group}:
+            if self._config.get(f'{ch_name}.events.{category}', 'true') == 'false':
+                return False
+        default = 'true' if TEMPLATES.get(filter_event_type, {}).get('default_enabled', True) else 'false'
+        if self._config.get(f'{ch_name}.event.{filter_event_type}', default) == 'false':
+            return False
+        alert_event_type = str((data or {}).get('alert_event_type', '') or '')
+        if event_type == 'error_resolved' and alert_event_type in TEMPLATES and alert_event_type != event_type:
+            return self._channel_allows(ch_name, alert_event_type)
+        return True
+
+    def _health_degraded_for_channel(self, ch_name: str, data: Dict):
+        """The categories of a health degradation that this channel accepts.
+
+        Returns False when none remain, None when all of them do, and the
+        title, body and severity rendered for the remaining ones otherwise.
+        """
+        payload = data.get('health_degraded')
+        categories = payload.get('categories') if isinstance(payload, dict) else None
+        if not isinstance(categories, list) or not categories:
+            return None
+        kept = []
+        for item in categories:
+            if not isinstance(item, dict):
+                continue
+            linked = health_linked_event(str(item.get('cat_key') or item.get('key') or ''),
+                                         str(item.get('reason') or ''))
+            if not linked or self._channel_allows(ch_name, linked):
+                kept.append(item)
+        if not kept:
+            return False
+        if len(kept) == len(categories):
+            return None
+        rank = {'INFO': 0, 'WARNING': 1, 'CRITICAL': 2}
+        severity = max((str(item.get('status') or 'WARNING') for item in kept),
+                       key=lambda value: rank.get(value, 1))
+        narrowed = dict(data, health_degraded=dict(payload, categories=kept), severity=severity)
+        narrowed.pop('title', None)
+        rendered = render_template('health_degraded', narrowed,
+                                   language=data.get('_notification_language') or self._notification_language())
+        return rendered['title'], rendered['body'], severity
+
     def _dispatch_to_channels(self, title: str, body: str, severity: str,
                                event_type: str, data: Dict, source: str) -> bool:
         """Send notification through configured channels, respecting per-channel filters.
@@ -1394,20 +1463,8 @@ class NotificationManager:
         with self._lock:
             channels = dict(self._channels)
         
-        template = TEMPLATES.get(event_type, {})
-        # Hidden burst templates represent their originating event; they must
-        # inherit both its category and its per-event toggle. Otherwise turning
-        # off an individual alert suppresses the first message but the hidden
-        # "+N more" summary still arrives later.
-        filter_event_type = event_type
-        if template.get('hidden', False):
-            source_event_type = str(data.get('event_type', '') or '')
-            if source_event_type in TEMPLATES:
-                filter_event_type = source_event_type
-        filter_template = TEMPLATES.get(filter_event_type, template)
-        event_group = filter_template.get('group', template.get('group', 'other'))
-        default_event_enabled = 'true' if filter_template.get('default_enabled', True) else 'false'
-        
+        _, event_group = self._filter_event(event_type, data)
+
         # Build AI config once (shared across channels, detail_level varies)
         ai_config = self._build_ai_config()
         
@@ -1420,18 +1477,18 @@ class NotificationManager:
         if event_type in ('backup_complete', 'backup_fail'):
             buffer_title, _ = enrich_with_emojis(event_type, title, '', data)
         
+        base_title, base_body, base_severity = title, body, severity
         for ch_name, channel in channels.items():
-            # ── Per-channel category check ──
-            # Default: category enabled (true) unless explicitly disabled.
-            ch_group_key = f'{ch_name}.events.{event_group}'
-            if self._config.get(ch_group_key, 'true') == 'false':
-                continue  # Channel has this category disabled
-
-            # ── Per-channel event check ──
-            # Default: from template default_enabled, unless explicitly set.
-            ch_event_key = f'{ch_name}.event.{filter_event_type}'
-            if self._config.get(ch_event_key, default_event_enabled) == 'false':
-                continue  # Channel has this specific event disabled
+            title, body, severity = base_title, base_body, base_severity
+            if not self._channel_allows(ch_name, event_type, data):
+                continue
+            if event_type == 'health_degraded':
+                narrowed = self._health_degraded_for_channel(ch_name, data)
+                if narrowed is False:
+                    continue
+                if narrowed:
+                    title, body, severity = narrowed
+            channel_buffer_title = buffer_title if title == base_title else title
 
             # ── Per-channel quiet hours ──
             # The user marks a window (e.g. 22:00 → 06:00) during which only
@@ -1448,7 +1505,7 @@ class NotificationManager:
             # delivered after Quiet Hours + Daily Digest were merged.
             if severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
                 self._buffer_quiet_event(ch_name, event_type, event_group,
-                                          severity, buffer_title, body)
+                                          severity, channel_buffer_title, body)
                 continue
 
             # ── Per-channel daily digest ──
@@ -1461,7 +1518,7 @@ class NotificationManager:
             # excluded from the digest by `_DIGEST_EXEMPT_EVENTS`.
             if self._should_buffer_for_digest(ch_name, severity, event_type):
                 self._buffer_digest_event(ch_name, event_type, event_group,
-                                          severity, buffer_title, body)
+                                          severity, channel_buffer_title, body)
                 continue
             
             try:
@@ -1814,6 +1871,8 @@ class NotificationManager:
             self._stats['total_errors'] += 1
             return
 
+        rows = self._drop_unwanted_rows('digest_pending', ch_name, rows)
+
         # Mark `last_at` even if there's nothing to send — otherwise an
         # empty buffer keeps re-triggering the 5-minute window for hours.
         self._save_setting(f'{ch_name}.digest_last_at', now.isoformat())
@@ -1874,6 +1933,25 @@ class NotificationManager:
         except Exception as e:
             print(f"[NotificationManager] digest cleanup failed for "
                   f"{ch_name}: {e}")
+
+    def _drop_unwanted_rows(self, table: str, ch_name: str, rows: list) -> list:
+        """Buffered rows whose category or event this channel has turned off
+        since they were stored are deleted instead of sent."""
+        kept = [row for row in rows if self._channel_allows(ch_name, row[1], group=row[2])]
+        dropped = [row[0] for row in rows if row not in kept]
+        if dropped:
+            try:
+                conn = sqlite3.connect(str(DB_PATH), timeout=10)
+                conn.execute('PRAGMA journal_mode=WAL')
+                conn.execute(
+                    f'DELETE FROM {table} WHERE id IN ({",".join("?" * len(dropped))})',
+                    dropped,
+                )
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"[NotificationManager] {table} cleanup failed for {ch_name}: {e}")
+        return kept
 
     def _compose_digest_body(self, rows: list, use_icons: bool = False,
                              quiet_release: bool = False) -> str:
@@ -2051,6 +2129,7 @@ class NotificationManager:
             print(f"[NotificationManager] quiet read failed for {ch_name}: {e}")
             return
 
+        rows = self._drop_unwanted_rows('quiet_pending', ch_name, rows)
         if not rows:
             return
 
@@ -2493,7 +2572,11 @@ class NotificationManager:
             entity_id: Entity identifier
         """
         from notification_events import NotificationEvent
-        
+
+        if not self._enabled:
+            return {'success': False, 'event_type': event_type, 'skipped': True,
+                    'error': 'Notifications are disabled'}
+
         event = NotificationEvent(
             event_type=event_type,
             severity=severity,
@@ -2543,9 +2626,17 @@ class NotificationManager:
                 'channels_sent': [],
             }
         
-        # Check if this event type is enabled (unless explicitly skipped)
-        # 'custom' and 'other' events always send (used for manual/script notifications)
-        if not skip_toggle_check and event_type not in ('custom', 'other'):
+        if not self._enabled:
+            return {
+                'success': False,
+                'error': 'Notifications are disabled',
+                'channels_sent': [],
+                'skipped': True,
+            }
+
+        # Scripts and the API obey the same per-channel switches as events;
+        # a type without a template uses the "Script and API notifications" one.
+        if not skip_toggle_check:
             if not self.is_event_enabled(event_type):
                 return {
                     'success': False,
@@ -2590,6 +2681,8 @@ class NotificationManager:
             channels = dict(self._channels)
         
         for ch_name, channel in channels.items():
+            if not skip_toggle_check and not self._channel_allows(ch_name, event_type, data):
+                continue
             try:
                 # Apply AI enhancement per channel with its detail level and emoji setting
                 detail_level_key = f'{ch_name}.ai_detail_level'
@@ -2863,10 +2956,6 @@ class NotificationManager:
         if not self._config:
             self._load_config()
         
-        # Get template info for default state
-        tmpl = TEMPLATES.get(event_type, {})
-        default_enabled = 'true' if tmpl.get('default_enabled', True) else 'false'
-        event_group = tmpl.get('group', 'other')
         
         # Check each configured channel. The list MUST come from CHANNEL_TYPES
         # (the canonical registry of channel implementations) — a hardcoded
@@ -2885,20 +2974,7 @@ class NotificationManager:
         if not active_channels:
             return False
         
-        # Check if ANY active channel has this event enabled
-        for ch_name in active_channels:
-            # First check category toggle for this channel
-            ch_group_key = f'{ch_name}.events.{event_group}'
-            if self._config.get(ch_group_key, 'true') == 'false':
-                continue  # Category disabled for this channel
-            
-            # Then check event-specific toggle
-            ch_event_key = f'{ch_name}.event.{event_type}'
-            if self._config.get(ch_event_key, default_enabled) == 'true':
-                return True  # At least one channel has it enabled
-        
-        # All active channels have this event disabled
-        return False
+        return any(self._channel_allows(ch_name, event_type) for ch_name in active_channels)
     
     def list_channels(self) -> Dict[str, Any]:
         """List all channel types with their configuration status."""

@@ -490,6 +490,7 @@ class RuntimeCatalogTests(unittest.TestCase):
         channel = RecordingTelegram()
         manager = notification_manager.NotificationManager()
         manager._channels = {"telegram": channel}
+        manager._enabled = True
         manager._config = {
             "notification_language": "sk",
             "ai_enabled": "false",
@@ -530,6 +531,7 @@ class RuntimeCatalogTests(unittest.TestCase):
         manager = notification_manager.NotificationManager()
         channel = RecordingChannel()
         manager._channels = {"telegram": channel}
+        manager._enabled = True
         manager._config = {
             "notification_language": "sk",
             "hostname": "HomeLAB_2",

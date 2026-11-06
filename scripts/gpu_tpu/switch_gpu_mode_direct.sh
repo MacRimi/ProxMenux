@@ -1172,7 +1172,7 @@ _send_gpu_mode_notification() {
     details="GPU is now available for LXC containers with native drivers."
   fi
   
-  python3 "$notify_script" --action send-raw --severity INFO \
+  python3 "$notify_script" --action send --type gpu_mode_switch --severity INFO \
     --title "${hostname_short}: GPU mode changed to ${mode_label}" \
     --message "GPU passthrough mode switched.
 GPU: ${gpu_name} (${gpu_pci})

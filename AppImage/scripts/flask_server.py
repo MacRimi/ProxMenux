@@ -104,6 +104,7 @@ from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
+from notification_templates import health_linked_event  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
 import auth_manager  # noqa: E402
@@ -1503,35 +1504,10 @@ def _health_collector_loop():
             details = result.get('details', {})
             degraded = []
             
-            # Map health categories to specific event types for toggle checks.
-            # `_CATEGORY_EVENT_MAP` is keyword-based for sub-types (network_down vs
-            # network_latency). `_BROAD_CATEGORY_TO_EVENT` is the catch-all fallback
-            # used when no keyword matches: if the user has muted the direct
-            # Resources/Storage event for a category (e.g. ram_high, cpu_high), do
-            # not re-emit the same condition under the Health Monitor banner. This
-            # closes the "muted ram_high but still got health_degraded for memory"
-            # double-event reported by users.
-            _CATEGORY_EVENT_MAP = {
-                # (category, reason_contains) -> event_type to check
-                ('network', 'latency'): 'network_latency',
-                ('network', 'connectivity'): 'network_down',
-                ('network', 'unreachable'): 'network_down',
-            }
-            _BROAD_CATEGORY_TO_EVENT = {
-                'cpu': 'cpu_high',
-                'memory': 'ram_high',
-                'load': 'load_high',
-                'temperature': 'temp_high',
-                'disk': 'disk_space_low',
-                'disks': 'disk_io_error',
-                'smart': 'disk_io_error',
-                'zfs': 'disk_io_error',
-                'storage': 'storage_unavailable',
-                # 'network' intentionally not here — handled by the keyword map above.
-                'pve_services': 'service_fail',
-                'security': 'auth_fail',
-                'updates': 'update_summary',
-            }
+            # Each health category is linked to the direct event that reports
+            # the same condition (network latency, RAM, CPU...). When every
+            # channel has muted that event, the category is not re-sent under
+            # the Health Monitor banner; each channel filters it again.
 
             # Sub-categories already rolled up into details['storage']
             # by _check_proxmox_storage_status. Emitting them as their
@@ -1557,26 +1533,12 @@ def _health_collector_loop():
 
                 if cur_rank > prev_rank and cur_rank >= 2:  # WARNING or CRITICAL
                     reason = cat_data.get('reason', f'{cat_key} status changed to {cur_status}')
-                    reason_lower = reason.lower()
                     cat_name = _CAT_NAMES.get(cat_key, cat_key)
 
-                    # Check if this specific notification type is enabled.
-                    skip_notification = False
-                    keyword_matched = False
-                    for (map_cat, map_keyword), event_type in _CATEGORY_EVENT_MAP.items():
-                        if cat_key == map_cat and map_keyword in reason_lower:
-                            keyword_matched = True
-                            if not notification_manager.is_event_enabled(event_type):
-                                skip_notification = True
-                            break
-
-                    # Broad category fallback — only when no keyword sub-type matched.
-                    # If the user explicitly muted the linked Resources/Storage event,
-                    # don't surface the same condition through health_degraded.
-                    if not keyword_matched and not skip_notification:
-                        broad_event = _BROAD_CATEGORY_TO_EVENT.get(cat_key)
-                        if broad_event and not notification_manager.is_event_enabled(broad_event):
-                            skip_notification = True
+                    linked_event = health_linked_event(cat_key, reason)
+                    skip_notification = bool(
+                        linked_event and not notification_manager.is_event_enabled(linked_event)
+                    )
 
                     # Startup grace period: skip transient issues from categories
                     # that typically need time to stabilize after boot
