@@ -9109,5 +9109,6 @@
   "Recyclarr has no web interface. It runs its scheduled synchronization in the background.": "Recyclarr hat keine Weboberfläche. Die geplante Synchronisierung läuft im Hintergrund.",
   "Edit /config/recyclarr.yml with your Sonarr or Radarr URL and API key before the first synchronization.": "Tragen Sie vor der ersten Synchronisierung die URL und den API-Schlüssel von Sonarr oder Radarr in /config/recyclarr.yml ein.",
   "The default configuration is created only if it is missing; existing files are preserved.": "Die Standardkonfiguration wird nur erstellt, wenn sie fehlt; vorhandene Dateien bleiben erhalten.",
-  "The official image does not support PUID or PGID variables. The container runs as UID/GID 1000:1000.": "Das offizielle Image unterstützt keine PUID- oder PGID-Variablen. Der Container läuft mit UID/GID 1000:1000."
+  "The official image does not support PUID or PGID variables. The container runs as UID/GID 1000:1000.": "Das offizielle Image unterstützt keine PUID- oder PGID-Variablen. Der Container läuft mit UID/GID 1000:1000.",
+  "Internet access is required to initialize and synchronize TRaSH Guides resources.": "Zum Initialisieren und Synchronisieren der TRaSH-Guides-Ressourcen ist Internetzugang erforderlich."
 }
