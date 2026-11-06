@@ -5,7 +5,7 @@ import { LocaleHtmlSync } from "@/components/locale-html-sync"
 import type React from "react"
 import { notFound } from "next/navigation"
 import { NextIntlClientProvider, hasLocale } from "next-intl"
-import { setRequestLocale } from "next-intl/server"
+import { getMessages, setRequestLocale } from "next-intl/server"
 import { routing } from "@/i18n/routing"
 
 /**
@@ -122,6 +122,39 @@ export const metadata = {
   },
 }
 
+// The namespaces client components read. Server pages translate during the
+// build, so the rest of the catalog stays out of every page.
+const CLIENT_MESSAGES = [
+  "nav",
+  "footer",
+  "hero",
+  "language",
+  "resources",
+  "rssLink",
+  "supportProject",
+  "tocPanel",
+  "docSidebar",
+  "docNav",
+  "docs.createVm.synology",
+  "docs.createVm.systemNas.synology",
+]
+
+type Messages = Record<string, unknown>
+
+function pickMessages(messages: Messages, paths: string[]): Messages {
+  const picked: Messages = {}
+  for (const path of paths) {
+    const keys = path.split(".")
+    let value: unknown = messages
+    for (const key of keys) value = (value as Messages | undefined)?.[key]
+    if (value === undefined) continue
+    let target = picked
+    for (const key of keys.slice(0, -1)) target = (target[key] ??= {}) as Messages
+    target[keys[keys.length - 1]] = value
+  }
+  return picked
+}
+
 export default async function LocaleLayout({
   children,
   params,
@@ -136,9 +169,10 @@ export default async function LocaleLayout({
   }
 
   setRequestLocale(locale)
+  const messages = (await getMessages({ locale })) as Messages
 
   return (
-    <NextIntlClientProvider>
+    <NextIntlClientProvider messages={pickMessages(messages, CLIENT_MESSAGES)}>
       {/* LocaleHtmlSync writes `document.documentElement.lang = locale`
           after hydration so the active language is reflected in <html lang>
           for accessibility tools and SEO crawlers that execute JS. The

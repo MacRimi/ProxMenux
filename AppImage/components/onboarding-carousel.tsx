@@ -96,6 +96,8 @@ const slides: OnboardingSlide[] = [
   },
 ]
 
+export const ONBOARDING_CLOSED_EVENT = "proxmenux-onboarding-closed"
+
 export function OnboardingCarousel() {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -109,6 +111,14 @@ export function OnboardingCarousel() {
       setOpen(true)
     }
   }, [])
+
+  // The release notes wait for the tour: two identical dialogs on top of each
+  // other made closing the first one look as if nothing happened.
+  const [wasOpen, setWasOpen] = useState(false)
+  useEffect(() => {
+    if (open) setWasOpen(true)
+    else if (wasOpen) window.dispatchEvent(new Event(ONBOARDING_CLOSED_EVENT))
+  }, [open, wasOpen])
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {

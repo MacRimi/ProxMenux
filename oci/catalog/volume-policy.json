@@ -115,9 +115,61 @@
     ],
     "unpackerr": [
       "/data"
+    ],
+    "airdcpp-webclient": [
+      "/Downloads",
+      "/Share"
+    ],
+    "spoolman": [
+      "/home/app/.local/share/spoolman"
+    ],
+    "cadcraft": [
+      "/storage"
+    ],
+    "deckcraft": [
+      "/storage"
+    ],
+    "designcraft": [
+      "/storage"
+    ],
+    "effectcraft": [
+      "/storage"
+    ],
+    "figcraft": [
+      "/storage"
+    ],
+    "filmcraft": [
+      "/storage"
+    ],
+    "gridcraft": [
+      "/storage"
+    ],
+    "lightcraft": [
+      "/storage"
+    ],
+    "pdfcraft": [
+      "/storage"
+    ],
+    "photocraft": [
+      "/storage"
+    ],
+    "soundcraft": [
+      "/storage"
+    ],
+    "vectorcraft": [
+      "/storage"
+    ],
+    "wordcraft": [
+      "/storage"
+    ],
+    "nextcloud-mariadb": [
+      "/data"
     ]
   },
   "sizes": {
+    "krusader": {
+      "/config": 4
+    },
     "sharecovex": {
       "/config": 1
     }

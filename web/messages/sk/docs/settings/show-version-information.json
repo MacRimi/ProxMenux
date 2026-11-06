@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "Zobraziť informácie o verzii | Dokumentácia ProxMenux",
+    "description": "Diagnostika ProxMenux iba na čítanie: verzia, kanál vydaní, komponenty zaznamenané v config.json, cesty k súborom, prekladové katalógy a aktuálny jazyk.",
+    "ogTitle": "Zobraziť informácie o verzii | Dokumentácia ProxMenux",
+    "ogDescription": "Diagnostický výpis verzie ProxMenux, kanála vydaní, komponentov, súborov a jazyka."
+  },
+  "header": {
+    "title": "Zobraziť informácie o verzii",
+    "description": "Diagnostika iba na čítanie. Načíta version.txt, config.json a známe cesty k súborom a zobrazí posúvateľné textové pole s verziou, kanálom vydaní, nainštalovanými komponentmi, prítomnosťou súborov, prekladovými súbormi a aktuálnym jazykom.",
+    "section": "Nastavenia"
+  },
+  "intro": {
+    "title": "Čo to je?",
+    "body": "Vlastná diagnostika. Užitočná pri nahlasovaní problému (vložte obsah dialógu do hlásenia chyby) alebo na overenie úspešného dokončenia inštalácie. Nič nemení."
+  },
+  "reports": {
+    "heading": "Čo hlási",
+    "headerSection": "Oddiel",
+    "headerSource": "Zdroj",
+    "headerContent": "Obsah",
+    "rows": [
+      {
+        "section": "Aktuálna verzia",
+        "source": "version.txt",
+        "contentRich": "Jednoriadkové číslo verzie; <code>Unknown</code>, ak chýba súbor"
+      },
+      {
+        "section": "Kanál vydaní",
+        "source": "Stav beta programu v config.json",
+        "content": "Stable (main) alebo Beta (develop); beta verzia, ak je dostupná"
+      },
+      {
+        "section": "Inštalované komponenty",
+        "source": "config.json",
+        "content": "Stav každého komponentu (✓ nainštalovaný / vytvorený / aktualizovaný, ✗ chýba)"
+      },
+      {
+        "section": "Súbory ProxMenux",
+        "source": "kontroly súborového systému",
+        "contentRich": "<code>menu</code>, <code>utils.sh</code>, <code>config.json</code>, prítomnosť <code>version.txt</code> + cesty"
+      },
+      {
+        "section": "Prekladové súbory",
+        "source": "/usr/local/share/proxmenux/lang/",
+        "content": "Prítomnosť adresára lang/ dodávaného s každou inštaláciou"
+      },
+      {
+        "section": "Aktuálny jazyk",
+        "source": "config.json",
+        "contentRich": "Kód jazyka z <code>.language</code>; ak nie je nastavený, použije <code>en</code>"
+      }
+    ]
+  },
+  "sampleHeading": "Výstup vzorky",
+  "manualHeading": "Ručné ekvivalenty",
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "unknownTitle": "Verzia zobrazuje \"Unknown\"",
+    "unknownBody": "<code>/usr/local/share/proxmenux/version.txt</code> chýba alebo nie je čitateľný. Najčastejšie spôsobené čiastočnou inštaláciou. Preinštalovať z oficiálneho zdroja ProxMenux.",
+    "noConfigTitle": "Nie sú k dispozícii žiadne informácie o inštalácii",
+    "noConfigBody": "<code>config.json</code> chýba. Bez neho skript nedokáže vypísať komponenty. Preinštalovaním súbor obnovíte.",
+    "wrongStatusTitle": "Komponent zobrazuje ✗, hoci som si istý, že som ho nainštaloval",
+    "wrongStatusBody": "To znamená, že <code>config.json</code> nesleduje ten komponent ako nainštalovaný, môže to byť skript, ktorý sa ešte sám neregistruje, alebo manuálna inštalácia, ktorá obíde ProxMenux. Dialóg odráža to, čo hovorí <code>config.json</code>, nie to, čo je vlastne na disku."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/settings/uninstall-proxmenux",
+        "label": "Odinštalovať ProxMenux",
+        "tail": " — Odstrániť všetky tieto súbory."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Prehľad nastavení",
+        "tail": "."
+      }
+    ]
+  }
+}

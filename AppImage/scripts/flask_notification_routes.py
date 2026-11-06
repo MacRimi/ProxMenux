@@ -446,7 +446,7 @@ def get_provider_models():
     Request body:
         {
             "provider": "gemini|groq|openai|openrouter|ollama|anthropic",
-            "api_key": "your-api-key",  // Not needed for ollama
+            "api_key": "your-api-key",  // Optional for protected Ollama gateways
             "ollama_url": "http://localhost:11434",  // Only for ollama
             "openai_base_url": "https://custom.endpoint/v1"  // Optional for openai
         }
@@ -498,9 +498,10 @@ def get_provider_models():
         if provider == 'ollama':
             import urllib.request
             import urllib.error
+            from ai_providers.ollama_provider import ollama_headers
             
             url = f"{ollama_url.rstrip('/')}/api/tags"
-            req = urllib.request.Request(url, method='GET')
+            req = urllib.request.Request(url, method='GET', headers=ollama_headers(api_key))
             req.add_header('User-Agent', 'ProxMenux-Monitor/1.1')
             
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -514,13 +515,10 @@ def get_provider_models():
                     'message': f'Found {len(models)} local models'
                 })
         
-        # Handle Anthropic - no models list API, return verified models directly
+        # Handle Anthropic - return verified models directly
         if provider == 'anthropic':
-            models = list(verified_models) if verified_models else [
-                'claude-3-5-haiku-latest',
-                'claude-3-5-sonnet-latest',
-                'claude-3-opus-latest',
-            ]
+            from ai_providers.anthropic_provider import AnthropicProvider
+            models = list(verified_models) if verified_models else list(AnthropicProvider.KNOWN_MODELS)
             return jsonify({
                 'success': True,
                 'models': sorted(models),
@@ -1156,6 +1154,14 @@ def setup_pve_webhook_core() -> dict:
         'fallback_commands': [],
         'error': None,
     }
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        result['not_applicable'] = True
+        return result
     
     try:
         if not _pve_cluster_fs_mounted():
@@ -1339,6 +1345,13 @@ def cleanup_pve_webhook_core() -> dict:
     Only removes blocks named 'proxmenux-webhook' / 'proxmenux-default'.
     """
     result = {'cleaned': False, 'error': None}
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        return {'cleaned': True, 'error': None, 'not_applicable': True}
     
     try:
         if not _pve_cluster_fs_mounted():

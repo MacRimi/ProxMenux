@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Anpassningsbart skript efter installation | ProxMenux-dokumentation",
+    "description": "Välj exakt vilka optimeringar ProxMenux ska tillämpa på en Proxmox VE-värd. 10 kategorier, cirka 35 verktyg och ett gränssnitt med kryssrutor. Innehåller allt i det automatiserade skriptet samt uttryckligen valbara funktioner (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD-korrigeringar …).",
+    "ogTitle": "Anpassningsbart skript efter installation | ProxMenux-dokumentation",
+    "ogDescription": "10 kategorier, ~ 35 individuella optimeringar. Välj exakt vad du vill ha på en Proxmox VE värd. Reversibla förändringar spåras."
+  },
+  "header": {
+    "title": "Anpassningsbart skript efter installation",
+    "description": "Välj exakt vilka optimeringar som ska tillämpas på en Proxmox VE-värd. ProxMenux grupperar cirka 35 verktyg i 10 kategorier i en gemensam dialog med kryssrutor. Samma motor som Automatiserad, med full kontroll över vad som tillämpas.",
+    "section": "Efter installation · Anpassningsbar"
+  },
+  "intro": {
+    "title": "När du ska välja Anpassningsbar",
+    "body": "Välj detta om du redan vet vilka justeringar du vill ha eller undvika på värden. En lista med kryssrutor grupperade per kategori låter dig välja, avmarkera och kombinera optimeringar. Poster kan tillämpas igen senare och återställbara ändringar registreras för <link>Avinstallera optimeringar</link>. Paketuppgraderingar presenteras inte som återställbara."
+  },
+  "compare": {
+    "heading": "Jämförelse med Automatiserad",
+    "body": "Anpassningsbar innehåller hela det <link>automatiserade skriptet</link>: samma 14 grundoptimeringar och en lång lista med valbara alternativ som Automatiserad avsiktligt hoppar över. De passar viss maskinvara (AMD-korrigeringar), viss hosting (OVH RTM) eller särskilda arbetslaster (IOMMU/VFIO, Ceph-förråd, hög tillgänglighet, Fastfetch, Figurine, justering av ZFS ARC, pigz, automatiska ZFS-ögonblicksbilder, hastighetsgränser för vzdump, Open vSwitch, TCP BBR …)."
+  },
+  "categoriesSection": {
+    "heading": "De 10 kategorierna",
+    "body": "Det anpassningsbara skriptet grupperar optimeringarna i 10 kategorier i en gemensam dialog med kryssrutor. Varje kategori har en egen dokumentationssida — öppna ett kort nedan för motivering, standardvärden och verifieringssteg för varje alternativ."
+  },
+  "categories": [
+    {
+      "name": "Grundinställningar",
+      "description": "Rensar APT-källorna, kör den officiella Proxmox-uppgraderingen och ställer in tidszon, regionala inställningar och vanliga verktyg. Grunden för alla andra kategorier."
+    },
+    {
+      "name": "System",
+      "description": "Justerar loggning och kärngränser för en värd med många VM:ar och containrar. Omfattar journald, logrotate, sysctl (minne och filgränser), beteende vid kärnpanik och snabba omstarter."
+    },
+    {
+      "name": "Virtualisering",
+      "description": "Förbereder värden för avancerad virtualisering. Installerar rätt gästagent när Proxmox självt körs i en VM som stöds och aktiverar IOMMU/VFIO för PCI-genomkoppling av GPU:er, styrenheter och TPU:er."
+    },
+    {
+      "name": "Nätverk",
+      "description": "Stärker och justerar värdens nätverksstack. Tvingar APT över IPv4, tillämpar säkerhetsinställningar i sysctl och TCP-buffertjusteringar, erbjuder Open vSwitch, TCP BBR och TCP Fast Open och binder beständiga gränssnittsnamn till MAC-adresser."
+    },
+    {
+      "name": "Lagring",
+      "description": "Konfigurerar Proxmox vanliga lagringsdelsystem: ZFS ARC-storlek, automatiska ZFS-ögonblicksbilder, ZFS autotrim för SSD-/NVMe-pooler och hastighetsgränser för vzdump så att diskar inte mättas under säkerhetskopiering."
+    },
+    {
+      "name": "Säkerhet",
+      "description": "Minskar attackytan som exponeras som standard. Inaktiverar RPC-tjänsterna portmapper/rpcbind som Proxmox inte behöver men lämnar lyssnande."
+    },
+    {
+      "name": "Anpassning",
+      "description": "Ändrar värdens utseende och skalmiljö: färger och alias i bashrc, MOTD-banner och borttagning av prenumerationsmeddelandet i webbgränssnittet."
+    },
+    {
+      "name": "Övervakning",
+      "description": "Integrerar värden med OVH Real-Time Monitoring. Installerar RTM bara om ProxMenux identifierar en OVH-server; på andra värdar ändrar alternativet ingenting."
+    },
+    {
+      "name": "Prestanda",
+      "description": "Snabbar upp komprimering vid säkerhetskopiering och överföringar genom att ersätta gzip med dess parallella motsvarighet pigz."
+    },
+    {
+      "name": "Valfritt",
+      "description": "Specialiserade alternativ som inte alla värdar behöver: AMD CPU-korrigeringar, Fastfetch-banner, 3D-värdnamn med Figurine, uppdatering av PVE Appliance Manager-indexet, Ceph-förråd, tjänster för hög tillgänglighet, Log2RAM för mindre SSD-slitage och en ZRAM-swapprofil."
+    }
+  ],
+  "mixTip": {
+    "title": "Kombinera Automatiserad och Anpassningsbar",
+    "body": "Ett vanligt upplägg: kör först <strong>Automatiserad</strong> för rimliga grundinställningar, öppna sedan <strong>Anpassningsbar</strong> och välj bara de extra verktyg du behöver, till exempel IOMMU för GPU-genomkoppling. Ändringarna registreras separat; Avinstallera visar allt du har tillämpat oavsett vilken väg som lade till det."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Automatiserad efterinstallation",
+        "href": "/docs/post-install/automated",
+        "tail": " — rimliga standardvärden som tillämpas utan frågor."
+      },
+      {
+        "label": "Avinstallera optimeringar",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — återställ valda ändringar utan rester."
+      },
+      {
+        "label": "Grundinställningar",
+        "href": "/docs/post-install/basic-settings",
+        "tail": " — repos, tid, språk, verktyg."
+      },
+      {
+        "label": "Virtualisering",
+        "href": "/docs/post-install/virtualization",
+        "tail": " — IOMMU + VFIO för genomkoppling."
+      },
+      {
+        "label": "Säkerhet",
+        "href": "/docs/post-install/security",
+        "tailRich": " · <storageLink>Lagring</storageLink> · <networkLink>Nätverk</networkLink> · <customLink>Anpassning</customLink> - andra kategorier."
+      },
+      {
+        "label": "Översikt efter installation",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

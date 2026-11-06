@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Hostiteľ: pripojenie zdieľania NFS | Dokumentácia ProxMenux",
+    "description": "Pripojte externý export NFS na hostiteľovi Proxmox ako úložisko Proxmox cez pvesm add nfs, ako samostatné pripojenie cez fstab neviditeľné v Datacenter > Storage alebo oboma spôsobmi. Metóda fstab je vhodná na sprístupnenie cesty kontajnerom LXC cez bind mount bez registrácie úložiska v Proxmoxe.",
+    "ogTitle": "Hostiteľ: pripojenie zdieľania NFS | Dokumentácia ProxMenux",
+    "ogDescription": "Pripojte externý export NFS na hostiteľovi Proxmox cez pvesm, fstab alebo oboje. Spôsob fstab je vhodný pre bind mounty LXC."
+  },
+  "header": {
+    "title": "Hostiteľ: pripojiť zdieľanie NFS na hostiteľovi",
+    "description": "Pripojte externý export NFS z NAS, iného servera alebo domáceho labu k hostiteľovi Proxmox. Môžete ho zaregistrovať ako úložisko Proxmox viditeľné v Datacenter > Storage, pridať samostatné pripojenie cez /etc/fstab na zvolenú cestu alebo použiť oba spôsoby. Samostatná cesta je vhodná na sprístupnenie zdieľania kontajnerom LXC pomocou bind mountu bez registrácie úložiska v Proxmoxe.",
+    "section": "Úložisko a zdieľanie · hostiteľ"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "ProxMenux ponúka dva spôsoby pripojenia exportu NFS: <strong>(1) Úložisko Proxmox</strong> pomocou <code>pvesm add nfs</code>. Zdieľanie sa zobrazí v Datacenter > Storage a Proxmox spravuje pripojenie na <code>/mnt/pve/&lt;id&gt;</code>. <strong>(2) Pripojenie cez fstab na hostiteľovi</strong> na zvolenú cestu, trvalo zapísané v <code>/etc/fstab</code>. Nezobrazí sa ako úložisko Proxmox a hodí sa na bind mounty do kontajnerov LXC bez ďalších položiek v rozhraní Proxmoxu. Môžete použiť jeden alebo oba spôsoby."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong>. Zobrazí sa podponuka so štyrmi možnosťami:",
+    "imageAlt": "Ponuka NFS hostiteľa — Pripojiť / Zobraziť / Odstrániť / Testovať pripojenie"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Postup má dve jasne oddelené fázy: vyhľadanie, overenie a výber, potom samotné pripojenie a zápis konfigurácie. Po výbere exportu zvolíte metódy pripojenia v zozname. Ďalšie dialógy sa pýtajú iba na parametre vybraných metód. Až do záverečného potvrdenia sa nemení ani <code>/etc/pve/storage.cfg</code>, ani <code>/etc/fstab</code>."
+  },
+  "modes": {
+    "heading": "Výber spôsobu pripojenia (označte jednu alebo obe možnosti)",
+    "intro": "Po výbere a overení exportu zobrazí ProxMenux zoznam dvoch spôsobov pripojenia. Môžete označiť jeden alebo oba. Ak stlačíte OK bez výberu, dialóg sa otvorí znovu. Vyberte aspoň jednu možnosť alebo postup ukončite tlačidlom Zrušiť.",
+    "imageAlt": "Výber spôsobov pripojenia s možnosťami pvesm a fstab",
+    "headerMethod": "Metóda",
+    "headerMount": "Cesta pripojenia",
+    "headerUi": "Viditeľné v datacentre > Úložisko",
+    "headerUseCase": "Typický prípad použitia",
+    "rows": [
+      {
+        "method": "<strong>Ako úložisko Proxmox (pvesm)</strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (manažovaný spoločnosťou Proxmox)",
+        "ui": "Áno",
+        "useCase": "VM obrazy diskov, zálohy, ISO, LXC šablóny — čokoľvek, čo sa musí objaviť v Proxmox UI."
+      },
+      {
+        "method": "<strong>Iba fstab hostiteľa</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> (vyberiete cestu)",
+        "ui": "Nie",
+        "useCaseRich": "Sprístupnite zdieľanie jednému alebo viacerým LXC cez bind mount <em>bez</em> registrácie úložiska Proxmox. Rozhranie Datacenter zostane prehľadné."
+      },
+      {
+        "method": "<strong>Obe</strong>",
+        "mount": "Obe cesty uvedené vyššie (dva body pripojenia toho istého exportu NFS)",
+        "ui": "Áno",
+        "useCase": "Integrácia s rozhraním a samostatná stabilná cesta hostiteľa s otvorenými oprávneniami pre bind mounty LXC."
+      }
+    ],
+    "bothTitle": "Možnosť „Oboje“ vytvorí dve nezávislé pripojenia NFS",
+    "bothBody": "Obe metódy sa vykonajú samostatne: pvesm pripojí export do <code>/mnt/pve/&lt;id&gt;</code> a fstab do <code>/mnt/&lt;path&gt;</code>. Získate pripojenie spravované Proxmoxom s predvolenými voľbami a samostatné pripojenie hostiteľa pre bind mounty LXC. Dva body pripojenia nezaručujú dve spojenia TCP; klient NFS môže transportné spojenia opätovne použiť."
+  },
+  "pvesmBranch": {
+    "heading": "Metóda A — ako úložisko Proxmox (pvesm)",
+    "intro": "Ak je <em>Ako úložisko Proxmox</em> označený, ProxMenux spustí pôvodný pvesm prietok:",
+    "items": [
+      "<strong>ID úložiska</strong> — názov, pod ktorým Proxmox toto úložisko zaregistruje. Predvolene je to <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Povolené sú iba písmená, číslice, <code>-</code> a <code>_</code>.",
+      "<strong>Typy obsahu</strong> Proxmox viaže kategórie obsahu na úložné objemy; vyberte si, čo to NFS je povolené držať:"
+    ],
+    "headerType": "Typ obsahu",
+    "headerAllows": "Čo to umožňuje",
+    "rows": [
+      {
+        "type": "import",
+        "allowsRich": "Import obrazu disku (štandardne vybraný). Potrebné pre <em>Import Disk Image na VM</em>."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "VM a CT záložné súbory (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "Inštalačné obrazy ISO."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "Šablóny LXC."
+      },
+      {
+        "type": "images",
+        "allows": "Obrazy diskov používaných VM — NFS tak slúži ako úložisko diskov VM."
+      },
+      {
+        "type": "rootdir",
+        "allows": "Koreňové súborové systémy LXC (pri NFS nezvyčajné — prečítajte si poznámku nižšie)."
+      },
+      {
+        "type": "snippets",
+        "allows": "Hook skripty a snippet súbory cloud-init."
+      }
+    ],
+    "warnTitle": "images a rootdir na NFS",
+    "warnBody": "Voľba <code>images</code> umožní ukladať disky VM na NFS. Výkon závisí od siete, servera a záťaže; výpadok môže zablokovať vstupno-výstupné operácie závislé od pripojenia. Voľba <code>rootdir</code> ukladá koreňové súborové systémy LXC na NFS, kde môžu neprivilegované kontajnery naraziť na obmedzenia mapovania UID, overlay a vlastníctva. Zvážte to pred umiestnením <code>images</code> / <code>rootdir</code>; NFS je vhodné aj pre <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
+    "result": "Výsledok je <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> a Proxmox auto-mounts na <code>/mnt/pve/&lt;id&gt;</code>."
+  },
+  "fstabBranch": {
+    "heading": "Metóda B — iba pripojenie cez fstab hostiteľa",
+    "intro": "Ak <em>Iba pripojenie cez fstab hostiteľa</em> je označený, ProxMenux požiada o cestu pripojenia hostiteľa a trvalé možnosti, potom sa pripojí a napíše položku na <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Cesta pripojenia k hostiteľovi</strong> Predvolené <code>/mnt/&lt;export-basename&gt;</code>. Musí to byť absolútna cesta. Ak je tam niečo už namontované, alebo existuje fstab položka pre tú istú cestu, ProxMenux Varuje vás a ponúka, že ho nahradíte.",
+      "<strong>Voľby pripojenia</strong> — <em>Čítanie/zápis</em> (predvolené: <code>rw,hard,nofail,_netdev,rsize=131072,wsize=131072,timeo=600,retrans=2</code>), <em>Iba na čítanie</em>, <em>Vlastné</em> (zadajte vlastné voľby)."
+    ],
+    "appliesIntro": "Keď potvrdíte, skript:",
+    "applies": [
+      "Vytvorí adresár bodu pripojenia pomocou <code>mkdir -p</code>.",
+      "<code>mount -t nfs -o &lt;opts&gt; &lt;srv&gt;:&lt;export&gt; &lt;path&gt;</code>.",
+      "Napíše jednoriadkový zápis do <code>/etc/fstab</code>: <code>&lt;srv&gt;:&lt;export&gt; &lt;path&gt; nfs &lt;opts&gt; 0 0</code>.",
+      "Spustí <code>systemctl daemon-reload</code> takže systemd zachytí novú fstab položku.",
+      "Pokúsi sa vykonať <code>chmod 1777</code> a <code>setfacl o::rwx</code> na bode pripojenia. Operácia je nezáväzná a nehlási zlyhanie: uspeje iba vtedy, ak ju server NFS povolí. Mnohé exporty NAS už umožňujú zápis všetkým používateľom."
+    ],
+    "lxcTitle": "Použitie pripojenia fstab z LXC",
+    "lxcBody": "Skript vypíše príkaz <code>pct set</code> pre bind mount, napríklad <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Alebo použite <mountLink>LXC Mount Manager</mountLink>, ktorý rozpozná pripojenia fstab. <strong>V kontajneri sa nič nemení</strong>. Prístup neprivilegovaného CT závisí od oprávnení servera pre jeho mapované UID/GID. Skript sa len pokúsi upraviť oprávnenia z hostiteľa; nezaručuje zapisovateľné exporty ani predvolené nastavenia výrobcov. Pri problémoch pozrite riešenie problémov.",
+    "noUiTitle": "Pripojenie fstab NIE JE úložiskom Proxmox",
+    "noUiBody": "Hostiteľský fstab mount je neviditeľný pre web Proxmox UI — podľa návrhu. Nezobrazuje sa v <em>Datacenter > Storage</em>, nemôžete ho vybrať v tvorcovi VM / CT a úlohy zálohovania Proxmox sa naň nemôžu zamerať. Je to čisto cesta hostiteľského súborového systému. Ak chcete aj integráciu UI, označte vo výbere <em>obe</em> metódy."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "pvesmIntro": "Metóda A (pvesm) zodpovedá:",
+    "fstabIntro": "Metóda B (fstab) zodpovedá:"
+  },
+  "view": {
+    "heading": "Zobraziť nakonfigurované úložiská NFS",
+    "body": "Vypíše položky NFS v Proxmoxe (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) so serverom, exportom, typmi obsahu, cestou pripojenia a aktuálnym stavom. <strong>Poznámka:</strong> zobrazí iba úložiská registrované cez pvesm, nie samostatné pripojenia fstab. Tie overte pomocou <code>findmnt -t nfs</code> alebo <code>grep nfs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "Odstrániť úložisko NFS",
+    "body": "Po potvrdení so serverom, exportom a obsahom spustí <code>pvesm remove &lt;storage-id&gt;</code>. Odstráni iba registráciu v Proxmoxe; <strong>vzdialený server NFS nemení</strong> a súbory neodstráni. Samostatné pripojenie fstab odstráňte ručnou úpravou <code>/etc/fstab</code> a príkazom <code>umount &lt;path&gt;</code>.",
+    "warnTitle": "Zálohovanie závislostí najprv",
+    "warnBody": "Ak VM, CT alebo úlohy zálohovania odkazujú na ID tohto úložiska, po odstránení budú odkazovať na neexistujúce úložisko. Proxmox ohlási chybu, ale odkazy neodstráni. Najprv ich presuňte alebo odstráňte a až potom odstráňte úložisko."
+  },
+  "test": {
+    "heading": "Test NFS konektivita",
+    "body": "Spustí diagnostický prechod cez každý NFS skladovanie registrované v Proxmoxe: kontroluje, či <code>showmount</code> je k dispozícii, <code>rpcbind</code> beží, pings každý server, sondy port 2049, volá <code>showmount -e</code>, a nakoniec uvádza Proxmox vlastný názor (<code>pvesm status</code>). Dobrá prvá zastávka, keď úložisko ukazuje ako <em>neaktívny</em> v Proxmoxe UI."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noServersTitle": "\"Žiadne NFS servery nájdené v sieti\"",
+    "noServersBody": "Automatické vyhľadávanie používa <code>nmap -p 2049 --open &lt;subnet&gt;/24</code>. Server nemusí reagovať, ak: je na inom VLAN / subnet, jeho firewall bloky nmap sondy (mnohý robiť) alebo port 2049 je zámerne uzavretý na tomto rozhraní. Použite možnosť <em>Manual</em> s IP alebo meno hostiteľa servera.",
+    "portTitle": "„Port NFS (2049) nie je dostupný“",
+    "portBody": "Ping uspel, ale <code>nc -z -w 3 &lt;server&gt; 2049</code> zlyhal. Skontrolujte, či služba NFS beží na serveri (<code>systemctl status nfs-server</code> na Linuxe, Ovládací panel → Súborové služby na Synology, NFS plugin na OMV / TrueNAS), a že firewall umožňuje 2049 z Proxmox hostiteľa.",
+    "showmountTitle": "„Failed to connect“ z príkazu showmount",
+    "showmountBody": "Server odmietol dotaz exportného zoznamu. Bežné príčiny: server vymáha prísne klientske ACL (vaše Proxmox IP nie je na povolenom zozname), <code>rpcbind</code> nebeží na serveri, alebo server vystaví iba NFSv4 s <code>showmount</code> vypnutým. Exportná cesta môže byť stále pridaná ručne, ak ju poznáte.",
+    "inactiveTitle": "Úložisko ukazuje ako neaktívne v systéme Proxmox UI",
+    "inactiveBody": "Najprv spustite <em>Testovať pripojenie NFS</em>: overí, či server odpovedá na ping, či je otvorený port 2049 a či je dostupný zoznam exportov (<code>showmount -e</code>). Ak spojenie funguje, ale úložisko zostáva neaktívne, skontrolujte <code>journalctl -u pvestatd</code> a konfiguráciu servera/exportu. Najprv opravte spojenie alebo oprávnenia. Príkaz <code>pvesm set &lt;id&gt; --disable 0</code> zapne vypnuté úložisko; nie je všeobecnou opravou chýb NFS.",
+    "lxcNoWriteTitle": "Pripojenie fstab funguje, ale neprivilegovaný LXC nemôže zapisovať cez bind mount",
+    "lxcNoWriteBody": "Prístup NFS závisí od vlastníkov, ACL a nastavení squash na serveri. Voľby CIFS <code>uid=</code> a <code>file_mode=</code> pre NFS <strong>neplatia</strong>. Pri predvolenom mapovaní LXC má root z CT na hostiteľovi UID 100000, nie vzdialené UID 0. Povoľte prístup skutočnému mapovanému UID/GID alebo anonymnej identite servera. <code>no_root_squash</code> ovplyvňuje iba vzdialené UID 0 a nie je všeobecným riešením pre UID 100000. Skript skúsi <code>chmod 1777</code>, ale oprávnenia servera neobíde.",
+    "fstabBootTitle": "fstab mount nepríde po reštarte",
+    "fstabBootBody": "Skript pridáva <code>nofail,_netdev</code>, aby nedostupné zdieľanie pri štarte neblokovalo spúšťanie systému. Ak sa nepripojí vôbec, overte dostupnosť siete pomocou <code>ping &lt;server&gt;</code>, skontrolujte <code>journalctl -u remote-fs.target</code> a platnosť záznamu pomocou <code>mount -fav | grep nfs</code>. Príkaz <code>mount -a</code> po štarte pripojí položky, ktoré zatiaľ chýbajú."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS ako úložisko Proxmox",
+        "tail": " — Rovnaký vzorec prietoku (Metóda A pvesm + metóda B fstab) pre zdieľania SMB/CIFS."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Správca LXC mountov",
+        "tailRich": " Pripojiť cestu, ktorá je určená len pre fstab <code>/mnt/&lt;path&gt;</code> do jedného alebo viacerých kontajnerov."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient v LXC",
+        "tail": " Alternatíva: pripojte NFS priamo zvnútra privilegovaného kontajnera (obíde hostiteľa)."
+      }
+    ]
+  }
+}

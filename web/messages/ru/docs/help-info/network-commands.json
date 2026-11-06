@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Сетевые команды Proxmox — ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Справочник сетевых команд хоста Proxmox VE: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup, а также pve-firewall, iptables и nftables для фильтрации. Проверка сетевых мостов, агрегированных интерфейсов и VLAN.",
+    "ogTitle": "Сетевые команды Proxmox — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Справочник сетевых команд для Proxmox VE — проверка интерфейсов и соединения, мониторинг, межсетевой экран (pve-firewall, iptables, nftables) и запросы DNS.",
+    "twitterTitle": "Сетевые команды Proxmox | ProxMenux",
+    "twitterDescription": "Команды для проверки, тестирования и настройки сети, а также управления межсетевым экраном в Proxmox VE."
+  },
+  "header": {
+    "title": "Сетевые команды",
+    "description": "Подборка справочных команд для сети хоста Proxmox: информация об интерфейсах, проверка соединения, настройка, мониторинг трафика и управление межсетевым экраном. Включает ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Быстрый обзор интерфейсов",
+    "body": "<code>ip a</code> показывает все интерфейсы с их IP-адресами и MAC-адресами. <code>ip r</code> показывает таблицу маршрутизации. Вместе они позволяют за считанные секунды ответить на большинство вопросов о том, правильно ли настроен интерфейс."
+  },
+  "commandGroups": [
+    {
+      "title": "Информация о сети",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Показать сетевые интерфейсы и IP-адреса"
+        },
+        {
+          "command": "ip r",
+          "description": "Показать таблицу маршрутизации"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Показать статистику трафика по интерфейсам"
+        },
+        {
+          "command": "brctl show",
+          "description": "Показать настроенные сетевые мосты"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Показать сетевую конфигурацию в исходном виде"
+        }
+      ]
+    },
+    {
+      "title": "Тестирование сети",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Проверить связь с другим узлом"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Выполнить трассировку маршрута до узла"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Совместить ping и traceroute в реальном времени"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "Выполнить DNS-запрос для домена"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Альтернативный способ выполнения DNS-запроса"
+        }
+      ]
+    },
+    {
+      "title": "Настройка сети",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Перезагрузить сетевую конфигурацию (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Показать сведения об устройстве Ethernet"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Показать состояние разрешения имён DNS"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Показать подробные сведения о сетевом устройстве (если используется NetworkManager)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Включить сетевой интерфейс"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Отключить сетевой интерфейс"
+        }
+      ]
+    },
+    {
+      "title": "Мониторинг сети",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Показать прослушиваемые порты (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Альтернативный способ просмотра прослушиваемых портов"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Вывести список открытых сетевых файлов и соединений"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Захватывать пакеты на интерфейсе"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Отслеживать использование пропускной способности интерфейса"
+        }
+      ]
+    },
+    {
+      "title": "Управление межсетевым экраном",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Показать активные правила межсетевого экрана (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Показать правила nftables"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Проверить состояние межсетевого экрана Proxmox"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Скомпилировать правила межсетевого экрана для всех узлов"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Перезагрузить правила межсетевого экрана Proxmox"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables и nftables",
+    "bodyRich": "Классическая служба <code>pve-firewall</code> генерирует правила iptables. Альтернативная служба proxmox-firewall использует <strong>nftables</strong>. Для просмотра правил подсистемы на основе iptables используйте <code>iptables -L -n -v</code>, а для подсистемы nftables — <code>nft list ruleset</code>. Используйте инструменты для включённой подсистемы; не считайте эти списки правил взаимозаменяемыми."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Управление сетью",
+        "tail": " — интерактивные сетевые инструменты ProxMenux (анализ мостов, постоянные имена, мониторинг)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Системные инструменты командной строки",
+        "tail": " — дополнительные инструменты мониторинга сети."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

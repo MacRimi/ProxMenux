@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Сервер Samba в LXC | Документация ProxMenux",
+    "description": "Запуск сервера Samba (SMB / CIFS) внутри контейнера Proxmox LXC с помощью ProxMenux. Автоматическая установка samba, управление /etc/samba/smb.conf, пользователями smbpasswd и группой sharedfiles для папок, подключённых через bind-mount. Требуется привилегированный контейнер.",
+    "ogTitle": "Сервер Samba в LXC | Документация ProxMenux",
+    "ogDescription": "Предоставление доступа к папкам по SMB/CIFS из привилегированного контейнера LXC. Автоматическая установка, пользователь smbpasswd, права доступа с учётом bind-mount."
+  },
+  "header": {
+    "title": "Сервер Samba в LXC",
+    "description": "Запустите сервер Samba (SMB / CIFS) внутри контейнера Proxmox LXC и предоставьте сетевым клиентам Windows / macOS / Linux доступ к папкам. ProxMenux устанавливает samba, создаёт пользователя Samba с помощью smbpasswd, управляет /etc/samba/smb.conf и настраивает права доступа с учётом bind-mount, если общая папка подключена с хоста.",
+    "section": "Хранилища и общий доступ · LXC"
+  },
+  "privReq": {
+    "title": "Требуется привилегированный контейнер",
+    "body": "Samba принимает идентификатор подключающегося пользователя с помощью <code>setgroups()</code> при каждом подключении к общему ресурсу (в момент, когда клиент открывает этот ресурс). В непривилегированном контейнере LXC ядро отклоняет этот системный вызов, поскольку пространство имён пользователей контейнера создано с <code>setgroups=deny</code>, а <code>smbd</code> в ответ аварийно завершает рабочий процесс с <code>PANIC: sys_setgroups failed</code>. В результате <code>smbd</code> запускается и привязывается к портам 139/445, но каждое клиентское подключение завершается ошибкой <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. По этой причине скрипт требует привилегированный CT и <strong>прерывает работу, если контейнер непривилегированный</strong>. Корректного решения на стороне сервера нет: используйте привилегированный CT или запускайте Samba в виртуальной машине."
+  },
+  "what": {
+    "heading": "Что делает этот инструмент",
+    "body": "Контейнер становится сервером SMB/CIFS: запускает <code>smbd</code>, предоставляет общий доступ к папке через <code>/etc/samba/smb.conf</code> и принимает клиентские подключения на портах <code>139</code> / <code>445</code>. Клиенты видят общий ресурс по адресу <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> в Проводнике Windows, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> в Finder на macOS или через <code>mount.cifs</code> в Linux.",
+    "diagramServerLabel": "LXC (привилегированный) — сервер Samba",
+    "diagramServerDetail": "/mnt/data\n(папка для общего доступа)\n\nsmbd + nmbd запущены\n\nПользователь: <username>\n(через smbpasswd)\n\nПринудительно заданная группа:\nsharedfiles",
+    "diagramClientLabel": "Любой клиент в сети",
+    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramArrow": "SMB / CIFS"
+  },
+  "perms": {
+    "heading": "Два варианта настройки прав доступа в зависимости от типа папки",
+    "body": "Перед добавлением общего ресурса в <code>smb.conf</code> скрипт проверяет, является ли выбранная папка <strong>папкой, подключённой с хоста через bind-mount</strong>, или обычной <strong>локальной папкой внутри CT</strong>, и в зависимости от этого по-разному настраивает владельца и права доступа:",
+    "headerType": "Тип папки",
+    "headerAction": "Что делает скрипт",
+    "bindType": "Bind-mount с хоста",
+    "bindTypeSubRich": "определяется по выводу <code>mount</code>",
+    "bindActionRich": "Создаёт группу <code>sharedfiles</code> (GID по умолчанию — 999; если он занят, подбирается свободный), добавляет в неё пользователя Samba, затем применяет <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — новые файлы наследуют группу). Если пользователь по-прежнему не может выполнять запись, применяет <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "localType": "Локальная папка внутри CT",
+    "localTypeSub": "bind-монтирование не обнаружено",
+    "localActionRich": "Стандартное назначение владельца и группы: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Общая группа не нужна, поскольку другие CT не выполняют запись в эту папку. Если доступ на запись по-прежнему отсутствует, применяется <code>setfacl</code>.",
+    "gidTitle": "GID группы 'sharedfiles' отличается от используемого при настройке сервера NFS",
+    "gidBody": "Скрипт сервера Samba использует GID <strong>999</strong> для <code>sharedfiles</code>, а <nfsLink>процедура настройки сервера NFS</nfsLink> — GID <strong>101000</strong>. Если вы запускаете оба сервера в одном контейнере и хотите использовать единую общую группу для обоих протоколов, после установки измените GID одной из групп так, чтобы он совпадал с GID другой (например, <code>groupmod -g 101000 sharedfiles</code>), и заново назначьте владельца и группу затронутым папкам. Это известное несоответствие в текущих скриптах."
+  },
+  "opening": {
+    "heading": "Открытие инструмента",
+    "body": "В главном меню ProxMenux откройте <strong>Хранилище &amp; Share Manager → Configure Samba Server в LXC (только для привилегированных контейнеров)</strong>. ProxMenux сначала предлагает выбрать целевой CT (и запускает его, если он остановлен); если контейнер непривилегированный, выполнение прекращается. После выбора CT открывается это подменю с пятью пунктами:",
+    "imageAlt": "Меню управления сервером Samba — Создать / Просмотреть / Удалить / Состояние / Деинсталлировать"
+  },
+  "howRuns": {
+    "heading": "Как работает скрипт (сценарий создания)"
+  },
+  "modes": {
+    "heading": "Три режима общего доступа",
+    "intro": "Каждый режим записывает отдельный блок конфигурации в <code>smb.conf</code>. Все три включают <code>valid users = &lt;username&gt;</code> (без анонимного доступа), <code>force group = sharedfiles</code> (чтобы новые файлы принадлежали общей группе) и <code>veto files = /lost+found/</code> (скрывает lost+found от клиентов).",
+    "headerMode": "Режим",
+    "headerBlock": "Блок, записываемый в smb.conf",
+    "rwMode": "Чтение и запись",
+    "roMode": "Только для чтения",
+    "customMode": "Пользовательский",
+    "customBodyRich": "Вы вводите собственные директивы в текстовом поле в свободной форме. ProxMenux всё равно помещает их в блок <code>[share]</code> со стандартными <code>path</code>, <code>valid users</code>, <code>force group</code> и <code>veto files</code>."
+  },
+  "manual": {
+    "heading": "Эквивалентные действия вручную",
+    "body": "Выполните все действия вручную — каждая команда выполняется <strong>внутри CT</strong> через <code>pct exec &lt;ctid&gt; --</code> или <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "connect": {
+    "heading": "Подключение с клиентских устройств",
+    "headerOs": "ОС клиента",
+    "headerHow": "Как подключиться",
+    "windowsOs": "Windows",
+    "windowsHowRich": "Проводник → адресная строка: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Или <em>Подключить сетевой диск</em> → установите флажок «Использовать другие учётные данные».",
+    "macosOs": "macOS",
+    "macosHowRich": "Finder → <em>Go → Connect к серверу…</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. Или <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
+    "linuxOs": "Linux",
+    "linuxHowRich": "<code>mount -t cifs //&lt;ct-ip&gt;/&lt;share&gt; /mnt/x -o username=&lt;u&gt;,password=&lt;p&gt;,iocharset=utf8</code>. Если клиент — другой CT Proxmox, можно также воспользоваться страницей <clientLink>Клиент Samba в LXC</clientLink>."
+  },
+  "view": {
+    "heading": "Просмотр текущих общих ресурсов",
+    "body": "Анализирует <code>/etc/samba/smb.conf</code> внутри CT и выводит все блоки <code>[share]</code> (пропуская <code>[global]</code>, <code>[homes]</code>, <code>[printers]</code>) с указанием пути для каждого. Полезно для быстрой инвентаризации."
+  },
+  "delete": {
+    "heading": "Удаление общего ресурса",
+    "body": "Позволяет выбрать общий ресурс по имени, удаляет его блок из <code>smb.conf</code> (<code>sed</code> удаляет строки от <code>[share]</code> до следующей пустой строки) и перезапускает <code>smbd</code>. Сама папка и её содержимое остаются нетронутыми."
+  },
+  "status": {
+    "heading": "Проверка состояния Samba",
+    "body": "Показывает, установлены ли и активны ли <code>smbd</code> и <code>nmbd</code>, выводит список пользователей Samba (<code>pdbedit -L</code>) и активные сеансы (<code>smbstatus</code>)."
+  },
+  "uninstall": {
+    "heading": "Удаление сервера Samba",
+    "body": "Полная очистка после подтверждения: останавливает и отключает <code>smbd</code> и <code>nmbd</code>, создаёт резервную копию <code>smb.conf</code> в <code>smb.conf.backup.YYYYMMDD_HHMMSS</code>, удаляет пользователей Samba с помощью <code>smbpasswd -x</code> и выполняет <code>apt-get purge</code> для пакетов Samba. Сами экспортируемые <strong>папки не удаляются</strong>.",
+    "warnTitle": "Папки сохраняются — создавайте резервные копии данных отдельно",
+    "warnBody": "Оба действия — <em>Удаление общего ресурса</em> и <em>Удаление сервера Samba</em> — удаляют конфигурацию общего ресурса. Данные в экспортируемых папках сохраняются. Чтобы удалить и данные, сделайте это явно с помощью <code>rm -rf</code> после завершения скрипта."
+  },
+  "troubleshoot": {
+    "heading": "Устранение неполадок",
+    "privTitle": "Требуется привилегированный контейнер (скрипт прекращает работу)",
+    "privBody": "Выбранный CT — непривилегированный контейнер, и <code>smbd</code> не может предоставлять в нём доступ к файлам. Если обойти проверку и настроить Samba вручную, <code>smbd</code> запустится и порты откроются, но первое подключение клиента вызовет аварийный сбой с <code>PANIC: sys_setgroups failed</code> в <code>/var/log/samba/log.&lt;client&gt;</code>, а клиент увидит <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Причина — наличие <code>setgroups=deny</code> в непривилегированном пространстве имён пользователей: это блокирует переключение Samba на учётную запись пользователя для каждого подключения. Ни <code>features=keyctl=1</code>, ни удаление <code>force user</code> / <code>force group</code> этого не меняют. Единственные рабочие варианты: преобразовать CT в привилегированный контейнер или перенести Samba в виртуальную машину.",
+    "aptTitle": "Ошибка при выполнении apt-get install",
+    "aptIntro": "Скрипт рассчитан на CT с системой семейства Debian. В Alpine / Arch / Rocky / Alma установите Samba вручную:",
+    "aptItems": [
+      "Alpine: <code>apk add samba</code>",
+      "Arch: <code>pacman -S samba</code>",
+      "Rocky / Alma: <code>dnf install samba</code>"
+    ],
+    "aptOutro": "Затем повторно запустите скрипт ProxMenux — этап установки пропускается, если необходимые инструменты уже установлены.",
+    "noShareTitle": "Клиент подключается, но не видит общий ресурс",
+    "noShareBody": "Убедитесь, что в блоке общего ресурса задано <code>browseable = yes</code> (по умолчанию для режимов rw / ro; в пользовательской конфигурации может отсутствовать). Также проверьте, что межсетевые экраны CT и хоста Proxmox разрешают TCP-подключения к портам 445 (SMB) и 139 (NetBIOS). Некоторым клиентам Windows также требуется разрешение имён — сначала попробуйте подключиться напрямую по IP-адресу.",
+    "authTitle": "Ошибка аутентификации (NT_STATUS_LOGON_FAILURE)",
+    "authBody": "Либо указан неверный пароль (пароли Samba <em>не зависят</em> от системных паролей; список пользователей Samba можно вывести с помощью <code>pdbedit -L</code>), либо пользователь не включён в <code>valid users</code> для этого общего ресурса. Сбросьте пароль с помощью <code>smbpasswd &lt;user&gt;</code> внутри CT.",
+    "groupTitle": "Файлы, записанные клиентом, имеют неверную группу на сервере",
+    "groupBody": "Скрипт задаёт <code>force group = sharedfiles</code> в блоке общего ресурса, поэтому новые файлы должны принадлежать группе <code>sharedfiles</code>. Если это не так, возможно, с родительского каталога был снят бит SGID (кто-то вручную выполнил <code>chmod</code>). Установите его повторно: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
+    "bothTitle": "Общий доступ к одной папке одновременно через NFS и Samba",
+    "bothBody": "ProxMenux использует разные GID для <code>sharedfiles</code> в каждом скрипте (Samba: 999, NFS: 101000). Если вы предоставляете доступ к одной папке через оба протокола, выберите один GID и приведите оба значения к нему. Самое простое решение: после выполнения обоих скриптов измените меньший GID:"
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Клиент Samba в LXC",
+        "tail": " — обратная задача: монтирование внешних общих ресурсов Samba изнутри CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "Сервер NFS в LXC",
+        "tail": " — связанная страница: тот же подход, но с NFS вместо CIFS."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS в качестве хранилища Proxmox",
+        "tailRich": " — когда ваш CT начнёт предоставлять общий ресурс, зарегистрируйте этот ресурс в Proxmox, чтобы он появился в <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}

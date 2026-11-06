@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Installare Kodi in LXC con accelerazione GPU | Guide ProxMenux",
+    "description": "Eseguire Kodi in un container LXC privilegiato su Proxmox VE, rendere accessibili l’iGPU e i dispositivi di input USB dell’host e usare il server come centro multimediale collegato direttamente al televisore.",
+    "ogTitle": "Installare Kodi in LXC con accelerazione GPU",
+    "ogDescription": "Eseguire Kodi in un container LXC privilegiato su Proxmox VE con accesso all’iGPU e ai dispositivi di input USB dell’host e trasformare il server in un centro multimediale."
+  },
+  "header": {
+    "title": "Installare Kodi in LXC con accelerazione GPU e collegarlo a un monitor o televisore",
+    "description": "Eseguire Kodi in un container LXC privilegiato su Proxmox VE, rendere accessibili l’iGPU e i dispositivi di input USB dell’host e usare il server come centro multimediale collegato direttamente al televisore.",
+    "section": "Guide"
+  },
+  "intro": {
+    "calloutTitle": "Attenzione",
+    "calloutBody": "Questa guida usa uno script esterno della comunità per preparare il container Kodi. ProxMenux può configurare l’accesso all’iGPU dell’host: <strong>GPU e Coral-TPU → Aggiungi GPU a LXC</strong> configura <code>/dev/dri</code> e installa i driver nel container. Lo script seguente installa anche Kodi e l’avvio automatico su <code>tty7</code>. Usalo per un centro multimediale LXC già pronto; scegli la <gpuLink>procedura ProxMenux</gpuLink> se serve solo l’accesso alla GPU per un container configurato manualmente.",
+    "credit": "Lo script originale di Kodi per LXC è stato creato da <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Cosa farai",
+    "steps": [
+      "Creare un container LXC privilegiato con Kodi tramite lo script.",
+      "Rendere accessibili nel container tastiera, mouse o controller USB.",
+      "Facoltativo: aggiornare Kodi dai repository configurati nel container."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Creare il Kodi LXC",
+    "body": "Per questa procedura seleziona <strong>Privileged</strong> nelle impostazioni avanzate dello script. Per impostazione predefinita crea container non privilegiati, che richiedono permessi sui dispositivi e mappatura degli ID appropriati. Configura l’accesso alla GPU, Kodi e l’avvio automatico su <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "L’installazione richiede un po’ di tempo. Quando Kodi si avvia su <code>tty7</code>, collega il monitor o il televisore all’uscita HDMI/DisplayPort dell’host: dovrebbe comparire l’interfaccia di Kodi."
+  },
+  "addInput": {
+    "heading": "2. Aggiungere tastiera, mouse o controller USB",
+    "body": "I dispositivi di input si trovano in <code>/dev/input/</code> sull’host. Individua il loro numero major:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Elenco dei dispositivi di input",
+    "afterList": "Per i dispositivi a caratteri usa il numero major prima della virgola, nell’esempio <code>13</code>. Sull’host, modifica la configurazione del container Kodi, sostituendo <code>'<'CTID'>'</code> con il suo ID, ad esempio <code>102</code>:",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
+    "addLines": "Aggiungi le righe seguenti, adattando <code>13</code> al numero rilevato sul <strong>tuo</strong> host:",
+    "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "Configurazione LXC",
+    "save": "Salva il file, esci dall’editor con <code>Ctrl+X</code> e riavvia <strong>solo il container</strong>. Non occorre riavviare l’host Proxmox:",
+    "restartCode": "pct reboot CTID",
+    "plug": "Collega tastiera, mouse o controller USB. Kodi dovrebbe rispondere."
+  },
+  "updateKodi": {
+    "heading": "3. Facoltativo: aggiornare Kodi dai repository configurati",
+    "calloutTitle": "Importante",
+    "calloutBody": "Il PPA team-xbmc è <strong>solo per Ubuntu</strong> e Kodi segnala che non è più mantenuto. L’assenza di <code>add-apt-repository</code> non identifica la distribuzione. Controlla <code>cat /etc/os-release</code> e cerca <code>NAME=\"Ubuntu\"</code>; non aggiungere PPA Ubuntu a Debian. I comandi seguenti aggiornano i pacchetti dai repository configurati nel container.",
+    "body": "Nel container (<code>pct enter '<'CTID'>'</code>):",
+    "code": "apt update\napt install --only-upgrade kodi kodi-bin",
+    "after": "Riavvia il container dopo l’aggiornamento. Kodi userà la versione disponibile nei repository configurati, che può differire dall’ultima versione del progetto."
+  },
+  "screenshots": {
+    "heading": "Schermate",
+    "image1Alt": "Interfaccia Kodi 1",
+    "image2Alt": "Interfaccia Kodi 2"
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "items": [
+      "<strong>Il container Kodi si avvia, ma sul televisore non appare nulla:</strong> potrebbe non avere accesso all’iGPU. Controlla <code>ls /dev/dri</code> nel container: dovrebbero apparire <code>card0</code> e <code>renderD128</code>. Se la directory è vuota, controlla il passthrough GPU o usa <strong>Aggiungi GPU a LXC</strong> in ProxMenux.",
+      "<strong>Tastiera o mouse non rilevati dopo il riavvio:</strong> controlla che <code>/dev/input</code> sia montato e che Kodi possa leggere i dispositivi. Esegui <code>ls -l /dev/input</code> sull’host e nel container e verifica la regola <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>La riproduzione con accelerazione hardware usa la CPU invece della GPU:</strong> installa o aggiorna i driver VA-API nel container: <code>intel-media-va-driver</code> per le iGPU Intel recenti, <code>i965-va-driver</code> per quelle meno recenti e <code>mesa-va-drivers</code> per AMD.",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> il comando non è installato; questo non dimostra che il container usi Debian. Controlla distribuzione e pacchetti disponibili. Su Debian usa i pacchetti Kodi di Debian senza aggiungere il PPA Ubuntu."
+    ]
+  },
+  "further": {
+    "heading": "Ulteriori informazioni",
+    "konpatRich": "<konpatLink>Articolo di Konpat</konpatLink> per approfondire l’accesso all’iGPU Intel da LXC."
+  }
+}

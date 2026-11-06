@@ -1,0 +1,308 @@
+{
+  "meta": {
+    "title": "Daten, Pfade und Netzwerk | ProxMenux",
+    "description": "So bewahrt OCI manager Apps die Daten eines OCI-Containers: Container-Datenträger, Host-Verzeichnisse, rclone-Mounts, Adressen und private Netzwerke."
+  },
+  "header": {
+    "title": "Daten, Pfade und Netzwerk",
+    "description": "Was im rootfs liegt, was beim Ersetzen erhalten bleibt, wie Container Daten gemeinsam nutzen und wie jeder Container seine Adresse erhält.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Persistenz wird vor dem Erstellen des LXC festgelegt",
+            "body": "Vor dem Erstellen des Containers werden die vom Image und seiner Compose-Datei deklarierten Volumes ausgelesen. Jeder Pfad, der eine Aktualisierung überstehen muss, erhält einen vom rootfs unabhängigen Mountpoint. Das rootfs enthält damit nur die zum Image gehörenden Dateien und kann ersetzt werden."
+          }
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Was der Installer abfragt",
+      "intro": "Die Vorlage gibt die von der Anwendung benötigten Pfade vor. Jeder wird auf einem Container-Datenträger oder in einem Host-Verzeichnis abgelegt. Vor der Zusammenfassung können weitere Pfade ergänzt werden.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Benötigte Pfade",
+                "body": "<code>/config</code>, <code>/data</code>, Bibliotheken, Downloads und alle von der Anwendung deklarierten Volumes werden aufgelistet."
+              },
+              {
+                "title": "Speicherort",
+                "body": "Jeder Pfad wird auf einem Container-Datenträger oder in einem vorhandenen Host-Verzeichnis abgelegt."
+              },
+              {
+                "title": "Speicher und Größe",
+                "body": "Ein Container-Datenträger wird mit der angegebenen Größe auf einem Proxmox-VE-Speicher erstellt. Die Standardinstallation fragt einmal nach dem Speicher für den Container und seine Daten, wenn der Knoten mehr als einen hat; die erweiterte Installation fragt für jeden Pfad unmittelbar vor seiner Größe nach dem Speicher und schlägt den des rootfs vor. Der Datenträger erscheint als <code>vm-VMID-disk-N</code> und wird als <code>mpN</code> eingebunden."
+              },
+              {
+                "title": "Host-Verzeichnis",
+                "body": "Das Host-Verzeichnis wird über seinen Pfad angegeben. Existiert es noch nicht, wird es angelegt und dem Host-Benutzer zugeordnet, auf den der Container-Benutzer abgebildet wird."
+              },
+              {
+                "title": "Weitere Pfade",
+                "body": "Vor der Installation können weitere Zuordnungen von Host-Pfad oder Volume zu einem Pfad im Container ergänzt werden."
+              },
+              {
+                "title": "Zusammenfassung",
+                "body": "Vor dem Erstellen des CT wird die vollständige Pfadzuordnung angezeigt und im Instanzvertrag gespeichert."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Die beiden persistenten Speicherorte",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Eigenschaft",
+              "Container-Datenträger",
+              "Host-Verzeichnis"
+            ],
+            "rows": [
+              [
+                "In der Konfiguration",
+                "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>",
+                "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
+              ],
+              [
+                "Containersicherung (vzdump)",
+                "Mit <code>backup=1</code> enthalten",
+                "Nicht enthalten"
+              ],
+              [
+                "Größe",
+                "Festgelegt; durch Vergrößern des Mountpoints erweiterbar",
+                "Der freie Platz im Dateisystem oder Dataset des Hosts"
+              ],
+              [
+                "Andere Container",
+                "Nur vom zugehörigen Container eingebunden",
+                "Dasselbe Verzeichnis kann in mehrere Container eingebunden werden"
+              ],
+              [
+                "Snapshots und Wiederherstellung",
+                "Von Proxmox VE zusammen mit dem CT verwaltet",
+                "Im Speicher des Hosts verwaltet"
+              ],
+              [
+                "Beim Entfernen der Anwendung",
+                "Wird mit dem Container gelöscht",
+                "Bleibt mit seinem Inhalt erhalten"
+              ],
+              [
+                "Beim Verschieben des CT auf einen anderen Knoten",
+                "Wird mit dem CT verschoben",
+                "Derselbe Pfad muss auf dem anderen Knoten vorhanden sein"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Das rootfs ist den Binärdateien und dem Inhalt des Images vorbehalten. Eine Aktualisierung oder Neuerstellung ersetzt es, ohne eine der beiden Arten von Mountpoints anzutasten."
+        },
+        {
+          "p": "Ein Host-Verzeichnis wird mit allem eingebunden, was der Host darin eingehängt hat. Ein Verzeichnis wie <code>/mnt/pve</code> zeigt seine Netzwerkfreigaben, Datenträger und Datasets im Container, und was der Host dort später ein- oder aushängt, erscheint oder verschwindet, ohne dass der Container neu gestartet wird. Ein schreibgeschützt hinzugefügtes Verzeichnis ist zusammen mit dem, was beim Start des Containers darin eingehängt ist, schreibgeschützt. Ein Dateisystem, das der Host danach einhängt, kommt mit den Berechtigungen an, mit denen der Host es einhängt, und wird beim Neustart des Containers ebenfalls schreibgeschützt."
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Beispiel: ein Container mit beiden Speicherorten",
+      "blocks": [
+        {
+          "code": {
+            "title": "Jellyfin als CT 151 auf local-lvm installiert (Auszug)",
+            "code": "rootfs: local-lvm:vm-151-disk-0,size=8G\n# Container disk, part of the CT backup\nmp0: local-lvm:vm-151-disk-1,mp=/config,backup=1,size=16G\n\n# Host directory, outside the CT backup\nmp1: /mnt/oci-shared/media,mp=/data/media"
+          }
+        },
+        {
+          "p": "Eine Aktualisierung oder Neuerstellung ersetzt nur das rootfs: <code>mp0</code> bewahrt Benutzer, Bibliotheken und Einstellungen, während <code>mp1</code> weiterhin dieselben Medien bereitstellt. Die Wiederherstellung der CT-Sicherung stellt <code>/config</code> wieder her. Das Medienverzeichnis wird bei Bedarf aus der Sicherung des Host-Speichers wiederhergestellt."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Vertrag",
+                "detail": "/config"
+              },
+              {
+                "label": "Speicherort",
+                "detail": "Container-Datenträger\noder Host-Verzeichnis"
+              },
+              {
+                "label": "LXC",
+                "detail": "Für die Anwendung\nimmer /config"
+              }
+            ],
+            "caption": "Die Anwendung sieht den vom Image vorgegebenen Pfad. Nur der Speicherort ändert sich."
+          }
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "title": "Ein Host-Verzeichnis, mehrere Container",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
+            "labels": {
+              "host": "Host-Verzeichnis",
+              "config": "Eigene Konfiguration"
+            }
+          }
+        },
+        {
+          "p": "Jeder Container speichert seine Konfiguration auf einem eigenen Datenträger. Bibliothek oder Downloads liegen in einem gemeinsamen Host-Verzeichnis, das in allen Containern unter demselben internen Pfad eingebunden wird. So ist der Pfad, in den eine Anwendung schreibt, derselbe, aus dem eine andere liest."
+        }
+      ]
+    },
+    {
+      "id": "rclone",
+      "title": "Cloud-Speicher über die rclone-Anwendung",
+      "intro": "Der rclone-Eintrag im Katalog bietet neben der Installation auch <strong>Mount in einem vorhandenen rclone-OCI-Container aktivieren</strong>. Dabei wird ein bereits in der rclone-Weboberfläche angelegtes und autorisiertes Remote eingehängt und auf dem Host bereitgestellt. Andere Container können es als Host-Verzeichnis nutzen.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Container und Remote",
+                "body": "Die VMID des rclone-Containers, der genaue Name des Remotes und optional ein Pfad darin."
+              },
+              {
+                "title": "Mount-Name und Cache",
+                "body": "Der Name des Mounts und der VFS-Cache-Modus: <code>off</code>, <code>minimal</code>, <code>writes</code> oder <code>full</code> (Standard)."
+              },
+              {
+                "title": "Bereitgestellte Ansichten",
+                "body": "Ein gemeinsames Stammverzeichnis, standardmäßig <code>/mnt/oci-shared</code>, enthält eine Ansicht mit Lese- und Schreibzugriff unter <code>/mnt/oci-shared/remotes/NAME</code> sowie eine schreibgeschützte Ansicht unter <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+              },
+              {
+                "title": "Aktivierung",
+                "body": "Nach der Bestätigung wird der CT gestoppt. Sein Startbefehl und ein Proxmox-VE-Hookscript werden eingerichtet, dann wird er wieder gestartet. Der Vorgang wartet, bis beide Ansichten auf dem Host eingehängt sind."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Wenn der Mount nicht zustande kommt",
+            "body": "Die vorherige Container-Konfiguration wird wiederhergestellt und der Container erneut gestartet. Eine fehlgeschlagene Aktivierung lässt rclone damit im bisherigen Zustand."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Adressen und Netzwerke",
+      "intro": "Eine einzelne Anwendung benötigt eine Adresse. Eine Anwendung aus mehreren Containern braucht zusätzlich ein stabiles Netzwerk zwischen ihren Mitgliedern.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "network",
+                "title": "Anwendung mit einem Container",
+                "body": "Gewählt werden die Netzwerk-Bridge sowie DHCP oder eine feste Adresse im CIDR-Format. Der LXC hat eine eigene Adresse, und die Zusammenfassung zeigt die vollständigen Dienst-URLs."
+              },
+              {
+                "icon": "waypoints",
+                "title": "Anwendung mit mehreren Containern",
+                "body": "Ein freies Subnetz wird ermittelt und eine dauerhafte private Bridge erstellt. Jedes Mitglied – Anwendung, Datenbank und Cache – erhält dort eine feste Adresse."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "LAN",
+                "detail": "Erreichbare Adresse\nnur für den Hauptdienst"
+              },
+              {
+                "label": "Haupt-LXC",
+                "detail": "Web / API\nLAN + privates Netzwerk"
+              },
+              {
+                "label": "Privates Netzwerk",
+                "detail": "PostgreSQL · Valkey · ML\nfeste Adressen"
+              }
+            ],
+            "caption": "Abhängigkeiten kommunizieren über das private Netzwerk und haben keine Adresse im LAN."
+          }
+        },
+        {
+          "p": "Der Stack-Vertrag speichert Bridge, Subnetz, Adressen und Beziehungen zwischen den Diensten. Bei einer Aktualisierung der Anwendung wird dieselbe Topologie für alle Mitglieder wiederverwendet. ProxMenux Monitor öffnet den Hauptcontainer über seine LAN-Adresse, nicht über seine Adresse im privaten Netzwerk."
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "title": "Datei- und Verzeichnisbesitz",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Neue Verzeichnisse werden mit der UID und GID angelegt, auf die der unprivilegierte LXC abgebildet wird.",
+              "Bei vorhandenen Verzeichnissen wird der Eigentümer nicht rekursiv geändert.",
+              "Sockets, Systemdateien und sensible Pfade werden nicht als allgemeine Host-Verzeichnisse angeboten."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "title": "Was eine Containersicherung enthält",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Bestandteil",
+              "In der vzdump-Sicherung des CT",
+              "Aufbewahrungsort"
+            ],
+            "rows": [
+              [
+                "OCI-rootfs",
+                "Ja",
+                "In der CT-Sicherung; außerdem aus Image und Vertrag neu erstellbar"
+              ],
+              [
+                "Container-Datenträger mit <code>backup=1</code>",
+                "Ja",
+                "Die CT-Sicherung"
+              ],
+              [
+                "Host-Verzeichnis",
+                "Nein",
+                "Die Sicherung des Host-Speichers"
+              ],
+              [
+                "Instanzvertrag",
+                "Ja, die im CT mitgeführte Kopie",
+                "<code>/.proxmenux/oci-record.json</code> im CT; weitere Host- und Cluster-Kopien werden separat gespeichert"
+              ],
+              [
+                "Anwendung mit mehreren Containern",
+                "Jedes Mitglied in einer eigenen Sicherung",
+                "Die Sicherungen aller Mitglieder sowie der Stack-Vertrag und seine Netzwerk-Bridge auf dem Host"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,17 @@ function resolveChangelogPath(locale: string): string {
   return path.join(repoRoot, "CHANGELOG.md")
 }
 
+// The image of the latest release, which is what a link to this page shows
+// in RSS readers and social networks.
+function latestReleaseImage(locale: string): string | null {
+  try {
+    const content = fs.readFileSync(resolveChangelogPath(locale), "utf8")
+    return content.match(/!\[[^\]]*\]\((https:[^)]+)\)/)?.[1] ?? null
+  } catch {
+    return null
+  }
+}
+
 // Surface the latest changelog entry in the metadata so social previews and
 // SERP snippets reflect what was actually shipped. The CHANGELOG.md mixes two
 // formats — `## [x.y.z] - YYYY-MM-DD` (older releases) and `## YYYY-MM-DD`
@@ -76,6 +87,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: "changelog.meta" })
+  const releaseImage = latestReleaseImage(locale)
   const latest = readLatestChangelogVersion(locale)
   const versionTag = latest?.version ?? ""
   const dateTag = latest?.date ?? ""
@@ -114,9 +126,9 @@ export async function generateMetadata({
       siteName: "ProxMenux",
       images: [
         {
-          url: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/main.png",
-          width: 1363,
-          height: 735,
+          url: releaseImage ?? "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/main.png",
+          width: releaseImage ? 1280 : 1363,
+          height: releaseImage ? 640 : 735,
           alt: "ProxMenux — Interactive Menu and Web Dashboard for Proxmox VE",
         },
       ],
@@ -126,7 +138,7 @@ export async function generateMetadata({
       title: `${t("title")}${titleSuffix}`,
       description: `${t("ogDescription")} ${descriptionSuffix}`.trim(),
       images: [
-        "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/main.png",
+        releaseImage ?? "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/main.png",
       ],
     },
   }

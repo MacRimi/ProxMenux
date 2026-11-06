@@ -28,7 +28,13 @@
     "switcher": "Jazyk",
     "en": "English",
     "es": "Español",
-    "sk": "Slovenčina"
+    "sk": "Slovenčina",
+    "de": "Deutsch",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "sv": "Svenska",
+    "ru": "Русский"
   },
   "resources": {
     "documentation": {
@@ -62,8 +68,8 @@
       "dashboardStorage": "Karta Úložisko",
       "dashboardNetwork": "Karta Sieť",
       "dashboardVmsLxcs": "Karta VM a LXC",
-      "dashboardVmsLxcsApp": "App",
-      "dashboardVmsLxcsUpdates": "Updates",
+      "dashboardVmsLxcsApp": "Aplikácia",
+      "dashboardVmsLxcsUpdates": "Aktualizácie",
       "dashboardHardware": "Karta Hardvér",
       "dashboardSystemLogs": "Karta Systémové logy",
       "dashboardTerminal": "Karta Terminál",
@@ -81,6 +87,7 @@
       "ociStorageNetwork": "Dáta, cesty a sieť",
       "ociHardware": "Zariadenia a akcelerácia",
       "ociStacks": "Aplikácie s viacerými kontajnermi",
+      "ociContributeApp": "Nainštalovať aplikáciu a pridať ju do katalógu",
       "ociLifecycle": "Inštalácia, aktualizácia a vytvorenie znova",
       "ociMonitor": "V ProxMenux Monitore",
       "proxmenuxScripts": "Skripty ProxMenux",
@@ -160,6 +167,7 @@
       "settingsOverview": "Prehľad",
       "settingsMonitor": "ProxMenux Monitor",
       "settingsBeta": "Zmeniť kanál vydaní",
+      "settingsLanguage": "Zmeniť jazyk",
       "settingsVersion": "Zobraziť informácie o verzii",
       "settingsUninstall": "Odinštalovať ProxMenux",
       "commandsReference": "Prehľad príkazov",
@@ -193,7 +201,15 @@
       "backupRestoreJobs": "Plánované úlohy",
       "backupRestoreRestoring": "Obnova",
       "backupRestoreCrossKernel": "Obnova medzi kernelmi",
-      "backupRestoreGlossary": "Slovník pojmov"
+      "backupRestoreGlossary": "Slovník pojmov",
+      "dashboardApps": "Karta Aplikácie",
+      "auditReport": "Audit a správy",
+      "auditReportOverview": "Prehľad",
+      "auditReportAssessment": "Hodnotenie a inventár",
+      "auditReportPolicy": "Pravidlá",
+      "auditReportChanges": "Zmeny",
+      "auditReportReports": "Správy a porovnania",
+      "auditReportScope": "Rozsah a záruky"
     }
   },
   "hero": {

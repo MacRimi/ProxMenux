@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Análisis de config y limpieza guiada | ProxMenux Documentation",
+    "title": "Análisis de configuración y limpieza guiada | Documentación de ProxMenux",
     "description": "Detecta bloques iface en /etc/network/interfaces que referencian NICs físicas que ya no están en el host. Los reporta y ofrece una eliminación guiada de 5 pasos con backup obligatorio y previsualización por bloque.",
-    "ogTitle": "Análisis de config y limpieza guiada | ProxMenux Documentation",
+    "ogTitle": "Análisis de configuración y limpieza guiada | Documentación de ProxMenux",
     "ogDescription": "Encuentra y elimina bloques de interfaz huérfanos dejados por cambios de hardware, con previsualización completa y rollback."
   },
   "header": {
-    "title": "Análisis de config y limpieza guiada",
+    "title": "Análisis de configuración y limpieza guiada",
     "description": "Recorre cada bloque iface en /etc/network/interfaces y verifica que la NIC física subyacente sigue existiendo. Reporta los bloques huérfanos dejados por cambios de hardware y ofrece una eliminación guiada con backup, previsualización y confirmación por bloque.",
     "section": "Red"
   },
@@ -18,7 +18,7 @@
     "heading": "En qué se diferencia del análisis de bridges",
     "headerAspect": "Aspecto",
     "headerBridge": "Análisis de bridges",
-    "headerConfig": "Análisis de config",
+    "headerConfig": "Análisis de configuración",
     "rows": [
       {
         "aspect": "Mira",
@@ -45,7 +45,7 @@
   },
   "step1": {
     "heading": "Paso 1: análisis (solo lectura)",
-    "intro": "Aborta inmediatamente si el host no usa la stack clásica. Si no, lista cada interfaz configurada que no sea loopback y reporta su estado:",
+    "intro": "Se detiene inmediatamente si el host no usa la pila clásica. En caso contrario, lista todas las interfaces configuradas salvo loopback e indica su estado:",
     "virtTitle": "Las interfaces virtuales están protegidas",
     "virtBody": "Los bridges (<code>vmbrX</code>) y los bonds (<code>bondX</code>) son construcciones virtuales. Pueden no existir legítimamente en el momento de la inspección (p. ej. un bridge aún sin puertos), por lo que el análisis nunca propone eliminarlos — solo NICs físicas."
   },
@@ -60,7 +60,7 @@
       },
       {
         "title": "2. Confirmar la lista a eliminar",
-        "body": "Lista exactamente qué bloques de interfaz física se van a eliminar. Si, entre el análisis y la limpieza, las NICs han reaparecido (p. ej. has reasentado una tarjeta), el flujo sale con <em>\"No cleanup needed.\"</em>",
+        "body": "Lista exactamente qué bloques de interfaz física se eliminarán. Si las NIC han reaparecido entre el análisis y la limpieza, por ejemplo al volver a insertar una tarjeta, el proceso termina con <em>«No se necesita limpieza»</em>.",
         "tone": "blue"
       },
       {
@@ -91,7 +91,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "notFoundTitle": "El análisis muestra mi NIC nueva como \"NOT FOUND\"",
+    "notFoundTitle": "El análisis muestra mi NIC nueva como «NO ENCONTRADO»",
     "notFoundBody": "El kernel ve el dispositivo con un nombre distinto al que hay en el fichero. Ejecuta <code>ip link show</code> para obtener el nombre real. Este es exactamente el caso en el que <link>Nombres persistentes de interfaz</link> evitaría el problema de aquí en adelante.",
     "tooMuchTitle": "La limpieza eliminó demasiado (un bloque que quería conservar)",
     "tooMuchBody": "Restaura desde el backup impreso en el paso 5:",

@@ -23,12 +23,17 @@ export function Mermaid({ chart, className }: MermaidProps) {
           startOnLoad: false,
           theme: "default",
           securityLevel: "strict",
+          themeVariables: {
+            fontSize: "18px",
+          },
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
           flowchart: {
             htmlLabels: true,
             curve: "basis",
-            useMaxWidth: true,
+            useMaxWidth: false,
+            rankSpacing: 36,
+            nodeSpacing: 40,
           },
         })
 
@@ -76,7 +81,10 @@ export function Mermaid({ chart, className }: MermaidProps) {
       )}
     >
       {!rendered && <span>Loading diagram…</span>}
-      <div ref={containerRef} className="flex justify-center [&_svg]:max-w-full [&_svg]:h-auto" />
+      <div
+        ref={containerRef}
+        className="flex w-max min-w-full justify-center [&_svg]:max-w-none [&_svg]:shrink-0 [&_svg]:h-auto"
+      />
     </div>
   )
 }

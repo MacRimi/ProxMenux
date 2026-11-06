@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "title": "Skapa VM: System NAS | ProxMenux Dokumentation",
+    "description": "Skapa NAS virtuella maskiner på Proxmox VE med ProxMenux. Stöder Synology DSM (laddare), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS och FygoOS. Umbrel OS är tillgänglig via community script.",
+    "ogTitle": "Skapa VM: System NAS | ProxMenux Dokumentation",
+    "ogDescription": "Skapa NAS virtuella maskiner på Proxmox VE med ProxMenux. Stöder Synology DSM (laddare), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS och FygoOS.",
+    "ogImageAlt": "ProxMenux-meny för NAS-system"
+  },
+  "header": {
+    "title": "Skapa VM: System NAS",
+    "description": "ProxMenux stöder åtta NAS-system som separata VM och en valfri Umbrel OS-installation via ett gemenskapsskript. De flesta delar ett automatiskt ISO-flöde; Synology DSM har en särskild starthanterarguide.",
+    "section": "Virtuella maskiner"
+  },
+  "intro": {
+    "title": "Hur NAS-väljaren fungerar",
+    "body": "I det generella ISO-flödet försöker NAS-väljaren hitta senaste stabila versionen på projektets spegel, använder en reservversion vid behov, laddar ned ISO:n och öppnar den gemensamma konfiguratorn för CPU, RAM, diskar och nätverk. Synology DSM och ZimaOS har egna installationsflöden."
+  },
+  "image": {
+    "alt": "ProxMenux System NAS-väljaren",
+    "caption": "System NAS väljare"
+  },
+  "flowBadges": {
+    "loader": "Starthanterarflöde",
+    "auto-iso": "Auto-ISO flöde",
+    "dedicated": "Dedikerat skript"
+  },
+  "labels": {
+    "base": "Bas",
+    "fileSystem": "Filsystem",
+    "viewDetails": "Visa detaljer"
+  },
+  "supported": {
+    "heading": "Stödda NAS-system",
+    "cards": [
+      {
+        "name": "Synology DSM",
+        "tagline": "DiskStation Manager med ARC/RR-starthanterare. Starthanteraren behöver konfigureras före första starten.",
+        "icon": "HardDrive",
+        "base": "Linux (anpassad)",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/synology",
+        "flow": "loader"
+      },
+      {
+        "name": "TrueNAS SCALE",
+        "tagline": "Debianbaserad TrueNAS med Docker-appar i aktuella versioner och ZFS som primärt filsystem. Äldre SCALE-versioner använde Kubernetes.",
+        "icon": "Database",
+        "base": "Debian Linux",
+        "fileSystem": "ZFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#truenas-scale",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "TrueNAS CORE",
+        "tagline": "FreeBSD-baserad TrueNAS med fokus på ZFS-lagring. Jails och insticksprogram i CORE 13.3 är föråldrade och saknar stöd.",
+        "icon": "Database",
+        "base": "FreeBSD",
+        "fileSystem": "ZFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#truenas-core",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "OpenMediaVault",
+        "tagline": "Lättviktig Debianbaserad NAS med modulära insticksprogram. Passar äldre maskinvara.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "ext4, XFS, Btrfs",
+        "href": "/docs/create-vm/system-nas/system-nas-others#openmediavault",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "XigmaNAS",
+        "tagline": "FreeBSD-baserade NAS - den ursprungliga efterträdaren till FreeNAS, fokuserad på ZFS och enkelhet.",
+        "icon": "Database",
+        "base": "FreeBSD",
+        "fileSystem": "ZFS, UFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#xigmanas",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "Rockstor",
+        "tagline": "openSUSE-baserade NAS byggdes runt Btrfs. Rock-ons (Docker-appar) utökar funktionaliteten.",
+        "icon": "HardDrive",
+        "base": "openSUSE Leap",
+        "fileSystem": "Btrfs",
+        "href": "/docs/create-vm/system-nas/system-nas-others#rockstor",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "ZimaOS",
+        "tagline": "Lättviktigt NAS-system för media, Docker-appar och hemautomation. Har en egen installerare.",
+        "icon": "MonitorIcon",
+        "base": "Buildroot (vidareutvecklat från CasaOS)",
+        "fileSystem": "ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#zimaos",
+        "flow": "dedicated"
+      },
+      {
+        "name": "FygoOS",
+        "tagline": "Internationell utgåva av fnOS: en Debian-baserad NAS med lagringsvolymer, appar och media streaming, hanteras från sitt webbgränssnitt och Fygo-appar.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#fygoos",
+        "flow": "auto-iso"
+      }
+    ]
+  },
+  "umbrel": {
+    "title": "Gemenskapsalternativ: Umbrel OS",
+    "bodyRich": "Den 9: e posten i NAS-menyn är <strong>Umbrel OS</strong>. Det körs en <umbrelLink>community-scripts installer</umbrelLink> underhålls utanför ProxMenux, så det är inte dokumenterat här. Installeraren hanterar hela livscykeln och skriver ut sina standarduppgifter i slutet."
+  },
+  "zfsMem": {
+    "title": "Tumregel för ZFS-minne",
+    "bodyRich": "Ge TrueNAS minst <strong>8 GB RAM</strong> för grundläggande drift och mer vid krävande belastning. ZFS använder RAM för ARC-cache, men det finns ingen allmän prestandagräns vid 8 GB för alla ZFS-NAS. Kontrollera distributionens krav och dimensionera för diskar, tjänster och appar; lätta OMV- eller Rockstor-installationer kan behöva mindre."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/create-vm/system-nas/synology",
+        "label": "Synology-VM",
+        "tail": " — Dedikerad installatör för Synology DSM (Xpenology) på Proxmox."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Övriga system NAS",
+        "tail": " — TrueNAS, OpenMediaVault, Rockstor, XigmaNAS, FygoOS och liknande."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importera disk till VM",
+        "tail": " - passera riktiga fysiska diskar till NAS VM (rekommenderas över virtuella diskar för produktion)."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Kommandon för ZFS-hantering",
+        "tail": " - användbart om din NAS-distribution använder ZFS under."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Översikt över att skapa VM",
+        "tail": "."
+      }
+    ]
+  }
+}

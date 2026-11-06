@@ -56,11 +56,39 @@ def version_from_environment(repository, environment):
     return found.get(expected)
 
 
+# What a registry answer means, read from skopeo's error output. Only the
+# cause is reported: the output itself can carry credentials.
+REGISTRY_ERRORS = (
+    (('toomanyrequests', 'too many requests', 'rate limit', 'registry 429'),
+     'The registry limited the requests. Try again later, or add an account for this registry.'),
+    (('unauthorized', 'authentication required', 'access to the resource is denied', '403 forbidden',
+      'registry 401', 'registry 403'),
+     'The registry refused access to the image.'),
+    (('manifest unknown', 'name unknown', '404 not found'),
+     'The image or its tag does not exist in the registry.'),
+    (('no such host', 'i/o timeout', 'connection refused', 'connection reset', 'network is unreachable',
+      'tls handshake timeout', 'context deadline exceeded', ': eof'),
+     'The registry could not be reached. Check the connection and try again.'),
+)
+
+
+def registry_error(errors):
+    text = errors.decode(errors='replace').casefold()
+    for patterns, message in REGISTRY_ERRORS:
+        if any(pattern in text for pattern in patterns):
+            return translate(message)
+    return None
+
+
 def command(*args):
-    result = subprocess.run(args, capture_output=True, timeout=120)
+    if args[:2] == ('skopeo', 'inspect'):
+        # A registry that fails for a moment is asked again before giving up.
+        args = args[:2] + ('--retry-times', '3', '--retry-delay', '5s') + args[2:]
+    result = subprocess.run(args, capture_output=True, timeout=300)
     if result.returncode:
         # Tool errors may contain credentials or environment values.
-        raise RuntimeError(f"{args[0]} {translate('failed with exit code')} {result.returncode}")
+        reason = registry_error(result.stderr) if args[0] == 'skopeo' else None
+        raise RuntimeError(reason or f"{args[0]} {translate('failed with exit code')} {result.returncode}")
     return result.stdout
 
 
@@ -106,6 +134,16 @@ def parse_config(data):
             key, value = line.split(': ', 1)
             values[key] = value
     return values
+
+
+def container_curl(vmid, run=command):
+    """curl for an address of this container. The host may have no route to the
+    VLAN of an interface: there it runs inside the network of the container."""
+    config = parse_config(run('pct', 'config', str(vmid)))
+    if not any(re.fullmatch(r'net[0-9]+', key) and re.search(r'(^|,)tag=', value) for key, value in config.items()):
+        return ['curl']
+    pid = run('lxc-info', '-n', str(vmid), '-pH').decode().strip()
+    return ['nsenter', f'--net=/proc/{pid}/ns/net', 'curl']
 
 
 def private_directory(path):
@@ -163,7 +201,7 @@ def record_install(args):
     save_record(args.state_dir, record)
 
 
-def resolve_candidate(reference, architecture):
+def resolve_candidate(reference, architecture, *, _known_metadata=None):
     repo = reference.split('@', 1)[0]
     if ':' in repo.rsplit('/', 1)[-1]:
         repo = repo.rsplit(':', 1)[0]
@@ -173,12 +211,27 @@ def resolve_candidate(reference, architecture):
     raw = command('skopeo', 'inspect', '--raw', 'docker://' + transport)
     registry_digest = 'sha256:' + sha(raw)
     manifest = json.loads(raw)
-    if 'manifests' in manifest:
+    indexed = 'manifests' in manifest
+    if indexed:
         matches = [m for m in manifest['manifests'] if m.get('platform', {}).get('architecture') == architecture
                    and m.get('platform', {}).get('os') == 'linux']
         if len(matches) != 1:
             raise ValueError(translate('A single matching image platform cannot be resolved'))
         digest = matches[0]['digest']
+    else:
+        digest = registry_digest
+    # The Monitor needs only the published version/build and digest. A fresh
+    # tag/index lookup proving the same immutable platform digest also proves
+    # its previously verified metadata; fetching its manifest and config again
+    # adds no information. Install/update callers do not pass this option and
+    # always receive the complete verified image contract below.
+    if (isinstance(_known_metadata, dict)
+            and re.fullmatch(r'sha256:[0-9a-f]{64}', str(digest))
+            and _known_metadata.get('manifest_digest') == digest
+            and _known_metadata.get('architecture') == architecture):
+        return {'manifest_digest': digest, 'registry_digest': registry_digest,
+                'version': _known_metadata.get('version'), 'created': _known_metadata.get('created')}
+    if indexed:
         raw = command('skopeo', 'inspect', '--raw', 'docker://' + repo + '@' + digest)
         if 'sha256:' + sha(raw) != digest:
             raise ValueError(translate('The manifest does not match its digest'))
@@ -202,6 +255,11 @@ def resolve_candidate(reference, architecture):
             'layers': [layer['digest'] for layer in json.loads(raw).get('layers', [])],
             'size': sum(int(layer.get('size') or 0) for layer in json.loads(raw).get('layers', [])),
             'defaults': defaults, 'version': version, 'created': config.get('created')}
+
+
+def resolve_candidate_metadata(reference, architecture, known=None):
+    """Monitor-only metadata fast path through the normal native resolver."""
+    return resolve_candidate(reference, architecture, _known_metadata=known)
 
 
 def same_image(candidate, image):
@@ -281,7 +339,7 @@ def main(argv=None):
     diagnose = sub.add_parser('diagnose')
     diagnose.add_argument('vmid', type=int)
     diagnose.add_argument('--check-registry', action='store_true')
-    record = sub.add_parser('record', help='Internal installer operation; not legacy adoption')
+    record = sub.add_parser('record', help=translate('Internal installer operation; not legacy adoption'))
     record.add_argument('vmid', type=int)
     for flag in ('template', 'deployment', 'archive', 'digest'):
         record.add_argument('--' + flag, required=True)

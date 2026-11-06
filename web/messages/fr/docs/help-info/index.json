@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Référence des commandes Proxmox — qm, pct, vzdump, zpool, pveversion | ProxMenux",
+    "description": "Sélection de commandes essentielles de Proxmox VE et Linux, classées par thème : inspection du système, gestion des VM et LXC (qm / pct), stockage et disques, réseau, mises à jour, passthrough GPU, ZFS, sauvegarde et restauration, et outils de terminal au quotidien.",
+    "ogTitle": "Référence des commandes Proxmox — qm, pct, vzdump, zpool",
+    "ogDescription": "Sélection de commandes utiles de Proxmox VE et Linux par thème : système, VM/CT, stockage, réseau, mises à jour, passthrough GPU, ZFS, sauvegarde et outils CLI.",
+    "twitterTitle": "Référence des commandes Proxmox | ProxMenux",
+    "twitterDescription": "Sélection de commandes utiles de Proxmox VE et Linux, regroupées par thème."
+  },
+  "header": {
+    "title": "Aide et informations",
+    "description": "Sélection de commandes utiles de Linux et Proxmox VE par thème. Les neuf catégories vont d’une simple vérification avec pveversion à une séquence multiligne de zfs send/receive. Cette référence complète les sections GPU, disques et partages de ProxMenux.",
+    "section": "Aide et informations"
+  },
+  "intro": {
+    "title": "Ce que c'est",
+    "body": "Un catalogue des commandes utilisées au quotidien sur un hôte Proxmox, regroupées par thème. Dans ProxMenux, choisissez un numéro pour exécuter directement une commande ou collez la vôtre à l’invite. Sur ce site, chaque catégorie est présentée dans un tableau prêt à copier."
+  },
+  "opening": {
+    "heading": "Ouverture du menu",
+    "body": "À partir du menu principal de ProxMenux, appuyez sur <kbd>h</kbd>. Vous verrez ceci :",
+    "imageAlt": "Menu Aide et informations avec neuf catégories de commandes"
+  },
+  "categories": {
+    "heading": "Les neuf catégories",
+    "options": [
+      {
+        "icon": "Terminal",
+        "href": "/docs/help-info/system-commands",
+        "title": "Commandes système utiles",
+        "description": "pveversion, uptime, free, journalctl, hostnamectl, informations sur l’utilisateur courant, audit lynis et fastfetch."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/vm-ct-commands",
+        "title": "Gestion VM et CT",
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, instantanés et clonage."
+      },
+      {
+        "icon": "HardDrive",
+        "href": "/docs/help-info/storage-commands",
+        "title": "Stockage et disques",
+        "description": "lsblk, blkid, smartctl, informations sur les montages, pvesm status et commandes LVM."
+      },
+      {
+        "icon": "Network",
+        "href": "/docs/help-info/network-commands",
+        "title": "Commandes réseau",
+        "description": "ip / ss / nmcli, inspection des ponts réseau, ping / traceroute, requêtes DNS et fail2ban-client."
+      },
+      {
+        "icon": "Package",
+        "href": "/docs/help-info/update-commands",
+        "title": "Mises à jour et paquets",
+        "description": "apt update / dist-upgrade, apt-cache policy, requêtes dpkg et vérification des fichiers de dépôts."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/gpu-commands",
+        "title": "Passthrough GPU",
+        "description": "Vérifications avec lspci / dmesg, contrôle de l’activation d’IOMMU, liaison à vfio-pci et utilisation du GPU depuis l’hôte."
+      },
+      {
+        "icon": "Database",
+        "href": "/docs/help-info/zfs-commands",
+        "title": "Gestion ZFS",
+        "description": "Commandes zpool / zfs pour l’état, les datasets, les instantanés, send/receive, le réglage d’ARC et TRIM."
+      },
+      {
+        "icon": "Archive",
+        "href": "/docs/help-info/backup-commands",
+        "title": "Sauvegarde et restauration",
+        "description": "vzdump, qmrestore / pct restore, outils pour Proxmox Backup Server et opérations sur les instantanés."
+      },
+      {
+        "icon": "Wrench",
+        "href": "/docs/help-info/tools-commands",
+        "title": "Outils CLI système",
+        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — outils d’administration au quotidien."
+      }
+    ]
+  },
+  "tip": {
+    "title": "Recherche à partir de la recherche globale",
+    "body": "Toutes les commandes de ces pages sont indexées par la recherche de la documentation. Si vous vous souvenez d’une option ou d’un fragment, mais pas de la page, utilisez la barre de recherche en haut pour retrouver directement la bonne entrée."
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "Skapa VM på Proxmox VE: guider för Synology, Windows, Linux och NAS | ProxMenux",
+    "description": "Skapa och konfigurera VM på Proxmox VE med ProxMenux. Guider för NAS (Synology DSM, TrueNAS, OpenMediaVault, XigmaNAS med flera), Windows, Linuxdistributioner och en extern macOS-installerare. Förnuftiga standardval för maskinvara, lagring och nätverk.",
+    "ogTitle": "Skapa VM på Proxmox VE: guider för Synology, Windows, Linux och NAS",
+    "ogDescription": "ProxMenux-guider för att skapa VM med Synology DSM, TrueNAS, OMV, XigmaNAS, Windows och Linux på Proxmox VE.",
+    "ogImageAlt": "ProxMenux Skapa VM-menyn",
+    "twitterTitle": "Skapa VM på Proxmox VE | ProxMenux",
+    "twitterDescription": "Guider för VM med Synology, TrueNAS, OMV, XigmaNAS, Windows och Linux på Proxmox VE."
+  },
+  "header": {
+    "title": "Skapa VM",
+    "description": "ProxMenux samlar VM-skapandet i en interaktiv meny. Välj operativsystemfamilj så hanterar rätt guide ISO, CPU, RAM, BIOS, nätverk, lagring och valfri GPU-passthrough.",
+    "section": "Virtuella maskiner"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Skapa VM-menyn är en router, inte en enda guide. Den frågar vilken operativsystemfamilj du vill installera och ladda upp lämplig ISO-väljare och konfigurator. Standardflöden använder förnuftiga ProxMenux-förinställningar; Avancerade flöden exponerar varje konfigurerbart alternativ innan VM skapas."
+  },
+  "opening": {
+    "heading": "Öppna menyn",
+    "body": "Välj <strong>Skapa VM</strong> i ProxMenux huvudmeny. Du ser då:",
+    "imageAlt": "Menyn Skapa VM med tre ProxMenux-val (NAS/Windows/Linux) följda av Community Scripts (macOS/Övriga)"
+  },
+  "families": {
+    "heading": "Tre OS-familjer",
+    "intro": "De tre ProxMenux-posterna högst upp på menyn delar samma underliggande motor och post-ISO-flöde - de sträcker sig bara till olika ISO-väljare och tillämpar standarder inställda för varje familj. Välj den som matchar den gäst du vill installera.",
+    "routes": [
+      {
+        "key": "nas",
+        "title": "NAS-system",
+        "icon": "HardDrive",
+        "href": "/docs/create-vm/system-nas",
+        "accent": "border-emerald-300 bg-emerald-50",
+        "iconBg": "bg-emerald-100 text-emerald-700",
+        "description": "Åtta NAS-system som separata VM. De flesta använder automatiskt ISO-flöde; Synology DSM har en särskild starthanterarguide.",
+        "bullets": [
+          "Synology DSM (starthanterare Arc / RR / Alpine RedPill M-shell)",
+          "TrueNAS SCALE och CORE (ZFS)",
+          "OpenMediaVault (Debianbaserad)",
+          "XigmaNAS (FreeBSD ZFS)",
+          "Rockstor (openSUSE / Btrfs), ZimaOS, FygoOS"
+        ]
+      },
+      {
+        "key": "windows",
+        "title": "Windows-system",
+        "icon": "MonitorCog",
+        "href": "/docs/create-vm/system-windows",
+        "accent": "border-blue-300 bg-blue-50",
+        "iconBg": "bg-blue-100 text-blue-700",
+        "description": "Windows 10, 11 och Server-utgåvor med Windows-vänliga standarder (q35 + OVMF + TPM 2.0) och VirtIO-drivrutiner premonterade.",
+        "bullets": [
+          "UUP Dump för aktuella ISO-filer",
+          "Eller lokal ISO från /var/lib/vz/template/iso",
+          "TPM 2.0 adderas automatiskt",
+          "VirtIO-drivrutins-ISO ansluten till ide3",
+          "Guest agent kanal aktiverad"
+        ]
+      },
+      {
+        "key": "linux",
+        "title": "Linux-system",
+        "icon": "Laptop",
+        "href": "/docs/create-vm/system-linux",
+        "accent": "border-amber-300 bg-amber-50",
+        "iconBg": "bg-amber-100 text-amber-700",
+        "description": "Utvald katalog med officiella Linux-ISO-filer som laddas ned från originalprojekten, samt val av lokala ISO-filer för andra avbildningar.",
+        "bullets": [
+          "Ubuntu (Skrivbord / Server, 20.04–25.10)",
+          "Debian (Skrivbord / Netinst, 11–13)",
+          "Fedora, Arch, Rocky, Mint, openSUSE",
+          "Alpine, Kali, Manjaro",
+          "Lokal ISO-väg för anpassade avbildningar"
+        ]
+      }
+    ]
+  },
+  "community": {
+    "title": "Gemenskapskript (ej dokumenterat här)",
+    "intro": "De två posterna under <em>Community Scripts</em> separator kör kod som är <strong> inte en del av ProxMenux</strong>, så de är avsiktligt kvar utanför denna dokumentation:",
+    "macosRich": "<strong>macOS-system</strong>: kör den externa installeraren <osxLink>OSX-PROXMOX</osxLink>. Den klonar originalarkivet, förbereder värden och <strong>startar om automatiskt när den är klar</strong>. Se projektets egen dokumentation.",
+    "othersRich": "<strong>Övriga system (Linuxbaserade)</strong>: läser in ett urval av gemenskapens installerare för hemservrar, routrar, brandväggar med mera. Varje skript underhålls utanför ProxMenux."
+  },
+  "afterPick": {
+    "heading": "Vad händer när du väljer ett OS",
+    "intro": "Efter ISO-valet följer menyn samma väg för varje operativsystemfamilj:",
+    "items": [
+      "<strong>Standard eller avancerat.</strong> En dialog låter dig godta ProxMenux standardval eller öppna hela konfiguratorn: CPU-modell och kärnor, RAM, BIOS/UEFI, nätverkskort och maskintyp.",
+      "<strong>Lagringsplan.</strong> Kombinera virtuella diskar, importerade diskar och PCI-passthrough-enheter som hela styrenheter eller NVMe i samma VM.",
+      "<strong>Valfri GPU-passthrough.</strong> Om en kompatibel GPU hittas erbjuder ProxMenux GPU-guiden efter att VM:n skapats. En omstart kan krävas.",
+      "<strong>Skapa VM.</strong> VM:n skapas, taggas och får en formaterad HTML-beskrivning som referens i Proxmox-gränssnittet."
+    ],
+    "tipTitle": "Välj avancerat läge för VM som ska användas länge",
+    "tipBody": "Standardförinställningar fungerar bra för snabba tester. För en VM du har för avsikt att hålla, den avancerade vägen låter dig välja rätt BIOS (SeaBIOS vs OVMF / UEFI), maskintyp (<code>i440fx</code> vs <code>q35</code>) och diskkontroller (VirtIO SCSI single vs SATA) fram - dessa är smärtsamma att ändra senare."
+  },
+  "scripts": {
+    "heading": "Skript involverade",
+    "intro": "Menyn läser in flera gemensamma komponentskript med source som saknar egna sidor. De listas här som referens. Varje undersida länkar till huvudskriptet för sitt flöde.",
+    "headerScript": "Skript",
+    "headerRole": "Rollen",
+    "rows": [
+      {
+        "path": "menus/create_vm_menu.sh",
+        "role": "Startpunkt och vägval."
+      },
+      {
+        "path": "vm/select_nas_iso.sh",
+        "role": "Val av ISO och NAS-system (Synology, TrueNAS, OMV, Rockstor, XigmaNAS, ZimaOS, FygoOS)."
+      },
+      {
+        "path": "vm/select_windows_iso.sh",
+        "role": "Val av Windows-ISO. Använder UUP Dump-byggaren vid behov."
+      },
+      {
+        "path": "vm/select_linux_iso.sh",
+        "role": "Linux ISO-väljaren för Linuxflödet (mainstreamdistributioner)."
+      },
+      {
+        "path": "vm/synology.sh",
+        "role": "Synology DSM-flöde: hämtar starthanterare och DSM-avbildning och förbereder VM-profilen."
+      },
+      {
+        "path": "vm/zimaos.sh",
+        "role": "ZimaOS-flödet: laddar ner avbildningen och kopplar den till VM-definitionen."
+      },
+      {
+        "path": "vm/vm_configurator.sh",
+        "role": "Standard- eller avancerad guide: CPU-modell och kärnor, RAM, BIOS, nätverkskort och maskintyp."
+      },
+      {
+        "path": "vm/disk_selector.sh",
+        "role": "Lagringsplan: virtuell disk, diskimport eller Controller/NVMe passthrough."
+      },
+      {
+        "path": "vm/vm_creator.sh",
+        "role": "Slutlig VM skapelse: tillämpa konfig, fäster lagring, skriver HTML beskrivning."
+      },
+      {
+        "path": "vm/guest_agent_config.sh",
+        "role": "Valfritt QEMU gäst agent setup hook, som används av flera flöden."
+      }
+    ]
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/disk-manager",
+        "label": "Diskhanteraren",
+        "tail": " - bifoga befintliga fysiska diskar eller importera diskbilder till VM."
+      },
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "UUP Dump ISO-skapare",
+        "tail": " — skapa installations-ISO för Windows att använda som startmedium."
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importera VM från OVA / OVF",
+        "tail": " - ta in förbyggda VM från VMware / VirtualBox / ProxMenux export."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " — passera en GPU till en nyskapad VM."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Kommandon för VM- och CT-hantering",
+        "tail": " — Qm referens för CLI-sidan."
+      }
+    ]
+  }
+}

@@ -282,8 +282,8 @@ done < /usr/local/share/proxmenux/zfs_autotrim_pools`}
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("vzdump.changedTitle")}</h3>
       <CopyableCode
-        code={`bwlimit: 0      # No bandwidth limit (was capped by default)
-ionice:  5      # Lower I/O priority (5 = best-effort class, lowest priority in that class)`}
+        code={`bwlimit: 0      # No bandwidth limit; replaces any configured global cap
+ionice:  5      # Best-effort level 5; higher priority than the default 7 where supported`}
         className="my-4"
       />
 

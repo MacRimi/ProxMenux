@@ -19,6 +19,9 @@
     "amule": {
       "status": "laboratory-validated"
     },
+    "authentik": {
+      "status": "laboratory-validated"
+    },
     "chromium": {
       "status": "laboratory-validated"
     },
@@ -62,6 +65,9 @@
     "grafana": {
       "status": "laboratory-validated"
     },
+    "haos-one": {
+      "status": "laboratory-validated"
+    },
     "immich": {
       "status": "laboratory-validated"
     },
@@ -74,6 +80,9 @@
     "linkwarden": {
       "status": "laboratory-validated"
     },
+    "mariadb": {
+      "status": "laboratory-validated"
+    },
     "memos": {
       "status": "laboratory-validated"
     },
@@ -81,6 +90,9 @@
       "status": "laboratory-validated"
     },
     "motioneye": {
+      "status": "laboratory-validated"
+    },
+    "navidrome": {
       "status": "laboratory-validated"
     },
     "nextcloud": {
@@ -108,6 +120,9 @@
         "report": "https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868"
       }
     },
+    "prowlarr": {
+      "status": "laboratory-validated"
+    },
     "qbittorrent": {
       "status": "laboratory-validated"
     },
@@ -117,19 +132,36 @@
     "rdtclient": {
       "status": "laboratory-validated"
     },
+    "scanopy": {
+      "status": "laboratory-validated"
+    },
     "sharecovex": {
       "status": "laboratory-validated"
     },
     "snapotter": {
       "status": "laboratory-validated"
     },
+    "sonarr": {
+      "status": "laboratory-validated"
+    },
     "tandoor": {
       "status": "laboratory-validated"
+    },
+    "teslamate": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-10-29",
+        "digest": "c85b3d447502683ed7bf12fb478e0dae9a985fe975ac22cccb64faeb4c4a5d31",
+        "scenario": "MS03/amd64: default and advanced install, browser login, volumes/restart, Modify, 4.3 to 4.4 update, controlled rollback, native backup/restore to new VMIDs and removal. No vehicle tokens used."
+      }
     },
     "thelounge": {
       "status": "laboratory-validated"
     },
     "trilium": {
+      "status": "laboratory-validated"
+    },
+    "vaultwarden": {
       "status": "laboratory-validated"
     },
     "wg-easy": {

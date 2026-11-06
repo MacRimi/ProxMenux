@@ -65,7 +65,7 @@ from build_translation_cache import (  # noqa: E402
 # users on sk see a decent auto-translation for new keys instead of raw
 # English while the human maintainer catches up, and Vaso73 keeps full
 # ownership of the wording via follow-up PRs.
-DEFAULT_LANGUAGES = ("es", "de", "fr", "it", "pt", "sk", "sv")
+DEFAULT_LANGUAGES = ("es", "de", "fr", "it", "pt", "sk", "sv", "ru")
 DEFAULT_CONTEXT = "Context: Technical UI text for a Proxmox management dashboard. Translate:"
 
 # next-intl / ICU-style placeholders: {name}, {vmid}, {count}, {app_name}.

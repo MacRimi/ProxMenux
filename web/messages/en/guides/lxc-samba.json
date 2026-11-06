@@ -34,8 +34,8 @@
       "Holding documents that get auto-scanned by Paperless.",
       "Generic NAS-style storage for the home network."
     ],
-    "privilegedCalloutTitle": "Privileged container required",
-    "privilegedCalloutBody": "Direct device passthrough (<code>mp0</code> with a host path) needs a privileged LXC. Unprivileged CTs can't bind-mount block devices directly — for those you need bind mounts of host directories instead (see ProxMenux <strong>Storage & Share Manager → LXC Mount Points</strong>)."
+    "privilegedCalloutTitle": "Privileged container used in this recipe",
+    "privilegedCalloutBody": "This recipe uses a privileged LXC with a block device as <code>mp0</code>. For an unprivileged container, an alternative is to mount the filesystem on the host and bind-mount its directory, with appropriate ID mapping and permissions. See <strong>Storage & Share Manager → LXC Mount Points</strong> in ProxMenux."
   },
   "attach": {
     "heading": "1. Attach the USB disk to the LXC",
@@ -48,10 +48,10 @@
     "lsblkBody": "You can also use <code>lsblk -o NAME,SIZE,MODEL,SERIAL</code> to list every block device with model and serial.",
     "stableCalloutTitle": "Important — use a stable identifier",
     "stableCalloutBody": "<code>/dev/sdb1</code> can change between boots if you have multiple USB disks. Find the persistent identifier:",
-    "stableCalloutCode": "ls -l /dev/disk/by-id/ | grep -v part",
-    "stableCalloutAfter": "Use the <code>/dev/disk/by-id/usb-...</code> path in the LXC config below instead of <code>/dev/sdb1</code>. It survives reboots and re-plugging.",
+    "stableCalloutCode": "ls -l /dev/disk/by-id/",
+    "stableCalloutAfter": "Use the <code>/dev/disk/by-id/usb-...</code> entry for the intended partition in the LXC config, instead of <code>/dev/sdb1</code>. Choose the partition entry, not the whole-disk entry; it identifies the same partition when device enumeration changes.",
     "formatHeading": "1.2 Format the disk",
-    "formatBody": "ext4 is a sensible default for Linux-backed shares (case-sensitive, supports POSIX ACLs, no file-size limits). Run from the <strong>Proxmox host</strong>, not the container:",
+    "formatBody": "ext4 is a practical choice for Linux-backed shares: it is case-sensitive and supports POSIX ACLs and large files. Formatting destroys the existing filesystem’s contents. Run on the <strong>Proxmox host</strong>, after confirming the partition, not inside the container:",
     "formatCode": "mkfs.ext4 /dev/sdb1",
     "formatAfter": "Replace <code>/dev/sdb1</code> with the actual partition device — or with the persistent <code>/dev/disk/by-id/usb-...-part1</code> path.",
     "mkdirHeading": "1.3 Create the mount point inside the LXC",
@@ -59,18 +59,18 @@
     "mkdirCode": "mkdir /mnt/lxc_USB",
     "wireHeading": "1.4 Wire the device into the LXC",
     "wireBody": "On the <strong>Proxmox host</strong> (not inside the CT), edit the container's config. Replace <code>'<'CTID'>'</code> with the container ID:",
-    "wireEditCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "wireEditCode": "nano /etc/pve/lxc/CTID.conf",
     "wireAddLine": "Add this line:",
     "wireConfigCode": "mp0: /dev/disk/by-id/usb-VENDOR_MODEL_SERIAL-part1,mp=/mnt/lxc_USB,backup=0",
     "wireShortForm": "(Or, if you accept the risk of the device path changing, the shorter form: <code>mp0: /dev/sdb1,mp=/mnt/lxc_USB,backup=0</code>.)",
-    "wireBackupNote": "The <code>backup=0</code> flag excludes this mount point from <code>vzdump</code> backups — usually the right call for large external drives that are the host's target storage rather than its data.",
+    "wireBackupNote": "This example sets <code>backup=0</code>. Device and bind mount contents are not included in container <code>vzdump</code> backups. Arrange a separate backup for the external disk’s data.",
     "restartHeading": "1.5 Restart the LXC and set permissions",
     "restartBody": "Restart the CT to apply the mount point:",
-    "restartCode": "pct restart '<'CTID'>'",
-    "permsBody": "Inside the LXC, give the directory permissions appropriate for the user that will own the share:",
-    "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
+    "restartCode": "pct reboot CTID",
+    "permsBody": "Inside the LXC, create the share account before assigning ownership, then set the directory permissions:",
+    "permsCode": "adduser --system --group --no-create-home --shell /usr/sbin/nologin proxmenux\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Note",
-    "permsNote": "Replace <code>proxmenux</code> with the username you'll create in step 2.2 below. <code>770</code> gives full access to the user and group, no access to others — safer than the wide-open <code>chmod -R 777</code> while still letting the share work."
+    "permsNote": "Replace <code>proxmenux</code> with your chosen account name. The mode <code>770</code> allows the owner and group to access the directory, with no access for others; it is more restrictive than <code>chmod -R 777</code>. The account is created here and registered with Samba in step 2.2."
   },
   "samba": {
     "heading": "2. Install Samba",
@@ -78,9 +78,9 @@
     "installCode": "apt-get update\napt-get install -y samba",
     "confirmBody": "Confirm the service is running:",
     "confirmCode": "systemctl status smbd.service",
-    "userHeading": "2.2 Create the share user",
-    "userBody": "Pick a username (here we use <code>proxmenux</code>; substitute your own). Create it as a system user with no shell:",
-    "userCode": "adduser proxmenux",
+    "userHeading": "2.2 Verify the share user",
+    "userBody": "The account <code>proxmenux</code> was created in step 1.5 as a system user without a login shell. Check it before setting its Samba password; substitute your chosen name throughout:",
+    "userCode": "id proxmenux",
     "passwordBody": "Set the Samba password (separate from the system password — Samba maintains its own credential store):",
     "passwordCode": "smbpasswd -a proxmenux",
     "aclHeading": "2.3 Set ownership / ACLs",
@@ -109,11 +109,11 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "items": [
-      "<strong><code>pct restart</code> fails with \"device not found\":</strong> the device path in <code>mp0</code> doesn't exist on the host. Check with <code>ls -l /dev/disk/by-id/</code> and update the path.",
-      "<strong>CT starts but <code>/mnt/lxc_USB</code> is empty:</strong> the disk isn't mounted inside the CT. Check from the host: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. If absent, the mount point in the config is wrong.",
-      "<strong>Samba authenticates but writes fail with \"Permission denied\":</strong> Linux permissions on the directory don't allow the Samba user to write. Re-check <code>chown</code> / <code>setfacl</code> in section 1.5 / 2.3.",
-      "<strong>Share doesn't appear in network browsers but <code>smb://'<'ip'>'/lxc_usb</code> works:</strong> browseability over the LAN depends on NetBIOS / WS-Discovery. Add <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> and ensure <code>nmbd</code> is enabled.",
-      "<strong>Want to add a second user to the same share:</strong> create the user with <code>adduser</code>, register with <code>smbpasswd -a</code>, add to the share's <code>valid users =</code> list comma-separated."
+      "<strong><code>pct reboot</code> fails with \"device not found\":</strong> the device path in <code>mp0</code> doesn't exist on the host. Check with <code>ls -l /dev/disk/by-id/</code> and update the path.",
+      "<strong>CT starts but <code>/mnt/lxc_USB</code> is empty:</strong> the disk may not be mounted, or its filesystem may be empty. Check from the host with <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. If the mount is absent, inspect its configuration, device path and startup errors.",
+      "<strong>Samba authenticates but writes fail with \"Permission denied\":</strong> check the directory’s Linux permissions and the share’s write settings. Review <code>chown</code> and <code>setfacl</code> in sections 1.5 and 2.3.",
+      "<strong>Share discovery fails but <code>smb://'<'ip'>'/lxc_usb</code> works:</strong> legacy NetBIOS discovery uses <code>nmbd</code>. Modern Windows discovery uses WS-Discovery instead; on Debian 12 install <code>apt-get install -y wsdd</code>; on Debian 13, where <code>wsdd</code> is not in the stable archive, use <code>apt-get install -y wsdd2</code>. Check the service and firewall. Enabling <code>nmbd</code> alone does not provide WS-Discovery.",
+      "<strong>To add a second user to the share:</strong> create the account with <code>adduser</code>, register it with <code>smbpasswd -a</code> and add it to the comma-separated <code>valid users =</code> list. Also grant the required filesystem permissions or ACLs."
     ]
   }
 }

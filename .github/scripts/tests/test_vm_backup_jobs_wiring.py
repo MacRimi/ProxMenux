@@ -15,7 +15,7 @@ class VmBackupJobsWiring(TestCase):
         source = ROUTES.read_text()
         routes = re.findall(r'@vm_backup_bp\.route\("([^"]+)", methods=\["(\w+)"\]\)\n@(\w+)\ndef (\w+)', source)
         self.assertEqual(len(routes), source.count('@vm_backup_bp.route('))
-        self.assertEqual(len(routes), 8)
+        self.assertEqual(len(routes), 10)
         for path, method, guard, name in routes:
             expected = 'require_auth' if method == 'GET' else 'require_admin_scope'
             self.assertEqual(guard, expected, f'{method} {path} ({name})')
@@ -24,7 +24,10 @@ class VmBackupJobsWiring(TestCase):
         source = ROUTES.read_text()
         self.assertNotIn('shell=True', source)
         self.assertNotIn('os.system', source)
-        self.assertEqual(source.count('subprocess.run('), 1)
+        # pvesh, and the transient unit a backup started by hand runs in.
+        programs = re.findall(r'subprocess\.run\(\s*\[\s*"([a-z-]+)"', source)
+        self.assertEqual(len(programs), source.count('subprocess.run('))
+        self.assertEqual(set(programs), {'pvesh', 'systemd-run', 'systemctl'})
         self.assertIn('subprocess.run(["pvesh", *args]', source)
 
     def test_the_monitor_ships_and_registers_it(self):

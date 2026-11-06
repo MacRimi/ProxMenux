@@ -51,6 +51,7 @@ DEBUG_PERF = False
 # ─── Startup Grace Period ────────────────────────────────────────────────────
 # Import centralized startup grace management for consistent behavior
 import startup_grace
+from pbs_manager import get_platform, PBS_SERVICES
 
 def _is_startup_health_grace() -> bool:
     """Check if we're within the startup health grace period (5 min).
@@ -153,36 +154,10 @@ def _hdd_in_standby(disk_name: str) -> bool:
     return parked
 
 
-def _lvm_device_args() -> list:
-    """`--devices` list scoping pvs/lvs/vgs off parked disks so they
-    aren't spun up by the LVM scan (issue #232). Empty when nothing is
-    parked, so the plain command runs unchanged. Each partition is
-    listed too — a whole-disk path alone doesn't cover a PV on a
-    partition."""
-    try:
-        r = subprocess.run(
-            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
-            capture_output=True, text=True, timeout=5)
-        if r.returncode != 0:
-            return []
-        nodes = []
-        for line in r.stdout.strip().split('\n'):
-            parts = line.split()
-            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
-                continue
-            name = parts[0]
-            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
-            nodes.append((name, base))
-        standby_bases = {
-            name for name, base in nodes
-            if name == base and _hdd_in_standby(name)
-        }
-        if not standby_bases:
-            return []
-        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
-        return ['--devices', ','.join(devices)] if devices else []
-    except Exception:
-        return []
+def _lvm_device_args():
+    """None means no automatic scan; [] permits LVM's normal scan."""
+    from lvm_device_scope import lvm_device_args
+    return lvm_device_args(_hdd_in_standby)
 
 
 def _is_disk_removable(disk_name: str) -> bool:
@@ -410,6 +385,10 @@ class HealthMonitor:
     
     # PVE Critical Services
     PVE_SERVICES = ['pveproxy', 'pvedaemon', 'pvestatd', 'pve-cluster']
+    # A restart passes through these for a few seconds; a service that stays
+    # in one of them longer is not restarting, it is failing to.
+    SERVICE_TRANSIENT_STATES = ('activating', 'deactivating')
+    SERVICE_SETTLE_SECONDS = 8
     
     # P2 fix: Pre-compiled regex patterns for performance (avoid re-compiling on every line)
     _BENIGN_RE = None
@@ -466,6 +445,7 @@ class HealthMonitor:
 
     def __init__(self):
         """Initialize health monitor with state tracking"""
+        self.platform_type = get_platform().get("product")
         self.state_history = defaultdict(list)
         self.last_check_times = {}
         self.cached_results = {}
@@ -919,9 +899,9 @@ class HealthMonitor:
         _perf_log("services", (time.time() - _t) * 1000)
         details['services'] = services_status
         if services_status['status'] == 'CRITICAL':
-            critical_issues.append(f"PVE Services: {services_status.get('reason', 'Service failure')}")
+            critical_issues.append(f"Proxmox Services: {services_status.get('reason', 'Service failure')}")
         elif services_status['status'] == 'WARNING':
-            warning_issues.append(f"PVE Services: {services_status.get('reason', 'Service issue')}")
+            warning_issues.append(f"Proxmox Services: {services_status.get('reason', 'Service issue')}")
         
         # Priority 1.5: Proxmox Storage Check (External Module)
         _t = time.time()
@@ -1661,7 +1641,7 @@ class HealthMonitor:
 
             mem_critical_samples = [
                 entry for entry in self.state_history[state_key]
-                if entry['mem_percent'] >= 90 and
+                if entry['mem_percent'] >= self.MEMORY_CRITICAL and
                 current_time - entry['time'] <= self.MEMORY_DURATION
             ]
 
@@ -1695,7 +1675,7 @@ class HealthMonitor:
                 oldest = min(s['time'] for s in mem_critical_samples)
                 actual_duration = int(current_time - oldest)
                 status = 'CRITICAL'
-                reason = f'RAM >90% sustained for {actual_duration}s'
+                reason = f'RAM >{self.MEMORY_CRITICAL}% sustained for {actual_duration}s'
             elif swap_critical >= 2:
                 status = 'CRITICAL'
                 reason = (f'Memory pressure: swap {swap_percent:.0f}% used '
@@ -1715,7 +1695,7 @@ class HealthMonitor:
             swap_total_gb = round(swap.total / (1024**3), 2)
 
             # Determine per-sub-check status
-            ram_status = 'CRITICAL' if mem_percent >= 90 and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
+            ram_status = 'CRITICAL' if mem_percent >= self.MEMORY_CRITICAL and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
             swap_status = 'CRITICAL' if swap_critical >= 2 else 'OK'
             
             result = {
@@ -2303,13 +2283,15 @@ class HealthMonitor:
 
             # `--devices` keeps lvs from scanning parked HDDs (issue #232).
             dev_args = _lvm_device_args()
+            if dev_args is None:
+                return {'status': 'INFO', 'skipped': True,
+                        'reason': 'Automatic LVM scan skipped by disk read policy or unavailable inventory'}
             result = subprocess.run(
                 ['lvs', *dev_args, '--noheadings', '--options', 'lv_name,vg_name,lv_attr'],
                 capture_output=True,
                 text=True,
                 timeout=3
             )
-            
             if result.returncode != 0:
                 return {'status': 'WARNING', 'reason': 'lvs command failed'}
             
@@ -2324,20 +2306,8 @@ class HealthMonitor:
                         if 'a' in parts[2]:
                             volumes.append(f'{vg_name}/{lv_name}')
             
-            # If LVM is configured but no active volumes are found, it might be an issue or just not used
-            if not volumes:
-                # Check if any VGs exist to determine if LVM is truly unconfigured or just inactive
-                vg_result = subprocess.run(
-                    ['vgs', *dev_args, '--noheadings', '--options', 'vg_name'],
-                    capture_output=True,
-                    text=True,
-                    timeout=3
-                )
-                if vg_result.returncode == 0 and vg_result.stdout.strip():
-                    return {'status': 'WARNING', 'reason': 'No active LVM volumes detected'}
-                else:
-                    return {'status': 'OK'} # No VGs found, LVM not in use
-            
+            # No active volume is normal for a leftover disk, stopped guests or
+            # shared LVM; the storage check reports a storage Proxmox cannot use.
             return {'status': 'OK', 'volumes': len(volumes)}
             
         except Exception:
@@ -2347,6 +2317,8 @@ class HealthMonitor:
     # The new _check_proxmox_storage function handles this logic better.
     def _check_proxmox_storages(self) -> Dict[str, Any]:
         """Check Proxmox-specific storages (only report problems)"""
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return {'status': 'OK', 'reason': 'Not applicable on PBS', 'checks': {}, 'not_applicable': True}
         storages = {}
         
         try:
@@ -3515,6 +3487,8 @@ class HealthMonitor:
         Optimized VM/CT check - detects qmp failures and startup errors from logs.
         Improved detection of container and VM errors from journalctl.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return {'status': 'OK', 'reason': 'Not applicable on PBS', 'checks': {}, 'not_applicable': True}
         try:
             # First: auto-resolve any persisted VM/CT errors where the guest
             # is now running.  This clears stale "Failed to start" / QMP
@@ -3678,6 +3652,8 @@ class HealthMonitor:
         Check VMs/CTs with persistent error tracking.
         Errors persist until VM starts or 48h elapsed.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return {'status': 'OK', 'reason': 'Not applicable on PBS', 'checks': {}, 'not_applicable': True}
         try:
             issues = []
             vm_details = {}
@@ -3909,6 +3885,28 @@ class HealthMonitor:
             print(f"[HealthMonitor] VMs/CTs persistence check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'VM/CT check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
     
+    def _service_state(self, service: str) -> str:
+        """The state of a service, once a restart in progress has finished."""
+        deadline = time.time() + self.SERVICE_SETTLE_SECONDS
+        while True:
+            state = subprocess.run(
+                ['systemctl', 'is-active', service],
+                capture_output=True,
+                text=True,
+                timeout=2
+            ).stdout.strip()
+            if state not in self.SERVICE_TRANSIENT_STATES or time.time() >= deadline:
+                return state
+            time.sleep(1)
+
+    def _package_update_running(self) -> bool:
+        """An update stops and restarts the services it replaces."""
+        try:
+            from notification_events import is_apt_active_on_host
+            return is_apt_active_on_host()
+        except Exception:
+            return False
+
     def _check_pve_services(self) -> Dict[str, Any]:
         """
         Check critical Proxmox services with persistence tracking.
@@ -3919,8 +3917,18 @@ class HealthMonitor:
         """
         try:
             # Build service list: base PVE services + corosync if clustered
-            services_to_check = list(self.PVE_SERVICES)
-            is_cluster = os.path.exists('/etc/corosync/corosync.conf')
+            pbs_host = getattr(self, "platform_type", "pve") == "pbs"
+            service_prefix = "pbs" if pbs_host else "pve"
+            product_name = "PBS" if pbs_host else "PVE"
+            services_to_check = list(PBS_SERVICES) if pbs_host else list(self.PVE_SERVICES)
+            if pbs_host:
+                # Old Monitor versions incorrectly treated absent PVE services
+                # as PBS failures; remove only those known inapplicable errors.
+                for service in self.PVE_SERVICES:
+                    old_key = f'pve_service_{service}'
+                    if health_persistence.is_error_active(old_key):
+                        health_persistence.clear_error(old_key)
+            is_cluster = not pbs_host and os.path.exists('/etc/corosync/corosync.conf')
             if is_cluster and 'corosync' not in services_to_check:
                 services_to_check.append('corosync')
             
@@ -3929,20 +3937,20 @@ class HealthMonitor:
 
             for service in services_to_check:
                 try:
-                    result = subprocess.run(
-                        ['systemctl', 'is-active', service],
-                        capture_output=True,
-                        text=True,
-                        timeout=2
-                    )
-
-                    status = result.stdout.strip()
-                    if result.returncode != 0 or status != 'active':
+                    status = self._service_state(service)
+                    # A service reloading its configuration keeps running.
+                    if status not in ('active', 'reloading'):
                         failed_services.append(service)
                         service_details[service] = status or 'inactive'
                 except Exception:
                     failed_services.append(service)
                     service_details[service] = 'error'
+
+            # During a package update nothing is concluded about these services
+            # in either direction: the next check after it does that.
+            in_update = []
+            if failed_services and self._package_update_running():
+                in_update, failed_services = failed_services, []
 
             # Auto-clear errors for services that are healthy this cycle.
             # Lifted out of the `if failed_services:` branch so it runs
@@ -3951,15 +3959,15 @@ class HealthMonitor:
             # active forever (the dismissed-only path returned before the
             # cleanup loop). Audit Tier 5 — Health stack.
             for svc in services_to_check:
-                if svc not in failed_services:
-                    error_key = f'pve_service_{svc}'
+                if svc not in failed_services and svc not in in_update:
+                    error_key = f'{service_prefix}_service_{svc}'
                     if health_persistence.is_error_active(error_key):
                         health_persistence.clear_error(error_key)
             
             # Build checks dict with status per service
             checks = {}
             for svc in services_to_check:
-                error_key = f'pve_service_{svc}'
+                error_key = f'{service_prefix}_service_{svc}'
                 if svc in failed_services:
                     state = service_details.get(svc, 'inactive')
                     checks[svc] = {
@@ -3967,6 +3975,12 @@ class HealthMonitor:
                         'detail': f'Service is {state}',
                         'error_key': error_key,
                         'dismissable': True,
+                    }
+                elif svc in in_update:
+                    checks[svc] = {
+                        'status': 'OK',
+                        'detail': f"Service is {service_details.get(svc, 'inactive')}",
+                        'error_key': error_key,
                     }
                 else:
                     checks[svc] = {
@@ -3987,12 +4001,12 @@ class HealthMonitor:
                 # Record each failed service in persistence, respecting dismiss
                 active_failed = []
                 for svc in failed_services:
-                    error_key = f'pve_service_{svc}'
+                    error_key = f'{service_prefix}_service_{svc}'
                     rec_result = health_persistence.record_error(
                         error_key=error_key,
                         category='pve_services',
                         severity='CRITICAL',
-                        reason=f'PVE service {svc} is {service_details.get(svc, "inactive")}',
+                        reason=f'{product_name} service {svc} is {service_details.get(svc, "inactive")}',
                         details={'service': svc, 'state': service_details.get(svc, 'inactive')}
                     )
                     if rec_result and rec_result.get('type') == 'skipped_acknowledged':
@@ -4753,6 +4767,10 @@ class HealthMonitor:
         Inst lines and exposes them as an INFO sub-check.
         """
         cache_key = 'updates_check'
+        # Kernel activation is independent of pending APT packages. Check it
+        # even when the package result is cached; this performs no APT call.
+        from kernel_reboot import reboot_status, with_reboot_status
+        reboot = reboot_status()
         current_time = time.time()
         apt_history_path = '/var/log/apt/history.log'
 
@@ -4775,7 +4793,7 @@ class HealthMonitor:
             cache_ts = self.last_check_times[cache_key]
             history_changed = (history_mtime is not None and history_mtime > cache_ts)
             if not history_changed and current_time - cache_ts < 600:
-                return self.cached_results.get(cache_key)
+                return with_reboot_status(self.cached_results.get(cache_key), reboot)
 
         try:
             last_update_days = None
@@ -4805,11 +4823,11 @@ class HealthMonitor:
                 )
             except subprocess.TimeoutExpired:
                 print("[HealthMonitor] apt-get upgrade --dry-run timed out")
-                return {
+                return with_reboot_status({
                     'status': 'UNKNOWN',
                     'reason': 'apt-get timed out - repository may be unreachable',
                     'count': 0, 'checks': {}
-                }
+                }, reboot)
             
             status = 'OK'
             reason = None
@@ -5126,11 +5144,11 @@ class HealthMonitor:
             
             self.cached_results[cache_key] = update_result
             self.last_check_times[cache_key] = current_time
-            return update_result
+            return with_reboot_status(update_result, reboot)
             
         except Exception as e:
             print(f"[HealthMonitor] Updates check failed: {e}")
-            return {'status': 'UNKNOWN', 'reason': f'Updates check unavailable: {str(e)}', 'count': 0, 'checks': {}, 'dismissable': True}
+            return with_reboot_status({'status': 'UNKNOWN', 'reason': f'Updates check unavailable: {str(e)}', 'count': 0, 'checks': {}, 'dismissable': True}, reboot)
     
     def _check_fail2ban_bans(self) -> Dict[str, Any]:
         """
@@ -5816,6 +5834,8 @@ class HealthMonitor:
         - No persistent errors are recorded
         This prevents false positives when NFS/PBS/remote storage is still mounting.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         if not PROXMOX_STORAGE_AVAILABLE:
             return None
         
@@ -6076,6 +6096,8 @@ class HealthMonitor:
             if status == 'stale':
                 checks[check_label] = {
                     'status': 'CRITICAL',
+                    'error_key': error_key,
+                    'dismissable': True,
                     'detail': f'{fstype} mount stale: {error or "unreachable"}',
                     'fstype': fstype,
                     'source': m.get('source', ''),
@@ -6105,6 +6127,8 @@ class HealthMonitor:
             elif status == 'readonly':
                 checks[check_label] = {
                     'status': 'WARNING',
+                    'error_key': error_key,
+                    'dismissable': True,
                     'detail': f'{fstype} mount unexpectedly read-only',
                     'fstype': fstype,
                     'source': m.get('source', ''),
@@ -6205,6 +6229,8 @@ class HealthMonitor:
         Notification cooldown is the standard 1h via the storage
         category, so a CT teetering at 96% won't spam the channel.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         # Cheap pre-check: bail out when there are no running LXCs. On
         # nodes without CTs, the previous version still paid ~860ms per
         # cycle for a `pvesh /cluster/resources` call that produced no
@@ -6365,6 +6391,8 @@ class HealthMonitor:
         path, so a slow / dead guest agent can't stretch the health
         cycle.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         try:
             import flask_server  # deferred — avoids circular import
             resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
@@ -6524,6 +6552,8 @@ class HealthMonitor:
         check (already covered) because those are usually large data
         mounts whose fill rate is driven by user content, not log spam.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         if not MOUNT_MONITOR_AVAILABLE:
             return None
         try:
@@ -6627,6 +6657,8 @@ class HealthMonitor:
         check via _check_filesystem. Re-alerting on the same condition
         through two channels just clutters the inbox.
         """
+        if getattr(self, "platform_type", "pve") == "pbs":
+            return None
         if not PROXMOX_STORAGE_AVAILABLE:
             return None
         try:

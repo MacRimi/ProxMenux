@@ -144,7 +144,7 @@ export default async function BetaProgramPage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("manual.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("manual.intro")}</p>
-      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# Check current channel (returns "beta" or "stable")
+      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# Check current channel (returns "active" for beta, or "stable")
 jq -r '.beta_program.status // "stable"' /usr/local/share/proxmenux/config.json
 
 # Switch to Stable

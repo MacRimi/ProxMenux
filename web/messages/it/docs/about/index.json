@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "title": "Informazioni su | Documentazione ProxMenux",
+    "description": "Informazioni su ProxMenux: obiettivi del progetto, collaboratori, FAQ e codice di condotta. Uno strumento di gestione open source a menu per Proxmox VE 8+, sviluppato e mantenuto da MacRimi con un piccolo gruppo di tester e collaboratori.",
+    "ogTitle": "Informazioni su | Documentazione ProxMenux",
+    "ogDescription": "Informazioni su ProxMenux — strumento di gestione a menu open source per Proxmox VE 8+."
+  },
+  "header": {
+    "title": "Informazioni",
+    "description": "Informazioni sul progetto, FAQ, contributori e codice di condotta. ProxMenux è uno strumento di gestione a menu open source per Proxmox VE 8+, costruito e mantenuto da MacRimi con l'aiuto di un piccolo team di tester e collaboratori.",
+    "section": "Informazioni"
+  },
+  "callout": {
+    "title": "Open source, sviluppato dalla comunità",
+    "body": "ProxMenux è distribuito con licenza GPL-3.0 e sviluppato pubblicamente su GitHub. Ogni script può essere esaminato e ogni modifica tracciata. Sono benvenuti segnalazioni di bug, idee, codice e test."
+  },
+  "section": {
+    "heading": "In questa sezione",
+    "options": [
+      {
+        "icon": "HelpCircle",
+        "href": "/docs/about/faq",
+        "title": "FAQ",
+        "description": "Domande frequenti: che cos’è ProxMenux, installazione, compatibilità, personalizzazione, aggiornamenti, sicurezza, uso in produzione e disinstallazione."
+      },
+      {
+        "icon": "Users",
+        "href": "/docs/about/contributors",
+        "title": "Contributori",
+        "description": "Un riconoscimento alle persone che rendono possibile ProxMenux: tester, revisori e sviluppatori che contribuiscono a ogni versione."
+      },
+      {
+        "icon": "ScrollText",
+        "href": "/docs/about/code-of-conduct",
+        "title": "Codice di condotta",
+        "description": "Valori del progetto, responsabilità del codice e linee guida per contribuire. Da leggere prima di aprire una PR o segnalare un problema."
+      }
+    ]
+  },
+  "involved": {
+    "heading": "Partecipa",
+    "intro": "Tre modi per partecipare al progetto:",
+    "cards": [
+      {
+        "href": "https://github.com/MacRimi/ProxMenux/issues/new",
+        "title": "🐛 Segnala un bug",
+        "description": "GitHub Issues — includi i log e i passaggi per riprodurre il problema."
+      },
+      {
+        "href": "https://github.com/MacRimi/ProxMenux/discussions",
+        "title": "💡 Suggerisci una funzionalità",
+        "description": "GitHub Discussions — condividi le tue idee prima di aprire una PR."
+      },
+      {
+        "href": "https://github.com/MacRimi/ProxMenux/pulls",
+        "title": "🔀 Invia una PR",
+        "description": "GitHub Pull Requests — leggere prima il codice di condotta."
+      }
+    ]
+  },
+  "support": {
+    "heading": "Sostieni il progetto",
+    "introRich": "Se ProxMenux ti fa risparmiare tempo, il modo più semplice per farlo conoscere è <starlink>assegnare una ⭐ al repository su GitHub</starlink>. Se vuoi fare di più:",
+    "kofiLabel": "Supporto su Ko-fi",
+    "kofiOutro": " — offri un caffè al manutentore e contribuisci a portare avanti lo sviluppo."
+  }
+}

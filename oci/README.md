@@ -111,6 +111,8 @@ Selecting an application, or giving a definition, opens the same sequence.
 4. **Resolve.** The registry is queried, the architecture of the host is selected and the digest the tag points to at that moment is fixed.
 5. **Download and verify.** Skopeo downloads the image as an OCI archive. Every layer is checked against its digest before anything is created.
 6. **Build.** `pct create` builds the rootfs from the archive and imports `Entrypoint`, `Cmd`, `Env`, `User`, `WorkingDir` and `StopSignal` from the image.
+
+   Proxmox reads the image inside the container's user namespace. Readable template-storage archives use the existing path without a copy. If a verified archive or its parents are private, the native create wrapper makes a temporary root-owned copy under `/var/tmp`, readable only by the mapped root group, and removes it after creation, failure or a catchable interruption. The cached image, storage directories, registry credentials and caller permissions stay unchanged. Reflinks are used where available; otherwise this uncommon path needs temporary space for one image copy. Only the `pct create` child receives the normal Proxmox creation umask.
 7. **Connect.** The volumes are added as mount points, then the devices, the environment, the network and the security settings the oci-compose declares.
 8. **Prepare.** Each new volume is made ready for the first start: `lost+found` is removed and the directory is given to the user the application writes with. The files the oci-compose asks to write are written.
 9. **Start and check.** The container starts, an address is waited for, the settings that need the running application are applied, and the service is checked. A failed first start is reported as a failed installation.
@@ -137,12 +139,56 @@ An application made of several images is one entry of the catalog and one instal
 
 ## Update, modify, recreate and remove
 
+The OCI menu has a **Check for updates** entry. Checking changes that same
+entry to **Checking for updates (completed/total)**, then **Updates available (N)** when
+newer images are found. Progress counts applications, including coordinated
+applications with several containers, and advances as each finishes. When finished, the entry shows only
+**Updates available (N)** or **Check for updates**. Only registry metadata is read; no image layers are
+downloaded and no containers are changed. The menu remains usable during the
+check. Leaving the OCI menu closes its request; the Monitor may finish
+metadata queries already in progress before stopping the remaining checks.
+
+Open **Updates available (N)** to choose applications with Space. Nothing is
+preselected, even when there is only one update. **Select all** at the top
+includes every listed application. After reviewing the selection, each
+application uses the existing update workflow, including its identity checks,
+backup prompts and recovery. Cancelling or failing an update stops the batch.
+The selection screen has only **Update** and **Cancel** buttons.
+
+Opening the menu reads the Monitor's existing `/etc/proxmenux/apps` results
+without contacting registries. Its daily checks and the manual menu check use
+the same `lxc_apps.check_app` implementation, cache and registry credentials.
+There is no second checker, private update-status cache or fallback checker.
+Manual checks run in the Monitor process through a root-only local Unix
+socket, preserving its locks and registry retries without changing web
+authentication. ProxMenux Monitor must be installed, running and include the
+menu integration for manual checks.
+
+Manual checks run up to sixteen applications in parallel. The native checker
+holds its shared cache lock only while reading or publishing a result; each
+app has its own check lock. Before saving it re-reads the app and installation
+record, discards answers for a concurrently edited/replaced app, and preserves
+unrelated registrations and schedules. A fresh tag/index lookup that confirms
+the same platform digest reuses its immutable version/build metadata. Changed
+digests still fetch and verify the new metadata; installs and updates retain
+the full image-contract verification path. Checks therefore still consult the
+registry rather than returning a cached verdict as a new check.
+
+Results older than 24 hours or for a different installed image or reference
+are not offered as current. Network failures retain the Monitor's existing
+result and retry state, or remain unknown when no previous result exists.
+Coordinated applications count once and follow the Monitor's existing policy:
+update availability is tracked on the primary container, while secondary
+containers are updated together with it. The menu does not add independent
+update tracking for secondary images. A reference pinned to an immutable
+digest does not follow newer tags.
+
 *Manage installed OCI applications* lists the registered installations. Before any action a container is compared with its record; one that no longer matches is neither modified nor deleted.
 
 | Operation | What changes | What is kept |
 |---|---|---|
 | **Update** | The rootfs is replaced by the image the saved tag publishes today | Record, container disks, host directories, network and devices |
-| **Modify** | An editor opens with the current resources, network, paths and GPU; the container is rebuilt with the changes | The data of container disks and host directories |
+| **Modify** | Edit and confirm the configuration; supported native settings apply directly, while other changes use the existing recreation flow | Native edits keep the installed image and rootfs; both paths preserve persistent data |
 | **Recreate** (multi-container) | Every container is rebuilt from the image it was installed with | Data, network and devices |
 | **Watchdog** | Whether the application is started again when it stops on its own | Everything; only the choice is saved |
 | **Remove** | The LXC, or every container of the application, its disks and its record | Host directories, with their content |
@@ -159,9 +205,88 @@ Settings changed in Proxmox VE after the installation, such as memory, cores or 
 
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
+For standalone applications, CPU and RAM changes apply live. Supported network settings, environment overrides, directory mounts, additional managed volumes and native devices use a controlled stop/start when needed. Modify does not query the registry or download an image for these native edits, even if the cached archive has already been cleaned. Removing a managed mount detaches its disk without deleting its data; subsequent image updates park that unused disk and return it to the container. An optional retained backup does not force recreation.
+
+The native path checks the saved configuration and installation identity, keeps a private before/after journal, and restores the original settings if applying them or checking the restarted service fails. It refuses to overwrite concurrent edits. Changes that require installer adaptations, such as NVIDIA runtime changes, GPU permission/environment setup, file mounts, completion notes or a refreshed catalog template, use the existing validated recreation flow. The route is chosen before applying any settings, so one proposal is not partially applied by both paths. The recreation flow reuses a verified cached archive when it matches the resolved image; it downloads an image when a suitable archive is unavailable. Image changes and coordinated stack operations retain their separate update flow.
+
 ## From a Compose file or a docker run command to an oci-compose
 
-The converter reads a Compose file with one service. A `docker run` command and an image reference alone are first written as a Compose file and follow the same path, so the three produce the same kind of oci-compose.
+The converter reads Compose files with one or several services. Multi-service
+files use the native stack compiler: each service runs in its own LXC, with
+dependency ordering and a private network. The first service that publishes a
+port is selected as the main service, unless `x-casaos.main` selects another one.
+Every image is checked for registry access before installation; written tags,
+digests and image entrypoints are preserved.
+
+The file importer resolves an explicitly selected project `.env` and service
+`env_file` files, then applies Compose interpolation and service overrides. It
+does not silently import the host process environment. Missing required values
+are requested before installation, and summaries hide secret values. An inline
+Compose definition can also supply an environment file or enter values through
+the assistant.
+
+Published web services receive individual LAN addresses. The main web check uses
+the same LAN URL shown to the user; private backend aliases stay on the internal
+network. Internal services can use declared or inherited image health checks,
+exposed TCP ports, or a clearly labelled process-running check. A running process
+alone does not satisfy `service_healthy`.
+
+For custom stacks, loopback public URLs in variables such as `PUBLIC_URL` or
+`PENPOT_PUBLIC_URI` are mapped to the service publishing their original Compose
+host port, using that service's LAN address and container port. Explicit external
+URLs and internal loopback endpoints remain unchanged. Automatic public URL
+mapping requires a static frontend address; with DHCP, provide the application's
+explicit public URL instead. This lets every dependent service receive its final
+public URL before its first start, including migration jobs.
+Only names containing a `PUBLIC` or `EXTERNAL` segment and ending in `URL`,
+`URI` or `ORIGIN` qualify for this automatic mapping. Other application-specific
+variables, such as `NEXTAUTH_URL` or `ROOT_URL`, must contain the intended URL in
+the supplied Compose or environment file. Changing a frontend IP later also
+requires updating its application URLs.
+
+Private members receive specific routes to their own stack's static frontend
+addresses before the application starts. These routes stay inside the container's
+network namespace and use the frontend's private address as the next hop. Native
+update and recovery preserve their ownership records and rebuild the required
+host configuration, including when a restore changes container IDs.
+
+Repeated identical volume sources share one host directory, selected once;
+separate configuration volumes stay independent. Host directories are not part
+of a normal Proxmox container backup. Newly created private data volumes use the
+imported image user unless an explicit volume owner or PUID/PGID overrides it.
+SELinux `z`/`Z` labels are reported as not applied on a non-enforcing host; an
+enforcing host is refused rather than silently losing their protection.
+
+An explicit Compose `stop_signal` overrides the image's stop signal through
+`lxc.signal.halt`. Without it, the image signal stays unchanged, including when
+Compose replaces its entrypoint. A worker sharing a web image may therefore
+need its own declared stop signal. Native updates abort safely if a service
+does not stop; they do not silently force termination to replace its disks.
+Some programs ignore termination signals when running as PID 1. Setting a signal
+does not add an init process or guarantee graceful shutdown; an explicit
+`SIGKILL` requests forced termination, not a graceful stop.
+
+A dependency declared with `service_completed_successfully` runs as a one-shot
+job. Its original command must finish with a verified exit code of zero before
+the dependent service starts. Such jobs are excluded from onboot and watchdog
+restarts. Update and restore invalidate the completion proof when the image,
+runtime configuration or recovery identity changes. A migration update is
+refused when database or unclassified backend data lives in host directories
+that the transaction cannot safely restore.
+The native exit-status monitor currently accepts LXC 7.0.0, the verified protocol
+version. Other versions refuse one-shot execution rather than treating a stopped
+container as proof of success.
+
+Before each native stack backup, the engine writes the validated original
+installation record into every stopped member and reads it back. A missing or
+unverifiable copy aborts the backup, so database and worker archives do not
+silently lose the metadata needed to register the restored stack.
+
+The bridges are local to the installation node; they are not a cluster SDN.
+Unsupported network and runtime semantics are reported before installation.
+Support for several services does not imply complete Docker Compose compatibility.
+A `docker run` command or image reference is converted to Compose first and
+follows the same importer.
 
 Starting from this definition:
 
@@ -203,7 +328,7 @@ each key becomes a field of the oci-compose:
 | `stop_grace_period` | `proxmox.defaults.shutdown_timeout_seconds` | The time a shutdown waits |
 | `labels`, `logging` | Kept in `container_contract.original_compose` only | Not applied: they are read by Docker tools |
 
-What has no translation stops the installation and is named: `pid: host`, a Compose file with several services given to this option, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
+What has no translation stops the installation and is named: `pid: host`, `configs`, external secrets, a `build` section without a published image, and shell substitutions such as `$(command)`.
 
 Besides those fields, the converter writes the blocks that describe the translation itself: where the definition came from, the keys it understood, the adaptations it applied and the state of each validation. They are listed in [Blocks ProxMenux writes](#blocks-proxmenux-writes).
 
@@ -325,6 +450,11 @@ The variables the image itself defines are imported with it and are not written 
 Where a path goes follows one rule. A path that holds content of the user, such as `/media`, `/downloads`, `/music` or `/backups`, is offered as a container disk or as a host directory, and the installation asks which. The list is in `catalog/volume-policy.json`. Every other path is state of the application and goes to a container disk without asking. Writing `"installation_choice": ["managed-volume", "host-bind"]` or `"default": "host-bind"` on a volume offers the host directory for a path that is not in that list.
 
 **`restart`**. With `unless-stopped`, `always` or `on-failure`, the watchdog is proposed by default: an application that stops on its own is started again.
+Its running history belongs to the installation UUID, not just the VMID. Before
+restarting a guest, it rechecks the saved record and the live ProxMenux identity
+under the registry operation lock. A stale record therefore cannot start an
+unrelated guest or a temporary `oci-data-holder` that reused the same VMID.
+Updates, removals, intentional stops and guests first seen stopped remain left alone.
 
 ### `first_run`: what is shown when the installation ends
 
@@ -456,8 +586,9 @@ A profile may also change the image, with `image`, for projects that publish one
 | `external_services` | Names of services the application needs already running, such as `["MariaDB"]`. They are announced before the installation asks how to reach them |
 | `generated_files` | Files written in the container before its first start, each with `container_path`, `content`, `owner` and `mode`. With `"only_if_missing": true` a file that already exists in a kept volume is not replaced |
 | `volume_owner` | `uid` and `gid` of the user the application writes with, when it is not 1000 |
+| `tmpfs_mounts` | Volatile paths with a size and mount options. An optional `owner_strategy` sets ownership to `mapped-root`, `mapped-application-user` (using `uid`/`gid` or `PUID`/`PGID`-style variables), or `image-user` (the effective `lxc.init.uid`/`lxc.init.gid`); `mode` sets permissions. The exact `/run` path requires an owner strategy. |
 | `non_persistent_image_volumes` | Paths the image declares as volumes that are left inside the rootfs |
-| `runtime`, `resources`, `security`, `device_requests`, `tmpfs_mounts`, `extra_hosts` | What the Compose keys of the [translation table](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose) become |
+| `runtime`, `resources`, `security`, `device_requests`, `extra_hosts` | What the Compose keys of the [translation table](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose) become |
 
 ### `proxmox.security_profile`: privileges
 
@@ -988,3 +1119,9 @@ have not been tested. No custom supervisor or image entrypoint is introduced.
 DeepSeek OCR remains deferred at the user's request: registry inspection on
 2026-09-14 found only `v2.2.0` for both IceWhaleTech images and no `latest` tag.
 No fixed-version exception or deployment has been introduced.
+
+## Automatic catalog refresh
+
+OCI Manager opens with its local catalog and checks for new applications and recipes
+in the background. **Refresh catalog** repeats the check manually. See
+[Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility.

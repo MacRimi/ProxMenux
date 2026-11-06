@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Crear VM: System NAS | ProxMenux Documentation",
+    "title": "Crear VM: sistema NAS | Documentación de ProxMenux",
     "description": "Crea máquinas virtuales NAS en Proxmox VE con ProxMenux. Soporta Synology DSM (loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS. Umbrel OS está disponible vía community script.",
-    "ogTitle": "Crear VM: System NAS | ProxMenux Documentation",
+    "ogTitle": "Crear VM: sistema NAS | Documentación de ProxMenux",
     "ogDescription": "Crea máquinas virtuales NAS en Proxmox VE con ProxMenux. Soporta Synology DSM (loader), TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS.",
     "ogImageAlt": "Menú System NAS de ProxMenux"
   },
@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Cómo funciona el selector de NAS",
-    "body": "El selector de NAS detecta la última release estable de cada appliance (consultando su mirror upstream), descarga la ISO — o construye la VM a partir de una imagen pre-empaquetada — y luego cede el control al asistente genérico de VM de ProxMenux para CPU, RAM, disco y configuración de red."
+    "body": "En el flujo genérico de ISO, el selector NAS intenta detectar la última versión estable en el servidor del proyecto, usa una versión alternativa si hace falta, descarga la ISO y abre la configuración compartida de CPU, RAM, discos y red. Synology DSM y ZimaOS usan instaladores específicos."
   },
   "image": {
     "alt": "Selector System NAS de ProxMenux",
@@ -26,7 +26,7 @@
   },
   "labels": {
     "base": "Base",
-    "fileSystem": "Filesystem",
+    "fileSystem": "Sistema de archivos",
     "viewDetails": "Ver detalles"
   },
   "supported": {
@@ -36,14 +36,14 @@
         "name": "Synology DSM",
         "tagline": "DiskStation Manager con el loader ARC / RR. Requiere configurar el loader antes del primer arranque.",
         "icon": "HardDrive",
-        "base": "Linux (custom)",
+        "base": "Linux (personalizado)",
         "fileSystem": "Btrfs, ext4",
         "href": "/docs/create-vm/system-nas/synology",
         "flow": "loader"
       },
       {
         "name": "TrueNAS SCALE",
-        "tagline": "TrueNAS basado en Debian con apps Docker / Kubernetes y ZFS como filesystem principal.",
+        "tagline": "TrueNAS basado en Debian con apps Docker en las versiones actuales y ZFS como sistema de archivos principal. Las versiones antiguas de SCALE usaban Kubernetes.",
         "icon": "Database",
         "base": "Debian Linux",
         "fileSystem": "ZFS",
@@ -52,7 +52,7 @@
       },
       {
         "name": "TrueNAS CORE",
-        "tagline": "TrueNAS basado en FreeBSD. Almacenamiento ZFS de nivel empresarial con jails y plugins.",
+        "tagline": "TrueNAS basado en FreeBSD, centrado en almacenamiento ZFS. Las jails y los plugins de CORE 13.3 están obsoletos y carecen de soporte.",
         "icon": "Database",
         "base": "FreeBSD",
         "fileSystem": "ZFS",
@@ -90,7 +90,7 @@
         "name": "ZimaOS",
         "tagline": "SO NAS ligero centrado en multimedia, apps Docker y domótica. Usa su propio instalador.",
         "icon": "MonitorIcon",
-        "base": "Debian / CasaOS",
+        "base": "Buildroot (evolución de CasaOS)",
         "fileSystem": "ext4",
         "href": "/docs/create-vm/system-nas/system-nas-others#zimaos",
         "flow": "dedicated"
@@ -112,7 +112,7 @@
   },
   "zfsMem": {
     "title": "Regla rápida de memoria para ZFS",
-    "bodyRich": "Si eliges un NAS basado en ZFS (TrueNAS, XigmaNAS), asigna al menos <strong>8 GB de RAM</strong> a la VM — ZFS usa la memoria libre como caché ARC y el rendimiento se degrada notablemente por debajo de eso. Rockstor (Btrfs) y OMV (ext4) son mucho menos exigentes con la memoria."
+    "bodyRich": "Para TrueNAS, asigna al menos <strong>8 GB de RAM</strong> para el funcionamiento básico y más para cargas exigentes. ZFS usa RAM para la caché ARC, pero no existe un umbral universal de 8 GB para todo NAS ZFS. Comprueba los requisitos de la distribución y dimensiona según discos, servicios y apps; configuraciones ligeras de OMV o Rockstor pueden necesitar menos."
   },
   "related": {
     "heading": "Relacionado",

@@ -30,7 +30,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk", "sv")
+DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk", "sv", "ru")
 DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
 # googletrans and the public Google endpoint used by this workflow do not
 # support Cloud Translation glossaries. Protect product names, package names
@@ -38,6 +38,18 @@ DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
 # provider, then restore the exact source spelling afterwards. Keep longer
 # terms first so ``gasket`` cannot consume part of ``gasket-dkms``.
 PROTECTED_TECHNICAL_TERMS = (
+    # Product names, kept whole. Left to a translator, "Proxmox Backup Server"
+    # became "Proxmox Sicherungsserver" and "Serveur de sauvegarde Proxmox",
+    # and when a provider rightly handed it back unchanged the string was
+    # retried and then dropped as untranslated.
+    "Proxmox Backup Server",
+    "Proxmox Datacenter Manager",
+    "Proxmox Mail Gateway",
+    "Proxmox VE",
+    "ProxMenux Monitor",
+    "ProxMenux Optimizations",
+    "Secure Gateway",
+    "Tailscale",
     "google/gasket-driver",
     "feranick/gasket-driver",
     "libedgetpu1-std",
@@ -90,6 +102,12 @@ PROTECTED_TECHNICAL_TERMS = (
     "WebUI",
     "Intel",
     "CUDA",
+    "ROCm",
+    "Vulkan",
+    "SYCL",
+    "QSV",
+    "OpenVINO",
+    "OpenCL",
     "KFD",
     "GPU",
     "CPU",

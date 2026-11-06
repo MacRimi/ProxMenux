@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Installera Kodi i LXC med GPU-acceleration | ProxMenux-guider",
+    "description": "Kör Kodi i en privilegierad LXC-container på Proxmox VE, ge den tillgång till värdsystemets iGPU och USB-inmatningsenheter och använd servern som mediecenter direkt anslutet till en TV.",
+    "ogTitle": "Installera Kodi i LXC med GPU-acceleration",
+    "ogDescription": "Kör Kodi i en privilegierad LXC-container på Proxmox VE med tillgång till värdsystemets iGPU och USB-inmatningsenheter och använd servern som mediecenter."
+  },
+  "header": {
+    "title": "Installera Kodi i LXC med GPU-acceleration och anslut till bildskärm eller TV",
+    "description": "Kör Kodi i en privilegierad LXC-container på Proxmox VE, ge den tillgång till värdsystemets iGPU och USB-inmatningsenheter och använd servern som mediecenter direkt anslutet till en TV.",
+    "section": "Guider"
+  },
+  "intro": {
+    "calloutTitle": "Observera",
+    "calloutBody": "Den här guiden använder ett externt gemenskapsskript för att konfigurera Kodi-containern. ProxMenux kan också ge tillgång till värdsystemets iGPU: <strong>GPU:er och Coral-TPU → Lägg till GPU i LXC</strong> konfigurerar <code>/dev/dri</code> och installerar drivrutiner i containern. Skriptet nedan installerar dessutom Kodi och automatisk start på <code>tty7</code>. Använd det för ett färdigt mediecenter i LXC; välj <gpuLink>ProxMenux-flödet</gpuLink> om du bara behöver GPU-åtkomst i en manuellt konfigurerad container.",
+    "credit": "Det ursprungliga Kodi-skriptet för LXC skapades av <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Vad du ska göra",
+    "steps": [
+      "Skapa en privilegierad LXC-container med Kodi med hjälp av skriptet.",
+      "Ge containern tillgång till USB-tangentbord, mus eller handkontroll.",
+      "Valfritt: uppdatera Kodi från containerns konfigurerade paketförråd."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Skapa Kodi LXC",
+    "body": "Välj <strong>Privileged</strong> i skriptets avancerade inställningar för den här guiden. Skriptet skapar som standard oprivilegierade containrar, som kräver lämpliga enhetsbehörigheter och ID-mappningar. Det konfigurerar GPU-åtkomst, Kodi och automatisk start på <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Installationen tar en stund. När Kodi startar på <code>tty7</code> ansluter du bildskärmen eller TV:n till värdsystemets HDMI-/DisplayPort-utgång. Kodi-gränssnittet bör då visas."
+  },
+  "addInput": {
+    "heading": "2. Lägg till tangentbord, mus eller USB-handkontroll",
+    "body": "Inmatningsenheterna finns under <code>/dev/input/</code> på värdsystemet. Identifiera deras major-nummer:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Lista över inmatningsenheter",
+    "afterList": "För teckenenheter använder du major-numret före kommatecknet, här <code>13</code>. Redigera Kodi-containerns konfiguration på värden. Ersätt <code>'<'CTID'>'</code> med dess ID, till exempel <code>102</code>:",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
+    "addLines": "Lägg till följande och anpassa <code>13</code> till numret på <strong>ditt</strong> värdsystem:",
+    "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "LXC konfiguration",
+    "save": "Spara filen, avsluta redigeraren med <code>Ctrl+X</code> och starta om <strong>bara containern</strong>. Proxmox-värdsystemet behöver inte startas om:",
+    "restartCode": "pct reboot CTID",
+    "plug": "Anslut tangentbordet, musen eller handkontrollen. Kodi bör reagera."
+  },
+  "updateKodi": {
+    "heading": "3. Valfritt: uppdatera Kodi från konfigurerade paketförråd",
+    "calloutTitle": "Viktigt",
+    "calloutBody": "PPA:t team-xbmc är <strong>endast för Ubuntu</strong> och enligt Kodi underhålls det inte längre. Att <code>add-apt-repository</code> saknas identifierar inte distributionen. Kontrollera <code>cat /etc/os-release</code> och leta efter <code>NAME=\"Ubuntu\"</code>; lägg inte till Ubuntu-PPA:er i Debian. Kommandona nedan uppdaterar paket från containerns konfigurerade paketförråd.",
+    "body": "Inne i containern (<code>pct enter '<'CTID'>'</code>):",
+    "code": "apt update\napt install --only-upgrade kodi kodi-bin",
+    "after": "Starta om containern efter uppdateringen. Kodi använder versionen i de konfigurerade paketförråden, som kan skilja sig från projektets senaste version."
+  },
+  "screenshots": {
+    "heading": "Skärmdumpar",
+    "image1Alt": "Kodi gränssnitt 1",
+    "image2Alt": "Kodi gränssnitt 2"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "items": [
+      "<strong>Kodi-containern startar men TV:n visar inget:</strong> containern kanske saknar tillgång till iGPU:n. Kontrollera <code>ls /dev/dri</code> i containern; där bör <code>card0</code> och <code>renderD128</code> finnas. Om katalogen är tom kontrollerar du GPU-genomkopplingen eller väljer <strong>Lägg till GPU i LXC</strong> i ProxMenux.",
+      "<strong>Tangentbord eller mus identifieras inte efter omstart:</strong> kontrollera att <code>/dev/input</code> är monterad och att Kodi kan läsa enheterna. Kör <code>ls -l /dev/input</code> på värdsystemet och i containern och kontrollera regeln <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>Hårdvaruaccelererad uppspelning använder CPU:n i stället för GPU:n:</strong> installera eller uppdatera VA-API-drivrutiner i containern: <code>intel-media-va-driver</code> för nyare Intel-iGPU:er, <code>i965-va-driver</code> för äldre och <code>mesa-va-drivers</code> för AMD.",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> kommandot är inte installerat; det bevisar inte att containern kör Debian. Kontrollera distribution och tillgängliga paket. Använd Debians Kodi-paket på Debian utan att lägga till Ubuntu-PPA:t."
+    ]
+  },
+  "further": {
+    "heading": "Läs mer",
+    "konpatRich": "<konpatLink>Konpats blogginlägg</konpatLink> med mer information om åtkomst till Intel-iGPU:n från LXC."
+  }
+}

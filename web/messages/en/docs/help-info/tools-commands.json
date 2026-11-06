@@ -251,7 +251,7 @@
   ],
   "tmuxTip": {
     "title": "Use tmux / screen for long-running commands",
-    "bodyRich": "Anything that takes longer than a coffee break — a backup, a long upgrade, a big rsync — should run inside <code>tmux</code> or <code>screen</code>. SSH disconnects don't kill the session, and you can re-attach from anywhere with <code>tmux attach</code>."
+    "bodyRich": "Long-running work — a backup, a lengthy upgrade or a large rsync transfer — should run inside <code>tmux</code> or <code>screen</code> so an SSH disconnect does not end the terminal session. For a tmux session, reconnect to the same host as the same user and run <code>tmux attach</code>. Screen sessions use their own reattachment command."
   },
   "related": {
     "heading": "Related",

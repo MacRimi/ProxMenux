@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Nomes de interface persistentes | Documentação ProxMenux",
+    "description": "Associe os nomes das interfaces Proxmox (eno1, enp3s0, …) aos endereços MAC através de ficheiros .link do systemd para os manter após a reenumeração PCI, atualizações do kernel e adição ou remoção de outras placas de rede.",
+    "ogTitle": "Nomes de interface persistentes | Documentação ProxMenux",
+    "ogDescription": "Impeça que os nomes das interfaces Proxmox mudem quando altera o hardware. Usa ficheiros .link do systemd associados ao endereço MAC."
+  },
+  "header": {
+    "title": "Nomes de interface persistentes",
+    "description": "Gera um ficheiro .link do systemd por placa de rede física para associar o nome atribuído pelo kernel ao endereço MAC da placa. Após a aplicação no próximo reinício, os nomes das interfaces mantêm-se estáveis ao adicionar, remover ou mudar placas PCIe de lugar.",
+    "section": "Rede"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Para cada NIC físico no host, escreve um pequeno arquivo sob <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> que diz: <em>\"o dispositivo com este MAC deve ser sempre chamado este nome\"</em>. systemd-udevd aplica a regra em cada inicialização, antes que <code>ifupdown</code> leia <code>/etc/network/interfaces</code>."
+  },
+  "problem": {
+    "heading": "O problema que isto resolve",
+    "intro": "O Linux deriva os nomes predefinidos das interfaces da topologia PCI — <code>eno1</code> = integrada na placa principal, <code>enp3s0</code> = placa no barramento PCI 3, slot 0, etc. O esquema de nomes é determinístico <em>para a mesma disposição de hardware</em>. Se a disposição mudar, os nomes mudam:",
+    "items": [
+      "Adicione um GPU na frente de um NIC existente → o número de barramento NIC pode mudar → alterações de nome.",
+      "Mudar uma placa para outro slot PCIe → o nome muda.",
+      "BIOS / UEFI atualização que re-enumera dispositivos → nomes podem mudar.",
+      "Substituir uma placa avariada pelo mesmo modelo noutro slot → o nome muda."
+    ],
+    "outro": "Após uma alteração destas, <code>/etc/network/interfaces</code> continua a referir o nome <em>antigo</em>; o bridge não se ativa e o host perde a rede. Configurar nomes persistentes impede que este cenário se repita."
+  },
+  "howWorks": {
+    "heading": "Como funciona",
+    "arrowLabel": "por NIC",
+    "nodes": {
+      "detectLabel": "Detetar placas de rede físicas",
+      "detectDetail": "ls /sys/class/net/\nexcluir vmbr / bond /\ndocker / veth / wireguard …",
+      "readLabel": "Ler cada MAC",
+      "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
+      "writeLabel": "Gravar o ficheiro .link",
+      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+    },
+    "minimalIntro": "Cada arquivo gerado é intencionalmente mínimo:",
+    "minimalOutro": "No arranque, o systemd-udevd identifica o dispositivo pelo MAC e atribui o nome pedido <em>antes</em> da intervenção de outros componentes (ifupdown, nomes predefinidos do kernel). O prefixo <code>10-</code> garante que estas regras carregam cedo, antes do ficheiro predefinido <code>99-default.link</code>."
+  },
+  "scope": {
+    "heading": "O que é escrito, o que é ignorado",
+    "headerType": "Tipo",
+    "headerBehaviour": "Comportamento",
+    "headerWhy": "Porquê?",
+    "rows": [
+      {
+        "type": "Placa de rede integrada / PCIe",
+        "behaviour": "Arquivo <code>.link</code> escrito",
+        "why": "Apoiado por um dispositivo PCI real — o caso em que a ferramenta se destina"
+      },
+      {
+        "type": "Wi-Fi (phy80211)",
+        "behaviour": "Arquivo <code>.link</code> escrito",
+        "why": "Tem um MAC real e beneficia da estabilidade do nome"
+      },
+      {
+        "type": "Pontes (vmbrX)",
+        "behaviour": "Ignorado",
+        "why": "Virtual; o nome vem do <code>/etc/network/interfaces</code>"
+      },
+      {
+        "type": "Bonds (bondX)",
+        "behaviour": "Ignorado",
+        "why": "Virtual; o nome do bond é definido pelo ifupdown"
+      },
+      {
+        "type": "veth / docker0 / br-XXXX",
+        "behaviour": "Ignorado",
+        "why": "Criados a pedido pelo Docker / LXC — não são hardware persistente"
+      },
+      {
+        "type": "tap / fwpr / fwln",
+        "behaviour": "Ignorado",
+        "why": "Criados a pedido pelo Proxmox para cada VM/CT"
+      },
+      {
+        "type": "WireGuard / Cilium / Tailscale",
+        "behaviour": "Ignorado",
+        "why": "Interfaces de software gerenciadas por seus próprios daemons"
+      }
+    ]
+  },
+  "safety": {
+    "heading": "Proteção: são criadas cópias de segurança dos ficheiros .link anteriores",
+    "intro": "Se <code>/etc/systemd/network/</code> já contiver ficheiros <code>.link</code> de uma execução anterior ou de outra ferramenta, são copiados para um diretório de segurança com data e hora antes de gerar os novos:",
+    "outro": "Para voltar atrás: copie os arquivos de volta do diretório de backup e reinicie.",
+    "rebootTitle": "Faz efeito na próxima reinicialização, não imediatamente",
+    "rebootBody": "Alterações nos arquivos <code>.link</code> só se aplicam no arranque, quando o udev re-enumera dispositivos. A ferramenta informa que <em>\"Alterações serão aplicadas após reiniciar\"</em> por esta razão. Renomear uma interface ao vivo é arriscado e não tentado: um <code>vmbr0</code> ativo com membros teria que ser reconfigurado atomicamente, por isso a operação é adiada para a próxima inicialização limpa."
+  },
+  "afterReboot": {
+    "heading": "Após a reinicialização",
+    "intro": "Uma vez que os nomes são fixados, o fluxo de trabalho para futuras mudanças de hardware é simples:",
+    "items": [
+      "Desligue, altere o hardware (adicione uma placa, mude de slot, …) e ligue novamente.",
+      "Cada NIC mantém seu nome anterior porque seu MAC corresponde a um arquivo <code>.link</code>.",
+      "Se um NIC é substituído (MAC diferente), ele recebe um nome padrão do kernel (<code>enp&lt;bus&gt;s&lt;slot&gt;</code>); execute novamente este menu para adicionar uma entrada <code>.link</code> para o MAC do novo cartão."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "emptyTitle": "\"Nenhuma interface física encontrada\" após executar a ferramenta",
+    "emptyBody": "O kernel não vê interfaces baseadas em PCI / phy80211 no host. Confirme com <code>ls -l /sys/class/net/</code> — cada entrada deve ter uma ligação simbólica <code>device</code> (PCI) ou uma entrada <code>phy80211</code> (Wi-Fi). Se ambas faltarem numa placa de rede real, o controlador não está carregado.",
+    "noChangeTitle": "Após a reinicialização, os nomes não mudaram como esperado",
+    "noChangeBody": "Verifique se o arquivo está presente e bem formado: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Em seguida, verifique registros udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Uma causa comum é um parâmetro antigo do kernel <code>net.ifnames=0</code> que desativa inteiramente a nomeação previsível — remova-a do <code>/etc/default/grub</code>, execute o <code>update-grub</code>, reinicie.",
+    "undoTitle": "Quero anular os nomes persistentes",
+    "undoBody": "Ou delete os arquivos <code>.link</code> (<code>rm /etc/systemd/network/10-*.link</code>) ou restaure do diretório de backup gerado na execução anterior. Reiniciar para aplicar."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Análise de ponte e reparo guiado",
+        "href": "/docs/network/bridge-analysis",
+        "tailRich": " — o caminho de recuperação quando os nomes <em>já</em> mudaram."
+      },
+      {
+        "label": "Análise de configuração e limpeza guiada",
+        "href": "/docs/network/config-analysis",
+        "tail": " — para remover blocos órfãos deixados pelas mudanças de nomes."
+      },
+      {
+        "label": "Diagnósticos",
+        "href": "/docs/network/diagnostics",
+        "tailRich": " — confirme os novos nomes com <em>Mostrar tabela de roteamento</em> após reiniciar."
+      }
+    ]
+  }
+}

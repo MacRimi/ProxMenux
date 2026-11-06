@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Importera VM från OVA / OVF | ProxMenux-dokumentation",
+    "description": "Importera en VM från VMware ESXi / Workstation / Fusion / VirtualBox / ProxMenux till Proxmox VE. Packar automatiskt upp OVA, läser OVF-metadata, skapar den virtuella maskinen och importerar varje disk i lagringens inbyggda format (qcow2 / raw).",
+    "ogTitle": "Importera VM från OVA / OVF | ProxMenux-dokumentation",
+    "ogDescription": "Importera virtuella maskiner från VMware-, VirtualBox- eller ProxMenux-exporter till Proxmox. Diskarna konverteras automatiskt till lagringens inbyggda format."
+  },
+  "header": {
+    "title": "Importera VM från OVA / OVF",
+    "description": "Importerar ett OVA- / OVF-paket till Proxmox VE: packar upp OVA-arkiv, läser antalet vCPU:er, minne, nätverkskort och diskreferenser från OVF-filen, skapar sedan den virtuella maskinen och importerar varje disk med qm importdisk till vald lagring. Kompatibelt med exporter från VMware (ESXi / Workstation / Fusion), VirtualBox och ProxMenux.",
+    "section": "Verktyg"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Skapar en komplett VM i Proxmox från ett portabelt paket. Efter importen är den redo att startas. Vissa kontroller och justeringar av nätverkskortsmodell, firmware och operativsystemstyp rekommenderas för prestanda och kompatibilitet."
+  },
+  "picker": {
+    "heading": "Filväljare",
+    "intro": "Vid start erbjuder skriptet två förinställda kataloger eller en egen sökväg:",
+    "items": [
+      "<code>/var/lib/vz/dump</code> - standard Proxmox vzdump backup katalog.",
+      "<code>/var/lib/vz/template/iso</code> — användbart om du överförde OVA-filen dit med sftp.",
+      "Egen sökväg för OVA- / OVF-filer på andra platser på värden."
+    ],
+    "outro": "Den listar sedan varje <code>.ova</code> och <code>.ovf</code>-fil i den valda katalogen.",
+    "imageAlt": "Filvalsdialog för import av en VM"
+  },
+  "flow": {
+    "heading": "Hur importen fungerar",
+    "nodes": [
+      {
+        "label": "OVA / OVF in",
+        "detail": ".ova → tar xf till\n /tmp/.proxmenux-import-*\n.ovf → använd på plats",
+        "variant": "source"
+      },
+      {
+        "label": "Tolkning och dialoger",
+        "detail": "AWK läser OVF\n(namn, vCPU, RAM, NIC,\ndiskar). Val av\nVMID / lagring / brygga",
+        "variant": "bridge"
+      },
+      {
+        "label": "qm create + importdisk",
+        "detail": "qm create $VMID\nqm importdisk\n(VMDK → lagringsformat)\nqm set --scsiN",
+        "variant": "target"
+      }
+    ]
+  },
+  "ovf": {
+    "heading": "OVF-tolkning",
+    "intro": "En <strong>gawk</strong>-parser läser OVF-filen och hämtar VM-metadata. Den använder <code>match()</code> med tre argument, en gawk-funktion som inte stöds av mawk, standardvalet för <code>awk</code> i Debian / Proxmox. Om gawk saknas installeras det automatiskt vid första importen via <code>ensure_repositories</code> + <code>install_single_package</code>. Senare importer behöver inte det steget. Fält som läses:",
+    "headerField": "Fält",
+    "headerSource": "Källa i OVF",
+    "headerDefault": "Standard om saknas",
+    "rows": [
+      {
+        "field": "VM namn",
+        "source": "<Name> (första matchen)",
+        "default": "imported-vm"
+      },
+      {
+        "field": "Antal vCPU:er",
+        "source": "RASD ResourceType 3 → VirtualQuantity",
+        "default": "1"
+      },
+      {
+        "field": "Minne (MiB)",
+        "source": "RASD ResourceType 4 → VirtualQuantity",
+        "default": "1024"
+      },
+      {
+        "field": "Antal nätverkskort",
+        "source": "antal poster med ResourceType 10",
+        "default": "1"
+      },
+      {
+        "field": "OS-typ",
+        "source": "/Linux/ eller /Windows/ i beskrivning",
+        "default": "other"
+      },
+      {
+        "field": "Diskreferenser",
+        "source": "href attribut slutar i .vmdk / .qcow2 / .img / .raw",
+        "default": "Inga (importen avbryts)"
+      }
+    ]
+  },
+  "memWarn": {
+    "title": "Tvetydiga minnesenheter",
+    "body": "Parsern konverterar kända minnesenheter till <strong>MiB</strong>, inklusive byte, KiB, MiB, GiB och stödda textetiketter. Saknade eller okända enheter <em>behandlas som MiB</em>. Jämför efter importen <code>qm config $VMID | grep memory</code> med källmaskinens dokumenterade RAM och korrigera vid behov med <code>qm set $VMID --memory &lt;MiB&gt;</code>."
+  },
+  "dialog": {
+    "heading": "Importens dialogsteg",
+    "items": [
+      "<strong>VMID</strong> — föreslår nästa lediga ID (<code>pvesh get /cluster/nextid</code>).",
+      "<strong>VM-namn</strong> — använder namnet från OVF-filen som standard; du kan ändra det.",
+      "<strong>Mållagring</strong> — meny med lagringar som stöder innehållet <code>images</code>, från <code>pvesm status -content images</code>.",
+      "<strong>Nätverksbrygga</strong> — meny med bryggor från <code>ip link show type bridge</code>. En ensam brygga väljs automatiskt; standardvalet är <code>vmbr0</code>.",
+      "<strong>Bekräftelse</strong> — sammanfattning med VMID, namn, vCPU:er, minne, nätverkskort, lagring, brygga och diskar att importera. Avbryt här så ändras inget."
+    ]
+  },
+  "create": {
+    "heading": "Skapa den virtuella maskinen",
+    "intro": "Efter bekräftelsen kör skriptet:",
+    "code": "qm create $VMID \\\n    --name \"$NAME\" \\\n    --memory $MEMORY \\\n    --cores $VCPU \\\n    --ostype $OSTYPE \\\n    --scsihw lsi \\\n    --net0 e1000,bridge=$BRIDGE\n\n# For each additional NIC:\nqm set $VMID --netN e1000,bridge=$BRIDGE",
+    "outro": "SCSI controller standarder till <code>lsi</code> (LSI Logic) för VMDK kompatibilitet. NICs standard till <code>e1000</code> (universell kompatibilitet) på den valda bron."
+  },
+  "diskLoop": {
+    "heading": "Importloop för diskar",
+    "intro": "För varje diskreferens i OVF:",
+    "items": [
+      "<code>qm importdisk $VMID $disk_path $STORAGE</code> — importerar disken i ett format som stöds av mållagringen och skapar en post <code>unusedN:</code> i VM-konfigurationen.",
+      "Skriptet söker med grep efter den nyskapade referensen <code>unusedN</code> i konfigurationen.",
+      "<code>qm set $VMID --scsiN $unused_disk</code> fäster disken som <code>scsi0</code>, <code>scsi1</code>, …",
+      "<code>qm set $VMID --delete unusedN</code> - rensar den numera oanvända markören."
+    ],
+    "outro": "Boot är inställd på den första SCSI-skivan: <code>qm set $VMID --boot c --bootdisk scsi0</code>."
+  },
+  "postImport": {
+    "heading": "Rekommenderade justeringar efter import",
+    "intro": "Importen använder brett kompatibla inställningar för att den virtuella maskinen ska kunna starta vid första försöket. När du har bekräftat att den startar kan du välja effektivare inställningar i Proxmox-gränssnittet eller via CLI:",
+    "headerSetting": "Inställning",
+    "headerDefault": "Standard efter import",
+    "headerRecommended": "Rekommenderas (om gästen stöder)",
+    "rows": [
+      {
+        "setting": "NIC modell",
+        "default": "e1000",
+        "recommended": "VirtIO (mycket snabbare, kräver drivrutin i gästen)"
+      },
+      {
+        "setting": "SCSI-kontroller",
+        "default": "LSI",
+        "recommended": "VirtIO SCSI single (modern Linux eller Windows med VirtIO-drivrutiner)"
+      },
+      {
+        "setting": "Fast programvara (BIOS / UEFI)",
+        "default": "Proxmox standard (BIOS)",
+        "recommended": "Använd källmaskinens firmware; ett felaktigt val kan hindra start"
+      },
+      {
+        "setting": "QEMU gästagent",
+        "default": "Av",
+        "recommendedRich": "På + installera <code>qemu-guest-agent</code> i gästen (bättre säkerhetskopior, IP-rapportering)"
+      },
+      {
+        "setting": "OS-typ",
+        "default": "l26 / win10 / other (heuristik)",
+        "recommended": "Kontrollera mot gästens faktiska operativsystem"
+      },
+      {
+        "setting": "Visning",
+        "default": "Standard",
+        "recommended": "VirtIO-GPU eller SPICE (bättre konsolprestanda)"
+      }
+    ]
+  },
+  "fwWarn": {
+    "title": "Firmware mismatch = ingen start",
+    "body": "Om källmaskinen använde UEFI men Proxmox skapar den med BIOS, eller tvärtom, hittar gästen ingen startbar disk. Kontrollera <em>FirmwareType / firmware</em> i OVF-filen eller ursprungsinställningarna och välj samma i Proxmox: <code>qm set $VMID --bios ovmf</code> för UEFI; standardvalet för BIOS är <code>seabios</code>."
+  },
+  "notImported": {
+    "heading": "Vad importeras INTE",
+    "items": [
+      "<strong>Specifika nätverksbryggor</strong> — bara antalet kort bevaras. Alla använder den brygga du valde vid importen.",
+      "<strong>Nätverkskortsmodell</strong> — standardvalet är e1000.",
+      "<strong>Firmwaretypen BIOS / UEFI</strong> — använder Proxmox standardval BIOS.",
+      "<strong>Konfiguration av PCI-genomkoppling</strong>.",
+      "<strong>TPM</strong> (vTPM).",
+      "<strong>Cloud-init</strong>-enheter.",
+      "<strong>Snapshots</strong> - endast det nuvarande tillståndet.",
+      "<strong>USB / seriella / parallella enheter</strong> förklaras i OVF.",
+      "<strong>VM taggar / anteckningar / start-on-boot</strong> alternativ."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "orphanTitle": "VM skapades men diskimporten misslyckades: en ofullständig VM blev kvar",
+    "orphanIntro": "När importen misslyckas erbjuder skriptet att ta bort den ofullständiga virtuella maskinen och dess importerade diskar. Om du avböjde eller automatisk radering misslyckades, granska maskinen och ta bort den manuellt med:",
+    "orphanCode": "qm destroy $VMID --destroy-unreferenced-disks 1",
+    "orphanOutro": "Fastställ sedan den underliggande orsaken (sannolikt diskutrymme på mållagringen) och återimportera.",
+    "memTitle": "Importerad VM har 8 MB RAM (eller 8 TB)",
+    "memIntro": "Parsern konverterar kända AllocationUnits till MiB. Saknade eller okända enheter behandlas som MiB. Granska OVF-filen och jämför det importerade minnet med källmaskinen. Korrigera vid behov:",
+    "memCode": "qm set $VMID --memory 8192    # 8 GiB",
+    "bootTitle": "Den importerade virtuella maskinen startar inte: \"No bootable device\"",
+    "bootIntro": "En vanlig orsak är fel val av BIOS / UEFI. Källmaskinen använde UEFI men Proxmox skapade den med BIOS. Välj matchande firmware:",
+    "bootCode": "qm set $VMID --bios ovmf       # UEFI\n# also add an EFI disk for the EFI vars:\nqm set $VMID --efidisk0 $STORAGE:1,format=qcow2,efitype=4m,pre-enrolled-keys=1",
+    "bootOutro": "En annan vanlig orsak: startordningen pekar på scsi0 medan operativsystemet ligger på scsi1. Ändra ordningen i VM-fliken Options.",
+    "bsodTitle": "En Windows-VM exporterad från VMware visar blåskärm vid första starten",
+    "bsodBody": "Windows är känsligt för byte av diskstyrenhet. Installera VirtIO-drivrutiner <em>före</em> exporten från VMware eller behåll standardstyrenheten <code>lsi</code>. Byt till VirtIO SCSI först efter att gästen startat och VirtIO-drivrutiner installerats i Windows.",
+    "zeroTitle": "OVF-parsern rapporterar 0 diskar",
+    "zeroBody": "OVF-filen kan använda diskreferenser som parsern inte känner igen. Öppna filen och leta efter varje disks post <code>&lt;File ovf:href=\"...vmdk\" ...&gt;</code>. Om disken faktiskt är VMDK men har ett ovanligt suffix som <code>.dat</code>, byt namn till <code>.vmdk</code> och uppdatera OVF-referensen. Ett namnbyte konverterar inte formatet.",
+    "awkTitle": "awk: syntax error at or near , — parsern misslyckas med varje OVA / OVF",
+    "awkIntro": "OVF-parsern använder gawk-syntaxen <code>match()</code> med tre argument, som saknas i mawk, standardvalet för <code>awk</code> i Debian / Proxmox. Nyare skriptversioner installerar gawk vid första användningen via <code>ensure_repositories</code> + <code>install_single_package</code>. Om du kör en äldre kopia, installera det manuellt:",
+    "awkCode": "apt-get install -y gawk",
+    "awkOutro": "Kör sedan importen igen.",
+    "netTitle": "Nätverket fungerar inte efter första starten",
+    "netBody": "Gästen kan sakna drivrutiner för e1000-modellen i Proxmox, eller den valda bryggan kan vara fel. Ändra Network Device → Model på VM-fliken Hardware. Kontrollera också <code>ip a</code> i gästen: gränssnittet kan ha fått namnet ens18 i stället för eth0, medan nätverkskonfigurationen fortfarande använder det gamla namnet."
+  },
+  "files": {
+    "heading": "Filer involverade",
+    "code": "scripts/utilities/import_vm_ova_ovf.sh       # this script\n/tmp/.proxmenux-import-*/                    # temp extraction dir for OVA\n/etc/pve/nodes/<node>/qemu-server/<vmid>.conf  # created by qm create\n<storage>/<vmid>/<vmid>-disk-<n>.<fmt>        # disk images, format depends on storage"
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/utils/export-vm",
+        "label": "Exportera VM till OVA / OVF",
+        "tail": " — det kompletterande verktyget för export."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Verktygsöversikt",
+        "tail": " — tillbaka till avsnittsöversikten."
+      }
+    ]
+  }
+}

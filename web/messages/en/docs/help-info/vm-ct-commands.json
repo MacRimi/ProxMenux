@@ -116,7 +116,7 @@
           "description": "Gracefully shutdown a container"
         },
         {
-          "command": "pct restart <ctid>",
+          "command": "pct reboot <ctid>",
           "description": "Restart a container"
         },
         {
@@ -153,11 +153,11 @@
   ],
   "destroyWarn": {
     "title": "Destroy is irreversible",
-    "bodyRich": "<code>qm destroy</code> and <code>pct destroy</code> delete the VM / CT and all its disks. There is no confirmation prompt by default. Take a backup first if there's any chance you might want the data back — see <backupLink>Backup and Restore</backupLink>."
+    "bodyRich": "<code>qm destroy</code> and <code>pct destroy</code> remove the guest configuration and its managed disk volumes. Do not assume that external or bind-mounted data is deleted. The CLI has no confirmation prompt by default. Back up any data you may need before running it; see <backupLink>Backup and Restore</backupLink>."
   },
   "qmConfigTip": {
     "title": "qm config vs editing the .conf file directly",
-    "bodyRich": "<code>qm config &lt;vmid&gt;</code> and <code>pct config &lt;ctid&gt;</code> read the file through Proxmox's own parser — output is normalised, comments stripped, pending changes shown separately. Editing <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> or <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> directly bypasses the parser. Useful for fixing a corrupted config or applying a setting <code>qm set</code> won't accept, but stop the guest first to avoid races. The cluster filesystem (<code>pmxcfs</code>) takes care of propagating the change to other nodes."
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> and <code>pct config &lt;ctid&gt;</code> display configuration through Proxmox’s parsers. For normal changes, prefer <code>qm set</code> or the corresponding pct setter. Direct edits to <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> or <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> bypass the validation and locking in management commands; the file must still remain parseable. Stop the guest and keep a copy before manual repair. <code>pmxcfs</code> synchronises configuration across cluster nodes, not guest disk contents."
   },
   "related": {
     "heading": "Related",

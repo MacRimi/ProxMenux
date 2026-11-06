@@ -1,0 +1,400 @@
+{
+  "meta": {
+    "title": "Skapa VM: Synology DSM | ProxMenux-dokumentation",
+    "description": "Skapa en Synology DSM-VM på Proxmox VE. ProxMenux laddar ned vald starthanterare (Arc, RR, Alpine RedPill M-shell eller en egen avbildning), importerar den som VM:ns startdisk och konfigurerar CPU, RAM och lagring med standard- eller avancerad guide.",
+    "ogTitle": "Skapa VM: Synology DSM | ProxMenux-dokumentation",
+    "ogDescription": "Skapa en Synology DSM virtuell maskin på Proxmox VE med ProxMenux."
+  },
+  "header": {
+    "title": "Skapa VM: Synology DSM",
+    "description": "Skapa en Synology DSM-VM på Proxmox VE. ProxMenux laddar ned vald starthanterare (Arc, RR, Alpine RedPill M-shell eller en egen avbildning), importerar den som VM:ns startdisk och konfigurerar CPU, RAM och lagring med standard- eller avancerad guide.",
+    "section": "Virtuella maskiner · NAS"
+  },
+  "loaderLabels": {
+    "arc": "Arc Loader",
+    "rr": "RR Loader",
+    "tinycore": "TinyCore Loader"
+  },
+  "whatThisDoes": {
+    "title": "Vad detta gör",
+    "bodyRich": "ProxMenux automatiserar VM-förberedelserna för Synology DSM: det laddar ned en starthanterare, importerar den som IDE-startdisk och tillämpar dina val för CPU, RAM, nätverk och lagring. Att bygga starthanteraren, välja modell och installera DSM sker <strong>inne i VM:n</strong> via starthanterarens webb- eller terminalgränssnitt. Dessa steg underhålls av communityn och ändras ofta; sidan ger en utgångspunkt."
+  },
+  "supportedLoaders": {
+    "heading": "Starthanterare som stöds",
+    "intro": "Skriptet låter dig välja mellan fyra källor för starthanteraren:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "name": "Alpine RedPill M-shell (TinyCore-projektet)",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "customRich": "<strong>Anpassad starthanterare</strong> — lägg din egen avbildning i <code>/var/lib/vz/template/iso</code> så hittar skriptet den."
+  },
+  "config": {
+    "heading": "Standard vs Avancerad konfiguration",
+    "intro": "När du kör skriptet frågar det om du ska använda ProxMenux standard VM-profilen eller öppna den avancerade guiden. Standardvärden är anpassade för DSM och fungerar för de flesta installationer.",
+    "defaultHeading": "Standardkonfiguration",
+    "headerParam": "Parameter",
+    "headerValue": "Standardvärde",
+    "defaultRowsRich": [
+      {
+        "param": "maskintyp",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU-typ",
+        "valueRich": "Host"
+      },
+      {
+        "param": "Kärnor",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "4096 MB"
+      },
+      {
+        "param": "Bro",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "MAC-adress",
+        "valueRich": "Autogenererad"
+      },
+      {
+        "param": "Starta när det är klart",
+        "valueRich": "Nej"
+      }
+    ],
+    "advancedHeading": "Avancerad konfiguration",
+    "advancedIntro": "Den avancerade guiden visar varje inställning separat. Du kan ändra följande värden:",
+    "headerOptions": "Alternativ",
+    "advancedRowsRich": [
+      {
+        "param": "maskintyp",
+        "optionsRich": "<code>q35</code> eller <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI) eller SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU-typ",
+        "optionsRich": "Host eller KVM64"
+      },
+      {
+        "param": "Kärnor",
+        "optionsRich": "Antal CPU-kärnor"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Minne som tilldelats VM"
+      },
+      {
+        "param": "Bro",
+        "optionsRich": "Nätverksbro"
+      },
+      {
+        "param": "MAC-adress",
+        "optionsRich": "Egen MAC-adress"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "VLAN tag (tillval)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "MTU storlek"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Lagringsplan",
+    "introRich": "Efter CPU och RAM öppnar ProxMenux menyn <strong>Lagringsplan</strong>. Där kan du <strong>kombinera</strong> virtuella diskar, importerade diskar och PCI-passthrough-enheter i samma VM. Lägg till ett objekt i taget och slutför när du är klar.",
+    "virtualHeading": "a. Lägg till virtuell disk",
+    "virtualItemsRich": [
+      "Listar de Proxmox lagringsvolymer som finns på värden.",
+      "Du väljer mållagring och storleken på GB.",
+      "Disken ansluts som SATA (<code>sata0</code>, <code>sata1</code>, …). Virtuella och fysiska datadiskar delar de sex SATA-platserna 0–5."
+    ],
+    "importHeading": "b. Lägg till importerad disk",
+    "importItemsRich": [
+      "Detekterar fysiska diskar som är säkra att importera (system och skyddade diskar är dolda).",
+      "Du väljer en eller flera diskar via en checklista.",
+      "Importerade diskar bifogas som SATA via <code>qm set</code>."
+    ],
+    "pciHeading": "c. Lägg till styrenhet eller NVMe (PCI-passthrough)",
+    "pciItemsRich": [
+      "Hittar SATA/SAS-HBA:er och NVMe-enheter och låter dig tilldela en <em>hel styrenhet</em> till VM:n. IOMMU måste vara aktivt; skriptet erbjuder aktivering och omstart vid behov.",
+      "Ett bekräftelsesteg varnar för kontrollörens hela risk (hela kortet, inklusive varje disk på det, lämnar värden).",
+      "PCI-enheter tilldelas med kommandon som <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Ersätt VMID och PCI_ADDRESS med VM-ID och PCI-adress och använd ett ledigt hostpci-index för varje enhet."
+    ],
+    "resetCalloutTitle": "Återställ och slutför",
+    "resetCalloutBodyRich": "Menyn erbjuder också <strong>r</strong> (återställ det aktuella urvalet och börja om) och <strong>d</strong> (slutför och fortsätt). Du kan inte avsluta med en tom plan - Synology behöver minst en disk för att installera DSM på."
+  },
+  "gpu": {
+    "heading": "Valfri GPU passthrough",
+    "bodyRich": "Efter lagringsplanen, om manuset upptäcker en kompatibel GPU på värden frågar det om du vill skicka den till denna VM. Se <link>Lägg till GPU till en VM (Passthrough) </link> för hur assistenten fungerar - en värd omstart kan krävas."
+  },
+  "loaderInstall": {
+    "heading": "Installation av starthanterare",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> och <strong>Alpine RedPill M-shell</strong> laddas ned och packas upp automatiskt från sina ursprungliga GitHub-kodförråd. Om nedladdningen misslyckas avbryts skriptet med ett tydligt meddelande.",
+    "intro2Rich": "För alternativet <strong>Custom Loader</strong> söker skriptet i <code>/var/lib/vz/template/iso</code>. Om flera lämpliga filer hittas får du välja en.",
+    "uploadIntro": "Du kan ladda upp egna starthanterare via Proxmox lokala lagring.",
+    "imageAlt": "Lägg till anpassad starthanterare",
+    "imageCaption": "Lägg till anpassad starthanterare"
+  },
+  "vmCreation": {
+    "heading": "Skapa VM – vad skriptet kör",
+    "introRich": "När du har bekräftat starthanteraren kör ProxMenux motsvarande dessa <code>qm</code>-kommandon:",
+    "itemsRich": [
+      "<code>qm create</code> Skapar VM med den valda CPU, RAM, BIOS och maskintyp.",
+      "<code>qm importdisk</code> importerar starthanterarens avbildning till Proxmox-lagringen. Skriptet ansluter den sedan som en <strong>IDE</strong>-disk på ide0 för kompatibilitet.",
+      "<code>qm set VMID --sata0 DISK_REFERENCE</code> ansluter en datadisk från planen. Ersätt VMID och DISK_REFERENCE med VM-ID och diskreferens; använd ett ledigt SATA-index 0–5. Nätverket konfigureras av qm create.",
+      "<code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code> tilldelar en vald PCI-styrenhet eller NVMe-enhet. Ersätt VMID och PCI_ADDRESS med VM-ID och PCI-adress och använd ett ledigt hostpci-index per enhet.",
+      "<code>qm set VMID --boot order=ide0</code> anger starthanteraren som startenhet. Ersätt VMID med VM-ID:t."
+    ]
+  },
+  "stepByStep": {
+    "heading": "Konfigurera starthanteraren steg för steg",
+    "intro": "De sex gemensamma stegen är: starta VM:n, välj modell, DSM-version och tillägg, bygg och starta. Menyer och alternativ varierar mellan versioner. M-shell-bilderna visar ett äldre TinyCore-gränssnitt; det aktuella skriptet laddar ned Alpine RedPill M-shell, så följ dess aktuella instruktioner.",
+    "warnCalloutTitle": "Starthanterarna underhålls inte av ProxMenux",
+    "warnCalloutBody": "Arc, RR och Alpine RedPill M-shell är communityprojekt med egna utgivningsplaner. Om ett steg skiljer sig från bilderna nedan har starthanteraren troligen uppdaterats. Läs dess egen dokumentation via länkarna längst ned på sidan."
+  },
+  "stepBadge": "Steg",
+  "step1": {
+    "title": "Starta VM:n och öppna huvudmenyn",
+    "intro": "Starta den skapade VM:n. Första starten öppnar starthanterarens konfiguration där du väljer och bygger DSM-modellen. Senare starter hoppar över steget om du inte begär en ny konfiguration från starthanterarens startmeny. Alla tre har både terminal- och webbgränssnitt.",
+    "arc": {
+      "webRich": "<strong>Webbgränssnitt.</strong> Öppna en webbläsare och gå till IP-adressen i VM-konsolen (i vårt exempel: <code>http://192.168.0.32</code>).",
+      "webAlt": "Arc-starthanterarens webbgränssnitt",
+      "webCaption": "Arc-starthanterarens webbgränssnitt",
+      "termRich": "<strong>Terminalgränssnitt</strong>: öppna det direkt i VM-konsolen.",
+      "termAlt": "Arc-starthanterarens terminalgränssnitt",
+      "termCaption": "Arc-starthanterarens terminalgränssnitt"
+    },
+    "rr": {
+      "webRich": "<strong>Webbgränssnitt.</strong> Öppna en webbläsare och ange IP-adressen från VM-konsolen följd av port <strong>7681</strong> (exempel: <code>http://192.168.0.33:7681</code>).",
+      "webAlt": "RR-starthanterarens webbgränssnitt",
+      "webCaption": "RR-starthanterarens webbgränssnitt",
+      "termRich": "<strong>Terminalgränssnitt.</strong> Skriv <code>menu.sh</code> i VM-konsolen för att öppna det.",
+      "termAlt": "RR-starthanterarens terminalgränssnitt",
+      "termCaption": "RR-starthanterarens terminalgränssnitt"
+    },
+    "tinycore": {
+      "webRich": "<strong>Webbgränssnitt.</strong> Öppna en webbläsare och ange IP-adressen från VM-konsolen följd av port <strong>7681</strong> (exempel: <code>http://192.168.0.35:7681</code>).",
+      "webAlt": "TinyCore loader webbgränssnitt",
+      "webCaption": "TinyCore loader webbgränssnitt",
+      "termRich": "<strong>Terminalgränssnitt</strong>: öppna det direkt i VM-konsolen. Håll uppsikt över skärmen; du kan bli ombedd att trycka på en tangent för att fortsätta eller välja ett annat språk.",
+      "termAlt": "TinyCore-starthanterarens terminalgränssnitt",
+      "termCaption": "TinyCore-starthanterarens terminalgränssnitt"
+    }
+  },
+  "step2": {
+    "title": "Välj modell",
+    "introRich": "Välj den Synology DSM-modell du vill installera. Beroende på starthanteraren kan du behöva visa fler alternativ för hela listan. Bilderna nedan använder modellen <strong>SA6400</strong> som exempel.",
+    "arc": {
+      "alt": "Modellval i Arc",
+      "caption": "Modellval i Arc"
+    },
+    "rr": {
+      "alt": "RR-modellval",
+      "caption": "RR-modellval"
+    },
+    "tinycore": {
+      "alt": "TinyCore-modellval",
+      "caption": "TinyCore-modellval"
+    }
+  },
+  "step3": {
+    "title": "Välj DSM version",
+    "intro": "Efter att ha valt modellen väljer du DSM-versionen för att installera.",
+    "arc": [
+      {
+        "alt": "Versionsval i Arc – steg 1",
+        "caption": "Versionsval i Arc – steg 1"
+      },
+      {
+        "alt": "Versionsval i Arc – steg 2",
+        "caption": "Versionsval i Arc – steg 2"
+      }
+    ],
+    "rr": [
+      {
+        "alt": "Versionsval i RR – steg 1",
+        "caption": "Versionsval i RR – steg 1"
+      },
+      {
+        "alt": "Versionsval i RR – steg 2",
+        "caption": "Versionsval i RR – steg 2"
+      },
+      {
+        "alt": "Versionsval i RR – steg 3",
+        "caption": "Versionsval i RR – steg 3"
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Versionsval i TinyCore – steg 1",
+        "caption": "Versionsval i TinyCore – steg 1"
+      },
+      {
+        "alt": "Versionsval i TinyCore – steg 2",
+        "caption": "Versionsval i TinyCore – steg 2"
+      }
+    ]
+  },
+  "step4": {
+    "title": "Välj addons",
+    "intro": "I det här steget kan du lägga till extra funktioner eller egna inställningar i starthanteraren.",
+    "arc": {
+      "autoRich": "<strong>Arc</strong> erbjuder ett rekommenderat automatiskt läge och ett manuellt läge. I automatiskt läge tillämpar starthanteraren lämpliga standardvärden och startar om när det är klart.",
+      "autoAlt": "Automatisk konfiguration i Arc",
+      "autoCaption": "Automatisk konfiguration i Arc",
+      "manualRich": "I manuellt läge går du igenom alternativen ett i taget:",
+      "manualAlt": "Manuell konfiguration i Arc",
+      "manualCaption": "Manuell konfiguration i Arc",
+      "snMacAlt": "Arc SN/MAC",
+      "snMacCaption": "Arc SN / MAC konfiguration",
+      "portmapAlt": "Arc SATA portmap",
+      "portmapCaption": "Arc SATA Portmap (använd det rekommenderade alternativet)",
+      "addonsAlt": "Arc-tillägg",
+      "addonsCaption": "Val av Arc-tillägg"
+    },
+    "rr": [
+      {
+        "alt": "RR-tillägg – steg 1",
+        "caption": "RR-tillägg – steg 1"
+      },
+      {
+        "alt": "RR-tillägg – steg 2",
+        "caption": "RR addon - steg 2: tryck för att lägga till en addon"
+      },
+      {
+        "alt": "RR-tillägg – steg 3",
+        "caption": "RR-tillägg – steg 3: klicka på önskat tillägg. Upprepa stegen i de två föregående bilderna för att lägga till fler."
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "TinyCore SN-konfiguration",
+        "caption": "TinyCore SN-konfiguration"
+      },
+      {
+        "alt": "TinyCore slumpmässigt alternativ",
+        "caption": "TinyCore slumpmässigt alternativ (rekommenderas)"
+      },
+      {
+        "alt": "TinyCore MAC konfiguration",
+        "caption": "TinyCore MAC konfiguration"
+      },
+      {
+        "alt": "TinyCore VM MAC",
+        "caption": "TinyCore – välj VM:ns MAC-adress eller en slumpmässig adress."
+      }
+    ]
+  },
+  "step5": {
+    "title": "Bygg starthanteraren",
+    "introRich": "Välj <strong>Build the Loader</strong> när modell, DSM-version och tillägg har valts. Det kan ta några minuter beroende på starthanterare och valda alternativ.",
+    "arc": {
+      "alt": "Bygg starthanteraren i Arc",
+      "caption": "Bygg starthanteraren i Arc"
+    },
+    "rr": {
+      "alt": "Bygg starthanteraren i RR",
+      "caption": "Bygg starthanteraren i RR"
+    },
+    "tinycore": {
+      "alt": "Bygg starthanteraren i TinyCore",
+      "caption": "Bygg starthanteraren i TinyCore"
+    }
+  },
+  "step6": {
+    "title": "Starta starthanteraren",
+    "intro": "När starthanteraren har byggts startar VM:n om med din konfiguration och DSM-installationen börjar.",
+    "arc": {
+      "alt": "Starta starthanteraren i Arc",
+      "caption": "Starta starthanteraren i Arc"
+    },
+    "rr": {
+      "alt": "Starta starthanteraren i RR",
+      "caption": "Starta starthanteraren i RR"
+    },
+    "tinycore": {
+      "alt": "Starta starthanteraren i TinyCore",
+      "caption": "Starta starthanteraren i TinyCore"
+    }
+  },
+  "dsmInstall": {
+    "heading": "Starta DSM-installationen",
+    "intro": "När starthanteraren har startat kan du hitta din DSM-VM genom att öppna:",
+    "afterCode": "Följ stegen på skärmen för att slutföra DSM-installationen.",
+    "setupAlt": "DSM-konfiguration",
+    "setupCaption": "DSM-installationsskärm",
+    "patience": "Ha tålamod; processen kan ta flera minuter. Förloppet uppdateras automatiskt och en nedräkning visas när installationen närmar sig slutet.",
+    "finishAlt": "Installationen är klar",
+    "finishCaption": "Installationen är klar"
+  },
+  "tips": {
+    "heading": "Tips",
+    "recentTitle": "Använd de senaste DSM-modellerna",
+    "recentBody": "Vissa äldre DSM-modeller har problem att känna igen diskar eller nätverkskort. Välj en nyare modell, exempelvis SA6400, för en smidigare första start.",
+    "updateTitle": "Uppdatera starthanteraren",
+    "updateBody": "Vissa starthanterare kan uppdateras direkt från sin konfigurationsmeny; du behöver inte ta bort och återskapa VM:n.",
+    "warnTitle": "ProxMenux erbjuder inte support för starthanterarna",
+    "warnBody": "ProxMenux automatiserar VM-förberedelserna. Problem med starthanteraren, som saknad modell, tillägg som inte installeras eller DSM som inte startar, hanteras via starthanterarens egen ärendehantering och dokumentation.",
+    "docsHeading": "Starthanterarens dokumentation",
+    "docLinks": [
+      {
+        "label": "Arc dokumentation",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "RR dokumentation",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "TinyCore dokumentation",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ]
+  },
+  "related": {
+    "heading": "Relaterat",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Översikt över NAS-system",
+        "tail": " — Jämförelse av Synology vs TrueNAS / OMV / Rockstor / XigmaNAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Övriga NAS-system",
+        "tail": " — andra NAS-distributioner än Synology."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importera disk till VM",
+        "tail": " — passera verkliga diskar till Synology VM (rekommenderas för lagringsprestanda)."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Översikt över att skapa VM",
+        "tail": "."
+      }
+    ]
+  }
+}

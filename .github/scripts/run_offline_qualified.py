@@ -13,6 +13,25 @@ import sys
 import tempfile
 
 PYTHON_FILES = (
+    "tests/test_host_update_jobs.py",
+    "tests/test_host_update_transport.py",
+    "tests/test_host_update_shell.py",
+    "tests/test_host_update_auth.py",
+    "tests/test_kernel_reboot.py",
+    "tests/test_reboot_health_refresh.py",
+    "tests/test_host_update_controls.py",
+    "tests/test_host_update_packaging.py",
+    "tests/test_host_update_version.py",
+    "tests/test_lxc_update_jobs.py",
+    "tests/test_post_install_i18n.py",
+    "tests/test_remaining_cli_i18n.py",
+    "AppImage/scripts/tests/test_pbs_i18n.py",
+    "AppImage/scripts/tests/test_monitor_links_i18n.py",
+    "AppImage/scripts/tests/test_monitor_links.py",
+    "AppImage/scripts/tests/test_local_app_icon_isolation.py",
+    "AppImage/scripts/tests/test_local_app_icons.py",
+    "AppImage/scripts/tests/test_docker_app_discovery.py",
+    "AppImage/scripts/tests/test_native_app_discovery.py",
     "tests/test_audit_presentation.py",
     "tests/test_audit_safety_wording.py",
     "tests/test_audit_policy.py",
@@ -24,6 +43,24 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
+    "tests/test_host_update_ui.cjs",
+    "tests/test_reboot_health_refresh.cjs",
+    "tests/test_host_update_controls.cjs",
+    "tests/test_reboot_recovery.cjs",
+    "tests/test_proxmenux_version_row.cjs",
+    "tests/test_lxc_update_jobs.cjs",
+    "tests/test_api_import_boundaries.cjs",
+    "tests/test_api_errors.cjs",
+    "tests/test_optimization_labels.cjs",
+    "tests/test_optimization_source.cjs",
+    "tests/lxc_updates/test_app_editor_errors.cjs",
+    "tests/test_oci_update_cancellation.cjs",
+    "tests/test_host_backup_messages.cjs",
+    "tests/test_pbs_i18n.cjs",
+    "tests/test_monitor_links_i18n.cjs",
+    "tests/lxc_updates/test_local_app_icons_ui.cjs",
+    "tests/lxc_updates/test_docker_app_discovery_ui.cjs",
+    "tests/lxc_updates/test_native_app_discovery_ui.cjs",
     "tests/lxc_updates/test_docker_delegated_ui.cjs",
     "tests/test_audit_diagnostic_document.cjs",
     "tests/test_audit_policy.cjs",
@@ -35,6 +72,7 @@ NODE_FILES = (
     "tests/test_borg_ssh_guidance.cjs",
     "tests/test_storage_messages.cjs",
     "tests/test_health_text.cjs",
+    "tests/test_overview_chart_axis_gutters.cjs",
 )
 
 # unittest's CLI accepts a missing pattern as a successful zero-test run.

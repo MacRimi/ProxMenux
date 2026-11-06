@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Analýza konfigurácie a čistenie so sprievodcom | Dokumentácia ProxMenux",
+    "description": "Zistí bloky iface v /etc/network/interfaces odkazujúce na fyzické sieťové karty, ktoré už nie sú na hostiteľovi. Nahlási ich a ponúkne odstránenie so sprievodcom v 5 krokoch s povinnou zálohou a náhľadom každého bloku.",
+    "ogTitle": "Analýza konfigurácie a čistenie so sprievodcom | Dokumentácia ProxMenux",
+    "ogDescription": "Nájdite a odstráňte osirelé bloky rozhraní, ktoré zostali po zmenách hardvéru, s úplným náhľadom a možnosťou vrátenia zmien."
+  },
+  "header": {
+    "title": "Analýza konfigurácie a čistenie so sprievodcom",
+    "description": "Prejde každý blok iface v /etc/network/interfaces a overí, či príslušná fyzická sieťová karta stále existuje. Nahlási osirelé bloky po zmenách hardvéru a ponúkne odstránenie so sprievodcom, zálohou, náhľadom a potvrdením každého bloku.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Identifikuje deklarácie <code>iface</code>, ktorých sieťová karta už nie je na hostiteľovi, typicky po výmene alebo odobratí karty. Potom ponúkne čistenie so sprievodcom, ktoré odstráni <em>iba</em> osirelé bloky, so zálohou, náhľadom každej sekcie a výslovným záverečným potvrdením."
+  },
+  "differs": {
+    "heading": "Ako sa líši od analýzy mosta",
+    "headerAspect": "Aspekt",
+    "headerBridge": "Analýza mosta",
+    "headerConfig": "Analýza konfigurácie",
+    "rows": [
+      {
+        "aspect": "Pozerá sa na",
+        "bridge": "Mosty (<code>vmbrX</code>) a ich riadok <code>bridge-ports</code>",
+        "config": "Každý blok <code>iface</code> okrem loopbacku, mostov a bondov"
+      },
+      {
+        "aspect": "Zisťuje",
+        "bridge": "Mosty odkazujúce na neexistujúci port",
+        "config": "Samostatné bloky rozhrania pre NIC, ktoré neexistujú"
+      },
+      {
+        "aspect": "Oprava",
+        "bridge": "Nahrádza názov portu v <code>bridge-ports</code>",
+        "config": "Odstráni celý blok <code>iface</code>"
+      },
+      {
+        "aspect": "Nezahŕňa",
+        "bridge": "Nič, každý most je analyzovaný",
+        "config": "Mosty (<code>vmbrX</code>) a bondy (<code>bondX</code>) sa vždy zachovajú, pretože sú virtuálne a ich neprítomnosť počas štartu môže byť normálna"
+      }
+    ],
+    "outro": "V praxi často použijete oba nástroje v tomto poradí: najprv <strong>analýzu konfigurácie</strong> na odstránenie osirelých blokov, potom <link>analýzu mostov</link> na nové priradenie mostov, ktoré používali odstránené rozhranie."
+  },
+  "step1": {
+    "heading": "Krok 1: analýza (iba na čítanie)",
+    "intro": "Okamžite sa zastaví, ak hostiteľ nepoužíva klasický sieťový stack. Inak zobrazí všetky nakonfigurované rozhrania okrem loopbacku a ich stav:",
+    "virtTitle": "Virtuálne rozhrania sú chránené",
+    "virtBody": "Mosty (<code>vmbrX</code>) a bondy (<code>bondX</code>) sú virtuálne konštrukcie. Pri kontrole môžu oprávnene chýbať, napríklad most bez portov. Analýza preto nikdy nenavrhuje ich odstránenie, iba odstránenie fyzických sieťových kariet."
+  },
+  "step2": {
+    "heading": "Krok 2: čistenie so sprievodcom (5 krokov)",
+    "intro": "Spustí sa iba po prijatí výzvy na konci analýzy. Každý krok vyžaduje potvrdenie; zrušením v ktoromkoľvek bode sa postup ukončí bez zápisu.",
+    "steps": [
+      {
+        "title": "1. Bezpečnostná záloha",
+        "body": "Skopíruje <code>/etc/network/interfaces</code> do <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Cestu zobrazí pred kopírovaním aj po ňom.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Potvrdenie zoznamu odstránenia",
+        "body": "Presne vypíše bloky fyzických rozhraní určené na odstránenie. Ak sa karty medzi analýzou a čistením znovu objavia, napríklad po opätovnom zasunutí, postup sa ukončí hlásením <em>„Čistenie nie je potrebné.“</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Náhľad presných blokov",
+        "body": "Otvorí rolovací pohľad na každý blok <code>iface</code>, ktorý by bol vymazaný, doslovne zo súboru. Toto je chvíľa, kedy si môžete všimnúť napríklad zaujímavý <code>up</code> hák, ktorý chcete zachovať.",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Použiť odstránenie",
+        "body": "Pre každé sirotské rozhranie beží <code>sed -i \"/^iface $iface/,/^$/d\" /etc/network/interfaces</code>. To odstráni zo zodpovedajúcej línie <code>iface</code> až do ďalšieho prázdneho riadku.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Overovanie",
+        "body": "Opätovne načíta súbor, vypíše, čo bolo odstránené, a znova skontroluje zostávajúce rozhrania. Vytlačí príkaz na vrátenie. <strong>nereštartuje</strong> automaticky sieť – odstránenie nepoužívaného bloku je bezpečné použiť pri ďalšom reštarte a nedotýka sa aktívneho stavu.",
+        "tone": "emerald"
+      }
+    ],
+    "noRestartTitle": "Nereštartuje sieť automaticky",
+    "noRestartBody": "Na rozdiel od opravy mostov čistenie neponúka reštart služby. Odstránenie nepoužívaného bloku rozhrania okamžite neovplyvní bežiacu konfiguráciu, takže reštart nie je potrebný a zbytočne by ohrozil pripojenie. Zmena sa prejaví pri ďalšom ručnom <code>systemctl restart networking</code> alebo pri ďalšom reštarte systému."
+  },
+  "caveats": {
+    "heading": "Dôležité upozornenia",
+    "boundaryTitle": "Hranica bloku je prvý prázdny riadok",
+    "boundaryBody": "Vzor <code>sed</code> odstráni obsah od <code>iface &lt;name&gt;</code> po ďalší prázdny riadok. Ak v <code>/etc/network/interfaces</code> chýbajú prázdne riadky medzi blokmi, čo je zriedkavé, ale možné po ručných úpravách, môže sa odstrániť aj nasledujúci blok. Preto je <strong>krok 3 povinný</strong>: pred potvrdením skontrolujte náhľad.",
+    "tandemTitle": "Osirelý blok iface používaný mostom sa zistí tu, nie pri analýze mostov",
+    "tandemBody": "Ak <code>vmbr0</code> deklaruje <code>bridge-ports enp3s0</code> a <code>enp3s0</code> má aj vlastný blok <code>iface enp3s0 inet manual</code>, odstránenie <code>enp3s0</code> tu ponechá neplatný odkaz v <code>vmbr0</code>. Po čistení spustite <link>analýzu mostov</link> na zmenu priradenia alebo odstránenie portu mosta. Oba postupy sú navrhnuté na spoločné použitie."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "notFoundTitle": "Analýza zobrazuje moju novú sieťovú kartu ako „NENÁJDENÁ“",
+    "notFoundBody": "Jadro vidí zariadenie pod iným názvom, než je v súbore. Spustite <code>ip link show</code> a zistite skutočný názov. Presne v takomto prípade by <link>trvalé názvy rozhraní</link> zabránili problému v budúcnosti.",
+    "tooMuchTitle": "Čistenie odstránilo príliš veľa, aj blok, ktorý som chcel zachovať",
+    "tooMuchBody": "Obnovte stav zo zálohy uvedenej v kroku 5:",
+    "tooMuchOutro": "Pred opätovným spustením čistenia ručne upravte súbor a pridajte prázdny riadok medzi bloky alebo problematický blok odstráňte ručne.",
+    "bridgeBreakTitle": "Most prestane pracovať po vyčistení.",
+    "bridgeBreakBody": "Most používal port, ktorého blok <code>iface</code> sa práve odstránil. Spustite <link>analýzu mostov</link> a návrh priradí most k existujúcemu fyzickému rozhraniu."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Analýza mostov a oprava so sprievodcom",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — prirodzený ďalší krok po čistení."
+      },
+      {
+        "label": "Trvalé názvy rozhraní",
+        "href": "/docs/network/persistent-names",
+        "tail": " — zabraňuje hromadeniu osirelých blokov po každej zmene hardvéru."
+      },
+      {
+        "label": "Záloha a reštart rozhraní",
+        "href": "/docs/network/backup-restore",
+        "tail": " — ručné snímky a prehliadanie záloh na obnovu."
+      }
+    ]
+  }
+}

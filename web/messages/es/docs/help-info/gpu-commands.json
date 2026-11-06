@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "IOMMU debe estar activado en BIOS / UEFI",
-    "body": "Antes de que ninguno de estos comandos importe, IOMMU tiene que estar activado a nivel de firmware (busca <em>VT-d</em>, <em>AMD-Vi</em> o <em>IOMMU</em> en BIOS / UEFI). Parámetros habituales de GRUB para activarlo del lado de Linux: <code>intel_iommu=on</code> (Intel) o <code>amd_iommu=on</code> (AMD), a menudo combinados con <code>iommu=pt video=efifb:off video=vesa:off</code>."
+    "body": "Activa primero IOMMU en el firmware: busca <em>VT-d</em>, <em>AMD-Vi</em> o <em>IOMMU</em> en BIOS/UEFI. En Linux está activado por defecto en AMD y en Intel con kernels Proxmox 6.8 o posteriores. Los kernels Intel anteriores pueden necesitar <code>intel_iommu=on</code>. La opción <code>iommu=pt</code> controla el modo passthrough de IOMMU; no justifica desactivar indiscriminadamente el framebuffer del host."
   },
   "commandGroups": [
     {
@@ -130,14 +130,14 @@
         },
         {
           "command": "qm set <vmid> -bios ovmf",
-          "description": "Hacer que la VM use UEFI/OVMF (necesario para passthrough de GPU)"
+          "description": "Configurar UEFI/OVMF en la VM, recomendado si la ROM de la GPU admite UEFI"
         }
       ]
     }
   ],
   "afterChangesTip": {
     "title": "Después de cambiar GRUB o configs de modprobe",
-    "bodyRich": "Ejecuta <code>update-grub</code> + <code>update-initramfs -u</code> y reinicia. Verifica con <code>cat /proc/cmdline</code> (parámetros del kernel), <code>dmesg | grep -i iommu</code> (IOMMU inicializado) y <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupos presentes)."
+    "bodyRich": "En hosts que usan GRUB, aplica los cambios de arranque con <code>update-grub</code>. Actualiza los módulos con <code>update-initramfs -u -k all</code> y reinicia. Otros cargadores de arranque requieren su propio procedimiento. Comprueba <code>cat /proc/cmdline</code> (parámetros del kernel), <code>dmesg | grep -i iommu</code> (IOMMU inicializado) y <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupos presentes)."
   },
   "related": {
     "heading": "Relacionado",
@@ -150,7 +150,7 @@
       {
         "href": "/docs/hardware/igpu-acceleration-lxc",
         "label": "Añadir GPU a LXC",
-        "tail": " — passthrough a un contenedor en lugar de a una VM."
+        "tail": " — compartir acceso a los dispositivos GPU del host con un contenedor LXC."
       },
       {
         "href": "/docs/help-info",

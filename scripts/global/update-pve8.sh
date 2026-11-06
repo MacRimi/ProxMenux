@@ -169,10 +169,8 @@ EOF
         else
             # The package list rides in the same dialog as the summary, so
             # the decision is taken knowing what is about to be replaced.
-            # --scrolltext keeps the buttons reachable however long it is.
-            menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
-            menu_text+="$(translate "Do you want to proceed with the system update?")"
-            if whiptail --title "$(translate "Proxmox Update")" --scrolltext --yesno "$menu_text" 24 78; then
+            if pmx_confirm_update "$(translate "Proxmox Update")" "$menu_text" "$upgradable_list" \
+                "$(translate "Do you want to proceed with the system update?")"; then
                 return 0
             else
                 return 1
@@ -188,7 +186,8 @@ EOF
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
         apt-get -y autoclean > /dev/null 2>&1 || true
-        return 0
+        # Not an error, but the system was not updated.
+        return 3
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
         echo -e "\nSystem is already up to date." >> "$log_file"
@@ -280,6 +279,12 @@ EOF
         tput ed
         tput cnorm
         msg_ok "$(translate "System upgrade completed")"
+    else
+        tput rc
+        tput ed
+        tput cnorm
+        msg_error "$(translate "Proxmox VE 8 package upgrade failed. Review the APT output before retrying.")"
+        return 1
     fi
 
 

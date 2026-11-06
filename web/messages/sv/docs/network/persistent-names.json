@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Beständiga gränssnittsnamn | ProxMenux-dokumentation",
+    "description": "Bind Proxmox-gränssnittsnamn (eno1, enp3s0, …) till MAC-adresser via systemds .link-filer så att namnen består vid omnumrering av PCI-enheter, kärnuppgraderingar och när andra nätverkskort läggs till eller tas bort.",
+    "ogTitle": "Beständiga gränssnittsnamn | ProxMenux-dokumentation",
+    "ogDescription": "Förhindra att Proxmox gränssnittsnamn ändras när du ändrar maskinvaran. Använder systemds .link-filer med matchning på MAC-adress."
+  },
+  "header": {
+    "title": "Beständiga gränssnittsnamn",
+    "description": "Skapar en .link-fil för systemd per fysiskt nätverkskort som binder det kärntilldelade namnet till kortets MAC-adress. När detta tillämpats efter nästa omstart förblir gränssnittsnamnen stabila när du lägger till, tar bort eller flyttar PCIe-kort.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "För varje fysisk NIC på värden, skriver en liten fil under <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> som säger: <em> \"enheten med denna MAC måste alltid kallas detta namn\" </em>. systemd-udevd tillämpar regeln vid varje start, innan <code>ifupdown</code> läser <code>/etc/network/interfaces</code>."
+  },
+  "problem": {
+    "heading": "Problemet detta löser",
+    "intro": "Linux härleder standardnamn för gränssnitt från PCI-topologin — <code>eno1</code> = inbyggt nätverkskort, <code>enp3s0</code> = kortet på PCI-buss 3, plats 0 osv. Namnschemat är deterministiskt <em>vid samma maskinvaruplacering</em>. Ändras placeringen kan namnen ändras:",
+    "items": [
+      "Lägg till en GPU före ett befintligt nätverkskort → nätverkskortets bussnummer kan ändras → namnet ändras.",
+      "Flytta ett kort till en annan PCIe slot → namnändringar.",
+      "BIOS-/UEFI-uppdatering som numrerar om enheter → namnen kan ändras.",
+      "Ersätt ett felaktigt kort med samma modell i en annan slot → namnändringar."
+    ],
+    "outro": "Efter en sådan ändring refererar <code>/etc/network/interfaces</code> fortfarande till det <em>gamla</em> namnet. Bryggan kan inte aktiveras och värden förlorar nätverksanslutningen. Beständiga namn förhindrar att detta händer igen."
+  },
+  "howWorks": {
+    "heading": "Hur det fungerar",
+    "arrowLabel": "per nätverkskort",
+    "nodes": {
+      "detectLabel": "Identifiera fysiska nätverkskort",
+      "detectDetail": "ls /sys/class/net/\nuteslut vmbr / bond /\ndocker / veth / wireguard …",
+      "readLabel": "Läs varje MAC",
+      "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
+      "writeLabel": "Skriv .link-fil",
+      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+    },
+    "minimalIntro": "Varje genererad fil är avsiktligt minimal:",
+    "minimalOutro": "Vid start matchar systemd-udevd enheten på MAC-adress och tilldelar det begärda namnet <em>innan</em> andra komponenter (ifupdown, kärnans standardnamngivning) kommer åt den. Filprefixet <code>10-</code> ser till att reglerna läses in tidigt, före standardfilen <code>99-default.link</code>."
+  },
+  "scope": {
+    "heading": "Vad som skrivs och vad som hoppas över",
+    "headerType": "Typ",
+    "headerBehaviour": "Beteende",
+    "headerWhy": "Varför",
+    "rows": [
+      {
+        "type": "Inbyggt nätverkskort / PCIe-nätverkskort",
+        "behaviour": "<code>.link</code>-fil skrivs",
+        "why": "Motsvarar en verklig PCI-enhet — det fall verktyget är avsett för"
+      },
+      {
+        "type": "Wi-Fi (phy80211)",
+        "behaviour": "<code>.link</code>-fil skrivs",
+        "why": "Har en verklig MAC-adress och gynnas av ett stabilt namn"
+      },
+      {
+        "type": "Bryggor (vmbrX)",
+        "behaviour": "Överhoppad",
+        "why": "Virtuell; namn kommer från <code>/etc/network/interfaces</code>"
+      },
+      {
+        "type": "Bondgränssnitt (bondX)",
+        "behaviour": "Överhoppad",
+        "why": "Virtuellt; bondgränssnittets namn anges av ifupdown"
+      },
+      {
+        "type": "veth / docker0 / br-XXXX",
+        "behaviour": "Överhoppad",
+        "why": "Skapas vid behov av Docker / LXC — ingen beständig maskinvara"
+      },
+      {
+        "type": "tap / fwpr / fwln",
+        "behaviour": "Överhoppad",
+        "why": "Skapas vid behov av Proxmox för varje VM/CT"
+      },
+      {
+        "type": "WireGuard / Cilium / Tailscale",
+        "behaviour": "Överhoppad",
+        "why": "Programvarugränssnitt som hanteras av sina egna daemoner"
+      }
+    ]
+  },
+  "safety": {
+    "heading": "Säkerhetsnät: tidigare .link-filer backas upp",
+    "intro": "Om <code>/etc/systemd/network/</code> redan innehåller <code>.link</code>-filer från en tidigare körning eller andra verktyg kopieras de till en tidsstämplad säkerhetskopieringskatalog innan de nya skapas:",
+    "outro": "För att rulla tillbaka: kopiera filerna tillbaka från backupkatalogen och starta om.",
+    "rebootTitle": "Börjar gälla vid nästa omstart, inte omedelbart",
+    "rebootBody": "Ändringar i <code>.link</code>-filer tillämpas endast vid start, när udev räknar upp enheterna på nytt. Därför rapporterar verktyget <em>”Ändringarna tillämpas efter omstart”</em>. Namnbyte på ett aktivt gränssnitt är riskabelt och försöks inte: en aktiv <code>vmbr0</code> med medlemsgränssnitt skulle behöva konfigureras om atomärt. Åtgärden skjuts därför upp till nästa rena start."
+  },
+  "afterReboot": {
+    "heading": "Efter omstarten",
+    "intro": "När namnen är beständigt bundna är arbetsflödet för framtida maskinvaruändringar enkelt:",
+    "items": [
+      "Stäng av, ändra maskinvaran (lägg till kort, byt plats, …) och starta.",
+      "Varje NIC håller sitt tidigare namn eftersom dess MAC matchar en <code>.link</code>-fil.",
+      "Om ett nätverkskort ersätts med ett som har en annan MAC-adress får det ett standardnamn från kärnan (<code>enp&lt;bus&gt;s&lt;slot&gt;</code>). Kör menyn igen för att lägga till en <code>.link</code>-post för det nya kortets MAC-adress."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "emptyTitle": "\"Inga fysiska gränssnitt hittades\" efter att ha kört verktyget",
+    "emptyBody": "Kärnan ser inga gränssnitt som bygger på PCI / phy80211 på värden. Kontrollera med <code>ls -l /sys/class/net/</code> — varje post ska ha antingen en symbolisk länk <code>device</code> (PCI) eller en post <code>phy80211</code> (Wi-Fi). Om båda saknas för ett verkligt nätverkskort är drivrutinen inte inläst.",
+    "noChangeTitle": "Efter omstarten ändrades inte namnen som förväntat.",
+    "noChangeBody": "Kontrollera att filen finns och är korrekt formaterad: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Kontrollera sedan udev-loggarna: <code>journalctl -u systemd-udevd -b | grep -i link</code>. En vanlig orsak är en kvarvarande kärnparameter <code>net.ifnames=0</code> som helt inaktiverar förutsägbara namn — ta bort den från <code>/etc/default/grub</code>, kör <code>update-grub</code> och starta om.",
+    "undoTitle": "Jag vill ångra beständig namngivning",
+    "undoBody": "Radera antingen <code>.link</code>-filerna (<code>rm /etc/systemd/network/10-*.link</code>) eller återställ dem från säkerhetskopieringskatalogen som skapades vid föregående körning. Starta om för att tillämpa ändringen."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Brygganalys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tailRich": " — återställningsvägen när namnen <em>redan</em> har ändrats."
+      },
+      {
+        "label": "Konfigurationsanalys och guidad rensning",
+        "href": "/docs/network/config-analysis",
+        "tail": " — för att ta bort föräldralösa block kvar efter namnskiften."
+      },
+      {
+        "label": "Diagnostik",
+        "href": "/docs/network/diagnostics",
+        "tailRich": " — bekräfta de nya namnen med <em>Visa routningstabell</em> efter omstart."
+      }
+    ]
+  }
+}

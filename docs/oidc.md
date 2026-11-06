@@ -46,7 +46,8 @@ Secrets are saved atomically with mode `0600` in
 `~/.config/proxmenux-monitor/oidc.json` under the service account. The configuration
 API requires an authenticated administrator and never returns the client secret.
 OIDC defaults to disabled. Its cryptography runtime is bundled separately for
-the Python 3.11 and 3.13 ABIs used by supported Monitor hosts.
+the Python 3.11 and 3.13 ABIs used by supported Monitor hosts, on both
+AMD64 and ARM64. Native dependency wheels always match the AppImage architecture.
 
 If login fails, check the exact issuer, redirect URI, client authentication
 method, subject and provider logs. Use local credentials to correct or disable

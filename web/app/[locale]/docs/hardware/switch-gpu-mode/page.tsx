@@ -336,29 +336,12 @@ export default async function SwitchGpuModePage({
         {t.rich("manual.intro", { strong, code })}
       </p>
       <CopyableCode
-        code={`# Drop the vendor:device from vfio.conf — keep other GPUs intact
-sed -i 's/10de:2204,//; s/,10de:2204//; s/=10de:2204 /=/' /etc/modprobe.d/vfio.conf
+        code={`# Inspect this example GPU; replace the ID with your card
+lspci -nnk -d 10de:2204
 
-# Remove the NVIDIA hard-blacklist and nouveau blacklist
-sed -i '/^blacklist nouveau$/d; /^blacklist nvidia$/d; /^blacklist nvidia_drm$/d; /^blacklist nvidia_modeset$/d; /^blacklist nvidia_uvm$/d; /^blacklist nvidiafb$/d' /etc/modprobe.d/blacklist.conf
-rm -f /etc/modprobe.d/nvidia-blacklist.conf
-
-# Re-enable NVIDIA udev rule + modules-load config (if disabled by VM-mode switch)
-[ -f /etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled-vfio ] && \\
-  mv /etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled-vfio \\
-     /etc/udev/rules.d/70-nvidia.rules
-[ -f /etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio ] && \\
-  mv /etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio \\
-     /etc/modules-load.d/nvidia-vfio.conf
-
-# Clean up the VM config — precise BDF regex, no substring collisions
-# (replace 0000:01:00 with your GPU's slot)
-sed -E -i '/^hostpci[0-9]+:[[:space:]]*(0000:)?01:00\\.[0-7]([,[:space:]]|$)/d' \\
-  /etc/pve/qemu-server/<vmid>.conf
-
-# Rebuild initramfs and reboot
-update-initramfs -u -k all
-reboot`}
+# Inspect the persistent per-BDF NVIDIA policy
+cat /etc/proxmenux/vfio-bind.bdfs
+cat /etc/udev/rules.d/10-proxmenux-vfio-bind.rules`}
         className="my-4"
       />
 
@@ -366,28 +349,12 @@ reboot`}
         {t.rich("manual.lxcToVm", { strong })}
       </p>
       <CopyableCode
-        code={`# Add the vendor:device to vfio.conf (create the line if missing)
-grep -q '^options vfio-pci ids=' /etc/modprobe.d/vfio.conf && \\
-  sed -i '/^options vfio-pci ids=/ s/$/,10de:2204/' /etc/modprobe.d/vfio.conf || \\
-  echo 'options vfio-pci ids=10de:2204 disable_vga=1' >> /etc/modprobe.d/vfio.conf
+        code={`# Replace this example PCI address with your selected GPU
+lspci -nnk -s 0000:01:00.0
+readlink /sys/bus/pci/devices/0000:01:00.0/iommu_group
 
-# Blacklist the native driver so vfio-pci can claim the card
-cat >> /etc/modprobe.d/blacklist.conf <<'EOF'
-blacklist nouveau
-blacklist nvidia
-blacklist nvidia_drm
-blacklist nvidia_modeset
-blacklist nvidia_uvm
-blacklist nvidiafb
-options nouveau modeset=0
-EOF
-
-# Make sure vfio-pci loads at boot
-grep -q '^vfio-pci$' /etc/modules || echo 'vfio-pci' >> /etc/modules
-
-# Rebuild initramfs and reboot
-update-initramfs -u -k all
-reboot`}
+# List all group members and review them before assignment
+find /sys/kernel/iommu_groups/ -type l | sort -V`}
         className="my-4"
       />
 
@@ -397,17 +364,13 @@ reboot`}
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("verification.heading")}</h2>
       <CopyableCode
-        code={`# Confirm the GPU is bound to the driver you expect
-lspci -nnk -d <vendor:device>
-# Expected (LXC mode): "Kernel driver in use: nvidia" (or amdgpu, i915)
-# Expected (VM  mode): "Kernel driver in use: vfio-pci"
+        code={`# Inspect the selected PCI address (replace this example)
+lspci -nnk -s 0000:01:00.0
+# LXC mode: the supported native driver should own the card
+# VM mode: vfio-pci should own the card
 
-# LXC mode — is the host tool happy?
-nvidia-smi                 # if NVIDIA
-intel_gpu_top              # if Intel iGPU
-
-# VM mode — ready to be claimed by a VM start
-lsmod | grep vfio`}
+# NVIDIA userspace/module consistency check
+nvidia-smi`}
         className="my-4"
       />
 
@@ -421,9 +384,10 @@ lsmod | grep vfio`}
         {t.rich("troubleshoot.vmFailBody", { code, em })}
       </Callout>
       <CopyableCode
-        code={`# Delete every hostpci line for the GPU slot
-sed -E -i '/^hostpci[0-9]+:[[:space:]]*(0000:)?<slot>\\.[0-7]([,[:space:]]|$)/d' \\
-  /etc/pve/qemu-server/<vmid>.conf`}
+        code={`# Inspect the VM configuration; replace VMID with the numeric ID
+qm config VMID
+# With the VM stopped, remove only the obsolete PCI assignment
+# in the Proxmox Hardware panel, after identifying its hostpci entry`}
         className="my-4"
       />
 

@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Post-Install: Monitoraggio | Documentazione ProxMenux",
+    "description": "Opzioni di monitoraggio nello script ProxMenux Personalizzabile post-installazione. Attualmente un'unica opzione: installare OVH Real-Time Monitoring (RTM), che si attiva solo se l'host viene rilevato come server OVH."
+  },
+  "header": {
+    "title": "Dopo l'installazione: monitoraggio",
+    "description": "Opzioni di monitoraggio all'interno dello script di installazione post personalizzabile. Questa categoria è piccola e specifica del fornitore — installa l'agente di monitoraggio OVH in tempo reale su server OVH dedicati e non fa nulla altrove.",
+    "section": "Impostazioni post-installazione Proxmox"
+  },
+  "intro": {
+    "title": "Ambito volutamente limitato",
+    "body": "Il monitoraggio post-installazione si limita a <strong>un agente specifico di un fornitore</strong>. Gli strumenti generici (Prometheus, Grafana, node_exporter) sono esclusi perché richiedono scelte architetturali — host separato, conservazione dei dati, destinazioni degli avvisi — che non si adattano a un passaggio con un clic. ProxMenux Monitor, incluso in ProxMenux, svolge gran parte di quel ruolo senza agenti esterni."
+  },
+  "ovh": {
+    "heading": "Installare il monitoraggio in tempo reale OVH (RTM)",
+    "intro": "Se il vostro host Proxmox è un server dedicato affittato da <a>OVHcloud</a>, è possibile attivare RTM per esporre la telemetria hardware (CPU temperatura, stato PSU, disco SMART, stato del controller RAID, ecc.) al pannello di controllo OVH. Questo è lo stesso agente OVH utilizza per la propria funzione \"Server Monitoring\".",
+    "decisionsTitle": "Come decide ProxMenux",
+    "decisionsItems": [
+      "Ottiene l'IP pubblico dell'host tramite <code>curl ipinfo.io/ip</code>.",
+      "Cerca il provider proprietario tramite una query <code>whois</code> a <code>v4.whois.cymru.com</code>.",
+      "Se il risultato menziona OVH, scarica <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> e lo passa a <code>bash</code> con il manifest Puppet di RTM v2.",
+      "Se il risultato <em>non</em> menziona OVH, non è installato nulla. L'opzione è una no-op."
+    ],
+    "remoteTitle": "Script remoto passato a bash tramite pipe",
+    "remoteBody": "L’installazione esegue <code>wget -qO - https://…apply.sh | bash</code>. Se il mirror OVH viene compromesso, lo script viene eseguito come root sull’host. Prima di attivare l’opzione, valuta la fiducia nella catena dei mirror OVH rispetto al beneficio del monitoraggio. Per la maggior parte degli utenti domestici o non OVH, l’opzione dovrebbe restare disattivata.",
+    "noOpTitle": "Attiva solo se l'host è effettivamente in OVH",
+    "noOpBody": "L’opzione non modifica i server non OVH, quindi selezionarla su un Proxmox domestico non rompe nulla. Su un host non OVH lo script mostra <em>«Non è un server OVH, installazione RTM saltata»</em> e termina senza installare pacchetti.",
+    "runsTitle": "Cosa esegue ProxMenux",
+    "verifyTitle": "Verifica",
+    "verifyBody": "Su un vero host OVH, dopo il riavvio dovresti vedere la <a>dashboard RTM</a> in OVH Manager con dati dell’host in tempo reale. Sul lato Proxmox, il raccoglitore RTM è un servizio systemd: controllalo direttamente:",
+    "troubleTitle": "Risoluzione dei problemi",
+    "revertTitle": "Rimuovi RTM dal menu Disinstalla",
+    "revertBody": "Se RTM è registrato come installato, Disinstalla ottimizzazioni offre una voce OVH Real-Time Monitoring. Esegue <code>apt-get purge -y ''ovh-rtm*'' ''rtm'' ''rtm-*''</code>, elimina /etc/rtm e registra RTM come disinstallato. I residui Puppet possono richiedere pulizia manuale: controlla i manifest specifici di RTM in <code>/etc/puppet/</code>. Su un host non OVH non sono stati installati pacchetti RTM, quindi non c’è nulla da rimuovere."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": "— dashboard web locale per l'host (lavora su qualsiasi fornitore, non solo OVH)."
+      },
+      {
+        "label": "Comandi di sistema utili",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — riferimento per il monitoraggio dell’host locale."
+      },
+      {
+        "label": "Post-installazione personalizzabile",
+        "href": "/docs/post-install/customizable",
+        "tail": " — torna al menu superiore."
+      }
+    ]
+  }
+}

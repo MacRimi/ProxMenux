@@ -1,19 +1,19 @@
 {
   "meta": {
-    "title": "UUP Dump ISO Creator | ProxMenux Documentation",
+    "title": "Creador de ISO UUP Dump | Documentación de ProxMenux",
     "description": "Crea una ISO de instalación de Windows actualizada en tu host Proxmox usando el UUP Dump ISO Creator de ProxMenux. Automatiza la instalación de dependencias, descarga y conversión de archivos UUP en una ISO arrancable lista para crear una VM.",
-    "ogTitle": "UUP Dump ISO Creator | ProxMenux Documentation",
+    "ogTitle": "Creador de ISO UUP Dump | Documentación de ProxMenux",
     "ogDescription": "Crea una ISO de Windows actualizada desde UUP Dump usando ProxMenux. Dependencias, descarga y conversión totalmente automatizadas.",
     "ogImageAlt": "UUP Dump ISO Creator de ProxMenux"
   },
   "header": {
-    "title": "UUP Dump ISO Creator",
-    "description": "Crea una ISO de instalación de Windows actualizada en tu host Proxmox usando UUP Dump. ProxMenux se encarga de las dependencias, descarga los archivos UUP en paralelo, ejecuta el conversor oficial y deja la ISO final en el almacenamiento de ISOs de Proxmox — lista para asociar a una nueva VM Windows.",
+    "title": "Creador de ISO UUP Dump",
+    "description": "Crea una ISO de instalación de Windows actualizada en tu host Proxmox con UUP Dump. ProxMenux gestiona las dependencias, descarga los archivos UUP en paralelo, ejecuta el conversor de UUP Dump y mueve la ISO al directorio de salida elegido, que por defecto es el almacenamiento de ISOs de Proxmox detectado.",
     "section": "Utilidades"
   },
   "intro": {
     "title": "Qué hace este script",
-    "body": "Tú aportas una URL de UUP Dump (la que uupdump.net genera tras elegir build, idioma y edición) y el script hace el resto: instala las dependencias que falten, descarga el conversor de UUP Dump, descarga cada archivo de payload UUP con aria2, ensambla una ISO arrancable de Windows y la mueve al almacenamiento de ISOs de Proxmox para que el creador de VM pueda montarla en el primer arranque."
+    "body": "Proporciona una URL generada por uupdump.net tras elegir una compilación, un idioma y una edición. El script instala las dependencias que falten, descarga el conversor de UUP Dump y los archivos UUP, crea una ISO arrancable de Windows y la mueve al directorio de salida elegido. Como destino predeterminado ofrece el almacenamiento de ISOs de Proxmox detectado."
   },
   "hero": {
     "imageAlt": "Entrada UUP Dump ISO Creator en ProxMenux",
@@ -61,7 +61,7 @@
       },
       {
         "pkg": "chntpw",
-        "roleRich": "Ajusta hives del registro de Windows durante la construcción."
+        "roleRich": "Modifica las secciones del registro de Windows durante la creación."
       }
     ],
     "manualIntro": "Equivalente manual — si alguna vez necesitas instalarlas tú mismo:",
@@ -73,22 +73,22 @@
       "Detecta el almacenamiento de ISOs de Proxmox (vía <code>pvesm status -content iso</code>) o recae en <code>/var/lib/vz/template/iso</code>.",
       "Pregunta por una carpeta base para archivos temporales (por defecto <code>/root/uup-temp</code>).",
       "Descarga el conversor de UUP Dump desde <code>git.uupdump.net</code>.",
-      "Parsea <code>id</code>, <code>pack</code> y <code>edition</code> de la URL que pegas.",
+      "Extrae <code>id</code>, <code>pack</code> y <code>edition</code> de la URL pegada.",
       "Llama a <code>https://uupdump.net/get.php?…&aria2=2</code> para generar una lista de descargas de aria2.",
       "Descarga cada payload UUP en <code>UUPs/</code> con aria2 (paralelo, reanudable).",
       "Ejecuta <code>convert.sh wim UUPs 1</code> del conversor para producir la ISO final.",
-      "Mueve la ISO al almacenamiento de ISOs de Proxmox y limpia los archivos temporales."
+      "Mueve la ISO al directorio de salida elegido y limpia los archivos temporales."
     ]
   },
   "aria2": {
-    "heading": "Flags de descarga de Aria2 usados",
+    "heading": "Opciones de descarga de aria2 utilizadas",
     "code": "aria2c --no-conf --console-log-level=warn --log-level=info \\\n  --log=aria2_download.log \\\n  -x16 -s16 -j5 -c -R \\\n  -d\"$destDir\" -i\"$tempScript\"",
     "flags": [
       "<code>-x16</code> — hasta 16 conexiones por servidor.",
       "<code>-s16</code> — divide cada archivo en 16 segmentos.",
       "<code>-j5</code> — 5 archivos descargados en paralelo.",
       "<code>-c</code> — reanuda descargas parciales.",
-      "<code>-R</code> — reintenta tras fallos."
+      "<code>-R</code> — aplica al archivo descargado la fecha y hora del archivo remoto, si están disponibles."
     ],
     "runtime": "El tiempo típico ronda los 10 minutos, dominado por la velocidad de tu enlace de internet y la carga del mirror de UUP Dump."
   },
@@ -147,15 +147,15 @@
         "body": "Pega la URL en el diálogo de entrada. El script valida que los tres parámetros requeridos están presentes; si falta alguno, aborta limpiamente."
       },
       {
-        "title": "Espera a que termine la construcción",
+        "title": "Espera a que termine la creación",
         "img": "/iso-creator/end-uupdump-iso-creator.png",
-        "caption": "Construcción terminada — la ISO está lista en el almacenamiento de ISOs de Proxmox",
-        "bodyRich": "La consola muestra el progreso de aria2 y luego la salida del conversor. Cuando termina, la ISO aterriza en el almacenamiento de ISOs de Proxmox detectado y está lista para elegirse desde <strong>Create VM → System Windows → Install with ISO from UUP Dump</strong>."
+        "caption": "Creación terminada: la ISO está lista en el almacenamiento de ISOs de Proxmox",
+        "bodyRich": "La consola muestra el progreso de aria2 y después la salida del conversor. La ISO terminada se mueve al directorio de salida elegido. Si está en un almacenamiento de ISOs configurado en Proxmox, se puede seleccionar desde <strong>Crear VM con Windows → Instalar con ISO personal</strong>."
       }
     ]
   },
   "tempFiles": {
     "title": "Archivos temporales",
-    "body": "Por defecto, los archivos temporales viven bajo <code>/root/uup-temp</code> (<code>uup-temp/</code> para descargas y <code>uup-converter/</code> para el script conversor). El creador limpia ambos tras una ejecución exitosa. En caso de fallo igual limpia y te devuelve al menú para que un reintento empiece desde cero."
+    "body": "La carpeta temporal predeterminada es <code>/root/uup-temp</code>, con las descargas en <code>UUPs/</code> y el conversor en <code>converter/</code>. Si eliges otra ruta base, se crea un subdirectorio de sesión independiente. Las ramas de creación correcta y de ausencia de ISO eliminan la sesión temporal. Los fallos o las cancelaciones anteriores pueden dejar archivos temporales."
   }
 }

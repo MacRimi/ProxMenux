@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Príkazy GPU passthrough v Proxmoxe — lspci, VFIO, IOMMU, qm set hostpci | ProxMenux",
+    "description": "Prehľad GPU passthrough v Proxmox VE: identifikácia zariadení cez lspci, moduly VFIO, skupiny IOMMU (intel_iommu / amd_iommu), aktualizácie GRUB a initramfs, qm set hostpci0 a nastavenie GPU NVIDIA, AMD a Intel.",
+    "ogTitle": "Príkazy GPU passthrough v Proxmoxe — lspci, VFIO, IOMMU, qm set hostpci",
+    "ogDescription": "Odkaz na kontrolu a konfiguráciu GPU priechodu na Proxmox VE — PCI zariadenia, VFIO moduly, IOMMU skupiny, parametre zavádzania jadra, qm set hostpci.",
+    "twitterTitle": "Príkazy GPU passthrough v Proxmoxe | ProxMenux",
+    "twitterDescription": "Skontrolujte PCI zariadenia, konfigurujte VFIO a IOMMU a pripojte GPU k VM na Proxmox VE."
+  },
+  "header": {
+    "title": "GPU passthrough",
+    "description": "Prehľad kontroly a nastavenia GPU / TPU passthrough v Proxmoxe: identifikácia zariadení (lspci), nastavenie modulov VFIO, overenie IOMMU, aktualizácie initramfs / GRUB a konfigurácia pre jednotlivé VM (qm set hostpci, machine q35, bios ovmf).",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "IOMMU musí byť povolené v BIOS / UEFI",
+    "body": "Najprv zapnite IOMMU vo firmvéri: v BIOS/UEFI hľadajte <em>VT-d</em>, <em>AMD-Vi</em> alebo <em>IOMMU</em>. V Linuxe je predvolene zapnuté na AMD a na Inteli s jadrami Proxmox 6.8 a novšími. Staršie jadrá Intel môžu vyžadovať <code>intel_iommu=on</code>. Voliteľné <code>iommu=pt</code> riadi režim IOMMU passthrough; nie je dôvodom na plošné vypínanie framebufferu hostiteľa."
+  },
+  "commandGroups": [
+    {
+      "title": "Identifikácia zariadenia",
+      "commands": [
+        {
+          "command": "lspci -nn | grep -i nvidia",
+          "description": "Zoznam zariadení NVIDIA PCI"
+        },
+        {
+          "command": "lspci -nn | grep -i vga",
+          "description": "Zoznam všetkých VGA kompatibilných zariadení"
+        },
+        {
+          "command": "lspci -nn | grep -i amd",
+          "description": "Zoznam zariadení AMD PCI"
+        },
+        {
+          "command": "lspci -nnk | grep -A3 VGA",
+          "description": "Zoznam zariadení VGA s ovládačmi jadra"
+        },
+        {
+          "command": "lspci -v -s <PCI_ID>",
+          "description": "Zobraziť podrobné informácie pre konkrétne PCI zariadenie"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie VFIO",
+      "commands": [
+        {
+          "command": "dmesg | grep -i vfio",
+          "description": "Kontrola správ modulu VFIO"
+        },
+        {
+          "command": "cat /etc/modprobe.d/vfio.conf",
+          "description": "Skontrolovať konfiguráciu VFIO passthrough"
+        },
+        {
+          "command": "ls -la /etc/modprobe.d/",
+          "description": "Zoznam všetkých konfiguračných súborov modprobe"
+        },
+        {
+          "command": "cat /etc/modules",
+          "description": "Zobraziť načítané moduly v čase zavedenia"
+        },
+        {
+          "command": "lsmod | grep vfio",
+          "description": "Skontrolujte, či sú moduly VFIO načítané"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie IOMMU",
+      "commands": [
+        {
+          "command": "cat /etc/default/grub",
+          "description": "Preskúmanie možností GRUB pre IOMMU"
+        },
+        {
+          "command": "update-grub",
+          "description": "Použiť zmeny GRUB"
+        },
+        {
+          "command": "dmesg | grep -i iommu",
+          "description": "Skontrolujte IOMMU správy v loge jadra"
+        },
+        {
+          "command": "dmesg | grep -e DMAR -e IOMMU",
+          "description": "Skontrolujte správy DMAR a IOMMU"
+        },
+        {
+          "command": "find /sys/kernel/iommu_groups/ -type l | sort -V",
+          "description": "Zoznam skupín IOMMU"
+        }
+      ]
+    },
+    {
+      "title": "Aktualizácie systému",
+      "commands": [
+        {
+          "command": "update-initramfs -u",
+          "description": "Použiť zmeny initramfs (VFIO)"
+        },
+        {
+          "command": "update-initramfs -u -k all",
+          "description": "Aktualizovať initramfs pre všetky jadrá"
+        },
+        {
+          "command": "cat /proc/cmdline",
+          "description": "Zobraziť aktuálne parametre zavádzania jadra"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie VM",
+      "commands": [
+        {
+          "command": "qm config <vmid> | grep hostpci",
+          "description": "Zobraziť nastavenie PCI passthrough pre VM"
+        },
+        {
+          "command": "qm set <vmid> -hostpci0 <PCI_ID>,pcie=1,x-vga=1",
+          "description": "Pridať GPU passthrough do VM"
+        },
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Zobraziť konfiguračný súbor VM"
+        },
+        {
+          "command": "qm set <vmid> -machine q35",
+          "description": "Nastaviť VM pre použitie čipset Q35 (odporúčané pre priechod)"
+        },
+        {
+          "command": "qm set <vmid> -bios ovmf",
+          "description": "Nastaviť VM na UEFI/OVMF, odporúčané pri podpore UEFI v ROM GPU"
+        }
+      ]
+    }
+  ],
+  "afterChangesTip": {
+    "title": "Po zmene GRUB alebo modprobe konfigurácie",
+    "bodyRich": "Na hostiteľoch s GRUB použite na zmeny štartovacích parametrov <code>update-grub</code>. Zmeny modulov zapracujte cez <code>update-initramfs -u -k all</code> a reštartujte. Iné zavádzače vyžadujú vlastný postup. Overte <code>cat /proc/cmdline</code> (parametre jadra), <code>dmesg | grep -i iommu</code> (inicializácia IOMMU) a <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (prítomné skupiny)."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — Interaktívny tok ProxMenux."
+      },
+      {
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "label": "Pridať GPU do LXC",
+        "tail": " — zdieľať prístup k zariadeniam GPU hostiteľa s kontajnerom LXC."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

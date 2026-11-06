@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "Versionsinformationen anzeigen | ProxMenux-Dokumentation",
+    "description": "ProxMenux-Diagnose mit reinem Lesezugriff: Version, Veröffentlichungskanal, in config.json erfasste Komponenten, Dateipfade, Übersetzungskataloge und aktuelle Sprache.",
+    "ogTitle": "Versionsinformationen anzeigen | ProxMenux-Dokumentation",
+    "ogDescription": "Diagnoseausgabe zu ProxMenux-Version, Veröffentlichungskanal, Komponenten, Dateien und Sprache."
+  },
+  "header": {
+    "title": "Versionsinformationen anzeigen",
+    "description": "Diagnose mit reinem Lesezugriff. Liest version.txt, config.json und bekannte Dateipfade und zeigt ein scrollbares Textfeld mit Version, Veröffentlichungskanal, installierten Komponenten, vorhandenen Dateien, Übersetzungsdateien und aktueller Sprache an.",
+    "section": "Einstellungen"
+  },
+  "intro": {
+    "title": "Was das ist",
+    "body": "Eine Selbstdiagnose. Nützlich, wenn Sie ein Problem melden (Dialoginhalte in den Fehlerbericht einfügen) oder eine ordnungsgemäß abgeschlossene Installation bestätigen. Ändert nichts."
+  },
+  "reports": {
+    "heading": "Was sie berichtet",
+    "headerSection": "Abschnitt",
+    "headerSource": "Quelle",
+    "headerContent": "Inhalt",
+    "rows": [
+      {
+        "section": "Aktuelle Fassung",
+        "source": "version.txt",
+        "contentRich": "Einzeilige Versionsnummer; <code>Unknown</code> bei fehlender Datei"
+      },
+      {
+        "section": "Veröffentlichungskanal",
+        "source": "Beta-Programm-Status in config.json",
+        "content": "Stable (main) oder Beta (develop); Beta-Version, falls vorhanden"
+      },
+      {
+        "section": "Installierte Komponenten",
+        "source": "config.json",
+        "content": "Status je Komponente (✓ installiert / erstellt / aktualisiert, ✗ fehlt)"
+      },
+      {
+        "section": "ProxMenux Dateien",
+        "source": "Filesystemprüfungen",
+        "contentRich": "<code>menu</code>, <code>utils.sh</code>, <code>config.json</code>, <code>version.txt</code> Präsenz + Pfade"
+      },
+      {
+        "section": "Übersetzungsdateien",
+        "source": "/usr/local/share/proxmenux/lang/",
+        "content": "Vorhandensein des Verzeichnisses lang/, das jeder Installation beiliegt"
+      },
+      {
+        "section": "Aktuelle Sprache",
+        "source": "config.json",
+        "contentRich": "Sprachcode aus <code>.language</code>; standardmäßig <code>en</code>, wenn nicht gesetzt"
+      }
+    ]
+  },
+  "sampleHeading": "Beispielausgabe",
+  "manualHeading": "Manuelle Äquivalente",
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "unknownTitle": "Version zeigt \"Unknown\"",
+    "unknownBody": "<code>/usr/local/share/proxmenux/version.txt</code> fehlt oder ist nicht lesbar. Am häufigsten verursacht durch eine teilweise Installation. Neuinstallation aus der offiziellen ProxMenux-Quelle.",
+    "noConfigTitle": "Keine Installationsinformationen verfügbar",
+    "noConfigBody": "<code>config.json</code> fehlt. Ohne diese Datei kann das Skript keine Komponenten auflisten. Installieren Sie neu, um sie wiederherzustellen.",
+    "wrongStatusTitle": "Eine Komponente zeigt ✗, obwohl ich sie sicher installiert habe",
+    "wrongStatusBody": "Das bedeutet, dass <code>config.json</code> diese Komponente nicht als installiert erfasst. Möglicherweise registriert sich das Skript noch nicht selbst, oder eine manuelle Installation hat ProxMenux umgangen. Der Dialog gibt den Inhalt von <code>config.json</code> wieder, nicht den tatsächlichen Zustand auf dem Datenträger."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/settings/uninstall-proxmenux",
+        "label": "Deinstallieren Sie ProxMenux",
+        "tail": " — entfernt alle diese Dateien."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Übersicht der Einstellungen",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "title": "Команды Proxmox qm и pct — управление виртуальными машинами и контейнерами LXC | ProxMenux",
+    "description": "Справочник команд qm и pct в Proxmox VE для виртуальных машин и контейнеров LXC: list, config, start, stop, shutdown, reboot, destroy, clone, migrate, snapshot, resize, а также pct exec / enter / push / pull для контейнеров.",
+    "ogTitle": "Команды Proxmox qm и pct — управление виртуальными машинами и контейнерами LXC",
+    "ogDescription": "Справочник команд qm и pct в Proxmox VE — управление виртуальными машинами и контейнерами LXC из командной строки: start, stop, configure, snapshot, migrate, clone, destroy.",
+    "twitterTitle": "Команды Proxmox qm / pct | ProxMenux",
+    "twitterDescription": "Подборка команд qm / pct для управления виртуальными машинами и контейнерами LXC в Proxmox VE."
+  },
+  "header": {
+    "title": "Управление ВМ и контейнерами",
+    "description": "Справочник основных команд qm (виртуальные машины) и pct (контейнеры LXC). Просмотр списков, управление жизненным циклом (start / stop / shutdown / destroy), просмотр конфигурации и специфичные для контейнеров операции, такие как exec, enter, push и pull.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Сначала найдите VMID или CTID",
+    "body": "Почти каждой команде нужен числовой идентификатор. Используйте <code>qm list</code> для виртуальных машин и <code>pct list</code> для контейнеров. Перед выполнением замените <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> в примерах на фактический идентификатор."
+  },
+  "commandGroups": [
+    {
+      "title": "Списки и информация",
+      "commands": [
+        {
+          "command": "qm list",
+          "description": "Вывести список всех виртуальных машин"
+        },
+        {
+          "command": "pct list",
+          "description": "Вывести список всех контейнеров LXC"
+        },
+        {
+          "command": "qm config <vmid>",
+          "description": "Показать конфигурацию виртуальной машины (после разбора командой qm)"
+        },
+        {
+          "command": "pct config <ctid>",
+          "description": "Показать конфигурацию контейнера (после разбора командой pct)"
+        }
+      ]
+    },
+    {
+      "title": "Файлы конфигурации (исходный вид)",
+      "commands": [
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Просмотреть файл конфигурации виртуальной машины в исходном виде"
+        },
+        {
+          "command": "cat /etc/pve/lxc/<ctid>.conf",
+          "description": "Просмотреть файл конфигурации контейнера в исходном виде"
+        },
+        {
+          "command": "nano /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Редактировать файл конфигурации виртуальной машины в исходном виде (nano)"
+        },
+        {
+          "command": "nano /etc/pve/lxc/<ctid>.conf",
+          "description": "Редактировать файл конфигурации контейнера в исходном виде (nano)"
+        },
+        {
+          "command": "vi /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Редактировать файл конфигурации ВМ напрямую (vi)"
+        },
+        {
+          "command": "vi /etc/pve/lxc/<ctid>.conf",
+          "description": "Редактировать файл конфигурации контейнера напрямую (vi)"
+        }
+      ]
+    },
+    {
+      "title": "Управление виртуальными машинами",
+      "commands": [
+        {
+          "command": "qm start <vmid>",
+          "description": "Запустить виртуальную машину. Укажите правильный <vmid>"
+        },
+        {
+          "command": "qm stop <vmid>",
+          "description": "Принудительно остановить виртуальную машину. Укажите правильный <vmid>"
+        },
+        {
+          "command": "qm shutdown <vmid>",
+          "description": "Корректно завершить работу виртуальной машины"
+        },
+        {
+          "command": "qm reset <vmid>",
+          "description": "Выполнить аппаратную перезагрузку виртуальной машины"
+        },
+        {
+          "command": "qm suspend <vmid>",
+          "description": "Приостановить виртуальную машину"
+        },
+        {
+          "command": "qm resume <vmid>",
+          "description": "Возобновить работу приостановленной виртуальной машины"
+        },
+        {
+          "command": "qm destroy <vmid>",
+          "description": "Удалить ВМ (необратимо). Укажите правильный <vmid>"
+        }
+      ]
+    },
+    {
+      "title": "Управление контейнерами",
+      "commands": [
+        {
+          "command": "pct start <ctid>",
+          "description": "Запустить контейнер. Укажите правильный <ctid>"
+        },
+        {
+          "command": "pct stop <ctid>",
+          "description": "Принудительно остановить контейнер. Укажите правильный <ctid>"
+        },
+        {
+          "command": "pct shutdown <ctid>",
+          "description": "Корректно завершить работу контейнера"
+        },
+        {
+          "command": "pct reboot <ctid>",
+          "description": "Перезапустить контейнер"
+        },
+        {
+          "command": "pct destroy <ctid>",
+          "description": "Удалить контейнер (необратимо). Укажите правильный <ctid>"
+        }
+      ]
+    },
+    {
+      "title": "Операции с контейнерами",
+      "commands": [
+        {
+          "command": "pct exec <ctid> -- getent passwd | column -t -s :",
+          "description": "Показать пользователей контейнера в виде таблицы"
+        },
+        {
+          "command": "pct exec <ctid> -- ps aux --sort=-%mem | head",
+          "description": "Процессы контейнера с наибольшим потреблением памяти"
+        },
+        {
+          "command": "pct enter <ctid>",
+          "description": "Войти в командную оболочку контейнера"
+        },
+        {
+          "command": "pct push <ctid> <source> <dest>",
+          "description": "Скопировать файл с хоста в контейнер"
+        },
+        {
+          "command": "pct pull <ctid> <source> <dest>",
+          "description": "Скопировать файл из контейнера на хост"
+        }
+      ]
+    }
+  ],
+  "destroyWarn": {
+    "title": "Удаление необратимо",
+    "bodyRich": "<code>qm destroy</code> и <code>pct destroy</code> удаляют конфигурацию гостевой системы и относящиеся к ней управляемые дисковые тома. Не считайте, что внешние данные или данные, подключённые через bind-монтирование, также удаляются. По умолчанию CLI не запрашивает подтверждение. Перед выполнением команды создайте резервную копию всех данных, которые могут вам понадобиться; см. <backupLink>Резервное копирование и восстановление</backupLink>."
+  },
+  "qmConfigTip": {
+    "title": "qm config и прямое редактирование файла .conf",
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> и <code>pct config &lt;ctid&gt;</code> отображают конфигурацию с помощью синтаксических анализаторов Proxmox. Для обычных изменений предпочтительнее использовать <code>qm set</code> или соответствующую команду pct для задания параметров. Прямое редактирование <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> или <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> обходит проверки и блокировки, предусмотренные командами управления; при этом файл должен оставаться синтаксически корректным. Перед ручным исправлением остановите гостевую систему и сохраните копию файла. <code>pmxcfs</code> синхронизирует конфигурацию между узлами кластера, но не содержимое дисков гостевых систем."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Резервное копирование и восстановление",
+        "tail": " — vzdump и qmrestore / pct restore."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Хранилища и диски",
+        "tail": " — qm importdisk и управление дисками."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

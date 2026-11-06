@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Команды проброса GPU в Proxmox — lspci, VFIO, IOMMU, qm set hostpci | ProxMenux",
+    "description": "Справочник по пробросу GPU в Proxmox VE: идентификация устройств с помощью lspci, модули VFIO, группы IOMMU (intel_iommu / amd_iommu), обновление GRUB и initramfs, qm set hostpci0, настройка проброса NVIDIA / AMD / Intel.",
+    "ogTitle": "Команды проброса GPU в Proxmox — lspci, VFIO, IOMMU, qm set hostpci",
+    "ogDescription": "Справочник по проверке и настройке проброса GPU в Proxmox VE — устройства PCI, модули VFIO, группы IOMMU, параметры загрузки ядра, qm set hostpci.",
+    "twitterTitle": "Команды проброса GPU в Proxmox | ProxMenux",
+    "twitterDescription": "Проверяйте устройства PCI, настраивайте VFIO и IOMMU и подключайте GPU к виртуальным машинам в Proxmox VE."
+  },
+  "header": {
+    "title": "Проброс GPU",
+    "description": "Справочник по проверке и настройке проброса GPU / TPU в Proxmox: идентификация устройств (lspci), настройка модулей VFIO, проверка IOMMU, обновление initramfs / GRUB и настройка проброса для отдельных виртуальных машин (qm set hostpci, machine q35, bios ovmf).",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "IOMMU должен быть включён в BIOS / UEFI",
+    "body": "Сначала включите IOMMU в настройках прошивки: найдите <em>VT-d</em>, <em>AMD-Vi</em> или <em>IOMMU</em> в BIOS/UEFI. В системах AMD IOMMU включён по умолчанию на стороне Linux, как и в системах Intel с ядрами Proxmox версии 6.8 и новее. Для более старых ядер в системах Intel может потребоваться <code>intel_iommu=on</code>. Необязательный параметр <code>iommu=pt</code> управляет режимом сквозного доступа IOMMU; это не повод без разбора отключать кадровый буфер хоста."
+  },
+  "commandGroups": [
+    {
+      "title": "Идентификация устройств",
+      "commands": [
+        {
+          "command": "lspci -nn | grep -i nvidia",
+          "description": "Вывести список устройств PCI NVIDIA"
+        },
+        {
+          "command": "lspci -nn | grep -i vga",
+          "description": "Вывести список всех VGA-совместимых устройств"
+        },
+        {
+          "command": "lspci -nn | grep -i amd",
+          "description": "Вывести список устройств PCI AMD"
+        },
+        {
+          "command": "lspci -nnk | grep -A3 VGA",
+          "description": "Вывести список устройств VGA с драйверами ядра"
+        },
+        {
+          "command": "lspci -v -s <PCI_ID>",
+          "description": "Показать подробную информацию об указанном устройстве PCI"
+        }
+      ]
+    },
+    {
+      "title": "Настройка VFIO",
+      "commands": [
+        {
+          "command": "dmesg | grep -i vfio",
+          "description": "Проверить сообщения модулей VFIO"
+        },
+        {
+          "command": "cat /etc/modprobe.d/vfio.conf",
+          "description": "Просмотреть настройки проброса VFIO"
+        },
+        {
+          "command": "ls -la /etc/modprobe.d/",
+          "description": "Вывести список всех файлов конфигурации modprobe"
+        },
+        {
+          "command": "cat /etc/modules",
+          "description": "Показать модули, загружаемые при запуске системы"
+        },
+        {
+          "command": "lsmod | grep vfio",
+          "description": "Проверить, загружены ли модули VFIO"
+        }
+      ]
+    },
+    {
+      "title": "Настройка IOMMU",
+      "commands": [
+        {
+          "command": "cat /etc/default/grub",
+          "description": "Просмотреть параметры GRUB для IOMMU"
+        },
+        {
+          "command": "update-grub",
+          "description": "Применить изменения GRUB"
+        },
+        {
+          "command": "dmesg | grep -i iommu",
+          "description": "Проверить сообщения IOMMU в журнале ядра"
+        },
+        {
+          "command": "dmesg | grep -e DMAR -e IOMMU",
+          "description": "Проверить сообщения DMAR и IOMMU"
+        },
+        {
+          "command": "find /sys/kernel/iommu_groups/ -type l | sort -V",
+          "description": "Показать список групп IOMMU"
+        }
+      ]
+    },
+    {
+      "title": "Обновления системы",
+      "commands": [
+        {
+          "command": "update-initramfs -u",
+          "description": "Применить изменения initramfs (VFIO)"
+        },
+        {
+          "command": "update-initramfs -u -k all",
+          "description": "Обновить initramfs для всех ядер"
+        },
+        {
+          "command": "cat /proc/cmdline",
+          "description": "Показать текущие параметры загрузки ядра"
+        }
+      ]
+    },
+    {
+      "title": "Настройка виртуальных машин",
+      "commands": [
+        {
+          "command": "qm config <vmid> | grep hostpci",
+          "description": "Показать настройки проброса PCI для виртуальной машины"
+        },
+        {
+          "command": "qm set <vmid> -hostpci0 <PCI_ID>,pcie=1,x-vga=1",
+          "description": "Добавить проброс GPU в виртуальную машину"
+        },
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Просмотреть файл конфигурации виртуальной машины"
+        },
+        {
+          "command": "qm set <vmid> -machine q35",
+          "description": "Настроить виртуальную машину на использование чипсета Q35 (рекомендуется для проброса устройств)"
+        },
+        {
+          "command": "qm set <vmid> -bios ovmf",
+          "description": "Настроить виртуальную машину на использование UEFI/OVMF (рекомендуется, если ROM видеокарты поддерживает UEFI)"
+        }
+      ]
+    }
+  ],
+  "afterChangesTip": {
+    "title": "После изменения настроек GRUB или modprobe",
+    "bodyRich": "На хостах с GRUB примените изменения параметров загрузки с помощью <code>update-grub</code>. Примените изменения настроек модулей с помощью <code>update-initramfs -u -k all</code>, затем перезагрузите систему. Для других загрузчиков требуется собственная процедура настройки. Проверьте результат с помощью <code>cat /proc/cmdline</code> (параметры ядра), <code>dmesg | grep -i iommu</code> (инициализация IOMMU) и <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (наличие групп)."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Добавить GPU в ВМ (прямой проброс)",
+        "tail": " — интерактивная процедура ProxMenux."
+      },
+      {
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "label": "Добавить GPU в LXC",
+        "tail": " — предоставление контейнеру LXC совместного доступа к GPU хоста."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

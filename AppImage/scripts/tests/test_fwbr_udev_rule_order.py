@@ -26,18 +26,18 @@ class FwbrUdevRuleOrderTests(unittest.TestCase):
     def test_auto_post_install_uses_late_rule_and_removes_legacy_rule(self):
         source = network_optimization_block(AUTO_POST_INSTALL)
         self.assertIn('local FUNC_VERSION="1.2"', source)
-        self.assertIn(f"rm -f /etc/udev/rules.d/{OLD_RULE}", source)
-        self.assertIn(f"cat > /etc/udev/rules.d/{NEW_RULE}", source)
+        self.assertIn(f"pmx_remove_file /etc/udev/rules.d/{OLD_RULE}", source)
+        self.assertIn(f"pmx_write_file /etc/udev/rules.d/{NEW_RULE}", source)
         self.assertIn(f"chmod 0644 /etc/udev/rules.d/{NEW_RULE}", source)
-        self.assertNotIn(f"cat > /etc/udev/rules.d/{OLD_RULE}", source)
+        self.assertNotIn(f"pmx_write_file /etc/udev/rules.d/{OLD_RULE}", source)
 
     def test_customizable_post_install_uses_late_rule_and_removes_legacy_rule(self):
         source = network_optimization_block(CUSTOM_POST_INSTALL)
         self.assertIn('local FUNC_VERSION="1.2"', source)
-        self.assertIn(f"rm -f /etc/udev/rules.d/{OLD_RULE}", source)
-        self.assertIn(f"cat > /etc/udev/rules.d/{NEW_RULE}", source)
+        self.assertIn(f"pmx_remove_file /etc/udev/rules.d/{OLD_RULE}", source)
+        self.assertIn(f"pmx_write_file /etc/udev/rules.d/{NEW_RULE}", source)
         self.assertIn(f"chmod 0644 /etc/udev/rules.d/{NEW_RULE}", source)
-        self.assertNotIn(f"cat > /etc/udev/rules.d/{OLD_RULE}", source)
+        self.assertNotIn(f"pmx_write_file /etc/udev/rules.d/{OLD_RULE}", source)
 
     def test_uninstall_removes_new_and_legacy_rule_names(self):
         source = UNINSTALL_TOOLS.read_text()

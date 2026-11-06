@@ -8,6 +8,8 @@ from flask import request, jsonify, g
 from functools import wraps
 from auth_manager import load_auth_config, verify_token, verify_token_full
 
+_READ_METHODS = ('GET', 'HEAD', 'OPTIONS')
+
 
 def require_auth(f):
     """
@@ -48,6 +50,7 @@ def require_auth(f):
         auth_header = request.headers.get('Authorization')
         
         if not auth_header:
+            verify_token_full(None)  # Guarded, credential-free rejection diagnostic.
             return jsonify({
                 "error": "Authentication required",
                 "message": "No authorization header provided"
@@ -56,6 +59,7 @@ def require_auth(f):
         # Extract token from "Bearer <token>" format
         parts = auth_header.split()
         if len(parts) != 2 or parts[0].lower() != 'bearer':
+            verify_token_full(None)
             return jsonify({
                 "error": "Invalid authorization header",
                 "message": "Authorization header must be in format: Bearer <token>"
@@ -64,12 +68,18 @@ def require_auth(f):
         token = parts[1]
         
         # Verify token
-        username = verify_token(token)
+        username, scope = verify_token_full(token)
         if not username:
             return jsonify({
                 "error": "Invalid or expired token",
                 "message": "Please log in again"
             }), 401
+
+        # read_only tokens may only read; any method that can change
+        # state needs full_admin.
+        if request.method not in _READ_METHODS and scope != 'full_admin':
+            return jsonify({"error": "Insufficient scope",
+                            "message": f"This action requires a full_admin token (your token: {scope})"}), 403
         
         # Token is valid, allow access
         return f(*args, **kwargs)

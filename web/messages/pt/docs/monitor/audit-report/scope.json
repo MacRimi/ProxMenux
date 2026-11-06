@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Âmbito e garantias | Auditoria e relatórios",
+    "description": "Origem dos dados de Auditoria e relatórios, limites do âmbito, garantias da conceção e localização dos dados."
+  },
+  "header": {
+    "title": "Âmbito e garantias",
+    "description": "De onde vêm os dados de uma avaliação, o que fica fora do seu âmbito e onde Auditoria e relatórios guarda os dados.",
+    "section": "Auditoria e relatórios"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "O que observa",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "A configuração e o estado do nó local.",
+              "A configuração declarada das VMs e LXCs.",
+              "O estado do armazenamento tal como é conhecido pelo Proxmox VE.",
+              "O histórico disponível de backups e verificações.",
+              "Dados SMART e os eventos que o Monitor recolheu.",
+              "O estado dos serviços, cluster, HA e fontes locais."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "O que está fora da sua visão",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "O interior dos convidados, além do que eles declaram para Proxmox VE.",
+              "Equipamento de rede fora do hospedeiro.",
+              "Dependências remotas que o nó não consegue observar.",
+              "Estado físico que o hardware não expõe.",
+              "O registo de alterações não inclui ações manuais ou de outro software."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Provas em falta não são provas de ausência",
+            "body": "Uma fonte que não pode ser lida dá um resultado não verificado ou incompleto, nunca conforme. O relatório enumera as fontes que não estavam disponíveis."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garantias do projecto",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identificadores estáveis para as verificações.",
+              "Histórico de execuções e conclusões.",
+              "Uma política validada, salva atomicamente.",
+              "Riscos aceitos com uma razão, visíveis.",
+              "Atribuição de alterações ao script e função.",
+              "Captura do estado anterior e posterior, quando disponível.",
+              "Um resultado explícito quando algo não pode ser medido ou capturado."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Onde são guardados os dados",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Dados",
+              "Localização"
+            ],
+            "rows": [
+              [
+                "Política",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Avaliações",
+                "A base de dados de auditoria do Monitor"
+              ],
+              [
+                "Objetos capturados",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "Entradas pendentes",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Registo consolidado",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Uma ferramenta para rever, não uma certificação",
+            "body": "Auditoria e relatórios revê, compara e documenta o nó. Os resultados são interpretados de acordo com a finalidade do sistema, a política declarada e as fontes disponíveis."
+          }
+        }
+      ]
+    }
+  ]
+}

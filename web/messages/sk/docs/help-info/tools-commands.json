@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "title": "Nástroje CLI Linuxu pre Proxmox — htop, iftop, journalctl, rsync, tmux | ProxMenux",
+    "description": "Nástroje CLI Linuxu na každodennú správu Proxmox VE: monitorovanie (htop, atop, glances, iotop), sieť (iftop, nmap, mtr, ss), súbory a text (find, grep, journalctl), výkon (iostat, perf, strace), bezpečnosť (fail2ban, lynis, lsof) a vzdialená správa (ssh, rsync, tmux).",
+    "ogTitle": "Nástroje CLI Linuxu pre Proxmox — htop, iftop, journalctl, rsync, tmux",
+    "ogDescription": "Každodenné nástroje CLI na správu Proxmox VE podľa účelu: monitorovanie, sieť, súbory a text, výkon, bezpečnosť a vzdialená správa.",
+    "twitterTitle": "Nástroje CLI Linuxu pre Proxmox | ProxMenux",
+    "twitterDescription": "Nástroje CLI na každodennú správu Proxmox VE, zoskupené podľa účelu."
+  },
+  "header": {
+    "title": "Systémové CLI nástroje",
+    "description": "Nástroje CLI na každodennú správu hostiteľa Proxmox podľa účelu: monitorovanie, sieť, súbory a text, analýza výkonu, bezpečnosť, vzdialená správa a konfigurácia systému.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Väčšinu nainštaluje skript po inštalácii",
+    "body": "Ak ste spustili skript ProxMenuxu po inštalácii s predvoleným výberom, väčšina nástrojov je už nainštalovaná. Chýbajúce nástroje ponúka <utilsLink>inštalátor systémových nástrojov</utilsLink> v skupinách ako základné, vývoj, sieť a analýza."
+  },
+  "commandGroups": [
+    {
+      "title": "Monitorovanie systému",
+      "commands": [
+        {
+          "command": "htop",
+          "description": "Interaktívny prehliadač procesov s využitím CPU a pamäte"
+        },
+        {
+          "command": "top",
+          "description": "Zobraziť procesy Linuxu v reálnom čase"
+        },
+        {
+          "command": "atop",
+          "description": "Rozšírený systémový a procesný monitor"
+        },
+        {
+          "command": "glances",
+          "description": "Nástroj na monitorovanie systému s webovým rozhraním"
+        },
+        {
+          "command": "nmon",
+          "description": "Nástroj na monitorovanie výkonnosti"
+        },
+        {
+          "command": "iotop",
+          "description": "Monitorovať používanie disku I/O procesmi"
+        },
+        {
+          "command": "vmstat 1",
+          "description": "Každú sekundu hlásite štatistiky virtuálnej pamäte"
+        }
+      ]
+    },
+    {
+      "title": "Sieťové nástroje",
+      "commands": [
+        {
+          "command": "iftop",
+          "description": "Zobraziť využitie šírky pásma na rozhraní"
+        },
+        {
+          "command": "nmap <host>",
+          "description": "Prieskum siete a bezpečnostné skenovanie"
+        },
+        {
+          "command": "tcpdump -i <interface>",
+          "description": "Zachytiť sieťovú prevádzku"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Zobrazenie sieťových pripojení"
+        },
+        {
+          "command": "ss -tuln",
+          "description": "Ďalší nástroj na skúmanie sockets"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Sieťový diagnostický nástroj kombinujúci ping a traceroute"
+        },
+        {
+          "command": "iperf3 -s",
+          "description": "Spustiť iperf server pre skúšku šírky pásma"
+        }
+      ]
+    },
+    {
+      "title": "Súborové a textové nástroje",
+      "commands": [
+        {
+          "command": "find / -name <filename>",
+          "description": "Hľadať súbory podľa názvu"
+        },
+        {
+          "command": "grep -r 'pattern' /path",
+          "description": "Hľadať vzor v súboroch"
+        },
+        {
+          "command": "sed -i 's/old/new/g' file",
+          "description": "Nahradiť text v súboroch"
+        },
+        {
+          "command": "awk '{print $1}' file",
+          "description": "Nástroj na spracovanie textu"
+        },
+        {
+          "command": "tail -f /var/log/syslog",
+          "description": "Sledovať log súbor v reálnom čase"
+        },
+        {
+          "command": "less /var/log/messages",
+          "description": "Zobraziť súbor s pagináciou"
+        },
+        {
+          "command": "journalctl -f",
+          "description": "Sledovať protokoly denníka systemd"
+        }
+      ]
+    },
+    {
+      "title": "Analýza výkonnosti",
+      "commands": [
+        {
+          "command": "iostat -x 1",
+          "description": "Zobraziť štatistiky CPU a vstupov/výstupov"
+        },
+        {
+          "command": "mpstat -P ALL 1",
+          "description": "Zobraziť využitie CPU"
+        },
+        {
+          "command": "perf top",
+          "description": "Systémový profilovací nástroj"
+        },
+        {
+          "command": "strace <command>",
+          "description": "Sledovať systémové volania a signály"
+        },
+        {
+          "command": "lsof",
+          "description": "Zoznam otvorených súborov"
+        },
+        {
+          "command": "pstree",
+          "description": "Zobraziť strom procesov"
+        },
+        {
+          "command": "slabtop",
+          "description": "Zobraziť informácie o vyrovnávacej pamäti slab jadra"
+        }
+      ]
+    },
+    {
+      "title": "Bezpečnostné nástroje",
+      "commands": [
+        {
+          "command": "fail2ban-client status",
+          "description": "Zobraziť stav fail2ban"
+        },
+        {
+          "command": "chage -l <username>",
+          "description": "Zobraziť informácie o uplynutí platnosti hesla"
+        },
+        {
+          "command": "lastlog",
+          "description": "Zobraziť posledné prihlásenie všetkých užívateľov"
+        },
+        {
+          "command": "last",
+          "description": "Zobraziť zoznam posledných prihlásených užívateľov"
+        },
+        {
+          "command": "w",
+          "description": "Zobraziť kto je prihlásený a čo robí"
+        },
+        {
+          "command": "lynis audit system",
+          "description": "Nástroj bezpečnostného auditu"
+        },
+        {
+          "command": "openssl s_client -connect host:port",
+          "description": "Test SSL/TLS pripojenia"
+        }
+      ]
+    },
+    {
+      "title": "Vzdialená správa",
+      "commands": [
+        {
+          "command": "ssh <user>@<host>",
+          "description": "Bezpečné spojenie shellu"
+        },
+        {
+          "command": "scp <file> <user>@<host>:<path>",
+          "description": "Bezpečne kopírovať súbory"
+        },
+        {
+          "command": "rsync -avz <src> <dest>",
+          "description": "Synchronizovať súbory/priečinky"
+        },
+        {
+          "command": "screen",
+          "description": "Terminálny multiplexer"
+        },
+        {
+          "command": "tmux",
+          "description": "Alternatíva Terminálneho multiplexeru"
+        },
+        {
+          "command": "ssh-keygen -t rsa -b 4096",
+          "description": "Generovať pár kľúčov SSH"
+        },
+        {
+          "command": "ssh-copy-id <user>@<host>",
+          "description": "Kopírovať kľúč SSH na server"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie systému",
+      "commands": [
+        {
+          "command": "systemctl status <service>",
+          "description": "Skontrolovať stav služby"
+        },
+        {
+          "command": "journalctl -u <service>",
+          "description": "Zobrazenie servisných záznamov"
+        },
+        {
+          "command": "timedatectl",
+          "description": "Spravovať systémový čas a dátum"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Spravovať názov hostiteľa"
+        },
+        {
+          "command": "localectl",
+          "description": "Spravovať miestne nastavenia a klávesnicu systému"
+        },
+        {
+          "command": "update-alternatives --config <name>",
+          "description": "Nastavenie systémových alternatív"
+        },
+        {
+          "command": "dpkg-reconfigure <package>",
+          "description": "Prekonfigurovať nainštalovaný balík"
+        }
+      ]
+    }
+  ],
+  "tmuxTip": {
+    "title": "Pri dlho bežiacich príkazoch používajte tmux / screen",
+    "bodyRich": "Dlho bežiace úlohy, napríklad zálohu, aktualizáciu alebo veľký prenos rsync, spúšťajte v <code>tmux</code> alebo <code>screen</code>, aby odpojenie SSH neukončilo terminálovú reláciu. K relácii tmux sa pripojíte znova na rovnakom hostiteľovi ako rovnaký používateľ príkazom <code>tmux attach</code>. Relácie screen majú vlastný príkaz na opätovné pripojenie."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Inštalátor systémových nástrojov",
+        "tail": " — nainštalovať chýbajúce nástroje."
+      },
+      {
+        "href": "/docs/help-info/system-commands",
+        "label": "Užitočné systémové príkazy",
+        "tail": " — príkazy na kontrolu systému špecifické pre Proxmox."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

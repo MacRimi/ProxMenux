@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "title": "Инструменты командной строки Linux для Proxmox — htop, iftop, journalctl, rsync, tmux | ProxMenux",
+    "description": "Повседневные инструменты командной строки Linux для администрирования Proxmox VE: мониторинг (htop, atop, glances, iotop), сеть (iftop, nmap, mtr, ss), работа с файлами и текстом (find, grep, journalctl), анализ производительности (iostat, perf, strace), безопасность (fail2ban, lynis, lsof) и удалённое администрирование (ssh, rsync, tmux).",
+    "ogTitle": "Инструменты командной строки Linux для Proxmox — htop, iftop, journalctl, rsync, tmux",
+    "ogDescription": "Повседневные инструменты командной строки для администрирования Proxmox VE, сгруппированные по назначению: мониторинг, сеть, работа с файлами и текстом, анализ производительности, безопасность и удалённое администрирование.",
+    "twitterTitle": "Инструменты командной строки Linux для Proxmox | ProxMenux",
+    "twitterDescription": "Повседневные инструменты командной строки для администрирования Proxmox VE, сгруппированные по назначению."
+  },
+  "header": {
+    "title": "Системные инструменты командной строки",
+    "description": "Повседневные инструменты командной строки для администрирования хоста Proxmox, сгруппированные по назначению: мониторинг, сеть, работа с файлами и текстом, анализ производительности, безопасность, удалённое администрирование и настройка системы.",
+    "section": "Справка и информация"
+  },
+  "intro": {
+    "title": "Большинство инструментов устанавливается скриптом Post-Install",
+    "body": "Если вы запускали скрипт Post-Install от ProxMenux с параметрами по умолчанию, большинство этих инструментов уже установлено. Недостающие инструменты доступны в <utilsLink>установщике системных утилит</utilsLink> от ProxMenux в виде предопределённых групп (базовые инструменты, разработка, сеть, анализ и т. д.)."
+  },
+  "commandGroups": [
+    {
+      "title": "Мониторинг системы",
+      "commands": [
+        {
+          "command": "htop",
+          "description": "Интерактивный просмотр процессов с отображением загрузки процессора и использования памяти"
+        },
+        {
+          "command": "top",
+          "description": "Отображение процессов Linux в реальном времени"
+        },
+        {
+          "command": "atop",
+          "description": "Расширенный монитор системы и процессов"
+        },
+        {
+          "command": "glances",
+          "description": "Инструмент мониторинга системы с веб-интерфейсом"
+        },
+        {
+          "command": "nmon",
+          "description": "Инструмент мониторинга производительности"
+        },
+        {
+          "command": "iotop",
+          "description": "Мониторинг дискового ввода-вывода по процессам"
+        },
+        {
+          "command": "vmstat 1",
+          "description": "Вывод статистики виртуальной памяти каждую секунду"
+        }
+      ]
+    },
+    {
+      "title": "Сетевые инструменты",
+      "commands": [
+        {
+          "command": "iftop",
+          "description": "Отображение использования пропускной способности сетевого интерфейса"
+        },
+        {
+          "command": "nmap <host>",
+          "description": "Исследование сети и сканирование безопасности"
+        },
+        {
+          "command": "tcpdump -i <interface>",
+          "description": "Захват сетевого трафика"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Отображение сетевых соединений"
+        },
+        {
+          "command": "ss -tuln",
+          "description": "Ещё одна утилита для исследования сокетов"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Инструмент диагностики сети, сочетающий ping и traceroute"
+        },
+        {
+          "command": "iperf3 -s",
+          "description": "Запуск сервера iperf для проверки пропускной способности"
+        }
+      ]
+    },
+    {
+      "title": "Инструменты для работы с файлами и текстом",
+      "commands": [
+        {
+          "command": "find / -name <filename>",
+          "description": "Поиск файлов по имени"
+        },
+        {
+          "command": "grep -r 'pattern' /path",
+          "description": "Поиск по шаблону в файлах"
+        },
+        {
+          "command": "sed -i 's/old/new/g' file",
+          "description": "Замена текста в файлах"
+        },
+        {
+          "command": "awk '{print $1}' file",
+          "description": "Инструмент обработки текста"
+        },
+        {
+          "command": "tail -f /var/log/syslog",
+          "description": "Отслеживание файла журнала в реальном времени"
+        },
+        {
+          "command": "less /var/log/messages",
+          "description": "Постраничный просмотр файла"
+        },
+        {
+          "command": "journalctl -f",
+          "description": "Отслеживание записей журнала systemd"
+        }
+      ]
+    },
+    {
+      "title": "Анализ производительности",
+      "commands": [
+        {
+          "command": "iostat -x 1",
+          "description": "Вывод статистики использования процессора и операций ввода-вывода"
+        },
+        {
+          "command": "mpstat -P ALL 1",
+          "description": "Показать загрузку процессора"
+        },
+        {
+          "command": "perf top",
+          "description": "Инструмент профилирования системы"
+        },
+        {
+          "command": "strace <command>",
+          "description": "Отслеживать системные вызовы и сигналы"
+        },
+        {
+          "command": "lsof",
+          "description": "Показать список открытых файлов"
+        },
+        {
+          "command": "pstree",
+          "description": "Показать дерево процессов"
+        },
+        {
+          "command": "slabtop",
+          "description": "Показать информацию о slab-кэше ядра"
+        }
+      ]
+    },
+    {
+      "title": "Инструменты безопасности",
+      "commands": [
+        {
+          "command": "fail2ban-client status",
+          "description": "Показать состояние fail2ban"
+        },
+        {
+          "command": "chage -l <username>",
+          "description": "Показать информацию о сроке действия пароля"
+        },
+        {
+          "command": "lastlog",
+          "description": "Показать время последнего входа каждого пользователя"
+        },
+        {
+          "command": "last",
+          "description": "Показать список последних входов пользователей"
+        },
+        {
+          "command": "w",
+          "description": "Показать, кто вошёл в систему и чем занимается"
+        },
+        {
+          "command": "lynis audit system",
+          "description": "Инструмент аудита безопасности"
+        },
+        {
+          "command": "openssl s_client -connect host:port",
+          "description": "Проверить соединения SSL/TLS"
+        }
+      ]
+    },
+    {
+      "title": "Удалённое администрирование",
+      "commands": [
+        {
+          "command": "ssh <user>@<host>",
+          "description": "Защищённое подключение к командной оболочке"
+        },
+        {
+          "command": "scp <file> <user>@<host>:<path>",
+          "description": "Копировать файлы по защищённому соединению"
+        },
+        {
+          "command": "rsync -avz <src> <dest>",
+          "description": "Синхронизировать файлы и папки"
+        },
+        {
+          "command": "screen",
+          "description": "Терминальный мультиплексор"
+        },
+        {
+          "command": "tmux",
+          "description": "Альтернативный терминальный мультиплексор"
+        },
+        {
+          "command": "ssh-keygen -t rsa -b 4096",
+          "description": "Создать пару ключей SSH"
+        },
+        {
+          "command": "ssh-copy-id <user>@<host>",
+          "description": "Скопировать ключ SSH на сервер"
+        }
+      ]
+    },
+    {
+      "title": "Настройка системы",
+      "commands": [
+        {
+          "command": "systemctl status <service>",
+          "description": "Проверить состояние службы"
+        },
+        {
+          "command": "journalctl -u <service>",
+          "description": "Просмотр журналов служб"
+        },
+        {
+          "command": "timedatectl",
+          "description": "Управление системным временем и датой"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Управление именем хоста системы"
+        },
+        {
+          "command": "localectl",
+          "description": "Управление системной локалью и раскладкой клавиатуры"
+        },
+        {
+          "command": "update-alternatives --config <name>",
+          "description": "Настройка системных альтернатив"
+        },
+        {
+          "command": "dpkg-reconfigure <package>",
+          "description": "Повторная настройка установленного пакета"
+        }
+      ]
+    }
+  ],
+  "tmuxTip": {
+    "title": "Используйте tmux / screen для длительных команд",
+    "bodyRich": "Длительные операции — создание резервной копии, продолжительное обновление или передача большого объёма данных через rsync — следует выполнять в <code>tmux</code> или <code>screen</code>, чтобы разрыв соединения SSH не завершил сеанс терминала. Чтобы вернуться к сеансу tmux, снова подключитесь к тому же хосту под тем же пользователем и выполните <code>tmux attach</code>. Для возврата к сеансам Screen используется отдельная команда."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Установка системных утилит",
+        "tail": " — установите недостающие инструменты из этого списка."
+      },
+      {
+        "href": "/docs/help-info/system-commands",
+        "label": "Полезные системные команды",
+        "tail": " — команды проверки состояния, специфичные для Proxmox."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Обзор раздела «Помощь и информация»",
+        "tail": "."
+      }
+    ]
+  }
+}

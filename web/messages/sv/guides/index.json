@@ -1,0 +1,118 @@
+{
+  "meta": {
+    "title": "Guider för Proxmox VE — Coral TPU, NVIDIA, Kodi i LXC, Samba och molnsäkerhetskopiering | ProxMenux",
+    "description": "Utförliga guider för Proxmox VE: Kodi i LXC med GPU-acceleration, NVIDIA-drivrutiner på PVE 9, USB-disk delad via Samba i en container samt vzdump-säkerhetskopior till Google Drive, Mega, Dropbox eller OneDrive. Dessutom utvalda gemenskapsresurser, ordlista och kommandoreferens.",
+    "ogTitle": "Guider för Proxmox VE — Coral TPU, NVIDIA, Kodi i LXC, Samba och molnsäkerhetskopiering",
+    "ogDescription": "Utförliga Proxmox VE-guider: GPU-genomkoppling, Kodi som mediecenter i LXC, USB-diskar delade via Samba, molnsäkerhetskopiering med rclone och utvalda gemenskapsresurser.",
+    "twitterTitle": "Guider för Proxmox VE | ProxMenux",
+    "twitterDescription": "Utförliga guider för Proxmox VE — GPU, Kodi i LXC, Samba, molnsäkerhetskopiering och annat.",
+    "ogImageAlt": "ProxMenux-guider — utförliga instruktioner för Proxmox VE"
+  },
+  "header": {
+    "title": "ProxMenux-guider",
+    "tagline": "Utförliga guider, snabbreferenser och utvalda gemenskapsresurser för att få ut mer av Proxmox VE."
+  },
+  "inDepth": {
+    "heading": "Fördjupade guider",
+    "intro": "Utförliga guider för specifika Proxmox-uppgifter. Varje guide visar de manuella stegen i ett automatiserat ProxMenux-flöde, så att du kan se vad som sker i varje steg.",
+    "items": [
+      {
+        "slug": "kodi-lxc",
+        "title": "Installera Kodi i LXC med GPU-acceleration och anslut till bildskärm eller TV",
+        "description": "Kör Kodi i en privilegierad LXC-container på Proxmox VE, ge den tillgång till värdsystemets iGPU och USB-inmatningsenheter och använd servern som mediecenter direkt anslutet till en TV."
+      },
+      {
+        "slug": "backup-cloud",
+        "title": "Säkerhetskopiera Proxmox till personlig molnlagring",
+        "description": "Montera personlig molnlagring, som Google Drive, Mega, Dropbox eller OneDrive, som en katalog på Proxmox VE-värdsystemet med rclone, registrera den som säkerhetskopieringslagring för vzdump och säkerhetskopiera virtuella maskiner och containrar direkt till molnet utan extra säkerhetskopieringsskript."
+      },
+      {
+        "slug": "lxc-samba",
+        "title": "Anslut en USB-disk eller ett USB-minne till LXC och dela via Samba i nätverket",
+        "description": "Ge en privilegierad LXC-container på Proxmox VE tillgång till en USB-disk eller ett USB-minne, installera Samba i containern och dela innehållet i nätverket."
+      },
+      {
+        "slug": "nvidia-manual",
+        "title": "Installera NVIDIA-grafikdrivrutiner på Proxmox VE 9 manuellt",
+        "description": "Installera och konfigurera NVIDIA-drivrutiner manuellt på ett Proxmox VE 9-värdsystem och ge en eller flera LXC-containrar tillgång till GPU:n. Guiden täcker drivrutiner, persistens­tjänsten, en valfri NVENC-patch och inställningar för varje container."
+      }
+    ]
+  },
+  "references": {
+    "heading": "ProxMenux referenser",
+    "intro": "Snabbreferensmaterial från själva ProxMenux-dokumentationen.",
+    "cards": {
+      "glossary": {
+        "title": "Ordlista",
+        "description": "Över 60 definitioner av tekniska termer i ProxMenux: Proxmox, virtualisering, lagring, nätverk och Linux. Snabb uppslagning med kategorietiketter och korslänkar."
+      },
+      "helpInfo": {
+        "title": "Hjälp och information — kommandokatalog",
+        "description": "Utvalda Linux- och Proxmox-kommandon efter ämne med kopiering till urklipp. Motsvarar referensen i ProxMenux-menyn."
+      },
+      "linuxResources": {
+        "title": "Linux-resurser",
+        "description": "Externa resurser för att lära sig Linux-kommandoraden, säkerhetsrutiner, övervakningsverktyg och ZFS — ett komplement till ProxMenux kommandokatalog."
+      },
+      "externalRepos": {
+        "title": "Externa repositorier",
+        "description": "Skriptrepositorier från tredje part som är integrerade i ProxMenux som alternativa menyval, till exempel community-scripts/ProxmoxVE."
+      }
+    }
+  },
+  "official": {
+    "heading": "Officiella Proxmox resurser",
+    "intro": "Dokumentation direkt från Proxmox Server Solutions — den officiella referensen för plattformen.",
+    "cards": {
+      "pveDocs": {
+        "title": "Proxmox VE Dokumentation",
+        "description": "Den officiella administratörsguiden med utförlig information om installation, nätverk, lagring, kluster, hög tillgänglighet och API."
+      },
+      "pbsDocs": {
+        "title": "Dokumentation för Proxmox Backup Server",
+        "description": "Dokumentation för PBS - stegvisa, deduplicerade, krypterade säkerhetskopior för Proxmox VE."
+      },
+      "videoTraining": {
+        "title": "Officiell videoutbildning",
+        "description": "Officiella videoguider och utbildningar från Proxmox."
+      },
+      "forum": {
+        "title": "Proxmox Forum",
+        "description": "Officiellt gemenskapsforum för frågor, felsökning och erfarenhetsutbyte. Projektets ansvariga följer diskussionerna."
+      }
+    }
+  },
+  "community": {
+    "heading": "Gemenskapsprojekt och resurser",
+    "intro": "Projekt med öppen källkod och utvalda listor från Proxmox-gemenskapen. De är fristående från Proxmox Server Solutions och ProxMenux och finns med eftersom de visat sig användbara.",
+    "cards": {
+      "helperScripts": {
+        "title": "Proxmox VE Helper-Scripts",
+        "description": "En gemenskapsunderhållen skriptkatalog för att enkelt skapa LXC-containrar, virtuella maskiner och PVE-anpassningar, till exempel för Home Assistant, Plex och Frigate. För vidare idén bakom ttecks hjälpskript."
+      },
+      "awesome": {
+        "title": "awesome-proxmox-ve (utvald lista)",
+        "description": "En stor gemenskapsvald samling Proxmox VE-resurser: verktyg, bibliotek, integrationer, bloggar och videor. En bra utgångspunkt för att upptäcka mer."
+      }
+    },
+    "suggestRich": "Känner du till en bra resurs som vi borde lägga till? Öppna en issue eller PR på <link>GitHub</link>. Vi vill behålla ett genomtänkt urval snarare än en fullständig förteckning."
+  },
+  "discussion": {
+    "heading": "Diskussioner i gemenskapen",
+    "intro": "Där folk pratar om Proxmox och ProxMenux.",
+    "cards": {
+      "proxmenuxDiscussions": {
+        "title": "ProxMenux Discussions",
+        "description": "GitHub Discussions för ProxMenux: funktionsidéer, frågor och svar samt delning av egna installationer. Rätt plats för ämnen om menyn, Monitor och dokumentationen."
+      },
+      "proxmoxForum": {
+        "title": "Proxmox Forum",
+        "description": "Proxmox forum (även länkat ovan). Rätt plats för fördjupad felsökning och konfig-specifika frågor."
+      },
+      "reddit": {
+        "title": "r/Proxmox på Reddit",
+        "description": "Aktiv subreddit för diskussioner, tips och teknisk hjälp. Lägre tröskel än forumet och ofta snabbare svar på enklare frågor."
+      }
+    }
+  }
+}

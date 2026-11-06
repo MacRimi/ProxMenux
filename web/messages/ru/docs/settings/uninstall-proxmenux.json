@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "title": "Удаление ProxMenux | Документация ProxMenux",
+    "description": "Средство полного удаления ProxMenux с возможностью удаления jq и dialog, очисткой устаревших файлов перевода и службы Monitor, а также восстановлением системных файлов из резервных копий.",
+    "ogTitle": "Удаление ProxMenux | Документация ProxMenux",
+    "ogDescription": "Полное удаление ProxMenux с узла Proxmox с возможностью удаления зависимостей."
+  },
+  "header": {
+    "title": "Удаление ProxMenux",
+    "description": "Удаляет ProxMenux с узла Proxmox в интерактивном режиме: подтверждение, необязательное удаление зависимостей, удаление службы ProxMenux Monitor, восстановление /root/.bashrc и /etc/motd из резервных копий. На протяжении всего процесса отображается индикатор выполнения.",
+    "section": "Настройки"
+  },
+  "scopeWarn": {
+    "title": "Затрагивает только установленный ProxMenux, но не ваши ВМ, контейнеры или хранилища",
+    "body": "При удалении ProxMenux удаляются ProxMenux scripts, средство запуска меню и служба Monitor, а также восстанавливаются /root/.bashrc и /etc/motd из резервных копий, созданных Post-Install, если эти копии существуют. <strong>Ваши ВМ, контейнеры, хранилища, конфигурация сети, Fail2Ban, драйвер NVIDIA и всё остальное, что вы установили через ProxMenux, не затрагиваются.</strong> Всё это остаётся без изменений."
+  },
+  "flow": {
+    "heading": "Процесс удаления",
+    "items": [
+      "<strong>Диалог подтверждения.</strong> Да/нет — «Вы уверены, что хотите удалить ProxMenux?»",
+      "<strong>Список зависимостей для удаления.</strong> Предлагает jq и dialog. По умолчанию оба флажка сняты; выбирайте только те зависимости, которые не нужны другим приложениям.",
+      "<strong>Удаление с индикатором выполнения.</strong> Удаляет оставшееся устаревшее окружение перевода, средство запуска <code>menu</code>, дерево каталогов <code>/usr/local/share/proxmenux/</code>, службу ProxMenux Monitor, если она есть, вместе с зарегистрированным ею в Proxmox VE получателем уведомлений (<code>proxmenux-webhook</code> и соответствующим правилом сопоставления), отмеченные вами зависимости, а затем восстанавливает системные файлы из резервных копий (см. ниже).",
+      "<strong>Диалог завершения.</strong> Показывает список удалённых зависимостей и завершает работу."
+    ]
+  },
+  "deps": {
+    "heading": "Удаление зависимостей: что предлагается",
+    "intro": "В списке предлагаются jq и dialog. <strong>По умолчанию оба флажка сняты</strong>: эти общесистемные пакеты могут использоваться другими приложениями, поэтому безопаснее их сохранить.",
+    "headerType": "Установка",
+    "headerOffered": "Предлагается удалить",
+    "rows": [
+      {
+        "type": "Текущие версии",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      },
+      {
+        "type": "Старые установки после обновления",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      }
+    ],
+    "warnTitle": "Общесистемные пакеты — обдумайте удаление",
+    "warnBody": "Текущий список предлагает <code>jq</code> и <code>dialog</code>, но не <code>python3</code>. Это системные пакеты, которые могут быть нужны другим инструментам. При их удалении также могут быть удалены зависящие от них пакеты или неиспользуемые зависимости. Сохраняйте необходимые пакеты и проверяйте все предлагаемые удаления перед запуском apt вручную."
+  },
+  "removed": {
+    "heading": "Что удаляется",
+    "code": "/usr/local/bin/menu                                  # the launcher\n/usr/local/share/proxmenux/                          # everything: scripts, config, cache, version\n/opt/googletrans-env/                                # leftover legacy translation environment\n/etc/systemd/system/proxmenux-monitor.service        # Monitor service unit\n/root/.config/proxmenux-monitor/                     # Monitor config dir\n                                                     # + dependencies you ticked in the checklist"
+  },
+  "restored": {
+    "heading": "Что восстанавливается",
+    "items": [
+      "Если <code>/root/.bashrc.bak</code> существует → переименовывается обратно в <code>/root/.bashrc</code> (восстанавливается ваш исходный bashrc).",
+      "Если <code>/etc/motd.bak</code> существует → переименовывается обратно в <code>/etc/motd</code>. В противном случае строка ProxMenux (<em>“This system is optimised by: ProxMenux”</em>) удаляется из существующего motd с помощью sed."
+    ]
+  },
+  "othersCallout": {
+    "title": "Другие компоненты, установленные через ProxMenux, сохраняются",
+    "body": "Всё, что ProxMenux установил через другие меню, — Fail2Ban, Lynis, драйверы NVIDIA, настройки после установки — это средство удаления <strong>не</strong> затрагивает. Для каждого компонента предусмотрена собственная процедура удаления в соответствующем меню (также можно удалить его напрямую с помощью apt). Сначала откройте <em>Показать информацию о версии</em>, чтобы увидеть, что зарегистрировано."
+  },
+  "manual": {
+    "heading": "Удаление вручную",
+    "intro": "Если по какой-либо причине средство удаления из меню не запускается (например, <code>dialog</code> уже отсутствует), выполните эквивалентную последовательность действий вручную:",
+    "code": "# 1. Stop and remove the Monitor service (if installed)\nsystemctl stop proxmenux-monitor.service 2>/dev/null\nsystemctl disable proxmenux-monitor.service 2>/dev/null\nrm -f /etc/systemd/system/proxmenux-monitor.service\nrm -rf /root/.config/proxmenux-monitor\nsystemctl daemon-reload\nsystemctl reset-failed 2>/dev/null\n\n# 2. Remove a leftover legacy translation environment\nrm -rf /opt/googletrans-env\n\n# 3. Remove ProxMenux files\nrm -f /usr/local/bin/menu\nrm -rf /usr/local/share/proxmenux\n\n# 4. Restore backups\n[ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc\n[ -f /etc/motd.bak ] && mv /etc/motd.bak /etc/motd \\\n    || sed -i '/This system is optimised by: ProxMenux/d' /etc/motd"
+  },
+  "reinstall": {
+    "heading": "Повторная установка в дальнейшем",
+    "body": "Снова запустите официальный установщик ProxMenux. В текущих версиях используется единая процедура установки, включающая все восемь языков интерфейса."
+  },
+  "troubleshoot": {
+    "heading": "Устранение неполадок",
+    "hangTitle": "Удаление зависает при удалении устаревшего окружения перевода",
+    "hangBody": "Текущие версии удаляют оставшееся окружение с помощью <code>rm -rf /opt/googletrans-env</code> и не запускают <code>pip uninstall</code>. Если этот шаг зависает, проверьте его состояние из другой командной оболочки и проверьте файловую систему хоста, прежде чем повторять попытку.",
+    "aptTitle": "apt предупреждает о пакетах, которые всё ещё используются, при удалении зависимостей",
+    "aptBody": "Выбранные пакеты помечаются как автоматически установленные и передаются в <code>apt-get -y --purge autoremove</code>. Это не гарантирует защиту служб, зависящих от них. Не отмечайте зависимости для удаления, если они нужны другим инструментам; перед любой ручной очисткой проверьте список пакетов, которые apt предлагает удалить.",
+    "motdTitle": "После удаления в MOTD по-прежнему отображается строка ProxMenux",
+    "motdBody": "<code>/etc/motd.bak</code> отсутствовал, а удаление строки с помощью sed не сработало из-за отсутствия совпадения (например, строка была изменена). Отредактируйте <code>/etc/motd</code> вручную и удалите оставшуюся строку ProxMenux, если она есть."
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Просмотр информации о версии",
+        "tail": " — посмотрите, что будет удалено, прежде чем запускать удаление."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Обзор настроек",
+        "tail": "."
+      }
+    ]
+  }
+}

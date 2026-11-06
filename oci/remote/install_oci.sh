@@ -358,14 +358,44 @@ cleanup_canonical_inputs() {
 
 # A derived check accepts any HTTP answer below 500: the application is up,
 # even when its first page is a redirect or asks for a login.
-healthcheck_probe() {
+healthcheck_probe_url() {
+  local url=$1 code status=0
   if [[ ${HC_ANY_STATUS:-false} == true ]]; then
-    local code
-    code=$(curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || return 1
-    [[ $code =~ ^[1-4][0-9][0-9]$ ]]
+    code=$(oci_curl "$VMID" "${CURL_ARGS[@]}" "$url" 2>/dev/null) || status=$?
+    (( status == 0 )) && [[ $code =~ ^[1-4][0-9][0-9]$ ]] && return 0
   else
-    curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null
+    oci_curl "$VMID" "${CURL_ARGS[@]}" "$url" >/dev/null 2>&1 || status=$?
+    (( status == 0 )) && return 0
   fi
+  # A port taken from the compose file may serve a database or SSH: an answer
+  # in another protocol (HTTP/0.9, weird or empty reply, reset) means it is up.
+  [[ ${HC_ACCEPT_NON_HTTP:-false} == true ]] \
+    && (( status == 1 || status == 8 || status == 52 || status == 56 ))
+}
+
+# The address of the check, without the default port of its scheme: an
+# application that records its first request, like Nextcloud's trusted domain,
+# then sees the same host a browser sends.
+healthcheck_url() {
+  local port=$1
+  if [[ ( $HC_SCHEME == https && $port == 443 ) || ( $HC_SCHEME == http && $port == 80 ) ]]; then
+    printf '%s://%s%s' "$HC_SCHEME" "$IP" "$HC_PATH"
+  else
+    printf '%s://%s:%s%s' "$HC_SCHEME" "$IP" "$port" "$HC_PATH"
+  fi
+}
+
+# Any of the addresses answering means the application is up; HC_URL keeps the
+# one that answered.
+healthcheck_probe() {
+  local url
+  for url in "${HC_URLS[@]}"; do
+    if healthcheck_probe_url "$url"; then
+      HC_URL=$url
+      return 0
+    fi
+  done
+  return 1
 }
 
 cleanup_failed_install() {
@@ -373,6 +403,7 @@ cleanup_failed_install() {
   stop_spinner
   cleanup_volume_seed_staging || true
   cleanup_canonical_inputs || true
+  [[ -z ${USER_DATABASES_ARCHIVE:-} ]] || rm -f "$USER_DATABASES_ARCHIVE" "${USER_DATABASES_ARCHIVE}.partial"
   if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
     # The transaction owns recovery. Destroying this CT could destroy reused data.
     cleanup_runtime_console_log || true
@@ -516,6 +547,14 @@ capture_volume_seeds() {
     index=$((index + 1))
   done < <(jq -r '.mounts[]? | select(.type == "managed-volume") | .container_path' "$DEPLOYMENT_FILE")
 
+  if (( failed == 0 )); then
+    # Data seeds were captured first; prepare the raw image even when the
+    # transaction will reuse a persistent disk and therefore skipped seeding.
+    # The helper changes nothing when it refuses a path (a link, another
+    # filesystem); the image then installs as it did before.
+    oci_quiet python3 "$SCRIPT_DIR/oci_image_mountpoints.py" "$rootfs" "$DEPLOYMENT_FILE" \
+      || oci_log "Image defaults left in place: a volume mountpoint of the image is not a plain directory"
+  fi
   if (( mounted == 1 )); then
     oci_quiet pct unmount "$VMID" || failed=1
   fi
@@ -912,7 +951,7 @@ set_lxc_directive() {
 
 add_device() {
   local host_path=$1 expected_type=$2 mode_spec=$3 gid_strategy=$4 deny_write=$5
-  local device_uid=${6:-}
+  local device_uid=${6:-} container_gid=${7:-}
   local mode gid dev_value
   [[ $host_path == /dev/* && $host_path != *[[:space:]]* && $host_path != *","* ]] \
     || die "$(translate "Invalid device path:") $host_path"
@@ -936,7 +975,12 @@ add_device() {
       || die "$(translate "Invalid device UID:") $device_uid"
     dev_value="${dev_value},uid=${device_uid}"
   fi
-  if [[ $gid_strategy == host-device-gid ]]; then
+  if [[ -n $container_gid ]]; then
+    [[ $container_gid =~ ^[0-9]{1,10}$ ]] && (( container_gid < 4294967295 )) \
+      || die "$(translate "Invalid container device GID"): $container_gid"
+    gid=$container_gid
+    dev_value="${dev_value},gid=${gid}"
+  elif [[ $gid_strategy == host-device-gid ]]; then
     gid=$(stat -c '%g' "$host_path")
     dev_value="${dev_value},gid=${gid}"
   elif [[ $gid_strategy != none ]]; then
@@ -951,7 +995,7 @@ add_device() {
 }
 
 add_character_device() {
-  add_device "$1" character "$2" "$3" "$4" "${5:-}"
+  add_device "$1" character "$2" "$3" "$4" "${5:-}" "${6:-}"
 }
 
 prepare_nvidia_driver_links() {
@@ -980,6 +1024,11 @@ prepare_nvidia_driver_links() {
 
 source "$SCRIPT_DIR/oci_nvidia_setup.sh"
 
+oci_valid_extra_hostname() {
+  # Compose network aliases may contain underscores; each entry stays one hosts-file token.
+  [[ ${#1} -le 253 && $1 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]
+}
+
 apply_extra_hosts() {
   local count rootfs hosts_file temporary address hostname bridge_address failed=0
   count=$(jq '.extra_hosts? // [] | length' "$DEPLOYMENT_FILE")
@@ -1007,7 +1056,7 @@ apply_extra_hosts() {
           || { oci_log "Could not resolve host-gateway on $BRIDGE"; failed=1; break; }
         address=$bridge_address
       fi
-      [[ $hostname =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] \
+      oci_valid_extra_hostname "$hostname" \
         || { oci_log "Invalid extra hostname: $hostname"; failed=1; break; }
       [[ $address =~ ^[0-9A-Fa-f:.]+$ ]] \
         || { oci_log "Invalid extra host address: $address"; failed=1; break; }
@@ -1025,16 +1074,27 @@ apply_extra_hosts() {
 }
 
 # Settings an update gives back to the rebuilt container before it starts:
-# the LAN leg of a suite or stack member and its start order.
+# the LAN leg of a suite or stack member, its start order and current tags,
+# and what the user set in Proxmox.
 apply_kept_settings() {
   local key value
   while IFS=$'\t' read -r key value; do
     [[ -n $key ]] || continue
-    [[ $key == net1 || $key == startup ]] \
+    [[ $key =~ ^(net[01]|startup|tags|features|nameserver|searchdomain|timezone|cpulimit|cmode|console|tty|hookscript|entrypoint)$ ]] \
       || die "$(translate "Unsupported kept setting:") $key"
-    oci_quiet pct set "$VMID" "--$key" "$value" \
-      || die "$(translate "Could not restore the container setting:") $key"
+    if [[ $key == tags && -z $value ]]; then
+      oci_quiet pct set "$VMID" --delete tags
+    else
+      oci_quiet pct set "$VMID" "--$key" "$value"
+    fi || die "$(translate "Could not restore the container setting:") $key"
   done < <(jq -r '.kept_proxmox_settings // {} | to_entries[] | [.key, .value] | @tsv' "$DEPLOYMENT_FILE")
+  while IFS= read -r value; do
+    [[ -n $value ]] || continue
+    [[ $value =~ ^lxc\.[A-Za-z0-9._-]+:\  ]] \
+      || die "$(translate "Unsupported kept setting:") $value"
+    printf '%s\n' "$value" >>"$CONF" \
+      || die "$(translate "Could not restore the container setting:") $value"
+  done < <(jq -r '.custom_lxc // [] | .[]' "$DEPLOYMENT_FILE")
 }
 
 apply_runtime_user() {
@@ -1091,7 +1151,7 @@ ensure_runtime_home() {
   passwd_file="${rootfs}/etc/passwd"
   mount_ct_rootfs
   if ! home=$(python3 "$OCI_RUNTIME_RESOLVER" --home "$passwd_file" "$uid" 2>>"${OCI_LOG:-/dev/stderr}"); then
-    oci_quiet pct unmount "$VMID" || true
+    oci_quiet pct unmount "$VMID" || die "$(translate "Could not unmount the container filesystem")"
     return 0
   fi
   oci_quiet pct unmount "$VMID" || die "$(translate "Could not unmount the container filesystem")"
@@ -1230,8 +1290,20 @@ apply_installer_profile() {
       fi
       [[ -d ${rootfs}${target} ]] \
         || { oci_log "The volume to prepare does not exist: $target"; failed=1; break; }
+      # A reused volume may intentionally be mounted read-only (for example,
+      # /run/secrets). Do not remove files or change ownership/mode on it.
+      # Use the most specific containing mount: an RW child can override RO.
+      if [[ $(jq -r --arg target "$target" '
+        [.mounts[]? | select(.container_path as $path |
+          $target == $path or ($target | startswith($path + "/")))]
+        | sort_by(.container_path | length) | last | .read_only // false' \
+        "$DEPLOYMENT_FILE") == true ]]; then
+        oci_log "Skipping preparation of read-only volume: $target"
+        continue
+      fi
       if [[ $remove_lost_found == true ]]; then
-        rm -rf "${rootfs}${target}/lost+found" || { failed=1; break; }
+        oci_quiet python3 "${SCRIPT_DIR}/oci_managed_volumes.py" prepare \
+          "$rootfs" "$DEPLOYMENT_FILE" --target "$target" || { failed=1; break; }
       fi
       case "$owner_strategy" in
         mapped-root) chown "$HOST_ROOT_UID:$HOST_ROOT_GID" "${rootfs}${target}" || failed=1 ;;
@@ -1680,6 +1752,8 @@ NET="name=eth0,bridge=${BRIDGE},firewall=${FIREWALL},host-managed=1,ip=${IPV4},t
 if [[ -n $GATEWAY ]]; then
   NET="${NET},gw=${GATEWAY}"
 fi
+oci_vlan_option vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+NET="${NET}${OCI_VLAN_OPTION}"
 if [[ -n $MAC_ADDRESS ]]; then
   [[ $MAC_ADDRESS =~ ^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$ ]] \
     || die "$(translate "Invalid MAC address:") $MAC_ADDRESS"
@@ -1729,8 +1803,25 @@ fi
 
 # pct keeps the OCI Entrypoint/Cmd/Env/User/WorkingDir/StopSignal metadata.
 msg_info "$(translate "Creating the container...")"
-oci_create_container "${CREATE_ARGS[@]}" \
-  || die "$(translate "Could not create the container:") CT $VMID"
+# Proxmox resolves the image User through /etc/passwd and /etc/group, even a
+# numeric one, and cannot create the container from an image without them.
+user_databases_rc=0
+missing_user_databases=$(python3 "$OCI_RUNTIME_RESOLVER" --user-databases "$ARCHIVE_PATH" \
+  2>>"${OCI_LOG:-/dev/stderr}") || user_databases_rc=$?
+if (( user_databases_rc == 3 )); then
+  oci_log "The image declares a user but lacks: ${missing_user_databases}"
+  # A numeric User is created from a copy with those files; the cached image
+  # and its digest stay as they were downloaded.
+  USER_DATABASES_ARCHIVE="${ARCHIVE_PATH%.tar}.user-databases.$$.tar"
+  python3 "$OCI_RUNTIME_RESOLVER" --add-user-databases "$ARCHIVE_PATH" "$USER_DATABASES_ARCHIVE" \
+    >>"${OCI_LOG:-/dev/null}" 2>&1 \
+    || die "$(translate "Proxmox VE cannot create a container from this image: it declares a user but does not include /etc/passwd and /etc/group. Nothing was created.")"
+  CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE
+fi
+create_status=0
+oci_create_container "${CREATE_ARGS[@]}" || create_status=$?
+[[ -z ${USER_DATABASES_ARCHIVE:-} ]] || rm -f "$USER_DATABASES_ARCHIVE"
+(( create_status == 0 )) || die "$(translate "Could not create the container:") CT $VMID"
 CT_CREATED=1
 msg_ok "$(translate "Container created:") CT $VMID ($HOSTNAME)"
 
@@ -1959,17 +2050,6 @@ for MOUNT_WARNING in ${MOUNT_WARNINGS[@]+"${MOUNT_WARNINGS[@]}"}; do
   msg_warn "$MOUNT_WARNING"
 done
 
-while IFS=$'\t' read -r TARGET SIZE_MB OPTIONS; do
-  [[ -n $TARGET ]] || continue
-  [[ $TARGET == /* && $TARGET != *","* && $TARGET != *[[:space:]]* ]] \
-    || die "$(translate "Invalid tmpfs path:") $TARGET"
-  [[ $SIZE_MB =~ ^[0-9]+$ && $SIZE_MB -gt 0 ]] || die "$(translate "Invalid tmpfs size:") $TARGET"
-  [[ $OPTIONS =~ ^(rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3})(,(rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3}))*$ ]] || die "$(translate "Invalid tmpfs options:") $TARGET"
-  TARGET_RELATIVE=${TARGET#/}
-  printf 'lxc.mount.entry: tmpfs %s tmpfs %s,size=%sM,create=dir 0 0\n' \
-    "$TARGET_RELATIVE" "$OPTIONS" "$SIZE_MB" >>"$CONF"
-done < <(jq -r '.tmpfs_mounts[]? | [.container_path,.size_mb,(.mount_options | join(","))] | @tsv' "$DEPLOYMENT_FILE")
-
 DEVICE_INDEX=0
 RESOLVED_CHARACTER_DEVICES=()
 NVIDIA_RUNTIME_CONFIGURED=0
@@ -1980,6 +2060,7 @@ while IFS= read -r DEVICE_ENCODED; do
   DEVICE=$(printf '%s' "$DEVICE_ENCODED" | base64 -d)
   DEVICE_KIND=$(jq -r '.kind // "character-device"' <<<"$DEVICE")
   DEVICE_GID_ENV=$(jq -r '.append_host_device_gid_to_environment // empty' <<<"$DEVICE")
+  CONTAINER_GID=$(jq -r '.container_gid // empty' <<<"$DEVICE")
   if [[ $DEVICE_KIND == nvidia-runtime ]]; then
     NVIDIA_GID_ENV=$DEVICE_GID_ENV
     if (( NVIDIA_RUNTIME_CONFIGURED == 0 )); then
@@ -1999,13 +2080,13 @@ while IFS= read -r DEVICE_ENCODED; do
   case "$DEVICE_KIND" in
     character-device)
       DEVICE_UID=$(jq -r '.uid // empty' <<<"$DEVICE")
-      add_character_device "$HOST_PATH" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "$DEVICE_UID"
+      add_character_device "$HOST_PATH" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "$DEVICE_UID" "$CONTAINER_GID"
       if [[ -n $DEVICE_GID_ENV ]]; then
         append_deployment_environment_csv "$DEVICE_GID_ENV" "$(stat -c '%g' "$HOST_PATH")"
       fi
       ;;
     block-device)
-      add_device "$HOST_PATH" block "$MODE" "$GID_STRATEGY" "$DENY_WRITE"
+      add_device "$HOST_PATH" block "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "" "$CONTAINER_GID"
       if [[ -n $DEVICE_GID_ENV ]]; then
         append_deployment_environment_csv "$DEVICE_GID_ENV" "$(stat -c '%g' "$HOST_PATH")"
       fi
@@ -2015,7 +2096,7 @@ while IFS= read -r DEVICE_ENCODED; do
       FOUND_TREE_DEVICE=0
       while IFS= read -r TREE_DEVICE; do
         [[ -n $TREE_DEVICE ]] || continue
-        add_character_device "$TREE_DEVICE" "$MODE" "$GID_STRATEGY" "$DENY_WRITE"
+        add_character_device "$TREE_DEVICE" "$MODE" "$GID_STRATEGY" "$DENY_WRITE" "" "$CONTAINER_GID"
         FOUND_TREE_DEVICE=1
       done < <(find "$HOST_PATH" -print 2>/dev/null | while IFS= read -r path; do
         [[ -c $path ]] && printf '%s\n' "$path"
@@ -2039,12 +2120,43 @@ while IFS=$'\t' read -r NAME ENCODED; do
   set_runtime_environment "$NAME" "$VALUE"
 done < <(jq -r '.environment[] | [.name, (.value | @base64)] | @tsv' "$DEPLOYMENT_FILE")
 
+prepare_managed_format_directories() {
+  local rootfs=$1 preparation_failed=0
+  # Stack members receive their real mounts later in attach_mounts().
+  [[ $(jq -r '.stack_managed // false' "$DEPLOYMENT_FILE") != true ]] || return 0
+  (( MOUNT_ENTRIES > 0 )) || return 0
+  mount_ct_rootfs
+  oci_quiet python3 "${SCRIPT_DIR}/oci_managed_volumes.py" prepare "$rootfs" "$DEPLOYMENT_FILE" \
+    || preparation_failed=1
+  oci_quiet pct unmount "$VMID" || preparation_failed=1
+  (( preparation_failed == 0 )) \
+    || die "$(translate "Could not add the mount point:") CT $VMID"
+}
+
+prepare_managed_format_directories "/var/lib/lxc/${VMID}/rootfs"
 apply_extra_hosts
 apply_installer_profile
+# Render tmpfs entries after the image and installer profile have set the
+# effective LXC init uid/gid. The same renderer validates and records them.
+TMPFS_CONFIG=$(mktemp)
+python3 "${SCRIPT_DIR}/oci_runtime_settings.py" --render-tmpfs "$DEPLOYMENT_FILE" "$CONF" \
+  >"$TMPFS_CONFIG" || { rm -f "$TMPFS_CONFIG"; die "$(translate "Could not configure the tmpfs mounts")"; }
+cat "$TMPFS_CONFIG" >>"$CONF"
+rm -f "$TMPFS_CONFIG"
 ensure_runtime_home
 apply_rlimits
 apply_host_monitor
 apply_kept_settings
+
+# Recreated stack members retain their owned pre-init routes. Append rather
+# than replacing lxc.include: other managed runtime includes must survive.
+if jq -e '.stack_public_routes != null' "$DEPLOYMENT_FILE" >/dev/null; then
+  ROUTE_INCLUDE=$(python3 "${SCRIPT_DIR}/oci_stack_public_routes.py" install "$VMID" \
+    --deployment "$DEPLOYMENT_FILE" --installation-id "$INSTANCE_ID") \
+    || die "$(translate "Managed public route installation failed")"
+  [[ -n "$ROUTE_INCLUDE" ]] || die "$(translate "Managed public route include is missing")"
+  grep -Fxq "$ROUTE_INCLUDE" "$CONF" || printf '%s\n' "$ROUTE_INCLUDE" >>"$CONF"
+fi
 
 while IFS= read -r REPAIR_ENCODED; do
   [[ -n $REPAIR_ENCODED ]] || continue
@@ -2251,8 +2363,15 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
   (( HC_STABILITY < HC_TIMEOUT )) \
     || die "$(translate "The stability period must be shorter than the healthcheck timeout")"
   [[ -n $IP ]] || die "$(translate "The healthcheck cannot run without an IP address")"
-  HC_URL="${HC_SCHEME}://${IP}:${HC_PORT}${HC_PATH}"
+  HC_URL=$(healthcheck_url "$HC_PORT")
+  HC_URLS=("$HC_URL")
+  while IFS= read -r HC_ALT_PORT; do
+    [[ $HC_ALT_PORT =~ ^[0-9]+$ && $HC_ALT_PORT -ge 1 && $HC_ALT_PORT -le 65535 ]] \
+      || die "$(translate "Invalid healthcheck port")"
+    HC_URLS+=("$(healthcheck_url "$HC_ALT_PORT")")
+  done < <(jq -r '.alternative_ports[]? | tostring' <<<"$STARTUP_HEALTHCHECK")
   HC_ANY_STATUS=$(jq -r '.accept_any_status // false' <<<"$STARTUP_HEALTHCHECK")
+  HC_ACCEPT_NON_HTTP=$(jq -r '.accept_non_http // false' <<<"$STARTUP_HEALTHCHECK")
   if [[ $HC_ANY_STATUS == true ]]; then
     CURL_ARGS=(-sS --noproxy '*' -o /dev/null -w '%{http_code}' --max-time "$HC_REQUEST_TIMEOUT")
   else

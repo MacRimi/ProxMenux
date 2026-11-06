@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Byt GPU-läge (VM ↔ LXC) | ProxMenux-dokumentation",
+    "description": "Byt GPU mellan VFIO för VM och inbyggd drivrutin för LXC. ProxMenux identifierar drivrutinen, frågar hur berörda gäster ska hanteras, tar bort tillhörande ljudtilldelningar och bygger om initramfs om värdkonfigurationen ändras."
+  },
+  "header": {
+    "title": "Byt GPU-läge (VM ↔ LXC)",
+    "description": "Byt en tilldelad GPU mellan VM-genomkoppling och LXC-delning. ProxMenux hanterar drivrutin, VFIO, moduler och initramfs och frågar hur berörda gäster ska hanteras. Granska valen och kontrollera konfigurationen efter omstart.",
+    "section": "Hårdvara: GPU:er och Coral-TPU"
+  },
+  "intro": {
+    "title": "Vad det gör",
+    "body": "Med <code>vfio-pci</code> reserveras GPU:n för en VM. Med inbyggd drivrutin <em>(i915 / amdgpu / nvidia)</em> kan värden och LXC dela den. <strong>Byt GPU-läge</strong> hanterar <code>vfio.conf</code>, modulblockering och gästreferenser och varnar om kvarvarande tilldelningar."
+  },
+  "graphics": {
+    "lxcTitle": "Klar för LXC-containrar",
+    "lxcDesc": "Inbyggd drivrutin aktiv",
+    "vmTitle": "Redo för VM-passthrough",
+    "vmDesc": "VFIO-PCI drivrutin aktiv"
+  },
+  "when": {
+    "heading": "När ska jag använda detta?",
+    "intro": "Använd när GPU:n <strong>redan är tilldelad</strong> och du vill ändra användningen:",
+    "headerSituation": "Situation",
+    "headerUse": "Använd denna sida?",
+    "rows": [
+      {
+        "situation": "GPU ledig och aldrig tilldelad: använd den i en VM.",
+        "useRich": "Nej — använd <vmLink>Lägg till GPU i VM</vmLink>"
+      },
+      {
+        "situation": "GPU ledig och aldrig tilldelad: använd den i en LXC.",
+        "useRich": "Nej — använd <lxcLink>Lägg till GPU i LXC</lxcLink>"
+      },
+      {
+        "situationRich": "GPU är i en VM via <code>vfio-pci</code>, jag vill använda den från en LXC istället.",
+        "useRich": "<strong>Ja — den här sidan.</strong>"
+      },
+      {
+        "situation": "GPU delas med en LXC, jag vill ägna den till en VM.",
+        "useRich": "<strong>Ja — den här sidan.</strong>"
+      },
+      {
+        "situation": "Jag vill ta bort alla tilldelningar av denna GPU.",
+        "use": "LXC-läget återför GPU:n till värdens drivrutin; VM-konfliktpolicyn kan ta bort hostpci-poster, men LXC-enhetsposter måste tas bort separat. GPU:n är fortfarande bunden till en drivrutin."
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Innan du börjar",
+    "assigned": "<strong>En redan tilldelad GPU</strong> i en VM via VFIO eller i en LXC. För första tilldelningen, använd Lägg till GPU i VM / LXC.",
+    "iommu": "<strong>IOMMU måste vara aktivt på värden</strong> vid byte <em>till</em> VM-läge. Både firmwareinställningar och kärnstöd spelar roll. Om <code>intel_iommu=on</code> eller <code>amd_iommu=on</code> saknas i den körande kärnan lägger skriptet till det med <code>iommu=pt</code> i <code>/etc/kernel/cmdline</code> (ZFS-rotmarkör) eller <code>/etc/default/grub</code> och kör sedan <code>proxmox-boot-tool refresh</code> eller <code>update-grub</code>. Granska eventuella varningar och starta om när du uppmanas.",
+    "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
+    "reboot": "<strong>Planera en omstart.</strong> Beständiga drivrutins- och startändringar kan kräva ombyggnad av initramfs och omstart. Skriptet frågar om detta i slutet.",
+    "knowList": "<strong>Ta reda på vilka VM och LXC som använder GPU:n.</strong> Skriptet hittar referenser och frågar hur varje gäst ska hanteras; en känd lista underlättar granskningen."
+  },
+  "blocklist": {
+    "title": "Inte alla GPU är säkra att passera till en VM",
+    "body": "Skriptet blockerar VM-läge för enhets-ID <code>8086:5a84</code> och <code>8086:5a85</code> enligt sin kompatibilitetspolicy. Om en vald GPU matchar avbryts bytet till VM-läge och skriptet återgår till GPU-valet, eller avslutas om det är den enda GPU:n. Blocklistan hindrar inte byte <em>till</em> LXC-läge; andra kontroller kan fortfarande gälla."
+  },
+  "running": {
+    "heading": "Kör skriptet",
+    "body": "Öppna <strong>Hårdvara: GPU och Coral-TPU → Byt GPU-läge (VM ↔ LXC)</strong> i ProxMenux.",
+    "imageAlt": "Alternativet Byt GPU-läge (VM ↔ LXC) i hårdvarumenyn"
+  },
+  "howRuns": {
+    "heading": "Så fungerar skriptet",
+    "body": "GPU-val och riktning granskas före huvudbytet. Separat städning av gamla VFIO-poster kan fråga tidigare, och berörda gäster har egna konfliktdialoger. Läs varje bekräftelse: en enda slutbekräftelse täcker inte alla ändringar."
+  },
+  "walkthrough": {
+    "heading": "Steg för steg",
+    "detect": {
+      "title": "Identifiera GPU och aktuell drivrutin",
+      "body": "Granskar värdens VGA-, 3D- och Display-styrenheter och kontrollerar <code>/sys/bus/pci/devices/*/driver</code>. Visar namn, PCI-adress och aktuell drivrutin för varje GPU så att läget kan identifieras.",
+      "imageAlt": "GPU checklista som visar varje upptäckt GPU med sin nuvarande drivrutin (vfio-pci / nvidia / amdgpu / i915) och PCI slot"
+    },
+    "pickGpu": {
+      "title": "Välj GPU:er att växla",
+      "body": "En ensam GPU väljs automatiskt. Med flera kan du markera flera, men alla måste vara i <em>samma</em> läge. Blandade lägen kräver att du begränsar urvalet.",
+      "tipTitle": "Växla flera GPU:er samtidigt",
+      "tipBody": "Exempel: växla tre NVIDIA till VM-läge och sedan iGPU:n tillbaka till LXC. Två körningar med ett gemensamt mål i varje, i stället för att växla korten ett i taget."
+    },
+    "direction": {
+      "title": "Granska den föreslagna riktningen",
+      "intro": "Baserat på det aktuella läget föreslår manuset motsatsen som mål:",
+      "items": [
+        "<strong>VM → LXC:</strong> tar bort bindningen till <code>vfio-pci</code> så att den inbyggda drivrutinen (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) kan använda GPU:n. För NVIDIA tas motsvarande BDF-poster bort från <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> inför nästa start.",
+        "<strong>LXC → VM:</strong> förbereder bindning till <code>vfio-pci</code>. AMD / Intel blockerar den inbyggda drivrutinen och använder <code>options vfio-pci ids=…</code>. För NVIDIA blockeras <code>nvidia</code> globalt endast när varje NVIDIA-GPU på värden är i VFIO; annars sätter regler per BDF <code>driver_override=vfio-pci</code> för enheterna i berörda IOMMU-grupper, och NVIDIA-GPU:er utanför grupperna behåller <code>nvidia</code>. Granska varje gruppmedlem före bytet."
+      ],
+      "outro": "Bekräfta riktningen eller avbryt."
+    },
+    "conflict": {
+      "title": "Val för varje berörd VM eller LXC",
+      "body": "Kontrollerar <code>/etc/pve/lxc/*.conf</code> efter GPU-enheter per drivrutinsfamilj och <code>/etc/pve/qemu-server/*.conf</code> efter PCI-tilldelningar. LXC-detekteringen matchar inte varje kort exakt per BDF. Granska gästerna och välj hantering för varje:",
+      "headerPolicy": "Policy",
+      "headerEffect": "Effekt",
+      "headerWhen": "När ska man välja",
+      "keepPolicy": "Behåll konfiguration, inaktivera automatisk start",
+      "keepEffect": "<code>pct set CTID -onboot 0</code> eller <code>qm set VMID -onboot 0</code>. GPU-posterna behålls.",
+      "keepWhen": "Om gästen ska användas igen när GPU:n återgår till ursprungligt läge. Försiktigt standardval.",
+      "removePolicy": "Ta bort GPU från konfig",
+      "removeEffect": "Tar bort identifierade <code>hostpci</code>- / <code>dev</code>-poster och äldre referenser som stöds.",
+      "removeWhen": "Om gästen ska fungera utan GPU. Kontrollera appinställningarna först: CPU-reservdrift beror på appen, och enhetsborttagning konfigurerar inte om den automatiskt.",
+      "imageAlt": "Dialog för att hantera varje berörd VM eller LXC"
+    },
+    "audio": {
+      "title": "Ta bort tillhörande ljudtilldelningar när VM-läget lämnas",
+      "body1": "Många separata NVIDIA-/AMD-GPU:er har HDMI-ljud på funktion <code>.1</code> i samma slot; fler ljudenheter kan också ha tilldelats. När GPU:n tas bort kan gamla ljudposter av typen <code>hostpci</code> bli kvar. Granska vilka tilldelningar som ska behållas.",
+      "body2": "Identifierar ljudets BDF-adresser och visar en lista för att välja tilldelningar att ta bort. Tar även bort deras vendor:device-ID från <code>/etc/modprobe.d/vfio.conf</code>, men bara om ingen annan VM använder dem."
+    },
+    "apply": {
+      "title": "Tillämpa ändringar på värd och gäster",
+      "body": "Efter bekräftelse skrivs värdändringarna: <code>vfio.conf</code>, drivrutinsblockering, moduler och för NVIDIA BDF-regeln <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> med status i <code>/etc/proxmenux/vfio-bind.bdfs</code>. Vald konfliktpolicy tillämpas på varje gäst. Om värdkonfigurationen ändrats körs <code>update-initramfs -u -k all</code> följt av <code>proxmox-boot-tool refresh</code>; annars hoppas båda över."
+    },
+    "reboot": {
+      "title": "Starta om",
+      "body": "Starta om värden för att tillämpa den nya beständiga bindningen. Omstarten kan skjutas upp, men kontrollera aktiv drivrutin före start av målgästen: den gamla kan fortfarande vara aktiv fram till omstarten.",
+      "imageAlt": "Sammanfattningsdialog som listar vad som ändrats, följt av omstartsprompten"
+    }
+  },
+  "manual": {
+    "heading": "Manuell granskning",
+    "intro": "Före <strong>VM → LXC</strong>, granska drivrutin och BDF-policy. NVIDIA-exemplet använder <code>10de:2204</code>; anpassa till ditt kort. Kommandona läser status; skriptet hanterar även gäster och IOMMU-gruppmedlemmar.",
+    "lxcToVm": "Före <strong>LXC → VM</strong>, granska PCI-adressen och IOMMU-gruppen. Ersätt exempeladressen och kontrollera alla gruppmedlemmar före tilldelning.",
+    "oneVmTitle": "En fysisk GPU tilldelad via VFIO kan bara användas av en VM i taget",
+    "oneVmBody": "Att sätta flera <code>hostpci</code>-poster med samma PCI-slot i två VM är giltigt konfig men bara en av VM kan börja med GPU - den andra kommer att misslyckas. ProxMenux konfliktpolitiskt steg handlar om att undvika denna fälla."
+  },
+  "verification": {
+    "heading": "Verifiering efter omstart"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "stillVfioTitle": "GPU visar fortfarande vfio-pci efter byte till LXC-läge",
+    "stillVfioBody": "En laddad VFIO-modul visar inte vilken drivrutin som äger denna GPU. Kontrollera kortets bindning samt att <code>update-initramfs</code> och omstart slutförts. <code>lsmod | grep vfio</code> listar bara moduler. För AMD / Intel granska <code>vfio.conf</code>; för NVIDIA <code>/etc/proxmenux/vfio-bind.bdfs</code> och <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code>. Korrigera gamla regler före <code>update-initramfs -u -k all</code> och omstart.",
+    "vmFailTitle": "En VM startar inte efter byte av GPU:n till LXC-läge",
+    "vmFailBody": "Kontrollera gamla <code>hostpci</code>-referenser. Valet <em>Ta bort GPU från konfiguration</em> kan rensa dem under avsett byte. Granska föreslagen riktning innan skriptet körs igen så att läget inte vänds av misstag. Alternativt ta bort tilldelningen i Proxmox när VM är stoppad.",
+    "smiFailTitle": "nvidia-smi visar ”Driver/library version mismatch” efter återgång till LXC",
+    "smiFailBody": "Jämför laddad NVIDIA-modul med installerade bibliotek, även i LXC. Anpassa versionerna först: omstart laddar installerad modul men rättar inte felaktiga bibliotekspaket. Omladdning med <code>modprobe -r nvidia</code> och <code>modprobe nvidia</code> kräver stoppade GPU-klienter och kan misslyckas när beroende moduler används.",
+    "logTitle": "Körningslogg",
+    "logBody": "Varje körning skriver till <code>/tmp/proxmenux_gpu_switch_mode.log</code> på värden. Bifoga loggen när du ber om hjälp på GitHub."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — första konfigurationen av VM-läge."
+      },
+      {
+        "label": "Lägg till GPU i LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — första konfigurationen av LXC-läge."
+      },
+      {
+        "label": "Installera NVIDIA-drivrutiner på värden",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " - krävs för LXC-läge på NVIDIA GPU."
+      },
+      {
+        "label": "ProxMenux Monitor — fliken Hårdvara",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — avsnittet Grafikkort med aktuellt läge och växlingskontroll."
+      },
+      {
+        "label": "Kommandon för GPU-genomkoppling",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — kort kommandoreferens."
+      }
+    ]
+  }
+}

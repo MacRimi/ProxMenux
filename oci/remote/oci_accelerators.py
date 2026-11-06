@@ -40,6 +40,14 @@ def drm_plan(deployment):
     return dict(deployment, devices=[d for d in deployment.get('devices', []) if d.get('kind') != 'nvidia-runtime'])
 
 
+def container_gid(device, host_value):
+    return drm.container_gid(device, host_value)
+
+
+def preserve_recorded_container_gids(record, candidate, config):
+    drm.preserve_recorded_container_gids(record, candidate, config)
+
+
 def planned(deployment):
     result = drm.planned(drm_plan(deployment))
     if nvidia.enabled(deployment):
@@ -69,7 +77,7 @@ def check(config, deployment):
         filtered = []
         for line in config.splitlines(keepends=True):
             if re.match(rb'dev[0-9]+: ', line):
-                fields = dict(part.split('=', 1) for part in line.decode().strip().split(': ', 1)[1].split(','))
+                fields = drm.device_fields(line.decode().strip().split(': ', 1)[1])
                 if fields.get('path') in value['devices']:
                     continue
             filtered.append(line)

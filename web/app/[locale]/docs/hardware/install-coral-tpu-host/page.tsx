@@ -166,20 +166,6 @@ export default async function InstallCoralTPUHostPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("howRuns.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("howRuns.body")}</p>
 
-      <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto text-sm my-4 border border-gray-200 leading-snug">
-{`Detect Coral hardware
-        │
-        ├─ PCIe / M.2 detected ──► build gasket + apex with DKMS
-        │                          └─ reboot recommended
-        │
-        ├─ USB detected ─────────► install libedgetpu runtime
-        │                          └─ no reboot required
-        │
-        └─ no PCIe / M.2 detected
-             ├─ no legacy gasket-dkms state ─► no PCIe changes
-             └─ legacy gasket-dkms state ────► offer optional cleanup
-                                                └─ USB runtime untouched`}
-      </pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("walkthrough.heading")}</h2>
 
@@ -362,6 +348,7 @@ rm -rf gasket-driver
 git clone --depth=1 https://github.com/feranick/gasket-driver.git
 
 # Stage under /usr/src for DKMS
+mkdir -p /usr/src/gasket-1.0
 cp -a /tmp/gasket-driver/src/. /usr/src/gasket-1.0/
 
 # Tell DKMS what it is

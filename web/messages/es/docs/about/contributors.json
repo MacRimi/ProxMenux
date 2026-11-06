@@ -1,38 +1,67 @@
 {
   "meta": {
-    "title": "Colaboradores | ProxMenux Documentation",
-    "description": "Reconocimiento a las personas que hacen posible ProxMenux — testers, revisores y desarrolladores que dan forma a cada release.",
-    "ogTitle": "Colaboradores | ProxMenux Documentation",
-    "ogDescription": "Conoce a los colaboradores detrás de ProxMenux."
+    "title": "Colaboradores | Documentación de ProxMenux",
+    "description": "Detrás de cada versión hay personas que desarrollan, revisan, traducen y prueban ProxMenux. Esta página agradece tanto el trabajo de hoy como la ayuda que hizo posibles sus primeros pasos.",
+    "ogTitle": "Colaboradores | Documentación de ProxMenux",
+    "ogDescription": "Detrás de cada versión hay personas que desarrollan, revisan, traducen y prueban ProxMenux. Esta página agradece tanto el trabajo de hoy como la ayuda que hizo posibles sus primeros pasos."
   },
   "header": {
     "title": "Colaboradores",
-    "description": "El proyecto ProxMenux crece y prospera gracias a la contribución de sus colaboradores. Este es el merecido reconocimiento a su trabajo — probando builds antes del release, cazando regresiones, revisando PRs y dando forma a la dirección de las nuevas funciones.",
+    "description": "Detrás de cada versión hay personas que desarrollan, revisan, traducen y prueban ProxMenux. Esta página agradece tanto el trabajo de hoy como la ayuda que hizo posibles sus primeros pasos.",
     "section": "Acerca de"
   },
-  "beyond": {
-    "title": "Más allá de esta lista",
-    "body": "Mucha más gente contribuye vía reportes de bugs, ideas de funciones en Discussions, pruebas beta y traducciones. La lista completa de colaboradores de código vive en el <extlink>grafo de colaboradores de GitHub</extlink>. La página de abajo destaca a las personas que han estado más activamente involucradas en probar y revisar releases de ProxMenux."
+  "active": {
+    "heading": "Desarrollo, revisión y colaboración continuada",
+    "intro": "Vaso73, f3rs3n y jcastro participan de forma continuada con mejoras, correcciones y revisiones. Su trabajo abarca mucho más que probar una versión: también ayuda a construir y depurar las siguientes.",
+    "people": {
+      "Vaso73": "Mejoras y correcciones en OCI manager y ProxMenux Monitor, además de la traducción y revisión de los textos en eslovaco.",
+      "f3rs3n": "Correcciones y revisión del comportamiento de los scripts y del Monitor, junto con mejoras continuas de la traducción al italiano.",
+      "jcastro": "Desarrollo y depuración de funciones OCI, copias de seguridad y Monitor, además de revisión de documentación y pruebas desde los primeros pasos del proyecto."
+    }
+  },
+  "code": {
+    "heading": "Más contribuciones al código",
+    "intro": "También han aportado cambios al código las siguientes personas. Cada enlace permite conocer su trabajo; el historial de GitHub recoge las contribuciones y las PR que se siguen incorporando.",
+    "viewWork": "Ver aportaciones",
+    "history": "Historial de contribuciones",
+    "merged": "Ver todas las PR integradas"
+  },
+  "community": {
+    "heading": "Una comunidad que también prueba, traduce y documenta",
+    "body": "No todo el trabajo llega en forma de código. Reproducir un fallo, compartir registros útiles, probar hardware distinto, corregir una explicación o proponer una mejora también ayuda a que ProxMenux funcione mejor.",
+    "languages": "Gracias especialmente a quienes revisan los textos en su idioma. Las traducciones de la interfaz, del Monitor y de la documentación acercan el proyecto a más personas y hacen que sea más cómodo utilizarlo."
   },
   "testers": {
-    "heading": "Testers y revisores",
-    "intro": "Estas personas fueron de las primeras en contribuir al proyecto, probando, reportando incidencias y proponiendo mejoras que ayudaron a que ProxMenux haya crecido hasta convertirse en lo que es hoy.",
-    "roles": {
-      "testing": "Pruebas",
-      "testingReviewer": "Pruebas y revisor"
-    },
+    "heading": "Gracias por las primeras pruebas",
+    "intro": "Este reconocimiento sigue teniendo su lugar. Estas personas ayudaron a validar las primeras versiones, probaron el proyecto en sus equipos y compartieron errores y sugerencias cuando ProxMenux comenzaba a crecer.",
     "youtube": "YouTube"
   },
   "contribute": {
-    "heading": "¿Quieres colaborar?",
-    "intro": "Cualquier contribución es bienvenida — código, pruebas, diseño, documentación o simplemente compartir tus ideas:",
-    "tester": "<strong>Tester</strong> — prueba el <beta>canal beta</beta> y reporta qué funciona y qué no antes de los releases estables.",
-    "developer": "<strong>Desarrollador</strong> — Bash + Next.js (TypeScript) + un poco de Python para el venv de traducción. Los PRs son bienvenidos en <gh>GitHub</gh>.",
-    "designer": "<strong>Diseñador</strong> — mejoras de UI, iconos, capturas para la documentación.",
-    "ideas": "<strong>Ideas</strong> — abre un hilo en <disc>GitHub Discussions</disc> antes de abrir una incidencia de petición de función."
+    "heading": "Tu aportación también tiene un lugar",
+    "intro": "Puedes colaborar con una corrección pequeña, una prueba concreta o la revisión de un texto. No hace falta desarrollar una función completa para ayudar.",
+    "ways": {
+      "code": {
+        "title": "Código y revisión",
+        "body": "Desarrolla funciones, corrige errores o revisa una PR. La guía de contribución explica cómo preparar y proponer los cambios."
+      },
+      "testing": {
+        "title": "Pruebas y diagnóstico",
+        "body": "Prueba las versiones beta y comparte los pasos para reproducir un problema y los registros que ayuden a entenderlo."
+      },
+      "translations": {
+        "title": "Traducciones",
+        "body": "Revisa los mensajes en tu idioma y ayuda a mantenerlos al día cuando se añaden nuevas funciones."
+      },
+      "docs": {
+        "title": "Documentación y diseño",
+        "body": "Aclara una guía, añade una captura o mejora la interfaz para que otras personas puedan seguirla con más facilidad."
+      }
+    },
+    "guide": "Guía de contribución",
+    "discuss": "Hablar con la comunidad"
   },
-  "coc": {
-    "title": "Lee primero el código de conducta",
-    "body": "Antes de enviar código o reportar incidencias, dale una lectura rápida al <coclink>Código de conducta y buenas prácticas</coclink>. Cubre las expectativas sobre responsabilidad del código, divulgación de problemas de seguridad y alcance de los PRs."
+  "thanks": {
+    "title": "Gracias por hacerlo posible",
+    "body": "A quienes aparecen aquí y a quienes ayudan en una issue, una conversación o una prueba: gracias por dedicar vuestro tiempo a mejorar ProxMenux."
   }
 }

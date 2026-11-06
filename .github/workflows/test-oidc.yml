@@ -28,12 +28,13 @@ permissions:
 
 jobs:
   oidc:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         python: ['3.11', '3.13']
+        runner: ['ubuntu-22.04', 'ubuntu-22.04-arm']
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +52,7 @@ jobs:
           import os, re, subprocess, sys
           from pathlib import Path
           source = Path('AppImage/scripts/build_appimage.sh').read_text()
+          os.environ['PMX_APPIMAGE_ARCH'] = __import__('platform').machine()
           version = re.search(r'^CRYPTOGRAPHY_VERSION="([^"]+)"', source, re.M).group(0)
           function = re.search(r'^install_oidc_crypto_runtime\(\) \{\n.*?^\}', source, re.M | re.S).group(0)
           abi = f'cp{sys.version_info.major}{sys.version_info.minor}'
@@ -65,11 +67,11 @@ jobs:
           python -B -m unittest discover -s AppImage/scripts/tests -p test_auth_manager_setup.py -v
           bash -n AppImage/scripts/build_appimage.sh
       - uses: actions/setup-node@v6
-        if: matrix.python == '3.11'
+        if: matrix.python == '3.11' && matrix.runner == 'ubuntu-22.04'
         with:
           node-version: '22.14.0'
       - name: Verify browser completion and failed-login recovery
-        if: matrix.python == '3.11'
+        if: matrix.python == '3.11' && matrix.runner == 'ubuntu-22.04'
         run: |
           npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           NODE_PATH="$PWD/.github/ci/offline-node/node_modules" node AppImage/tests/oidc-login.cjs

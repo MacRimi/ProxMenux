@@ -27,9 +27,9 @@
     "heading": "La convención del grupo \"sharedfiles\"",
     "body": "Antes de exportar la carpeta, ProxMenux crea un grupo llamado <code>sharedfiles</code> con <strong>GID 101000</strong> dentro del contenedor, añade cada usuario regular a él, luego pone el directorio del export a <code>root:sharedfiles</code> con modo <code>2775</code>. El <code>2</code> al principio es el bit SGID — cada archivo o carpeta creada dentro hereda automáticamente el grupo <code>sharedfiles</code>.",
     "gidTitle": "Por qué GID 101000 específicamente",
-    "gidBody": "Mapea al GID <strong>1000</strong> del host cuando un contenedor unprivileged lee el mismo archivo (el idmap por defecto de LXC desplaza todo en +100000). En el flujo actual de ProxMenux el propio servidor NFS corre en un CT <strong>privileged</strong> (sin desplazamiento de su lado), pero la convención mantiene el GID numéricamente consistente con CTs cliente unprivileged que puedan montar este share después. Dos CTs privileged usando ambos <code>sharedfiles</code> con GID 101000 pueden leer / escribir los archivos del otro limpiamente porque los números de GID coinciden de principio a fin.",
-    "remapTitle": "El script también crea usuarios 'remap_*' — son vestigiales aquí",
-    "remapBody": "Por cada usuario regular en el CT (y para UIDs comunes como 33 = www-data, 1000, 1001, 1002), el script crea un usuario paralelo <code>remap_&lt;uid&gt;</code> con UID = <code>&lt;uid&gt; + 100000</code>, todos miembros de <code>sharedfiles</code>. El desplazamiento <code>+100000</code> imita el idmap unprivileged de LXC, pero como este script impone un CT <strong>privileged</strong> (sin desplazamiento), esos usuarios <code>remap_*</code> son cuentas shadow sin contraparte real en el host. Son restos inofensivos de una intención de diseño más ambiciosa. Si no los ves en <code>getent passwd</code>, no se rompe nada."
+    "gidBody": "Con el mapa de ID predeterminado de LXC (+100000), el GID 101000 del host aparece como GID <strong>1000</strong> dentro de un CT sin privilegios. Este flujo de servidor usa un CT <strong>con privilegios</strong>, donde no hay desplazamiento. Dos CT con privilegios que usen <code>sharedfiles</code> con GID 101000 comparten el mismo ID numérico de grupo.",
+    "remapTitle": "La creación heredada de usuarios «remap_*» se omite en CT con privilegios",
+    "remapBody": "La rama heredada para CT sin privilegios crearía usuarios <code>remap_&lt;uid&gt;</code> con UID <code>&lt;uid&gt; + 100000</code>, todos en <code>sharedfiles</code>, para usuarios normales y UID habituales (33, 1000, 1001, 1002). Este desplazamiento <code>+100000</code> no se aplica a los CT <strong>con privilegios</strong> exigidos por este flujo, por lo que el script omite esa rama. Es normal que no aparezcan cuentas <code>remap_*</code> en <code>getent passwd</code>; no indica un fallo."
   },
   "defaults": {
     "heading": "Opciones de export por defecto — léelo primero",
@@ -39,7 +39,7 @@
   "opening": {
     "heading": "Abrir la herramienta",
     "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Configure NFS Server in LXC (only privileged)</strong>. ProxMenux te pide primero elegir el CT destino (y lo arranca si está parado); aborta si es unprivileged. Una vez seleccionado el CT ves este submenú con cinco opciones:",
-    "imageAlt": "Menú NFS Server Manager — Create / View / Delete / Status / Uninstall"
+    "imageAlt": "Menú del servidor NFS — Crear / Ver / Eliminar / Estado / Desinstalar"
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script (flujo Create)"
@@ -79,7 +79,7 @@
       },
       {
         "option": "sync",
-        "effectRich": "Responder a las peticiones de escritura solo después de que los datos estén en disco. Más seguro que <code>async</code> a costa de throughput."
+        "effectRich": "Responde a las peticiones de escritura solo cuando los datos están en disco. Más seguro que <code>async</code>, a costa del rendimiento."
       },
       {
         "option": "no_subtree_check",
@@ -97,7 +97,7 @@
   },
   "view": {
     "heading": "Ver exports actuales",
-    "body": "Cat de <code>/etc/exports</code> desde dentro del CT (saltando comentarios / blancos) e imprime cada export con su ACL de red y cadena de opciones. Útil para comprobar qué carpetas están expuestas antes de compartir la IP del CT con alguien."
+    "body": "Muestra <code>/etc/exports</code> desde dentro del CT, omitiendo comentarios y líneas vacías, y presenta cada export con su ACL de red y opciones. Útil para comprobar qué carpetas están expuestas antes de compartir la IP del CT."
   },
   "delete": {
     "heading": "Eliminar un export",
@@ -115,9 +115,9 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "privTitle": "Contenedor privileged requerido (el script aborta)",
+    "privTitle": "Se requiere un contenedor con privilegios (el script se detiene)",
     "privBody": "El CT seleccionado es unprivileged. <code>nfs-kernel-server</code> no puede arrancar ahí porque montar <code>/proc/fs/nfsd</code> necesita <code>CAP_SYS_ADMIN</code> en el namespace del kernel del host, y el módulo <code>nfsd</code> tampoco está expuesto al namespace del contenedor (<code>modprobe nfsd</code> desde dentro devuelve <code>FATAL: Module nfsd not found</code>). Si te saltas el gate, verás <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> en el journal y ningún puerto NFS llegará a abrirse. Las únicas opciones viables son: convertir el CT a privileged, o mover el servidor NFS a una VM.",
-    "aptTitle": "apt-get install falla",
+    "aptTitle": "Falla apt-get install",
     "aptIntro": "El script asume un CT de la familia Debian. En Alpine / Arch / Rocky / Alma, instala los paquetes del servidor NFS a mano:",
     "aptItems": [
       "Alpine: <code>apk add nfs-utils</code>",

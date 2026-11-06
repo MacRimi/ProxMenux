@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "title": "Crea VM: sistema Windows | Documentazione ProxMenux",
+    "description": "Creare e configurare macchine virtuali Windows su Proxmox VE con ProxMenux. Include UUP Dump ISO e percorsi ISO locali, configurazione predefinita / avanzata, piano di archiviazione unificato, passthrough GPU opzionale, configurazione TPM 2.0 e installazione driver VirtIO.",
+    "ogTitle": "Crea VM: sistema Windows | Documentazione ProxMenux",
+    "ogDescription": "Crea VM Windows su Proxmox VE con ProxMenux. UUP Dump o ISO locale, piano di archiviazione unificato, passthrough opzionale GPU, driver TPM 2.0 e VirtIO.",
+    "ogImageAlt": "ProxMenux menu Windows VM"
+  },
+  "header": {
+    "title": "Crea VM: sistema Windows",
+    "description": "Crea una VM Windows su Proxmox VE. ProxMenux gestisce la scelta dell’ISO (UUP Dump o locale), CPU, RAM, tipo di macchina, piano di archiviazione comune, passthrough GPU facoltativo, TPM 2.0 e installazione dei driver VirtIO.",
+    "section": "Macchine virtuali"
+  },
+  "intro": {
+    "title": "Cosa fa questo script",
+    "body": "Il percorso Windows chiede l’origine dell’ISO: UUP Dump o copia locale in <code>/var/lib/vz/template/iso</code>. Avvia poi la procedura guidata VM comune con impostazioni adatte a Windows: <code>q35</code>, OVMF e TPM 2.0. L’ISO dei driver VirtIO viene collegata come secondo CD-ROM e la VM è pronta ad avviare l’installatore Windows."
+  },
+  "image": {
+    "alt": "ProxMenux Opzioni di installazione di Windows",
+    "caption": "Opzioni di installazione di Windows"
+  },
+  "config": {
+    "heading": "Configurazione predefinita vs Avanzata",
+    "intro": "Dopo la selezione dell'ISO, ProxMenux chiede se utilizzare il profilo predefinito VM o aprire la procedura guidata avanzata. Il profilo predefinito è sintonizzato per le moderne edizioni desktop e server Windows.",
+    "defaultHeading": "Configurazione predefinita",
+    "headerParam": "Parametro",
+    "headerValue": "Valore predefinito",
+    "defaultRows": [
+      {
+        "param": "Tipo di macchina",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "Tipo di CPU",
+        "value": "Host"
+      },
+      {
+        "param": "Core",
+        "value": "4"
+      },
+      {
+        "param": "RAM",
+        "value": "8192 MB"
+      },
+      {
+        "param": "Ponte",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Indirizzo MAC",
+        "value": "Autogenerata"
+      },
+      {
+        "param": "TPM",
+        "value": "Abilitato (v2.0)"
+      },
+      {
+        "param": "Avvia al termine",
+        "value": "No"
+      }
+    ],
+    "advancedHeading": "Configurazione avanzata",
+    "advancedIntro": "La procedura guidata avanzata mostra ogni impostazione separatamente:",
+    "headerOptions": "Opzioni",
+    "advancedRows": [
+      {
+        "param": "Tipo di macchina",
+        "optionsRich": "<code>q35</code> o <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI) o SeaBIOS (Legacy)"
+      },
+      {
+        "param": "Tipo di CPU",
+        "options": "Host, KVM64 e altri modelli CPU elencati"
+      },
+      {
+        "param": "Core",
+        "options": "Numero di core CPU"
+      },
+      {
+        "param": "RAM",
+        "options": "Memoria assegnata alla VM"
+      },
+      {
+        "param": "Ponte",
+        "options": "Bridge di rete"
+      },
+      {
+        "param": "Indirizzo MAC",
+        "options": "MAC personalizzato"
+      },
+      {
+        "param": "VLAN",
+        "options": "Tag VLAN (opzionale)"
+      },
+      {
+        "param": "MTU",
+        "options": "MTU misura"
+      },
+      {
+        "param": "TPM",
+        "options": "TPM 2.0 viene aggiunto automaticamente per Windows; la procedura guidata non offre un interruttore TPM."
+      }
+    ],
+    "tpmWarnTitle": "I requisiti TPM dipendono dall’edizione Windows",
+    "tpmWarnBody": "Windows 11 richiede normalmente TPM 2.0. Windows Server 2022 lo richiede per alcune funzioni di sicurezza, non per ogni installazione. ProxMenux aggiunge un TPM virtuale per Windows; la procedura guidata avanzata non consente di disattivarlo."
+  },
+  "storagePlan": {
+    "heading": "Piano di archiviazione",
+    "body": "Dopo CPU / RAM, ProxMenux apre il menu <strong>Storage Plan</strong>, dove è possibile combinare dischi virtuali, dischi importati e dispositivi passanti PCI nello stesso VM, aggiungendo elementi uno alla volta e terminando quando si è fatto.",
+    "virtualDiskTitle": "a. Aggiungere disco virtuale",
+    "virtualDiskItems": [
+      "Elenca i volumi di archiviazione Proxmox disponibili sull'host.",
+      "Scegli lo storage di destinazione e la dimensione in GB.",
+      "Il disco usa il bus scelto: SCSI (predefinito), SATA, VirtIO o IDE. SATA offre sei posizioni numerate da 0 a 5: <code>sata0</code>, <code>sata1</code>, …."
+    ],
+    "importDiskTitle": "b. Aggiungere disco di importazione",
+    "importDiskItems": [
+      "Rileva i dischi fisici che sono sicuri da importare (sistema e dischi protetti sono nascosti).",
+      "Seleziona uno o più dischi tramite una lista di controllo.",
+      "I dischi importati usano il bus scelto e vengono collegati tramite <code>qm set</code>."
+    ],
+    "pciTitle": "C. Aggiungi controller o NVMe (passthrough PCI)",
+    "pciItems": [
+      "Rileva HBA SATA/SAS e dispositivi NVMe e consente di assegnare un <em>intero controller</em> alla VM. IOMMU deve essere attivo; lo script propone l’attivazione e un riavvio se necessario.",
+      "Un passo di conferma avverte il rischio a livello del controller (l'intera carta, compreso ogni disco su di esso, lascia l'host).",
+      "I dispositivi PCI vengono assegnati con comandi come <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Sostituisci VMID e PCI_ADDRESS con ID della VM e indirizzo PCI e usa un indice hostpci libero per ogni dispositivo."
+    ],
+    "resetTitle": "Azzera e termina",
+    "resetBody": "Il menu offre anche <strong>r</strong> (riimpostare la selezione attuale e ricominciare da capo) e <strong>d</strong> (finire e continuare). Non puoi finire con un piano vuoto."
+  },
+  "gpu": {
+    "heading": "Passaggio opzionale GPU",
+    "body": "Dopo il piano di archiviazione, se viene rilevato un GPU compatibile sull'host ProxMenux offre di lanciare l'assistente passthrough GPU. Vedere <gpuLink>Add GPU a un VM (Passthrough)</gpuLink> per come funziona l'assistente - un riavvio host può essere richiesto."
+  },
+  "autoFeatures": {
+    "heading": "Caratteristiche automatiche VM",
+    "efiTitle": "Disco EFI",
+    "efiBody": "Quando OVMF (UEFI) viene selezionato, ProxMenux crea un disco di sistema EFI 4 MB sullo storage scelto e lo collega al VM in modo che il firmware UEFI abbia un posto per memorizzare le sue variabili.",
+    "tpmTitle": "TPM 2.0",
+    "tpmBody": "ProxMenux aggiunge un TPM 2.0 virtuale alle VM Windows. Soddisfa il requisito TPM di Windows 11 e supporta le funzioni Windows Server che dipendono da TPM.",
+    "isoTitle": "Montaggio ISO",
+    "isoBody": "L’ISO di installazione viene collegata a <code>ide2</code>. L’ISO dei driver VirtIO viene scaricata se necessario e collegata a <code>ide3</code> per il passaggio <em>Carica driver</em>.",
+    "guestTitle": "Agente ospite QEMU",
+    "guestBody": "Il canale dell'agente ospite è abilitato nella configurazione VM. L'agente stesso è installato all'interno di Windows eseguendo <code>virtio-win-guest-tools.exe</code> dopo l'installazione."
+  },
+  "installOptions": {
+    "heading": "Opzioni di installazione di Windows",
+    "intro": "ProxMenux offre due metodi per ottenere il supporto di installazione di Windows:",
+    "uupTitle": "Creatore di ISO UUP Dump",
+    "uupLogoAlt": "logo UUP Dump",
+    "uupBody": "Lo script <strong>UUP Dump ISO Creator</strong> è un’utilità ProxMenux che crea una ISO Windows al momento dai server Windows Update di Microsoft. Scarica file di installazione ufficiali, incluse le build Insider Preview.",
+    "uupItems": [
+      "Accesso alle ultime versioni di Windows.",
+      "Supporta le versioni Insider Preview.",
+      "File di installazione Microsoft ufficiali e non modificati.",
+      "Creazione e montaggio automatico ISO nel VM.",
+      "Supporta le edizioni Home, Pro e Enterprise."
+    ],
+    "uupLearnMore": "Scopri di più su UUP Dump ISO Creator",
+    "localTitle": "Installare con ISO locale",
+    "localBody": "Utilizza una ISO di Windows che hai già caricato sullo storage locale dell'host (<code>/var/lib/vz/template/iso</code>). Lo script elenca ogni ISO non-VirtIO che trova e ti permette di sceglierne uno.",
+    "localImageAlt": "Menu di selezione ISO locale",
+    "localImageCaption": "Menu di selezione ISO locale"
+  },
+  "endToEnd": {
+    "heading": "Cosa fa lo script end-to-end",
+    "items": [
+      "Ottiene l’ISO Windows tramite UUP Dump o da una copia locale.",
+      "Applica le impostazioni predefinite o avanzate di CPU, RAM, BIOS e tipo di macchina.",
+      "Apre il piano di archiviazione e allega i dischi virtuali selezionati, i dischi importati e i dispositivi PCI.",
+      "Crea il disco EFI per le installazioni UEFI e collega il dispositivo TPM 2.0.",
+      "Monta l'ISO di Windows su <code>ide2</code>.",
+      "Scarica e monta i driver VirtIO ISO su <code>ide3</code>.",
+      "Imposta l'ordine di avvio (disco prima, poi ISO).",
+      "Abilita il canale Agente Ospite QEMU.",
+      "Opzionalmente gestisce l'assistente passante GPU.",
+      "Genera una descrizione HTML stilizzata collegata al VM.",
+      "Avvia la VM se hai scelto di farlo."
+    ]
+  },
+  "virtio": {
+    "heading": "Driver VirtIO durante l'installazione",
+    "body": "Il creatore di VM usa per impostazione predefinita dischi SCSI con controller VirtIO SCSI e una scheda di rete VirtIO. Una ISO Windows standard può richiedere i relativi driver dall’ISO VirtIO montata su <code>ide3</code>. I dischi SATA funzionano normalmente con i driver inclusi in Windows; scegliere SATA non cambia la scheda di rete VirtIO.",
+    "warnTitle": "Carica il driver di rete VirtIO se Windows non ha rete",
+    "warnBody": "La VM usa una scheda di rete VirtIO (<code>virtio</code>). Se Windows non include il driver, caricalo durante l’installazione per accedere alla rete. Altrimenti attivazione e Windows Update potrebbero non essere disponibili al primo avvio.",
+    "stepLabel": "Passaggio",
+    "steps": [
+      {
+        "title": "Accedi alla schermata \"Dove vuoi installare Windows?\"",
+        "body": "Durante la configurazione di Windows, se non vengono mostrati dischi, il driver di archiviazione per l'interfaccia selezionata (SCSI o VirtIO) non è ancora caricato. Caricarlo manualmente dalla ISO VirtIO montata.",
+        "img": "/vm/windows/virtio-step-1.png",
+        "caption": "Configurazione di Windows senza dischi mostrati"
+      },
+      {
+        "title": "Fare clic su \"Carica driver\"",
+        "bodyRich": "Fai clic su <strong>Carica driver</strong>, sfoglia l’ISO VirtIO montata e scegli il driver di archiviazione adatto all’interfaccia selezionata.",
+        "img": "/vm/windows/virtio-step-2.png",
+        "caption": "Fai clic su Carica driver per sfogliare l’ISO VirtIO"
+      },
+      {
+        "title": "Sfoglia nella cartella corretta del driver",
+        "bodyRich": "Nell’ISO VirtIO scegli <code>vioscsi</code> per il controller VirtIO SCSI oppure <code>viostor</code> per i dischi a blocchi VirtIO. Scegli poi la sottocartella per versione Windows e architettura.",
+        "img": "/vm/windows/virtio-step-3.png",
+        "caption": "Sfoglia la cartella driver appropriata"
+      },
+      {
+        "title": "Selezionare il driver",
+        "bodyRich": "Windows elenca i driver disponibili. Scegliere quello che corrisponde alla configurazione (tipicamente <strong>Red Hat VirtIO SCSI controller</strong>) e fare clic su <strong>Next</strong>.",
+        "img": "/vm/windows/virtio-step-4.png",
+        "caption": "Selezionare il driver VirtIO che corrisponde all'interfaccia del disco"
+      },
+      {
+        "title": "(Opzionale) Installare il driver di rete",
+        "bodyRich": "Se hai anche scelto VirtIO come interfaccia di rete, carica il driver di rete dalla cartella <code>NetKVM</code> della stessa ISO, selezionando la sottocartella per la tua versione di Windows. Senza questo passaggio Windows installa senza accesso a Internet.",
+        "img": "/vm/windows/virtio-step-5.png",
+        "caption": "Caricare il driver di rete VirtIO per abilitare internet durante l'installazione"
+      }
+    ],
+    "tipTitle": "Post-installazione: eseguire virtio-win-guest-tools.exe",
+    "tipBody": "Dopo aver installato Windows, apri l’ISO VirtIO in Esplora file ed esegui <code>virtio-win-guest-tools.exe</code>. Installa i driver rimanenti (rete, schermo, input, ballooning) e QEMU Guest Agent in un’unica operazione."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "Creatore di ISO UUP Dump",
+        "tail": "— generare ISO di installazione di Windows aggiornate sull'host Proxmox."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importa immagine disco nella VM",
+        "tail": " — importa un’immagine disco Windows esistente (.vmdk, .qcow2, .img o .raw) in una VM esistente; converti prima le immagini .vhdx in un formato supportato."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Aggiungi GPU a VM (Passthrough)",
+        "tail": "— per le VM Windows con GPU ad accelerazione hardware."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Comandi di gestione VM e CT",
+        "tail": "— riferimento qm CLI."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Panoramica della creazione di VM",
+        "tail": "."
+      }
+    ]
+  }
+}

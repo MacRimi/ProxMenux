@@ -1,5 +1,11 @@
 [
   {
+    "title": "USB/IP over SSH",
+    "menu": "Hardware: GPUs and Coral-TPU",
+    "script": "devices/usbip_menu.sh",
+    "keywords": "usbip usb ip ssh remote zigbee bluetooth printer impresora remoto"
+  },
+  {
     "title": "Settings post-install Proxmox",
     "menu": "Settings post-install Proxmox",
     "script": "menus/menu_post_install.sh",

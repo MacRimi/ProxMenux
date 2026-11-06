@@ -876,8 +876,8 @@ and traceback before changing catalogs or translation-provider settings.
 #### Qualified offline `tests/` CI lanes
 
 `.github/workflows/test-offline-qualified.yml` runs **only** the explicitly listed
-nine Python files (including the inert active-notification payload fixture and
-the focused health recurrence tests) and eleven
+ten Python files (including the native discovery fixtures, the inert active-notification payload fixture and
+the focused health recurrence tests) and twelve
 Node files in `.github/scripts/run_offline_qualified.py`.
 The Python runner gives each test file a private temporary directory through
 `TMPDIR`. It removes that directory after the test file finishes.
@@ -900,7 +900,7 @@ dangling symlink) rather than overwrite or reuse it. In Bash:
 )
 ```
 
-Requires Python 3.11, Node 22.14, npm and Bash/coreutils for the bounded shell
+Requires Python 3.11, Flask 3.x for the native route fixtures, Node 22.14, npm and Bash/coreutils for the bounded shell
 fixtures. The separate lockfile installs only TypeScript, React, React DOM,
 Lucide icons and the locked scheduler dependency; it does not build the Monitor
 or run npm lifecycle scripts. `--legacy-peer-deps` admits the existing Lucide

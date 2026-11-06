@@ -29,7 +29,13 @@ export function LanguageSwitcher() {
   const labels: Record<string, string> = {
     en: t("en"),
     es: t("es"),
+    de: t("de"),
+    fr: t("fr"),
+    it: t("it"),
+    pt: t("pt"),
     sk: t("sk"),
+    sv: t("sv"),
+    ru: t("ru"),
   }
 
   return (

@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Punti di montaggio LXC (host ↔ container) | Documentazione ProxMenux",
+    "description": "LXC Mount Manager rende accessibile una directory dell’host in uno o più container LXC tramite bind mount con pct set -mpN. Gestisce le particolarità dei permessi nei container non privilegiati, corregge i montaggi CIFS e NFS sul lato host e non modifica nulla all’interno del container.",
+    "ogTitle": "Punti di montaggio LXC (host ↔ container) | Documentazione ProxMenux",
+    "ogDescription": "Monta directory dell’host nei container LXC tramite bind mount. Gestisce la mappatura UID non privilegiata in modo pratico e corregge l’accesso CIFS / NFS sull’host."
+  },
+  "header": {
+    "title": "LXC Punti di montaggio (Host ↔ Contenitore)",
+    "description": "Lo strumento principale per condividere cartelle fra l’host Proxmox e i container LXC. Rende accessibile una directory dell’host in uno o più container tramite bind mount con la sintassi nativa pct set -mpN. Gestisce i permessi dei container non privilegiati sul lato host, senza modificare nulla all’interno del container.",
+    "section": "Archiviazione e condivisione · LXC"
+  },
+  "intro": {
+    "title": "Cosa succede?",
+    "body": "Prendere una directory che vive sull'host Proxmox (una cartella locale, una condivisione NAS montata, un deposito gestito da Proxmox...) e farlo apparire all'interno di un contenitore LXC in un percorso scelto, con autorizzazioni che funzionano anche per contenitori non privilegiati - senza toccare nulla all'interno del contenitore."
+  },
+  "bigPicture": {
+    "heading": "Come funziona (il quadro grande)",
+    "intro": "Con un bind mount, Proxmox chiede al kernel di rendere la directory <code>X</code> dell’host accessibile anche nel percorso <code>Y</code> del container. Non ci sono copie, sincronizzazioni o trasferimenti di rete: entrambi vedono contemporaneamente gli <em>stessi file</em>.",
+    "sourceLabel": "Host Proxmox",
+    "sourceDetail": "/mnt/data\n(la tua cartella)",
+    "targetLabel": "Contenitore LXC",
+    "targetDetail": "/mnt/data\n(vedi qui)",
+    "arrowLabel": "bind mount",
+    "outro": "Il percorso host sulla sinistra e il percorso contenitore sulla destra possono essere diversi — ad esempio, <code>/mnt/nas-films</code> sull'host può diventare <code>/media/films</code> all'interno del contenitore. Lo script aggiunge l'ingresso al contenitore config (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) utilizzando il prossimo indice <code>mpN</code> libero, con due impostazioni di sicurezza integrate:",
+    "items": [
+      "<code>shared=1</code> — indica a Proxmox che i dati sono condivisi e non vanno migrati con il CT. Il flag non replica i dati: lo stesso percorso e gli stessi dati devono essere già disponibili sul nodo di destinazione.",
+      "<code>backup=0</code> — il bind mount resta escluso dai backup <code>vzdump</code>. I dati risiedono sull’host e vanno salvati separatamente."
+    ]
+  },
+  "perms": {
+    "heading": "Gestione delle autorizzazioni — la parte smart",
+    "intro": "Il principio dei bind mount è semplice; la parte delicata sono i permessi. Un container LXC <strong>non privilegiato</strong> applica uno spostamento di <strong>+100000</strong> agli UID. Un file creato dall’utente 1000 nel container appare quindi sull’host con UID 101000, che non appartiene a nessun utente dell’host. Per evitare di dover allineare gli UID, ProxMenux adatta i permessi sul lato <em>host</em> in base al tipo di directory scelto:",
+    "headerType": "Tipo di directory host",
+    "headerAction": "Cosa offre lo script da fare",
+    "localType": "Cartella locale",
+    "localTypeSub": "ad esempio. /mnt/data",
+    "localActionRich": "<code>chmod o+rwx</code> + <code>setfacl o::rwx</code> nella directory host. Solo se il CT non è privilegiato e le autorizzazioni attuali sono insufficienti.",
+    "cifsType": "montato CIFS / SMB",
+    "cifsTypeSub": "ad esempio. /mnt/pve/cifs-…",
+    "cifsActionRich": "Rimontare con <code>uid=0, gid=0, file_mode=0777, dir_mode=0777</code> in modo che il CT (qualsiasi UID) possa leggere e scrivere la condivisione. <code>/etc/fstab</code> è aggiornato.",
+    "nfsType": "NFS montato",
+    "nfsTypeSub": "ad esempio. /mnt/pve/nfs-…",
+    "nfsActionRich": "<code>chmod 1777</code> e <code>setfacl o::rwx</code> sul montaggio NFS. Non possono aggirare lo squashing applicato dal server: se nemmeno root sull’host riesce a scrivere, la procedura ti invita a correggere l’esportazione sul server NFS.",
+    "privTitle": "I container privilegiati non richiedono questi adattamenti",
+    "privBody": "Per contenitori privilegiati, UID 0 nel CT è UID 0 sull'host — root all'interno del CT può leggere e scrivere la directory host direttamente senza alcun trucco di autorizzazione. Lo script rileva e salta completamente il passo \"aprire le autorizzazioni\".",
+    "noCtTitle": "Lo script non modifica mai nulla all'interno del contenitore",
+    "noCtBody": "Tutte le modifiche di autorizzazione avvengono sul filesystem <strong>host</strong>. Nessun chowns <code>pct exec</code>, nessun gruppo creato nel CT, nessun fstab all'interno del contenitore. Se riutilizzate la directory in un altro CT in seguito, le stesse autorizzazioni si applicano automaticamente, nessuna configurazione per-container."
+  },
+  "writes": {
+    "heading": "Che cosa scrive ProxMenux — e che cosa non fa",
+    "intro": "Un equivoco comune sui bind mount nei CT non privilegiati è pensare che ProxMenux debba aggiungere voci <code>lxc.idmap</code> in <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. <strong>Non lo fa.</strong> A quel file viene aggiunta una sola riga, quella del bind mount:",
+    "outro": "La linea di uscita che vedi alla fine della corsa, <em>\"Container non privilegiato — UID offset: 100000\"</em>, è puramente informativo — ti dice solo che il CT sta usando la mappatura non privilegiata predefinita di Proxmox (root in CT = UID 100000 sull'host). Lo script non configura nulla intorno a esso.",
+    "twoWaysHeading": "I due modi per far funzionare le autorizzazioni — e perché ProxMenux sceglie uno",
+    "headerApproach": "Approccio",
+    "headerChanges": "Cosa cambia",
+    "headerWhen": "Quando si adatta",
+    "hostType": "Permessi sull’host",
+    "hostTypeSub": "(che cosa fa questo script)",
+    "hostChangesRich": "<code>chmod o+rwx</code> + <code>setfacl o::rwx</code> nella directory host. Gli UID mappati di CT (100000+) cadono nel secchio \"altri\", quindi l'apertura di <em>altri</em> è sufficiente.",
+    "hostWhen": "Accesso generico a cartella condivisa da qualsiasi CT. Multiple CTs che condividono la stessa directory host. Semplice e riutilizzabile.",
+    "idmapTypeRich": "<code>lxc.idmap</code>",
+    "idmapTypeSub": "(non usato da questo script)",
+    "idmapChangesRich": "Mapping UID/GID personalizzato in <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> più abbinato <code>/etc/subuid</code> + <code>/etc/subgid</code> voci sull'host. CT deve essere riavviata su ogni cambiamento.",
+    "idmapWhenRich": "Hai bisogno di un UID <em>specifico</em> all'interno del CT per mappare un UID <em>specifico</em> sull'host (ad es. <code>media:1000</code> nel CT deve possedere i file come <code>media:1000</code> sull'host in modo che NFS non squash). Una configurazione più rigida, normalmente ne vale solo la pena per quello scenario esatto.",
+    "idmapTipTitle": "Quando hai veramente bisogno lxc.idmap",
+    "idmapTipBody": "Usa la mappatura manuale quando i file scritti nel CT devono avere uno specifico UID/GID numerico sull’host, ad esempio per condividere il proprietario con un utente host. Non aggira <code>all_squash</code> di NFS: il server decide comunque identità anonima e permessi. Aggiungi manualmente voci <code>lxc.idmap</code> se necessario. La riga del bind mount è indipendente da queste voci."
+  },
+  "opening": {
+    "heading": "Apertura dello strumento",
+    "body": "Dal menu principale di ProxMenux, aprire <strong>Storage &amp; Share Manager → Configurare LXC Mount Points (Host ↔ Container)</strong>. Vedrete questo sub-menu con tre opzioni:",
+    "imageAlt": "LXC Mount Manager menu — Aggiungi / Vedi / Rimuovi"
+  },
+  "addFlow": {
+    "heading": "Aggiungere un montaggio — procedura completa",
+    "intro": "La vista tecnica, per quando si desidera sapere esattamente ciò che ogni dialogo fa:"
+  },
+  "sources": {
+    "heading": "Cosa puoi scegliere come directory host",
+    "intro": "Il raccoglitore host-directory è il più accurato nella sezione Storage &amp; Share. Scansiona quattro fonti e presenta una lista deduplicata:",
+    "headerSource": "Fonte",
+    "headerWhere": "Da dove viene",
+    "headerLabel": "Etichetta nel menu",
+    "rows": [
+      {
+        "source": "Montaggi di rete attivi",
+        "whereRich": "Condivisioni CIFS / NFS attualmente montate, lette da <code>/proc/mounts</code>.",
+        "labelRich": "<code>NFS [used/size]</code> o <code>CIFS/SMB [used/size]</code>"
+      },
+      {
+        "source": "Montaggi fstab inattivi",
+        "whereRich": "Definito in <code>/etc/fstab</code> ma non attualmente montato.",
+        "labelRich": "<code>fstab(off)-NFS</code> / <code>fstab(off)-CIFS/SMB</code>"
+      },
+      {
+        "source": "Directory locali",
+        "whereRich": "Sottodirectory di <code>/mnt</code> che non corrispondono a montaggi di rete.",
+        "labelRich": "<code>Local [size]</code>"
+      },
+      {
+        "source": "Stoccaggio Proxmox",
+        "whereRich": "Percorsi di stoccaggio sotto <code>/mnt/pve/*</code> (NFS / CIFS registrati tramite <code>pvesm</code>).",
+        "labelRich": "<code>PVE-NFS</code> / <code>PVE-CIFS/SMB</code> / <code>Proxmox-Storage</code>"
+      },
+      {
+        "source": "Entrata manuale",
+        "where": "Qualsiasi altra cosa — digitare il percorso assoluto da soli.",
+        "labelRich": "<em>Inserisci percorso manualmente</em>"
+      }
+    ],
+    "tipTitle": "I percorsi Proxmox interni sono filtrati",
+    "tipBody": "Il raccoglitore salta esplicitamente i percorsi interni Proxmox (<code>/mnt/pve/local</code>, <code>/mnt/pve/local-lvm</code>, <code>/mnt/pve/backup</code>, ...) — quelli sono riservati per gli interni Proxmox e non è necessario legare-montare. Vengono visualizzati solo gli storage aggiunti dall'utente."
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "privIntro": "Per un contenitore privilegiato — il caso più semplice, nessun trucco di autorizzazione:",
+    "unprivLocalIntro": "Per un contenitore non privilegiato con una directory host locale — aprire le autorizzazioni sull'host prima:",
+    "unprivCifsIntro": "Per un contenitore non privilegiato con una condivisione CIFS già montata sull'host:"
+  },
+  "view": {
+    "heading": "Visualizza i punti di montaggio",
+    "body": "Elenca ogni ingresso <code>mpN</code> su ogni contenitore su questo host Proxmox, raggruppato da CT id e che mostra il percorso host → percorso container più eventuali opzioni extra. sola lettura — utile come controllo di sanità prima di aggiungere o rimuovere nulla."
+  },
+  "remove": {
+    "heading": "Rimuovi un punto di montaggio",
+    "body": "Scegli il contenitore, scegli la voce <code>mpN</code>, conferma. Lo script esegue <code>pct set --delete mpN</code> per rilasciare l'ingresso dalla configurazione CT e offre di riavviare il contenitore se è in esecuzione. La directory host e i suoi contenuti sono <strong>non toccati</strong> — è possibile ri-add il montaggio in seguito (o collegare la stessa directory a un diverso CT).",
+    "warnTitle": "I container in esecuzione richiedono un riavvio per applicare le modifiche",
+    "warnBody": "Sia l'aggiunta che la rimozione dei punti di montaggio diventano visibili solo all'interno del contenitore dopo un riavvio. Lo script offre un <code>pct reboot</code> con un solo clic alla fine di ogni operazione; è possibile declinare e riavviare manualmente in seguito."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "noMountTitle": "Il montaggio appare in pct config ma non all'interno del contenitore",
+    "noMountBody": "I bind mount vengono collegati all’avvio del container. Se hai aggiunto il montaggio mentre il CT era in esecuzione, riavvialo con <code>pct reboot &lt;ctid&gt;</code>. Se manca anche dopo il riavvio, controlla con <code>pct config &lt;ctid&gt;</code> che la voce esista e che il percorso sull’host contenga effettivamente una directory.",
+    "noWriteTitle": "Il contenitore può vedere la directory ma non può scrivere",
+    "noWriteBody": "Quasi sempre un problema di autorizzazioni. Per i contenitori non privilegiati, eseguire nuovamente la correzione del permesso dello script — gli ACL della directory host possono essere stati ripristinati da un altro strumento (rsync, ripristino da backup, manuale <code>chmod</code>). Per CIFS, controllare le opzioni di montaggio sull'host: <code>findmnt /mnt/pve/cifs-…</code>, cercare i valori <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",
+    "alreadyTitle": "\"Questo percorso è già utilizzato come punto di montaggio in questo contenitore\"",
+    "alreadyBody": "Hai scelto lo stesso percorso contenitore che è già collegato a una directory host diversa. Scegliere un percorso contenitore diverso o rimuovere prima il punto di montaggio esistente.",
+    "nfsTitle": "L'accesso NFS bloccato anche dopo aver applicato la correzione dell'host",
+    "nfsIntro": "Il server NFS sta schiacciando root o tutte le connessioni. Lo script può rilevare questo (cerca di scrivere un file di prova dall'host) e mostra la guida lato server. Due correzioni lato server comuni per l'esportazione:",
+    "nfsItems": [
+      "<code>no_root_squash</code> — i CT privilegiati possono scrivere direttamente.",
+      "<code>all_squash,anonuid=65534,anongid=65534</code> — per CT non privilegiati."
+    ],
+    "nfsOutro": "Queste modifiche avvengono sul server NFS (TrueNAS, Synology, la tua esportazione personalizzata, ...), non su Proxmox.",
+    "fstabOffTitle": "Il montaggio delle voci \"fstab(off)\" non fa nulla",
+    "fstabOffBody": "La selezione mostra voci <code>fstab(off)-</code> quando un montaggio di rete è definito in fstab ma non è attivo. Lo script consente di collegare il percorso tramite bind mount, ma la directory resterà vuota finché non monterai la condivisione sull’host con <code>mount &lt;path&gt;</code>. Montala prima e poi collegala al CT."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "label": "Aggiungi Directory condivisa su host",
+        "tailRich": "— primo passo tipico: preparare un <code>/mnt/shared</code> sull'host prima di legarlo in una o più CT qui."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Aggiungi condivisione NFS come storage Proxmox",
+        "extraHref": "/docs/storage-share/host-samba",
+        "extraLabel": "Aggiungi condivisione Samba come storage Proxmox",
+        "joiner": " / ",
+        "tailRich": "— registrare una condivisione esterna in Proxmox prima, quindi legare-montare il suo percorso <code>/mnt/pve/&lt;id&gt;</code> nel CT qui."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "client NFS in LXC",
+        "extraHref": "/docs/storage-share/lxc-samba-client",
+        "extraLabel": "client Samba in LXC",
+        "joiner": " / ",
+        "tail": "— l'alternativa quando si desidera che il CT stesso monti la condivisione (richiede un contenitore privilegiato)."
+      }
+    ]
+  }
+}

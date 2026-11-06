@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import runpy
+import subprocess
 import sys
 import tempfile
 from types import ModuleType, SimpleNamespace
@@ -28,6 +29,10 @@ TRANSACTION = ROOT / 'oci/remote/oci_stack_transaction.py'
 
 
 def extracted(path, name, scope):
+    if name == 'remove':
+        # Operational cache cleanup is exercised by the engine tests; keep wording tests inert.
+        scope.setdefault('compose_jobs', SimpleNamespace(forget_completed=lambda *args: None))
+        scope.setdefault('public_routes', SimpleNamespace(remove=lambda *args: None))
     node = next(n for n in ast.parse(path.read_text()).body
                 if isinstance(n, ast.FunctionDef) and n.name == name)
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), scope)
@@ -52,7 +57,8 @@ class InventoryMessages(unittest.TestCase):
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: dict(line.split(': ', 1) for line in raw.decode().splitlines())
         scope = {'sys': SimpleNamespace(path=[]), 'source_text': lambda text: text or '',
-                 'translate': translate, 're': re}
+                 'translate': translate, 're': re, 'subprocess': subprocess,
+                 '_selected_configuration': remover.guest_config}
         summary = extracted(MENU, '_removal_summary', scope)
         with patch.dict(sys.modules, {'oci_instances': instances, 'oci_remove': remover,
                                       'oci_installation_state': state}):
@@ -69,6 +75,9 @@ class InventoryMessages(unittest.TestCase):
         self.assertNotIn('Host directories that are kept, with their content:', text)
 
     def test_removal_notice_qualifies_saved_record_source(self):
+        # Extracted operational functions must never inspect the real pmxcfs.
+        host = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        inert_path = lambda value: host / Path(value).name if str(value).startswith('/etc/pve/') else Path(value)
         events = []
         scope = {'members_of': lambda root, vmid: (101, {}, [101]),
                  'instances': SimpleNamespace(read=lambda root, vmid: {'installation_id': 'owned'},
@@ -79,7 +88,7 @@ class InventoryMessages(unittest.TestCase):
                  'remove_owned_host_firewall': lambda primary: True,
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
-                 'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
+                 'Path': inert_path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
                  'image_cache': SimpleNamespace(prune=lambda root, lock: []),
                  'work_backup': SimpleNamespace(forget=lambda root, vmid: None),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),
@@ -114,7 +123,7 @@ class RecoveryMessages(unittest.TestCase):
         instances.ROOT = Path('/inert')
         instances.read = lambda root, vmid: self.primary
         self.modules = {'oci_instances': instances, 'oci_stack_replay': ModuleType('oci_stack_replay')}
-        self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path,
+        self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path, 'CANCELLED': None,
                       'translate': lambda text: text, 'images': SimpleNamespace(offer_removal=lambda *args: None),
                       '_remove': lambda *args: self.fail('remove must not run'),
                       '_run_lifecycle': lambda command, title: self.calls.append((command, title)) or False}
@@ -193,7 +202,7 @@ class RecoveryMessages(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         paths = sorted((ROOT / 'lang').glob('*.json'))
-        self.assertEqual(len(paths), 7)
+        self.assertEqual(len(paths), 8)
         for path in paths:
             cache = json.loads(path.read_text())
             setattr(module, '_language', path.stem)

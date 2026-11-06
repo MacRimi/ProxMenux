@@ -43,14 +43,17 @@ class ScriptedUI:
     def password(self, text, required=True):
         return self._answer(text, "")
 
-    def choose(self, text, options, default=None):
+    def choose(self, text, options, default=None, **_kwargs):
         return self._answer(text, default)
 
     def confirm(self, text, default=False):
         return self._answer(text, default)
 
-    def message(self, text):
+    def message(self, text, *_args):
         pass
+
+    def review(self, *_args, **_kwargs):
+        return True
 
 
 @patch("proxmenux_oci.i18n.language", return_value="en")
@@ -223,14 +226,15 @@ class SharedDirectoriesTests(unittest.TestCase):
              patch("proxmenux_oci.recreation.edit_acceleration"), \
              patch("proxmenux_oci.recreation.edit_environment"):
             ui = ScriptedUI({"Add a directory to share": [True], NAME: ["photos"],
+                             "Choose a setting. Changes are applied only after the final review.": ["shares", "apply"],
                              "Where to store /shares/photos": ["host-bind"],
                              "Host path for /shares/photos": ["/tank/photos"]})
             proposal = edit_recreation(record, ui)
             mounts = [m["container_path"] for m in proposal["candidate"]["deployment"]["mounts"]]
             self.assertEqual(mounts, ["/config", "/shares/media", "/shares/photos"])
-            untouched = edit_recreation(record, ScriptedUI())
-            self.assertEqual([m["container_path"] for m in untouched["candidate"]["deployment"]["mounts"]],
-                             ["/config", "/shares/media"])
+            untouched = edit_recreation(record, ScriptedUI({
+                "Choose a setting. Changes are applied only after the final review.": ["discard"]}))
+            self.assertIsNone(untouched)
         self.assertEqual([m["container_path"] for m in plan["mounts"]], ["/config", "/shares/media"])
 
 

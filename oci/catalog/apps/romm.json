@@ -788,6 +788,9 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "non_persistent_image_volumes": [
+        "/romm"
       ]
     }
   },

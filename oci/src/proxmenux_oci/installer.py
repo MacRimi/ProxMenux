@@ -495,6 +495,7 @@ def build_deployment(
 
     mounts: list[dict[str, Any]] = []
     host_bind_policies = installer_profile.get("host_bind_policies", {})
+    required_host_path_prompts = set(installer_profile.get("required_host_path_prompts", []))
     labels = {"managed-volume": translate("Container volume (included in backups)"),
               "host-bind": translate("Host directory (not included in Proxmox backups)"),
               "skip": translate("Do not mount")}
@@ -506,8 +507,8 @@ def build_deployment(
         offered = list(choices)
         chosen = advanced or {"managed-volume", "host-bind"} <= set(choices)
         if chosen and len(offered) > 1:
-            # The answer is the user's: a host directory is never proposed.
-            proposed = "managed-volume" if item["default"] == "host-bind" else item["default"]
+            # The answer is the user's; the choice of the oci-compose is proposed.
+            proposed = item["default"]
             volume_mode = ui.choose(f"{translate('Where to store')} {item['container_path']}",
                                     [(choice, labels[choice]) for choice in offered], proposed)
             if volume_mode is None:
@@ -528,7 +529,7 @@ def build_deployment(
             backup = item["managed_volume"]["backup"]
         else:
             source = _shared_host_path_default(template, item)
-            if chosen and not _is_system_bind(item):
+            if (chosen or item["container_path"] in required_host_path_prompts) and not _is_system_bind(item):
                 source = ui.ask(f"{translate('Host path for')} {item['container_path']}", source)
             size = None
             backup = False
@@ -577,9 +578,18 @@ def build_deployment(
                 "container_path": item["container_path"],
                 "size_mb": size_mb,
                 "mount_options": item.get("mount_options", ["rw", "nosuid", "nodev"]),
+                **({"owner_strategy": item["owner_strategy"]} if item.get("owner_strategy") else {}),
+                **({"mode": item["mode"]} if item.get("mode") is not None else {}),
+                **({"uid": item["uid"]} if item.get("uid") is not None else {}),
+                **({"gid": item["gid"]} if item.get("gid") is not None else {}),
             }
         )
+        if item.get("owner_strategy") == "mapped-application-user":
+            for key in ("uid", "gid"):
+                if key not in tmpfs_mounts[-1] and installer_profile.get("volume_owner", {}).get(key) is not None:
+                    tmpfs_mounts[-1][key] = installer_profile["volume_owner"][key]
 
+    vlan_tag = None
     if advanced:
         bridge = ask_bridge(ui, translate("Network bridge"), defaults["bridge"])
         if mac_address:
@@ -588,6 +598,7 @@ def build_deployment(
             ipv4, gateway = "host", None
         else:
             ipv4, gateway = access.ask_ipv4(ui, bridge)
+            vlan_tag = access.ask_vlan_tag(ui)
     else:
         bridge = ask_bridge(ui, "", defaults["bridge"], DEFAULT_MODE)
         if host_monitor:
@@ -751,6 +762,7 @@ def build_deployment(
             "firewall": defaults["firewall"],
             "host_managed": defaults["host_managed_network"],
             "mac_address": mac_address,
+            **({"vlan_tag": vlan_tag} if vlan_tag else {}),
         },
         "features": defaults.get("features", []),
         "security": {
@@ -823,6 +835,7 @@ def _build_rclone_deployment(
         raise InstallError(translate("The web UI password must have at least 24 characters"))
     bridge = ask_bridge(ui, translate("Network bridge"), schema["bridge"]["default"])
     ipv4, gateway = access.ask_ipv4(ui, bridge)
+    vlan_tag = access.ask_vlan_tag(ui)
 
     return {
         "vmid": int(vmid_text) if vmid_text else None,
@@ -842,6 +855,7 @@ def _build_rclone_deployment(
             "firewall": defaults["firewall"],
             "host_managed": defaults["host_managed_network"],
             "mac_address": None,
+            **({"vlan_tag": vlan_tag} if vlan_tag else {}),
         },
         "features": defaults["features"],
         "security": {
@@ -948,15 +962,14 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
         return software
     # Recognition on an AMD GPU depends on ROCm: it is offered when the host
     # can run it, marked as experimental on a GPU ROCm does not support
-    # officially, and left out, with the reason, when it cannot.
+    # officially, and left out when it cannot. A GPU of a generation ROCm does
+    # not run is simply not offered; what the host can fix is explained.
     amd_blocker = host.rocm_blocker(rootfs_storage) if found["amd"] else None
     amd_experimental = (found["amd"] and not amd_blocker
                         and host.rocm_support(found.get("amd_gfx_target")) == "experimental")
-    if amd_blocker:
+    if amd_blocker in ("kfd", "space"):
         reason = (translate("The AMD driver does not offer its compute interface (/dev/kfd) on this host.")
                   if amd_blocker == "kfd" else
-                  f"{translate('The ROCm image has no support for the AMD GPU of this host:')} {host.amd_gpu_name()}."
-                  if amd_blocker == "generation" else
                   translate("The storage has less than 40 GB free for the ROCm image."))
         real.message(f"{reason}\n\n{translate('Recognition is not offered on the AMD GPU; video transcoding is.')}")
     mark = f" — {translate('experimental on this GPU')}" if amd_experimental else ""
@@ -1073,6 +1086,7 @@ def _build_immich_deployment(
     addresses, frontend_gateway = access.ask_addresses(
         essential_ui(ui), frontend_bridge, [translate("Immich server"), "Immich Machine learning"])
     server_ipv4, ml_ipv4 = addresses.values()
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     (video_acceleration, render_device, vaapi_driver,
      ml_acceleration, ml_render) = _ask_immich_acceleration(ui, rootfs_storage)
@@ -1103,6 +1117,7 @@ def _build_immich_deployment(
             "frontend_ipv4": server_ipv4,
             "machine_learning_frontend_ipv4": ml_ipv4,
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": defaults["private_network"]["bridge"],
             "private_subnet": defaults["private_network"]["subnet"],
@@ -1190,6 +1205,7 @@ def _build_nextcloud_stack_deployment(
     extra_mounts = ask_application_extra_paths(ui, ["/var/www/html"], application_storage or rootfs_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Nextcloud"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     admin_username = ui.ask(
         translate("Initial administrator user"), defaults["application"]["admin_username"]
@@ -1230,6 +1246,7 @@ def _build_nextcloud_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1314,6 +1331,7 @@ def _build_paperless_stack_deployment(
              "/usr/src/paperless/export"], application_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Paperless"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     ocr_language = ui.ask(translate("OCR language (Tesseract code)"), defaults["ocr_language"])
     if not re.fullmatch(r"[a-z]{3}(?:\+[a-z]{3})*", ocr_language):
@@ -1359,6 +1377,7 @@ def _build_paperless_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1441,6 +1460,7 @@ def _build_tandoor_stack_deployment(
         ui, ["/opt/recipes/mediafiles", "/opt/recipes/staticfiles"], static_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Tandoor"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     allowed_hosts = ui.ask(
         translate("Allowed hosts (comma separated; * allows access through the assigned IP)"),
@@ -1501,6 +1521,7 @@ def _build_tandoor_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1588,7 +1609,8 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'haos_healthcheck.py', temporary / 'haos_healthcheck.py')
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            shutil.copy2(project_root / 'remote' / 'oci_image_mountpoints.py', temporary / 'oci_image_mountpoints.py')
+            for helper in ('oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
@@ -1625,7 +1647,7 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')
@@ -1893,11 +1915,6 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
             found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) == "experimental"}
         options = [(item["id"], item["label"]) for item in usable]
         asked = advanced or not installer_profile.get("selkies")
-        if asked and found["amd"] and any(item.get("amd_gfx_targets") and item not in usable and host.rocm_support(
-                found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) is None for item in profiles):
-            # Its owner may expect the GPU to be offered: say why it is not.
-            ui.message(f"{translate('The ROCm image of this application has no support for the AMD GPU of this host:')} "
-                       f"{host.amd_gpu_name()}. {translate('Its ROCm profile is not offered.')}")
         if asked and len(usable) < len(profiles) and len(usable) == 1:
             # Nothing but the CPU is left: say why there is nothing to choose.
             ui.message(translate("No usable GPU was found on this host. The application will be installed "

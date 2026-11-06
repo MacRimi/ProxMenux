@@ -212,10 +212,21 @@ class AIProvider(ABC):
             except urllib.error.HTTPError as e:
                 # Drain the body so we can decide whether to retry, but NEVER
                 # include it in the raised exception (PII / API key in echo).
+                quota_exhausted = False
                 try:
-                    e.read()
+                    error = json.loads(e.read(65536)).get('error', {})
+                    if isinstance(error, dict):
+                        quota_exhausted = any(error.get(key) in (
+                            'insufficient_quota', 'billing_hard_limit_reached', 'billing_not_active',
+                            'credit_balance_exhausted', 'organization_spend_limit_exceeded',
+                            'project_spend_limit_exceeded', 'organization_usage_limit_exceeded',
+                        ) for key in ('code', 'type'))
                 except Exception:
                     pass
+                if e.code == 429 and quota_exhausted:
+                    raise AIProviderError(
+                        'HTTP 429: AI provider quota exhausted. Check API usage and billing limits.'
+                    )
                 # Retry on 429 (rate limit) and 5xx (server error).
                 retryable = e.code == 429 or 500 <= e.code < 600
                 last_error = AIProviderError(f"HTTP {e.code}: {e.reason}")

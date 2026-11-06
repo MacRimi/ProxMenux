@@ -24,23 +24,27 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   }
 }
 
-async function getCodeOfConductContent(notFoundMsg: string, loadFailedMsg: string) {
+async function getCodeOfConductContent(notFoundMsg: string, loadFailedMsg: string, translatedMarkdown?: string) {
   try {
     const codeOfConductPath = path.join(process.cwd(), "..", "CODE_OF_CONDUCT.md")
 
-    if (!fs.existsSync(codeOfConductPath)) {
+    if (!translatedMarkdown && !fs.existsSync(codeOfConductPath)) {
       console.error("CODE_OF_CONDUCT.md file not found.")
       return `<p class='text-red-600'>${notFoundMsg}</p>`
     }
 
-    const fileContents = fs.readFileSync(codeOfConductPath, "utf8")
+    const fileContents = translatedMarkdown || fs.readFileSync(codeOfConductPath, "utf8")
 
     const result = await remark()
       .use(gfm.default || gfm)
       .use(html)
       .process(fileContents)
 
-    return result.toString()
+    // Repository-relative policy links otherwise resolve under the docs URL.
+    return result.toString().replaceAll(
+      'href="./SECURITY.md"',
+      'href="https://github.com/MacRimi/ProxMenux/blob/main/SECURITY.md"',
+    )
   } catch (error) {
     console.error("Error reading the CODE_OF_CONDUCT.md file", error)
     return `<p class='text-red-600'>${loadFailedMsg}</p>`
@@ -71,7 +75,11 @@ export default async function CodeOfConductPage({ params }: { params: Promise<{ 
   const { locale } = await params
   setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.about.codeOfConduct" })
-  const codeOfConductContent = await getCodeOfConductContent(t("errors.notFound"), t("errors.loadFailed"))
+  const translatedMarkdown = t.has("contentMarkdown") ? t.raw("contentMarkdown") : undefined
+  const codeOfConductContent = await getCodeOfConductContent(
+    t("errors.notFound"), t("errors.loadFailed"),
+    typeof translatedMarkdown === "string" ? translatedMarkdown : undefined,
+  )
   const cleanedInlineCode = cleanInlineCode(codeOfConductContent)
   const parsedContent = wrapCodeBlocksWithCopyable(cleanedInlineCode)
 

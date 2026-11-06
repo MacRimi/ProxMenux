@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Formatear / borrar disco físico | ProxMenux Documentation",
+    "title": "Formatear o borrar un disco físico | Documentación de ProxMenux",
     "description": "Wipe seguro y formateo de disco físico en Proxmox VE usando ProxMenux. Cuatro modos de operación, filtros estrictos de seguridad (discos del sistema / montados / en uso bloqueados) y doble confirmación incluyendo tecleo de la ruta completa.",
-    "ogTitle": "Formatear / borrar disco físico | ProxMenux Documentation",
+    "ogTitle": "Formatear o borrar un disco físico | Documentación de ProxMenux",
     "ogDescription": "Borra o formatea de forma segura un disco físico en Proxmox. Reglas de visibilidad seguras, 4 modos de operación, doble confirmación."
   },
   "header": {
@@ -43,31 +43,31 @@
     "headerUseCase": "Caso de uso",
     "rows": [
       {
-        "mode": "1. Wipe all",
+        "mode": "1. Borrar todo",
         "part": "Destruida",
         "data": "Firmas borradas",
-        "useCase": "Empezar de cero: todo lo del disco se va, listo para una nueva distribución."
+        "useCase": "Elimina la tabla de particiones y los metadatos de sistemas de archivos y RAID, pone a cero los primeros y los últimos 16 MiB y, en unidades que admiten discard, aplica TRIM a todo el disco. El resto de los datos no se sobrescribe y en un HDD aún podría recuperarse; no es un borrado seguro."
       },
       {
-        "mode": "2. Remove FS labels",
+        "mode": "2. Borrar firmas FS",
         "part": "Preservada",
         "data": "Preservados",
-        "useCase": "Limpia firmas obsoletas de ZFS / LVM / RAID para que el disco deje de ser reclamado automáticamente, sin tocar los datos."
+        "useCase": "Elimina firmas antiguas de ZFS / LVM / RAID para evitar que el disco se reclame automáticamente. No sobrescribe los datos de usuario en bloque, pero borrar las firmas puede dejarlos inaccesibles."
       },
       {
-        "mode": "3. Zero all data",
+        "mode": "3. Poner a cero",
         "part": "Preservada",
-        "data": "Destruidos (zerados)",
-        "useCase": "Sanear antes de entregar el disco, manteniendo la distribución de particiones existente."
+        "data": "Destruidos (sobrescritos con ceros)",
+        "useCase": "Sobrescribir con ceros las particiones existentes conservando la tabla de particiones. No cubre el espacio sin asignar ni las áreas de reserva de los SSD; no garantiza el saneamiento completo del dispositivo."
       },
       {
-        "mode": "4. Full format",
+        "mode": "4. Formato completo",
         "part": "Nuevo GPT",
         "data": "Destruidos",
         "useCase": "Disco listo para usar con una única partición nueva y un filesystem fresco."
       }
     ],
-    "fullFormatOutro": "<strong>Full format</strong> continúa con dos diálogos extra:",
+    "fullFormatOutro": "<strong>Formato completo</strong> continúa con dos diálogos más:",
     "fullFormatItems": [
       "<strong>Filesystem</strong> — <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portable) o <code>btrfs</code>. Si faltan herramientas (por ejemplo <code>mkfs.btrfs</code>) aborta con un mensaje claro.",
       "<strong>Etiqueta</strong> — etiqueta opcional del filesystem para identificación."
@@ -83,10 +83,10 @@
       },
       {
         "title": "Elige un modo de operación",
-        "bodyRich": "Elige entre <strong>Wipe all</strong>, <strong>Remove FS labels</strong>, <strong>Zero all data</strong> o <strong>Full format</strong> según la tabla de arriba."
+        "bodyRich": "Elige entre <strong>Borrar todo</strong>, <strong>Borrar firmas FS</strong>, <strong>Poner a cero</strong> o <strong>Formato completo</strong> según la tabla anterior."
       },
       {
-        "title": "(Solo Full format) Elige filesystem y etiqueta",
+        "title": "(Solo Formato completo) Elegir sistema de archivos y etiqueta",
         "body": "ext4 / xfs / exfat / btrfs, más una etiqueta opcional."
       },
       {

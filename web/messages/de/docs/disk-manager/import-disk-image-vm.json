@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Datenträgerbild in VM importieren | ProxMenux Dokumentation",
+    "description": "Importieren Sie eine Disk-Image-Datei (.img / .qcow2 / .vmdk / .raw) mit ProxMenux in ein vorhandenes Proxmox VM. Per-Image-Schnittstelle, SSD-Emulation und bootfähiges Flag, mit qm importdisk unter der Haube.",
+    "ogTitle": "Datenträgerbild in VM importieren | ProxMenux Dokumentation",
+    "ogDescription": "Importieren Sie .img / .qcow2 / .vmdk / .raw Disk-Images in einen vorhandenen VM mit ProxMenux. Verwendet qm importdisk unter der Haube."
+  },
+  "header": {
+    "title": "Disk-Image in VM importieren",
+    "description": "Importieren Sie eine Disk-Image-Datei (.img, .qcow2, .vmdk oder .raw) in eine vorhandene Proxmox VM. ProxMenux sammelt jede Entscheidung im Voraus - Ziel VM, Proxmox-Speicher, Quellverzeichnis, Schnittstelle, SSD-Emulation, Boot-Order - und führt dann qm importdisk für jedes ausgewählte Image aus.",
+    "section": "Datenträgerverwaltung · VM"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Anders als <em>Datenträger in VM importieren</em>, das ein physisches Laufwerk direkt zuweist, verwendet dieser Ablauf eine <strong>Datei</strong> auf dem Host, etwa einen Export eines anderen Hypervisors, ein heruntergeladenes Cloud-Image oder ein aus einer Sicherung extrahiertes Image. Sie wird in ein Proxmox-VM-Laufwerk auf dem gewählten Speicher umgewandelt. Die Originaldatei bleibt erhalten: ProxMenux kopiert sie, statt sie zu verschieben."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Ablauf hat zwei Phasen. Phase 1 erfasst über Dialoge vorab alle Entscheidungen: VM, Speicher, Quellverzeichnis, Images und Optionen je Image. Phase 2 führt <code>qm importdisk</code> für jedes ausgewählte Image aus. Vor Beginn von Phase 2 wird weder etwas kopiert noch die VM-Konfiguration verändert."
+  },
+  "prereqs": {
+    "heading": "Voraussetzungen",
+    "items": [
+      "Mindestens eine VM ist auf dem Host definiert. Die Ziel-VM sollte <strong>ausgeschaltet</strong> sein.",
+      "Mindestens eine Disk-Image-Datei in einem unterstützten Format liegt im Quellverzeichnis. Unterstützt werden <code>.img</code>, <code>.qcow2</code>, <code>.vmdk</code> und <code>.raw</code>.",
+      "Genug freien Speicherplatz auf dem Ziel-Proxmox-Speicher, um jede importierte Festplatte zu halten.",
+      "ProxMenux sucht standardmäßig nach Images in <code>/var/lib/vz/template/iso</code>. Sie können es auf jedes andere Verzeichnis auf dem Host verweisen, wenn es gefragt wird."
+    ]
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Ziel-VM auswählen",
+        "bodyRich": "ProxMenux liest <code>qm list</code> und zeigt jeden VM an. Wählen Sie diejenige aus, die die importierten Festplatten erhält."
+      },
+      {
+        "title": "Wählen Sie den Proxmox-Speicher",
+        "bodyRich": "Die Liste enthält jeden Speicher, für den der Inhaltstyp <code>images</code> aktiviert ist. Wenn es nur einen Kandidaten gibt, wird er automatisch ausgewählt und der Dialog wird übersprungen."
+      },
+      {
+        "title": "Wählen Sie das Quellverzeichnis",
+        "bodyRich": "Wählen Sie das Standardverzeichnis (<code>/var/lib/vz/template/iso</code>) oder geben Sie einen benutzerdefinierten Pfad ein - in der Regel, wo Sie das Image heruntergeladen / hochgeladen haben. Das Skript lehnt Pfade ab, die nicht existieren."
+      },
+      {
+        "title": "Wählen Sie ein oder mehrere Images",
+        "bodyRich": "Das Verzeichnis wird nach <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code> Dateien gescannt. Sie können mehrere gleichzeitig auswählen; jede wird im nächsten Schritt die Per-Bild-Optionen durchlaufen."
+      },
+      {
+        "title": "Per-Image Optionen",
+        "intro": "Für jedes ausgewählte Image fragt ProxMenux:",
+        "items": [
+          "<strong>Interface</strong> — <code>scsi</code> (Standard), <code>virtio</code>, <code>sata</code> oder <code>ide</code>. Passt dazu, wie der Gast die Festplatte sehen wird.",
+          "<strong>SSD-Emulation</strong>: nur für Nicht-VirtIO-Schnittstellen verfügbar. Fügt <code>ssd=1</code> hinzu, damit der Gast das Laufwerk als SSD erkennt. Discard/TRIM muss separat konfiguriert werden.",
+          "<strong>Bootfähig</strong>: Bei Ja nimmt ProxMenux das Laufwerk als primäres Startgerät in die Bootreihenfolge der VM auf."
+        ]
+      },
+      {
+        "title": "Importieren und zuweisen",
+        "bodyRich": "ProxMenux führt <code>qm importdisk</code> für jedes Image aus (Konvertierung des Formats im laufenden Betrieb, wo dies erforderlich ist), fügt die resultierende Festplatte mit den von Ihnen gewählten Optionen an den nächsten freien Slot (<code>scsiN</code>, <code>sataN</code>, ...) an und aktualisiert - wenn Sie eine Festplatte als bootfähig markiert haben - die Boot-Order. Fortschritt zeigt sich im Terminal."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Ein einzelnes Image lässt sich mit drei <code>qm</code>-Befehlen importieren:",
+    "warnTitle": "Konvertierung des Disk-Image-Formats",
+    "warnBody": "Wenn der Zielspeicher das Quellformat nativ nicht halten kann (z. B. LVM-Speicher <code>.qcow2</code>), konvertiert <code>qm importdisk</code> das Image transparent. Dies kann mehrere Minuten für Multi-GB-Bilder dauern; planen Sie entsprechend und unterbrechen Sie das Skript nicht."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noImagesTitle": "\"Keine kompatiblen Disk Images gefunden\"",
+    "noImagesBody": "Das Skript fand keine Datei mit <code>.img</code>, <code>.qcow2</code>, <code>.vmdk</code> oder <code>.raw</code>. Prüfen Sie die Erweiterung einschließlich Groß-/Kleinschreibung, ob die Datei direkt im gewählten Verzeichnis liegt (Unterverzeichnisse werden nicht durchsucht) und ob root sie lesen darf.",
+    "slowTitle": "Import ist langsam",
+    "slowBody": "Konvertierungen zwischen VMDK, QCOW2 und raw können durch CPU und E/A begrenzt sein. Die Importgeschwindigkeit hängt von Quelllesezugriffen, Zielschreibzugriffen und nötiger Dekomprimierung ab. Bevorzugen Sie nach Möglichkeit raw- oder qcow2-Quellen.",
+    "uefiTitle": "Importiertes Laufwerk startet in der UEFI-Shell",
+    "uefiBody": "Das Image wurde für Legacy (SeaBIOS) gebaut, aber der VM verwendet OVMF (oder umgekehrt). Wechseln Sie entweder den VM BIOS in Proxmox, um das Image abzugleichen, oder bauen Sie das Image vor dem Importieren im richtigen Modus neu auf."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": " — derselbe Ablauf für physische Laufwerke (Passthrough)."
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "VM von OVA / OVF importieren",
+        "tail": "- wenn Sie ein vollständiges VM-Paket haben, nicht nur ein Festplattenimage."
+      },
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "UUP-Dump-ISO-Erstellung",
+        "tail": "- Generieren Sie eine Windows ISO, wenn Sie eine für eine neue Installation benötigen."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Speicher- und Festplattenbefehle",
+        "tail": " — Referenz für qm importdisk und qemu-img convert."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

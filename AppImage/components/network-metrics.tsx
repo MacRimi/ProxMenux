@@ -101,6 +101,9 @@ interface NetworkInterface {
   // Master device resolved from /sys/class/net/<iface>/master — the
   // bridge for a guest tap, the bond for a slave NIC.
   bridge_owner?: string
+  network_backend?: "ovs"
+  ovs_tag?: number | null
+  ovs_trunks?: number[]
   bridge_members?: string[]
   bridge_physical_interface?: string
   bridge_bond_slaves?: string[]
@@ -568,6 +571,7 @@ export function NetworkMetrics() {
     ...(networkData.bond_interfaces || []),
     ...(networkData.bridge_interfaces || []),
     ...(networkData.vm_lxc_interfaces || []),
+    ...(networkData.interfaces || []).filter((i) => i.network_backend === "ovs" && i.type === "vlan"),
   ]
 
   const vmLxcInterfaces = (networkData.vm_lxc_interfaces || []).sort((a, b) => {
@@ -867,6 +871,7 @@ export function NetworkMetrics() {
           ...(networkData.bond_interfaces || []),
           ...(networkData.bridge_interfaces || []),
           ...(networkData.vm_lxc_interfaces || []),
+          ...(networkData.interfaces || []).filter((i) => i.network_backend === "ovs" && i.type === "vlan"),
         ]
         const flowData: NetworkFlowData = {
           nics: (networkData.physical_interfaces || []).map((p) => ({
@@ -916,7 +921,9 @@ export function NetworkMetrics() {
                 tx: runningGuests.reduce((a, v) => a + toMBps(v.tx_Bps), 0),
               }
             })(),
-            ...(networkData.vm_lxc_interfaces || []).map((v) => {
+            ...[...(networkData.vm_lxc_interfaces || []),
+              ...(networkData.interfaces || []).filter((i) => i.network_backend === "ovs" && i.type === "vlan"),
+            ].map((v) => {
               // Authoritative bridge from the kernel (read by the
               // backend from /sys/class/net/<iface>/master). Fallback
               // to bridge_members scan, then first bridge as last
@@ -929,8 +936,8 @@ export function NetworkMetrics() {
                 (networkData.bridge_interfaces?.[0]?.name || "")
               return {
                 id: v.name,
-                label: v.vm_name || v.name,
-                kind: (v.vm_type === "vm" ? "vm" : "lxc") as "vm" | "lxc",
+                label: v.vm_name || (v.ovs_tag != null ? `${v.name} · VLAN ${v.ovs_tag}` : v.name),
+                kind: v.type === "vlan" ? "interface" as const : (v.vm_type === "vm" ? "vm" as const : "lxc" as const),
                 bridge: ownerName,
                 rx: toMBps(v.rx_Bps),
                 tx: toMBps(v.tx_Bps),
@@ -1213,6 +1220,7 @@ export function NetworkMetrics() {
                       ...(modalNetworkData.bond_interfaces || []),
                       ...(modalNetworkData.bridge_interfaces || []),
                       ...(modalNetworkData.vm_lxc_interfaces || []),
+                      ...(modalNetworkData.interfaces || []).filter((i) => i.network_backend === "ovs" && i.type === "vlan"),
                     ].find((iface) => iface.name === selectedInterface.name)
                   : selectedInterface
 
@@ -1298,7 +1306,7 @@ export function NetworkMetrics() {
                         </div>
                         <div>
                           <div className="text-sm text-muted-foreground">MTU</div>
-                          <div className="font-medium">{displayInterface.mtu}</div>
+                          <div className="font-medium">{displayInterface.mtu || t("common.notAvailable")}</div>
                         </div>
                         {displayInterface.mac_address && (
                           <div className="col-span-2">

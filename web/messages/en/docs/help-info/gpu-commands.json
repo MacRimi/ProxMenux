@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "IOMMU must be enabled in BIOS / UEFI",
-    "body": "Before any of these commands matter, IOMMU has to be enabled at the firmware level (look for <em>VT-d</em>, <em>AMD-Vi</em> or <em>IOMMU</em> in BIOS / UEFI). Common GRUB parameters to enable it on the Linux side: <code>intel_iommu=on</code> (Intel) or <code>amd_iommu=on</code> (AMD), often combined with <code>iommu=pt video=efifb:off video=vesa:off</code>."
+    "body": "Enable IOMMU in firmware first: look for <em>VT-d</em>, <em>AMD-Vi</em> or <em>IOMMU</em> in BIOS/UEFI. AMD enables IOMMU by default on the Linux side, as do Intel systems with Proxmox kernels 6.8 and newer. Older Intel kernels may need <code>intel_iommu=on</code>. The optional <code>iommu=pt</code> setting controls IOMMU passthrough mode; it is not a reason to disable the host framebuffer indiscriminately."
   },
   "commandGroups": [
     {
@@ -130,14 +130,14 @@
         },
         {
           "command": "qm set <vmid> -bios ovmf",
-          "description": "Set VM to use UEFI/OVMF (required for GPU passthrough)"
+          "description": "Set VM to UEFI/OVMF (recommended when the GPU ROM supports UEFI)"
         }
       ]
     }
   ],
   "afterChangesTip": {
     "title": "After changing GRUB or modprobe configs",
-    "bodyRich": "Run <code>update-grub</code> + <code>update-initramfs -u</code>, then reboot. Verify with <code>cat /proc/cmdline</code> (kernel parameters), <code>dmesg | grep -i iommu</code> (IOMMU initialised) and <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (groups present)."
+    "bodyRich": "On hosts using GRUB, apply boot-option changes with <code>update-grub</code>. Refresh module changes with <code>update-initramfs -u -k all</code>, then reboot. Other bootloaders require their own configuration procedure. Verify with <code>cat /proc/cmdline</code> (kernel parameters), <code>dmesg | grep -i iommu</code> (IOMMU initialised) and <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (groups present)."
   },
   "related": {
     "heading": "Related",
@@ -150,7 +150,7 @@
       {
         "href": "/docs/hardware/igpu-acceleration-lxc",
         "label": "Add GPU to LXC",
-        "tail": " — passthrough to a container instead of a VM."
+        "tail": " — share host GPU device access with an LXC container."
       },
       {
         "href": "/docs/help-info",

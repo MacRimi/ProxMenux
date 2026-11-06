@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "How the NAS selector works",
-    "body": "The NAS selector detects the latest stable release of each appliance (querying its upstream mirror), downloads the ISO — or builds the VM from a pre-packaged image — and then hands over to the generic ProxMenux VM wizard for CPU, RAM, disk and network configuration."
+    "body": "For the generic ISO flow, the NAS selector tries to detect the latest stable release from the project’s mirror, uses a fallback version if needed, downloads the ISO and opens the shared VM configurator for CPU, RAM, disks and networking. Synology DSM and ZimaOS use dedicated installer flows."
   },
   "image": {
     "alt": "ProxMenux System NAS selector",
@@ -43,7 +43,7 @@
       },
       {
         "name": "TrueNAS SCALE",
-        "tagline": "Debian-based TrueNAS with Docker / Kubernetes apps and ZFS as primary filesystem.",
+        "tagline": "Debian-based TrueNAS with Docker apps in current releases and ZFS as the primary filesystem. Kubernetes was used by older SCALE releases.",
         "icon": "Database",
         "base": "Debian Linux",
         "fileSystem": "ZFS",
@@ -52,7 +52,7 @@
       },
       {
         "name": "TrueNAS CORE",
-        "tagline": "FreeBSD-based TrueNAS. Enterprise-grade ZFS storage with jails and plugins.",
+        "tagline": "FreeBSD-based TrueNAS focused on ZFS storage. Jails and plugins in CORE 13.3 are obsolete and unsupported.",
         "icon": "Database",
         "base": "FreeBSD",
         "fileSystem": "ZFS",
@@ -90,7 +90,7 @@
         "name": "ZimaOS",
         "tagline": "Lightweight NAS OS focused on media, Docker apps and home automation. Uses its own installer.",
         "icon": "MonitorIcon",
-        "base": "Debian / CasaOS",
+        "base": "Buildroot (evolved from CasaOS)",
         "fileSystem": "ext4",
         "href": "/docs/create-vm/system-nas/system-nas-others#zimaos",
         "flow": "dedicated"
@@ -112,7 +112,7 @@
   },
   "zfsMem": {
     "title": "ZFS memory rule of thumb",
-    "bodyRich": "If you pick a ZFS-based NAS (TrueNAS, XigmaNAS), allocate at least <strong>8 GB RAM</strong> to the VM — ZFS uses free memory as ARC cache and performance degrades noticeably below that. Rockstor (Btrfs) and OMV (ext4) are far less memory-hungry."
+    "bodyRich": "For TrueNAS, allocate at least <strong>8 GB RAM</strong> for basic operation and more for demanding workloads. ZFS uses RAM for its ARC cache, but there is no universal 8 GB performance cliff for every ZFS-based NAS. Check the chosen distribution’s requirements and size memory for its disks, services and apps; lighter OMV or Rockstor setups can need less."
   },
   "related": {
     "heading": "Related",

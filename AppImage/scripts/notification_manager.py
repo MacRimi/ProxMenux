@@ -42,7 +42,7 @@ from notification_channels import create_channel, CHANNEL_TYPES
 from notification_templates import (
     render_template, format_with_ai, format_with_ai_full, enrich_with_emojis, TEMPLATES,
     EVENT_GROUPS, CATEGORY_EMOJI, EVENT_EMOJI, get_event_types_by_group,
-    get_default_enabled_events, runtime_message,
+    get_default_enabled_events, runtime_message, format_backup_diagnostics_with_ai,
 )
 from notification_events import (
     JournalWatcher, TaskWatcher, PollingCollector, NotificationEvent,
@@ -62,12 +62,19 @@ except ImportError:
 DB_PATH = Path('/usr/local/share/proxmenux/health_monitor.db')
 SETTINGS_PREFIX = 'notification.'
 ENCRYPTION_KEY_FILE = Path('/usr/local/share/proxmenux/.notification_key')
-RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv')
+RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv', 'ru')
 ALLOWED_AI_LANGUAGES = (
     'en', 'sk', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'sv', 'no',
     'ja', 'zh', 'ko', 'pl', 'nl', 'tr', 'ar',
 )
 _AI_BYPASS_EVENTS = frozenset({'backup_complete', 'backup_fail'})
+_AI_NO_SUGGESTION_EVENTS = frozenset({
+    'update_available', 'update_summary', 'pve_update',
+    'proxmenux_update', 'post_install_update', 'apt_listchanges',
+    'lxc_updates_available', 'secure_gateway_update_available',
+    'nvidia_driver_update_available', 'coral_driver_update_available',
+    'app_update_available', 'docker_stack_update_available',
+})
 
 
 def _should_bypass_ai(event_type: str) -> bool:
@@ -86,6 +93,7 @@ SENSITIVE_KEYS = {
     'ai_api_key_anthropic',
     'ai_api_key_openai',
     'ai_api_key_openrouter',
+    'ai_api_key_ollama',
     # `telegram.bot_token` — was previously listed as `telegram.token`,
     # which never matched the real config_key (`bot_token` in
     # CHANNEL_TYPES). The mismatch silently sent Telegram bot tokens
@@ -797,6 +805,18 @@ class BurstAggregator:
 # on the rewrite at AI_REWRITE_TIMEOUT_SECONDS and ship the non-AI version.
 # Audit Tier 3.2 #2.
 AI_REWRITE_TIMEOUT_SECONDS = 25
+# A model on the user's own hardware (Ollama, or an OpenAI-compatible server
+# at their own address) is much slower than a cloud API. A notification that
+# arrives a little later but translated is worth more than one in English.
+LOCAL_AI_REWRITE_TIMEOUT_SECONDS = 60
+
+
+def _ai_rewrite_timeout(ai_config):
+    provider = str((ai_config or {}).get('ai_provider') or '')
+    base_url = str((ai_config or {}).get('ai_openai_base_url') or '').strip()
+    if provider == 'ollama' or (provider == 'openai' and base_url and 'api.openai.com' not in base_url):
+        return LOCAL_AI_REWRITE_TIMEOUT_SECONDS
+    return AI_REWRITE_TIMEOUT_SECONDS
 
 # A small dedicated pool so an in-flight AI call never starves the dispatch
 # thread itself. One worker is enough — events serialize through the dispatch
@@ -806,7 +826,7 @@ _ai_rewrite_pool = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS, **kwargs):
+def _format_with_ai_bounded(format_fn, *args, timeout=None, **kwargs):
     """Run an AI rewrite with a hard wall-clock timeout.
 
     Returns the rewriter's result on success, or `None` on timeout / exception.
@@ -814,6 +834,10 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
     is not cancelled — Python can't cancel an in-flight HTTP call cleanly —
     but its result is discarded and the dispatch thread proceeds.
     """
+    if timeout is None:
+        # Both rewriters take the AI configuration as their fourth argument.
+        ai_config = args[3] if len(args) > 3 and isinstance(args[3], dict) else {}
+        timeout = _ai_rewrite_timeout(ai_config)
     future = _ai_rewrite_pool.submit(format_fn, *args, **kwargs)
     try:
         return future.result(timeout=timeout)
@@ -826,6 +850,13 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
 
 
 # ─── Notification Manager ─────────────────────────────────────────
+
+def _format_backup_with_ai_bounded(*args, **kwargs):
+    result = _format_with_ai_bounded(format_backup_diagnostics_with_ai, *args, **kwargs)
+    if result is not None:
+        return result
+    return format_backup_diagnostics_with_ai(*args, **kwargs, fallback_only=True)
+
 
 class NotificationManager:
     """Central notification orchestrator.
@@ -1015,6 +1046,7 @@ class NotificationManager:
             'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
             'ai_prompt_mode': self._config.get('ai_prompt_mode', 'default'),
             'ai_custom_prompt': self._config.get('ai_custom_prompt', ''),
+            'ai_allow_suggestions': self._config.get('ai_allow_suggestions', 'false'),
         }
     
     def _rebuild_channels(self):
@@ -1327,6 +1359,8 @@ class NotificationManager:
             enriched_data['_body_html'] = rendered.get('body_html', '')
             enriched_data['_event_type'] = event.event_type
             enriched_data['_group'] = TEMPLATES.get(event.event_type, {}).get('group', 'other')
+            if rendered.get('backup_analysis'):
+                enriched_data['_backup_analysis'] = rendered['backup_analysis']
 
             if '_journal_context' in event.data:
                 enriched_data['_journal_context'] = event.data['_journal_context']
@@ -1453,14 +1487,7 @@ class NotificationManager:
                 # diagnostic alerts, update announcements must only translate
                 # and format the versions/actions already supplied by the
                 # deterministic template.
-                if event_type in {
-                    'update_available', 'update_summary', 'pve_update',
-                    'proxmenux_update', 'post_install_update', 'apt_listchanges',
-                    'lxc_updates_available', 'secure_gateway_update_available',
-                    'nvidia_driver_update_available',
-                    'coral_driver_update_available', 'app_update_available',
-                    'docker_stack_update_available',
-                }:
+                if event_type in _AI_NO_SUGGESTION_EVENTS:
                     channel_ai_config['ai_allow_suggestions'] = False
 
                 # Isolate the AI/enrich block in its own try so a failure
@@ -1470,11 +1497,16 @@ class NotificationManager:
                 # raw template-formatted notification. Audit Tier 6 —
                 # `_dispatch_to_channels`: AI failure dropped the notification.
                 try:
-                    # Backup reports are authoritative inventories. A model can
-                    # neither be trusted to avoid repeating all guest rows nor to
-                    # preserve every value, so these two events bypass AI entirely.
+                    # Keep backup inventories deterministic. Suggestions may
+                    # explain their diagnostic section without rewriting rows.
                     ai_result = None
-                    if not _should_bypass_ai(event_type):
+                    if _should_bypass_ai(event_type):
+                        ai_result = _format_backup_with_ai_bounded(
+                            ch_title, ch_body, severity, channel_ai_config,
+                            event_type=event_type, data=data,
+                            detail_level=detail_level, use_emojis=use_rich_format,
+                        )
+                    else:
                         enriched_context = enrich_context_for_ai(
                             title=ch_title,
                             body=ch_body,
@@ -2542,6 +2574,8 @@ class NotificationManager:
             title = title or rendered['title']
             message = rendered['body']
             severity = severity or rendered['severity']
+            if rendered.get('backup_analysis'):
+                runtime_data['_backup_analysis'] = rendered['backup_analysis']
 
         data = runtime_data
         
@@ -2566,8 +2600,16 @@ class NotificationManager:
                 
                 # Pass channel_type so AI knows whether to append original (email only)
                 channel_ai_config = {**ai_config, 'channel_type': ch_name}
+                if event_type in _AI_NO_SUGGESTION_EVENTS:
+                    channel_ai_config['ai_allow_suggestions'] = False
                 if _should_bypass_ai(event_type):
-                    ch_title, ch_message = title, message
+                    ai_result = _format_backup_with_ai_bounded(
+                        title, message, severity, channel_ai_config,
+                        event_type=event_type, data=data,
+                        detail_level=detail_level, use_emojis=use_rich_format,
+                    )
+                    ch_title = title
+                    ch_message = ai_result.get('body', message) if ai_result else message
                 else:
                     ai_result = format_with_ai_full(
                         title, message, severity, channel_ai_config,
@@ -3019,6 +3061,7 @@ class NotificationManager:
         current_provider = self._config.get('ai_provider', 'groq')
         _raw_keys = {
             'groq': self._config.get('ai_api_key_groq', ''),
+            'ollama': self._config.get('ai_api_key_ollama', ''),
             'gemini': self._config.get('ai_api_key_gemini', ''),
             'anthropic': self._config.get('ai_api_key_anthropic', ''),
             'openai': self._config.get('ai_api_key_openai', ''),
@@ -3026,7 +3069,7 @@ class NotificationManager:
         }
         ai_api_keys = {
             'groq': _mask_if_set(_raw_keys['groq']),
-            'ollama': '',  # Ollama doesn't need API key
+            'ollama': _mask_if_set(_raw_keys['ollama']),
             'gemini': _mask_if_set(_raw_keys['gemini']),
             'anthropic': _mask_if_set(_raw_keys['anthropic']),
             'openai': _mask_if_set(_raw_keys['openai']),
@@ -3136,7 +3179,10 @@ class NotificationManager:
                     if not ok:
                         raise ValueError(f"Invalid ai_ollama_url: {err}")
                 if short_key == 'ai_openai_base_url' and str(value):
-                    ok, err = validate_external_url(str(value), allow_loopback=False)
+                    # Custom OpenAI-compatible servers can run on the LAN or
+                    # localhost, just like Ollama. Match test-ai/provider-models;
+                    # unsafe schemes, metadata hosts and link-local stay blocked.
+                    ok, err = validate_external_url(str(value), allow_loopback=True)
                     if not ok:
                         raise ValueError(f"Invalid ai_openai_base_url: {err}")
 

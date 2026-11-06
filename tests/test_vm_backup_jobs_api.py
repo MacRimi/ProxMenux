@@ -1,7 +1,11 @@
 """VM/CT backup jobs API: what reaches pvesh, with pvesh itself replaced."""
 import importlib
+import importlib.util
+import contextlib
 import json
+import subprocess
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -21,6 +25,34 @@ NODES = [{"node": "pve1", "status": "online"}, {"node": "pve2", "status": "onlin
 GUESTS = [{"vmid": 100, "name": "web", "type": "qemu", "node": "pve1"},
           {"vmid": 101, "name": "db", "type": "lxc", "node": "pve1"},
           {"vmid": 200, "name": "other", "type": "qemu", "node": "pve2"}]
+
+
+@unittest.skipIf(Flask is None, "Flask runtime required")
+class StorageRetentionAuthorizationTests(unittest.TestCase):
+    def test_real_authentication_guard_blocks_read_only_writes_before_pvesh(self):
+        scripts = Path(__file__).resolve().parents[1] / "AppImage/scripts"
+        auth = types.ModuleType("auth_manager")
+        auth.load_auth_config = lambda: {"enabled": True}
+        auth.verify_token = lambda token: "tester" if token in ("admin", "reader") else None
+        auth.verify_token_full = lambda token: ("tester", "full_admin" if token == "admin" else "read_only")
+        spec = importlib.util.spec_from_file_location("storage_retention_middleware", scripts / "jwt_middleware.py")
+        middleware = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, auth_manager=auth):
+            spec.loader.exec_module(middleware)
+        spec = importlib.util.spec_from_file_location("storage_retention_auth_routes", scripts / "flask_vm_backup_routes.py")
+        routes = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, jwt_middleware=middleware):
+            spec.loader.exec_module(routes)
+        app = Flask(__name__)
+        app.register_blueprint(routes.vm_backup_bp)
+        client = app.test_client()
+        data = {"digest": "a" * 40, "prune_backups": "keep-last=3"}
+        with patch.object(routes, "_pvesh") as run:
+            self.assertEqual(client.get("/api/vm-backup-storages").status_code, 401)
+            self.assertEqual(client.put("/api/vm-backup-storages/local", json=data).status_code, 401)
+            self.assertEqual(client.put("/api/vm-backup-storages/local", json=data,
+                                        headers={"Authorization": "Bearer reader"}).status_code, 403)
+        run.assert_not_called()
 
 
 @unittest.skipIf(Flask is None, "Flask runtime required")
@@ -66,16 +98,77 @@ class VmBackupJobsApiTests(unittest.TestCase):
                     return False, "storage is not online"
                 return True, f'"UPID:{node}:0001:0002:0003:vzdump::root@pam:"\n'
             return True, ""
-        return patch.object(self.routes, "_pvesh", side_effect=run)
+
+        def start(node, arguments, job_id):
+            ok, out = run(["create", f"/nodes/{node}/vzdump", *arguments])
+            return (out.strip().strip('"').rstrip(":"), None) if ok else (None, out)
+        stack = contextlib.ExitStack()
+        stack.enter_context(patch.object(self.routes, "_pvesh", side_effect=run))
+        stack.enter_context(patch.object(self.routes, "_start_vzdump", side_effect=start))
+        return stack
 
     def changes(self):
         return [call for call in self.calls if call[0] in ("create", "set", "delete")]
 
     def test_reading_needs_a_session_and_changing_needs_an_administrator(self):
         guards = dict((name, kind) for kind, name in self.guards)
-        self.assertEqual({name for name, kind in guards.items() if kind == "auth"}, {"list_jobs", "options", "get_job"})
+        self.assertEqual({name for name, kind in guards.items() if kind == "auth"}, {"list_jobs", "options", "get_job", "backup_storage_retention"})
         self.assertEqual({name for name, kind in guards.items() if kind == "admin"},
-                         {"create_job", "update_job", "delete_job", "toggle_job", "run_job"})
+                         {"create_job", "update_job", "delete_job", "toggle_job", "run_job", "update_backup_storage_retention"})
+
+    def test_storage_retention_lists_only_backup_storages_and_no_secrets(self):
+        with patch.object(self.routes, "_pvesh_json", return_value=(True, [
+            {"storage": "local", "type": "dir", "content": "backup,iso", "digest": "a" * 40,
+             "prune-backups": {"keep-last": 3}, "password": "private"},
+            {"storage": "images", "type": "dir", "content": "images", "digest": "a" * 40},
+        ])):
+            answer = self.client.get("/api/vm-backup-storages").get_json()
+        self.assertEqual(answer, {"storages": [{"id": "local", "type": "dir", "digest": "a" * 40, "prune_backups": "keep-last=3"}]})
+
+    def storage_policy(self, prune="keep-last=3,keep-weekly=2", digest="a" * 40, current=None):
+        if current is None:
+            current = {"storage": "local", "content": "backup,iso", "digest": "a" * 40}
+        with patch.object(self.routes, "_pvesh_json", return_value=(True, current)), self.pvesh():
+            return self.client.put("/api/vm-backup-storages/local", json={"digest": digest, "prune_backups": prune})
+
+    def test_saving_native_storage_retention_never_runs_pruning_or_changes_other_properties(self):
+        response = self.storage_policy()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.changes(), [["set", "/storage/local", "--digest", "a" * 40,
+                                          "--prune-backups", "keep-last=3,keep-weekly=2"]])
+        self.calls.clear()
+        self.assertEqual(self.storage_policy("keep-all=1").status_code, 200)
+        self.assertEqual(self.changes()[0][-1], "keep-all=1")
+
+    def test_an_empty_policy_returns_the_storage_to_the_proxmox_default(self):
+        self.assertEqual(self.storage_policy("").status_code, 200)
+        self.assertEqual(self.changes(), [["set", "/storage/local", "--digest", "a" * 40, "--delete", "prune-backups"]])
+
+    def test_invalid_storage_retention_is_rejected_before_commands(self):
+        invalid = [None, [], {}, {"digest": "a" * 40, "prune_backups": []}]
+        for prune in ("keep-last=3,keep-daily=0", "keep-last=-1", "keep-all=0", "keep-all=2", "keep-last=0", "keep-last=1,keep-last=2",
+                      "keep-all=1,keep-last=2", "keep-last=2 --delete path", "keep-last=1\n", "keep-other=1"):
+            invalid.append({"digest": "a" * 40, "prune_backups": prune})
+        invalid += [{"digest": "invalid", "prune_backups": "keep-last=1"}]
+        with patch.object(self.routes, "_pvesh") as run:
+            for data in invalid:
+                with self.subTest(data=data):
+                    self.assertEqual(self.client.put("/api/vm-backup-storages/local", json=data).status_code, 400)
+            self.assertEqual(self.client.put("/api/vm-backup-storages/-bad", json=invalid[-1]).status_code, 400)
+        run.assert_not_called()
+
+    def test_stale_storage_configuration_or_non_backup_storage_is_not_overwritten(self):
+        for current in ({"content": "backup", "digest": "b" * 40},
+                        {"content": "images", "digest": "a" * 40}):
+            self.assertEqual(self.storage_policy(current=current).status_code, 409)
+        self.assertEqual(self.changes(), [])
+
+    def test_native_storage_update_failure_is_visible(self):
+        with patch.object(self.routes, "_pvesh_json", return_value=(True, {"content": "backup", "digest": "a" * 40})), \
+                patch.object(self.routes, "_pvesh", return_value=(False, "configuration changed under lock")):
+            response = self.client.put("/api/vm-backup-storages/local", json={"digest": "a" * 40, "prune_backups": "keep-last=3"})
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("changed", response.get_json()["error"])
 
     def test_the_list_gives_text_properties_and_the_host_backups_that_hang_from_a_job(self):
         with self.pvesh(), patch.object(self.routes, "_host_backups_attached",
@@ -150,6 +243,57 @@ class VmBackupJobsApiTests(unittest.TestCase):
         self.assertEqual([task["node"] for task in answer["tasks"]], ["pve1"])
         self.assertEqual([failure["node"] for failure in answer["failures"]], ["pve2"])
         self.assertNotIn("/nodes/pve3/vzdump", [call[1] for call in self.calls])
+
+    def test_a_run_starts_vzdump_detached_and_answers_with_its_upid(self):
+        # pvesh waits for the whole backup; a child of the Monitor is killed
+        # with it. The task runs in its own unit and is followed by its UPID.
+        upid = "UPID:pve1:0001:0002:0003:vzdump::root@pam:"
+        launched = []
+
+        def systemd_run(command, **kwargs):
+            launched.append(command)
+            if command[0] == "systemd-run":
+                output = next(part.split("file:", 1)[1] for part in command if part.startswith("--property=StandardOutput=file:"))
+                Path(output).write_text(f"{upid}\n")
+            return subprocess.CompletedProcess(command, 0, "active\n", "")
+        with tempfile.TemporaryDirectory() as folder, patch.object(self.routes, "RUN_DIR", folder), \
+                patch.object(self.routes.shutil, "which", return_value="/usr/bin/systemd-run"), \
+                patch.object(self.routes.subprocess, "run", side_effect=systemd_run):
+            self.assertEqual(self.routes._start_vzdump("pve1", ["--vmid", "101"], "backup-nightly"), (upid.rstrip(":"), None))
+        unit = launched[0]
+        self.assertEqual(unit[0], "systemd-run")
+        self.assertEqual(unit[unit.index("pvesh"):], ["pvesh", "create", "/nodes/pve1/vzdump", "--vmid", "101"])
+
+    def test_a_long_run_is_found_among_the_active_tasks_while_pvesh_still_waits(self):
+        # Until the backup ends pvesh prints only its log, never the UPID.
+        upid = "UPID:pve1:0001:0002:0003:vzdump:107:root@pam:"
+
+        def systemd_run(command, **kwargs):
+            if command[0] == "systemd-run":
+                output = next(part.split("file:", 1)[1] for part in command if part.startswith("--property=StandardOutput=file:"))
+                Path(output).write_text("INFO: starting new backup job: vzdump 107\n")
+                return subprocess.CompletedProcess(command, 0, "", "")
+            if command[0] == "systemctl":
+                return subprocess.CompletedProcess(command, 0, "active\n", "")
+            tasks = [{"upid": "UPID:pve1:0009:0002:0001:vzdump:200:root@pam:", "starttime": 1},
+                     {"upid": upid, "starttime": 2_000_000_000}]
+            return subprocess.CompletedProcess(command, 0, json.dumps(tasks), "")
+        with tempfile.TemporaryDirectory() as folder, patch.object(self.routes, "RUN_DIR", folder), \
+                patch.object(self.routes.shutil, "which", return_value="/usr/bin/systemd-run"), \
+                patch.object(self.routes.subprocess, "run", side_effect=systemd_run):
+            self.assertEqual(self.routes._start_vzdump("pve1", ["--vmid", "107"], "backup-nightly"), (upid.rstrip(":"), None))
+
+    def test_a_run_that_ends_without_a_upid_reports_what_pvesh_said(self):
+        def systemd_run(command, **kwargs):
+            if command[0] == "systemd-run":
+                output = next(part.split("file:", 1)[1] for part in command if part.startswith("--property=StandardOutput=file:"))
+                Path(output).write_text("storage 'pbs' is not online\n")
+                return subprocess.CompletedProcess(command, 0, "", "")
+            return subprocess.CompletedProcess(command, 3, "inactive\n", "")
+        with tempfile.TemporaryDirectory() as folder, patch.object(self.routes, "RUN_DIR", folder), \
+                patch.object(self.routes.shutil, "which", return_value="/usr/bin/systemd-run"), \
+                patch.object(self.routes.subprocess, "run", side_effect=systemd_run):
+            self.assertEqual(self.routes._start_vzdump("pve1", [], "backup-nightly"), (None, "storage 'pbs' is not online"))
 
     def test_a_job_whose_guests_are_on_no_online_node_starts_nothing(self):
         self.job["vmid"] = "999"

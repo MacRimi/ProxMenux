@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Acerca de | ProxMenux Documentation",
+    "title": "Acerca del proyecto | Documentación de ProxMenux",
     "description": "Acerca de ProxMenux: objetivos del proyecto, colaboradores, FAQ y código de conducta. Herramienta de gestión basada en menús, de código abierto, para Proxmox VE 8+, construida y mantenida por MacRimi con un pequeño equipo de testers y colaboradores.",
-    "ogTitle": "Acerca de | ProxMenux Documentation",
+    "ogTitle": "Acerca del proyecto | Documentación de ProxMenux",
     "ogDescription": "Acerca de ProxMenux — herramienta de gestión basada en menús, de código abierto, para Proxmox VE 8+."
   },
   "header": {
@@ -27,7 +27,7 @@
         "icon": "Users",
         "href": "/docs/about/contributors",
         "title": "Colaboradores",
-        "description": "Reconocimiento a las personas que hacen posible ProxMenux — testers, revisores y desarrolladores que dan forma a cada release."
+        "description": "Reconocimiento a las personas que hacen posible ProxMenux: quienes prueban, revisan y desarrollan cada versión."
       },
       {
         "icon": "ScrollText",
@@ -38,7 +38,7 @@
     ]
   },
   "involved": {
-    "heading": "Implicarse",
+    "heading": "Participa",
     "intro": "Tres lugares para participar en el proyecto:",
     "cards": [
       {

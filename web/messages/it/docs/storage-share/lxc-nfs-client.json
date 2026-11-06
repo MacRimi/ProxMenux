@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "client NFS in LXC | Documentazione ProxMenux",
+    "description": "Monta condivisioni NFS direttamente in un container LXC Proxmox con ProxMenux. Installa automaticamente nfs-common, rileva i server nella LAN, supporta montaggi persistenti via /etc/fstab e impostazioni di avvio sicure. Richiede un container privilegiato.",
+    "ogTitle": "client NFS in LXC | Documentazione ProxMenux",
+    "ogDescription": "Monta condivisioni NFS in un container LXC privilegiato. Rilevamento automatico, persistenza in /etc/fstab e impostazioni di avvio sicure."
+  },
+  "header": {
+    "title": "client NFS in LXC",
+    "description": "Monta condivisioni NFS direttamente in un container LXC Proxmox. Il container diventa un vero client NFS: comunica con il server in rete, esegue mount.nfs e scrive in /etc/fstab. ProxMenux installa nfs-common, aiuta a trovare server ed esportazioni e applica impostazioni di avvio sicure.",
+    "section": "Archiviazione e condivisione · LXC"
+  },
+  "privReq": {
+    "title": "Contenitore privilegiato richiesto",
+    "body": "Il client NFS che usa <code>mount.nfs</code> richiede capacità (almeno <code>SYS_ADMIN</code>) non disponibili nei container LXC non privilegiati. Lo script chiede di scegliere un CT e <strong>si interrompe se non è privilegiato</strong>. Per usare la condivisione in un CT non privilegiato, montala prima sull’host Proxmox con <hostNfsLink>Condivisione NFS come storage Proxmox</hostNfsLink> e rendila accessibile al CT tramite bind mount con <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "what": {
+    "heading": "Cosa succede?",
+    "body": "A differenza di LXC Mount Manager — che permette al CT di vedere una risorsa <em>tramite</em> l'host Proxmox — questo script dà al contenitore il suo <strong>proprio client NFS</strong>: parla NFS sulla rete, monta condivisioni direttamente dal server NFS, e memorizza il montaggio nel contenitore <code>/etc/fstab</code>. L'host Proxmox non è nel percorso dati.",
+    "diagramServerLabel": "Server NFS",
+    "diagramServerDetail": "/export/data",
+    "diagramHostLabel": "Host Proxmox",
+    "diagramHostDetail": "(solo un\nponte di rete)",
+    "diagramCtLabel": "LXC (privilegiato)",
+    "diagramCtDetail": "/mnt/data\nmount.nfs nel CT",
+    "diagramArrow": "NFS",
+    "twoWaysTitle": "Due modi per dare un accesso CT NFS — scegliere uno",
+    "twoWaysBind": "<strong>Bind mount tramite host</strong> (<mountLink>LXC Mount Manager</mountLink>): l’host monta NFS una volta e ogni CT riceve lo stesso percorso tramite bind mount. Funziona con CT non privilegiati. Consigliato quando più CT usano la stessa condivisione.",
+    "twoWaysDirect": "<strong>Montaggio NFS diretto nel CT</strong> (questa pagina): il CT monta NFS da sé. Richiede un CT privilegiato. Utile se il CT deve gestire la propria connessione e le credenziali o se ciascun CT usa un server diverso."
+  },
+  "opening": {
+    "heading": "Apertura dello strumento",
+    "body": "Dal menu principale apri <strong>Storage &amp; Share Manager → Configura client NFS in LXC (solo privilegiato)</strong>. ProxMenux chiede di <strong>scegliere il CT di destinazione</strong>, lo avvia se è fermo e si interrompe se non è privilegiato. Dopo la selezione compare questo sottomenu:",
+    "imageAlt": "Menu client NFS — Monta / Visualizza / Smonta / Verifica connettività"
+  },
+  "howRuns": {
+    "heading": "Come viene eseguito lo script (Mount flow)"
+  },
+  "fstabFlags": {
+    "heading": "Perché quelle bandiere di fstab",
+    "intro": "Per montare permanente lo script aggiunge tre bandiere oltre le opzioni standard NFS: <code>_netdev,x-systemd.automount,noauto</code>. Ognuno risolve un problema di boot-time reale:",
+    "headerFlag": "Bandiera",
+    "headerEffect": "Che cosa fa",
+    "rows": [
+      {
+        "flag": "_netdev",
+        "effect": "Segnala al sistema di inizializzazione che questo montaggio richiede la rete. L’avvio non resta bloccato in attesa del montaggio prima che la rete sia disponibile."
+      },
+      {
+        "flag": "x-systemd.automount",
+        "effectRich": "Crea un'unità auto-montaggio systemd: il montaggio avviene solo la prima volta che qualcosa accede a <code>/mnt/&lt;path&gt;</code>. Il server NFS non raggiungibile all'avvio non blocca il CT."
+      },
+      {
+        "flag": "noauto",
+        "effect": "Evita il montaggio immediato all’avvio. In combinazione con l’unità automount descritta sopra, il filesystem viene montato solo al primo accesso."
+      }
+    ],
+    "netEffectTitle": "Effetto netto",
+    "netEffectBody": "Il filesystem NFS viene montato al <em>primo accesso</em> anziché subito durante l’avvio. Se il server è offline, l’accesso può attendere o fallire e influire sui servizi che dipendono dal percorso. Automount riduce la dipendenza all’avvio, ma non garantisce che tutti i servizi del CT restino indipendenti da un guasto NFS."
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "body": "Replica l'intero flusso a mano — ogni comando viene eseguito <strong>dentro il CT</strong> tramite <code>pct exec &lt;ctid&gt; --</code> o direttamente tramite <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "view": {
+    "heading": "Visualizzare i montaggi correnti",
+    "body": "Elenca i punti di montaggio NFS attivi nel CT tramite <code>mount | grep nfs</code> e tutte le righe NFS del suo <code>/etc/fstab</code>. Per ciascuna voce di fstab mostra se il montaggio è attualmente attivo, così puoi individuare quelli permanenti che non sono stati ripristinati all’avvio."
+  },
+  "unmount": {
+    "heading": "Smonta la condivisione NFS",
+    "body": "Combina i montaggi live e le voci fstab in un unico elenco, ti consente di sceglierne uno e <strong>rimuove la riga corrispondente da <code>/etc/fstab</code></strong>. Lo script <em>non</em> esegue <code>umount</code> sul montaggio live, invece ti dice che è necessario un riavvio CT affinché lo smontaggio abbia effetto.",
+    "warnTitle": "Lo script rimuove le voci da fstab, senza smontare i filesystem attivi",
+    "warnBody": "È una scelta voluta: <code>umount</code> fallisce con “device busy” se un processo nel CT usa ancora il montaggio. Rimuovere la voce da fstab impedisce che venga ripristinato al prossimo avvio del CT. Se vuoi smontarlo <em>subito</em> e sei certo che non sia in uso, esegui manualmente <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> dopo la fine dello script."
+  },
+  "test": {
+    "heading": "Test di connettività NFS",
+    "body": "La diagnostica nel CT verifica che <code>nfs-common</code> sia installato e che <code>rpcbind</code> sia in esecuzione, poi elenca i montaggi NFS attivi. Per ogni server NFS indicato in fstab controlla ping, porta 2049 e <code>showmount -e</code>. È un buon primo passo se un montaggio permanente non si attiva."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "privTitle": "Container privilegiato richiesto (lo script si interrompe)",
+    "privBody": "Il CT selezionato non è privilegiato. Il client NFS del kernel richiede la capacità <code>SYS_ADMIN</code>, non esposta dai CT non privilegiati. Converti il CT in privilegiato (la conversione con Disk Manager &amp; è descritta in <importLink>Importa disco in LXC</importLink>) oppure usa l’alternativa indicata nell’avviso all’inizio di questa pagina.",
+    "aptTitle": "apt-get install nfs-common fails",
+    "aptIntro": "Lo script assume una famiglia Debian CT (<code>apt-get</code>). Se il CT funziona Alpine / Arch / Rocky / Alma, la fase di installazione non riesce silenziosamente. Installare il client NFS a mano per quella distro:",
+    "aptItems": [
+      "Alpine: <code>apk add nfs-utils</code>",
+      "Arch: <code>pacman -S nfs-utils</code>",
+      "Rocky / Alma: <code>dnf install nfs-utils</code>"
+    ],
+    "aptOutro": "Quindi eseguire nuovamente lo script ProxMenux — il passaggio di installazione salta quando gli strumenti sono già presenti.",
+    "portTitle": "\"NFS port (2049) is not accessible\"",
+    "portBody": "Ping è riuscito ma <code>nc -z &lt;server&gt; 2049</code> non è riuscito da dentro il CT. Controllare che il servizio NFS sia in esecuzione sul server, che il firewall consenta a 2049 dalla rete CT e che il CT abbia effettivamente un percorso di rete valido (prova <code>pct exec &lt;ctid&gt; -- ip route</code>).",
+    "bootTitle": "Il montaggio permanente riesce, ma non viene ripristinato all’avvio",
+    "bootBody": "Quasi sempre uno di: la rete non è pronta quando CT monta (lo script <code>_netdev,x-systemd.automount,noauto</code> le opzioni risolvono il problema — aggiungi di nuovo il montaggio tramite lo script se hai scritto la linea fstab a mano senza quelle), il server è irraggiungibile all'avvio (auto-mount aspetta per il primo accesso — che è normale), o DNS è irrisolto all'avvio (utilizzare l'IP del server, non il suo nome host).",
+    "squashTitle": "Server squash root, nessun accesso di scrittura dall'interno CT",
+    "squashIntro": "L'esportazione NFS utilizza <code>root_squash</code> (il default) e il CT scrive come root. Due opzioni:",
+    "squashItems": [
+      "lato server: cambiare l'esportazione in <code>no_root_squash</code> (solo se ti fidi della CT).",
+      "CT-side: scrivere come utente non-root che il server accetta, o chown la parte in modo appropriato."
+    ],
+    "squashOutro": "ProxMenux non può risolvere questo problema — è la politica del server."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Punti di montaggio (Host ↔ Contenitore)",
+        "tail": " — l'alternativa per le TC non private: montare su host, legare in CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "client Samba in LXC",
+        "tail": " — pagina correlata con lo stesso schema per le condivisioni SMB / CIFS."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "Server NFS in LXC",
+        "tailRich": " — l’inverso: esporre cartelle <em>da</em> un CT tramite NFS."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Condivisione NFS come storage Proxmox",
+        "tail": " — registrare la condivisione in Proxmox anziché in un singolo CT."
+      }
+    ]
+  }
+}

@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Proxmox VE System Commands — pveversion, uptime, journalctl, systemctl | ProxMenux",
-    "description": "Reference of essential Proxmox VE and Linux system commands: pveversion, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, free, last, who. All read-only and safe to run on any host.",
+    "description": "Proxmox VE and Linux system commands for versions, uptime, memory, services, logs and users, plus auditing and summary tools. Includes a service restart command; not every example is read-only.",
     "ogTitle": "Proxmox VE System Commands — pveversion, uptime, journalctl, systemctl",
-    "ogDescription": "Reference of essential Proxmox VE and Linux system commands — version, uptime, services, logs, user info, hardware probes. All read-only.",
+    "ogDescription": "Proxmox VE and Linux system commands for version, uptime, services, logs and user information, including service management and auditing tools.",
     "twitterTitle": "Proxmox VE System Commands | ProxMenux",
     "twitterDescription": "Essential system inspection commands for Proxmox VE — version, status, services, logs, user info."
   },
   "header": {
     "title": "Useful System Commands",
-    "description": "Read-only commands to look at the Proxmox host: version, kernel, uptime, memory, web UI status, recent log lines, who's logged in, and a couple of audit / summary tools. None of them modifies the system.",
+    "description": "Commands for inspecting the Proxmox host: version, kernel, uptime, memory, web UI status, recent logs and logged-in users, plus auditing and summary tools. Most inspect state, but systemctl restart pveproxy restarts the web UI proxy, and audit tools can write reports and logs.",
     "section": "Help and Info"
   },
   "intro": {

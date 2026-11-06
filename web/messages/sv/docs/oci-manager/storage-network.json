@@ -1,0 +1,308 @@
+{
+  "meta": {
+    "title": "Data, sökvägar och nätverk | ProxMenux",
+    "description": "Så bevarar OCI manager Apps data i en OCI-container: containerdiskar, kataloger på värden, rclone-monteringar, adresser och privata nätverk."
+  },
+  "header": {
+    "title": "Data, sökvägar och nätverk",
+    "description": "Vad som finns i rootfs, vad som bevaras när det ersätts, hur data delas mellan containrar och hur varje container får sin adress.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Beständig lagring bestäms innan LXC-containern skapas",
+            "body": "Volymerna som deklareras av avbildningen och dess Compose-fil läses innan containern skapas. Varje sökväg som måste bevaras vid en uppdatering blir en monteringspunkt som är oberoende av rootfs. Därmed innehåller rootfs bara det som tillhör avbildningen och kan ersättas."
+          }
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Vad installationsguiden frågar efter",
+      "intro": "Mallen anger de sökvägar som programmet behöver. Var och en placeras på en containerdisk eller i en katalog på värden. Fler sökvägar kan läggas till före sammanfattningen.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Nödvändiga sökvägar",
+                "body": "<code>/config</code>, <code>/data</code>, bibliotek, hämtningar och alla volymer som programmet deklarerar listas."
+              },
+              {
+                "title": "Plats",
+                "body": "Varje sökväg placeras på en containerdisk eller i en befintlig katalog på värden."
+              },
+              {
+                "title": "Lagring och storlek",
+                "body": "En containerdisk skapas på en Proxmox VE-lagring med den angivna storleken. Standardinstallationen frågar en gång efter lagringen för containern och dess data när noden har mer än en; den avancerade installationen frågar efter lagring för varje sökväg strax före storleken och föreslår lagringen för rootfs. Disken visas som <code>vm-VMID-disk-N</code> och ansluts som <code>mpN</code>."
+              },
+              {
+                "title": "Katalog på värden",
+                "body": "Katalogen på värden anges med sin sökväg. Om den inte finns skapas den med den värdanvändare som containeranvändaren mappas till som ägare."
+              },
+              {
+                "title": "Ytterligare sökvägar",
+                "body": "Före installationen kan fler kopplingar läggas till mellan en sökväg eller volym på värden och en sökväg i containern."
+              },
+              {
+                "title": "Sammanfattning",
+                "body": "Hela sökvägsmappningen visas innan CT:n skapas och sparas i instanskontraktet."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "De två platserna för beständig lagring",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Egenskap",
+              "Containerdisk",
+              "Katalog på värden"
+            ],
+            "rows": [
+              [
+                "I konfigurationen",
+                "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>",
+                "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
+              ],
+              [
+                "Containerns säkerhetskopia (vzdump)",
+                "Ingår med <code>backup=1</code>",
+                "Ingår inte"
+              ],
+              [
+                "Storlek",
+                "Fast; kan utökas genom att ändra monteringspunktens storlek",
+                "Det lediga utrymmet i värdens filsystem eller dataset"
+              ],
+              [
+                "Andra containrar",
+                "Monteras bara av den container som den tillhör",
+                "Samma katalog kan monteras i flera containrar"
+              ],
+              [
+                "Ögonblicksbilder och återställning",
+                "Hanteras av Proxmox VE tillsammans med CT:n",
+                "Hanteras på värdens lagring"
+              ],
+              [
+                "När programmet tas bort",
+                "Tas bort med containern",
+                "Bevaras med sitt innehåll"
+              ],
+              [
+                "När CT:n flyttas till en annan nod",
+                "Flyttas med CT:n",
+                "Samma sökväg måste finnas på den andra noden"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Rootfs är reserverat för binärfilerna och avbildningens innehåll. En uppdatering eller ett återskapande ersätter det utan att röra någon av de två typerna av monteringspunkt."
+        },
+        {
+          "p": "En katalog på värden monteras med allt som värden har monterat i den. En katalog som <code>/mnt/pve</code> visar sina nätverksresurser, diskar och dataset i containern, och det som värden senare monterar eller avmonterar där dyker upp eller försvinner utan att containern startas om. En katalog som lagts till som skrivskyddad är skrivskyddad tillsammans med det som är monterat i den när containern startar. Ett filsystem som värden monterar efteråt kommer med de behörigheter som värden monterar det med, och blir också skrivskyddat när containern startas om."
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Exempel: en container med båda platserna",
+      "blocks": [
+        {
+          "code": {
+            "title": "Jellyfin installerat som CT 151 på local-lvm (utdrag)",
+            "code": "rootfs: local-lvm:vm-151-disk-0,size=8G\n# Container disk, part of the CT backup\nmp0: local-lvm:vm-151-disk-1,mp=/config,backup=1,size=16G\n\n# Host directory, outside the CT backup\nmp1: /mnt/oci-shared/media,mp=/data/media"
+          }
+        },
+        {
+          "p": "En uppdatering eller ett återskapande ersätter bara rootfs: <code>mp0</code> bevarar användare, bibliotek och inställningar, och <code>mp1</code> visar fortfarande samma medier. När CT:ns säkerhetskopia återställs kommer <code>/config</code> tillbaka. Mediekatalogen återställs vid behov från säkerhetskopian av värdens lagring."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Kontrakt",
+                "detail": "/config"
+              },
+              {
+                "label": "Plats",
+                "detail": "Containerdisk\neller katalog på värden"
+              },
+              {
+                "label": "LXC",
+                "detail": "Alltid /config\nför programmet"
+              }
+            ],
+            "caption": "Programmet ser sökvägen som avbildningen anger. Bara lagringsplatsen ändras."
+          }
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "title": "En katalog på värden, flera containrar",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
+            "labels": {
+              "host": "Katalog på värden",
+              "config": "Egen konfiguration"
+            }
+          }
+        },
+        {
+          "p": "Varje container sparar sin konfiguration på sin egen disk. Biblioteket eller hämtningarna ligger i en enda katalog på värden som monteras på samma interna sökväg i alla containrar. Därmed är sökvägen som ett program skriver till samma sökväg som ett annat läser från."
+        }
+      ]
+    },
+    {
+      "id": "rclone",
+      "title": "Molnlagring via programmet rclone",
+      "intro": "Utöver installation erbjuder rclone-posten i katalogen <strong>Aktivera en montering i en befintlig OCI-container med rclone</strong>. En fjärrlagring som redan skapats och auktoriserats i rclones webbgränssnitt monteras och görs tillgänglig på värden. Andra containrar kan använda den som en katalog på värden.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Container och fjärrlagring",
+                "body": "VMID för rclone-containern, fjärrlagringens exakta namn och, valfritt, en sökväg i den."
+              },
+              {
+                "title": "Monteringens namn och cache",
+                "body": "Monteringens namn och VFS-cacheläget: <code>off</code>, <code>minimal</code>, <code>writes</code> eller <code>full</code> (standard)."
+              },
+              {
+                "title": "Tillgängliga vyer",
+                "body": "En gemensam rot, som standard <code>/mnt/oci-shared</code>, innehåller en läs- och skrivbar vy i <code>/mnt/oci-shared/remotes/NAME</code> och en skrivskyddad vy i <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+              },
+              {
+                "title": "Aktivering",
+                "body": "Efter bekräftelsen stoppas CT:n, dess startkommando och ett Proxmox VE-hookscript konfigureras, och den startas igen. Åtgärden väntar tills båda vyerna är monterade på värden."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Om monteringen inte aktiveras",
+            "body": "Containerns tidigare konfiguration återställs och containern startas igen. En misslyckad aktivering lämnar därmed rclone som det var."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Adresser och nätverk",
+      "intro": "Ett program med en enda container behöver en adress. Ett program med flera containrar behöver också ett stabilt nätverk mellan sina delar.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "network",
+                "title": "Program med en container",
+                "body": "En nätverksbrygga väljs tillsammans med DHCP eller en fast adress i CIDR-format. LXC-containern har en egen adress och sammanfattningen visar tjänsternas fullständiga URL:er."
+              },
+              {
+                "icon": "waypoints",
+                "title": "Program med flera containrar",
+                "body": "Ett ledigt subnät hittas och en beständig privat brygga skapas. Varje del – program, databas och cache – får en fast adress på nätverket."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "LAN",
+                "detail": "Nåbar adress\nbara huvudtjänsten"
+              },
+              {
+                "label": "Huvud-LXC",
+                "detail": "Webb / API\nLAN + privat nätverk"
+              },
+              {
+                "label": "Privat nätverk",
+                "detail": "PostgreSQL · Valkey · ML\nfasta adresser"
+              }
+            ],
+            "caption": "Beroenden kommunicerar över det privata nätverket och har ingen adress på LAN:et."
+          }
+        },
+        {
+          "p": "Stackkontraktet sparar brygga, subnät, adresser och relationerna mellan tjänsterna. När programmet uppdateras återanvänds samma topologi för alla delar. ProxMenux Monitor öppnar huvudcontainern på dess LAN-adress, inte dess adress på det privata nätverket."
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "title": "Ägarskap för filer och kataloger",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Nya kataloger skapas med de UID och GID som den oprivilegierade LXC-containern mappas till.",
+              "Ägarskapet för befintliga kataloger ändras inte rekursivt.",
+              "Socklar, systemfiler och känsliga sökvägar erbjuds inte som vanliga kataloger på värden."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "title": "Vad en säkerhetskopia av containern innehåller",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Del",
+              "I CT:ns vzdump-säkerhetskopia",
+              "Var det sparas"
+            ],
+            "rows": [
+              [
+                "OCI-rootfs",
+                "Ja",
+                "I CT:ns säkerhetskopia; kan också återskapas från avbildningen och kontraktet"
+              ],
+              [
+                "Containerdisk med <code>backup=1</code>",
+                "Ja",
+                "CT:ns säkerhetskopia"
+              ],
+              [
+                "Katalog på värden",
+                "Nej",
+                "Säkerhetskopian av värdens lagring"
+              ],
+              [
+                "Instanskontrakt",
+                "Ja, kopian som finns i CT:n",
+                "<code>/.proxmenux/oci-record.json</code> i CT:n; ytterligare kopior på värden och i klustret sparas separat"
+              ],
+              [
+                "Program med flera containrar",
+                "Varje del i sin egen säkerhetskopia",
+                "Säkerhetskopiorna av alla delar samt stackkontraktet och dess nätverksbrygga på värden"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -63,7 +63,7 @@
         },
         {
           "command": "tcpdump -i <interface>",
-          "description": "Volcar tráfico de red"
+          "description": "Capturar tráfico de red"
         },
         {
           "command": "netstat -tuln",
@@ -191,7 +191,7 @@
         },
         {
           "command": "scp <file> <user>@<host>:<path>",
-          "description": "Copiar ficheros de forma segura"
+          "description": "Copiar archivos de forma segura"
         },
         {
           "command": "rsync -avz <src> <dest>",
@@ -228,15 +228,15 @@
         },
         {
           "command": "timedatectl",
-          "description": "Controlar la hora y fecha del sistema"
+          "description": "Gestionar la hora y la fecha del sistema"
         },
         {
           "command": "hostnamectl",
-          "description": "Controlar el hostname del sistema"
+          "description": "Gestionar el nombre del host"
         },
         {
           "command": "localectl",
-          "description": "Controlar el locale y el teclado del sistema"
+          "description": "Gestionar la configuración regional y el teclado del sistema"
         },
         {
           "command": "update-alternatives --config <name>",
@@ -251,7 +251,7 @@
   ],
   "tmuxTip": {
     "title": "Usa tmux / screen para comandos de larga duración",
-    "bodyRich": "Cualquier cosa que tarde más que un café — un backup, una actualización larga, un rsync grande — debería correr dentro de <code>tmux</code> o <code>screen</code>. Las desconexiones SSH no matan la sesión, y puedes reengancharte desde cualquier sitio con <code>tmux attach</code>."
+    "bodyRich": "Ejecuta las tareas largas, como un backup, una actualización o una transferencia grande con rsync, dentro de <code>tmux</code> o <code>screen</code> para que una desconexión SSH no termine la sesión del terminal. En una sesión tmux, vuelve a conectarte al mismo host con el mismo usuario y ejecuta <code>tmux attach</code>. Las sesiones screen tienen su propio comando de reconexión."
   },
   "related": {
     "heading": "Relacionado",
@@ -263,7 +263,7 @@
       },
       {
         "href": "/docs/help-info/system-commands",
-        "label": "Comandos de sistema útiles",
+        "label": "Comandos útiles del sistema",
         "tail": " — comandos de inspección específicos de Proxmox."
       },
       {

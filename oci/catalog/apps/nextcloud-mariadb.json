@@ -1,0 +1,720 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-nextcloud-mariadb",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Nextcloud MariaDB"
+    },
+    "tagline": {
+      "en_US": "LinuxServer Nextcloud with MariaDB and Redis"
+    },
+    "description": {
+      "en_US": "LinuxServer Nextcloud, MariaDB 10.11 and Redis 7 in three native OCI LXC containers. /config and /data are separate; user files can use a host/NAS directory while database state stays in local managed storage."
+    },
+    "category": "productivity",
+    "category_label": "Productivity & Workflows",
+    "author": "LinuxServer.io",
+    "developer": "Nextcloud",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 443,
+      "path": "/"
+    },
+    "website": "https://nextcloud.com/",
+    "documentation": "https://docs.linuxserver.io/images/docker-nextcloud/",
+    "repository": "https://github.com/linuxserver/docker-nextcloud",
+    "tips": [
+      "ProxMenux generates the administrator password and shows it at the end of the installation. Change it after the first login.",
+      "Use managed storage for /config and MariaDB. A host/NAS directory can be selected for /data and needs a separate backup.",
+      "Redis locking is configured automatically. Existing Nextcloud configuration files are preserved.",
+      "Use a trusted HTTPS reverse proxy. Upgrade Nextcloud one major version at a time."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "linuxserver",
+    "repository": "https://github.com/linuxserver/docker-nextcloud",
+    "revision": "bde257b20aa3ea653bf6900d22356c15cede5cc8",
+    "image_repository_url": "https://github.com/linuxserver/docker-nextcloud/pkgs/container/nextcloud",
+    "readme_pushed_at": "",
+    "compose_sha256": "1edca1fd2290a583ab28748343f8313bf0cf4e8806e534604c1f1ace41cc1539",
+    "generated_at": "2026-11-03T22:32:36+00:00"
+  },
+  "container_contract": {
+    "service_name": "nextcloud",
+    "container_name": "nextcloud",
+    "image": {
+      "reference": "lscr.io/linuxserver/nextcloud:latest",
+      "registry": "lscr.io",
+      "repository": "lscr.io/linuxserver/nextcloud",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "MYSQL_DATABASE",
+        "example": "nextcloud",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MYSQL_HOST",
+        "example": "db",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MYSQL_PASSWORD",
+        "example": "${GENERATED_GENERATED_DB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "MYSQL_USER",
+        "example": "nextcloud",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NEXTCLOUD_ADMIN_PASSWORD",
+        "example": "${GENERATED_ADMIN_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "${PGID}",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PUID",
+        "example": "${PUID}",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "${TZ}",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/data",
+        "compose_source_example": "data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 443,
+        "published_example": 443,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "db",
+        "image": "mariadb:10.11"
+      },
+      {
+        "name": "redis",
+        "image": "redis:7-alpine"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: nextcloud\nservices:\n  db:\n    environment:\n      MYSQL_DATABASE: nextcloud\n      MYSQL_PASSWORD: ${GENERATED_DB_PASSWORD}\n      MYSQL_ROOT_PASSWORD: ${GENERATED_DB_ROOT_PASSWORD}\n      MYSQL_USER: nextcloud\n      TZ: ${TZ}\n    image: mariadb:10.11\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: database\n      target: /var/lib/mysql\n    mem_limit: 1g\n    healthcheck:\n      test:\n      - CMD\n      - healthcheck.sh\n      - --connect\n      - --innodb_initialized\n      interval: 10s\n      timeout: 5s\n      retries: 30\n  nextcloud:\n    depends_on:\n      db:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    entrypoint:\n    - /bin/sh\n    - -ec\n    - umask 077; printf %s PD9waHAKLy8gUHJlcGFyZSBhIGZyZXNoIExpbnV4U2VydmVyIE5leHRjbG91ZCB3aXRob3V0IHJlcGxhY2luZyBwZXJzaXN0ZW50IHVzZXIgc2V0dGluZ3MuCiRkaXIgPSAnL2NvbmZpZy93d3cvbmV4dGNsb3VkL2NvbmZpZyc7CmlmICghaXNfZGlyKCRkaXIpICYmICFta2RpcigkZGlyLCAwNzcwLCB0cnVlKSkgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignQ2Fubm90IGNyZWF0ZSB0aGUgTmV4dGNsb3VkIGNvbmZpZyBkaXJlY3RvcnknKTsgfQppZiAoIWlzX2ZpbGUoJGRpciAuICcvY29uZmlnLnBocCcpICYmICFpc19maWxlKCRkaXIgLiAnL2F1dG9jb25maWcucGhwJykpIHsKICAgIGZvcmVhY2ggKFsnTVlTUUxfSE9TVCcsICdNWVNRTF9EQVRBQkFTRScsICdNWVNRTF9VU0VSJywgJ01ZU1FMX1BBU1NXT1JEJ10gYXMgJG5hbWUpIHsKICAgICAgICBpZiAoZ2V0ZW52KCRuYW1lKSA9PT0gZmFsc2UgfHwgZ2V0ZW52KCRuYW1lKSA9PT0gJycpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ01pc3NpbmcgTmV4dGNsb3VkIGRhdGFiYXNlIHNldHRpbmc6ICcgLiAkbmFtZSk7IH0KICAgIH0KICAgIC8vIEtlZXAgdGhlIGRlZmF1bHRzIHRoYXQgTGludXhTZXJ2ZXIgY29waWVzIG9ubHkgaW50byBhbiBlbXB0eSBjb25maWcgZGlyZWN0b3J5LgogICAgJGRlZmF1bHRzID0gJy9hcHAvd3d3L3NyYy9jb25maWcnOwogICAgaWYgKGlzX2RpcigkZGVmYXVsdHMpKSB7CiAgICAgICAgZm9yZWFjaCAobmV3IERpcmVjdG9yeUl0ZXJhdG9yKCRkZWZhdWx0cykgYXMgJGZpbGUpIHsKICAgICAgICAgICAgaWYgKCRmaWxlLT5pc0RvdCgpIHx8ICEkZmlsZS0+aXNGaWxlKCkpIHsgY29udGludWU7IH0KICAgICAgICAgICAgJHRhcmdldCA9ICRkaXIgLiAnLycgLiAkZmlsZS0+Z2V0RmlsZW5hbWUoKTsKICAgICAgICAgICAgaWYgKCFmaWxlX2V4aXN0cygkdGFyZ2V0KSAmJiAhY29weSgkZmlsZS0+Z2V0UGF0aG5hbWUoKSwgJHRhcmdldCkpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCBzZWVkIHRoZSBOZXh0Y2xvdWQgY29uZmlndXJhdGlvbicpOyB9CiAgICAgICAgfQogICAgfQogICAgJHNldHRpbmdzID0gWydkYnR5cGUnID0+ICdteXNxbCcsICdkYmhvc3QnID0+IGdldGVudignTVlTUUxfSE9TVCcpLCAnZGJuYW1lJyA9PiBnZXRlbnYoJ01ZU1FMX0RBVEFCQVNFJyksICdkYnVzZXInID0+IGdldGVudignTVlTUUxfVVNFUicpLCAnZGJwYXNzJyA9PiBnZXRlbnYoJ01ZU1FMX1BBU1NXT1JEJyksICdkaXJlY3RvcnknID0+ICcvZGF0YSddOwogICAgJHBhdGggPSAkZGlyIC4gJy9hdXRvY29uZmlnLnBocCc7CiAgICBpZiAoZmlsZV9wdXRfY29udGVudHMoJHBhdGgsICI8P3BocFxuXCRBVVRPQ09ORklHID0gIiAuIHZhcl9leHBvcnQoJHNldHRpbmdzLCB0cnVlKSAuICI7XG4iLCBMT0NLX0VYKSA9PT0gZmFsc2UpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCB3cml0ZSB0aGUgTmV4dGNsb3VkIGRhdGFiYXNlIGNvbmZpZ3VyYXRpb24nKTsgfQogICAgY2htb2QoJHBhdGgsIDA2MDApOwogICAgLy8gRXhpc3RpbmcgaW5zdGFsbGF0aW9ucyBza2lwIExpbnV4U2VydmVyJ3MgZmlyc3QtcnVuIG93bmVyc2hpcCBzZXR1cC4KICAgIGlmICghY2hvd24oJHBhdGgsIGZpbGVvd25lcigkZGlyKSkgfHwgIWNoZ3JwKCRwYXRoLCBmaWxlZ3JvdXAoJGRpcikpKSB7IHRocm93IG5ldyBSdW50aW1lRXhjZXB0aW9uKCdDYW5ub3Qgc2V0IE5leHRjbG91ZCBjb25maWd1cmF0aW9uIG93bmVyc2hpcCcpOyB9Cn0KJHBhdGggPSAkZGlyIC4gJy9wcm94bWVudXgtcmVkaXMuY29uZmlnLnBocCc7Ci8vIEluc3RhbGxlZCBpbnN0YW5jZXMga2VlcCB0aGVpciBleGlzdGluZyBjYWNoZSBjb25maWd1cmF0aW9uIHVuY2hhbmdlZC4KaWYgKCFpc19maWxlKCRwYXRoKSAmJiAhaXNfZmlsZSgkZGlyIC4gJy9jb25maWcucGhwJykpIHsKICAgICRzZXR0aW5ncyA9IFsnZmlsZWxvY2tpbmcuZW5hYmxlZCcgPT4gdHJ1ZSwgJ21lbWNhY2hlLmxvY2FsJyA9PiAnXE9DXE1lbWNhY2hlXEFQQ3UnLCAnbWVtY2FjaGUubG9ja2luZycgPT4gJ1xPQ1xNZW1jYWNoZVxSZWRpcycsICdyZWRpcycgPT4gWydob3N0JyA9PiAncmVkaXMnLCAncG9ydCcgPT4gNjM3OSwgJ3RpbWVvdXQnID0+IDAuMF1dOwogICAgaWYgKGZpbGVfcHV0X2NvbnRlbnRzKCRwYXRoLCAiPD9waHBcblwkQ09ORklHID0gIiAuIHZhcl9leHBvcnQoJHNldHRpbmdzLCB0cnVlKSAuICI7XG4iLCBMT0NLX0VYKSA9PT0gZmFsc2UpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCB3cml0ZSB0aGUgTmV4dGNsb3VkIFJlZGlzIGNvbmZpZ3VyYXRpb24nKTsgfQogICAgY2htb2QoJHBhdGgsIDA2MDApOwogICAgLy8gRXhpc3RpbmcgaW5zdGFsbGF0aW9ucyBza2lwIExpbnV4U2VydmVyJ3MgZmlyc3QtcnVuIG93bmVyc2hpcCBzZXR1cC4KICAgIGlmICghY2hvd24oJHBhdGgsIGZpbGVvd25lcigkZGlyKSkgfHwgIWNoZ3JwKCRwYXRoLCBmaWxlZ3JvdXAoJGRpcikpKSB7IHRocm93IG5ldyBSdW50aW1lRXhjZXB0aW9uKCdDYW5ub3Qgc2V0IE5leHRjbG91ZCBjb25maWd1cmF0aW9uIG93bmVyc2hpcCcpOyB9Cn0K\n      | base64 -d | php; exec /init\n    environment:\n      MYSQL_DATABASE: nextcloud\n      MYSQL_HOST: db\n      MYSQL_PASSWORD: ${GENERATED_DB_PASSWORD}\n      MYSQL_USER: nextcloud\n      PGID: ${PGID}\n      PUID: ${PUID}\n      TZ: ${TZ}\n    image: lscr.io/linuxserver/nextcloud:latest\n    ports:\n    - 443:443\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: config\n      target: /config\n    - read_only: false\n      source: data\n      target: /data\n    mem_limit: 2g\n  redis:\n    image: redis:7-alpine\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: redis\n      target: /data\n    mem_limit: 512m\n    healthcheck:\n      test:\n      - CMD\n      - redis-cli\n      - ping\n      interval: 10s\n      timeout: 5s\n      retries: 30\nvolumes:\n  config: {}\n  data: {}\n  database: {}\n  redis: {}\n"
+  },
+  "compose_stack": {
+    "project_name": "nextcloud",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "nextcloud",
+    "service_count": 3,
+    "services": [
+      {
+        "name": "db",
+        "image": "mariadb:10.11",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "environment": {
+            "MYSQL_DATABASE": "nextcloud",
+            "MYSQL_USER": "nextcloud",
+            "MYSQL_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "MYSQL_ROOT_PASSWORD": "${GENERATED_DB_ROOT_PASSWORD}",
+            "TZ": "${TZ}"
+          },
+          "image": "mariadb:10.11",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "database",
+              "target": "/var/lib/mysql",
+              "read_only": false
+            }
+          ],
+          "mem_limit": "1g",
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "healthcheck.sh",
+              "--connect",
+              "--innodb_initialized"
+            ],
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 30
+          }
+        }
+      },
+      {
+        "name": "redis",
+        "image": "redis:7-alpine",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "redis:7-alpine",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "redis",
+              "target": "/data",
+              "read_only": false
+            }
+          ],
+          "mem_limit": "512m",
+          "healthcheck": {
+            "test": [
+              "CMD",
+              "redis-cli",
+              "ping"
+            ],
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 30
+          }
+        }
+      },
+      {
+        "name": "nextcloud",
+        "image": "lscr.io/linuxserver/nextcloud:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "db",
+          "redis"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "depends_on": {
+            "db": {
+              "condition": "service_healthy"
+            },
+            "redis": {
+              "condition": "service_healthy"
+            }
+          },
+          "entrypoint": [
+            "/bin/sh",
+            "-ec",
+            "(umask 077; printf %s PD9waHAKLy8gUHJlcGFyZSBhIGZyZXNoIExpbnV4U2VydmVyIE5leHRjbG91ZCB3aXRob3V0IHJlcGxhY2luZyBwZXJzaXN0ZW50IHVzZXIgc2V0dGluZ3MuCiRkaXIgPSAnL2NvbmZpZy93d3cvbmV4dGNsb3VkL2NvbmZpZyc7CnVtYXNrKDAwNzcpOwppZiAoIWlzX2RpcigkZGlyKSAmJiAhbWtkaXIoJGRpciwgMDc3MCwgdHJ1ZSkpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCBjcmVhdGUgdGhlIE5leHRjbG91ZCBjb25maWcgZGlyZWN0b3J5Jyk7IH0KLy8gT25jZSB0aGUgZGlyZWN0b3J5IGJlbG9uZ3MgdG8gdGhlIGFwcGxpY2F0aW9uIHVzZXIsIG9ubHkgdGhhdCB1c2VyIGNvdWxkCi8vIGhhdmUgcGxhY2VkIGEgbGluayBpbiBpdDogd3JpdGUgYXMgdGhhdCB1c2VyLCBzbyBhIGxpbmsgcmVhY2hlcyBub3RoaW5nIHRoZQovLyBhcHBsaWNhdGlvbiBjb3VsZCBub3QgYWxyZWFkeSBjaGFuZ2UuIFBIUCBmb2xsb3dzIGxpbmtzIHdoZW4gaXQgb3BlbnMgYQovLyBwYXRoLCBzbyBhIGxpbmsgaW4gcGxhY2Ugb2YgYSBmaWxlIGlzIGFsc28gcmVmdXNlZC4KJG93bmVyID0gZmlsZW93bmVyKCRkaXIpOwppZiAocG9zaXhfZ2V0ZXVpZCgpID09PSAwICYmICRvd25lciAhPT0gMCkgewogICAgaWYgKCFwb3NpeF9zZXRnaWQoZmlsZWdyb3VwKCRkaXIpKSB8fCAhcG9zaXhfc2V0dWlkKCRvd25lcikpIHsgdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oJ0Nhbm5vdCBzd2l0Y2ggdG8gdGhlIE5leHRjbG91ZCB1c2VyJyk7IH0KfQpmdW5jdGlvbiBjcmVhdGVfcHJpdmF0ZSgkcGF0aCwgJGNvbnRlbnQpIHsKICAgIGlmIChpc19saW5rKCRwYXRoKSkgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignUmVmdXNpbmcgYSBsaW5rIGluIHBsYWNlIG9mICcgLiBiYXNlbmFtZSgkcGF0aCkpOyB9CiAgICAkaGFuZGxlID0gQGZvcGVuKCRwYXRoLCAneCcpOwogICAgaWYgKCRoYW5kbGUgPT09IGZhbHNlIHx8IGZ3cml0ZSgkaGFuZGxlLCAkY29udGVudCkgIT09IHN0cmxlbigkY29udGVudCkgfHwgIWZjbG9zZSgkaGFuZGxlKSkgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignQ2Fubm90IHdyaXRlICcgLiBiYXNlbmFtZSgkcGF0aCkpOyB9Cn0KaWYgKCFpc19maWxlKCRkaXIgLiAnL2NvbmZpZy5waHAnKSAmJiAhaXNfZmlsZSgkZGlyIC4gJy9hdXRvY29uZmlnLnBocCcpKSB7CiAgICBmb3JlYWNoIChbJ01ZU1FMX0hPU1QnLCAnTVlTUUxfREFUQUJBU0UnLCAnTVlTUUxfVVNFUicsICdNWVNRTF9QQVNTV09SRCcsICdORVhUQ0xPVURfQURNSU5fUEFTU1dPUkQnXSBhcyAkbmFtZSkgewogICAgICAgIGlmIChnZXRlbnYoJG5hbWUpID09PSBmYWxzZSB8fCBnZXRlbnYoJG5hbWUpID09PSAnJykgeyB0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbignTWlzc2luZyBOZXh0Y2xvdWQgc2V0dGluZzogJyAuICRuYW1lKTsgfQogICAgfQogICAgLy8gS2VlcCB0aGUgZGVmYXVsdHMgdGhhdCBMaW51eFNlcnZlciBjb3BpZXMgb25seSBpbnRvIGFuIGVtcHR5IGNvbmZpZyBkaXJlY3RvcnkuCiAgICAkZGVmYXVsdHMgPSAnL2FwcC93d3cvc3JjL2NvbmZpZyc7CiAgICBpZiAoaXNfZGlyKCRkZWZhdWx0cykpIHsKICAgICAgICBmb3JlYWNoIChuZXcgRGlyZWN0b3J5SXRlcmF0b3IoJGRlZmF1bHRzKSBhcyAkZmlsZSkgewogICAgICAgICAgICBpZiAoJGZpbGUtPmlzRG90KCkgfHwgISRmaWxlLT5pc0ZpbGUoKSkgeyBjb250aW51ZTsgfQogICAgICAgICAgICAkdGFyZ2V0ID0gJGRpciAuICcvJyAuICRmaWxlLT5nZXRGaWxlbmFtZSgpOwogICAgICAgICAgICBpZiAoIWZpbGVfZXhpc3RzKCR0YXJnZXQpICYmICFpc19saW5rKCR0YXJnZXQpKSB7IGNyZWF0ZV9wcml2YXRlKCR0YXJnZXQsIGZpbGVfZ2V0X2NvbnRlbnRzKCRmaWxlLT5nZXRQYXRobmFtZSgpKSk7IH0KICAgICAgICB9CiAgICB9CiAgICAvLyBXaXRoIHRoZSBhZG1pbmlzdHJhdG9yIGluY2x1ZGVkLCBOZXh0Y2xvdWQgaW5zdGFsbHMgaXRzZWxmIG9uIHRoZSBmaXJzdAogICAgLy8gcmVxdWVzdCwgc28gbm9ib2R5IGVsc2Ugb24gdGhlIG5ldHdvcmsgY2FuIGNsYWltIHRoZSBzZXR1cCBwYWdlLgogICAgJHNldHRpbmdzID0gWydkYnR5cGUnID0+ICdteXNxbCcsICdkYmhvc3QnID0+IGdldGVudignTVlTUUxfSE9TVCcpLCAnZGJuYW1lJyA9PiBnZXRlbnYoJ01ZU1FMX0RBVEFCQVNFJyksICdkYnVzZXInID0+IGdldGVudignTVlTUUxfVVNFUicpLCAnZGJwYXNzJyA9PiBnZXRlbnYoJ01ZU1FMX1BBU1NXT1JEJyksICdkaXJlY3RvcnknID0+ICcvZGF0YScsICdhZG1pbmxvZ2luJyA9PiAnYWRtaW4nLCAnYWRtaW5wYXNzJyA9PiBnZXRlbnYoJ05FWFRDTE9VRF9BRE1JTl9QQVNTV09SRCcpXTsKICAgIGNyZWF0ZV9wcml2YXRlKCRkaXIgLiAnL2F1dG9jb25maWcucGhwJywgIjw/cGhwXG5cJEFVVE9DT05GSUcgPSAiIC4gdmFyX2V4cG9ydCgkc2V0dGluZ3MsIHRydWUpIC4gIjtcbiIpOwp9CiRwYXRoID0gJGRpciAuICcvcHJveG1lbnV4LXJlZGlzLmNvbmZpZy5waHAnOwovLyBJbnN0YWxsZWQgaW5zdGFuY2VzIGtlZXAgdGhlaXIgZXhpc3RpbmcgY2FjaGUgY29uZmlndXJhdGlvbiB1bmNoYW5nZWQuCmlmICghaXNfZmlsZSgkcGF0aCkgJiYgIWlzX2xpbmsoJHBhdGgpICYmICFpc19maWxlKCRkaXIgLiAnL2NvbmZpZy5waHAnKSkgewogICAgJHNldHRpbmdzID0gWydmaWxlbG9ja2luZy5lbmFibGVkJyA9PiB0cnVlLCAnbWVtY2FjaGUubG9jYWwnID0+ICdcT0NcTWVtY2FjaGVcQVBDdScsICdtZW1jYWNoZS5sb2NraW5nJyA9PiAnXE9DXE1lbWNhY2hlXFJlZGlzJywgJ3JlZGlzJyA9PiBbJ2hvc3QnID0+ICdyZWRpcycsICdwb3J0JyA9PiA2Mzc5LCAndGltZW91dCcgPT4gMC4wXV07CiAgICBjcmVhdGVfcHJpdmF0ZSgkcGF0aCwgIjw/cGhwXG5cJENPTkZJRyA9ICIgLiB2YXJfZXhwb3J0KCRzZXR0aW5ncywgdHJ1ZSkgLiAiO1xuIik7Cn0K | base64 -d | php); exec /init"
+          ],
+          "environment": {
+            "PUID": "${PUID}",
+            "PGID": "${PGID}",
+            "TZ": "${TZ}",
+            "MYSQL_HOST": "db",
+            "MYSQL_DATABASE": "nextcloud",
+            "MYSQL_USER": "nextcloud",
+            "MYSQL_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "NEXTCLOUD_ADMIN_PASSWORD": "${GENERATED_ADMIN_PASSWORD}"
+          },
+          "image": "lscr.io/linuxserver/nextcloud:latest",
+          "ports": [
+            "443:443"
+          ],
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "config",
+              "target": "/config",
+              "read_only": false
+            },
+            {
+              "source": "data",
+              "target": "/data",
+              "read_only": false
+            }
+          ],
+          "mem_limit": "2g"
+        }
+      }
+    ],
+    "top_level": {
+      "name": "nextcloud",
+      "volumes": {
+        "config": {},
+        "data": {},
+        "database": {},
+        "redis": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "db-volume-0",
+        "service": "db",
+        "container_path": "/var/lib/mysql",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "nextcloud-volume-0",
+        "service": "nextcloud",
+        "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "nextcloud-volume-1",
+        "service": "nextcloud",
+        "container_path": "/data",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "redis-volume-0",
+        "service": "redis",
+        "container_path": "/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 3,
+      "start_order": [
+        "db",
+        "redis",
+        "nextcloud"
+      ],
+      "stop_order": [
+        "nextcloud",
+        "redis",
+        "db"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "generated-admin-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "nextcloud",
+              "environment_variable": "NEXTCLOUD_ADMIN_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "generated-db-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "db",
+              "environment_variable": "MYSQL_PASSWORD"
+            },
+            {
+              "service": "nextcloud",
+              "environment_variable": "MYSQL_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "generated-db-root-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "db",
+              "environment_variable": "MYSQL_ROOT_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Nextcloud Web UI",
+        "scheme": "https",
+        "port": 443,
+        "path": "/",
+        "source": "linuxserver-nextcloud-documentation"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Generated administrator login",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "NEXTCLOUD_ADMIN_PASSWORD",
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "owner_strategy": "mapped-root",
+          "remove_lost_found": true,
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/data",
+          "owner_strategy": "mapped-application-user",
+          "remove_lost_found": true
+        }
+      ]
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
+        "reason": "Catalog import must not imply runtime compatibility.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "rolling-latest-image",
+        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
+        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
+        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
+        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "A reviewed native application will listen on its original container ports at a dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-privileged-mode",
+        "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
+        "native_lxc_behavior": "ProxMenux keeps the LXC unprivileged by default and exposes the broad Compose privilege request only as an explicit compatibility option.",
+        "reason": "A Compose privilege request is source metadata, not proof that the image technically requires a privileged LXC.",
+        "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
+        "validation": "native-equivalent"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-resource-limits",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "stop_signal",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false
+    }
+  }
+}

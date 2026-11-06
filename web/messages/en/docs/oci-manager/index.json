@@ -117,6 +117,7 @@
               { "label": "Data, paths and networking", "href": "/docs/oci-manager/storage-network", "tail": "container disks, host directories, Rclone mounts and addresses." },
               { "label": "Devices and acceleration", "href": "/docs/oci-manager/hardware", "tail": "GPU, NVIDIA, Coral, USB and other devices." },
               { "label": "Multi-container applications", "href": "/docs/oci-manager/stacks", "tail": "application, database and cache as coordinated LXCs." },
+              { "label": "Install an app and contribute it", "href": "/docs/oci-manager/contribute-app", "tail": "agent brief, installation checks and catalog pull request." },
               { "label": "Install, update and modify", "href": "/docs/oci-manager/lifecycle", "tail": "the instance contract and its operations." },
               { "label": "In ProxMenux Monitor", "href": "/docs/oci-manager/monitor", "tail": "versions, updates, console output and terminal." }
             ]

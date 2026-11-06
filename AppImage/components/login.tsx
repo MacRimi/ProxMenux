@@ -268,21 +268,24 @@ export function Login({ onLogin }: LoginProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="totp-code" className="text-sm">
-                    {t("login.authenticationCode")}
-                  </Label>
-                  <Input
-                    id="totp-code"
-                    type="text"
-                    placeholder="000000"
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))}
-                    className="text-center text-lg tracking-widest font-mono text-base"
-                    maxLength={9}
-                    disabled={loading}
-                    autoComplete="one-time-code"
-                    autoFocus
-                  />
+                  {/* Password managers read the field's siblings and skip it when they mention a backup code. */}
+                  <div className="space-y-2">
+                    <Label htmlFor="totp-code" className="text-sm">
+                      {t("login.authenticationCode")}
+                    </Label>
+                    <Input
+                      id="totp-code"
+                      type="text"
+                      placeholder="000000"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))}
+                      className="text-center text-lg tracking-widest font-mono text-base"
+                      maxLength={9}
+                      disabled={loading}
+                      autoComplete="one-time-code"
+                      autoFocus
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground text-center">
                     {t("login.backupCodeHint")}
                   </p>

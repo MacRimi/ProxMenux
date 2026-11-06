@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Comandos de red",
-    "description": "Referencia curada para la red del host Proxmox: información de interfaces, pruebas de conectividad, configuración, monitorización de tráfico y gestión del firewall. Combina ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "description": "Selección de comandos de red para el host Proxmox: información de interfaces, pruebas de conectividad, configuración, monitorización de tráfico y gestión del firewall. Incluye ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
     "section": "Ayuda e información"
   },
   "intro": {
@@ -88,11 +88,11 @@
         },
         {
           "command": "ip link set <iface> up",
-          "description": "Levantar una interfaz de red"
+          "description": "Activar una interfaz de red"
         },
         {
           "command": "ip link set <iface> down",
-          "description": "Bajar una interfaz de red"
+          "description": "Desactivar una interfaz de red"
         }
       ]
     },
@@ -149,7 +149,7 @@
   ],
   "iptablesTip": {
     "title": "iptables vs nftables",
-    "bodyRich": "Debian / Proxmox modernos usan <strong>nftables</strong> como motor de firewall subyacente. El clásico <code>iptables -L -n -v</code> sigue funcionando como capa de traducción, pero la fuente de verdad es <code>nft list ruleset</code>. Los comandos <code>pve-firewall</code> son el wrapper de Proxmox que emite reglas nftables a partir de la configuración del firewall del clúster."
+    "bodyRich": "El servicio clásico <code>pve-firewall</code> genera reglas de iptables. El servicio alternativo proxmox-firewall usa <strong>nftables</strong>. Consulta el backend iptables con <code>iptables -L -n -v</code> y el backend nftables con <code>nft list ruleset</code>. Usa las herramientas del backend activado; estos listados no son intercambiables."
   },
   "related": {
     "heading": "Relacionado",

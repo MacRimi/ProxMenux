@@ -1,0 +1,69 @@
+{
+ "output_version": {
+  "command": "zpool status",
+  "vers_major": 0,
+  "vers_minor": 1
+ },
+ "pools": {
+  "rpool": {
+   "name": "rpool",
+   "state": "ONLINE",
+   "txg": 38071404,
+   "spa_version": 5000,
+   "zpl_version": 5,
+   "scan_stats": {
+    "function": "SCRUB",
+    "state": "FINISHED",
+    "start_time": 1791674641,
+    "end_time": 1791674884,
+    "to_examine": 36167286784,
+    "examined": 36193234944,
+    "skipped": 6365184,
+    "processed": 0,
+    "errors": 0,
+    "bytes_per_scan": 0,
+    "pass_start": 1791909484,
+    "scrub_pause": 0,
+    "scrub_spent_paused": 0,
+    "issued_bytes_per_scan": 0,
+    "issued": 36186869760
+   },
+   "vdevs": {
+    "rpool": {
+     "name": "rpool",
+     "vdev_type": "root",
+     "class": "normal",
+     "state": "ONLINE",
+     "alloc_space": 37495803904,
+     "total_space": 476741369856,
+     "def_space": 476741369856,
+     "read_errors": 0,
+     "write_errors": 0,
+     "checksum_errors": 0,
+     "vdevs": {
+      "/dev/disk/by-id/ata-Patriot_Burst_00000000000000000001-part3": {
+       "name": "/dev/disk/by-id/ata-Patriot_Burst_00000000000000000001-part3",
+       "vdev_type": "disk",
+       "path": "/dev/disk/by-id/ata-Patriot_Burst_00000000000000000001-part3",
+       "class": "normal",
+       "state": "ONLINE",
+       "alloc_space": 37495803904,
+       "total_space": 476741369856,
+       "def_space": 476741369856,
+       "rep_dev_size": 476746088448,
+       "phys_space": 479565971456,
+       "read_errors": 0,
+       "write_errors": 0,
+       "checksum_errors": 0,
+       "slow_ios": 0,
+       "guid": 1001
+      }
+     },
+     "guid": 1001
+    }
+   },
+   "error_count": 0,
+   "pool_guid": 1000
+  }
+ }
+}

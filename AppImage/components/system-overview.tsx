@@ -1,10 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network, ChevronRight } from "lucide-react"
+import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network, ChevronRight, Database } from "lucide-react"
+import { DatastoreUsageRow, type PBSDatastore } from "./pbs-datastore-usage"
+import { PBSProblemMessage } from "./pbs-problem-message"
+import { pbsDiagnostic } from "../lib/pbs-messages"
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { TemperatureDetailModal } from "./temperature-detail-modal"
@@ -185,9 +189,23 @@ const getUnitsSettings = (): "Bytes" | "Bits" => {
   return raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes"
 }
 
-export function SystemOverview() {
+interface PBSOverviewStatus {
+  datastores: PBSDatastore[] | null
+  errors?: Record<string, string>
+  error_details?: Record<string, { code: string }>
+}
+
+export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } = {}) {
   const t = useT()
   const { language } = useI18n()
+  const isPbs = product === "pbs"
+  // On Proxmox Backup Server the datastores take the place of guests and PVE storage.
+  const { data: pbsStatus, error: pbsError } = useSWR<PBSOverviewStatus>(
+    isPbs ? "/api/pbs/status?server=local" : null,
+    (url: string) => fetchApi<PBSOverviewStatus>(url),
+    { refreshInterval: 60000, revalidateOnFocus: false },
+  )
+  const datastores = pbsStatus?.datastores ?? null
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
   const [storageData, setStorageData] = useState<StorageData | null>(null)
@@ -212,8 +230,8 @@ export function SystemOverview() {
     const fetchAllData = async () => {
       const [systemResult, vmResult, storageResults, networkResult] = await Promise.all([
         fetchSystemData().finally(() => setLoadingStates((prev) => ({ ...prev, system: false }))),
-        fetchVMData().finally(() => setLoadingStates((prev) => ({ ...prev, vms: false }))),
-        Promise.all([fetchStorageData(), fetchProxmoxStorageData()]).finally(() =>
+        (isPbs ? Promise.resolve([]) : fetchVMData()).finally(() => setLoadingStates((prev) => ({ ...prev, vms: false }))),
+        Promise.all([fetchStorageData(), isPbs ? Promise.resolve(null) : fetchProxmoxStorageData()]).finally(() =>
           setLoadingStates((prev) => ({ ...prev, storage: false })),
         ),
         fetchNetworkData().finally(() => setLoadingStates((prev) => ({ ...prev, network: false }))),
@@ -248,12 +266,13 @@ export function SystemOverview() {
     }, 5000)
 
     const vmInterval = setInterval(async () => {
+      if (isPbs) return
       const data = await fetchVMData()
       setVmData(data)
     }, 59000)
 
     const storageInterval = setInterval(async () => {
-      const [storage, proxmoxStorage] = await Promise.all([fetchStorageData(), fetchProxmoxStorageData()])
+      const [storage, proxmoxStorage] = await Promise.all([fetchStorageData(), isPbs ? Promise.resolve(null) : fetchProxmoxStorageData()])
       if (storage) setStorageData(storage)
       if (proxmoxStorage) setProxmoxStorageData(proxmoxStorage)
     }, 59000)
@@ -278,7 +297,7 @@ export function SystemOverview() {
       clearInterval(networkInterval)
       window.removeEventListener("networkUnitChanged" as any, handleUnitChange)
     }
-  }, [t])
+  }, [t, isPbs])
 
   if (!hasAttemptedLoad || loadingStates.system) {
     return (
@@ -527,7 +546,48 @@ export function SystemOverview() {
           </CardContent>
         </Card>
 
-        {/* ── Active VM & LXC (preview restyle v2: pills mismo tamaño que "X running") ── */}
+        {isPbs ? (
+        <Card className="bg-card border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("pbs.datastores")}</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {!pbsStatus && !pbsError ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-10 bg-muted rounded w-20"></div>
+                <div className="h-5 bg-muted rounded w-32"></div>
+              </div>
+            ) : !datastores ? (
+              <div role="alert" className="text-sm text-amber-500">
+                <PBSProblemMessage problem={pbsError || pbsStatus?.error_details?.datastores} raw={pbsDiagnostic(pbsError) || pbsStatus?.errors?.datastores} />
+              </div>
+            ) : datastores.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("pbs.noDatastores")}</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-end justify-between">
+                  <span className="text-4xl font-bold leading-none text-foreground">{datastores.length}</span>
+                  {datastores.some(store => store.error) ? (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                      {t("pbs.datastoresUnavailable", { count: datastores.filter(store => store.error).length })}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                      {t("pbs.datastoresOnline")}
+                    </Badge>
+                  )}
+                </div>
+                {datastores.slice(0, 2).map(store => <DatastoreUsageRow key={store.name} store={store} compact />)}
+                {datastores.length > 2 && (
+                  <p className="text-xs text-muted-foreground">{t("pbs.moreDatastores", { count: datastores.length - 2 })}</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        ) : (
+        /* ── Active VM & LXC (preview restyle v2: pills mismo tamaño que "X running") ── */
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{t("overview.activeVmLxc")}</CardTitle>
@@ -565,6 +625,7 @@ export function SystemOverview() {
             )}
           </CardContent>
         </Card>
+        )}
 
         <Card 
           className={`bg-card border-border ${systemData.temperature > 0 ? "cursor-pointer hover:bg-white/5 transition-colors" : ""}`}
@@ -708,7 +769,20 @@ export function SystemOverview() {
                   </div>
                 </div>
 
-                {vmLxcStorages && vmLxcStorages.length > 0 ? (
+                {isPbs ? (
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">{t("pbs.datastores")}</div>
+                    {!pbsStatus && !pbsError ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">{t("pbs.loading")}</div>
+                    ) : !datastores ? (
+                      <div role="alert" className="py-4 text-amber-500 text-sm">
+                        <PBSProblemMessage problem={pbsError || pbsStatus?.error_details?.datastores} raw={pbsDiagnostic(pbsError) || pbsStatus?.errors?.datastores} />
+                      </div>
+                    ) : datastores.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">{t("pbs.noDatastores")}</div>
+                    ) : datastores.map(store => <DatastoreUsageRow key={store.name} store={store} />)}
+                  </div>
+                ) : vmLxcStorages && vmLxcStorages.length > 0 ? (
                   <div className="space-y-2 pb-3 border-b border-border">
                     <div className="text-xs font-medium text-muted-foreground mb-2">{t("overview.vmLxcStorage")}</div>
                     <div className="flex justify-between items-center">
@@ -744,7 +818,7 @@ export function SystemOverview() {
                   </div>
                 )}
 
-                {localStorage && (
+                {!isPbs && localStorage && (
                   <div className="space-y-2">
                     <div className="text-xs font-medium text-muted-foreground mb-2">{t("overview.localStorageSystem")}</div>
                     <div className="flex justify-between items-center">
@@ -899,7 +973,7 @@ export function SystemOverview() {
               <span className="text-foreground">{formatSystemUptime(systemData.uptime)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("overview.proxmoxVersion")}</span>
+              <span className="text-muted-foreground">{t(isPbs ? "overview.pbsVersion" : "overview.proxmoxVersion")}</span>
               <span className="text-foreground">{systemData.proxmox_version || t("app.notAvailable")}</span>
             </div>
             <div className="flex justify-between">

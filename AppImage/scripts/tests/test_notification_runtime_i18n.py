@@ -227,7 +227,65 @@ class RuntimeCatalogTests(unittest.TestCase):
             total_label = notification_templates._localized_template_labels(
                 "update_summary", language,
             )["total_count"][0]
-            self.assertIn(f"📦 {total_label}: 2", body_locale, language)
+            self.assertRegex(body_locale, rf"(?m)^📦 {re.escape(total_label)}[ \u00a0\u202f]*: 2$", language)
+
+    def test_french_update_icons_preserve_labels_values_and_typography(self):
+        data = {
+            'hostname': 'fixture-pve', 'total_count': '17', 'security_count': '3',
+            'pve_count': '5', 'kernel_count': '7',
+            'important_list': 'fixture-package 1.2.3',
+            'severity': 'INFO', '_notification_language': 'fr',
+        }
+        rendered = notification_templates.render_template('update_summary', data, language='fr')
+        _title, body = notification_templates.enrich_with_emojis(
+            'update_summary', rendered['title'], rendered['body'], data,
+        )
+        for icon, label, value in (
+            ('📦', 'Nombre total de mises à jour', '17'),
+            ('🛡️', 'Mises à jour de sécurité', '3'),
+            ('📦', 'Mises à jour liées à Proxmox', '5'),
+            ('⚙️', 'Mises à jour du noyau', '7'),
+        ):
+            with self.subTest(label=label):
+                self.assertIn(f'{icon} {label}\u00a0: {value}', body.splitlines())
+        self.assertIn('fixture-package 1.2.3', body.splitlines())
+        self.assertNotIn('Total updates:', body)
+
+        versions = {
+            'hostname': 'fixture-pve', 'current_version': '9.2.18',
+            'new_version': '9.2.20', 'details': 'pve-manager 9.2.18 → 9.2.20',
+            'severity': 'INFO', '_notification_language': 'fr',
+        }
+        rendered = notification_templates.render_template('pve_update', versions, language='fr')
+        _title, body = notification_templates.enrich_with_emojis(
+            'pve_update', rendered['title'], rendered['body'], versions,
+        )
+        self.assertIn('Une nouvelle version Proxmox VE est disponible.', body.splitlines())
+        self.assertIn('📦 Actuel\u00a0: 9.2.18', body.splitlines())
+        self.assertIn('🆕 Nouveau\u00a0: 9.2.20', body.splitlines())
+        self.assertIn('🔧 pve-manager 9.2.18 → 9.2.20', body.splitlines())
+
+    def test_field_icons_preserve_horizontal_colon_spacing_and_literal_labels(self):
+        label = 'Résumé (A+B)[0]'
+        labels = {'total_count': [label]}
+        data = {'_notification_language': 'fr', 'severity': 'INFO'}
+        with mock.patch.object(notification_templates, '_localized_template_labels', return_value=labels):
+            for separator in ('', ' ', '\u00a0', '\u202f', ' \u00a0\u202f'):
+                line = f'{label}{separator}: 17'
+                with self.subTest(separator=repr(separator)):
+                    _title, body = notification_templates.enrich_with_emojis(
+                        'update_summary', 'Summary', line, data,
+                    )
+                    self.assertEqual(body, f'📦 {line}')
+            # Prefix collisions, regex-like labels and non-admitted separators
+            # must not gain this field icon. The existing prose branch is separate.
+            for line in (f'{label}X: 17', 'Résumé AAAB0\u00a0: 17',
+                         f'{label}\t: 17', f'{label}\n: 17'):
+                with self.subTest(line=repr(line)):
+                    _title, body = notification_templates.enrich_with_emojis(
+                        'update_summary', 'Summary', line, data,
+                    )
+                    self.assertEqual(body, line)
 
     def test_docker_update_body_icons_preserve_localized_container_label(self):
         data = {
@@ -283,7 +341,7 @@ class RuntimeCatalogTests(unittest.TestCase):
             label = notification_templates._localized_template_labels(
                 "pve_update", language,
             )["new_version"][0]
-            self.assertIn(f"🆕 {label}: 9.2.20", locale_body, language)
+            self.assertRegex(locale_body, rf"(?m)^🆕 {re.escape(label)}[ \u00a0\u202f]*: 9\.2\.20$", language)
 
     def test_missing_slovak_key_falls_back_to_english(self):
         with tempfile.TemporaryDirectory() as directory:

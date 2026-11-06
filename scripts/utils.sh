@@ -271,6 +271,18 @@ translate() {
             echo "$cached"
             return
         fi
+        # The catalog stores texts trimmed; keep the caller's surrounding spaces.
+        local lead="${text%%[![:space:]]*}"
+        local core="${text#"$lead"}"
+        local trail="${core##*[![:space:]]}"
+        core="${core%"$trail"}"
+        if [ -n "$core" ] && [ "$core" != "$text" ]; then
+            cached=$(jq -r --arg text "$core" '.[$text] // .[($text | gsub("\\\\n"; "\n"))] // empty' "$lang_file" 2>/dev/null)
+            if [ -n "$cached" ]; then
+                echo "${lead}${cached}${trail}"
+                return
+            fi
+        fi
     fi
 
     echo "$text"

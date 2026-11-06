@@ -545,7 +545,7 @@ curl -X DELETE http://<host>:8008/api/auth/api-tokens/<token-id> \\
         {t.rich("apiTokens.outro", { apiLink, intLink })}
       </p>
 
-      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("https.heading")}</h2>
+      <h2 id="https" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("https.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("https.intro")}</p>
       <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
         {httpsItems.map((_, idx) => (
@@ -643,11 +643,11 @@ labels:
         {t.rich("audit.intro", { code })}
       </p>
       <CopyableCode
-        code={`# Failed login from 192.0.2.10 (real IP recovered from X-Forwarded-For)
-2026-04-24 14:32:11 WARNING proxmenux.auth: authentication failure; rhost=192.0.2.10 user=admin
+        code={`# Failed login from 192.0.2.10 (forwarded IP only with PROXMENUX_TRUST_PROXY=1)
+2026-04-24 14:32:11,000 proxmenux-auth: authentication failure; rhost=192.0.2.10 user=admin
 
-# Successful login
-2026-04-24 14:32:18 INFO    proxmenux.auth: authentication success;  rhost=192.0.2.10 user=admin`}
+# Login rate limit reached
+2026-04-24 14:32:18,000 proxmenux-auth: login rate limit exceeded; rhost=192.0.2.10 retry_after=240s`}
         className="my-4"
       />
       <p className="mb-6 text-gray-800 leading-relaxed">

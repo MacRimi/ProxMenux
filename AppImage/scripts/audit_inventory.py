@@ -27,6 +27,8 @@ import sys
 import time
 from typing import Any, Optional
 
+import disk_identity
+
 SCHEMA_VERSION = 2
 
 # Disk entries in a guest configuration: rootfs and mpN for containers,
@@ -630,12 +632,16 @@ def _physical_disks(ctx) -> list[dict[str, Any]]:
         size = row.get("SIZE", "")
         name = row.get("NAME", "")
         health = smart.get(name) or {}
+        # The Monitor's rotation when it read the disk, so both agree.
+        rate = health.get("rotation_rate")
+        if not isinstance(rate, int):
+            rate = -1 if row.get("ROTA") == "1" else 0
         disks.append({
             "name": name,
             "model": (row.get("MODEL") or "").strip(),
             "serial": (row.get("SERIAL") or "").strip(),
             "size_bytes": int(size) if size.isdigit() else None,
-            "rotational": row.get("ROTA") == "1",
+            "rotational": disk_identity.media_type(name, rate) == "HDD",
             "bus": (row.get("TRAN") or "").strip(),
             "health": health.get("smart_status"),
             "temperature": health.get("temperature"),

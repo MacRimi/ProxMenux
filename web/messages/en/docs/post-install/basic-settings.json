@@ -31,7 +31,7 @@
     ],
     "officialTitle": "The official Proxmox recommendation",
     "officialBody": "Proxmox's own upgrade guidance is to run, in this exact order:",
-    "officialOutro": "That single line is all you need on any current Proxmox release. The challenge isn't the command itself — it's making sure the repositories on the host are sane <em>before</em> running it.",
+    "officialOutro": "For routine updates within the installed Proxmox VE major version, this is the usual command. Check the host’s repositories and review the proposed package changes <em>before</em> proceeding. Upgrading to another major version requires the official migration procedure.",
     "doesTitle": "What the ProxMenux option does — verified against the script",
     "doesIntro": "The ProxMenux update wraps the exact apt commands above and adds a number of pre/post steps you would otherwise have to remember by hand. Every item below is what the dispatcher script actually does (see <link>Proxmox System Update</link> for the full breakdown):",
     "doesItems": [
@@ -59,7 +59,7 @@
   },
   "languages": {
     "heading": "Skip downloading additional languages",
-    "intro": "On every <code>apt update</code>, Debian by default pulls translation files for every locale it ships — a lot of traffic and disk space for something you'll rarely see. This option tells APT to only fetch the main metadata. Before disabling, ProxMenux <strong>makes sure the host's own locale is actually generated</strong> (reads <code>/etc/default/locale</code> or <code>/etc/environment</code>, appends to <code>/etc/locale.gen</code> if missing, and runs <code>locale-gen</code>). So you don't lose your shell locale as a side effect.",
+    "intro": "During <code>apt update</code>, APT can download translated package descriptions as well as the main metadata. This option disables those translation downloads to save bandwidth and disk space. Before disabling them, ProxMenux <strong>makes sure the host’s own locale is actually generated</strong> (reads <code>/etc/default/locale</code> or <code>/etc/environment</code>, appends to <code>/etc/locale.gen</code> if missing, and runs <code>locale-gen</code>). So you do not lose your shell locale as a side effect.",
     "writtenTitle": "What gets written",
     "revertTitle": "Reversible from the Uninstall menu",
     "revertBody": "Deleting <code>/etc/apt/apt.conf.d/99-disable-translations</code> (either manually or from the Uninstall menu) restores the default behaviour and APT downloads language files again."

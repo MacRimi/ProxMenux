@@ -192,21 +192,25 @@ def application(root, vmid):
     return primary_id, members or [vmid]
 
 
-def status(root, vmid):
+def status(root, vmid, only_needed=False):
     """What the menu needs to know before an operation: whether the backup
     fits on the system disk, the storage chosen earlier and the ones that
-    have room."""
+    have room. The menu can skip unused alternatives once a destination fits;
+    the default retains the complete status used by the maintenance CLI."""
     primary_id, vmids = application(root, vmid)
     record = instances.read(root, primary_id)
     default = instances.location(root, primary_id).parent
     needed, free = required(vmids), available(default)
     saved = (record.get('deployment') or {}).get(KEY)
-    path = storage_path(saved) if saved else None
+    fits = free >= needed
+    path = storage_path(saved) if saved and not (only_needed and fits) else None
     saved_free = available(path) if path is not None and path.is_dir() else None
-    return {'needed': needed, 'free': free, 'fits': free >= needed, 'saved': saved,
-            'saved_fits': saved_free is not None and saved_free >= needed,
+    saved_fits = saved_free is not None and saved_free >= needed
+    candidates = [] if only_needed and (fits or saved_fits) else file_storages()
+    return {'needed': needed, 'free': free, 'fits': fits, 'saved': saved,
+            'saved_fits': saved_fits,
             'candidates': [{'storage': item['storage'], 'free': item['free']}
-                           for item in file_storages() if item['free'] >= needed]}
+                           for item in candidates if item['free'] >= needed]}
 
 
 def choose(root, vmid, storage):

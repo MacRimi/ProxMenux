@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Disk Manager de Proxmox — adjuntar discos a VMs / LXC, tests SMART, wipe | ProxMenux",
-    "description": "Gestiona discos físicos en un host Proxmox VE con ProxMenux: pasa discos a VMs o contenedores LXC (qm set scsi/sata/virtio, pct mp), importa imágenes de disco qcow2 / vmdk / vdi, pasa HBAs o controladoras NVMe enteras, borra discos de forma segura y ejecuta self-tests SMART.",
+    "description": "Gestiona discos físicos en un host Proxmox VE con ProxMenux: conecta discos a VM o contenedores LXC (qm set scsi/sata/virtio, pct mp), importa imágenes img / qcow2 / vmdk / raw, asigna HBA o controladoras NVMe completas, borra discos con controles de seguridad y ejecuta pruebas SMART.",
     "ogTitle": "Disk Manager de Proxmox — adjuntar discos a VMs / LXC, tests SMART, wipe",
     "ogDescription": "Adjuntar discos a VMs / LXC, importar imágenes de disco, PCI passthrough para controladoras, wipe seguro y tests SMART en Proxmox VE.",
     "twitterTitle": "Disk Manager de Proxmox | ProxMenux",
     "twitterDescription": "Adjuntar discos a VMs / LXC, importar imágenes, PCI passthrough, wipe seguro y tests SMART."
   },
   "header": {
-    "title": "Disk Manager",
+    "title": "Administrador de discos",
     "description": "El menú Disk Manager agrupa las herramientas de ProxMenux para gestionar discos físicos en un host Proxmox: adjuntar discos a VMs y contenedores LXC, importar imágenes de disco, pasar una controladora entera o un dispositivo NVMe, borrar discos de forma segura y ejecutar tests de salud SMART.",
-    "section": "Disk Manager"
+    "section": "Administrador de discos"
   },
   "intro": {
     "title": "Para qué sirve este menú",
-    "body": "Cada opción aquí opera sobre <strong>discos físicos ya visibles para el host Proxmox</strong>. El menú está dividido en tres grupos — <strong>VM</strong> (adjuntar discos o importar imágenes a una máquina virtual), <strong>LXC</strong> (adjuntar discos a un contenedor) y <strong>Utilidades</strong> (format seguro, salud SMART). Los chequeos de seguridad se aplican en todas partes: los discos del sistema y los discos ya en uso están ocultos o bloqueados."
+    "body": "Estas herramientas trabajan con <strong>discos físicos visibles para el host Proxmox y archivos de imagen guardados en él</strong>. Hay tres grupos: <strong>VM</strong> (conectar discos o importar imágenes), <strong>LXC</strong> (conectar discos a un contenedor) y <strong>Utilidades</strong> (formateo y salud SMART). Las operaciones de conexión y borrado ocultan o bloquean los discos del sistema y en uso; las comprobaciones SMART pueden examinarlos sin borrarlos."
   },
   "opening": {
     "heading": "Abrir el menú",
@@ -32,7 +32,7 @@
       "Añadir controladora o NVMe a VM"
     ],
     "lxcTitle": "LXC",
-    "lxcBody": "Herramientas que operan sobre contenedores existentes. El passthrough directo de dispositivos necesita un contenedor privilegiado; el script se ofrece a convertirlo si hace falta.",
+    "lxcBody": "Herramientas para contenedores LXC existentes. Este script requiere un contenedor privilegiado y ofrece cambiar la opción cuando hace falta. Lee primero las precauciones sobre conversión y propiedad de archivos en la página de la herramienta.",
     "lxcItems": [
       "Importar disco a LXC"
     ],
@@ -69,7 +69,7 @@
   },
   "lxc": {
     "heading": "LXC",
-    "intro": "Herramientas que operan sobre contenedores LXC existentes. El passthrough directo de dispositivos requiere un contenedor privilegiado; el script se ofrece a convertir el contenedor si hace falta.",
+    "intro": "Herramientas para contenedores LXC existentes. Este script requiere un contenedor privilegiado y ofrece cambiar la opción cuando hace falta. Lee primero las precauciones sobre conversión y propiedad de archivos en la página de la herramienta.",
     "options": [
       {
         "icon": "Boxes",
@@ -98,8 +98,8 @@
     ]
   },
   "safety": {
-    "title": "Reglas de seguridad comunes a todas las opciones",
-    "intro": "ProxMenux filtra cualquier cosa que pueda dañar el host:",
+    "title": "Reglas de seguridad para conectar y borrar discos",
+    "intro": "Las operaciones de conexión y borrado excluyen los dispositivos que podrían dañar el host:",
     "items": [
       "El <strong>disco del sistema</strong> (root pool, swap, miembros activos de ZFS / LVM / RAID) está siempre oculto.",
       "Los discos <strong>montados</strong> en cualquier punto del host se ocultan o se bloquean en ejecución.",
@@ -112,7 +112,7 @@
     "items": [
       {
         "href": "/docs/storage-share",
-        "label": "Storage & Share Manager",
+        "label": "Gestor de almacenamiento y recursos compartidos",
         "tail": " — registrar almacenamiento en el propio Proxmox (NFS / Samba / iSCSI / local) y compartir carpetas entre host y CTs."
       },
       {

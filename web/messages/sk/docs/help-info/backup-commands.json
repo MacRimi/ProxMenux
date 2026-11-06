@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Príkazy zálohovania Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Prehľad príkazov zálohovania a obnovy v Proxmox VE: vzdump pre VM a kontajnery LXC, qmrestore pre VM, pct restore pre kontajnery, plánované zálohy v /etc/pve/jobs.cfg, hook skripty a vylúčené cesty.",
+    "ogTitle": "Príkazy zálohovania Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Prehľad príkazov vzdump, qmrestore a pct restore na zálohovanie a obnovu VM a kontajnerov LXC v Proxmoxe.",
+    "twitterTitle": "Príkazy zálohovania Proxmoxu | ProxMenux",
+    "twitterDescription": "Príkazy vzdump, qmrestore a pct restore na zálohovanie a obnovu VM a kontajnerov Proxmox."
+  },
+  "header": {
+    "title": "Zálohovanie a obnova",
+    "description": "Prehľad príkazov vzdump, qmrestore a pct restore pre zálohovanie v Proxmoxe. Obsahuje plánovanie, pokročilé možnosti ako hook skripty, vylúčené cesty a prioritu I/O, ako aj správu súborov záloh.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Tri režimy zálohovania",
+    "body": "Pri VM je <strong>snapshot</strong> živá záloha bez požiadavky na snímky úložiska. <strong>suspend</strong> VM predtým pozastaví a nemusí zlepšiť konzistentnosť. <strong>stop</strong> ju najprv vypne; predtým bežiaca VM môže pokračovať po začatí zálohy. Pri LXC je to iné: snapshot vyžaduje úložisko so snímkami, suspend používa dva priechody rsync a stop drží kontajner zastavený počas celej zálohy."
+  },
+  "commandGroups": [
+    {
+      "title": "Zálohovanie VM",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Vytvoriť zálohu špecifického VM/CT"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Zálohovanie VM do špecifického úložiska"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Vytvoriť zálohu snímok (pre VMs)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Pozastaviť VM pred živou zálohou, starší režim suspend"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Vypnúť VM pred začatím zálohy"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Zálohovať všetky VM a kontajnery"
+        },
+        {
+          "command": "vzdump --all --exclude <vmid1>,<vmid2>",
+          "description": "Zálohovať všetko okrem zadaných VM"
+        }
+      ]
+    },
+    {
+      "title": "Možnosti zálohovania",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Použiť kompresiu zstd pre zálohovanie"
+        },
+        {
+          "command": "vzdump <vmid> --compress gzip --pigz <threads>",
+          "description": "Použiť pigz s viacerými vláknami"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage> --notes-template <text>",
+          "description": "Pridať poznámky k zálohe"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Poslať notifikáciu e-mail"
+        },
+        {
+          "command": "vzdump <vmid> --prune-backups keep-last=<n>",
+          "description": "Udržujte iba n zálohy na VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Nevylučujte dočasné súbory"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Potlačiť výstupné správy"
+        }
+      ]
+    },
+    {
+      "title": "Obnoviť zálohy",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Obnoviť VM zo zálohy"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Obnoviť na vybrané úložisko"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Obnoviť VM s novými náhodnými MAC adresami"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Obnoviť kontajner zo zálohy"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Obnoviť kontajner na vybrané úložisko"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>:<size-GiB>",
+          "description": "Obnoviť s koreňovým diskom na vybranom úložisku a so zvolenou veľkosťou"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Obnoviť ako neprivilegovaný CT"
+        }
+      ]
+    },
+    {
+      "title": "Správa záloh",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Zoznam záloh v predvolenom mieste"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Nájsť zálohy VM"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Nájsť zálohy kontajnerov"
+        },
+        {
+          "command": "pvesm list <storage> --content backup",
+          "description": "Zobraziť zálohy na vybranom úložisku"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Odstrániť zálohovací súbor"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Zobraziť nastavenie zálohy"
+        }
+      ]
+    },
+    {
+      "title": "Plánované zálohy",
+      "commands": [
+        {
+          "command": "cat /etc/pve/jobs.cfg",
+          "description": "Zobraziť plán zálohovania"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Upraviť nastavenie zálohovania"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Zobraziť časovače systemd"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Kontrola stavu služby Cron"
+        },
+        {
+          "command": "pvenode task list --typefilter vzdump",
+          "description": "Zobraziť dokončené úlohy zálohovania"
+        },
+        {
+          "command": "pvenode task log <upid>",
+          "description": "Zobraziť protokol úlohy zálohovania podľa jej UPID"
+        }
+      ]
+    },
+    {
+      "title": "Pokročilé operácie",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Vynútiť obnovu s prepísaním existujúcej VM"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Zadať vlastný záložný adresár"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Spustiť hook skript počas zálohy"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Vylúčiť špecifické cesty zo zálohy"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Nastaviť prioritu I/O pre proces zálohovania"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Počkajte na zámok"
+        },
+        {
+          "command": "qm importdisk <vmid> <disk-image> <storage>",
+          "description": "Importovať súbor obrazu disku (napríklad raw, qcow2 alebo vmdk) ako nepoužitý disk, nie archív zálohy vzdump"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Otestujte si svoje obnovy",
+    "bodyRich": "Pravidelne obnovte zálohu na voľné testovacie VMID cez <code>qmrestore --unique</code>, spustite VM v izolovanej testovacej sieti a overte obsah. Voľba unique vytvára nové MAC adresy, nemení statické IP ani nastavenia aplikácií. Rovnako otestujte kontajnery cez <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Správa VM a CT",
+        "tail": " — príkazy qm a pct na správu životného cyklu hostí."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Úložiská a disky",
+        "tail": " — správa úložísk cez pvesm."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

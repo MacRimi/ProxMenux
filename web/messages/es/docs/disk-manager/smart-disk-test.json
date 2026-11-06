@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Salud y test SMART de disco | ProxMenux Documentation",
+    "title": "Salud y pruebas SMART del disco | Documentación de ProxMenux",
     "description": "Ejecuta chequeos de salud SMART y tests de disco en Proxmox VE con ProxMenux. Soporta SATA / SAS (smartmontools) y NVMe (nvme-cli). Self-tests cortos y largos, exportación JSON para integración con ProxMenux Monitor.",
-    "ogTitle": "Salud y test SMART de disco | ProxMenux Documentation",
+    "ogTitle": "Salud y pruebas SMART del disco | Documentación de ProxMenux",
     "ogDescription": "Chequeos de salud SMART y self-tests para unidades SATA / SAS y NVMe en Proxmox. Exportación JSON para el Monitor."
   },
   "header": {
@@ -49,17 +49,17 @@
         "dur": "Horas (depende del tamaño del disco)"
       },
       {
-        "action": "Comprobar el progreso del test",
+        "action": "Progreso de prueba",
         "what": "Estado del self-test activo o más reciente.",
         "dur": "Instantáneo"
       }
     ],
     "tipTitle": "Los tests largos sobreviven al cierre del terminal",
-    "tipBody": "Un test largo se encola <em>dentro de la unidad</em> — no depende de que el proceso de ProxMenux siga vivo. Puedes cerrar el terminal, reiniciar el host Proxmox (el test continúa donde lo dejó en algunas unidades) o simplemente volver más tarde y usar <strong>Comprobar el progreso del test</strong> para ver el resultado."
+    "tipBody": "Un test largo se ejecuta <em>dentro de la unidad</em> y no depende de que siga activo el proceso de ProxMenux. Puedes cerrar el terminal y volver después a <strong>Progreso de prueba</strong>. Un reinicio del host, de la controladora o una pérdida de alimentación puede interrumpir el test y su recopilador de resultados; no presupongas que se reanudará automáticamente."
   },
   "json": {
     "heading": "Exportación JSON para el Monitor",
-    "intro": "Cada ejecución escribe un archivo JSON con marca de tiempo en <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>. La estructura es:",
+    "intro": "Las acciones de estado, test corto y progreso guardan un JSON con fecha en <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>; los resultados del test largo se recopilan en segundo plano. El informe completo solo se muestra. La estructura es:",
     "outro": "El ProxMenux Monitor los recoge para renderizar tendencias de salud por disco; los archivos viejos se rotan automáticamente cuando se alcanza el límite de retención."
   },
   "steps": {
@@ -89,7 +89,7 @@
       },
       {
         "title": "Revisa los resultados",
-        "bodyRich": "El estado y el informe se imprimen en el terminal y se escriben en JSON. Para los tests largos, vuelve más tarde y ejecuta <strong>Comprobar el progreso del test</strong> en el mismo disco para ver el resultado.",
+        "bodyRich": "La salida del estado, de las pruebas y del progreso se muestra en el terminal; <strong>Informe completo</strong> se abre en un diálogo desplazable. El JSON se exporta para las acciones indicadas arriba, no para Informe completo. Para las pruebas largas, vuelve después a <strong>Progreso de prueba</strong> en el mismo disco.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Salida del estado de salud rápido",
         "caption": "Salida del estado de salud rápido (SATA — smartctl -H + -A)"
@@ -103,10 +103,10 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noSmartTitle": "\"Could not read SMART data from /dev/sdX\"",
+    "noSmartTitle": "\"No se pudieron leer los datos SMART de /dev/sdX\"",
     "noSmartBody": "El disco está probablemente detrás de una controladora RAID / SAS que no pasa SMART. Con tarjetas basadas en megaraid, prueba <code>smartctl -d megaraid,N /dev/sdX</code>. Para HBAs en modo IT la invocación directa funciona.",
     "longTitle": "El test largo no termina nunca",
-    "longBody": "El test se encola en el firmware de la unidad y pausa si el disco tiene carga pesada. Ejecutarlo de noche en un sistema en reposo suele funcionar. También puedes revisar <code>smartctl -c</code> para ver el porcentaje restante; si se queda atascado en un LBA fijo, el disco está fallando en ese sector."
+    "longBody": "La unidad ejecuta el test en su firmware y la carga de E/S puede retrasarlo. Prueba en un periodo de poca actividad, como de noche. En SATA, <code>smartctl -c</code> muestra el porcentaje restante, y en SAS, <code>smartctl -l selftest</code>; revisa el registro de tests para ver el resultado y posibles LBA con fallos. Un error de lectura requiere investigación; la lentitud por sí sola no demuestra un sector defectuoso."
   },
   "related": {
     "heading": "Relacionado",
@@ -124,7 +124,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "Comandos de gestión de ZFS",
-        "tail": " — zpool scrub como equivalente a los tests SMART a nivel de capa de almacenamiento."
+        "tail": " — zpool scrub comprueba las sumas de verificación de los datos ZFS y complementa los tests SMART del hardware."
       },
       {
         "href": "/docs/monitor/dashboard/storage",

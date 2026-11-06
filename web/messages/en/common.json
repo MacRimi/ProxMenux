@@ -28,7 +28,13 @@
     "switcher": "Language",
     "en": "English",
     "es": "Español",
-    "sk": "Slovenčina"
+    "sk": "Slovenčina",
+    "de": "Deutsch",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "sv": "Svenska",
+    "ru": "Русский"
   },
   "resources": {
     "documentation": {
@@ -89,6 +95,7 @@
       "ociStorageNetwork": "Data, paths and networking",
       "ociHardware": "Devices and acceleration",
       "ociStacks": "Multi-container applications",
+      "ociContributeApp": "Install an app and contribute it",
       "ociLifecycle": "Install, update and modify",
       "ociMonitor": "In ProxMenux Monitor",
       "proxmenuxScripts": "ProxMenux Scripts",
@@ -168,6 +175,7 @@
       "settingsOverview": "Overview",
       "settingsMonitor": "ProxMenux Monitor",
       "settingsBeta": "Change Release Channel",
+      "settingsLanguage": "Change Language",
       "settingsVersion": "Show Version Information",
       "settingsUninstall": "Uninstall ProxMenux",
       "commandsReference": "Commands Reference",

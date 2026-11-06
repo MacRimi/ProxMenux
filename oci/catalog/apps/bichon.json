@@ -1,0 +1,313 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-bichon",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Bichon"
+    },
+    "description": {
+      "en_US": "Self-hosted email archival and search server that downloads mailboxes over IMAP into encrypted local storage."
+    },
+    "category": "communication",
+    "category_label": "Communication & Community",
+    "author": "rustmailer",
+    "developer": "rustmailer",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bichon.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 15630,
+      "path": "/"
+    },
+    "website": "https://github.com/rustmailer/bichon",
+    "documentation": "https://github.com/rustmailer/bichon#readme",
+    "repository": "https://github.com/rustmailer/bichon",
+    "tips": [
+      "The upstream Docker command runs as UID:GID 1000:1000 and requires BICHON_ENCRYPT_PASSWORD. The initial web login is admin / admin@bichon; change it immediately."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "rustmailer",
+    "repository": "https://github.com/rustmailer/bichon",
+    "default_branch": "main",
+    "revision": "010e7dbd8ea1eceb478d6cee070c2156319e5685",
+    "image_repository_url": "https://hub.docker.com/r/rustmailer/bichon",
+    "readme_pushed_at": "",
+    "compose_sha256": "8e6b0d98f8fe7ff90ec4d092fc19ece93ba1f940b6690914c9fd6ab864729cdd",
+    "generated_at": "2026-10-26T06:12:09+00:00",
+    "readme_raw_url": "https://raw.githubusercontent.com/rustmailer/bichon/main/README.md"
+  },
+  "container_contract": {
+    "service_name": "bichon",
+    "container_name": "bichon",
+    "image": {
+      "reference": "docker.io/rustmailer/bichon:latest",
+      "registry": "docker.io",
+      "repository": "docker.io/rustmailer/bichon",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "BICHON_ROOT_DIR",
+        "example": "/data",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "BICHON_ENCRYPT_PASSWORD",
+        "example": null,
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "BICHON_LOG_LEVEL",
+        "example": "info",
+        "required": false,
+        "sensitive": false,
+        "source": "upstream-documentation"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/data",
+        "compose_source_example": "./bichon-data",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 15630,
+        "published_example": 15630,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "{\n  \"name\": \"bichon\",\n  \"services\": {\n    \"bichon\": {\n      \"image\": \"docker.io/rustmailer/bichon:latest\",\n      \"container_name\": \"bichon\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"15630:15630/tcp\"\n      ],\n      \"volumes\": [\n        \"./bichon-data:/data\"\n      ],\n      \"environment\": {\n        \"BICHON_ROOT_DIR\": \"/data\",\n        \"BICHON_ENCRYPT_PASSWORD\": null,\n        \"BICHON_LOG_LEVEL\": \"info\"\n      },\n      \"user\": \"1000:1000\"\n    }\n  }\n}"
+  },
+  "compose_stack": {
+    "project_name": "bichon",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "bichon",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "bichon",
+        "image": "docker.io/rustmailer/bichon:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "docker.io/rustmailer/bichon:latest",
+          "container_name": "bichon",
+          "restart": "unless-stopped",
+          "ports": [
+            "15630:15630/tcp"
+          ],
+          "volumes": [
+            "./bichon-data:/data"
+          ],
+          "environment": {
+            "BICHON_ROOT_DIR": "/data",
+            "BICHON_ENCRYPT_PASSWORD": null,
+            "BICHON_LOG_LEVEL": "info"
+          },
+          "user": "1000:1000"
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "bichon-volume-0",
+        "service": "bichon",
+        "container_path": "/data",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "bichon"
+      ],
+      "stop_order": [
+        "bichon"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Bichon",
+        "scheme": "http",
+        "port": 15630,
+        "path": "/",
+        "source": "upstream-documentation"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Bichon administrator",
+        "type": "static-default",
+        "username": "admin",
+        "password": "admin@bichon",
+        "change_required": true,
+        "source": "upstream-documentation"
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 120
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "generated_sensitive_environment": {},
+      "volume_preparations": [
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 15630,
+        "path": "/",
+        "timeout_seconds": 180,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": true
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "image",
+      "container_name",
+      "environment",
+      "ports",
+      "restart",
+      "volumes",
+      "user"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single OCI image and one application service. Persistent paths, required settings, listeners and upstream first-run steps are recorded; runtime installation and service behavior remain unvalidated until laboratory testing."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

@@ -82,22 +82,6 @@
           "backup": true,
           "default_size_gb": 8
         }
-      },
-      {
-        "id": "volume-1",
-        "container_path": "/dev/net/tun",
-        "compose_source_example": "/dev/net/tun",
-        "read_only": false,
-        "required": true,
-        "installation_choice": [
-          "managed-volume",
-          "host-bind"
-        ],
-        "default": "managed-volume",
-        "managed_volume": {
-          "backup": true,
-          "default_size_gb": 8
-        }
       }
     ],
     "ports": [],
@@ -153,7 +137,7 @@
             "NET_ADMIN",
             "NET_RAW"
           ],
-          "entrypoint": "/bin/sh -c \"tailscaled --state=/var/lib/tailscale/tailscaled.state & sleep 10; tailscale web --listen 0.0.0.0:5252\""
+          "entrypoint": "/bin/sh -c 'sysctl -w net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1 >/dev/null 2>&1; tailscaled --state=/var/lib/tailscale/tailscaled.state & i=0; while [ $i -lt 60 ]; do lan=$(ip -4 addr show dev eth0 2>/dev/null | sed -n \"s/.*inet \\([0-9.]*\\)\\/.*/\\1/p\" | head -n 1); [ -n \"$lan\" ] && break; i=$((i+1)); sleep 1; done; sleep 10; exec tailscale web --listen \"${lan:-0.0.0.0}:5252\"'"
         }
       }
     ],
@@ -174,17 +158,6 @@
         "id": "tailscale-volume-0",
         "service": "tailscale",
         "container_path": "/var/lib/tailscale",
-        "mode": "managed-volume",
-        "user_selectable": false,
-        "backup": true,
-        "shared_with_other_lxc": false,
-        "source_path": null,
-        "source_path_prompt": null
-      },
-      {
-        "id": "tailscale-volume-1",
-        "service": "tailscale",
-        "container_path": "/dev/net/tun",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -270,7 +243,7 @@
     },
     "installer_profile": {
       "runtime": {
-        "compose_entrypoint": "/bin/sh -c \"tailscaled --state=/var/lib/tailscale/tailscaled.state & sleep 10; tailscale web --listen 0.0.0.0:5252\""
+        "compose_entrypoint": "/bin/sh -c 'sysctl -w net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1 >/dev/null 2>&1; tailscaled --state=/var/lib/tailscale/tailscaled.state & i=0; while [ $i -lt 60 ]; do lan=$(ip -4 addr show dev eth0 2>/dev/null | sed -n \"s/.*inet \\([0-9.]*\\)\\/.*/\\1/p\" | head -n 1); [ -n \"$lan\" ] && break; i=$((i+1)); sleep 1; done; sleep 10; exec tailscale web --listen \"${lan:-0.0.0.0}:5252\"'"
       },
       "network": {
         "compose_mode": "host"
@@ -287,6 +260,23 @@
           "remove_lost_found": true,
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "device_requests": [
+        {
+          "id": "dev-net-tun",
+          "kind": "character-device",
+          "purpose": "tun",
+          "enable_prompt": "Pass /dev/net/tun to the LXC",
+          "enabled_default": true,
+          "required_by_compose": true,
+          "path_prompt": "Host device for /dev/net/tun",
+          "host_path_default": "/dev/net/tun",
+          "container_path": "/dev/net/tun",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "source_mapping": "/dev/net/tun:/dev/net/tun"
         }
       ]
     },

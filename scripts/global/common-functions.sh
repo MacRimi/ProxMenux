@@ -445,17 +445,66 @@ cleanup_duplicate_repos() {
 # an operator reads the log days later to find out what moved.
 
 # Reads `apt list --upgradable` on stdin and writes one aligned
-# `name  old → new` line per package. Lines that do not carry the
+# `name  old → new` line per package, never wider than the dialog that
+# shows it (70 columns by default): a package whose versions do not fit
+# continues on indented lines. Lines that do not carry the
 # "[upgradable from: …]" part are passed through as they came.
 pmx_format_upgradable() {
-    awk 'NF == 0 { next }
+    awk -v width="${1:-70}" 'NF == 0 { next }
          $0 ~ /\[upgradable from: / {
              name = $1; sub(/\/.*/, "", name)
              from = $6; sub(/\]$/, "", from)
-             printf "  %-30s %s → %s\n", name, from, $2
+             # Widths are counted by hand: " → " is three columns but more
+             # bytes, and mawk measures bytes.
+             if (2 + 30 + 1 + length(from) + 3 + length($2) <= width && length(name) <= 30)
+                 printf "  %-30s %s → %s\n", name, from, $2
+             else if (6 + length(from) + 3 + length($2) <= width)
+                 printf "  %s\n      %s → %s\n", name, from, $2
+             else
+                 printf "  %s\n      %s\n    → %s\n", name, from, $2
              next
          }
          { print "  " $0 }'
+}
+
+# Asks whether to go ahead with an update, with Yes focused so Enter
+# confirms. whiptail cannot focus a button while its text scrolls, so the
+# box takes the height of the terminal and a list that does not fit ends
+# with a line counting the packages left out; the update log keeps them all.
+#
+#     pmx_confirm_update TITLE TEXT LIST QUESTION
+pmx_confirm_update() {
+    local title="$1" text="$2" list="$3" question="$4"
+    local rows height room shown more
+    rows=$(tput lines 2>/dev/null)
+    [[ "$rows" =~ ^[0-9]+$ ]] || rows=24
+    height=$(( rows > 50 ? 48 : rows - 2 ))
+    (( height < 16 )) && height=16
+    # Frame, padding, the heading, the question and the buttons.
+    room=$(( height - 9 - $(printf '%b' "$text" | grep -c '') ))
+    (( room < 3 )) && room=3
+
+    # A package that spans several lines is shown whole or counted.
+    shown=$(printf '%s\n' "$list" | awk -v room="$room" '
+        /^  [^ ]/ { package++ }
+        { lines[NR] = $0; owner[NR] = package }
+        END {
+            if (NR <= room) { for (i = 1; i <= NR; i++) print lines[i]; exit }
+            # One line is kept for the count of the packages left out.
+            cap = room - 1
+            last = owner[cap]
+            if (owner[cap + 1] == last) last--
+            for (i = 1; i <= NR && owner[i] <= last; i++) print lines[i]
+            printf "\n%d\n", package - last
+        }')
+    more="${shown##*$'\n'}"
+    if [[ "$shown" == *$'\n\n'"$more" && "$more" =~ ^[0-9]+$ ]]; then
+        shown="${shown%$'\n\n'"$more"}"
+        shown+="\n  … ${more} $(translate "more packages; the full list is in the update log")"
+    fi
+
+    whiptail --title "$title" --yesno \
+        "${text}$(translate "Packages to be upgraded"):\n${shown}\n\n${question}" "$height" 78
 }
 
 # Writes what dpkg actually did since `$1` (a "YYYY-MM-DD HH:MM:SS"

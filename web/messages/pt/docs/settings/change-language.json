@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "title": "Alterar idioma | Documentação do ProxMenux",
+    "description": "Escolha entre oito idiomas para a interface do ProxMenux. Todas as instalações incluem catálogos JSON de traduções pré-gerados; o anfitrião não necessita de serviços de tradução nem de um ambiente Python. O menu é recarregado automaticamente.",
+    "ogTitle": "Alterar idioma | Documentação do ProxMenux",
+    "ogDescription": "Escolha um dos oito idiomas do ProxMenux nas Configurações. Disponível em todas as instalações."
+  },
+  "header": {
+    "title": "Alterar idioma",
+    "description": "Alterne a interface do ProxMenux entre oito idiomas suportados. A escolha é guardada em config.json e o menu é reiniciado no novo idioma. Todas as instalações incluem os catálogos de traduções.",
+    "section": "Configurações"
+  },
+  "intro": {
+    "title": "O que é isto?",
+    "body": "Um diálogo lista os oito idiomas suportados. O ProxMenux guarda a sua escolha em <code>config.json</code> como <code>.language</code> e reinicia <code>config_menu.sh</code> para a aplicar imediatamente."
+  },
+  "warn": {
+    "title": "Disponível em todas as instalações",
+    "body": "As Configurações mostram sempre Alterar idioma. Os catálogos são instalados em <code>/usr/local/share/proxmenux/lang/</code> <em>e</em> o idioma escolhido é guardado em <code>config.json</code>. O antigo ambiente Python de tradução não é necessário."
+  },
+  "supported": {
+    "heading": "Idiomas suportados",
+    "headerCode": "Code",
+    "headerLang": "Idioma",
+    "headerNotes": "Notas",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "Inglês",
+        "notes": "Língua de origem — mais precisa"
+      },
+      {
+        "code": "es",
+        "lang": "Espanhol",
+        "notes": "Catálogo JSON pré-gerado"
+      },
+      {
+        "code": "fr",
+        "lang": "Francês",
+        "notes": "Catálogo JSON pré-gerado"
+      },
+      {
+        "code": "de",
+        "lang": "Alemão",
+        "notes": "Catálogo JSON pré-gerado"
+      },
+      {
+        "code": "it",
+        "lang": "italiano",
+        "notes": "Catálogo JSON pré-gerado"
+      },
+      {
+        "code": "pt",
+        "lang": "Português",
+        "notes": "Catálogo JSON pré-gerado"
+      },
+      {
+        "code": "sk",
+        "lang": "Eslovaco",
+        "notes": "Catálogo JSON pré-gerado"
+      },
+      {
+        "code": "sv",
+        "lang": "Sueco",
+        "notes": "Catálogo JSON pré-gerado"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "Inglês é o mais preciso",
+    "body": "Os textos noutros idiomas provêm dos catálogos JSON pré-gerados incluídos no ProxMenux. As traduções em falta usam o inglês; o anfitrião não faz chamadas de tradução em direto. O inglês continua a ser a referência em caso de tradução duvidosa."
+  },
+  "underHood": {
+    "heading": "Como funciona sob o capô",
+    "items": [
+      "O diálogo apresenta oito códigos de idioma; escolha um.",
+      "Se <code>config.json</code> existe: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> atualiza o campo no local.",
+      "Se <code>config.json</code> não existe: um novo é criado com o código de linguagem em um objeto de campo único.",
+      "Diálogo de confirmação: <em>\"Idioma alterado para [code]\"</em>.",
+      "<code>exec bash config_menu.sh</code> recarrega o menu Configurações com o novo idioma ativo."
+    ]
+  },
+  "manual": {
+    "heading": "Equivalente manual"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "noOptionTitle": "A opção não aparece na Configuração",
+    "noOptionBody": "Alterar idioma está sempre disponível nas versões atuais. Se a opção não aparecer, atualize o ProxMenux com o instalador oficial e volte a abrir as Configurações.",
+    "stillEnglishTitle": "A língua mudou, mas a UI ainda mostra inglês",
+    "stillEnglishBody": "O menu volta a ser executado após a alteração. Se abriu uma nova shell e iniciou outro ponto de entrada do ProxMenux, execute <code>menu</code> novamente para aplicar o novo idioma. Confirme com <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Mostrar informações da versão",
+        "tail": " — confirma o canal de lançamento, os ficheiros de tradução e o idioma atual."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Visão geral das configurações",
+        "tail": "."
+      }
+    ]
+  }
+}

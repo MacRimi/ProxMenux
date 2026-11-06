@@ -12,13 +12,13 @@
   },
   "intro": {
     "title": "What this page covers",
-    "body": "How to switch the Monitor from HTTP to HTTPS in the Settings → Security panel, what each certificate source actually points at on disk, how the Proxmox option behaves when the host has a Let's Encrypt cert, and how to set custom paths if you manage certs outside Proxmox."
+    "body": "How to switch the Monitor from HTTP to HTTPS in the Admin → Security panel, what each certificate source actually points at on disk, how the Proxmox option behaves when the host has a Let's Encrypt cert, and how to set custom paths if you manage certs outside Proxmox."
   },
   "wheresetting": {
     "heading": "Where the setting lives",
-    "body": "Open the Monitor and go to <strong>Settings → Security → HTTPS / SSL</strong>. The panel shows the current state (HTTP or HTTPS), and on a host without HTTPS yet it lists the certificate sources the Monitor was able to detect.",
-    "imageAlt": "Settings → Security → HTTPS / SSL panel in the Monitor showing the HTTPS-off state, the auto-detected Proxmox certificate (subject, issuer, expiry) and the Use Custom Certificate option",
-    "caption": "Settings → Security → HTTPS / SSL panel before activation. The Monitor surfaces the cert Proxmox itself is using and offers it as a one-click source."
+    "body": "Open the Monitor and go to <strong>Admin → Security → SSL / HTTPS</strong>. The panel shows the current state (HTTP or HTTPS), and on a host without HTTPS yet it lists the certificate sources the Monitor was able to detect.",
+    "imageAlt": "Admin → Security → SSL / HTTPS panel in the Monitor showing the HTTPS-off state, the auto-detected Proxmox certificate (subject, issuer, expiry) and the Use Custom Certificate option",
+    "caption": "Admin → Security → SSL / HTTPS panel before activation. The Monitor surfaces the cert Proxmox itself is using and offers it as a one-click source."
   },
   "twoways": {
     "heading": "Two ways to enable HTTPS",
@@ -28,7 +28,7 @@
       "items": [
         "Auto-detected — no path to type",
         "Picks the ACME-uploaded cert if present, falls back to the self-signed default",
-        "Renewal happens through Proxmox; the Monitor follows automatically on next start"
+        "Proxmox handles renewal; the Monitor validates and loads it on the next new TLS connection"
       ]
     },
     "custom": {
@@ -117,7 +117,7 @@
   },
   "switchToHttps": {
     "heading": "Switch the Monitor to HTTPS",
-    "bodyRich": "Once <code>/etc/pve/local/pveproxy-ssl.pem</code> is signed by Let's Encrypt, the Monitor side is one click: open <strong>Settings → Security → HTTPS / SSL</strong>, confirm the issuer shown in the detected-certificate panel reads <em>Let's Encrypt</em> (and not the local Proxmox CA), and click <strong>Use Proxmox Certificate</strong>. The Monitor service restarts and the next browser load is HTTPS on port 8008 — no certificate warning, since the chain is publicly trusted. Later Proxmox ACME renewals are validated and selected during the next new TLS connection; there is no recurring certificate poller or renewal-time service restart. <strong>Update certificate</strong> remains available in Security as an explicit diagnostic and recovery action."
+    "bodyRich": "Once <code>/etc/pve/local/pveproxy-ssl.pem</code> is signed by Let's Encrypt, the Monitor side is one click: open <strong>Admin → Security → SSL / HTTPS</strong>, confirm the issuer shown in the detected-certificate panel reads <em>Let's Encrypt</em> (and not the local Proxmox CA), and click <strong>Use Proxmox Certificate</strong>. The Monitor service restarts and the next browser load is HTTPS on port 8008 — no certificate warning, since the chain is publicly trusted. Later Proxmox ACME renewals are validated and selected during the next new TLS connection; there is no recurring certificate poller or renewal-time service restart. <strong>Update certificate</strong> remains available in Security as an explicit diagnostic and recovery action."
   },
   "custom": {
     "heading": "Custom certificate — when to use it",
@@ -143,7 +143,7 @@
   },
   "trustCa": {
     "heading": "Trust the Proxmox self-signed CA",
-    "intro1Rich": "If you prefer to keep the default Proxmox-generated certificate (no ACME), you can stop the browser warning by importing the cluster's root CA into the OS or browser trust store. The Monitor will keep auto-detecting the same <code>/etc/pve/local/pveproxy-ssl.pem</code>; the only thing that changes is that the device viewing the dashboard now recognises the issuer.",
+    "intro1Rich": "To keep the default Proxmox-generated certificate without ACME, import the cluster root CA into the OS or browser trust store. The Monitor detects <code>/etc/pve/local/pve-ssl.pem</code> as the fallback certificate. This makes the client trust its issuer; the URL must still match a name in the certificate.",
     "intro2Rich": "The CA file lives at <code>/etc/pve/pve-root-ca.pem</code> on every node. In a cluster the path is on the shared <code>pmxcfs</code> filesystem so all nodes share the same root, and a single import covers the whole datacenter. Copy it to your machine:",
     "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Then import it on the client side:",

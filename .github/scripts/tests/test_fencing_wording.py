@@ -111,9 +111,12 @@ class FencingWordingTests(unittest.TestCase):
                 rendered = self.render(args[0], args[2], lang)
                 body = catalog['runtime']['notifications']['templates']['split_brain']['body']
                 self.assertEqual(rendered['body'], body.replace('{reason}', message), lang)
-        journal = Journal()
-        method(journal, 'quorum lost', 'syslog')
-        self.assertEqual(journal.events[0][0][0], 'node_disconnect')
+        # Losing quorum is this host's state, not a node that left: the
+        # membership lines name the nodes that left (issue #605).
+        for message in ('quorum lost', '[status] notice: node lost quorum'):
+            journal = Journal()
+            method(journal, message, 'pmxcfs')
+            self.assertEqual(journal.events, [])
 
     def test_english_family_and_settings_label_align_without_changing_key(self):
         en = self.catalogs['en']
@@ -136,6 +139,7 @@ class FencingWordingTests(unittest.TestCase):
             'pt': ('{hostname}: evento do cluster comunicado', 'Foi comunicado um evento do cluster:\n{reason}', 'Evento do cluster', 'Eventos do cluster'),
             'sk': ('{hostname}: hlásená udalosť klastra', 'Bola hlásená udalosť klastra:\n{reason}', 'Udalosť klastra', 'Udalosti klastra'),
             'sv': ('{hostname}: klusterhändelse rapporterad', 'En klusterhändelse har rapporterats:\n{reason}', 'Klusterhändelse', 'Klusterhändelser'),
+            'ru': ('{hostname}: получено сообщение о событии в кластере', 'Получено сообщение о событии в кластере:\n{reason}', 'Событие в кластере', 'События кластера'),
         }
         self.assertEqual(set(self.catalogs), {'en', *expected})
         for lang, (title, body, label, settings) in expected.items():

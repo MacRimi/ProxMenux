@@ -51,6 +51,16 @@ fi
 load_language
 initialize_cache
 
+if [[ -f "$LOCAL_SCRIPTS/global/platform-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+fi
+# On Proxmox Backup Server the menu lists only the options that apply to
+# it; repositories, upgrade and the subscription notice use its tooling.
+PMX_ON_PBS=false
+if declare -F pmx_is_pbs >/dev/null && pmx_is_pbs; then
+    PMX_ON_PBS=true
+fi
+
 # Load shared global functions
 if [[ -f "$LOCAL_SCRIPTS/global/common-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/common-functions.sh"
@@ -62,6 +72,9 @@ fi
 # change made without it is a mistake we can find, not one we can make.
 if [[ -f "$LOCAL_SCRIPTS/global/pmx_journal.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/pmx_journal.sh"
+fi
+if [[ -f "$LOCAL_SCRIPTS/global/log2ram_setup.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/log2ram_setup.sh"
 fi
 if [[ -f "$LOCAL_SCRIPTS/post_install/zram_profile_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS/post_install/zram_profile_helpers.sh"
@@ -117,6 +130,17 @@ setup_proxmox_repositories() {
 
     msg_info2 "$(translate "Configuring Proxmox APT repositories...")"
 
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        if ! ensure_pbs_repositories; then
+            msg_error "$(translate "Failed to configure Proxmox Backup Server repositories")"
+            register_tool "proxmox_repos" false "$FUNC_VERSION"
+            return 1
+        fi
+        register_tool "proxmox_repos" true "$FUNC_VERSION"
+        msg_success "$(translate "Proxmox Backup Server APT repositories configured")"
+        return 0
+    fi
+
     if ! ensure_repositories; then
         msg_error "$(translate "Failed to configure Proxmox repositories")"
         register_tool "proxmox_repos" false "$FUNC_VERSION"
@@ -166,7 +190,7 @@ $(translate "Do you want to continue anyway?")" 13 70
 enable_kexec() {
     local FUNC_VERSION="1.1"
     pmx_journal_context "enable_kexec" "$FUNC_VERSION"
-    # description: Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.
+    # description: Install kexec-tools and prepare a systemd unit plus the reboot-quick alias for fast reboots that skip BIOS/POST.
     msg_info2 "$(translate "Configuring kexec for quick reboots...")"
     NECESSARY_REBOOT=1
 
@@ -243,6 +267,10 @@ EOF
 
 
 apt_upgrade() {
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        bash "$LOCAL_SCRIPTS/global/update-pbs.sh"
+        return
+    fi
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -670,19 +698,24 @@ configure_time_sync() {
 apply_amd_fixes() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "apply_amd_fixes" "$FUNC_VERSION"
-    # description: Detect AMD EPYC/Ryzen CPUs and apply microcode + IOMMU + KVM-specific kernel boot params.
+    # description: Apply idle=nomwait and KVM module options on AMD EPYC/Ryzen hosts.
     msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
-    NECESSARY_REBOOT=1
 
-    local cpu_model
+    local cpu_model cpu_vendor
     cpu_model=$(grep -i -m 1 "model name" /proc/cpuinfo || true)
+    cpu_vendor=$(grep -i -m 1 "vendor_id" /proc/cpuinfo || true)
 
+    # The fixes address Zen processors; older AMD generations do not need them.
     if echo "$cpu_model" | grep -qiE "EPYC|Ryzen"; then
         msg_ok "$(translate "AMD CPU detected")"
+    elif echo "$cpu_vendor" | grep -q "AuthenticAMD"; then
+        msg_ok "$(translate "AMD CPU detected, but these fixes only apply to AMD EPYC and Ryzen. Nothing was changed.")"
+        return 0
     else
         msg_ok "$(translate "No AMD CPU detected. Skipping AMD fixes.")"
         return 0
     fi
+    NECESSARY_REBOOT=1
 
     msg_info "$(translate "Applying AMD-specific fixes...")"
 
@@ -1787,7 +1820,7 @@ EOF
 
 install_guest_agent() {
     local FUNC_VERSION="1.0"
-    # description: Detect the host's hypervisor (qemu/vmware/hyperv/virtualbox) and install the matching guest agent.
+    # description: Detect QEMU/KVM, VMware or VirtualBox and install the matching guest agent; skip other environments.
     msg_info2 "$(translate "Detecting virtualization and installing  guest agent...")"
     NECESSARY_REBOOT=1
 
@@ -2038,7 +2071,7 @@ path = Path(sys.argv[1])
 mode = sys.argv[2] if len(sys.argv) > 2 else "migrate"
 if mode not in {"inspect", "migrate"}:
     raise SystemExit(f"invalid Bashrc migration mode: {mode}")
-lines = path.read_text(encoding="utf-8", errors="surrogateescape").splitlines(keepends=True)
+lines = path.read_bytes().decode("utf-8", errors="surrogateescape").splitlines(keepends=True)
 
 
 def content(line: str) -> str:
@@ -2067,11 +2100,47 @@ marker_pairs = (
     ("${marker_begin}", "${marker_end}"),
 )
 
+# Pair each family independently: a foreign END must not hide a closing marker.
+# A complete span containing any other marker is ambiguous (nested, crossed,
+# or unmatched inside). Preserve overlapping spans as a whole before deleting
+# anything, so a rerun cannot expose user bytes as an ordinary managed block.
+# Unclosed BEGINs create no span; later standalone blocks can still migrate.
+marker_ends = dict(marker_pairs)
+marker_tokens = {marker for pair in marker_pairs for marker in pair}
+open_markers = {end: [] for end in marker_ends.values()}
+ambiguous_ranges = []
+marker_number = 0
+for index, line in enumerate(lines):
+    text = content(line)
+    if text not in marker_tokens:
+        continue
+    marker_number += 1
+    if text in marker_ends:
+        open_markers[marker_ends[text]].append((index, marker_number))
+    elif open_markers[text]:
+        start, begin_number = open_markers[text].pop()
+        if marker_number > begin_number + 1:
+            ambiguous_ranges.append((start, index + 1))
+
+preserved_spans = []
+for start, end in sorted(ambiguous_ranges):
+    if preserved_spans and start < preserved_spans[-1][1]:
+        previous_start, previous_end = preserved_spans[-1]
+        preserved_spans[-1] = (previous_start, max(previous_end, end))
+    else:
+        preserved_spans.append((start, end))
+preserved_ranges = dict(preserved_spans)
+
 result: list[str] = []
 detected_style = "short"
 changed = False
 i = 0
 while i < len(lines):
+    if i in preserved_ranges:
+        end_index = preserved_ranges[i]
+        result.extend(lines[i:end_index])
+        i = end_index
+        continue
     current = content(lines[i])
 
     removed = False
@@ -2079,11 +2148,13 @@ while i < len(lines):
         if current != marker_begin:
             continue
         end_index = next(
-            (j for j in range(i + 1, len(lines)) if content(lines[j]) == marker_end),
+            (j for j in range(i + 1, min(i + 33, len(lines)))
+             if content(lines[j]) == marker_end
+             or any(content(lines[j]) == pair[0] for pair in marker_pairs)),
             None,
         )
-        # Preserve incomplete ranges rather than risk consuming user content.
-        if end_index is None or end_index - i > 32:
+        # A new BEGIN cannot close an earlier orphan; preserve that prefix.
+        if end_index is None or content(lines[end_index]) != marker_end:
             continue
         block = lines[i:end_index + 1]
         if prompt_style(block) == "full":
@@ -2143,7 +2214,7 @@ PY
 
 
 customize_bashrc() {
-    local FUNC_VERSION="1.2"
+    local FUNC_VERSION="1.3"
     pmx_journal_context "customize_bashrc" "$FUNC_VERSION"
     # description: Install and safely migrate the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info2 "$(translate "Customizing bashrc for root user...")"
@@ -2160,7 +2231,7 @@ customize_bashrc() {
     local choice=""
     local detected_path_style="short"
 
-    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null
+    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null || return 1
     if ! detected_path_style="$(_migrate_proxmenux_bashrc "$bashrc" inspect)"; then
         msg_error "$(translate "Failed to inspect the existing ProxMenux Bash configuration.")"
         return 1
@@ -2203,20 +2274,17 @@ customize_bashrc() {
             ;;
     esac
 
-    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
+    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1 || return 1
     local migrated_bashrc
-    migrated_bashrc="$(mktemp)"
-    cp -p "$bashrc" "$migrated_bashrc"
-    if ! _migrate_proxmenux_bashrc "$migrated_bashrc" migrate >/dev/null; then
+    # Build the entire replacement beside the original, then rename once.
+    migrated_bashrc="$(mktemp "${bashrc}.proxmenux.XXXXXX")" || return 1
+    if ! cp -p "$bashrc" "$migrated_bashrc" ||
+       ! _migrate_proxmenux_bashrc "$migrated_bashrc" migrate >/dev/null; then
         rm -f "$migrated_bashrc"
         msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
         return 1
     fi
-    pmx_write_file "$bashrc" < "$migrated_bashrc"
-    rm -f "$migrated_bashrc"
-    
- 
-    pmx_append_file "$bashrc" << EOF
+    if ! cat >> "$migrated_bashrc" << EOF
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
@@ -2231,12 +2299,38 @@ alias egrep='egrep --color=auto'
 source /etc/profile.d/bash_completion.sh
 ${marker_end}
 EOF
-    
+    then
+        rm -f "$migrated_bashrc"
+        msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
+        return 1
+    fi
 
     if ! grep -q "source /root/.bashrc" "$bash_profile" 2>/dev/null; then
-        echo "source /root/.bashrc" | pmx_append_file "$bash_profile" 2>/dev/null
+        if ! echo "source /root/.bashrc" | pmx_append_file "$bash_profile" 2>/dev/null; then
+            rm -f "$migrated_bashrc"
+            return 1
+        fi
     fi
-    
+
+    # Keep the usual file journal, but never truncate the live Bashrc.
+    local before after kept
+    _pmx_store_object "$bashrc"
+    before="$PMX_LAST_DIGEST"; kept="$PMX_LAST_OBJECT_STORED"
+    if ! mv -f -- "$migrated_bashrc" "$bashrc"; then
+        rm -f "$migrated_bashrc"
+        return 1
+    fi
+    _pmx_store_object "$bashrc"; after="$PMX_LAST_DIGEST"
+    if [[ "$before" != "$after" ]]; then
+        local -a fields
+        mapfile -t fields < <(_pmx_journal_common)
+        _pmx_journal_record "${fields[@]}" \
+            "class=configuration" "operation=write_file" "target=$bashrc" \
+            "before=$before" "after=$after" "existed_raw=true" \
+            "capture=present" "revert=restore" \
+            "exactness=$([ "$kept" = true ] && echo exact || echo none)"
+    fi
+
     msg_ok "$(translate "Bashrc customization completed")"
     msg_info "$(translate "The new prompt will be used in new terminal sessions.")"
     msg_info "$(translate "To apply it to the current shell now, run:") source /root/.bashrc"
@@ -2323,7 +2417,7 @@ setup_motd() {
 
 
 optimize_logrotate() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).
     msg_info2 "$(translate "Optimizing logrotate configuration...")"
 
@@ -2344,7 +2438,6 @@ su root adm
 rotate 7
 size 10M
 compress
-delaycompress
 missingok
 notifempty
 create 0640 root adm
@@ -2371,6 +2464,14 @@ EOF
 remove_subscription_banner() {
     local FUNC_VERSION="1.0"
     # description: Patch the Proxmox web UI to suppress the "no valid subscription" dialog (PVE 8 + 9 variants supported).
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
+        register_tool "subscription_banner" true "$FUNC_VERSION"
+        return 0
+    fi
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -2542,7 +2643,7 @@ configure_zram_swap() {
     fi
     version="$(dpkg-query -W -f='${Version}' systemd-zram-generator 2>/dev/null)"
     if [[ -z "$version" ]]; then
-        failure="Cannot determine installed systemd-zram-generator version"
+        failure="$(translate "Cannot determine installed systemd-zram-generator version")"
     else
         if dpkg --compare-versions "$version" ge '1.2.0'; then
             supports_params=true
@@ -2556,7 +2657,7 @@ configure_zram_swap() {
             msg_success "$(translate "ZRAM profile is already active")"
             return 0
         fi
-        failure="Existing ZRAM profile is active but does not match its configuration"
+        failure="$(translate "Existing ZRAM profile is active but does not match its configuration")"
     fi
     if [[ -z "$failure" && "$previous_active" == true ]]; then
         if ! swapoff /dev/zram0; then
@@ -2565,31 +2666,31 @@ configure_zram_swap() {
         fi
         state_mutated=true
         if ! systemctl stop dev-zram0.swap >/dev/null 2>&1; then
-            failure="Could not stop existing dev-zram0.swap"
+            failure="$(translate "Could not stop existing dev-zram0.swap")"
         fi
     fi
     if [[ -z "$failure" ]]; then
         state_mutated=true
         if ! install -d -m 755 "$(dirname "$config")"; then
-            failure="Could not create ZRAM generator directory"
+            failure="$(translate "Could not create ZRAM generator directory")"
         elif ! printf '%s\n' "$desired" | pmx_write_file "$config"; then
-            failure="Could not write ZRAM generator configuration"
+            failure="$(translate "Could not write ZRAM generator configuration")"
         fi
     fi
     if [[ -z "$failure" ]]; then
         old_umask="$(umask)"
         umask 077
         if ! printf 'installed_by_proxmenux=%s\n' "$package_owned" | pmx_write_file "$marker"; then
-            failure="Could not write ZRAM package ownership state"
+            failure="$(translate "Could not write ZRAM package ownership state")"
         fi
         umask "$old_umask"
         [[ -f "$marker" ]] && chmod 600 "$marker"
     fi
     if [[ -z "$failure" ]]; then
         if ! systemctl daemon-reload || ! systemctl start dev-zram0.swap; then
-            failure="Could not activate dev-zram0.swap"
+            failure="$(translate "Could not activate dev-zram0.swap")"
         elif ! zram_profile_verify_active "$algorithm"; then
-            failure="Active ZRAM algorithm, capacity or swap sources did not match the profile"
+            failure="$(translate "Active ZRAM algorithm, capacity or swap sources did not match the profile")"
         fi
     fi
     if [[ -z "$failure" ]]; then
@@ -2637,7 +2738,7 @@ configure_zram_swap() {
 optimize_vzdump() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "optimize_vzdump" "$FUNC_VERSION"
-    # description: Lift vzdump bandwidth/IO limits so backups run at the storage's real throughput.
+    # description: Set global vzdump defaults to bwlimit: 0 and ionice: 5. This does not guarantee faster backups.
     msg_info2 "$(translate "Optimizing vzdump backup speed...")"
 
     local vzdump_conf="/etc/vzdump.conf"
@@ -3034,15 +3135,27 @@ register_tool "fastfetch" true "$FUNC_VERSION"
 
 
 configure_figurine() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     pmx_journal_context "configure_figurine" "$FUNC_VERSION"
     # description: Install Figurine (ASCII-art hostname banner) and wire it into the SSH login flow.
     msg_info2 "$(translate "Installing and configuring Figurine...")"
     # `FIGURINE_VERSION` env var allows pinning to a specific release;
     # default tracks the last tested upstream tag. Audit Tier 6 —
     # recursos remotos sin pinning de versión.
-    local version="${FIGURINE_VERSION:-2.0.0}"
-    local file="figurine_linux_amd64_v${version}.tar.gz"
+    local version="${FIGURINE_VERSION:-2.1.1}"
+    # Prefer the Debian userspace ABI; the upstream 32-bit ARM build requires ARMv7.
+    local arch
+    arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+    case "$arch" in
+        amd64|x86_64) arch="amd64" ;;
+        arm64|aarch64) arch="arm64" ;;
+        armhf|armv7l|armv8l) arch="arm" ;;
+        *)
+            msg_error "$(translate "Unsupported architecture for Figurine:") $arch"
+            return 1
+            ;;
+    esac
+    local file="figurine_linux_${arch}_v${version}.tar.gz"
     local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
     local temp_dir; temp_dir=$(mktemp -d)
     local install_dir="/usr/local/bin"
@@ -3126,8 +3239,11 @@ EOF
     }
 
 
-    ensure_aliases
-    msg_ok "$(translate "Aliases added to .bashrc")"
+    # The aliases call Proxmox VE tools.
+    if [[ "$PMX_ON_PBS" != true ]]; then
+        ensure_aliases
+        msg_ok "$(translate "Aliases added to .bashrc")"
+    fi
 
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
     register_tool "figurine" true "$FUNC_VERSION"
@@ -3174,137 +3290,24 @@ update_pve_appliance_manager() {
 
 _update_existing_log2ram_custom() {
     local func_version="$1"
-    local log2ram_bin=""
-    local candidate resolved tmp_file
+    local watch=false
     pmx_journal_context "_update_existing_log2ram_custom" "$func_version"
 
     msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
-
-    for candidate in \
-        "$(command -v log2ram 2>/dev/null)" \
-        /usr/local/bin/log2ram \
-        /usr/sbin/log2ram \
-        /usr/bin/log2ram
-    do
-        [[ -n "$candidate" && -f "$candidate" ]] || continue
-        resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s' "$candidate")"
-        [[ -f "$resolved" ]] || continue
-        log2ram_bin="$resolved"
-        break
-    done
-
-    if [[ -z "$log2ram_bin" || ! -f /etc/log2ram.conf ]]; then
-        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-
-    if grep -q 'rsync -aAXv ' "$log2ram_bin" 2>/dev/null; then
-        [[ -e "${log2ram_bin}.proxmenux.bak" ]] || cp -a "$log2ram_bin" "${log2ram_bin}.proxmenux.bak"
-        sed 's/rsync -aAXv /rsync -aXv --no-acls /g' "$log2ram_bin" | pmx_write_file "$log2ram_bin"
-    fi
-
-    if pmx_log2ram_drop_stale_journal "$log2ram_bin"; then
-        NECESSARY_REBOOT=1
-        msg_ok "$(translate "Log2RAM keeps the journal in order from the next reboot")"
-    fi
-
-    if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
-        | grep -q 'install ok installed'; then
-        tmp_file="$(mktemp /etc/logrotate.d/.proxmox-backup-api.XXXXXX)" || return 1
-        cat > "$tmp_file" <<'EOF'
-/var/log/proxmox-backup/api/access.log /var/log/proxmox-backup/api/auth.log {
-    size 20M
-    rotate 3
-    compress
-    delaycompress
-    missingok
-    notifempty
-    copytruncate
-}
-EOF
-        chmod 0644 "$tmp_file"
-        chown root:root "$tmp_file"
-        pmx_write_file /etc/logrotate.d/proxmox-backup-api < "$tmp_file"
-        rm -f "$tmp_file"
-
-        tmp_file="$(mktemp /etc/cron.hourly/.proxmox-backup-logrotate.XXXXXX)" || return 1
-        cat > "$tmp_file" <<'EOF'
-#!/bin/sh
-/usr/sbin/logrotate /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1
-EOF
-        chmod 0755 "$tmp_file"
-        chown root:root "$tmp_file"
-        pmx_write_file /etc/cron.hourly/proxmox-backup-logrotate < "$tmp_file"
-        chmod 0755 /etc/cron.hourly/proxmox-backup-logrotate
-        chown root:root /etc/cron.hourly/proxmox-backup-logrotate
-        rm -f "$tmp_file"
-        msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
-    fi
-
-    if [[ -f /usr/local/bin/log2ram-check.sh ]]; then
-        tmp_file="$(mktemp /usr/local/bin/.log2ram-check.XXXXXX)" || return 1
-        cat > "$tmp_file" <<'EOF'
-#!/usr/bin/env bash
-# Watch /var/log usage on Log2RAM's tmpfs and act at two thresholds:
-#   > 80% → vacuum journald down to ~30% of SIZE, then log2ram write
-#   > 92% → aggressive: journal to ~5%, rotate PBS API logs if present,
-#           truncate existing pveproxy/pveam logs, then log2ram write
-PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-CONF_FILE="/etc/log2ram.conf"
-L2R_BIN="$(command -v log2ram || true)"
-[[ -z "$L2R_BIN" && -x /usr/sbin/log2ram ]] && L2R_BIN="/usr/sbin/log2ram"
-[[ -z "$L2R_BIN" ]] && exit 0
-
-SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
-[[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
-LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
-WARN_BYTES=$(( LIMIT_BYTES * 80 / 100 ))
-EMERGENCY_BYTES=$(( LIMIT_BYTES * 92 / 100 ))
-
-USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
-[[ -z "$USED_BYTES" ]] && exit 0
-
-LOCK="/run/log2ram-check.lock"
-exec 9>"$LOCK" 2>/dev/null || exit 0
-flock -n 9 || exit 0
-
-if (( USED_BYTES > EMERGENCY_BYTES )); then
-    SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
-    [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
-    journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
-    if [[ -x /usr/sbin/logrotate && -f /etc/logrotate.d/proxmox-backup-api ]]; then
-        /usr/sbin/logrotate -f /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1 || true
-    fi
-    [ -e /var/log/pveproxy/access.log ] && : > /var/log/pveproxy/access.log 2>/dev/null || true
-    [ -e /var/log/pveproxy/error.log ]  && : > /var/log/pveproxy/error.log  2>/dev/null || true
-    [ -e /var/log/pveam.log ]           && : > /var/log/pveam.log           2>/dev/null || true
-    "$L2R_BIN" write 2>/dev/null || true
-elif (( USED_BYTES > WARN_BYTES )); then
-    SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
-    [[ "$SOFT_JOURNAL_MB" -lt 32 ]] && SOFT_JOURNAL_MB=32
-    journalctl --vacuum-size="${SOFT_JOURNAL_MB}M" >/dev/null 2>&1 || true
-    "$L2R_BIN" write 2>/dev/null || true
-fi
-EOF
-        chmod 0755 "$tmp_file"
-        chown root:root "$tmp_file"
-        bash -n "$tmp_file" || return 1
-        pmx_write_file /usr/local/bin/log2ram-check.sh < "$tmp_file"
-        chmod 0755 /usr/local/bin/log2ram-check.sh
-        chown root:root /usr/local/bin/log2ram-check.sh
-        rm -f "$tmp_file"
-    fi
-
+    [[ -f /etc/cron.d/log2ram-auto-sync ]] && watch=true
+    pmx_log2ram_setup "$(pmx_log2ram_current_size)" "$(pmx_log2ram_current_hours)" "$watch" || return 1
+    NECESSARY_REBOOT=1
     register_tool "log2ram" true "$func_version"
     msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
 }
 
 
 configure_log2ram() {
-    local FUNC_VERSION="1.7"
+    local FUNC_VERSION="2.1"
     local existing_log2ram_bin=""
+    local watch=false
     pmx_journal_context "configure_log2ram" "$FUNC_VERSION"
-    # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
+    # description: Install Log2RAM with a chosen size, sync interval and optional autosync. Updates preserve the size and autosync choice.
 
     existing_log2ram_bin="$(command -v log2ram 2>/dev/null || true)"
     if [[ -f /etc/log2ram.conf || -n "$existing_log2ram_bin" \
@@ -3316,7 +3319,6 @@ configure_log2ram() {
 
     msg_info2 "$(translate "Preparing Log2RAM configuration")"
     sleep 1
-
 
     RAM_SIZE_GB=$(awk '/^MemTotal:/{print int($2/1024/1024)}' /proc/meminfo)
     [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
@@ -3355,254 +3357,12 @@ configure_log2ram() {
         "12" "$(translate "Every 12 hours")" OFF \
         3>&1 1>&2 2>&3) || return 0
 
- 
-    if whiptail --title "Log2RAM" --yesno "$(translate "Enable auto-sync if /var/log exceeds 90% of its size?")" 10 60; then
-        ENABLE_AUTOSYNC=true
-    else
-        ENABLE_AUTOSYNC=false
+    if whiptail --title "Log2RAM" --yesno "$(translate "Rotate and write /var/log to disk when it passes 85% of its size?")" 10 60; then
+        watch=true
     fi
 
-  
-    msg_info "$(translate "Cleaning previous Log2RAM installation...")"
-    pmx_disable_service log2ram || true
-    pmx_disable_service log2ram-daily.timer || true
-
-    local obsolete_path
-    for obsolete_path in \
-        /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
-        /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
-        /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram \
-        /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram \
-        /etc/systemd/system/log2ram.service \
-        /etc/systemd/system/log2ram-daily.timer \
-        /etc/systemd/system/log2ram-daily.service \
-        /etc/systemd/system/sysinit.target.wants/log2ram.service \
-        /etc/log2ram.conf /etc/log2ram.conf.* /etc/logrotate.d/log2ram
-    do
-        pmx_remove_file "$obsolete_path" 2>/dev/null || true
-    done
-    rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
-    rm -rf /var/log.hdd /tmp/log2ram 2>/dev/null || true
-
-    systemctl daemon-reload >/dev/null 2>&1 || true
-    systemctl restart cron >/dev/null 2>&1 || true
-    msg_ok "$(translate "Previous installation cleaned")"
-
-   
-    msg_info "$(translate "Installing Log2RAM from GitHub...")"
-    if ! command -v git >/dev/null 2>&1; then
-        msg_info "$(translate "Installing required package: git")"
-        apt-get update -qq >/dev/null 2>&1
-        pmx_install_pkg git
-    fi
-
-    rm -rf /tmp/log2ram 2>/dev/null || true
-    if ! git clone --depth 1 https://github.com/azlux/log2ram.git /tmp/log2ram \
-            >/dev/null 2>>/tmp/log2ram_install.log; then
-        msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-
-    cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
-    if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
-        msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-
-    # Drop ACL preservation from the upstream rsync call: some
-    # /var/log.hdd filesystems reject POSIX ACLs and log2ram write
-    # exits 23 with `set_acl: Operation not supported`. xattrs stay.
-    local _l2r_bin
-    for _l2r_bin in \
-        "$(command -v log2ram 2>/dev/null)" \
-        /usr/local/bin/log2ram \
-        /usr/sbin/log2ram \
-        /usr/bin/log2ram
-    do
-        [[ -n "$_l2r_bin" && -f "$_l2r_bin" ]] || continue
-        if grep -q 'rsync -aAXv ' "$_l2r_bin" 2>/dev/null; then
-            cp -a "$_l2r_bin" "${_l2r_bin}.proxmenux.bak"
-            pmx_edit_file "$_l2r_bin" 's/rsync -aAXv /rsync -aXv --no-acls /g'
-        fi
-        pmx_log2ram_drop_stale_journal "$_l2r_bin" || true
-        break
-    done
-
-    # Size-based rotation for the PBS API logs — the upstream package
-    # ships no logrotate rule and pvestatd's local-datastore poll fills
-    # them fast enough to saturate a tmpfs /var/log.
-    if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
-        | grep -q 'install ok installed'; then
-        mkdir -p /var/log/proxmox-backup/api 2>/dev/null || true
-        pmx_write_file /etc/logrotate.d/proxmox-backup-api <<'EOF'
-/var/log/proxmox-backup/api/access.log /var/log/proxmox-backup/api/auth.log {
-    size 20M
-    rotate 3
-    compress
-    delaycompress
-    missingok
-    notifempty
-    copytruncate
-}
-EOF
-        chmod 0644 /etc/logrotate.d/proxmox-backup-api
-        chown root:root /etc/logrotate.d/proxmox-backup-api
-        pmx_write_file /etc/cron.hourly/proxmox-backup-logrotate <<'EOF'
-#!/bin/sh
-/usr/sbin/logrotate /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1
-EOF
-        chmod 0755 /etc/cron.hourly/proxmox-backup-logrotate
-        chown root:root /etc/cron.hourly/proxmox-backup-logrotate
-        msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
-    fi
-
-    systemctl daemon-reload >/dev/null 2>&1 || true
-
-    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
-        msg_ok "$(translate "Log2RAM installed successfully")"
-    else
-        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-
-  
-    pmx_edit_file /etc/log2ram.conf "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/"
-    LOG2RAM_BIN="$(command -v log2ram || echo /usr/sbin/log2ram)"
-
-    pmx_write_file /etc/cron.d/log2ram <<EOF
-# Log2RAM periodic sync - Created by ProxMenux
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-MAILTO=""
-0 */$CRON_HOURS * * * root $LOG2RAM_BIN write >/dev/null 2>&1
-EOF
-    chmod 0644 /etc/cron.d/log2ram
-    chown root:root /etc/cron.d/log2ram
-    msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
-
-   
-    if [[ "$ENABLE_AUTOSYNC" == true ]]; then
-        pmx_write_file /usr/local/bin/log2ram-check.sh <<'EOF'
-#!/usr/bin/env bash
-# Watch /var/log usage on Log2RAM's tmpfs and act at two thresholds:
-#   > 80% → vacuum journald down to ~30% of SIZE, then log2ram write
-#   > 92% → aggressive: journal to ~5%, rotate PBS API logs if present,
-#           truncate existing pveproxy/pveam logs, then log2ram write
-PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-CONF_FILE="/etc/log2ram.conf"
-L2R_BIN="$(command -v log2ram || true)"
-[[ -z "$L2R_BIN" && -x /usr/sbin/log2ram ]] && L2R_BIN="/usr/sbin/log2ram"
-[[ -z "$L2R_BIN" ]] && exit 0
-
-SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
-[[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
-LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
-WARN_BYTES=$(( LIMIT_BYTES * 80 / 100 ))
-EMERGENCY_BYTES=$(( LIMIT_BYTES * 92 / 100 ))
-
-USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
-[[ -z "$USED_BYTES" ]] && exit 0
-
-LOCK="/run/log2ram-check.lock"
-exec 9>"$LOCK" 2>/dev/null || exit 0
-flock -n 9 || exit 0
-
-if (( USED_BYTES > EMERGENCY_BYTES )); then
-    SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
-    [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
-    journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
-    if [[ -x /usr/sbin/logrotate && -f /etc/logrotate.d/proxmox-backup-api ]]; then
-        /usr/sbin/logrotate -f /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1 || true
-    fi
-    [ -e /var/log/pveproxy/access.log ] && : > /var/log/pveproxy/access.log 2>/dev/null || true
-    [ -e /var/log/pveproxy/error.log ]  && : > /var/log/pveproxy/error.log  2>/dev/null || true
-    [ -e /var/log/pveam.log ]           && : > /var/log/pveam.log           2>/dev/null || true
-    "$L2R_BIN" write 2>/dev/null || true
-elif (( USED_BYTES > WARN_BYTES )); then
-    SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
-    [[ "$SOFT_JOURNAL_MB" -lt 32 ]] && SOFT_JOURNAL_MB=32
-    journalctl --vacuum-size="${SOFT_JOURNAL_MB}M" >/dev/null 2>&1 || true
-    "$L2R_BIN" write 2>/dev/null || true
-fi
-EOF
-        chmod +x /usr/local/bin/log2ram-check.sh
-
-        pmx_write_file /etc/cron.d/log2ram-auto-sync <<'EOF'
-# Log2RAM auto-sync based on /var/log usage - Created by ProxMenux
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-MAILTO=""
-*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
-EOF
-        chmod 0644 /etc/cron.d/log2ram-auto-sync
-        chown root:root /etc/cron.d/log2ram-auto-sync
-        msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
-    else
-        pmx_remove_file /usr/local/bin/log2ram-check.sh 2>/dev/null || true
-        pmx_remove_file /etc/cron.d/log2ram-auto-sync 2>/dev/null || true
-        msg_info2 "$(translate "Auto-sync was not enabled")"
-    fi
-
-    # --- Ajuste de systemd-journald proporcional al tamaño de Log2RAM ---
-    msg_info "$(translate "Adjusting systemd-journald limits to match Log2RAM size...")"
-
-    if [[ -f /etc/systemd/journald.conf ]]; then
-        cp -n /etc/systemd/journald.conf "/etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
-        BAK_OK=$?
-    fi
-
-    SIZE_MB=$(echo "$LOG2RAM_SIZE" | tr -dc '0-9')
-    # Repartos: 55% persistente / 10% libre / 25% runtime   (pisos mínimos)
-    USE_MB=$(( SIZE_MB * 55 / 100 ))
-    KEEP_MB=$(( SIZE_MB * 10 / 100 ))
-    RUNTIME_MB=$(( SIZE_MB * 25 / 100 ))
-    [ "$USE_MB"     -lt 80 ] && USE_MB=80
-    [ "$RUNTIME_MB" -lt 32 ] && RUNTIME_MB=32
-    [ "$KEEP_MB"    -lt 8  ] && KEEP_MB=8
-
-    # Reescribir bloque [Journal] de forma segura
-    pmx_edit_file /etc/systemd/journald.conf '/^\[Journal\]/,$d' 2>/dev/null || true
-    pmx_append_file /etc/systemd/journald.conf <<EOF
-[Journal]
-Storage=persistent
-SplitMode=none
-RateLimitIntervalSec=30s
-RateLimitBurst=1000
-ForwardToSyslog=no
-ForwardToWall=no
-Seal=no
-Compress=yes
-SystemMaxUse=${USE_MB}M
-SystemKeepFree=${KEEP_MB}M
-RuntimeMaxUse=${RUNTIME_MB}M
-# MaxLevelStore=info: required for ProxMenux Monitor log display and Fail2Ban detection.
-# Using "warning" silently discards most system logs making date filters useless.
-MaxLevelStore=info
-MaxLevelSyslog=info
-MaxLevelKMsg=warning
-MaxLevelConsole=notice
-MaxLevelWall=crit
-EOF
-
-    [[ "$BAK_OK" = "0" ]] && msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
-    msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
-
-    mkdir -p /var/log/pveproxy
-    chown -R www-data:www-data /var/log/pveproxy
-    chmod 0750 /var/log/pveproxy
-
-    mkdir -p /var/log.hdd/pveproxy
-    chown -R www-data:www-data /var/log.hdd/pveproxy
-    chmod 0750 /var/log.hdd/pveproxy
-
-    systemctl restart cron >/dev/null 2>&1 || true
-    if ! pmx_apply_setting "service-enabled:log2ram" "systemctl is-enabled log2ram" \
-        systemctl enable log2ram; then
-        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
+    pmx_log2ram_setup "$USER_SIZE" "$CRON_HOURS" "$watch" || return 1
     NECESSARY_REBOOT=1
-
     msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
     register_tool "log2ram" true "$FUNC_VERSION"
 }
@@ -3975,6 +3735,19 @@ main_menu() {
     "Optional|Install Figurine|FIGURINE"
     "Optional|Install and configure Log2RAM|LOG2RAM"
   )
+
+  if [[ "$PMX_ON_PBS" == true ]]; then
+    local -A pve_only=(
+      [GUESTAGENT]=1 [VFIO_IOMMU]=1 [OPENVSWITCH]=1 [VZDUMP]=1 [PVEAM]=1
+      [CEPH]=1 [ENABLE_HA]=1 [OVHRTM]=1 [PIGZ]=1
+    )
+    local pbs_options=() option_key
+    for option in "${options[@]}"; do
+      option_key="${option##*|}"
+      [[ -n "${pve_only[$option_key]:-}" ]] || pbs_options+=("$option")
+    done
+    options=("${pbs_options[@]}")
+  fi
 
   IFS=$'\n' sorted_options=($(for option in "${options[@]}"; do
     IFS='|' read -r category description function_name <<< "$option"

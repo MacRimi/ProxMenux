@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: Terminál | Dokumentácia ProxMenux",
+    "description": "Shell hostiteľa Proxmox v prehliadači: až 4 terminály v mriežke, tlačidlá klávesnice pre mobilné zariadenia (ESC, TAB, šípky, kombinácie Ctrl), integrovaný prehľad príkazov z cheat.sh a ochrana JWT."
+  },
+  "header": {
+    "title": "Panel: Terminál",
+    "description": "Skutočná relácia shellu na hostiteľovi Proxmox v prehliadači. Až štyri terminály súčasne, tlačidlá klávesnice pre mobilné zariadenia a integrovaný prehľad príkazov, všetko v rovnakej téme ako zvyšok panela.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Skutočná PTY v prehliadači",
+    "body": "Terminál vytvorí na serveri PTY cez <code>flask_terminal_routes</code>, spojí ho cez WebSocket s <code>xterm.js</code> v prehliadači a beží ako <code>root</code>, používateľ jednotky systemd. Rovnako ako cez <code>ssh root@&lt;host&gt;</code> môžete používať <code>vim</code>, <code>tmux</code>, nástroje ncurses a CLI Proxmox (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Každý PTY exportuje <code>PROXMENUX_TERMINAL=monitor</code>. Všetky podriadené procesy <code>bash</code> vrátane neskoršieho spustenia <code>menu</code> premennú zdedia, aby rozpoznali terminál Monitora."
+  },
+  "singleAlt": "ProxMenux Monitor Karta Terminál – jedna terminálová relácia zobrazujúca súhrn systému Fastfetch pri prihlásení",
+  "singleCaption": "Jeden host terminál otvorený a vyššie uvedený panel nástrojov ukazuje počet (<em>1 / 4 terminály</em>), <em>+ Nové</em>, <em>Hľadať</em>, <em>Vyčistiť</em> a <em>Zavrieť</em>. Pomocníci mobilnej klávesnice sa objavia pod terminálom na dotykových zariadeniach.",
+  "target": {
+    "heading": "Cieľ pripojenia",
+    "body1": "Karta Terminál otvorí shell na <strong>samotnom hostiteľovi Proxmox</strong>, rovnako ako prihlásenie cez SSH. Každá karta otvorí nový terminál hostiteľa.",
+    "body2": "Na prístup do <strong>kontajnera LXC</strong> použite tlačidlo <em>Konzola</em> na karte každého spusteného CT v <link>karte VM a LXC</link>. Otvorí okno, ktoré spustí <code>pct enter &lt;vmid&gt;</code> a použije rovnaký mobilný panel nástrojov opísaný nižšie."
+  },
+  "menuGuard": {
+    "heading": "Ochrana pri samoaktualizácii menu v tomto termináli",
+    "body1": "Po potvrdení <code>menu</code> nahradí vlastný strom skriptov a znovu sa načíta. Cez SSH alebo konzolu Proxmox to funguje, ale v prehliadači by sa ukončil PTY shellu a prerušil WebSocket. Preto <code>check_updates_stable</code>, <code>check_updates_beta</code> a <code>apply_release_channel</code> čítajú <code>PROXMENUX_TERMINAL</code> a rozpoznávajú kontext Monitora.",
+    "body2": "Dialóg áno/nie sa potom nahradí správou s oficiálnym príkazom inštalátora: <code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> pre stable a zodpovedajúcou URL <code>install_proxmenux_beta.sh</code> pre beta. Aktualizáciu vykonajte cez SSH alebo konzolu hostiteľa Proxmox; terminál prehliadača slúži iba na prečítanie a potvrdenie správy."
+  },
+  "fourTerminals": {
+    "heading": "Až štyri terminály naraz",
+    "intro": "Môžete otvoriť až štyri terminály hostiteľa súčasne. Každý má vlastný PTY aj WebSocket a ide o úplne nezávislé relácie. Ikony vedľa tlačidla „Nový“ prepínajú dve rozloženia:",
+    "items": [
+      "<strong>Zobrazenie kariet</strong> — viditeľný je jeden terminál, ostatné sú pomenované karty hore (<em>Terminál 1</em>, <em>Terminál 2</em>…). Vhodné na jednu úlohu, kým ostatné bežia na pozadí.",
+      "<strong>Zobrazenie mriežky</strong> — všetky otvorené terminály v mriežke 2×2. Môžete sledovať <code>htop</code> v jednom, <code>iftop</code> v druhom a upravovať v treťom bez prepínania kariet."
+    ],
+    "outro": "Panel nástrojov uvádza počet (<em>1/4 terminálov</em>, <em>4/4 terminálov</em>). <strong>+ Nový</strong> otvorí kartu; malé <code>×</code> v jej hlavičke ju zatvorí. Veľké červené tlačidlo <strong>Zavrieť</strong> hore ukončí všetky terminály."
+  },
+  "gridAlt": "Karta Terminál ProxMenux Monitor — mriežka štyroch terminálov hostiteľa s ls, konfiguráciou siete, iftop a hlavnou ponukou ProxMenux vedľa seba",
+  "gridCaption": "Zobrazenie mriežky (4 / 4 terminály) — štyri nezávislé PTY súčasne: zoznam adresára, <code>/etc/network/interfaces</code>, <code>iftop</code> a hlavná ponuka ProxMenux. Prepínač rozloženia na paneli nástrojov mení mriežku a karty.",
+  "keyboard": {
+    "heading": "Tlačidlá klávesnice pre mobilné zariadenia",
+    "intro": "Klávesnice telefónov a tabletov zvyčajne nemajú ESC, TAB, šípky ani kombinácie s modifikátormi. Tieto klávesy sú potrebné pre <code>vim</code>, <code>nano</code>, <code>htop</code> a ponuky TUI. Terminál preto na malých alebo dotykových zariadeniach zobrazuje pod terminálom rad dotykových tlačidiel:",
+    "headerButton": "Tlačidlo",
+    "headerSends": "Posiela",
+    "headerUse": "Typické použitie",
+    "rows": [
+      {
+        "button": "ESC",
+        "sends": "\\x1b",
+        "use": "Ukončí režim vkladania v <code>vim</code>, zruší dialóg TUI alebo ukončí vyhľadávanie."
+      },
+      {
+        "button": "TAB",
+        "sends": "\\t",
+        "use": "Automatické dopĺňanie ciest a prechod medzi poľami v dialog/whiptail."
+      },
+      {
+        "button": "↑ ↓ ← →",
+        "sends": "\\x1bO[ABCD]",
+        "use": "História shellu, pohyb kurzora a navigácia ponúk."
+      },
+      {
+        "button": "↵ Enter",
+        "sends": "\\r",
+        "use": "Potvrdenie. Niektoré klávesnice nahrádzajú Enter tlačidlami Prejsť/Hotovo; toto tlačidlo je jednoznačné."
+      },
+      {
+        "button": "Ctrl ▾",
+        "sends": "Rozbaľovací zoznam",
+        "useRich": true
+      }
+    ],
+    "ctrlIntro": "Tri kontrolné sekvencie:",
+    "ctrlItems": [
+      "<code>Ctrl+C</code> — zruší alebo preruší bežiaci príkaz (<code>\\x03</code>).",
+      "<code>Ctrl+X</code> — ukončí <code>nano</code> (<code>\\x18</code>).",
+      "<code>Ctrl+R</code> — spätné vyhľadávanie v histórii bash (<code>\\x12</code>)."
+    ],
+    "modalTitle": "Rovnaký panel nástrojov v okne konzoly LXC",
+    "modalBody": "Konzola otvorená cez <link>VM a LXC → Konzola</link> zobrazuje rovnaké tlačidlá klávesnice pod oknom. Pri pripojení automaticky zadá <code>pct enter &lt;vmid&gt;</code>, čím vstúpite priamo do kontajnera."
+  },
+  "lxcAlt": "Okno konzoly LXC ProxMenux Monitor — Terminal: ubuntu (ID: 103), s rovnakým mobilným panelom nástrojov (ESC, TAB, šípky, Enter, Ctrl) pod terminálom",
+  "lxcCaption": "Konzola LXC otvorená cez <em>VM a LXC → Konzola</em>. Hlavička uvádza cieľový kontajner (<em>Terminal: ubuntu (ID: 103)</em>) a pod terminálom sa zobrazuje rovnaký dotykový panel nástrojov.",
+  "search": {
+    "heading": "Vyhľadávanie príkazov — integrovaný prehľad",
+    "intro": "Modré tlačidlo <strong>Hľadať</strong> otvorí približné vyhľadávanie príkazov. Zadajte niekoľko písmen príkazu Linux alebo Proxmox (<code>ls</code>, <code>tar</code>, <code>qm</code>, <code>pct</code>, <code>zpool</code>, <code>systemctl</code>…) a zobrazia sa príklady s voľbou <em>Odoslať do aktívneho terminálu</em> jedným dotykom. Voľbu príkazu tak nájdete bez prepínania karty prehliadača.",
+    "modalAlt": "Okno Vyhľadávanie príkazov ProxMenux Monitor — približné vyhľadávanie príkazov Linux a Proxmox cez cheat.sh s príkladmi ls",
+    "modalCaption": "Vyhľadávanie <code>ls</code> — každý výsledok zobrazuje príkaz, opis a malú šípku na odoslanie do aktívneho terminálu. Vpravo dole je uvedený zdroj údajov (<em>Údaje z cheat.sh</em>).",
+    "aboutLabel": "O cheat.sh:",
+    "aboutBody": "je open-source prehľad spravovaný komunitou s krátkymi praktickými príkladmi stoviek príkazov Linux, nástrojov správy a programovacích jazykov. Pôvodne bol navrhnutý na použitie cez <code>curl cheat.sh/&lt;command&gt;</code>, ale je dostupný aj v prehliadači. ProxMenux Monitor posiela dotazy cez proxy na serveri, aby okno používalo rovnaký pôvod ako panel.",
+    "headerSource": "Zdroj",
+    "headerWhen": "Keď sa použije",
+    "headerWhat": "Čo vidíš",
+    "onlineLabel": "(online)",
+    "onlineWhen": "Keď má hostiteľ prístup na internet a cheat.sh proxy odpovedá.",
+    "onlineWhat": "Niekoľko praktických príkladov na príkaz s opisom nad nimi. Stavová bodka v hlavičke je <green>zelená</green>.",
+    "fallbackLabel": "Miestna záložná možnosť",
+    "fallbackWhen": "Keď cheat.sh je nedostupný (offline hostiteľ, obmedzujúci firewall, cheat.sh výpadok).",
+    "fallbackWhat": "Pribalený zoznam bežných príkazov Linux a Proxmox. Menší katalóg, ale vždy dostupný. Stavová bodka je <red>červená</red>.",
+    "sendingNote": "<strong>Ako funguje odosielanie</strong>: šípka vedľa výsledku odošle text do aktívneho terminálu (vybraná karta alebo posledný terminál, na ktorý ste klikli v mriežke). Okno sa automaticky zatvorí, aby ste mohli stlačiť Enter."
+  },
+  "auth": {
+    "heading": "Prihlásenie",
+    "items": [
+      "Prehliadač najprv požiada o jednorazový lístok cez <code>POST /api/terminal/ticket</code> s JWT v hlavičke <code>Authorization</code>. Lístok následne odošle pri otvorení WebSocketu. Platí 5 sekúnd; pri zapnutom overovaní chýbajúci alebo neplatný lístok ukončí spojenie pred vytvorením PTY.",
+      "Ak je Monitor za reverzným proxy, proxy musí posielať požiadavky na upgrade WebSocket. Príklady pre Nginx / Caddy / Traefik sú na stránke <link>Prístup a overenie</link>."
+    ]
+  },
+  "clipboard": {
+    "heading": "Schránka, história výstupu a zmena veľkosti",
+    "items": [
+      "<strong>Kopírovanie a prilepenie</strong> — používa schránku prehliadača. Vyberte text myšou alebo trackpadom a použite systémovú skratku (<code>Cmd+C</code> na macOS, <code>Ctrl+Shift+C</code> na Linux/Windows). Prostredia Linux podporujú aj prilepenie prostredným tlačidlom.",
+      "<strong>História výstupu</strong> — posúvanie kolieskom alebo dvoma prstami. xterm.js uchováva v pamäti posledných niekoľko tisíc riadkov.",
+      "<strong>Zmena veľkosti</strong> — pri zmene veľkosti panela terminál prispôsobí okno PTY, aby sa <code>htop</code> a <code>vim</code> zobrazovali správne.",
+      "<strong>Opätovné pripojenie po návrate na kartu</strong> — prepnutie aplikácie v telefóne alebo tablete, najmä iPade, môže prerušiť WebSocket. Terminál zistí zmenu viditeľnosti a po návrate sa pripojí, s časovým limitom 15 sekúnd pre pomalé VPN."
+    ]
+  },
+  "disconnect": {
+    "heading": "Príčiny odpojenia",
+    "intro": "Najčastejšie príčiny ukončenia relácie a ich riešenia:",
+    "headerCause": "Príčina",
+    "headerFix": "Riešenie",
+    "rows": [
+      {
+        "cause": "JWT relácie vypršal pri otváraní alebo opätovnom pripájaní terminálu (platnosť 24 h).",
+        "fix": "Obnovte stránku a prihláste sa znova. Terminál nie je určený na bezobslužné relácie; platnosť JWT je rovnaká ako pri bežnom prihlásení do panela."
+      },
+      {
+        "cause": "Časový limit nečinnosti reverzného proxy.",
+        "fix": "Zvýšte <code>proxy_read_timeout</code> v Nginx alebo ekvivalent v Caddy / Traefik (príklady na stránke Prístup a overenie)."
+      },
+      {
+        "cause": "Telefón alebo tablet v režime spánku.",
+        "fix": "Po prebudení zariadenia sa karta automaticky pripojí (časový limit 15 s pre VPN). Ak nie, obnovte ju."
+      },
+      {
+        "cause": "Reštart služby na hostiteľovi.",
+        "fix": "Každý reštart <code>proxmenux-monitor.service</code> ukončí všetky PTY. Nové terminály otvorte po dokončení načítania panela."
+      }
+    ]
+  },
+  "warning": {
+    "title": "Terminál je shell root na hostiteľovi",
+    "body": "Terminál zdedí používateľa jednotky systemd (<code>root</code>) a má plné oprávnenia na hostiteľovi Proxmox. Pred sprístupnením mimo miestnej siete nastavte meno, heslo a 2FA v <authLink>Prístup a overenie</authLink>. Pri vypnutom overovaní môže každý s prístupom k portu 8008 otvoriť shell root bez ďalších potvrdení či prihlasovacích údajov SSH. Na prístup zvonka použite <gatewayLink>Secure Gateway</gatewayLink> (Tailscale) alebo reverzný proxy s HTTPS namiesto zverejnenia portu na internete."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Prístup a overenie",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — príklady reverzného proxy s riadkami na upgrade WebSocket potrebnými pre terminál."
+      },
+      {
+        "label": "Architektúra",
+        "href": "/docs/monitor/architecture",
+        "tail": " — prenos WebSocket (HTTP cez flask-sock a HTTPS / WSS cez gevent)."
+      },
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tail": " — koncové body WebSocket /ws/terminal a /ws/script/<sid> spolu so zvyškom API."
+      },
+      {
+        "label": "Integrácia → Bezpečná brána",
+        "href": "/docs/monitor/integrations",
+        "tail": " — prístup k terminálu mimo LAN bez sprístupnenia portu 8008."
+      },
+      {
+        "label": "Index panela",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ostatné karty."
+      }
+    ]
+  }
+}

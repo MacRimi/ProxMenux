@@ -36,9 +36,9 @@
     "headerWhy": "Por qué importa aquí",
     "rows": [
       {
-        "bit": "1 (sticky)",
-        "effect": "Solo el propietario del archivo puede borrar / renombrar un archivo.",
-        "why": "Evita que el CT-A borre archivos creados por el CT-B en el mismo directorio."
+        "bit": "1 (sticky bit)",
+        "effect": "Solo pueden borrar o renombrar un archivo su propietario, el propietario del directorio o un proceso con privilegios suficientes.",
+        "why": "Ayuda a impedir que usuarios con UID mapeados diferentes borren archivos ajenos. No aísla CT que comparten un UID mapeado o acceso root privilegiado."
       },
       {
         "bit": "777 (rwx-rwx-rwx)",
@@ -46,9 +46,9 @@
         "why": "Los UIDs de CT unprivileged (100000+) aparecen como \"others\" desde el host, así que world-rwx les da acceso."
       },
       {
-        "bit": "ACLs (default)",
+        "bit": "ACL (predeterminadas)",
         "effect": "Heredado en cada archivo / subdir recién creado.",
-        "why": "Los permisos se aplican para siempre — el contenido nuevo conserva el perfil abierto sin reejecutar el script."
+        "why": "El contenido nuevo hereda las ACL predeterminadas sin volver a ejecutar el script. Las aplicaciones pueden solicitar modos restrictivos o cambiar los permisos después."
       }
     ],
     "privTitle": "Los CTs privileged ven lo mismo, solo que sin el desplazamiento",
@@ -90,7 +90,7 @@
     "items": [
       {
         "href": "/docs/storage-share/lxc-mount-points",
-        "label": "LXC Mount Manager",
+        "label": "Gestor de montajes LXC",
         "tail": " — el siguiente paso natural: hacer bind mount de este directorio en uno o más contenedores."
       },
       {

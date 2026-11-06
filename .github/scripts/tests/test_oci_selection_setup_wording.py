@@ -42,13 +42,13 @@ class SelectionSetupWording(TestCase):
             shutil=SimpleNamespace(which=lambda _: '/fake/pct'), saved_inventory=lambda _: [],
             _clean_orphans=lambda project: None,
             recover_automatically=lambda project: None, offer_recovery=lambda project, ui: None,
-            carry_records=lambda project, **options: {},
+            carry_records=lambda project, **options: {}, _records_unread=lambda project: False,
             translate=lambda s: s)
         fn(Path('/fixture'), ui)
         ui.message.assert_called_once_with(EMPTY, 'OCI management')
         ui.choose.assert_not_called()
 
-    def _menu(self, inventories, selections):
+    def _menu(self, inventories, selections, unread=True):
         rows = iter(inventories)
         ui = SimpleNamespace(message=Mock(), choose=Mock(side_effect=selections))
         refresh = Mock(return_value={})
@@ -57,7 +57,8 @@ class SelectionSetupWording(TestCase):
             shutil=SimpleNamespace(which=lambda _: '/fake/pct'), saved_inventory=lambda _: next(rows),
             _clean_orphans=lambda project: None,
             recover_automatically=lambda project: None, offer_recovery=lambda project, ui: None,
-            carry_records=refresh, manage_instance=manage, menu_size=lambda: 10,
+            carry_records=refresh, _records_unread=lambda project: unread,
+            manage_instance=manage, menu_size=lambda: 10,
             STATUS_LABELS={}, translate=lambda s: s)
         fn(Path('/fixture'), ui)
         return ui, refresh, manage
@@ -67,7 +68,14 @@ class SelectionSetupWording(TestCase):
         ui, refresh, manage = self._menu([[row], [row]], ['101', None])
         self.assertEqual(ui.choose.call_count, 2)
         manage.assert_called_once()
-        refresh.assert_called_once_with(Path('/fixture'), mount_stopped=False, shown=True)
+        refresh.assert_called_once_with(Path('/fixture'), mount_stopped=False, shown=True,
+                                        heading='Manage installed OCI applications')
+
+    def test_the_list_opens_without_the_sync_notice_once_every_configuration_is_cached(self):
+        row = {'vmid': 101, 'title': 'Jellyfin', 'hostname': 'jellyfin', 'status': 'installed', 'image': 'jellyfin/jellyfin'}
+        _, refresh, _ = self._menu([[row]], [None], unread=False)
+        refresh.assert_called_once_with(Path('/fixture'), mount_stopped=False, shown=False,
+                                        heading='Manage installed OCI applications')
 
     def test_removing_the_last_application_returns_without_a_message(self):
         row = {'vmid': 101, 'title': 'Jellyfin', 'hostname': 'jellyfin', 'status': 'installed', 'image': 'jellyfin/jellyfin'}
@@ -125,7 +133,7 @@ class SelectionSetupWording(TestCase):
             with self.subTest(app=app):
                 path = ROOT / f'oci/remote/install_{app}_stack.sh'
                 lines = path.read_text().splitlines()
-                start = next(i for i, line in enumerate(lines) if line.strip().startswith('curl -fsS "http://${APPLICATION_LAN_IP}' + port + '/" >/dev/null 2>>"$OCI_LOG"'))
+                start = next(i for i, line in enumerate(lines) if line.strip().startswith('oci_curl "$APPLICATION_ID" -fsS "http://${APPLICATION_LAN_IP}' + port + '/" >/dev/null 2>>"$OCI_LOG"'))
                 command = '\n'.join(lines[start:start + (3 if app == 'tandoor' else 2)])
                 # Actual Bash failure expression, never source the parent installer.
                 harness = '''set -u
@@ -133,6 +141,7 @@ APPLICATION_LAN_IP=192.0.2.1
 APPLICATION_ID=101
 OCI_LOG=/dev/null
 curl() { return 7; }
+oci_curl() { shift; curl "$@"; }
 translate() { printf '%s' "$1"; }
 print_first_boot_diagnostics() { :; }
 die() { printf 'ERROR:%s\\n' "$1"; }

@@ -1,0 +1,677 @@
+{
+  "meta": {
+    "title": "Slovník pojmov | Dokumentácia ProxMenux",
+    "description": "Definície pojmov používaných v dokumentácii ProxMenux: Proxmox, úložiská, siete a virtualizácia.",
+    "ogTitle": "Slovník pojmov | Dokumentácia ProxMenux",
+    "ogDescription": "Stručný prehľad pojmov"
+  },
+  "header": {
+    "title": "Slovník pojmov",
+    "description": "Stručné definície pojmov z ProxMenuxu a z vysvetlení vnútorného fungovania Proxmoxu.",
+    "section": "Slovník pojmov"
+  },
+  "callout": {
+    "title": "Ako používať túto stránku",
+    "bodyRich": "Každá položka obsahuje kategóriu a stručnú definíciu. Odkazy <em>Pozri tiež</em> otvoria súvisiacu dokumentáciu. Navigáciou A–Z prejdete priamo na vybrané písmeno."
+  },
+  "jumpHeading": "Prejsť na písmeno",
+  "seeAlsoLabel": "Pozri tiež:",
+  "aliasesLabel": "tiež:",
+  "missingCallout": {
+    "title": "Chýba vám pojem?",
+    "leadRich": "Ak pojem chýba, otvorte issue alebo PR na <ext>GitHub</ext>. Slovník je v <code>web/messages/en/docs/glossary.json</code> so zodpovedajúcimi jazykovými katalógmi."
+  },
+  "entries": [
+    {
+      "term": "ACS",
+      "aliases": [
+        "Access Control Services",
+        "Prepísanie ACS"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Funkcie riadenia prístupu PCIe, ktoré pomáhajú izolovať komunikáciu zariadení. Skupiny IOMMU závisia od hardvéru a topológie. Úprava jadra <em>ACS override</em> môže rozdeliť skupiny hlásené Linuxom, nevytvára však hardvérovú izoláciu; priradenie do rôznych VM predstavuje bezpečnostné riziko.",
+      "seeAlso": [
+        {
+          "label": "Pridať radič alebo NVMe do VM",
+          "href": "/docs/disk-manager/add-controller-nvme-vm"
+        }
+      ]
+    },
+    {
+      "term": "ARC",
+      "aliases": [
+        "Adaptive Replacement Cache"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Vyrovnávacia pamäť ZFS v RAM hostiteľa pre nedávno a často používané dátové bloky. Predvolený limit závisí od verzie a nastavení inštalácie Proxmoxu. ProxMenux ponúka jeho obmedzenie v ponuke po inštalácii.",
+      "seeAlso": [
+        {
+          "label": "Po inštalácii: úložiská",
+          "href": "/docs/post-install/storage"
+        },
+        {
+          "label": "ZFS príkazy",
+          "href": "/docs/help-info/zfs-commands"
+        }
+      ]
+    },
+    {
+      "term": "Bind mount",
+      "category": "Linux",
+      "definitionRich": "Funkcia Linuxu, ktorá sprístupní časť súborového systému aj cez inú cestu. ProxMenux ju používa na zdieľanie adresárov hostiteľa s kontajnermi LXC cez <code>pct set -mpN</code>.",
+      "seeAlso": [
+        {
+          "label": "Prípojné body LXC",
+          "href": "/docs/storage-share/lxc-mount-points"
+        }
+      ]
+    },
+    {
+      "term": "Agregované sieťové rozhranie",
+      "aliases": [
+        "Združenie sieťových rozhraní",
+        "Agregácia liniek"
+      ],
+      "category": "Sieť",
+      "definitionRich": "Združuje viac fyzických sieťových rozhraní do jedného logického pre redundanciu (active-backup), vyššiu súhrnnú priepustnosť (LACP / 802.3ad) alebo oboje. Nastavuje sa v <code>/etc/network/interfaces</code>."
+    },
+    {
+      "term": "Most",
+      "aliases": [
+        "vmbrX",
+        "vmbr0",
+        "Most Linux"
+      ],
+      "category": "Sieť",
+      "definitionRich": "Virtuálny prepínač druhej vrstvy na hostiteľovi. <code>vmbr0</code> zvyčajne pripája hosťov k fyzickej sieti. Ďalšie mosty (<code>vmbr1</code>, <code>vmbr2</code>...) môžu oddeľovať siete podľa fyzických prepojení a konfigurácie.",
+      "seeAlso": [
+        {
+          "label": "Analýza a oprava mosta",
+          "href": "/docs/network/bridge-analysis"
+        }
+      ]
+    },
+    {
+      "term": "Ceph",
+      "category": "Úložisko",
+      "definitionRich": "Distribuované úložisko integrované do Proxmoxu pre hyperkonvergované klastre. OSD (Object Storage Daemons) tvoria základ objektového, blokového a súborového úložiska. Požadovaná verzia Cephu závisí od verzie Proxmoxu a postupu aktualizácie; pozrite si príslušnú príručku.",
+      "seeAlso": [
+        {
+          "label": "Upgrade PVE 8 na PVE 9",
+          "href": "/docs/utils/upgrade-pve8-pve9"
+        }
+      ]
+    },
+    {
+      "term": "CT",
+      "aliases": [
+        "Kontajner",
+        "Kontajner LXC"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Skratka pre kontajner používaná v Proxmoxe pre inštanciu LXC. Číselné CTID zodpovedá súboru <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Pozri aj <strong>LXC</strong>.",
+      "seeAlso": [
+        {
+          "label": "Správa VM a kontajnerov",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "deb822",
+      "category": "Linux",
+      "definitionRich": "Moderný formát zdrojov APT: súbory <code>.sources</code> so štruktúrovanými blokmi a poľami Types, URIs, Suites, Components a Signed-By. Nahrádza jednoriadkový formát <code>.list</code>; štandard od PVE 9 / Debian Trixie.",
+      "seeAlso": [
+        {
+          "label": "Upgrade PVE 8 na PVE 9",
+          "href": "/docs/utils/upgrade-pve8-pve9"
+        }
+      ]
+    },
+    {
+      "term": "dGPU",
+      "aliases": [
+        "Samostatný GPU"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Samostatná grafická karta, zvyčajne pripojená cez PCIe, na rozdiel od <strong>iGPU</strong>. Možno ju priradiť VM cez VFIO alebo sprístupniť viacerým kontajnerom LXC cez zariadenia a ovládač hostiteľa, ak to hardvér a aplikácie podporujú.",
+      "seeAlso": [
+        {
+          "label": "Pridať GPU do VM (priame priradenie)",
+          "href": "/docs/hardware/gpu-vm-passthrough"
+        }
+      ]
+    },
+    {
+      "term": "Dialog",
+      "category": "Linux",
+      "definitionRich": "Nástroj založený na ncurses na zobrazovanie ponúk, výziev a priebehu operácií v termináli. Ponuky ProxMenuxu používajú dialog."
+    },
+    {
+      "term": "DKMS",
+      "aliases": [
+        "Podpora dynamického kernelového modulu"
+      ],
+      "category": "Linux",
+      "definitionRich": "Systém na opätovné zostavenie registrovaných externých modulov, napríklad NVIDIA alebo ZFS, pri zmene jadra. Úspech vyžaduje kompatibilné zdrojové kódy modulov a zodpovedajúce hlavičky jadra.",
+      "seeAlso": [
+        {
+          "label": "Nainštalovať Coral TPU (host)",
+          "href": "/docs/hardware/install-coral-tpu-host"
+        }
+      ]
+    },
+    {
+      "term": "Fail2Ban",
+      "category": "Linux",
+      "definitionRich": "Služba sledujúca opakované neúspešné prihlásenia v protokoloch a blokujúca príslušné IP adresy cez firewall. ProxMenux obsahuje prednastavené pravidlá jail pre SSH, rozhranie Proxmoxu a Monitor.",
+      "seeAlso": [
+        {
+          "label": "Fail2Ban",
+          "href": "/docs/security/fail2ban"
+        }
+      ]
+    },
+    {
+      "term": "Fastfetch",
+      "category": "Linux",
+      "definitionRich": "Nástroj zobrazujúci informácie o systéme s grafikou ASCII pri prihlásení do shellu. Nahrádza <code>neofetch</code> a možno ho voliteľne zapnúť v ponuke ProxMenuxu po inštalácii.",
+      "seeAlso": [
+        {
+          "label": "Po inštalácii: voliteľné",
+          "href": "/docs/post-install/optional"
+        }
+      ]
+    },
+    {
+      "term": "GRUB",
+      "aliases": [
+        "GRand Unified Bootloader"
+      ],
+      "category": "Linux",
+      "definitionRich": "Zavádzač používaný v inštaláciách Linuxu s GRUB-om. Konfigurácia je v <code>/etc/default/grub</code> a <code>/boot/grub/</code>; zmeny aplikujte cez <code>update-grub</code>. Proxmox môže používať aj systemd-boot: pred zmenou parametrov jadra overte aktívny zavádzač.",
+      "seeAlso": [
+        {
+          "label": "GPU Prenosové príkazy",
+          "href": "/docs/help-info/gpu-commands"
+        }
+      ]
+    },
+    {
+      "term": "iGPU",
+      "aliases": [
+        "Integrovaný GPU"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Grafický procesor integrovaný v puzdre CPU, napríklad Intel UHD / Iris alebo Radeon v APU Ryzen. Často sa zdieľa medzi viacerými LXC cez <code>/dev/dri</code> namiesto výhradného priradenia jednej VM.",
+      "seeAlso": [
+        {
+          "label": "Pridať GPU do LXC",
+          "href": "/docs/hardware/igpu-acceleration-lxc"
+        }
+      ]
+    },
+    {
+      "term": "ifupdown / ifupdown2",
+      "category": "Sieť",
+      "definitionRich": "Klasický systém konfigurácie siete v Debiane, ktorý číta <code>/etc/network/interfaces</code>. Proxmox štandardne používa prepracovanú verziu <code>ifupdown2</code> s načítaním konfigurácie za behu cez <code>ifreload -a</code>."
+    },
+    {
+      "term": "initramfs",
+      "category": "Linux",
+      "definitionRich": "Počiatočný súborový systém v RAM používaný pred pripojením skutočného koreňového systému. Obsahuje ovládače potrebné pri štarte. Po zmenách VFIO, IOMMU alebo ovládačov úložísk ho obnovte cez <code>update-initramfs -u -k all</code>."
+    },
+    {
+      "term": "IOMMU",
+      "aliases": [
+        "Jednotka riadenia vstupnej/výstupnej pamäte",
+        "VT-d",
+        "AMD-Vi"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Hardvérová funkcia (Intel VT-d / AMD-Vi) potrebná na priame priradenie PCIe zariadení do VM. Zapnite ju vo firmvéri a overte podporu v jadre. Podľa platformy a predvolených nastavení môžu byť potrebné parametre <code>intel_iommu=on</code> alebo <code>amd_iommu=on</code>.",
+      "seeAlso": [
+        {
+          "label": "Po inštalácii: Virtualizácia",
+          "href": "/docs/post-install/virtualization"
+        },
+        {
+          "label": "Pridať GPU do VM (priame priradenie)",
+          "href": "/docs/hardware/gpu-vm-passthrough"
+        }
+      ]
+    },
+    {
+      "term": "Skupina IOMMU",
+      "category": "Virtualizácia",
+      "definitionRich": "Skupina zariadení tvoriaca najmenšiu jednotku izolácie IOMMU. Jej členovia nemusia byť izolovaní navzájom; pred priradením cez VFIO skontrolujte všetkých. Zoznam zobrazíte cez <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code>."
+    },
+    {
+      "term": "iSCSI",
+      "aliases": [
+        "Internet SCSI"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Protokol pre blokové úložisko cez IP: vzdialený disk sa zobrazí ako lokálne zariadenie SCSI. Do Proxmoxu sa pridáva cez <code>pvesm add iscsi</code>.",
+      "seeAlso": [
+        {
+          "label": "Pridať iSCSI target ako Proxmox úložisko",
+          "href": "/docs/storage-share/host-iscsi"
+        }
+      ]
+    },
+    {
+      "term": "KVM",
+      "aliases": [
+        "Virtuálny stroj na báze kernelu"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Modul jadra Linuxu, ktorý z hostiteľa vytvára hypervízor. Spolu s <strong>QEMU</strong> na emuláciu zariadení tvorí základ virtuálnych strojov v Proxmoxe."
+    },
+    {
+      "term": "LVM",
+      "aliases": [
+        "Logical Volume Manager"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Správa zväzkov Linuxu združujúca fyzické úložisko do skupín (VG) obsahujúcich logické zväzky (LV). Inštalácie Proxmoxu založené na LVM často používajú LVM-thin pre disky hosťov; dostupné sú aj iné úložiská. Nástroje: <code>pvs</code>, <code>vgs</code> a <code>lvs</code>.",
+      "seeAlso": [
+        {
+          "label": "Príkazy pre úložiská a disky",
+          "href": "/docs/help-info/storage-commands"
+        }
+      ]
+    },
+    {
+      "term": "LXC",
+      "aliases": [
+        "Linux Containers"
+      ],
+      "category": "Linux",
+      "definitionRich": "Virtualizácia na úrovni operačného systému: izolované používateľské prostredia zdieľajú jadro hostiteľa. Zvyčajne má nižšiu réžiu než VM, ale inú hranicu izolácie. Proxmox spravuje LXC cez <code>pct</code>.",
+      "seeAlso": [
+        {
+          "label": "Správa VM a kontajnerov",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "Lynis",
+      "category": "Linux",
+      "definitionRich": "Bezpečnostný audítor s otvoreným zdrojovým kódom od CISOfy. Analyzuje hostiteľa a poskytuje skóre zabezpečenia s konkrétnymi odporúčaniami. ProxMenux inštaluje verziu z pôvodného repozitára GitHub namiesto staršieho balíka Debianu.",
+      "seeAlso": [
+        {
+          "label": "Lynis",
+          "href": "/docs/security/lynis"
+        }
+      ]
+    },
+    {
+      "term": "Adresa MAC",
+      "aliases": [
+        "Adresa hardvéru"
+      ],
+      "category": "Sieť",
+      "definitionRich": "Zvyčajne 48-bitový identifikátor ethernetového rozhrania pridelený hardvérom alebo softvérom. Funkcia <em>Trvalé názvy sieťových rozhraní</em> v ProxMenuxe spája MAC adresy so stálymi názvami (<code>eno1</code>, <code>enp3s0</code>) aj po zmene enumerácie PCI.",
+      "seeAlso": [
+        {
+          "label": "Stále názvy sieťových rozhraní",
+          "href": "/docs/network/persistent-names"
+        }
+      ]
+    },
+    {
+      "term": "MOTD",
+      "aliases": [
+        "Správa dňa"
+      ],
+      "category": "Linux",
+      "definitionRich": "Text zobrazený po prihlásení cez SSH, uložený v <code>/etc/motd</code>. ProxMenux môže po inštalácii pridať banner; odinštalovanie obnoví pôvodný súbor, ak existuje jeho záloha."
+    },
+    {
+      "term": "NFS",
+      "aliases": [
+        "Systém sieťových súborov"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Protokol na sieťové zdieľanie súborov pochádzajúci z Unixu. Do Proxmoxu sa pridáva cez <code>pvesm add nfs</code>; ProxMenux ponúka aj postupy pre klientov a servery NFS v LXC.",
+      "seeAlso": [
+        {
+          "label": "Správca úložísk a zdieľania",
+          "href": "/docs/storage-share"
+        }
+      ]
+    },
+    {
+      "term": "nftables / iptables",
+      "category": "Sieť",
+      "definitionRich": "Nástroje firewallu Linuxu. <code>nftables</code> je moderné riešenie; <code>iptables</code> môže používať pôvodný alebo nft-kompatibilný backend. Klasický <code>pve-firewall</code> používa iptables, alternatívny proxmox-firewall používa nftables.",
+      "seeAlso": [
+        {
+          "label": "Sieťové príkazy",
+          "href": "/docs/help-info/network-commands"
+        }
+      ]
+    },
+    {
+      "term": "nouveau",
+      "category": "Linux",
+      "definitionRich": "Ovládač grafických kariet NVIDIA s otvoreným zdrojovým kódom v Linuxe. Pri inštalácii proprietárneho ovládača zabráňte tomu, aby nouveau obsadil ten istý GPU, zvyčajne zablokovaním modulu a obnovou initramfs.",
+      "seeAlso": [
+        {
+          "label": "Inštalačný návod NVIDIA",
+          "href": "/guides/nvidia"
+        }
+      ]
+    },
+    {
+      "term": "Repozitár no-subscription",
+      "category": "Proxmox",
+      "definitionRich": "Repozitár balíkov Proxmoxu dostupný bez predplatného enterprise. Balíky prechádzajú menším rozsahom overenia než v repozitári enterprise, ktorý Proxmox odporúča do produkcie. ProxMenux ponúka nastavenie repozitárov po inštalácii.",
+      "seeAlso": [
+        {
+          "label": "Po inštalácii: Základné nastavenia",
+          "href": "/docs/post-install/basic-settings"
+        }
+      ]
+    },
+    {
+      "term": "OVA / OVF",
+      "aliases": [
+        "Open Virtualization Format"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Formáty DMTF na prenos virtuálnych strojov. <strong>OVA</strong> zabalí súbory do jedného archívu TAR; <strong>OVF</strong> opisuje VM v XML so súvisiacimi súbormi diskov, často VMDK. Podpora importu závisí od cieľového hypervízora a konfigurácie.",
+      "seeAlso": [
+        {
+          "label": "Exportovať VM do OVA / OVF",
+          "href": "/docs/utils/export-vm"
+        },
+        {
+          "label": "Importovať VM z OVA / OVF",
+          "href": "/docs/utils/import-vm"
+        }
+      ]
+    },
+    {
+      "term": "OVMF",
+      "aliases": [
+        "Firmvér UEFI",
+        "Open Virtual Machine Firmware"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Firmvér UEFI pre VM, nastavený cez <code>qm set &lt;vmid&gt; -bios ovmf</code>. Používa sa pre hostí UEFI vrátane Windows 11 a konfigurácií Secure Boot. <code>efidisk0</code> uchováva premenné EFI; mnohí iní hostia môžu naďalej používať klasický BIOS.",
+      "seeAlso": [
+        {
+          "label": "Pridať GPU do VM (priame priradenie)",
+          "href": "/docs/hardware/gpu-vm-passthrough"
+        }
+      ]
+    },
+    {
+      "term": "PBS",
+      "aliases": [
+        "Proxmox Backup Server"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Samostatný zálohovací produkt Proxmoxu s inkrementálnym prenosom, deduplikáciou a voliteľným šifrovaním na strane klienta pre VM a CT. Môže byť cieľom vzdump; samostatný server je vhodnejší než zálohy na chránenom hostiteľovi."
+    },
+    {
+      "term": "pct",
+      "category": "Proxmox",
+      "definitionRich": "Nástroj príkazového riadka na správu kontajnerov LXC v Proxmoxe: <code>pct list / start / stop / shutdown / config / enter / exec / push / pull / destroy</code>.",
+      "seeAlso": [
+        {
+          "label": "Správa VM a kontajnerov",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "pmxcfs",
+      "aliases": [
+        "Proxmox Cluster Filesystem"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Virtuálny súborový systém založený na FUSE, pripojený v <code>/etc/pve/</code>. Replikuje konfiguráciu medzi uzlami klastra: zmeny v <code>/etc/pve/</code> sa šíria automaticky."
+    },
+    {
+      "term": "pveam",
+      "aliases": [
+        "Správca virtuálnych zariadení Proxmox VE"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Nástroj na správu lokálneho katalógu šablón CT. <code>pveam update</code> aktualizuje index; <code>pveam available</code> vypíše šablóny a <code>pveam download &lt;storage&gt; &lt;template&gt;</code> stiahne vybranú šablónu."
+    },
+    {
+      "term": "pveproxy",
+      "category": "Proxmox",
+      "definitionRich": "Služba HTTPS pre webové rozhranie a terminál Proxmoxu na porte 8006. Pri veľkých aktualizáciách sa reštartuje; ProxMenux preto odmieta spustiť prechod PVE 8 → 9 z webového terminálu."
+    },
+    {
+      "term": "pvesm",
+      "aliases": [
+        "Správca úložísk Proxmox"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Nástroj CLI pre správu úložiska Proxmox. <code>pvesm status</code> zobrazuje všetky nakonfigurované úložiská; <code>pvesm add &lt;type&gt;</code> registruje nové (NFS, Samba, iSCSI, dir, ZFS, LVM, ...).",
+      "seeAlso": [
+        {
+          "label": "Príkazy pre úložiská a disky",
+          "href": "/docs/help-info/storage-commands"
+        }
+      ]
+    },
+    {
+      "term": "Privilegovaný kontajner",
+      "category": "Linux",
+      "definitionRich": "Kontajner LXC, ktorého root <em>zodpovedá UID 0 hostiteľa</em>, pričom naďalej platia menné priestory a ďalšie obmedzenia. Má slabšiu izoláciu než neprivilegovaný kontajner. GPU, USB a Samba tento režim nevyžadujú vždy; dôležité sú oprávnenia a mapovania UID."
+    },
+    {
+      "term": "ProxMenux Monitor",
+      "category": "ProxMenux",
+      "definitionRich": "Voliteľný webový panel ProxMenuxu. Zobrazuje štatistiky hostiteľa v reálnom čase (CPU, RAM, disky a sieť), prehľad VM a LXC a prihlásenie s 2FA na porte TCP <code>8008</code>.",
+      "seeAlso": [
+        {
+          "label": "ProxMenux Monitor",
+          "href": "/docs/settings/proxmenux-monitor"
+        }
+      ]
+    },
+    {
+      "term": "qcow2",
+      "aliases": [
+        "QEMU Copy-On-Write v2"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Formát obrazu disku VM bežný na adresárových úložiskách. Podporuje prideľovanie priestoru podľa potreby, snímky a kopírovanie pri zápise. Konverzia cez <code>qemu-img convert -O qcow2 ...</code>."
+    },
+    {
+      "term": "qm",
+      "aliases": [
+        "Správca QEMU"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Nástroj na správu VM v Proxmoxe: <code>qm list / start / stop / shutdown / config / set / destroy / importdisk / migrate</code>. Pre kontajnery plní rovnakú úlohu <code>pct</code>.",
+      "seeAlso": [
+        {
+          "label": "Správa VM a kontajnerov",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "Q35",
+      "category": "Virtualizácia",
+      "definitionRich": "Typ stroja QEMU emulujúci čipovú súpravu Intel Q35 s PCIe. Odporúčaný namiesto i440FX pre priame priradenie PCIe a moderných hostí. Nastaví sa cez <code>qm set &lt;vmid&gt; -machine q35</code>."
+    },
+    {
+      "term": "QEMU",
+      "category": "Virtualizácia",
+      "definitionRich": "Emulátor počítačov a virtualizačný nástroj s otvoreným zdrojovým kódom. Proxmox ho kombinuje s KVM na spúšťanie VM s výkonom blízkym natívnemu."
+    },
+    {
+      "term": "rclone",
+      "category": "Linux",
+      "definitionRich": "Nástroj príkazového riadka podporujúci mnohé cloudové úložiská vrátane Google Drive, Dropbox, OneDrive, Mega a S3. Príručka cloudového zálohovania ho používa na pripojenie vzdialeného úložiska ako adresára pre archívy vzdump.",
+      "seeAlso": [
+        {
+          "label": "Zálohy do osobného cloudu",
+          "href": "/guides/backup_cloud"
+        }
+      ]
+    },
+    {
+      "term": "Samba / SMB / CIFS",
+      "category": "Úložisko",
+      "definitionRich": "Rodina protokolov Microsoftu na zdieľanie súborov. <strong>SMB</strong> je protokol, <strong>Samba</strong> jeho otvorená implementácia pre Linux a <strong>CIFS</strong> starší dialekt SMB. Do Proxmoxu sa pridáva cez <code>pvesm add cifs</code>.",
+      "seeAlso": [
+        {
+          "label": "Správca úložísk a zdieľania",
+          "href": "/docs/storage-share"
+        }
+      ]
+    },
+    {
+      "term": "SeaBIOS",
+      "category": "Virtualizácia",
+      "definitionRich": "Otvorená implementácia klasického BIOS-u používaná v QEMU. Predvolený firmvér nových VM, ak nevyberiete OVMF. Vhodný pre staršie systémy a inštalácie Linuxu bez požiadavky na UEFI."
+    },
+    {
+      "term": "smartctl / SMART",
+      "aliases": [
+        "Self-Monitoring, Analysis and Reporting Technology"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Vstavaná diagnostika diskov poskytujúca stav, počty chýb a výsledky interných testov. Nástrojom je <code>smartctl</code> z balíka <code>smartmontools</code>; <code>nvme-cli</code> pridáva príkazy pre NVMe.",
+      "seeAlso": [
+        {
+          "label": "SMART Zdravie a test disku",
+          "href": "/docs/disk-manager/smart-disk-test"
+        },
+        {
+          "label": "Príkazy pre úložiská → časť SMART",
+          "href": "/docs/help-info/storage-commands"
+        }
+      ]
+    },
+    {
+      "term": "systemd / systemctl / journalctl",
+      "category": "Linux",
+      "definitionRich": "Inicializačný systém Debianu / Proxmoxu. <code>systemctl</code> spravuje služby: spustenie, zastavenie, povolenie a stav. <code>journalctl</code> číta binárny protokol vytvorený službou <code>systemd-journald</code>."
+    },
+    {
+      "term": "sysctl",
+      "category": "Linux",
+      "definitionRich": "Nástroj na čítanie a zmenu parametrov jadra. Trvalé nastavenia sa zvyčajne ukladajú do <code>/etc/sysctl.d/*.conf</code>; podpora <code>/etc/sysctl.conf</code> závisí od načítavacej služby. ProxMenux ponúka profil sysctl po inštalácii.",
+      "seeAlso": [
+        {
+          "label": "Po inštalácii: sieť",
+          "href": "/docs/post-install/network"
+        }
+      ]
+    },
+    {
+      "term": "trixie",
+      "category": "Linux",
+      "definitionRich": "Kódový názov Debianu 13, základného operačného systému pre Proxmox VE 9. Predchodca: <em>bookworm</em> (Debian 12 / PVE 8).",
+      "seeAlso": [
+        {
+          "label": "Upgrade PVE 8 na PVE 9",
+          "href": "/docs/utils/upgrade-pve8-pve9"
+        }
+      ]
+    },
+    {
+      "term": "udev",
+      "category": "Linux",
+      "definitionRich": "Správca zariadení Linuxu. Reaguje na hardvérové udalosti a vytvára alebo odstraňuje položky v <code>/dev</code>. Pravidlá v <code>/etc/udev/rules.d/</code> môžu priraďovať stále názvy rozhraní podľa MAC, vytvárať zariadenia NVIDIA pri načítaní ovládača a podobne."
+    },
+    {
+      "term": "UID / GID idmap",
+      "aliases": [
+        "UID posun"
+      ],
+      "category": "Linux",
+      "definitionRich": "Pri predvolenom mapovaní <strong>neprivilegovaných</strong> LXC sú UID a GID na hostiteľovi posunuté o <code>+100000</code>: UID 0 zodpovedá 100000 a 1000 zodpovedá 101000. Vlastné mapovania môžu byť odlišné; vlastníctvo súborov v bind mountoch musí zodpovedať mapovaniu.",
+      "seeAlso": [
+        {
+          "label": "Prípojné body LXC",
+          "href": "/docs/storage-share/lxc-mount-points"
+        }
+      ]
+    },
+    {
+      "term": "Neprivilegovaný kontajner",
+      "category": "Linux",
+      "definitionRich": "Kontajner LXC, ktorého root sa mapuje na neprivilegované UID hostiteľa, zvyčajne 100000. Obmedzuje práva na hostiteľovi, ale zdieľa jeho jadro. Prístup k hardvéru je možný s vhodnými oprávneniami a mapovaním; privilegovaný režim nie je vždy potrebný."
+    },
+    {
+      "term": "VFIO",
+      "aliases": [
+        "Virtuálna funkcia I/O"
+      ],
+      "category": "Virtualizácia",
+      "definitionRich": "Rozhranie jadra Linuxu pre bezpečné ovládače v používateľskom priestore, používané na priame priradenie PCIe zariadení do VM. Využíva <code>vfio</code>, <code>vfio_iommu_type1</code> a <code>vfio_pci</code> s konfiguráciou v <code>/etc/modprobe.d/vfio.conf</code>.",
+      "seeAlso": [
+        {
+          "label": "Po inštalácii: Virtualizácia",
+          "href": "/docs/post-install/virtualization"
+        }
+      ]
+    },
+    {
+      "term": "VirtIO",
+      "category": "Virtualizácia",
+      "definitionRich": "Rodina paravirtualizovaných ovládačov pre sieť, úložisko, dynamickú pamäť a GPU. Znižujú réžiu emulácie starého hardvéru, napríklad e1000 alebo IDE. Hosť potrebuje príslušné ovládače: v Linuxe sú súčasťou jadra, pre Windows sú na samostatnom ISO."
+    },
+    {
+      "term": "VLAN",
+      "aliases": [
+        "Virtuálna lokálna sieť"
+      ],
+      "category": "Sieť",
+      "definitionRich": "Značky 802.1Q rozdeľujúce jednu fyzickú sieť na viac logických sietí. Nastavujú sa pre most alebo rozhranie v <code>/etc/network/interfaces</code>."
+    },
+    {
+      "term": "VM",
+      "aliases": [
+        "Virtuálny stroj"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Virtuálny stroj spravovaný Proxmoxom cez QEMU/KVM s vlastným jadrom hosťa. Číselné VMID zodpovedá <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Zvyčajne má vyššiu réžiu než LXC a izoláciu cez oddelené jadro.",
+      "seeAlso": [
+        {
+          "label": "Správa VM a kontajnerov",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "vzdump",
+      "category": "Proxmox",
+      "definitionRich": "Zálohovací nástroj Proxmoxu pre VM a CT. Súborové archívy <strong>nie sú inkrementálne</strong>; ciele PBS podporujú inkrementálne prenosy. Úlohy nastavujú režim (snapshot / suspend / stop), kompresiu (napríklad zstd, gzip alebo lzo), uchovávanie a upozornenia.",
+      "seeAlso": [
+        {
+          "label": "Príkazy zálohovania a obnovy",
+          "href": "/docs/help-info/backup-commands"
+        }
+      ]
+    },
+    {
+      "term": "ZFS",
+      "aliases": [
+        "Zettabyte File System"
+      ],
+      "category": "Úložisko",
+      "definitionRich": "Súborový systém a správca zväzkov so snímkami, replikáciou send/receive, kontrolnými súčtami a kompresiou. Poškodené dáta môže opraviť, ak existuje platná redundantná kópia. Vyrovnávacia pamäť <strong>ARC</strong> používa RAM a možno ju obmedziť.",
+      "seeAlso": [
+        {
+          "label": "Príkazy správy ZFS",
+          "href": "/docs/help-info/zfs-commands"
+        }
+      ]
+    }
+  ]
+}

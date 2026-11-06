@@ -8,7 +8,10 @@
           "owner_strategy": "mapped-root",
           "only_when_mount_type": "managed-volume"
         }
-      ]
+      ],
+      "runtime": {
+        "compose_entrypoint": "/bin/sh -c 'sysctl -w net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1 >/dev/null 2>&1; tailscaled --state=/var/lib/tailscale/tailscaled.state & i=0; while [ $i -lt 60 ]; do lan=$(ip -4 addr show dev eth0 2>/dev/null | sed -n \"s/.*inet \\([0-9.]*\\)\\/.*/\\1/p\" | head -n 1); [ -n \"$lan\" ] && break; i=$((i+1)); sleep 1; done; sleep 10; exec tailscale web --listen \"${lan:-0.0.0.0}:5252\"'"
+      }
     }
   }
 }

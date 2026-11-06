@@ -21,7 +21,7 @@
 #     • whiptail (interactive terminal menus)
 #     • curl (downloads and connectivity checks)
 #     • jq (JSON parsing)
-#     • Python 3 + venv (for translation support)
+# - Installs pre-generated JSON language catalogs (no translation runtime).
 # - Creates the ProxMenux base directories and configuration files:
 #     • $BASE_DIR/config.json
 #     • $BASE_DIR/cache.json
@@ -396,7 +396,9 @@ select_language() {
         "de" "German" \
         "it" "Italian" \
         "pt" "Portuguese" \
-        "sk" "Slovenčina" 3>&1 1>&2 2>&3)
+        "sk" "Slovenčina" \
+        "sv" "Svenska" \
+        "ru" "Русский" 3>&1 1>&2 2>&3)
     
     if [ -z "$LANGUAGE" ]; then
         msg_error "No language selected. Exiting."
@@ -898,8 +900,12 @@ install_normal_version() {
         mkdir -p "$BASE_DIR/oci/engine"
         cp -r "./oci/"* "$BASE_DIR/oci/engine/"
         find "$BASE_DIR/oci/engine" -type f -name '*.sh' -exec chmod +x {} +
+        # Multi-container applications already installed take the new start hook.
+        bash "$BASE_DIR/oci/engine/remote/stack_dependency_hook.sh" --refresh >/dev/null 2>&1 || true
         systemctl try-restart proxmenux-oci-watchdog.service >/dev/null 2>&1 || true
     fi
+    # A host backup job saved with a schedule systemd rejects never runs.
+    bash "$BASE_DIR/scripts/backup_restore/backup_scheduler.sh" --repair-schedules >/dev/null 2>&1 || true
     chmod +x "$BASE_DIR/install_proxmenux.sh"
     msg_ok "Necessary files created."
 

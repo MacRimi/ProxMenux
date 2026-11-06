@@ -3,8 +3,8 @@ import copy
 import re
 from pathlib import Path, PurePosixPath
 
-from .i18n import translate
-from .ui import UserCancelled
+from .i18n import N_, translate
+from .ui import BacktrackUI, RestartWizard, UserCancelled
 
 
 def positive_integer(ui, prompt, value, minimum=1):
@@ -27,16 +27,20 @@ def edit_network(deployment, ui):
     network = deployment['network']
     bridge = ask_bridge(ui, translate('Access bridge'), network['bridge'])
     ipv4, gateway = access.ask_ipv4(ui, bridge, network.get('ipv4'), network.get('gateway'))
+    vlan_tag = access.ask_vlan_tag(ui, network.get('vlan_tag'))
     network.update(bridge=bridge, ipv4=ipv4, gateway=gateway)
+    network.pop('vlan_tag', None)
+    if vlan_tag:
+        network['vlan_tag'] = vlan_tag
 
 
-def edit_acceleration(candidate, ui):
+def edit_acceleration(candidate, ui, confirm=True):
     from .installer import configure_acceleration
     deployment = candidate['deployment']
     template = candidate.get('template', {})
     installer = template.get('proxmox', {}).get('installer_profile', {})
     hardware = installer.get('hardware_acceleration')
-    if not hardware or not ui.confirm(translate('Change GPU acceleration?'), False):
+    if not hardware or (confirm and not ui.confirm(translate('Change GPU acceleration?'), False)):
         return
     profiles = hardware.get('profiles', [])
     reference = template.get('container_contract', {}).get('image', {}).get('reference', '')
@@ -104,48 +108,169 @@ def edit_environment(deployment, ui):
             environment.append(item)
 
 
-def edit_recreation(record, ui):
-    candidate = copy.deepcopy(record)
-    refresh_template(candidate, ui)
+def modification_options(candidate):
+    """Only offer supported settings; never put environment values in the menu."""
     deployment = candidate['deployment']
     resources = deployment['resources']
-    resources['cores'] = positive_integer(ui, translate('Cores'), resources['cores'])
-    resources['memory_mb'] = positive_integer(ui, translate('RAM in MiB'), resources['memory_mb'], 128)
+    profile = candidate.get('template', {}).get('proxmox', {}).get('installer_profile', {})
+    network = deployment.get('network', {})
+    address = network.get('ipv4', 'dhcp')
+
+    def row(label, value):
+        return f"{label:<26} {value}"
+
+    options = [
+        ('cores', row(translate('CPU cores'), resources['cores'])),
+        ('memory', row(translate('RAM in MiB'), resources['memory_mb'])),
+        ('network', row(translate('Network'),
+                        f"{network.get('bridge', '-')} · {'DHCP' if address == 'dhcp' else address}"
+                        + (f" · VLAN {network['vlan_tag']}" if network.get('vlan_tag') else ''))),
+        # Only the paths added by hand: the application's own volumes are not extra.
+        ('paths', row(translate('Extra paths'), sum(1 for m in deployment.get('mounts', []) if m.get('custom')))),
+    ]
+    if profile.get('shared_directories'):
+        options.append(('shares', translate('Shared directories')))
+    if profile.get('hardware_acceleration'):
+        hardware = profile['hardware_acceleration']
+        selected = next((p for p in hardware.get('profiles', [])
+                         if p['id'] == deployment.get('hardware_profile')), {})
+        options.append(('acceleration', row(translate('Acceleration'),
+                         translate(selected.get('label') or deployment.get('hardware_profile') or 'CPU'))))
+    if profile.get('object_detector'):
+        options.append(('detector', translate('Object detector')))
+    options += [
+        ('devices', row(translate('Devices'), len(deployment.get('devices', [])))),
+        ('environment', row(translate('Variables'), len(deployment.get('environment', [])))),
+        ('catalog', translate('Catalog options')),
+        ('apply', translate('Review and apply')),
+        ('discard', translate('Discard changes')),
+    ]
+    return options
+
+
+def edit_setting(candidate, ui, setting):
+    deployment = candidate['deployment']
     template = candidate.get('template', {})
-    if template.get('proxmox', {}).get('installer_profile', {}).get('shared_directories'):
+    profile = template.get('proxmox', {}).get('installer_profile', {})
+    if setting == 'cores':
+        resources = deployment['resources']
+        resources['cores'] = positive_integer(ui, translate('Cores'), resources['cores'])
+    elif setting == 'memory':
+        resources = deployment['resources']
+        resources['memory_mb'] = positive_integer(ui, translate('RAM in MiB'), resources['memory_mb'], 128)
+    elif setting == 'network':
+        edit_network(deployment, ui)
+    elif setting == 'shares':
         from .installer import ask_shared_directories
         deployment['mounts'] += ask_shared_directories(
             ui, template, deployment['mounts'], deployment['rootfs']['storage'], True, optional=True,
             unprivileged=deployment.get('security', {}).get('unprivileged', True))
-    from .custom_mounts import ask_custom_mounts
-    deployment['mounts'] = ask_custom_mounts(
-        ui, deployment['mounts'], deployment['rootfs']['storage'])
-    if ui.confirm(translate('Change the access network?'), False):
-        edit_network(deployment, ui)
-    edit_acceleration(candidate, ui)
-    from .installer import configure_detector
-    installer_profile = candidate.get('template', {}).get('proxmox', {}).get('installer_profile', {})
-    deployment['devices'], notes = configure_detector(installer_profile, deployment.get('devices', []), ui)
-    if notes:
-        deployment['completion_notes'] = notes
-    from .extra_devices import ask_extra_devices
-    reference = candidate.get('template', {}).get('container_contract', {}).get('image', {}).get('reference', '')
-    repository = reference.split('@')[0].rsplit(':', 1)[0]
-    deployment['devices'] = ask_extra_devices(
-        ui, deployment.get('devices', []), deployment.get('security', {}).get('unprivileged', True),
-        allow_coral=repository in ('ghcr.io/blakeblackshear/frigate', 'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
-    from .extra_devices import device_permissions
-    deployment['device_permissions'] = device_permissions(
-        reference, deployment['devices'], deployment.get('device_permissions'))
-    edit_environment(deployment, ui)
-    proposal = {'operation': 'recreate', 'candidate': candidate}
-    if record.get('observed', {}).get('config_sha256'):
-        proposal['base_config_sha256'] = record['observed']['config_sha256']
-    return proposal
+    elif setting == 'paths':
+        from .custom_mounts import ask_custom_mounts
+        deployment['mounts'] = ask_custom_mounts(ui, deployment['mounts'], deployment['rootfs']['storage'])
+    elif setting == 'acceleration':
+        edit_acceleration(candidate, ui, confirm=False)
+    elif setting == 'detector':
+        from .installer import configure_detector
+        deployment['devices'], notes = configure_detector(profile, deployment.get('devices', []), ui)
+        if notes:
+            deployment['completion_notes'] = notes
+    elif setting == 'devices':
+        from .extra_devices import ask_extra_devices
+        reference = template.get('container_contract', {}).get('image', {}).get('reference', '')
+        repository = reference.split('@')[0].rsplit(':', 1)[0]
+        deployment['devices'] = ask_extra_devices(
+            ui, deployment.get('devices', []), deployment.get('security', {}).get('unprivileged', True),
+            allow_coral=repository in ('ghcr.io/blakeblackshear/frigate', 'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+    elif setting == 'environment':
+        edit_environment(deployment, ui)
+    elif setting == 'catalog':
+        refresh_template(candidate, ui)
+    else:
+        raise ValueError(setting)
+    if setting in ('acceleration', 'detector', 'devices'):
+        from .extra_devices import device_permissions
+        reference = candidate.get('template', {}).get('container_contract', {}).get('image', {}).get('reference', '')
+        permissions = device_permissions(reference, deployment.get('devices', []), deployment.get('device_permissions'))
+        if permissions is not None or 'device_permissions' in deployment:
+            deployment['device_permissions'] = permissions
+
+
+def edit_section(candidate, ui, setting):
+    """A cancelled or invalid section cannot leave a half-edited draft."""
+    wizard = BacktrackUI(ui)
+    try:
+        while True:
+            edited = copy.deepcopy(candidate)
+            try:
+                edit_setting(edited, wizard, setting)
+                return edited
+            except RestartWizard:
+                wizard.restart()
+            except UserCancelled:
+                return candidate
+            except ValueError as error:
+                if not wizard.retry_last(error):
+                    ui.message(str(error), translate('Modify OCI'))
+                    return candidate
+    finally:
+        wizard.close()
+
+
+def edit_recreation(record, ui, *, cancelled_result=None):
+    """Keep a draft; optionally distinguish cancellation from an unchanged review."""
+    from .cli import _deployment_summary_text
+    candidate = copy.deepcopy(record)
+    selected = 'cores'
+    while True:
+        pending = candidate != record
+        status = translate('Unapplied changes') if pending else translate('No pending changes')
+        text = (f"CT {record.get('vmid', '-')}: {candidate['deployment'].get('hostname', '')}\n"
+                f"{status}\n\n"
+                + translate('Choose a setting. Changes are applied only after the final review.'))
+        selected = ui.choose(text, modification_options(candidate), selected,
+                             title=translate('Modify OCI'), show_tags=False)
+        if selected is None or selected == 'discard':
+            if not pending or ui.confirm(translate('Discard unapplied changes?'), False):
+                return cancelled_result
+            selected = 'apply'
+        elif selected == 'apply':
+            if not pending:
+                ui.message(translate('Nothing was changed.'), translate('Modify OCI'))
+                return None
+            if ui.review(_deployment_summary_text(candidate['template'], candidate['deployment']),
+                         translate('Modify OCI'), question=translate('Apply these changes?'), default=True):
+                proposal = {'operation': 'recreate', 'candidate': candidate}
+                if record.get('observed', {}).get('config_sha256'):
+                    proposal['base_config_sha256'] = record['observed']['config_sha256']
+                return proposal
+        else:
+            candidate = edit_section(candidate, ui, selected)
+
+
+def _catalog_message(error):
+    """Localize legacy catalog errors here, preserving the catalog API."""
+    text = str(error)
+    patterns = (
+        (r"No template is available for '(.*)'", N_("No template is available for '{app_id}'")),
+        (r"The application '(.*)' is not in the index", N_("The application '{app_id}' is not in the index")),
+    )
+    for pattern, source in patterns:
+        match = re.fullmatch(pattern, text)
+        if match:
+            translated = translate(source)
+            return text if translated == source else translated.format(app_id=match[1])
+    prefix = 'La plantilla generada no cumple el esquema:'
+    if text.startswith(prefix):
+        source = N_('The generated template does not match the schema:')
+        translated = translate(source)
+        return text if translated == source else translated + text[len(prefix):]
+    return text
 
 
 def refresh_template(candidate, ui):
     from .catalog import Catalog
+    from .converter import ConversionError
     old = candidate.get('template', {})
     template_id = old.get('id', '')
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]+', template_id):
@@ -159,7 +284,10 @@ def refresh_template(candidate, ui):
     if len(matching) != 1:
         return
     name = matching[0]['id']
-    latest = catalog.compose(name)
+    try:
+        latest = catalog.compose(name)
+    except ConversionError as error:
+        raise ConversionError(_catalog_message(error)) from error
     if latest == old:
         return
     if not ui.confirm(translate('Apply options from the current catalog template? New required paths and settings may be requested. Review the resulting configuration before recreating the CT.'), True):
@@ -203,8 +331,16 @@ def refresh_template(candidate, ui):
         size = item['default_size_mb']
         if item.get('prompt_size', True):
             size = positive_integer(ui, f"{translate('Tmpfs size in MiB for')} {item['container_path']}", size, item.get('minimum_size_mb', 1))
-        tmpfs.append({'container_path': item['container_path'], 'size_mb': size,
-                      'mount_options': copy.deepcopy(item.get('mount_options', ['rw', 'nosuid', 'nodev']))})
+        tmpfs_mount = {'container_path': item['container_path'], 'size_mb': size,
+                       'mount_options': copy.deepcopy(item.get('mount_options', ['rw', 'nosuid', 'nodev']))}
+        for key in ('owner_strategy', 'mode', 'uid', 'gid'):
+            if item.get(key) is not None:
+                tmpfs_mount[key] = copy.deepcopy(item[key])
+        if item.get('owner_strategy') == 'mapped-application-user':
+            for key in ('uid', 'gid'):
+                if key not in tmpfs_mount and profile.get('volume_owner', {}).get(key) is not None:
+                    tmpfs_mount[key] = copy.deepcopy(profile['volume_owner'][key])
+        tmpfs.append(tmpfs_mount)
         deployment['tmpfs_mounts'] = tmpfs
     sysctls = deployment.get('security', {}).get('sysctls', [])
     for item in profile.get('security', {}).get('sysctls', []):

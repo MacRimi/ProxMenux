@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Create VM: Synology DSM | ProxMenux Documentation",
-    "description": "Create a Synology DSM virtual machine on Proxmox VE. ProxMenux downloads the loader of your choice (Arc, RR, TinyCore M-shell or a custom one), imports it as the VM's boot disk and prepares CPU, RAM and storage through the default or advanced wizard.",
+    "description": "Create a Synology DSM virtual machine on Proxmox VE. ProxMenux downloads your chosen loader (Arc, RR, Alpine RedPill M-shell or a custom image), imports it as the VM boot disk and configures CPU, RAM and storage through the default or advanced wizard.",
     "ogTitle": "Create VM: Synology DSM | ProxMenux Documentation",
     "ogDescription": "Create a Synology DSM virtual machine on Proxmox VE with ProxMenux."
   },
   "header": {
     "title": "Create VM: Synology DSM",
-    "description": "Create a Synology DSM virtual machine on Proxmox VE. ProxMenux downloads the loader of your choice (Arc, RR, TinyCore M-shell or a custom one), imports it as the VM's boot disk and prepares CPU, RAM and storage through the default or advanced wizard.",
+    "description": "Create a Synology DSM virtual machine on Proxmox VE. ProxMenux downloads your chosen loader (Arc, RR, Alpine RedPill M-shell or a custom image), imports it as the VM boot disk and configures CPU, RAM and storage through the default or advanced wizard.",
     "section": "Virtual Machines · NAS"
   },
   "loaderLabels": {
@@ -32,7 +32,7 @@
         "url": "https://github.com/RROrg/rr"
       },
       {
-        "name": "TinyCore RedPill M-shell",
+        "name": "Alpine RedPill M-shell (TinyCore project)",
         "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
       }
     ],
@@ -127,7 +127,7 @@
     "virtualItemsRich": [
       "Lists the Proxmox storage volumes available on the host.",
       "You pick the target storage and the size in GB.",
-      "The disk is attached to the VM as SATA (<code>sata0</code>, <code>sata1</code>, … up to 6)."
+      "The disk is attached as SATA (<code>sata0</code>, <code>sata1</code>, …). Virtual and physical data disks share the six SATA slots numbered 0–5."
     ],
     "importHeading": "b. Add import disk",
     "importItemsRich": [
@@ -139,7 +139,7 @@
     "pciItemsRich": [
       "Detects SATA/SAS HBAs and NVMe devices on the host and lets you pass an <em>entire controller</em> into the VM. IOMMU must be enabled; the script offers to enable it and reboots if required.",
       "A confirmation step warns about controller-wide risk (the whole card, including every disk on it, leaves the host).",
-      "The selected PCI devices are attached via <code>qm set hostpciN: …</code>."
+      "The selected PCI devices are attached with commands such as <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Replace VMID and PCI_ADDRESS with the VM ID and PCI address, and use an unused hostpci index for each device."
     ],
     "resetCalloutTitle": "Reset and finish",
     "resetCalloutBodyRich": "The menu also offers <strong>r</strong> (reset the current selection and start over) and <strong>d</strong> (finish and continue). You cannot finish with an empty plan — Synology needs at least one disk to install DSM on."
@@ -150,7 +150,7 @@
   },
   "loaderInstall": {
     "heading": "Loader installation",
-    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> and <strong>TinyCore M-shell</strong> are downloaded and extracted automatically from their upstream GitHub repositories. If the download fails the script aborts with a clear message.",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> and <strong>Alpine RedPill M-shell</strong> are downloaded and extracted automatically from their upstream GitHub repositories. If the download fails the script aborts with a clear message.",
     "intro2Rich": "For the <strong>Custom Loader</strong> option the script scans <code>/var/lib/vz/template/iso</code>. If more than one candidate is found you are prompted to pick the one you want.",
     "uploadIntro": "You can upload custom loaders from Proxmox local storage:",
     "imageAlt": "Add custom loader",
@@ -161,17 +161,17 @@
     "introRich": "Once you confirm the loader, ProxMenux runs the equivalent of these <code>qm</code> commands:",
     "itemsRich": [
       "<code>qm create</code> — creates the VM with the selected CPU, RAM, BIOS and machine type.",
-      "<code>qm importdisk</code> — imports the loader as an <strong>IDE</strong> disk (maximum compatibility).",
-      "<code>qm set sataN: …</code> — attaches virtual disks and imported disks from the storage plan, plus the network interface.",
-      "<code>qm set hostpciN: …</code> — attaches any Controller / NVMe devices selected for PCI passthrough.",
-      "<code>qm set --boot</code> — sets the loader as the first boot device."
+      "<code>qm importdisk</code> imports the loader image to Proxmox storage. The script then attaches it to the VM as an <strong>IDE</strong> disk on ide0 for compatibility.",
+      "<code>qm set VMID --sata0 DISK_REFERENCE</code> attaches a planned data disk. Replace VMID and DISK_REFERENCE with the VM ID and disk reference; use a free SATA index from 0–5. The network adapter is configured by qm create.",
+      "<code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code> attaches a selected PCI controller or NVMe device. Replace VMID and PCI_ADDRESS with the VM ID and PCI address, and use a free hostpci index for each device.",
+      "<code>qm set VMID --boot order=ide0</code> configures the loader as the boot device. Replace VMID with the VM ID."
     ]
   },
   "stepByStep": {
     "heading": "Step-by-step loader configuration",
-    "intro": "All loaders follow the same high-level pattern — start the VM, pick a model, pick a DSM version, pick add-ons, build, boot — but the screens and menus differ. The guide below walks through the six shared steps with screenshots for each loader. Exact options may change with new loader releases.",
+    "intro": "The six common steps are: start the VM, choose a model, choose a DSM version, choose add-ons, build and boot. Menus and options vary by release. The M-shell screenshots below show an earlier TinyCore interface; the current script downloads Alpine RedPill M-shell, so follow its current prompts.",
     "warnCalloutTitle": "Loaders are not maintained by ProxMenux",
-    "warnCalloutBody": "Arc, RR and TinyCore are community projects with their own release cadence. If a step looks different from the screenshots below, the loader has probably updated — check the loader's own documentation (links at the bottom of this page)."
+    "warnCalloutBody": "Arc, RR and Alpine RedPill M-shell are community projects with their own release cadence. If a step looks different from the screenshots below, the loader has probably updated — check the loader's own documentation (links at the bottom of this page)."
   },
   "stepBadge": "Step",
   "step1": {

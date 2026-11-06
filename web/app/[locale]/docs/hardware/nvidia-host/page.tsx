@@ -138,102 +138,7 @@ export default async function NvidiaHostPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("howRuns.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("howRuns.body")}</p>
 
-      <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto text-sm my-4 border border-gray-200 leading-snug">
-{`┌─────────────────────────────────────────────┐
-│  PHASE 1 — Detect, validate, pick version   │
-│  (nothing touched yet)                      │
-└──────────────────┬──────────────────────────┘
-                   ▼
-      ┌────────────┴────────────┐
-      ▼                         ▼
-  lspci detects             GPU bound to
-  NVIDIA GPU(s)             vfio-pci? ──→ Abort
-      │                         │        (remove VM
-      │                         No        passthrough first)
-      ▼
-  nvidia-smi: driver already installed?
-      │
-      ├─ No  → continue (fresh install)
-      └─ Yes → ask: Reinstall/Update  OR  Remove
-                     │
-                     ├─ Remove    → complete uninstall
-                     │               + reboot prompt
-                     └─ Reinstall → continue
-      │
-      ▼
-  Show install overview
-  (GPU list + current driver +
-   LXC containers with NVIDIA passthrough)
-      │
-      ▼
-  Kernel-compat filter:
-  ├─ Kernel 6.17+   → driver 580.82.07+
-  ├─ Kernel 6.8–16  → driver 550+
-  ├─ Kernel 6.2–7   → driver 535+
-  └─ Kernel 5.15+   → driver 470+
-      │
-      ▼
-  User picks version (or "Latest")
-                   │
-     ┌─────── Cancel   OR   Confirm ────┐
-     ▼                                  ▼
- Exit, nothing            ┌─────────────┴──────────────┐
- was changed              │  PHASE 2 — Install driver  │
-                          └─────────────┬──────────────┘
-                                        ▼
-                          Prepare host:
-                          ├─ Install pve-headers-$(uname -r)
-                          ├─ Install build-essential + dkms
-                          ├─ Blacklist nouveau + unload
-                          │  └ /etc/modprobe.d/nouveau-blacklist.conf
-                          ├─ Write modules-load config
-                          │  └ /etc/modules-load.d/nvidia-vfio.conf
-                          ├─ Stop/disable nvidia services
-                          └─ Unload residual nvidia modules
 
-                          If different version already present:
-                          └─ clean uninstall first (apt purge,
-                             remove DKMS entries)
-                                        │
-                                        ▼
-                          Download NVIDIA .run installer
-                          to /opt/nvidia (validate size +
-                          executable signature)
-                                        │
-                                        ▼
-                          Run installer with --dkms
-                          --disable-nouveau --no-nouveau-check
-                                        │
-                                        ▼
-                          Install udev rules
-                          └─ /etc/udev/rules.d/70-nvidia.rules
-                          + clone NVIDIA/nvidia-persistenced
-                                        │
-                                        ▼
-                          update-initramfs -u -k all
-                                        │
-                                        ▼
-                          nvidia-smi — verify driver loaded
-                                        │
-                        ┌───────────────┴───────────────┐
-                        │  PHASE 3 — Optional extras    │
-                        └───────────────┬───────────────┘
-                                        ▼
-                          LXC containers with NVIDIA?
-                          ├─ Yes → offer driver propagation
-                          │        (Alpine: apk · Arch: pacman ·
-                          │         Debian/others: extract .run)
-                          └─ No  → skip
-                                        │
-                                        ▼
-                          keylase/nvidia-patch (NVENC limit)?
-                          ├─ Yes → clone + apply
-                          └─ No  → skip
-                                        │
-                                        ▼
-                          Reboot prompt — required to finalize
-                          nouveau blacklist + load new module`}
-      </pre>
 
       <Steps>
         <Steps.Step title={t("walkthrough.detect.title")}>
@@ -282,7 +187,7 @@ export default async function NvidiaHostPage({
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.download.body", { code })}</p>
           <CopyableCode
             code={`# What ProxMenux runs under the hood (you don't have to type this):
-sh NVIDIA-Linux-x86_64-<version>.run \\
+sh NVIDIA-Linux-x86_64-VERSION.run \\
   --no-questions \\
   --ui=none \\
   --disable-nouveau \\

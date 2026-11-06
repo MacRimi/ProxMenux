@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Analýza mostov a oprava so sprievodcom | Dokumentácia ProxMenux",
+    "description": "Zistí mosty vmbrX s chýbajúcimi alebo neplatnými fyzickými portmi, typicky po opätovnom číslovaní PCI. Nahlási ich s návrhmi príkazov shellu a ponúkne opravu so sprievodcom v 5 krokoch s povinnou zálohou.",
+    "ogTitle": "Analýza mostov a oprava so sprievodcom | Dokumentácia ProxMenux",
+    "ogDescription": "Skontrolujte a opravte porty mostov Proxmox po zmenách hardvéru pomocou postupu so sprievodcom a bezpečným vrátením zmien."
+  },
+  "header": {
+    "title": "Analýza mostov a oprava so sprievodcom",
+    "description": "Skontroluje každý most vmbrX deklarovaný v /etc/network/interfaces, overí existenciu fyzických portov a pri chýbajúcich ponúkne opravu krok za krokom. Analýza je iba na čítanie; oprava vyžaduje súhlas, zobrazí náhľad a vytvorí zálohu.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Prečíta každý most v <code>/etc/network/interfaces</code>, skontroluje jeho riadok <code>bridge-ports</code> a overí, či každý deklarovaný port, napríklad <code>enp3s0</code>, existuje na hostiteľovi. Ak port chýba, navrhne náhradu a s výslovným súhlasom použije zmenu postupom <strong>záloha, náhľad, použitie, overenie</strong>."
+  },
+  "when": {
+    "heading": "Keď to potrebujete",
+    "intro": "Linux prideľuje predvídateľné názvy rozhraní podľa topológie PCI a poradia slotov. Viaceré udalosti ich môžu zmeniť, takže <code>/etc/network/interfaces</code> odkazuje na názvy, ktoré už neexistujú:",
+    "items": [
+      "Pridanie alebo odstránenie PCIe karty (NIC, GPU, a HBA, nosič NVMe).",
+      "Presun existujúcej karty na iný PCIe slot.",
+      "Aktualizácie BIOS / UEFI, ktoré znovu číslujú zariadenia PCI.",
+      "Migrácia zavádzacieho disku na iný hardvér."
+    ],
+    "outro": "Po ďalšom štarte sa most pokúsi pripojiť k portu, ktorý už neexistuje, neaktivuje sa a hostiteľ stratí sieťové pripojenie. <link>Trvalé názvy rozhraní</link> zabránia opakovaniu tohto problému. Ak ste už stratili prístup, táto stránka opisuje postup obnovy."
+  },
+  "bigPicture": {
+    "heading": "Celkový prehľad",
+    "diagram1": {
+      "arrowLabel": "krok 1",
+      "nodes": {
+        "sourceLabel": "/etc/network/interfaces",
+        "sourceDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports enp3s0",
+        "bridgeLabel": "Analyzovať (iba na čítanie)",
+        "bridgeDetail": "ip link show enp3s0\n→ neexistuje",
+        "targetLabel": "Správa + návrh",
+        "targetDetail": "❌ enp3s0: NENÁJDENÉ\nNahradiť za: eno1\n(zatiaľ bez zmien)"
+      }
+    },
+    "diagram2": {
+      "arrowLabel": "aplikovať so zálohou",
+      "nodes": {
+        "sourceLabel": "Oprava so sprievodcom",
+        "sourceDetail": "1. Záloha\n2. Zobraziť aktuálny stav\n3. Náhľad zmien\n4. Použiť\n5. Overiť",
+        "targetLabel": "/etc/network/interfaces (nový)",
+        "targetDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports eno1"
+      }
+    }
+  },
+  "step1": {
+    "heading": "Krok 1: analýza (iba na čítanie)",
+    "intro": "Po výbere <strong>Analyzovať konfiguráciu mostov</strong> sa nástroj okamžite zastaví, ak hostiteľ nepoužíva klasický stack Debian/Proxmox. Inak prejde každý most a nahlási:",
+    "items": [
+      "Názov mosta, aktuálny stav (UP / DOWN) a pridelená IP adresa.",
+      "Každý deklarovaný port a či v súčasnosti existuje (<code>ip link show &lt;port&gt;</code>).",
+      "Pre každý neplatný port: navrhovaná náhrada (prvé dostupné fyzické rozhranie) plus presný <code>sed</code> príkaz na manuálne použitie.",
+      "Mosty bez riadka <code>bridge-ports</code> a osirelé položky <code>auto</code> bez zodpovedajúceho bloku <code>iface</code>."
+    ],
+    "readonlyTitle": "Záruka režimu iba na čítanie",
+    "readonlyBody": "Až do tohto bodu skript nespustil žiadny príkaz meniaci systém. Analýzu môžete nechať otvorenú, skopírovať navrhnuté príkazy <code>sed</code> a použiť ich ručne, ak to uprednostňujete. Alebo prijmite nasledujúcu výzvu na spustenie opravy so sprievodcom."
+  },
+  "step2": {
+    "heading": "Krok 2: oprava so sprievodcom (5 krokov)",
+    "intro": "Spustí sa iba po prijatí výzvy na konci analýzy. Každý krok zobrazí plánovanú akciu a pred pokračovaním vyžiada potvrdenie.",
+    "steps": [
+      {
+        "title": "1. Bezpečnostná záloha",
+        "body": "Skopíruje <code>/etc/network/interfaces</code> do <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Presnú cestu zálohy zobrazí pred kopírovaním aj po ňom spolu s príkazom na vrátenie zmien.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Preskúmanie aktuálnej konfigurácie",
+        "body": "Otvorí aktuálny <code>/etc/network/interfaces</code> v posúvateľnom dialógu, aby ste presne videli, čo sa zmení.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Náhľad navrhovaných zmien",
+        "body": "Presne vypíše dotknuté mosty a plánované náhrady portov. Ak už oprava nie je potrebná, pretože sa port medzi kontrolami znovu objavil, postup sa ukončí hlásením <em>„Nie sú potrebné žiadne zmeny.“</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Použiť zmeny",
+        "body": "Pre každý postihnutý most beží <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> proti <code>/etc/network/interfaces</code>. Ak most nemal k dispozícii platnú náhradu, substitúcia sa preskočí a zaznamená v kroku 5.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Overovanie",
+        "body": "Znovu prečíta súbor a potvrdí, že nový port každého mosta existuje. Vypíše príkaz na vrátenie zmien (<code>cp &lt;backup&gt; /etc/network/interfaces</code>). Nakoniec ponúkne <strong>Reštartovať sieť</strong> — prijmite iba vtedy, ak máte náhradný prístup cez konzolu.",
+        "tone": "emerald"
+      }
+    ],
+    "restartTitle": "Reštart siete ≠ bezpečné vrátenie zmien",
+    "restartBody": "Oprava sa zapíše na disk bez ohľadu na reštart služby. <code>systemctl restart networking</code> použije zmenu <em>teraz</em>, čo môže prerušiť reláciu SSH, ak je nový port nesprávny. Ak reštart odmietnete, zmena sa aj tak prejaví pri ďalšom štarte. Najprv overte novú konfiguráciu alebo ju vráťte zobrazeným príkazom."
+  },
+  "edits": {
+    "heading": "Čo sa edituje (presne)",
+    "body": "Iba riadok <code>bridge-ports</code> každého dotknutého mosta. Ostatné direktívy (<code>address</code>, <code>netmask</code>, <code>gateway</code>, <code>bridge-stp</code>, …) zostávajú nezmenené. Skript v tomto postupe nevytvára ani neodstraňuje bloky <code>iface</code> — to je úloha <link>analýzy konfigurácie &amp; čistenia</link>."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "unsupportedTitle": "Analýza sa zastaví s hlásením „Nepodporovaný sieťový stack“",
+    "unsupportedBody": "Hostiteľ používa netplan, systemd-networkd alebo NetworkManager. Nástroj podporuje iba <code>/etc/network/interfaces</code>. Najprv prepnite hostiteľa na klasický stack alebo upravte konfiguráciu natívnymi nástrojmi správcu (napríklad <code>netplan apply</code>).",
+    "noSuggestTitle": "Pre neplatný port sa nevypíše žiadny návrh",
+    "noSuggestBody": "Hostiteľ nemá žiadne voľné fyzické rozhrania: všetky sú už v inom moste alebo neexistujú. Analýza preto navrhne <code>bridge-ports none</code>, aby sa most mohol aspoň aktivovať bez portu. Pred opätovným spustením pridajte sieťovú kartu alebo ručne presuňte porty medzi mostmi.",
+    "stillDownTitle": "Oprava sa skončila, ale most je stále dole",
+    "stillDownBody": "<code>sed</code> aktualizoval súbor, ale <code>systemctl restart networking</code> bol odmietnutý. Po overení novej konfigurácie ho spustite ručne alebo reštartujte systém. Ak bol reštart prijatý a most je stále DOWN, overte existenciu nového portu cez <code>ip link show</code> a skontrolujte <code>journalctl -u networking</code> pre skutočnú chybu: odpojený kábel, nevyjednané spojenie alebo port už patriaci do iného mosta.",
+    "lostSshTitle": "Stratila som prístup SSH hneď po reštarte siete",
+    "lostSshIntro": "Použite konzolu / IPMI / iKVM na dosiahnutie hostiteľa. Obnoviť zálohu:",
+    "lostSshOutro": "Potom znovu spustite analýzu z konzoly a zistite, prečo návrh nefungoval, typicky preto, že náhradný port nie je zapojený."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Trvalé názvy rozhraní",
+        "href": "/docs/network/persistent-names",
+        "tail": " — priradí názvy k MAC adresám, aby sa problém neopakoval."
+      },
+      {
+        "label": "Analýza konfigurácie a čistenie so sprievodcom",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " — Pre osirotené <code>iface</code> bloky (druhá polovica rovnakého problému)."
+      },
+      {
+        "label": "Záloha a reštart rozhraní",
+        "href": "/docs/network/backup-restore",
+        "tail": " — ručné snímky a prehliadanie záloh na obnovu."
+      }
+    ]
+  }
+}

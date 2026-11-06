@@ -16,12 +16,18 @@ Endpoints, all under /api/vm-backup-jobs:
   DELETE /<id>             delete a job (its backups are kept)
   POST   /<id>/toggle      enable / disable
   POST   /<id>/run         run it now, as a Proxmox task on each node
+
+Storage retention is read/edited under /api/vm-backup-storages. Saving a
+policy only changes the native storage configuration; it never runs pruning.
 """
 
 import json
 import os
 import re
+import shutil
 import subprocess
+import time
+import uuid
 
 from flask import Blueprint, jsonify, request
 
@@ -229,6 +235,58 @@ def options():
     })
 
 
+@vm_backup_bp.route("/api/vm-backup-storages", methods=["GET"])
+@require_auth
+def backup_storage_retention():
+    ok, storages = _pvesh_json(["get", "/storage"])
+    if not ok or not isinstance(storages, list):
+        return _err(storages if not ok else "Invalid storage inventory", 502)
+    return jsonify({"storages": [
+        {"id": storage["storage"], "type": storage.get("type", ""),
+         "prune_backups": _flat(storage.get("prune-backups") or ""),
+         "digest": storage.get("digest", "")}
+        for storage in storages
+        if isinstance(storage, dict) and storage.get("storage")
+        and "backup" in (storage.get("content") or "").split(",")
+    ]})
+
+
+@vm_backup_bp.route("/api/vm-backup-storages/<storage_id>", methods=["PUT"])
+@require_admin_scope
+def update_backup_storage_retention(storage_id):
+    if not STORAGE_RE.fullmatch(storage_id):
+        return _err("Invalid storage")
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _err("A retention policy and current configuration digest are required")
+    digest, prune = data.get("digest"), data.get("prune_backups")
+    if not isinstance(digest, str) or not re.fullmatch(r"[a-fA-F0-9]{40}", digest):
+        return _err("Refresh the storage list before editing its retention")
+    # An empty policy removes the storage setting, so the Proxmox default applies.
+    if not isinstance(prune, str) or (prune and not PRUNE_RE.fullmatch(prune)):
+        return _err("Invalid retention policy")
+    pairs = [part.split("=", 1) for part in prune.split(",")] if prune else []
+    keys = [key for key, _ in pairs]
+    if (len(keys) != len(set(keys)) or
+            ("keep-all" in keys and (len(keys) != 1 or pairs[0][1] != "1")) or
+            any(int(value) < 1 for _, value in pairs)):
+        return _err("Choose keep-all=1 or one or more positive retention counts")
+    # Check that this is still a backup storage, then let Proxmox check the
+    # digest under its storage lock. Other storage settings are never passed.
+    ok, storage = _pvesh_json(["get", f"/storage/{storage_id}"])
+    if not ok:
+        return _err(storage, 502)
+    if not isinstance(storage, dict) or "backup" not in (storage.get("content") or "").split(","):
+        return _err("This storage does not accept backups", 409)
+    if storage.get("digest") != digest:
+        return _err("Storage configuration changed; refresh before saving", 409)
+    change = ["--prune-backups", prune] if prune else ["--delete", "prune-backups"]
+    ok, out = _pvesh(["set", f"/storage/{storage_id}", "--digest", digest, *change])
+    if not ok:
+        return _err(out, 409)
+    return jsonify({"success": True})
+
+
 @vm_backup_bp.route("/api/vm-backup-jobs", methods=["POST"])
 @require_admin_scope
 def create_job():
@@ -340,6 +398,86 @@ def _run_arguments(job):
     return args
 
 
+# A job of several guests leaves the id of its task empty.
+UPID_RE = re.compile(r"UPID:[^:\s]+:[^:\s]+:[^:\s]+:[^:\s]+:vzdump:[^:\s]*:[^:\s]+:")
+RUN_DIR = "/run/proxmenux"
+
+
+def active_vzdump(node, since):
+    """The UPID of the first backup task the node started at or after `since`."""
+    ok, tasks = _pvesh_json(["get", f"/nodes/{node}/tasks", "--source", "active", "--typefilter", "vzdump"])
+    if not ok or not isinstance(tasks, list):
+        return None
+    started = sorted((task for task in tasks if isinstance(task, dict)
+                      and UPID_RE.match(str(task.get("upid") or ""))
+                      and isinstance(task.get("starttime"), int) and task["starttime"] >= since),
+                     key=lambda task: task["starttime"])
+    return started[0]["upid"].rstrip(":") if started else None
+
+
+def _start_vzdump(node, arguments, job_id):
+    """Start the part of a job that runs on a node and return its task UPID.
+
+    pvesh waits for the whole backup and prints the UPID only at the end, and
+    a child of the Monitor is killed with its service, so vzdump runs in its
+    own transient unit and its UPID is read from the node's active tasks. The
+    task then runs to the end on its own. Returns (upid, error)."""
+    if not shutil.which("systemd-run"):
+        return None, "systemd-run not found"
+    run_dir = RUN_DIR
+    try:
+        os.makedirs(run_dir, mode=0o700, exist_ok=True)
+        now = time.time()
+        for old in os.listdir(run_dir):
+            old_path = os.path.join(run_dir, old)
+            if old.startswith("vzdump-") and now - os.path.getmtime(old_path) > 86400:
+                os.remove(old_path)
+    except OSError:
+        pass
+    unit = f"proxmenux-vzdump-job-{uuid.uuid4().hex[:8]}"
+    out_path = os.path.join(run_dir, f"vzdump-{unit}.out")
+    since = int(time.time()) - 1
+    try:
+        launch = subprocess.run(
+            ["systemd-run", f"--unit={unit}", "--collect", "--quiet",
+             f"--description=ProxMenux backup job {job_id}",
+             f"--property=StandardOutput=file:{out_path}",
+             "pvesh", "create", f"/nodes/{node}/vzdump", *arguments],
+            capture_output=True, text=True, timeout=15)
+    except subprocess.TimeoutExpired:
+        return None, "systemd-run timed out"
+    if launch.returncode != 0:
+        return None, (launch.stderr or launch.stdout).strip()
+    buf = ""
+    deadline = time.time() + 10.0
+    while time.time() < deadline:
+        try:
+            with open(out_path, encoding="utf-8", errors="replace") as handle:
+                buf = handle.read()
+        except OSError:
+            buf = ""
+        found = UPID_RE.search(buf)
+        if found:
+            return found.group(0).rstrip(":"), None
+        state = subprocess.run(["systemctl", "is-active", unit], capture_output=True, text=True).stdout.strip()
+        if state not in ("active", "activating"):
+            break
+        upid = active_vzdump(node, since)
+        if upid:
+            return upid, None
+        time.sleep(0.5)
+    # A short backup can finish between two reads: its UPID is the last line.
+    try:
+        with open(out_path, encoding="utf-8", errors="replace") as handle:
+            buf = handle.read()
+    except OSError:
+        pass
+    found = UPID_RE.search(buf)
+    if found:
+        return found.group(0).rstrip(":"), None
+    return None, (buf.strip() or "pvesh exited without producing a UPID")[-800:]
+
+
 @vm_backup_bp.route("/api/vm-backup-jobs/<job_id>/run", methods=["POST"])
 @require_admin_scope
 def run_job(job_id):
@@ -363,12 +501,11 @@ def run_job(job_id):
     for node in nodes:
         if not NODE_RE.match(node):
             continue
-        ok, out = _pvesh(["create", f"/nodes/{node}/vzdump", *arguments])
-        if ok:
-            found = re.search(r"UPID:[^\s\"']+", out)
-            tasks.append({"node": node, "upid": found.group(0) if found else ""})
+        upid, error = _start_vzdump(node, arguments, job_id)
+        if upid:
+            tasks.append({"node": node, "upid": upid})
         else:
-            failures.append({"node": node, "error": out})
+            failures.append({"node": node, "error": error})
     if not tasks:
         return _err(failures[0]["error"] if failures else "The backup could not be started", 500)
     return jsonify({"success": True, "tasks": tasks, "failures": failures})

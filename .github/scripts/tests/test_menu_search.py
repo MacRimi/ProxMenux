@@ -4,9 +4,13 @@ lives: the scripts it launches are the ones the menus launch."""
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import runpy
+import shlex
+import subprocess
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,17 +46,40 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(unknown, [])
         self.assertEqual([item["menu"] for item in self.index if item["menu"] not in self.spanish], [])
 
-    def test_every_script_a_menu_launches_can_be_found(self):
+    def test_every_script_a_pve_menu_launches_can_be_found(self):
         indexed = {item["script"] for item in self.index}
         launched = set()
         for menu in sorted((SCRIPTS / "menus").glob("*.sh")):
-            if menu.name in ("main_menu.sh", "lxc_menu.sh"):
+            # PBS replaces the PVE main menu and does not use its search.
+            # The exclusive platform dispatch is executed in the test below.
+            if menu.name in ("main_menu.sh", "lxc_menu.sh", "pbs_menu.sh"):
                 continue
             launched |= set(re.findall(r'bash "\$LOCAL_SCRIPTS/([A-Za-z0-9_./-]+\.sh)"', menu.read_text()))
         launched -= {"menus/main_menu.sh"}
         # Opened from their own menu, which is what the index points at.
         launched -= {"post_install/auto_post_install.sh", "utilities/proxmox_update.sh", "utilities/upgrade_pve8_to_pve9.sh"}
         self.assertEqual(sorted(launched - indexed), [])
+
+    def test_pbs_replaces_the_searchable_pve_menu(self):
+        menu = (SCRIPTS / "menus/main_menu.sh").read_text()
+        dispatch = menu[menu.rindex('source "$LOCAL_SCRIPTS/global/platform-functions.sh"'):]
+        with tempfile.TemporaryDirectory() as directory:
+            scripts = Path(directory)
+            (scripts / "global").mkdir()
+            (scripts / "menus").mkdir()
+            helper = scripts / "global/platform-functions.sh"
+            helper.write_text(
+                "source " + shlex.quote(str(SCRIPTS / "global/platform-functions.sh")) + "\n"
+                'pmx_platform_field() { printf "%s" "$TEST_PROXMENUX_PRODUCT"; }\n')
+            (scripts / "menus/pbs_menu.sh").write_text('printf "PBS menu\\n"\n')
+            harness = 'show_menu() { printf "PVE search menu\\n"; }\n' + dispatch
+            for product, expected in (("pve", "PVE search menu"), ("pbs", "PBS menu")):
+                with self.subTest(product=product):
+                    result = subprocess.run(["bash", "-e", "-c", harness], text=True, capture_output=True,
+                                            env={**os.environ, "LOCAL_SCRIPTS": str(scripts),
+                                                 "TEST_PROXMENUX_PRODUCT": product})
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout.strip(), expected)
 
     def test_the_main_menu_offers_the_search_and_opens_what_it_hands_back(self):
         menu = (SCRIPTS / "menus/main_menu.sh").read_text()

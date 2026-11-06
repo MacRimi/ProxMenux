@@ -22,7 +22,7 @@
       "commands": [
         {
           "command": "apt update && apt upgrade -y",
-          "description": "Update and upgrade all system packages"
+          "description": "Refresh package lists and upgrade installed packages (apt upgrade)"
         },
         {
           "command": "apt dist-upgrade -y",
@@ -51,15 +51,15 @@
         },
         {
           "command": "pveupgrade",
-          "description": "Show available Proxmox upgrades"
+          "description": "Start the interactive Proxmox package upgrade"
         },
         {
-          "command": "pve-upgrade",
-          "description": "Perform Proxmox VE upgrade"
+          "command": "pve8to9 --full",
+          "description": "Check readiness for the PVE 8 to 9 upgrade (does not perform it)"
         },
         {
-          "command": "pveceph upgrade",
-          "description": "Upgrade Ceph packages (if Ceph is installed)"
+          "command": "ceph versions",
+          "description": "Show Ceph daemon versions before planning a Ceph upgrade"
         }
       ]
     },
@@ -134,18 +134,18 @@
         },
         {
           "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
-          "description": "Show Proxmox Enterprise repo config"
+          "description": "Show Proxmox Enterprise repository configuration in the PVE 8 .list file"
         },
         {
           "command": "apt-key list",
-          "description": "List repository signing keys"
+          "description": "List legacy repository signing keys where apt-key is available"
         }
       ]
     }
   ],
   "backupWarn": {
     "title": "Take a backup before major upgrades",
-    "bodyRich": "For point releases (8.4.1 → 8.4.5) the standard <code>apt update &amp;&amp; apt upgrade</code> is safe. For <strong>major version upgrades</strong> (PVE 8 → 9) use the dedicated ProxMenux flow: <upgradeLink>Upgrade PVE 8 to PVE 9</upgradeLink> — it adds pre-flight checks, repository migration and post-upgrade validation."
+    "bodyRich": "For routine updates, Proxmox recommends <code>apt update &amp;&amp; apt full-upgrade</code>; review the proposed package changes before confirming. For <strong>major version upgrades</strong> (PVE 8 → 9), use the dedicated ProxMenux flow: <upgradeLink>Upgrade PVE 8 to PVE 9</upgradeLink>. It adds readiness checks, repository migration and post-upgrade validation. Back up first."
   },
   "related": {
     "heading": "Related",

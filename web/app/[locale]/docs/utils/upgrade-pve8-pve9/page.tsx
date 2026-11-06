@@ -110,7 +110,7 @@ export default async function UpgradePve8Pve9Page({
   )
   const cephlink = (chunks: React.ReactNode) => (
     <a
-      href="https://pve.proxmox.com/wiki/Ceph_Squid"
+      href="https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid"
       target="_blank"
       rel="noopener noreferrer"
       className="text-blue-700 hover:underline inline-flex items-center gap-1"

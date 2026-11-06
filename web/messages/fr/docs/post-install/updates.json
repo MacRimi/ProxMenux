@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "title": "Appliquer les mises à jour disponibles — Optimisations post-installation | Documentation ProxMenux",
+    "description": "Comment ProxMenux détecte lorsqu'une optimisation post-installation (Log2Ram, Paramètres de mémoire, Limites du système, Logrotate, réglage réseau...) a été mise à jour en amont, et comment appliquer la nouvelle version — depuis le menu Post-Install ou depuis le tableau de bord de Monitor."
+  },
+  "header": {
+    "title": "Appliquer les mises à jour disponibles",
+    "description": "Si une optimisation post-installation (Log2Ram, paramètres de mémoire, limites système, Logrotate…) a une version sur disque plus récente que celle enregistrée sur l’hôte, ProxMenux la signale comme mise à jour disponible. Vous pouvez l’appliquer depuis le menu post-installation des scripts ou le tableau de bord Monitor. Les deux relancent la même fonction et actualisent le registre.",
+    "section": "Paramètres post-installation de Proxmox"
+  },
+  "intro": {
+    "title": "Ce que c'est",
+    "body": "Les optimisations post-installation ProxMenux ont des versions, par exemple <code>Log2ram SSD Protection v1.2</code>. L’hôte enregistre les optimisations actives et leurs versions dans <code>/usr/local/share/proxmenux/installed_tools.json</code>. Lorsqu’une version ProxMenux fournit une optimisation plus récente, l’écart est détecté et seule celle-ci est proposée à la réapplication, sans relancer toute la post-installation."
+  },
+  "why": {
+    "heading": "Pourquoi cela existe",
+    "body": "Les optimisations après installation peuvent être améliorées : meilleur réglage sysctl, limite Logrotate plus stricte, nouvelle méthode de dimensionnement de Log2RAM ou correction d’un cas particulier signalé par un testeur. Sans mécanisme de mise à jour, il fallait relancer manuellement le script après installation, qui réapplique <em>toutes</em> les optimisations, ou renoncer à l’amélioration. Appliquer les mises à jour disponibles permet de relancer volontairement chaque optimisation dont la version a changé."
+  },
+  "detection": {
+    "heading": "Comment les mises à jour sont détectées",
+    "steps": [
+      {
+        "title": "Scripts versionnés sur disque",
+        "body": "Chaque fonction post-installation déclare sa version dans le script (<code>scripts/post_install/auto_post_install.sh</code> et <code>scripts/post_install/customizable_post_install.sh</code>). Un scanner extrait ces versions de la source sur le disque."
+      },
+      {
+        "title": "Registre des versions sur l’hôte",
+        "body": "Lorsque l'opérateur a appliqué chaque optimisation, l'appel <code>register_tool</code> correspondant a écrit la version active dans <code>/usr/local/share/proxmenux/installed_tools.json</code>. Ce fichier est la source de la vérité pour \"ce qui est actif sur cet hôte en ce moment\"."
+      },
+      {
+        "title": "Monitor compare les deux versions",
+        "body": "Au démarrage et toutes les 24 h, Monitor compare les versions sur disque aux versions enregistrées. Chaque écart crée une entrée dans <code>/usr/local/share/proxmenux/updates_available.json</code>. Ce fichier alimente l’entrée du menu post-installation et la carte du tableau de bord Monitor."
+      },
+      {
+        "title": "Une notification par nouvelle version",
+        "body": "Dès qu’une optimisation a une mise à jour en attente, Monitor envoie une notification groupée, par exemple <em>« 4 mises à jour d’optimisations ProxMenux disponibles »</em>, avec une ligne par outil au format <code>name (vX → vY)</code>, comme pour les paquets Proxmox. Elle ne se répète pas chaque jour pour le même ensemble : seule une nouvelle version ou un nouvel outil dans la liste la déclenche à nouveau."
+      }
+    ]
+  },
+  "pathA": {
+    "heading": "Chemin A — À partir du menu Post-Installation",
+    "intro": "À partir du menu principal de ProxMenux, ouvrez <strong>Paramètres après l'installation Proxmox</strong>. Lorsqu'il y a des mises à jour en attente, une nouvelle entrée <strong>Appliquer les mises à jour disponibles (N)</strong> apparaît juste au-dessus de <em>Désinstaller les optimisations</em>. Le nombre reflète combien d'optimisations ont une version plus récente sur disque que ce que l'hôte a actuellement enregistré. Lorsque tout est à jour, l'entrée n'apparaît tout simplement pas, donc le menu reste propre.",
+    "menuAlt": "Menu des scripts post-installation montrant Appliquer les mises à jour disponibles (N) au-dessus de Désinstaller les optimisations ; le compteur indique les optimisations dont une version plus récente est sur disque",
+    "menuCaption": "<em>Appliquer les mises à jour disponibles (N)</em> apparaît seulement si une optimisation a une mise à jour en attente ; l’entrée est masquée quand l’hôte est à jour.",
+    "checklistBody": "Sélectionner l'entrée ouvre une liste de contrôle avec chaque mise à jour en attente, chaque ligne formatée en <code>name (vX → vY)</code>. Toutes les lignes sont pré-cochées par défaut; décochez toutes les lignes que vous ne voulez pas appliquer ce tour.",
+    "checklistAlt": "Sélecteur Appliquer les mises à jour disponibles avec une ligne par optimisation en attente, son nom et le changement de version (actuelle → disponible). Toutes les lignes sont cochées.",
+    "checklistCaption": "Sélection individuelle des optimisations à mettre à jour. Le même moteur qu’Automatisé et Personnalisable réapplique chaque fonction en arrière-plan et actualise sa version enregistrée."
+  },
+  "pathB": {
+    "heading": "Voie B — Depuis le tableau de bord Monitor",
+    "intro": "Les mêmes mises à jour apparaissent dans Monitor sous <link>Paramètres → Optimisations ProxMenux</link>. La carte affiche un <strong>compteur des mises à jour</strong> en attente qui ouvre le sélecteur par optimisation. Chaque outil propose aussi sa propre action de mise à jour.",
+    "imageAlt": "Carte Optimisations ProxMenux dans les paramètres Monitor avec un compteur ouvrant le sélecteur par optimisation et des actions de mise à jour par outil",
+    "imageCaption": "La carte Optimisations de Monitor donne accès aux mises à jour via son compteur dès qu’une version plus récente est sur disque, sans accès au shell."
+  },
+  "applying": {
+    "heading": "Ce qui se passe lors de l’application",
+    "steps": [
+      {
+        "title": "Réexécute la fonction post-installation",
+        "body": "La fonction de l’optimisation sélectionnée est réexécutée sur l’hôte. Comme chaque fonction après installation est <strong>idempotente</strong>, la relancer ne duplique pas la configuration : elle remplace la version précédente par la nouvelle, notamment les fichiers sysctl, les fichiers complémentaires et les unités de service."
+      },
+      {
+        "title": "Actualise le registre",
+        "body": "L'appel <code>register_tool</code> à l'intérieur de la fonction écrit la nouvelle version dans <code>installed_tools.json</code>. Le scan suivant ne voit plus d'inadéquation et l'entrée mise à jour disparaît du menu et de la carte Monitor."
+      },
+      {
+        "title": "Pas de redémarrage sauf si la fonction le dit",
+        "body": "La plupart des mises à jour prennent effet immédiatement. Les mises à jour qui touchent les modules du noyau, les noms d'interface persistants ou VFIO affichent la même invitation de redémarrage qu'une nouvelle installation."
+      },
+      {
+        "title": "Mise à jour du registre envoyée au moniteur",
+        "body": "Après le lot, le menu envoie une requête POST à <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> pour reconstruire <code>/usr/local/share/proxmenux/updates_available.json</code>. Une fois toutes les mises à jour appliquées, leur compteur et l’entrée conditionnelle du menu shell disparaissent sans attendre le prochain scan. La carte Optimisations reste disponible."
+      }
+    ],
+    "jqTitle": "jq est nécessaire",
+    "jqBody": "La liste de contrôle Path A repose sur <code>jq</code> pour analyser les mises à jour en attente JSON. Si le <code>jq</code> manque, le flux s'éteint silencieusement — vous verrez l'entrée du menu avec un nombre mais rien ne se produirait après avoir sélectionné les lignes. Sur n'importe quelle installation Proxmox moderne <code>jq</code> est présente; si dans le doute exécuter <code>apt install -y jq</code>."
+  },
+  "differs": {
+    "heading": "Comment il diffère des autres chemins",
+    "headerPath": "Path",
+    "headerScope": "Portée",
+    "headerWhen": "Quand ça a du sens",
+    "rows": [
+      {
+        "pathLabel": "Automatisé",
+        "pathHref": "/docs/post-install/automated",
+        "scope": "Ré-applique <em> chaque optimisation </em> dans le paquet.",
+        "when": "Hôte neuf ou réapplication complète de la configuration de base d’un nœud entièrement géré."
+      },
+      {
+        "pathLabel": "Personnalisable",
+        "pathHref": "/docs/post-install/customizable",
+        "scope": "Choisissez parmi le catalogue complet.",
+        "when": "Choisir précisément les optimisations actives sur l’hôte."
+      },
+      {
+        "pathLabel": "appliquer les mises à jour disponibles",
+        "pathHref": null,
+        "scope": "Uniquement les optimisations dont la version sur disque a augmenté.",
+        "when": "Garder les optimisations installées à jour sans toucher au reste."
+      },
+      {
+        "pathLabel": "Désinstaller les optimisations",
+        "pathHref": "/docs/post-install/uninstall",
+        "scope": "Inverser l'optimisation et supprimer son entrée de registre.",
+        "when": "Annuler une modification précise."
+      }
+    ]
+  },
+  "notifTitle": "Contrôle de la notification",
+  "notifBody": "L’événement <em>Mises à jour d’optimisations ProxMenux disponibles</em> annonce les mises à jour en attente. Activé par défaut sur chaque canal, il peut être désactivé par canal dans <link>Paramètres → Notifications</link>. Il ne se déclenche qu’une fois par ensemble distinct de mises à jour, pas à chaque scan de 24 h."
+}

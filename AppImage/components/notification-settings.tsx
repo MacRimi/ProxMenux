@@ -1,5 +1,6 @@
 "use client"
 
+import { AppriseServiceHelp } from "./apprise-service-help"
 import { useState, useEffect, useCallback } from "react"
 import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useIsPbs } from "../lib/use-platform"
 import {
   Bell, BellOff, Send, CheckCircle2, XCircle, Loader2,
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
@@ -153,6 +155,8 @@ function validateGotifyUrl(url: string): { error?: string; warning?: string } {
 }
 
 const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "hardware", "system", "other"].map(key => ({ key }))
+// Guests, vzdump backups and the cluster do not exist on Proxmox Backup Server.
+const PVE_ONLY_CATEGORIES = new Set(["vm_ct", "backup", "cluster"])
 
 const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "pushover", "apprise"] as const
 
@@ -210,6 +214,7 @@ const NOTIFICATION_LANGUAGES = [
   { value: "pt", label: "Português" },
   { value: "sk", label: "Slovenčina" },
   { value: "sv", label: "Svenska" },
+  { value: "ru", label: "Русский" },
 ]
 
 function normalizeNotificationLanguage(notificationLanguage?: string, legacyAiLanguage?: string): string {
@@ -329,6 +334,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
 
 export function NotificationSettings() {
   const t = useT()
+  const isPbs = useIsPbs()
   const { resolvedTheme } = useTheme()
   const [config, setConfig] = useState<NotificationConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<ServiceStatus | null>(null)
@@ -702,7 +708,7 @@ export function NotificationSettings() {
           <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.notificationCategories")}</Label>
         </div>
         <div className="space-y-2">
-          {EVENT_CATEGORIES.filter(cat => cat.key !== "other").map(cat => {
+          {EVENT_CATEGORIES.filter(cat => cat.key !== "other" && !(isPbs && PVE_ONLY_CATEGORIES.has(cat.key))).map(cat => {
             const isEnabled = overrides.categories[cat.key] ?? true
             const isExpanded = expandedCategories.has(`${chName}.${cat.key}`)
             // Hide the LXC update toggle when the user has disabled the
@@ -869,7 +875,7 @@ export function NotificationSettings() {
     // Flatten per-provider API keys
     if (cfg.ai_api_keys) {
       for (const [provider, key] of Object.entries(cfg.ai_api_keys)) {
-        if (key) {
+        if (key || provider === "ollama") {
           flat[`ai_api_key_${provider}`] = key
         }
       }
@@ -921,7 +927,7 @@ export function NotificationSettings() {
       const wasEnabled = originalConfig.enabled
       const isNowDisabled = !nextConfig.enabled
 
-      if (wasEnabled && isNowDisabled) {
+      if (wasEnabled && isNowDisabled && !isPbs) {
         try {
           await fetchApi("/api/notifications/proxmox/cleanup-webhook", { method: "POST" })
         } catch {
@@ -1216,8 +1222,10 @@ export function NotificationSettings() {
       setConfig(newConfig)
       setOriginalConfig(newConfig)
 
-      // 2) Auto-configure PVE webhook
-      try {
+      // 2) Auto-configure PVE webhook; PBS has no /etc/pve notifications
+      if (isPbs) {
+        setWebhookSetup({ status: "idle", fallback_commands: [], error: "" })
+      } else try {
         const setup = await fetchApi<{
           configured: boolean
           secret?: string
@@ -1523,7 +1531,7 @@ export function NotificationSettings() {
                           <Input
                             type={showSecrets["tg_token"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
-                            placeholder="7595377878:AAGE6Fb2cy... (with or without 'bot' prefix)"
+                            placeholder={t("settings.notifications.ui.botTokenPlaceholder")}
                             value={secretValue("tg_token", config.channels.telegram?.bot_token || "")}
                             onChange={e => updateChannel("telegram", "bot_token", e.target.value)}
                             disabled={!editMode}
@@ -1535,6 +1543,7 @@ export function NotificationSettings() {
                             {showSecrets["tg_token"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
                         </div>
+                        <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.botTokenHelp")}</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.chatId")}</Label>
@@ -2061,6 +2070,7 @@ export function NotificationSettings() {
                     Enable toggle + Test button pattern as the other
                     channels. */}
                 <TabsContent value="apprise" className="space-y-3 pt-2">
+                  <AppriseServiceHelp />
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Label className="text-xs font-medium">{t("settings.notifications.ui.enableApprise")}</Label>
@@ -2296,6 +2306,12 @@ export function NotificationSettings() {
                             
                             // Restore previously saved model for the new provider (if any)
                             const savedModel = config.ai_models?.[v] || ''
+                            setShowSecrets(p => ({ ...p, ai_key: false }))
+                            setRevealedSecrets(p => {
+                              const next = { ...p }
+                              delete next.ai_key
+                              return next
+                            })
                             
                             updateConfig(p => ({ 
                               ...p, 
@@ -2355,11 +2371,13 @@ export function NotificationSettings() {
                         </div>
                       )}
                       
-                      {/* API Key (not shown for Ollama) */}
-                      {config.ai_provider !== "ollama" && (
+                      {/* Ollama gateways may require a key; native servers do not. */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.apiKey")}</Label>
+                            <Label htmlFor="notification-ai-api-key" className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.apiKey")}</Label>
+                            {config.ai_provider === "ollama" && (
+                              <span className="text-xs text-muted-foreground">({t("settings.notifications.ui.optional")})</span>
+                            )}
                             {AI_PROVIDERS.find(p => p.value === config.ai_provider)?.keyUrl && (
                               <a
                                 href={AI_PROVIDERS.find(p => p.value === config.ai_provider)?.keyUrl}
@@ -2373,9 +2391,10 @@ export function NotificationSettings() {
                           </div>
                           <div className="flex items-center gap-2">
                         <Input
+                          id="notification-ai-api-key"
                           type={showSecrets["ai_key"] ? "text" : "password"}
                           className="h-9 text-sm font-mono"
-                          placeholder="sk-..."
+                          placeholder={config.ai_provider === "ollama" ? "" : "sk-..."}
                           value={secretValue("ai_key", config.ai_api_keys?.[config.ai_provider] || "")}
                           onChange={e => updateConfig(p => ({
                             ...p,
@@ -2393,8 +2412,12 @@ export function NotificationSettings() {
                               {showSecrets["ai_key"] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
+                          {config.ai_provider === "ollama" && (
+                            <p className="text-xs text-muted-foreground">
+                              {t("settings.notifications.ai.ollamaApiKeyHint")}
+                            </p>
+                          )}
                         </div>
-                      )}
                       
                       {/* Model - selector with Load button for all providers */}
                       <div className="space-y-2">

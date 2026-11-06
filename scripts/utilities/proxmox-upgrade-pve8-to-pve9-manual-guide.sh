@@ -95,7 +95,7 @@ show_proxmox_upgrade_manual_guide() {
     show_command "2.1" \
         "${YW}$(translate "If this node runs hyper-converged Ceph: ensure Ceph is 19.x (Squid) BEFORE upgrading PVE.")${CL}\n\n" \
         "ceph --version" \
-        "$(translate "If not 19.x, upgrade Ceph (Reef→Squid) first per the official guide:") ${BL}https://pve.proxmox.com/wiki/Ceph_Squid${CL}" \
+        "$(translate "If not 19.x, upgrade Ceph (Reef→Squid) first per the official guide:") ${BL}https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid${CL}" \
         "\n"
 
 

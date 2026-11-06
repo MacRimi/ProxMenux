@@ -1,18 +1,18 @@
 {
   "meta": {
-    "title": "Importar disco a VM | ProxMenux Documentation",
+    "title": "Importar disco a una VM | Documentación de ProxMenux",
     "description": "Adjunta un disco físico a una VM Proxmox existente con ProxMenux. Detección segura de discos (excluye sistema, montados, en uso, ZFS/RAID/LVM), rutas persistentes /dev/disk/by-id e interfaces SATA / SCSI / VirtIO / IDE.",
-    "ogTitle": "Importar disco a VM | ProxMenux Documentation",
+    "ogTitle": "Importar disco a una VM | Documentación de ProxMenux",
     "ogDescription": "Adjunta un disco físico a una VM Proxmox existente. Usa rutas persistentes /dev/disk/by-id y soporta SATA / SCSI / VirtIO / IDE."
   },
   "header": {
     "title": "Importar disco a VM",
     "description": "Adjunta un disco físico ya existente en el host Proxmox a una máquina virtual existente. ProxMenux detecta los discos libres, te deja elegir la VM destino y el tipo de bus (SATA / SCSI / VirtIO / IDE), y lo adjunta todo usando rutas persistentes /dev/disk/by-id para que el mapeo sobreviva a reinicios y cambios en el orden de los dispositivos.",
-    "section": "Disk Manager · VM"
+    "section": "Administrador de discos · VM"
   },
   "intro": {
     "title": "Qué hace esto",
-    "body": "Esto es un passthrough de disco crudo: el SO guest ve la unidad como un block device real (con sus datos SMART y geometría nativa). El disco se adjunta por su ruta <code>/dev/disk/by-id/…</code> — no <code>/dev/sdX</code> — para que la asignación no se rompa si las controladoras de disco enumeran los dispositivos en otro orden en el siguiente arranque."
+    "body": "Conecta un disco físico como dispositivo subyacente de una interfaz de disco virtual. El invitado no recibe automáticamente los datos SMART nativos ni las funciones de la controladora física; usa passthrough PCI de la controladora si los necesitas. Se conecta mediante su ruta <code>/dev/disk/by-id/…</code> cuando existe, para que un cambio en el orden de enumeración al arrancar no rompa la asignación; si no existe, se usa <code>/dev/sdX</code>."
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script",
@@ -49,7 +49,7 @@
         "items": [
           "<strong>SCSI</strong> — opción por defecto moderna para Linux y Windows con drivers VirtIO-SCSI instalados.",
           "<strong>SATA</strong> — amplia compatibilidad, funciona por defecto en prácticamente cualquier guest.",
-          "<strong>VirtIO</strong> — block device paravirtualizado, el más rápido pero requiere drivers en el guest.",
+          "<strong>VirtIO</strong>: dispositivo de bloques paravirtualizado eficiente; requiere controladores en el invitado.",
           "<strong>IDE</strong> — para guests legacy que no tienen ninguno de los drivers anteriores."
         ]
       },
@@ -63,13 +63,13 @@
     "heading": "Equivalente manual",
     "body": "El script es un wrapper alrededor de <code>qm set</code>. El comando exacto para un solo disco se ve así:",
     "migrationTitle": "La migración en vivo no es posible",
-    "migrationBody": "Una VM con un disco en passthrough está <strong>atada al host que expone ese disco</strong>. La migración en vivo a otro nodo Proxmox fallará porque el nodo destino no ve la misma ruta <code>/dev/disk/by-id/…</code>. Usa replicación o backup/restore en su lugar, o elige discos virtuales en almacenamiento compartido si necesitas movilidad.",
+    "migrationBody": "Una VM con un disco físico conectado directamente está <strong>ligada al host que expone ese disco</strong>. Otro nodo normalmente no dispone de la misma ruta <code>/dev/disk/by-id/…</code> ni de sus datos. Copia y transfiere esos datos por separado, o usa discos virtuales gestionados en almacenamiento compartido o con replicación compatible para facilitar la movilidad. No presupongas que la replicación de almacenamiento de Proxmox cubre este dispositivo.",
     "shareTitle": "No compartas un disco físico entre VMs",
     "shareBody": "Adjuntar el mismo disco físico a dos VMs a la vez corromperá los datos en la siguiente escritura. ProxMenux detecta esta situación y la bloquea, pero si te saltas el script (un <code>qm set</code> directo), asegúrate de que solo un guest monte el disco."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noDisksTitle": "\"No disks available for this VM\"",
+    "noDisksTitle": "\"No hay discos disponibles para esta máquina virtual\"",
     "noDisksIntro": "El script encontró discos, pero todos los candidatos se filtraron. Razones comunes:",
     "noDisksItems": [
       "Cada disco restante ya está referenciado en la config de la VM destino.",

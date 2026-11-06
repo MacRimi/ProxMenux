@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Importar VM de OVA / OVF | Documentação ProxMenux",
+    "description": "Importe uma VM VMware ESXi / Workstation / Fusion / VirtualBox / ProxMenux no Proxmox VE. Extrai OVA automaticamente, analisa metadados OVF, cria a VM e importa cada disco no formato nativo do armazenamento (qcow2 / raw).",
+    "ogTitle": "Importar VM de OVA / OVF | Documentação ProxMenux",
+    "ogDescription": "Importe no Proxmox VMs exportadas do VMware, VirtualBox ou ProxMenux. Os discos são convertidos automaticamente para o formato nativo do armazenamento."
+  },
+  "header": {
+    "title": "Importar VM de OVA / OVF",
+    "description": "Importa um pacote OVA / OVF no Proxmox VE: extrai arquivos OVA, lê no descritor OVF o número de vCPUs, memória, placas de rede e referências dos discos, cria a VM e importa cada disco com qm importdisk para o armazenamento escolhido. Compatível com exportações VMware (ESXi / Workstation / Fusion), VirtualBox e ProxMenux.",
+    "section": "Utilitários"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Cria uma VM completa no Proxmox a partir de um pacote portátil. Após a importação, está pronta para arrancar; recomendam-se verificações e ajustes do modelo de placa de rede, firmware e tipo de sistema para desempenho e compatibilidade."
+  },
+  "picker": {
+    "heading": "Selector de ficheiros",
+    "intro": "No lançamento, o script oferece dois diretórios predefinidos ou um caminho manual:",
+    "items": [
+      "<code>/var/lib/vz/dump</code> — o diretório de backup padrão do Proxmox vzdump.",
+      "<code>/var/lib/vz/template/iso</code> — útil se transferiu o OVA para aí por sftp.",
+      "Caminho manual — para arquivos OVA / OVF em qualquer outro lugar no host."
+    ],
+    "outro": "Ele então lista todos os arquivos <code>.ova</code> e <code>.ovf</code> no diretório escolhido.",
+    "imageAlt": "Janela de seleção do ficheiro da VM a importar"
+  },
+  "flow": {
+    "heading": "Como funciona a importação",
+    "nodes": [
+      {
+        "label": "Entrada OVA / OVF",
+        "detail": ".ova → tar xf para\n /tmp/.proxmenux-import-*\n.ovf → usar no local",
+        "variant": "source"
+      },
+      {
+        "label": "Processar + diálogos",
+        "detail": "AWK lê OVF\n(nome, vCPU, RAM, NICs,\ndiscos). Escolha de\nVMID / armazenamento / bridge",
+        "variant": "bridge"
+      },
+      {
+        "label": "qm create + importdisk",
+        "detail": "qm create $VMID\nqm importdisk\n(VMDK → formato do armazenamento)\nqm set --scsiN",
+        "variant": "target"
+      }
+    ]
+  },
+  "ovf": {
+    "heading": "Processamento OVF",
+    "intro": "Um analisador <strong>gawk</strong> lê o descritor OVF e retira os metadados VM. O analisador usa a forma de 3-argumento do <code>match()</code> que é específica do gawk (mawk — o <code>awk</code> padrão no Debian / Proxmox — não o suporta). Na primeira importação, o script auto-instala gawk através do par canônico <code>ensure_repositories</code> + <code>install_single_package</code> se estiver faltando; as importações subsequentes começam instantaneamente. Campos extraídos:",
+    "headerField": "Campo",
+    "headerSource": "Fonte em OVF",
+    "headerDefault": "Predefinição se faltar",
+    "rows": [
+      {
+        "field": "Nome VM",
+        "source": "<Name> (primeira correspondência)",
+        "default": "imported-vm"
+      },
+      {
+        "field": "Contagem de vCPU",
+        "source": "RASD ResourceType 3 → VirtualQuantity",
+        "default": "1"
+      },
+      {
+        "field": "Memória (MiB)",
+        "source": "RASD ResourceType 4 → VirtualQuantity",
+        "default": "1024"
+      },
+      {
+        "field": "Contagem NIC",
+        "source": "contagem de ResourceType 10",
+        "default": "1"
+      },
+      {
+        "field": "Tipo de sistema operacional",
+        "source": "/Linux/ ou /Windows/ na descrição",
+        "default": "other"
+      },
+      {
+        "field": "Referências do disco",
+        "source": "atributos href terminando em .vmdk / .qcow2 / .img / .raw",
+        "default": "nenhum (importação aborta)"
+      }
+    ]
+  },
+  "memWarn": {
+    "title": "Ambiguidade da unidade de memória",
+    "body": "O analisador converte as unidades de memória reconhecidas para <strong>MiB</strong>, incluindo bytes, KiB, MiB, GiB e as etiquetas de texto suportadas. As unidades em falta ou desconhecidas são <em>tratadas como MiB</em>. Após importar, compare <code>qm config $VMID | grep memory</code> com a RAM documentada da VM de origem e, se necessário, corrija com <code>qm set $VMID --memory &lt;MiB&gt;</code>."
+  },
+  "dialog": {
+    "heading": "Fluxo de diálogo de importação",
+    "items": [
+      "<strong>VMID</strong> — propõe o próximo identificador disponível (<code>pvesh get /cluster/nextid</code>).",
+      "<strong>Nome da VM</strong> — usa o nome lido no OVF; pode alterá-lo.",
+      "<strong>Armazenamento de destino</strong> — lista dos armazenamentos com conteúdo <code>images</code>, obtida por <code>pvesm status -content images</code>.",
+      "<strong> Ponte de rede</strong> — menu de pontes (de <code>ip link show type bridge</code>); escolhe automaticamente se existir apenas um; o padrão é <code>vmbr0</code>.",
+      "<strong>Confirmação</strong> — diálogo sumário com VMID, nome, vCPU, memória, NICs, armazenamento, ponte e a lista de discos a serem importados. Cancelar aqui = nada muda."
+    ]
+  },
+  "create": {
+    "heading": "Criação de VM",
+    "intro": "Após a confirmação, o script é executado:",
+    "code": "qm create $VMID \\\n    --name \"$NAME\" \\\n    --memory $MEMORY \\\n    --cores $VCPU \\\n    --ostype $OSTYPE \\\n    --scsihw lsi \\\n    --net0 e1000,bridge=$BRIDGE\n\n# For each additional NIC:\nqm set $VMID --netN e1000,bridge=$BRIDGE",
+    "outro": "Controlador SCSI padrão para <code>lsi</code> (LSI Logic) para compatibilidade VMDK. NICs padrão para <code>e1000</code> (compatibilidade universal) na ponte escolhida."
+  },
+  "diskLoop": {
+    "heading": "Loop de importação de disco",
+    "intro": "Para cada referência de disco no OVF:",
+    "items": [
+      "<code>qm importdisk $VMID $disk_path $STORAGE</code> — importa o disco num formato suportado pelo armazenamento de destino e cria uma entrada <code>unusedN:</code> na configuração da VM.",
+      "O script procura com grep na configuração a referência <code>unusedN</code> acabada de criar.",
+      "<code>qm set $VMID --scsiN $unused_disk</code> — liga o disco como <code>scsi0</code>, <code>scsi1</code>, ...",
+      "<code>qm set $VMID --delete unusedN</code> — elimina o marcador unused que deixou de ser necessário."
+    ],
+    "outro": "A inicialização é definida para o primeiro disco SCSI: <code>qm set $VMID --boot c --bootdisk scsi0</code>."
+  },
+  "postImport": {
+    "heading": "Ajustes recomendados após a importação",
+    "intro": "A importação usa configurações amplamente compatíveis para favorecer o arranque à primeira tentativa. Depois de confirmar o arranque, escolha configurações mais eficientes pela interface Proxmox ou CLI:",
+    "headerSetting": "Configuração",
+    "headerDefault": "Predefinição após a importação",
+    "headerRecommended": "Recomendado se suportado pelo sistema convidado",
+    "rows": [
+      {
+        "setting": "Modelo NIC",
+        "default": "e1000",
+        "recommended": "VirtIO (muito mais rápido, exige controlador no sistema convidado)"
+      },
+      {
+        "setting": "Controlador SCSI",
+        "default": "LSI",
+        "recommended": "VirtIO SCSI single (Linux recente ou Windows com controladores VirtIO)"
+      },
+      {
+        "setting": "Firmware (BIOS / UEFI)",
+        "default": "Por omissão do Proxmox (BIOS)",
+        "recommended": "Use o firmware da VM de origem; uma escolha incorreta impede o arranque"
+      },
+      {
+        "setting": "Agente convidado QEMU",
+        "default": "Desligado",
+        "recommendedRich": "Ativar e instalar <code>qemu-guest-agent</code> no sistema convidado (melhores cópias de segurança e indicação dos IPs)"
+      },
+      {
+        "setting": "Tipo de sistema operacional",
+        "default": "l26 / win10 / other (heurística)",
+        "recommended": "Verifique contra o sistema operacional convidado real"
+      },
+      {
+        "setting": "Visualização",
+        "default": "Padrão",
+        "recommended": "VirtIO-GPU ou SPICE (melhor desempenho da consola)"
+      }
+    ]
+  },
+  "fwWarn": {
+    "title": "Firmware mismatch = nenhuma inicialização",
+    "body": "Se a VM de origem usava UEFI mas o Proxmox a cria com BIOS, ou vice-versa, o sistema convidado não encontra um disco de arranque. Verifique <em>FirmwareType / firmware</em> no OVF ou nas configurações originais e use a mesma escolha no Proxmox: <code>qm set $VMID --bios ovmf</code> para UEFI; o valor predefinido para BIOS é <code>seabios</code>."
+  },
+  "notImported": {
+    "heading": "O QUE NÃO É IMPORTADO",
+    "items": [
+      "<strong>Bridges de rede específicas</strong> — apenas o número de placas é preservado. Todas usam a bridge escolhida na importação.",
+      "<strong>Modelo da placa de rede</strong> — usa e1000 por predefinição.",
+      "<strong>Tipo de firmware BIOS / UEFI</strong> — usa a predefinição Proxmox, BIOS.",
+      "<strong>Configuração de passthrough PCI</strong>.",
+      "<strong>TPM</strong> (vTPM).",
+      "Unidades <strong>cloud-init</strong>.",
+      "<strong>Snapshots</strong> — apenas o estado atual.",
+      "<strong>USB / serial / dispositivos paralelos</strong> declarados no OVF.",
+      "Opções de <strong>etiquetas / notas / arranque automático da VM</strong>."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "orphanTitle": "A VM foi criada mas a importação dos discos falhou: ficou uma VM parcial",
+    "orphanIntro": "Quando a importação falha, o script propõe remover a VM parcial e os discos importados. Se recusou ou a eliminação automática falhou, inspecione a VM e remova-a manualmente com:",
+    "orphanCode": "qm destroy $VMID --destroy-unreferenced-disks 1",
+    "orphanOutro": "Em seguida, corrija a causa subjacente (provavelmente espaço em disco no armazenamento alvo) e re-importação.",
+    "memTitle": "VM importado tem 8 MB de RAM (ou 8 TB)",
+    "memIntro": "O analisador converte as AllocationUnits reconhecidas para MiB. Unidades em falta ou desconhecidas são tratadas como MiB. Inspecione o OVF e compare a memória importada com a VM de origem. Corrija se necessário:",
+    "memCode": "qm set $VMID --memory 8192    # 8 GiB",
+    "bootTitle": "A VM importada não arranca: \"No bootable device\"",
+    "bootIntro": "Uma causa frequente é uma diferença BIOS / UEFI. A VM usava UEFI, mas o Proxmox criou-a com BIOS. Configure o firmware correspondente:",
+    "bootCode": "qm set $VMID --bios ovmf       # UEFI\n# also add an EFI disk for the EFI vars:\nqm set $VMID --efidisk0 $STORAGE:1,format=qcow2,efitype=4m,pre-enrolled-keys=1",
+    "bootOutro": "Outra causa frequente: a ordem de arranque aponta para scsi0, mas o disco do sistema é scsi1. Altere a ordem no separador Opções da VM.",
+    "bsodTitle": "Uma VM Windows exportada do VMware apresenta um ecrã azul no primeiro arranque",
+    "bsodBody": "O Windows é sensível a mudanças do controlador de disco. Instale os controladores VirtIO <em>antes</em> de exportar do VMware, ou mantenha o controlador <code>lsi</code> predefinido. Mude para VirtIO SCSI só depois de arrancar o sistema convidado e instalar os controladores VirtIO no Windows.",
+    "zeroTitle": "O analisador OVF indica 0 discos",
+    "zeroBody": "O OVF pode usar referências de disco que o analisador não reconhece. Abra-o e procure uma entrada <code>&lt;File ovf:href=\"...vmdk\" ...&gt;</code> para cada disco. Se o disco for realmente VMDK mas tiver uma extensão invulgar como <code>.dat</code>, mude-a para <code>.vmdk</code> e atualize a referência OVF. Mudar o nome não converte o formato.",
+    "awkTitle": "awk: erro de sintaxe em ou próximo , — o analisador falha em cada OVA / OVF",
+    "awkIntro": "O analisador OVF usa a sintaxe gawk de <code>match()</code> com três argumentos, não suportada pelo mawk, o <code>awk</code> predefinido no Debian / Proxmox. As versões recentes instalam gawk no primeiro uso por <code>ensure_repositories</code> + <code>install_single_package</code>. Se usa uma cópia antiga, instale-o manualmente:",
+    "awkCode": "apt-get install -y gawk",
+    "awkOutro": "Depois repita a importação.",
+    "netTitle": "A rede não funciona após a primeira inicialização",
+    "netBody": "O sistema convidado pode não ter controladores para o modelo e1000, ou a bridge escolhida pode estar errada. No separador Hardware da VM, altere Network Device → Model. Verifique também <code>ip a</code> no sistema convidado: a interface pode chamar-se ens18 em vez de eth0, enquanto a configuração de rede ainda usa o nome antigo."
+  },
+  "files": {
+    "heading": "Ficheiros envolvidos",
+    "code": "scripts/utilities/import_vm_ova_ovf.sh       # this script\n/tmp/.proxmenux-import-*/                    # temp extraction dir for OVA\n/etc/pve/nodes/<node>/qemu-server/<vmid>.conf  # created by qm create\n<storage>/<vmid>/<vmid>-disk-<n>.<fmt>        # disk images, format depends on storage"
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/utils/export-vm",
+        "label": "Exportar VM para OVA / OVF",
+        "tail": " — a ferramenta complementar para exportar a VM."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Visão geral dos utilitários",
+        "tail": " — voltar ao panorama da secção."
+      }
+    ]
+  }
+}

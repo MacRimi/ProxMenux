@@ -98,7 +98,7 @@
     "noLunTitle": "LUNs do not appear in /dev/disk/by-path after registering",
     "noLunBody": "<code>pvesm add iscsi</code> succeeded but the kernel is not seeing block devices. Check <code>iscsiadm --mode session</code> — if no session is active, start one manually with <code>iscsiadm --mode node --login</code>. If a session exists but no LUNs appear, force a rescan: <code>iscsiadm --mode session --rescan</code>. If still nothing, the target probably has no LUNs assigned to this IQN yet (configure LUN mapping on the target).",
     "chapTitle": "CHAP authentication",
-    "chapBody": "ProxMenux does not expose the CHAP username / password fields in the interactive flow. If your target requires CHAP, register with ProxMenux first (discovery with CHAP may fail, but <code>pvesm add</code> will still write the entry), then add credentials manually: <code>pvesm set &lt;id&gt; --username &lt;chap-user&gt;</code> and edit <code>/etc/iscsi/iscsid.conf</code> with the password, then <code>systemctl restart iscsid</code>. This is a gap in the current script — documented here so you know what to do."
+    "chapBody": "ProxMenux does not expose CHAP username/password fields in the interactive flow. If discovery fails, the script stops before <code>pvesm add</code>; it does not register the storage anyway. Configure the target’s CHAP requirements separately in <code>open-iscsi</code>, including discovery authentication when required, then retry. Use <code>iscsiadm</code> to check the configuration and verify active sessions with <code>iscsiadm --mode session</code>."
   },
   "related": {
     "heading": "Related",

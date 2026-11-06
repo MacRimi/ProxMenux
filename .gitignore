@@ -54,6 +54,7 @@ Thumbs.db
 
 # Cache
 .cache
+/oci/.catalog-cache/
 /web/.cache
 
 # IDE/editor files

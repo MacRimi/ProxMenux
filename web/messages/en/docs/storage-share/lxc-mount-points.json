@@ -24,7 +24,7 @@
     "arrowLabel": "bind mount",
     "outro": "The host path on the left and the container path on the right can be different — for example, <code>/mnt/nas-films</code> on the host can become <code>/media/films</code> inside the container. The script adds the entry to the container config (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) using the next free <code>mpN</code> index, with two safe-defaults baked in:",
     "items": [
-      "<code>shared=1</code> — tells Proxmox the data is shared storage, so it does not try to migrate the disk when you migrate the container.",
+      "<code>shared=1</code> — tells Proxmox the mount uses shared data, so it does not migrate the data with the CT. This flag does not replicate data: the same path and data must already be available on the destination node.",
       "<code>backup=0</code> — excludes the bind mount from <code>vzdump</code> backups (the data lives on the host, you back it up separately)."
     ]
   },
@@ -64,7 +64,7 @@
     "idmapChangesRich": "Custom UID/GID mapping in <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> plus matching <code>/etc/subuid</code> + <code>/etc/subgid</code> entries on the host. CT must be restarted on every change.",
     "idmapWhenRich": "You need a <em>specific</em> UID inside the CT to map to a <em>specific</em> UID on the host (e.g. <code>media:1000</code> in the CT must own files as <code>media:1000</code> on the host so NFS doesn't squash). A more rigid setup, normally only worth it for that exact scenario.",
     "idmapTipTitle": "When you actually need lxc.idmap",
-    "idmapTipBody": "If the LXC Mount Manager doesn't cover your case — typically because you need files written from inside the CT to land on the host as a specific UID/GID (NFS exports with <code>all_squash</code>, Samba shares with strict ownership, sharing a directory with a host user that has the same name as someone inside the CT) — that is the moment to add <code>lxc.idmap</code> entries by hand. The Mount Manager won't fight you: the bind-mount line it wrote is independent of any idmap configuration you add later."
+    "idmapTipBody": "Use manual ID mapping when files written in the CT must appear on the host under a specific numeric UID/GID, for example to share ownership with a host user. It cannot override NFS <code>all_squash</code>; the server still decides the anonymous identity and permissions. Add <code>lxc.idmap</code> entries by hand if needed. The Mount Manager’s bind-mount line is independent of those entries."
   },
   "opening": {
     "heading": "Opening the tool",

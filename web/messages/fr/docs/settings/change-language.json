@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "title": "Changer de langue | Documentation ProxMenux",
+    "description": "Choisissez parmi huit langues pour ProxMenux. Chaque installation inclut des catalogues JSON de traductions prégénérés ; aucun service de traduction ni environnement Python n'est nécessaire sur l'hôte. Le menu se recharge automatiquement.",
+    "ogTitle": "Changer de langue | Documentation ProxMenux",
+    "ogDescription": "Choisissez une des huit langues de ProxMenux dans les Paramètres. Disponible sur chaque installation."
+  },
+  "header": {
+    "title": "Changer de langue",
+    "description": "Changez la langue de ProxMenux parmi huit langues prises en charge. Le choix est enregistré dans config.json et le menu redémarre dans la nouvelle langue. Chaque installation comprend les catalogues de traductions.",
+    "section": "Paramètres"
+  },
+  "intro": {
+    "title": "Ce que c'est",
+    "body": "Un dialogue répertorie les huit langues prises en charge. ProxMenux enregistre votre choix dans <code>config.json</code> sous <code>.language</code>, puis relance <code>config_menu.sh</code> pour l'appliquer immédiatement."
+  },
+  "warn": {
+    "title": "Disponible sur chaque installation",
+    "body": "Les Paramètres affichent toujours Changer de langue. Les catalogues sont installés dans <code>/usr/local/share/proxmenux/lang/</code> <em>et</em> la langue choisie est enregistrée dans <code>config.json</code>. L'ancien environnement Python de traduction n'est pas nécessaire."
+  },
+  "supported": {
+    "heading": "Langues prises en charge",
+    "headerCode": "Code",
+    "headerLang": "Langue",
+    "headerNotes": "Remarques",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "Anglais",
+        "notes": "Langue source — la plus précise"
+      },
+      {
+        "code": "es",
+        "lang": "Espagnol",
+        "notes": "Catalogue JSON prégénéré"
+      },
+      {
+        "code": "fr",
+        "lang": "Français",
+        "notes": "Catalogue JSON prégénéré"
+      },
+      {
+        "code": "de",
+        "lang": "Allemand",
+        "notes": "Catalogue JSON prégénéré"
+      },
+      {
+        "code": "it",
+        "lang": "italien",
+        "notes": "Catalogue JSON prégénéré"
+      },
+      {
+        "code": "pt",
+        "lang": "portugais",
+        "notes": "Catalogue JSON prégénéré"
+      },
+      {
+        "code": "sk",
+        "lang": "Slovaque",
+        "notes": "Catalogue JSON prégénéré"
+      },
+      {
+        "code": "sv",
+        "lang": "Suédois",
+        "notes": "Catalogue JSON prégénéré"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "L'anglais est le plus précis",
+    "body": "Les textes dans les autres langues proviennent des catalogues JSON prégénérés inclus avec ProxMenux. Les traductions manquantes sont remplacées par l'anglais ; aucun appel de traduction en direct n'est effectué sur l'hôte. L'anglais reste la référence en cas de traduction douteuse."
+  },
+  "underHood": {
+    "heading": "Comment ça marche sous le capot",
+    "items": [
+      "Le dialogue propose huit codes de langue ; choisissez-en un.",
+      "Si <code>config.json</code> existe : <code>jq --arg lang \"$new_language\" '.language = $lang''</code> met à jour le champ en place.",
+      "Si <code>config.json</code> n'existe pas : un nouveau est créé avec le code de langue dans un objet à champ unique.",
+      "Boîte de dialogue de confirmation : <em>\"Langue changée en [code]\"</em>.",
+      "<code>exec bash config_menu.sh</code> recharge le menu Paramètres avec la nouvelle langue active."
+    ]
+  },
+  "manual": {
+    "heading": "Équivalent manuel"
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "noOptionTitle": "L'option n'apparaît pas dans les paramètres",
+    "noOptionBody": "Changer de langue est toujours disponible dans les versions actuelles. Si cette option manque, mettez ProxMenux à jour avec l'installateur officiel, puis rouvrez les Paramètres.",
+    "stillEnglishTitle": "La langue a changé mais l'interface utilisateur affiche toujours l'anglais",
+    "stillEnglishBody": "Le menu se relance après le changement. Si vous avez ouvert un nouveau shell et lancé un autre point d'entrée ProxMenux, exécutez à nouveau <code>menu</code> pour appliquer la nouvelle langue. Vérifiez avec <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Afficher les informations sur la version",
+        "tail": " — confirme le canal de publication, les fichiers de traduction et la langue actuelle."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Aperçu des paramètres",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: Systemprotokolle | ProxMenux-Dokumentation",
+    "description": "Die Registerkarte Systemprotokolle konsolidiert drei Quellen in einem Bildschirm: journalctl mit Filtern und Download, Proxmox Task History (UPIDs) und Benachrichtigungsprotokoll - alle durchsuchbar, nach Schweregrad / Zeitbereich filterbar und als Textbündel herunterladbar."
+  },
+  "header": {
+    "title": "Dashboard: Systemprotokolle",
+    "description": "Drei Unterreiter in einer Ansicht: das Systemjournal (journalctl mit Filtern), der Proxmox-Aufgabenverlauf und das Benachrichtigungsprotokoll. Alle drei lassen sich durchsuchen, filtern und als Textpakete herunterladen.",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "readOnly": {
+    "title": "Read-only nach Design",
+    "body": "Dieser Reiter verändert keine Protokolldateien. Die Filter werden in der URL bzw. im Ansichtsstatus gehalten; Downloads werden auf dem Server erstellt. Das Dashboard löscht keine Einträge. Zur Protokollpflege verwenden Sie auf dem Host <code>journalctl --vacuum-time=&lt;N&gt;</code> oder <code>logrotate</code>."
+  },
+  "topRow": {
+    "heading": "Obere Reihe: vier Zähler",
+    "items": [
+      "<strong>Einträge insgesamt</strong> — Anzahl der Protokolleinträge im aktiven Filterzeitraum.",
+      "<strong>Fehler</strong> — Anzahl der Einträge mit Schweregrad ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
+      "<strong>Warnungen</strong> — Anzahl der Einträge mit Schweregrad 4 (<code>warning</code>).",
+      "<strong>Sicherungen</strong>: Anzahl der Backup-Archive auf den konfigurierten Backup-Speichern."
+    ]
+  },
+  "subtabs": {
+    "heading": "Drei Unterreiter",
+    "logsTitle": "Protokolle",
+    "logsIntro": "Das Systemjournal wird auf dem Server mit <code>journalctl</code> abgerufen. Die Werkzeugleiste bietet folgende Filter :",
+    "logsFilters": [
+      "<strong>Stufe</strong>: Alle Ebenen, Fehler, Warnung oder Info.",
+      "<strong>Zeitbereich</strong>: 1 Tag / 3 Tage / 1 Woche / 2 Wochen / 1 Monat oder eine benutzerdefinierte Anzahl von Tagen (bis zu 90).",
+      "<strong>Freitextsuche</strong>: Teilzeichenfolge ohne Beachtung der Groß-/Kleinschreibung über Nachricht, Dienst, PID, Hostname und Unit, im Browser angewendet.",
+      "<strong>Dienstfilter</strong>: auf einen Dienst beschränken (der Journal-<code>SYSLOG_IDENTIFIER</code>)."
+    ],
+    "logsRowsAfter": "Jede Zeile zeigt Zeitstempel, Schweregradabzeichen, Quelleinheit und die Nachricht. Lange Nachrichten brechen mit einem \"mehr anzeigen\"-Schalter zusammen. Die Aktion <strong>Download</strong> bündelt den aktuellen Filter über <code>GET /api/logs/download</code> in einer einzigen <code>.txt</code>-Datei – nützlich, wenn Sie ein Stück Journal mit jemandem teilen möchten.",
+    "logDetailsModalTitle": "Dialog Protokolldetails",
+    "logDetailsBody": "Ein Klick auf eine Zeile öffnet <strong>Protokolldetails</strong> mit allen strukturierten Feldern, die journald für diesen Eintrag erfasst hat — wie bei <code>journalctl --output=verbose</code> auf dem Host.",
+    "logDetailsImageAlt": "Dialog Protokolldetails — einzelner Journaleintrag mit Stufe, Dienst, Zeitstempel, Quelle, systemd-Unit, Prozess-ID, Hostname und vollständiger Nachricht",
+    "logDetailsImageCaption": "Protokolldetails — alle strukturierten journald-Felder dieses Eintrags mit der vollständigen, ungekürzten Nachricht am Ende. Hilfreich bei cron- und Dienstprotokollen, wenn die ausgeführte Befehlszeile wichtig ist.",
+    "fieldsIntro": "Gezeigte Felder:",
+    "fields": [
+      "<strong>Level</strong> — farbiges Schweregradabzeichen (INFO / WARNUNG / ERROR / KRITIKAL).",
+      "<strong>Service</strong> — Kurzname der Einheit / des Prozesses, der den Eintrag ausgegeben hat.",
+      "<strong>Timestamp</strong> — vollständiges Datum und Uhrzeit der Logzeile.",
+      "<strong>Source</strong> — Ursprung des Eintrags (Journal, Kernel, Audit, ...).",
+      "<strong>Systemd Unit</strong> — die tatsächliche <code>.service</code>/<code>.timer</code>/<code>.socket</code>-Einheit, wenn der Eintrag mit einer Einheit verknüpft war.",
+      "<strong>Process ID</strong> — PID des Sendevorgangs.",
+      "<strong>Hostname</strong> — nützlich, wenn Zeitschriften über Clusterknoten weitergeleitet werden.",
+      "<strong>Nachricht</strong> — vollständige, ungekürzte Nachricht in einem Monospace-Block zum Kopieren."
+    ],
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
+    "maxLevelStoreBody": "Bei einer neuen Proxmox-Installation verwendet journald standardmäßig <code>MaxLevelStore=warning</code> und verwirft dadurch Info-Meldungen. Monitor erkennt dies beim Start und ergänzt eine Drop-in-Datei (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) mit dem Grenzwert <code>info</code>. So werden Informationsmeldungen und schwerwiegendere Meldungen gespeichert; debug ist darin nicht enthalten.",
+    "backupsTitle": "Sicherungen",
+    "backupsBody": "Die Backup-Archive auf jedem backupfähigen Speicher (dir, NFS, CIFS, PBS), gelesen mit <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>. Karten oben zeigen die Anzahl der VMs und LXCs sowie die Gesamtgröße; darunter steht eine Zeile pro Archiv mit Typ, Speicher, Größe und Datum. Die Wiederherstellung erfolgt in der Proxmox-Weboberfläche.",
+    "notificationsTitle": "Benachrichtigungen",
+    "notificationsBody1": "Proxmox-Benachrichtigungsaktivität: Journalzeilen von Proxmox-Diensten, die Benachrichtigungen, E-Mail, Webhooks oder Alarme erwähnen, die Ziele in /etc/pve/notifications.cfg und Backup-Aufgaben aus der Cluster-Aufgabenliste. Bei Zeilen von Backup-Aufgaben kann das vollständige Aufgabenprotokoll heruntergeladen werden. Der Verlauf dessen, was der Monitor selbst versendet hat, befindet sich unter Einstellungen → Benachrichtigungen → Benachrichtigungsverlauf.",
+    "notificationsBody2": "Hier prüfen Sie, was das eigene Benachrichtigungssystem von Proxmox tut. Die Kanäle des Monitors konfigurieren Sie auf der Detailseite <link>Benachrichtigungen</link>."
+  },
+  "dataCollected": {
+    "heading": "Wie die Daten gesammelt werden",
+    "headerSubtab": "Unterregisterkarte",
+    "headerEndpoint": "Endpunkt",
+    "headerSource": "Quelle",
+    "rows": [
+      {
+        "subtab": "Protokolle (Live-Filter)",
+        "endpoint": "/api/logs",
+        "source": "Der Tab ruft <code>/api/logs?since_days=N</code> ab; Stufe, Dienst und Textsuche werden im Browser gefiltert. Die API akzeptiert auch <code>priority</code> und <code>service</code>, die der Tab noch nicht nutzt."
+      },
+      {
+        "subtab": "Herunterladen",
+        "endpoint": "/api/logs/download",
+        "source": "Dieselbe Abfrage als Klartext für grep / less."
+      },
+      {
+        "subtab": "Sicherungen",
+        "endpoint": "/api/backups",
+        "source": "Backup-Archive, aufgelistet aus jedem Backup-Speicher mit <code>pvesh get /nodes/localhost/storage/&lt;id&gt;/content</code>."
+      },
+      {
+        "subtab": "Protokoll der Sicherungsaufgabe (Benachrichtigungen)",
+        "endpoint": "/api/task-log/&lt;upid&gt;",
+        "source": "Vollständiges Aufgabenprotokoll im Klartext aus <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
+      },
+      {
+        "subtab": "Benachrichtigungen",
+        "endpoint": "/api/notifications",
+        "source": "<code>journalctl --grep</code> über Proxmox-Units, <code>/etc/pve/notifications.cfg</code> und Backup-Aufgaben aus <code>pvesh get /cluster/tasks</code>."
+      }
+    ],
+    "apiIntro": "Live-Filter und Downloads sind auch über die API erreichbar:",
+    "codeComment1": "# Fehler und schwerwiegendere Meldungen der letzten Stunde mit einem Suchwort",
+    "codeComment2": "# Laden Sie das vollständige Journal der letzten 6 Stunden als Klartext herunter",
+    "codeComment3": "# Vollständige Ausgabe einer bestimmten Aufgabe anhand ihrer UPID abrufen"
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — die Kategorie Systemprotokolle zur Erkennung dauerhafter, sprunghafter oder kaskadierender Muster."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": " — die Journalüberwachung liest dieselbe Quelle und erzeugt bei Treffern Benachrichtigungen."
+      },
+      {
+        "label": "API-Referenz",
+        "href": "/docs/monitor/api",
+        "tail": " — die Endpunkte logs und task-log mit ihren Abfrageparametern."
+      },
+      {
+        "label": "Dashboard-Index",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — die anderen Reiter."
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -18,6 +18,8 @@ import { Security } from "./security"
 import { Profile } from "./profile"
 import { About } from "./about"
 import { BackupTab } from "./backup-tab"
+import { PBSPanel } from "./pbs-panel"
+import { MonitorSwitcher } from "./monitor-switcher"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
@@ -30,6 +32,7 @@ import {
   CheckCircle,
   XCircle,
   Server,
+  ListChecks,
   Menu,
   LayoutDashboard,
   HardDrive,
@@ -45,7 +48,9 @@ import {
   ClipboardCheck,
   Info,
   DatabaseBackup,
+  Database,
   ChevronDown,
+  Clock,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -97,9 +102,34 @@ const _dashboardPrefetchFetcher = (url: string) => fetchApi(url)
 
 export function ProxmoxDashboard() {
   const t = useT()
-  useSWR("/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
-  useSWR("/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
-  const { order: tabOrder } = useTabOrder()
+  const { data, error } = useSWR<{ product: string }>("/api/platform", url => fetchApi<{ product: string }>(url), { revalidateOnFocus: false })
+  if (!data && !error) return <p role="status" className="p-8">{t("app.loading")}</p>
+  if (data?.product === "pbs") return <PBSDashboard />
+  return <PVEDashboard />
+}
+
+function PVEDashboard() {
+  return <MonitorDashboard product="pve" />
+}
+
+function PBSDashboard() {
+  return <MonitorDashboard product="pbs" />
+}
+
+type Product = "pve" | "pbs"
+type TopTab = TabId | "datastores" | "pbs-tasks"
+
+// Proxmox Backup Server has no guests, apps or PVE storage: it keeps the
+// same header, health and administration with its own top-level sections.
+const PBS_TABS: TopTab[] = ["overview", "datastores", "pbs-tasks", "terminal", "admin"]
+
+function MonitorDashboard({ product }: { product: Product }) {
+  const t = useT()
+  const isPbs = product === "pbs"
+  useSWR(isPbs ? null : "/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  useSWR(isPbs ? null : "/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  const { order: userTabOrder } = useTabOrder()
+  const tabOrder: TopTab[] = isPbs ? PBS_TABS : userTabOrder
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -117,8 +147,8 @@ export function ProxmoxDashboard() {
   // runs post-hydration; the tiny flash is acceptable and matches the
   // pattern next-themes uses for the same reason.
   useEffect(() => {
-    setActiveTab(firstActualTab())
-  }, [])
+    setActiveTab(isPbs ? "overview" : firstActualTab())
+  }, [isPbs])
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
@@ -155,10 +185,18 @@ export function ProxmoxDashboard() {
     }
   }, [])
 
+  const healthRequest = useRef<AbortController | null>(null)
   // Fetch health info count independently (for initial load and refresh)
-  const fetchHealthInfoCount = useCallback(async () => {
+  const fetchHealthInfoCount = useCallback(async (cachedOnly = false) => {
+    if (cachedOnly && healthRequest.current) return
+    healthRequest.current?.abort()
+    const controller = new AbortController()
+    healthRequest.current = controller
+    const timeout = cachedOnly ? setTimeout(() => controller.abort(), 10000) : undefined
     try {
-      const response = await fetchApi("/api/health/full")
+      const response = await fetchApi(cachedOnly ? "/api/health/full?cached=1" : "/api/health/full", { signal: controller.signal })
+      if (healthRequest.current !== controller) return
+      if (!response?.health?.details) throw new Error("Invalid health snapshot")
       let calculatedInfoCount = 0
       
       if (response && response.health?.details) {
@@ -188,7 +226,10 @@ export function ProxmoxDashboard() {
       
       setInfoCount(calculatedInfoCount)
     } catch (error) {
-      // Silently fail - infoCount will remain at 0
+      // Preserve the last known count; a failed poll is not a healthy result.
+    } finally {
+      if (timeout !== undefined) clearTimeout(timeout)
+      if (healthRequest.current === controller) healthRequest.current = null
     }
   }, [])
 
@@ -239,20 +280,29 @@ export function ProxmoxDashboard() {
   fetchHealthInfoCount()
   fetchUpdateStatus()
 
-    // Overview polls health every 30 s; the other tabs every 60 s.
+    // Header reboot information stays current on every tab, without full audits.
+    const refreshHealth = () => {
+      if (document.visibilityState === "visible") void fetchHealthInfoCount(true)
+    }
     let interval: ReturnType<typeof setInterval> | null = null
     let healthInterval: ReturnType<typeof setInterval> | null = null
     if (activeTab === "overview") {
       interval = setInterval(fetchSystemData, 30000) // 30 segundos
-      healthInterval = setInterval(fetchHealthInfoCount, 30000) // Also refresh info count
     } else {
       interval = setInterval(fetchSystemData, 60000) // 60 segundos
-      healthInterval = setInterval(fetchHealthInfoCount, 60000) // Also refresh info count
     }
 
+    healthInterval = setInterval(refreshHealth, 30000)
+    window.addEventListener("focus", refreshHealth)
+    document.addEventListener("visibilitychange", refreshHealth)
     return () => {
       if (interval) clearInterval(interval)
       if (healthInterval) clearInterval(healthInterval)
+      window.removeEventListener("focus", refreshHealth)
+      document.removeEventListener("visibilitychange", refreshHealth)
+      const controller = healthRequest.current
+      healthRequest.current = null
+      controller?.abort()
     }
   }, [fetchSystemData, fetchHealthInfoCount, fetchUpdateStatus, activeTab])
 
@@ -361,6 +411,7 @@ export function ProxmoxDashboard() {
   const refreshData = async () => {
     setIsRefreshing(true)
     await fetchSystemData()
+    await fetchHealthInfoCount()
     setComponentKey((prev) => prev + 1)
     await new Promise((resolve) => setTimeout(resolve, 500))
     setIsRefreshing(false)
@@ -391,6 +442,8 @@ export function ProxmoxDashboard() {
   const getActiveTabLabel = () => {
     switch (activeTab) {
       case "overview":  return t("navigation.overview")
+      case "datastores": return t("pbs.datastores")
+      case "pbs-tasks": return t("pbs.tasksTab")
       case "apps":      return t("navigation.apps")
       case "vms":       return t("navigation.virtualMachines")
       case "storage":   return t("navigation.storage")
@@ -410,8 +463,9 @@ export function ProxmoxDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <OnboardingCarousel />
-      <ReleaseNotesModal open={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />
+      {/* Both describe the PVE Monitor. */}
+      {!isPbs && <OnboardingCarousel />}
+      {!isPbs && <ReleaseNotesModal open={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />}
 
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
@@ -435,7 +489,9 @@ export function ProxmoxDashboard() {
       )}
 
       <header
-        className="border-b border-border bg-card sticky top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
+        // On a short screen (a phone turned sideways) the header and the bar below
+        // scroll with the page instead of covering half of it.
+        className="border-b border-border bg-card sticky [@media(max-height:500px)]:static top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
         onClick={() => setShowHealthModal(true)}
       >
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
@@ -464,22 +520,17 @@ export function ProxmoxDashboard() {
               </div>
               <div className="min-w-0">
                 <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">{t("app.title")}</h1>
-                <p className="text-xs md:text-sm text-muted-foreground">{t("app.description")}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t(isPbs ? "app.descriptionPbs" : "app.description")}</p>
                 <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                  <Server className="h-3 w-3" />
-                  <span className="truncate">{t("status.node", { node: displayServerName })}</span>
+                  <Clock className="h-3 w-3" />
+                  <span className="truncate">{t("status.uptime", { uptime: displayUptime })}</span>
                 </div>
               </div>
             </div>
 
             {/* Desktop Actions */}
             <div className="hidden lg:flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Server className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium text-foreground">{t("status.node", { node: displayServerName })}</div>
-                </div>
-              </div>
+              <MonitorSwitcher nodeName={displayServerName} />
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className={statusColor}>
@@ -580,15 +631,13 @@ export function ProxmoxDashboard() {
                 </Badge>
               )}
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {t("status.uptime", { uptime: displayUptime })}
-            </span>
+            <MonitorSwitcher nodeName={displayServerName} compact />
           </div>
         </div>
       </header>
 
       <div
-        className={`sticky z-40 bg-background
+        className={`sticky [@media(max-height:500px)]:static z-40 bg-background
           top-[120px] lg:top-[76px]
           transition-all duration-700 ease-in-out
           ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0 pointer-events-none"}
@@ -623,7 +672,7 @@ export function ProxmoxDashboard() {
                 { value: "audit",    label: t("navigation.audit"),      Icon: ClipboardCheck, default: false },
                 { value: "settings", label: t("navigation.settings"),   Icon: SettingsIcon, default: false },
                 { value: "about",    label: t("navigation.about"),      Icon: Info,        default: false },
-              ]
+              ].filter(item => !isPbs || item.value !== "audit")
               const activeNodeItem  = NODE_ITEMS.find(i => i.value === activeTab)
               const activeAdminItem = ADMIN_ITEMS.find(i => i.value === activeTab)
               const isNodeActive    = activeNodeItem !== undefined
@@ -689,9 +738,11 @@ export function ProxmoxDashboard() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )
-              const renderTop = (id: TabId) => {
+              const renderTop = (id: TopTab) => {
                 switch (id) {
                   case "overview": return renderDirect("overview", LayoutDashboard, t("navigation.overview"))
+                  case "datastores": return renderDirect("datastores", Database, t("pbs.datastores"))
+                  case "pbs-tasks": return renderDirect("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                   case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
                   case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
                   case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
@@ -701,7 +752,7 @@ export function ProxmoxDashboard() {
                 }
               }
               return (
-                <TabsList className="hidden lg:grid w-full grid-cols-7 bg-card border border-border">
+                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-7"} bg-card border border-border`}>
                   {tabOrder.map(renderTop)}
                 </TabsList>
               )
@@ -762,6 +813,8 @@ export function ProxmoxDashboard() {
                       {tabOrder.map((id): React.ReactNode => {
                         switch (id) {
                           case "overview": return btn("overview", LayoutDashboard, t("navigation.overview"))
+                          case "datastores": return btn("datastores", Database, t("pbs.datastores"))
+                          case "pbs-tasks": return btn("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                           case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
                           case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
                           case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
@@ -777,7 +830,7 @@ export function ProxmoxDashboard() {
                             <React.Fragment key="admin">
                               {btn("logs",     ScrollText,  t("navigation.systemLogs"))}
                               {btn("security", ShieldCheck, t("navigation.security"))}
-                              {btn("audit",    ClipboardCheck, t("navigation.audit"))}
+                              {!isPbs && btn("audit",    ClipboardCheck, t("navigation.audit"))}
                               {btn("settings", SettingsIcon, t("navigation.settings"))}
                               {btn("about",    Info,         t("navigation.about"))}
                             </React.Fragment>
@@ -811,9 +864,22 @@ export function ProxmoxDashboard() {
               5 s / 59 s refresh intervals keep the data fresh in the
               background — reopening the tab is instant. */}
           <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
-            <SystemOverview key={`overview-${componentKey}`} />
+            <SystemOverview key={`overview-${componentKey}`} product={product} />
           </TabsContent>
 
+          {isPbs && (
+            <TabsContent value="datastores" className="space-y-4 md:space-y-6 mt-0">
+              <PBSPanel key={`datastores-${componentKey}`} localOnly view="datastores" />
+              <StorageOverview key={`datastore-disks-${componentKey}`} disksOnly />
+            </TabsContent>
+          )}
+          {isPbs && (
+            <TabsContent value="pbs-tasks" className="space-y-4 md:space-y-6 mt-0">
+              <PBSPanel key={`pbs-tasks-${componentKey}`} localOnly view="tasks" />
+            </TabsContent>
+          )}
+
+          {!isPbs && <>
           <TabsContent value="apps" className="space-y-4 md:space-y-6 mt-0">
             <AppsDashboard key={`apps-${componentKey}`} />
           </TabsContent>
@@ -839,11 +905,13 @@ export function ProxmoxDashboard() {
           <TabsContent value="hardware" className="space-y-4 md:space-y-6 mt-0">
             <Hardware key={`hardware-${componentKey}`} />
           </TabsContent>
+          </>}
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
           </TabsContent>
 
+          {!isPbs && <>
           <TabsContent value="audit" className="space-y-4 md:space-y-6 mt-0">
             <AuditReport key={`audit-${componentKey}`} />
           </TabsContent>
@@ -851,13 +919,14 @@ export function ProxmoxDashboard() {
           <TabsContent value="backup" className="space-y-4 md:space-y-6 mt-0">
             <BackupTab key={`backup-${componentKey}`} />
           </TabsContent>
+          </>}
 
           <TabsContent value="terminal" className="mt-0">
             <TerminalPanel key={`terminal-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4 md:space-y-6 mt-0">
-            <Security key={`security-${componentKey}`} />
+            <Security key={`security-${componentKey}`} hostType={product} />
           </TabsContent>
 
           {/* Profile tab — not surfaced in the top tabs nav. The only

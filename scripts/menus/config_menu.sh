@@ -92,6 +92,40 @@ remove_registry_logins() {
     rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
 }
 
+remove_usbip_sharing() {
+    local manager="$BASE_DIR/scripts/devices/usbip_manager.py"
+    local config="/etc/proxmenux/usbip/config.json" id unit
+    if [[ -f "$manager" && -f "$config" ]] && command -v jq >/dev/null 2>&1; then
+        for id in $(jq -r '.imports[]?.id' "$config" 2>/dev/null); do
+            pmx_record_execution "Remove USB/IP client connection" "python3 $manager remove-import $id"
+            python3 "$manager" remove-import "$id" >/dev/null 2>&1 || true
+        done
+        pmx_record_execution "Disable USB/IP server" "python3 $manager server-disable"
+        python3 "$manager" server-disable >/dev/null 2>&1 || true
+    fi
+    for unit in /etc/systemd/system/proxmenux-usbip-*.service; do
+        [[ -f "$unit" ]] && grep -q '^# Managed by ProxMenux USB/IP' "$unit" || continue
+        systemctl disable --now "$(basename "$unit")" >/dev/null 2>&1 || true
+        pmx_remove_file "$unit"
+    done
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    # The transport account holds the authorized client keys. Remove it only
+    # when ProxMenux created it, so a reinstall does not revive old clients.
+    local home=/var/lib/proxmenux-usbip
+    if getent passwd proxmenux-usbip >/dev/null && [[ -f "$home/.proxmenux-owned" ]]; then
+        pkill -KILL -u proxmenux-usbip >/dev/null 2>&1 || true
+        pmx_record_execution "Remove USB/IP transport account" "userdel proxmenux-usbip"
+        userdel proxmenux-usbip >/dev/null 2>&1 || true
+        getent group proxmenux-usbip >/dev/null && groupdel proxmenux-usbip >/dev/null 2>&1
+        rm -rf "$home"
+    fi
+    if [[ -d /etc/proxmenux/usbip ]]; then
+        pmx_record_execution "Remove USB/IP configuration" "rm -rf /etc/proxmenux/usbip"
+        rm -rf /etc/proxmenux/usbip
+    fi
+    rmdir /etc/proxmenux 2>/dev/null || true
+}
+
 uninstall_proxmenux_monitor() {
 
     # 1. Stop service if it is running
@@ -674,7 +708,7 @@ change_language() {
     local new_language
     new_language=$(dialog --clear --backtitle "$BACKTITLE" \
                           --title "$(translate "Change Language")" \
-                          --menu "$(translate "Select a new language for the menu:")" 22 60 8 \
+                          --menu "$(translate "Select a new language for the menu:")" 22 60 9 \
                           "en" "$(translate "English")" \
                           "de" "$(translate "German")" \
                           "es" "$(translate "Spanish")" \
@@ -682,7 +716,8 @@ change_language() {
                           "it" "$(translate "Italian")" \
                           "pt" "$(translate "Portuguese")" \
                           "sk" "Slovenčina" \
-                          "sv" "Svenska" 3>&1 1>&2 2>&3)
+                          "sv" "Svenska" \
+                          "ru" "Русский" 3>&1 1>&2 2>&3)
     
     if [ -z "$new_language" ]; then
         dialog --clear --backtitle "$BACKTITLE" \
@@ -744,7 +779,7 @@ show_version_info() {
             fi
             local translated_status=$(translate "$status")
             case "$status" in
-                "installed"|"already_installed"|"created"|"already_exists"|"upgraded"|"updated")
+                "installed"|"already_installed"|"installed_from_github"|"created"|"already_exists"|"upgraded"|"updated")
                     info_message+="✓ $component: $translated_status\n"
                     ;;
                 *)
@@ -816,6 +851,7 @@ uninstall_proxmenu() {
         fi
 
         echo "50" ; echo "Removing ProxMenu files..."
+        remove_usbip_sharing
         pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
         pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
         rm -rf "$BASE_DIR"
@@ -851,6 +887,9 @@ uninstall_proxmenu() {
         else
             pmx_edit_file /etc/motd '/This system is optimised by: ProxMenux/d'
         fi
+
+        # The change journal above writes under BASE_DIR again.
+        rm -rf "$BASE_DIR"
         
         echo "100" ; echo "Uninstallation complete!"
         sleep 1

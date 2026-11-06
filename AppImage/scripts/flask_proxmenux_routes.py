@@ -35,7 +35,7 @@ TOOL_METADATA = {
     'system_utils':         {'name': 'System Utilities',                       'function': 'install_system_utils',         'version': '1.0'},
     'network_optimization': {'name': 'Network Optimizations',                 'function': 'apply_network_optimizations',  'version': '1.0'},
     'bashrc_custom':        {'name': 'Bashrc Customization',                  'function': 'customize_bashrc',             'version': '1.0'},
-    'figurine':             {'name': 'Figurine',                              'function': 'configure_figurine',           'version': '1.0'},
+    'figurine':             {'name': 'Figurine',                              'function': 'configure_figurine',           'version': '1.2'},
     'fastfetch':            {'name': 'Fastfetch',                             'function': 'configure_fastfetch',          'version': '1.0'},
     'log2ram':              {'name': 'Log2ram (SSD Protection)',               'function': 'configure_log2ram',            'version': '1.0'},
     'zfs_autotrim':         {'name': 'ZFS Autotrim',                          'function': 'enable_zfs_autotrim',          'version': '1.0'},

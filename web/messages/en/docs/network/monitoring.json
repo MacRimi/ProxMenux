@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Live monitoring tools",
-    "description": "Three interactive launchers for real-time network observation and bandwidth measurement: iftop, iptraf-ng and iperf3. Each tool is auto-installed from apt on first use, runs in the foreground, and is exited with the documented keystroke. Read-only against the host configuration — they only observe traffic.",
+    "description": "Three interactive launchers for real-time network observation and bandwidth measurement: iftop, iptraf-ng and iperf3. Each tool is auto-installed from apt on first use, runs in the foreground, and is exited with the documented keystroke. They do not change the host network configuration; iperf3 generates test traffic.",
     "section": "Network"
   },
   "intro": {

@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Post-instalación: Basic Settings | ProxMenux Documentation",
+    "title": "Post-instalación: Ajustes básicos | Documentación de ProxMenux",
     "description": "Opciones post-instalación fundamentales: cambiar a los repositorios sin suscripción de Proxmox y hacer upgrade, autodetectar la zona horaria y activar NTP, saltar la descarga de idiomas de APT, y elegir entre 25 utilidades de sistema comunes para instalar."
   },
   "header": {
-    "title": "Post-instalación: Basic Settings",
-    "section": "Settings post-install Proxmox"
+    "title": "Post-instalación: Ajustes básicos",
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -15,8 +15,8 @@
     "heading": "Actualizar y hacer upgrade del sistema",
     "intro": "Reconfigura APT para usar el repositorio gratuito <em>pve-no-subscription</em> (en lugar del repo enterprise que requiere suscripción) y ejecuta un upgrade completo del sistema. Los pasos exactos dependen de la versión mayor de Proxmox VE: ProxMenux la detecta y despacha al script correcto.",
     "headerVersion": "Versión PVE",
-    "headerScript": "Script despachador",
-    "headerCodename": "Codename Debian",
+    "headerScript": "Script de selección por versión",
+    "headerCodename": "Nombre en clave de Debian",
     "rows": [
       {
         "version": "9.x",
@@ -31,7 +31,7 @@
     ],
     "officialTitle": "La recomendación oficial de Proxmox",
     "officialBody": "La guía oficial de upgrade de Proxmox es ejecutar, exactamente en este orden:",
-    "officialOutro": "Esa única línea es todo lo que necesitas en cualquier release actual de Proxmox. El reto no es el comando en sí — es asegurarse de que los repositorios del host están sanos <em>antes</em> de ejecutarlo.",
+    "officialOutro": "Este es el comando habitual para actualizaciones dentro de la misma versión mayor de Proxmox VE. Comprueba los repositorios del host y revisa los cambios de paquetes propuestos <em>antes</em> de continuar. Cambiar de versión mayor requiere el procedimiento oficial de migración.",
     "doesTitle": "Qué hace la opción de ProxMenux — verificado contra el script",
     "doesIntro": "El update de ProxMenux envuelve los comandos apt exactos de arriba y añade una serie de pasos pre/post que tendrías que recordar tú a mano. Cada item de abajo es lo que el script despachador realmente hace (mira <link>Proxmox System Update</link> para el desglose completo):",
     "doesItems": [
@@ -39,37 +39,37 @@
       "<strong>Repos Debian reescritos</strong> con main / updates / security, incluyendo <code>non-free-firmware</code>, para que la advertencia de firmware durante el upgrade desaparezca.",
       "<strong>Ejecuta el upgrade oficial.</strong> <code>apt-get update</code> seguido de <code>apt full-upgrade -y</code> (PVE 9) o <code>apt dist-upgrade -y</code> (PVE 8), ambos lanzados de forma no interactiva con <code>--force-confdef --force-confold</code> para que cualquier archivo de configuración que hayas customizado siga siendo tuyo.",
       "<strong>Instala paquetes esenciales</strong> si faltan: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
-      "<strong>Comprobación de cordura de metadatos LVM.</strong> Busca VMs con passthrough de disco que puedan haber garabateado cabeceras stale de physical-volume sobre discos en bruto; avisa si hay algo raro (no hay fix automático).",
+      "<strong>Comprueba los metadatos LVM.</strong> Busca VM con passthrough de disco que puedan haber dejado cabeceras antiguas de volúmenes físicos en discos en bruto; avisa si detecta anomalías, sin corregirlas automáticamente.",
       "<strong>Limpia al final:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, y luego pregunta por un reinicio si el kernel fue actualizado o si está presente <code>/var/run/reboot-required</code>."
     ],
     "shortTitle": "En resumen",
     "shortBody": "La opción ejecuta el exacto <code>apt update && apt full-upgrade -y</code> que Proxmox recomienda, lo envuelve con la limpieza de repos y la limpieza post-upgrade que la guía oficial también te dice que hagas, y pregunta por el reinicio al final. Mira <link>Proxmox System Update</link> — el mismo updater también está disponible como utilidad independiente en el menú principal, con el diagrama completo del proceso.",
     "subTitle": "No apliques esto a un host con suscripción",
-    "subBody": "Si tienes una suscripción de Proxmox y quieres seguir usando los repositorios enterprise, omite esta opción. Al ejecutarla se desactiva el repositorio enterprise y el host pasa al canal comunitario. La actualización de paquetes y la reescritura de repositorios no se presentan como reversibles en Uninstall Optimizations; restaura deliberadamente la configuración de repositorios si más adelante necesitas cambiar de canal.",
+    "subBody": "Si tienes una suscripción de Proxmox y quieres mantener los repositorios Enterprise, omite esta opción. Al ejecutarla, el host pasa al canal comunitario. La actualización de paquetes y la reescritura de repositorios no se pueden revertir desde Desinstalar optimizaciones; si quieres cambiar de canal después, debes configurar los repositorios expresamente.",
     "safetyTitle": "Comprobación de seguridad post-update",
-    "safetyBody": "Tras el upgrade, el script comprueba si hay discos con metadatos PV (Physical Volume) obsoletos — un caso límite que puede pasar cuando una VM con passthrough de disco garabatea cabeceras LVM sobre un disco en bruto. Si encuentra algo sospechoso verás un aviso sugiriendo <code>pvs</code> para inspeccionarlo. No se toma ninguna acción automáticamente."
+    "safetyBody": "Tras actualizar, el script busca discos con metadatos antiguos de volúmenes físicos (PV). Puede ocurrir si una VM con passthrough de disco escribe cabeceras LVM en un disco en bruto. Si encuentra algo sospechoso, avisa y sugiere inspeccionarlo con <code>pvs</code>. No modifica nada automáticamente."
   },
   "time": {
     "heading": "Sincronizar la hora automáticamente",
     "intro": "Detecta la IP pública del servidor vía <code>dig myip.opendns.com @resolver1.opendns.com</code>, luego consulta <code>ipapi.co/'{'ip'}'/timezone</code> para buscar la zona horaria IANA correspondiente, y la aplica con <code>timedatectl set-timezone</code>. Finalmente activa NTP con <code>timedatectl set-ntp true</code>.",
     "depTitle": "Depende de dos servicios externos",
     "depBody": "El lookup depende de que OpenDNS e <code>ipapi.co</code> sean accesibles, y de que sus respuestas sean correctas. Si ejecutas Proxmox detrás de una VPN o en una VLAN que sale por una región distinta, la zona horaria autodetectada puede ser incorrecta. En ese caso sáltate esta opción y configura la zona horaria a mano:",
-    "revertTitle": "Reversible desde el menú Uninstall",
-    "revertBody": "<link>Uninstall Optimizations</link> resetea la zona horaria a UTC (un valor por defecto seguro). No desactiva NTP — tu reloj sigue sincronizándose, solo anclado a UTC hasta que pongas una nueva zona horaria manualmente."
+    "revertTitle": "Reversible desde el menú Desinstalar",
+    "revertBody": "<link>Desinstalar optimizaciones</link> restablece la zona horaria a UTC, un valor predeterminado seguro. No desactiva NTP: el reloj sigue sincronizándose y muestra UTC hasta que configures otra zona manualmente."
   },
   "languages": {
     "heading": "Saltar la descarga de idiomas adicionales",
-    "intro": "En cada <code>apt update</code>, Debian por defecto descarga archivos de traducción para cada locale que distribuye — mucho tráfico y espacio en disco para algo que rara vez verás. Esta opción le dice a APT que solo descargue los metadatos principales. Antes de desactivarlo, ProxMenux <strong>se asegura de que el propio locale del host está realmente generado</strong> (lee <code>/etc/default/locale</code> o <code>/etc/environment</code>, lo añade a <code>/etc/locale.gen</code> si falta, y ejecuta <code>locale-gen</code>). Así no pierdes tu locale de shell como efecto colateral.",
+    "intro": "Durante <code>apt update</code>, APT puede descargar descripciones de paquetes traducidas además de los metadatos principales. Esta opción desactiva esas traducciones para ahorrar ancho de banda y disco. Antes, ProxMenux <strong>comprueba que la configuración regional del host está generada</strong>: lee <code>/etc/default/locale</code> o <code>/etc/environment</code>, la añade a <code>/etc/locale.gen</code> si falta y ejecuta <code>locale-gen</code>. Así se conserva la configuración regional de la shell.",
     "writtenTitle": "Qué se escribe",
-    "revertTitle": "Reversible desde el menú Uninstall",
+    "revertTitle": "Reversible desde el menú Desinstalar",
     "revertBody": "Borrar <code>/etc/apt/apt.conf.d/99-disable-translations</code> (manualmente o desde el menú Uninstall) restaura el comportamiento por defecto y APT vuelve a descargar los archivos de idioma."
   },
   "utilities": {
     "heading": "Instalar utilidades de sistema comunes",
-    "intro": "Abre un checklist con <strong>25 utilidades curadas</strong> organizadas en grupos. Elige las que quieras, confirma, y ProxMenux instala cada una vía <code>apt</code>, verificando que el paquete funcionó y mostrando un resumen al final.",
-    "imageAlt": "Diálogo de checklist mostrando la lista de utilidades de sistema de ProxMenux con espacio para seleccionar y enter para confirmar",
+    "intro": "Abre una lista con <strong>25 utilidades seleccionadas</strong> organizadas en grupos. Elige las que quieras y confirma; ProxMenux las instala mediante <code>apt</code>, comprueba el resultado y muestra un resumen final.",
+    "imageAlt": "Diálogo de selección de utilidades de ProxMenux: Espacio selecciona y Entrar confirma",
     "reuseTitle": "La misma lista se reutiliza en otro sitio",
-    "reuseBody": "El catálogo de 25 utilidades vive en una única fuente de verdad (<code>PROXMENUX_UTILS</code> en <code>scripts/global/utils-install-functions.sh</code>). El menú <em>Utilities and Tools → System Utilities</em> del menú principal de ProxMenux expone la misma lista, así que puedes volver más tarde e instalar más sin volver a ejecutar la post-instalación.",
+    "reuseBody": "El catálogo de 25 utilidades tiene una única definición: <code>PROXMENUX_UTILS</code> en <code>scripts/global/utils-install-functions.sh</code>. El menú <em>Utilidades y herramientas → Utilidades del sistema</em> ofrece la misma lista para instalar más adelante sin repetir la post-instalación.",
     "listTitle": "Qué hay en la lista",
     "groups": [
       {
@@ -177,7 +177,7 @@
           },
           {
             "pkg": "tmux",
-            "desc": "Multiplexador de terminal — sesiones que se separan, paneles divididos, sobrevive a desconexiones"
+            "desc": "Multiplexador de terminal: separa sesiones, divide paneles y mantiene las sesiones tras desconectarte"
           }
         ]
       },
@@ -210,18 +210,18 @@
     ],
     "actionTitle": "Algunas de ellas en acción",
     "noBulkTitle": "Solo se eliminan las utilidades instaladas por ProxMenux",
-    "noBulkBody": "ProxMenux registra únicamente los paquetes seleccionados que no estaban instalados antes de esta acción. Uninstall Optimizations puede purgar después esos paquetes, mientras que las utilidades que ya existían en el host permanecen intactas. La actualización general mediante APT no se registra como reversible porque los paquetes actualizados no disponen de una restauración atómica segura."
+    "noBulkBody": "ProxMenux registra únicamente los paquetes seleccionados que no estaban ya instalados. Al ejecutar Desinstalar optimizaciones, purga esos paquetes y conserva los que ya tenías. Las actualizaciones de APT no tienen una reversión atómica segura: desinstalar utilidades no deshace la actualización del sistema."
   },
   "related": {
     "heading": "Relacionado",
     "items": [
       {
-        "label": "Proxmox System Update",
+        "label": "Actualización del sistema Proxmox",
         "href": "/docs/utils/system-update",
         "tail": " — vuelve a ejecutar el ciclo apt update + dist-upgrade bajo demanda."
       },
       {
-        "label": "System Utilities Installer",
+        "label": "Instalador de utilidades del sistema",
         "href": "/docs/utils/system-utils",
         "tail": " — instala (o reinstala) utilidades individualmente tras la post-instalación."
       },
@@ -231,7 +231,7 @@
         "tail": " — referencia de apt."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Post-instalación personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

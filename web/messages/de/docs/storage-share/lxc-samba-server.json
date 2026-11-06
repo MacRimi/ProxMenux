@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Samba-Server in LXC | ProxMenux Dokumentation",
+    "description": "Mit ProxMenux einen Samba-Server (SMB / CIFS) in einem Proxmox-LXC-Container betreiben. Installiert samba automatisch und verwaltet /etc/samba/smb.conf, smbpasswd-Benutzer und die Gruppe sharedfiles für per Bind-Mount eingebundene Ordner. Erfordert einen privilegierten Container.",
+    "ogTitle": "Samba-Server in LXC | ProxMenux Dokumentation",
+    "ogDescription": "Ordner über SMB/CIFS aus einem privilegierten LXC-Container freigeben. Automatische Installation, smbpasswd-Benutzer und an Bind-Mounts angepasste Berechtigungen."
+  },
+  "header": {
+    "title": "Samba-Server in LXC",
+    "description": "Führen Sie einen Samba-Server (SMB / CIFS) in einem Proxmox LXC-Container aus und stellen Sie Ordner Windows / macOS / Linux-Clients im Netzwerk aus. ProxMenux installiert samba, erstellt einen Samba-Benutzer mit smbpasswd, verwaltet /etc/samba/smb.conf und wendet bind-mount-bewusste Berechtigungen an, wenn der freigegebene Ordner vom Host stammt.",
+    "section": "Speicher und Freigaben · LXC"
+  },
+  "privReq": {
+    "title": "Privilegierter Container erforderlich",
+    "body": "Samba nimmt die Identität des verbindenden Benutzers an mit <code>setgroups()</code> auf jeder Baumverbindung (der Moment, in dem ein Client eine Freigabe öffnet). In einem unprivilegierten LXC lehnt der Kernel diesen Syscall ab, weil der Namespace des Containers mit <code>setgroups=deny</code> erstellt wird – und <code>smbd</code> reagiert, indem er den Worker-Prozess mit <code>PANIC: sys_setgroups failed</code> abbricht. Das Ergebnis ist, dass <code>smbd</code> die Ports 139/445 startet und bindet, aber jede Clientverbindung mit <code>NT_STATUS_CONNECTION_DISCONNECTED</code> fehlschlägt. Das Skript erzwingt aus diesem Grund einen privilegierten CT und <strong>bricht bei unprivilegierten CTs ab</strong>. Es gibt keine saubere Lösung auf der Serverseite; Verwenden Sie einen privilegierten CT oder führen Sie Samba in einer VM aus."
+  },
+  "what": {
+    "heading": "Was das macht",
+    "body": "Der Container wird zu einem SMB/CIFS-Server: Er führt <code>smbd</code> aus, stellt einen Ordner über <code>/etc/samba/smb.conf</code> frei und akzeptiert Clientverbindungen an den Ports <code>139</code> / <code>445</code>. Clients sehen die Freigabe unter <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> im Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> im macOS Finder oder über <code>mount.cifs</code> unter Linux.",
+    "diagramServerLabel": "LXC (privilegiert) — Samba-Server",
+    "diagramServerDetail": "/mnt/data\n(freigegebener Ordner)\n\nsmbd + nmbd laufen\n\nBenutzer: <username>\n(via smbpasswd)\n\nErzwungene Gruppe:\nsharedfiles",
+    "diagramClientLabel": "Jeder Client im Netzwerk",
+    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux: mount.cifs",
+    "diagramArrow": "SMB / CIFS"
+  },
+  "perms": {
+    "heading": "Zwei Berechtigungspfade abhängig vom Ordnertyp",
+    "body": "Vor dem Hinzufügen der Freigabe zu <code>smb.conf</code> prüft das Skript, ob der Ordner ein <strong>Bind-Mount vom Host</strong> oder ein normaler <strong>lokaler Ordner im CT</strong> ist. Entsprechend setzt es Eigentümer und Berechtigungen:",
+    "headerType": "Art des Ordners",
+    "headerAction": "Was das Skript macht",
+    "bindType": "Bind-Mount vom Host",
+    "bindTypeSubRich": "erfasst über <code>mount</code> Ausgang",
+    "bindActionRich": "Erstellt Gruppe <code>sharedfiles</code> (Standard GID 999, dynamisch, wenn genommen), fügt den Samba-Benutzer hinzu, dann <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID - neue Dateien erben die Gruppe). Wenn der Benutzer immer noch nicht schreiben kann, wendet <code>setfacl -m u:&lt;user&gt;:rwx</code> an.",
+    "localType": "Lokaler Ordner im CT",
+    "localTypeSub": "Kein Bind-Mount erkannt",
+    "localActionRich": "Standardbesitz: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Keine freigegebene Gruppe erforderlich, da kein anderer CT in diesen Ordner schreibt. Fällt zurück zu <code>setfacl</code>, wenn der Schreibzugriff noch fehlt.",
+    "gidTitle": "GID für 'sharedfiles' unterscheidet sich vom NFS Server Flow",
+    "gidBody": "Das Samba-Serverskript verwendet GID <strong>999</strong> für <code>sharedfiles</code>, während der <nfsLink>NFS-Serverablauf</nfsLink> GID <strong>101000</strong> verwendet. Wenn Sie beide Server in demselben CT betreiben und eine einzelne gemeinsame Gruppe für beide Protokolle wünschen, bearbeiten Sie eines von ihnen nach der Installation so, dass es mit dem anderen übereinstimmt (z.B. <code>groupmod -g 101000 sharedfiles</code>) und setzen Sie die Eigentümer der betroffenen Ordner erneut. Dies ist eine bekannte Inkonsistenz in den aktuellen Skripten."
+  },
+  "opening": {
+    "heading": "Öffnen des Tools",
+    "body": "Öffnen Sie im Hauptmenü von ProxMenux <strong>Storage &amp; Share Manager → Samba-Server in LXC (nur privilegiert)</strong> konfigurieren. ProxMenux fordert Sie zuerst auf, das Ziel CT auszuwählen (und startet es, wenn es gestoppt wird); abbricht, wenn es nicht privilegiert ist. Sobald das CT ausgewählt ist, sehen Sie dieses sub-Menü mit fünf Optionen:",
+    "imageAlt": "Samba Server Manager-Menü - Erstellen / Anzeigen / Löschen / Status / Deinstallieren"
+  },
+  "howRuns": {
+    "heading": "Ablauf des Skripts beim Erstellen"
+  },
+  "modes": {
+    "heading": "Die drei Share-Modi",
+    "intro": "Jeder Modus schreibt einen anderen Konfigurationsabschnitt in <code>smb.conf</code>. Alle drei beinhalten <code>valid users = &lt;username&gt;</code> (nicht anonym), <code>force group = sharedfiles</code> (damit neue Dateien zur freigegebenen Gruppe gehören) und <code>veto files = /lost+found/</code> (versteckt sie vor Clients).",
+    "headerMode": "Modus",
+    "headerBlock": "Block geschrieben an smb.conf",
+    "rwMode": "Lesen und Schreiben",
+    "roMode": "Schreibgeschützt",
+    "customMode": "Benutzerdefiniert",
+    "customBodyRich": "Sie geben Ihre eigenen Direktiven in ein Freitextfeld ein. ProxMenux wickelt sie weiterhin in einen <code>[share]</code>-Block mit den Standards <code>path</code>, <code>valid users</code>, <code>force group</code> und <code>veto files</code> ein."
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Führen Sie den gesamten Ablauf von Hand aus. Jeder Befehl läuft <strong>innerhalb des CTs</strong> über <code>pct exec &lt;ctid&gt; --</code> oder <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "connect": {
+    "heading": "Verbindung von Clients",
+    "headerOs": "Client-Betriebssystem",
+    "headerHow": "Wie man verbindet",
+    "windowsOs": "Windows",
+    "windowsHowRich": "Datei-Explorer → Adressleiste: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Oder <em>Netzlaufwerk verbinden</em> → „Verbindung mit anderen Anmeldeinformationen herstellen“ aktivieren.",
+    "macosOs": "macOS",
+    "macosHowRich": "Finder → <em>Gehe zu → Verbindung zum Server...</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. Oder <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
+    "linuxOs": "Linux",
+    "linuxHowRich": "<code>mount -t cifs //&lt;ct-ip&gt;/&lt;share&gt; /mnt/x -o username=&lt;u&gt;,password=&lt;p&gt;,iocharset=utf8</code>. Oder verwenden Sie den <clientLink>Samba-Client auf der LXC</clientLink>-Seite, wenn der Client ein anderer Proxmox CT ist."
+  },
+  "view": {
+    "heading": "Aktuelle Freigaben anzeigen",
+    "body": "Liest <code>/etc/samba/smb.conf</code> im CT und listet jeden <code>[share]</code>-Block (überspringen <code>[global]</code>, <code>[homes]</code>, <code>[printers]</code>) mit seinem Pfad auf. Nützlich als schnelles Inventar."
+  },
+  "delete": {
+    "heading": "Freigabe löschen",
+    "body": "Sie können eine Freigabe nach Namen auswählen, den Block aus <code>smb.conf</code> entfernen (<code>sed</code> löscht aus <code>[share]</code> bis zur nächsten leeren Zeile) und <code>smbd</code> neu starten. Der Ordner selbst und sein Inhalt bleiben intakt."
+  },
+  "status": {
+    "heading": "Samba-Status überprüfen",
+    "body": "Gibt an, ob <code>smbd</code> und <code>nmbd</code> installiert und aktiv sind, listet Samba-Benutzer auf (<code>pdbedit -L</code>) und druckt aktive Sitzungen aus (<code>smbstatus</code>)."
+  },
+  "uninstall": {
+    "heading": "Samba-Server deinstallieren",
+    "body": "Vollständige Bereinigung nach Bestätigung: stoppt und deaktiviert <code>smbd</code> und <code>nmbd</code>, sichert <code>smb.conf</code> als <code>smb.conf.backup.YYYYMMDD_HHMMSS</code>, entfernt Samba-Benutzer mit <code>smbpasswd -x</code> und die Samba-Pakete mit <code>apt-get purge</code>. Die <strong>exportierten Ordner selbst bleiben erhalten</strong>.",
+    "warnTitle": "Ordner überleben – Daten separat sichern",
+    "warnBody": "<em>Freigabe löschen</em> und <em>Samba-Server deinstallieren</em> entfernen die Freigabekonfiguration. Die Daten in den exportierten Ordnern bleiben erhalten. Löschen Sie Daten bei Bedarf nach Abschluss des Skripts ausdrücklich mit <code>rm -rf</code>."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "privTitle": "Privilegierter Container erforderlich (Skript bricht ab)",
+    "privBody": "Der ausgewählte CT ist unprivilegiert und <code>smbd</code> kann dort keine Dateien bedienen. Wenn Sie das Gate umgehen und Samba von Hand konfigurieren, startet <code>smbd</code> und die Ports öffnen sich, aber die erste Clientverbindung gerät in Panik mit <code>PANIC: sys_setgroups failed</code> in <code>/var/log/samba/log.&lt;client&gt;</code> und der Client sieht <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Die Ursache ist der unprivilegierte Benutzernamensraum mit <code>setgroups=deny</code>, der die Per-Verbindungs-Imitation von Samba blockiert. Weder <code>features=keyctl=1</code> noch das Entfernen von <code>force user</code> / <code>force group</code> ändert dies. Die einzigen praktikablen Optionen sind: Wandeln Sie den CT in einen privilegierten CT um oder verschieben Sie Samba in eine VM.",
+    "aptTitle": "apt-get install schlägt fehl",
+    "aptIntro": "Das Skript nimmt eine Debian-Familie CT an. Auf Alpine / Arch / Rocky / Alma installieren Sie Samba von Hand:",
+    "aptItems": [
+      "Alpine: <code>apk add samba</code>",
+      "Arch: <code>pacman -S samba</code>",
+      "Rocky / Alma: <code>dnf install samba</code>"
+    ],
+    "aptOutro": "Führen Sie danach das ProxMenux-Skript erneut aus; sind die Werkzeuge schon vorhanden, wird die Installation übersprungen.",
+    "noShareTitle": "Client verbindet sich, sieht aber die Freigabe nicht",
+    "noShareBody": "Überprüfen Sie, ob <code>browseable = yes</code> im Freigabeblock eingestellt ist (Standard für rw / ro-Modi; möglicherweise fehlt es in benutzerdefinierten). Überprüfen Sie auch die CT-Firewall und die Proxmox-Host-Firewall erlauben TCP 445 (SMB) und 139 (NetBIOS). Einige Windows-Clients benötigen auch eine Namensauflösung - versuchen Sie die IP direkt zuerst.",
+    "authTitle": "Authentifizierung fehlschlägt (NT_STATUS_LOGON_FAILURE)",
+    "authBody": "Entweder ist das Passwort falsch (Samba-Passwörter sind von Systempasswörtern <em>getrennt</em>; Samba-Benutzer mit <code>pdbedit -L</code> auflisten) oder der Benutzer fehlt in <code>valid users</code> für diese Freigabe. Setzen Sie das Passwort im CT mit <code>smbpasswd &lt;user&gt;</code> zurück.",
+    "groupTitle": "Vom Client geschriebene Dateien erscheinen mit falscher Gruppe auf dem Server",
+    "groupBody": "Das Skript setzt <code>force group = sharedfiles</code> im Freigabeblock, so dass neue Dateien die Gruppe <code>sharedfiles</code> sein sollten. Wenn dies nicht der Fall ist, ist das SGID-Bit im Elternverzeichnis möglicherweise verloren gegangen (jemand hat <code>chmod</code> von Hand ausgeführt). Erneut anwenden: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
+    "bothTitle": "Teilen des gleichen Ordners über NFS und Samba",
+    "bothBody": "ProxMenux verwendet unterschiedliche GIDs für <code>sharedfiles</code> in jedem Skript (Samba: 999, NFS: 101000). Wenn Sie den gleichen Ordner über beide bedienen, entscheiden Sie sich für eine GID und richten Sie beide aus. Die einfachste Lösung: Nachdem Sie beide Skripte ausgeführt haben, bearbeiten Sie die kleinere GID:"
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba-Client in LXC",
+        "tail": " — umgekehrte Richtung: externe Samba-Freigaben im CT einhängen."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "NFS Server in LXC",
+        "tail": "— Geschwisterseite, gleiches Muster mit NFS anstelle von CIFS."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS als Proxmox-Speicher",
+        "tailRich": " — Sobald der CT Ordner über Samba freigibt, registrieren Sie die Samba-Freigabe in Proxmox, damit sie unter <em>Datacenter → Storage</em> erscheint."
+      }
+    ]
+  }
+}

@@ -29,10 +29,11 @@ const lookupCode = pure.map(node => printer.printNode(ts.EmitHint.Unspecified, n
 const catalogs = Object.fromEntries(fs.readdirSync(path.join(app, 'messages')).filter(locale =>
   fs.existsSync(path.join(app, 'messages', locale, 'common.json'))).map(locale =>
   [locale, JSON.parse(read(`messages/${locale}/common.json`))]));
-const registered = provider.statements.flatMap(statement => ts.isVariableStatement(statement) ?
-  statement.declarationList.declarations.filter(declaration => declaration.name.getText(provider) === 'MESSAGE_CATALOG') : []);
-assert.equal(registered.length, 1, 'real provider catalog declaration');
-assert.deepEqual(registered[0].initializer.properties.map(property => property.name.getText(provider)).sort(),
+const catalogSource = ts.createSourceFile('catalogs.ts', read('lib/i18n/catalogs.ts'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const registered = catalogSource.statements.flatMap(statement => ts.isVariableStatement(statement) ?
+  statement.declarationList.declarations.filter(declaration => declaration.name.getText(catalogSource) === 'MESSAGE_CATALOG') : []);
+assert.equal(registered.length, 1, 'real shared catalog declaration');
+assert.deepEqual(registered[0].initializer.properties.map(property => property.name.getText(catalogSource)).sort(),
   Object.keys(catalogs).sort(), 'test each runtime-registered shipped locale');
 assert.ok(catalogs.en, 'English fallback catalog exists');
 const translator = (language, messages = catalogs) =>

@@ -1,12 +1,13 @@
 {
   "meta": {
-    "title": "Código de conducta | ProxMenux Documentation",
+    "title": "Código de conducta | Documentación de ProxMenux",
     "description": "Código de conducta y buenas prácticas de ProxMenux para colaboradores, testers y usuarios.",
-    "ogTitle": "Código de conducta | ProxMenux Documentation",
+    "ogTitle": "Código de conducta | Documentación de ProxMenux",
     "ogDescription": "Expectativas sobre responsabilidad del código, divulgación de problemas de seguridad y alcance de los PRs para el proyecto ProxMenux."
   },
   "errors": {
     "notFound": "Error: archivo CODE_OF_CONDUCT.md no encontrado.",
     "loadFailed": "Error: no se pudo cargar el contenido del código de conducta."
-  }
+  },
+  "contentMarkdown": "# 📝 Código de conducta y buenas prácticas\n\nEste documento define los **principios y las pautas** de uso de **ProxMenux** para promover el **respeto, la colaboración y la seguridad** durante el desarrollo.\n\n## 📌 1. Autoría del código y reconocimiento\n\n- Si se utilizan **scripts, fragmentos de código o ideas** de otros repositorios o desarrolladores, se reconocerá siempre la autoría original.\n- Se añadirá un comentario en el código o la documentación que indique la fuente y, si es posible, enlace al repositorio original.\n- Al utilizar código con una **licencia** concreta, se deben respetar sus condiciones.\n\n### ✅ Ejemplo de reconocimiento de autoría en el código:\n\n```bash\n# Script basado en el trabajo de [Autor] en [Enlace al repositorio]\n```\n\n## 🔒 2. Seguridad y responsabilidad del código\n\n- Todo el código de este repositorio sigue las buenas prácticas de desarrollo seguro.\n- No se permiten contribuciones que introduzcan vulnerabilidades intencionadas o prácticas inseguras.\n- Los scripts nunca deben comprometer la seguridad del sistema ni los datos de los usuarios.\n- Las contribuciones deben revisarse antes de implementarlas para comprobar su seguridad y estabilidad.\n\n### ⚠️ Divulgación responsable de vulnerabilidades\n\nSi descubres una vulnerabilidad de seguridad, NO la notifiques en incidencias o foros públicos.\n\nComunícala en privado por correo electrónico:\n\n📧 proxmenux@macrimi.pro\n\nPara más información sobre las vulnerabilidades y cómo notificarlas, consulta nuestra [política de seguridad](./SECURITY.md).\n\n## 🤝 3. Normas de la comunidad\n\nPara mantener un entorno respetuoso y profesional, todos los usuarios deben seguir estas pautas:\n\n- ✅ Sé respetuoso y constructivo en las discusiones.\n- ❌ No se tolerarán el acoso, el discurso de odio ni las conductas ofensivas.\n- ✅ Aporta comentarios de forma profesional, sin ataques personales.\n- ❌ El incumplimiento puede dar lugar a advertencias o expulsiones, según la gravedad.\n\n##\n\nEste documento promueve un uso ético del código, la conciencia de seguridad y una comunidad respetuosa.\n\n📢 ¡Construyamos algo grande juntos!\n"
 }

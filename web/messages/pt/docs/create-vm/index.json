@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "Criar VM no Proxmox VE: assistentes Synology, Windows, Linux e NAS | ProxMenux",
+    "description": "Crie e configure VM no Proxmox VE com o ProxMenux. Assistentes para NAS (Synology DSM, TrueNAS, OpenMediaVault, XigmaNAS, etc.), Windows, distribuições Linux e um instalador macOS externo. Predefinições adequadas para hardware, armazenamento e rede.",
+    "ogTitle": "Crie VMs em Proxmox VE — Synology, Windows, Linux, Assistentes NAS",
+    "ogDescription": "Assistentes ProxMenux para criar VM Synology DSM, TrueNAS, OMV, XigmaNAS, Windows e Linux no Proxmox VE.",
+    "ogImageAlt": "ProxMenux Criar o Menu VM",
+    "twitterTitle": "Criar VM no Proxmox VE | ProxMenux",
+    "twitterDescription": "Assistentes para VM Synology, TrueNAS, OMV, XigmaNAS, Windows e Linux no Proxmox VE."
+  },
+  "header": {
+    "title": "Criar VM",
+    "description": "O ProxMenux reúne a criação de VM num menu interativo. Escolha a família do sistema operativo e o assistente trata da ISO, CPU, RAM, BIOS, rede, armazenamento e passthrough GPU opcional.",
+    "section": "Máquinas Virtuais"
+  },
+  "intro": {
+    "title": "Para que serve este menu",
+    "body": "O menu Criar VM encaminha para vários assistentes. Pergunta a família do sistema operativo e carrega o seletor ISO e configurador adequados. O modo predefinido usa definições apropriadas; o avançado apresenta as opções disponíveis antes da criação."
+  },
+  "opening": {
+    "heading": "Abrir o menu",
+    "body": "Do menu principal do ProxMenux, selecione <strong>Criar VM</strong>. Você verá isto:",
+    "imageAlt": "Crie o expedidor VM com opções 3 ProxMenux (NAS / Windows / Linux) seguido da seção de scripts comunitários (macOS / Outros)"
+  },
+  "families": {
+    "heading": "Três famílias OS",
+    "intro": "As três entradas ProxMenux no topo do menu compartilham o mesmo motor subjacente e fluxo pós-ISO — elas apenas encaminham para diferentes seletores ISO e aplicam padrões sintonizados para cada família. Escolha o que corresponde ao hóspede que deseja instalar.",
+    "routes": [
+      {
+        "key": "nas",
+        "title": "Sistema NAS",
+        "icon": "HardDrive",
+        "href": "/docs/create-vm/system-nas",
+        "accent": "border-emerald-300 bg-emerald-50",
+        "iconBg": "bg-emerald-100 text-emerald-700",
+        "description": "Oito sistemas NAS como VM dedicadas. A maioria usa o processo ISO automático; Synology DSM tem um assistente especializado com carregador.",
+        "bullets": [
+          "Synology DSM (Arc / RR / Alpine RedPill M-shell carregadores)",
+          "TrueNAS SCALE e CORE (ZFS)",
+          "OpenMediaVault (baseado em Debian)",
+          "XigmaNAS (FreeBSD ZFS)",
+          "Rockstor (openSUSE / Btrfs), ZimaOS, FygoOS"
+        ]
+      },
+      {
+        "key": "windows",
+        "title": "Sistema Windows",
+        "icon": "MonitorCog",
+        "href": "/docs/create-vm/system-windows",
+        "accent": "border-blue-300 bg-blue-50",
+        "iconBg": "bg-blue-100 text-blue-700",
+        "description": "Windows 10, 11 e edições de servidor com padrões compatíveis com Windows (q35 + OVMF + TPM 2.0) e drivers VirtIO pré-montados.",
+        "bullets": [
+          "UUP Dump para ISOs atualizadas",
+          "Ou ISO local de /var/lib/vz/template/iso",
+          "TPM 2.0 adicionado automaticamente",
+          "VirtIO Controladores ISO ligados ao ide3",
+          "Canal de agente convidado habilitado"
+        ]
+      },
+      {
+        "key": "linux",
+        "title": "Sistema Linux",
+        "icon": "Laptop",
+        "href": "/docs/create-vm/system-linux",
+        "accent": "border-amber-300 bg-amber-50",
+        "iconBg": "bg-amber-100 text-amber-700",
+        "description": "Catálogo com curadoria de ISOs Linux oficiais baixados automaticamente do upstream, além de um coletor ISO local para qualquer outra coisa.",
+        "bullets": [
+          "Ubuntu (Ambiente de trabalho / Servidor, 20.04–25.10)",
+          "Debian (Ambiente de trabalho / Netinst, 11–13)",
+          "Fedora, Arch, Rocky, Mint, openSUSE",
+          "Alpine, Kali, Manjaro",
+          "Localização ISO local para imagens personalizadas"
+        ]
+      }
+    ]
+  },
+  "community": {
+    "title": "Programas comunitários (não documentados aqui)",
+    "intro": "As duas entradas abaixo do separador <em>Community Scripts</em> executam código que <strong>não faz parte do ProxMenux</strong> e ficam, por isso, fora desta documentação:",
+    "macosRich": "<strong>System macOS</strong> — executa o instalador externo <osxLink>OSX-PROXMOX</osxLink>. Ele clona o repositório upstream, prepara o host e o <strong> reinicia automaticamente quando terminado</strong>. Consulte a documentação do próprio projeto.",
+    "othersRich": "<strong>Outros sistemas (baseados em Linux)</strong>: carrega uma seleção de instaladores da comunidade para servidores domésticos, routers, firewalls e semelhantes. Cada script é mantido fora do ProxMenux."
+  },
+  "afterPick": {
+    "heading": "O que acontece depois de escolher um SO",
+    "intro": "Após selecionar a ISO, o menu segue o mesmo percurso para cada família de sistemas:",
+    "items": [
+      "<strong>Predefinido ou avançado.</strong> Um diálogo permite aceitar as predefinições ProxMenux ou abrir o configurador completo: modelo e núcleos CPU, RAM, BIOS/UEFI, placa de rede e tipo de máquina.",
+      "<strong>Plano de armazenamento.</strong> Você combina um ou vários discos virtuais, discos importados e dispositivos de passagem PCI (controlador inteiro / NVMe) no mesmo VM.",
+      "<strong>Passthrough GPU opcional.</strong> Se detetar uma GPU compatível, o ProxMenux oferece o assistente GPU após criar a VM. Pode ser necessário reiniciar.",
+      "<strong>Criação da VM.</strong> A VM é criada, recebe etiquetas e uma descrição HTML formatada para consulta rápida no Proxmox."
+    ],
+    "tipTitle": "Preferir Avançado para VMs que pretende manter",
+    "tipBody": "Predefinições padrão funcionam bem para testes rápidos. Para um VM você pretende manter, o caminho Avançado permite que você escolha o BIOS direito (SeaBIOS vs OVMF/UEFI), tipo de máquina (<code>i440fx</code> vs <code>q35</code>) e controlador de disco (VirtIO SCSI single vs SATA) na frente — estes são dolorosos para mudar mais tarde."
+  },
+  "scripts": {
+    "heading": "Programas envolvidos",
+    "intro": "O menu carrega através de source vários scripts partilhados sem página própria. Estão listados como referência. Cada subpágina liga ao script principal do respetivo processo.",
+    "headerScript": "Script",
+    "headerRole": "Papel",
+    "rows": [
+      {
+        "path": "menus/create_vm_menu.sh",
+        "role": "Central de entrada."
+      },
+      {
+        "path": "vm/select_nas_iso.sh",
+        "role": "Seletor ISO e sistemas NAS (Synology, TrueNAS, OMV, Rockstor, XigmaNAS, ZimaOS, FygoOS)."
+      },
+      {
+        "path": "vm/select_windows_iso.sh",
+        "role": "Selector ISO do Windows. Delega ao construtor UUP Dump quando necessário."
+      },
+      {
+        "path": "vm/select_linux_iso.sh",
+        "role": "Selector ISO Linux para o fluxo Linux (distribuições de mainstream)."
+      },
+      {
+        "path": "vm/synology.sh",
+        "role": "Processo Synology DSM: obtém o carregador e a imagem DSM e prepara o perfil da VM."
+      },
+      {
+        "path": "vm/zimaos.sh",
+        "role": "Fluxo ZimaOS: baixa a imagem e a liga à definição VM."
+      },
+      {
+        "path": "vm/vm_configurator.sh",
+        "role": "Assistente padrão vs Avançado: CPU modelo/cores, RAM, BIOS, NIC, tipo de máquina."
+      },
+      {
+        "path": "vm/disk_selector.sh",
+        "role": "Plano de armazenamento: disco virtual, importação de disco ou passagem Controlador/NVMe."
+      },
+      {
+        "path": "vm/vm_creator.sh",
+        "role": "Criação final do VM: aplica a configuração, liga o armazenamento, escreve a descrição HTML."
+      },
+      {
+        "path": "vm/guest_agent_config.sh",
+        "role": "Opcional QEMU hook de instalação de agente convidado, usado por vários fluxos."
+      }
+    ]
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/disk-manager",
+        "label": "Gerenciador de disco",
+        "tail": " — anexar discos físicos existentes ou importar imagens de disco em VMs."
+      },
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "Criador de ISO do UUP Dump",
+        "tail": " — crie ISO de instalação Windows prontas como suporte de arranque."
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importar VM de OVA / OVF",
+        "tail": " — introduzir as MV pré-construídas das exportações VMware / VirtualBox / ProxMenux."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Adicionar GPU a uma VM (passthrough)",
+        "tail": " — passar um GPU para um VM."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Comandos de gestão VM e CT",
+        "tail": " — referência qm para o lado CLI."
+      }
+    ]
+  }
+}

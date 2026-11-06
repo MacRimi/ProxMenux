@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Trvalé názvy rozhraní | Dokumentácia ProxMenux",
+    "description": "Priraďte názvy rozhraní Proxmox (eno1, enp3s0, …) k MAC adresám pomocou súborov .link služby systemd, aby zostali zachované pri opätovnom číslovaní PCI, aktualizáciách jadra a pridávaní či odoberaní iných sieťových kariet.",
+    "ogTitle": "Trvalé názvy rozhraní | Dokumentácia ProxMenux",
+    "ogDescription": "Zabráňte zmene názvov rozhraní Proxmox pri zmene hardvéru. Používa súbory .link služby systemd s priradením podľa MAC adresy."
+  },
+  "header": {
+    "title": "Trvalé názvy rozhraní",
+    "description": "Pre každú fyzickú sieťovú kartu vytvorí súbor .link služby systemd, ktorý priradí názov pridelený jadrom k MAC adrese karty. Po použití pri ďalšom reštarte sa názvy rozhraní prestanú meniť pri pridávaní, odoberaní alebo presúvaní kariet PCIe.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Pre každú fyzickú sieťovú kartu hostiteľa zapíše malý súbor <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> s pravidlom: <em>„Zariadenie s touto MAC adresou sa musí vždy volať týmto názvom.“</em> systemd-udevd použije pravidlo pri každom štarte skôr, než <code>ifupdown</code> prečíta <code>/etc/network/interfaces</code>."
+  },
+  "problem": {
+    "heading": "Problém, ktorý rieši",
+    "intro": "Linux odvodzuje predvolené názvy rozhraní z topológie PCI — <code>eno1</code> = integrovaná karta, <code>enp3s0</code> = karta na zbernici PCI 3, slot 0 atď. Schéma názvov je deterministická <em>pri rovnakom rozložení hardvéru</em>. Ak sa rozloženie zmení, zmenia sa aj názvy:",
+    "items": [
+      "Pridanie GPU pred existujúcu sieťovú kartu → číslo zbernice sieťovej karty sa môže zmeniť → zmení sa názov.",
+      "Presunutie karty do iného slotu PCIe → zmení sa názov.",
+      "Aktualizácia BIOS / UEFI s opätovným číslovaním zariadení → názvy sa môžu zmeniť.",
+      "Nahradenie chybnej karty rovnakým modelom v inom slote → zmení sa názov."
+    ],
+    "outro": "Po takejto zmene <code>/etc/network/interfaces</code> stále odkazuje na <em>starý</em> názov; most sa neaktivuje a hostiteľ stratí sieťové pripojenie. Nastavenie trvalých názvov zabráni opakovaniu tejto situácie."
+  },
+  "howWorks": {
+    "heading": "Ako to funguje",
+    "arrowLabel": "na NIC",
+    "nodes": {
+      "detectLabel": "Zistiť fyzické sieťové karty",
+      "detectDetail": "ls /sys/class/net/\nvylúčiť vmbr / bond /\ndocker / veth / wireguard …",
+      "readLabel": "Prečítať každú MAC adresu",
+      "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
+      "writeLabel": "Zapísať súbor .link",
+      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+    },
+    "minimalIntro": "Každý vygenerovaný súbor je zámerne minimálny:",
+    "minimalOutro": "Pri štarte systemd-udevd identifikuje zariadenie podľa MAC adresy a pridelí požadovaný názov <em>skôr</em>, než zasiahnu iné komponenty (ifupdown, predvolené pomenovanie jadra). Predpona <code>10-</code> zabezpečuje skoré načítanie pravidiel pred predvoleným súborom <code>99-default.link</code>."
+  },
+  "scope": {
+    "heading": "Čo sa napíše, čo sa preskočí",
+    "headerType": "Typ",
+    "headerBehaviour": "Správanie",
+    "headerWhy": "Prečo?",
+    "rows": [
+      {
+        "type": "Integrovaná / PCIe sieťová karta",
+        "behaviour": "Zapíše sa súbor <code>.link</code>",
+        "why": "Zodpovedá skutočnému zariadeniu PCI — prípad, pre ktorý je nástroj určený"
+      },
+      {
+        "type": "Wi-Fi (phy80211)",
+        "behaviour": "Zapíše sa súbor <code>.link</code>",
+        "why": "Má skutočnú MAC adresu a využije stabilný názov"
+      },
+      {
+        "type": "Mosty (vmbrX)",
+        "behaviour": "Preskočené",
+        "why": "Virtuálne; meno pochádza z <code>/etc/network/interfaces</code>"
+      },
+      {
+        "type": "Bondy (bondX)",
+        "behaviour": "Preskočené",
+        "why": "Virtuálne; názov bondu nastavuje ifupdown"
+      },
+      {
+        "type": "veth / docker0 / br-XXXX",
+        "behaviour": "Preskočené",
+        "why": "Vytvárané podľa potreby systémom Docker / LXC — nejde o trvalý hardvér"
+      },
+      {
+        "type": "tap / fwpr / fwln",
+        "behaviour": "Preskočené",
+        "why": "Vytvárané podľa potreby systémom Proxmox pre každú VM/CT"
+      },
+      {
+        "type": "WireGuard / Cilium / Tailscale",
+        "behaviour": "Preskočené",
+        "why": "Softvérové rozhrania spravované vlastnými démonmi"
+      }
+    ]
+  },
+  "safety": {
+    "heading": "Ochrana: predchádzajúce súbory .link sa zálohujú",
+    "intro": "Ak <code>/etc/systemd/network/</code> už obsahuje <code>.link</code> súbory (z predchádzajúceho spustenia alebo iného nástroja), skopírujú sa do záložného adresára s časovou značkou pred generovaním nových:",
+    "outro": "Ak chcete vrátiť späť: skopírujte súbory späť zo záložného adresára a reštartujte.",
+    "rebootTitle": "Prejaví sa pri ďalšom reštarte, nie okamžite",
+    "rebootBody": "Zmeny súborov <code>.link</code> sa použijú iba pri štarte, keď udev znovu enumeruje zariadenia. Preto nástroj hlási <em>„Zmeny sa použijú po reštarte“</em>. Premenovanie rozhrania za behu je riskantné a nástroj sa oň nepokúša: aktívny <code>vmbr0</code> s členskými rozhraniami by sa musel prekonfigurovať atómovo. Operácia sa preto odkladá na ďalší čistý štart."
+  },
+  "afterReboot": {
+    "heading": "Po reštarte",
+    "intro": "Keď sú názvy napevno priradené, postup pri budúcich zmenách hardvéru je jednoduchý:",
+    "items": [
+      "Vypnite počítač, zmeňte hardvér (pridajte kartu, zmeňte slot, …) a spustite ho.",
+      "Každý NIC si ponechá svoje predchádzajúce meno, pretože jeho MAC zodpovedá súboru <code>.link</code>.",
+      "Ak je NIC nahradený (iný MAC), dostane predvolený názov jadra (<code>enp&lt;bus&gt;s&lt;slot&gt;</code>); znovu spustite toto menu pre pridanie položky <code>.link</code> pre MAC novej karty."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "emptyTitle": "\"Nenájdené žiadne fyzické rozhrania\" po spustení nástroja",
+    "emptyBody": "Jadro na hostiteľovi nevidí žiadne rozhrania založené na PCI / phy80211. Overte to cez <code>ls -l /sys/class/net/</code> — každá položka by mala obsahovať symbolický odkaz <code>device</code> (PCI) alebo položku <code>phy80211</code> (Wi-Fi). Ak pri skutočnej sieťovej karte chýbajú obe, ovládač nie je načítaný.",
+    "noChangeTitle": "Po reštarte sa mená nezmenili podľa očakávania.",
+    "noChangeBody": "Skontrolujte, či súbor existuje a má správny formát: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Potom skontrolujte záznamy udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Bežnou príčinou je starý parameter jadra <code>net.ifnames=0</code>, ktorý úplne vypína predvídateľné názvy — odstráňte ho z <code>/etc/default/grub</code>, spustite <code>update-grub</code> a reštartujte.",
+    "undoTitle": "Chcem zrušiť trvalé pomenovanie.",
+    "undoBody": "Buď odstráňte súbory <code>.link</code> (<code>rm /etc/systemd/network/10-*.link</code>), alebo ich obnovte z adresára záloh vytvoreného pri predchádzajúcom spustení. Zmenu použijete reštartom."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Analýza mostov a oprava so sprievodcom",
+        "href": "/docs/network/bridge-analysis",
+        "tailRich": " — postup obnovy, keď sa názvy <em>už</em> zmenili."
+      },
+      {
+        "label": "Analýza konfigurácie a čistenie so sprievodcom",
+        "href": "/docs/network/config-analysis",
+        "tail": " — na odstránenie osirelých blokov, ktoré zostali po zmenách názvov."
+      },
+      {
+        "label": "Diagnostika",
+        "href": "/docs/network/diagnostics",
+        "tailRich": " — po reštarte overte nové názvy cez <em>Zobraziť smerovaciu tabuľku</em>."
+      }
+    ]
+  }
+}

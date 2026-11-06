@@ -1,0 +1,292 @@
+{
+  "meta": {
+    "title": "Skapa VM: Linux-system | ProxMenux-dokumentation",
+    "description": "Skapa virtuella Linux-maskiner på Proxmox VE med ProxMenux. Beskriver katalogen med utvalda officiella ISO-avbildningar (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), den gemensamma lagringsplanen, valfri GPU-passthrough och tips efter installationen.",
+    "ogTitle": "Skapa VM: Linux-system | ProxMenux-dokumentation",
+    "ogDescription": "Skapa Linux VM på Proxmox VE med ProxMenux. Curated ISO katalog, enhetlig lagringsplan, valfri GPU genomgång och post-install tips.",
+    "ogImageAlt": "ProxMenux Linux VM-menyn"
+  },
+  "header": {
+    "title": "Skapa VM: Linux-system",
+    "description": "Skapa en Linux-VM på Proxmox VE. ProxMenux har en katalog med utvalda officiella Linux-ISO:er för nedladdning och en väljare för lokala ISO:er. Alla alternativ använder den gemensamma VM-guiden, lagringsplanen och den valfria guiden för GPU-passthrough.",
+    "section": "Virtuella maskiner"
+  },
+  "intro": {
+    "title": "Vad skriptet gör",
+    "body": "Välj en officiell Linux-ISO för automatisk nedladdning eller en lokal ISO som redan har laddats upp. Den gemensamma guiden går sedan igenom CPU, RAM och BIOS, lagringsplan, valfri GPU-passthrough och skapandet av VM:n."
+  },
+  "image": {
+    "alt": "ProxMenux Linux installationsalternativ",
+    "caption": "Linux installationsalternativ"
+  },
+  "config": {
+    "heading": "Standard vs Avancerad konfiguration",
+    "intro": "När ISO väljs frågar ProxMenux om du vill använda standard VM-profilen eller öppna den avancerade guiden.",
+    "defaultHeading": "Standardkonfiguration",
+    "headerParam": "Parameter",
+    "headerValue": "Standardvärde",
+    "defaultRows": [
+      {
+        "param": "maskintyp",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU-typ",
+        "value": "Host"
+      },
+      {
+        "param": "Kärnor",
+        "value": "2"
+      },
+      {
+        "param": "RAM",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Bro",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "MAC-adress",
+        "value": "Autogenererad"
+      },
+      {
+        "param": "Starta när det är klart",
+        "value": "Nej"
+      }
+    ],
+    "advancedHeading": "Avancerad konfiguration",
+    "advancedIntro": "Den avancerade guiden visar varje inställning separat:",
+    "headerOptions": "Alternativ",
+    "advancedRows": [
+      {
+        "param": "maskintyp",
+        "optionsRich": "<code>q35</code> eller <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI) eller SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU-typ",
+        "options": "Host, KVM64 och andra listade CPU-modeller"
+      },
+      {
+        "param": "Kärnor",
+        "options": "Antal CPU-kärnor"
+      },
+      {
+        "param": "RAM",
+        "options": "Minne som tilldelats VM"
+      },
+      {
+        "param": "Bro",
+        "options": "Nätverksbro"
+      },
+      {
+        "param": "MAC-adress",
+        "options": "Egen MAC-adress"
+      },
+      {
+        "param": "VLAN",
+        "options": "VLAN tag (tillval)"
+      },
+      {
+        "param": "MTU",
+        "options": "MTU storlek"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Lagringsplan",
+    "body": "Efter CPU / RAM öppnar ProxMenux <strong>Storage Plan</strong>-menyn, där du kan kombinera virtuella diskar, importerade diskar och PCI genomgångsenheter i samma VM, lägga till objekt en i taget och avsluta när du är klar.",
+    "virtualDiskTitle": "a. Lägg till virtuell disk",
+    "virtualDiskItems": [
+      "Listar de Proxmox lagringsvolymer som finns på värden.",
+      "Du väljer mållagring och storleken på GB.",
+      "Disken använder vald buss: SCSI (standard), SATA, VirtIO eller IDE. SATA har sex platser numrerade 0–5: <code>sata0</code>, <code>sata1</code>, …."
+    ],
+    "importDiskTitle": "b. Lägg till importerad disk",
+    "importDiskItems": [
+      "Detekterar fysiska diskar som är säkra att importera (system och skyddade diskar är dolda).",
+      "Du väljer en eller flera diskar via en checklista.",
+      "Importerade diskar använder vald buss och ansluts via <code>qm set</code>."
+    ],
+    "pciTitle": "c. Lägg till styrenhet eller NVMe (PCI-passthrough)",
+    "pciItems": [
+      "Hittar SATA/SAS-HBA:er och NVMe-enheter och låter dig tilldela en <em>hel styrenhet</em> till VM:n. IOMMU måste vara aktivt; skriptet erbjuder aktivering och omstart vid behov.",
+      "Ett bekräftelsesteg varnar för kontrollörens hela risk (hela kortet, inklusive varje disk på det, lämnar värden).",
+      "PCI-enheter tilldelas med kommandon som <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Ersätt VMID och PCI_ADDRESS med VM-ID och PCI-adress och använd ett ledigt hostpci-index för varje enhet."
+    ],
+    "resetTitle": "Återställ och slutför",
+    "resetBody": "Menyn erbjuder också <strong>r</strong> (återställ det aktuella urvalet och börja om) och <strong>d</strong> (slutför och fortsätt). Du kan inte avsluta med en tom plan."
+  },
+  "gpu": {
+    "heading": "Valfri GPU passthrough",
+    "body": "Efter lagringsplanen, om en kompatibel GPU detekteras på värd ProxMenux erbjudanden för att starta GPU passthrough assistent. Se <gpuLink>Lägg till GPU till en VM (Passthrough) </gpuLink> för hur assistenten fungerar - en värd omstart kan krävas."
+  },
+  "autoFeatures": {
+    "heading": "Automatiska VM-funktioner",
+    "efiTitle": "EFI-disk",
+    "efiBody": "När OVMF (UEFI) väljs skapar ProxMenux en 4 MB EFI-systemdisk på lagringen du väljer så firmware har en plats att lagra sina variabler.",
+    "isoTitle": "ISO montering",
+    "isoBody": "Installationen ISO är kopplad till <code>ide2</code> som en CD-ROM, redo för första start.",
+    "guestTitle": "QEMU gästagent",
+    "guestBody": "Gästagentkanalen är aktiverad i VM-konfig. Du måste fortfarande installera agenten inuti gästen - se tipsen nedan."
+  },
+  "installOptions": {
+    "heading": "Linux installationsalternativ",
+    "officialHeading": "Officiell ISO (traditionell installation)",
+    "officialBody": "ProxMenux har ett urval officiella Linux-ISO:er. Välj en så laddar skriptet ned den direkt från distributionens spegelserver till <code>/var/lib/vz/template/iso</code> och ansluter den till VM:n.",
+    "officialImageAlt": "Val av Linux-distribution",
+    "officialImageCaption": "Val av Linux-distribution",
+    "localHeading": "Lokalt ISO",
+    "localBody": "Använder en Linux-ISO som redan finns i <code>/var/lib/vz/template/iso</code>. Skriptet listar alla <code>*.iso</code>-filer det hittar och låter dig välja en.",
+    "localImageAlt": "Lokala ISO urvalsmenyn",
+    "localImageCaption": "Lokala ISO urvalsmenyn",
+    "distros": [
+      {
+        "name": "Ubuntu",
+        "variants": [
+          "25.10 Desktop",
+          "24.04 Desktop",
+          "22.04 Desktop",
+          "20.04 Desktop",
+          "25.10 Server",
+          "24.04 Server",
+          "22.04 Server",
+          "20.04 Server"
+        ]
+      },
+      {
+        "name": "Debian",
+        "variants": [
+          "13 Desktop",
+          "12 Desktop",
+          "11 Desktop",
+          "13 Netinst",
+          "12 Netinst",
+          "11 Netinst"
+        ]
+      },
+      {
+        "name": "Fedora",
+        "variants": [
+          "Workstation 42"
+        ]
+      },
+      {
+        "name": "Arch Linux",
+        "variants": [
+          "senaste versionen"
+        ]
+      },
+      {
+        "name": "Rocky Linux",
+        "variants": [
+          "9"
+        ]
+      },
+      {
+        "name": "Linux Mint",
+        "variants": [
+          "22.1 Cinnamon"
+        ]
+      },
+      {
+        "name": "openSUSE",
+        "variants": [
+          "Leap 15.6"
+        ]
+      },
+      {
+        "name": "Alpine Linux",
+        "variants": [
+          "3.21"
+        ]
+      },
+      {
+        "name": "Kali Linux",
+        "variants": [
+          "2026.1"
+        ]
+      },
+      {
+        "name": "Manjaro",
+        "variants": [
+          "25.0 GNOME"
+        ]
+      }
+    ]
+  },
+  "endToEnd": {
+    "heading": "Vad skriptet gör från början till slut",
+    "items": [
+      "Hämtar Linux-ISO:n via officiell nedladdning eller en lokal fil.",
+      "Tillämpar standard- eller avancerade inställningar för CPU, RAM, BIOS och maskintyp.",
+      "Öppnar lagringsplanen och fäster de valda virtuella diskarna, importerade diskar och PCI-enheter.",
+      "Skapar EFI-skivan när UEFI väljs.",
+      "Monterar Linux ISO på <code>ide2</code>.",
+      "Ange startordern (disk först, sedan ISO).",
+      "Möjliggör QEMU Guest Agent-kanalen.",
+      "Kör guiden för GPU-passthrough om du väljer det.",
+      "Genererar en stilig HTML-beskrivning bifogad till VM.",
+      "Startar VM:n om du valde det."
+    ]
+  },
+  "postInstall": {
+    "heading": "Tips efter installationen",
+    "guestAgentHeading": "Installera QEMU Guest Agent i VM",
+    "guestAgentBody": "ProxMenux aktiverar gästagentens kanal i VM-konfigurationen, men agenten måste installeras i gästsystemet. Den stöder kontrollerad avstängning och frysning av filsystem under säkerhetskopiering för bättre datakonsistens.",
+    "debian": "Debian / Ubuntu",
+    "fedora": "Fedora / Rocky / RHEL",
+    "arch": "Arch Linux",
+    "opensuse": "openSUSE",
+    "virtioHeading": "VirtIO stöd i Linux",
+    "virtioBody": "Moderna Linux-distributioner innehåller normalt VirtIO-drivrutiner för disk och nätverk. Välj <code>virtio</code> för VirtIO-blockdiskar eller <code>scsi</code> med den konfigurerade VirtIO SCSI-styrenheten; nätverkskortet använder också <code>virtio</code>. Kontrollera drivrutinsstödet i äldre installerare.",
+    "virtioWarnTitle": "Mycket gamla distributioner",
+    "virtioWarnBody": "Mycket gamla installerare kan sakna nödvändiga VirtIO-drivrutiner. Använd då en emulerad SATA-/SCSI-styrenhet eller tillhandahåll lämpliga drivrutiner.",
+    "trimHeading": "Aktivera TRIM / discard på SSD-lagring",
+    "trimBody": "När VM sitter på SSD-stödd Proxmox-lagring och disken fästes med <code>discard</code>-flaggan kan du vidarebefordra trimkommandon inifrån gästen. Två alternativ:",
+    "trimItems": [
+      "Kör <code>fstrim -av</code> regelbundet eller aktivera enheten <code>fstrim.timer</code> på distributioner med systemd.",
+      "Eller montera filsystem med alternativet <code>discard</code> i <code>/etc/fstab</code>."
+    ],
+    "balloonHeading": "Dynamiskt minne (ballooning)",
+    "balloonBody": "Moderna Linux-kärnor innehåller normalt drivrutinen <code>virtio_balloon</code>. Med en aktiverad balloon-enhet kan Proxmox samla minnesstatistik. Dynamisk återvinning kräver också ett minimivärde under konfigurerat maximum; lika värden ger fast minnestilldelning."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importera diskavbildning till virtuell dator",
+        "tail": " - bifoga en befintlig Linux .qcow2 / .img / .raw till en ny VM."
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importera VM från OVA / OVF",
+        "tail": " - ta in en Linux VM exporterad från VMware / VirtualBox / Proxmox."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " — För Linux VM som behöver GPU acceleration."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Kommandon för VM- och CT-hantering",
+        "tail": " — referens för qm CLI."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Översikt över att skapa VM",
+        "tail": "."
+      }
+    ]
+  }
+}

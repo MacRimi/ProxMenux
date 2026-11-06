@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Pós-instalação: Personalização | Documentação ProxMenux",
+    "description": "Opções de personalização no script pós-instalação personalizável do ProxMenux: prompt bash colorido com aliases úteis, faixa ProxMenux no MOTD e remoção do aviso de subscrição da interface web Proxmox."
+  },
+  "header": {
+    "title": "Após a instalação: personalização",
+    "description": "Ajustes visuais e de utilização do host Proxmox. Melhoram a shell e ocultam o aviso de subscrição na interface web. Bashrc, MOTD e a faixa de subscrição são registados e reversíveis pelo menu Desinstalar.",
+    "section": "Configurações pós-instalação do Proxmox"
+  },
+  "intro": {
+    "title": "O que esta categoria abrange",
+    "body": "Três opções pequenas e independentes: um <strong>prompt bash colorido com aliases</strong> para a shell root, uma <strong>faixa MOTD</strong> de uma linha no acesso SSH e remoção da <strong>janela «Sem subscrição válida»</strong> apresentada a cada acesso à interface web Proxmox."
+  },
+  "bashrc": {
+    "heading": "Personalizar bashrc",
+    "intro": "Insere em <code>/root/.bashrc</code> um bloco com prompt colorido, histórico com data e hora, aliases comuns de <code>ls</code> / <code>grep</code> e um <code>source</code> para o preenchimento automático bash. Torna o trabalho por SSH mais agradável e identifica claramente o host quando tem muitos separadores abertos.",
+    "writesTitle": "O que o ProxMenux adiciona ao .bashrc",
+    "writesOutro": "O bloco é delimitado pelos marcadores <code>PMX_CORE_BASHRC</code>. Voltar a executar o script substitui o bloco anterior sem o duplicar. O <code>.bashrc</code> original é guardado uma vez em <code>/root/.bashrc.bak</code> e acrescenta-se a linha <code>source /root/.bashrc</code> a <code>/root/.bash_profile</code> para aplicar o prompt também nas shells de login, por exemplo após <code>su -</code>.",
+    "rootTitle": "Aplica-se apenas ao root",
+    "rootBody": "A personalização visa o shell da conta root. Outros usuários que você cria no host mantêm seus próprios padrões. Se você administrar o Proxmox exclusivamente na interface web e nunca usar o shell, esta opção é estética pura e você pode pular."
+  },
+  "motd": {
+    "heading": "configurar banner MOTD personalizado",
+    "intro": "Acrescenta <em>\"This system is optimised by: ProxMenux\"</em> ao início de <code>/etc/motd</code>, a mensagem após um acesso SSH bem-sucedido, acima do prompt e antes dos scripts <code>update-motd</code>. Inofensivo e apenas informativo: confirma visualmente que o ProxMenux foi aplicado no host.",
+    "writesTitle": "O que o ProxMenux escreve",
+    "writesOutro": "Em primeiro lugar, ProxMenux registra se <code>/etc/motd</code> existia e armazena seu conteúdo original sob <code>/usr/local/share/proxmenux</code>. A operação é idempotente: se a linha do marcador já está presente, nada é adicionado. Instalações antigas com <code>/etc/motd.bak</code> existentes são migradas para o mesmo estado reversível."
+  },
+  "banner": {
+    "heading": "Remover banner de assinatura",
+    "intro": "Remove o <em>\"Você não tem uma assinatura válida para este servidor\"</em> modal que aparece toda vez que alguém entra na interface web do Proxmox sem uma assinatura corporativa. O patch tem conhecimento de versão: diferentes versões principais do Proxmox têm diferentes pacotes de UI, então o ProxMenux envia para o script certo.",
+    "versionTitle": "Escolha do script conforme a versão",
+    "versionItems": [
+      "<strong>PVE 9.x</strong> → executa <code>remove-banner-pve-v3.sh</code>, que altera <code>proxmoxlib.js</code> para desktop e a nova interface móvel baseada em Yew.",
+      "<strong>PVE 8.x</strong> → executa <code>remove-banner-pve8.sh</code> (somente desktop)."
+    ],
+    "versionOutro": "Antes do patch, o ProxMenux faz backup dos arquivos originais JS/template para <code>/usr/local/share/proxmenux/backups/</code> com um timestamp. O fluxo de desinstalação usa esses backups para restaurar os arquivos originais, e cai de volta para reinstalar os pacotes de UI Proxmox se o backup estiver faltando ou corrompido.",
+    "breakTitle": "Pode quebrar após as atualizações do Proxmox",
+    "breakBody": "As atualizações da interface Proxmox substituem regularmente <code>proxmoxlib.js</code> e podem fazer regressar o aviso. Pode voltar a aplicar a opção para alterar o ficheiro ou aceitar o aviso até lá. O ProxMenux também instala um hook APT que reaplica a alteração após atualizações de pacotes; consulte <link>Desinstalar otimizações</link> para o remover.",
+    "legalTitle": "Nota legal (sempre vale a pena repetir)",
+    "legalBody": "Esta opção só oculta o aviso da interface. <strong>Não</strong> dá suporte Enterprise nem acesso ao repositório Enterprise e não altera a licença do software. O Proxmox VE é distribuído sob GNU AGPLv3. Uma subscrição apoia o projeto e dá acesso ao canal de atualizações Enterprise; escolha o suporte adequado ao seu ambiente."
+  },
+  "verify": {
+    "heading": "Verificação",
+    "intro": "Após a aplicação dos três:",
+    "reversibleTitle": "Todas as três alterações de personalização são monitoradas",
+    "reversibleBody": "<link>Desinstalar otimizações</link> repõe <code>/root/.bashrc</code>, devolve ao MOTD o conteúdo exato anterior ao ProxMenux ou remove o ficheiro se antes não existia e restaura os ficheiros de interface alterados a partir das cópias ou reinstala os pacotes necessários."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Opcional",
+        "href": "/docs/post-install/optional",
+        "tail": " — Fastfetch e Figurine (outras personalizações visuais)."
+      },
+      {
+        "label": "Mostrar informações da versão",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — confirma que as personalizações são seguidas como instaladas."
+      },
+      {
+        "label": "Desinstalar otimizações",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — reverter bashrc, motd e o aviso de subscrição."
+      },
+      {
+        "label": "Pós-instalação personalizável",
+        "href": "/docs/post-install/customizable",
+        "tail": " — voltar ao menu superior."
+      }
+    ]
+  }
+}

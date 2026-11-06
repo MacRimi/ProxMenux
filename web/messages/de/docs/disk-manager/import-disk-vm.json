@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Datenträger zu VM importieren | ProxMenux Dokumentation",
+    "description": "Befestigen Sie eine physische Festplatte an eine vorhandene Proxmox VM mit ProxMenux. Sichere Festplattenerkennung (ausgenommen System, montiert, in Gebrauch, ZFS/RAID/LVM), persistente /dev/disk/by-id-Pfade und SATA / SCSI / VirtIO / IDE-Schnittstellen.",
+    "ogTitle": "Datenträger zu VM importieren | ProxMenux Dokumentation",
+    "ogDescription": "Befestigen Sie eine physische Festplatte an eine vorhandene Proxmox VM. Verwendet persistente /dev/disk/by-id-Pfade und unterstützt SATA / SCSI / VirtIO / IDE."
+  },
+  "header": {
+    "title": "Datenträger in VM importieren",
+    "description": "Weisen Sie einer vorhandenen VM ein physisches Laufwerk des Proxmox-Hosts zu. ProxMenux erkennt freie Laufwerke, lässt Sie Ziel-VM und Bustyp (SATA/SCSI/VirtIO/IDE) wählen und verwendet persistente /dev/disk/by-id-Pfade. So bleibt die Zuordnung bei Neustarts und geänderter Gerätereihenfolge bestehen.",
+    "section": "Datenträgerverwaltung · VM"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Ein physisches Laufwerk wird als Backend einer virtuellen Laufwerksschnittstelle zugewiesen. Der Gast erhält nicht automatisch native SMART-Daten oder Funktionen des physischen Controllers; dafür ist Controller-PCI-Passthrough geeignet. Das Laufwerk wird, falls vorhanden, über seinen Pfad <code>/dev/disk/by-id/…</code> zugewiesen, sodass eine geänderte Gerätereihenfolge beim Start die Zuordnung nicht unterbricht; andernfalls wird <code>/dev/sdX</code> verwendet."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Anbringen von Festplatten am VM\". Bis zur endgültigen Bestätigung bleibt die VM-Konfiguration unberührt.",
+    "summary": "ProxMenux blendet unsichere Kandidaten aus: Root-Laufwerk, auf dem Host eingehängte Laufwerke, aktive ZFS-/LVM-/RAID-Mitglieder und bereits in VM-/LXC-Konfigurationen referenzierte Laufwerke. Laufwerke mit <em>alten</em>, nicht mehr verwendeten ZFS-/RAID-/LVM-Metadaten erscheinen mit ⚠, werden aber nicht gesperrt."
+  },
+  "prereqs": {
+    "heading": "Voraussetzungen",
+    "items": [
+      "Mindestens ein VM, der auf dem Host definiert ist (das Skript wird direkt an <code>qm list</code> gesendet).",
+      "Die <strong>Ziel-VM ist ausgeschaltet</strong>. Läuft sie, bricht das Skript mit einer Meldung ab; das Hinzufügen im laufenden Betrieb ist nicht Teil dieses Ablaufs.",
+      "Mindestens eine physische Festplatte auf dem Host, die nicht vom Host oder einem anderen Gast verwendet wird."
+    ]
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Ziel-VM auswählen",
+        "bodyRich": "ProxMenux listet alle VMs auf dem Host über <code>qm list</code> auf. Wählen Sie die VM für das Laufwerk. Läuft sie, bricht das Skript ab und fordert Sie auf, sie zuerst herunterzufahren."
+      },
+      {
+        "title": "Wählen Sie die physische Festplatte(n) zum Anbringen",
+        "img": "/disk/disk-selection.png",
+        "caption": "Freie Festplatten auf dem Host erkannt (mit ⚠ Labels für veraltete Metadaten)",
+        "body": "Das Skript scannt jede Host-Disk und zeigt nur diejenigen an, die sicher angehängt werden können. Mit der Checkliste können Sie eine oder mehrere auf einmal auswählen. Disks mit alten ZFS / LVM / RAID-Signaturen werden immer noch angezeigt, gekennzeichnet mit ⚠, so dass Sie wissen, dass sie ein Wischen benötigen, bevor der Gast sie formatieren kann."
+      },
+      {
+        "title": "Wählen Sie die Bus-Schnittstelle",
+        "img": "/disk/disk-assigment.png",
+        "caption": "Auswahl der Busschnittstellen",
+        "intro": "Wählen Sie aus, wie der Gast die Festplatte sehen soll:",
+        "items": [
+          "<strong>SCSI</strong> – moderner Standard für Linux und Windows mit installierten VirtIO-SCSI-Treibern.",
+          "<strong>SATA</strong> — breite Kompatibilität, funktioniert out of the box auf praktisch jedem Gast.",
+          "<strong>VirtIO</strong>: effizientes paravirtualisiertes Blockgerät; benötigt Gasttreiber.",
+          "<strong>IDE</strong>: für ältere Gäste ohne einen der oben genannten Treiber."
+        ]
+      },
+      {
+        "title": "Zuweisen und prüfen",
+        "bodyRich": "ProxMenux verbindet jede ausgewählte Festplatte mit dem besten <code>/dev/disk/by-id/</code>-Pfad, überspringt Slot-Indizes, die bereits in der VM-Konfiguration verwendet werden (<code>scsi0</code>, <code>sata0</code>, ...) und liest die Konfiguration erneut, um die Zuordnung zu bestätigen. Am Ende wird eine Zusammenfassung gedruckt."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Das Skript ist ein Wrapper um <code>qm set</code>. Der genaue Befehl für eine einzelne Festplatte sieht so aus:",
+    "migrationTitle": "Live Migration ist nicht möglich",
+    "migrationBody": "Eine VM mit einem direkt zugewiesenen physischen Laufwerk ist <strong>an den Host gebunden, der dieses bereitstellt</strong>. Ein anderer Knoten hat normalerweise weder denselben Pfad <code>/dev/disk/by-id/…</code> noch dessen Daten. Sichern und übertragen Sie diese separat oder verwenden Sie verwaltete virtuelle Laufwerke auf gemeinsamem oder unterstützt repliziertem Speicher. Gehen Sie nicht davon aus, dass Proxmox-Speicherreplikation dieses Gerät umfasst.",
+    "shareTitle": "Teilen Sie keine physische Festplatte zwischen VMs",
+    "shareBody": "Wenn Sie dieselbe physische Festplatte gleichzeitig an zwei VMs anbringen, werden die Daten beim nächsten Schreiben beschädigt. ProxMenux erkennt diese Situation und blockiert sie, aber wenn Sie das Skript umgehen (direktes <code>qm set</code>), stellen Sie sicher, dass nur ein Gast jemals die Festplatte mountet."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noDisksTitle": "\"Für diesen VM sind keine Festplatten verfügbar\"",
+    "noDisksIntro": "Das Skript fand Festplatten, aber jeder Kandidat wurde herausgefiltert. Häufige Gründe:",
+    "noDisksItems": [
+      "Jede verbleibende Festplatte wird bereits in der Konfiguration des Ziels VM referenziert.",
+      "Jede verbleibende Festplatte wird auf dem Host montiert oder ist Teil eines aktiven ZFS / LVM / RAID.",
+      "Der Host hat nur die Root Disk installiert."
+    ],
+    "noDisksOutro": "Führen Sie <code>lsblk -f</code> auf dem Host aus, um den Status jeder Festplatte zu überprüfen.",
+    "noVisibleTitle": "VM sieht die Festplatte nach dem Booten nicht",
+    "noVisibleBody": "Bei <strong>SCSI</strong> oder <strong>VirtIO</strong> benötigt der Gast den passenden Treiber. Linux bringt ihn im Kernel mit; unter Windows installieren Sie ihn von der VirtIO-ISO (siehe <winLink>VM erstellen: Windows</winLink>). SATA auf der Hardware-Registerkarte der VM ist ein schneller Test, ob das Laufwerk zugewiesen ist."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Disk-Image in VM importieren",
+        "tail": " — derselbe Ablauf für Disk-Image-Dateien (qcow2 / vmdk / raw / img)."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "label": "Datenträger in LXC importieren",
+        "tail": " — entsprechender Ablauf für LXC-Container."
+      },
+      {
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "label": "Controller oder NVMe zu VM hinzufügen",
+        "tail": "- wenn Sie einen vollständigen PCIe / NVMe-Durchgang anstelle eines Festplattenanschlusses benötigen."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Speicher- und Festplattenbefehle",
+        "tail": "qm importdisk und zugehörige Shell-Referenz."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

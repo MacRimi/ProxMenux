@@ -1,0 +1,158 @@
+{
+  "normal_rc": 0,
+  "records": [
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "name": "/manual-app-current",
+      "image": "example/manual-app:2",
+      "running": false,
+      "project": "manual-app",
+      "service": "web-current",
+      "title": null,
+      "version": null,
+      "bindings": {
+        "8080/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8081"
+          }
+        ]
+      },
+      "ports": {}
+    },
+    {
+      "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "name": "/manual-app-previous",
+      "image": "example/manual-app:1",
+      "running": true,
+      "project": "manual-app",
+      "service": "web-previous",
+      "title": null,
+      "version": null,
+      "bindings": {
+        "21115/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "21115"
+          }
+        ],
+        "21116/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "21116"
+          }
+        ],
+        "21116/udp": [
+          {
+            "HostIp": "",
+            "HostPort": "21116"
+          }
+        ],
+        "21117/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "21117"
+          }
+        ],
+        "8080/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "8080"
+          }
+        ]
+      },
+      "ports": {
+        "21115/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "21115"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "21115"
+          }
+        ],
+        "21116/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "21116"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "21116"
+          }
+        ],
+        "21116/udp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "21116"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "21116"
+          }
+        ],
+        "21117/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "21117"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "21117"
+          }
+        ],
+        "21118/tcp": null,
+        "21119/tcp": null,
+        "8080/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "8080"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "8080"
+          }
+        ],
+        "9000/tcp": null
+      }
+    },
+    {
+      "id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "name": "/db-1",
+      "image": "mysql:8.4",
+      "running": true,
+      "project": "manual-app",
+      "service": "db",
+      "title": null,
+      "version": null,
+      "bindings": {},
+      "ports": {
+        "3306/tcp": null,
+        "33060/tcp": null
+      }
+    }
+  ],
+  "partial_rc": 1,
+  "partial_records": [
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "name": "/manual-app-current",
+      "image": "example/manual-app:2",
+      "running": false,
+      "project": "manual-app",
+      "service": "web-current",
+      "title": null,
+      "version": null,
+      "bindings": {
+        "8080/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8081"
+          }
+        ]
+      },
+      "ports": {}
+    }
+  ]
+}

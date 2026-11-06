@@ -1,4 +1,5 @@
 """Inert infrastructure for actual endpoint/manual/queued/SQLite release seams."""
+import ast
 import datetime
 import sqlite3
 import tempfile
@@ -36,6 +37,10 @@ def restore_event(warnings):
 def deliver(event_type, data, severity='INFO', language='en', manual=False, quiet=False, quiet_before=()):
     """Execute real dispatch/manual and optional real SQLite buffer+flush."""
     captured = []
+    delivery_errors = []
+    def record_history(event_type, channel, title, body, severity, success, error, source):
+        if not success:
+            delivery_errors.append(f'{channel}: {error}')
     channel = object.__new__(EmailChannel); channel.subject_prefix = '[ProxMenux]'
     def sink(title, body, severity, data):
         markup = channel._format_html(title, body, severity, data)
@@ -48,12 +53,25 @@ def deliver(event_type, data, severity='INFO', language='en', manual=False, quie
         _claim_delivery=lambda event:'inert', _finish_delivery_claim=lambda *a,**kw:None,
         _notification_language=lambda:language, _build_ai_config=lambda:{'ai_enabled':'false'},
         _in_quiet_hours=lambda channel:quiet, _should_buffer_for_digest=lambda *a:False,
-        _record_history=lambda *a:None, _stats={'total_sent':0,'total_errors':0},
+        _record_history=record_history, _stats={'total_sent':0,'total_errors':0},
         is_event_enabled=lambda event:True)
     ns = dict(vars(typing), NotificationEvent=types.SimpleNamespace, TEMPLATES=templates.TEMPLATES, render_template=templates.render_template,
         resolve_notification_hostname=lambda host, config:host or 'node-a',
         enrich_with_emojis=templates.enrich_with_emojis, datetime=datetime.datetime,
-        _should_bypass_ai=lambda event:True, _AI_BYPASS_EVENTS=frozenset({'backup_complete','backup_fail'}))
+        format_backup_diagnostics_with_ai=templates.format_backup_diagnostics_with_ai,
+        format_with_ai_full=templates.format_with_ai_full,
+        # AI is disabled in this fixture. Execute the actual formatting helpers
+        # synchronously, without a worker pool, providers or operational imports.
+        _format_with_ai_bounded=lambda function,*args,**kwargs:function(*args,**kwargs),
+        enrich_context_for_ai=lambda **kwargs:'')
+    manager_path = SCRIPTS/'notification_manager.py'
+    for node in ast.parse(manager_path.read_text()).body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in ('_AI_BYPASS_EVENTS', '_AI_NO_SUGGESTION_EVENTS'):
+                    ns[target.id] = frozenset(ast.literal_eval(node.value.args[0]))
+    for name in ('_should_bypass_ai', '_format_backup_with_ai_bounded'):
+        extract(manager_path, name, None, ns)
     for name in ('_dispatch_to_channels', '_dispatch_event', 'send_notification'):
         setattr(manager, name, types.MethodType(extract(SCRIPTS/'notification_manager.py', name, 'NotificationManager', ns), manager))
     with tempfile.TemporaryDirectory(prefix='notification-final-') as scratch:
@@ -73,10 +91,11 @@ def deliver(event_type, data, severity='INFO', language='en', manual=False, quie
         if manual:
             assert not quiet
             result = manager.send_notification(event_type, severity, '', '', dict(data))
-            assert result['success']
+            assert result['success'], result.get('errors')
         else:
             event = types.SimpleNamespace(event_type=event_type, severity=severity, data=dict(data), source='inert', entity_type='node', entity_id='', event_id='inert', fingerprint='inert')
             manager._dispatch_event(event)
+        assert not delivery_errors, '; '.join(delivery_errors)
         if quiet:
             conn = sqlite3.connect(db); rows = conn.execute('SELECT event_type,severity,title,body FROM quiet_pending').fetchall(); conn.close()
             assert len(rows)==1+len(quiet_before) and not captured

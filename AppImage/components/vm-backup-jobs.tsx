@@ -21,6 +21,7 @@ import {
 import { fetchApi } from "../lib/api-config"
 import { cancelButtonClass } from "../lib/utils"
 import { useT } from "../lib/i18n/provider"
+import { RETENTION, parseRetention, buildRetention } from "../lib/backup-retention"
 
 interface VmBackupJob {
   id: string
@@ -70,24 +71,6 @@ const EMPTY_FORM: FormState = {
   mode: "snapshot", compress: "zstd", retention: {}, keepAll: false, notes: "{{guestname}}", attached: [],
 }
 
-// The limits a job can keep, in the order Proxmox lists them.
-const RETENTION = ["last", "hourly", "daily", "weekly", "monthly", "yearly"] as const
-
-const parseRetention = (prune: string) => {
-  const fields: Record<string, string> = {}
-  let keepAll = false
-  for (const part of prune.split(",")) {
-    const [key, value] = part.trim().split("=")
-    if (key === "keep-all") keepAll = value === "1"
-    else if (key?.startsWith("keep-") && Number(value) > 0) fields[key.slice(5)] = String(Number(value))
-  }
-  return { fields, keepAll }
-}
-
-const buildRetention = (fields: Record<string, string>, keepAll: boolean) => {
-  const parts = RETENTION.filter((key) => Number(fields[key]) > 0).map((key) => `keep-${key}=${Number(fields[key])}`)
-  return parts.length ? parts.join(",") : keepAll ? "keep-all=1" : ""
-}
 
 const isOn = (value: unknown) => value === 1 || value === true || value === "1"
 const jobEnabled = (job: VmBackupJob) => job.enabled === undefined || isOn(job.enabled)
