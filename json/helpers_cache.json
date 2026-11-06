@@ -3102,7 +3102,8 @@
       "Docker is installed as a system dependency because Wings uses it to run the actual game server containers; the Panel and Wings processes themselves run natively, not inside Docker."
     ],
     "warnings": [
-      "The encryption key is generated automatically and saved to /etc/calagopus/.env. Back it up, losing it will make existing data unreadable."
+      "The encryption key is generated automatically and saved to /etc/calagopus/.env. Back it up, losing it will make existing data unreadable.",
+      "This install script installs Calagopus as a binary nativly and does not use the heavy docker image. meaning you will not be able to install extensions."
     ],
     "port": 8000,
     "website": "https://calagopus.com",
