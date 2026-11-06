@@ -77,6 +77,14 @@
     "jenkins": {
       "status": "laboratory-validated"
     },
+    "lastboard": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-06",
+        "digest": "33501ce2e2812a2ce870bec70f33d235a7b5f39f334551fb852453ffc337647a",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced OCI-compose install; browser login; managed/host data, PUID/PGID, restart, Modify, 1.10.1 to 1.10.2 update, failed-health rollback, managed backup/restore to new VMID/Manage, removal. ARM64 manifest only; optional integrations untested."
+      }
+    },
     "linkwarden": {
       "status": "laboratory-validated"
     },
