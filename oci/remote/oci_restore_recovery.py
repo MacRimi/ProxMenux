@@ -40,6 +40,7 @@ import oci_nested_mounts
 import oci_nvidia_refresh
 import oci_nvidia_runtime as nvidia
 import oci_runtime_settings as runtime_settings
+import oci_mount_idmap as mount_idmap
 import oci_stack_modify
 from oci_host_mounts import capture_sources, validate_source
 from oci_accelerators import capture as capture_gpu_devices
@@ -444,6 +445,21 @@ def check_host_resources(plan):
         deployment = entry['copy']['record']['deployment']
         projected = renumbered_lines(entry['config'], entry.get('recorded', vmid), vmid)
         try:
+            if transaction.nested_mounts.idmapped_overlays(entry['config'].encode()):
+                raise ValueError(translate('An ID-mapped mount is shadowed by a recursive bind. Revert the manual mapping and apply it through OCI Modify.'))
+            recorded = entry['copy']['record']
+            actual = transaction.mounts(entry['config'].encode())
+            # An explicitly saved mapping is part of the data contract. Do
+            # not silently forget it merely because a restore omitted a bind.
+            if any(m.get('idmap') and m['container_path'] not in actual for m in deployment.get('mounts', [])):
+                raise ValueError(translate('The mount source or options were not kept'))
+            attached = dict(deployment, mounts=[m for m in deployment.get('mounts', []) if m['container_path'] in actual])
+            mount_idmap.check_deployment(attached, recorded.get('template'), entry['config'].encode(),
+                standalone=not any(recorded.get(k) for k in ('stack','stack_member','native_stack_intent')), require_supported=True)
+            declared = {m['container_path']: m for m in attached['mounts']}
+            for target, current in actual.items():
+                if (current.get('idmap') or declared.get(target, {}).get('idmap')) and not mount_idmap.same_mapping(current, declared.get(target, {})):
+                    raise ValueError(translate('The mount source or options were not kept'))
             public_routes.check(projected, deployment, vmid, entry.get('installation_id'), require_host_assets=False)
         except ValueError as error:
             plan['blockers'].append(f"{label}: {error}")

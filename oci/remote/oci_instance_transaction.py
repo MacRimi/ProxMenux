@@ -30,6 +30,7 @@ import oci_instances as instances
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
+import oci_mount_idmap as mount_idmap
 import oci_nested_mounts as nested_mounts
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
@@ -667,6 +668,10 @@ def refuse_high_availability(vmid):
 def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
+    standalone = not coordinated and not any(key in record for key in ('stack', 'stack_member', 'native_stack_intent'))
+    for contract in (record, candidate):
+        mount_idmap.check_deployment(contract['deployment'], contract.get('template'), config,
+                                    standalone=standalone, require_supported=True)
     if coordinated and (record.get('native_stack_intent') or deployment.get('rootfs_adaptation_replay_required')):
         raise ValueError(translate('The dedicated adapter still requires replaying its rootfs changes'))
     if not coordinated and (any(key in record for key in ('stack', 'stack_member', 'native_stack_intent')) or deployment.get('stack_managed')):
@@ -778,7 +783,8 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
         host_bind = old[target]['type'] == 'host-bind'
         if ((host_bind and (mount['volume'] != old[target]['source'] or mount.get('backup', '0') != '0'))
                 or (not host_bind and (mount.get('backup') != '1' or not mount['volume'].startswith(old[target]['source'] + ':')))
-                or mount.get('ro', '0') != ('1' if old[target].get('read_only') else '0')):
+                or mount.get('ro', '0') != ('1' if old[target].get('read_only') else '0')
+                or not mount_idmap.same_mapping(mount, old[target])):
             raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
     for target in old.keys() & new.keys():
         directory_bind = old[target]['type'] == new[target]['type'] == 'host-bind'
@@ -851,7 +857,8 @@ def check_runtime_mounts(config, deployment):
         expected = declared[target]
         source_ok = value['volume'] == expected['source'] if expected['type'] == 'host-bind' else value['volume'].startswith(expected['source'] + ':')
         if (not source_ok or value.get('backup', '0') != ('1' if expected['backup'] else '0')
-                or value.get('ro', '0') != ('1' if expected.get('read_only') else '0')):
+                or value.get('ro', '0') != ('1' if expected.get('read_only') else '0')
+                or not mount_idmap.same_mapping(value, expected)):
             raise ValueError(translate('The mount source or options were not kept'))
 
 
