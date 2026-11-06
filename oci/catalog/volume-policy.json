@@ -167,6 +167,9 @@
     ],
     "restreamer": [
       "/core/data"
+    ],
+    "unmanic": [
+      "/library"
     ]
   },
   "sizes": {

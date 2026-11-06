@@ -9101,5 +9101,8 @@
   "Restreamer": "Restreamer",
   "Wizarr": "Wizarr",
   "Invite users to Plex, Jellyfin and Emby with a guided setup.": "Invita utenti su Plex, Jellyfin ed Emby con una configurazione guidata.",
-  "Create the first administrator account in the web setup wizard, then connect your media server.": "Crea il primo account amministratore nella procedura guidata di configurazione web, poi collega il tuo server multimediale."
+  "Create the first administrator account in the web setup wizard, then connect your media server.": "Crea il primo account amministratore nella procedura guidata di configurazione web, poi collega il tuo server multimediale.",
+  "Unmanic": "Unmanic",
+  "Automatically convert and optimize your media library with a plugin-based workflow.": "Converti e ottimizza automaticamente la tua raccolta multimediale con un flusso di lavoro basato su plugin.",
+  "Open the web interface to configure libraries and plugins. Hardware acceleration is optional.": "Apri l’interfaccia web per configurare le raccolte e i plugin. L’accelerazione hardware è facoltativa."
 }

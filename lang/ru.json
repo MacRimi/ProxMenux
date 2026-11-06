@@ -9072,5 +9072,8 @@
   "Restreamer": "Restreamer",
   "Wizarr": "Wizarr",
   "Invite users to Plex, Jellyfin and Emby with a guided setup.": "Приглашайте пользователей в Plex, Jellyfin и Emby с помощью пошаговой настройки.",
-  "Create the first administrator account in the web setup wizard, then connect your media server.": "Создайте первую учётную запись администратора в веб-мастере настройки, затем подключите свой медиасервер."
+  "Create the first administrator account in the web setup wizard, then connect your media server.": "Создайте первую учётную запись администратора в веб-мастере настройки, затем подключите свой медиасервер.",
+  "Unmanic": "Unmanic",
+  "Automatically convert and optimize your media library with a plugin-based workflow.": "Автоматически преобразуйте и оптимизируйте медиатеку с помощью рабочего процесса на основе плагинов.",
+  "Open the web interface to configure libraries and plugins. Hardware acceleration is optional.": "Откройте веб-интерфейс, чтобы настроить медиатеки и плагины. Аппаратное ускорение необязательно."
 }

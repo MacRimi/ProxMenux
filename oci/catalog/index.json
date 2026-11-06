@@ -17216,6 +17216,39 @@
       "template_id": "linuxserver-unifi-network-application"
     },
     {
+      "id": "unmanic",
+      "provider": "josh5",
+      "template_family": "curated-profile",
+      "title": "Unmanic",
+      "repository": "https://github.com/Unmanic/unmanic",
+      "description": "Automatically convert and optimize your media library with a plugin-based workflow.",
+      "website": "https://unmanic.app/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unmanic.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/josh5/unmanic:latest",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/unmanic.json",
+      "template_id": "image-unmanic",
+      "template": "apps/unmanic.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "unpackerr",
       "provider": "golift",
       "template_family": "curated-profile",
@@ -19880,7 +19913,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 21
+      "included_count": 22
     }
   }
 }
