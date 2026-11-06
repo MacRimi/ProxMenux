@@ -126,7 +126,7 @@
         ],
         "default": "managed-volume",
         "managed_volume": {
-          "backup": false,
+          "backup": true,
           "default_size_gb": 16
         }
       }
