@@ -51,7 +51,7 @@
     "readme_pushed_at": "",
     "compose_sha256": "61b779a2849baa70043874daf8e295ec213546b86173556c100c40836482a0a0",
     "generated_at": "2026-11-06T23:32:37+00:00",
-    "readme_raw_url": "https://raw.githubusercontent.com/recyclarr/recyclarr/v8.8.1/docker/Dockerfile"
+    "readme_raw_url": "https://raw.githubusercontent.com/recyclarr/recyclarr/874cb274f8b419dff6fb211fc326e4f2dd63c4fb/Dockerfile"
   },
   "container_contract": {
     "service_name": "recyclarr",
