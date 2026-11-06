@@ -9068,5 +9068,8 @@
   "A self-hosted live streaming server with a web interface, FFmpeg processing, RTMP, SRT and HLS.": "Un servidor de retransmisión de vídeo autoalojado con interfaz web, procesamiento con FFmpeg, RTMP, SRT y HLS.",
   "Create the administrator credentials in the web interface on first access. Hardware acceleration and external streaming services are optional.": "Crea las credenciales de administrador en la interfaz web al acceder por primera vez. La aceleración por hardware y los servicios externos de retransmisión son opcionales.",
   "miniserve": "miniserve",
-  "Restreamer": "Restreamer"
+  "Restreamer": "Restreamer",
+  "Wizarr": "Wizarr",
+  "Invite users to Plex, Jellyfin and Emby with a guided setup.": "Invita a usuarios a Plex, Jellyfin y Emby con una configuración guiada.",
+  "Create the first administrator account in the web setup wizard, then connect your media server.": "Crea la primera cuenta de administrador en el asistente de configuración web y conecta tu servidor multimedia."
 }

@@ -9098,5 +9098,8 @@
   "A self-hosted live streaming server with a web interface, FFmpeg processing, RTMP, SRT and HLS.": "En egenhostad server för direktsänd video med webbgränssnitt, FFmpeg-bearbetning, RTMP, SRT och HLS.",
   "Create the administrator credentials in the web interface on first access. Hardware acceleration and external streaming services are optional.": "Skapa administratörens inloggningsuppgifter i webbgränssnittet vid första besöket. Hårdvaruacceleration och externa strömningstjänster är valfria.",
   "miniserve": "miniserve",
-  "Restreamer": "Restreamer"
+  "Restreamer": "Restreamer",
+  "Wizarr": "Wizarr",
+  "Invite users to Plex, Jellyfin and Emby with a guided setup.": "Bjud in användare till Plex, Jellyfin och Emby med en guidad konfiguration.",
+  "Create the first administrator account in the web setup wizard, then connect your media server.": "Skapa det första administratörskontot i webbens installationsguide och anslut sedan din medieserver."
 }
