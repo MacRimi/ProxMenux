@@ -61,7 +61,11 @@ def _copy(source, target):
             try:
                 fcntl.ioctl(outgoing.fileno(), FICLONE, incoming.fileno())
             except OSError as error:
-                if error.errno not in (errno.EXDEV, errno.EOPNOTSUPP, errno.ENOTTY, errno.EINVAL, errno.ENOSYS):
+                # A confined reader may be allowed normal file I/O while
+                # its filesystem denies cloning. Reflink is only an
+                # optimization; the open descriptors still enforce access.
+                if error.errno not in (errno.EXDEV, errno.EOPNOTSUPP, errno.ENOTTY,
+                                      errno.EINVAL, errno.ENOSYS, errno.EPERM):
                     raise
                 shutil.copyfileobj(incoming, outgoing, length=1024 * 1024)
     finally:
