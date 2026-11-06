@@ -253,7 +253,12 @@
         "type": "running",
         "timeout_seconds": 90,
         "stability_seconds": 20
-      }
+      },
+      "completion_notes": [
+        "Recyclarr has no web interface. It runs its scheduled synchronization in the background.",
+        "Edit /config/recyclarr.yml with your Sonarr or Radarr URL and API key before the first synchronization.",
+        "Internet access is required to initialize and synchronize TRaSH Guides resources."
+      ]
     },
     "adaptations": [
       {
