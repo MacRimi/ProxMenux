@@ -91,6 +91,7 @@ from flask_terminal_routes import (  # noqa: E402
 )
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
+from flask_oidc_routes import oidc_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
 from flask_pbs_routes import pbs_bp  # noqa: E402
 from flask_monitor_links_routes import monitor_links_bp  # noqa: E402
@@ -199,6 +200,7 @@ post_install_versions.scan_at_startup()
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
+app.register_blueprint(oidc_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
 app.register_blueprint(pbs_bp)

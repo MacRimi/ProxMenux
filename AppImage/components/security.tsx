@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
+import { OIDCSettings } from "./oidc-settings"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { SecureGatewaySetup } from "./secure-gateway-setup"
 import { useI18n } from "../lib/i18n/provider"
@@ -2186,6 +2187,8 @@ ${(report.sections && report.sections.length > 0) ? `
           )}
         </CardContent>
       </Card>
+
+      <OIDCSettings />
 
       {/* SSL/HTTPS Configuration */}
       <Card>
