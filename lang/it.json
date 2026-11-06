@@ -9092,5 +9092,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "A lightweight web server for sharing files and directories, with optional authentication and uploads.": "Un server web leggero per condividere file e cartelle, con autenticazione e caricamento facoltativi.",
+  "Files are shared without authentication by default. Configure MINISERVE_AUTH in advanced settings to require a username and password.": "Per impostazione predefinita, i file vengono condivisi senza autenticazione. Configura MINISERVE_AUTH nelle impostazioni avanzate per richiedere nome utente e password.",
+  "A self-hosted live streaming server with a web interface, FFmpeg processing, RTMP, SRT and HLS.": "Un server di streaming video autogestito con interfaccia web, elaborazione FFmpeg, RTMP, SRT e HLS.",
+  "Create the administrator credentials in the web interface on first access. Hardware acceleration and external streaming services are optional.": "Crea le credenziali di amministratore nell’interfaccia web al primo accesso. L’accelerazione hardware e i servizi di streaming esterni sono facoltativi.",
+  "miniserve": "miniserve",
+  "Restreamer": "Restreamer"
 }

@@ -9092,5 +9092,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "A lightweight web server for sharing files and directories, with optional authentication and uploads.": "Nenáročný webový server na zdieľanie súborov a priečinkov s voliteľným overovaním a nahrávaním súborov.",
+  "Files are shared without authentication by default. Configure MINISERVE_AUTH in advanced settings to require a username and password.": "Súbory sa predvolene zdieľajú bez overovania. Ak chcete vyžadovať používateľské meno a heslo, nastavte MINISERVE_AUTH v rozšírených nastaveniach.",
+  "A self-hosted live streaming server with a web interface, FFmpeg processing, RTMP, SRT and HLS.": "Samostatne hostovaný server na živé vysielanie videa s webovým rozhraním, spracovaním cez FFmpeg a podporou RTMP, SRT a HLS.",
+  "Create the administrator credentials in the web interface on first access. Hardware acceleration and external streaming services are optional.": "Pri prvom prístupe vytvorte prihlasovacie údaje správcu vo webovom rozhraní. Hardvérová akcelerácia a externé služby vysielania sú voliteľné.",
+  "miniserve": "miniserve",
+  "Restreamer": "Restreamer"
 }

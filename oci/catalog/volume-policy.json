@@ -164,6 +164,9 @@
     ],
     "nextcloud-mariadb": [
       "/data"
+    ],
+    "restreamer": [
+      "/core/data"
     ]
   },
   "sizes": {
