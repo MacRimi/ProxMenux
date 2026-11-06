@@ -7144,6 +7144,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "Узел {node_name} перезапустил службу кластера и снова присоединился через {seconds} с."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} — новое состояние: {current}{entity_suffix}",

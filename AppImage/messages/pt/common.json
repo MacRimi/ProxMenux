@@ -6992,6 +6992,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "O nó {node_name} reiniciou o serviço do cluster e voltou a entrar após {seconds} s."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} alterado para {current}{entity_suffix}",

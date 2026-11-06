@@ -6992,6 +6992,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "Il nodo {node_name} ha riavviato il servizio del cluster ed è rientrato dopo {seconds} s."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} cambiato in {current}{entity_suffix}",

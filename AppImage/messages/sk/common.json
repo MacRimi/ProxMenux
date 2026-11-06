@@ -6991,6 +6991,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "Uzol {node_name} reštartoval službu klastra a po {seconds} s sa znova pripojil."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} sa zmenilo na {current}{entity_suffix}",

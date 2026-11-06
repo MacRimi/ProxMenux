@@ -35,6 +35,10 @@ from proxmox_known_errors import analyze_oom_event, format_oom_diagnosis
 # This provides a single source of truth for all grace period logic
 import startup_grace
 
+# Serializes JournalWatcher emits: held cluster events fire from a timer.
+_JOURNAL_EMIT_LOCK = threading.RLock()
+
+
 class _SharedState:
     """Wrapper around centralized startup_grace module for backwards compatibility.
     
@@ -1872,14 +1876,18 @@ class JournalWatcher:
         # the surviving nodes when a peer leaves or comes back:
         #   [TOTEM ] A new membership (1.55) was formed. Members left: 2
         #   [TOTEM ] A new membership (1.5a) was formed. Members joined: 2
-        # The line carries node IDs and no "node" keyword, so the generic
-        # match below never fired for a plain node loss in a quorate cluster.
+        # Only these lines identify a node. pmxcfs' "node lost quorum" is this
+        # host losing quorum while a peer is away, never a node of that name.
         if 'a new membership' in msg_lower and 'was formed' in msg_lower:
             names = self._corosync_node_names()
             local_name = socket.gethostname().split('.')[0]
-            for keyword, event_type, severity in (
-                    ('left', 'node_disconnect', 'CRITICAL'),
-                    ('joined', 'node_reconnect', 'INFO')):
+            local_ids = {node_id for node_id, name in names.items() if name == local_name}
+            joined = re.search(r'\bjoined:((?:\s+\d+)+)', msg)
+            if joined and local_ids & set(joined.group(1).split()):
+                # Our own corosync (re)started: the peers it now sees never
+                # left the cluster, so they are not reconnections.
+                self._cluster_own_join_at = time.time()
+            for keyword, event_type in (('left', 'node_disconnect'), ('joined', 'node_reconnect')):
                 id_match = re.search(r'\b%s:((?:\s+\d+)+)' % keyword, msg)
                 if not id_match:
                     continue
@@ -1887,28 +1895,64 @@ class JournalWatcher:
                     node_name = names.get(node_id, node_id)
                     if node_name == local_name:
                         continue  # our own corosync (re)starting
-                    if (event_type == 'node_reconnect'
-                            and startup_grace.is_real_system_boot()
-                            and _shared_state.is_startup_health_grace()):
-                        continue  # this host just booted: it is us joining them
-                    self._emit(event_type, severity, {
-                        'node_name': node_name,
-                        'hostname': self._hostname,
-                    }, entity='cluster', entity_id=node_name)
+                    if event_type == 'node_disconnect':
+                        self._hold_node_disconnect(node_name)
+                    else:
+                        self._node_rejoined(node_name)
             return
 
-        # Node disconnect
-        if (('quorum' in msg_lower and 'lost' in msg_lower) or
-            ('node' in msg_lower and any(w in msg_lower for w in ['left', 'offline', 'lost']))):
-            
-            node_match = re.search(r'[Nn]ode\s+(\S+)', msg)
-            node_name = node_match.group(1) if node_match else 'unknown'
-            
-            self._emit('node_disconnect', 'CRITICAL', {
+    # A corosync restart (package update, maintenance) takes a node out of the
+    # membership for a few seconds. Report a departure only when the node is
+    # still away after this grace; a quick return is reported as one rejoin.
+    CLUSTER_LEAVE_GRACE_SECONDS = 60
+    CLUSTER_OWN_JOIN_WINDOW_SECONDS = 30
+
+    def _cluster_pending(self) -> Dict[str, Any]:
+        if not hasattr(self, '_cluster_pending_nodes'):
+            self._cluster_pending_nodes = {}
+        return self._cluster_pending_nodes
+
+    def _hold_node_disconnect(self, node_name: str):
+        pending = self._cluster_pending()
+        with _JOURNAL_EMIT_LOCK:
+            if node_name in pending:
+                return
+            timer = threading.Timer(self.CLUSTER_LEAVE_GRACE_SECONDS,
+                                    self._report_node_disconnect, args=(node_name,))
+            timer.daemon = True
+            pending[node_name] = (time.time(), timer)
+        timer.start()
+
+    def _report_node_disconnect(self, node_name: str):
+        with _JOURNAL_EMIT_LOCK:
+            if self._cluster_pending().pop(node_name, None) is None:
+                return  # it came back in time
+            self._emit_unlocked('node_disconnect', 'CRITICAL', {
                 'node_name': node_name,
                 'hostname': self._hostname,
             }, entity='cluster', entity_id=node_name)
-    
+
+    def _node_rejoined(self, node_name: str):
+        with _JOURNAL_EMIT_LOCK:
+            held = self._cluster_pending().pop(node_name, None)
+        if held is not None:
+            left_at, timer = held
+            timer.cancel()
+            self._emit('node_reconnect', 'INFO', {
+                'node_name': node_name,
+                'downtime_seconds': max(1, int(round(time.time() - left_at))),
+                'hostname': self._hostname,
+            }, entity='cluster', entity_id=node_name)
+            return
+        if time.time() - getattr(self, '_cluster_own_join_at', 0) < self.CLUSTER_OWN_JOIN_WINDOW_SECONDS:
+            return  # we joined them, they did not come back
+        if startup_grace.is_real_system_boot() and _shared_state.is_startup_health_grace():
+            return  # this host just booted: it is us joining them
+        self._emit('node_reconnect', 'INFO', {
+            'node_name': node_name,
+            'hostname': self._hostname,
+        }, entity='cluster', entity_id=node_name)
+
     def _corosync_node_names(self) -> Dict[str, str]:
         """Map corosync node IDs to node names from corosync.conf."""
         for path in ('/etc/pve/corosync.conf', '/etc/corosync/corosync.conf'):
@@ -2022,6 +2066,12 @@ class JournalWatcher:
     def _emit(self, event_type: str, severity: str, data: Dict,
               entity: str = 'node', entity_id: str = ''):
         """Emit event to queue with short-term deduplication (30s window)."""
+        # A held cluster event is emitted from its timer thread.
+        with _JOURNAL_EMIT_LOCK:
+            self._emit_unlocked(event_type, severity, data, entity, entity_id)
+
+    def _emit_unlocked(self, event_type: str, severity: str, data: Dict,
+                       entity: str = 'node', entity_id: str = ''):
         event = NotificationEvent(
             event_type, severity, data, source='journal',
             entity=entity, entity_id=entity_id,

@@ -6992,6 +6992,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "Le nœud {node_name} a redémarré son service de cluster et l'a rejoint après {seconds} s."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname} : {category} remplacé par {current}{entity_suffix}",

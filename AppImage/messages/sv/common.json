@@ -6992,6 +6992,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "Noden {node_name} startade om sin klustertjänst och anslöt igen efter {seconds} s."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} har ändrats till {current}{entity_suffix}",

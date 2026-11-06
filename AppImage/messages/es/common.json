@@ -7145,6 +7145,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "El nodo {node_name} reinició su servicio de clúster y volvió a unirse tras {seconds} s."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} cambió a {current}{entity_suffix}",

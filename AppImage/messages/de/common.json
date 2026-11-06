@@ -6992,6 +6992,9 @@
   },
   "runtime": {
     "notifications": {
+      "cluster": {
+        "rejoinedBody": "Der Knoten {node_name} hat seinen Clusterdienst neu gestartet und ist nach {seconds} s wieder beigetreten."
+      },
       "templates": {
         "state_change": {
           "title": "{hostname}: {category} geändert zu {current}{entity_suffix}",

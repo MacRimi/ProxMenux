@@ -1967,6 +1967,13 @@ def render_template(event_type: str, data: Dict[str, Any],
         )
         if localized:
             template[field] = localized
+    if event_type == 'node_reconnect' and data.get('downtime_seconds'):
+        # A node that left and came back within the grace: one notice.
+        rejoined = runtime_message('cluster.rejoinedBody', language,
+                                   node_name=data.get('node_name', ''),
+                                   seconds=data['downtime_seconds'])
+        if rejoined:
+            template['body'] = rejoined
     backup_title_target = ''
     if event_type == 'backup_complete':
         template['title'] = runtime_message('backup.unconfirmedTitle', language,
