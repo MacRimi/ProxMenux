@@ -9092,5 +9092,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Lastboard": "Lastboard",
+  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Ein selbst gehostetes Dashboard mit Lesezeichen, Widgets, Verfügbarkeitsüberwachung und Proxmox-Integration.",
+  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Erstelle das erste Administratorkonto im Einrichtungsassistenten der Weboberfläche. Die Docker-Integration ist optional."
 }
