@@ -164,6 +164,12 @@
     ],
     "nextcloud-mariadb": [
       "/data"
+    ],
+    "restreamer": [
+      "/core/data"
+    ],
+    "unmanic": [
+      "/library"
     ]
   },
   "sizes": {

@@ -9741,6 +9741,39 @@
       "template_id": "linuxserver-minisatip"
     },
     {
+      "id": "miniserve",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "miniserve",
+      "repository": "https://github.com/svenstaro/miniserve",
+      "description": "A lightweight web server for sharing files and directories, with optional authentication and uploads.",
+      "website": "https://github.com/svenstaro/miniserve",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/miniserve.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/svenstaro/miniserve:latest",
+      "category": "sharing",
+      "category_label": "Files & Sharing",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/miniserve.json",
+      "template_id": "image-miniserve",
+      "template": "apps/miniserve.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "mkvtoolnix",
       "provider": "jlesage",
       "template_family": "curated-profile",
@@ -13985,6 +14018,39 @@
       "template_id": "image-readeck"
     },
     {
+      "id": "recyclarr",
+      "provider": "recyclarr",
+      "template_family": "curated-profile",
+      "title": "Recyclarr",
+      "repository": "https://github.com/recyclarr/recyclarr",
+      "description": "Synchronize TRaSH Guides quality profiles, custom formats and naming settings with Sonarr and Radarr.",
+      "website": "https://recyclarr.dev/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/recyclarr.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/recyclarr/recyclarr:8",
+      "category": "arr",
+      "category_label": "*Arr Suite",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/recyclarr.json",
+      "template_id": "image-recyclarr",
+      "template": "apps/recyclarr.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "redisinsight",
       "provider": "redis",
       "template_family": "curated-profile",
@@ -14144,6 +14210,39 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "image-restic-rest-server"
+    },
+    {
+      "id": "restreamer",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "Restreamer",
+      "repository": "https://github.com/datarhei/restreamer",
+      "description": "A self-hosted live streaming server with a web interface, FFmpeg processing, RTMP, SRT and HLS.",
+      "website": "https://datarhei.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/restreamer.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/datarhei/restreamer:latest",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/restreamer.json",
+      "template_id": "image-restreamer",
+      "template": "apps/restreamer.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
     },
     {
       "id": "retroarch",
@@ -17150,6 +17249,39 @@
       "template_id": "linuxserver-unifi-network-application"
     },
     {
+      "id": "unmanic",
+      "provider": "josh5",
+      "template_family": "curated-profile",
+      "title": "Unmanic",
+      "repository": "https://github.com/Unmanic/unmanic",
+      "description": "Automatically convert and optimize your media library with a plugin-based workflow.",
+      "website": "https://unmanic.app/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unmanic.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/josh5/unmanic:latest",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/unmanic.json",
+      "template_id": "image-unmanic",
+      "template": "apps/unmanic.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "unpackerr",
       "provider": "golift",
       "template_family": "curated-profile",
@@ -18344,6 +18476,39 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "linuxserver-wireshark"
+    },
+    {
+      "id": "wizarr",
+      "provider": "wizarrrr",
+      "template_family": "curated-profile",
+      "title": "Wizarr",
+      "repository": "https://github.com/wizarrrr/wizarr",
+      "description": "Invite users to Plex, Jellyfin and Emby with a guided setup.",
+      "website": "https://github.com/wizarrrr/wizarr",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wizarr.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/wizarrrr/wizarr:latest",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/wizarr.json",
+      "template_id": "image-wizarr",
+      "template": "apps/wizarr.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
     },
     {
       "id": "wps-office",
@@ -19781,7 +19946,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 18
+      "included_count": 23
     }
   }
 }
