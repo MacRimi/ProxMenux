@@ -154,6 +154,7 @@
   "A self-hosted app for organizing tabletop role-playing campaigns.": "Un’app self-hosted per organizzare campagne di giochi di ruolo da tavolo.",
   "A self-hosted bookmark manager and web archiver.": "Un gestore di segnalibri e archiviatore web self-hosted.",
   "A self-hosted bookmark manager.": "Gestore di segnalibri self-hosted.",
+  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Una dashboard self-hosted con segnalibri, widget, monitoraggio della disponibilità e integrazione con Proxmox.",
   "A self-hosted file sharing service with expiring downloads.": "Servizio self-hosted di condivisione file con download a scadenza.",
   "A self-hosted link-in-bio page.": "Pagina link-in-bio self-hosted.",
   "A self-hosted read-it-later application.": "Un'applicazione self-hosted per salvare articoli da leggere in seguito.",
@@ -1654,6 +1655,7 @@
   "Create scheduled backup job": "Crea attività di backup pianificata",
   "Create share directory:": "Crea directory condivisa:",
   "Create shared directory:": "Crea directory condivisa:",
+  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Crea il primo account amministratore nella procedura guidata di configurazione web. L’integrazione con Docker è facoltativa.",
   "Create this LXC in privileged mode?": "Creare questo LXC in modalità privilegiata?",
   "Create with create_user in the container console": "Crea l’utente con create_user nella console del container",
   "Create, send and sign documents with a self-hosted web app.": "Crea, invia e firma documenti con un'app web self-hosted.",
@@ -3878,6 +3880,7 @@
   "Last 50 kernel log lines": "Ultime 50 righe del registro kernel",
   "Last run:": "Ultima esecuzione:",
   "Last system boot time": "Ora ultimo avvio sistema",
+  "Lastboard": "Lastboard",
   "Latest version:": "Ultima versione:",
   "Launching GPU passthrough assistant for VM": "Avvio dell'assistente passthrough GPU per VM",
   "Lazylibrarian is a program to follow authors and grab metadata for all your digital reading needs. It uses a combination of Goodreads Librarything and optionally GoogleBooks as sources for author info and book info.  This container is based on the DobyTang fork.": "Lazylibrarian consente di seguire gli autori e raccogliere metadati per la propria libreria digitale. Utilizza Goodreads, LibraryThing e, facoltativamente, Google Books come fonti di informazioni su autori e libri. Questo container si basa sul fork di DobyTang.",
@@ -9103,8 +9106,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "Lastboard": "Lastboard",
-  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Una dashboard self-hosted con segnalibri, widget, monitoraggio della disponibilità e integrazione con Proxmox.",
-  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Crea il primo account amministratore nella procedura guidata di configurazione web. L’integrazione con Docker è facoltativa."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
 }

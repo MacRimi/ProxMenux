@@ -154,6 +154,7 @@
   "A self-hosted app for organizing tabletop role-playing campaigns.": "Aplikácia s vlastným hostingom na organizovanie kampaní stolových hier na hrdinov.",
   "A self-hosted bookmark manager and web archiver.": "Správca záložiek a webový archivátor prevádzkovaný vo vlastnej réžii.",
   "A self-hosted bookmark manager.": "Vlastný správca záložiek.",
+  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Panel na vlastnom serveri so záložkami, widgetmi, monitorovaním dostupnosti a integráciou s Proxmoxom.",
   "A self-hosted file sharing service with expiring downloads.": "Vlastná služba na zdieľanie súborov so sťahovaním s obmedzenou platnosťou.",
   "A self-hosted link-in-bio page.": "Vlastná stránka s odkazmi v profile.",
   "A self-hosted read-it-later application.": "Aplikácia na ukladanie článkov na neskoršie čítanie prevádzkovaná vo vlastnej réžii.",
@@ -1654,6 +1655,7 @@
   "Create scheduled backup job": "Vytvoriť naplánovanú úlohu zálohy",
   "Create share directory:": "Vytvoriť zdieľaný priečinok:",
   "Create shared directory:": "Vytvoriť zdieľaný priečinok:",
+  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Prvé konto správcu vytvorte v sprievodcovi nastavením webového rozhrania. Integrácia s Dockerom je voliteľná.",
   "Create this LXC in privileged mode?": "Vytvoriť tento LXC v privilegovanom režime?",
   "Create with create_user in the container console": "Používateľa vytvorte príkazom create_user v konzole kontajnera",
   "Create, send and sign documents with a self-hosted web app.": "Vytvárajte, posielajte a podpisujte dokumenty vo webovej aplikácii prevádzkovanej vo vlastnej réžii.",
@@ -3878,6 +3880,7 @@
   "Last 50 kernel log lines": "Posledných 50 riadkov logu jadra",
   "Last run:": "Posledné spustenie:",
   "Last system boot time": "Čas posledného štartu systému",
+  "Lastboard": "Lastboard",
   "Latest version:": "Najnovšia verzia:",
   "Launching GPU passthrough assistant for VM": "Spúšťam sprievodcu priamym priradením GPU pre VM",
   "Lazylibrarian is a program to follow authors and grab metadata for all your digital reading needs. It uses a combination of Goodreads Librarything and optionally GoogleBooks as sources for author info and book info.  This container is based on the DobyTang fork.": "LazyLibrarian sleduje autorov a získava metadáta pre vašu digitálnu knižnicu. Informácie o autoroch a knihách čerpá z Goodreads, LibraryThing a voliteľne Google Books. Tento kontajner vychádza z vetvy DobyTang.",
@@ -9103,8 +9106,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "Lastboard": "Lastboard",
-  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Panel na vlastnom serveri so záložkami, widgetmi, monitorovaním dostupnosti a integráciou s Proxmoxom.",
-  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Prvé konto správcu vytvorte v sprievodcovi nastavením webového rozhrania. Integrácia s Dockerom je voliteľná."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }
