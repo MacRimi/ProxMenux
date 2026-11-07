@@ -6993,7 +6993,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Uzol {node_name} reštartoval službu klastra a po {seconds} s sa znova pripojil."
+        "rejoinedBody": "Uzol {node_name} stratil spojenie s klastrom a po {seconds} s sa znova pripojil.",
+        "restartedBody": "Corosync, komunikačná služba klastra, sa na uzle {node_name} zastavil a znova spustil. Uzol sa po {seconds} s znova pripojil ku klastru."
       },
       "templates": {
         "state_change": {

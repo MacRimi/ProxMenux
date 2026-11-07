@@ -4,5 +4,42 @@
       "reference": "ghcr.io/ggml-org/llama.cpp:server",
       "tag": "server"
     }
-  }
+  },
+  "environment_overrides": {
+    "LLAMA_ARG_CTX_SIZE": {
+      "prompt": "Context window in tokens (more context needs more RAM)",
+      "default_by_memory_mb": [
+        [
+          0,
+          "8192"
+        ],
+        [
+          4096,
+          "16384"
+        ],
+        [
+          6144,
+          "32768"
+        ],
+        [
+          10240,
+          "65536"
+        ],
+        [
+          24576,
+          "131072"
+        ]
+      ]
+    },
+    "LLAMA_ARG_N_GPU_LAYERS": {
+      "example": "auto"
+    }
+  },
+  "environment_additions": [
+    {
+      "name": "LLAMA_ARG_CACHE_TYPE_K",
+      "example": "q8_0",
+      "prompt": "Context cache type for keys (q8_0 halves its memory; f16 keeps it uncompressed)"
+    }
+  ]
 }

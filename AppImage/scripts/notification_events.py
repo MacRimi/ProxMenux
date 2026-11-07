@@ -1872,6 +1872,16 @@ class JournalWatcher:
             }, entity='cluster', entity_id=self._hostname)
             return
         
+        # A peer whose Corosync is stopped cleanly says so before it leaves:
+        #   [CFG   ] Node 2 was shut down by sysadmin
+        stopped = re.search(r'\bNode (\d+) was shut down by sysadmin', msg)
+        if stopped:
+            node_name = self._corosync_node_names().get(stopped.group(1))
+            if node_name:
+                with _JOURNAL_EMIT_LOCK:
+                    self._cluster_clean_stops()[node_name] = time.time()
+            return
+
         # Corosync membership change. This is what corosync really logs on
         # the surviving nodes when a peer leaves or comes back:
         #   [TOTEM ] A new membership (1.55) was formed. Members left: 2
@@ -1906,11 +1916,17 @@ class JournalWatcher:
     # still away after this grace; a quick return is reported as one rejoin.
     CLUSTER_LEAVE_GRACE_SECONDS = 60
     CLUSTER_OWN_JOIN_WINDOW_SECONDS = 30
+    CLUSTER_CLEAN_STOP_WINDOW_SECONDS = 30
 
     def _cluster_pending(self) -> Dict[str, Any]:
         if not hasattr(self, '_cluster_pending_nodes'):
             self._cluster_pending_nodes = {}
         return self._cluster_pending_nodes
+
+    def _cluster_clean_stops(self) -> Dict[str, float]:
+        if not hasattr(self, '_cluster_clean_stop_at'):
+            self._cluster_clean_stop_at = {}
+        return self._cluster_clean_stop_at
 
     def _hold_node_disconnect(self, node_name: str):
         pending = self._cluster_pending()
@@ -1935,14 +1951,19 @@ class JournalWatcher:
     def _node_rejoined(self, node_name: str):
         with _JOURNAL_EMIT_LOCK:
             held = self._cluster_pending().pop(node_name, None)
+            stopped_at = self._cluster_clean_stops().pop(node_name, None)
         if held is not None:
             left_at, timer = held
             timer.cancel()
-            self._emit('node_reconnect', 'INFO', {
+            data = {
                 'node_name': node_name,
                 'downtime_seconds': max(1, int(round(time.time() - left_at))),
                 'hostname': self._hostname,
-            }, entity='cluster', entity_id=node_name)
+            }
+            # The clean stop is logged just before the node leaves.
+            if stopped_at is not None and 0 <= left_at - stopped_at <= self.CLUSTER_CLEAN_STOP_WINDOW_SECONDS:
+                data['clean_stop'] = True
+            self._emit('node_reconnect', 'INFO', data, entity='cluster', entity_id=node_name)
             return
         if time.time() - getattr(self, '_cluster_own_join_at', 0) < self.CLUSTER_OWN_JOIN_WINDOW_SECONDS:
             return  # we joined them, they did not come back

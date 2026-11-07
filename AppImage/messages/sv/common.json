@@ -6994,7 +6994,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Noden {node_name} startade om sin klustertjänst och anslöt igen efter {seconds} s."
+        "rejoinedBody": "Noden {node_name} tappade kontakten med klustret och anslöt igen efter {seconds} s.",
+        "restartedBody": "Corosync, klustrets kommunikationstjänst, stoppades på noden {node_name} och startades igen. Noden anslöt till klustret igen efter {seconds} s."
       },
       "templates": {
         "state_change": {

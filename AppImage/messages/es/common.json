@@ -7147,7 +7147,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "El nodo {node_name} reinició su servicio de clúster y volvió a unirse tras {seconds} s."
+        "rejoinedBody": "El nodo {node_name} perdió el contacto con el clúster y volvió a unirse tras {seconds} s.",
+        "restartedBody": "Corosync, el servicio de comunicación del clúster, se detuvo en el nodo {node_name} y volvió a arrancar. El nodo volvió a unirse al clúster tras {seconds} s."
       },
       "templates": {
         "state_change": {

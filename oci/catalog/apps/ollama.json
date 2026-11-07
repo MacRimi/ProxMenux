@@ -379,7 +379,13 @@
               "digest": null,
               "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
             },
-            "device_requests": []
+            "device_requests": [],
+            "environment": [
+              {
+                "name": "OLLAMA_KV_CACHE_TYPE",
+                "value": "q8_0"
+              }
+            ]
           },
           {
             "id": "nvidia",

@@ -7146,7 +7146,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Узел {node_name} перезапустил службу кластера и снова присоединился через {seconds} с."
+        "rejoinedBody": "Узел {node_name} потерял связь с кластером и снова присоединился через {seconds} с.",
+        "restartedBody": "Corosync, служба связи кластера, была остановлена на узле {node_name} и запущена снова. Узел снова присоединился к кластеру через {seconds} с."
       },
       "templates": {
         "state_change": {

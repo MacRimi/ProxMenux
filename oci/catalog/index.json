@@ -7989,6 +7989,39 @@
       "template_id": "image-langflow"
     },
     {
+      "id": "lastboard",
+      "provider": "codigosh",
+      "template_family": "curated-profile",
+      "title": "Lastboard",
+      "repository": "https://git.codigosh.com/CodigoSH/Lastboard",
+      "description": "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.",
+      "website": "https://codigosh.com/projects/lastboard/",
+      "icon": "https://git.codigosh.com/CodigoSH/Lastboard/raw/commit/1cb17d16bb69bedaa59c53f620f7b91edf17b358/web/public/icon-192.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "git.codigosh.com/codigosh/lastboard:latest",
+      "category": "tools",
+      "category_label": "Tools",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/lastboard.json",
+      "template_id": "image-lastboard",
+      "template": "apps/lastboard.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "lazylibrarian",
       "provider": "linuxserver.io",
       "title": "Lazylibrarian",
@@ -19946,7 +19979,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 23
+      "included_count": 24
     }
   }
 }
