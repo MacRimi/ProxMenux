@@ -9103,5 +9103,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Lastboard": "Lastboard",
+  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "En självhostad översikt med bokmärken, widgetar, tillgänglighetsövervakning och Proxmox-integration.",
+  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Skapa det första administratörskontot i webbgränssnittets installationsguide. Docker-integrationen är valfri."
 }

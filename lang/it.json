@@ -9103,5 +9103,8 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Lastboard": "Lastboard",
+  "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration.": "Una dashboard self-hosted con segnalibri, widget, monitoraggio della disponibilità e integrazione con Proxmox.",
+  "Create the first administrator account in the web setup wizard. Docker integration is optional.": "Crea il primo account amministratore nella procedura guidata di configurazione web. L’integrazione con Docker è facoltativa."
 }
