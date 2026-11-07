@@ -120,7 +120,7 @@
     "services": [
       {
         "name": "recyclarr",
-        "image": "ghcr.io/recyclarr/recyclarr:latest",
+        "image": "ghcr.io/recyclarr/recyclarr:8",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -128,7 +128,7 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "ghcr.io/recyclarr/recyclarr:latest",
+          "image": "ghcr.io/recyclarr/recyclarr:8",
           "container_name": "recyclarr",
           "user": "1000:1000",
           "restart": "unless-stopped",
