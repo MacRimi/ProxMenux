@@ -9096,6 +9096,6 @@
   "Public URL used to access Baserow": "URL publique utilisée pour accéder à Baserow",
   "Baserow WebUI": "Interface web de Baserow",
   "Create the first administrator account on the initial signup page.": "Créez le premier compte administrateur sur la page d’inscription initiale.",
-  "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address.": "BASEROW_PUBLIC_URL doit correspondre à l’adresse utilisée dans le navigateur. Modifiez cette valeur dans Modify avant d’utiliser un domaine ou de restaurer l’installation à une autre adresse.",
-  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "L’application, PostgreSQL et Redis s’exécutent dans trois LXC. Sauvegardez et restaurez le groupe entier."
+  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "L’application, PostgreSQL et Redis s’exécutent dans trois LXC. Sauvegardez et restaurez le groupe entier.",
+  "BASEROW_PUBLIC_URL must match the address used in the browser. Configure the canonical public URL before using a reverse proxy.": "BASEROW_PUBLIC_URL doit correspondre à l’adresse utilisée dans le navigateur. Configurez l’URL publique canonique avant d’utiliser un proxy inverse."
 }

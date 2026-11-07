@@ -9068,6 +9068,6 @@
   "Public URL used to access Baserow": "Публичный URL для доступа к Baserow",
   "Baserow WebUI": "Веб-интерфейс Baserow",
   "Create the first administrator account on the initial signup page.": "Создайте первую учётную запись администратора на странице первоначальной регистрации.",
-  "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address.": "BASEROW_PUBLIC_URL должен совпадать с адресом в браузере. Измените значение в Modify перед использованием домена или восстановлением установки с другим адресом.",
-  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "Приложение, PostgreSQL и Redis работают в трёх LXC. Создавайте резервные копии и восстанавливайте всю группу целиком."
+  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "Приложение, PostgreSQL и Redis работают в трёх LXC. Создавайте резервные копии и восстанавливайте всю группу целиком.",
+  "BASEROW_PUBLIC_URL must match the address used in the browser. Configure the canonical public URL before using a reverse proxy.": "BASEROW_PUBLIC_URL должен совпадать с адресом в браузере. Перед использованием обратного прокси настройте канонический публичный URL."
 }
