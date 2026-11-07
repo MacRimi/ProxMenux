@@ -19453,7 +19453,7 @@
       "template_family": "curated-profile",
       "title": "Baserow",
       "repository": "https://github.com/baserow/baserow",
-      "description": "Developer-published all-in-one Baserow image with its embedded PostgreSQL database, Redis and Caddy web server. All application state is kept in one persistent data volume.",
+      "description": "Developer-published Baserow image with separate PostgreSQL and authenticated Redis services. ProxMenux creates three native OCI LXCs with a private dependency network.",
       "website": "https://baserow.io/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/baserow.webp",
       "architectures": [
@@ -19478,7 +19478,7 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "multi_container": false
+      "multi_container": true
     }
   ],
   "discovery": {

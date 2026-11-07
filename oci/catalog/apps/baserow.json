@@ -11,7 +11,7 @@
       "en_US": "Build online databases and applications without writing code."
     },
     "description": {
-      "en_US": "Developer-published all-in-one Baserow image with its embedded PostgreSQL database, Redis and Caddy web server. All application state is kept in one persistent data volume."
+      "en_US": "Developer-published Baserow image with separate PostgreSQL and authenticated Redis services. ProxMenux creates three native OCI LXCs with a private dependency network."
     },
     "category": "productivity",
     "category_label": "Productivity & Workflows",
@@ -34,8 +34,8 @@
     "repository": "https://github.com/baserow/baserow",
     "tips": [
       "Create the first administrator account on the initial signup page.",
-      "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address.",
-      "The data volume includes the embedded PostgreSQL database, uploaded files and internal service secrets. Back it up before an image upgrade; database migrations may require manual recovery after a downgrade."
+      "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.",
+      "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -47,7 +47,7 @@
     "revision": "313156b6ea6b98fbd740767aab767955f813b8ed",
     "image_repository_url": "https://hub.docker.com/r/baserow/baserow",
     "readme_pushed_at": "",
-    "compose_sha256": "dbdec9bc9ab686f1030f4a26a058562aa1cbc58e1b439659dd2b217a79701cd0",
+    "compose_sha256": "7e43892e0632afd34e4626767c42ce09e8a4d997923bb9a48bd852592e0276b9",
     "generated_at": "2026-11-07T13:31:57+00:00",
     "readme_raw_url": "https://baserow.io/docs/installation/install-with-docker",
     "default_branch": "develop"
@@ -66,12 +66,66 @@
     "environment": [
       {
         "name": "BASEROW_PUBLIC_URL",
-        "example": "",
+        "example": "http://localhost",
         "required": true,
         "sensitive": false,
-        "source": "docker-compose",
-        "container_address": "http://@CONTAINER_ADDRESS@",
-        "prompt": "Public URL used to access Baserow"
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_HOST",
+        "example": "db",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_NAME",
+        "example": "baserow",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_PASSWORD",
+        "example": "${GENERATED_GENERATED_DATABASE_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_PORT",
+        "example": "5432",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_USER",
+        "example": "baserow",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REDIS_HOST",
+        "example": "redis",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REDIS_PASSWORD",
+        "example": "${GENERATED_GENERATED_REDIS_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "REDIS_PORT",
+        "example": "6379",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
       }
     ],
     "volumes": [
@@ -88,7 +142,7 @@
         "default": "managed-volume",
         "managed_volume": {
           "backup": true,
-          "default_size_gb": 16
+          "default_size_gb": 8
         }
       }
     ],
@@ -101,37 +155,160 @@
         "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
       }
     ],
-    "related_services": [],
+    "related_services": [
+      {
+        "name": "db",
+        "image": "postgres:15-alpine"
+      },
+      {
+        "name": "redis",
+        "image": "redis:7-alpine"
+      }
+    ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: baserow\nservices:\n  baserow:\n    environment:\n      BASEROW_PUBLIC_URL: ''\n    image: baserow/baserow:latest\n    ports:\n    - 80:80\n    volumes:\n    - ./data:/baserow/data\n"
+    "original_compose": "name: baserow\nservices:\n  baserow:\n    depends_on:\n      db:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    environment:\n      BASEROW_PUBLIC_URL: http://localhost\n      DATABASE_HOST: db\n      DATABASE_NAME: baserow\n      DATABASE_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      DATABASE_PORT: '5432'\n      DATABASE_USER: baserow\n      REDIS_HOST: redis\n      REDIS_PASSWORD: ${GENERATED_REDIS_PASSWORD}\n      REDIS_PORT: '6379'\n    healthcheck:\n      interval: 10s\n      retries: 60\n      start_period: 30s\n      test:\n        - CMD\n        - curl\n        - --fail\n        - --silent\n        - http://127.0.0.1/api/settings/\n      timeout: 10s\n    image: baserow/baserow:latest\n    mem_limit: 3g\n    ports:\n      - 80:80\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: ./data\n        target: /baserow/data\n  db:\n    environment:\n      POSTGRES_DB: baserow\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      POSTGRES_USER: baserow\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n        - CMD-SHELL\n        - pg_isready -U baserow -d baserow\n      timeout: 5s\n    image: postgres:15-alpine\n    mem_limit: 768m\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: ./postgres\n        target: /var/lib/postgresql/data\n  redis:\n    command:\n      - redis-server\n      - --requirepass\n      - ${REDISCLI_AUTH}\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n        - CMD\n        - redis-cli\n        - ping\n      timeout: 5s\n    image: redis:7-alpine\n    mem_limit: 256m\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: ./redis\n        target: /data\n"
   },
   "compose_stack": {
     "project_name": "baserow",
     "deployment_model": "one-native-oci-lxc-per-compose-service",
     "user_experience": "single-application-install",
     "main_service": "baserow",
-    "service_count": 1,
+    "service_count": 3,
     "services": [
+      {
+        "name": "db",
+        "image": "postgres:15-alpine",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "environment": {
+            "POSTGRES_USER": "baserow",
+            "POSTGRES_DB": "baserow",
+            "POSTGRES_PASSWORD": "${GENERATED_DATABASE_PASSWORD}"
+          },
+          "healthcheck": {
+            "interval": "5s",
+            "retries": 30,
+            "test": [
+              "CMD-SHELL",
+              "pg_isready -U baserow -d baserow"
+            ],
+            "timeout": "5s"
+          },
+          "image": "postgres:15-alpine",
+          "mem_limit": "768m",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "./postgres",
+              "target": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "redis",
+        "image": "redis:7-alpine",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 2,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "command": [
+            "redis-server",
+            "--requirepass",
+            "${REDISCLI_AUTH}"
+          ],
+          "environment": {
+            "REDISCLI_AUTH": "${GENERATED_REDIS_PASSWORD}"
+          },
+          "healthcheck": {
+            "interval": "5s",
+            "retries": 30,
+            "test": [
+              "CMD",
+              "redis-cli",
+              "ping"
+            ],
+            "timeout": "5s"
+          },
+          "image": "redis:7-alpine",
+          "mem_limit": "256m",
+          "restart": "unless-stopped",
+          "volumes": [
+            {
+              "source": "./redis",
+              "target": "/data",
+              "read_only": false
+            }
+          ]
+        }
+      },
       {
         "name": "baserow",
         "image": "baserow/baserow:latest",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
-        "depends_on": [],
+        "depends_on": [
+          "db",
+          "redis"
+        ],
         "frontend_network": true,
-        "private_network": false,
+        "private_network": true,
         "compose": {
+          "depends_on": {
+            "db": {
+              "condition": "service_healthy"
+            },
+            "redis": {
+              "condition": "service_healthy"
+            }
+          },
           "environment": {
-            "BASEROW_PUBLIC_URL": ""
+            "BASEROW_PUBLIC_URL": "http://localhost",
+            "DATABASE_HOST": "db",
+            "DATABASE_PORT": "5432",
+            "DATABASE_NAME": "baserow",
+            "DATABASE_USER": "baserow",
+            "DATABASE_PASSWORD": "${GENERATED_DATABASE_PASSWORD}",
+            "REDIS_HOST": "redis",
+            "REDIS_PORT": "6379",
+            "REDIS_PASSWORD": "${GENERATED_REDIS_PASSWORD}"
+          },
+          "healthcheck": {
+            "interval": "10s",
+            "retries": 60,
+            "start_period": "30s",
+            "test": [
+              "CMD",
+              "curl",
+              "--fail",
+              "--silent",
+              "http://127.0.0.1/api/settings/"
+            ],
+            "timeout": "10s"
           },
           "image": "baserow/baserow:latest",
+          "mem_limit": "3g",
           "ports": [
             "80:80"
           ],
+          "restart": "unless-stopped",
           "volumes": [
-            "./data:/baserow/data"
+            {
+              "source": "./data",
+              "target": "/baserow/data",
+              "read_only": false
+            }
           ]
         }
       }
@@ -141,7 +318,7 @@
     },
     "networking": {
       "frontend": "selected-proxmox-bridge",
-      "private_required": false,
+      "private_required": true,
       "private_creation": "automatic-create-if-missing",
       "private_address_allocation": "automatic-static-address-per-service",
       "service_discovery": "private-addresses-with-compose-service-host-aliases",
@@ -159,15 +336,41 @@
         "shared_with_other_lxc": false,
         "source_path": null,
         "source_path_prompt": null
+      },
+      {
+        "id": "db-volume-0",
+        "service": "db",
+        "container_path": "/var/lib/postgresql/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "redis-volume-0",
+        "service": "redis",
+        "container_path": "/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
       }
     ],
     "orchestration": {
-      "reserve_vmids_atomically": 1,
+      "reserve_vmids_atomically": 3,
       "start_order": [
+        "db",
+        "redis",
         "baserow"
       ],
       "stop_order": [
-        "baserow"
+        "baserow",
+        "redis",
+        "db"
       ],
       "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
       "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
@@ -190,7 +393,42 @@
         "generated_secrets",
         "dependency_start_and_stop_order"
       ],
-      "generated_secrets": []
+      "generated_secrets": [
+        {
+          "id": "generated-database-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "baserow",
+              "environment_variable": "DATABASE_PASSWORD"
+            },
+            {
+              "service": "db",
+              "environment_variable": "POSTGRES_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "generated-redis-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "baserow",
+              "environment_variable": "REDIS_PASSWORD"
+            }
+          ]
+        },
+        {
+          "id": "redis-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "redis",
+              "environment_variable": "REDISCLI_AUTH"
+            }
+          ]
+        }
+      ]
     }
   },
   "first_run": {
@@ -212,7 +450,7 @@
       "unprivileged": true,
       "ostype": "auto-from-image",
       "cores": 2,
-      "memory_mb": 4096,
+      "memory_mb": 3072,
       "swap_mb": 512,
       "rootfs_size_gb": 12,
       "rootfs_storage": "local-lvm",
@@ -235,6 +473,29 @@
       "user": "import-from-oci-image",
       "working_dir": "import-from-oci-image",
       "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/baserow/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/postgresql/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {
@@ -299,7 +560,7 @@
         "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
         "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
         "behavioral_impact": "The check runs during installation rather than continuously after installation.",
-        "validation": "not-requested-by-compose"
+        "validation": "pending-per-application"
       },
       {
         "id": "compose-cpu-priority",
@@ -315,7 +576,7 @@
         "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
         "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
         "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
-        "validation": "not-requested-by-compose"
+        "validation": "pending-per-application"
       },
       {
         "id": "compose-network-identity",
@@ -364,26 +625,24 @@
         "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
         "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
         "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "external-database-and-cache",
+        "upstream_behavior": "The all-in-one image supports DATABASE_HOST and REDIS_HOST and recommends an external PostgreSQL database for production.",
+        "native_lxc_behavior": "Run the unchanged all-in-one application alongside official PostgreSQL 15 and authenticated Redis 7 images on a private native bridge.",
+        "reason": "Avoid the embedded Debian PostgreSQL startup dependency on a pre-generated snakeoil key that Proxmox removes from container templates.",
+        "behavioral_impact": "Three coordinated containers instead of one; database and cache have no LAN interface.",
+        "validation": "pending-runtime"
       }
     ],
-    "installer_profile": {
-      "volume_preparations": [
-        {
-          "container_path": "/baserow/data",
-          "remove_lost_found": true,
-          "owner_strategy": "mapped-application-user",
-          "only_when_mount_type": "managed-volume"
-        }
-      ],
-      "startup_healthcheck": {
-        "scheme": "http",
-        "port": 80,
-        "path": "/api/settings/",
-        "timeout_seconds": 600,
-        "request_timeout_seconds": 15,
-        "stability_seconds": 5
-      }
-    }
+    "custom_compose_stack": true,
+    "custom_compose_interpolated": false,
+    "stack_image_entrypoints": {},
+    "stack_completion_notes": [
+      "Create the first administrator account on the initial signup page.",
+      "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.",
+      "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address."
+    ]
   },
   "compatibility": {
     "automatic_install_candidate": true,
@@ -446,6 +705,12 @@
       "image_created": null
     },
     "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
-    "automatic_unattended_updates": false
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false
+    }
   }
 }

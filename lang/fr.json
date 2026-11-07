@@ -9097,5 +9097,5 @@
   "Baserow WebUI": "Interface web de Baserow",
   "Create the first administrator account on the initial signup page.": "Créez le premier compte administrateur sur la page d’inscription initiale.",
   "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address.": "BASEROW_PUBLIC_URL doit correspondre à l’adresse utilisée dans le navigateur. Modifiez cette valeur dans Modify avant d’utiliser un domaine ou de restaurer l’installation à une autre adresse.",
-  "The data volume includes the embedded PostgreSQL database, uploaded files and internal service secrets. Back it up before an image upgrade; database migrations may require manual recovery after a downgrade.": "Le volume de données contient la base PostgreSQL intégrée, les fichiers importés et les secrets des services internes. Sauvegardez-le avant de mettre à jour l’image. Les migrations de la base peuvent nécessiter une restauration manuelle lors du retour à une version antérieure."
+  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "L’application, PostgreSQL et Redis s’exécutent dans trois LXC. Sauvegardez et restaurez le groupe entier."
 }
