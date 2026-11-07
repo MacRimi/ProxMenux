@@ -97,6 +97,14 @@
     "mineos-node": {
       "status": "laboratory-validated"
     },
+    "miniserve": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "70de52ea4754da9de9db322d9fed183889c5a64b0da4000a02bf1f6462695e2c",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced; browser and HTTP files; managed/host persistence, restart, Modify; 0.34.0 to 0.35.0 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; optional authentication untested."
+      }
+    },
     "motioneye": {
       "status": "laboratory-validated"
     },
@@ -140,6 +148,22 @@
     "rdtclient": {
       "status": "laboratory-validated"
     },
+    "recyclarr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "1a8370c4e830ee3b46709225cc888013e20f667c6bc87593fd58ecfbf149afbf",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced OCI-compose; cron/CLI and sync to temporary Radarr; managed/host persistence, UID 1000, restart, Modify; 8.7.3 to 8.8.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. Internet required. ARM64 manifest only."
+      }
+    },
+    "restreamer": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "9bced1da8a4293efd01c1bc3107c0963e426319bbecb29a9dfafbf52daaf57b1",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced; browser/API login; config/media persistence, restart, Modify; 2.11.0 to 2.12.0 update (served JS changed), no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/publishing untested."
+      }
+    },
     "scanopy": {
       "status": "laboratory-validated"
     },
@@ -169,6 +193,14 @@
     "trilium": {
       "status": "laboratory-validated"
     },
+    "unmanic": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "b249cba0d77331fe015794dc06f98cc4c99c50f158cfce43575a1b4f330495a9",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced; browser/API; managed/host library, UID/GID 1000/1001, restart, FFmpeg CPU encode, Modify; 0.4.0 to 0.4.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/full plugin flows untested."
+      }
+    },
     "vaultwarden": {
       "status": "laboratory-validated"
     },
@@ -177,6 +209,14 @@
     },
     "wireguard": {
       "status": "laboratory-validated"
+    },
+    "wizarr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "5e1b78572088a4b79dc784aa4847f82a0387b5d5538ecd16d3af49bf5b5bb4b2",
+        "scenario": "PVE 9.2/amd64/ZFS: default and advanced OCI-compose; browser admin login; managed/host data, UID/GID, restart, Modify; 2026.10.0 to 2026.10.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; media integrations untested."
+      }
     }
   }
 }
