@@ -9092,5 +9092,14 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Host Git repositories and collaborate on software projects.": "Ospita repository Git e collabora a progetti software.",
+  "GitLab Community Edition includes Git hosting, merge requests, issue tracking and CI/CD coordination. Its official all-in-one image includes PostgreSQL, Redis and Gitaly.": "GitLab Community Edition include hosting Git, richieste di unione, gestione delle segnalazioni e coordinamento CI/CD. La sua immagine ufficiale integrata include PostgreSQL, Redis e Gitaly.",
+  "Allow several minutes for the first configuration and database migrations.": "La configurazione iniziale e le migrazioni del database possono richiedere diversi minuti.",
+  "Plan GitLab upgrades using the required upgrade stops before updating the image.": "Prima di aggiornare l’immagine, pianifica l’aggiornamento di GitLab rispettando le versioni intermedie obbligatorie.",
+  "The HTTP address is configured automatically; configure HTTPS and SMTP in GitLab before exposing it publicly.": "L’indirizzo HTTP viene configurato automaticamente; configura HTTPS e SMTP in GitLab prima di renderlo accessibile pubblicamente.",
+  "GitLab administrator password": "Password dell’amministratore GitLab",
+  "GitLab configuration": "Configurazione di GitLab",
+  "GitLab administrator": "Amministratore GitLab",
+  "GitLab": "GitLab"
 }
