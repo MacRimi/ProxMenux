@@ -8,8 +8,17 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    
+    # Native builds only: every AppImage payload (runtime, wheels, tools)
+    # must come from a runner of the target CPU.
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-22.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+
     steps:
     - name: Checkout main
       uses: actions/checkout@v6
@@ -74,19 +83,42 @@ jobs:
 
     - name: Generate SHA256 checksum
       run: |
+        source AppImage/scripts/appimage_arch.sh
+        pmx_appimage_arch "$(uname -m)"
+        test "$PMX_APPIMAGE_ARCH" = '${{ matrix.arch }}'
         cd AppImage/dist
-        sha256sum *.AppImage > ProxMenux-Monitor.AppImage.sha256
+        sha256sum *.AppImage > "ProxMenux-Monitor${PMX_APPIMAGE_SUFFIX}.AppImage.sha256"
         echo "Generated SHA256:"
-        cat ProxMenux-Monitor.AppImage.sha256
+        cat ./*.sha256
 
     - name: Upload AppImage artifact
       uses: actions/upload-artifact@v7
       with:
-        name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
+        name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage-${{ matrix.arch }}
         path: |
           AppImage/dist/*.AppImage
           AppImage/dist/*.sha256
         retention-days: 30
+
+  # A single commit for every architecture: parallel matrix jobs pushing
+  # to the same branch would race each other.
+  publish:
+    needs: build
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout main
+      uses: actions/checkout@v6
+      with:
+        ref: main
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Download AppImage artifacts
+      uses: actions/download-artifact@v7
+      with:
+        pattern: ProxMenux-*-AppImage-*
+        path: AppImage/dist
+        merge-multiple: true
 
     - name: Commit AppImage to main
       env:
@@ -97,7 +129,7 @@ jobs:
 
         rm -f AppImage/*.AppImage AppImage/*.sha256 || true
         cp AppImage/dist/*.AppImage AppImage/
-        cp AppImage/dist/ProxMenux-Monitor.AppImage.sha256 AppImage/
+        cp AppImage/dist/*.sha256 AppImage/
 
         git add AppImage/*.AppImage AppImage/*.sha256
         git commit -m "Update AppImage release build ($(date +'%Y-%m-%d %H:%M:%S'))" || echo "No changes to commit"

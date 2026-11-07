@@ -345,18 +345,34 @@ cleanup_corrupted_files() {
     fi
 }
 
+# Resolve the host's Monitor AppImage flavour with the same helper the
+# build uses (PMX_APPIMAGE_ARCH / PMX_APPIMAGE_SUFFIX). x86_64 keeps the
+# historical unsuffixed file names; aarch64 uses `-aarch64`.
+select_monitor_appimage_arch() {
+    local helper="$TEMP_DIR/AppImage/scripts/appimage_arch.sh"
+    [ -f "$helper" ] || return 1
+    # shellcheck source=AppImage/scripts/appimage_arch.sh
+    source "$helper" && pmx_appimage_arch "$(uname -m)" 2>/dev/null
+}
+
 detect_latest_appimage() {
     local appimage_dir="$TEMP_DIR/AppImage"
     [ ! -d "$appimage_dir" ] && return 1
     local latest
-    latest=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" -type f | sort -V | tail -1)
+    if [ -n "$PMX_APPIMAGE_SUFFIX" ]; then
+        latest=$(find "$appimage_dir" -name "ProxMenux-*${PMX_APPIMAGE_SUFFIX}.AppImage" -type f | sort -V | tail -1)
+    else
+        latest=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" ! -name "ProxMenux-*-aarch64.AppImage" -type f | sort -V | tail -1)
+    fi
     [ -z "$latest" ] && return 1
     echo "$latest"
 }
 
 get_appimage_version() {
     local filename
-    filename=$(basename "$1")
+    filename=$(basename "$1" .AppImage)
+    # Drop the architecture suffix so it is not read as a pre-release tag.
+    filename="${filename%"${PMX_APPIMAGE_SUFFIX:-}"}"
     # Match any dotted number sequence + optional pre-release suffix
     # (e.g. "-beta"). The previous `[0-9]+\.[0-9]+\.[0-9]+` was hardcoded
     # to three segments and dropped both the fourth segment AND the
@@ -413,11 +429,17 @@ extract_appimage_to_runtime_dir() {
 
 # ── Monitor install ────────────────────────────────────────
 install_proxmenux_monitor() {
+    if ! select_monitor_appimage_arch; then
+        msg_error "ProxMenux Monitor is not available for this architecture ($(uname -m))."
+        update_config "proxmenux_monitor" "unsupported_arch"
+        return 1
+    fi
+
     local appimage_source
     appimage_source=$(detect_latest_appimage)
 
     if [ -z "$appimage_source" ] || [ ! -f "$appimage_source" ]; then
-        msg_error "ProxMenux Monitor AppImage not found in $TEMP_DIR/AppImage/"
+        msg_error "ProxMenux Monitor AppImage ($PMX_APPIMAGE_ARCH) not found in $TEMP_DIR/AppImage/"
         msg_warn "Make sure the AppImage directory exists in the develop branch."
         update_config "proxmenux_monitor" "appimage_not_found"
         return 1
@@ -432,7 +454,7 @@ install_proxmenux_monitor() {
     local service_exists=false
     [ -f "$MONITOR_SERVICE_FILE" ] && service_exists=true
 
-    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor.AppImage.sha256"
+    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor${PMX_APPIMAGE_SUFFIX}.AppImage.sha256"
     if [ -f "$sha256_file" ]; then
         msg_info "Verifying AppImage integrity..."
         local expected_hash actual_hash
@@ -818,6 +840,8 @@ install_beta() {
         create_monitor_service
     elif [ $monitor_status -eq 2 ]; then
         msg_ok "ProxMenux Monitor beta updated successfully."
+    else
+        msg_warn "ProxMenux installed, but ProxMenux Monitor could not be installed."
     fi
 
     # Reset the update indicator flag after successful installation
