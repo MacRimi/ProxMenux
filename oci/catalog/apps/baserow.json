@@ -47,7 +47,7 @@
     "revision": "313156b6ea6b98fbd740767aab767955f813b8ed",
     "image_repository_url": "https://hub.docker.com/r/baserow/baserow",
     "readme_pushed_at": "",
-    "compose_sha256": "62db286d2b13e4a5d306994867bfc2a6ba4a8e6a7a5669e5d4801ab141c32819",
+    "compose_sha256": "ab878bfb88b70807b28949990bd4c93bc9dacb48eea9d50cc926480494c35601",
     "generated_at": "2026-11-07T13:31:57+00:00",
     "readme_raw_url": "https://baserow.io/docs/installation/install-with-docker",
     "default_branch": "develop"
@@ -175,7 +175,7 @@
     ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: baserow\nservices:\n  baserow:\n    depends_on:\n      db:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    environment:\n      BASEROW_PUBLIC_URL: http://localhost\n      DATABASE_HOST: db\n      DATABASE_NAME: baserow\n      DATABASE_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      DATABASE_PORT: '5432'\n      DATABASE_USER: baserow\n      REDIS_HOST: redis\n      REDIS_PASSWORD: ${GENERATED_REDIS_PASSWORD}\n      REDIS_PORT: '6379'\n      BASEROW_AMOUNT_OF_GUNICORN_WORKERS: '1'\n    healthcheck:\n      interval: 10s\n      retries: 60\n      start_period: 30s\n      test:\n      - CMD\n      - curl\n      - --fail\n      - --silent\n      - http://127.0.0.1:8000/api/_health/\n      timeout: 10s\n    image: baserow/baserow:latest\n    mem_limit: 3g\n    ports:\n    - 80:80\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./data\n      target: /baserow/data\n  db:\n    environment:\n      POSTGRES_DB: baserow\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      POSTGRES_USER: baserow\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD-SHELL\n      - pg_isready -U baserow -d baserow\n      timeout: 5s\n    image: postgres:15-alpine\n    mem_limit: 768m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./postgres\n      target: /var/lib/postgresql/data\n  redis:\n    command:\n    - redis-server\n    - --requirepass\n    - ${REDISCLI_AUTH}\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD\n      - redis-cli\n      - ping\n      timeout: 5s\n    image: redis:7-alpine\n    mem_limit: 256m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./redis\n      target: /data\n"
+    "original_compose": "name: baserow\nservices:\n  baserow:\n    depends_on:\n      db:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    environment:\n      BASEROW_PUBLIC_URL: http://localhost\n      DATABASE_HOST: db\n      DATABASE_NAME: baserow\n      DATABASE_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      DATABASE_PORT: '5432'\n      DATABASE_USER: baserow\n      REDIS_HOST: redis\n      REDIS_PASSWORD: ${GENERATED_REDIS_PASSWORD}\n      REDIS_PORT: '6379'\n      BASEROW_AMOUNT_OF_GUNICORN_WORKERS: '1'\n    healthcheck:\n      interval: 10s\n      retries: 60\n      start_period: 30s\n      test:\n      - CMD\n      - curl\n      - --fail\n      - --silent\n      - http://127.0.0.1:8000/api/auth-provider/login-options/\n      timeout: 10s\n    image: baserow/baserow:latest\n    mem_limit: 3g\n    ports:\n    - 80:80\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./data\n      target: /baserow/data\n  db:\n    environment:\n      POSTGRES_DB: baserow\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      POSTGRES_USER: baserow\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD-SHELL\n      - pg_isready -U baserow -d baserow\n      timeout: 5s\n    image: postgres:15-alpine\n    mem_limit: 768m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./postgres\n      target: /var/lib/postgresql/data\n  redis:\n    command:\n    - redis-server\n    - --requirepass\n    - ${REDISCLI_AUTH}\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD\n      - redis-cli\n      - ping\n      timeout: 5s\n    image: redis:7-alpine\n    mem_limit: 256m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./redis\n      target: /data\n"
   },
   "compose_stack": {
     "project_name": "baserow",
@@ -302,7 +302,7 @@
               "curl",
               "--fail",
               "--silent",
-              "http://127.0.0.1:8000/api/_health/"
+              "http://127.0.0.1:8000/api/auth-provider/login-options/"
             ],
             "timeout": "10s"
           },
@@ -646,8 +646,8 @@
       {
         "id": "single-web-worker-and-backend-readiness",
         "upstream_behavior": "BASEROW_AMOUNT_OF_GUNICORN_WORKERS is the developer-supported web worker limit; backend health endpoints are served on port 8000.",
-        "native_lxc_behavior": "Use one web worker and probe the local backend health endpoint directly, without passing through Caddy virtual-host routing.",
-        "reason": "Conservative resource defaults and a readiness check independent of the browser-facing canonical hostname.",
+        "native_lxc_behavior": "Use one web worker and probe the local login-options API directly, without passing through Caddy virtual-host routing.",
+        "reason": "Conservative resource defaults and a readiness check that verifies login-provider availability independently of the browser-facing canonical hostname.",
         "behavioral_impact": "Web worker concurrency is limited to one; background workers retain their image defaults.",
         "validation": "pending-runtime"
       }
