@@ -133,6 +133,7 @@
               "example": {"type": ["string", "null"]},
               "prompt": {"type": "string", "minLength": 1},
               "prompt_user": {"type": "boolean"},
+              "default_by_memory_mb": {"type": "array", "minItems": 1, "items": {"type": "array", "minItems": 2, "maxItems": 2, "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "string", "minLength": 1}]}},
               "container_address": {"type": "string", "pattern": "@CONTAINER_ADDRESS@"},
               "required": {"type": "boolean"},
               "sensitive": {"type": "boolean"},

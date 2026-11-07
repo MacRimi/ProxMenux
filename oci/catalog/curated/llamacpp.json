@@ -278,7 +278,13 @@
               "digest": null,
               "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
             },
-            "device_requests": []
+            "device_requests": [],
+            "environment": [
+              {
+                "name": "LLAMA_ARG_CACHE_TYPE_V",
+                "value": "q8_0"
+              }
+            ]
           },
           {
             "id": "nvidia",
@@ -345,23 +351,15 @@
             ],
             "environment": [
               {
-                "name": "LLAMA_ARG_FLASH_ATTN",
-                "value": "off"
-              },
-              {
                 "name": "LLAMA_ARG_UBATCH",
-                "value": "32"
-              },
-              {
-                "name": "LLAMA_ARG_BATCH",
                 "value": "128"
               },
               {
-                "name": "GGML_VK_DISABLE_F16",
-                "value": "1"
+                "name": "LLAMA_ARG_BATCH",
+                "value": "512"
               },
               {
-                "name": "GGML_VK_DISABLE_ASYNC",
+                "name": "GGML_VK_DISABLE_F16",
                 "value": "1"
               }
             ]
@@ -417,7 +415,8 @@
                 "kind": "character-device",
                 "container_path_strategy": "same-as-host"
               }
-            ]
+            ],
+            "rootfs_minimum_gb": 32
           },
           {
             "id": "intel",
@@ -447,7 +446,8 @@
                   "0x8086"
                 ]
               }
-            ]
+            ],
+            "rootfs_minimum_gb": 16
           }
         ]
       },
