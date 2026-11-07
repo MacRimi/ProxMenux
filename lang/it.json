@@ -9092,5 +9092,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Build online databases and applications without writing code.": "Crea database e applicazioni online senza scrivere codice.",
+  "Public URL used to access Baserow": "URL pubblico per accedere a Baserow",
+  "Baserow WebUI": "Interfaccia web di Baserow",
+  "Create the first administrator account on the initial signup page.": "Crea il primo account amministratore nella pagina di registrazione iniziale.",
+  "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address.": "BASEROW_PUBLIC_URL deve corrispondere all’indirizzo usato nel browser. Modifica il valore in Modify prima di usare un dominio o ripristinare l’installazione a un indirizzo diverso.",
+  "The data volume includes the embedded PostgreSQL database, uploaded files and internal service secrets. Back it up before an image upgrade; database migrations may require manual recovery after a downgrade.": "Il volume dati include il database PostgreSQL integrato, i file caricati e i segreti dei servizi interni. Esegui un backup prima di aggiornare l’immagine. Dopo le migrazioni del database, tornare a una versione precedente può richiedere un ripristino manuale."
 }

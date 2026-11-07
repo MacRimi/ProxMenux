@@ -9092,5 +9092,11 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Build online databases and applications without writing code.": "Skapa databaser och applikationer online utan att skriva kod.",
+  "Public URL used to access Baserow": "Publik URL för åtkomst till Baserow",
+  "Baserow WebUI": "Baserows webbgränssnitt",
+  "Create the first administrator account on the initial signup page.": "Skapa det första administratörskontot på den inledande registreringssidan.",
+  "BASEROW_PUBLIC_URL must match the address used in the browser; change it in Modify before using a domain or restoring to a different address.": "BASEROW_PUBLIC_URL måste motsvara adressen som används i webbläsaren. Ändra värdet i Modify innan du använder en domän eller återställer installationen med en annan adress.",
+  "The data volume includes the embedded PostgreSQL database, uploaded files and internal service secrets. Back it up before an image upgrade; database migrations may require manual recovery after a downgrade.": "Datavolymen innehåller den inbyggda PostgreSQL-databasen, uppladdade filer och hemligheter för interna tjänster. Säkerhetskopiera den före en bilduppdatering. Efter databasmigreringar kan återgång till en äldre version kräva manuell återställning."
 }

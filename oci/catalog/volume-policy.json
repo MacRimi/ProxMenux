@@ -164,6 +164,9 @@
     ],
     "nextcloud-mariadb": [
       "/data"
+    ],
+    "baserow": [
+      "/baserow/data"
     ]
   },
   "sizes": {

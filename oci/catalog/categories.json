@@ -436,6 +436,7 @@
     "kitchenowl": "productivity",
     "unbound": "adblock",
     "spoolman": "tools",
-    "zwave-js-ui": "smarthome"
+    "zwave-js-ui": "smarthome",
+    "baserow": "productivity"
   }
 }
