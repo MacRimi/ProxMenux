@@ -9092,5 +9092,22 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Semaphore UI": "Semaphore UI",
+  "Run Ansible, Terraform and other automation tools from a web interface.": "Führe Ansible, Terraform und andere Automatisierungswerkzeuge über eine Weboberfläche aus.",
+  "SQLite and the encryption keys are kept in persistent volumes. Keep both configuration and database backups together.": "SQLite und die Verschlüsselungsschlüssel werden in persistenten Volumes gespeichert. Bewahre die Sicherungen der Konfiguration und der Datenbank zusammen auf.",
+  "Password of the Semaphore administrator": "Passwort des Semaphore-Administrators",
+  "Semaphore administrator": "Semaphore-Administrator",
+  "YOURLS": "YOURLS",
+  "Your own URL shortener with statistics, plugins and a private MariaDB database.": "Ihr eigener URL-Kürzungsdienst mit Statistiken, Plugins und einer privaten MariaDB-Datenbank.",
+  "Open /admin/ to complete the database setup. Use the administrator credentials shown by the installer.": "Öffnen Sie /admin/, um die Datenbankeinrichtung abzuschließen. Verwenden Sie die vom Installationsassistenten angezeigten Administrator-Zugangsdaten.",
+  "YOURLS administrator": "YOURLS-Administrator",
+  "Track IT assets, software licenses, accessories and equipment assignments with Snipe-IT.": "Verwalten Sie IT-Geräte, Softwarelizenzen, Zubehör und Gerätezuweisungen mit Snipe-IT.",
+  "Complete the web setup wizard to create your administrator account.": "Erstellen Sie Ihr Administratorkonto im Einrichtungsassistenten der Weboberfläche.",
+  "The application key is generated once and preserved with the installation. Keep it with your backups.": "Der Anwendungsschlüssel wird einmalig erzeugt und mit der Installation beibehalten. Bewahren Sie ihn zusammen mit Ihren Sicherungen auf.",
+  "Email is logged by default. Configure an SMTP server before relying on email delivery.": "E-Mails werden standardmäßig nur protokolliert. Richten Sie einen SMTP-Server ein, bevor Sie sich auf den E-Mail-Versand verlassen.",
+  "listmonk": "listmonk",
+  "Manage mailing lists, subscribers and email campaigns with a private PostgreSQL database.": "Verwalte Mailinglisten, Abonnenten und E-Mail-Kampagnen mit einer privaten PostgreSQL-Datenbank.",
+  "listmonk administrator": "listmonk-Administrator",
+  "Configure SMTP and the public root URL before sending email. Set the media upload directory to /listmonk/uploads in the web settings.": "Richte SMTP und die öffentliche Basis-URL ein, bevor du E-Mails sendest. Lege in den Webeinstellungen /listmonk/uploads als Upload-Verzeichnis für Medien fest."
 }
