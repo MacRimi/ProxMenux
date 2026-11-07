@@ -164,6 +164,9 @@
     ],
     "nextcloud-mariadb": [
       "/data"
+    ],
+    "listmonk": [
+      "/listmonk/uploads"
     ]
   },
   "sizes": {

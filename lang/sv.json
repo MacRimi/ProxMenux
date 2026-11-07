@@ -9092,5 +9092,22 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Semaphore UI": "Semaphore UI",
+  "Run Ansible, Terraform and other automation tools from a web interface.": "Kör Ansible, Terraform och andra automationsverktyg från ett webbgränssnitt.",
+  "SQLite and the encryption keys are kept in persistent volumes. Keep both configuration and database backups together.": "SQLite och krypteringsnycklarna lagras i beständiga volymer. Spara säkerhetskopiorna av konfigurationen och databasen tillsammans.",
+  "Password of the Semaphore administrator": "Lösenord för Semaphore-administratören",
+  "Semaphore administrator": "Semaphore-administratör",
+  "YOURLS": "YOURLS",
+  "Your own URL shortener with statistics, plugins and a private MariaDB database.": "Din egen URL-förkortare med statistik, insticksprogram och en privat MariaDB-databas.",
+  "Open /admin/ to complete the database setup. Use the administrator credentials shown by the installer.": "Öppna /admin/ för att slutföra databasinställningen. Använd administratörsuppgifterna som installationsprogrammet visar.",
+  "YOURLS administrator": "YOURLS-administratör",
+  "Track IT assets, software licenses, accessories and equipment assignments with Snipe-IT.": "Hantera IT-utrustning, programvarulicenser, tillbehör och tilldelning av utrustning med Snipe-IT.",
+  "Complete the web setup wizard to create your administrator account.": "Slutför installationsguiden i webbgränssnittet för att skapa ditt administratörskonto.",
+  "The application key is generated once and preserved with the installation. Keep it with your backups.": "Programnyckeln genereras en gång och bevaras med installationen. Spara den tillsammans med dina säkerhetskopior.",
+  "Email is logged by default. Configure an SMTP server before relying on email delivery.": "E-postmeddelanden skrivs bara till loggen som standard. Konfigurera en SMTP-server innan du förlitar dig på e-postutskick.",
+  "listmonk": "listmonk",
+  "Manage mailing lists, subscribers and email campaigns with a private PostgreSQL database.": "Hantera e-postlistor, prenumeranter och e-postkampanjer med en privat PostgreSQL-databas.",
+  "listmonk administrator": "listmonk-administratör",
+  "Configure SMTP and the public root URL before sending email. Set the media upload directory to /listmonk/uploads in the web settings.": "Konfigurera SMTP och programmets publika bas-URL innan du skickar e-post. Ange /listmonk/uploads som uppladdningskatalog för media i webbinställningarna."
 }
