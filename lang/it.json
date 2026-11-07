@@ -9092,5 +9092,17 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Ente Photos": "Ente Photos",
+  "End-to-end encrypted photo backup and sharing.": "Backup e condivisione delle foto con crittografia end-to-end.",
+  "Creates five LXC containers: Photos web, Museum API, PostgreSQL, S3 storage and a stopped bucket initialization job.": "Vengono creati cinque container LXC: l’interfaccia web Photos, l’API Museum, PostgreSQL, lo storage S3 e un processo di creazione dei bucket che poi rimane arrestato.",
+  "For remote browser access, expose the Photos web, Museum API and S3 endpoints through HTTPS and configure the corresponding public URLs. localhost access is suitable for local tests.": "Per accedere da altri dispositivi, esponi l’interfaccia web Photos, l’API Museum e lo storage S3 tramite HTTPS e configura i relativi URL pubblici. localhost è adatto ai test locali.",
+  "Create your account in Photos. Without SMTP, retrieve the verification code from the Museum container logs. Keep the database and object storage backed up together.": "Crea il tuo account in Photos. Senza SMTP, recupera il codice di verifica dai log del container Museum. Esegui insieme il backup del database e dello storage a oggetti.",
+  "Without SMTP, find the account verification code in the Museum container logs. Browser access requires HTTPS or localhost for cryptography.": "Senza SMTP, il codice di verifica dell’account appare nei log del container Museum. Il browser richiede HTTPS o localhost per la crittografia.",
+  "Photos": "Foto",
+  "HTTPS Museum API endpoint": "Accesso HTTPS all’API Museum",
+  "HTTPS Museum API URL": "URL HTTPS dell’API Museum",
+  "HTTPS S3 and public-album endpoints": "Accessi HTTPS a S3 e agli album pubblici",
+  "HTTPS S3 storage URL": "URL HTTPS dello storage S3",
+  "HTTPS public albums URL": "URL HTTPS degli album pubblici"
 }

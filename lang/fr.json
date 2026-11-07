@@ -9091,5 +9091,17 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "Ente Photos": "Ente Photos",
+  "End-to-end encrypted photo backup and sharing.": "Sauvegardez et partagez vos photos avec un chiffrement de bout en bout.",
+  "Creates five LXC containers: Photos web, Museum API, PostgreSQL, S3 storage and a stopped bucket initialization job.": "Cinq conteneurs LXC sont créés : l’interface web Photos, l’API Museum, PostgreSQL, le stockage S3 et une tâche de création des compartiments qui reste ensuite arrêtée.",
+  "For remote browser access, expose the Photos web, Museum API and S3 endpoints through HTTPS and configure the corresponding public URLs. localhost access is suitable for local tests.": "Pour accéder depuis un autre appareil, exposez l’interface web Photos, l’API Museum et le stockage S3 en HTTPS et configurez leurs URL publiques. localhost convient aux tests locaux.",
+  "Create your account in Photos. Without SMTP, retrieve the verification code from the Museum container logs. Keep the database and object storage backed up together.": "Créez votre compte dans Photos. Sans SMTP, récupérez le code de vérification dans les journaux du conteneur Museum. Sauvegardez ensemble la base de données et le stockage objet.",
+  "Without SMTP, find the account verification code in the Museum container logs. Browser access requires HTTPS or localhost for cryptography.": "Sans SMTP, le code de vérification du compte apparaît dans les journaux du conteneur Museum. Le navigateur exige HTTPS ou localhost pour le chiffrement.",
+  "Photos": "Photos",
+  "HTTPS Museum API endpoint": "Accès HTTPS à l’API Museum",
+  "HTTPS Museum API URL": "URL HTTPS de l’API Museum",
+  "HTTPS S3 and public-album endpoints": "Accès HTTPS à S3 et aux albums publics",
+  "HTTPS S3 storage URL": "URL HTTPS du stockage S3",
+  "HTTPS public albums URL": "URL HTTPS des albums publics"
 }
