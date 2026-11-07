@@ -9092,5 +9092,14 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Host Git repositories and collaborate on software projects.": "Lagra Git-repositorier och samarbeta i programvaruprojekt.",
+  "GitLab Community Edition includes Git hosting, merge requests, issue tracking and CI/CD coordination. Its official all-in-one image includes PostgreSQL, Redis and Gitaly.": "GitLab Community Edition innehåller Git-värdtjänst, sammanfogningsförfrågningar, ärendehantering och samordning av CI/CD. Den officiella helhetsavbildningen innehåller PostgreSQL, Redis och Gitaly.",
+  "Allow several minutes for the first configuration and database migrations.": "Den första konfigurationen och databasmigreringarna kan ta flera minuter.",
+  "Plan GitLab upgrades using the required upgrade stops before updating the image.": "Planera GitLab-uppgraderingar med de obligatoriska mellanversionerna innan du uppdaterar avbildningen.",
+  "The HTTP address is configured automatically; configure HTTPS and SMTP in GitLab before exposing it publicly.": "HTTP-adressen konfigureras automatiskt. Konfigurera HTTPS och SMTP i GitLab innan du gör tjänsten offentligt tillgänglig.",
+  "GitLab administrator password": "Lösenord för GitLab-administratören",
+  "GitLab configuration": "GitLab-konfiguration",
+  "GitLab administrator": "GitLab-administratör",
+  "GitLab": "GitLab"
 }
