@@ -90,7 +90,18 @@ class MembershipGraceTests(unittest.TestCase):
         ])
         self.expire_timers()
         self.assertEqual(watcher.events, [('node_reconnect', 'INFO', {
-            'node_name': 'pmxlab2', 'downtime_seconds': 3, 'hostname': 'pmxlab1'})])
+            'node_name': 'pmxlab2', 'downtime_seconds': 3, 'hostname': 'pmxlab1',
+            'clean_stop': True})])
+
+    def test_a_short_absence_without_a_clean_stop_does_not_name_a_cause(self):
+        watcher = self.watcher('pmxlab1')
+        self.feed(watcher, 'pmxlab1', [
+            (0, 'corosync', '  [TOTEM ] A new membership (1.59) was formed. Members left: 2'),
+            (5, 'corosync', '  [TOTEM ] A new membership (1.5e) was formed. Members joined: 2'),
+        ])
+        self.expire_timers()
+        self.assertEqual(watcher.events, [('node_reconnect', 'INFO', {
+            'node_name': 'pmxlab2', 'downtime_seconds': 5, 'hostname': 'pmxlab1'})])
 
     def test_a_node_that_stays_away_is_reported_after_the_grace(self):
         watcher = self.watcher('pmxlab1')
@@ -138,6 +149,11 @@ class MembershipGraceTests(unittest.TestCase):
         self.assertIn('pve', rendered['body'])
         self.assertIn('3 s', rendered['body'])
         self.assertNotIn('{', rendered['body'])
+        self.assertNotIn('Corosync', rendered['body'])
+        restarted = nt.render_template('node_reconnect', {
+            'node_name': 'pve', 'downtime_seconds': 3, 'hostname': 'pve1', 'clean_stop': True}, language='en')
+        self.assertEqual(restarted['body'], 'Corosync, the cluster communication service, was stopped on node pve '
+                                            'and started again. The node rejoined the cluster after 3 s.')
         plain = nt.render_template('node_reconnect', {'node_name': 'pve', 'hostname': 'pve1'}, language='en')
         self.assertIn('rejoined the cluster successfully', plain['body'])
 

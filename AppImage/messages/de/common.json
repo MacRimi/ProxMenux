@@ -6994,7 +6994,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Der Knoten {node_name} hat seinen Clusterdienst neu gestartet und ist nach {seconds} s wieder beigetreten."
+        "rejoinedBody": "Der Knoten {node_name} hat die Verbindung zum Cluster verloren und ist nach {seconds} s wieder beigetreten.",
+        "restartedBody": "Corosync, der Kommunikationsdienst des Clusters, wurde auf dem Knoten {node_name} gestoppt und wieder gestartet. Der Knoten ist dem Cluster nach {seconds} s wieder beigetreten."
       },
       "templates": {
         "state_change": {

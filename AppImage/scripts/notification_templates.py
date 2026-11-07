@@ -2009,8 +2009,10 @@ def render_template(event_type: str, data: Dict[str, Any],
         if localized:
             template[field] = localized
     if event_type == 'node_reconnect' and data.get('downtime_seconds'):
-        # A node that left and came back within the grace: one notice.
-        rejoined = runtime_message('cluster.rejoinedBody', language,
+        # A node that left and came back within the grace: one notice. It
+        # names Corosync only when the node announced stopping it.
+        key = 'cluster.restartedBody' if data.get('clean_stop') else 'cluster.rejoinedBody'
+        rejoined = runtime_message(key, language,
                                    node_name=data.get('node_name', ''),
                                    seconds=data['downtime_seconds'])
         if rejoined:

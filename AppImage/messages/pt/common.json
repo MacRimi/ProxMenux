@@ -6994,7 +6994,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "O nó {node_name} reiniciou o serviço do cluster e voltou a entrar após {seconds} s."
+        "rejoinedBody": "O nó {node_name} perdeu o contacto com o cluster e voltou a entrar após {seconds} s.",
+        "restartedBody": "O Corosync, o serviço de comunicação do cluster, foi parado no nó {node_name} e iniciado novamente. O nó voltou a entrar no cluster após {seconds} s."
       },
       "templates": {
         "state_change": {

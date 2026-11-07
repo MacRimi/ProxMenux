@@ -6994,7 +6994,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Il nodo {node_name} ha riavviato il servizio del cluster ed è rientrato dopo {seconds} s."
+        "rejoinedBody": "Il nodo {node_name} ha perso il contatto con il cluster ed è rientrato dopo {seconds} s.",
+        "restartedBody": "Corosync, il servizio di comunicazione del cluster, è stato arrestato sul nodo {node_name} e avviato di nuovo. Il nodo è rientrato nel cluster dopo {seconds} s."
       },
       "templates": {
         "state_change": {
