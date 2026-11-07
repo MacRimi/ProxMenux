@@ -49,7 +49,7 @@
     "revision": "874cb274f8b419dff6fb211fc326e4f2dd63c4fb",
     "image_repository_url": "https://github.com/recyclarr/recyclarr/pkgs/container/recyclarr",
     "readme_pushed_at": "",
-    "compose_sha256": "61b779a2849baa70043874daf8e295ec213546b86173556c100c40836482a0a0",
+    "compose_sha256": "1076003169882639a92446a34c0dc42f2e5ba7180517e27b1e33c4537556e8c3",
     "generated_at": "2026-11-06T23:32:37+00:00",
     "readme_raw_url": "https://raw.githubusercontent.com/recyclarr/recyclarr/874cb274f8b419dff6fb211fc326e4f2dd63c4fb/Dockerfile"
   },
@@ -109,7 +109,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "services:\n  recyclarr:\n    image: ghcr.io/recyclarr/recyclarr:latest\n    container_name: recyclarr\n    user: 1000:1000\n    restart: unless-stopped\n    environment:\n      TZ: UTC\n      CRON_SCHEDULE: '@daily'\n      RECYCLARR_CREATE_CONFIG: 'true'\n    volumes:\n    - ./config:/config\n"
+    "original_compose": "services:\n  recyclarr:\n    image: ghcr.io/recyclarr/recyclarr:8\n    container_name: recyclarr\n    user: 1000:1000\n    restart: unless-stopped\n    environment:\n      TZ: UTC\n      CRON_SCHEDULE: '@daily'\n      RECYCLARR_CREATE_CONFIG: 'true'\n    volumes:\n    - ./config:/config\n"
   },
   "compose_stack": {
     "project_name": "recyclarr",
