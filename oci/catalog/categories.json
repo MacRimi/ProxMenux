@@ -445,6 +445,7 @@
     "windows": "desktop",
     "windows-arm": "desktop",
     "chromeos": "desktop",
-    "baserow": "productivity"
+    "baserow": "productivity",
+    "mindwtr": "productivity"
   }
 }
