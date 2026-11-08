@@ -1329,10 +1329,21 @@ class NotificationManager:
 
         # Check storage exclusions for storage-related events.
         # If the storage is excluded from notifications, suppress the event entirely.
+        # A remote mount of an excluded storage is silenced the same way, and
+        # so is the recovery of any of these alerts.
         _STORAGE_EVENTS = {'storage_unavailable', 'storage_low_space', 'storage_warning', 'storage_error',
-                           'pve_storage_full'}
-        if event.event_type in _STORAGE_EVENTS:
+                           'pve_storage_full', 'mount_stale', 'mount_readonly'}
+        alert_type = (event.data.get('alert_event_type') if event.event_type == 'error_resolved'
+                      else event.event_type)
+        if alert_type in _STORAGE_EVENTS:
             storage_name = event.data.get('storage_name') or event.data.get('name')
+            if not storage_name and event.data.get('mount_target'):
+                try:
+                    import mount_monitor
+                    storage_name = mount_monitor.storage_for_mount(
+                        event.data.get('mount_target', ''), event.data.get('mount_source', ''))
+                except Exception:
+                    storage_name = None
             if storage_name:
                 try:
                     from health_persistence import health_persistence

@@ -6066,6 +6066,33 @@ class HealthMonitor:
         critical_targets: list[str] = []
         warning_targets: list[str] = []
 
+        # A mount of a storage excluded from health monitoring is shown but
+        # never raises an error; one it already had is cleared below.
+        try:
+            excluded_names = health_persistence.get_excluded_storage_names('health')
+        except Exception:
+            excluded_names = set()
+        monitored = []
+        for m in mounts:
+            m['storage_name'] = mount_monitor.storage_for_mount(
+                m.get('target', ''), m.get('source', ''), host_mounts) or ''
+            if m['storage_name'] and m['storage_name'] in excluded_names:
+                lxc_id = m.get('lxc_id', '') or ''
+                label = (f"CT {lxc_id}" + (f" ({m.get('lxc_name')})" if m.get('lxc_name') else '')
+                         + f" {m.get('target', '?')}") if lxc_id else m.get('target', '?')
+                checks[label] = {
+                    'status': 'INFO',
+                    'detail': f"{m.get('fstype', '?')} mount of storage {m['storage_name']} excluded from monitoring",
+                    'excluded': True,
+                    'fstype': m.get('fstype', '?'),
+                    'source': m.get('source', ''),
+                    'lxc_id': lxc_id,
+                    'lxc_name': m.get('lxc_name', '') or '',
+                }
+            else:
+                monitored.append(m)
+        mounts = monitored
+
         for m in mounts:
             target = m.get('target', '?')
             status = m.get('status', 'ok')
@@ -6122,6 +6149,7 @@ class HealthMonitor:
                         'lxc_id': lxc_id,
                         'lxc_name': lxc_name,
                         'lxc_scope': lxc_scope,
+                        'storage_name': m.get('storage_name', ''),
                     },
                 )
             elif status == 'readonly':
@@ -6152,6 +6180,7 @@ class HealthMonitor:
                         'lxc_id': lxc_id,
                         'lxc_name': lxc_name,
                         'lxc_scope': lxc_scope,
+                        'storage_name': m.get('storage_name', ''),
                     },
                 )
             else:

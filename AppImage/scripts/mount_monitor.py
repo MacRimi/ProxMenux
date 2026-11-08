@@ -29,7 +29,7 @@ import re
 import subprocess
 import threading
 import time
-from typing import Any
+from typing import Any, Optional
 
 # `nfs`, `nfs4`, `cifs`, `smbfs`, `smb3`, etc. — any FS type whose name
 # starts with one of the three remote families. Keeps the filter
@@ -162,6 +162,31 @@ def _is_proxmox_managed(target: str) -> bool:
     paying a ``pvesh`` round-trip per mount.
     """
     return target.startswith('/mnt/pve/')
+
+
+def storage_for_mount(target: str, source: str,
+                      host_mounts: Optional[list[dict[str, Any]]] = None) -> Optional[str]:
+    """The Proxmox storage a remote mount belongs to, or None.
+
+    A host mount under ``/mnt/pve/<storage_id>`` is that storage. A mount
+    inside a container that shows the same source as one of those host
+    mounts (a bind mount of the storage, or the same share mounted again)
+    belongs to it as well, so the storage exclusions reach it too.
+    """
+    if target.startswith('/mnt/pve/'):
+        return target.split('/')[3] or None
+    if not source:
+        return None
+    if host_mounts is None:
+        try:
+            host_mounts = scan_remote_mounts()
+        except Exception:
+            return None
+    for mount in host_mounts:
+        host_target = mount.get('target', '')
+        if mount.get('source') == source and host_target.startswith('/mnt/pve/'):
+            return host_target.split('/')[3] or None
+    return None
 
 
 def scan_remote_mounts(force: bool = False) -> list[dict[str, Any]]:
