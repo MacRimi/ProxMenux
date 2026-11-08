@@ -897,10 +897,12 @@ def candidate_host_sources(journal, state):
     return pinned
 
 
-def stop(vmid):
+def stop(vmid, timeout=60):
+    if isinstance(timeout, bool) or not isinstance(timeout, int) or timeout < 1:
+        raise ValueError(translate('The shutdown timeout must be a positive number of seconds'))
     if run('pct', 'status', str(vmid)).strip() == b'status: running':
         try:
-            run('pct', 'shutdown', str(vmid), '--timeout', '60')
+            run('pct', 'shutdown', str(vmid), '--timeout', str(timeout))
         except RuntimeError:
             # What `docker stop` does with a process that ignores the signal.
             run('pct', 'stop', str(vmid))
@@ -970,11 +972,18 @@ def healthcheck(vmid, template):
         raise ValueError(translate('Invalid health check'))
     started, stable_since = time.monotonic(), None
     # A monitor of the host answers on the network of the host itself.
-    shared = parse_config(run('pct', 'config', str(vmid))).get('lxc.net.0.type') == 'none'
+    config = parse_config(run('pct', 'config', str(vmid)))
+    shared = config.get('lxc.net.0.type') == 'none'
+    managed_network = any(re.fullmatch(r'net[0-9]+', key) for key in config)
     while time.monotonic() - started < timeout:
         if run('pct', 'status', str(vmid)).strip() != b'status: running':
             raise ValueError(translate('The restored service stopped; the recovery is not confirmed'))
-        addresses = ['127.0.0.1'] if shared else run('lxc-info', '-n', str(vmid), '-iH').decode().splitlines()
+        if shared:
+            addresses = ['127.0.0.1']
+        elif managed_network:
+            addresses = own_addresses(vmid)
+        else:
+            addresses = run('lxc-info', '-n', str(vmid), '-iH').decode().splitlines()
         ip = next((a for a in addresses if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', a)), None)
         ok = False
         if ip:
@@ -1334,7 +1343,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if show:
         msg_ok(translate('Update prepared') if update else translate('Changes prepared'))
         msg_info(translate('Stopping the container...'))
-    stop(vmid)
+    stop(vmid, record['deployment'].get('shutdown_timeout_seconds', 60))
     if show:
         msg_ok(translate('Container stopped'))
         msg_info(translate('Creating a backup of the container...'))
@@ -1423,7 +1432,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     check_runtime_mounts(run('pct', 'config', str(vmid)), candidate['deployment'])
     gpu_devices.check(run('pct', 'config', str(vmid)), candidate['deployment'])
     if not state['was_running']:
-        stop(vmid)
+        stop(vmid, candidate['deployment'].get('shutdown_timeout_seconds', 60))
     run('pct', 'set', str(vmid), '--onboot', '1' if candidate['deployment']['onboot'] else '0')
     state['validated_config_sha256'] = sha(owned(vmid, record['installation_id']))
     checkpoint(journal, state, 'health-passed')
@@ -1495,7 +1504,7 @@ def complete_recovery(root, journal, state):
         gpu_devices.validate_runtime(vmid, state['record']['deployment'])
         msg_ok(f"{translate('Application responding:')} {url}")
     if not state['was_running']:
-        stop(vmid)
+        stop(vmid, state['record']['deployment'].get('shutdown_timeout_seconds', 60))
     restored = copy.deepcopy(state['record'])
     restored['observed'] = instances.observe(vmid, restored['installation_id'],
         restored['observed']['archive_path'], restored['observed']['resolved_registry_digest'],
@@ -1599,7 +1608,8 @@ def recover(root, journal):
         held = None
     checkpoint(journal, state, 'recovering')
     if current_path.exists():
-        stop(vmid)
+        deployment = state.get('candidate_contract', {}).get('deployment', state['record']['deployment'])
+        stop(vmid, deployment.get('shutdown_timeout_seconds', 60))
         current = owned(vmid, record['installation_id'])
         check_recovery_runtime(current, state)
         if unused_volumes(current).keys() - state.get('retained_unused', {}).keys():

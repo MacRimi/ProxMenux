@@ -90,7 +90,7 @@ def tmpfs_lines(deployment, config=None):
             raise ValueError(translate('The tmpfs path or size is outside the supported profile'))
         if any(target == p or target.startswith(p+'/') or p.startswith(target+'/') for p in [*persistent,*targets]):
             raise ValueError(translate('A tmpfs mount overlaps another mount'))
-        options = item.get('mount_options', [])
+        options = list(item.get('mount_options', []))
         if not options or any(not re.fullmatch(r'rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3,4}', opt) for opt in options):
             raise ValueError(translate('Unsupported tmpfs options'))
         if len(options) != len(set(options)) or ('rw' in options and 'ro' in options):
