@@ -9231,5 +9231,13 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Synchronisiert eine UniFi-VPN-Richtlinienroute mit der öffentlichen Quelle zum Sperrstatus.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Offizielles StopLiga-Image. Dieses Profil richtet UniFi ein; erforderlich sind ein lokaler API-Schlüssel und ein vorhandenes VPN-Client-Netzwerk. Der Dienst läuft im Hintergrund ohne Weboberfläche.",
+  "UniFi controller hostname or IP address": "Hostname oder IP-Adresse des UniFi-Controllers",
+  "Local UniFi API key": "Lokaler UniFi-API-Schlüssel",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "UniFi-TLS-Zertifikat prüfen (false nur für einen vertrauenswürdigen Controller mit selbstsigniertem Zertifikat)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Keine Weboberfläche. Synchronisierungsstatus prüfen: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Dieses Profil verwendet UniFi. Erstelle zuerst ein VPN-Client-Netzwerk und verwende einen lokalen API-Schlüssel mit Berechtigung zur Verwaltung von Richtlinienrouten.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Um Änderungen ohne Eingriff am Router anzuzeigen, setze STOPLIGA_DRY_RUN=true."
 }

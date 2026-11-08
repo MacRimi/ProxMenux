@@ -814,6 +814,14 @@ The sections that follow are the design and laboratory notes of the engine.
   enables the official FUSE mount and publishes distinct read/write and
   recursively read-only paths for other native LXCs.
 
+- The curated `stopliga` profile uses the developer-published image with the
+  UniFi backend. It requires a local API key and an existing VPN Client network;
+  it has no web interface. `/data` preserves state as UID/GID 10001 and `/tmp`
+  is a bounded native tmpfs. `STOPLIGA_DRY_RUN=true` previews routing changes.
+  The profile keeps the native LXC rootfs and security defaults; it does not
+  claim Docker's read-only rootfs or `cap_drop: ALL` hardening. Omada and OPNsense
+  are upstream backends, not configured or runtime-validated by this profile.
+
 ## Catalog maintenance
 
 The catalog is generated rather than written by hand. A contributor adding an

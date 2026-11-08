@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-70 of 574 applications in the OCI catalog have been tested for real: 54 in the ProxMenux lab and 16 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+71 of 575 applications in the OCI catalog have been tested for real: 54 in the ProxMenux lab and 17 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -36,6 +36,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Restreamer | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `9bced1da8a42` | PVE 9.2/amd64/ZFS: default/advanced; browser/API login; config/media persistence, restart, Modify; 2.11.0 to 2.12.0 update (served JS changed), no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/publishing untested. | — |
 | Semaphore UI | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `426816c986cc` | PVE 9.2 amd64/ZFS; default and advanced; managed/host persistence; browser login; restart/Modify; 2.19.16 to 2.19.17; rollback; backup/restore/Manage; removal and PBS cleanup. | — |
 | Snipe-IT | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `2917d721b97e` | PVE 9.2 amd64/ZFS; default/advanced; browser login and inventory; managed/host uploads; restart/Modify; native 8.8.2 to 8.8.3; rollback; full-group backup/restore/Manage; removal/PBS cleanup. | — |
+| StopLiga | [@jcastro](https://github.com/jcastro) | 2026-11-08 | `9332aa8ad286` | PVE 9.2 amd64/ZFS; UniFi dry-run authentication/health; default/advanced, managed data, restart/Modify, 0.1.29 to 0.1.30, rollback, backup/restore/Manage and removal. No router writes or arm64 runtime test. | — |
 | TeslaMate | [@jcastro](https://github.com/jcastro) | 2026-10-29 | `c85b3d447502` | MS03/amd64: default and advanced install, browser login, volumes/restart, Modify, 4.3 to 4.4 update, controlled rollback, native backup/restore to new VMIDs and removal. No vehicle tokens used. | — |
 | Unmanic | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `b249cba0d773` | PVE 9.2/amd64/ZFS: default/advanced; browser/API; managed/host library, UID/GID 1000/1001, restart, FFmpeg CPU encode, Modify; 0.4.0 to 0.4.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/full plugin flows untested. | — |
 | Wizarr | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `5e1b78572088` | PVE 9.2/amd64/ZFS: default and advanced OCI-compose; browser admin login; managed/host data, UID/GID, restart, Modify; 2026.10.0 to 2026.10.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; media integrations untested. | — |
