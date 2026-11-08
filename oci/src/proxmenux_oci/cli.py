@@ -696,7 +696,7 @@ def interactive(catalog: Catalog) -> int:
                     if not new or _new_applications(catalog, ui, new, catalog_refresh):
                         # Asked for: wait for it and say if it could not be done.
                         catalog_refresh.start(force=True)
-                        ui.info(translate("Refreshing the application catalog..."))
+                        ui.gauge(catalog_refresh.progress, translate("Refresh catalog"))
                         catalog_refresh.wait()
                         refresh_requested = True
                 elif selection == "updates":

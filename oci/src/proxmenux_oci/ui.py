@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import time
 from dataclasses import dataclass
 
 from .i18n import translate
@@ -190,6 +191,15 @@ class TerminalUI:
     def info(self, text: str) -> None:
         print(text)
 
+    def gauge(self, poll, title: str | None = None) -> None:
+        """Print each new step while ``poll()`` returns (percent, text)."""
+        shown = None
+        while (state := poll()) is not None:
+            if state != shown:
+                print(f"[{state[0]:3}%] {state[1]}", flush=True)
+                shown = state
+            time.sleep(0.2)
+
 
 # Width of the windows of the installer: questions, choices and notices. The
 # final summary and the page of an application, which show tables, are wider.
@@ -224,7 +234,8 @@ class DialogUI:
     def available() -> bool:
         return bool(shutil.which("dialog") and sys.stdin.isatty() and sys.stdout.isatty())
 
-    def _run(self, widget: list[str], title: str | None = None, refresh=None) -> subprocess.CompletedProcess[str]:
+    @staticmethod
+    def _environment() -> dict[str, str]:
         environment = os.environ.copy()
         # ncurses otherwise waits a full second to distinguish Escape from
         # the prefix of a cursor/function key. Keep a short sequence window,
@@ -232,6 +243,10 @@ class DialogUI:
         environment.setdefault("ESCDELAY", "150")
         if environment.get("TERM", "").casefold() in {"", "dumb", "unknown"}:
             environment["TERM"] = "xterm-256color"
+        return environment
+
+    def _run(self, widget: list[str], title: str | None = None, refresh=None) -> subprocess.CompletedProcess[str]:
+        environment = self._environment()
         # dialog draws on the terminal and writes the selection to stderr.
         back_widget = ['--extra-button', '--extra-label', translate('Back')] if self.back_enabled and any(
             flag in widget for flag in ('--inputbox', '--passwordbox', '--yesno', '--menu', '--checklist')) else []
@@ -405,6 +420,32 @@ class DialogUI:
     def info(self, text: str, title: str | None = None) -> None:
         height, width = self._size(text, 6, MENU_WIDTH, 5)
         self._run(["--infobox", f"\n{text}", height, width], title)
+
+    def gauge(self, poll, title: str | None = None) -> None:
+        """A dialog progress bar fed by ``poll()``, which returns (percent, text)
+        while the work runs and None once it has finished."""
+        first = poll()
+        if first is None:
+            return
+        _, width = self._size(first[1], 8, MENU_WIDTH, 5)
+        command = ["dialog", "--no-collapse", "--backtitle", self.backtitle, "--title", title or self.title,
+                   "--gauge", first[1], "8", width, str(first[0])]
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=None, stderr=subprocess.DEVNULL,
+                              text=True, env=self._environment()) as process:
+            state = first
+            try:
+                while state is not None:
+                    process.stdin.write(f"XXX\n{state[0]}\n{state[1]}\nXXX\n")
+                    process.stdin.flush()
+                    time.sleep(0.2)
+                    state = poll()
+            except BrokenPipeError:
+                pass
+            finally:
+                try:
+                    process.stdin.close()
+                except BrokenPipeError:
+                    pass
 
 
 def interactive_ui() -> TerminalUI | DialogUI:

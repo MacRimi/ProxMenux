@@ -25,7 +25,7 @@ import urllib.error
 import urllib.request
 import uuid
 
-from .i18n import translate
+from .i18n import N_, translate
 
 REPOSITORY = "MacRimi/ProxMenux"
 CATALOG_API = 1
@@ -290,8 +290,26 @@ def validate_snapshot(root, directory, *, allow_empty=False):
             validator.validate(catalog._compose_item(item))
 
 
-def synchronize(root, channel, fetch=request, force=False):
+def progress_path(root, channel):
+    return cache_root(root) / f"{channel}-progress.json"
+
+
+def read_progress(root, channel):
+    """The step the refresh worker last reported, as (percent, translated text)."""
+    state = read_json(progress_path(root, channel))
+    percent = state.get("percent")
+    if type(percent) is not int or not 0 <= percent <= 100 or not isinstance(state.get("message"), str):
+        return 0, translate("Refreshing the application catalog...")
+    values = state.get("values") if isinstance(state.get("values"), dict) else {}
+    try:
+        return percent, translate(state["message"]).format(**values)
+    except (KeyError, IndexError, ValueError):
+        return percent, translate(state["message"])
+
+
+def synchronize(root, channel, fetch=request, force=False, progress=None):
     """Download changed JSON files into a private snapshot, then publish once."""
+    report = progress or (lambda percent, message, **values: None)
     root = Path(root)
     cache = cache_root(root)
     cache.mkdir(parents=True, exist_ok=True)
@@ -302,6 +320,7 @@ def synchronize(root, channel, fetch=request, force=False):
     force = force or previous.get("profile_capabilities") != capabilities
     etag = previous.get("etag") if active != root / "catalog" and not force else None
     url = f"https://api.github.com/repos/{REPOSITORY}/commits?sha={channel}&path=oci/catalog&per_page=1"
+    report(5, N_("Checking the catalog version..."))
     body, etag = fetch(url, etag)
     if body is None:
         return False
@@ -312,6 +331,7 @@ def synchronize(root, channel, fetch=request, force=False):
     if previous.get("revision") == revision and active != root / "catalog" and not force:
         write_json(pointer, {**previous, "etag": etag})
         return False
+    report(15, N_("Reading the list of catalog files..."))
     body, _ = fetch(f"https://api.github.com/repos/{REPOSITORY}/git/trees/{revision}?recursive=1")
     tree = json.loads(body)
     if tree.get("truncated"):
@@ -346,6 +366,10 @@ def synchronize(root, channel, fetch=request, force=False):
     with tempfile.TemporaryDirectory(prefix=".download-", dir=snapshots) as name:
         staging = Path(name)
         deadline = time.monotonic() + 90
+        total = len(entries)
+        downloaded = [0]
+        counter = threading.Lock()
+        report(20, N_("Downloading the catalog files ({done}/{total})..."), done=0, total=total)
 
         def download(pair):
             if time.monotonic() > deadline:
@@ -361,12 +385,17 @@ def synchronize(root, channel, fetch=request, force=False):
             target = staging / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
+            with counter:
+                downloaded[0] += 1
+                report(20 + 65 * downloaded[0] // total, N_("Downloading the catalog files ({done}/{total})..."),
+                       done=downloaded[0], total=total)
 
         pool = ThreadPoolExecutor(max_workers=4)
         try:
             list(pool.map(download, entries.items()))
         finally:
             pool.shutdown(wait=True, cancel_futures=True)
+        report(88, N_("Checking the downloaded applications..."))
         validate_snapshot(root, staging)
         filter_compatible_recipes(root, staging, active)
         validate_snapshot(root, staging, allow_empty=True)
@@ -382,6 +411,7 @@ def synchronize(root, channel, fetch=request, force=False):
             if not intact or existing != staged_files:
                 # Repair without removing a snapshot another wizard may still hold.
                 destination = snapshots / (revision + "-" + uuid.uuid4().hex[:12])
+        report(95, N_("Applying the new catalog..."))
         with snapshot_lock(root):
             if not destination.exists():
                 os.replace(staging, destination)
@@ -394,13 +424,25 @@ def synchronize(root, channel, fetch=request, force=False):
 def worker(root, channel, force=False):
     cache = cache_root(root)
     cache.mkdir(parents=True, exist_ok=True)
+    last = {"percent": -1, "time": 0.0}
+
+    def report(percent, message, **values):
+        # Every new percent is written; the same one at most a few times a second.
+        now = time.monotonic()
+        if percent == last["percent"] and now - last["time"] < 0.25:
+            return
+        last.update(percent=percent, time=now)
+        try:
+            write_json(progress_path(root, channel), {"percent": percent, "message": message, "values": values})
+        except OSError:
+            pass
     with (cache / "refresh.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
             for partial in (cache / "snapshots").glob(".download-*"):
                 if partial.is_dir() and not partial.is_symlink():
                     shutil.rmtree(partial)
-            changed = synchronize(root, channel, force=force)
+            changed = synchronize(root, channel, force=force, progress=report)
             write_json(cache / f"{channel}-result.json", {"ok": True, "changed": changed})
         except Exception as error:
             write_json(cache / f"{channel}-result.json", {"ok": False, "error": str(error)[:400]})
@@ -471,6 +513,12 @@ class CatalogRefresh:
         self.failed = False
         environment = dict(os.environ, PYTHONPATH=str(self.root / "src"))
         try:
+            # A new refresh starts from zero, never from the last one's steps.
+            write_json(progress_path(self.root, self.channel),
+                       {"percent": 0, "message": N_("Refreshing the application catalog..."), "values": {}})
+        except OSError:
+            pass
+        try:
             command = [sys.executable, "-m", __name__, str(self.root), self.channel]
             if force:
                 command.append("--force")
@@ -523,6 +571,12 @@ class CatalogRefresh:
     def wait(self):
         if self.process is not None and not self._finished:
             self.process.wait()
+
+    def progress(self):
+        """(percent, text) while the worker runs, None once it has finished."""
+        if self.process is None or self._finished or self.process.poll() is not None:
+            return None
+        return read_progress(self.root, self.channel)
 
     def mark_seen(self):
         """Opening the list of new applications makes them known."""
