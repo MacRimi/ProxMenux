@@ -5324,6 +5324,39 @@
       "template_id": "linuxserver-github-desktop"
     },
     {
+      "id": "gitlab-ce",
+      "provider": "gitlab",
+      "template_family": "curated-profile",
+      "title": "GitLab CE",
+      "repository": "https://hub.docker.com/r/gitlab/gitlab-ce",
+      "description": "GitLab Community Edition includes Git hosting, merge requests, issue tracking and CI/CD coordination. Its official all-in-one image includes PostgreSQL, Redis and Gitaly.",
+      "website": "https://about.gitlab.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitlab.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/gitlab/gitlab-ce:latest",
+      "category": "ai",
+      "category_label": "AI / Coding & Dev-Tools",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/gitlab-ce.json",
+      "template_id": "image-gitlab-ce",
+      "template": "apps/gitlab-ce.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "gitqlient",
       "provider": "linuxserver.io",
       "title": "Gitqlient",
@@ -20134,7 +20167,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 29
+      "included_count": 30
     }
   }
 }

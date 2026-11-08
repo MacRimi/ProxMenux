@@ -9148,5 +9148,14 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Host Git repositories and collaborate on software projects.": "Hostujte repozitáre Git a spolupracujte na softvérových projektoch.",
+  "GitLab Community Edition includes Git hosting, merge requests, issue tracking and CI/CD coordination. Its official all-in-one image includes PostgreSQL, Redis and Gitaly.": "GitLab Community Edition zahŕňa hosting Git, požiadavky na zlúčenie, sledovanie úloh a koordináciu CI/CD. Jeho oficiálny obraz so všetkými komponentmi obsahuje PostgreSQL, Redis a Gitaly.",
+  "Allow several minutes for the first configuration and database migrations.": "Úvodné nastavenie a migrácie databázy môžu trvať niekoľko minút.",
+  "Plan GitLab upgrades using the required upgrade stops before updating the image.": "Pred aktualizáciou obrazu naplánujte aktualizáciu GitLabu s dodržaním povinných medziverzií.",
+  "The HTTP address is configured automatically; configure HTTPS and SMTP in GitLab before exposing it publicly.": "Adresa HTTP sa nastaví automaticky; pred sprístupnením GitLabu verejnosti nastavte HTTPS a SMTP.",
+  "GitLab administrator password": "Heslo správcu GitLabu",
+  "GitLab configuration": "Nastavenia GitLabu",
+  "GitLab administrator": "Správca GitLabu",
+  "GitLab": "GitLab"
 }

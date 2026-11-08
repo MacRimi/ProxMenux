@@ -55,6 +55,14 @@
     "frigate": {
       "status": "laboratory-validated"
     },
+    "gitlab-ce": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "60fc37e470aca439ead4b6e3ed8f578d9e85c954b84b611b5f323a32a9e47615",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced managed storage; browser/root login; restart; CPU/RAM/timezone Modify; cached recreation; native failed-candidate recovery; backup/restore/Manage; Remove/PBS audit. Host-bind not offered. CLI trigger and cross-release upgrades not E2E-tested."
+      }
+    },
     "glances": {
       "community_tested": {
         "by": "Vaso73",
