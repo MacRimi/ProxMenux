@@ -387,6 +387,38 @@ def _work_backup_ready(project, ui, vmid):
     return True
 
 
+def _apply_recommended(project, ui, vmid, record):
+    """Before an interactive update, offer once the settings the current
+    catalog recipe recommends. False only when applying them failed."""
+    if getattr(ui, 'unattended', False):
+        return True
+    try:
+        from . import host
+        from .recommended import latest_template, recommendation
+        latest = latest_template(project, record)
+        deployment = record.get('deployment', {})
+        gpu = host.gpu_memory(deployment.get('hardware_profile'), deployment.get('devices', []))
+        offer = recommendation(record, latest, host.memory_total_mb(), host.cpu_count(), gpu) if latest else None
+    except Exception:
+        return True  # an offer never stands in the way of the update
+    if not offer:
+        return True
+    text = (translate('The catalog now recommends these settings for this application:') + '\n\n'
+            + '\n'.join(f'  {line}' for line in offer['details']) + '\n\n'
+            + translate('They are applied without recreating the container. Settings you changed yourself are kept.'))
+    if not ui.review(text, translate('Recommended settings'), question=translate('Apply them before updating?'),
+                     default=True):
+        return True
+    proposal = {'operation': 'recreate', 'candidate': offer['candidate']}
+    if record.get('observed', {}).get('config_sha256'):
+        proposal['base_config_sha256'] = record['observed']['config_sha256']
+    command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(vmid), '--acknowledge-external-data']
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
+        json.dump(proposal, file)
+        file.flush()
+        return _run_lifecycle(command + ['--proposal', file.name], translate('Modify OCI'))
+
+
 def _toggle_watchdog(project, ui, vmid, enabled):
     """Ask and change the watchdog of an application from its menu."""
     question = (translate('This application is under watchdog: it is restarted automatically when it crashes. Turn the watchdog off?')
@@ -474,7 +506,9 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
                 return CANCELLED
             if proposal is None:
                 return False
-        elif not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
+        elif not _apply_recommended(project, ui, row['vmid'], record):
+            return False
+        if proposal is None and not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
             return CANCELLED
         # Opening/cancelling a confirmation needs no disk or storage probes.

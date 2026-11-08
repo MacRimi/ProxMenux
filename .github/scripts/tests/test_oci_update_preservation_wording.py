@@ -139,6 +139,7 @@ class UpdateWording(unittest.TestCase):
                  'images': SimpleNamespace(offer_removal=lambda *args: None),
                  'carry_records': lambda project, **options: {},
                  '_work_backup_ready': lambda project, ui, vmid: True,
+                 '_apply_recommended': lambda project, ui, vmid, record: True,
                  '_run_lifecycle': lambda command, title: events.append(('run', command, title)) or True}
         row = {'vmid': 101, 'reason': 'matched', 'stack': False, 'pending': False, 'status': 'installed'}
         decision = False

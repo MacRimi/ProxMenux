@@ -69,6 +69,10 @@
           }
         ]
       }
+    },
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 4096
     }
   }
 }
