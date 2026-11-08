@@ -3507,7 +3507,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -6736,7 +6736,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -7471,7 +7471,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -11553,7 +11553,7 @@
     ],
     "warnings": [
       "Registration and guest sign-in both stay open after that. Set DISABLE_REGISTRATION=true and DISABLE_GUEST_ACCESS=true in /opt/kaneo/.env and restart the service to close the instance; DISABLE_REGISTRATION alone still leaves the guest login available.",
-      "The API URL is baked into the frontend at build time. To move Kaneo to another IP or a custom domain, set KANEO_CLIENT_URL and KANEO_API_URL in /opt/kaneo/.env and the matching VITE_API_URL and VITE_CLIENT_URL in /opt/kaneo/apps/web/.env.production, then rebuild with 'cd /opt/kaneo && pnpm exec turbo build --filter=@kaneo/web'."
+      "The API URL is baked into the frontend at build time. To move Kaneo to another IP or a custom domain, set KANEO_CLIENT_URL and KANEO_API_URL in /opt/kaneo/.env and the matching VITE_API_URL and VITE_CLIENT_URL in /opt/kaneo/apps/web/.env.production, then rebuild with 'cd /opt/kaneo && pnpm exec vp run --filter=@kaneo/web build'."
     ],
     "port": 5173,
     "website": "https://kaneo.app/",
@@ -22060,7 +22060,7 @@
   {
     "name": "Shinobi NVR",
     "slug": "shinobi",
-    "desc": "Shinobi is an open-source, self-hosted network video recording (NVR) software. It allows you to manage and monitor security cameras and record video footage. Shinobi can be run on various platforms including Linux, macOS, and Raspberry Pi, and offers features such as real-time streaming, motion detection, and email notifications.",
+    "desc": "Shinobi is a self-hosted network video recording (NVR) software. It allows you to manage and monitor security cameras and record video footage. Shinobi can be run on various platforms including Linux, macOS, and Raspberry Pi, and offers features such as real-time streaming, motion detection, and email notifications.",
     "script": "ct/shinobi.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/shinobi.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/shinobi.sh",
