@@ -187,12 +187,63 @@ def downstream_build(data, entries):
             return True
         if any(marker in uri.lower() for uri in row['URIs'] for marker in DOWNSTREAM_URI_PATHS):
             return True
-    return bool(downstream_variant())
+    return False
+
+
+APT_SOURCES = Path('/etc/apt')
+
+
+def downstream_sources_on_disk(root=None):
+    """True when an enabled APT source file points at a downstream mirror. Reads the
+    files directly, so it answers even when the repository API does not."""
+    root = Path(root or APT_SOURCES)
+    files = [root / 'sources.list', *sorted((root / 'sources.list.d').glob('*.list')),
+             *sorted((root / 'sources.list.d').glob('*.sources'))]
+    marked = lambda text: any(marker in text.lower() for marker in DOWNSTREAM_URI_PATHS)
+    for path in files:
+        try:
+            text = path.read_text(errors='replace')
+        except OSError:
+            continue
+        if path.suffix == '.sources':
+            for stanza in re.split(r'\n\s*\n', text):
+                fields, last = {}, None
+                for line in stanza.splitlines():
+                    if line.lstrip().startswith('#'):
+                        continue
+                    if line[:1].isspace() and last:  # deb822 folded value (e.g. several URIs)
+                        fields[last] += ' ' + line.strip().lower()
+                        continue
+                    key, sep, value = line.partition(':')
+                    if sep:
+                        last = key.strip().lower()
+                        fields[last] = value.strip().lower()
+                if 'deb' in fields.get('types', '').split() and marked(fields.get('uris', '')) \
+                        and fields.get('enabled', 'yes') not in ('no', 'false', '0'):
+                    return True
+        else:
+            for line in text.splitlines():
+                words = line.split()
+                if words and words[0] == 'deb' and marked(line):
+                    return True
+    return False
+
+
+def local_downstream():
+    """Downstream detection that needs no Proxmox API: package markers or source files."""
+    try:
+        return bool(downstream_variant()) or downstream_sources_on_disk()
+    except Exception:  # never let the local probe block the regular policy
+        return False
 
 
 def evaluate(suite, apply=False, product='pve'):
     if suite not in ('bookworm', 'trixie'):
         raise PolicyError(N_('Unsupported Proxmox suite; no repository changed.'))
+    # Checked before any API call: a downstream build must be recognised even when
+    # pvesh fails, otherwise the callers would treat it as a regular host.
+    if local_downstream():
+        return 'downstream'
     p = PRODUCTS[product]
     data, entries = repository_state(suite, product)
     # A downstream build keeps its own sources: no subscription lookup, no write.
