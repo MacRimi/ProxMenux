@@ -1709,6 +1709,7 @@ class HealthMonitor:
                         'status': ram_status,
                         'detail': 'High RAM usage sustained' if ram_status != 'OK' else 'Normal',
                         'dismissable': True,
+                        'error_key': 'memory_ram_usage',
                     },
                     'swap_usage': {
                         'status': swap_status,
@@ -1717,6 +1718,7 @@ class HealthMonitor:
                             else ('Normal' if swap.total > 0 else 'No swap configured')
                         ),
                         'dismissable': True,
+                        'error_key': 'memory_swap_usage',
                     }
                 }
             }
@@ -5944,18 +5946,21 @@ class HealthMonitor:
             # During grace period, report as INFO instead of CRITICAL
             checks = {}
             for st_name, st_info in storage_details.items():
+                # The key the error is recorded under, so Dismiss acknowledges it.
                 if in_grace_period:
                     checks[st_name] = {
                         'status': 'INFO',
                         'detail': f"[Startup] {st_info.get('reason', 'Unavailable')} (checking...)",
                         'dismissable': True,
-                        'grace_period': True
+                        'grace_period': True,
+                        'error_key': f'storage_unavailable_{st_name}',
                     }
                 else:
                     checks[st_name] = {
                         'status': 'CRITICAL',
                         'detail': st_info.get('reason', 'Unavailable'),
-                        'dismissable': True
+                        'dismissable': True,
+                        'error_key': f'storage_unavailable_{st_name}',
                     }
             
             # Add excluded unavailable storages as INFO (not as errors)

@@ -989,6 +989,7 @@ class HealthPersistence:
                                     # flow honest (invalidates the storage cache, groups with the
                                     # other capacity events).
                                     ('storage', 'vm_disk_'),
+                                    ('memory', 'memory_'),
                                     ('pve_services', 'pve_service_'), ('vms', 'vmct_'), ('vms', 'vm_'), ('vms', 'ct_'),
                                     # ── Storage keys — HealthMonitor emits these under `storage` category
                                     # but they used to fall through to 'general' here because no prefix
