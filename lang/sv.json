@@ -9232,5 +9232,13 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
   "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "The shutdown timeout must be a positive number of seconds": "Tidsgränsen för avstängning måste vara ett positivt antal sekunder"
+  "The shutdown timeout must be a positive number of seconds": "Tidsgränsen för avstängning måste vara ett positivt antal sekunder",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Synkroniserar en policybaserad VPN-rutt i UniFi med den offentliga källan för blockeringsstatus.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Officiell StopLiga-avbildning. Den här profilen konfigurerar UniFi och kräver en lokal API-nyckel och ett befintligt VPN Client-nätverk. Tjänsten körs i bakgrunden utan webbgränssnitt.",
+  "UniFi controller hostname or IP address": "UniFi-styrenhetens värdnamn eller IP-adress",
+  "Local UniFi API key": "Lokal UniFi-API-nyckel",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "Verifiera UniFis TLS-certifikat (false endast för en betrodd styrenhet med självsignerat certifikat)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Inget webbgränssnitt. Kontrollera synkroniseringen med: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Den här profilen använder UniFi. Skapa först ett VPN Client-nätverk och använd en lokal API-nyckel med behörighet att hantera policybaserade rutter.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Förhandsgranska ändringarna utan att ändra routern genom att ange STOPLIGA_DRY_RUN=true."
 }

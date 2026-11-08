@@ -9232,5 +9232,13 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
   "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "The shutdown timeout must be a positive number of seconds": "Časový limit vypnutia musí byť kladný počet sekúnd"
+  "The shutdown timeout must be a positive number of seconds": "Časový limit vypnutia musí byť kladný počet sekúnd",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Synchronizuje trasu VPN podľa pravidiel v UniFi s verejným zdrojom stavu blokovania.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Oficiálny obraz StopLiga. Tento profil nastavuje UniFi; vyžaduje lokálny kľúč API a už vytvorenú sieť VPN Client. Služba beží na pozadí bez webového rozhrania.",
+  "UniFi controller hostname or IP address": "Názov hostiteľa alebo IP adresa radiča UniFi",
+  "Local UniFi API key": "Lokálny kľúč API UniFi",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "Overiť certifikát TLS UniFi (false iba pre dôveryhodný radič s certifikátom podpísaným samým sebou)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Bez webového rozhrania. Synchronizáciu overíte príkazom: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Tento profil používa UniFi. Najprv vytvorte sieť VPN Client a použite lokálny kľúč API s oprávnením spravovať trasy podľa pravidiel.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Na zobrazenie plánovaných zmien bez úprav smerovača nastavte STOPLIGA_DRY_RUN=true."
 }

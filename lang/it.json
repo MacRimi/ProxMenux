@@ -9232,5 +9232,13 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
   "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "The shutdown timeout must be a positive number of seconds": "Il tempo massimo per lo spegnimento deve essere un numero positivo di secondi"
+  "The shutdown timeout must be a positive number of seconds": "Il tempo massimo per lo spegnimento deve essere un numero positivo di secondi",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Sincronizza una rotta VPN basata su criteri di UniFi con la fonte pubblica sullo stato dei blocchi.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Immagine ufficiale di StopLiga. Questo profilo configura UniFi; richiede una chiave API locale e una rete VPN Client già creata. Il servizio funziona in background senza interfaccia web.",
+  "UniFi controller hostname or IP address": "Nome host o indirizzo IP del controller UniFi",
+  "Local UniFi API key": "Chiave API locale UniFi",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "Verifica il certificato TLS di UniFi (false solo per un controller attendibile con certificato autofirmato)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Nessuna interfaccia web. Verifica la sincronizzazione con: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Questo profilo usa UniFi. Crea prima una rete VPN Client e usa una chiave API locale autorizzata a gestire le rotte basate su criteri.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Per visualizzare le modifiche senza applicarle al router, imposta STOPLIGA_DRY_RUN=true."
 }

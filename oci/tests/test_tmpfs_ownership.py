@@ -1,5 +1,6 @@
 """Ownership and mode are preserved on volatile native OCI-LXC mounts."""
 import json
+import copy
 from pathlib import Path
 import sys
 import tempfile
@@ -13,6 +14,16 @@ import oci_runtime_settings as runtime_settings
 
 
 class TmpfsOwnershipTests(unittest.TestCase):
+    def test_rendering_a_mode_only_mount_is_repeatable_and_does_not_mutate_the_plan(self):
+        plan = {'tmpfs_mounts': [{'container_path': '/tmp', 'size_mb': 64,
+                                 'mount_options': ['rw', 'nosuid', 'nodev'], 'mode': '01777'}]}
+        before = copy.deepcopy(plan)
+        first = runtime_settings.tmpfs_lines(plan)
+        self.assertEqual(plan, before)
+        self.assertEqual(runtime_settings.tmpfs_lines(plan), first)
+        self.assertEqual(first[0].count('mode=01777'), 1)
+        self.assertEqual(plan, before)
+
     def test_image_user_is_taken_from_the_effective_lxc_init_identity(self):
         plan = {'tmpfs_mounts': [{
             'container_path': '/run', 'size_mb': 64, 'mount_options': ['rw', 'nosuid', 'nodev'],

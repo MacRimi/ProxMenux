@@ -9203,5 +9203,13 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
   "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
-  "The shutdown timeout must be a positive number of seconds": "Время ожидания выключения должно быть положительным числом секунд"
+  "The shutdown timeout must be a positive number of seconds": "Время ожидания выключения должно быть положительным числом секунд",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Синхронизация VPN-маршрута UniFi на основе политик с общедоступным источником состояния блокировок.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Официальный образ StopLiga. Этот профиль настраивает UniFi; нужны локальный API-ключ и заранее созданная сеть VPN Client. Служба работает в фоне без веб-интерфейса.",
+  "UniFi controller hostname or IP address": "Имя хоста или IP-адрес контроллера UniFi",
+  "Local UniFi API key": "Локальный API-ключ UniFi",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "Проверять TLS-сертификат UniFi (false только для доверенного контроллера с самоподписанным сертификатом)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Веб-интерфейса нет. Проверка синхронизации: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Этот профиль использует UniFi. Сначала создайте сеть VPN Client и используйте локальный API-ключ с правом управления маршрутами на основе политик.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Для просмотра изменений без их применения на маршрутизаторе задайте STOPLIGA_DRY_RUN=true."
 }

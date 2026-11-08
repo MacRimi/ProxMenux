@@ -9231,5 +9231,13 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
   "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
-  "The shutdown timeout must be a positive number of seconds": "Le délai d’arrêt doit être un nombre positif de secondes"
+  "The shutdown timeout must be a positive number of seconds": "Le délai d’arrêt doit être un nombre positif de secondes",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Synchronise une route VPN par politique UniFi avec la source publique indiquant les blocages.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Image officielle de StopLiga. Ce profil configure UniFi ; une clé API locale et un réseau VPN Client existant sont nécessaires. Le service fonctionne en arrière-plan sans interface web.",
+  "UniFi controller hostname or IP address": "Nom d’hôte ou adresse IP du contrôleur UniFi",
+  "Local UniFi API key": "Clé API locale UniFi",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "Vérifier le certificat TLS UniFi (false uniquement pour un contrôleur de confiance avec un certificat autosigné)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Sans interface web. Vérifiez la synchronisation avec : pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Ce profil utilise UniFi. Créez d’abord un réseau VPN Client et utilisez une clé API locale autorisée à gérer les routes par politique.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Pour prévisualiser les changements sans modifier le routeur, définissez STOPLIGA_DRY_RUN=true."
 }
