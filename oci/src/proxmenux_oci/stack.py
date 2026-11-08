@@ -253,6 +253,23 @@ def public_environment_bindings(services, main_name, environments=None):
         bindings = {}
         values = (environments or {}).get(service['name'], environment(service['compose'].get('environment')))
         for key, value in values.items():
+            # Explicit native LAN URLs belong to this frontend, including
+            # aliases whose names are plural (for example *_PUBLIC_URLS).
+            # Configure them before the first web check needs that origin.
+            if service in frontends and '@STACK_LAN_IP@' in value:
+                try:
+                    explicit = urlsplit(value.replace('@STACK_LAN_IP@', '127.0.0.1'))
+                    port = explicit.port or (443 if explicit.scheme == 'https' else 80)
+                except ValueError as error:
+                    raise StackError(translate('Invalid service check URL')) from error
+                if explicit.scheme in {'http', 'https'} and explicit.hostname == '127.0.0.1':
+                    ports = _port_contract(service['compose'].get('ports'), set())
+                    if (value.count('@STACK_LAN_IP@') != 1 or any(c in value for c in '\r\n')
+                            or not any(p['protocol'] == 'tcp' and p['container_port'] == port
+                                       and not p.get('container_port_end') for p in ports)):
+                        raise StackError(translate('Invalid service check URL'))
+                    bindings[key] = {'target_service': service['name'], 'container_port': port, 'value': value}
+                    continue
             words = key.upper().split('_')
             if not ({'PUBLIC', 'EXTERNAL'} & set(words[:-1]) and words[-1] in {'URL', 'URI', 'ORIGIN'}):
                 continue
