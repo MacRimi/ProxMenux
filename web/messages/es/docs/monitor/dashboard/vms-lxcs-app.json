@@ -57,7 +57,7 @@
       "Los resultados pueden rellenar el nombre canónico, el logotipo y los puertos web habituales.",
       "Los detectores conocidos se basan en paquetes, binarios, archivos, distribuciones Python, etiquetas OCI o comandos reales, no en una suposición universal como <code>/root/.app</code>.",
       "Las correcciones verificadas en instalaciones reales tienen prioridad cuando una ruta difiere de los datos del instalador.",
-      "Los marcadores de Proxmox VE Helper-Scripts, como <code>/root/.slug</code>, se mantienen como una señal de compatibilidad para instalaciones recientes, pero no son el único detector.",
+      "Los marcadores de Community Scripts, como <code>/root/.slug</code>, se mantienen como una señal de compatibilidad para instalaciones recientes, pero no son el único detector.",
       "Todos los valores propuestos se pueden editar antes de guardar para cubrir instaladores oficiales e instalaciones manuales."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "Un registro de solo enlace indica que el seguimiento no está configurado, pero puede recibir un comando de actualización personalizado.",
       "Una app con seguimiento, pero sin un método ejecutable, muestra un mensaje neutro que solicita un comando personalizado.",
-      "Una app con un wrapper verificado de Proxmox VE Helper-Scripts puede usar ese actualizador integrado aunque el registro comenzara únicamente con un enlace web.",
+      "Una app con un wrapper verificado de Community Scripts puede usar ese actualizador integrado aunque el registro comenzara únicamente con un enlace web.",
       "Añadir o editar un actualizador no cambia el detector ni la fuente disponible guardados en la pestaña App."
     ]
   },

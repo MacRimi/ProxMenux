@@ -19,7 +19,7 @@
   "openingMenu": {
     "heading": "Öffnen des Menüs",
     "body": "Wählen Sie im Hauptmenü von ProxMenux <strong>Einstellungen nach der Installation von Proxmox</strong>. Folgendes wird angezeigt:",
-    "imageAlt": "Menü für Skripte nach der Installation: Automatisch, Anpassbar, der bedingte Eintrag Verfügbare Updates anwenden (nur bei ausstehenden Updates) und Deinstallieren, gefolgt von Community-Skripten"
+    "imageAlt": "Menü für Skripte nach der Installation: Automatisch, Anpassbar, der bedingte Eintrag Verfügbare Updates anwenden (nur bei ausstehenden Updates) und Deinstallieren, gefolgt vom Abschnitt Externe Skripte"
   },
   "threeWays": {
     "heading": "Vier Möglichkeiten, Optimierungen anzuwenden",
@@ -70,7 +70,7 @@
   "mixing": {
     "heading": "Mischen mit anderen Post-Installation-Scripts",
     "stackTitle": "Stapeln Sie nicht mehrere Post-Installationsskripte",
-    "stackBody": "Das Ausführen mehrerer Post-Installationsskripte auf demselben Host kann doppelte Konfigurationsdateien, widersprüchliche sysctl-Einträge oder, schlimmer noch, defekte Netzwerke nach dem Neustart verursachen. Wenn Sie das <strong>Helper-Scripts Post Install</strong> bereits angewendet haben, können sich einige ProxMenux-Optimierungen mit dem bereits konfigurierten überschneiden. Bleiben Sie bei einem Post-Installations-Tool pro Host.",
+    "stackBody": "Das Ausführen mehrerer Post-Installationsskripte auf demselben Host kann doppelte Konfigurationsdateien, widersprüchliche sysctl-Einträge oder, schlimmer noch, defekte Netzwerke nach dem Neustart verursachen. Wenn Sie das <strong>Community Scripts Post Install</strong> bereits angewendet haben, können sich einige ProxMenux-Optimierungen mit dem bereits konfigurierten überschneiden. Bleiben Sie bei einem Post-Installations-Tool pro Host.",
     "xshokTitle": "xshok-proxmox: veraltet",
     "xshokBody": "Frühere Versionen von ProxMenux verwies auf <a>xshok-proxmox</a> als Begleitwerkzeug nach der Installation. Dieses Projekt ist jetzt veraltet und wird nicht mehr von ProxMenux angeboten. Wenn ein früherer Lauf von xshok-proxmox Markierungen auf dem Host hinterlassen hat, erkennt ProxMenux sie immer noch und wird Sie warnen - aber es ist nicht etwas, das Sie heute neben ProxMenux installieren sollten."
   },

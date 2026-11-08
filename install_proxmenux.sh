@@ -451,14 +451,29 @@ get_server_ip() {
     echo "$ip"
 }
 
+# Resolve the host's Monitor AppImage flavour with the same helper the
+# build uses (PMX_APPIMAGE_ARCH / PMX_APPIMAGE_SUFFIX). x86_64 keeps the
+# historical unsuffixed file names; aarch64 uses `-aarch64`.
+select_monitor_appimage_arch() {
+    local helper="$TEMP_DIR/AppImage/scripts/appimage_arch.sh"
+    [ -f "$helper" ] || return 1
+    # shellcheck source=AppImage/scripts/appimage_arch.sh
+    source "$helper" && pmx_appimage_arch "$(uname -m)" 2>/dev/null
+}
+
 detect_latest_appimage() {
     local appimage_dir="$TEMP_DIR/AppImage"
-    
+
     if [ ! -d "$appimage_dir" ]; then
         return 1
     fi
-    
-    local latest_appimage=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" -type f | sort -V | tail -1)
+
+    local latest_appimage
+    if [ -n "$PMX_APPIMAGE_SUFFIX" ]; then
+        latest_appimage=$(find "$appimage_dir" -name "ProxMenux-*${PMX_APPIMAGE_SUFFIX}.AppImage" -type f | sort -V | tail -1)
+    else
+        latest_appimage=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" ! -name "ProxMenux-*-aarch64.AppImage" -type f | sort -V | tail -1)
+    fi
     
     if [ -z "$latest_appimage" ]; then
         return 1
@@ -470,7 +485,9 @@ detect_latest_appimage() {
 
 get_appimage_version() {
     local appimage_path="$1"
-    local filename=$(basename "$appimage_path")
+    local filename=$(basename "$appimage_path" .AppImage)
+    # Drop the architecture suffix so it is not read as a pre-release tag.
+    filename="${filename%"${PMX_APPIMAGE_SUFFIX:-}"}"
 
     # Match any dotted number sequence + optional pre-release suffix
     # (e.g. "-beta"). The previous `[0-9]+\.[0-9]+\.[0-9]+` was hardcoded
@@ -528,10 +545,16 @@ extract_appimage_to_runtime_dir() {
 }
 
 install_proxmenux_monitor() {
+    if ! select_monitor_appimage_arch; then
+        msg_error "ProxMenux Monitor is not available for this architecture ($(uname -m))."
+        update_config "proxmenux_monitor" "unsupported_arch"
+        return 1
+    fi
+
     local appimage_source=$(detect_latest_appimage)
-    
+
     if [ -z "$appimage_source" ] || [ ! -f "$appimage_source" ]; then
-        msg_error "ProxMenux Monitor AppImage not found in $TEMP_DIR/AppImage/"
+        msg_error "ProxMenux Monitor AppImage ($PMX_APPIMAGE_ARCH) not found in $TEMP_DIR/AppImage/"
         msg_warn "Please ensure the AppImage directory exists with ProxMenux-*.AppImage files."
         update_config "proxmenux_monitor" "appimage_not_found"
         return 1
@@ -548,7 +571,7 @@ install_proxmenux_monitor() {
         service_exists=true
     fi
     
-    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor.AppImage.sha256"
+    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor${PMX_APPIMAGE_SUFFIX}.AppImage.sha256"
     
     if [ -f "$sha256_file" ]; then
         msg_info "Verifying AppImage integrity..."
@@ -732,9 +755,11 @@ install_normal_version() {
             update_config "jq" "installed"
         else
             discard_apt_error
-            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+            local jq_arch=amd64
+            [ "$(uname -m)" = "aarch64" ] && jq_arch=arm64
+            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${jq_arch}"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
-                if command -v jq > /dev/null 2>&1; then
+                if jq --version > /dev/null 2>&1; then
                     update_config "jq" "installed_from_github"
                 else
                     msg_error "Failed to install jq. Please install it manually."
@@ -920,8 +945,12 @@ install_normal_version() {
     if [ $monitor_status -eq 0 ]; then
         create_monitor_service
     fi
-    
-    msg_ok "ProxMenux installation completed successfully."
+
+    if [ $monitor_status -eq 1 ]; then
+        msg_warn "ProxMenux installed, but ProxMenux Monitor could not be installed."
+    else
+        msg_ok "ProxMenux installation completed successfully."
+    fi
 }
 
 show_installation_options() {

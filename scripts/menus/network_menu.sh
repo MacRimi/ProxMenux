@@ -1153,7 +1153,7 @@ declare -a PROXMENUX_SCRIPTS=(
 
 
 declare -a COMMUNITY_SCRIPTS=(
-    "Disable NIC Offloading (Intel e1000e)|Helper-Scripts|confirm_and_run \"Helper-Scripts\" \"bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/nic-offloading-fix.sh)\""
+    "Disable NIC Offloading (Intel e1000e)|Community Scripts|confirm_and_run \"Community Scripts\" \"bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/nic-offloading-fix.sh)\""
 )
 
 # ==========================================================
@@ -1253,7 +1253,7 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("" "\Z4───────────────────── $(translate "Community Scripts") ──────────────────────\Zn")
+        menu_items+=("" "\Z4───────────────────── $(translate "External Scripts") ──────────────────────\Zn")
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"

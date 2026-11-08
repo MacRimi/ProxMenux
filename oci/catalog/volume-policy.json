@@ -165,6 +165,15 @@
     "nextcloud-mariadb": [
       "/data"
     ],
+    "restreamer": [
+      "/core/data"
+    ],
+    "unmanic": [
+      "/library"
+    ],
+    "listmonk": [
+      "/listmonk/uploads"
+    ],
     "baserow": [
       "/baserow/data"
     ]

@@ -72,7 +72,7 @@ show_menu() {
             3 "$(translate "Create VM from template or script")" \
             4 "$(translate "Disk Manager")" \
             5 "$(translate "Storage & Share Manager")" \
-            6 "$(translate "Proxmox VE Helper Scripts")" \
+            6 "$(translate "Community Scripts")" \
             o "$(translate "OCI manager Apps (Technology Preview)")" \
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \

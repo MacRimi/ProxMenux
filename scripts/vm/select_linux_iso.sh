@@ -64,7 +64,7 @@ function select_linux_iso() {
                   --menu "\nSeleccione el tipo de instalación de Linux:\n\n$header" \
                   20 70 10 \
                   1 "$(printf '%-35s│ %s' 'Instalar con metodo tradicional' 'Desde ISO oficial')" \
-                  2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Helper-Scripts')" \
+                  2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Community Scripts')" \
                   3 "$(printf '%-35s│ %s' 'Instalar con ISO personal' 'Almacenamiento ISO')" \
                   4 "Volver al menú principal" \
                   3>&1 1>&2 2>&3)
@@ -81,7 +81,7 @@ function select_linux_iso() {
         --menu "\n$(translate "Select the type of Linux installation:")\n\n$header" \
         18 70 10 \
         1 "$(printf '%-35s│ %s' "$desc1" "From official ISO")" \
-        2 "$(printf '%-35s│ %s' "$desc2" "Helper Scripts")" \
+        2 "$(printf '%-35s│ %s' "$desc2" "Community Scripts")" \
         3 "$(printf '%-35s│ %s' "$desc3" "ISO Storage")" \
         4 "$back" \
         3>&1 1>&2 2>&3)
@@ -172,9 +172,9 @@ function select_linux_iso_official() {
 function select_linux_cloudinit() {
   # The maintained Debian and Ubuntu helpers select their own release.
   local CLOUDINIT_OPTIONS=(
-    "1" "Arch Linux  (Cloud-Init automated)   │ Helper-Scripts"
-    "2" "Debian      (Cloud-Init automated)   │ Helper-Scripts"
-    "3" "Ubuntu      (Cloud-Init automated)   │ Helper-Scripts"
+    "1" "Arch Linux  (Cloud-Init automated)   │ Community Scripts"
+    "2" "Debian      (Cloud-Init automated)   │ Community Scripts"
+    "3" "Ubuntu      (Cloud-Init automated)   │ Community Scripts"
     "4" "$(translate "Return to Main Menu")"
   )
 
@@ -205,7 +205,7 @@ function select_linux_cloudinit() {
 
   # Do not execute a failed or partial download through process substitution.
   if ! script_content=$(curl -fsSL --connect-timeout 5 --max-time 60 "$script_url") || [[ -z "${script_content//[[:space:]]/}" ]]; then
-    dialog --title "Helper Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
+    dialog --title "Community Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
     return 1
   fi
   bash -c "$script_content" || return $?
@@ -213,7 +213,7 @@ function select_linux_cloudinit() {
   msg_success "$(translate "Press Enter to return to menu...")"
   read -r
 
-  whiptail --title "Proxmox VE Helper-Scripts" \
+  whiptail --title "Community Scripts" \
            --msgbox "$(translate "Visit the website to discover more scripts, stay updated with the latest updates, and support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE")" 15 70
 
   exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh"
@@ -270,9 +270,9 @@ function select_linux_custom_iso() {
 
 function select_linux_other_scripts() {
 local OTHER_OPTIONS=(
-  "1" "Home Assistant OS VM (HAOS)       │ Helper-Scripts"
-  "2" "Docker VM (Debian + SSH + Docker) │ Helper-Scripts"
-  "3" "Nextcloud                         │ Helper-Scripts"
+  "1" "Home Assistant OS VM (HAOS)       │ Community Scripts"
+  "2" "Docker VM (Debian + SSH + Docker) │ Community Scripts"
+  "3" "Nextcloud                         │ Community Scripts"
   "4" "$(translate "Return to Main Menu")"
 )
 
@@ -311,7 +311,7 @@ esac
 msg_success "$(translate "Press Enter to return to menu...")"
 read -r
 
-whiptail --title "Proxmox VE Helper-Scripts" \
+whiptail --title "Community Scripts" \
   --msgbox "$(translate "Visit the website to discover more scripts, stay updated with the latest updates, and support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE")" 15 70
 
 return 1

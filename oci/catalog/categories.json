@@ -437,6 +437,8 @@
     "unbound": "adblock",
     "spoolman": "tools",
     "zwave-js-ui": "smarthome",
+    "miniserve": "sharing",
+    "restreamer": "media",
     "baserow": "productivity"
   }
 }

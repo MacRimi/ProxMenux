@@ -21,7 +21,7 @@
     "intro": "ProxMenux má dve súčasti v spoločnom zdrojovom strome. Inštalátor nainštaluje obe na hostiteľa: Scripts poskytuje terminálové rozhranie a Monitor webový panel:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "Pôvodné rozhranie CLI/TUI, ktoré spustíte príkazom <code>menu</code>. Funkčné oblasti pokrývajú optimalizácie po inštalácii, VM a kontajnery LXC, priame priradenie GPU a Coral TPU, disky, úložiská, aplikácie OCI, sieť, zabezpečenie, nástroje, zálohovanie a obnovu hostiteľa, Proxmox VE Helper Scripts, spolu s prehľadom vybraných príkazov. Funguje v lokálnom termináli, cez SSH aj vo webovom termináli."
+      "body": "Pôvodné rozhranie CLI/TUI, ktoré spustíte príkazom <code>menu</code>. Funkčné oblasti pokrývajú optimalizácie po inštalácii, VM a kontajnery LXC, priame priradenie GPU a Coral TPU, disky, úložiská, aplikácie OCI, sieť, zabezpečenie, nástroje, zálohovanie a obnovu hostiteľa, Community Scripts, spolu s prehľadom vybraných príkazov. Funguje v lokálnom termináli, cez SSH aj vo webovom termináli."
     },
     "monitor": {
       "title": "ProxMenux Monitor",

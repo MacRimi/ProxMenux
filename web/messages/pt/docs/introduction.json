@@ -21,7 +21,7 @@
     "intro": "O ProxMenux tem dois componentes na mesma árvore de código-fonte. O instalador coloca ambos no anfitrião: Scripts fornece a interface de terminal e Monitor o painel web:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "A CLI/TUI original, iniciada com <code>menu</code>. Áreas funcionais que abrangem otimizações após a instalação, criação de VM e LXC, passagem direta de GPU e Coral TPU, discos, armazenamento, aplicações OCI, rede, segurança, utilitários, backup e restauro do host, Proxmox VE Helper Scripts, com uma seleção de comandos de referência. Funciona em terminais locais, por SSH ou na web."
+      "body": "A CLI/TUI original, iniciada com <code>menu</code>. Áreas funcionais que abrangem otimizações após a instalação, criação de VM e LXC, passagem direta de GPU e Coral TPU, discos, armazenamento, aplicações OCI, rede, segurança, utilitários, backup e restauro do host, Community Scripts, com uma seleção de comandos de referência. Funciona em terminais locais, por SSH ou na web."
     },
     "monitor": {
       "title": "ProxMenux Monitor",

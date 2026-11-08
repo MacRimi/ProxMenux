@@ -19,7 +19,7 @@
   "openingMenu": {
     "heading": "Öppna menyn",
     "body": "Välj <strong>Inställningar efter installation av Proxmox</strong> i ProxMenux huvudmeny. Då visas följande:",
-    "imageAlt": "Menyn för skript efter installation: Automatiserad, Anpassningsbar, det villkorliga alternativet Tillämpa tillgängliga uppdateringar (bara vid väntande uppdateringar) och Avinstallera, följt av Gemenskapens skript"
+    "imageAlt": "Menyn för skript efter installation: Automatiserad, Anpassningsbar, det villkorliga alternativet Tillämpa tillgängliga uppdateringar (bara vid väntande uppdateringar) och Avinstallera, följt av Externa skript"
   },
   "threeWays": {
     "heading": "Fyra sätt att tillämpa optimeringar",
@@ -70,7 +70,7 @@
   "mixing": {
     "heading": "Blanda med andra post-install skript",
     "stackTitle": "Kombinera inte flera skript efter installationen",
-    "stackBody": "Kör flera post-install-skript på samma värd kan orsaka duplicerade konfigurationsfiler, motstridiga sysctl-poster eller värre - brutna nätverk efter omstart. Om du redan tillämpade <strong>Helper-Scripts Post Install</strong>, kan vissa ProxMenux optimeringar överlappa med vad den redan konfigurerade. Håll dig till ett post-install-verktyg per värd.",
+    "stackBody": "Kör flera post-install-skript på samma värd kan orsaka duplicerade konfigurationsfiler, motstridiga sysctl-poster eller värre - brutna nätverk efter omstart. Om du redan tillämpade <strong>Community Scripts Post Install</strong>, kan vissa ProxMenux optimeringar överlappa med vad den redan konfigurerade. Håll dig till ett post-install-verktyg per värd.",
     "xshokTitle": "xshok-proxmox: föråldrad",
     "xshokBody": "Tidigare versioner av ProxMenux hänvisade till <a>xshok-proxmox</a> som ett kompletterande verktyg efter installationen. Projektet är nu föråldrat och erbjuds inte längre i ProxMenux. Om en tidigare körning lämnat markörer på värden upptäcker ProxMenux dem fortfarande och varnar dig. Det är dock inget som bör installeras tillsammans med ProxMenux i dag."
   },

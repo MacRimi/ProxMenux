@@ -64,7 +64,7 @@
     "doesLabel": "Выполняемые действия:",
     "doesItems": [
       "Без вывода сообщений загружает и устанавливает последнюю версию Fastfetch",
-      "Позволяет выбрать логотип (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong> или собственный)",
+      "Позволяет выбрать логотип (<strong>ProxMenux, Proxmox, Helper-Scripts, Community Scripts, Home-Labs-Club, Proxmology</strong> или собственный)",
       "Настраивает Fastfetch для отображения надписи <em>\"Система оптимизирована с помощью ProxMenux\"</em>",
       "Настраивает автоматический запуск Fastfetch при входе в консоль"
     ],

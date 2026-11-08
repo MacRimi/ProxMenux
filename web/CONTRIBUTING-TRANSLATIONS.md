@@ -334,7 +334,7 @@ The same criterion applies to the Monitor (`AppImage/messages/es`), the terminal
 - **Spain vocabulary:** *pulsar* (not *presionar*), *introducir* (not *ingresar*), *volver* (not *regresar*), *elegir* or *seleccionar*, *hacer clic*, *añadir* (not *agregar*), *fallo* (not *falla* as a noun), *usuario* (not *operador*), *monitorización* (not *monitoreo*). The key is **Intro**, not *Enter* or *Entrar*.
 - **Destructive actions use *eliminar*,** not *quitar*.
 - **Activate and deactivate:** an action or switch of the user is *activar/desactivar*; a technical state can stay *habilitado/deshabilitado*.
-- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Helper-Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
+- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Community Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
 - **Translated:** *pila* (stack), *puente* (bridge), *pasarela* (gateway) when they are common nouns; *Secure Gateway* is a product name and stays as it is.
 - **One canonical form for repeated phrases,** for example «Pulsa Intro para volver al menú…».
 - **Documentation quotes screen texts exactly as the Spanish interface shows them,** and page titles end in «Documentación de ProxMenux».

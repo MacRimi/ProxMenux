@@ -123,6 +123,55 @@ def timezone() -> str:
     return value or "Etc/UTC"
 
 
+def memory_total_mb(meminfo: Path = Path("/proc/meminfo")) -> int | None:
+    """The RAM of this node in MiB, or None when it cannot be read."""
+    try:
+        match = re.search(r"^MemTotal:\s+(\d+)\s+kB", meminfo.read_text(encoding="utf-8"), re.M)
+    except OSError:
+        return None
+    return int(match.group(1)) // 1024 if match else None
+
+
+def gpu_memory(profile: str | None, devices: list[dict[str, Any]], root: Path = Path("/")) -> dict[str, Any]:
+    """The memory of the GPU an installation will use, in MiB: its own
+    (`dedicated_mb`) and, for an AMD integrated GPU, the system memory the
+    driver lets it map (`shared_mb`)."""
+    if profile == "nvidia" or any(device.get("kind") == "nvidia-runtime" for device in devices):
+        try:
+            output = subprocess.run(["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+                                    capture_output=True, text=True, timeout=15, check=False).stdout
+        except (OSError, subprocess.TimeoutExpired):
+            output = ""
+        return {"vendor": "nvidia", "dedicated_mb": sum(int(line) for line in output.split() if line.isdigit()),
+                "shared_mb": 0}
+    found = {"vendor": None, "dedicated_mb": 0, "shared_mb": 0}
+    for device in devices:
+        name = Path(str(device.get("host_path") or "")).name
+        if not re.fullmatch(r"renderD\d+", name):
+            continue
+        node = root / "sys/class/drm" / name / "device"
+        vendor = _sysfs(node / "vendor").lower()
+        if vendor == "0x1002":
+            found["vendor"] = "amd"
+            for key, field in (("dedicated_mb", "mem_info_vram_total"), ("shared_mb", "mem_info_gtt_total")):
+                value = _sysfs(node / field)
+                if value.isdigit():
+                    found[key] = max(found[key], int(value) // 2**20)
+        elif vendor == "0x8086" and found["vendor"] is None:
+            found["vendor"] = "intel"
+    return found
+
+
+def gpu_memory_mb(profile: str | None, devices: list[dict[str, Any]], root: Path = Path("/")) -> int:
+    """The dedicated memory of the GPU an installation will use, in MiB."""
+    return gpu_memory(profile, devices, root)["dedicated_mb"]
+
+
+def cpu_count() -> int | None:
+    """The CPU threads of this node."""
+    return os.cpu_count()
+
+
 def gib(value: Any) -> int:
     try:
         return int(value) // 2**30

@@ -9,5 +9,11 @@
     "architectures": [
       "amd64"
     ]
+  },
+  "proxmox": {
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 4096
+    }
   }
 }

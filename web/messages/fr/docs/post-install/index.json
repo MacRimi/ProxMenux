@@ -70,7 +70,7 @@
   "mixing": {
     "heading": "Mélange avec d'autres scripts post-installation",
     "stackTitle": "Ne pas empiler plusieurs scripts post-installation",
-    "stackBody": "Exécuter plusieurs scripts post-installation sur le même hôte peut créer des fichiers de configuration en double, des entrées sysctl contradictoires ou même casser le réseau après redémarrage. Si vous avez déjà appliqué <strong>Helper-Scripts Post Install</strong>, certaines optimisations ProxMenux peuvent recouper sa configuration. Utilisez un seul outil post-installation par hôte.",
+    "stackBody": "Exécuter plusieurs scripts post-installation sur le même hôte peut créer des fichiers de configuration en double, des entrées sysctl contradictoires ou même casser le réseau après redémarrage. Si vous avez déjà appliqué <strong>Community Scripts Post Install</strong>, certaines optimisations ProxMenux peuvent recouper sa configuration. Utilisez un seul outil post-installation par hôte.",
     "xshokTitle": "xshok-proxmox: déprécié",
     "xshokBody": "Les anciennes versions de ProxMenux présentaient <a>xshok-proxmox</a> comme outil post-installation complémentaire. Ce projet est désormais obsolète et n’est plus proposé dans ProxMenux. Si une ancienne exécution a laissé des marqueurs sur l’hôte, ProxMenux les détecte toujours et vous avertit. Ce n’est toutefois plus un outil à installer aux côtés de ProxMenux."
   },

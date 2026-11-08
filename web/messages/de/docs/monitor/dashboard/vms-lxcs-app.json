@@ -57,7 +57,7 @@
       "Suchergebnisse können den kanonischen Namen, das Logo und die gemeinsamen Web-Ports vorfüllen.",
       "Bekannte Versionsdetektoren basieren auf echten Paketnamen, Binärdateien, Dateien, Python-Distributionen, OCI-Beschriftungen oder Befehlen und nicht auf einer universellen <code>/root/.app</code>-Annahme.",
       "Verifizierte Laufzeitüberschreibungen haben Vorrang, wenn eine Installation einen Pfad verwendet, der sich von den Metadaten des Installationsprogramms unterscheidet.",
-      "Proxmox VE Helper-Scripts-Marker wie <code>/root/.slug</code> bleiben ein Kompatibilitätssignal für neuere Helferinstallationen, nicht der einzige Detektor.",
+      "Community-Scripts-Marker wie <code>/root/.slug</code> bleiben ein Kompatibilitätssignal für neuere Helferinstallationen, nicht der einzige Detektor.",
       "Alle vorgeschlagenen Werte sind vor dem Speichern bearbeitbar, um offizielle Installationsprogramme und manuelle Installationen abzudecken."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "Ein Link-only-Record zeigt an, dass die Versionsverfolgung nicht konfiguriert ist, aber dennoch einen benutzerdefinierten Update-Befehl erhalten kann.",
       "Eine App mit Tracking, aber ohne ausführbare Methode zeigt eine neutrale Nachricht an, in der ein benutzerdefinierter Befehl angefordert wird.",
-      "Eine App mit einem verifizierten Proxmox VE Helper-Scripts-Wrapper kann diesen integrierten Updater auch dann verwenden, wenn die Registrierung über einen Weblink begann.",
+      "Eine App mit einem verifizierten Community-Scripts-Wrapper kann diesen integrierten Updater auch dann verwenden, wenn die Registrierung über einen Weblink begann.",
       "Durch Hinzufügen oder Bearbeiten eines Updaters wird der Detektor oder die Upstream-Quelle, die auf der Registerkarte App gespeichert ist, nicht geändert."
     ]
   },

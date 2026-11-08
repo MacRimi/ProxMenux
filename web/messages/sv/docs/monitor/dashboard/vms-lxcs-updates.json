@@ -10,7 +10,7 @@
   "intro": {
     "p1": "Fliken <strong>Uppdateringar</strong> skiljer versionskontroll från installationen. Registrering och valfri versionsspårning finns på <link>App-fliken</link>; körbara uppdateringsmetoder hanteras här.",
     "p2": "En sparad applikation visas i uppdateringar även när den endast innehåller en webblänk. Versionsspårning är frivillig, och en uppdaterare kan konfigureras oberoende.",
-    "callout": "Registrering väljer inget uppdateringsprogram. Om ett matchande Helper-Scripts-program upptäcks, välj och spara <strong>Helper-Scripts</strong> eller <strong>Eget kommando</strong>. Upptäckt garanterar inte kompatibilitet. Valet görs per app även om flera delar en LXC."
+    "callout": "Registrering väljer inget uppdateringsprogram. Om ett matchande Community Scripts-program upptäcks, välj och spara <strong>Community Scripts</strong> eller <strong>Eget kommando</strong>. Upptäckt garanterar inte kompatibilitet. Valet görs per app även om flera delar en LXC."
   },
   "overview": {
     "heading": "Vad fliken innehåller",
@@ -24,8 +24,8 @@
   },
   "mechanisms": {
     "heading": "Hur en uppdateringsmetod väljs",
-    "lead": "Den inbyggda vägen för Proxmox VE Helper-Scripts följer den officiella <helper>update-apps-mekanismen</helper>. Andra installationer använder rätt paket-, Docker- eller egen metod.",
-    "officialReference": "Officiell referens: <helper>Proxmox VE Helper-Scripts dokumentation för update-apps</helper> beskriver interaktiva och obevakade lägen, säkerhetskopior, provkörningar, tillfälliga byggresurser, loggar och slutkoder.",
+    "lead": "Den inbyggda vägen för Community Scripts följer den officiella <helper>update-apps-mekanismen</helper>. Andra installationer använder rätt paket-, Docker- eller egen metod.",
+    "officialReference": "Officiell referens: <helper>Community Scripts dokumentation för update-apps</helper> beskriver interaktiva och obevakade lägen, säkerhetskopior, provkörningar, tillfälliga byggresurser, loggar och slutkoder.",
     "colSource": "Källa",
     "colAction": "Visad åtgärd",
     "colNotes": "Vad som körs",
@@ -36,9 +36,9 @@
         "notes": "Uppdaterar containerpaketen. Registrerade appar installerade som dpkg eller apk-paket täcks av samma pass."
       },
       {
-        "source": "Proxmox VE Helper-Scripts",
+        "source": "Community Scripts",
         "action": "Tillämpa uppdatering",
-        "notes": "Efter ett uttryckligt val av Helper-Scripts körs det officiella appskript som identifieras via det validerade /usr/bin/update-omslagsskriptet. En markör eller katalogträff räcker aldrig för att tillåta körning."
+        "notes": "Efter ett uttryckligt val av Community Scripts körs det officiella appskript som identifieras via det validerade /usr/bin/update-omslagsskriptet. En markör eller katalogträff räcker aldrig för att tillåta körning."
       },
       {
         "source": "Eget kommando",
@@ -56,7 +56,7 @@
         "notes": "Hämtar vald avbildning och återskapar dess Compose-tjänstegrupp eller skyddade fristående container."
       }
     ],
-    "callout": "Ett eget kommando <strong>ersätter</strong> Helper-Scripts för appen. Manuella, gruppvisa och schemalagda körningar följer det sparade valet. Befintliga kommandon och uttryckligen sparade äldre grupp- eller aktiva schemaval behålls; en nyregistrerad app väljs aldrig in av ett gammalt schema."
+    "callout": "Ett eget kommando <strong>ersätter</strong> Community Scripts för appen. Manuella, gruppvisa och schemalagda körningar följer det sparade valet. Befintliga kommandon och uttryckligen sparade äldre grupp- eller aktiva schemaval behålls; en nyregistrerad app väljs aldrig in av ett gammalt schema."
   },
   "docker": {
     "heading": "Docker Engine och Docker avbildningar",
@@ -76,7 +76,7 @@
     "items": [
       "<strong>Konfigurera</strong> öppnar metodväljaren när ingen metod är vald; <strong>Redigera</strong> ändrar ett sparat val. Informationsknapparna förklarar alternativen, länkar till officiell dokumentation och visar ett exempel på eget skript. Att välja kör inte alternativet.",
       "Utan versionsspårning men med ett uppdateringsprogram visas den neutrala åtgärden <strong>Kör uppdateringsprogram</strong>. ProxMenux hävdar inte att en uppdatering väntar.",
-      "Utan ett tillgängligt Helper-Scripts-program kan ett eget kommando anges. Att inaktivera en metod väljer inte tyst en annan; befintliga plan- och schemaval sparas och otillgängliga mål rapporteras.",
+      "Utan ett tillgängligt Community Scripts-program kan ett eget kommando anges. Att inaktivera en metod väljer inte tyst en annan; befintliga plan- och schemaval sparas och otillgängliga mål rapporteras.",
       "<strong>Uppdatera avbildning</strong> gäller bara vald Docker-enhet; Docker Engine och orelaterade avbildningar uppdateras inte."
     ],
     "statusColState": "Känt tillstånd",
@@ -144,7 +144,7 @@
       "Efter varje körning kontrollerar ProxMenux standarden Debian reboot-krävd markör. När en omstart behövs, säger fliken Uppdateringar och slutförandet meddelandet så; varningen rensas när LXC startar eller startar om.",
       "På Proxmox värd lagras schemalagda loggar i <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> med namnet <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. De senaste tio loggar sparas per LXC och äldre filer tas bort automatiskt.",
       "Den sparade historiken gäller schemalagda uppdateringar. En manuell uppdatering visar utdata direkt i Monitors körningsfönster och skapar ingen schemalagd logg i katalogen.",
-      "Externa värdscheman som upptäckts från Proxmox VE Helper-Scripts visas separat så överlappande automatisering är synlig."
+      "Externa värdscheman som upptäckts från Community Scripts visas separat så överlappande automatisering är synlig."
     ],
     "callout": "Kör varje vald metod manuellt innan ett schema aktiveras. Schemalagda kommandon kan inte svara på interaktiva frågor."
   },
@@ -169,7 +169,7 @@
         "resolution": "Öppen konfiguration, lägg till den officiella icke-interaktiva proceduren och testa den manuellt innan du schemalägger den."
       },
       {
-        "problem": "En Proxmox VE Helper-Scripts-identitet visas men ingen handling existerar",
+        "problem": "En Community Scripts-identitet visas men ingen handling existerar",
         "resolution": "LXC:n har äldre identifieringsdata men inget verifierat /usr/bin/update-omslagsskript. Lägg till en egen metod först när rätt förfarande har bekräftats."
       },
       {

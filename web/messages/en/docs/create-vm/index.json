@@ -20,7 +20,7 @@
   "opening": {
     "heading": "Opening the menu",
     "body": "From ProxMenux's main menu, select <strong>Create VM</strong>. You will see this:",
-    "imageAlt": "Create VM dispatcher with 3 ProxMenux options (NAS / Windows / Linux) followed by the Community Scripts section (macOS / Others)"
+    "imageAlt": "Create VM dispatcher with 3 ProxMenux options (NAS / Windows / Linux) followed by the External Scripts section (macOS / Others)"
   },
   "families": {
     "heading": "Three OS families",
@@ -78,7 +78,7 @@
   },
   "community": {
     "title": "Community scripts (not documented here)",
-    "intro": "The two entries below the <em>Community Scripts</em> separator run code that is <strong>not part of ProxMenux</strong>, so they are intentionally left outside this documentation:",
+    "intro": "The two entries below the <em>External Scripts</em> separator run code that is <strong>not part of ProxMenux</strong>, so they are intentionally left outside this documentation:",
     "macosRich": "<strong>System macOS</strong> — runs the external <osxLink>OSX-PROXMOX</osxLink> installer. It clones the upstream repository, prepares the host and <strong>reboots automatically when finished</strong>. Refer to the project's own documentation.",
     "othersRich": "<strong>System Others (Linux-based)</strong> — loads a curated list of community Linux-based installers (home-server OSes, router/firewall appliances, etc.). Each community script is maintained outside ProxMenux."
   },

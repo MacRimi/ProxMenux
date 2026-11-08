@@ -64,7 +64,7 @@
     "doesLabel": "Was sie tut:",
     "doesItems": [
       "Lädt und installiert die neueste Fastfetch-Version ohne zusätzliche Rückfragen",
-      "Ermöglicht Ihnen die Auswahl eines benutzerdefinierten Logos (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong> oder ein benutzerdefiniertes).",
+      "Ermöglicht Ihnen die Auswahl eines benutzerdefinierten Logos (<strong>ProxMenux, Proxmox, Helper-Scripts, Community Scripts, Home-Labs-Club, Proxmology</strong> oder ein benutzerdefiniertes).",
       "Konfiguriert Fastfetch zur Anzeige von <em>\"System optimiert durch ProxMenux\"</em>",
       "Richtet Fastfetch so ein, dass es automatisch bei der Konsolenanmeldung ausgeführt wird"
     ],

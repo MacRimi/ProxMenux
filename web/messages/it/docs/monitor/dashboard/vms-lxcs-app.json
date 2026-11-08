@@ -57,7 +57,7 @@
       "I risultati della ricerca possono precompilare nome canonico, logo e porte web comuni.",
       "I rilevatori noti usano veri nomi di pacchetti, binari, file, distribuzioni Python, etichette OCI o comandi, invece di un'ipotesi universale come <code>/root/.app</code>.",
       "Gli override di runtime verificati hanno la precedenza quando un'installazione utilizza un percorso che differisce dai metadati dell'installatore.",
-      "I marcatori Proxmox VE Helper-Scripts come <code>/root/.slug</code> rimangono un segnale di compatibilità per le nuove installazioni di helper, non l'unico rilevatore.",
+      "I marcatori Community Scripts come <code>/root/.slug</code> rimangono un segnale di compatibilità per le nuove installazioni di helper, non l'unico rilevatore.",
       "Ogni valore proposto può essere modificato prima di salvare per coprire installatori ufficiali e installazioni manuali."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "Un record di collegamento mostra che il tracciamento della versione non è configurato, ma può ancora ricevere un comando di aggiornamento personalizzato.",
       "Un'applicazione con monitoraggio ma senza un metodo eseguibile mostra un messaggio neutro che chiede un comando personalizzato.",
-      "Una app con wrapper Proxmox VE Helper-Scripts verificato può usare il programma integrato anche se la registrazione è partita da un link web.",
+      "Una app con wrapper Community Scripts verificato può usare il programma integrato anche se la registrazione è partita da un link web.",
       "Aggiungere o modificare un programma di aggiornamento non cambia rilevatore o fonte upstream salvati in App."
     ]
   },
