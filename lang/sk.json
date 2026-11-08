@@ -2159,6 +2159,8 @@
   "Downloading pre-existing encrypted backups from this host will fail unless you kept a copy of the current key.": "Stiahnutie už existujúcich šifrovaných záloh z tohto hosta zlyhá, ak ste si nenechali kópiu aktuálneho kľúča.",
   "Downloading the image:": "Sťahuje sa obraz:",
   "Downloading the latest Fastfetch release...": "Sťahujem najnovšiu verziu Fastfetch...",
+  "Downstream Proxmox Backup Server build detected (PXVIRT): APT sources left unchanged.": "Zistená odvodená zostava Proxmox Backup Server (PXVIRT): zdroje APT ostali nezmenené.",
+  "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.": "Zistená odvodená zostava Proxmox VE (PXVIRT): zdroje APT ostali nezmenené.",
   "Driver blacklist entries removed": "Záznamy v blackliste ovládačov boli odstránené",
   "Driver blacklist removed for": "Blacklist ovládača odstránený pre",
   "Driver installed successfully. Press Enter to continue...": "Ovládač bol úspešne nainštalovaný. Stlačte Enter na pokračovanie...",
