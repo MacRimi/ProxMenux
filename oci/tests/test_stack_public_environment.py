@@ -47,6 +47,47 @@ def build(template,dynamic=False):
         return build_stack(template,DefaultsUI(),DEFAULT_MODE)
 
 class PublicEnvironmentTests(unittest.TestCase):
+    def test_explicit_native_alias_is_bound_before_first_boot(self):
+        source = SOURCE.replace("PUBLIC_URI: 'http://localhost:9001/app?x=1#view'",
+                                "PUBLIC_URI: 'https://operator.example', EXTRA_PUBLIC_URLS: 'http://@STACK_LAN_IP@:8080'", 1)
+        template = template_from_compose(source)
+        plan = build(template)
+        web = next(s for s in plan['services'] if s['name'] == 'web')
+        self.assertEqual(web['public_environment_bindings']['EXTRA_PUBLIC_URLS']['target_service'], 'web')
+        runtime.prepare_public_environment(plan['services'])
+        environment = {e['name']: e['value'] for e in web['deployment']['environment']}
+        self.assertEqual(environment['EXTRA_PUBLIC_URLS'], 'http://172.30.249.10:8080')
+        self.assertEqual(environment['PUBLIC_URI'], 'https://operator.example')
+        self.assertNotIn('@STACK_LAN_IP@', environment['EXTRA_PUBLIC_URLS'])
+
+    def test_explicit_native_alias_refuses_an_unpublished_port_or_dhcp(self):
+        source = SOURCE.replace("PUBLIC_URI: 'http://localhost:9001/app?x=1#view'",
+                                "EXTRA_PUBLIC_URLS: 'http://@STACK_LAN_IP@:8080'", 1)
+        template = template_from_compose(source)
+        with self.assertRaisesRegex(StackError, 'static'):
+            build(template, dynamic=True)
+        template = template_from_compose(source.replace('@STACK_LAN_IP@:8080', '@STACK_LAN_IP@:12345'))
+        self.assertFalse(template['compatibility']['automatic_install_candidate'])
+
+    def test_explicit_native_alias_keeps_legacy_deferred_path_for_dhcp(self):
+        source = SOURCE.replace("PUBLIC_URI: 'http://localhost:9001/app?x=1#view'",
+                                "PUBLIC_URI: 'https://operator.example', EXTRA_PUBLIC_URLS: 'http://@STACK_LAN_IP@:8080'", 1)
+        source = source.replace('http://localhost:9001/app?x=1#view', 'https://operator.example')
+        source = source.replace('http://localhost:8025/mail', 'https://mail.example')
+        plan = build(template_from_compose(source), dynamic=True)
+        web = next(s for s in plan['services'] if s['name'] == 'web')
+        self.assertNotIn('EXTRA_PUBLIC_URLS', web.get('public_environment_bindings', {}))
+        self.assertEqual(next(e['value'] for e in web['deployment']['environment']
+                              if e['name'] == 'EXTRA_PUBLIC_URLS'), 'http://@STACK_LAN_IP@:8080')
+
+    def test_explicit_native_alias_uses_its_own_frontend_even_with_shared_ports(self):
+        services = [{'name': name, 'image': 'nginx:alpine', 'compose': {
+            'ports': ['80:80'], 'environment': {'ALIASES': 'http://@STACK_LAN_IP@/a'}}}
+                    for name in ('first', 'second')]
+        bindings = public_environment_bindings(services, 'first')
+        self.assertEqual(bindings['first']['ALIASES']['target_service'], 'first')
+        self.assertEqual(bindings['second']['ALIASES']['target_service'], 'second')
+
     def source(self,text=SOURCE):
         template=template_from_compose(text)
         return template,template['compose_stack']['services']
