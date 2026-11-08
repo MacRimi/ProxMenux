@@ -19871,7 +19871,7 @@
       "template_family": "curated-profile",
       "title": "Baserow",
       "repository": "https://github.com/baserow/baserow",
-      "description": "Developer-published Baserow image with separate PostgreSQL and authenticated Redis services. ProxMenux creates three native OCI LXCs with a private dependency network.",
+      "description": "Build databases without code. Use a static IPv4 address for the application LXC.",
       "website": "https://baserow.io/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/baserow.webp",
       "architectures": [

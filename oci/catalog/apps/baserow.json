@@ -8,7 +8,7 @@
       "en_US": "Baserow"
     },
     "tagline": {
-      "en_US": "Build online databases and applications without writing code."
+      "en_US": "Build databases without code. Use a static IPv4 address for the application LXC."
     },
     "description": {
       "en_US": "Developer-published Baserow image with separate PostgreSQL and authenticated Redis services. ProxMenux creates three native OCI LXCs with a private dependency network."

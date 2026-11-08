@@ -9179,5 +9179,6 @@
   "Baserow WebUI": "Interface web do Baserow",
   "Create the first administrator account on the initial signup page.": "Crie a primeira conta de administrador na página de registo inicial.",
   "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "A aplicação, o PostgreSQL e o Redis são executados em três LXC. Faça cópias de segurança e restaure o grupo completo.",
-  "BASEROW_PUBLIC_URL must match the address used in the browser. Configure the canonical public URL before using a reverse proxy.": "BASEROW_PUBLIC_URL deve corresponder ao endereço usado no navegador. Configure o URL público canónico antes de usar um proxy inverso."
+  "BASEROW_PUBLIC_URL must match the address used in the browser. Configure the canonical public URL before using a reverse proxy.": "BASEROW_PUBLIC_URL deve corresponder ao endereço usado no navegador. Configure o URL público canónico antes de usar um proxy inverso.",
+  "Build databases without code. Use a static IPv4 address for the application LXC.": "Crie bases de dados sem programar. Use um endereço IPv4 estático para o LXC da aplicação."
 }
