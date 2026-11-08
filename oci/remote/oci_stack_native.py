@@ -413,7 +413,7 @@ class NativeAdapter:
     def stop(self, vmid):
         self.validate(self.plan)
         if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
-            member_tx.stop(vmid)
+            member_tx.stop(vmid, self.records[vmid]['deployment'].get('shutdown_timeout_seconds', 60))
 
     def backup(self, vmid, transaction_id):
         self.validate(self.plan)
