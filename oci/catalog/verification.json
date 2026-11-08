@@ -289,6 +289,14 @@
         "scenario": "PVE 9.2 amd64/ZFS; default/advanced; browser login and redirect; managed/host data; restart/Modify; live coordinated update; controlled rollback with verified cached images; whole-group backup/restore/Manage; Remove/PBS cleanup."
       }
     },
+    "baserow": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-08",
+        "digest": "d10301e2dc5ef3a49fc9270dbbe0465df074f980cbcffa142128d44b9543285b",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced static IPv4; browser login/workspace; 256 MiB upload SHA, no OOM; 512 MiB /tmp; delayed restarts/Modify; managed 3-CT backup/restore/Manage; host data. Tested with #619/#620; other architectures/storage untested."
+      }
+    },
     "stopliga": {
       "community_tested": {
         "by": "jcastro",

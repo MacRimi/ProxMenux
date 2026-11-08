@@ -9240,5 +9240,12 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Build online databases and applications without writing code.": "Vytvárajte online databázy a aplikácie bez písania kódu.",
+  "Public URL used to access Baserow": "Verejná URL adresa na prístup k Baserow",
+  "Baserow WebUI": "Webové rozhranie Baserow",
+  "Create the first administrator account on the initial signup page.": "Na úvodnej registračnej stránke vytvorte prvý účet správcu.",
+  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "Aplikácia, PostgreSQL a Redis bežia v troch LXC. Zálohujte a obnovujte celú skupinu.",
+  "BASEROW_PUBLIC_URL must match the address used in the browser. Configure the canonical public URL before using a reverse proxy.": "BASEROW_PUBLIC_URL musí zodpovedať adrese používanej v prehliadači. Pred použitím reverzného proxy nastavte kanonickú verejnú URL adresu.",
+  "Build databases without code. Use a static IPv4 address for the application LXC.": "Vytvárajte databázy bez programovania. Pre LXC kontajner aplikácie použite statickú adresu IPv4."
 }

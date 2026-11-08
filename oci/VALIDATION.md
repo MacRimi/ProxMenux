@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-71 of 575 applications in the OCI catalog have been tested for real: 54 in the ProxMenux lab and 17 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+72 of 576 applications in the OCI catalog have been tested for real: 54 in the ProxMenux lab and 18 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -25,6 +25,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Application | Tested by | Date | Image | Scenario | Report |
 |---|---|---|---|---|---|
 | Apache Guacamole | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `50484043eadd` | PVE 9.2 amd64/ZFS; default/advanced; browser login and real SSH; private guacd/DB; restart/Modify; 1.6 refresh and controlled rollback; four-member backup/restore/Manage; Remove/PBS cleanup; official image mirror verified. | — |
+| Baserow | [@jcastro](https://github.com/jcastro) | 2026-11-08 | `d10301e2dc5e` | PVE 9.2 amd64/ZFS; default/advanced static IPv4; browser login/workspace; 256 MiB upload SHA, no OOM; 512 MiB /tmp; delayed restarts/Modify; managed 3-CT backup/restore/Manage; host data. Tested with #619/#620; other architectures/storage untested. | — |
 | Ente Photos | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `5224466c15f7` | PVE 9.2 amd64/ZFS; default/advanced; browser page, real OTP auth and Museum-configured S3; managed/host data; restart/Modify; cached refresh and automatic readiness rollback; five-CT backup/restore/Manage. S3 host data external; browser password/SRP and uploads not tested. | — |
 | GitLab CE | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `60fc37e470ac` | PVE 9.2 amd64/ZFS; default/advanced managed storage; browser/root login; restart; CPU/RAM/timezone Modify; cached recreation; native failed-candidate recovery; backup/restore/Manage; Remove/PBS audit. Host-bind not offered. CLI trigger and cross-release upgrades not E2E-tested. | — |
 | Glances | [@Vaso73](https://github.com/Vaso73) | 2026-09-27 | — | — | [Report](https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868) |

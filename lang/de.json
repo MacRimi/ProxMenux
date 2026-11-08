@@ -9240,5 +9240,12 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Build online databases and applications without writing code.": "Erstelle Online-Datenbanken und Anwendungen ohne Programmierkenntnisse.",
+  "Public URL used to access Baserow": "Öffentliche URL für den Zugriff auf Baserow",
+  "Baserow WebUI": "Baserow-Weboberfläche",
+  "Create the first administrator account on the initial signup page.": "Erstelle das erste Administratorkonto auf der anfänglichen Registrierungsseite.",
+  "The application, PostgreSQL and Redis run in three LXCs. Back up and restore the whole group.": "Die Anwendung, PostgreSQL und Redis laufen in drei LXCs. Sichere und stelle immer die gesamte Gruppe wieder her.",
+  "BASEROW_PUBLIC_URL must match the address used in the browser. Configure the canonical public URL before using a reverse proxy.": "BASEROW_PUBLIC_URL muss der im Browser verwendeten Adresse entsprechen. Konfiguriere die kanonische öffentliche URL, bevor du einen Reverse-Proxy verwendest.",
+  "Build databases without code. Use a static IPv4 address for the application LXC.": "Datenbanken ohne Programmierung erstellen. Verwenden Sie eine statische IPv4-Adresse für den Anwendungs-LXC."
 }

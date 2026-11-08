@@ -185,6 +185,9 @@
     ],
     "chromeos": [
       "/storage"
+    ],
+    "baserow": [
+      "/baserow/data"
     ]
   },
   "sizes": {
