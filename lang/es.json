@@ -2157,6 +2157,8 @@
   "Downloading pre-existing encrypted backups from this host will fail unless you kept a copy of the current key.": "La descarga de backups cifrados ya existentes desde este host fallará salvo que conserve una copia de la clave actual.",
   "Downloading the image:": "Descargando la imagen:",
   "Downloading the latest Fastfetch release...": "Descargando la última versión de Fastfetch...",
+  "Downstream Proxmox Backup Server build detected (PXVIRT): APT sources left unchanged.": "Se detectó la compilación Proxmox Backup Server descendente (PXVIRT): las fuentes APT no se modificaron.",
+  "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.": "Se detectó la compilación Proxmox VE descendente (PXVIRT): las fuentes APT no se modificaron.",
   "Driver blacklist entries removed": "Se eliminaron las entradas de la lista negra de controladores",
   "Driver blacklist removed for": "Lista negra de controladores eliminada para",
   "Driver installed successfully. Press Enter to continue...": "Controlador instalado correctamente. Pulsa Intro para continuar...",

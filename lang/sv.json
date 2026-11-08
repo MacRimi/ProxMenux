@@ -2159,6 +2159,8 @@
   "Downloading pre-existing encrypted backups from this host will fail unless you kept a copy of the current key.": "Nedladdning av redan existerande krypterade säkerhetskopior från denna värd kommer att misslyckas om du inte behåller en kopia av den aktuella nyckeln.",
   "Downloading the image:": "Ladda ner bilden:",
   "Downloading the latest Fastfetch release...": "Laddar ner den senaste Fastfetch-versionen...",
+  "Downstream Proxmox Backup Server build detected (PXVIRT): APT sources left unchanged.": "Nedströms Proxmox Backup Server build upptäckt (PXVIRT): APT-källor lämnas oförändrade.",
+  "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.": "Nedströms Proxmox VE build upptäckt (PXVIRT): APT-källor lämnas oförändrade.",
   "Driver blacklist entries removed": "Drivrutinens svartlistade poster har tagits bort",
   "Driver blacklist removed for": "Svartlista för drivrutiner har tagits bort för",
   "Driver installed successfully. Press Enter to continue...": "Drivrutinen installerades framgångsrikt. Tryck på Enter för att fortsätta...",

@@ -2157,6 +2157,8 @@
   "Downloading pre-existing encrypted backups from this host will fail unless you kept a copy of the current key.": "Не удастся загрузить с этого узла ранее созданные зашифрованные резервные копии, если вы не сохранили копию текущего ключа.",
   "Downloading the image:": "Загрузка образа:",
   "Downloading the latest Fastfetch release...": "Загрузка последнего выпуска Fastfetch...",
+  "Downstream Proxmox Backup Server build detected (PXVIRT): APT sources left unchanged.": "Контекст: Техническое сообщение для Proxmox и ИТ.Перевести: обнаружена нисходящая сборка Proxmox Backup Server (PXVIRT): источники APT остались без изменений.",
+  "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.": "Контекст: Техническое сообщение для Proxmox и ИТ.Перевести: обнаружена нисходящая сборка Proxmox VE (PXVIRT): источники APT остались без изменений.",
   "Driver blacklist entries removed": "Записи в чёрном списке драйверов удалены",
   "Driver blacklist removed for": "Удалён чёрный список драйверов для",
   "Driver installed successfully. Press Enter to continue...": "Драйвер успешно установлен. Нажмите Enter, чтобы продолжить...",
