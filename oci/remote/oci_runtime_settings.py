@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import posixpath
 import stat
 import tempfile
 
@@ -76,7 +77,8 @@ def _application_ids(deployment, item):
 def tmpfs_lines(deployment, config=None):
     result = []
     targets = set()
-    persistent = [m['container_path'].rstrip('/') for m in deployment.get('mounts', [])]
+    persistent = [('/' + posixpath.normpath(m['container_path']).lstrip('/')).rstrip('/')
+                  for m in deployment.get('mounts', [])]
     for item in deployment.get('tmpfs_mounts', []):
         target, size = item['container_path'], item['size_mb']
         owner_strategy = item.get('owner_strategy')

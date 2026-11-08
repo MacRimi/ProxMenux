@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import posixpath
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -492,7 +493,7 @@ def _compose_tmpfs_mounts(service: dict[str, Any]) -> list[dict[str, Any]] | Non
         else:
             continue
         if isinstance(target, str):
-            persistent.append(target.rstrip("/"))
+            persistent.append(("/" + posixpath.normpath(target).lstrip("/")).rstrip("/"))
     for target, options in entries:
         if (not isinstance(target, str) or not re.fullmatch(r"/[A-Za-z0-9_./-]+", target)
                 or any(part in (".", "..", "") for part in target.split("/")[1:])

@@ -136,6 +136,14 @@ class ComposeTmpfs(unittest.TestCase):
         self.assertIsNone(_compose_tmpfs_mounts({'tmpfs': '/dev/shm', 'shm_size': '64m'}))
         self.assertIsNotNone(_compose_tmpfs_mounts({'tmpfs': '/tmp', 'volumes': ['data:/tmp-other']}))
 
+    def test_persistent_path_aliases_cannot_hide_an_overlapping_mount(self):
+        for target in ('/tmp//app', '/tmp/./app', '//tmp/app', '/tmp/other/../app'):
+            self.assertIsNone(_compose_tmpfs_mounts({'tmpfs': '/tmp/app', 'volumes': ['data:' + target]}))
+            plan = {'mounts': [{'container_path': target}], 'tmpfs_mounts': [{
+                'container_path': '/tmp/app', 'size_mb': 64, 'mount_options': ['rw']}]}
+            with self.assertRaisesRegex(ValueError, 'overlaps'):
+                runtime.tmpfs_lines(plan)
+
     def test_unsupported_tmpfs_keeps_compatibility_blocker(self):
         template = self.single(tmpfs=['/tmp:unknown=yes'])
         self.assertFalse(template['compatibility']['automatic_install_candidate'])
