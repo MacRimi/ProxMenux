@@ -57,6 +57,80 @@ def _example_default(name: str, example: str | None, timezone: str | None = None
     return example
 
 
+# The share of the node's RAM a proposed default may take; the user can still
+# set any value, since a Proxmox memory limit reserves nothing.
+HOST_MEMORY_SHARE = 0.75
+
+
+def fit_memory_to_host(memory_mb: int, host_mb: int | None) -> tuple[int, str | None]:
+    """The proposed RAM, lowered to what this node can give, with the reason."""
+    limit = int(host_mb * HOST_MEMORY_SHARE) // 256 * 256 if host_mb else 0
+    if not limit or memory_mb <= limit:
+        return memory_mb, None
+    fitted = max(512, limit)
+    return fitted, translate("This node has {host} MB of RAM, so {fitted} MB are proposed instead of {wanted} MB.").format(
+        host=host_mb, fitted=fitted, wanted=memory_mb)
+
+
+def proportional_cores(cores: int, memory_mb: int, host_cpus: int | None) -> int:
+    """One core for every 2 GiB of RAM, between the template's own and 8, and
+    never more than the node has."""
+    wanted = max(int(cores), min(8, -(-int(memory_mb) // 2048)))
+    return max(1, min(wanted, host_cpus)) if host_cpus else wanted
+
+
+# Below this, an AMD GPU's own memory is the carve-out of an integrated GPU.
+INTEGRATED_GPU_VRAM_MB = 4096
+# An Intel integrated GPU allocates the model inside the container's memory,
+# next to what the CPU keeps of it.
+INTEGRATED_GPU_MEMORY_MB = 12288
+
+
+def context_budget(memory_mb: int, gpu: dict[str, Any] | None) -> int:
+    """The memory that holds a model and its context window: the GPU's own,
+    the system memory an AMD integrated GPU maps, or the container's."""
+    gpu = gpu or {}
+    dedicated = int(gpu.get("dedicated_mb") or 0)
+    if gpu.get("vendor") == "intel" and not dedicated:
+        # Measured: the GPU buffers count in the container, about a third more.
+        return int(memory_mb) * 2 // 3
+    if gpu.get("vendor") == "amd" and dedicated < INTEGRATED_GPU_VRAM_MB:
+        return int(gpu.get("shared_mb") or 0) or int(memory_mb)
+    return max(int(memory_mb), dedicated)
+
+
+# Bytes per value of each context cache type.
+CACHE_TYPE_BYTES = {"f32": 4, "f16": 2, "bf16": 2, "q8_0": 1, "q5_1": 0.69, "q5_0": 0.69,
+                    "q4_1": 0.56, "q4_0": 0.56, "iq4_nl": 0.56}
+
+
+def cache_size_factor(variable: str, environment: list[dict[str, Any]]) -> float:
+    """How large the context cache is next to the 8-bit one the context
+    tables are measured with: 2 uncompressed, 1.5 with only keys compressed."""
+    values = {entry["name"]: str(entry.get("value") or "").lower() for entry in environment}
+    if variable.startswith("OLLAMA_"):
+        keys = vals = values.get("OLLAMA_KV_CACHE_TYPE") or "f16"
+    else:
+        keys = values.get("LLAMA_ARG_CACHE_TYPE_K") or "f16"
+        vals = values.get("LLAMA_ARG_CACHE_TYPE_V") or "f16"
+    return (CACHE_TYPE_BYTES.get(keys, 2) + CACHE_TYPE_BYTES.get(vals, 2)) / 2
+
+
+def value_for_memory(table: Any, memory_mb: int) -> str | None:
+    """The value of a variable that depends on the container's RAM, from
+    [[minimum MiB, value], ...] in ascending order."""
+    if not isinstance(table, list):
+        return None
+    selected = None
+    for row in table:
+        if (not isinstance(row, list) or len(row) != 2 or isinstance(row[0], bool)
+                or not isinstance(row[0], int) or not isinstance(row[1], str)):
+            raise InstallError(translate("Invalid memory-dependent default"))
+        if memory_mb >= row[0]:
+            selected = row[1]
+    return selected
+
+
 def _compose_example(template: dict[str, Any], name: str) -> str | None:
     """The value the image's own Compose file shows for a variable, as a hint."""
     try:
@@ -453,7 +527,12 @@ def build_deployment(
     hostname_default = _hostname_default(runtime_profile.get("hostname")
                                          or template["container_contract"]["container_name"])
     cpu_shares = installer_profile.get("resources", {}).get("cpu_shares")
-    memory_default = installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])
+    memory_default, memory_note = fit_memory_to_host(
+        int(installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])),
+        host.memory_total_mb())
+    cores_default = proportional_cores(int(defaults["cores"]), memory_default, host.cpu_count())
+    if memory_note and not _answers_from_recipe(ui):
+        ui.info(memory_note)
     mac_address = installer_profile.get("network", {}).get("mac_address")
     timezone = host.timezone()
     # A default installation still asks its storage, its address and how it
@@ -462,7 +541,7 @@ def build_deployment(
     if advanced:
         vmid_text = ui.ask(translate("VMID (empty = next free)"), "", required=False)
         hostname = ui.ask(translate("Hostname"), hostname_default)
-        cores = int(ui.ask(translate("CPU cores"), str(defaults["cores"])))
+        cores = int(ui.ask(translate("CPU cores"), str(cores_default)))
         cpu_units = (int(ui.ask(translate("Relative CPU priority (cpuunits)"),
                                 str(_cpu_units_default(int(cpu_shares)))))
                      if cpu_shares is not None else None)
@@ -488,7 +567,7 @@ def build_deployment(
             volume_storage = rootfs_storage
         template_storage = ask_storage(ui, "", "vztmpl", defaults["template_storage"], DEFAULT_MODE)
         rootfs_size = int(defaults["rootfs_size_gb"])
-        cores = int(defaults["cores"])
+        cores = cores_default
         cpu_units = _cpu_units_default(int(cpu_shares)) if cpu_shares is not None else None
         memory = int(memory_default)
         swap = int(defaults["swap_mb"])
@@ -611,6 +690,7 @@ def build_deployment(
     host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
     environment: list[dict[str, str]] = []
+    memory_dependent: list[tuple[dict[str, Any], str, str | None]] = []
     optional_explained = False
     for item in template["container_contract"]["environment"]:
         name = item["name"]
@@ -621,6 +701,11 @@ def build_deployment(
         else:
             label = f"{translate('Value for')} {name}"
         default = _example_default(name, item["example"], timezone)
+        # A setting that grows with the memory the model will use, such as its
+        # context window, is decided once the GPU is chosen.
+        if item.get("default_by_memory_mb"):
+            memory_dependent.append((item, label, default))
+            continue
         generated = installer_profile.get("generated_sensitive_environment", {}).get(name)
         if item.get("container_address"):
             # The address of the container is known or will be: nothing to ask.
@@ -683,6 +768,36 @@ def build_deployment(
 
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
+    hardware_profile = next((profile for profile in installer_profile.get("hardware_acceleration", {}).get("profiles", [])
+                             if profile.get("id") == selected_hardware_profile), {})
+    # Some GPU images are several times larger than the CPU one: give the
+    # container the disk its image needs instead of failing to unpack it.
+    minimum_rootfs = int(hardware_profile.get("rootfs_minimum_gb") or 0)
+    if rootfs_size < minimum_rootfs:
+        ui.info(translate("The image for this acceleration needs a larger disk: {size} GB are used instead of {previous} GB.").format(
+            size=minimum_rootfs, previous=rootfs_size))
+        rootfs_size = minimum_rootfs
+    if memory_dependent:
+        gpu = host.gpu_memory(selected_hardware_profile, devices)
+        if gpu.get("vendor") == "intel" and not gpu.get("dedicated_mb") and not advanced:
+            # An Intel integrated GPU allocates inside the container: give it
+            # room for the model, its context and what the CPU keeps of it.
+            raised, note = fit_memory_to_host(max(memory, INTEGRATED_GPU_MEMORY_MB), host.memory_total_mb())
+            if raised > memory:
+                ui.info(translate("The integrated GPU uses the container's memory: {memory} MB are proposed.").format(
+                    memory=raised))
+                memory = raised
+                cores = proportional_cores(cores, memory, host.cpu_count())
+        budget = context_budget(memory, gpu)
+        chosen = {entry["name"] for entry in environment}
+        for item, label, fallback in memory_dependent:
+            if item["name"] in chosen:
+                continue  # the acceleration profile sets it
+            effective = int(budget / cache_size_factor(item["name"], environment))
+            default = value_for_memory(item["default_by_memory_mb"], effective) or fallback
+            value = ui.ask(label, default, required=item["required"]) if advanced else default
+            if value or item["required"]:
+                environment.append({"name": item["name"], "value": value or "", "sensitive": False})
     devices, completion_notes = configure_detector(installer_profile, devices, ui)
     # What the selected acceleration profile leaves for the user to set.
     completion_notes = [*next((profile.get("completion_notes", [])

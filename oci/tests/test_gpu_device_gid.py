@@ -53,6 +53,19 @@ class ContainerDeviceGidTests(unittest.TestCase):
         self.assertEqual(devices.check(changed, candidate['deployment'])['/dev/dri/renderD128'], HOST)
 
     @patch.object(devices, 'snapshot', return_value=HOST)
+    def test_an_nvidia_application_keeps_its_device_gids_and_can_be_updated(self, _snapshot):
+        nvidia = {'id': 'nvidia-runtime', 'kind': 'nvidia-runtime', 'purpose': 'nvidia-cuda'}
+        record = {'deployment': {'devices': [dict(nvidia), dict(DEPLOYMENT['devices'][0])]},
+                  'observed': {'config': SAVED_CONFIG}}
+        candidate = {'deployment': {'devices': [dict(nvidia), dict(DEPLOYMENT['devices'][0])]}}
+
+        accelerators.preserve_recorded_container_gids(record, candidate, CURRENT_CONFIG)
+
+        self.assertEqual(candidate['deployment']['devices'][1]['container_gid'], 44)
+        self.assertEqual(candidate['deployment']['devices'][0], nvidia)
+        self.assertEqual([d['kind'] for d in record['deployment']['devices']], ['nvidia-runtime', 'character-device'])
+
+    @patch.object(devices, 'snapshot', return_value=HOST)
     def test_other_permission_changes_are_still_refused(self, _snapshot):
         record = {'deployment': {'devices': [dict(DEPLOYMENT['devices'][0])]},
                   'observed': {'config': SAVED_CONFIG}}

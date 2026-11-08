@@ -15,6 +15,44 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 8192
     }
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "OLLAMA_CONTEXT_LENGTH",
+      "example": "32768",
+      "prompt": "Context window in tokens (more context needs more RAM)",
+      "default_by_memory_mb": [
+        [
+          0,
+          "8192"
+        ],
+        [
+          4096,
+          "16384"
+        ],
+        [
+          6144,
+          "32768"
+        ],
+        [
+          10240,
+          "65536"
+        ],
+        [
+          24576,
+          "131072"
+        ]
+      ]
+    },
+    {
+      "name": "OLLAMA_KV_CACHE_TYPE",
+      "example": "q8_0",
+      "prompt": "Context cache type (q8_0 halves its memory; f16 keeps it uncompressed)"
+    }
+  ]
 }
