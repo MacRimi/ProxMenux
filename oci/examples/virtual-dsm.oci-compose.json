@@ -1,0 +1,146 @@
+{
+  "kind": "proxmenux.oci-template",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Virtual DSM"
+    },
+    "tagline": {
+      "en_US": "Virtual DSM in a container."
+    },
+    "description": {
+      "en_US": "Virtual DSM in QEMU/KVM inside a native OCI LXC. Experimental laboratory profile; application setup and full lifecycle validation remain pending."
+    },
+    "category": "files",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/synology.webp",
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 5000,
+      "path": "/"
+    },
+    "website": "https://github.com/vdsm/virtual-dsm",
+    "documentation": "https://github.com/vdsm/virtual-dsm",
+    "repository": "https://github.com/vdsm/virtual-dsm",
+    "tips": [
+      "/storage contains virtual disk images; it does not expose host files directly inside DSM.",
+      "AMD GPU uses a render node and VirtIO GPU; Photos acceleration still requires functional testing.",
+      "Physical disk passthrough is not enabled in this laboratory profile.",
+      "DSM shutdown requires up to 120 seconds."
+    ]
+  },
+  "container_contract": {
+    "service_name": "dsm",
+    "container_name": "dsm",
+    "image": {
+      "reference": "vdsm/virtual-dsm:latest"
+    },
+    "ports": [
+      {
+        "container_port": 5000
+      }
+    ],
+    "environment": [
+      {
+        "name": "DISK_SIZE",
+        "example": "32G",
+        "required": true,
+        "prompt_user": false
+      },
+      {
+        "name": "RAM_SIZE",
+        "example": "2G",
+        "required": true,
+        "prompt_user": false
+      },
+      {
+        "name": "CPU_CORES",
+        "example": "2",
+        "required": true,
+        "prompt_user": false
+      },
+      {
+        "name": "GPU",
+        "example": "N",
+        "required": true,
+        "prompt_user": false
+      }
+    ],
+    "volumes": [
+      {
+        "container_path": "/storage",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 64
+        }
+      }
+    ],
+    "restart": "always",
+    "stop_grace_period": "2m"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "http",
+        "port": 5000,
+        "path": "/",
+        "source": "compose-first-tcp-port-fallback"
+      }
+    ]
+  },
+  "proxmox": {
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 3072,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "shutdown_timeout_seconds": 120
+    },
+    "installer_profile": {
+      "device_requests": [
+        {
+          "id": "dev-kvm",
+          "kind": "character-device",
+          "purpose": "kvm",
+          "enable_prompt": "Pass /dev/kvm to the LXC",
+          "enabled_default": true,
+          "required_by_compose": true,
+          "path_prompt": "Host device for /dev/kvm",
+          "host_path_default": "/dev/kvm",
+          "container_path": "/dev/kvm",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "source_mapping": "/dev/kvm:/dev/kvm"
+        },
+        {
+          "id": "dev-net-tun",
+          "kind": "character-device",
+          "purpose": "tun",
+          "enable_prompt": "Pass /dev/net/tun to the LXC",
+          "enabled_default": true,
+          "required_by_compose": true,
+          "path_prompt": "Host device for /dev/net/tun",
+          "host_path_default": "/dev/net/tun",
+          "container_path": "/dev/net/tun",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid",
+          "source_mapping": "/dev/net/tun:/dev/net/tun"
+        }
+      ],
+      "security": {
+        "required_capabilities": [
+          "NET_ADMIN"
+        ]
+      }
+    }
+  }
+}

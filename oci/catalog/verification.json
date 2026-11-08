@@ -272,6 +272,9 @@
     "vaultwarden": {
       "status": "laboratory-validated"
     },
+    "vikunja": {
+      "status": "laboratory-validated"
+    },
     "wg-easy": {
       "status": "laboratory-validated"
     },

@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-73 of 577 applications in the OCI catalog have been tested for real: 54 in the ProxMenux lab and 19 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+74 of 577 applications in the OCI catalog have been tested for real: 55 in the ProxMenux lab and 19 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -99,6 +99,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Thelounge | Communication & Community |
 | Trilium | Documents & Notes |
 | Vaultwarden | Authentication & Security |
+| Vikunja | Productivity & Workflows |
 | Windows | Browsers & Web Desktops |
 | Wireguard | Remote Access & VPN |
 | WireGuard Easy | Remote Access & VPN |
