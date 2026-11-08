@@ -227,6 +227,12 @@ def service_template(parent, service, main=False):
     # declare one of them is not affected by it.
     transient = parent.get('proxmox', {}).get('installer_profile', {}).get('non_persistent_image_volumes')
     if transient:
+        # Compose-derived paths belong to their own service. Only explicit
+        # parent-wide exceptions are inherited by every member.
+        main_compose = next((s['compose'] for s in parent['compose_stack']['services']
+                             if s['name'] == parent['compose_stack']['main_service']), {})
+        main_tmpfs = {m['container_path'] for m in (_compose_tmpfs_mounts(main_compose) or [])}
+        transient = [path for path in transient if path not in main_tmpfs]
         profile = single['proxmox'].setdefault('installer_profile', {})
         profile['non_persistent_image_volumes'] = list(dict.fromkeys(
             [*profile.get('non_persistent_image_volumes', []), *transient]))

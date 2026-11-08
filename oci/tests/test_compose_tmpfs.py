@@ -150,6 +150,16 @@ class ComposeTmpfs(unittest.TestCase):
         self.assertFalse(template['compatibility']['automatic_install_candidate'])
         self.assertTrue(any('tmpfs' in error for error in template['compatibility']['untranslated_blockers']))
 
+    def test_main_tmpfs_does_not_change_other_members_image_volume_policy(self):
+        document = {'services': {
+            'app': {'image': 'nginx:alpine', 'ports': ['80:80'], 'tmpfs': '/tmp'},
+            'worker': {'image': 'nginx:alpine', 'tmpfs': '/run/worker'}}}
+        template = custom.template_from_compose(yaml.safe_dump(document))
+        for service in ordered_services(template):
+            child = service_template(template, service)
+            paths = child['proxmox']['installer_profile']['non_persistent_image_volumes']
+            self.assertEqual(paths, ['/tmp'] if service['name'] == 'app' else ['/run/worker'])
+
 
 if __name__ == '__main__':
     unittest.main()
