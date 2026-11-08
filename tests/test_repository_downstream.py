@@ -54,9 +54,12 @@ class DownstreamPolicyTest(unittest.TestCase):
             ('/etc/apt/sources.list.d/pve-enterprise.list', [repo('pve-enterprise')]),
             ('/etc/apt/sources.list', [repo('main contrib', uri='http://deb.debian.org/debian')]),
         )
-        patcher = patch.object(self.module, 'downstream_variant', side_effect=lambda: self.variant)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        self.on_disk = False
+        for name, value in (('downstream_variant', lambda: self.variant),
+                            ('downstream_sources_on_disk', lambda root=None: self.on_disk)):
+            patcher = patch.object(self.module, name, side_effect=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def run_policy(self, apply=False, suite='trixie', product='pve'):
         def run(args):
@@ -110,6 +113,29 @@ class DownstreamPolicyTest(unittest.TestCase):
         self.assertEqual(self.run_policy(apply=True), 'downstream')
         self.assertEqual(self.writes, 0)
 
+    def test_marker_answers_even_when_the_api_fails(self):
+        # The case found on the Pi: pvesh fails, the port must still be recognised.
+        self.variant = 'pxvirt'
+        self.repositories['errors'] = ['inventory unavailable']
+        self.subscription = RuntimeError('must not query subscription')
+        for apply in (False, True):
+            with self.subTest(apply=apply):
+                self.calls = []
+                self.assertEqual(self.run_policy(apply=apply), 'downstream')
+                self.assertEqual(self.calls, [])
+                self.assertEqual(self.writes, 0)
+
+    def test_source_file_answers_even_when_the_api_fails(self):
+        self.on_disk = True
+        self.repositories['errors'] = ['inventory unavailable']
+        self.assertEqual(self.run_policy(apply=True), 'downstream')
+        self.assertEqual(self.calls, [])
+
+    def test_api_failure_on_an_upstream_host_still_raises(self):
+        self.repositories['errors'] = ['inventory unavailable']
+        with self.assertRaises(ValueError):
+            self.run_policy()
+
     def test_disabled_or_source_only_downstream_entries_do_not_count(self):
         path = '/etc/apt/sources.list.d/pveport.list'
         self.repositories['files'].append({'path': path, 'repositories': [
@@ -146,6 +172,38 @@ class DownstreamPolicyTest(unittest.TestCase):
              patch('builtins.print') as printed:
             self.assertEqual(self.module.main(), 0)
         printed.assert_called_once_with('downstream')
+
+
+class SourceFilesTest(unittest.TestCase):
+    """The on-disk probe used when the repository API is unavailable."""
+
+    def probe(self, files):
+        module = load(POLICY, 'repository_policy_files')
+        with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as directory:
+            root = Path(directory)
+            (root / 'sources.list.d').mkdir()
+            for name, text in files.items():
+                (root / name).write_text(text)
+            return module.downstream_sources_on_disk(root)
+
+    def test_pi_source_files_are_recognised(self):
+        self.assertTrue(self.probe({'sources.list.d/pveport.list':
+            'deb [arch=arm64 signed-by=/usr/share/keyrings/lierfang.gpg] https://mirrors.lierfang.com/pxcloud/pxvirt trixie main\n'}))
+        self.assertTrue(self.probe({'sources.list.d/pxvirt.sources':
+            'Types: deb\nURIs: https://eu.mirrors.lierfang.com/pxcloud/pxvirt\nSuites: trixie\nComponents: main\n'}))
+        # deb822 folded value: the port's mirror on the second URIs line
+        self.assertTrue(self.probe({'sources.list.d/multi.sources':
+            '# mirrors\nTypes: deb\nURIs: http://deb.debian.org/debian\n https://mirrors.lierfang.com/pxcloud/pxvirt\nSuites: trixie\n'}))
+
+    def test_commented_disabled_or_unrelated_sources_are_not(self):
+        self.assertFalse(self.probe({}))
+        self.assertFalse(self.probe({'sources.list.d/pveport.list':
+            '# deb https://mirrors.lierfang.com/pxcloud/pxvirt trixie main\n',
+            'sources.list': 'deb http://deb.debian.org/debian trixie main\n'}))
+        self.assertFalse(self.probe({'sources.list.d/pxvirt.sources':
+            'Enabled: no\nTypes: deb\nURIs: https://mirrors.lierfang.com/pxcloud/pxvirt\nSuites: trixie\n'}))
+        self.assertFalse(self.probe({'sources.list.d/pxvirt.sources':
+            'Types: deb-src\nURIs: https://mirrors.lierfang.com/pxcloud/pxvirt\nSuites: trixie\n'}))
 
 
 class PlatformVariantTest(unittest.TestCase):
@@ -226,7 +284,7 @@ class UpdateScriptsDownstreamTest(unittest.TestCase):
     """The post-install updaters rewrite the APT sources themselves; on a downstream
     build they must skip that and still offer the package upgrade."""
 
-    def run_updater(self, path, name, decision):
+    def run_updater(self, path, name, decision, python_stub=None):
         source = (ROOT / path).read_text()
         start = source.index(f'\n{name}() {{\n') + 1
         body = source[start:source.index('\n}\n', start) + 3]
@@ -241,7 +299,7 @@ class UpdateScriptsDownstreamTest(unittest.TestCase):
                 if target:
                     (bindir / cmd).symlink_to(target)
             stubs = {
-                'python3': f'echo {decision}',
+                'python3': python_stub or f'echo {decision}',
                 'df': "printf 'Filesystem 1K-blocks Used Available Use%% Mounted on\\nfixture 9999999 1 9999999 1%% /\\n'",
                 'ping': 'exit 1',
                 'apt-get': f'echo "apt-get $*" >> "{d}/calls"',
@@ -287,6 +345,17 @@ class UpdateScriptsDownstreamTest(unittest.TestCase):
                 result, calls, writes = self.run_updater(path, name, 'downstream')
                 self.assertIn('left unchanged', result.stdout, result.stderr)
                 self.assertNotIn('Cannot reach Proxmox repositories', result.stdout)
+                self.assertEqual(writes, [], writes)
+                self.assertEqual(calls[:2], ['apt-get update', 'confirm'], (calls, result.stderr))
+
+    def test_failing_policy_on_a_marked_port_still_skips_the_rewrite(self):
+        # The policy errors out (pvesh down) but the package marker says pxvirt.
+        stub = 'case "$*" in *proxmox_platform.py*) echo pxvirt ;; *) echo "inventory invalid" >&2; exit 1 ;; esac'
+        for path, name in (('scripts/global/update-pve9_2.sh', 'update_pve9'),
+                           ('scripts/global/update-pve8.sh', 'update_pve8')):
+            with self.subTest(path=path):
+                result, calls, writes = self.run_updater(path, name, None, python_stub=stub)
+                self.assertIn('left unchanged', result.stdout, result.stderr)
                 self.assertEqual(writes, [], writes)
                 self.assertEqual(calls[:2], ['apt-get update', 'confirm'], (calls, result.stderr))
 

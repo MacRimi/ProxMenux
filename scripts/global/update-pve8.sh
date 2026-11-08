@@ -64,7 +64,10 @@ update_pve8() {
     # PXVIRT and similar downstream builds already serve Proxmox VE from their
     # own sources; the upstream no-subscription repository would replace the port.
     local downstream_build=false
-    if [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan "$OS_CODENAME" 2>/dev/null)" == downstream ]]; then
+    # The package marker answers without the Proxmox API; the policy also reads the
+    # source files. Either one is enough to keep the port's sources.
+    if [[ "$(python3 "$LOCAL_SCRIPTS/global/proxmox_platform.py" --field variant 2>/dev/null)" == pxvirt ]] \
+        || [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan "$OS_CODENAME" 2>/dev/null)" == downstream ]]; then
         downstream_build=true
         msg_info2 "$(translate "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.")"
     fi
