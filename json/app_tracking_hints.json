@@ -665,6 +665,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://chartdb.io/"
   },
+  "chatto": {
+    "default_ports": [
+      4000
+    ],
+    "file_path": "/root/.chatto",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chatto.webp",
+    "repo": "chattocorp/chatto",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://chatto.run"
+  },
   "chatwoot": {
     "default_ports": [
       3000
@@ -1391,6 +1404,19 @@
     "repo": "firefly-iii/firefly-iii",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://firefly-iii.org/"
+  },
+  "firefox-syncserver": {
+    "default_ports": [
+      8000
+    ],
+    "file_path": "/root/.firefox-syncserver",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/firefox.webp",
+    "repo": "mozilla-services/syncstorage-rs",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.mozilla.org/firefox/features/sync/"
   },
   "fireshare": {
     "default_ports": [
