@@ -529,10 +529,12 @@ def clean_translation(value: str) -> str:
         "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
         "|Preložiť|Prelož|Preloz"          # sk
         "|Översätta|Översätt"              # sv
+        "|Перевести|Переведите|Перевод"    # ru
     )
     context_labels = (
         "Context|Contexto|Contexte|Kontext|Contesto"
         "|Sammanhang"                      # sv alternate
+        "|Контекст"                        # ru
     )
     value = re.sub(
         rf"^.*?({translate_labels}){separator}",
@@ -594,7 +596,15 @@ def translate_text(
     translated = restore_technical_terms(clean_translation(translated), protected_terms)
     translated = restore_placeholders(translated, placeholders)
     assert_no_sentinel_residue(translated)
+    translated = restore_leading_capital(text, translated)
     return restore_sentence_spacing(translated) if translated else text
+
+
+def restore_leading_capital(source: str, translated: str) -> str:
+    """Stripping the context prompt can leave the sentence starting lowercase."""
+    if source[:1].isupper() and translated[:1].islower():
+        return translated[0].upper() + translated[1:]
+    return translated
 
 
 def load_language_cache(path: Path) -> dict[str, str]:
