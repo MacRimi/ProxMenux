@@ -257,7 +257,7 @@ def service_endpoint(service, include_expose=False):
     return None
 
 
-def public_environment_bindings(services, main_name, environments=None):
+def public_environment_bindings(services, main_name, environments=None, *, static_frontends=None):
     """Bind loopback URL origins to the service publishing their Compose host port."""
     frontends = [service for service in services if service_endpoint(service)]
     result = {}
@@ -265,6 +265,24 @@ def public_environment_bindings(services, main_name, environments=None):
         bindings = {}
         values = (environments or {}).get(service['name'], environment(service['compose'].get('environment')))
         for key, value in values.items():
+            # Explicit native LAN URLs belong to this frontend, including
+            # aliases whose names are plural (for example *_PUBLIC_URLS).
+            # Configure them before the first web check needs that origin.
+            if (service in frontends and '@STACK_LAN_IP@' in value
+                    and (static_frontends is None or service['name'] in static_frontends)):
+                try:
+                    explicit = urlsplit(value.replace('@STACK_LAN_IP@', '127.0.0.1'))
+                    port = explicit.port or (443 if explicit.scheme == 'https' else 80)
+                except ValueError as error:
+                    raise StackError(translate('Invalid service check URL')) from error
+                if explicit.scheme in {'http', 'https'} and explicit.hostname == '127.0.0.1':
+                    ports = _port_contract(service['compose'].get('ports'), set())
+                    if (value.count('@STACK_LAN_IP@') != 1 or any(c in value for c in '\r\n')
+                            or not any(p['protocol'] == 'tcp' and p['container_port'] == port
+                                       and not p.get('container_port_end') for p in ports)):
+                        raise StackError(translate('Invalid service check URL'))
+                    bindings[key] = {'target_service': service['name'], 'container_port': port, 'value': value}
+                    continue
             words = key.upper().split('_')
             if not ({'PUBLIC', 'EXTERNAL'} & set(words[:-1]) and words[-1] in {'URL', 'URI', 'ORIGIN'}):
                 continue
@@ -698,7 +716,9 @@ def build_stack(template, ui, mode='advanced'):
             if not value or any(c in value for c in '\r\n'):
                 raise StackError(translate('External credential is empty or spans multiple lines'))
             envs[service_name][field['name']] = value
-    public_bindings = public_environment_bindings(services, template['compose_stack']['main_service'], envs) if custom else {}
+    public_bindings = public_environment_bindings(
+        services, template['compose_stack']['main_service'], envs,
+        static_frontends={name for name, address in addresses.items() if address != 'dhcp'}) if custom else {}
     if any(addresses[binding['target_service']] == 'dhcp' for bindings in public_bindings.values() for binding in bindings.values()):
         raise StackError(translate('Automatic public URLs require static frontend addresses or explicit URLs'))
     plans = []
