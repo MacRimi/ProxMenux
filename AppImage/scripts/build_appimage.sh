@@ -159,6 +159,7 @@ cp "$SCRIPT_DIR/disk_temperature_history.py" "$APP_DIR/usr/bin/" 2>/dev/null || 
 cp "$SCRIPT_DIR/lvm_device_scope.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/smartctl_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  smartctl_resolver.py not found"
 cp "$SCRIPT_DIR/disk_identity.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_identity.py not found"
+cp "$SCRIPT_DIR/system_board_info.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  system_board_info.py not found"
 cp "$SCRIPT_DIR/health_thresholds.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_thresholds.py not found"
 cp "$SCRIPT_DIR/managed_installs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  managed_installs.py not found"
 cp "$SCRIPT_DIR/lxc_update_observation.py" "$APP_DIR/usr/bin/"
