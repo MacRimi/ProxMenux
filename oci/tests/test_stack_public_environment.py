@@ -69,6 +69,17 @@ class PublicEnvironmentTests(unittest.TestCase):
         template = template_from_compose(source.replace('@STACK_LAN_IP@:8080', '@STACK_LAN_IP@:12345'))
         self.assertFalse(template['compatibility']['automatic_install_candidate'])
 
+    def test_explicit_native_alias_keeps_legacy_deferred_path_for_dhcp(self):
+        source = SOURCE.replace("PUBLIC_URI: 'http://localhost:9001/app?x=1#view'",
+                                "PUBLIC_URI: 'https://operator.example', EXTRA_PUBLIC_URLS: 'http://@STACK_LAN_IP@:8080'", 1)
+        source = source.replace('http://localhost:9001/app?x=1#view', 'https://operator.example')
+        source = source.replace('http://localhost:8025/mail', 'https://mail.example')
+        plan = build(template_from_compose(source), dynamic=True)
+        web = next(s for s in plan['services'] if s['name'] == 'web')
+        self.assertNotIn('EXTRA_PUBLIC_URLS', web.get('public_environment_bindings', {}))
+        self.assertEqual(next(e['value'] for e in web['deployment']['environment']
+                              if e['name'] == 'EXTRA_PUBLIC_URLS'), 'http://@STACK_LAN_IP@:8080')
+
     def test_explicit_native_alias_uses_its_own_frontend_even_with_shared_ports(self):
         services = [{'name': name, 'image': 'nginx:alpine', 'compose': {
             'ports': ['80:80'], 'environment': {'ALIASES': 'http://@STACK_LAN_IP@/a'}}}

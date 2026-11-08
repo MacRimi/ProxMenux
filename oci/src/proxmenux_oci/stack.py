@@ -245,7 +245,7 @@ def service_endpoint(service, include_expose=False):
     return None
 
 
-def public_environment_bindings(services, main_name, environments=None):
+def public_environment_bindings(services, main_name, environments=None, *, static_frontends=None):
     """Bind loopback URL origins to the service publishing their Compose host port."""
     frontends = [service for service in services if service_endpoint(service)]
     result = {}
@@ -256,7 +256,8 @@ def public_environment_bindings(services, main_name, environments=None):
             # Explicit native LAN URLs belong to this frontend, including
             # aliases whose names are plural (for example *_PUBLIC_URLS).
             # Configure them before the first web check needs that origin.
-            if service in frontends and '@STACK_LAN_IP@' in value:
+            if (service in frontends and '@STACK_LAN_IP@' in value
+                    and (static_frontends is None or service['name'] in static_frontends)):
                 try:
                     explicit = urlsplit(value.replace('@STACK_LAN_IP@', '127.0.0.1'))
                     port = explicit.port or (443 if explicit.scheme == 'https' else 80)
@@ -703,7 +704,9 @@ def build_stack(template, ui, mode='advanced'):
             if not value or any(c in value for c in '\r\n'):
                 raise StackError(translate('External credential is empty or spans multiple lines'))
             envs[service_name][field['name']] = value
-    public_bindings = public_environment_bindings(services, template['compose_stack']['main_service'], envs) if custom else {}
+    public_bindings = public_environment_bindings(
+        services, template['compose_stack']['main_service'], envs,
+        static_frontends={name for name, address in addresses.items() if address != 'dhcp'}) if custom else {}
     if any(addresses[binding['target_service']] == 'dhcp' for bindings in public_bindings.values() for binding in bindings.values()):
         raise StackError(translate('Automatic public URLs require static frontend addresses or explicit URLs'))
     plans = []
