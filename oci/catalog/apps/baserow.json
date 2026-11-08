@@ -47,7 +47,7 @@
     "revision": "313156b6ea6b98fbd740767aab767955f813b8ed",
     "image_repository_url": "https://hub.docker.com/r/baserow/baserow",
     "readme_pushed_at": "",
-    "compose_sha256": "b9c36785c66a329adc76adace0d15ff27261f5bb704870af0c321fb2b9f5f5f6",
+    "compose_sha256": "21ea5aa01b8c32599e4766848ad7e234c4c5d320603066e60b7447c6c695f0e3",
     "generated_at": "2026-11-07T13:31:57+00:00",
     "readme_raw_url": "https://baserow.io/docs/installation/install-with-docker",
     "default_branch": "develop"
@@ -134,6 +134,14 @@
         "sensitive": false,
         "source": "developer-supported-resource-setting",
         "prompt_user": false
+      },
+      {
+        "name": "BASEROW_EXTRA_PUBLIC_URLS",
+        "example": "http://@STACK_LAN_IP@",
+        "required": true,
+        "sensitive": false,
+        "prompt_user": false,
+        "source": "developer-supported-native-health-alias"
       }
     ],
     "volumes": [
@@ -175,7 +183,7 @@
     ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: baserow\nservices:\n  baserow:\n    depends_on:\n      db:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    environment:\n      BASEROW_PUBLIC_URL: http://localhost\n      DATABASE_HOST: db\n      DATABASE_NAME: baserow\n      DATABASE_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      DATABASE_PORT: '5432'\n      DATABASE_USER: baserow\n      REDIS_HOST: redis\n      REDIS_PASSWORD: ${GENERATED_REDIS_PASSWORD}\n      REDIS_PORT: '6379'\n      BASEROW_AMOUNT_OF_GUNICORN_WORKERS: '1'\n    healthcheck:\n      interval: 10s\n      retries: 60\n      start_period: 30s\n      test:\n      - CMD\n      - curl\n      - --fail\n      - --silent\n      - http://127.0.0.1:8000/api/auth-provider/login-options/\n      timeout: 10s\n    image: baserow/baserow:latest\n    mem_limit: 3g\n    ports:\n    - 80:80\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./data\n      target: /baserow/data\n    tmpfs:\n    - /tmp:size=512m,mode=1777\n  db:\n    environment:\n      POSTGRES_DB: baserow\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      POSTGRES_USER: baserow\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD-SHELL\n      - pg_isready -U baserow -d baserow\n      timeout: 5s\n    image: postgres:15-alpine\n    mem_limit: 768m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./postgres\n      target: /var/lib/postgresql/data\n  redis:\n    command:\n    - redis-server\n    - --requirepass\n    - ${REDISCLI_AUTH}\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD\n      - redis-cli\n      - ping\n      timeout: 5s\n    image: redis:7-alpine\n    mem_limit: 256m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./redis\n      target: /data\n"
+    "original_compose": "name: baserow\nservices:\n  baserow:\n    depends_on:\n      db:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    environment:\n      BASEROW_PUBLIC_URL: http://localhost\n      DATABASE_HOST: db\n      DATABASE_NAME: baserow\n      DATABASE_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      DATABASE_PORT: '5432'\n      DATABASE_USER: baserow\n      REDIS_HOST: redis\n      REDIS_PASSWORD: ${GENERATED_REDIS_PASSWORD}\n      REDIS_PORT: '6379'\n      BASEROW_AMOUNT_OF_GUNICORN_WORKERS: '1'\n      BASEROW_EXTRA_PUBLIC_URLS: http://@STACK_LAN_IP@\n    healthcheck:\n      interval: 10s\n      retries: 60\n      start_period: 30s\n      test:\n      - CMD\n      - curl\n      - --fail\n      - --silent\n      - http://127.0.0.1:8000/api/auth-provider/login-options/\n      timeout: 10s\n    image: baserow/baserow:latest\n    mem_limit: 3g\n    ports:\n    - 80:80\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./data\n      target: /baserow/data\n    tmpfs:\n    - /tmp:size=512m,mode=1777\n  db:\n    environment:\n      POSTGRES_DB: baserow\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n      POSTGRES_USER: baserow\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD-SHELL\n      - pg_isready -U baserow -d baserow\n      timeout: 5s\n    image: postgres:15-alpine\n    mem_limit: 768m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./postgres\n      target: /var/lib/postgresql/data\n  redis:\n    command:\n    - redis-server\n    - --requirepass\n    - ${REDISCLI_AUTH}\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n      - CMD\n      - redis-cli\n      - ping\n      timeout: 5s\n    image: redis:7-alpine\n    mem_limit: 256m\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./redis\n      target: /data\n"
   },
   "compose_stack": {
     "project_name": "baserow",
@@ -291,7 +299,8 @@
             "REDIS_HOST": "redis",
             "REDIS_PORT": "6379",
             "REDIS_PASSWORD": "${GENERATED_REDIS_PASSWORD}",
-            "BASEROW_AMOUNT_OF_GUNICORN_WORKERS": "1"
+            "BASEROW_AMOUNT_OF_GUNICORN_WORKERS": "1",
+            "BASEROW_EXTRA_PUBLIC_URLS": "http://@STACK_LAN_IP@"
           },
           "healthcheck": {
             "interval": "10s",
@@ -653,6 +662,22 @@
         "reason": "Conservative resource defaults and a readiness check that verifies login-provider availability independently of the browser-facing canonical hostname.",
         "behavioral_impact": "Web worker concurrency is limited to one; background workers retain their image defaults.",
         "validation": "pending-runtime"
+      },
+      {
+        "id": "native-lan-access-alias",
+        "upstream_behavior": "BASEROW_EXTRA_PUBLIC_URLS adds documented additional public or private origins to Caddy and backend access.",
+        "native_lxc_behavior": "Keep the selected LXC LAN address as an allowed HTTP origin, including when BASEROW_PUBLIC_URL uses a reverse-proxy hostname.",
+        "reason": "Native readiness and the displayed direct-IP endpoint must remain reachable with a custom canonical public URL.",
+        "behavioral_impact": "Adds only this LXC LAN origin; the canonical public URL remains unchanged.",
+        "validation": "pending-runtime"
+      },
+      {
+        "id": "native-volatile-temporary-files",
+        "upstream_behavior": "The publisher stores the Celery Beat PID and temporary upload files under /tmp.",
+        "native_lxc_behavior": "Mount /tmp as a native 512 MiB tmpfs with sticky mode 1777. Persistent Baserow data remains in /baserow/data.",
+        "reason": "A PID from a previous boot must not survive and refer to a different process after restart.",
+        "behavioral_impact": "Temporary files disappear on stop; allocated pages count toward the 3 GiB application memory limit.",
+        "validation": "pending-runtime"
       }
     ],
     "custom_compose_stack": true,
@@ -699,6 +724,7 @@
       "stop_grace_period",
       "stop_signal",
       "sysctls",
+      "tmpfs",
       "tty",
       "ulimits",
       "user",
