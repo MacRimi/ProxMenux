@@ -265,6 +265,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
             child = service["deployment"]
             lines.append(f"  {service['name']}: {child['resources']['cores']} CPU, "
                          f"{child['resources']['memory_mb']} MB RAM")
+            for mount in child.get('tmpfs_mounts', []):
+                lines.append(f"    tmpfs {mount['container_path']} → {mount['size_mb']} MiB RAM")
             check = service.get('healthcheck', {}).get('type')
             if check:
                 label = {'running': translate('Process running only (no health check declared)'),
@@ -313,6 +315,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
         row(translate("Storage"), f"rootfs {rootfs['size_gb']} GB {on} {rootfs['storage']} · "
                                   f"{translate('image cache on')} {plan.get('template_storage', '-')}")
     mounts = plan.get("mounts", [])
+    for mount in plan.get('tmpfs_mounts', []):
+        row('tmpfs', f"{mount['container_path']} → {mount['size_mb']} MiB RAM")
     if mounts:
         lines.append(f"{translate('Data') + ':':<16}")
         for mount in mounts:

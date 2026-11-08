@@ -83,19 +83,19 @@ def tmpfs_lines(deployment, config=None):
         if (not re.fullmatch(r'/[A-Za-z0-9_./-]+', target) or '..' in target.split('/')
                 or '//' in target or target.endswith('/') or target in ('/etc','/usr','/bin','/lib','/lib64','/sbin','/proc','/sys','/dev')
                 or target == '/run' and owner_strategy not in ('mapped-root', 'mapped-application-user', 'image-user')
-                or not (target == '/run' or target.startswith(('/run/', '/tmp/', '/var/cache/')) or target == '/dev/shm')
+                or not (target in ('/run', '/tmp', '/dev/shm') or target.startswith(('/run/', '/tmp/', '/var/cache/')))
                 or isinstance(size, bool) or not isinstance(size, int) or size < 1):
             raise ValueError(translate('The tmpfs path or size is outside the supported profile'))
         if any(target == p or target.startswith(p+'/') or p.startswith(target+'/') for p in [*persistent,*targets]):
             raise ValueError(translate('A tmpfs mount overlaps another mount'))
         options = item.get('mount_options', [])
-        if not options or any(not re.fullmatch(r'rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3}', opt) for opt in options):
+        if not options or any(not re.fullmatch(r'rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3,4}', opt) for opt in options):
             raise ValueError(translate('Unsupported tmpfs options'))
         if len(options) != len(set(options)) or ('rw' in options and 'ro' in options):
             raise ValueError(translate('Contradictory tmpfs options'))
         mode = item.get('mode')
         if mode is not None:
-            if not isinstance(mode, str) or not re.fullmatch(r'0[0-7]{3}', mode):
+            if not isinstance(mode, str) or not re.fullmatch(r'0[0-7]{3,4}', mode):
                 raise ValueError(translate('Unsupported tmpfs mode'))
             if any(option.startswith('mode=') for option in options):
                 raise ValueError(translate('The tmpfs mode is specified more than once'))

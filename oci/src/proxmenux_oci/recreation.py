@@ -338,7 +338,8 @@ def refresh_template(candidate, ui):
     for item in profile.get('tmpfs_mounts', []):
         if any(m['container_path'] == item['container_path'] for m in tmpfs):
             continue
-        size = item['default_size_mb']
+        size = (max(1, int(deployment['resources']['memory_mb']) // 2)
+                if item.get('size_from_memory') else item['default_size_mb'])
         if item.get('prompt_size', True):
             size = positive_integer(ui, f"{translate('Tmpfs size in MiB for')} {item['container_path']}", size, item.get('minimum_size_mb', 1))
         tmpfs_mount = {'container_path': item['container_path'], 'size_mb': size,
