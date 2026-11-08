@@ -150,6 +150,30 @@ def _compose_example(template: dict[str, Any], name: str) -> str | None:
     return None
 
 
+def choose_environment_value(item: dict[str, Any], ui, default: str | None) -> str:
+    """Select a declared value using the same menu as the rest of the installer.
+
+    Values are image arguments, not shell commands. Labels can be translated,
+    but the value saved in the deployment must remain exactly as declared.
+    """
+    choices = item["choices"]
+    values = [choice["value"] for choice in choices]
+    if not values or len(set(values)) != len(values) or any(not value for value in values):
+        raise InstallError(f"{item['name']}: invalid or duplicate choices")
+    if item.get("sensitive") or item.get("container_address") or item.get("prompt_user") is False:
+        raise InstallError(f"{item['name']}: choices require an interactive, non-secret variable")
+    if default not in (None, "") and default not in values:
+        raise InstallError(f"{item['name']}: default is not among the declared choices")
+    label = translate(item["prompt"]) if item.get("prompt") else f"{translate('Value for')} {item['name']}"
+    selected = ui.choose(label, [(choice["value"], translate(choice["label"])) for choice in choices],
+                         default if default in values else values[0])
+    if selected is None:
+        raise UserCancelled(label)
+    if selected not in values:
+        raise InstallError(f"{item['name']}: selected value is not among the declared choices")
+    return selected
+
+
 def _image_documentation(template: dict[str, Any]) -> str | None:
     ui = template.get("catalog_ui", {})
     return next((ui[key] for key in ("documentation", "repository", "website")
@@ -691,8 +715,9 @@ def build_deployment(
 
     environment: list[dict[str, str]] = []
     memory_dependent: list[tuple[dict[str, Any], str, str | None]] = []
+    choice_defaults: dict[str, str] = {}
     optional_explained = False
-    for item in template["container_contract"]["environment"]:
+    for environment_index, item in enumerate(template["container_contract"]["environment"]):
         name = item["name"]
         if item.get("prompt"):
             label = translate(item["prompt"])
@@ -700,13 +725,27 @@ def build_deployment(
             label = f"{translate('Password or secret')} ({name})"
         else:
             label = f"{translate('Value for')} {name}"
-        default = _example_default(name, item["example"], timezone)
+        default = _example_default(name, choice_defaults.get(name, item["example"]), timezone)
         # A setting that grows with the memory the model will use, such as its
         # context window, is decided once the GPU is chosen.
         if item.get("default_by_memory_mb"):
             memory_dependent.append((item, label, default))
             continue
         generated = installer_profile.get("generated_sensitive_environment", {}).get(name)
+        if "choices" in item:
+            value = choose_environment_value(item, ui, default)
+            selected_choice = next(choice for choice in item["choices"] if choice["value"] == value)
+            suggested = selected_choice.get("environment_defaults", {})
+            subsequent = {entry["name"]: entry for entry in template["container_contract"]["environment"][
+                environment_index + 1:]}
+            for target, example in suggested.items():
+                entry = subsequent.get(target)
+                if (entry is None or entry.get("sensitive") or entry.get("container_address")
+                        or entry.get("prompt_user") is False or "choices" in entry or not isinstance(example, str)):
+                    raise InstallError(f"{name}: invalid choice default for {target}")
+            choice_defaults.update(suggested)
+            environment.append({"name": name, "value": value, "sensitive": False})
+            continue
         if item.get("container_address"):
             # The address of the container is known or will be: nothing to ask.
             # The advanced installation shows it, for a name or a proxy in front.

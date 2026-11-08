@@ -134,12 +134,35 @@
               "prompt": {"type": "string", "minLength": 1},
               "prompt_user": {"type": "boolean"},
               "default_by_memory_mb": {"type": "array", "minItems": 1, "items": {"type": "array", "minItems": 2, "maxItems": 2, "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "string", "minLength": 1}]}},
+              "choices": {
+                "type": "array", "minItems": 1, "uniqueItems": true,
+                "items": {
+                  "type": "object", "required": ["value", "label"],
+                  "properties": {
+                    "value": {"type": "string", "minLength": 1},
+                    "label": {"type": "string", "minLength": 1},
+                    "environment_defaults": {
+                      "type": "object",
+                      "patternProperties": {"^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}},
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
               "container_address": {"type": "string", "pattern": "@CONTAINER_ADDRESS@"},
               "required": {"type": "boolean"},
               "sensitive": {"type": "boolean"},
               "source": {"type": "string"}
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "allOf": [{
+              "if": {"required": ["choices"]},
+              "then": {
+                "properties": {"sensitive": {"const": false}, "prompt_user": {"const": true}},
+                "not": {"required": ["container_address"]}
+              }
+            }]
           }
         },
         "volumes": {
