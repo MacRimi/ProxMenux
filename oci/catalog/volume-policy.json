@@ -173,6 +173,18 @@
     ],
     "listmonk": [
       "/listmonk/uploads"
+    ],
+    "proxmox-backup": [
+      "/var/lib/proxmox-backup"
+    ],
+    "windows": [
+      "/storage"
+    ],
+    "windows-arm": [
+      "/storage"
+    ],
+    "chromeos": [
+      "/storage"
     ]
   },
   "sizes": {

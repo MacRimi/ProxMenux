@@ -438,6 +438,12 @@
     "spoolman": "tools",
     "zwave-js-ui": "smarthome",
     "miniserve": "sharing",
-    "restreamer": "media"
+    "restreamer": "media",
+    "proxmox-backup": "backup",
+    "proxmox-dm": "management",
+    "proxmox-mail": "security",
+    "windows": "desktop",
+    "windows-arm": "desktop",
+    "chromeos": "desktop"
   }
 }
