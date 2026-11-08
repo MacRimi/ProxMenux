@@ -101,6 +101,33 @@ class PrivateImageImportTests(unittest.TestCase):
             imports._copy(self.source, target)
         self.assertEqual(target.read_bytes(), self.source.read_bytes())
 
+    def test_reflink_permission_denied_stages_a_private_copy_without_changing_source(self):
+        before = self.source.stat()
+        with self.staging(), patch.object(imports.os, 'chown'), \
+             patch.object(imports, 'readable', return_value=False), \
+             patch.object(imports.fcntl, 'ioctl', side_effect=PermissionError(errno.EPERM, 'fixture')):
+            with imports.import_archive(self.source, str(self.source), 100000, 100000) as path:
+                staged = Path(path)
+                self.assertEqual(staged.read_bytes(), self.source.read_bytes())
+                self.assertEqual(stat.S_IMODE(staged.stat().st_mode), 0o440)
+                self.assertEqual(stat.S_IMODE(staged.parent.stat().st_mode), 0o750)
+            self.assertFalse(staged.parent.exists())
+        after = self.source.stat()
+        self.assertEqual((before.st_uid, before.st_gid, before.st_mode),
+                         (after.st_uid, after.st_gid, after.st_mode))
+
+    def test_reflink_io_error_is_not_hidden_by_a_fallback_copy(self):
+        with self.staging(), patch.object(imports, 'readable', return_value=False), \
+             patch.object(imports.fcntl, 'ioctl', side_effect=OSError(errno.EIO, 'fixture')), \
+             patch.object(imports.shutil, 'copyfileobj') as copy, \
+             patch.object(imports.subprocess, 'run') as run:
+            with self.assertRaises(OSError) as raised:
+                imports.create('9161', str(self.source), str(self.source), ['--unprivileged', '1'])
+            self.assertEqual(raised.exception.errno, errno.EIO)
+            copy.assert_not_called()
+            run.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [self.source])
+
     def test_local_and_ssh_installer_stage_the_native_helper(self):
         import ast
         tree = ast.parse((ROOT / 'src/proxmenux_oci/installer.py').read_text())

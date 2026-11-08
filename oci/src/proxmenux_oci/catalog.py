@@ -925,7 +925,17 @@ class Catalog:
         if path.exists():
             overlay = json.loads(path.read_text(encoding="utf-8"))
             environment_overrides = overlay.pop("environment_overrides", {})
+            environment_additions = overlay.pop("environment_additions", [])
             self._deep_merge(template, overlay)
+            # Settings the image reads but its Compose file does not list,
+            # added once; a variable the template already has is kept.
+            environment = template.setdefault("container_contract", {}).setdefault("environment", [])
+            present = {item.get("name") for item in environment}
+            for addition in environment_additions:
+                if addition.get("name") not in present:
+                    environment.append({"required": True, "sensitive": False, "source": "proxmenux-overlay",
+                                        **addition})
+                    present.add(addition.get("name"))
             for item in template.get("container_contract", {}).get("environment", []):
                 if item.get("name") in environment_overrides:
                     item.update(environment_overrides[item["name"]])

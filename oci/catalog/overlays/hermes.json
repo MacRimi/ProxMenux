@@ -86,6 +86,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 4096
     }
   }
 }
