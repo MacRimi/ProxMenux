@@ -142,12 +142,12 @@ update_pve9() {
 
         msg_info "$(translate "Creating Proxmox VE 9.x no-subscription repository...")"
         pmx_write_file /etc/apt/sources.list.d/proxmox.sources << EOF
-    Enabled: true
-    Types: deb
-    URIs: http://download.proxmox.com/debian/pve
-    Suites: ${TARGET_CODENAME}
-    Components: pve-no-subscription
-    Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+Enabled: true
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: ${TARGET_CODENAME}
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
         chmod 0644 /etc/apt/sources.list.d/proxmox.sources
         msg_ok "$(translate "Proxmox VE 9.x no-subscription repository created")" | tee -a "$screen_capture"
@@ -155,17 +155,17 @@ EOF
 
         msg_info "$(translate "Creating Debian ${TARGET_CODENAME} sources file...")"
         pmx_write_file /etc/apt/sources.list.d/debian.sources << EOF
-    Types: deb
-    URIs: http://deb.debian.org/debian/
-    Suites: ${TARGET_CODENAME} ${TARGET_CODENAME}-updates
-    Components: main contrib non-free non-free-firmware
-    Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: ${TARGET_CODENAME} ${TARGET_CODENAME}-updates
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-    Types: deb
-    URIs: http://security.debian.org/debian-security/
-    Suites: ${TARGET_CODENAME}-security
-    Components: main contrib non-free non-free-firmware
-    Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+Types: deb
+URIs: http://security.debian.org/debian-security/
+Suites: ${TARGET_CODENAME}-security
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
         chmod 0644 /etc/apt/sources.list.d/debian.sources
 

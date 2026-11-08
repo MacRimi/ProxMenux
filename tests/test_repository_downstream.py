@@ -301,6 +301,21 @@ class UpdateScriptsDownstreamTest(unittest.TestCase):
                 self.assertEqual(writes, [])
                 self.assertIn(marker, (ROOT / path).read_text())
 
+    def test_written_apt_sources_start_at_column_zero(self):
+        # In deb822 a leading space continues the previous field: APT then
+        # silently reads no source at all from the file.
+        for path in ('scripts/global/update-pve9_2.sh', 'scripts/global/update-pve8.sh'):
+            inside = False
+            for number, line in enumerate((ROOT / path).read_text().splitlines(), 1):
+                if inside:
+                    if line == 'EOF':
+                        inside = False
+                    else:
+                        with self.subTest(path=path, line=number):
+                            self.assertEqual(line, line.lstrip())
+                elif 'pmx_write_file' in line and line.endswith('<< EOF'):
+                    inside = True
+
 
 if __name__ == '__main__':
     unittest.main()

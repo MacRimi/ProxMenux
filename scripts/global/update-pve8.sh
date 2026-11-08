@@ -121,10 +121,10 @@ update_pve8() {
         fi
 
         pmx_write_file "$sources_file" << EOF
-    # Debian $OS_CODENAME repositories
-    deb http://deb.debian.org/debian $OS_CODENAME main contrib non-free non-free-firmware
-    deb http://deb.debian.org/debian $OS_CODENAME-updates main contrib non-free non-free-firmware
-    deb http://security.debian.org/debian-security $OS_CODENAME-security main contrib non-free non-free-firmware
+# Debian $OS_CODENAME repositories
+deb http://deb.debian.org/debian $OS_CODENAME main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian $OS_CODENAME-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security $OS_CODENAME-security main contrib non-free non-free-firmware
 EOF
 
         msg_ok "$(translate "Debian repositories configured for $OS_CODENAME")"
