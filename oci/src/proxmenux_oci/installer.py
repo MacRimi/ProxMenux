@@ -669,7 +669,7 @@ def build_deployment(
 
     tmpfs_mounts: list[dict[str, Any]] = []
     for item in installer_profile.get("tmpfs_mounts", []):
-        size_mb = int(item["default_size_mb"])
+        size_mb = max(1, memory // 2) if item.get("size_from_memory") else int(item["default_size_mb"])
         if advanced and item.get("prompt_size", True):
             size_prompt = (translate(item["size_prompt"]) if item.get("size_prompt")
                            else f"{translate('tmpfs size in MB for')} {item['container_path']}")

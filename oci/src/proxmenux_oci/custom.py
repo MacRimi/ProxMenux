@@ -99,6 +99,10 @@ def _check_mounts(service: dict[str, Any]) -> None:
     """A Compose file that reaches into the host or into the Docker engine is
     refused before anything else, with the reason."""
     for item in service.get('volumes') or []:
+        if isinstance(item, dict) and item.get('type') == 'tmpfs':
+            # No host source is attached; the converter validates this as a
+            # volatile native mount instead of a system directory bind.
+            continue
         if isinstance(item, dict):
             source, target = str(item.get('source') or ''), str(item.get('target') or '')
         else:
@@ -225,9 +229,11 @@ def _template_from_stack(compose: dict[str, Any], title: str | None, *, interpol
         service['compose']['image'] = reference
         if 'environment' in services[service['name']]:
             service['compose']['environment'] = copy.deepcopy(services[service['name']]['environment'])
+        volatile_volumes = [mount for mount in service['compose'].get('volumes', [])
+                            if isinstance(mount, dict) and mount.get('type') == 'tmpfs']
         service['compose']['volumes'] = [
             mount for mount in normalized_mounts(service['compose'].get('volumes', []))
-            if mount['target'] not in TIME_SETTINGS]
+            if mount['target'] not in TIME_SETTINGS] + volatile_volumes
     template['container_contract']['original_compose'] = _dump({
         **template['compose_stack']['top_level'],
         'services': {service['name']: service['compose'] for service in template['compose_stack']['services']}})

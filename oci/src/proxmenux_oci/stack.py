@@ -14,7 +14,7 @@ import yaml
 
 from .casaos import convert_casaos_compose, canonical_image_repository
 from .converter import ConversionError
-from .converter import _image_contract, _split_short_mount, _port_contract
+from .converter import _image_contract, _split_short_mount, _port_contract, _compose_tmpfs_mounts
 from .i18n import translate
 
 
@@ -28,6 +28,8 @@ VARIABLE = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*
 def normalized_mounts(mounts):
     result = []
     for mount in mounts:
+        if isinstance(mount, dict) and mount.get('type') == 'tmpfs':
+            continue
         if isinstance(mount, str):
             source, target, mode = _split_short_mount(mount)
             if mode not in (None, 'rw', 'ro'):
@@ -177,12 +179,14 @@ def ordered_services(template):
 def service_template(parent, service, main=False):
     c = copy.deepcopy(service['compose'])
     mounts = normalized_mounts(c.get('volumes', []))
-    explicit_targets = {m['target'] for m in mounts}
+    volatile = _compose_tmpfs_mounts(c) or []
+    explicit_targets = {m['target'] for m in mounts} | {m['container_path'] for m in volatile}
     for target in DEPENDENCY_VOLUMES.get(kind(service['image']), []):
         if not any(target == t or target.startswith(t.rstrip('/')+'/') for t in explicit_targets):
             mounts.append({'type':'volume','target':target})
     targets = {m['target'] for m in mounts}
-    c['volumes'] = mounts
+    c['volumes'] = mounts + [m for m in c.get('volumes', [])
+                             if isinstance(m, dict) and m.get('type') == 'tmpfs']
     for key in ('depends_on', 'networks', 'healthcheck', 'expose'):
         c.pop(key, None)
     c['environment'] = environment(c.get('environment'))
@@ -223,7 +227,15 @@ def service_template(parent, service, main=False):
     # declare one of them is not affected by it.
     transient = parent.get('proxmox', {}).get('installer_profile', {}).get('non_persistent_image_volumes')
     if transient:
-        single['proxmox'].setdefault('installer_profile', {})['non_persistent_image_volumes'] = list(transient)
+        # Compose-derived paths belong to their own service. Only explicit
+        # parent-wide exceptions are inherited by every member.
+        main_compose = next((s['compose'] for s in parent['compose_stack']['services']
+                             if s['name'] == parent['compose_stack']['main_service']), {})
+        main_tmpfs = {m['container_path'] for m in (_compose_tmpfs_mounts(main_compose) or [])}
+        transient = [path for path in transient if path not in main_tmpfs]
+        profile = single['proxmox'].setdefault('installer_profile', {})
+        profile['non_persistent_image_volumes'] = list(dict.fromkeys(
+            [*profile.get('non_persistent_image_volumes', []), *transient]))
     return single
 
 
@@ -734,6 +746,10 @@ def build_stack(template, ui, mode='advanced'):
         plan['mounts'] = drafts[index]['deployment']['mounts']
         if s['name'] in selected_resources:
             plan['resources'].update(selected_resources[s['name']])
+        for mount in single['proxmox'].get('installer_profile', {}).get('tmpfs_mounts', []):
+            if mount.get('size_from_memory'):
+                next(item for item in plan['tmpfs_mounts']
+                     if item['container_path'] == mount['container_path'])['size_mb'] = max(1, plan['resources']['memory_mb'] // 2)
         explicit_check = compose_healthcheck(s) if custom else None
         if s['name'] in jobs:
             health = {'type': 'completed', 'timeout_seconds': 300}
