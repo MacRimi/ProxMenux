@@ -68,6 +68,14 @@ update_pve9() {
         msg_info2 "$(translate "Detected: Proxmox VE $pve_version (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
     } | tee -a "$screen_capture"
 
+    # PXVIRT and similar downstream builds already serve Proxmox VE from their
+    # own sources; the upstream no-subscription repository would replace the port.
+    local downstream_build=false
+    if [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan "$TARGET_CODENAME" 2>/dev/null)" == downstream ]]; then
+        downstream_build=true
+        msg_info2 "$(translate "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.")" | tee -a "$screen_capture"
+    fi
+
 
     local available_space
     available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
@@ -79,7 +87,7 @@ update_pve9() {
         return 1
     fi
 
-    if ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
+    if [[ "$downstream_build" == false ]] && ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
         msg_error "$(translate "Cannot reach Proxmox repositories")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
@@ -87,52 +95,53 @@ update_pve9() {
         return 1
     fi
 
-    disable_sources_repo() {
-        local file="$1"
-        if [[ -f "$file" ]]; then
-            pmx_edit_file "$file" ':a;/^\n*$/{$d;N;ba}'
+    configure_upstream_repositories() {
+        disable_sources_repo() {
+            local file="$1"
+            if [[ -f "$file" ]]; then
+                pmx_edit_file "$file" ':a;/^\n*$/{$d;N;ba}'
 
-            if grep -q "^Enabled:" "$file"; then
-                pmx_edit_file "$file" 's/^Enabled:.*$/Enabled: false/'
-            else
-                echo "Enabled: false" | pmx_append_file "$file"
+                if grep -q "^Enabled:" "$file"; then
+                    pmx_edit_file "$file" 's/^Enabled:.*$/Enabled: false/'
+                else
+                    echo "Enabled: false" | pmx_append_file "$file"
+                fi
+
+                if ! grep -q "^Types: " "$file"; then
+                    msg_warn "$(translate "Malformed .sources file detected, removing: $(basename "$file")")"
+                    pmx_remove_file "$file"
+                fi
+                return 0
             fi
+            return 1
+        }
 
-            if ! grep -q "^Types: " "$file"; then
-                msg_warn "$(translate "Malformed .sources file detected, removing: $(basename "$file")")"
-                pmx_remove_file "$file"
+        if disable_sources_repo "/etc/apt/sources.list.d/pve-enterprise.sources"; then
+            msg_ok "$(translate "Enterprise Proxmox repository disabled")" | tee -a "$screen_capture"
+            changes_made=true
+        fi
+
+        if disable_sources_repo "/etc/apt/sources.list.d/ceph.sources"; then
+            msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")" | tee -a "$screen_capture"
+            changes_made=true
+        fi
+
+        for legacy_file in /etc/apt/sources.list.d/pve-public-repo.list \
+                           /etc/apt/sources.list.d/pve-install-repo.list \
+                           /etc/apt/sources.list.d/debian.list; do
+            if [[ -f "$legacy_file" ]]; then
+                pmx_remove_file "$legacy_file"
+                msg_ok "$(translate "Removed legacy repository: $(basename "$legacy_file")")" | tee -a "$screen_capture"
             fi
-            return 0
+        done
+
+        if [[ -f /etc/apt/sources.list.d/debian.sources ]]; then
+            pmx_remove_file /etc/apt/sources.list.d/debian.sources
+            msg_ok "$(translate "Old debian.sources file removed to prevent duplication")" | tee -a "$screen_capture"
         fi
-        return 1
-    }
 
-    if disable_sources_repo "/etc/apt/sources.list.d/pve-enterprise.sources"; then
-        msg_ok "$(translate "Enterprise Proxmox repository disabled")" | tee -a "$screen_capture"
-        changes_made=true
-    fi
-
-    if disable_sources_repo "/etc/apt/sources.list.d/ceph.sources"; then
-        msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")" | tee -a "$screen_capture"
-        changes_made=true
-    fi
-
-    for legacy_file in /etc/apt/sources.list.d/pve-public-repo.list \
-                       /etc/apt/sources.list.d/pve-install-repo.list \
-                       /etc/apt/sources.list.d/debian.list; do
-        if [[ -f "$legacy_file" ]]; then
-            pmx_remove_file "$legacy_file"
-            msg_ok "$(translate "Removed legacy repository: $(basename "$legacy_file")")" | tee -a "$screen_capture"
-        fi
-    done
-
-    if [[ -f /etc/apt/sources.list.d/debian.sources ]]; then
-        pmx_remove_file /etc/apt/sources.list.d/debian.sources
-        msg_ok "$(translate "Old debian.sources file removed to prevent duplication")" | tee -a "$screen_capture"
-    fi
-
-    msg_info "$(translate "Creating Proxmox VE 9.x no-subscription repository...")"
-    pmx_write_file /etc/apt/sources.list.d/proxmox.sources << EOF
+        msg_info "$(translate "Creating Proxmox VE 9.x no-subscription repository...")"
+        pmx_write_file /etc/apt/sources.list.d/proxmox.sources << EOF
 Enabled: true
 Types: deb
 URIs: http://download.proxmox.com/debian/pve
@@ -140,12 +149,12 @@ Suites: ${TARGET_CODENAME}
 Components: pve-no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
-    chmod 0644 /etc/apt/sources.list.d/proxmox.sources
-    msg_ok "$(translate "Proxmox VE 9.x no-subscription repository created")" | tee -a "$screen_capture"
-    changes_made=true
+        chmod 0644 /etc/apt/sources.list.d/proxmox.sources
+        msg_ok "$(translate "Proxmox VE 9.x no-subscription repository created")" | tee -a "$screen_capture"
+        changes_made=true
 
-    msg_info "$(translate "Creating Debian ${TARGET_CODENAME} sources file...")"
-    pmx_write_file /etc/apt/sources.list.d/debian.sources << EOF
+        msg_info "$(translate "Creating Debian ${TARGET_CODENAME} sources file...")"
+        pmx_write_file /etc/apt/sources.list.d/debian.sources << EOF
 Types: deb
 URIs: http://deb.debian.org/debian/
 Suites: ${TARGET_CODENAME} ${TARGET_CODENAME}-updates
@@ -158,15 +167,21 @@ Suites: ${TARGET_CODENAME}-security
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
-    chmod 0644 /etc/apt/sources.list.d/debian.sources
+        chmod 0644 /etc/apt/sources.list.d/debian.sources
 
-    msg_ok "$(translate "Debian repositories configured for $TARGET_CODENAME")"
+        msg_ok "$(translate "Debian repositories configured for $TARGET_CODENAME")"
 
-    local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
-    if [ ! -f "$firmware_conf" ]; then
-        msg_info "$(translate "Disabling non-free firmware warnings...")"
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
-        msg_ok "$(translate "Non-free firmware warnings disabled")"
+        local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
+        if [ ! -f "$firmware_conf" ]; then
+            msg_info "$(translate "Disabling non-free firmware warnings...")"
+            echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
+            msg_ok "$(translate "Non-free firmware warnings disabled")"
+        fi
+
+    }
+
+    if [[ "$downstream_build" == false ]]; then
+        configure_upstream_repositories
     fi
 
     # UPDATE: no progress bar here (dpkg is not involved); capture output to parse errors
@@ -223,7 +238,9 @@ EOF
         fi
     fi
 
-    if apt policy 2>/dev/null | grep -q "${TARGET_CODENAME}.*pve-no-subscription"; then
+    if [[ "$downstream_build" == true ]]; then
+        :
+    elif apt policy 2>/dev/null | grep -q "${TARGET_CODENAME}.*pve-no-subscription"; then
         msg_ok "$(translate "Proxmox VE $pve_version repositories verified")" | tee -a "$screen_capture"
     else
         msg_warn "$(translate "Proxmox VE $pve_version repositories verification inconclusive, continuing...")"

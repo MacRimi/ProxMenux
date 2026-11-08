@@ -61,6 +61,14 @@ update_pve8() {
     msg_info2 "$(translate "Detected: Proxmox VE 8.x (Debian $OS_CODENAME)")"
     echo
 
+    # PXVIRT and similar downstream builds already serve Proxmox VE from their
+    # own sources; the upstream no-subscription repository would replace the port.
+    local downstream_build=false
+    if [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan "$OS_CODENAME" 2>/dev/null)" == downstream ]]; then
+        downstream_build=true
+        msg_info2 "$(translate "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.")"
+    fi
+
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
         msg_error "$(translate "Insufficient disk space. Available: ${available_space}MB")"
@@ -70,7 +78,7 @@ update_pve8() {
         return 1
     fi
 
-    if ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
+    if [[ "$downstream_build" == false ]] && ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
         msg_error "$(translate "Cannot reach Proxmox repositories")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
@@ -79,50 +87,57 @@ update_pve8() {
     fi
 
 
-    if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
-        pmx_edit_file /etc/apt/sources.list.d/pve-enterprise.list "s/^deb/#deb/g"
-        msg_ok "$(translate "Enterprise Proxmox repository disabled")"
-        changes_made=true
-    fi
+    configure_upstream_repositories() {
+        if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
+            pmx_edit_file /etc/apt/sources.list.d/pve-enterprise.list "s/^deb/#deb/g"
+            msg_ok "$(translate "Enterprise Proxmox repository disabled")"
+            changes_made=true
+        fi
 
-    if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
-        pmx_edit_file /etc/apt/sources.list.d/ceph.list "s/^deb/#deb/g"
-        msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
-        changes_made=true
-    fi
-
-
-    if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" | pmx_write_file /etc/apt/sources.list.d/pve-public-repo.list
-        msg_ok "$(translate "Free public Proxmox repository enabled")"
-        changes_made=true
-    fi
+        if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
+            pmx_edit_file /etc/apt/sources.list.d/ceph.list "s/^deb/#deb/g"
+            msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
+            changes_made=true
+        fi
 
 
-    local sources_file="/etc/apt/sources.list"
-    cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
+            echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" | pmx_write_file /etc/apt/sources.list.d/pve-public-repo.list
+            msg_ok "$(translate "Free public Proxmox repository enabled")"
+            changes_made=true
+        fi
 
-    if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
-        pmx_edit_file "$sources_file" \
-            -e '/^deb.*debian-security -security/d' \
-            -e '/^deb.*debian main$/d' \
-            -e '/^deb.*debian -updates/d'
-        changes_made=true
-        msg_ok "$(translate "Malformed repository entries cleaned")"
-    fi
 
-    pmx_write_file "$sources_file" << EOF
+        local sources_file="/etc/apt/sources.list"
+        cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
+
+        if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
+            pmx_edit_file "$sources_file" \
+                -e '/^deb.*debian-security -security/d' \
+                -e '/^deb.*debian main$/d' \
+                -e '/^deb.*debian -updates/d'
+            changes_made=true
+            msg_ok "$(translate "Malformed repository entries cleaned")"
+        fi
+
+        pmx_write_file "$sources_file" << EOF
 # Debian $OS_CODENAME repositories
 deb http://deb.debian.org/debian $OS_CODENAME main contrib non-free non-free-firmware
 deb http://deb.debian.org/debian $OS_CODENAME-updates main contrib non-free non-free-firmware
 deb http://security.debian.org/debian-security $OS_CODENAME-security main contrib non-free non-free-firmware
 EOF
 
-    msg_ok "$(translate "Debian repositories configured for $OS_CODENAME")"
+        msg_ok "$(translate "Debian repositories configured for $OS_CODENAME")"
 
-    local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
-    if [ ! -f "$firmware_conf" ]; then
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
+        local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
+        if [ ! -f "$firmware_conf" ]; then
+            echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
+        fi
+
+    }
+
+    if [[ "$downstream_build" == false ]]; then
+        configure_upstream_repositories
     fi
 
     cleanup_duplicate_repos

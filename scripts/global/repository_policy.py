@@ -4,8 +4,15 @@ repository API.
 
 Only `notfound` or `expired` permits an offered switch. Never print raw subscription or
 repository API responses: they can contain subscription keys or credentials.
+
+Downstream builds (PXVIRT, the Proxmox VE/PBS port for arm64 and loong64 published by
+Lierfang) ship their packages in a plain `main` component and patch the subscription
+status. Since Proxmox VE 9.2 publishes arm64 packages itself, switching such a host to
+`pve-no-subscription` silently replaces the port with upstream packages. The policy
+answers `downstream` for them and never writes.
 """
 import copy
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -14,6 +21,10 @@ import string
 import sys
 
 ENDPOINT = '/nodes/localhost/apt/repositories'
+# `Origin:` of the downstream Release files as the Proxmox repository API reports it
+# (`infos[].kind == "origin"`), and the path their mirrors share.
+DOWNSTREAM_ORIGINS = {'lierfang'}
+DOWNSTREAM_URI_PATHS = ('/pxcloud/pxvirt',)
 PVE_CHANNELS = {'pve-enterprise', 'pve-no-subscription', 'pve-test', 'pvetest'}
 # Proxmox VE and Proxmox Backup Server share the repository API; each has its
 # own command line, channels and place in the web interface.
@@ -150,11 +161,43 @@ def repository_state(suite, product='pve'):
         raise PolicyError(N_('Proxmox APT repository inventory is invalid or reports parse errors. Fix sources in {ui}; no repository changed.'), ui=p['ui']) from exc
 
 
+def downstream_variant():
+    """The platform module's `variant` (e.g. `pxvirt`), or '' when unknown."""
+    try:
+        spec = importlib.util.spec_from_file_location('proxmox_platform', Path(__file__).with_name('proxmox_platform.py'))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.detect_platform().get('variant') or ''
+    except Exception:  # a failed lookup never blocks the regular policy
+        return ''
+
+
+def downstream_build(data, entries):
+    """True when an enabled source belongs to a downstream Proxmox build, or the
+    installed packages carry its version marker. Never raises: malformed `infos`
+    only disable the origin check, the URI and package checks still apply."""
+    origins = {}
+    for info in data.get('infos') or []:
+        if isinstance(info, dict) and info.get('kind') == 'origin' and isinstance(info.get('message'), str):
+            origins[(info.get('path'), info.get('index'))] = info['message'].strip().lower()
+    for path, index, row in entries:
+        if not row['Enabled'] or 'deb' not in row['Types']:
+            continue
+        if origins.get((path, index)) in DOWNSTREAM_ORIGINS:
+            return True
+        if any(marker in uri.lower() for uri in row['URIs'] for marker in DOWNSTREAM_URI_PATHS):
+            return True
+    return bool(downstream_variant())
+
+
 def evaluate(suite, apply=False, product='pve'):
     if suite not in ('bookworm', 'trixie'):
         raise PolicyError(N_('Unsupported Proxmox suite; no repository changed.'))
     p = PRODUCTS[product]
     data, entries = repository_state(suite, product)
+    # A downstream build keeps its own sources: no subscription lookup, no write.
+    if downstream_build(data, entries):
+        return 'downstream'
     pve = []
     ceph = []
     debian = False

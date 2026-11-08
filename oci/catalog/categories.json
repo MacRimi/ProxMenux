@@ -444,6 +444,7 @@
     "proxmox-mail": "security",
     "windows": "desktop",
     "windows-arm": "desktop",
-    "chromeos": "desktop"
+    "chromeos": "desktop",
+    "baserow": "productivity"
   }
 }

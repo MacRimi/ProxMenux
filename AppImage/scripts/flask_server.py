@@ -54,6 +54,7 @@ import urllib.parse
 import uuid
 import disk_identity
 import ovs_topology
+import system_board_info
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -9397,41 +9398,8 @@ def _get_hardware_info_uncached():
         try:
             result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                cpu_info = {}
-                for line in result.stdout.split('\n'):
-                    if ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        
-                        if key == 'Model name':
-                            cpu_info['model'] = value
-                        elif key == 'CPU(s)':
-                            cpu_info['total_threads'] = int(value)
-                        elif key == 'Core(s) per socket':
-                            cpu_info['cores_per_socket'] = int(value)
-                        elif key == 'Socket(s)':
-                            cpu_info['sockets'] = int(value)
-                        elif key == 'CPU MHz':
-                            cpu_info['current_mhz'] = float(value)
-                        elif key == 'CPU max MHz':
-                            cpu_info['max_mhz'] = float(value)
-                        elif key == 'CPU min MHz':
-                            cpu_info['min_mhz'] = float(value)
-                        elif key == 'Virtualization':
-                            cpu_info['virtualization'] = value
-                        elif key == 'L1d cache':
-                            cpu_info['l1d_cache'] = value
-                        elif key == 'L1i cache':
-                            cpu_info['l1i_cache'] = value
-                        elif key == 'L2 cache':
-                            cpu_info['l2_cache'] = value
-                        elif key == 'L3 cache':
-                            cpu_info['l3_cache'] = value
-                
-                hardware_data['cpu'] = cpu_info
-                # print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
-                pass
+                # Tolerant parsing: lscpu prints "-" for Socket(s) on ARM.
+                hardware_data['cpu'] = system_board_info.parse_lscpu(result.stdout)
         except Exception as e:
             # print(f"[v0] Error getting CPU info: {e}")
             pass
@@ -9458,6 +9426,10 @@ def _get_hardware_info_uncached():
         except Exception as e:
             # print(f"[v0] Error getting motherboard info: {e}")
             pass
+        
+        # Boards without DMI (Raspberry Pi, SBCs) describe themselves in the device tree
+        if not hardware_data['motherboard']:
+            hardware_data['motherboard'] = system_board_info.read_device_tree_board()
         
         # BIOS Information
         try:

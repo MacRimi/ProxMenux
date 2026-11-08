@@ -11,6 +11,8 @@ on:
       - '.github/scripts/check_appimage_elf.py'
       - 'AppImage/scripts/AppRun'
       - 'tests/test_appimage_arch.py'
+      - 'AppImage/scripts/system_board_info.py'
+      - 'tests/test_system_board_info.py'
   workflow_dispatch:
 
 permissions:
@@ -44,6 +46,7 @@ jobs:
         run: |
           test "$(uname -m)" = '${{ matrix.arch }}'
           python -B -m unittest discover -s tests -p test_appimage_arch.py -v
+          python -B -m unittest discover -s tests -p test_system_board_info.py -v
       - name: Refresh package indexes for bundled monitoring tools
         # Third-party runner repositories occasionally fail; the build reports missing tools.
         run: sudo apt-get update || true

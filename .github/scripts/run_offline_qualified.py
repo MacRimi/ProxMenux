@@ -17,6 +17,7 @@ PYTHON_FILES = (
     "tests/test_host_update_transport.py",
     "tests/test_host_update_shell.py",
     "tests/test_host_update_auth.py",
+    "tests/test_repository_downstream.py",
     "tests/test_kernel_reboot.py",
     "tests/test_reboot_health_refresh.py",
     "tests/test_host_update_controls.py",

@@ -188,6 +188,9 @@
     ],
     "macos": [
       "/storage"
+    ],
+    "baserow": [
+      "/baserow/data"
     ]
   },
   "sizes": {
