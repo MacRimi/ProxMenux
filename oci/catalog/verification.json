@@ -123,6 +123,14 @@
         "scenario": "PVE 9.2 amd64/ZFS; default/advanced; generated login, lists/media; managed/host data; restart/Modify; 6.1 to 6.2 and controlled rollback using verified official cached images; full-group backup/restore/Manage; Remove/PBS cleanup."
       }
     },
+    "macos": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-08",
+        "digest": "08d1bcaac74ad44d548b7ce683b3dded083512d2a0d26416f9a620b763f8ea3d",
+        "scenario": "PVE 9.2 Intel amd64/ZFS; Sequoia Recovery, KVM/browser, guest HTTPS and APFS file; default/advanced, managed/host storage; restart/CPU-RAM Modify; 3.11 to 3.12, backup/restore/Manage and readiness rollback. Full desktop installation/login, AMD and GPU not tested."
+      }
+    },
     "mariadb": {
       "status": "laboratory-validated"
     },

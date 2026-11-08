@@ -9232,5 +9232,16 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
   "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
-  "The shutdown timeout must be a positive number of seconds": "Das Zeitlimit für das Herunterfahren muss eine positive Anzahl von Sekunden sein"
+  "The shutdown timeout must be a positive number of seconds": "Das Zeitlimit für das Herunterfahren muss eine positive Anzahl von Sekunden sein",
+  "Run a macOS virtual machine with KVM acceleration inside a native OCI LXC.": "Führt eine macOS-VM mit KVM-Beschleunigung in einem nativen OCI-LXC aus.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Dockur-Image mit QEMU/KVM und Browserkonsole. macOS läuft als virtuelle Maschine, nicht als Linux-Container. Die Installation wird im Webviewer abgeschlossen.",
+  "macOS version": "macOS-Version",
+  "Complete macOS installation and create its account in the web viewer; the image does not provide a default macOS login.": "Schließe die macOS-Installation ab und erstelle das Benutzerkonto im Webviewer. Das Image enthält keine voreingestellten macOS-Zugangsdaten.",
+  "macOS 15 (Sequoia)": "macOS 15 (Sequoia)",
+  "macOS 14 (Sonoma)": "macOS 14 (Sonoma)",
+  "macOS 13 (Ventura)": "macOS 13 (Ventura)",
+  "macOS 12 (Monterey)": "macOS 12 (Monterey)",
+  "macOS 11 (Big Sur)": "macOS 11 (Big Sur)",
+  "The guest disk size must fit inside the /storage volume. Keep additional room for downloads and snapshots.": "Die virtuelle Festplatte muss in das Volume /storage passen. Lass zusätzlichen Platz für Downloads und Snapshots.",
+  "The web viewer can be available before the guest installation has finished.": "Der Webviewer kann bereits verfügbar sein, bevor die Installation des Gastsystems abgeschlossen ist."
 }

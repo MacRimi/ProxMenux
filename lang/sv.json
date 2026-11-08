@@ -9232,5 +9232,16 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
   "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "The shutdown timeout must be a positive number of seconds": "Tidsgränsen för avstängning måste vara ett positivt antal sekunder"
+  "The shutdown timeout must be a positive number of seconds": "Tidsgränsen för avstängning måste vara ett positivt antal sekunder",
+  "Run a macOS virtual machine with KVM acceleration inside a native OCI LXC.": "Kör en virtuell macOS-maskin med KVM-acceleration i en inbyggd OCI-LXC.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Dockur-avbildning med QEMU/KVM och konsol i webbläsaren. macOS körs i en virtuell maskin, inte i en Linux-container; slutför installationen i webbvisaren.",
+  "macOS version": "macOS-version",
+  "Complete macOS installation and create its account in the web viewer; the image does not provide a default macOS login.": "Slutför macOS-installationen och skapa kontot i webbvisaren. Avbildningen innehåller inga förinställda inloggningsuppgifter för macOS.",
+  "macOS 15 (Sequoia)": "macOS 15 (Sequoia)",
+  "macOS 14 (Sonoma)": "macOS 14 (Sonoma)",
+  "macOS 13 (Ventura)": "macOS 13 (Ventura)",
+  "macOS 12 (Monterey)": "macOS 12 (Monterey)",
+  "macOS 11 (Big Sur)": "macOS 11 (Big Sur)",
+  "The guest disk size must fit inside the /storage volume. Keep additional room for downloads and snapshots.": "Den virtuella disken måste få plats i volymen /storage. Lämna extra utrymme för hämtningar och ögonblicksbilder.",
+  "The web viewer can be available before the guest installation has finished.": "Webbvisaren kan vara tillgänglig innan installationen av gästsystemet är klar."
 }

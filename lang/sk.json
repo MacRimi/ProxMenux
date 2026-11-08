@@ -9232,5 +9232,16 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
   "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "The shutdown timeout must be a positive number of seconds": "Časový limit vypnutia musí byť kladný počet sekúnd"
+  "The shutdown timeout must be a positive number of seconds": "Časový limit vypnutia musí byť kladný počet sekúnd",
+  "Run a macOS virtual machine with KVM acceleration inside a native OCI LXC.": "Spustí virtuálny stroj macOS s akceleráciou KVM v natívnom OCI LXC.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Obraz Dockur s QEMU/KVM a konzolou v prehliadači. macOS beží vo virtuálnom stroji, nie v linuxovom kontajneri; inštaláciu dokončite vo webovom prehliadači.",
+  "macOS version": "Verzia macOS",
+  "Complete macOS installation and create its account in the web viewer; the image does not provide a default macOS login.": "Dokončite inštaláciu macOS a vytvorte účet vo webovom prehliadači; obraz neobsahuje predvolené prihlasovacie údaje do macOS.",
+  "macOS 15 (Sequoia)": "macOS 15 (Sequoia)",
+  "macOS 14 (Sonoma)": "macOS 14 (Sonoma)",
+  "macOS 13 (Ventura)": "macOS 13 (Ventura)",
+  "macOS 12 (Monterey)": "macOS 12 (Monterey)",
+  "macOS 11 (Big Sur)": "macOS 11 (Big Sur)",
+  "The guest disk size must fit inside the /storage volume. Keep additional room for downloads and snapshots.": "Virtuálny disk sa musí zmestiť do zväzku /storage. Nechajte ďalšie miesto na sťahovanie a snímky.",
+  "The web viewer can be available before the guest installation has finished.": "Webový prehliadač môže byť dostupný ešte pred dokončením inštalácie hosťovského systému."
 }

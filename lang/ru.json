@@ -9203,5 +9203,16 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
   "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
-  "The shutdown timeout must be a positive number of seconds": "Время ожидания выключения должно быть положительным числом секунд"
+  "The shutdown timeout must be a positive number of seconds": "Время ожидания выключения должно быть положительным числом секунд",
+  "Run a macOS virtual machine with KVM acceleration inside a native OCI LXC.": "Запускает виртуальную машину macOS с ускорением KVM внутри нативного OCI-LXC.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Образ Dockur с QEMU/KVM и консолью в браузере. macOS работает в виртуальной машине, а не в контейнере Linux; установку нужно завершить в веб-консоли.",
+  "macOS version": "Версия macOS",
+  "Complete macOS installation and create its account in the web viewer; the image does not provide a default macOS login.": "Завершите установку macOS и создайте учётную запись в веб-консоли. Образ не содержит стандартных учётных данных macOS.",
+  "macOS 15 (Sequoia)": "macOS 15 (Sequoia)",
+  "macOS 14 (Sonoma)": "macOS 14 (Sonoma)",
+  "macOS 13 (Ventura)": "macOS 13 (Ventura)",
+  "macOS 12 (Monterey)": "macOS 12 (Monterey)",
+  "macOS 11 (Big Sur)": "macOS 11 (Big Sur)",
+  "The guest disk size must fit inside the /storage volume. Keep additional room for downloads and snapshots.": "Виртуальный диск должен помещаться в том /storage. Оставьте дополнительное место для загрузок и снимков.",
+  "The web viewer can be available before the guest installation has finished.": "Веб-консоль может быть доступна до завершения установки гостевой системы."
 }

@@ -9232,5 +9232,16 @@
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
   "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "The shutdown timeout must be a positive number of seconds": "Il tempo massimo per lo spegnimento deve essere un numero positivo di secondi"
+  "The shutdown timeout must be a positive number of seconds": "Il tempo massimo per lo spegnimento deve essere un numero positivo di secondi",
+  "Run a macOS virtual machine with KVM acceleration inside a native OCI LXC.": "Esegue una macchina virtuale macOS con accelerazione KVM in un LXC OCI nativo.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Immagine Dockur con QEMU/KVM e console nel browser. macOS viene eseguito in una macchina virtuale, non in un contenitore Linux; completa l’installazione nel visualizzatore web.",
+  "macOS version": "Versione di macOS",
+  "Complete macOS installation and create its account in the web viewer; the image does not provide a default macOS login.": "Completa l’installazione di macOS e crea il suo account nel visualizzatore web; l’immagine non fornisce credenziali macOS predefinite.",
+  "macOS 15 (Sequoia)": "macOS 15 (Sequoia)",
+  "macOS 14 (Sonoma)": "macOS 14 (Sonoma)",
+  "macOS 13 (Ventura)": "macOS 13 (Ventura)",
+  "macOS 12 (Monterey)": "macOS 12 (Monterey)",
+  "macOS 11 (Big Sur)": "macOS 11 (Big Sur)",
+  "The guest disk size must fit inside the /storage volume. Keep additional room for downloads and snapshots.": "Il disco virtuale deve rientrare nel volume /storage. Lascia spazio aggiuntivo per download e snapshot.",
+  "The web viewer can be available before the guest installation has finished.": "Il visualizzatore web può essere disponibile prima che l’installazione del sistema ospite sia terminata."
 }
