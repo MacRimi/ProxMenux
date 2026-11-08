@@ -2125,7 +2125,7 @@
   "Docker Mods are only offered for compatible LinuxServer images": "Les mods Docker sont proposés uniquement pour les images LinuxServer compatibles",
   "Docker Volume Backup": "Docker Volume Backup",
   "Docker/CLI not available yet or no valid answer": "Docker/CLI pas encore disponible ou pas de réponse valide",
-  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Image Dockur exécutant QEMU/KVM avec une console dans le navigateur. macOS fonctionne dans une machine virtuelle, pas dans un conteneur Linux ; terminez l’installation dans le visualiseur web.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer. Installing Apple's macOS requires accepting its end-user license agreement; install it at your own responsibility.": "Image Dockur exécutant QEMU/KVM avec une console dans le navigateur. macOS fonctionne dans une machine virtuelle, pas dans un conteneur Linux ; terminez l’installation dans le visualiseur web. En installant macOS d’Apple, vous devez accepter son contrat de licence utilisateur final ; installez-le sous votre propre responsabilité.",
   "Docs": "Docs",
   "Documents & Notes": "Documents et notes",
   "Documents volume size in GB": "Volume des documents en GB",

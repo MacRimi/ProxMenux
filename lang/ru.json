@@ -2123,7 +2123,7 @@
   "Docker Mods are only offered for compatible LinuxServer images": "Docker Mods доступны только для совместимых образов LinuxServer",
   "Docker Volume Backup": "Резервное копирование томов Docker",
   "Docker/CLI not available yet or no valid answer": "Docker/CLI пока недоступен или не получен корректный ответ",
-  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer.": "Образ Dockur с QEMU/KVM и консолью в браузере. macOS работает в виртуальной машине, а не в контейнере Linux; установку нужно завершить в веб-консоли.",
+  "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer. Installing Apple's macOS requires accepting its end-user license agreement; install it at your own responsibility.": "Образ Dockur с QEMU/KVM и консолью в браузере. macOS работает в виртуальной машине, а не в контейнере Linux; установку нужно завершить в веб-консоли. Устанавливая macOS от Apple, вы должны принять её лицензионное соглашение с конечным пользователем; устанавливайте на свою ответственность.",
   "Docs": "Документация",
   "Documents & Notes": "Документы и заметки",
   "Documents volume size in GB": "Размер тома для документов в ГБ",
