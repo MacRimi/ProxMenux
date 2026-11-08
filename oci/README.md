@@ -317,6 +317,7 @@ each key becomes a field of the oci-compose:
 | `cpu_shares` | `proxmox.installer_profile.resources.cpu_shares` | `cpuunits` of the LXC |
 | `ulimits` | `proxmox.installer_profile.resources.rlimits` | `lxc.prlimit.*` |
 | `shm_size` | `proxmox.installer_profile.tmpfs_mounts` | A tmpfs at `/dev/shm` of that size |
+| `tmpfs`, `volumes` with `type: tmpfs` | `proxmox.installer_profile.tmpfs_mounts` | A volatile native LXC mount, with no persistent disk or host directory |
 | `user`, `working_dir`, `entrypoint`, `command`, `hostname`, `group_add` | `proxmox.installer_profile.runtime` | The process the LXC starts, its user, directory and groups |
 | `extra_hosts` | `proxmox.installer_profile.extra_hosts` | Entries of `/etc/hosts` in the container |
 | `devices` | `proxmox.installer_profile.device_requests` | A `devN` entry for each device, confirmed during the installation |
@@ -553,6 +554,29 @@ Updates, removals, intentional stops and guests first seen stopped remain left a
 ```
 
 Only what differs from the defaults is written. The defaults are 2 cores, 1024 MB of memory, 512 MB of swap, an 8 GB rootfs, an unprivileged LXC with `nesting=1`, DHCP on `vmbr0`, the firewall on, and no start with the node. The fields are `cores`, `memory_mb`, `swap_mb`, `rootfs_size_gb`, `unprivileged`, `features`, `onboot` and `shutdown_timeout_seconds`. The storage and the bridge proposed are the ones of the node.
+
+Compose tmpfs mounts are supported for individual images and for each member
+of a multi-image stack. Both `tmpfs: /tmp` / `tmpfs: ["/tmp:size=512m,mode=1777"]`
+and long `volumes` syntax (`type: tmpfs`, `target`, optional `read_only`,
+`tmpfs.size` and `tmpfs.mode`) use the same native mount renderer. Supported
+paths are `/tmp`, `/run`, their subdirectories, `/var/cache/` subdirectories
+and `/dev/shm`; other paths remain blocked for review. Supported short options
+are `size`, `mode`, numeric `uid`/`gid`, `rw`/`ro`, `nosuid`, `nodev` and `noexec`.
+Unknown options, duplicate/overlapping mounts, and conflicts with persistent
+volumes or `shm_size` are blocked rather than dropped.
+
+Sizes are rounded up to MiB, as with `shm_size`. Without an explicit size,
+the capacity is half the selected LXC RAM, not half the Proxmox host's RAM.
+The confirmation summary shows each path and its capacity. The native default
+is mode `1777`, owner `0:0`, `nosuid,nodev`; explicit numeric owners are guest
+IDs mapped by the unprivileged LXC, not host IDs. For long syntax, quote octal
+modes (for example, `mode: "1777"`) or use a YAML octal number.
+
+Tmpfs contents disappear when the container stops; backups and updates retain
+the mount configuration, not its files. Its pages count against the LXC memory
+limit (and may use swap); setting a capacity reserves no memory and does not
+increase that limit. Keep persistent data outside these paths and size large
+uploads together with the application memory budget.
 
 ### `proxmox.installer_profile`: what Compose cannot say
 
