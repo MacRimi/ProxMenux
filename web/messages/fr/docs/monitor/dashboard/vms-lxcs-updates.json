@@ -10,7 +10,7 @@
   "intro": {
     "p1": "L'onglet <strong>Mises à jour</strong> sépare la détection des versions de leur installation. Enregistrement et suivi facultatif se trouvent dans l'<link>onglet App</link> ; les méthodes exécutables se gèrent ici.",
     "p2": "Une application enregistrée apparaît dans Mises à jour même avec un seul lien web. Le suivi de version est facultatif ; son programme de mise à jour peut être configuré séparément.",
-    "callout": "L'enregistrement ne choisit aucun programme de mise à jour. Si un programme Helper-Scripts correspondant est détecté, choisissez et enregistrez <strong>Helper-Scripts</strong> ou <strong>Commande personnalisée</strong>. La détection ne garantit pas la compatibilité. Le choix appartient à chaque application, même dans un LXC partagé."
+    "callout": "L'enregistrement ne choisit aucun programme de mise à jour. Si un programme Community Scripts correspondant est détecté, choisissez et enregistrez <strong>Community Scripts</strong> ou <strong>Commande personnalisée</strong>. La détection ne garantit pas la compatibilité. Le choix appartient à chaque application, même dans un LXC partagé."
   },
   "overview": {
     "heading": "Que contient l'onglet",
@@ -24,8 +24,8 @@
   },
   "mechanisms": {
     "heading": "Comment une méthode de mise à jour est sélectionnée",
-    "lead": "Le chemin intégré Proxmox VE Helper-Scripts suit le mécanisme officiel <helper>update-apps</helper>. D'autres types d'installation utilisent le paquet correspondant, Docker ou chemin personnalisé.",
-    "officialReference": "Référence officielle : la <helper>documentation update-apps de Proxmox VE Helper-Scripts</helper> décrit les modes interactif et sans surveillance, sauvegardes, simulations, ressources temporaires de compilation, journaux et codes de sortie.",
+    "lead": "Le chemin intégré Community Scripts suit le mécanisme officiel <helper>update-apps</helper>. D'autres types d'installation utilisent le paquet correspondant, Docker ou chemin personnalisé.",
+    "officialReference": "Référence officielle : la <helper>documentation update-apps de Community Scripts</helper> décrit les modes interactif et sans surveillance, sauvegardes, simulations, ressources temporaires de compilation, journaux et codes de sortie.",
     "colSource": "Source",
     "colAction": "Action affichée",
     "colNotes": "Ce qui est exécuté",
@@ -36,9 +36,9 @@
         "notes": "Mettre à jour les paquets de conteneurs. Les applications enregistrées installées sous forme de paquets dpkg ou apk sont couvertes par ce même passe."
       },
       {
-        "source": "Proxmox VE Helper-Scripts",
+        "source": "Community Scripts",
         "action": "Appliquer la mise à jour",
-        "notes": "Après sélection explicite de Helper-Scripts, lance le script officiel identifié par le wrapper /usr/bin/update validé. Un marqueur ou une correspondance du catalogue ne suffit jamais à autoriser l'exécution."
+        "notes": "Après sélection explicite de Community Scripts, lance le script officiel identifié par le wrapper /usr/bin/update validé. Un marqueur ou une correspondance du catalogue ne suffit jamais à autoriser l'exécution."
       },
       {
         "source": "Commande personnalisée",
@@ -56,7 +56,7 @@
         "notes": "Télécharge l'image sélectionnée et recrée son groupe de services Compose ou son conteneur autonome protégé."
       }
     ],
-    "callout": "Une commande personnalisée <strong>remplace</strong> Helper-Scripts pour cette application. Les exécutions manuelles, groupées et programmées respectent le choix enregistré. Les commandes existantes et les anciennes sélections explicitement enregistrées dans les plans groupés ou les programmations actives sont conservées ; une nouvelle application n'est jamais ajoutée par une ancienne programmation."
+    "callout": "Une commande personnalisée <strong>remplace</strong> Community Scripts pour cette application. Les exécutions manuelles, groupées et programmées respectent le choix enregistré. Les commandes existantes et les anciennes sélections explicitement enregistrées dans les plans groupés ou les programmations actives sont conservées ; une nouvelle application n'est jamais ajoutée par une ancienne programmation."
   },
   "docker": {
     "heading": "Docker Engine et images Docker",
@@ -76,7 +76,7 @@
     "items": [
       "<strong>Configurer</strong> ouvre le choix du programme si aucune méthode n'est définie ; <strong>Modifier</strong> change un choix enregistré. Les boutons d'information expliquent les options, donnent la documentation officielle et un exemple de script personnalisé. Choisir une option ne l'exécute pas.",
       "Sans suivi de version mais avec un programme de mise à jour, l'action neutre <strong>Exécuter le programme de mise à jour</strong> apparaît. ProxMenux n'affirme pas qu'une mise à jour est en attente.",
-      "Sans programme Helper-Scripts disponible, configurez une commande personnalisée. Désactiver une méthode n'en choisit pas une autre ; les sélections des plans groupés et programmations restent enregistrées et les cibles indisponibles sont signalées.",
+      "Sans programme Community Scripts disponible, configurez une commande personnalisée. Désactiver une méthode n'en choisit pas une autre ; les sélections des plans groupés et programmations restent enregistrées et les cibles indisponibles sont signalées.",
       "L'action <strong>Mise à jour de l'image</strong> s'applique uniquement à l'unité Docker sélectionnée; elle ne met pas à jour Docker Engine ou des images non liées."
     ],
     "statusColState": "État connu",
@@ -144,7 +144,7 @@
       "Après chaque exécution, ProxMenux vérifie le marqueur standard de redémarrage de Debian. Lorsqu'un redémarrage est nécessaire, l'onglet Mises à jour et la notification d'achèvement le disent; l'avertissement est effacé lorsque LXC démarre ou redémarre.",
       "Sur l'hôte Proxmox, les journaux programmés sont stockés dans <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> en utilisant le nom <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Les dix derniers journaux sont conservés par LXC et les anciens fichiers sont supprimés automatiquement.",
       "Cet historique concerne les mises à jour programmées. Une mise à jour manuelle affiche sa sortie en direct dans la fenêtre d'exécution de Monitor et ne crée aucun journal programmé dans ce répertoire.",
-      "Les calendriers d'hôtes externes détectés à partir de Proxmox VE Helper-Scripts sont indiqués séparément, de sorte que l'automatisation du chevauchement est visible."
+      "Les calendriers d'hôtes externes détectés à partir de Community Scripts sont indiqués séparément, de sorte que l'automatisation du chevauchement est visible."
     ],
     "callout": "Testez chaque méthode manuellement avant d'activer une programmation. Les commandes programmées ne peuvent pas répondre aux questions interactives."
   },
@@ -169,7 +169,7 @@
         "resolution": "Ouvrez Configurer, ajoutez la procédure non interactive officielle et testez-la manuellement avant de la programmer."
       },
       {
-        "problem": "Une identité Proxmox VE Helper-Scripts est affichée mais aucune action n'existe",
+        "problem": "Une identité Community Scripts est affichée mais aucune action n'existe",
         "resolution": "Le LXC possède d'anciennes données d'identification, mais aucun wrapper /usr/bin/update vérifié. Ajoutez une méthode personnalisée après avoir confirmé la bonne procédure."
       },
       {

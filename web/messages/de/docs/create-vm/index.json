@@ -20,7 +20,7 @@
   "opening": {
     "heading": "Öffnen des Menüs",
     "body": "Wählen Sie im ProxMenux-Hauptmenü <strong>VM erstellen</strong>. Es erscheint:",
-    "imageAlt": "Menü zur VM-Erstellung mit drei ProxMenux-Optionen (NAS/Windows/Linux) und Community Scripts darunter (macOS/Andere)"
+    "imageAlt": "Menü zur VM-Erstellung mit drei ProxMenux-Optionen (NAS/Windows/Linux) und Externe Skripte darunter (macOS/Andere)"
   },
   "families": {
     "heading": "Drei OS-Familien",
@@ -78,7 +78,7 @@
   },
   "community": {
     "title": "Community-Scripts (nicht hier dokumentiert)",
-    "intro": "Die beiden Einträge unter dem <em>Community Scripts</em>-Separator führen Code aus, der <strong>nicht Teil von ProxMenux</strong> ist, so dass sie absichtlich außerhalb dieser Dokumentation bleiben:",
+    "intro": "Die beiden Einträge unter dem <em>Externe Skripte</em>-Separator führen Code aus, der <strong>nicht Teil von ProxMenux</strong> ist, so dass sie absichtlich außerhalb dieser Dokumentation bleiben:",
     "macosRich": "<strong>macOS-System</strong>: führt den externen Installer <osxLink>OSX-PROXMOX</osxLink> aus. Er klont das Originalrepository, bereitet den Host vor und <strong>startet ihn nach Abschluss automatisch neu</strong>. Beachten Sie die Dokumentation dieses Projekts.",
     "othersRich": "<strong>System Sonstige (Linux-basiert)</strong> lädt eine kuratierte Liste von Linux-basierten Installateuren der Community (Home-Server-Betriebssysteme, Router-/Firewall-Appliances usw.). Jedes Community-Script wird außerhalb von ProxMenux gepflegt."
   },

@@ -36,10 +36,10 @@
     "keywords": ""
   },
   {
-    "title": "Proxmox VE Helper Scripts",
-    "menu": "Proxmox VE Helper Scripts",
+    "title": "Community Scripts",
+    "menu": "Community Scripts",
     "script": "menus/menu_Helper_Scripts.sh",
-    "keywords": ""
+    "keywords": "helper-scripts helper scripts"
   },
   {
     "title": "OCI manager Apps (Technology Preview)",

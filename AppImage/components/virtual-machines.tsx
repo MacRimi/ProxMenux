@@ -6565,7 +6565,7 @@ export function VirtualMachines() {
                                       {helperExists && (
                                         <div className="mb-3 flex items-start gap-2.5">
                                           <img
-                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/community-scripts.webp"
                                             alt=""
                                             className="h-7 w-7 rounded-sm object-contain flex-shrink-0"
                                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
@@ -7228,7 +7228,7 @@ export function VirtualMachines() {
                                     return (
                                       <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 rounded-md bg-muted/40 border border-border/50">
                                         <img
-                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/community-scripts.webp"
                                           alt=""
                                           className="h-5 w-5 rounded-sm object-contain flex-shrink-0 mt-0.5"
                                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}

@@ -57,7 +57,7 @@
       "Les résultats de recherche peuvent préremplir le nom canonique, le logo et les ports web communs.",
       "Les détecteurs connus utilisent les vrais noms de paquets, exécutables, fichiers, distributions Python, étiquettes OCI ou commandes, plutôt qu'une hypothèse universelle comme <code>/root/.app</code>.",
       "Les corrections vérifiées dans les installations réelles sont prioritaires lorsque le chemin diffère des métadonnées de l'installateur.",
-      "Les marqueurs Proxmox VE Helper-Scripts tels que <code>/root/.slug</code> restent un signal de compatibilité pour les nouvelles installations d'aide, pas le seul détecteur.",
+      "Les marqueurs Community Scripts tels que <code>/root/.slug</code> restent un signal de compatibilité pour les nouvelles installations d'aide, pas le seul détecteur.",
       "Chaque valeur proposée peut être modifiée avant d'enregistrer pour couvrir les installateurs officiels et les installations manuelles."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "Un enregistrement link-only montre que le suivi des versions n'est pas configuré, mais peut toujours recevoir une commande de mise à jour personnalisée.",
       "Une application avec suivi mais sans méthode exécutable affiche un message neutre demandant une commande personnalisée.",
-      "Une application avec un wrapper Proxmox VE Helper-Scripts vérifié peut utiliser ce programme intégré même si sa fiche a commencé par un simple lien web.",
+      "Une application avec un wrapper Community Scripts vérifié peut utiliser ce programme intégré même si sa fiche a commencé par un simple lien web.",
       "Ajouter ou modifier un programme de mise à jour ne change ni le détecteur ni la source amont enregistrés dans App."
     ]
   },

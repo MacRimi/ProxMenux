@@ -22,7 +22,7 @@
         "name": "community-scripts / ProxmoxVE",
         "url": "https://community-scripts.github.io/ProxmoxVE/",
         "description": "Duchovný nástupca pomocných skriptov od ttecka. Rozsiahly katalóg skriptov na nasadenie LXC (Home Assistant, Plex, Frigate…), VM, doplnkov a úprav PVE jedným spustením.",
-        "usedIn": "Spúšťač Helper Scripts a Sieť (oprava offloadingu sieťovej karty Intel e1000e)"
+        "usedIn": "Spúšťač Community Scripts a Sieť (oprava offloadingu sieťovej karty Intel e1000e)"
       }
     ]
   },

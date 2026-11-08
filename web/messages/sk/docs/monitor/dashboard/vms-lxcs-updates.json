@@ -10,7 +10,7 @@
   "intro": {
     "p1": "Karta <strong>Aktualizácie</strong> oddeľuje zisťovanie verzie od akcie, ktorá aktualizáciu nainštaluje. Registrácia a voliteľné sledovanie verzie sú na <link>karte Aplikácia</link>; spustiteľné metódy aktualizácie sa spravujú tu.",
     "p2": "Uložená aplikácia sa zobrazí v Aktualizáciách aj vtedy, keď obsahuje iba webový odkaz. Sledovanie verzie je voliteľné a aktualizátor možno nastaviť nezávisle.",
-    "callout": "Registrácia aplikácie nevyberá aktualizátor. Ak sa zistí zodpovedajúci aktualizátor Helper-Scripts, vyberte a uložte <strong>Helper-Scripts</strong> alebo <strong>Vlastný príkaz</strong>. Zistenie nezaručuje kompatibilitu. Výber patrí každej aplikácii samostatne, aj keď viac aplikácií zdieľa jeden LXC."
+    "callout": "Registrácia aplikácie nevyberá aktualizátor. Ak sa zistí zodpovedajúci aktualizátor Community Scripts, vyberte a uložte <strong>Community Scripts</strong> alebo <strong>Vlastný príkaz</strong>. Zistenie nezaručuje kompatibilitu. Výber patrí každej aplikácii samostatne, aj keď viac aplikácií zdieľa jeden LXC."
   },
   "overview": {
     "heading": "Obsah karty",
@@ -24,8 +24,8 @@
   },
   "mechanisms": {
     "heading": "Výber metódy aktualizácie",
-    "lead": "Integrovaná cesta Proxmox VE Helper-Scripts používa oficiálny mechanizmus <helper>update-apps</helper>. Ostatné inštalácie používajú príslušnú metódu balíkov, Dockeru alebo vlastného príkazu.",
-    "officialReference": "Oficiálna referencia: <helper>dokumentácia update-apps od Proxmox VE Helper-Scripts</helper> opisuje interaktívny aj bezobslužný režim, zálohy, simuláciu, dočasné prostriedky na zostavenie, protokoly a návratové kódy.",
+    "lead": "Integrovaná cesta Community Scripts používa oficiálny mechanizmus <helper>update-apps</helper>. Ostatné inštalácie používajú príslušnú metódu balíkov, Dockeru alebo vlastného príkazu.",
+    "officialReference": "Oficiálna referencia: <helper>dokumentácia update-apps od Community Scripts</helper> opisuje interaktívny aj bezobslužný režim, zálohy, simuláciu, dočasné prostriedky na zostavenie, protokoly a návratové kódy.",
     "colSource": "Zdroj",
     "colAction": "Zobrazená akcia",
     "colNotes": "Čo sa spustí",
@@ -36,9 +36,9 @@
         "notes": "Aktualizuje balíky kontajnera. Registrované aplikácie nainštalované ako dpkg alebo apk sú zahrnuté v rovnakom behu."
       },
       {
-        "source": "Proxmox VE Helper-Scripts",
+        "source": "Community Scripts",
         "action": "Použiť aktualizáciu",
-        "notes": "Po výslovnom výbere Helper-Scripts spustí oficiálny skript aplikácie identifikovaný pomocou overeného wrappera /usr/bin/update. Samotný marker ani zhoda v katalógu spustenie nepovoľujú."
+        "notes": "Po výslovnom výbere Community Scripts spustí oficiálny skript aplikácie identifikovaný pomocou overeného wrappera /usr/bin/update. Samotný marker ani zhoda v katalógu spustenie nepovoľujú."
       },
       {
         "source": "Vlastný príkaz",
@@ -56,7 +56,7 @@
         "notes": "Stiahne vybraný obraz a znova vytvorí jeho skupinu služieb Compose alebo chránený samostatný kontajner."
       }
     ],
-    "callout": "Vlastný príkaz <strong>nahrádza</strong> Helper-Scripts pre danú aplikáciu. Ručné, hromadné aj plánované behy rešpektujú uloženú voľbu. Existujúce príkazy a staršie výslovne uložené výbery v hromadných plánoch či aktívnych úlohách sa zachovajú; starý plán nikdy nezahrnie novo registrovanú aplikáciu."
+    "callout": "Vlastný príkaz <strong>nahrádza</strong> Community Scripts pre danú aplikáciu. Ručné, hromadné aj plánované behy rešpektujú uloženú voľbu. Existujúce príkazy a staršie výslovne uložené výbery v hromadných plánoch či aktívnych úlohách sa zachovajú; starý plán nikdy nezahrnie novo registrovanú aplikáciu."
   },
   "docker": {
     "heading": "Docker Engine a Docker obrazy",
@@ -76,7 +76,7 @@
     "items": [
       "<strong>Nastaviť</strong> otvorí výber aktualizátora, ak nebol vybraný žiadny spôsob; <strong>Upraviť</strong> umožní zmeniť uložený výber. Informačné tlačidlá vysvetľujú možnosti, odkazujú na oficiálnu dokumentáciu a zobrazujú príklad vlastného skriptu. Výber možnosti ju nespustí.",
       "Ak je sledovanie verzie vypnuté, ale aktualizátor existuje, zobrazí sa neutrálna akcia <strong>Spustiť aktualizátor</strong>. ProxMenux netvrdí, že je dostupná aktualizácia.",
-      "Ak aktualizátor Helper-Scripts nie je dostupný, možno nastaviť vlastný príkaz. Deaktivovanie spôsobu nevyberie potichu iný; plány a naplánované úlohy si zachovajú výber a nedostupné ciele sa oznámia.",
+      "Ak aktualizátor Community Scripts nie je dostupný, možno nastaviť vlastný príkaz. Deaktivovanie spôsobu nevyberie potichu iný; plány a naplánované úlohy si zachovajú výber a nedostupné ciele sa oznámia.",
       "Akcia <strong>Aktualizovať obraz</strong> ovplyvní iba vybranú jednotku Dockeru, nie Docker Engine ani nesúvisiace obrazy."
     ],
     "statusColState": "Známy stav",
@@ -144,7 +144,7 @@
       "Po každom spustení ProxMenux skontroluje štandardnú značku Debianu oznamujúcu potrebu reštartu. Ak je reštart potrebný, karta Aktualizácie aj záverečné upozornenie to oznámia. Varovanie sa zruší pri spustení alebo reštarte daného LXC.",
       "Na počítači Proxmox sa v <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> ukladajú záznamy plánovaného priebehu pomocou mena <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Posledných desať protokolov je zachovaných na LXC a staršie súbory sú automaticky odstránené.",
       "Táto zachovaná história sa vzťahuje na plánované aktualizácie. Manuálna aktualizácia zobrazuje svoj výstup naživo v okne vykonávania monitora a v tomto adresári nevytvára plánovaný záznam.",
-      "Externé plány na hostiteľovi zistené z Proxmox VE Helper-Scripts sa zobrazujú samostatne, aby bolo vidieť prekrývajúce sa automatizácie."
+      "Externé plány na hostiteľovi zistené z Community Scripts sa zobrazujú samostatne, aby bolo vidieť prekrývajúce sa automatizácie."
     ],
     "callout": "Pred zapnutím plánu otestujte každú vybranú metódu manuálne. Plánovaný príkaz nemôže odpovedať na interaktívne otázky."
   },
@@ -169,7 +169,7 @@
         "resolution": "Otvorte Nastaviť, pridajte oficiálny neinteraktívny postup a pred plánovaním ho otestujte manuálne."
       },
       {
-        "problem": "Zobrazí sa identita Proxmox VE Helper-Scripts, ale nie akcia",
+        "problem": "Zobrazí sa identita Community Scripts, ale nie akcia",
         "resolution": "LXC obsahuje staré identifikačné údaje bez overeného wrappera /usr/bin/update. Vlastnú metódu pridajte až po potvrdení správneho postupu."
       },
       {

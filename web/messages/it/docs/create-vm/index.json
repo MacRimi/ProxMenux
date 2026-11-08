@@ -20,7 +20,7 @@
   "opening": {
     "heading": "Apertura del menu",
     "body": "Nel menu principale di ProxMenux seleziona <strong>Crea VM</strong>. Vedrai:",
-    "imageAlt": "Menu Crea VM con tre opzioni ProxMenux (NAS/Windows/Linux) e la sezione Community Scripts sotto (macOS/Altri)"
+    "imageAlt": "Menu Crea VM con tre opzioni ProxMenux (NAS/Windows/Linux) e la sezione Script esterni sotto (macOS/Altri)"
   },
   "families": {
     "heading": "Tre famiglie OS",
@@ -78,7 +78,7 @@
   },
   "community": {
     "title": "Script della comunità (non documentati qui)",
-    "intro": "Le due voci sotto il separatore <em>Community Scripts</em> eseguono codice che <strong>non fa parte di ProxMenux</strong>, quindi sono volutamente escluse da questa documentazione:",
+    "intro": "Le due voci sotto il separatore <em>Script esterni</em> eseguono codice che <strong>non fa parte di ProxMenux</strong>, quindi sono volutamente escluse da questa documentazione:",
     "macosRich": "<strong>Sistema macOS</strong>: esegue l’installatore esterno <osxLink>OSX-PROXMOX</osxLink>. Clona il repository originale, prepara l’host e <strong>lo riavvia automaticamente al termine</strong>. Consulta la documentazione del progetto.",
     "othersRich": "<strong>Altri sistemi (basati su Linux)</strong>: carica una selezione di installatori della comunità per server domestici, router, firewall e simili. Ogni script viene mantenuto fuori da ProxMenux."
   },

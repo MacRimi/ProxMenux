@@ -22,7 +22,7 @@
         "name": "community-scripts / ProxmoxVE",
         "url": "https://community-scripts.github.io/ProxmoxVE/",
         "description": "Andlig efterföljare till ttecks hjälpskript. Stor katalog med skript som i en körning installerar LXC:er (Home Assistant, Plex, Frigate…), VM:ar, tillägg och PVE-anpassningar.",
-        "usedIn": "Start av Helper Scripts och Nätverk (korrigering av nätverksavlastning för Intel e1000e)"
+        "usedIn": "Start av Community Scripts och Nätverk (korrigering av nätverksavlastning för Intel e1000e)"
       }
     ]
   },

@@ -215,9 +215,9 @@ function select_nas_iso() {
     "7" "ZimaOS         VM          (Proxmox-zimaos)"
     "8" "FygoOS         VM          (Debian based)"
     ""  ""
-    ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn"
+    ""  "\Z4───────────────── $(translate "External Scripts") ─────────────────\Zn"
     ""  ""
-    "9" "Umbrel OS      VM          (Helper-Scripts)"
+    "9" "Umbrel OS      VM          (Community Scripts)"
     "10" "$(translate "Return to Main Menu")"
   )
 
@@ -274,7 +274,7 @@ function select_nas_iso() {
       read -r
       
       whiptail --title "Proxmox VE - Umbrel OS" \
-        --msgbox "$(translate "Umbrel OS installer script by Helper Scripts\n\nVisit the GitHub repo to learn more, contribute, or support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE/scripts?id=umbrel-os-vm")" 15 70
+        --msgbox "$(translate "Umbrel OS installer script by Community Scripts\n\nVisit the GitHub repo to learn more, contribute, or support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE/scripts?id=umbrel-os-vm")" 15 70
 
       return 1
       ;;

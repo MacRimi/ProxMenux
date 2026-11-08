@@ -22,7 +22,7 @@
         "name": "community-scripts / ProxmoxVE",
         "url": "https://community-scripts.github.io/ProxmoxVE/",
         "description": "Führt die Arbeit von ttecks Helper Scripts fort. Umfangreicher Katalog von Skripten zur Bereitstellung von LXCs wie Home Assistant, Plex oder Frigate, VMs, Erweiterungen und PVE-Anpassungen in einem Durchgang.",
-        "usedIn": "Helper-Scripts-Starter und Netzwerk (Korrektur des NIC-Offloadings für Intel e1000e)"
+        "usedIn": "Community-Scripts-Starter und Netzwerk (Korrektur des NIC-Offloadings für Intel e1000e)"
       }
     ]
   },

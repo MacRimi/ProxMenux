@@ -31,7 +31,7 @@ HELPERS_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/refs/heads/ma
 HELPERS_CACHE = BASE / 'helpers_cache.json'
 HELPERS_MAX_AGE = 24 * 3600
 # Results come in this order: the menu itself, then the two catalogs.
-SOURCES = ('ProxMenux', 'OCI Manager', 'Helper-Scripts')
+SOURCES = ('ProxMenux', 'OCI Manager', 'Community Scripts')
 # Words an OCI application is also found by, when its name does not say them.
 OCI_KEYWORDS = {'sharecovex': 'samba smb cifs nfs share compartir archivos time machine'}
 
@@ -176,7 +176,7 @@ def helper_entries(refresh=True):
         if not slug or slug in seen or not item.get('name'):
             continue
         seen.add(slug)
-        entries.append(dict(title=item['name'], source='Helper-Scripts', kind=str(item.get('type', '')).upper(),
+        entries.append(dict(title=item['name'], source='Community Scripts', kind=str(item.get('type', '')).upper(),
                             terms=f"{item['name']} {slug}",
                             related=' '.join(item.get('category_names', [])),
                             action=['bash', str(launcher), slug], handoff=False))
@@ -288,7 +288,7 @@ def main():
     except OSError:
         outdated = True
     if outdated:
-        dialog('infobox', translate('Search'), '\n' + translate('Loading the Helper-Scripts catalog...'))
+        dialog('infobox', translate('Search'), '\n' + translate('Loading the Community Scripts catalog...'))
     items = catalog()
     query = ''
     while True:

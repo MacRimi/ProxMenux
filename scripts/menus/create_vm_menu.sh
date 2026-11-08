@@ -149,7 +149,7 @@ while true; do
       2 "$(translate "Create VM System Windows")" \
       3 "$(translate "Create VM System Linux")" \
       ""          "" \
-      ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn" \
+      ""  "\Z4───────────────── $(translate "External Scripts") ─────────────────\Zn" \
       ""          "" \
       4 "$(translate "Create VM System macOS (OSX-PROXMOX)")" \
       5 "$(translate "Create VM System Others (based Linux)")" \

@@ -78,7 +78,7 @@
   },
   "community": {
     "title": "Scripts communautaires (non documentés ici)",
-    "intro": "Les deux entrées sous le séparateur <em>Community Scripts</em> exécutent du code qui <strong>ne fait pas partie de ProxMenux</strong>. Elles sont donc volontairement exclues de cette documentation :",
+    "intro": "Les deux entrées sous le séparateur <em>Scripts externes</em> exécutent du code qui <strong>ne fait pas partie de ProxMenux</strong>. Elles sont donc volontairement exclues de cette documentation :",
     "macosRich": "<strong>Système macOS</strong> : exécute l’installateur externe <osxLink>OSX-PROXMOX</osxLink>. Il clone le dépôt d’origine, prépare l’hôte et <strong>redémarre automatiquement à la fin</strong>. Consultez la documentation du projet.",
     "othersRich": "<strong>Autres systèmes (basés sur Linux)</strong> : charge une sélection d’installateurs communautaires pour serveurs domestiques, routeurs, pare-feu, etc. Chaque script est maintenu hors de ProxMenux."
   },

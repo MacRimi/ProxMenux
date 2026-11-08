@@ -10,7 +10,7 @@
   "intro": {
     "p1": "La scheda <strong>Aggiornamenti</strong> separa il rilevamento delle versioni dalla loro installazione. Registrazione e tracciamento opzionale sono nella <link>scheda App</link>; i metodi eseguibili si gestiscono qui.",
     "p2": "Un'app salvata appare in Aggiornamenti anche con un solo link web. Il tracciamento delle versioni è opzionale e il programma di aggiornamento può essere configurato separatamente.",
-    "callout": "Registrare un'app non seleziona il programma di aggiornamento. Se viene rilevato un programma Helper-Scripts corrispondente, scegli e salva <strong>Helper-Scripts</strong> o <strong>Comando personalizzato</strong>. Il rilevamento non garantisce la compatibilità. La scelta è per app, anche quando più app condividono un LXC."
+    "callout": "Registrare un'app non seleziona il programma di aggiornamento. Se viene rilevato un programma Community Scripts corrispondente, scegli e salva <strong>Community Scripts</strong> o <strong>Comando personalizzato</strong>. Il rilevamento non garantisce la compatibilità. La scelta è per app, anche quando più app condividono un LXC."
   },
   "overview": {
     "heading": "Cosa contiene la scheda",
@@ -24,8 +24,8 @@
   },
   "mechanisms": {
     "heading": "Come viene selezionato un metodo di aggiornamento",
-    "lead": "Il percorso integrato Proxmox VE Helper-Scripts segue il meccanismo ufficiale <helper>update-apps </helper>. Altri tipi di installazione utilizzano il pacchetto corrispondente, Docker o percorso personalizzato.",
-    "officialReference": "Riferimento ufficiale: la <helper>documentazione update-apps di Proxmox VE Helper-Scripts</helper> descrive modalità interattiva e non presidiata, backup, simulazioni, risorse temporanee di compilazione, log e codici di uscita.",
+    "lead": "Il percorso integrato Community Scripts segue il meccanismo ufficiale <helper>update-apps </helper>. Altri tipi di installazione utilizzano il pacchetto corrispondente, Docker o percorso personalizzato.",
+    "officialReference": "Riferimento ufficiale: la <helper>documentazione update-apps di Community Scripts</helper> descrive modalità interattiva e non presidiata, backup, simulazioni, risorse temporanee di compilazione, log e codici di uscita.",
     "colSource": "Fonte",
     "colAction": "Azione visualizzata",
     "colNotes": "Cosa viene eseguito",
@@ -36,9 +36,9 @@
         "notes": "Aggiorna i pacchetti container. Le app registrate installate come pacchetti dpkg o apk sono coperte da questo stesso passaggio."
       },
       {
-        "source": "Proxmox VE Helper-Scripts",
+        "source": "Community Scripts",
         "action": "Applica aggiornamento",
-        "notes": "Dopo la scelta esplicita di Helper-Scripts esegue lo script ufficiale identificato dal wrapper /usr/bin/update convalidato. Un marcatore o una corrispondenza nel catalogo da soli non abilitano mai l'esecuzione."
+        "notes": "Dopo la scelta esplicita di Community Scripts esegue lo script ufficiale identificato dal wrapper /usr/bin/update convalidato. Un marcatore o una corrispondenza nel catalogo da soli non abilitano mai l'esecuzione."
       },
       {
         "source": "Comando personalizzato",
@@ -56,7 +56,7 @@
         "notes": "Scarica l'immagine selezionata e ricrea il gruppo di servizi Compose o il container autonomo protetto."
       }
     ],
-    "callout": "Un comando personalizzato <strong>sostituisce</strong> Helper-Scripts per quell'app. Le esecuzioni manuali, in blocco e pianificate rispettano la scelta salvata. Restano i comandi esistenti e le vecchie selezioni salvate esplicitamente nei piani in blocco o nelle pianificazioni attive; una nuova app non viene mai inclusa da una vecchia pianificazione."
+    "callout": "Un comando personalizzato <strong>sostituisce</strong> Community Scripts per quell'app. Le esecuzioni manuali, in blocco e pianificate rispettano la scelta salvata. Restano i comandi esistenti e le vecchie selezioni salvate esplicitamente nei piani in blocco o nelle pianificazioni attive; una nuova app non viene mai inclusa da una vecchia pianificazione."
   },
   "docker": {
     "heading": "Docker Engine e immagini Docker",
@@ -76,7 +76,7 @@
     "items": [
       "<strong>Configura</strong> apre la scelta del programma quando non è definito un metodo; <strong>Modifica</strong> cambia una scelta salvata. I pulsanti informativi spiegano le opzioni, collegano la documentazione ufficiale e mostrano un esempio di script personalizzato. Selezionare non esegue l'opzione.",
       "Con tracciamento versione disattivato ma programma disponibile, appare l'azione neutra <strong>Esegui programma di aggiornamento</strong>. ProxMenux non afferma che ci sia un aggiornamento in attesa.",
-      "Senza un programma Helper-Scripts disponibile, configura un comando personalizzato. Disattivare un metodo non ne seleziona un altro; i piani e le pianificazioni conservano le scelte e segnalano gli obiettivi non disponibili.",
+      "Senza un programma Community Scripts disponibile, configura un comando personalizzato. Disattivare un metodo non ne seleziona un altro; i piani e le pianificazioni conservano le scelte e segnalano gli obiettivi non disponibili.",
       "<strong>Aggiorna immagine</strong> agisce solo sull'unità Docker selezionata; non aggiorna Docker Engine né immagini non correlate."
     ],
     "statusColState": "Stato conosciuto",
@@ -144,7 +144,7 @@
       "Dopo ogni esecuzione, ProxMenux controlla il marcatore standard Debian di riavvio richiesto. La scheda Aggiornamenti e la notifica finale segnalano quando serve riavviare; l'avviso si cancella quando quel LXC viene avviato o riavviato.",
       "Sull'host Proxmox, i log in esecuzione programmata vengono memorizzati in <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> utilizzando il nome <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Gli ultimi dieci registri sono conservati per LXC e i file più vecchi vengono rimossi automaticamente.",
       "Questa storia conservata si applica agli aggiornamenti programmati. Un aggiornamento manuale visualizza la sua uscita dal vivo nella finestra di esecuzione Monitor e non crea un registro in esecuzione programmata in quella directory.",
-      "Le pianificazioni esterne sull'host rilevate da Proxmox VE Helper-Scripts sono mostrate separatamente per evidenziare automazioni sovrapposte."
+      "Le pianificazioni esterne sull'host rilevate da Community Scripts sono mostrate separatamente per evidenziare automazioni sovrapposte."
     ],
     "callout": "Eseguire manualmente ogni metodo selezionato prima di attivare un programma. I comandi programmati non possono rispondere alle richieste."
   },
@@ -169,7 +169,7 @@
         "resolution": "Apri Configura, aggiungi la procedura ufficiale non interattiva e provala manualmente prima di pianificarla."
       },
       {
-        "problem": "Viene mostrata una identità Proxmox VE Helper-Scripts ma non esiste azione",
+        "problem": "Viene mostrata una identità Community Scripts ma non esiste azione",
         "resolution": "Il LXC ha dati di identificazione legacy ma nessun wrapper /usr/bin/update verificato. Aggiungere un metodo personalizzato solo dopo aver confermato la procedura corretta."
       },
       {

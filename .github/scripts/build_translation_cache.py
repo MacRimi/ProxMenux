@@ -54,6 +54,7 @@ PROTECTED_TECHNICAL_TERMS = (
     "feranick/gasket-driver",
     "libedgetpu1-std",
     "Proxmox VE Helper-Scripts",
+    "Community Scripts",
     "Docker Compose",
     "gasket-driver",
     "gasket-dkms",

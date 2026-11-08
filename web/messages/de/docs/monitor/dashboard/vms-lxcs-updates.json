@@ -10,7 +10,7 @@
   "intro": {
     "p1": "Der Reiter <strong>Aktualisierungen</strong> trennt Versionserkennung und Installation. Registrierung und optionale Versionsverfolgung erfolgen im <link>App-Reiter</link>; ausführbare Aktualisierungsmethoden werden hier verwaltet.",
     "p2": "Eine gespeicherte Anwendung wird in Updates angezeigt, auch wenn sie nur einen Weblink enthält. Die Versionsverfolgung ist optional und ein Updater kann unabhängig konfiguriert werden.",
-    "callout": "Die Registrierung wählt keinen Updater aus. Wird ein passender Helper-Scripts-Updater erkannt, wählen und speichern Sie <strong>Helper-Scripts</strong> oder <strong>Eigener Befehl</strong>. Die Erkennung garantiert keine Kompatibilität. Die Wahl gilt pro App, auch wenn mehrere denselben LXC nutzen."
+    "callout": "Die Registrierung wählt keinen Updater aus. Wird ein passender Community-Scripts-Updater erkannt, wählen und speichern Sie <strong>Community Scripts</strong> oder <strong>Eigener Befehl</strong>. Die Erkennung garantiert keine Kompatibilität. Die Wahl gilt pro App, auch wenn mehrere denselben LXC nutzen."
   },
   "overview": {
     "heading": "Was der Tab enthält",
@@ -24,8 +24,8 @@
   },
   "mechanisms": {
     "heading": "Wie eine Aktualisierungsmethode ausgewählt wird",
-    "lead": "Der integrierte Weg für Proxmox VE Helper-Scripts verwendet den offiziellen <helper>update-apps-Mechanismus</helper>. Andere Installationen verwenden die passende Paket-, Docker- oder eigene Methode.",
-    "officialReference": "Offizielle Referenz: Die <helper>Proxmox VE Helper-Scripts-Update-Apps-Dokumentation</helper> umfasst interaktive und unbeaufsichtigte Modi, Backups, Trockenläufe, temporäre Build-Ressourcen, Protokolle und Exit-Codes.",
+    "lead": "Der integrierte Weg für Community Scripts verwendet den offiziellen <helper>update-apps-Mechanismus</helper>. Andere Installationen verwenden die passende Paket-, Docker- oder eigene Methode.",
+    "officialReference": "Offizielle Referenz: Die <helper>Community-Scripts-Update-Apps-Dokumentation</helper> umfasst interaktive und unbeaufsichtigte Modi, Backups, Trockenläufe, temporäre Build-Ressourcen, Protokolle und Exit-Codes.",
     "colSource": "Quelle",
     "colAction": "Gezeigte Aktion",
     "colNotes": "Was läuft",
@@ -36,9 +36,9 @@
         "notes": "Aktualisiert die Containerpakete. Als dpkg- oder apk-Pakete installierte registrierte Apps werden im selben Lauf berücksichtigt."
       },
       {
-        "source": "Proxmox VE Helper-Scripts",
+        "source": "Community Scripts",
         "action": "Update anwenden",
-        "notes": "Nachdem Helper-Scripts explizit ausgewählt wurde, wird das offizielle Anwendungsskript ausgeführt, das durch den validierten /usr/bin/update-Wrapper identifiziert wurde. Eine Marker- oder Katalogübereinstimmung allein ermöglicht niemals die Ausführung."
+        "notes": "Nachdem Community Scripts explizit ausgewählt wurde, wird das offizielle Anwendungsskript ausgeführt, das durch den validierten /usr/bin/update-Wrapper identifiziert wurde. Eine Marker- oder Katalogübereinstimmung allein ermöglicht niemals die Ausführung."
       },
       {
         "source": "Eigener Befehl",
@@ -56,7 +56,7 @@
         "notes": "Zieht das ausgewählte Image und erstellt die Compose-Servicegruppe oder den geschützten eigenständigen Container neu."
       }
     ],
-    "callout": "Ein eigener Befehl <strong>ersetzt</strong> Helper-Scripts für diese Anwendung. Manuelle, Sammel- und geplante Läufe beachten die gespeicherte Wahl. Vorhandene eigene Befehle und ausdrücklich gespeicherte ältere Sammel- bzw. aktivierte Zeitplanauswahlen bleiben erhalten. Neu registrierte Apps werden nie durch einen alten Zeitplan aufgenommen."
+    "callout": "Ein eigener Befehl <strong>ersetzt</strong> Community Scripts für diese Anwendung. Manuelle, Sammel- und geplante Läufe beachten die gespeicherte Wahl. Vorhandene eigene Befehle und ausdrücklich gespeicherte ältere Sammel- bzw. aktivierte Zeitplanauswahlen bleiben erhalten. Neu registrierte Apps werden nie durch einen alten Zeitplan aufgenommen."
   },
   "docker": {
     "heading": "Docker Engine und Docker Images",
@@ -76,7 +76,7 @@
     "items": [
       "<strong>Configure</strong> öffnet den Updater-Selektor, wenn keine Methode ausgewählt ist; <strong>Edit</strong> ändert eine gespeicherte Auswahl. Die Informationsschaltflächen erklären jede Option, verlinken auf die offizielle Dokumentation und zeigen ein benutzerdefiniertes Skriptbeispiel an. Die Auswahl einer Option führt sie nicht aus.",
       "Wenn die Versionsverfolgung deaktiviert ist, aber ein Updater vorhanden ist, wird die neutrale Aktion <strong>Run updater</strong> angezeigt. ProxMenux behauptet nicht, dass ein Update anhängig ist.",
-      "Konfigurieren Sie ohne einen verfügbaren Helper-Scripts-Updater einen benutzerdefinierten Befehl. Das Deaktivieren einer Methode wählt nicht stillschweigend eine andere aus; bestehende Plan-/Zeitplanauswahlen bleiben gespeichert und nicht verfügbare Ziele werden gemeldet.",
+      "Konfigurieren Sie ohne einen verfügbaren Community-Scripts-Updater einen benutzerdefinierten Befehl. Das Deaktivieren einer Methode wählt nicht stillschweigend eine andere aus; bestehende Plan-/Zeitplanauswahlen bleiben gespeichert und nicht verfügbare Ziele werden gemeldet.",
       "Die Aktion <strong>Update image</strong> gilt nur für die ausgewählte Docker-Einheit; sie aktualisiert weder Docker Engine noch nicht verwandte Images."
     ],
     "statusColState": "Bekannter Zustand",
@@ -144,7 +144,7 @@
       "Nach jedem Durchlauf überprüft ProxMenux den standardmäßigen Debian-Reboot-erforderlichen Marker. Wenn ein Neustart erforderlich ist, wird dies auf der Registerkarte Updates und der Abschlussbenachrichtigung angezeigt; die Warnung wird gelöscht, wenn der LXC gestartet oder neu gestartet wird.",
       "Protokolle geplanter Läufe liegen auf dem Proxmox-Host in <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> mit dem Namen <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Pro LXC bleiben die letzten zehn Protokolle erhalten; ältere Dateien werden automatisch gelöscht.",
       "Diese beibehaltene Historie gilt für geplante Updates. Ein manuelles Update zeigt seine Ausgabe live im Monitor-Ausführungsfenster an und erstellt kein geplantes Protokoll in diesem Verzeichnis.",
-      "Externe Host-Zeitpläne, die von Proxmox VE Helper-Scripts erkannt wurden, werden separat angezeigt, so dass eine überlappende Automatisierung sichtbar ist."
+      "Externe Host-Zeitpläne, die von Community Scripts erkannt wurden, werden separat angezeigt, so dass eine überlappende Automatisierung sichtbar ist."
     ],
     "callout": "Führen Sie jede ausgewählte Methode manuell aus, bevor Sie einen Zeitplan aktivieren. Geplante Befehle können keine Eingabeaufforderungen beantworten."
   },
@@ -169,7 +169,7 @@
         "resolution": "Öffnen Sie die Konfiguration, fügen Sie die offizielle nicht-interaktive Prozedur hinzu und testen Sie sie manuell, bevor Sie sie planen."
       },
       {
-        "problem": "Eine Proxmox VE Helper-Scripts-Identität wird angezeigt, aber es gibt keine Aktion",
+        "problem": "Eine Community-Scripts-Identität wird angezeigt, aber es gibt keine Aktion",
         "resolution": "Der LXC hat Legacy-Identifikationsdaten, aber keinen verifizierten /usr/bin/update-Wrapper. Fügen Sie eine benutzerdefinierte Methode erst hinzu, nachdem Sie das korrekte Verfahren bestätigt haben."
       },
       {

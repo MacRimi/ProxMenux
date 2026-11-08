@@ -32,6 +32,7 @@ DEFAULT_CONTEXT = (
 
 TECHNICAL_TERMS = (
     "Proxmox VE Helper-Scripts",
+    "Community Scripts",
     "Proxmox Backup Server",
     "Proxmox Mail Gateway",
     "Proxmox VE",

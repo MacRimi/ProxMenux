@@ -4125,8 +4125,8 @@ _bk_community_launcher() {
 
 _bk_community_pve_host_backup() {
     _bk_community_launcher \
-        "PVE Host Backup — Helper-Scripts" \
-        "Helper-Scripts (community-scripts)" \
+        "PVE Host Backup — Community Scripts" \
+        "Community Scripts (community-scripts)" \
         "https://github.com/community-scripts/ProxmoxVE" \
         'bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/host-backup.sh)"'
 }
@@ -4168,8 +4168,8 @@ main_menu() {
             ""  " " \
             6   "$(_bk_format_menu_item "$(translate "VM and CT backup jobs (Datacenter > Backup)")" "")" \
             ""  " " \
-            ""  "\Z4───────────────────── $(translate "Community Scripts") ─────────────────────\Zn" \
-            7   "$(_bk_format_menu_item "PVE Host Backup" "Helper-Scripts")" \
+            ""  "\Z4───────────────────── $(translate "External Scripts") ─────────────────────\Zn" \
+            7   "$(_bk_format_menu_item "PVE Host Backup" "Community Scripts")" \
             8   "$(_bk_format_menu_item "proxmox_toolbox" "Tontonjo")" \
             9   "$(_bk_format_menu_item "proxsave" "tis24dev")" \
             ""  " " \

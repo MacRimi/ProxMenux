@@ -21,7 +21,7 @@
     "intro": "ProxMenux har två delar i samma källkodsträd. Installationsprogrammet installerar båda på värdsystemet: Scripts ger terminalgränssnittet och Monitor webbpanelen:",
     "scripts": {
       "title": "ProxMenux Scripts",
-      "body": "Det ursprungliga CLI/TUI som du startar med <code>menu</code>. Områden som täcker optimeringar efter installation, skapande av virtuella maskiner och LXC-containrar, GPU- och Coral TPU-genomkoppling, diskar, lagring, OCI-appar, nätverk, säkerhet, verktyg, säkerhetskopiering och återställning av värden, Proxmox VE Helper Scripts samt en utvald kommandoreferens. Fungerar i lokala terminaler, via SSH och i webbterminaler."
+      "body": "Det ursprungliga CLI/TUI som du startar med <code>menu</code>. Områden som täcker optimeringar efter installation, skapande av virtuella maskiner och LXC-containrar, GPU- och Coral TPU-genomkoppling, diskar, lagring, OCI-appar, nätverk, säkerhet, verktyg, säkerhetskopiering och återställning av värden, Community Scripts samt en utvald kommandoreferens. Fungerar i lokala terminaler, via SSH och i webbterminaler."
     },
     "monitor": {
       "title": "ProxMenux Monitor",

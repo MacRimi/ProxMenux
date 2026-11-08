@@ -20,7 +20,7 @@
   "opening": {
     "heading": "Otvorenie menu",
     "body": "V hlavnej ponuke ProxMenux vyberte <strong>Vytvoriť VM</strong>. Zobrazí sa:",
-    "imageAlt": "Ponuka Vytvoriť VM s tromi možnosťami ProxMenux (NAS/Windows/Linux) a časťou Community Scripts pod nimi (macOS/Ostatné)"
+    "imageAlt": "Ponuka Vytvoriť VM s tromi možnosťami ProxMenux (NAS/Windows/Linux) a časťou Externé skripty pod nimi (macOS/Ostatné)"
   },
   "families": {
     "heading": "Tri rodiny OS",
@@ -78,7 +78,7 @@
   },
   "community": {
     "title": "Komunitné skripty (tu nie sú zdokumentované)",
-    "intro": "Dve položky pod oddeľovačom <em>Community Scripts</em> spúšťajú kód, ktorý <strong>nie je súčasťou ProxMenux</strong>, preto sú zámerne mimo tejto dokumentácie:",
+    "intro": "Dve položky pod oddeľovačom <em>Externé skripty</em> spúšťajú kód, ktorý <strong>nie je súčasťou ProxMenux</strong>, preto sú zámerne mimo tejto dokumentácie:",
     "macosRich": "<strong>Systém macOS</strong>: spustí externý inštalátor <osxLink>OSX-PROXMOX</osxLink>. Naklonuje pôvodný repozitár, pripraví hostiteľa a <strong>po dokončení ho automaticky reštartuje</strong>. Pozrite si dokumentáciu daného projektu.",
     "othersRich": "<strong>Ostatné systémy (založené na Linuxe)</strong> — načíta upravený zoznam komunitných inštalátorov založených na Linuxe (operačné systémy domáceho servera, zariadenia smerovača/brány firewall atď.). Každý skript komunity je udržiavaný mimo ProxMenux."
   },
