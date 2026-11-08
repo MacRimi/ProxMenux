@@ -755,9 +755,11 @@ install_normal_version() {
             update_config "jq" "installed"
         else
             discard_apt_error
-            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+            local jq_arch=amd64
+            [ "$(uname -m)" = "aarch64" ] && jq_arch=arm64
+            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${jq_arch}"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
-                if command -v jq > /dev/null 2>&1; then
+                if jq --version > /dev/null 2>&1; then
                     update_config "jq" "installed_from_github"
                 else
                     msg_error "Failed to install jq. Please install it manually."
