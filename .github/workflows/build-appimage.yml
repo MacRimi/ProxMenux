@@ -14,6 +14,7 @@ jobs:
     # Native builds only: every AppImage payload (runtime, wheels, tools)
     # must come from a runner of the target CPU.
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-22.04

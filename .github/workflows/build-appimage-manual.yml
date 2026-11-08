@@ -12,6 +12,7 @@ jobs:
     # Native builds only: every AppImage payload (runtime, wheels, tools)
     # must come from a runner of the target CPU.
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-22.04
@@ -102,6 +103,8 @@ jobs:
   # to the same branch would race each other.
   publish:
     needs: build
+    # A failed architecture must not hold back the others.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
 
     steps:
@@ -124,7 +127,19 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-        rm -f AppImage/*.AppImage AppImage/*.sha256 || true
+        # Replace only the architectures rebuilt in this run.
+        for sha in AppImage/dist/*.sha256; do
+          [ -e "$sha" ] || continue
+          name=$(basename "$sha")
+          suffix=${name#ProxMenux-Monitor}
+          suffix=${suffix%.AppImage.sha256}
+          if [ -n "$suffix" ]; then
+            rm -f AppImage/ProxMenux-*"$suffix".AppImage
+          else
+            find AppImage -maxdepth 1 -name 'ProxMenux-*.AppImage' ! -name 'ProxMenux-*-aarch64.AppImage' -delete
+          fi
+          rm -f "AppImage/$name"
+        done
 
         # Copy new files
         cp AppImage/dist/*.AppImage AppImage/
