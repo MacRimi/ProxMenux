@@ -9160,5 +9160,18 @@
   "⚠ Disk data will NOT be erased.": "⚠ Os dados do disco NÃO serão apagados.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ O disco será desmontado e removido de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ A entrada /etc/fstab será removida.",
-  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado."
+  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado.",
+  "Ente Photos": "Ente Photos",
+  "End-to-end encrypted photo backup and sharing.": "Cópias de segurança e partilha de fotografias com encriptação de ponta a ponta.",
+  "Creates five LXC containers: Photos web, Museum API, PostgreSQL, S3 storage and a stopped bucket initialization job.": "São criados cinco contentores LXC: a interface web Photos, a API Museum, PostgreSQL, o armazenamento S3 e uma tarefa de criação de buckets que depois fica parada.",
+  "For remote browser access, expose the Photos web, Museum API and S3 endpoints through HTTPS and configure the corresponding public URLs. localhost access is suitable for local tests.": "Para aceder a partir de outro dispositivo, disponibilize a interface web Photos, a API Museum e o armazenamento S3 por HTTPS e configure os respetivos URL públicos. localhost serve para testes locais.",
+  "Create your account in Photos. Without SMTP, retrieve the verification code from the Museum container logs. Keep the database and object storage backed up together.": "Crie a sua conta no Photos. Sem SMTP, consulte o código de verificação nos registos do contentor Museum. Faça cópias de segurança conjuntas da base de dados e do armazenamento de objetos.",
+  "Without SMTP, find the account verification code in the Museum container logs. Browser access requires HTTPS or localhost for cryptography.": "Sem SMTP, o código de verificação da conta aparece nos registos do contentor Museum. O navegador exige HTTPS ou localhost para a encriptação.",
+  "Photos": "Fotografias",
+  "HTTPS Museum API endpoint": "Acesso HTTPS à API Museum",
+  "HTTPS Museum API URL": "URL HTTPS da API Museum",
+  "HTTPS S3 and public-album endpoints": "Acessos HTTPS ao S3 e aos álbuns públicos",
+  "HTTPS S3 storage URL": "URL HTTPS do armazenamento S3",
+  "HTTPS public albums URL": "URL HTTPS dos álbuns públicos",
+  "Encrypted photo backup. LAN browser access requires HTTPS for Photos, Museum API and S3; plain HTTP by IP cannot perform the required cryptography.": "Cópia de segurança encriptada de fotografias. O acesso pelo navegador na LAN requer HTTPS para Photos, Museum API e S3; HTTP diretamente pelo IP não permite as operações criptográficas necessárias."
 }

@@ -9160,5 +9160,18 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Ente Photos": "Ente Photos",
+  "End-to-end encrypted photo backup and sharing.": "Säkerhetskopiera och dela foton med totalsträckskryptering.",
+  "Creates five LXC containers: Photos web, Museum API, PostgreSQL, S3 storage and a stopped bucket initialization job.": "Fem LXC-containrar skapas: webbgränssnittet Photos, Museum-API:t, PostgreSQL, S3-lagringen och ett jobb som skapar bucketar och sedan förblir stoppat.",
+  "For remote browser access, expose the Photos web, Museum API and S3 endpoints through HTTPS and configure the corresponding public URLs. localhost access is suitable for local tests.": "För åtkomst från andra enheter behöver webbgränssnittet Photos, Museum-API:t och S3-lagringen vara tillgängliga via HTTPS. Konfigurera motsvarande publika URL:er. localhost passar för lokala tester.",
+  "Create your account in Photos. Without SMTP, retrieve the verification code from the Museum container logs. Keep the database and object storage backed up together.": "Skapa ditt konto i Photos. Utan SMTP finns verifieringskoden i Museum-containerns loggar. Säkerhetskopiera databasen och objektlagringen tillsammans.",
+  "Without SMTP, find the account verification code in the Museum container logs. Browser access requires HTTPS or localhost for cryptography.": "Utan SMTP visas kontots verifieringskod i Museum-containerns loggar. Webbläsaren kräver HTTPS eller localhost för kryptering.",
+  "Photos": "Foton",
+  "HTTPS Museum API endpoint": "HTTPS-åtkomst till Museum-API:t",
+  "HTTPS Museum API URL": "HTTPS-URL till Museum-API:t",
+  "HTTPS S3 and public-album endpoints": "HTTPS-åtkomst till S3 och publika album",
+  "HTTPS S3 storage URL": "HTTPS-URL till S3-lagringen",
+  "HTTPS public albums URL": "HTTPS-URL till publika album",
+  "Encrypted photo backup. LAN browser access requires HTTPS for Photos, Museum API and S3; plain HTTP by IP cannot perform the required cryptography.": "Krypterad säkerhetskopiering av foton. Webbläsaråtkomst i det lokala nätverket kräver HTTPS för Photos, Museum API och S3; vanlig HTTP via en IP-adress stöder inte de kryptografiska funktioner som behövs."
 }

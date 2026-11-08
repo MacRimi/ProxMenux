@@ -40,6 +40,14 @@
     "duplicati": {
       "status": "laboratory-validated"
     },
+    "ente-photos": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "5224466c15f716b520fab8e58400aa4cc3c40883fc3b0363ee9910bc995d4ced",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced; browser page, real OTP auth and Museum-configured S3; managed/host data; restart/Modify; cached refresh and automatic readiness rollback; five-CT backup/restore/Manage. S3 host data external; browser password/SRP and uploads not tested."
+      }
+    },
     "etherpad": {
       "status": "laboratory-validated"
     },

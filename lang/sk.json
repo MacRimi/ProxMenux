@@ -9160,5 +9160,18 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Ente Photos": "Ente Photos",
+  "End-to-end encrypted photo backup and sharing.": "Zálohujte a zdieľajte fotografie s koncovým šifrovaním.",
+  "Creates five LXC containers: Photos web, Museum API, PostgreSQL, S3 storage and a stopped bucket initialization job.": "Vytvorí sa päť kontajnerov LXC: webové rozhranie Photos, API Museum, PostgreSQL, úložisko S3 a úloha vytvorenia bucketov, ktorá potom zostane zastavená.",
+  "For remote browser access, expose the Photos web, Museum API and S3 endpoints through HTTPS and configure the corresponding public URLs. localhost access is suitable for local tests.": "Na prístup z iného zariadenia sprístupnite webové rozhranie Photos, API Museum a úložisko S3 cez HTTPS a nastavte ich verejné URL. localhost je vhodný na miestne testy.",
+  "Create your account in Photos. Without SMTP, retrieve the verification code from the Museum container logs. Keep the database and object storage backed up together.": "Vytvorte si účet v Photos. Bez SMTP nájdete overovací kód v protokole kontajnera Museum. Databázu a objektové úložisko zálohujte spoločne.",
+  "Without SMTP, find the account verification code in the Museum container logs. Browser access requires HTTPS or localhost for cryptography.": "Bez SMTP sa overovací kód účtu zobrazí v protokole kontajnera Museum. Prehliadač vyžaduje na šifrovanie HTTPS alebo localhost.",
+  "Photos": "Fotografie",
+  "HTTPS Museum API endpoint": "Prístup k API Museum cez HTTPS",
+  "HTTPS Museum API URL": "HTTPS URL API Museum",
+  "HTTPS S3 and public-album endpoints": "Prístup k S3 a verejným albumom cez HTTPS",
+  "HTTPS S3 storage URL": "HTTPS URL úložiska S3",
+  "HTTPS public albums URL": "HTTPS URL verejných albumov",
+  "Encrypted photo backup. LAN browser access requires HTTPS for Photos, Museum API and S3; plain HTTP by IP cannot perform the required cryptography.": "Šifrované zálohovanie fotografií. Prístup z prehliadača v sieti LAN vyžaduje HTTPS pre Photos, Museum API a S3; priamy prístup cez HTTP na IP adresu neumožňuje potrebné kryptografické operácie."
 }
