@@ -9169,5 +9169,6 @@
   "GitLab administrator password": "Passwort des GitLab-Administrators",
   "GitLab configuration": "GitLab-Konfiguration",
   "GitLab administrator": "GitLab-Administrator",
-  "GitLab": "GitLab"
+  "GitLab": "GitLab",
+  "Encrypted photo backup. LAN browser access requires HTTPS for Photos, Museum API and S3; plain HTTP by IP cannot perform the required cryptography.": "Verschlüsselte Fotosicherung. Der Browserzugriff im LAN benötigt HTTPS für Photos, Museum API und S3; über HTTP mit einer IP-Adresse sind die erforderlichen kryptografischen Vorgänge nicht möglich."
 }

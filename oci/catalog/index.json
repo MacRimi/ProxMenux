@@ -4103,7 +4103,7 @@
       "template_family": "curated-profile",
       "title": "Ente Photos",
       "repository": "https://github.com/ente/ente",
-      "description": "End-to-end encrypted photo backup and sharing.",
+      "description": "Encrypted photo backup. LAN browser access requires HTTPS for Photos, Museum API and S3; plain HTTP by IP cannot perform the required cryptography.",
       "website": "https://ente.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ente-photos.webp",
       "architectures": [
