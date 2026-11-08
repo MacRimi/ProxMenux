@@ -65,6 +65,14 @@
     "grafana": {
       "status": "laboratory-validated"
     },
+    "guacamole": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "50484043eadd8d9562053940c0ed523dbddaf9086c370127b2f4acabb8bddddc",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced; browser login and real SSH; private guacd/DB; restart/Modify; 1.6 refresh and controlled rollback; four-member backup/restore/Manage; Remove/PBS cleanup; official image mirror verified."
+      }
+    },
     "haos-one": {
       "status": "laboratory-validated"
     },
@@ -77,8 +85,24 @@
     "jenkins": {
       "status": "laboratory-validated"
     },
+    "lastboard": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-06",
+        "digest": "33501ce2e2812a2ce870bec70f33d235a7b5f39f334551fb852453ffc337647a",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced OCI-compose install; browser login; managed/host data, PUID/PGID, restart, Modify, 1.10.1 to 1.10.2 update, failed-health rollback, managed backup/restore to new VMID/Manage, removal. ARM64 manifest only; optional integrations untested."
+      }
+    },
     "linkwarden": {
       "status": "laboratory-validated"
+    },
+    "listmonk": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "7fb5a41120ab1319ddc1631355e2ec6bd45885b87efb62def373172a9f4b595e",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced; generated login, lists/media; managed/host data; restart/Modify; 6.1 to 6.2 and controlled rollback using verified official cached images; full-group backup/restore/Manage; Remove/PBS cleanup."
+      }
     },
     "mariadb": {
       "status": "laboratory-validated"
@@ -88,6 +112,14 @@
     },
     "mineos-node": {
       "status": "laboratory-validated"
+    },
+    "miniserve": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "70de52ea4754da9de9db322d9fed183889c5a64b0da4000a02bf1f6462695e2c",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced; browser and HTTP files; managed/host persistence, restart, Modify; 0.34.0 to 0.35.0 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; optional authentication untested."
+      }
     },
     "motioneye": {
       "status": "laboratory-validated"
@@ -132,14 +164,46 @@
     "rdtclient": {
       "status": "laboratory-validated"
     },
+    "recyclarr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "1a8370c4e830ee3b46709225cc888013e20f667c6bc87593fd58ecfbf149afbf",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced OCI-compose; cron/CLI and sync to temporary Radarr; managed/host persistence, UID 1000, restart, Modify; 8.7.3 to 8.8.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. Internet required. ARM64 manifest only."
+      }
+    },
+    "restreamer": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "9bced1da8a4293efd01c1bc3107c0963e426319bbecb29a9dfafbf52daaf57b1",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced; browser/API login; config/media persistence, restart, Modify; 2.11.0 to 2.12.0 update (served JS changed), no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/publishing untested."
+      }
+    },
     "scanopy": {
       "status": "laboratory-validated"
+    },
+    "semaphore-ui": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "426816c986ccf96283a23e27338cc84a7ee92856f9ce62c696861cf559cf6e26",
+        "scenario": "PVE 9.2 amd64/ZFS; default and advanced; managed/host persistence; browser login; restart/Modify; 2.19.16 to 2.19.17; rollback; backup/restore/Manage; removal and PBS cleanup."
+      }
     },
     "sharecovex": {
       "status": "laboratory-validated"
     },
     "snapotter": {
       "status": "laboratory-validated"
+    },
+    "snipe-it": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "2917d721b97ec47cfe0a4d63e86262d42460e579a418c9b1e6806b364acee096",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced; browser login and inventory; managed/host uploads; restart/Modify; native 8.8.2 to 8.8.3; rollback; full-group backup/restore/Manage; removal/PBS cleanup."
+      }
     },
     "sonarr": {
       "status": "laboratory-validated"
@@ -161,6 +225,14 @@
     "trilium": {
       "status": "laboratory-validated"
     },
+    "unmanic": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "b249cba0d77331fe015794dc06f98cc4c99c50f158cfce43575a1b4f330495a9",
+        "scenario": "PVE 9.2/amd64/ZFS: default/advanced; browser/API; managed/host library, UID/GID 1000/1001, restart, FFmpeg CPU encode, Modify; 0.4.0 to 0.4.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/full plugin flows untested."
+      }
+    },
     "vaultwarden": {
       "status": "laboratory-validated"
     },
@@ -170,12 +242,20 @@
     "wireguard": {
       "status": "laboratory-validated"
     },
-    "guacamole": {
+    "wizarr": {
       "community_tested": {
         "by": "jcastro",
         "date": "2026-11-07",
-        "digest": "50484043eadd8d9562053940c0ed523dbddaf9086c370127b2f4acabb8bddddc",
-        "scenario": "PVE 9.2 amd64/ZFS; default/advanced; browser login and real SSH; private guacd/DB; restart/Modify; 1.6 refresh and controlled rollback; four-member backup/restore/Manage; Remove/PBS cleanup; official image mirror verified."
+        "digest": "5e1b78572088a4b79dc784aa4847f82a0387b5d5538ecd16d3af49bf5b5bb4b2",
+        "scenario": "PVE 9.2/amd64/ZFS: default and advanced OCI-compose; browser admin login; managed/host data, UID/GID, restart, Modify; 2026.10.0 to 2026.10.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; media integrations untested."
+      }
+    },
+    "yourls": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-07",
+        "digest": "774dc1d1f4216fb49d6ad366eefd7a7d01261a8793b9ae20732d3fe004bbe9e3",
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced; browser login and redirect; managed/host data; restart/Modify; live coordinated update; controlled rollback with verified cached images; whole-group backup/restore/Manage; Remove/PBS cleanup."
       }
     }
   }

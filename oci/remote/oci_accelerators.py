@@ -45,7 +45,11 @@ def container_gid(device, host_value):
 
 
 def preserve_recorded_container_gids(record, candidate, config):
-    drm.preserve_recorded_container_gids(record, candidate, config)
+    # NVIDIA comes through its runtime, without a device line or group of its
+    # own; the other devices are the same objects, so their GIDs are kept.
+    drm.preserve_recorded_container_gids(dict(record, deployment=drm_plan(record.get('deployment', {}))),
+                                         dict(candidate, deployment=drm_plan(candidate.get('deployment', {}))),
+                                         config)
 
 
 def planned(deployment):
