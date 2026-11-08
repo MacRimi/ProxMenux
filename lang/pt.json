@@ -9231,5 +9231,13 @@
   "⚠ Disk data will NOT be erased.": "⚠ Os dados do disco NÃO serão apagados.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ O disco será desmontado e removido de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ A entrada /etc/fstab será removida.",
-  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado."
+  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado.",
+  "Synchronize a UniFi VPN policy route with the public block-status feed.": "Sincroniza uma rota VPN por política do UniFi com a fonte pública do estado dos bloqueios.",
+  "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface.": "Imagem oficial do StopLiga. Este perfil configura o UniFi; requer uma chave API local e uma rede VPN Client já criada. O serviço funciona em segundo plano sem interface web.",
+  "UniFi controller hostname or IP address": "Nome do anfitrião ou endereço IP do controlador UniFi",
+  "Local UniFi API key": "Chave API local do UniFi",
+  "Verify the UniFi TLS certificate (false only for a trusted self-signed controller)": "Verificar o certificado TLS do UniFi (false apenas para um controlador de confiança com certificado autoassinado)",
+  "No web interface. Check sync status with: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck": "Sem interface web. Verifique a sincronização com: pct exec <VMID> -- /opt/venv/bin/stopliga --healthcheck",
+  "This profile uses UniFi. Create a VPN Client network first; use a local API key with permission to manage policy routes.": "Este perfil usa UniFi. Crie primeiro uma rede VPN Client e use uma chave API local com permissão para gerir rotas por política.",
+  "To preview changes without updating the router, set STOPLIGA_DRY_RUN=true.": "Para pré-visualizar as alterações sem modificar o router, defina STOPLIGA_DRY_RUN=true."
 }
