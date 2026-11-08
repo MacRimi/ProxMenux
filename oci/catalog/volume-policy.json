@@ -186,6 +186,9 @@
     "chromeos": [
       "/storage"
     ],
+    "macos": [
+      "/storage"
+    ],
     "baserow": [
       "/baserow/data"
     ]
