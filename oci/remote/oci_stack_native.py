@@ -343,11 +343,16 @@ class NativeAdapter:
             current['pending_stack_transaction'] = str(self.journal)
             instances.write(instances.location(self.root, vmid), current)
         config = instances.command('pct', 'config', str(record['vmid']))
+        # Installations and updates use different cache names. The resolver
+        # verifies both the saved archive's integrity and its resolved image
+        # before reusing it; a genuinely changed image is still downloaded.
+        local_archives = (record.get('observed', {}).get('archive_path'),)
         if operation == 'recreate':
             digest = record.get('observed', {}).get('resolved_registry_digest')
-            archive, digest = resolve_archive(record, config, required_digest=digest)
+            archive, digest = resolve_archive(record, config, required_digest=digest,
+                                              local_archives=local_archives)
         else:
-            archive, digest = resolve_archive(record, config)
+            archive, digest = resolve_archive(record, config, local_archives=local_archives)
         image = image_from_archive(str(archive))
         old = record['observed']['image']
         validate_database_transition(old, image)

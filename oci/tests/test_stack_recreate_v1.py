@@ -40,7 +40,8 @@ class StackRecreateV1Tests(unittest.TestCase):
                 patch.object(native, "image_from_archive", return_value=image):
             prepared = adapter.prepare(MEMBER, "recreate")
 
-        resolve.assert_called_once_with(MEMBER, b"arch: amd64\n", required_digest=DIGEST)
+        resolve.assert_called_once_with(MEMBER, b"arch: amd64\n", required_digest=DIGEST,
+                                        local_archives=(None,))
         self.assertEqual(prepared["digest"], DIGEST)
         self.assertEqual(prepared["proposal"]["operation"], "recreate")
         self.assertEqual(prepared["proposal"]["candidate"], MEMBER)
