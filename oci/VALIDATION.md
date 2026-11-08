@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-66 of 569 applications in the OCI catalog have been tested for real: 49 in the ProxMenux lab and 17 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+71 of 575 applications in the OCI catalog have been tested for real: 54 in the ProxMenux lab and 17 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -53,6 +53,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Alist | Files & Sharing |
 | aMule | Files & Downloads |
 | Authentik | Authentication & Security |
+| ChromeOS Flex | Browsers & Web Desktops |
 | Chromium | Browsers & Web Desktops |
 | CodeProject.AI Server | AI |
 | CopyParty | Files & Sharing |
@@ -82,6 +83,9 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Paperless-ngx | Productivity & Workflows |
 | Phpmyadmin | Databases |
 | Prowlarr | *Arr Suite |
+| Proxmox Backup Server | Backup & Recovery |
+| Proxmox Datacenter Manager | Host Management |
+| Proxmox Mail Gateway | Authentication & Security |
 | Qbittorrent | Files & Downloads |
 | Rclone WebUI | Backup & Recovery |
 | Real-Debrid Torrent Client | Files & Downloads |
@@ -93,5 +97,6 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Thelounge | Communication & Community |
 | Trilium | Documents & Notes |
 | Vaultwarden | Authentication & Security |
+| Windows | Browsers & Web Desktops |
 | Wireguard | Remote Access & VPN |
 | WireGuard Easy | Remote Access & VPN |

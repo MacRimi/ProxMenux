@@ -437,6 +437,36 @@ The first TCP port is taken as the web address unless `first_run.endpoints` says
 
 The variables the image itself defines are imported with it and are not written here.
 
+An interactive, non-secret variable can declare a fixed list of `choices`.
+The installer shows its normal selection menu in both default and advanced
+mode; it saves the selected `value`, not its translated `label`. `example`
+selects the initial entry and must match one of the values. Values must be
+unique. Cancelling the menu cancels the installation.
+
+```json
+{
+  "name": "VERSION",
+  "example": "11",
+  "required": true,
+  "sensitive": false,
+  "prompt": "Windows version",
+  "choices": [
+    { "value": "11", "label": "Windows 11 Pro" },
+    { "value": "2025", "label": "Windows Server 2025" }
+  ]
+}
+```
+
+`choices` cannot be combined with a secret, `container_address` or
+`prompt_user: false`. Recipes without `choices` keep their existing behaviour.
+
+A choice can also declare `environment_defaults`, for example
+`{"RAM_SIZE": "512M", "CPU_CORES": "1"}` for a legacy operating system.
+These become the proposed values of variables declared **after** the selector;
+advanced mode can still change them. They cannot target undeclared variables,
+secrets, fixed variables, address substitutions or another selector. The saved
+recipe is not modified by the choice.
+
 **`volumes`**. One entry for each path that has to survive an update.
 
 | Field | Default | What it is |

@@ -22,6 +22,9 @@
     "authentik": {
       "status": "laboratory-validated"
     },
+    "chromeos": {
+      "status": "laboratory-validated"
+    },
     "chromium": {
       "status": "laboratory-validated"
     },
@@ -171,6 +174,15 @@
     "prowlarr": {
       "status": "laboratory-validated"
     },
+    "proxmox-backup": {
+      "status": "laboratory-validated"
+    },
+    "proxmox-dm": {
+      "status": "laboratory-validated"
+    },
+    "proxmox-mail": {
+      "status": "laboratory-validated"
+    },
     "qbittorrent": {
       "status": "laboratory-validated"
     },
@@ -253,6 +265,9 @@
       "status": "laboratory-validated"
     },
     "wg-easy": {
+      "status": "laboratory-validated"
+    },
+    "windows": {
       "status": "laboratory-validated"
     },
     "wireguard": {
