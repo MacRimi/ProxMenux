@@ -8519,6 +8519,29 @@
       "template_id": "image-linkwarden"
     },
     {
+      "id": "listmonk",
+      "provider": "listmonk",
+      "template_family": "curated-profile",
+      "title": "listmonk",
+      "repository": "https://github.com/knadh/listmonk",
+      "description": "Manage mailing lists, subscribers and email campaigns with a private PostgreSQL database.",
+      "website": "https://listmonk.app/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/listmonk.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/listmonk/listmonk:latest",
+      "category": "tools",
+      "category_label": "Tools",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/listmonk.json",
+      "template_id": "image-listmonk",
+      "template": null,
+      "template_status": null
+    },
+    {
       "id": "livebook",
       "provider": "livebook-dev",
       "template_family": "curated-profile",
@@ -14863,6 +14886,39 @@
       "template_id": "image-seerr"
     },
     {
+      "id": "semaphore-ui",
+      "provider": "semaphoreui",
+      "template_family": "curated-profile",
+      "title": "Semaphore UI",
+      "repository": "https://github.com/semaphoreui/semaphore",
+      "description": "Run Ansible, Terraform and other automation tools from a web interface.",
+      "website": "https://semaphoreui.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/semaphore-ui.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/semaphoreui/semaphore:latest",
+      "category": "automation",
+      "category_label": "Automation & Scheduling",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/semaphore-ui.json",
+      "template_id": "image-semaphore-ui",
+      "template": "apps/semaphore-ui.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "sftpgo",
       "provider": "drakkan",
       "template_family": "curated-profile",
@@ -15354,6 +15410,39 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "image-snapotter"
+    },
+    {
+      "id": "snipe-it",
+      "provider": "grokability",
+      "template_family": "curated-profile",
+      "title": "Snipe-IT",
+      "repository": "https://github.com/grokability/snipe-it",
+      "description": "Track IT assets, software licenses, accessories and equipment assignments with Snipe-IT.",
+      "website": "https://snipeitapp.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/snipe-it.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "snipe/snipe-it:v8-latest",
+      "category": "tools",
+      "category_label": "Tools",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/snipe-it.json",
+      "template_id": "image-snipe-it",
+      "template": "apps/snipe-it.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true
     },
     {
       "id": "sofa",
@@ -18734,6 +18823,39 @@
       "template_id": "linuxserver-your-spotify"
     },
     {
+      "id": "yourls",
+      "provider": "yourls",
+      "template_family": "curated-profile",
+      "title": "YOURLS",
+      "repository": "https://github.com/YOURLS/containers",
+      "description": "Your own URL shortener with statistics, plugins and a private MariaDB database.",
+      "website": "https://yourls.org/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yourls.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/library/yourls:apache",
+      "category": "tools",
+      "category_label": "Tools",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/yourls.json",
+      "template_id": "image-yourls",
+      "template": "apps/yourls.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true
+    },
+    {
       "id": "zen",
       "provider": "linuxserver.io",
       "title": "Zen",
@@ -19979,7 +20101,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 24
+      "included_count": 28
     }
   }
 }

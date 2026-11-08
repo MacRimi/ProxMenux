@@ -9095,5 +9095,22 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Semaphore UI": "Semaphore UI",
+  "Run Ansible, Terraform and other automation tools from a web interface.": "Запускайте Ansible, Terraform и другие средства автоматизации через веб-интерфейс.",
+  "SQLite and the encryption keys are kept in persistent volumes. Keep both configuration and database backups together.": "SQLite и ключи шифрования хранятся в постоянных томах. Храните резервные копии конфигурации и базы данных вместе.",
+  "Password of the Semaphore administrator": "Пароль администратора Semaphore",
+  "Semaphore administrator": "Администратор Semaphore",
+  "YOURLS": "YOURLS",
+  "Your own URL shortener with statistics, plugins and a private MariaDB database.": "Собственный сервис сокращения URL со статистикой, плагинами и закрытой базой данных MariaDB.",
+  "Open /admin/ to complete the database setup. Use the administrator credentials shown by the installer.": "Откройте /admin/, чтобы завершить настройку базы данных. Используйте учетные данные администратора, показанные установщиком.",
+  "YOURLS administrator": "Администратор YOURLS",
+  "Track IT assets, software licenses, accessories and equipment assignments with Snipe-IT.": "Управляйте ИТ-оборудованием, лицензиями на ПО, аксессуарами и назначением устройств с помощью Snipe-IT.",
+  "Complete the web setup wizard to create your administrator account.": "Завершите настройку в веб-мастере, чтобы создать учётную запись администратора.",
+  "The application key is generated once and preserved with the installation. Keep it with your backups.": "Ключ приложения создаётся один раз и сохраняется вместе с установкой. Храните его вместе с резервными копиями.",
+  "Email is logged by default. Configure an SMTP server before relying on email delivery.": "По умолчанию письма только записываются в журнал. Настройте SMTP-сервер, прежде чем использовать отправку почты.",
+  "listmonk": "listmonk",
+  "Manage mailing lists, subscribers and email campaigns with a private PostgreSQL database.": "Управляйте рассылками, подписчиками и почтовыми кампаниями с отдельной базой данных PostgreSQL.",
+  "listmonk administrator": "Администратор listmonk",
+  "Configure SMTP and the public root URL before sending email. Set the media upload directory to /listmonk/uploads in the web settings.": "Настройте SMTP и общедоступный адрес приложения перед отправкой писем. В веб-настройках укажите /listmonk/uploads как каталог загрузки медиафайлов."
 }

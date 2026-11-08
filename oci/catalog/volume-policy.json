@@ -170,6 +170,9 @@
     ],
     "unmanic": [
       "/library"
+    ],
+    "listmonk": [
+      "/listmonk/uploads"
     ]
   },
   "sizes": {

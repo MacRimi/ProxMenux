@@ -9124,5 +9124,22 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Semaphore UI": "Semaphore UI",
+  "Run Ansible, Terraform and other automation tools from a web interface.": "Spúšťajte Ansible, Terraform a ďalšie nástroje automatizácie cez webové rozhranie.",
+  "SQLite and the encryption keys are kept in persistent volumes. Keep both configuration and database backups together.": "SQLite a šifrovacie kľúče sa ukladajú do trvalých zväzkov. Zálohy konfigurácie a databázy uchovávajte spolu.",
+  "Password of the Semaphore administrator": "Heslo správcu Semaphore",
+  "Semaphore administrator": "Správca Semaphore",
+  "YOURLS": "YOURLS",
+  "Your own URL shortener with statistics, plugins and a private MariaDB database.": "Vlastná služba na skracovanie URL so štatistikami, doplnkami a súkromnou databázou MariaDB.",
+  "Open /admin/ to complete the database setup. Use the administrator credentials shown by the installer.": "Otvorte /admin/ a dokončite nastavenie databázy. Použite prihlasovacie údaje správcu zobrazené inštalátorom.",
+  "YOURLS administrator": "Správca YOURLS",
+  "Track IT assets, software licenses, accessories and equipment assignments with Snipe-IT.": "Spravujte IT vybavenie, softvérové licencie, príslušenstvo a pridelenie zariadení pomocou Snipe-IT.",
+  "Complete the web setup wizard to create your administrator account.": "Dokončite webového sprievodcu nastavením a vytvorte si účet správcu.",
+  "The application key is generated once and preserved with the installation. Keep it with your backups.": "Kľúč aplikácie sa vygeneruje raz a zachová sa spolu s inštaláciou. Uložte ho spolu so zálohami.",
+  "Email is logged by default. Configure an SMTP server before relying on email delivery.": "E-maily sa predvolene iba zapisujú do denníka. Pred používaním odosielania e-mailov nastavte server SMTP.",
+  "listmonk": "listmonk",
+  "Manage mailing lists, subscribers and email campaigns with a private PostgreSQL database.": "Spravujte distribučné zoznamy, odberateľov a e-mailové kampane so súkromnou databázou PostgreSQL.",
+  "listmonk administrator": "Správca listmonk",
+  "Configure SMTP and the public root URL before sending email. Set the media upload directory to /listmonk/uploads in the web settings.": "Pred odosielaním e-mailov nastavte SMTP a verejnú základnú adresu URL aplikácie. Vo webových nastaveniach zadajte /listmonk/uploads ako priečinok na nahrávanie médií."
 }
