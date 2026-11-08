@@ -5819,6 +5819,39 @@
       "template_id": "linuxserver-grocy"
     },
     {
+      "id": "guacamole",
+      "provider": "apache-guacamole",
+      "template_family": "curated-profile",
+      "title": "Apache Guacamole",
+      "repository": "https://github.com/apache/guacamole-client",
+      "description": "Access remote desktops and SSH sessions from your browser.",
+      "website": "https://guacamole.apache.org/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache-guacamole.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/guacamole/guacamole:1.6.0",
+      "category": "remote",
+      "category_label": "Remote Access & VPN",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/guacamole.json",
+      "template_id": "image-guacamole",
+      "template": "apps/guacamole.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true
+    },
+    {
       "id": "guestroll",
       "provider": "achedon12",
       "template_family": "curated-profile",
@@ -20101,7 +20134,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 28
+      "included_count": 29
     }
   }
 }
