@@ -43,12 +43,12 @@
   "source": {
     "provider": "bookorbit",
     "repository": "https://github.com/bookorbit/bookorbit",
-    "revision": "main",
+    "revision": "6f8f5f4818eb737dc4d78fc5b5294fc3adb26860",
     "image_repository_url": "https://github.com/bookorbit/bookorbit/pkgs/container/bookorbit",
     "readme_pushed_at": "",
-    "compose_sha256": "",
+    "compose_sha256": "f4043f3db8c559d6223b354186ec3a7a4d9e5edf5163fe311973c798f73b54df",
     "generated_at": "2026-11-09T00:00:00+00:00",
-    "readme_raw_url": "https://raw.githubusercontent.com/bookorbit/bookorbit/main/docker-compose.yml"
+    "readme_raw_url": "https://raw.githubusercontent.com/bookorbit/bookorbit/6f8f5f4818eb737dc4d78fc5b5294fc3adb26860/docker-compose.yml"
   },
   "container_contract": {
     "service_name": "app",
@@ -197,7 +197,7 @@
         ],
         "default": "host-bind",
         "managed_volume": {
-          "backup": false,
+          "backup": true,
           "default_size_gb": 32
         }
       }
@@ -341,7 +341,7 @@
         "container_path": "/books",
         "mode": "user-selectable",
         "user_selectable": true,
-        "backup": false,
+        "backup": true,
         "shared_with_other_lxc": true,
         "default": "host-bind",
         "installation_choice": [
@@ -542,7 +542,7 @@
   },
   "compatibility": {
     "automatic_install_candidate": true,
-    "validated": true,
+    "validated": false,
     "supported_compose_keys": [
       "cap_add",
       "cap_drop",
