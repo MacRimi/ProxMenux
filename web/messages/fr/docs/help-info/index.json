@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Gestion VM et CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, instantanés et clonage."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull, édition des fichiers de configuration."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Commandes réseau",
-        "description": "ip / ss / nmcli, inspection des ponts réseau, ping / traceroute, requêtes DNS et fail2ban-client."
+        "description": "ip / ss / nmcli, inspection des ponts réseau, ping / traceroute / mtr, requêtes DNS, pve-firewall et tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Gestion ZFS",
-        "description": "Commandes zpool / zfs pour l’état, les datasets, les instantanés, send/receive, le réglage d’ARC et TRIM."
+        "description": "Commandes zpool / zfs pour l’état, les datasets, les instantanés, send/receive, les scrubs et arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Sauvegarde et restauration",
-        "description": "vzdump, qmrestore / pct restore, outils pour Proxmox Backup Server et opérations sur les instantanés."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf et tâches de sauvegarde, liste et nettoyage des dumps."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Outils CLI système",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — outils d’administration au quotidien."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh : outils d’administration au quotidien."
       }
     ]
   },

@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Gestione VM e CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshot e clonazione."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull, modifica dei file di configurazione."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Comandi rete",
-        "description": "ip / ss / nmcli, controllo dei bridge, ping / traceroute, query DNS e fail2ban-client."
+        "description": "ip / ss / nmcli, controllo dei bridge, ping / traceroute / mtr, query DNS, pve-firewall e tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Gestione ZFS",
-        "description": "Comandi zpool / zfs per stato, dataset, snapshot, send/receive, regolazione di ARC e TRIM."
+        "description": "Comandi zpool / zfs per stato, dataset, snapshot, send/receive, scrub e arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Backup e ripristino",
-        "description": "vzdump, qmrestore / pct restore, strumenti Proxmox Backup Server e operazioni sugli snapshot."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf e job di backup, elenco e pulizia dei dump."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Strumenti CLI di sistema",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — strumenti di amministrazione quotidiana."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: strumenti di amministrazione quotidiana."
       }
     ]
   },

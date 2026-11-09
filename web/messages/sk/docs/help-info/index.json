@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Správa VM a CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snímky a klonovanie."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull, úprava konfiguračných súborov."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Sieťové príkazy",
-        "description": "ip / ss / nmcli, kontrola sieťových mostov, ping / traceroute, dotazy DNS a fail2ban-client."
+        "description": "ip / ss / nmcli, kontrola sieťových mostov, ping / traceroute / mtr, dotazy DNS, pve-firewall a tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Správa ZFS",
-        "description": "Príkazy zpool / zfs pre stav, datasety, snímky, send/receive, ladenie ARC a TRIM."
+        "description": "Príkazy zpool / zfs pre stav, datasety, snímky, send/receive, scrub a arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Zálohovanie a obnova",
-        "description": "vzdump, qmrestore / pct restore, nástroje Proxmox Backup Server a operácie so snímkami."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf a zálohovacie úlohy, zoznam a čistenie dumpov."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Systémové CLI nástroje",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — každodenné nástroje správcu."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: každodenné nástroje správcu."
       }
     ]
   },

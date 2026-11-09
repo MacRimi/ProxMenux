@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Gestão de VM e CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots e clonagem."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull e edição de ficheiros de configuração."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Comandos de rede",
-        "description": "ip / ss / nmcli, inspeção de bridges, ping / traceroute, consultas DNS e fail2ban-client."
+        "description": "ip / ss / nmcli, inspeção de bridges, ping / traceroute / mtr, consultas DNS, pve-firewall e tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Gestão de ZFS",
-        "description": "Comandos zpool / zfs para estado, datasets, snapshots, send/receive, ajuste de ARC e TRIM."
+        "description": "Comandos zpool / zfs para estado, datasets, snapshots, send/receive, scrubs e arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Cópias de segurança e restauro",
-        "description": "vzdump, qmrestore / pct restore, ferramentas do Proxmox Backup Server e operações com snapshots."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf e trabalhos de backup, listagem e limpeza de dumps."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Ferramentas CLI do sistema",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — ferramentas de administração para o dia a dia."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: ferramentas de administração para o dia a dia."
       }
     ]
   },

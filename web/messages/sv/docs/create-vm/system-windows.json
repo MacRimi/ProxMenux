@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Vad skriptet gör",
-    "body": "Windows-flödet frågar efter ISO-källan: UUP Dump eller en lokal kopia i <code>/var/lib/vz/template/iso</code>. Sedan startar den gemensamma VM-guiden med Windows-anpassade standardval: <code>q35</code>, OVMF och TPM 2.0. ISO:n med VirtIO-drivrutiner ansluts som en andra CD-ROM och VM:n är redo för Windows-installationen."
+    "body": "Windows-flödet frågar efter ISO-källan: UUP Dump eller en lokal ISO från valfri Proxmox-lagring med ISO-innehåll. Sedan startar den gemensamma VM-guiden med Windows-anpassade standardval: <code>q35</code>, OVMF och TPM 2.0. ISO:n med VirtIO-drivrutiner ansluts som en andra CD-ROM och VM:n är redo för Windows-installationen."
   },
   "image": {
     "alt": "ProxMenux Windows installationsalternativ",
@@ -165,7 +165,7 @@
     ],
     "uupLearnMore": "Läs mer om UUP Dump ISO Creator",
     "localTitle": "Installera med lokal ISO",
-    "localBody": "Använder en Windows ISO du redan har laddat upp till värdens lokala lagring (<code>/var/lib/vz/template/iso</code>). Skriptet listar varje icke-VirtIO ISO det hittar och låter dig välja en.",
+    "localBody": "Använder en Windows ISO du redan har laddat upp till valfri Proxmox-lagring med ISO-innehåll (local, NFS, CIFS…). Skriptet listar varje icke-VirtIO ISO det hittar, med respektive lagring, och låter dig välja en.",
     "localImageAlt": "Lokala ISO urvalsmenyn",
     "localImageCaption": "Lokala ISO urvalsmenyn"
   },

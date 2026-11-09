@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Abrir o menu",
-    "body": "Do menu principal do ProxMenux, selecione <strong>Criar VM</strong>. Você verá isto:",
+    "body": "No menu principal do ProxMenux, selecione <strong>Criar VM a partir de template ou script</strong>. Você verá isto:",
     "imageAlt": "Crie o expedidor VM com opções 3 ProxMenux (NAS / Windows / Linux) seguido da seção Scripts externos (macOS / Outros)"
   },
   "families": {
@@ -52,7 +52,7 @@
         "description": "Windows 10, 11 e edições de servidor com padrões compatíveis com Windows (q35 + OVMF + TPM 2.0) e drivers VirtIO pré-montados.",
         "bullets": [
           "UUP Dump para ISOs atualizadas",
-          "Ou ISO local de /var/lib/vz/template/iso",
+          "Ou uma ISO local de qualquer armazenamento ISO do Proxmox",
           "TPM 2.0 adicionado automaticamente",
           "VirtIO Controladores ISO ligados ao ide3",
           "Canal de agente convidado habilitado"
@@ -80,7 +80,7 @@
     "title": "Programas comunitários (não documentados aqui)",
     "intro": "As duas entradas abaixo do separador <em>Scripts externos</em> executam código que <strong>não faz parte do ProxMenux</strong> e ficam, por isso, fora desta documentação:",
     "macosRich": "<strong>System macOS</strong> — executa o instalador externo <osxLink>OSX-PROXMOX</osxLink>. Ele clona o repositório upstream, prepara o host e o <strong> reinicia automaticamente quando terminado</strong>. Consulte a documentação do próprio projeto.",
-    "othersRich": "<strong>Outros sistemas (baseados em Linux)</strong>: carrega uma seleção de instaladores da comunidade para servidores domésticos, routers, firewalls e semelhantes. Cada script é mantido fora do ProxMenux."
+    "othersRich": "<strong>Outros sistemas (baseados em Linux)</strong>: carrega uma lista curta de VMs Linux pré-construídas pela comunidade: Home Assistant OS, uma VM Docker (Debian + SSH + Docker) e Nextcloud. Cada script da comunidade é mantido fora do ProxMenux."
   },
   "afterPick": {
     "heading": "O que acontece depois de escolher um SO",

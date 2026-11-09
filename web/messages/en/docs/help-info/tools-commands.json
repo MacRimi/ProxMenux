@@ -13,8 +13,8 @@
     "section": "Help and Info"
   },
   "intro": {
-    "title": "Most are installed by Post-Install",
-    "body": "If you ran the ProxMenux Post-Install script with the default selections, the majority of these tools are already installed. For anything missing, ProxMenux's <utilsLink>System Utilities Installer</utilsLink> offers them as predefined groups (basic, dev, network, analysis, …)."
+    "title": "Some tools need to be installed first",
+    "body": "Several of these tools are not installed by default, not even by Post-Install with its default selections. To add them, ProxMenux's <utilsLink>System Utilities Installer</utilsLink> offers them as predefined groups (basic, dev, network, analysis, …)."
   },
   "commandGroups": [
     {

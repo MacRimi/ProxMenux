@@ -30,8 +30,8 @@
   },
   "running": {
     "heading": "Running the installer",
-    "body": "Open ProxMenux on the host, go to <strong>Hardware Graphics → NVIDIA GPU Driver Installer</strong>. What you see depends on whether a driver is already present.",
-    "imageAlt": "Hardware Graphics menu with the NVIDIA GPU Driver Installer entry highlighted"
+    "body": "Open ProxMenux on the host, go to <strong>Hardware: GPUs and Coral-TPU → Install/Update NVIDIA Drivers (Host + LXC)</strong>. What you see depends on whether a driver is already present.",
+    "imageAlt": "Hardware: GPUs and Coral-TPU menu with the Install/Update NVIDIA Drivers entry highlighted"
   },
   "howRuns": {
     "heading": "How the script runs",

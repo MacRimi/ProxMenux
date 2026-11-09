@@ -8,12 +8,12 @@
   },
   "header": {
     "title": "Crear VM: sistema Linux",
-    "description": "Crea una VM Linux en Proxmox VE. ProxMenux trae un catálogo curado de ISOs oficiales de Linux listas para descargar, más un selector de ISO local, y enruta todo a través del asistente de VM compartido, el plan de almacenamiento unificado y el asistente opcional de passthrough de GPU.",
+    "description": "Crea una VM Linux en Proxmox VE. ProxMenux trae un catálogo curado de ISOs oficiales de Linux listas para descargar, más un selector de ISO local y los scripts Cloud-Init de la comunidad, y enruta todo a través del asistente de VM compartido, el plan de almacenamiento unificado y el asistente opcional de passthrough de GPU.",
     "section": "Máquinas virtuales"
   },
   "intro": {
     "title": "Qué hace este script",
-    "body": "El selector de Linux ofrece dos fuentes de medios de instalación gestionadas por ProxMenux: una ISO oficial del catálogo curado (descargada automáticamente) o una ISO local que hayas subido tú. Elijas la que elijas, el resto del flujo es el asistente compartido: CPU / RAM / BIOS → plan de almacenamiento → passthrough de GPU opcional → creación de la VM."
+    "body": "El selector de Linux ofrece tres opciones: una ISO oficial del catálogo curado (descargada automáticamente), una ISO local que hayas subido tú o un script Cloud-Init de los Helper-Scripts de la comunidad (Arch, Debian, Ubuntu). Para las dos primeras, el resto del flujo es el asistente compartido: CPU / RAM / BIOS → plan de almacenamiento → passthrough de GPU opcional → creación de la VM."
   },
   "image": {
     "alt": "Opciones de instalación de Linux en ProxMenux",
@@ -145,7 +145,7 @@
     "officialImageAlt": "Selección de distribución Linux",
     "officialImageCaption": "Selección de distribución Linux",
     "localHeading": "ISO local",
-    "localBody": "Usa cualquier ISO de Linux ya presente en <code>/var/lib/vz/template/iso</code>. El script lista cada <code>*.iso</code> que encuentre y te deja elegir uno.",
+    "localBody": "Usa cualquier ISO de Linux ya presente en un almacenamiento de Proxmox con contenido ISO (local, NFS, CIFS…). El script lista cada ISO que encuentre, con su almacenamiento, y te deja elegir una.",
     "localImageAlt": "Menú de selección de ISO local",
     "localImageCaption": "Menú de selección de ISO local",
     "distros": [

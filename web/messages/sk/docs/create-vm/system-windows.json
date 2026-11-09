@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Čo tento skript robí",
-    "body": "Postup pre Windows sa opýta na zdroj ISO: UUP Dump alebo lokálna kópia v <code>/var/lib/vz/template/iso</code>. Potom spustí spoločného sprievodcu VM s nastaveniami pre Windows: <code>q35</code>, OVMF a TPM 2.0. ISO ovládačov VirtIO pripojí ako druhé CD-ROM a VM je pripravená spustiť inštalátor Windows."
+    "body": "Postup pre Windows sa opýta na zdroj ISO: UUP Dump alebo lokálne ISO z ľubovoľného úložiska Proxmoxu s obsahom ISO. Potom spustí spoločného sprievodcu VM s nastaveniami pre Windows: <code>q35</code>, OVMF a TPM 2.0. ISO ovládačov VirtIO pripojí ako druhé CD-ROM a VM je pripravená spustiť inštalátor Windows."
   },
   "image": {
     "alt": "Možnosti inštalácie ProxMenux Windows",
@@ -165,7 +165,7 @@
     ],
     "uupLearnMore": "Zistite viac o UUP Dump ISO Creator",
     "localTitle": "Inštalovať s lokálnou ISO",
-    "localBody": "Používa Windows ISO, ktorý ste už nahrali do miestneho úložiska hostiteľa (<code>/var/lib/vz/template/iso</code>). Skript obsahuje zoznam všetkých non-VirtIO ISO, ktoré nájde a umožní vám vybrať jeden.",
+    "localBody": "Používa Windows ISO, ktoré ste už nahrali do ľubovoľného úložiska Proxmoxu s obsahom ISO (local, NFS, CIFS…). Skript zobrazí všetky nájdené ISO okrem VirtIO spolu s ich úložiskom a umožní jedno vybrať.",
     "localImageAlt": "Lokálne menu výberu ISO",
     "localImageCaption": "Lokálne menu výberu ISO"
   },

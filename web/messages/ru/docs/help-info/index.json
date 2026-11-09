@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Управление ВМ и контейнерами",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, снимки, клонирование."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull, редактирование файлов конфигурации."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Сетевые команды",
-        "description": "ip / ss / nmcli, проверка сетевых мостов, ping / traceroute, запросы DNS, fail2ban-client."
+        "description": "ip / ss / nmcli, проверка сетевых мостов, ping / traceroute / mtr, запросы DNS, pve-firewall, tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Управление ZFS",
-        "description": "Команды zpool / zfs для просмотра состояния, работы с наборами данных и снимками, отправки и приёма данных, настройки ARC и выполнения TRIM."
+        "description": "Команды zpool / zfs для просмотра состояния, работы с наборами данных и снимками, отправки и приёма данных, scrub и arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Резервное копирование и восстановление",
-        "description": "vzdump, qmrestore / pct restore, вспомогательные средства Proxmox Backup Server, операции со снимками."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf и задания резервного копирования, просмотр и очистка дампов."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Системные инструменты командной строки",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — инструменты для повседневного администрирования."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: инструменты для повседневного администрирования."
       }
     ]
   },

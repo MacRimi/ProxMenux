@@ -30,8 +30,8 @@
   },
   "running": {
     "heading": "Exécution de l'installateur",
-    "body": "Ouvrez <strong>Hardware Graphics → NVIDIA GPU Driver Installer</strong> dans ProxMenux. Le menu dépend de la présence d’un pilote actif.",
-    "imageAlt": "Menu matériel avec l’installateur NVIDIA sélectionné"
+    "body": "Ouvrez ProxMenux sur l’hôte et allez à <strong>Hardware: GPUs and Coral-TPU → Install/Update NVIDIA Drivers (Host + LXC)</strong>. Le menu dépend de la présence d’un pilote actif.",
+    "imageAlt": "Menu Hardware: GPUs and Coral-TPU avec l’entrée Install/Update NVIDIA Drivers sélectionnée"
   },
   "howRuns": {
     "heading": "Déroulement du script",
