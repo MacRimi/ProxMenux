@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Что делает этот инструмент",
-    "body": "Для каждой физической сетевой карты узла записывает небольшой файл в <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> с правилом: <em>«устройство с этим MAC-адресом всегда должно называться этим именем»</em>. systemd-udevd применяет правило при каждой загрузке, прежде чем <code>ifupdown</code> прочитает <code>/etc/network/interfaces</code>."
+    "body": "Для каждой физической сетевой карты узла записывает небольшой файл в <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> с правилом: <em>«устройство с этим MAC-адресом всегда должно называться этим именем»</em>. systemd-udevd применяет правило при каждой загрузке, прежде чем <code>ifupdown</code> прочитает <code>/etc/network/interfaces</code>."
   },
   "problem": {
     "heading": "Какую проблему это решает",
@@ -34,7 +34,7 @@
       "readLabel": "Прочитать каждый MAC-адрес",
       "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
       "writeLabel": "Запись файла .link",
-      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+      "writeDetail": "/etc/systemd/network/\n  10-proxmenux-'<'iface'>'.link"
     },
     "minimalIntro": "Каждый создаваемый файл намеренно содержит только самое необходимое:",
     "minimalOutro": "При загрузке systemd-udevd определяет устройство по MAC-адресу и назначает ему запрошенное имя <em>до того, как</em> это сделает любой другой компонент (ifupdown или механизм именования ядра по умолчанию). Префикс файла <code>10-</code> обеспечивает раннюю загрузку этих правил, до стандартного файла <code>99-default.link</code>."
@@ -103,9 +103,9 @@
     "emptyTitle": "Сообщение «Физические интерфейсы не найдены» после запуска инструмента",
     "emptyBody": "На узле нет видимых ядру интерфейсов на базе PCI или phy80211. Проверьте это с помощью <code>ls -l /sys/class/net/</code> — у каждой записи должна быть либо символическая ссылка <code>device</code> (PCI), либо запись <code>phy80211</code> (Wi-Fi). Если у интерфейса, который должен соответствовать физической сетевой карте, отсутствуют оба элемента, драйвер не загружен.",
     "noChangeTitle": "После перезагрузки имена не изменились ожидаемым образом",
-    "noChangeBody": "Убедитесь, что файл существует и имеет правильный формат: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Затем проверьте журналы udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Частая причина — оставшийся параметр ядра <code>net.ifnames=0</code>, который полностью отключает предсказуемое именование. Удалите его из <code>/etc/default/grub</code>, выполните <code>update-grub</code> и перезагрузите систему.",
+    "noChangeBody": "Убедитесь, что файл существует и имеет правильный формат: <code>cat /etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Затем проверьте журналы udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Частая причина — оставшийся параметр ядра <code>net.ifnames=0</code>, который полностью отключает предсказуемое именование. Удалите его из <code>/etc/default/grub</code>, выполните <code>update-grub</code> и перезагрузите систему.",
     "undoTitle": "Я хочу отменить закрепление имён",
-    "undoBody": "Либо удалите файлы <code>.link</code> (<code>rm /etc/systemd/network/10-*.link</code>), либо восстановите их из каталога резервных копий, созданного при предыдущем запуске. Для применения изменений перезагрузите систему."
+    "undoBody": "Либо удалите файлы, созданные ProxMenux (<code>rm /etc/systemd/network/10-proxmenux-*.link</code>), — любые файлы <code>.link</code>, написанные вами, при этом останутся на месте, — либо восстановите их из каталога резервных копий, созданного при предыдущем запуске. Для применения изменений перезагрузите систему."
   },
   "related": {
     "heading": "Связанные материалы",
