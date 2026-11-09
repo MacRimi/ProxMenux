@@ -103,6 +103,7 @@ class WorkerStackTests(unittest.TestCase):
 
     def test_dockerhub_aliases_keep_the_existing_database_health_profiles(self):
         for image, expected in [('docker.io/library/postgres:16', 'postgres'),
+                                ('docker.io/pgvector/pgvector:pg18', 'postgres'),
                                 ('docker.io/library/redis:7', 'redis'),
                                 ('docker.io/valkey/valkey:8', 'valkey/valkey'),
                                 ('index.docker.io/library/mariadb:11', 'mariadb')]:

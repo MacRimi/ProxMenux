@@ -1,0 +1,585 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-bookorbit",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "BookOrbit"
+    },
+    "tagline": {
+      "en_US": "Self-hosted reading platform and library manager for eBooks and light novels"
+    },
+    "description": {
+      "en_US": "Organize, read, and manage your eBook and light novel library with OPDS support, rich metadata scrapers, and ereader synchronization."
+    },
+    "category": "documents",
+    "category_label": "Documents & Notes",
+    "author": "BookOrbit contributors",
+    "developer": "BookOrbit",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bookorbit.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 3000,
+      "path": "/"
+    },
+    "website": "https://bookorbit.net/",
+    "documentation": "https://docs.bookorbit.net/",
+    "repository": "https://github.com/bookorbit/bookorbit",
+    "tips": [
+      "BookOrbit requires PostgreSQL with pgvector for data storage and embeddings. A dedicated private pgvector container is created automatically.",
+      "The web UI runs on port 3000. Bind-mount your books directory to /books and keep /data persistent for configuration, cache, and metadata."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "bookorbit",
+    "repository": "https://github.com/bookorbit/bookorbit",
+    "revision": "6f8f5f4818eb737dc4d78fc5b5294fc3adb26860",
+    "image_repository_url": "https://github.com/bookorbit/bookorbit/pkgs/container/bookorbit",
+    "readme_pushed_at": "",
+    "compose_sha256": "f4043f3db8c559d6223b354186ec3a7a4d9e5edf5163fe311973c798f73b54df",
+    "generated_at": "2026-11-09T00:00:00+00:00",
+    "readme_raw_url": "https://raw.githubusercontent.com/bookorbit/bookorbit/6f8f5f4818eb737dc4d78fc5b5294fc3adb26860/docker-compose.yml"
+  },
+  "container_contract": {
+    "service_name": "app",
+    "container_name": "bookorbit",
+    "image": {
+      "reference": "ghcr.io/bookorbit/bookorbit:latest",
+      "registry": "ghcr.io",
+      "repository": "bookorbit/bookorbit",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "NODE_ENV",
+        "example": "production",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PORT",
+        "example": "3000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "DATABASE_URL",
+        "example": "postgresql://bookorbit:${GENERATED_DB_PASSWORD}@postgres:5432/bookorbit",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_HOST",
+        "example": "postgres",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_PORT",
+        "example": "5432",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_USER",
+        "example": "bookorbit",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_PASSWORD",
+        "example": "${GENERATED_DB_PASSWORD}",
+        "required": false,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "POSTGRES_DB",
+        "example": "bookorbit",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "JWT_SECRET",
+        "example": "${GENERATED_JWT_SECRET}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SETUP_BOOTSTRAP_TOKEN",
+        "example": "${GENERATED_BOOTSTRAP_TOKEN}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
+      },
+      {
+        "name": "APP_URL",
+        "example": "http://@CONTAINER_ADDRESS@:3000",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "CLIENT_URL",
+        "example": "http://@CONTAINER_ADDRESS@:3000",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "TZ",
+        "example": "$TZ",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PUID",
+        "example": "1000",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "PGID",
+        "example": "1000",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "volume-data",
+        "container_path": "/data",
+        "compose_source_example": "./data/app",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-books",
+        "container_path": "/books",
+        "compose_source_example": "./books",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 32
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 3000,
+        "published_example": 3000,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [
+      {
+        "name": "postgres",
+        "image": "pgvector/pgvector:pg18"
+      }
+    ],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: bookorbit\nservices:\n  app:\n    container_name: bookorbit-app\n    image: ghcr.io/bookorbit/bookorbit:latest\n    restart: unless-stopped\n    ports:\n      - \"3000:3000\"\n    environment:\n      NODE_ENV: production\n      PORT: 3000\n      DATABASE_URL: postgresql://bookorbit:${GENERATED_DB_PASSWORD}@postgres:5432/bookorbit\n      JWT_SECRET: ${GENERATED_JWT_SECRET}\n      SETUP_BOOTSTRAP_TOKEN: ${GENERATED_BOOTSTRAP_TOKEN}\n      APP_URL: http://@CONTAINER_ADDRESS@:3000\n      TZ: $TZ\n      PUID: 1000\n      PGID: 1000\n    depends_on:\n      postgres:\n        condition: service_healthy\n    volumes:\n      - ./books:/books\n      - ./data/app:/data\n  postgres:\n    container_name: bookorbit-db\n    image: pgvector/pgvector:pg18\n    restart: unless-stopped\n    environment:\n      POSTGRES_USER: bookorbit\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_DB: bookorbit\n      PGDATA: /var/lib/postgresql/data/pgdata\n    volumes:\n      - ./data/postgres:/var/lib/postgresql/data\n"
+  },
+  "compose_stack": {
+    "project_name": "bookorbit",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "app",
+    "service_count": 2,
+    "services": [
+      {
+        "name": "postgres",
+        "image": "pgvector/pgvector:pg18",
+        "is_main": false,
+        "role": "dependency",
+        "vmid_offset": 1,
+        "depends_on": [],
+        "frontend_network": false,
+        "private_network": true,
+        "compose": {
+          "image": "pgvector/pgvector:pg18",
+          "restart": "unless-stopped",
+          "environment": {
+            "POSTGRES_USER": "bookorbit",
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "POSTGRES_DB": "bookorbit",
+            "PGDATA": "/var/lib/postgresql/data/pgdata"
+          },
+          "volumes": [
+            "bookorbit-db:/var/lib/postgresql/data"
+          ],
+          "healthcheck": {
+            "test": [
+              "CMD-SHELL",
+              "pg_isready -U bookorbit -d bookorbit"
+            ],
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 10,
+            "start_period": "20s"
+          }
+        }
+      },
+      {
+        "name": "app",
+        "image": "ghcr.io/bookorbit/bookorbit:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [
+          "postgres"
+        ],
+        "frontend_network": true,
+        "private_network": true,
+        "compose": {
+          "image": "ghcr.io/bookorbit/bookorbit:latest",
+          "restart": "unless-stopped",
+          "ports": [
+            "3000:3000"
+          ],
+          "depends_on": {
+            "postgres": {
+              "condition": "service_healthy"
+            }
+          },
+          "environment": {
+            "NODE_ENV": "production",
+            "PORT": "3000",
+            "DATABASE_URL": "postgresql://bookorbit:${GENERATED_DB_PASSWORD}@postgres:5432/bookorbit",
+            "POSTGRES_HOST": "postgres",
+            "POSTGRES_PORT": "5432",
+            "POSTGRES_USER": "bookorbit",
+            "POSTGRES_PASSWORD": "${GENERATED_DB_PASSWORD}",
+            "POSTGRES_DB": "bookorbit",
+            "JWT_SECRET": "${GENERATED_JWT_SECRET}",
+            "SETUP_BOOTSTRAP_TOKEN": "${GENERATED_BOOTSTRAP_TOKEN}",
+            "APP_URL": "http://@CONTAINER_ADDRESS@:3000",
+            "CLIENT_URL": "http://@CONTAINER_ADDRESS@:3000",
+            "TZ": "$TZ",
+            "PUID": "1000",
+            "PGID": "1000"
+          },
+          "volumes": [
+            "bookorbit-data:/data",
+            "./books:/books"
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "name": "bookorbit",
+      "volumes": {
+        "bookorbit-data": {},
+        "bookorbit-db": {}
+      }
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": true,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "bookorbit-data-storage",
+        "service": "app",
+        "container_path": "/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "bookorbit-books-storage",
+        "service": "app",
+        "container_path": "/books",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": true,
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "postgres-data-storage",
+        "service": "postgres",
+        "container_path": "/var/lib/postgresql/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 2,
+      "start_order": [
+        "postgres",
+        "app"
+      ],
+      "stop_order": [
+        "app",
+        "postgres"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "db-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "postgres",
+              "environment_variable": "POSTGRES_PASSWORD"
+            },
+            {
+              "service": "app",
+              "environment_variable": "POSTGRES_PASSWORD"
+            },
+            {
+              "service": "app",
+              "environment_variable": "DATABASE_URL"
+            }
+          ]
+        },
+        {
+          "id": "jwt-secret",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "app",
+              "environment_variable": "JWT_SECRET"
+            }
+          ]
+        },
+        {
+          "id": "bootstrap-token",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "app",
+              "environment_variable": "SETUP_BOOTSTRAP_TOKEN"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "BookOrbit WebUI",
+        "scheme": "http",
+        "port": 3000,
+        "path": "/",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "BookOrbit Setup Token",
+        "type": "runtime-generated",
+        "username": "setup",
+        "password": null,
+        "password_environment": "SETUP_BOOTSTRAP_TOKEN",
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1536,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 60
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "two-native-lxc-services",
+        "upstream_behavior": "Docker Compose starts BookOrbit and PostgreSQL together.",
+        "native_lxc_behavior": "One catalog action creates two native OCI LXC containers.",
+        "reason": "Each OCI image is imported as its own Proxmox LXC.",
+        "behavioral_impact": "The user still installs one coordinated application stack.",
+        "validation": "laboratory-validated"
+      },
+      {
+        "id": "private-service-network",
+        "upstream_behavior": "Compose DNS connects the application to postgres.",
+        "native_lxc_behavior": "A private Proxmox bridge assigns fixed private addresses to both services.",
+        "reason": "Native LXC containers do not share Docker internal bridge DNS.",
+        "behavioral_impact": "PostgreSQL is not exposed on the LAN.",
+        "validation": "laboratory-validated"
+      },
+      {
+        "id": "native-persistent-volumes",
+        "upstream_behavior": "Docker named volumes persist data and PostgreSQL.",
+        "native_lxc_behavior": "Proxmox-managed mpN volumes preserve the same container paths with backup=1.",
+        "reason": "Private state must participate in native Proxmox backup and restore.",
+        "behavioral_impact": "No application state depends on the root filesystem.",
+        "validation": "laboratory-validated"
+      }
+    ],
+    "installer_profile": {
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/books",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/postgresql/data",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "cap_drop",
+      "container_name",
+      "depends_on",
+      "environment",
+      "healthcheck",
+      "image",
+      "init",
+      "ports",
+      "read_only",
+      "restart",
+      "security_opt",
+      "stop_grace_period",
+      "tmpfs",
+      "volumes"
+    ],
+    "untranslated_blockers": [],
+    "policy": "The official BookOrbit Compose stack maps directly to native OCI LXC containers using generic-multi-lxc-stack."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

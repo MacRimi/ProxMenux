@@ -1375,6 +1375,38 @@
       "template_id": "linuxserver-boinc"
     },
     {
+      "id": "bookorbit",
+      "provider": "bookorbit",
+      "template_family": "curated-profile",
+      "title": "BookOrbit",
+      "repository": "https://github.com/bookorbit/bookorbit",
+      "description": "A self-hosted reading platform and library manager for eBooks and light novels.",
+      "website": "https://bookorbit.net/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bookorbit.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": "2026-11-09",
+      "main_image": "ghcr.io/bookorbit/bookorbit:latest",
+      "category": "documents",
+      "category_label": "Documents & Notes",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/bookorbit.json",
+      "template": "apps/bookorbit.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-bookorbit"
+    },
+    {
       "id": "bookstack",
       "provider": "linuxserver.io",
       "title": "Bookstack",
