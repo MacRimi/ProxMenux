@@ -1243,7 +1243,7 @@ def _record_ssl_refresh_error(error):
             return
         _SSL_RUNTIME_LAST_REFRESH_ERROR = message
     print(
-        "[ProxMenux] Proxmox TLS certificate refresh skipped; "
+        "[ProxMenux] TLS certificate refresh skipped; "
         f"the active certificate remains unchanged: {message}",
         flush=True,
     )
@@ -1268,9 +1268,15 @@ def _persist_active_proxmox_certificate_paths(cert_path, key_path):
         )
 
 
-def _refresh_proxmox_ssl_context_for_handshake():
-    """Activate a renewed Proxmox pair just before a TLS handshake.
+_RELOADABLE_SSL_SOURCES = ("proxmox", "custom")
 
+
+def _refresh_ssl_context_for_handshake():
+    """Activate a renewed certificate pair just before a TLS handshake.
+
+    The Proxmox source follows the pair Proxmox prefers; a custom source
+    follows the files it was configured with, so a certificate renewed on
+    disk (Proxmox ACME, certbot or any other tool) is used without a restart.
     This deliberately has no timer and does not depend on inotify (pmxcfs can
     update /etc/pve without emitting a local event).  The small PEM pair is
     inspected only when a client starts a new TLS connection.  Any missing,
@@ -1279,22 +1285,28 @@ def _refresh_proxmox_ssl_context_for_handshake():
     global _SSL_RUNTIME_LAST_REFRESH_ERROR
 
     with _SSL_RUNTIME_LOCK:
-        if _SSL_RUNTIME_SOURCE != "proxmox" or _SSL_RUNTIME_CONTEXT is None:
+        if _SSL_RUNTIME_SOURCE not in _RELOADABLE_SSL_SOURCES or _SSL_RUNTIME_CONTEXT is None:
             return False
 
     # Several browser connections can arrive together. Only one of them may
     # validate/swap a newly written pair; the others reuse its result.
     with _SSL_RUNTIME_REFRESH_LOCK:
         with _SSL_RUNTIME_LOCK:
-            if _SSL_RUNTIME_SOURCE != "proxmox" or _SSL_RUNTIME_CONTEXT is None:
+            if _SSL_RUNTIME_SOURCE not in _RELOADABLE_SSL_SOURCES or _SSL_RUNTIME_CONTEXT is None:
                 return False
+            source = _SSL_RUNTIME_SOURCE
             active_fingerprint = _SSL_RUNTIME_FINGERPRINT
             active_cert_path = _SSL_RUNTIME_CERT_PATH
             active_key_path = _SSL_RUNTIME_KEY_PATH
 
-        cert_path, key_path = _detect_proxmox_certificate_paths()
-        if not cert_path or not key_path:
-            raise RuntimeError("No complete Proxmox certificate/key pair was detected")
+        if source == "proxmox":
+            cert_path, key_path = _detect_proxmox_certificate_paths()
+            if not cert_path or not key_path:
+                raise RuntimeError("No complete Proxmox certificate/key pair was detected")
+        else:
+            cert_path, key_path = active_cert_path, active_key_path
+            if not (os.path.isfile(cert_path) and os.path.isfile(key_path)):
+                raise RuntimeError("The configured certificate/key pair is not complete")
 
         candidate_fingerprint = _certificate_pair_fingerprint(cert_path, key_path)
         paths_changed = cert_path != active_cert_path or key_path != active_key_path
@@ -1311,7 +1323,7 @@ def _refresh_proxmox_ssl_context_for_handshake():
 
         if changed:
             print(
-                f"[ProxMenux] Renewed Proxmox TLS certificate activated from {cert_path}",
+                f"[ProxMenux] Renewed TLS certificate activated from {cert_path}",
                 flush=True,
             )
         return changed
@@ -1333,7 +1345,7 @@ def create_reloadable_ssl_context(cert_path, key_path):
 
     def _select_active_context(ssl_socket, _server_name, _initial_context):
         try:
-            _refresh_proxmox_ssl_context_for_handshake()
+            _refresh_ssl_context_for_handshake()
         except Exception as error:
             # Never fail a client handshake because Proxmox is between the
             # certificate and key writes. The previously validated context
