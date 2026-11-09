@@ -125,7 +125,7 @@
       {
         "href": "/docs/storage-share/host-samba",
         "label": "Samba / CIFS в качестве хранилища Proxmox",
-        "tailRich": " — когда ваш CT начнёт предоставлять общий ресурс, зарегистрируйте этот ресурс в Proxmox, чтобы он появился в <em>Datacenter → Storage</em>."
+        "tailRich": " — когда Ваш CT начнёт предоставлять общий ресурс, зарегистрируйте этот ресурс в Proxmox, чтобы он появился в <em>Datacenter → Storage</em>."
       }
     ]
   }
