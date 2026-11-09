@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Come funziona lo script",
-    "body": "Il flusso ha due fasi. La prima raccoglie tutte le scelte tramite finestre di dialogo: VM, storage, directory sorgente, immagini e opzioni per ciascuna immagine. La seconda esegue <code>qm importdisk</code> per ogni immagine selezionata. Prima della seconda fase non viene copiato nulla né modificata la configurazione della VM."
+    "body": "Il flusso ha due fasi. La prima raccoglie tutte le scelte tramite finestre di dialogo: VM, storage, directory sorgente, immagini e opzioni per ciascuna immagine. La seconda esegue <code>qm importdisk</code> per ogni immagine selezionata. La seconda fase inizia subito dopo l’ultima domanda per immagine, senza una conferma finale separata; fino ad allora non viene copiato nulla né modificata la configurazione della VM."
   },
   "prereqs": {
     "heading": "Prerequisiti",

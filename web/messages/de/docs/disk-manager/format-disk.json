@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Physischen Datenträger formatieren oder löschen | ProxMenux-Dokumentation",
-    "description": "Physische Datenträger auf Proxmox VE mit ProxMenux löschen und formatieren. Vier Betriebsarten, strenge Sicherheitsfilter gegen Systemlaufwerke, eingehängte oder verwendete Laufwerke und doppelte Bestätigung mit Eingabe des vollständigen Pfads.",
+    "description": "Physische Datenträger auf Proxmox VE mit ProxMenux sicher löschen und formatieren. Vier Betriebsarten, ausgeblendete Systemlaufwerke, gesperrte Laufwerke laufender Gäste und doppelte Bestätigung mit Eingabe des vollständigen Pfads.",
     "ogTitle": "Physischen Datenträger formatieren oder löschen | ProxMenux-Dokumentation",
     "ogDescription": "Physische Datenträger auf Proxmox löschen oder formatieren. Sicherheitsfilter, vier Betriebsarten und doppelte Bestätigung."
   },
   "header": {
     "title": "Physischen Datenträger formatieren / löschen",
-    "description": "Wischen oder formatieren Sie sicher eine physische Festplatte auf dem Proxmox-Host. ProxMenux zeigt nur Festplatten an, die völlig frei sind (keine Systemnutzung, keine Gastreferenz, keine Mounts) und erzwingt eine doppelte Bestätigung - ja / nein plus Eingabe des vollständigen Festplattenpfads -, bevor Daten zerstört werden.",
+    "description": "Wischen oder formatieren Sie sicher eine physische Festplatte auf dem Proxmox-Host. ProxMenux blendet Systemlaufwerke aus, warnt vor jeder anderen Nutzung, bevor Sie bestätigen, sperrt Festplatten, die von einer laufenden VM oder einem laufenden CT verwendet werden, und erzwingt eine doppelte Bestätigung (ja / nein plus Eingabe des vollständigen Festplattenpfads), bevor Daten zerstört werden.",
     "section": "Disk Manager · Dienstprogramme"
   },
   "danger": {
@@ -20,17 +20,17 @@
   },
   "visibility": {
     "heading": "Sichtbarkeitsregeln",
-    "intro": "Bevor das Menü überhaupt erscheint, filtert ProxMenux die Festplattenliste. Es werden nur Kandidaten gezeigt, die nachweislich sicher sind:",
+    "intro": "Bevor das Menü erscheint, filtert ProxMenux die Festplattenliste. Nur Systemlaufwerke werden ausgeblendet; jede andere Nutzung wird angezeigt, damit Sie entscheiden können:",
     "items": [
-      "<strong>Angezeigt</strong> werden Laufwerke, die <em>nicht</em> vom Host genutzt werden (Root-Pool, Swap, eingehängte Dateisysteme, aktives ZFS/LVM/RAID) und <em>nicht</em> in einer VM-/LXC-Konfiguration referenziert sind, unabhängig vom Betriebszustand des Gasts.",
-      "<strong>Ausgeblendet</strong>: Host- und Systemlaufwerke.",
-      "<strong>Ausgeblendet</strong>: in VM-/LXC-Konfigurationen referenzierte Laufwerke."
+      "<strong>Ausgeblendet</strong>: Laufwerke mit einem System-Mount (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), einer aktiven Swap-Partition oder als Mitglied des ZFS-Root-Pools sowie schreibgeschützte Geräte.",
+      "<strong>Angezeigt, bei der Bestätigung gesperrt</strong>: Laufwerke, die von einer <strong>laufenden</strong> VM oder einem laufenden CT referenziert werden.",
+      "<strong>Angezeigt mit einer Warnung</strong>: Laufwerke, die in der Konfiguration einer gestoppten VM oder eines gestoppten LXC referenziert werden, Laufwerke mit eingehängten Datenpartitionen sowie aktive ZFS-/LVM-/RAID-Mitglieder."
     ],
     "safetyTitle": "Sicherheit bei Bestätigung und Ausführung",
     "safetyItems": [
       "Bei Laufwerken mit veralteten oder aktiven Metadaten erscheinen detaillierte Warnungen <em>vor</em> der Bestätigung.",
       "Von einer <strong>laufenden</strong> VM genutzte Laufwerke werden bei der Bestätigung <strong>vollständig gesperrt</strong>.",
-      "Laufwerke mit eingehängten Partitionen werden bei der Ausführung <strong>vollständig gesperrt</strong>. Unmittelbar vor dem Schreiben erfolgt eine neue Prüfung.",
+      "Eingehängte Datenpartitionen werden bei der Ausführung automatisch ausgehängt und jeder aktive ZFS-Pool auf dem Laufwerk wird exportiert. Lässt sich eine Partition nicht aushängen, bricht die Ausführung ab (unmittelbar vor dem Schreiben erfolgt eine neue Prüfung).",
       "Zwei Bestätigungen sind immer erforderlich: ein <em>Ja/Nein</em>-Dialog und die exakte Eingabe des vollständigen Laufwerkspfads."
     ]
   },
@@ -64,13 +64,13 @@
         "mode": "4. Vollformat",
         "part": "Neue GPT",
         "data": "Zerstört",
-        "useCase": "Einsatzbereites Laufwerk mit einer neuen Partition und einem neuen Dateisystem."
+        "useCase": "Einsatzbereites Laufwerk mit einer neuen Partition und einem neuen Dateisystem oder ZFS-Pool."
       }
     ],
-    "fullFormatOutro": "<strong>Vollständiges Formatieren</strong> führt zu zwei weiteren Dialogen:",
+    "fullFormatOutro": "<strong>Vollständiges Formatieren</strong> stellt nach der Bestätigung eine weitere Frage:",
     "fullFormatItems": [
-      "<strong>Dateisystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabel) oder <code>btrfs</code>. Fehlen Werkzeuge wie <code>mkfs.btrfs</code>, wird mit einer klaren Meldung abgebrochen.",
-      "<strong>Label</strong> — optionales Dateisystem-Etikett zur Identifizierung."
+      "<strong>Dateisystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabel), <code>btrfs</code> oder <code>zfs</code>. Fehlt <code>mkfs.exfat</code>, installiert ProxMenux <code>exfatprogs</code>; fehlt <code>mkfs.btrfs</code>, wird mit einem Hinweis abgebrochen.",
+      "<strong>ZFS-Pool-Name</strong> (nur ZFS): vorgeschlagen als <code>pool_&lt;disk&gt;</code>. Der Pool wird mit <code>ashift=12</code> und <code>lz4</code>-Komprimierung erstellt."
     ]
   },
   "steps": {
@@ -79,23 +79,23 @@
     "list": [
       {
         "title": "Freies Laufwerk wählen",
-        "body": "ProxMenux listet jede Festplatte auf, die die oben genannten Sichtbarkeitsfilter passiert. Festplatten mit ⚠-Markern tragen veraltete Metadaten und werden mit den Details angezeigt, damit Sie wissen, was Sie überschreiben möchten."
+        "body": "ProxMenux listet jede Festplatte auf, die den oben genannten Sichtbarkeitsfilter passiert, mit Modell und Größe. Alle auf der Festplatte gefundenen Metadaten (ZFS-/LVM-/RAID-Signaturen, eingehängte Partitionen, Gastreferenzen) werden in der Bestätigungszusammenfassung angezeigt, damit Sie wissen, was Sie überschreiben möchten."
       },
       {
         "title": "Wählen Sie einen Betriebsmodus",
         "bodyRich": "Wählen Sie gemäß obiger Tabelle <strong>Alles löschen</strong>, <strong>FS-Etiketten entfernen</strong>, <strong>Daten mit Nullen überschreiben</strong> oder <strong>Vollständiges Formatieren</strong>."
       },
       {
-        "title": "(Nur Vollformat) Dateisystem und Label auswählen",
-        "body": "ext4 / xfs / exfat / btrfs, plus ein optionales Etikett."
-      },
-      {
         "title": "Zweimal bestätigen",
         "bodyRich": "ProxMenux zeigt eine Zusammenfassung der geplanten Aktion. Sie bestätigen im Ja/Nein-Dialog und <strong>geben den vollständigen Laufwerkspfad</strong> exakt wie angezeigt ein, etwa <code>/dev/sdc</code>. Jede andere Eingabe bricht ab."
       },
       {
+        "title": "(Nur vollständiges Formatieren) Dateisystem wählen",
+        "body": "ext4 / xfs / exfat / btrfs / zfs. Bei ZFS zusätzlich der Pool-Name."
+      },
+      {
         "title": "Revalidierung und Ausführung",
-        "body": "Kurz vor dem Schreiben überprüft das Skript den Festplattenzustand erneut. Wurde zwischenzeitlich eine Partition gemountet oder ein VM gestartet, wird die Ausführung abgebrochen. Ansonsten läuft die gewählte Operation und eine Zusammenfassung wird am Ende gedruckt."
+        "body": "Kurz vor dem Schreiben überprüft das Skript den Festplattenzustand erneut. Es bricht ab, wenn die Festplatte inzwischen einen System-Mount, eine aktive Swap-Partition oder ein Mitglied des ZFS-Root-Pools enthält oder wenn eine laufende VM oder ein laufender CT sie verwendet. Eingehängte Datenpartitionen werden ausgehängt und aktive ZFS-Pools auf der Festplatte werden exportiert. Danach läuft die gewählte Operation."
       }
     ]
   },
@@ -105,7 +105,7 @@
   },
   "troubleshoot": {
     "notListedTitle": "Disk nicht im Menü aufgeführt",
-    "notListedBody": "Das Laufwerk wurde aus Sicherheitsgründen ausgeblendet. Häufige Gründe: Es ist eingehängt, auch unter <code>/mnt/tmp</code>, aktives Mitglied von ZFS/LVM/RAID, in einer VM-/LXC-Konfiguration referenziert oder das Proxmox-Root-Laufwerk. Prüfen Sie auf dem Host <code>lsblk -f</code> und <code>cat /proc/mdstat</code>, um den Grund zu ermitteln.",
+    "notListedBody": "Das Laufwerk wurde aus Sicherheitsgründen ausgeblendet. Es werden nur Systemlaufwerke ausgeblendet: eine Festplatte mit einem System-Mount (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), einer aktiven Swap-Partition oder als Mitglied des ZFS-Root-Pools oder ein schreibgeschütztes Gerät. Daten-Mounts, Gastreferenzen und ZFS-/LVM-/RAID-Mitgliedschaft blenden eine Festplatte nicht aus. Führen Sie auf dem Host <code>lsblk -f</code>, <code>swapon --show</code> und <code>zpool status</code> aus, um den Grund zu ermitteln.",
     "busyTitle": "\"Disk may be busy\" / Unmount fehlgeschlagen",
     "busyBody": "Etwas hält immer noch eine offene Datei auf einer Partition dieser Festplatte - meistens ein Container oder eine Shell, deren cwd sich in einem Mountpoint befindet. Identifizieren Sie es mit <code>lsof | grep /dev/sdX</code> oder <code>fuser -vm /dev/sdX1</code>, stoppen Sie es und führen Sie das Tool erneut aus."
   },

@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Wie das Skript läuft",
-    "body": "Der Ablauf hat zwei Phasen. Phase 1 erfasst über Dialoge vorab alle Entscheidungen: VM, Speicher, Quellverzeichnis, Images und Optionen je Image. Phase 2 führt <code>qm importdisk</code> für jedes ausgewählte Image aus. Vor Beginn von Phase 2 wird weder etwas kopiert noch die VM-Konfiguration verändert."
+    "body": "Der Ablauf hat zwei Phasen. Phase 1 erfasst über Dialoge vorab alle Entscheidungen: VM, Speicher, Quellverzeichnis, Images und Optionen je Image. Phase 2 führt <code>qm importdisk</code> für jedes ausgewählte Image aus. Phase 2 beginnt unmittelbar nach der letzten Frage zu einem Image, ohne separate abschließende Bestätigung; bis dahin wird weder etwas kopiert noch die VM-Konfiguration verändert."
   },
   "prereqs": {
     "heading": "Voraussetzungen",

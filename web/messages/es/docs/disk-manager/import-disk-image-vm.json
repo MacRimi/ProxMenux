@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script",
-    "body": "El flujo tiene dos fases. La Fase 1 recopila por adelantado todas las decisiones (VM, almacenamiento, directorio origen, imágenes, opciones por imagen) mediante diálogos. La Fase 2 ejecuta <code>qm importdisk</code> para cada imagen seleccionada. Hasta que empieza la Fase 2 no se copia nada y no se toca la config de la VM."
+    "body": "El flujo tiene dos fases. La Fase 1 recopila por adelantado todas las decisiones (VM, almacenamiento, directorio origen, imágenes, opciones por imagen) mediante diálogos. La Fase 2 ejecuta <code>qm importdisk</code> para cada imagen seleccionada. La Fase 2 empieza justo después de la última pregunta por imagen, sin una confirmación final aparte; hasta entonces no se copia nada y no se toca la config de la VM."
   },
   "prereqs": {
     "heading": "Requisitos previos",

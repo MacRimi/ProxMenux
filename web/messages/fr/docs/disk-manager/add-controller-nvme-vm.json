@@ -21,13 +21,14 @@
   "iommu": {
     "heading": "Les groupes IOMMU — pourquoi la carte entière part à la fois",
     "body": "La limite d’isolation du passthrough PCI est le <strong>groupe IOMMU</strong>, la plus petite unité que l’IOMMU du CPU peut isoler. Les périphériques d’un même groupe ne peuvent pas être isolés les uns des autres. Si un contrôleur SATA partage son groupe avec un contrôleur USB, le passthrough SATA peut exiger de libérer aussi l’USB de l’hôte, ou être impossible. Il n’attribue pas automatiquement tous les périphériques du groupe à la VM.",
-    "outro": "ProxMenux montre le groupe IOMMU à côté de chaque appareil et vous avertit lorsqu'un groupe porte plus que le contrôleur que vous voulez. Vous pouvez toujours procéder si les périphériques supplémentaires du groupe sont acceptables (tous les contrôleurs de disque, par exemple), ou revenir en arrière s'ils ne le sont pas."
+    "outro": "ProxMenux ne vérifie pas les groupes IOMMU. Avant de transférer une carte en passthrough, vérifiez son groupe avec les commandes manuelles ci-dessous : si le groupe contient plus que le contrôleur voulu, les autres périphériques quittent l’hôte avec lui."
   },
   "prereqs": {
     "heading": "Préalables",
     "items": [
       "<strong>Le CPU et la carte mère prennent en charge</strong> VT-d (Intel) ou AMD-Vi, et la fonction est activée dans le firmware (BIOS/UEFI). ProxMenux peut activer la partie noyau, mais ne peut pas modifier le réglage du firmware.",
       "La VM cible est <strong>éteinte</strong> avant l’affectation de périphériques PCI.",
+      "La VM cible utilise le type de machine <strong>q35</strong>. ProxMenux rejette les autres types de machine.",
       "Le contrôleur/NVMe <strong> n'est pas celui qui détient le système de fichiers racine Proxmox</strong>. Le script cache tout ce qui est utilisé par l'hôte.",
       "Le système invité dispose des pilotes du contrôleur. Linux prend en charge presque tous les HBA sans ajout de pilote ; sous Windows, le pilote du fabricant doit être installé <em>avant</em> le démarrage avec le contrôleur affecté."
     ],
@@ -40,46 +41,46 @@
     "list": [
       {
         "title": "Choisir la VM cible",
-        "bodyRich": "ProxMenux lit <code>qm list</code> et affiche chaque VM. Choisissez celui qui recevra le contrôleur.",
+        "bodyRich": "ProxMenux lit <code>qm list</code> et affiche chaque VM avec son état et son type de machine. Choisissez celle qui recevra le contrôleur. Une VM en cours d’exécution, ou dont le type de machine n’est pas q35, est rejetée.",
         "img": "/disk/nvme-passthrough/vm-selection.png",
         "alt": "Boîte de dialogue de sélection VM",
         "caption": "Boîte de dialogue de sélection VM"
       },
       {
         "title": "Vérification IOMMU",
-        "bodyRich": "Si IOMMU n’est pas activé dans la ligne de commande du noyau, ProxMenux propose de l’activer. Il modifie <code>/etc/kernel/cmdline</code> pour systemd-boot ou <code>/etc/default/grub</code> pour GRUB et ajoute le paramètre adapté au CPU :",
+        "bodyRich": "Si IOMMU n’est pas actif, ProxMenux propose de l’activer. Il modifie <code>/etc/kernel/cmdline</code> pour systemd-boot ou <code>/etc/default/grub</code> pour GRUB, ajoute les paramètres adaptés au CPU et exécute <code>proxmox-boot-tool refresh</code> ou <code>update-grub</code> :",
         "items": [
-          "<code>intel_iommu=on</code> pour les processeurs Intel.",
-          "<code>amd_iommu=on</code> pour processeurs AMD."
+          "<code>intel_iommu=on iommu=pt</code> pour les processeurs Intel.",
+          "<code>amd_iommu=on iommu=pt</code> pour processeurs AMD."
         ],
-        "outro": "Un redémarrage est nécessaire après cette modification. Le script propose de redémarrer maintenant ou plus tard ; le passthrough ne peut continuer que lorsque la nouvelle ligne de commande du noyau est active.",
+        "outro": "Le processus se poursuit et les périphériques sont attribués dans la même exécution, mais l’hôte doit redémarrer avant le démarrage de la VM. À la fin, ProxMenux propose de redémarrer maintenant ; si vous refusez, ne démarrez pas la VM avant le redémarrage de l’hôte.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
         "alt": "Boîte de dialogue IOMMU requis",
         "caption": "IOMMU requis : proposition d’activation et de redémarrage"
       },
       {
         "title": "Énumération du périphérique",
-        "body": "ProxMenux liste tous les contrôleurs de stockage (SATA / SAS HBA) et tous les périphériques NVMe du bus PCI. Pour chaque appareil, il affiche :",
+        "body": "ProxMenux liste tous les périphériques PCI de classe stockage (HBA SATA / SAS / RAID et NVMe). Pour chaque appareil, il affiche :",
         "items": [
-          "Adresse PCI (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "Adresse PCI (<code>0000:00:17.0</code>, <code>0000:01:00.0</code>, ...).",
           "Description du fournisseur / de l'appareil.",
-          "Groupe IOMMU, avec un avertissement ⚠ s’il est partagé avec d’autres périphériques sans rapport.",
-          "Les disques actuellement derrière le contrôleur (pour que vous sachiez ce qui va le suivre au VM)."
+          "<code>Assigned to VM</code> lorsqu’une autre VM a déjà le périphérique dans sa configuration.",
+          "Un marqueur ⚠ lorsqu’un disque derrière le contrôleur est référencé dans la configuration d’une VM ou d’un CT arrêté."
         ],
         "img": "/disk/nvme-passthrough/device-list.png",
         "alt": "Liste des contrôleurs et périphériques NVMe",
-        "caption": "Liste des contrôleurs et périphériques NVMe avec les groupes IOMMU"
+        "caption": "Liste des contrôleurs et périphériques NVMe"
       },
       {
         "title": "Détection des conflits",
-        "bodyRich": "Le script bloque les périphériques manifestement dangereux : ceux déjà attribués à une autre VM via <code>hostpci</code> dans sa configuration, ceux utilisés par l’hôte comme le contrôleur du disque racine, ou ceux d’un groupe IOMMU dont les autres membres ne peuvent pas être identifiés de façon sûre. Les périphériques admissibles sont proposés à la sélection.",
+        "bodyRich": "Les contrôleurs dont un disque contient le système Proxmox ou est utilisé par une VM ou un CT en cours d’exécution sont masqués par sécurité et listés dans la boîte de dialogue, de même que les périphériques déjà présents dans la VM cible. Les fonctions virtuelles SR-IOV, et les fonctions physiques avec des VF actives, sont exclues après la sélection. Si une autre VM possède déjà le périphérique, un propriétaire en cours d’exécution le bloque ; pour un propriétaire arrêté, vous choisissez de le laisser là avec onboot désactivé, de le déplacer vers la VM cible ou de l’ignorer. Les disques référencés dans les configurations de VM ou CT arrêtés offrent un choix similaire : désactiver onboot, supprimer les références ou les laisser telles quelles.",
         "img": "/disk/nvme-passthrough/conflict-warning.png",
         "alt": "Avertissement de détection des conflits",
         "caption": "Détection des conflits — dispositif bloqué avec raison"
       },
       {
         "title": "Affecter et terminer",
-        "bodyRich": "Pour chaque appareil sélectionné ProxMenux exécute <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, en choisissant la prochaine fente libre <code>hostpci</code>. Si IOMMU a été activé pendant cette session, on vous rappelle de redémarrer avant de démarrer le VM.",
+        "bodyRich": "ProxMenux affiche un résumé avec un avis de compatibilité (sur certaines plateformes, l’hôte ralentit ou se fige au démarrage de la VM ; les firmwares anciens et les CPU basse consommation sont signalés). À la confirmation, pour chaque appareil sélectionné, il exécute <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, en choisissant la prochaine fente libre <code>hostpci</code>. Si IOMMU a été activé pendant cette session, il propose de redémarrer l’hôte.",
         "img": "/disk/nvme-passthrough/assignment.png",
         "alt": "Résumé de l'attribution",
         "caption": "Résumé de l’affectation : emplacements hostpciN et adresses PCI attribuées"

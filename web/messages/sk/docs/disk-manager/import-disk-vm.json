@@ -16,8 +16,8 @@
   },
   "howRuns": {
     "heading": "Ako beží skript",
-    "body": "Postup má dve oddelené fázy: zhromaždenie informácií a volieb, potom samotné pripojenie diskov k VM. Až do záverečného potvrdenia sa konfigurácia VM nemení.",
-    "summary": "ProxMenux filtruje všetko, čo nemôže bezpečne prejsť: koreňový disk, disky pripojené k hostiteľovi, členovia aktívneho ZFS/LVM/RAID pool a disky, na ktoré už odkazujú VM/LXC konfigurácia. Disky s <em>zastaranými</em> metadátami (staré ZFS / RAID / LVM podpisy, ktoré sa už nepoužívajú) sú zobrazené s označením ⚠, ale nie sú blokované."
+    "body": "Postup má dve oddelené fázy: zhromaždenie informácií a volieb, potom samotné pripojenie diskov k VM. Kým nezodpoviete posledný dialóg, konfigurácia VM sa nemení; samostatné záverečné potvrdenie neexistuje, preto zrušte pomocou Esc v ktoromkoľvek skoršom dialógu.",
+    "summary": "ProxMenux filtruje všetko, čo nemôže bezpečne odovzdať: koreňový disk a ďalšie disky pripojené k hostiteľovi, disky používané LVM hostiteľa, členov ZFS (aktívnych aj zastaraných), aktívnych členov RAID a disky, ktoré už sú v konfigurácii tejto VM. Disky používané inou VM alebo CT sa zobrazia ako ⚠ In use a zvyšné podpisy RAID / LVM dostanú označenie ⚠, ale nie sú blokované."
   },
   "prereqs": {
     "heading": "Predpoklady",
@@ -39,7 +39,7 @@
         "title": "Vybrať fyzické disky na pripojenie",
         "img": "/disk/disk-selection.png",
         "caption": "Voľné disky na hostiteľovi, s označením ⚠ pre staré metadáta",
-        "body": "Skript prehľadá každý hostiteľský disk a zobrazí len tie, ktoré je možné bezpečne pripojiť. Kontrolný zoznam vám umožňuje vybrať jeden alebo niekoľko naraz. Disky so starými ZFS / LVM / RAID signatúrami sa stále zobrazujú a sú označené ⚠, takže viete, že je potrebné ich vymazať, aby ich hosť mohol naformátovať."
+        "body": "Skript prehľadá každý hostiteľský disk a zobrazí len tie, ktoré je možné bezpečne pripojiť. Kontrolný zoznam vám umožňuje vybrať jeden alebo niekoľko naraz. Disky so starými podpismi LVM / RAID sa stále zobrazujú a sú označené ⚠ (disky s podpismi ZFS sú skryté), takže viete, že je potrebné ich vymazať, aby ich hosť mohol naformátovať."
       },
       {
         "title": "Vyberte rozhranie zbernice",
@@ -65,7 +65,7 @@
     "migrationTitle": "Živá migrácia nie je možná",
     "migrationBody": "VM s priamo pripojeným fyzickým diskom je <strong>viazaná na hostiteľa, ktorý disk sprístupňuje</strong>. Iný uzol zvyčajne nemá rovnakú cestu <code>/dev/disk/by-id/…</code> ani dáta disku. Zálohujte a preneste dáta samostatne alebo použite spravované virtuálne disky na zdieľanom či podporovanom replikovanom úložisku. Nepredpokladajte, že replikácia Proxmox zahŕňa toto zariadenie.",
     "shareTitle": "Nezdieľať fyzický disk medzi VM",
-    "shareBody": "Pripojenie rovnakého fyzického disku k dvom VM súčasne skazí dáta pri ďalšom zápise. ProxMenux detekuje túto situáciu a blokuje ju, ale ak obídete skript (direct <code>qm set</code>), uistite sa, že len jeden hosť niekedy pripojí disk."
+    "shareBody": "Pripojenie rovnakého fyzického disku k dvom VM súčasne skazí dáta pri ďalšom zápise. ProxMenux to zablokuje, keď druhý hosť beží, a pýta si potvrdenie, keď je zastavený, ale ak skript obídete (priamy <code>qm set</code>), uistite sa, že disk pripojí vždy len jeden hosť."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",

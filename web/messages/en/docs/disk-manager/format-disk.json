@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Format / Wipe Physical Disk | ProxMenux Documentation",
-    "description": "Secure physical disk wipe and format on Proxmox VE using ProxMenux. Four operation modes, strict safety filters (system / mounted / in-use disks blocked) and double confirmation including full path typing.",
+    "description": "Secure physical disk wipe and format on Proxmox VE using ProxMenux. Four operation modes, system disks hidden, disks used by running guests blocked, and double confirmation including full path typing.",
     "ogTitle": "Format / Wipe Physical Disk | ProxMenux Documentation",
     "ogDescription": "Securely wipe or format a physical disk on Proxmox. Safe visibility rules, 4 operation modes, double confirmation."
   },
   "header": {
     "title": "Format / Wipe Physical Disk",
-    "description": "Securely wipe or format a physical disk on the Proxmox host. ProxMenux only shows disks that are fully free (no system use, no guest reference, no mounts) and forces a double confirmation — yes/no plus typing the full disk path — before destroying any data.",
+    "description": "Securely wipe or format a physical disk on the Proxmox host. ProxMenux hides system disks, warns about any other use before you confirm, blocks disks used by a running VM or CT, and forces a double confirmation (yes/no plus typing the full disk path) before destroying any data.",
     "section": "Disk Manager · Utilities"
   },
   "danger": {
@@ -20,17 +20,17 @@
   },
   "visibility": {
     "heading": "Visibility rules",
-    "intro": "Before the menu even appears, ProxMenux filters the disk list. Only candidates that are provably safe are shown:",
+    "intro": "Before the menu appears, ProxMenux filters the disk list. Only system disks are hidden; any other use is shown so you can decide:",
     "items": [
-      "<strong>Shown</strong> — disks <em>not</em> used by the host (root pool, swap, mounted, active ZFS/LVM/RAID) and <em>not</em> referenced by any VM/LXC config (running or stopped).",
-      "<strong>Hidden</strong> — host / system disks.",
-      "<strong>Hidden</strong> — disks referenced by a VM/LXC config."
+      "<strong>Hidden</strong>: disks with a system mount (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), an active swap partition or a member of the ZFS root pool, plus read-only devices.",
+      "<strong>Shown, blocked at confirmation</strong>: disks referenced by a <strong>running</strong> VM or CT.",
+      "<strong>Shown with a warning</strong>: disks referenced by a stopped VM or LXC config, disks with mounted data partitions, and active ZFS / LVM / RAID members."
     ],
     "safetyTitle": "Safety at confirmation and execution",
     "safetyItems": [
       "Disks with stale / active metadata show detailed warnings <em>before</em> you confirm.",
       "Disks used by a <strong>running</strong> VM are <strong>hard-blocked</strong> at confirmation.",
-      "Disks with mounted partitions are <strong>hard-blocked</strong> at execution (a fresh re-validation runs right before anything is written).",
+      "Mounted data partitions are unmounted automatically at execution and any active ZFS pool on the disk is exported. If a partition cannot be unmounted, execution aborts (a fresh re-validation runs right before anything is written).",
       "Two confirmations are always required: <em>yes/no</em> dialog + typing the full disk path exactly."
     ]
   },
@@ -64,13 +64,13 @@
         "mode": "4. Full format",
         "part": "New GPT",
         "data": "Destroyed",
-        "useCase": "Ready-to-use disk with a single new partition and a fresh filesystem."
+        "useCase": "Ready-to-use disk with a single new partition and a fresh filesystem or ZFS pool."
       }
     ],
-    "fullFormatOutro": "<strong>Full format</strong> continues with two extra dialogs:",
+    "fullFormatOutro": "<strong>Full format</strong> asks one more question after the confirmation:",
     "fullFormatItems": [
-      "<strong>Filesystem</strong> — <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portable), or <code>btrfs</code>. Missing tools (for example <code>mkfs.btrfs</code>) abort with a clear message.",
-      "<strong>Label</strong> — optional filesystem label for identification."
+      "<strong>Filesystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portable), <code>btrfs</code> or <code>zfs</code>. If <code>mkfs.exfat</code> is missing, ProxMenux installs <code>exfatprogs</code>; if <code>mkfs.btrfs</code> is missing, it aborts with a hint.",
+      "<strong>ZFS pool name</strong> (ZFS only): suggested as <code>pool_&lt;disk&gt;</code>. The pool is created with <code>ashift=12</code> and <code>lz4</code> compression."
     ]
   },
   "steps": {
@@ -79,23 +79,23 @@
     "list": [
       {
         "title": "Pick a free disk",
-        "body": "ProxMenux lists every disk that passes the visibility filters above. Disks with ⚠ markers carry stale metadata and are shown with the details so you know what you are about to overwrite."
+        "body": "ProxMenux lists every disk that passes the visibility filter above, with its model and size. Any metadata found on the disk (ZFS / LVM / RAID signatures, mounted partitions, guest references) is shown in the confirmation summary so you know what you are about to overwrite."
       },
       {
         "title": "Pick an operation mode",
         "bodyRich": "Choose between <strong>Wipe all</strong>, <strong>Remove FS labels</strong>, <strong>Zero all data</strong> or <strong>Full format</strong> according to the table above."
       },
       {
-        "title": "(Full format only) Pick filesystem and label",
-        "body": "ext4 / xfs / exfat / btrfs, plus an optional label."
-      },
-      {
         "title": "Confirm twice",
         "bodyRich": "ProxMenux shows a summary of what will happen. You accept with a yes/no dialog and <strong>type the full disk path</strong> exactly as shown (for example <code>/dev/sdc</code>). Anything else aborts."
       },
       {
+        "title": "(Full format only) Pick the filesystem",
+        "body": "ext4 / xfs / exfat / btrfs / zfs. For ZFS, also the pool name."
+      },
+      {
         "title": "Re-validation and execution",
-        "body": "Just before writing, the script re-checks the disk state. If a partition has been mounted or a VM started in the meantime, execution is aborted. Otherwise the chosen operation runs and a summary is printed at the end."
+        "body": "Just before writing, the script re-checks the disk state. It aborts if the disk now holds a system mount, an active swap partition or a ZFS root pool member, or if a running VM or CT uses it. Mounted data partitions are unmounted and active ZFS pools on the disk are exported. Then the chosen operation runs."
       }
     ]
   },
@@ -105,7 +105,7 @@
   },
   "troubleshoot": {
     "notListedTitle": "Disk not listed in the menu",
-    "notListedBody": "It was filtered for safety. Common reasons: it is mounted (even at <code>/mnt/tmp</code>), it is an active ZFS / LVM / RAID member, it is referenced by a VM or LXC config, or it is your Proxmox root disk. Run <code>lsblk -f</code> and <code>cat /proc/mdstat</code> on the host to understand why.",
+    "notListedBody": "It was filtered for safety. Only system disks are hidden: a disk with a system mount (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), an active swap partition or a member of the ZFS root pool, or a read-only device. Data mounts, guest references and ZFS / LVM / RAID membership do not hide a disk. Run <code>lsblk -f</code>, <code>swapon --show</code> and <code>zpool status</code> on the host to understand why.",
     "busyTitle": "\"Disk may be busy\" / unmount failed",
     "busyBody": "Something is still holding an open file on a partition of that disk — most often a container or a shell whose cwd is inside a mountpoint. Identify it with <code>lsof | grep /dev/sdX</code> or <code>fuser -vm /dev/sdX1</code>, stop it, then re-run the tool."
   },

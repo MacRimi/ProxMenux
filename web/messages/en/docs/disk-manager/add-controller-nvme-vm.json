@@ -21,13 +21,14 @@
   "iommu": {
     "heading": "IOMMU groups — why the whole card leaves at once",
     "body": "The isolation boundary for PCI passthrough is the <strong>IOMMU group</strong>, the smallest unit the CPU’s IOMMU can isolate. Devices in the same group cannot be isolated from each other. If a SATA controller shares its group with a USB controller, passing through SATA may also require releasing USB from the host, or may prevent passthrough. It does not automatically assign every device in the group to the VM.",
-    "outro": "ProxMenux shows the IOMMU group next to each device and warns you when a group carries more than just the controller you want. You can still proceed if the extra devices in the group are acceptable (all disk controllers, for example), or back out if they are not."
+    "outro": "ProxMenux does not check IOMMU groups. Before you pass a card through, check its group with the manual commands below: if the group holds more than the controller you want, the other devices leave the host with it."
   },
   "prereqs": {
     "heading": "Prerequisites",
     "items": [
       "<strong>CPU and motherboard support</strong> VT-d (Intel) or AMD-Vi, and it is enabled in firmware (BIOS/UEFI). ProxMenux can enable the kernel side for you, but it cannot flip the firmware switch.",
       "The target VM is <strong>powered off</strong> before attaching PCI devices.",
+      "The target VM uses the <strong>q35</strong> machine type. ProxMenux rejects other machine types.",
       "The controller/NVMe <strong>is not the one holding the Proxmox root filesystem</strong>. The script hides anything in use by the host.",
       "Guest OS has drivers for the controller model. Linux covers virtually every HBA out of the box; Windows needs the vendor driver installed <em>before</em> you boot with the controller attached."
     ],
@@ -40,46 +41,46 @@
     "list": [
       {
         "title": "Pick the target VM",
-        "bodyRich": "ProxMenux reads <code>qm list</code> and shows every VM. Pick the one that will receive the controller.",
+        "bodyRich": "ProxMenux reads <code>qm list</code> and shows every VM with its status and machine type. Pick the one that will receive the controller. A running VM, or one whose machine type is not q35, is rejected.",
         "img": "/disk/nvme-passthrough/vm-selection.png",
         "alt": "VM selection dialog",
         "caption": "VM selection dialog"
       },
       {
         "title": "IOMMU check",
-        "bodyRich": "If IOMMU is not enabled on the kernel cmdline, ProxMenux offers to enable it. It edits <code>/etc/kernel/cmdline</code> (for systemd-boot) or <code>/etc/default/grub</code> (for GRUB) and appends the correct parameter for your CPU:",
+        "bodyRich": "If IOMMU is not active, ProxMenux offers to enable it. It edits <code>/etc/kernel/cmdline</code> (for systemd-boot) or <code>/etc/default/grub</code> (for GRUB), appends the parameters for your CPU and runs <code>proxmox-boot-tool refresh</code> or <code>update-grub</code>:",
         "items": [
-          "<code>intel_iommu=on</code> for Intel CPUs.",
-          "<code>amd_iommu=on</code> for AMD CPUs."
+          "<code>intel_iommu=on iommu=pt</code> for Intel CPUs.",
+          "<code>amd_iommu=on iommu=pt</code> for AMD CPUs."
         ],
-        "outro": "A reboot is required after this change. The script prompts you to reboot now or later; the passthrough cannot continue until the new kernel cmdline is active.",
+        "outro": "The flow continues and the devices are assigned in the same run, but the host must reboot before the VM starts. At the end ProxMenux offers to reboot now; if you decline, do not start the VM until the host has rebooted.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
         "alt": "IOMMU Required dialog",
         "caption": "IOMMU Required — offer to enable and reboot"
       },
       {
         "title": "Device enumeration",
-        "body": "ProxMenux lists every storage controller (SATA / SAS HBA) and every NVMe device on the PCI bus. For each device it shows:",
+        "body": "ProxMenux lists every storage-class PCI device (SATA / SAS / RAID HBAs and NVMe). For each device it shows:",
         "items": [
-          "PCI address (<code>00:17.0</code>, <code>01:00.0</code>, …).",
+          "PCI address (<code>0000:00:17.0</code>, <code>0000:01:00.0</code>, …).",
           "Vendor / device description.",
-          "IOMMU group — and a ⚠ warning if the group is shared with other, unrelated devices.",
-          "The disks currently behind the controller (so you know what will follow it to the VM)."
+          "<code>Assigned to VM</code> when another VM already has the device in its config.",
+          "A ⚠ marker when a disk behind the controller is referenced in a stopped VM or CT config."
         ],
         "img": "/disk/nvme-passthrough/device-list.png",
         "alt": "Controller / NVMe device enumeration",
-        "caption": "Controller / NVMe device enumeration with IOMMU group info"
+        "caption": "Controller / NVMe device enumeration"
       },
       {
         "title": "Conflict detection",
-        "bodyRich": "The script blocks devices that are clearly unsafe: already assigned to another VM (via <code>hostpci</code> in that VM's config), in use by the host (root disk controller), or sitting in an IOMMU group whose other members the script cannot identify safely. Eligible devices are available for selection.",
+        "bodyRich": "Controllers with a disk that holds the Proxmox system or is used by a running VM or CT are hidden for safety and listed in the dialog, and so are devices already in the target VM. SR-IOV virtual functions, and physical functions with active VFs, are excluded after selection. If another VM already has the device, a running owner blocks it; for a stopped owner you choose to keep it there with onboot disabled, move it to the target VM or skip it. Disks referenced in stopped VM or CT configs get a similar choice: disable onboot, remove the references or leave them as they are.",
         "img": "/disk/nvme-passthrough/conflict-warning.png",
         "alt": "Conflict detection warning",
         "caption": "Conflict detection — device blocked with reason"
       },
       {
         "title": "Attach and finalise",
-        "bodyRich": "For every selected device ProxMenux runs <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, choosing the next free <code>hostpci</code> slot. If IOMMU was enabled during this session you are reminded to reboot before starting the VM.",
+        "bodyRich": "ProxMenux shows a summary with a compatibility notice (on some platforms the host slows down or freezes when the VM starts; old firmware and low-power CPUs are flagged). On confirm, for every selected device it runs <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, choosing the next free <code>hostpci</code> slot. If IOMMU was enabled during this session, it offers to reboot the host.",
         "img": "/disk/nvme-passthrough/assignment.png",
         "alt": "Assignment summary",
         "caption": "Assignment summary — hostpciN slots and PCI addresses attached"

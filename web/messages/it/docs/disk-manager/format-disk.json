@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Formatta o cancella un disco fisico | Documentazione ProxMenux",
-    "description": "Cancella e formatta dischi fisici su Proxmox VE con ProxMenux. Quattro modalità, filtri rigorosi che escludono i dischi di sistema, montati o in uso e doppia conferma con inserimento del percorso completo.",
+    "description": "Cancella e formatta dischi fisici su Proxmox VE con ProxMenux. Quattro modalità, dischi di sistema nascosti, dischi usati da guest in esecuzione bloccati e doppia conferma con inserimento del percorso completo.",
     "ogTitle": "Formatta o cancella un disco fisico | Documentazione ProxMenux",
     "ogDescription": "Pulire in modo sicuro o formattare un disco fisico su Proxmox. Regole di visibilità sicure, modalità di funzionamento 4, doppia conferma."
   },
   "header": {
     "title": "Formatta o cancella un disco fisico",
-    "description": "Cancella in modo sicuro o formatta un disco fisico sull’host Proxmox. ProxMenux mostra solo i dischi completamente liberi: nessun uso da parte del sistema, nessun riferimento nei guest e nessun filesystem montato. Prima di distruggere i dati richiede una doppia conferma: sì/no e inserimento del percorso completo del disco.",
+    "description": "Cancella in modo sicuro o formatta un disco fisico sull’host Proxmox. ProxMenux nasconde i dischi di sistema, avvisa di qualsiasi altro uso prima della conferma, blocca i dischi usati da una VM o da un CT in esecuzione e impone una doppia conferma (sì/no più l’inserimento del percorso completo del disco) prima di distruggere qualsiasi dato.",
     "section": "Disk Manager · Utilità"
   },
   "danger": {
@@ -20,17 +20,17 @@
   },
   "visibility": {
     "heading": "Regole di visibilità",
-    "intro": "Prima che il menu venga visualizzato, ProxMenux filtra l'elenco dei dischi. Solo i candidati che sono provabilmente sicuri sono mostrati:",
+    "intro": "Prima che il menu venga visualizzato, ProxMenux filtra l'elenco dei dischi. Vengono nascosti solo i dischi di sistema; ogni altro uso viene mostrato, così puoi decidere:",
     "items": [
-      "<strong>Mostrati</strong>: dischi <em>non</em> usati dall’host (pool root, swap, filesystem montati, ZFS/LVM/RAID attivi) e <em>non</em> citati in configurazioni VM/LXC, sia avviate sia arrestate.",
-      "<strong>Nascosti</strong>: dischi dell’host e di sistema.",
-      "<strong>Nascosti</strong>: dischi citati in una configurazione VM/LXC."
+      "<strong>Nascosti</strong>: dischi con un mount di sistema (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), una partizione swap attiva o membri del pool root ZFS, oltre ai dispositivi di sola lettura.",
+      "<strong>Mostrati, bloccati alla conferma</strong>: dischi citati da una VM o da un CT <strong>in esecuzione</strong>.",
+      "<strong>Mostrati con un avviso</strong>: dischi citati nella configurazione di una VM o di un LXC fermo, dischi con partizioni dati montate e membri attivi ZFS / LVM / RAID."
     ],
     "safetyTitle": "Sicurezza alla conferma e all'esecuzione",
     "safetyItems": [
       "I dischi con metadati obsoleti o attivi mostrano avvisi dettagliati <em>prima</em> della conferma.",
       "I dischi usati da una VM <strong>in esecuzione</strong> sono <strong>bloccati senza possibilità di procedere</strong> alla conferma.",
-      "I dischi con partizioni montate sono <strong>bloccati senza possibilità di procedere</strong> all’esecuzione. Una nuova verifica avviene subito prima di qualsiasi scrittura.",
+      "Le partizioni dati montate vengono smontate automaticamente all’esecuzione e qualsiasi pool ZFS attivo sul disco viene esportato. Se una partizione non può essere smontata, l’esecuzione viene interrotta (una nuova verifica avviene subito prima di qualsiasi scrittura).",
       "Sono sempre necessarie due conferme: una finestra <em>sì/no</em> e l’inserimento esatto del percorso completo del disco."
     ]
   },
@@ -64,13 +64,13 @@
         "mode": "4. Formattazione completa",
         "part": "Nuovo GPT",
         "data": "Distrutto",
-        "useCase": "Disco pronto all'uso con una singola nuova partizione e un filesystem fresco."
+        "useCase": "Disco pronto all'uso con una singola nuova partizione e un filesystem fresco o un pool ZFS."
       }
     ],
-    "fullFormatOutro": "<strong>Formattazione completa</strong> prosegue con altre due finestre:",
+    "fullFormatOutro": "<strong>Formattazione completa</strong> pone un’ulteriore domanda dopo la conferma:",
     "fullFormatItems": [
-      "<strong>Filesystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabile) o <code>btrfs</code>. Se mancano strumenti come <code>mkfs.btrfs</code>, l’operazione si interrompe con un messaggio chiaro.",
-      "<strong>Etichetta</strong>: etichetta facoltativa del filesystem per identificarlo."
+      "<strong>Filesystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabile), <code>btrfs</code> o <code>zfs</code>. Se manca <code>mkfs.exfat</code>, ProxMenux installa <code>exfatprogs</code>; se manca <code>mkfs.btrfs</code>, l’operazione si interrompe con un suggerimento.",
+      "<strong>Nome del pool ZFS</strong> (solo ZFS): suggerito come <code>pool_&lt;disk&gt;</code>. Il pool viene creato con <code>ashift=12</code> e compressione <code>lz4</code>."
     ]
   },
   "steps": {
@@ -79,23 +79,23 @@
     "list": [
       {
         "title": "Scegli un disco libero",
-        "body": "ProxMenux elenca ogni disco che passa i filtri di visibilità sopra. I dischi con marcatori ⚠ portano metadati stanti e vengono mostrati con i dettagli in modo da sapere cosa stai per sovrascrivere."
+        "body": "ProxMenux elenca ogni disco che passa il filtro di visibilità sopra, con modello e dimensione. Gli eventuali metadati trovati sul disco (firme ZFS / LVM / RAID, partizioni montate, riferimenti dei guest) vengono mostrati nel riepilogo di conferma in modo da sapere cosa stai per sovrascrivere."
       },
       {
         "title": "Scegli una modalità di funzionamento",
         "bodyRich": "Scegli <strong>Pulisci tutto</strong>, <strong>Rimuovere le etichette FS</strong>, <strong>Sovrascrivi i dati con zeri</strong> o <strong>Formattazione completa</strong> secondo la tabella sopra."
       },
       {
-        "title": "(Solo formattazione completa) Scegli filesystem ed etichetta",
-        "body": "ext4 / xfs / exfat / btrfs, più un'etichetta opzionale."
-      },
-      {
         "title": "Confermare due volte",
         "bodyRich": "ProxMenux mostra un riassunto di ciò che accadrà. Si accetta con una finestra di dialogo sì/no e <strong> digitare il percorso completo del disco</strong> esattamente come mostrato (ad esempio <code>/dev/sdc</code>). Tutto il resto si interrompe."
       },
       {
+        "title": "(Solo formattazione completa) Scegliere il filesystem",
+        "body": "ext4 / xfs / exfat / btrfs / zfs. Per ZFS, anche il nome del pool."
+      },
+      {
         "title": "Nuova verifica ed esecuzione",
-        "body": "Subito prima di scrivere, lo script ricontrolla lo stato del disco. Se nel frattempo è stata montata una partizione o avviata una VM, l’esecuzione viene annullata. Altrimenti viene eseguita l’operazione scelta e mostrato un riepilogo finale."
+        "body": "Subito prima di scrivere, lo script ricontrolla lo stato del disco. Si interrompe se il disco contiene ora un mount di sistema, una partizione swap attiva o un membro del pool root ZFS, oppure se lo usa una VM o un CT in esecuzione. Le partizioni dati montate vengono smontate e i pool ZFS attivi sul disco vengono esportati. Poi viene eseguita l’operazione scelta."
       }
     ]
   },
@@ -105,7 +105,7 @@
   },
   "troubleshoot": {
     "notListedTitle": "Disco non elencato nel menu",
-    "notListedBody": "È stato filtrato per la sicurezza. Motivi comuni: è montato (anche a <code>/mnt/tmp</code>), è un membro attivo ZFS / LVM / RAID, è riferito da una configurazione VM o LXC, o è il disco radice Proxmox. Eseguire <code>lsblk -f</code> e <code>cat /proc/mdstat</code> sull'host per capire perché.",
+    "notListedBody": "È stato filtrato per la sicurezza. Vengono nascosti solo i dischi di sistema: un disco con un mount di sistema (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), una partizione swap attiva o un membro del pool root ZFS, oppure un dispositivo di sola lettura. I mount di dati, i riferimenti dei guest e l'appartenenza a ZFS / LVM / RAID non nascondono un disco. Eseguire <code>lsblk -f</code>, <code>swapon --show</code> e <code>zpool status</code> sull'host per capire perché.",
     "busyTitle": "\"Disk may be busy\" / smontaggio non riuscito",
     "busyBody": "Un processo mantiene aperto un file in una partizione del disco, spesso un contenitore o una shell la cui directory corrente si trova nel punto di mount. Identificalo con <code>lsof | grep /dev/sdX</code> o <code>fuser -vm /dev/sdX1</code>, arrestalo e riesegui lo strumento."
   },
