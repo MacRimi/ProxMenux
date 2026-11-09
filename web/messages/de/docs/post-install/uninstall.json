@@ -83,7 +83,7 @@
           },
           {
             "tool": "Systemgrenzen erhöhen",
-            "restores": "Entfernt /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf und /etc/security/limits.d/99-limits.conf. Setzt PAM-Grenzen und systemd DefaultLimitNOFILE zurück. In /root/.profile entfernt es nur die alte Zeile ulimit -n 256000; ulimit -n 1048576 des aktuellen Installers kann bleiben und manuelle Entfernung erfordern."
+            "restores": "Entfernt /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf und /etc/security/limits.d/99-limits.conf. Setzt PAM-Grenzen und systemd DefaultLimitNOFILE zurück. Entfernt aus /root/.profile sowohl die alte Zeile ulimit -n 256000 als auch die aktuelle Zeile ulimit -n 1048576."
           },
           {
             "tool": "ZRAM-Swapprofil",
