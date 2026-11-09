@@ -61,7 +61,7 @@
   },
   "uninstall": {
     "heading": "Удаление",
-    "body": "В интерфейсе ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. Удаляет дерево скриптов, средство запуска и службу Monitor, при желании удаляет выбранные зависимости и восстанавливает <code>/root/.bashrc</code> и <code>/etc/motd</code> из резервных копий, созданных при настройке после установки, если эти копии существуют (в противном случае удаляет строку ProxMenux из MOTD). Полная пошаговая инструкция: <uninstalllink>Удаление ProxMenux</uninstalllink>."
+    "body": "В интерфейсе ProxMenux: <strong>Settings → «Удалить ProxMenux»</strong>. Удаляет дерево скриптов, средство запуска и службу Monitor, при желании удаляет выбранные зависимости и восстанавливает <code>/root/.bashrc</code> и <code>/etc/motd</code> из резервных копий, созданных при настройке после установки, если эти копии существуют (в противном случае удаляет строку ProxMenux из MOTD). Полная пошаговая инструкция: <uninstalllink>Удаление ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Устранение неполадок",
