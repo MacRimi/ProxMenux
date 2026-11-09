@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "Репозитории APT и полное обновление",
-      "what": "Отключает корпоративные источники pve-enterprise.sources и ceph.sources, создаёт корректную запись источника no-subscription для кодового имени Debian на хосте, затем выполняет apt update && apt full-upgrade -y (официальную команду обновления Proxmox).",
+      "what": "Отключает корпоративные репозитории (pve-enterprise.sources / ceph.sources в PVE 9, файлы .list в PVE 8), создаёт корректную запись источника no-subscription для кодового имени Debian на хосте, затем выполняет apt update && apt full-upgrade -y (dist-upgrade в PVE 8).",
       "category": "Основные настройки",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "Самый первый шаг набора Automated — обновление Proxmox. Согласно официальным рекомендациям Proxmox, для обновления работающего узла в пределах одной основной версии следует выполнить:",
     "after": "Эта единственная строка — официальная команда для любого актуального выпуска Proxmox. Скрипт Automated выполняет <strong>именно</strong> её, дополняя настройкой репозиториев и очисткой после обновления, которые также рекомендованы в официальном руководстве. Это те же шаги, что и в отдельной утилите <link>Proxmox System Update</link>:",
     "items": [
-      "Отключает корпоративные репозитории <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, удаляет устаревшие файлы репозиториев и создаёт корректный источник no-subscription для кодового имени выпуска системы узла.",
+      "Отключает корпоративные репозитории (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> в PVE 9, файлы <code>.list</code> в PVE 8), удаляет устаревшие файлы репозиториев и создаёт корректный источник no-subscription для кодового имени выпуска системы узла.",
       "Выполняет обновление без интерактивных запросов с <code>DEBIAN_FRONTEND=noninteractive</code> и <code>--force-confdef --force-confold</code> — изменённые вами файлы конфигурации сохраняются, даже если в исходном проекте они тоже были изменены.",
       "Устанавливает основные пакеты Proxmox, если они отсутствуют (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Проверка корректности метаданных LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> и предложение перезагрузки только в том случае, если ядро действительно изменилось."
