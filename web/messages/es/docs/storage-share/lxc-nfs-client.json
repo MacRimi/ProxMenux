@@ -68,9 +68,9 @@
   },
   "unmount": {
     "heading": "Desmontar share NFS",
-    "body": "Combina los montajes en vivo y las entradas fstab en una sola lista, te deja elegir uno y <strong>elimina la línea correspondiente de <code>/etc/fstab</code></strong>. El script <em>no</em> ejecuta <code>umount</code> en el montaje en vivo — en su lugar te dice que hace falta un reinicio del CT para que el desmontaje surta efecto.",
-    "warnTitle": "El script elimina entradas fstab, no montajes en vivo",
-    "warnBody": "Es una decisión de diseño deliberada: <code>umount</code> en un montaje ocupado falla con \"device busy\" cuando algo dentro del CT lo sigue usando. Eliminar la entrada fstab garantiza que el montaje desaparezca limpiamente en el siguiente arranque del CT. Si quieres el montaje fuera <em>ya</em> y estás seguro de que nada lo está usando, ejecuta <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> a mano después de que el script termine."
+    "body": "Combina los montajes en vivo y las entradas fstab en una sola lista, te deja elegir uno, <strong>elimina la línea correspondiente de <code>/etc/fstab</code></strong> y lo desmonta dentro del CT con <code>umount</code>. Si el montaje está ocupado recurre a un <code>umount -l</code> diferido.",
+    "warnTitle": "Si el desmontaje falla, reinicia el CT",
+    "warnBody": "Cuando fallan tanto <code>umount</code> como <code>umount -l</code>, el script te avisa de que reinicies el LXC para liberar el montaje. La entrada fstab ya no existe, así que el montaje no vuelve en el siguiente arranque del CT."
   },
   "test": {
     "heading": "Probar conectividad NFS",

@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Öffnen des Tools",
-    "body": "Öffnen Sie im Hauptmenü von ProxMenux <strong>Speicher &amp; Freigabe-Manager → NFS Freigabe auf Host bereitstellen</strong>. Sie sehen dieses sub-Menü mit vier Optionen:",
+    "body": "Öffnen Sie im Hauptmenü von ProxMenux <strong>Speicher &amp; Freigabe-Manager → NFS Freigabe als Proxmox-Speicher hinzufügen</strong>. Sie sehen dieses sub-Menü mit vier Optionen (zuzüglich Exit):",
     "imageAlt": "NFS-Host-Menü — Einhängen / Anzeigen / Entfernen / Verbindung testen"
   },
   "howRuns": {
@@ -124,17 +124,17 @@
   },
   "view": {
     "heading": "Ansicht konfigurierter NFS-Speicher",
-    "body": "Zeigt alle NFS-Einträge in Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) mit Server, Export, Inhaltstypen, Mount-Pfad und aktuellem Status. <strong>Hinweis:</strong> Diese Ansicht enthält nur über pvesm registrierte Storages. Reine fstab-Mounts werden nicht aufgeführt; prüfen Sie diese mit <code>findmnt -t nfs</code> oder <code>grep nfs /etc/fstab</code>."
+    "body": "Zeigt die in Proxmox registrierten NFS-Speicher (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) mit Server, Export, Inhaltstypen, Mount-Pfad und aktuellem Status, gefolgt von den NFS-Mounts in der <code>/etc/fstab</code> des Hosts mit Server, Export, Pfad, Optionen und der Angabe, ob jeder eingehängt ist."
   },
   "remove": {
     "heading": "NFS-Speicher entfernen",
-    "body": "Führt <code>pvesm remove &lt;storage-id&gt;</code> nach einer Bestätigung aus, die den Server / Export / Inhalt anzeigt. Nur die Registrierung auf Proxmox-Seite wird entfernt — <strong>der entfernte NFS-Server selbst wird nie berührt</strong>, es werden keine Dateien gelöscht. Um ein fstab-only-Halter zu entfernen, bearbeiten Sie <code>/etc/fstab</code> von Hand und führen Sie <code>umount &lt;path&gt;</code> aus.",
+    "body": "Die Auswahl listet sowohl Proxmox-Speicher (<code>[pvesm]</code>) als auch Host-fstab-Mounts (<code>[fstab]</code>) auf. Für einen Proxmox-Speicher führt es <code>pvesm remove &lt;storage-id&gt;</code> nach einer Bestätigung aus, die den Server / Export / Inhalt anzeigt. Für einen fstab-Mount hängt es den Pfad aus, sichert <code>/etc/fstab</code> nach <code>/etc/fstab.proxmenux.bak</code>, entfernt die Zeile und löscht das Mount-Verzeichnis, wenn es leer ist. <strong>Der entfernte NFS-Server selbst wird nie berührt</strong>, es werden keine Dateien gelöscht.",
     "warnTitle": "Abhängigkeiten zuerst sichern",
     "warnBody": "Wenn VMs, CTs oder Backup-Jobs immer noch auf diesen Speicher verweisen (nach ID), zeigt das Entfernen auf einen verschwundenen Speicher. Proxmox wird den Fehler markieren, aber nicht bereinigen. Verschieben oder löschen Sie diese Referenzen zuerst und entfernen Sie dann den Speicher."
   },
   "test": {
     "heading": "NFS-Verbindung testen",
-    "body": "Führt einen Diagnosepass über jeden in Proxmox registrierten NFS-Speicher aus: Prüft, ob <code>showmount</code> verfügbar ist, ob <code>rpcbind</code> ausgeführt wird, pingt jeden Server, prüft den Port 2049, ruft <code>showmount -e</code> auf und meldet schließlich die eigene Ansicht von Proxmox (<code>pvesm status</code>). Gute erste Station, wenn ein Speicher als <em>inactive</em> in der Proxmox-Benutzeroberfläche angezeigt wird."
+    "body": "Führt einen Diagnosepass über jeden in Proxmox registrierten NFS-Speicher und jeden NFS-Mount in der <code>/etc/fstab</code> des Hosts aus: Prüft, ob <code>showmount</code> verfügbar ist, ob <code>rpcbind</code> ausgeführt wird, pingt jeden Server, prüft den Port 2049, ruft <code>showmount -e</code> auf und meldet schließlich die eigene Ansicht von Proxmox (<code>pvesm status</code>). Gute erste Station, wenn ein Speicher als <em>inactive</em> in der Proxmox-Benutzeroberfläche angezeigt wird."
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",

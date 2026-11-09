@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Открытие инструмента",
-    "body": "В главном меню ProxMenux откройте <strong>Хранилище &amp; Share Manager → Mount Samba Share на хосте</strong>. Появится подменю с четырьмя пунктами:",
+    "body": "В главном меню ProxMenux откройте <strong>Storage &amp; Share Manager → Add Samba share as Proxmox Storage</strong>. Появится подменю с четырьмя пунктами (и пунктом Exit):",
     "imageAlt": "Меню Samba Host Manager — Монтирование / Просмотр / Удаление / Проверка подключения"
   },
   "howRuns": {

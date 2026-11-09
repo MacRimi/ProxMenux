@@ -30,12 +30,12 @@
     "headerAction": "Ce que fait le script",
     "bindType": "Bind-mount de l'hôte",
     "bindTypeSubRich": "détecté par la sortie <code>mount</code>",
-    "bindActionRich": "Crée le groupe <code>sharedfiles</code> (par défaut GID 999, dynamique si pris), y ajoute l'utilisateur Samba, puis <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — nouveaux fichiers héritent du groupe). Si l'utilisateur ne peut toujours pas écrire, applique <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "bindActionRich": "Crée le groupe <code>sharedfiles</code> (GID 101000 par défaut, dynamique si pris) et y ajoute l’utilisateur Samba. Il vérifie ensuite le système de fichiers : là où <code>chown</code> fonctionne, il exécute <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID, les nouveaux fichiers héritent du groupe), et là où les ACL sont prises en charge, il applique des ACL d’accès et par défaut (<code>u:&lt;user&gt;:rwx,g:sharedfiles:rwx</code>, récursif). Sur vfat / exfat / ntfs, il ignore les deux et affiche comment remonter avec le bon uid/gid. L’accès en écriture est vérifié à la fin.",
     "localType": "Dossier local à l'intérieur de CT",
     "localTypeSub": "aucun montage de liaison détecté",
     "localActionRich": "Propriété standard: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Aucun groupe partagé n'est nécessaire car aucun autre CT n'écrit dans ce dossier. Retourne à <code>setfacl</code> si l'accès à l'écriture est toujours manquant.",
-    "gidTitle": "GID pour 'sharedfiles' diffère du flux du serveur NFS",
-    "gidBody": "Le script serveur Samba utilise GID <strong>999</strong> pour <code>sharedfiles</code>, tandis que le flux du serveur <nfsLink>NFS</nfsLink> utilise GID <strong>101000</strong>. Si vous exécutez les deux serveurs dans le même CT et que vous voulez un seul groupe partagé dans les deux protocoles, modifiez l'un d'eux pour correspondre à l'autre après l'installation (p. ex. <code>groupmod -g 101000 sharedfiles</code>) et ré-appliquer la propriété sur les dossiers touchés. C'est une incohérence connue dans les scripts actuels."
+    "gidTitle": "GID pour 'sharedfiles'",
+    "gidBody": "Le script serveur Samba crée <code>sharedfiles</code> avec le GID <strong>101000</strong>, le même GID que celui du flux du serveur <nfsLink>NFS</nfsLink>, de sorte que les deux protocoles partagent un seul groupe. Si un autre groupe détient déjà le GID 101000 dans le CT, le script crée <code>sharedfiles</code> avec un GID dynamique à la place. Vérifiez-le avec <code>getent group sharedfiles</code>."
   },
   "opening": {
     "heading": "Ouverture de l'outil",
@@ -47,7 +47,7 @@
   },
   "modes": {
     "heading": "Les trois modes de partage",
-    "intro": "Chaque mode écrit une stanza différente à <code>smb.conf</code>. Tous les trois comprennent le <code>valid users = &lt;username&gt;</code> (pas d'anonymat), le <code>force group = sharedfiles</code> (ainsi les nouveaux fichiers appartiennent au groupe partagé) et le <code>veto files = /lost+found/</code> (le cache des clients).",
+    "intro": "Chaque mode écrit une stanza différente à <code>smb.conf</code>. Tous les trois comprennent un <code>comment</code>, le <code>valid users = &lt;username&gt;</code> (pas d’anonymat), le <code>force user = &lt;username&gt;</code> et le <code>force group = sharedfiles</code> (pour que les écritures aient une propriété cohérente) et le <code>veto files = /lost+found/</code> (le cache des clients).",
     "headerMode": "Mode",
     "headerBlock": "Bloc écrit en smb.conf",
     "rwMode": "Lecture et écriture",
@@ -107,7 +107,7 @@
     "groupTitle": "Les fichiers écrits par le client apparaissent avec un mauvais groupe sur le serveur",
     "groupBody": "Le script définit <code>force group = sharedfiles</code> dans le bloc de partage, de sorte que les nouveaux fichiers doivent être du groupe <code>sharedfiles</code>. S'ils ne le sont pas, le bit SGID du répertoire parent peut avoir été perdu (quelqu'un a exécuté <code>chmod</code> à la main). Réappliquer : <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
     "bothTitle": "Partage du même dossier sur NFS et Samba",
-    "bothBody": "Le ProxMenux utilise différents GID pour le <code>sharedfiles</code> dans chaque script (Samba: 999, NFS: 101000). Si vous servez le même dossier via les deux, choisissez un seul GID et alignez les deux. La correction la plus simple : après avoir exécuté les deux scripts, modifiez le GID plus petit :"
+    "bothBody": "Les deux scripts utilisent le GID 101000 pour <code>sharedfiles</code> ; un dossier servi via les deux protocoles ne nécessite donc aucune étape supplémentaire. Si le script Samba est passé à un GID dynamique parce que 101000 était pris, libérez ce GID et alignez le groupe à la main :"
   },
   "related": {
     "heading": "Autres",

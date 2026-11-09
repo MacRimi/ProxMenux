@@ -89,8 +89,8 @@
     "items": [
       "Vyber ten disk.",
       "Vyberte \"Použiť existujúci súborový systém.\"",
-      "ID úložiska, cesta pripojenia a predvoľba typu obsahu.",
-      "ProxMenux dáta <strong>nemení</strong>: vytvorí bod pripojenia, pripojí disk, pridá položku UUID do <code>/etc/fstab</code> a zaregistruje ho ako úložisko Proxmox typu <code>dir</code>."
+      "Spôsob pripojenia: <strong>pripojenie cez fstab hostiteľa</strong> (predvolené), <strong>úložisko Proxmox</strong> alebo oboje. Potom názov pripojenia alebo ID úložiska, cesta pripojenia a, iba pre úložisko Proxmox, predvoľba typu obsahu.",
+      "ProxMenux dáta <strong>nemení</strong>: vytvorí bod pripojenia, pripojí disk a pridá položku UUID do <code>/etc/fstab</code>. Úložisko Proxmox typu <code>dir</code> zaregistruje, iba ak ste zvolili túto metódu."
     ],
     "warnTitle": "Opätovné použitie cesty nespracúva ZFS pools",
     "warnBody": "Ak už disk obsahuje ZFS pool, cesta <em>znova použiť</em> sa ho pokúsi pripojiť ako bežný súborový systém – čo zlyhá. Ak chcete importovať existujúci ZFS pool, použite <code>zpool import &lt;name&gt;</code> na príkazovom riadku a potom ho manuálne zaregistrujte pomocou <code>pvesm add zfspool</code>."
@@ -133,13 +133,13 @@
   },
   "view": {
     "heading": "Zobraziť diskové úložiská",
-    "body": "Vypisuje všetky diskové úložiská Proxmox (<code>dir</code> aj <code>zfspool</code>, ktoré sú vytvorené používateľom — systémové pooly ako <code>rpool</code> je skrytý). Zobrazuje cestu pripojenia / pool názov, typy obsahu a aktuálny stav."
+    "body": "Vypisuje všetky diskové úložiská Proxmox (<code>dir</code> aj <code>zfspool</code> vytvorené používateľom; systémové pooly ako <code>rpool</code> sú skryté) a pripojenia lokálnych diskov iba cez fstab. Zobrazuje cestu pripojenia / názov poolu, typy obsahu a aktuálny stav."
   },
   "remove": {
     "heading": "Odstrániť diskové úložisko",
-    "body": "Odregistruje úložisko z Proxmoxu (<code>pvesm remove</code>) a ponúkne odstránenie príslušnej položky v <code>/etc/fstab</code>. Skript pool ZFS automaticky <strong>nezničí</strong>; na to slúži samostatný príkaz <code>zpool destroy &lt;name&gt;</code>, ktorý vykonáte ručne, keď ste si istí.",
+    "body": "Výber uvádza úložiská Proxmox a pripojenia lokálnych diskov iba cez fstab. Po jednom potvrdení ProxMenux odregistruje úložisko (<code>pvesm remove</code>), odpojí cestu a odstráni jej riadok z <code>/etc/fstab</code>. Pri poolech ZFS spustí <code>zpool export &lt;pool&gt;</code>, ale pool <strong>nezničí</strong>; na to slúži samostatný krok <code>zpool destroy &lt;name&gt;</code>, ktorý vykonáte ručne, keď ste si istí. Na konci ponúkne reštart hostiteľa.",
     "warnTitle": "Údaje a existujúce závislosti VM",
-    "warnBody": "Odstránenie úložiska sa nedotkne súborového systému ani pool — údaje zostanú na disku. Ale virtuálne počítače / CT, ktoré odkazujú na toto úložisko podľa ID, sa po odstránení nespustia. Pred odstránením presuňte tieto VM disky na iné úložisko (alebo vytvorte zálohu)."
+    "warnBody": "Odstránenie úložiska neformátuje disk ani neničí pool: údaje zostanú na disku, ale disk sa odpojí a pool ZFS sa exportuje. Virtuálne počítače / CT, ktoré odkazujú na toto úložisko podľa ID, sa však po odstránení nespustia. Pred odstránením presuňte tieto VM disky na iné úložisko (alebo vytvorte zálohu)."
   },
   "list": {
     "heading": "Zoznam dostupných diskov",

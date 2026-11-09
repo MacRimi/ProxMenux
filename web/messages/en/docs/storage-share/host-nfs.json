@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Opening the tool",
-    "body": "From ProxMenux's main menu, open <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong>. You will see this sub-menu with four options:",
+    "body": "From ProxMenux's main menu, open <strong>Storage &amp; Share Manager → Add NFS share as Proxmox Storage</strong>. You will see this sub-menu with four options (plus Exit):",
     "imageAlt": "NFS Host Manager menu — Mount / View / Remove / Test connectivity"
   },
   "howRuns": {
@@ -124,17 +124,17 @@
   },
   "view": {
     "heading": "View configured NFS storages",
-    "body": "Lists every NFS entry in Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) with server, export, content types, mount path and live status. <strong>Note:</strong> this view only shows pvesm-registered storages — fstab-only mounts are not listed here. Check those with <code>findmnt -t nfs</code> or <code>grep nfs /etc/fstab</code>."
+    "body": "Lists the NFS storages registered in Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) with server, export, content types, mount path and live status, followed by the host's <code>/etc/fstab</code> NFS mounts with server, export, path, options and whether each is mounted."
   },
   "remove": {
     "heading": "Remove NFS storage",
-    "body": "Runs <code>pvesm remove &lt;storage-id&gt;</code> after a confirmation that shows the server / export / content. Only the Proxmox-side registration is removed — <strong>the remote NFS server itself is never touched</strong>, no files are deleted. To remove a fstab-only mount, edit <code>/etc/fstab</code> by hand and run <code>umount &lt;path&gt;</code>.",
+    "body": "The picker lists both Proxmox storages (<code>[pvesm]</code>) and host fstab mounts (<code>[fstab]</code>). For a Proxmox storage it runs <code>pvesm remove &lt;storage-id&gt;</code> after a confirmation that shows the server / export / content. For an fstab mount it unmounts the path, backs up <code>/etc/fstab</code> to <code>/etc/fstab.proxmenux.bak</code>, removes the line and deletes the mount directory if it is empty. <strong>The remote NFS server itself is never touched</strong>, no files are deleted.",
     "warnTitle": "Back up dependencies first",
     "warnBody": "If VMs, CTs or backup jobs still reference this storage (by ID), removing it leaves them pointing at a disappeared store. Proxmox will flag the error but not clean up. Move or drop those references first, then remove the storage."
   },
   "test": {
     "heading": "Test NFS connectivity",
-    "body": "Runs a diagnostic pass over every NFS storage registered in Proxmox: checks that <code>showmount</code> is available, that <code>rpcbind</code> is running, pings each server, probes port 2049, calls <code>showmount -e</code>, and finally reports Proxmox's own view (<code>pvesm status</code>). Good first stop when a storage shows as <em>inactive</em> in the Proxmox UI."
+    "body": "Runs a diagnostic pass over every NFS storage registered in Proxmox and every NFS mount in the host's <code>/etc/fstab</code>: checks that <code>showmount</code> is available, that <code>rpcbind</code> is running, pings each server, probes port 2049, calls <code>showmount -e</code>, and finally reports Proxmox's own view (<code>pvesm status</code>). Good first stop when a storage shows as <em>inactive</em> in the Proxmox UI."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",

@@ -30,12 +30,12 @@
     "headerAction": "Čo robí skript",
     "bindType": "Bind mount z hostiteľa",
     "bindTypeSubRich": "detekovaný prostredníctvom výstupu <code>mount</code>",
-    "bindActionRich": "Vytvorí skupinu <code>sharedfiles</code> (predvolené GID 999, dynamické, ak je obsadené), pridá používateľa Samba a použije <code>chown root:sharedfiles</code> a <code>chmod 2775</code> (SGID — nové súbory zdedia skupinu). Ak používateľ stále nemôže zapisovať, použije <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "bindActionRich": "Vytvorí skupinu <code>sharedfiles</code> (predvolené GID 101000, dynamické, ak je obsadené) a pridá do nej používateľa Samba. Potom skontroluje súborový systém: kde funguje <code>chown</code>, použije <code>chown root:sharedfiles</code> a <code>chmod 2775</code> (SGID, nové súbory zdedia skupinu), a kde sú podporované ACL, použije prístupové a predvolené ACL (<code>u:&lt;user&gt;:rwx,g:sharedfiles:rwx</code>, rekurzívne). Na vfat / exfat / ntfs preskočí oboje a vypíše, ako pripojiť znova so správnym uid/gid. Prístup na zápis sa overí na konci.",
     "localType": "Lokálny priečinok vnútri CT",
     "localTypeSub": "Nebol zistený bind mount",
     "localActionRich": "Štandardné vlastníctvo: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Žiadna spoločná skupina nie je potrebná, pretože do tohto priečinku nepíše žiadna iná CT. Vracia sa do <code>setfacl</code> ak stále chýba prístup k zápisu.",
-    "gidTitle": "GID pre „sharedfiles“ sa líši od toku servera NFS",
-    "gidBody": "Skript Samba server používa GID <strong>999</strong> pre <code>sharedfiles</code>, zatiaľ čo <nfsLink>postup servera NFS</nfsLink> používa GID <strong>101000</strong>. Ak spustíte oba servery v rovnakom CT a chcete jednu spoločnú skupinu v oboch protokoloch, upravte jeden z nich tak, aby zodpovedal druhému po inštalácii (napr. <code>groupmod -g 101000 sharedfiles</code>) a znova nastavte vlastníkov príslušných priečinkov. Toto je známy nesúlad v aktuálnych skriptoch."
+    "gidTitle": "GID pre „sharedfiles“",
+    "gidBody": "Skript Samba server vytvára <code>sharedfiles</code> s GID <strong>101000</strong>, rovnakým GID, aké používa <nfsLink>postup servera NFS</nfsLink>, takže oba protokoly zdieľajú jednu skupinu. Ak už GID 101000 vnútri CT používa iná skupina, skript vytvorí <code>sharedfiles</code> namiesto toho s dynamickým GID. Overíte ho príkazom <code>getent group sharedfiles</code>."
   },
   "opening": {
     "heading": "Otvorenie nástroja",
@@ -47,7 +47,7 @@
   },
   "modes": {
     "heading": "Tri režimy zdieľania",
-    "intro": "Každý režim zapíše iný blok do <code>smb.conf</code>. Všetky tri zahŕňajú <code>valid users = &lt;username&gt;</code> (nie anonymné), <code>force group = sharedfiles</code> (takže nové súbory patria do zdieľanej skupiny) a <code>veto files = /lost+found/</code> (skrýva ich od klientov).",
+    "intro": "Každý režim zapíše iný blok do <code>smb.conf</code>. Všetky tri zahŕňajú <code>comment</code>, <code>valid users = &lt;username&gt;</code> (nie anonymné), <code>force user = &lt;username&gt;</code> a <code>force group = sharedfiles</code> (takže zápisy majú jednotného vlastníka) a <code>veto files = /lost+found/</code> (skrýva ich od klientov).",
     "headerMode": "Režim",
     "headerBlock": "Blok napísaný smb.conf",
     "rwMode": "Čítanie a zápis",
@@ -107,7 +107,7 @@
     "groupTitle": "Súbory napísané klientom sa objavujú s nesprávnou skupinou na serveri",
     "groupBody": "Skript nastaví <code>force group = sharedfiles</code> v bloku zdieľania, takže nové súbory by mali byť skupiny <code>sharedfiles</code>. Ak nie sú, SGID bit na rodičovskom adresári mohol byť stratený (niekto spustil <code>chmod</code> ručne). Opakovane: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
     "bothTitle": "Zdieľanie rovnakého priečinka na oboch NFS a Samba",
-    "bothBody": "ProxMenux používa rôzne GIDs pre <code>sharedfiles</code> v každom skripte (Samba: 999, NFS: 101000). Ak podávate rovnaký priečinok prostredníctvom oboch, rozhodnite sa pre jednu GID a zarovnajte obe. Najjednoduchšia oprava: po spustení oboch skriptov upravte menšie GID:"
+    "bothBody": "Oba skripty používajú GID 101000 pre <code>sharedfiles</code>, takže priečinok sprístupnený cez oba protokoly nevyžaduje ďalší krok. Ak skript Samba použil dynamické GID, pretože 101000 bolo obsadené, uvoľnite toto GID a zarovnajte skupinu ručne:"
   },
   "related": {
     "heading": "Súvisiace",

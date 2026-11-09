@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Apertura dello strumento",
-    "body": "Dal menu principale di ProxMenux, apri <strong>Storage &amp; Share Manager → Mount Samba Share on Host</strong>. Il sottomenu presenta quattro opzioni:",
+    "body": "Dal menu principale di ProxMenux, apri <strong>Storage &amp; Share Manager → Add Samba share as Proxmox Storage</strong>. Il sottomenu presenta quattro opzioni (più Exit):",
     "imageAlt": "Menu Samba host — Monta / Visualizza / Rimuovi / Testa connettività"
   },
   "howRuns": {

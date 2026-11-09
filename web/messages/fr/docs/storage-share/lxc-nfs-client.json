@@ -68,9 +68,9 @@
   },
   "unmount": {
     "heading": "Démonter le partage NFS",
-    "body": "Combine les montages live et les entrées fstab dans une seule liste, vous permet d'en choisir une et <strong>supprime la ligne correspondante de <code>/etc/fstab</code></strong>. Le script <em>n'exécute pas</em> <code>umount</code> sur le montage en direct ; à la place, il vous indique qu'un redémarrage CT est nécessaire pour que le démontage prenne effet.",
-    "warnTitle": "Le script supprime les entrées fstab, pas les montages en direct",
-    "warnBody": "C'est un choix de conception délibéré : <code>umount</code> sur une monture occupée échoue avec \"appareil occupé\" quand quelque chose à l'intérieur du CT l'utilise encore. La suppression de l'entrée fstab garantit que le montage disparaît proprement lors du prochain démarrage CT. Si vous voulez que le montage soit parti <em>maintenant</em> et vous êtes sûr que rien ne l'utilise, exécutez <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> à la main après la fin du script."
+    "body": "Combine les montages live et les entrées fstab dans une seule liste, vous permet d’en choisir une, <strong>supprime la ligne correspondante de <code>/etc/fstab</code></strong> et la démonte dans le CT avec <code>umount</code>. Si le montage est occupé, il se rabat sur un <code>umount -l</code> différé.",
+    "warnTitle": "Si le démontage échoue, redémarrez le CT",
+    "warnBody": "Lorsque <code>umount</code> et <code>umount -l</code> échouent tous deux, le script vous avertit de redémarrer le LXC pour libérer le montage. L’entrée fstab a déjà disparu, le montage ne revient donc pas au prochain démarrage du CT."
   },
   "test": {
     "heading": "Tester la connectivité NFS",

@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "NFS-Server deinstallieren",
-    "body": "Vollständige Bereinigung nach Bestätigung: stoppt und deaktiviert <code>nfs-kernel-server</code> und <code>rpcbind</code>, leert <code>/etc/exports</code>, entfernt die NFS-Pakete mit <code>apt-get purge</code>, löscht die Gruppe <code>sharedfiles</code> und die Benutzer <code>remap_*</code> und beendet verbleibende Prozesse. Die <strong>exportierten Ordner selbst bleiben erhalten</strong>; entfernt werden nur NFS-Konfiguration und Pakete.",
+    "body": "Vollständige Bereinigung nach Bestätigung: stoppt und deaktiviert <code>nfs-kernel-server</code> und <code>rpcbind</code>, leert <code>/etc/exports</code>, entfernt mit <code>apt-get purge</code> <code>nfs-kernel-server</code> und <code>nfs-common</code>, löscht die Benutzer <code>remap_*</code> und die Gruppe <code>sharedfiles</code> (nur wenn keine regulären Benutzer mehr Mitglied sind, was meist nicht der Fall ist) und beendet verbleibende Prozesse. Die <strong>exportierten Ordner selbst bleiben erhalten</strong>; entfernt werden nur NFS-Konfiguration und Pakete.",
     "warnTitle": "Das Skript stoppt an der Exportlinie, nicht an den Daten",
     "warnBody": "Sowohl <em>Export löschen</em> als auch <em>NFS-Server deinstallieren</em> entfernen die Exportkonfiguration. Die Daten im freigegebenen Ordner bleiben erhalten. Löschen Sie Daten bei Bedarf nach Abschluss des Skripts ausdrücklich mit <code>rm -rf</code>; sichern Sie sie vorher, falls jemand sie noch benötigen könnte."
   },

@@ -89,8 +89,8 @@
     "items": [
       "Choisissez le disque.",
       "Choisir « Utiliser le système de fichiers existant ».",
-      "ID de stockage, chemin de montage, préréglage de type contenu.",
-      "ProxMenux ne touche <strong>pas</strong> aux données : il crée le point de montage, monte le disque, ajoute une entrée UUID à <code>/etc/fstab</code> et l'enregistre en tant que stockage Proxmox <code>dir</code>."
+      "Méthode de montage : <strong>montage fstab de l’hôte</strong> (par défaut), <strong>stockage Proxmox</strong>, ou les deux. Puis un nom de montage ou un ID de stockage, le chemin de montage et, pour le stockage Proxmox uniquement, le préréglage de type contenu.",
+      "ProxMenux ne touche <strong>pas</strong> aux données : il crée le point de montage, monte le disque et ajoute une entrée UUID à <code>/etc/fstab</code>. Il n’enregistre un stockage Proxmox <code>dir</code> que si vous avez choisi cette méthode."
     ],
     "warnTitle": "Le chemin de réutilisation ne gère pas ZFS pools",
     "warnBody": "Si le disque contient déjà un pool ZFS, le chemin <em>reuse</em> essaie ici de le monter en tant que système de fichiers régulier — qui échoue. Pour importer un pool ZFS existant, utilisez <code>zpool import &lt;name&gt;</code> sur la ligne de commande, puis enregistrez-le manuellement avec <code>pvesm add zfspool</code>."
@@ -133,13 +133,13 @@
   },
   "view": {
     "heading": "Afficher les stockages de disques",
-    "body": "Liste tous les stockages Proxmox soutenus par un disque (les deux <code>dir</code> et <code>zfspool</code> qui sont créés par l'utilisateur — système pools comme <code>rpool</code> sont cachés). Affiche le chemin de montage / pool nom, types de contenu et statut en direct."
+    "body": "Liste tous les stockages Proxmox soutenus par un disque (les deux <code>dir</code> et <code>zfspool</code> qui sont créés par l’utilisateur ; les pools système comme <code>rpool</code> sont cachés) et les montages de disque local uniquement fstab. Affiche le chemin de montage / nom du pool, types de contenu et statut en direct."
   },
   "remove": {
     "heading": "Supprimer le stockage du disque",
-    "body": "Désenregistre le stockage de Proxmox (<code>pvesm remove</code>) et propose de nettoyer l'entrée correspondante dans <code>/etc/fstab</code>. Pour ZFS pools, le script <strong>ne détruit pas</strong> automatiquement le pool — il s'agit d'une étape <code>zpool destroy &lt;name&gt;</code> distincte que vous effectuez manuellement lorsque vous êtes sûr.",
+    "body": "Le sélecteur liste les stockages Proxmox et les montages de disque local uniquement fstab. Après une confirmation, ProxMenux désenregistre le stockage (<code>pvesm remove</code>), démonte le chemin et supprime sa ligne de <code>/etc/fstab</code>. Pour les pools ZFS, il exécute <code>zpool export &lt;pool&gt;</code> mais ne détruit <strong>pas</strong> le pool ; il s’agit d’une étape <code>zpool destroy &lt;name&gt;</code> distincte que vous effectuez manuellement lorsque vous êtes sûr. À la fin, il propose de redémarrer l’hôte.",
     "warnTitle": "Données et dépendances existantes VM",
-    "warnBody": "La suppression du stockage ne touche pas le système de fichiers ou le pool — les données restent sur le disque. Mais VMs / CTs qui font référence à ce stockage par ID échouera à démarrer après la suppression. Déplacez ces disques VM vers un autre stockage (ou prenez une sauvegarde) avant de les supprimer."
+    "warnBody": "La suppression du stockage ne formate pas le disque et ne détruit pas le pool : les données restent sur le disque, mais le disque est démonté et un pool ZFS est exporté. Les VMs / CTs qui font référence à ce stockage par ID échoueront à démarrer après la suppression. Déplacez ces disques VM vers un autre stockage (ou prenez une sauvegarde) avant de les supprimer."
   },
   "list": {
     "heading": "Liste des disques disponibles",

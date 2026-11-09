@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Abrir la herramienta",
-    "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong>. Verás este submenú con cuatro opciones:",
+    "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Add NFS share as Proxmox Storage</strong>. Verás este submenú con cuatro opciones (más Exit):",
     "imageAlt": "Menú NFS del host — Montar / Ver / Eliminar / Probar conectividad"
   },
   "howRuns": {
@@ -124,17 +124,17 @@
   },
   "view": {
     "heading": "Ver almacenamientos NFS configurados",
-    "body": "Lista cada entrada NFS en Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) con servidor, export, content types, ruta de montaje y estado en vivo. <strong>Nota:</strong> esta vista solo muestra almacenamientos registrados con pvesm — los montajes solo en fstab no se listan aquí. Compruébalos con <code>findmnt -t nfs</code> o <code>grep nfs /etc/fstab</code>."
+    "body": "Lista los almacenamientos NFS registrados en Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) con servidor, export, content types, ruta de montaje y estado en vivo, seguidos de los montajes NFS de <code>/etc/fstab</code> del host con servidor, export, ruta, opciones y si cada uno está montado."
   },
   "remove": {
     "heading": "Eliminar almacenamiento NFS",
-    "body": "Ejecuta <code>pvesm remove &lt;storage-id&gt;</code> tras una confirmación que muestra servidor / export / contenido. Solo se elimina el registro del lado de Proxmox — <strong>el propio servidor NFS remoto nunca se toca</strong>, no se borran archivos. Para eliminar un montaje solo en fstab, edita <code>/etc/fstab</code> a mano y ejecuta <code>umount &lt;path&gt;</code>.",
+    "body": "El selector lista tanto los almacenamientos Proxmox (<code>[pvesm]</code>) como los montajes fstab del host (<code>[fstab]</code>). Para un almacenamiento Proxmox ejecuta <code>pvesm remove &lt;storage-id&gt;</code> tras una confirmación que muestra servidor / export / contenido. Para un montaje fstab desmonta la ruta, hace una copia de <code>/etc/fstab</code> en <code>/etc/fstab.proxmenux.bak</code>, elimina la línea y borra el directorio de montaje si está vacío. <strong>El propio servidor NFS remoto nunca se toca</strong>, no se borran archivos.",
     "warnTitle": "Haz backup de las dependencias primero",
     "warnBody": "Si VMs, CTs o trabajos de backup todavía referencian este almacenamiento (por ID), eliminarlo los deja apuntando a un almacén desaparecido. Proxmox marcará el error pero no limpiará. Mueve o elimina esas referencias primero, después elimina el almacenamiento."
   },
   "test": {
     "heading": "Probar conectividad NFS",
-    "body": "Ejecuta una pasada de diagnóstico sobre cada almacenamiento NFS registrado en Proxmox: comprueba que <code>showmount</code> está disponible, que <code>rpcbind</code> está corriendo, hace ping a cada servidor, prueba el puerto 2049, llama a <code>showmount -e</code> y finalmente informa de la vista del propio Proxmox (<code>pvesm status</code>). Buena primera parada cuando un almacenamiento aparece como <em>inactive</em> en la UI de Proxmox."
+    "body": "Ejecuta una pasada de diagnóstico sobre cada almacenamiento NFS registrado en Proxmox y cada montaje NFS de <code>/etc/fstab</code> del host: comprueba que <code>showmount</code> está disponible, que <code>rpcbind</code> está corriendo, hace ping a cada servidor, prueba el puerto 2049, llama a <code>showmount -e</code> y finalmente informa de la vista del propio Proxmox (<code>pvesm status</code>). Buena primera parada cuando un almacenamiento aparece como <em>inactive</em> en la UI de Proxmox."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",

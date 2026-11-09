@@ -86,7 +86,9 @@ export default async function LxcSambaServerPage({
         command={`# /etc/samba/smb.conf  —  block written by ProxMenux:
 [<share-name>]
     path = /mnt/data
+    comment = Shared folder for <username>
     valid users = <username>
+    force user = <username>
     force group = sharedfiles
     read only = no
     create mask = 0664
@@ -175,10 +177,11 @@ export default async function LxcSambaServerPage({
                    ▼
       Permission setup (2 paths)
       ├─ Bind-mount detected
-      │     groupadd -g 999 sharedfiles
+      │     groupadd -g 101000 sharedfiles
       │     usermod -aG sharedfiles <user>
       │     chown root:sharedfiles + chmod 2775
-      │     setfacl fallback if write fails
+      │     + access/default ACLs when supported
+      │     (FAT/NTFS: remount hint instead)
       └─ Local folder
             chown -R <user>:<user>
             chmod -R 755
@@ -271,19 +274,21 @@ echo -e "P4ssw0rd\\nP4ssw0rd" | smbpasswd -a proxmenux
 
 # 3. for a bind-mounted folder: shared group + SGID
 mkdir -p /mnt/data
-groupadd -g 999 sharedfiles 2>/dev/null || true
+groupadd -g 101000 sharedfiles 2>/dev/null || true
 usermod -aG sharedfiles proxmenux
 chown root:sharedfiles /mnt/data
 chmod 2775             /mnt/data
-# fallback if user can't write:
-# setfacl -R -m u:proxmenux:rwx /mnt/data
+setfacl -R    -m u:proxmenux:rwx,g:sharedfiles:rwx,m::rwx /mnt/data
+setfacl -R -d -m u:proxmenux:rwx,g:sharedfiles:rwx,m::rwx /mnt/data
 
 # 4. write the share block
 cat >> /etc/samba/smb.conf <<'EOF'
 
 [data]
+    comment = Shared folder for proxmenux
     path = /mnt/data
     valid users = proxmenux
+    force user = proxmenux
     force group = sharedfiles
     read only = no
     writable = yes
