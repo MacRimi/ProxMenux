@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to robí?",
-    "body": "Pre každú fyzickú sieťovú kartu hostiteľa zapíše malý súbor <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> s pravidlom: <em>„Zariadenie s touto MAC adresou sa musí vždy volať týmto názvom.“</em> systemd-udevd použije pravidlo pri každom štarte skôr, než <code>ifupdown</code> prečíta <code>/etc/network/interfaces</code>."
+    "body": "Pre každú fyzickú sieťovú kartu hostiteľa zapíše malý súbor <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> s pravidlom: <em>„Zariadenie s touto MAC adresou sa musí vždy volať týmto názvom.“</em> systemd-udevd použije pravidlo pri každom štarte skôr, než <code>ifupdown</code> prečíta <code>/etc/network/interfaces</code>."
   },
   "problem": {
     "heading": "Problém, ktorý rieši",
@@ -34,7 +34,7 @@
       "readLabel": "Prečítať každú MAC adresu",
       "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
       "writeLabel": "Zapísať súbor .link",
-      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+      "writeDetail": "/etc/systemd/network/\n  10-proxmenux-'<'iface'>'.link"
     },
     "minimalIntro": "Každý vygenerovaný súbor je zámerne minimálny:",
     "minimalOutro": "Pri štarte systemd-udevd identifikuje zariadenie podľa MAC adresy a pridelí požadovaný názov <em>skôr</em>, než zasiahnu iné komponenty (ifupdown, predvolené pomenovanie jadra). Predpona <code>10-</code> zabezpečuje skoré načítanie pravidiel pred predvoleným súborom <code>99-default.link</code>."
@@ -103,9 +103,9 @@
     "emptyTitle": "\"Nenájdené žiadne fyzické rozhrania\" po spustení nástroja",
     "emptyBody": "Jadro na hostiteľovi nevidí žiadne rozhrania založené na PCI / phy80211. Overte to cez <code>ls -l /sys/class/net/</code> — každá položka by mala obsahovať symbolický odkaz <code>device</code> (PCI) alebo položku <code>phy80211</code> (Wi-Fi). Ak pri skutočnej sieťovej karte chýbajú obe, ovládač nie je načítaný.",
     "noChangeTitle": "Po reštarte sa mená nezmenili podľa očakávania.",
-    "noChangeBody": "Skontrolujte, či súbor existuje a má správny formát: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Potom skontrolujte záznamy udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Bežnou príčinou je starý parameter jadra <code>net.ifnames=0</code>, ktorý úplne vypína predvídateľné názvy — odstráňte ho z <code>/etc/default/grub</code>, spustite <code>update-grub</code> a reštartujte.",
+    "noChangeBody": "Skontrolujte, či súbor existuje a má správny formát: <code>cat /etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Potom skontrolujte záznamy udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Bežnou príčinou je starý parameter jadra <code>net.ifnames=0</code>, ktorý úplne vypína predvídateľné názvy — odstráňte ho z <code>/etc/default/grub</code>, spustite <code>update-grub</code> a reštartujte.",
     "undoTitle": "Chcem zrušiť trvalé pomenovanie.",
-    "undoBody": "Buď odstráňte súbory <code>.link</code> (<code>rm /etc/systemd/network/10-*.link</code>), alebo ich obnovte z adresára záloh vytvoreného pri predchádzajúcom spustení. Zmenu použijete reštartom."
+    "undoBody": "Buď odstráňte súbory vygenerované ProxMenuxom (<code>rm /etc/systemd/network/10-proxmenux-*.link</code>), čím ponecháte na mieste každý súbor <code>.link</code>, ktorý ste napísali sami, alebo ich obnovte z adresára záloh vytvoreného pri predchádzajúcom spustení. Zmenu použijete reštartom."
   },
   "related": {
     "heading": "Súvisiace",

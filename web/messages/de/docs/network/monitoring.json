@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das macht",
-    "body": "Drei interaktive Monitoring-Tools, jedes hinter seinem eigenen Menüeintrag. Beim ersten Start eines Pakets wird das Paket lautlos über <code>apt-get</code> installiert. Nachfolgende Starts beginnen sofort. Keines dieser Tools ändert die Host-Netzwerkkonfiguration."
+    "body": "Drei interaktive Monitoring-Tools, jedes hinter seinem eigenen Menüeintrag. Beim ersten Start eines Pakets wird das Paket über <code>apt-get</code> installiert. Nachfolgende Starts beginnen sofort. Keines dieser Tools ändert die Host-Netzwerkkonfiguration."
   },
   "when": {
     "heading": "Welches Werkzeug Sie wann verwenden",
@@ -105,7 +105,7 @@
   },
   "install": {
     "heading": "Erster Start installiert das Paket",
-    "body": "Alle drei Starter prüfen, ob das Programm vorhanden ist, und führen bei Bedarf <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> aus. Die Installation erfolgt ohne Ausgabe: Das Menü kann beim ersten Mal 10–30 Sekunden lang eingefroren wirken. Spätere Starts erfolgen sofort."
+    "body": "Alle drei Starter prüfen, ob das Programm vorhanden ist. Fehlt es, prüft ProxMenux zuerst die Repositories (auf einem Host ohne Subscription kann es anbieten, auf das No-Subscription-Repository umzustellen, gefolgt von <code>apt-get update</code>) und führt dann <code>apt-get install -y &lt;pkg&gt;</code> mit der Meldung „Installing…“ auf dem Bildschirm aus. Spätere Starts erfolgen sofort."
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",

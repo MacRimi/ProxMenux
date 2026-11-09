@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Sicherheitssicherung",
-        "body": "Kopiert <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Der genaue Sicherungspfad wird vor der Kopie und danach mit dem Rollback-Befehl angezeigt.",
+        "body": "Kopiert <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Der Dialog vor dem Kopieren zeigt einen Beispielnamen; der genaue Pfad der erstellten Datei wird nach dem Kopieren mit dem Rollback-Befehl angezeigt.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Vorgeschlagene Änderungen anzeigen",
-        "body": "Listet genau die betroffenen Bridges und geplanten Portersetzungen auf. Falls inzwischen kein Reparaturbedarf mehr besteht, weil der Port zwischenzeitlich wieder aufgetaucht ist, endet der Ablauf mit <em>„Keine Änderungen erforderlich.“</em>",
+        "body": "Listet die betroffenen Bridges und die vorgeschlagenen Portänderungen auf. Falls inzwischen kein Reparaturbedarf mehr besteht, weil der Port zwischenzeitlich wieder aufgetaucht ist, endet der Ablauf mit <em>„Keine Änderungen erforderlich.“</em>",
         "tone": "blue"
       },
       {
         "title": "4. Änderungen anwenden",
-        "body": "Für jede betroffene Brücke läuft <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> gegen <code>/etc/network/interfaces</code>. Wenn für eine Brücke kein gültiger Ersatz verfügbar war, wird die Substitution übersprungen und in Schritt 5 gemeldet.",
+        "body": "Für jede betroffene Brücke läuft <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> gegen <code>/etc/network/interfaces</code>. Der neue <code>bridge-ports</code>-Wert behält nur die Ports, die noch existieren, sodass ein ungültiger Port neben einem gültigen einfach entfernt wird. Bleibt kein gültiger Port übrig, wird die erste erkannte physische NIC verwendet; hat der Host keine, wird die Zeile leer geschrieben. Schritt 5 meldet das Ergebnis.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "Die Analyse bricht mit „Nicht unterstützter Netzwerkstack“ ab",
     "unsupportedBody": "Der Host läuft netplan, systemd-networkd oder NetworkManager. Das Tool unterstützt nur <code>/etc/network/interfaces</code>. Schalten Sie den Host zuerst auf den klassischen Stack oder bearbeiten Sie die Konfiguration mit dem nativen Tooling des Managers (z.B. <code>netplan apply</code>).",
     "noSuggestTitle": "Kein Vorschlag wird für einen ungültigen Port gedruckt",
-    "noSuggestBody": "Der Host hat null freie physische Schnittstellen (alles befindet sich entweder bereits in einer anderen Brücke oder existiert nicht). Die Analyse greift auf <code>bridge-ports none</code> zurück, so dass die Brücke zumindest ohne Port auftauchen kann. Fügen Sie eine NIC hinzu oder migrieren Sie Ports zwischen Brücken manuell, bevor Sie erneut ausführen.",
+    "noSuggestBody": "ProxMenux hat überhaupt keine physischen Schnittstellen erkannt (die Liste filtert nur virtuelle Namen wie <code>vmbr</code>, <code>bond</code>, <code>veth</code> oder <code>tap</code> heraus; sie prüft nicht, ob eine NIC bereits in einer anderen Brücke ist). Die Analyse greift auf <code>bridge-ports none</code> zurück, so dass die Brücke zumindest ohne Port auftauchen kann. Fügen Sie eine NIC hinzu oder migrieren Sie Ports zwischen Brücken manuell, bevor Sie erneut ausführen.",
     "stillDownTitle": "Die Reparatur ist abgeschlossen, aber die Brücke ist noch DOWN",
     "stillDownBody": "<code>sed</code> hat die Datei aktualisiert, aber <code>systemctl restart networking</code> wurde abgelehnt. Führen Sie den Befehl nach Prüfung der neuen Konfiguration manuell aus oder starten Sie das System neu. Wurde der Neustart angenommen und bleibt die Bridge DOWN, prüfen Sie mit <code>ip link show</code>, ob der neue Port existiert, und suchen Sie mit <code>journalctl -u networking</code> nach der Ursache: nicht eingestecktes Kabel, nicht ausgehandelte Verbindung oder ein Port, der schon zu einer anderen Bridge gehört.",
     "lostSshTitle": "Ich habe den SSH-Zugang direkt nach dem Neustart des Netzwerks verloren",

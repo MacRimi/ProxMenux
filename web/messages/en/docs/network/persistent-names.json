@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "For every physical NIC on the host, writes a small file under <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> that says: <em>\"the device with this MAC must always be called this name\"</em>. systemd-udevd applies the rule at every boot, before <code>ifupdown</code> reads <code>/etc/network/interfaces</code>."
+    "body": "For every physical NIC on the host, writes a small file under <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> that says: <em>\"the device with this MAC must always be called this name\"</em>. systemd-udevd applies the rule at every boot, before <code>ifupdown</code> reads <code>/etc/network/interfaces</code>."
   },
   "problem": {
     "heading": "The problem this solves",
@@ -34,7 +34,7 @@
       "readLabel": "Read each MAC",
       "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
       "writeLabel": "Write .link file",
-      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+      "writeDetail": "/etc/systemd/network/\n  10-proxmenux-'<'iface'>'.link"
     },
     "minimalIntro": "Each generated file is intentionally minimal:",
     "minimalOutro": "At boot, systemd-udevd matches the device by MAC and assigns the requested name <em>before</em> any other component (ifupdown, kernel default naming) gets to it. The file prefix <code>10-</code> ensures these rules load early, ahead of the default <code>99-default.link</code>."
@@ -103,9 +103,9 @@
     "emptyTitle": "\"No physical interfaces found\" after running the tool",
     "emptyBody": "The host has no PCI / phy80211-backed interfaces visible to the kernel. Confirm with <code>ls -l /sys/class/net/</code> — every entry should have either a <code>device</code> symlink (PCI) or a <code>phy80211</code> entry (Wi-Fi). If both are missing for what should be a real NIC, the driver is not loaded.",
     "noChangeTitle": "After the reboot, names did not change as expected",
-    "noChangeBody": "Check that the file is present and well-formed: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Then check udev logs: <code>journalctl -u systemd-udevd -b | grep -i link</code>. A common cause is a stale <code>net.ifnames=0</code> kernel parameter that disables predictable naming entirely — remove it from <code>/etc/default/grub</code>, run <code>update-grub</code>, reboot.",
+    "noChangeBody": "Check that the file is present and well-formed: <code>cat /etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Then check udev logs: <code>journalctl -u systemd-udevd -b | grep -i link</code>. A common cause is a stale <code>net.ifnames=0</code> kernel parameter that disables predictable naming entirely — remove it from <code>/etc/default/grub</code>, run <code>update-grub</code>, reboot.",
     "undoTitle": "I want to undo persistent naming",
-    "undoBody": "Either delete the <code>.link</code> files (<code>rm /etc/systemd/network/10-*.link</code>) or restore from the backup directory generated on the previous run. Reboot to apply."
+    "undoBody": "Either delete the files ProxMenux generated (<code>rm /etc/systemd/network/10-proxmenux-*.link</code>), which leaves any <code>.link</code> file you wrote yourself in place, or restore from the backup directory generated on the previous run. Reboot to apply."
   },
   "related": {
     "heading": "Related",

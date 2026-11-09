@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das macht",
-    "body": "Schreibt für jede physische Netzwerkkarte des Hosts eine kleine Datei unter <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> mit der Regel: <em>„Das Gerät mit dieser MAC-Adresse muss immer diesen Namen tragen.“</em> systemd-udevd wendet die Regel bei jedem Start an, bevor <code>ifupdown</code> die Datei <code>/etc/network/interfaces</code> liest."
+    "body": "Schreibt für jede physische Netzwerkkarte des Hosts eine kleine Datei unter <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> mit der Regel: <em>„Das Gerät mit dieser MAC-Adresse muss immer diesen Namen tragen.“</em> systemd-udevd wendet die Regel bei jedem Start an, bevor <code>ifupdown</code> die Datei <code>/etc/network/interfaces</code> liest."
   },
   "problem": {
     "heading": "Das Problem, das dies löst",
@@ -34,7 +34,7 @@
       "readLabel": "Jede MAC-Adresse lesen",
       "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
       "writeLabel": ".link-Datei schreiben",
-      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+      "writeDetail": "/etc/systemd/network/\n  10-proxmenux-'<'iface'>'.link"
     },
     "minimalIntro": "Jede generierte Datei ist absichtlich minimal:",
     "minimalOutro": "Beim Start erkennt systemd-udevd das Gerät anhand der MAC-Adresse und weist den gewünschten Namen zu, <em>bevor</em> andere Komponenten wie ifupdown oder die Standardbenennung des Kernels darauf zugreifen. Das Dateipräfix <code>10-</code> sorgt dafür, dass diese Regeln früh und vor der Standarddatei <code>99-default.link</code> geladen werden."
@@ -103,9 +103,9 @@
     "emptyTitle": "\"Keine physischen Schnittstellen gefunden\" nach dem Ausführen des Tools",
     "emptyBody": "Der Kernel erkennt auf dem Host keine auf PCI oder phy80211 basierenden Schnittstellen. Prüfen Sie mit <code>ls -l /sys/class/net/</code> — jeder Eintrag sollte entweder einen <code>device</code>-Symlink (PCI) oder einen <code>phy80211</code>-Eintrag (WLAN) haben. Fehlt bei einer echten Netzwerkkarte beides, ist der Treiber nicht geladen.",
     "noChangeTitle": "Nach dem Neustart änderten sich die Namen nicht wie erwartet",
-    "noChangeBody": "Überprüfen Sie, ob die Datei vorhanden und gut geformt ist: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Dann überprüfen Sie udev logs: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Eine häufige Ursache ist ein veralteter <code>net.ifnames=0</code>-Kernelparameter, der die vorhersagbare Benennung vollständig deaktiviert - entfernen Sie ihn aus <code>/etc/default/grub</code>, führen Sie <code>update-grub</code> aus, Neustart.",
+    "noChangeBody": "Überprüfen Sie, ob die Datei vorhanden und gut geformt ist: <code>cat /etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Dann überprüfen Sie udev logs: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Eine häufige Ursache ist ein veralteter <code>net.ifnames=0</code>-Kernelparameter, der die vorhersagbare Benennung vollständig deaktiviert - entfernen Sie ihn aus <code>/etc/default/grub</code>, führen Sie <code>update-grub</code> aus, Neustart.",
     "undoTitle": "Ich möchte persistente Benennung rückgängig machen",
-    "undoBody": "Löschen Sie entweder die <code>.link</code>-Dateien (<code>rm /etc/systemd/network/10-*.link</code>) oder stellen Sie sie aus dem beim vorherigen Durchlauf erstellten Backup-Verzeichnis wieder her. Starten Sie neu, um die Änderung anzuwenden."
+    "undoBody": "Löschen Sie entweder die von ProxMenux erzeugten Dateien (<code>rm /etc/systemd/network/10-proxmenux-*.link</code>), wodurch jede von Ihnen selbst geschriebene <code>.link</code>-Datei erhalten bleibt, oder stellen Sie sie aus dem beim vorherigen Durchlauf erstellten Backup-Verzeichnis wieder her. Starten Sie neu, um die Änderung anzuwenden."
   },
   "related": {
     "heading": "Verwandte Themen",

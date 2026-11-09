@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Backup di sicurezza",
-        "body": "Copia <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Il percorso esatto del backup viene mostrato prima e dopo la copia, insieme al comando di ripristino.",
+        "body": "Copia <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. La finestra prima della copia mostra un nome indicativo; il percorso esatto del file creato viene mostrato dopo la copia, insieme al comando di ripristino.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Anteprima delle modifiche proposte",
-        "body": "Elenca esattamente i bridge interessati e le sostituzioni delle porte previste. Se non serve più alcuna riparazione perché la porta è ricomparsa tra i controlli, la procedura termina con <em>«Nessuna modifica necessaria.»</em>",
+        "body": "Elenca i bridge interessati e le modifiche suggerite alle porte. Se non serve più alcuna riparazione perché la porta è ricomparsa tra i controlli, la procedura termina con <em>«Nessuna modifica necessaria.»</em>",
         "tone": "blue"
       },
       {
         "title": "4. Applicare le modifiche",
-        "body": "Per ogni ponte interessato, viene eseguito <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contro <code>/etc/network/interfaces</code>. Se un ponte non ha una sostituzione valida disponibile, la sostituzione è saltata e riportata nella fase 5.",
+        "body": "Per ogni ponte interessato, viene eseguito <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contro <code>/etc/network/interfaces</code>. Il nuovo valore di <code>bridge-ports</code> mantiene solo le porte che esistono ancora, quindi una porta non valida accanto a una valida viene semplicemente rimossa. Se non resta alcuna porta valida, usa la prima NIC fisica rilevata; se l’host non ne ha, la riga viene scritta vuota. La fase 5 riporta il risultato.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "L’analisi si interrompe con «Stack di rete non supportato»",
     "unsupportedBody": "L'host esegue netplan, systemd-networkd o NetworkManager. Lo strumento supporta solo <code>/etc/network/interfaces</code>. Passare l'host al classico stack prima, o modificare la configurazione con il tooling nativo del manager (ad es. <code>netplan apply</code>).",
     "noSuggestTitle": "Non viene mostrato alcun suggerimento per una porta non valida",
-    "noSuggestBody": "L’host non ha interfacce fisiche libere: sono già tutte in un altro bridge oppure non esistono. L’analisi suggerisce come alternativa <code>bridge-ports none</code>, così il bridge può almeno attivarsi senza una porta. Aggiungi una scheda di rete o sposta manualmente le porte tra i bridge prima di riprovare.",
+    "noSuggestBody": "ProxMenux non ha rilevato alcuna interfaccia fisica (l’elenco filtra solo i nomi virtuali come <code>vmbr</code>, <code>bond</code>, <code>veth</code> o <code>tap</code>; non verifica se una scheda di rete è già in un altro bridge). L’analisi suggerisce come alternativa <code>bridge-ports none</code>, così il bridge può almeno attivarsi senza una porta. Aggiungi una scheda di rete o sposta manualmente le porte tra i bridge prima di riprovare.",
     "stillDownTitle": "La riparazione completa ma il ponte è ancora DOWN",
     "stillDownBody": "<code>sed</code> ha aggiornato il file, ma <code>systemctl restart networking</code> è stato rifiutato. Eseguilo manualmente dopo aver verificato la nuova configurazione oppure riavvia. Se il riavvio è stato accettato e il bridge è ancora DOWN, esegui <code>ip link show</code> per verificare che la nuova porta esista e controlla <code>journalctl -u networking</code> per l’errore effettivo: cavo scollegato, collegamento non negoziato o porta già appartenente a un altro bridge.",
     "lostSshTitle": "Ho perso l'accesso SSH subito dopo il riavvio della rete",

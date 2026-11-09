@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Bezpečnostná záloha",
-        "body": "Skopíruje <code>/etc/network/interfaces</code> do <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Presnú cestu zálohy zobrazí pred kopírovaním aj po ňom spolu s príkazom na vrátenie zmien.",
+        "body": "Skopíruje <code>/etc/network/interfaces</code> do <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Dialóg pred kopírovaním ukazuje orientačný názov; presnú cestu vytvoreného súboru zobrazí po kopírovaní spolu s príkazom na vrátenie zmien.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Náhľad navrhovaných zmien",
-        "body": "Presne vypíše dotknuté mosty a plánované náhrady portov. Ak už oprava nie je potrebná, pretože sa port medzi kontrolami znovu objavil, postup sa ukončí hlásením <em>„Nie sú potrebné žiadne zmeny.“</em>",
+        "body": "Vypíše dotknuté mosty a navrhované zmeny portov. Ak analýza zistí, že nič nie je treba opraviť (race condition: port sa vrátil), postup sa čisto ukončí s hlásením <em>„Nie sú potrebné žiadne zmeny.“</em>",
         "tone": "blue"
       },
       {
         "title": "4. Použiť zmeny",
-        "body": "Pre každý postihnutý most beží <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> proti <code>/etc/network/interfaces</code>. Ak most nemal k dispozícii platnú náhradu, substitúcia sa preskočí a zaznamená v kroku 5.",
+        "body": "Pre každý postihnutý most beží <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> proti <code>/etc/network/interfaces</code>. Nová hodnota <code>bridge-ports</code> ponechá iba porty, ktoré ešte existujú, takže neplatný port vedľa platného sa jednoducho odstráni. Ak nezostane žiadny platný port, použije sa prvá zistená fyzická sieťová karta; ak hostiteľ žiadnu nemá, riadok sa zapíše prázdny. Výsledok uvádza krok 5.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "Analýza sa zastaví s hlásením „Nepodporovaný sieťový stack“",
     "unsupportedBody": "Hostiteľ používa netplan, systemd-networkd alebo NetworkManager. Nástroj podporuje iba <code>/etc/network/interfaces</code>. Najprv prepnite hostiteľa na klasický stack alebo upravte konfiguráciu natívnymi nástrojmi správcu (napríklad <code>netplan apply</code>).",
     "noSuggestTitle": "Pre neplatný port sa nevypíše žiadny návrh",
-    "noSuggestBody": "Hostiteľ nemá žiadne voľné fyzické rozhrania: všetky sú už v inom moste alebo neexistujú. Analýza preto navrhne <code>bridge-ports none</code>, aby sa most mohol aspoň aktivovať bez portu. Pred opätovným spustením pridajte sieťovú kartu alebo ručne presuňte porty medzi mostmi.",
+    "noSuggestBody": "ProxMenux nezistil žiadne fyzické rozhrania (zoznam vynecháva iba virtuálne názvy ako <code>vmbr</code>, <code>bond</code>, <code>veth</code> alebo <code>tap</code>; nekontroluje, či je sieťová karta už v inom moste). Analýza preto navrhne <code>bridge-ports none</code>, aby sa most mohol aspoň aktivovať bez portu. Pred opätovným spustením pridajte sieťovú kartu alebo ručne presuňte porty medzi mostmi.",
     "stillDownTitle": "Oprava sa skončila, ale most je stále dole",
     "stillDownBody": "<code>sed</code> aktualizoval súbor, ale <code>systemctl restart networking</code> bol odmietnutý. Po overení novej konfigurácie ho spustite ručne alebo reštartujte systém. Ak bol reštart prijatý a most je stále DOWN, overte existenciu nového portu cez <code>ip link show</code> a skontrolujte <code>journalctl -u networking</code> pre skutočnú chybu: odpojený kábel, nevyjednané spojenie alebo port už patriaci do iného mosta.",
     "lostSshTitle": "Stratila som prístup SSH hneď po reštarte siete",

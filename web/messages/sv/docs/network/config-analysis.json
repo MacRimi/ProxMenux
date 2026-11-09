@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Säkerhetskopia",
-        "body": "Kopierar <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Sökvägen visas före och efter.",
+        "body": "Kopierar <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Ett vägledande namn visas före kopieringen; den exakta sökvägen visas efteråt.",
         "tone": "blue"
       },
       {

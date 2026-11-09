@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "Tre interaktiva övervakningsverktyg, var och en bakom sin egen meny. Första gången du startar ett installeras paketet tyst via <code>apt-get</code>. Efterföljande lanseringar börjar omedelbart. Inget av dessa verktyg ändrar värdnätverkskonfigurationen."
+    "body": "Tre interaktiva övervakningsverktyg, var och en bakom sin egen meny. Första gången du startar ett installeras paketet via <code>apt-get</code>. Efterföljande lanseringar börjar omedelbart. Inget av dessa verktyg ändrar värdnätverkskonfigurationen."
   },
   "when": {
     "heading": "När du ska använda vilken",
@@ -105,7 +105,7 @@
   },
   "install": {
     "heading": "Första lanseringen installerar paketet",
-    "body": "Alla tre startare kontrollerar om programmet finns och kör annars <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code>. Installationen sker utan utdata: menyn kan verka frusen i 10–30 sekunder första gången. Senare starter sker omedelbart."
+    "body": "Alla tre startare kontrollerar om programmet finns. Om det saknas kontrollerar ProxMenux först förråden (på en värd utan prenumeration kan det erbjuda att byta till förrådet utan prenumeration, följt av <code>apt-get update</code>) och kör sedan <code>apt-get install -y &lt;pkg&gt;</code> med meddelandet ”Installing…” på skärmen. Senare starter sker omedelbart."
   },
   "troubleshoot": {
     "heading": "Felsökning",

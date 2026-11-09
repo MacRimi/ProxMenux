@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Создание страховочной резервной копии",
-        "body": "Копирует <code>/etc/network/interfaces</code> в <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Путь отображается до и после копирования.",
+        "body": "Копирует <code>/etc/network/interfaces</code> в <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Перед копированием показывается ориентировочное имя, после — точный путь.",
         "tone": "blue"
       },
       {

@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Safety backup",
-        "body": "Copies <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. The exact backup path is shown before the copy and again after, with the rollback command.",
+        "body": "Copies <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. The dialog before the copy shows an indicative name; the exact path of the file created is shown after the copy, with the rollback command.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Preview proposed changes",
-        "body": "Lists exactly which bridges will be touched and which port substitutions will happen. If the analysis decides nothing actually needs fixing (race condition: the port came back), the flow exits cleanly with <em>\"No changes needed.\"</em>",
+        "body": "Lists which bridges will be touched and the suggested port changes. If the analysis decides nothing actually needs fixing (race condition: the port came back), the flow exits cleanly with <em>\"No changes needed.\"</em>",
         "tone": "blue"
       },
       {
         "title": "4. Apply changes",
-        "body": "For each affected bridge, runs <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> against <code>/etc/network/interfaces</code>. If a bridge had no valid replacement available, the substitution is skipped and reported in step 5.",
+        "body": "For each affected bridge, runs <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> against <code>/etc/network/interfaces</code>. The new <code>bridge-ports</code> value keeps only the ports that still exist, so an invalid port next to a valid one is simply removed. If no valid port remains, it uses the first physical NIC detected; if the host has none, the line is written empty. Step 5 reports the result.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "Analysis aborts with \"Unsupported Network Stack\"",
     "unsupportedBody": "The host runs netplan, systemd-networkd or NetworkManager. The tool only supports <code>/etc/network/interfaces</code>. Switch the host to the classic stack first, or edit the configuration with the manager's native tooling (e.g. <code>netplan apply</code>).",
     "noSuggestTitle": "No suggestion is printed for an invalid port",
-    "noSuggestBody": "The host has zero free physical interfaces (everything is either already in another bridge or doesn't exist). The analysis falls back to suggesting <code>bridge-ports none</code> so the bridge can at least come up without a port. Add a NIC or migrate ports between bridges manually before re-running.",
+    "noSuggestBody": "ProxMenux detected no physical interfaces at all (the list only filters out virtual names such as <code>vmbr</code>, <code>bond</code>, <code>veth</code> or <code>tap</code>; it does not check whether a NIC is already in another bridge). The analysis falls back to suggesting <code>bridge-ports none</code> so the bridge can at least come up without a port. Add a NIC or migrate ports between bridges manually before re-running.",
     "stillDownTitle": "The repair completes but the bridge is still DOWN",
     "stillDownBody": "<code>sed</code> updated the file but <code>systemctl restart networking</code> was declined. Run it manually once the new config is verified, or reboot. If the restart was accepted and the bridge is still DOWN, run <code>ip link show</code> to confirm the new port exists, then check <code>journalctl -u networking</code> for the actual error (cable unplugged, link not negotiated, port already a member of another bridge).",
     "lostSshTitle": "I lost SSH access right after restarting networking",

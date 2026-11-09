@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Ce que ça fait",
-    "body": "Trois outils de suivi interactifs, chacun derrière sa propre entrée de menu. La première fois que vous en lancez un, le paquet est installé silencieusement via <code>apt-get</code>. Les lancements suivants commencent instantanément. Aucun de ces outils ne modifie la configuration du réseau hôte."
+    "body": "Trois outils de suivi interactifs, chacun derrière sa propre entrée de menu. La première fois que vous en lancez un, le paquet est installé via <code>apt-get</code>. Les lancements suivants commencent instantanément. Aucun de ces outils ne modifie la configuration du réseau hôte."
   },
   "when": {
     "heading": "Quel outil utiliser selon le besoin",
@@ -105,7 +105,7 @@
   },
   "install": {
     "heading": "Le premier lancement installe le paquet",
-    "body": "Les trois lanceurs vérifient le binaire et exécutent <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> s'il manque. L'installation est silencieuse : le menu peut apparaître gelé pour 10–30 secondes la première fois. Les lancements suivants commencent instantanément."
+    "body": "Les trois lanceurs vérifient le binaire. S’il manque, ProxMenux vérifie d’abord les dépôts (sur un hôte sans abonnement, il peut proposer de passer au dépôt sans abonnement, suivi de <code>apt-get update</code>), puis exécute <code>apt-get install -y &lt;pkg&gt;</code> avec un message « Installing… » à l’écran. Les lancements suivants commencent instantanément."
   },
   "troubleshoot": {
     "heading": "Dépannage",
