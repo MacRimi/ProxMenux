@@ -138,7 +138,9 @@ class ProxmoxCertificateHotReloadTests(unittest.TestCase):
         self.assertIs(ssl_socket.context, context)
         self.assertTrue(auth_manager._SSL_RUNTIME_LAST_REFRESH_ERROR)
 
-    def test_custom_certificate_source_is_not_examined_automatically(self):
+    def test_custom_certificate_renewed_on_disk_is_activated_during_the_handshake(self):
+        # Issue #307: a custom certificate pointing at the Proxmox files, or one
+        # renewed by certbot, must be followed just like the Proxmox source.
         self._write_config("custom")
         context = self._create_context()
         previous_fingerprint = auth_manager._SSL_RUNTIME_FINGERPRINT
@@ -147,8 +149,29 @@ class ProxmoxCertificateHotReloadTests(unittest.TestCase):
 
         context.sni_callback(ssl_socket, "proxmenux.test", context)
 
-        self.assertEqual(previous_fingerprint, auth_manager._SSL_RUNTIME_FINGERPRINT)
+        self.assertNotEqual(previous_fingerprint, auth_manager._SSL_RUNTIME_FINGERPRINT)
+        self.assertIs(ssl_socket.context, auth_manager._SSL_RUNTIME_CONTEXT)
+        self.assertEqual(auth_manager._SSL_RUNTIME_CERT_PATH, str(self.active_cert))
+
+    def test_custom_pair_that_disappears_keeps_the_previous_context(self):
+        self._write_config("custom")
+        context = self._create_context()
+        self.active_key.unlink()
+        ssl_socket = _FakeSslSocket(context)
+
+        context.sni_callback(ssl_socket, "proxmenux.test", context)
+
+        self.assertIs(auth_manager._SSL_RUNTIME_CONTEXT, context)
         self.assertIs(ssl_socket.context, context)
+        self.assertTrue(auth_manager._SSL_RUNTIME_LAST_REFRESH_ERROR)
+
+    def test_without_https_configured_nothing_is_examined(self):
+        self.ssl_config.write_text(json.dumps({"enabled": False, "source": "none"}))
+        context = self._create_context()
+        self._install_pair(1)
+        with mock.patch.object(auth_manager, "_certificate_pair_fingerprint") as fingerprint:
+            context.sni_callback(_FakeSslSocket(context), "proxmenux.test", context)
+        fingerprint.assert_not_called()
 
     def test_first_real_tls_connection_receives_the_renewed_certificate(self):
         server_context = self._create_context()
