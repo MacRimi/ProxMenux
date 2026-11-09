@@ -21,6 +21,7 @@ import oci_instances as instances
 import oci_instance_transaction as member_tx
 import oci_stack_plan
 import oci_stack_transaction as stack_tx
+import oci_stack_adapters as adapters
 import oci_stack_replay as replay
 import oci_work_backup as work_backup
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
@@ -49,27 +50,28 @@ def validate_database_transition(previous, candidate):
         raise ValueError(translate('The new image changes the PostgreSQL major version; the data must be migrated before updating'))
 
 
-def nextcloud_plan(primary, records, inventory, lifecycle, operation):
-    """Translate only the known three-member stack and retain rollback contracts."""
-    intent = primary.get('native_stack_intent', {})
-    if intent.get('adapter', {}).get('name') != 'install_nextcloud_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Nextcloud")
-    translated = {vmid: replay.nextcloud_record(record) for vmid, record in records.items()}
-    roles = {record['deployment']['replay_profile']['role']: vmid
-             for vmid, record in translated.items()}
-    if len(translated) != 3 or set(roles) != {'application', 'cache', 'database'} or roles['application'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Nextcloud")
+def adapter_plan(script, primary, records, inventory, lifecycle, operation):
+    """Translate the members of a stack its adapter installed and keep the
+    contracts a rollback needs. What differs between adapters (its members, their
+    start order and the readiness check of the application) is declared in
+    oci_stack_adapters."""
+    adapter = adapters.ADAPTERS[script]
+    label = adapter['label']
+    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != script:
+        raise ValueError(f"{translate('Unrecognized stack adapter:')} {label}")
+    translated = {vmid: adapter['record'](record) for vmid, record in records.items()}
+    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
+    expected = {adapter['main_role'], *adapter['dependencies']}
+    if len(translated) != len(expected) or set(roles) != expected or roles[adapter['main_role']] != primary['vmid']:
+        raise ValueError(f"{translate('Unrecognized stack structure:')} {label}")
     dependencies = lifecycle.get('dependencies', [])
     if (lifecycle.get('schema') != 1
-            or [d.get('vmid') for d in dependencies] != [roles['database'], roles['cache']]):
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Nextcloud")
+            or [d.get('vmid') for d in dependencies] != [roles[role] for role in adapter['dependencies']]):
+        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} {label}")
     services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])}
                 for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Nextcloud', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['php', '-r',
-            '$s=json_decode(file_get_contents("http://127.0.0.1/status.php"),true);'
-            'exit(is_array($s)&&!empty($s["installed"])&&empty($s["maintenance"])'
-            '&&empty($s["needsDbUpgrade"])?0:1);']}})
+    services.append({'vmid': primary['vmid'], 'name': label, 'healthcheck': {
+        'type': 'exec', 'timeout_seconds': 600, 'argv': list(adapter['healthcheck'])}})
     parent = translated[primary['vmid']]
     parent['stack']['deployment']['services'] = services
     parent['stack']['members'] = []
@@ -79,92 +81,7 @@ def nextcloud_plan(primary, records, inventory, lifecycle, operation):
         parent['stack']['members'].append(snapshot)
     plan = oci_stack_plan.build(parent, translated, inventory, operation)
     plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['nextcloud_replay'] = True
-    return plan
-
-
-def paperless_plan(primary, records, inventory, lifecycle, operation):
-    """Prepare the known Paperless stack without publishing translated recipes."""
-    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_paperless_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Paperless")
-    translated = {vmid: replay.paperless_record(record) for vmid, record in records.items()}
-    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
-    if len(translated) != 3 or set(roles) != {'application', 'database', 'broker'} or roles['application'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Paperless")
-    dependencies = lifecycle.get('dependencies', [])
-    if lifecycle.get('schema') != 1 or [d.get('vmid') for d in dependencies] != [roles['database'], roles['broker']]:
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Paperless")
-    services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])}
-                for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Paperless', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['python3', '-c',
-            'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/", timeout=10).read(1)']}})
-    parent = translated[primary['vmid']]
-    parent['stack']['deployment']['services'] = services
-    parent['stack']['members'] = []
-    for service in services:
-        snapshot = copy.deepcopy(translated[service['vmid']])
-        snapshot.pop('stack', None)
-        parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, operation)
-    plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['paperless_replay'] = True
-    return plan
-
-
-def tandoor_plan(primary, records, inventory, lifecycle, operation):
-    """Prepare exactly the application and PostgreSQL without publishing state."""
-    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_tandoor_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Tandoor")
-    translated = {vmid: replay.tandoor_record(record) for vmid, record in records.items()}
-    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
-    if len(translated) != 2 or set(roles) != {'application', 'database'} or roles['application'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Tandoor")
-    dependencies = lifecycle.get('dependencies', [])
-    if lifecycle.get('schema') != 1 or [d.get('vmid') for d in dependencies] != [roles['database']]:
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Tandoor")
-    services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])}
-                for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Tandoor', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['python3', '-c',
-            'import urllib.request; urllib.request.urlopen("http://127.0.0.1/", timeout=10).read(1)']}})
-    parent = translated[primary['vmid']]
-    parent['stack']['deployment']['services'] = services
-    parent['stack']['members'] = []
-    for service in services:
-        snapshot = copy.deepcopy(translated[service['vmid']])
-        snapshot.pop('stack', None)
-        parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, operation)
-    plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['tandoor_replay'] = True
-    return plan
-
-
-def immich_plan(primary, records, inventory, lifecycle, operation):
-    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_immich_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Immich")
-    translated = {vmid: replay.immich_record(record) for vmid, record in records.items()}
-    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
-    if len(translated) != 4 or set(roles) != {'server', 'database', 'valkey', 'machine-learning'} or roles['server'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Immich")
-    dependencies = lifecycle.get('dependencies', [])
-    if lifecycle.get('schema') != 1 or [d.get('vmid') for d in dependencies] != [roles['database'], roles['valkey'], roles['machine-learning']]:
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Immich")
-    services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])} for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Immich', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['node', '-e',
-            'fetch("http://127.0.0.1:2283/api/server/ping").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))']}})
-    parent = translated[primary['vmid']]
-    parent['stack']['deployment']['services'] = services
-    parent['stack']['members'] = []
-    for service in services:
-        snapshot = copy.deepcopy(translated[service['vmid']])
-        snapshot.pop('stack', None)
-        parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, operation)
-    plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['immich_replay'] = True
+    plan[f"{adapter['name']}_replay"] = True
     return plan
 
 
@@ -365,7 +282,7 @@ class NativeAdapter:
                for p in set(image['defaults'].get('Volumes') or {}) - transient):
             raise ValueError(translate('The new image requires additional persistent paths'))
         profile = record['deployment'].get('replay_profile', {})
-        if profile.get('adapter') in ('install_nextcloud_stack.sh', 'install_paperless_stack.sh', 'install_tandoor_stack.sh', 'install_immich_stack.sh'):
+        if profile.get('adapter') in adapters.ADAPTERS:
             msg_info(f"{translate('Checking the new image without starting it:')} {self.describe(record['vmid'])}")
             self.probe_nextcloud_image(record, archive, image)
             msg_ok(f"{translate('New image compatible:')} {self.describe(record['vmid'])}")
@@ -397,10 +314,7 @@ class NativeAdapter:
             member_tx.run('pct', 'mount', str(vmid))
             mounted = True
             profile = record['deployment']['replay_profile']
-            check = {'install_paperless_stack.sh': replay.paperless_prerequisites,
-                     'install_nextcloud_stack.sh': replay.nextcloud_prerequisites,
-                     'install_tandoor_stack.sh': replay.tandoor_prerequisites,
-                     'install_immich_stack.sh': replay.immich_prerequisites}[profile['adapter']]
+            check = adapters.ADAPTERS[profile['adapter']]['prerequisites']
             check(Path('/var/lib/lxc') / str(vmid) / 'rootfs', profile['role'], image)
         finally:
             if mounted:
@@ -444,14 +358,9 @@ class NativeAdapter:
         state = self.state()
         context = {'journal': str(self.journal), 'id': identity,
                    'backup': state['backups'][str(vmid)]}
-        if self.plan.get('nextcloud_replay'):
-            context.update(nextcloud_replay=True, effective_record=self.records[vmid])
-        if self.plan.get('paperless_replay'):
-            context.update(paperless_replay=True, effective_record=self.records[vmid])
-        if self.plan.get('tandoor_replay'):
-            context.update(tandoor_replay=True, effective_record=self.records[vmid])
-        if self.plan.get('immich_replay'):
-            context.update(immich_replay=True, effective_record=self.records[vmid])
+        for flag in adapters.REPLAY_FLAGS:
+            if self.plan.get(flag):
+                context.update({flag: True, 'effective_record': self.records[vmid]})
         operation = self.plan['operation']
         member_tx.apply(self.root, vmid, Path(prepared['archive']), operation,
             proposal=prepared.get('proposal'), registry_digest=prepared['digest'],
@@ -718,7 +627,7 @@ class NativeAdapter:
             record['observed'] = instances.observe(vmid, record['installation_id'],
                 original['observed']['archive_path'], original['observed']['resolved_registry_digest'],
                 original['observed']['image'])
-            if any(self.plan.get(flag) for flag in ('nextcloud_replay', 'paperless_replay', 'tandoor_replay', 'immich_replay')):
+            if any(self.plan.get(flag) for flag in adapters.REPLAY_FLAGS):
                 record['deployment']['native_config'] = record['observed']['config']
                 record['deployment']['member_replay_projection'] = replay.normalize(record)
             if self.is_job(vmid) and self.state().get('replacement_intent'):
@@ -863,17 +772,12 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
             records[member_id] = instances.read(root, member_id)
             inventory[member_id] = instances.identity(instances.command('pct', 'config', str(member_id)))
         adapter_name = primary.get('native_stack_intent', {}).get('adapter', {}).get('name')
-        builders = {'install_nextcloud_stack.sh': nextcloud_plan,
-                    'install_paperless_stack.sh': paperless_plan,
-                    'install_tandoor_stack.sh': tandoor_plan,
-                    'install_immich_stack.sh': immich_plan}
-        if adapter_name in builders:
+        if adapter_name in adapters.ADAPTERS:
             lifecycle = Path('/etc/pve/priv/proxmenux-stack-%s.json' % primary_id)
             info = lifecycle.lstat()
             if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
                 raise ValueError(translate('Unsafe dependency contract'))
-            builder = builders[adapter_name]
-            plan = builder(primary, records, inventory, json.loads(lifecycle.read_text()), operation)
+            plan = adapter_plan(adapter_name, primary, records, inventory, json.loads(lifecycle.read_text()), operation)
         else:
             plan = oci_stack_plan.build(primary, records, inventory, operation)
         stack_tx.validate_plan(plan)

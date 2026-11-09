@@ -143,6 +143,47 @@ def _storage_change(key, value, deployment, vmid):
                 mount['idmap'] = current['idmap']
 
 
+MOUNT_OR_DEVICE = re.compile(r'(mp|dev)[0-9]+')
+
+
+def adopt_settings(record, config, deployment, owned=()):
+    """Take into `deployment` the settings changed in Proxmox since the last
+    operation that every OCI container keeps: resources, network, hostname,
+    start at boot, entrypoint, variables, the root disk and raw lxc.* lines.
+    The keys in `owned` (mounts and devices) are left to the caller, which
+    knows how its container uses them. A change no container can keep stops
+    here. Returns what was taken, for the review."""
+    before, current = transaction.settings(record['observed']['config'].encode()), transaction.settings(config)
+    changed = sorted(key for key in before.keys() | current.keys() if before.get(key) != current.get(key))
+    details = []
+    skipped = [key for key in changed if key in owned]
+    if any(key in ENVIRONMENT_KEYS for key in changed):
+        details += _adopt_environment(deployment, *_environment(record, config))
+        skipped += ENVIRONMENT_KEYS
+    custom = transaction.custom_lxc(record, config)
+    custom_keys = {line.split(': ', 1)[0] for line in (*custom, *record['deployment'].get('custom_lxc', []))}
+    if custom:
+        deployment['custom_lxc'] = custom
+    else:
+        deployment.pop('custom_lxc', None)
+    skipped += custom_keys
+    if 'rootfs' in changed and 'rootfs' in current and 'rootfs' in before:
+        _storage_change('rootfs', current['rootfs'], deployment, record['vmid'])
+        skipped.append('rootfs')
+    # What the caller or the steps above took is compared as it was before;
+    # every other difference is a setting the record takes or refuses.
+    filtered = b'\n'.join(line for line in config.splitlines()
+                          if not any(line.startswith(key.encode() + b': ') for key in skipped))
+    filtered += b''.join(b'\n' + line for line in record['observed']['config'].encode().splitlines()
+                         if any(line.startswith(key.encode() + b': ') for key in skipped))
+    filtered += b'\n'
+    for key, value in transaction.external_changes(record, filtered).items():
+        section, name = transaction.ADOPTABLE[key]
+        target = deployment.setdefault(section, {}) if section else deployment
+        target[name] = value
+    return details
+
+
 def propose(record, config, member=False):
     if (record.get('status') != 'installed' or (not member and (
             record.get('stack') or record.get('stack_member') or record.get('native_stack_intent')
@@ -183,13 +224,11 @@ def propose(record, config, member=False):
         return None
     candidate = copy.deepcopy(record)
     deployment = candidate['deployment']
-    if custom:
-        deployment['custom_lxc'] = custom
-    else:
-        deployment.pop('custom_lxc', None)
-    details = _adopt_environment(deployment, *environment) if environment else []
+    owned = [key for key in changed if MOUNT_OR_DEVICE.fullmatch(key)]
+    details = adopt_settings(record, config, deployment, owned=owned)
     for key in storage:
-        _storage_change(key, current[key], deployment, record['vmid'])
+        if key != 'rootfs':
+            _storage_change(key, current[key], deployment, record['vmid'])
     # A host directory or a device taken away in Proxmox holds no data of the container.
     for key in detached:
         fields = dict(part.split('=', 1) for part in before[key].split(',') if '=' in part)
@@ -211,19 +250,6 @@ def propose(record, config, member=False):
             deployment.setdefault('devices', []).append(device)
             kind = 'GPU' if gpu_devices.gpu_path(device['host_path']) else 'USB/Coral/NPU'
             details.append(f"{key}: {device['host_path']} ({kind})")
-    skipped = [*new_keys, *storage, *detached, *custom_keys, *(ENVIRONMENT_KEYS if environment else ())]
-    filtered = b'\n'.join(line for line in config.splitlines()
-                          if not any(line.startswith(key.encode() + b': ') for key in skipped))
-    if environment or storage or detached or custom_keys:
-        filtered += b''.join(b'\n' + line for line in record['observed']['config'].encode().splitlines()
-                             if any(line.startswith(key.encode() + b': ')
-                                    for key in (*storage, *detached, *custom_keys,
-                                                *(ENVIRONMENT_KEYS if environment else ()))))
-    filtered += b'\n'
-    for key, value in transaction.external_changes(record, filtered).items():
-        section, name = transaction.ADOPTABLE[key]
-        target = deployment.setdefault(section, {}) if section else deployment
-        target[name] = value
     candidate['observed']['config'] = config.decode()
     candidate['observed']['config_sha256'] = sha(config)
     candidate['observed']['gpu_devices'] = gpu_devices.capture(config)

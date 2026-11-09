@@ -1247,14 +1247,10 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if show:
         msg_info(translate('Preparing the update...') if update else translate('Preparing the changes...'))
     record = instances.read(root, vmid)
-    if coordinated and any(coordinated.get(flag) for flag in
-                           ('nextcloud_replay', 'paperless_replay', 'tandoor_replay', 'immich_replay')):
-        import oci_stack_replay
-        project = (oci_stack_replay.immich_record if coordinated.get('immich_replay')
-                   else oci_stack_replay.tandoor_record if coordinated.get('tandoor_replay')
-                   else oci_stack_replay.paperless_record if coordinated.get('paperless_replay')
-                   else oci_stack_replay.nextcloud_record)
-        record = project(record)
+    import oci_stack_adapters
+    adapter = oci_stack_adapters.flagged(coordinated) if coordinated else None
+    if adapter:
+        record = adapter['record'](record)
         expected = coordinated['effective_record']
         if any(record.get(key) != expected.get(key) for key in
                ('vmid', 'installation_id', 'template', 'deployment')):

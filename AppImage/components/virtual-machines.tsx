@@ -5496,8 +5496,18 @@ export function VirtualMachines() {
                                     <Info className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
                                     <span>{t("vmLxc.ociUpdates.memberNote", { primary: primaryLabel, count: ociInstance.members.length })}</span>
                                   </div>
-                                  {primaryVM && (
-                                    <div className="flex justify-end">
+                                  <div className="flex flex-wrap justify-end gap-2">
+                                    {!ociInstance.pending && (
+                                      <Button
+                                        size="sm"
+                                        className={neutralBtnCls}
+                                        onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "modify" })}
+                                      >
+                                        <Settings2 className="h-4 w-4 mr-1.5" />
+                                        {t("vmLxc.ociUpdates.modify")}
+                                      </Button>
+                                    )}
+                                    {primaryVM && (
                                       <Button
                                         size="sm"
                                         className={neutralBtnCls}
@@ -5508,8 +5518,8 @@ export function VirtualMachines() {
                                         <ChevronRight className="h-4 w-4 mr-1.5" />
                                         {t("vmLxc.ociUpdates.openPrimary")}
                                       </Button>
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               ) : (
                               <>

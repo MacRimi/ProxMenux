@@ -15,15 +15,18 @@ import time
 import oci_gpu_devices as gpu_devices
 import oci_host_mounts as host_mounts
 import oci_instance_reconcile as reconcile
+import oci_instance_transaction as transaction
 import oci_instances as instances
+import oci_native_modify as native_modify
 import oci_nested_mounts
+import oci_stack_adapters as adapters
 import oci_stack_replay as replay
 from oci_ui import msg_error, msg_info, msg_ok, translate
 
-CONVERTERS = {'install_nextcloud_stack.sh': replay.nextcloud_record,
-              'install_paperless_stack.sh': replay.paperless_record,
-              'install_tandoor_stack.sh': replay.tandoor_record,
-              'install_immich_stack.sh': replay.immich_record}
+CONVERTERS = adapters.converters()
+
+
+VARIABLE_NAME = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 
 
 def run(*command):
@@ -58,8 +61,64 @@ def device_path(value):
     return fields.get('path') or value.split(',', 1)[0]
 
 
+def settings_of(changes):
+    """The resources and variables of a change, empty when it asks for none."""
+    environment = {'set': {}, 'unset': [], **(changes.get('environment') or {})}
+    return changes.get('resources') or {}, environment
+
+
+def validate_settings(changes):
+    """The resources and variables asked for, refused before anything changes."""
+    resources, environment = settings_of(changes)
+    for key, value in resources.items():
+        minimum = {'cores': 1, 'memory_mb': 64, 'swap_mb': 0}.get(key)
+        if minimum is None or isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise ValueError(f"{translate('Invalid resource value:')} {key}")
+    for name, value in environment['set'].items():
+        if not VARIABLE_NAME.fullmatch(name) or not isinstance(value, str) \
+                or any(ord(c) < 32 or ord(c) == 127 for c in value):
+            raise ValueError(translate('The value contains an unsupported character'))
+    for name in environment['unset']:
+        if not VARIABLE_NAME.fullmatch(name) or name in environment['set']:
+            raise ValueError(translate('The value contains an unsupported character'))
+
+
+def settings_values(record, config, changes):
+    """The Proxmox settings that carry the requested resources and variables,
+    with the values an adapter derives from them."""
+    values = {}
+    cfg = transaction.settings(config)
+    resources, environment = settings_of(changes)
+    if 'cores' in resources:
+        # A container limited by CPU time keeps that kind of limit.
+        values['cpulimit' if 'cpulimit' in cfg and 'cores' not in cfg else 'cores'] = resources['cores']
+    if 'memory_mb' in resources:
+        values['memory'] = resources['memory_mb']
+    if 'swap_mb' in resources:
+        values['swap'] = resources['swap_mb']
+    wanted = dict(environment['set'])
+    profile = record['deployment'].get('replay_profile') or {}
+    for name, source in adapters.derived(profile.get('adapter'), profile.get('role')).items():
+        if source in resources:
+            wanted.setdefault(name, str(resources[source]))
+    if wanted or environment['unset']:
+        env = native_modify.environment(config)
+        defaults = dict(item.split('=', 1) for item in
+                        (record['observed'].get('image') or {}).get('defaults', {}).get('Env', []) if '=' in item)
+        for name in environment['unset']:
+            # A variable the image defines comes back with its value, as in Docker.
+            if name in defaults:
+                env[name] = defaults[name]
+            else:
+                env.pop(name, None)
+        env.update(wanted)
+        values['env'] = '\0'.join(f'{name}={value}' for name, value in env.items())
+    return values
+
+
 def validate(vmid, changes):
     """Everything that can be refused is refused before the container stops."""
+    validate_settings(changes)
     mounts = {options(value).get('mp'): (key, value) for key, value in entries(vmid, 'mp').items()}
     devices = {device_path(value): key for key, value in entries(vmid, 'dev').items()}
     for path in changes['remove_mounts']:
@@ -194,12 +253,30 @@ def adopt(root, vmid):
     if instances.same_config_except_notes(record, config, ignore_tags=True):
         return
     if (record['deployment'].get('replay_profile') or {}).get('adapter') in CONVERTERS:
-        register(root, vmid)
+        record_member(root, vmid)
         return
     proposal = reconcile.propose(record, config, member=True)
     if proposal:
         reconcile.commit_locked(root, vmid, proposal, member=True)
         snapshot(root, vmid)
+
+
+def record_member(root, vmid):
+    """Take the member as it is now into its record: its settings through the
+    common adoption every container uses, then what its adapter reads itself."""
+    record = instances.read(root, vmid)
+    plan = record['deployment']
+    # A member an adapter installed and no stack update has rebuilt yet is
+    # read from its native configuration by the adapter itself. Any other is
+    # rebuilt from its record, so what changed goes into it first.
+    if not ((plan.get('replay_profile') or {}).get('adapter') in CONVERTERS and 'native_config' in plan):
+        config = instances.command('pct', 'config', str(vmid))
+        keys = (transaction.settings(record['observed']['config'].encode()).keys()
+                | transaction.settings(config).keys())
+        reconcile.adopt_settings(record, config, plan,
+                                 owned=[key for key in keys if reconcile.MOUNT_OR_DEVICE.fullmatch(key)])
+        instances.write(instances.location(root, vmid), record)
+    register(root, vmid)
 
 
 def snapshot(root, vmid):
@@ -242,7 +319,14 @@ def modify(root, vmid, changes):
 
 
 def _modify(root, vmid, changes):
-    running = is_running(vmid)
+    record = instances.read(root, vmid)
+    config = instances.command('pct', 'config', str(vmid))
+    values = settings_values(record, config, changes)
+    # Resources apply to a running container; paths, devices and variables
+    # take effect on its next start.
+    restart = 'env' in values or any(changes[key] for key in
+                                     ('add_mounts', 'remove_mounts', 'add_devices', 'remove_devices'))
+    running = is_running(vmid) and restart
     if running:
         msg_info(translate('Stopping the container...'))
         try:
@@ -251,9 +335,13 @@ def _modify(root, vmid, changes):
             run('pct', 'stop', str(vmid))
         msg_ok(translate('Container stopped'))
     try:
+        if values:
+            native_modify.set_config(vmid, record['installation_id'],
+                                     instances.command('pct', 'config', str(vmid)), values)
+            msg_ok(translate('Resources and variables applied'))
         apply(vmid, changes)
         msg_info(translate('Saving the new configuration of the application...'))
-        register(root, vmid)
+        record_member(root, vmid)
         msg_ok(translate('Configuration saved'))
     finally:
         if running:
@@ -271,7 +359,8 @@ def main():
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
     changes = {'remove_mounts': [], 'add_mounts': [], 'remove_devices': [], 'add_devices': [],
-               **json.loads(args.changes.read_text())}
+               'resources': {}, **json.loads(args.changes.read_text())}
+    changes['environment'] = {'set': {}, 'unset': [], **changes.get('environment', {})}
     try:
         with instances.locked(args.root):
             modify(args.root, args.vmid, changes)

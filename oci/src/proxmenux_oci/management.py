@@ -648,17 +648,13 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
     pending = primary.get('pending_stack_transaction')
     if not pending:
         members = primary.get('stack', {}).get('members', [])
-        import oci_stack_replay
+        import oci_stack_adapters
         needs_replay = any(m.get('native_stack_intent') or
                 m.get('deployment', {}).get('rootfs_adaptation_replay_required') for m in members)
         if not members:
             ui.message(translate('This stack has no saved members to update.'), translate('OCI stack management'))
             return False
-        updatable = not needs_replay or (
-                oci_stack_replay.nextcloud_menu_ready(primary) or
-                oci_stack_replay.paperless_menu_ready(primary) or
-                oci_stack_replay.tandoor_menu_ready(primary) or
-                oci_stack_replay.immich_menu_ready(primary))
+        updatable = not needs_replay or oci_stack_adapters.menu_ready(primary)
         if not updatable and action in (None, 'update'):
             ui.message(translate('This stack needs rootfs adaptations that coordinated updates cannot replay yet.'), translate('OCI stack management'))
             if action == 'update':
@@ -666,7 +662,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         if action is None:
             # A stack that cannot be updated can still be removed.
             options = [('update', translate('Update every container of the application'))] if updatable else []
-            options.append(('modify', translate('Modify extra paths and devices')))
+            options.append(('modify', translate('Modify: resources, variables, paths and devices of a container')))
             if updatable:
                 options.append(('recreate', translate('Recreate every container with its saved configuration')))
             watched = primary.get('deployment', {}).get('watchdog') is True
@@ -682,7 +678,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
             return _remove(project, ui, primary_id)
         if action == 'modify':
             from .stack_recreation import modify_stack
-            return modify_stack(project, ui, primary, _run_lifecycle)
+            return modify_stack(project, ui, primary, _run_lifecycle,
+                                member_vmid=row['vmid'] if row['vmid'] != primary_id else None)
         if action == 'recreate':
             if not ui.review(translate('All {count} containers of the application will be recreated from their saved '
                                        'image digests (main CT: {vmid}). The stack is stopped, every container is '
