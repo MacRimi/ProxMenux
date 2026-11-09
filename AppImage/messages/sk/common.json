@@ -5392,6 +5392,8 @@
       "storageAvailable": "Úložisko {type} je dostupné",
       "storageUsage": "{percent} % využité",
       "mountReachable": "Pripojenie {type} je dostupné",
+      "mountReachableReadOnly": "Pripojenie {type} je dostupné, iba na čítanie",
+      "mountReadOnlyConfiguredRw": "Pripojenie {type} je iba na čítanie, ale je nastavené na čítanie a zápis",
       "rootfsUsed": "Využitie rootfs: {percent} % ({size})",
       "runningCtsSafe": "Bežiace CT s bezpečným využitím rootfs: {count}",
       "pveStorageSafe": "PVE blokové úložiská s bezpečným využitím: {count}",

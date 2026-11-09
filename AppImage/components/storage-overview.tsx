@@ -1696,7 +1696,13 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                             </Badge>
                           )}
                           {mount.readonly && (
-                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                            <Badge
+                              className={
+                                isReadonly
+                                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  : "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                              }
+                            >
                               {t("storage.readOnlyShort")}
                             </Badge>
                           )}

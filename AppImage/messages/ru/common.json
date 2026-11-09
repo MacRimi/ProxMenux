@@ -5584,6 +5584,8 @@
       "storageAvailable": "Хранилище {type} доступно",
       "storageUsage": "Использовано {percent}%",
       "mountReachable": "Точка монтирования {type} доступна",
+      "mountReachableReadOnly": "Точка монтирования {type} доступна, только для чтения",
+      "mountReadOnlyConfiguredRw": "Точка монтирования {type} в режиме только для чтения, но настроена на чтение и запись",
       "rootfsUsed": "Использование rootfs: {percent}% ({size})",
       "runningCtsSafe": "Использование rootfs в пределах безопасного уровня у {count} работающих контейнеров",
       "pveStorageSafe": "Использование {count} целевых блочных хранилищ PVE находится в пределах безопасного уровня",

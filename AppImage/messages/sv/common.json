@@ -5346,6 +5346,8 @@
       "storageAvailable": "{type} lagringsutrymme är tillgängligt",
       "storageUsage": "{percent} % använt",
       "mountReachable": "{type}-monteringen kan nåbar",
+      "mountReachableReadOnly": "{type}-monteringen är nåbar, skrivskyddad",
+      "mountReadOnlyConfiguredRw": "{type}-monteringen är skrivskyddad men konfigurerad för läsning och skrivning",
       "rootfsUsed": "rootfs-användning: {percent}% ({size})",
       "runningCtsSafe": "{count} som kör CT:er har säker rootfs-användning",
       "pveStorageSafe": "{count} PVE-blocklagringsmål har säker användning",

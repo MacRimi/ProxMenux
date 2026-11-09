@@ -18,8 +18,8 @@ Scope for Sprint 13:
 - Host-only. Mounts done inside running LXCs are out of scope —
   reaching them needs ``pct exec`` per container which is slow and
   can hang on a corrupted guest. That's tracked as a follow-up.
-- Detects: stale (timeout/ESTALE), unexpected read-only, plain
-  reachable.
+- Detects: stale (timeout/ESTALE), read-only although its configuration
+  asks for read-write, plain reachable.
 """
 
 from __future__ import annotations
@@ -189,6 +189,145 @@ def storage_for_mount(target: str, source: str,
     return None
 
 
+# Where a remote mount is asked to be read-only. An NFS or CIFS mount is
+# read-only only because the mount request said so (the client does not
+# switch to read-only on its own), so a read-only mount is a problem only
+# when the configuration that mounts it asks for read-write.
+_STORAGE_CFG = '/etc/pve/storage.cfg'
+_FSTAB = '/etc/fstab'
+_SYSTEMD_MOUNT_DIR = '/etc/systemd/system'
+_LXC_CONF_DIR = '/etc/pve/lxc'
+
+
+def _requests_ro(options: str) -> bool:
+    return 'ro' in {o.strip() for o in (options or '').split(',')}
+
+
+def _read_lines(path: str) -> list[str]:
+    try:
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            return f.read().splitlines()
+    except OSError:
+        return []
+
+
+def _storage_options() -> dict[str, str]:
+    """The mount options of each storage in storage.cfg, by storage id."""
+    out: dict[str, str] = {}
+    current = None
+    for line in _read_lines(_STORAGE_CFG):
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        if not line[0].isspace():
+            current = line.split(':', 1)[1].strip() if ':' in line else None
+            if current:
+                out[current] = ''
+            continue
+        parts = line.split(None, 1)
+        if current and parts[0] == 'options':
+            out[current] = parts[1].strip() if len(parts) > 1 else ''
+    return out
+
+
+def _fstab_options(path: str) -> dict[str, str]:
+    """The options of each fstab entry, by mount point."""
+    out: dict[str, str] = {}
+    for line in _read_lines(path):
+        parts = line.split()
+        if len(parts) >= 4 and not parts[0].startswith('#'):
+            out[parts[1].rstrip('/') or '/'] = parts[3]
+    return out
+
+
+def _systemd_mount_options() -> dict[str, str]:
+    """The options of each systemd mount unit, by mount point."""
+    out: dict[str, str] = {}
+    try:
+        names = [n for n in os.listdir(_SYSTEMD_MOUNT_DIR) if n.endswith('.mount')]
+    except OSError:
+        return out
+    for name in names:
+        where, options = None, ''
+        for line in _read_lines(os.path.join(_SYSTEMD_MOUNT_DIR, name)):
+            key, _, value = line.strip().partition('=')
+            if key == 'Where':
+                where = value.strip()
+            elif key == 'Options':
+                options = value.strip()
+        if where:
+            out[where.rstrip('/') or '/'] = options
+    return out
+
+
+def _lxc_mount_points(vmid: str) -> dict[str, dict[str, Any]]:
+    """The mount points of a container, by target: source and ro flag."""
+    out: dict[str, dict[str, Any]] = {}
+    for line in _read_lines(os.path.join(_LXC_CONF_DIR, f'{vmid}.conf')):
+        line = line.strip()
+        if line.startswith('['):
+            break
+        match = re.match(r'^mp\d+:\s*(.+)$', line)
+        if not match:
+            continue
+        parts = [p.strip() for p in match.group(1).split(',')]
+        values = dict(p.split('=', 1) for p in parts[1:] if '=' in p)
+        if values.get('mp'):
+            out[values['mp'].rstrip('/') or '/'] = {
+                'source': parts[0],
+                'ro': values.get('ro', '0').lower() in ('1', 'yes', 'true', 'on'),
+            }
+    return out
+
+
+def configured_readonly(target: str, lxc_vmid: str = '', ct_pid: str = '',
+                        host_mounts: Optional[list[dict[str, Any]]] = None) -> Optional[bool]:
+    """Whether the configuration that mounts ``target`` asks for read-only.
+
+    True or False when a Proxmox storage, fstab, a systemd mount unit or a
+    container mount point names the mount; None when none of them does (a
+    mount made by hand or by another tool), which is taken as asked for.
+    A container mount point that binds a host mount which is itself
+    read-only inherits it, so it is None too: the host mount is the one
+    reported if that is wrong.
+    """
+    key = target.rstrip('/') or '/'
+    if lxc_vmid:
+        mount_point = _lxc_mount_points(lxc_vmid).get(key)
+        if mount_point:
+            if mount_point['ro']:
+                return True
+            source = mount_point['source']
+            for host in host_mounts or []:
+                host_target = host.get('target', '')
+                if host.get('readonly') and (source == host_target or source.startswith(host_target.rstrip('/') + '/')):
+                    return None
+            return False
+        if ct_pid:
+            options = _fstab_options(f'/proc/{ct_pid}/root/etc/fstab').get(key)
+            if options is not None:
+                return _requests_ro(options)
+        return None
+    if key.startswith('/mnt/pve/'):
+        options = _storage_options().get(key.split('/')[3])
+        if options is not None:
+            return _requests_ro(options)
+    for table in (_fstab_options(_FSTAB), _systemd_mount_options()):
+        if key in table:
+            return _requests_ro(table[key])
+    return None
+
+
+def mount_status(mount: dict[str, Any], reachable: bool, lxc_vmid: str = '', ct_pid: str = '',
+                 host_mounts: Optional[list[dict[str, Any]]] = None) -> str:
+    """``stale``, ``readonly`` (read-only although configured read-write) or ``ok``."""
+    if not reachable:
+        return 'stale'
+    if mount.get('readonly') and configured_readonly(
+            mount.get('target', ''), lxc_vmid, ct_pid, host_mounts) is False:
+        return 'readonly'
+    return 'ok'
+
+
 def scan_remote_mounts(force: bool = False) -> list[dict[str, Any]]:
     """Top-level scan: list each remote mount with its health status.
 
@@ -225,12 +364,7 @@ def scan_remote_mounts(force: bool = False) -> list[dict[str, Any]]:
             entry.update(_disk_usage(m['target']))
         else:
             entry.update({'total_bytes': None, 'used_bytes': None, 'available_bytes': None})
-        if not health['reachable']:
-            entry['status'] = 'stale'
-        elif m['readonly']:
-            entry['status'] = 'readonly'
-        else:
-            entry['status'] = 'ok'
+        entry['status'] = mount_status(m, health['reachable'])
         enriched.append(entry)
 
     with _cache_lock:
@@ -594,6 +728,7 @@ def scan_lxc_mounts(force: bool = False) -> list[dict[str, Any]]:
         return []
 
     enriched: list[dict[str, Any]] = []
+    host_mounts = _read_proc_mounts()
     for ct in _list_running_lxcs():
         ct_mounts = _read_lxc_mounts(ct)
         for m in ct_mounts:
@@ -613,12 +748,7 @@ def scan_lxc_mounts(force: bool = False) -> list[dict[str, Any]]:
             entry['total_bytes'] = None
             entry['used_bytes'] = None
             entry['available_bytes'] = None
-            if not health['reachable']:
-                entry['status'] = 'stale'
-            elif m['readonly']:
-                entry['status'] = 'readonly'
-            else:
-                entry['status'] = 'ok'
+            entry['status'] = mount_status(m, health['reachable'], ct['vmid'], ct['pid'], host_mounts)
             enriched.append(entry)
 
     with _lxc_cache_lock:
