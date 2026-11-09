@@ -125,7 +125,7 @@
     "items": [
       {
         "title": "apt update завершается с ошибкой 401 Unauthorized",
-        "body": "Репозиторий Enterprise включён, но у хоста нет активной подписки. Рабочий скрипт предлагает переключиться на no-subscription перед <code>apt-get update</code>; если вы отказались, запустите обновление повторно и примите предложение либо отключите источник Enterprise в <em>Node → Updates → Repositories</em> и включите источник no-subscription."
+        "body": "Репозиторий Enterprise включён, но у хоста нет активной подписки. Рабочий скрипт предлагает переключиться на no-subscription перед <code>apt-get update</code>; если Вы отказались, запустите обновление повторно и примите предложение либо отключите источник Enterprise в <em>Node → Updates → Repositories</em> и включите источник no-subscription."
       },
       {
         "title": "full-upgrade зависает на этапе \"Configuring grub-pc\"",

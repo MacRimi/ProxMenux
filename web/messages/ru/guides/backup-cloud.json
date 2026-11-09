@@ -31,7 +31,7 @@
     "image1Alt": "Добавление нового хранилища в Proxmox",
     "configIntro": "Укажите следующие параметры:",
     "configItems": [
-      "<strong>Идентификатор:</strong> <code>gdrive</code> (или имя, которое вы выбрали для каталога)",
+      "<strong>Идентификатор:</strong> <code>gdrive</code> (или имя, которое Вы выбрали для каталога)",
       "<strong>Каталог:</strong> <code>/mnt/gdrive</code>",
       "<strong>Содержимое:</strong> выберите <strong>Файл резервной копии VZDump</strong>"
     ],
@@ -67,7 +67,7 @@
     "mountCode": "rclone mount gdrive:/PBC /mnt/gdrive --allow-other --allow-non-empty --vfs-cache-mode writes",
     "mountItems": [
       "<code>gdrive:/PBC</code> — папка в Вашем облачном хранилище.",
-      "<code>/mnt/gdrive</code> — каталог на хосте, который вы зарегистрировали как хранилище данных."
+      "<code>/mnt/gdrive</code> — каталог на хосте, который Вы зарегистрировали как хранилище данных."
     ],
     "mountFootnote": "<strong>Эта команда продолжает работать на переднем плане.</strong> Для проверки оставьте её работающей в терминале и попробуйте создать резервную копию. Чтобы автоматически монтировать папку при каждой загрузке, настройте юнит systemd (см. следующий раздел)."
   },

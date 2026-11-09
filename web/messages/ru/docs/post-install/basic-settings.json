@@ -37,7 +37,7 @@
     "doesItems": [
       "<strong>Сначала — приведение репозиториев в порядок.</strong> Отключает корпоративные <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, удаляет устаревшие файлы репозиториев, оставшиеся от предыдущих версий PVE, и записывает новый <code>proxmox.sources</code>, указывающий на бесплатный канал <em>pve-no-subscription</em> (в соответствии с кодовым именем Debian на узле: trixie для PVE 9, bookworm для PVE 8).",
       "<strong>Перезаписывает настройки репозиториев Debian</strong> с main / updates / security, включая <code>non-free-firmware</code>, чтобы при обновлении больше не появлялось предупреждение о микропрограммах.",
-      "<strong>Выполняет официальную процедуру обновления.</strong> Сначала <code>apt-get update</code>, затем <code>apt full-upgrade -y</code> (PVE 9) или <code>apt dist-upgrade -y</code> (PVE 8); обе команды запускаются без интерактивных запросов с <code>--force-confdef --force-confold</code>, чтобы сохранить все изменённые вами конфигурационные файлы.",
+      "<strong>Выполняет официальную процедуру обновления.</strong> Сначала <code>apt-get update</code>, затем <code>apt full-upgrade -y</code> (PVE 9) или <code>apt dist-upgrade -y</code> (PVE 8); обе команды запускаются без интерактивных запросов с <code>--force-confdef --force-confold</code>, чтобы сохранить все изменённые Вами конфигурационные файлы.",
       "<strong>Устанавливает необходимые пакеты</strong>, если они отсутствуют: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
       "<strong>Проверяет корректность метаданных LVM.</strong> Ищет виртуальные машины с прямым пробросом дисков, которые могли записать устаревшие заголовки физических томов непосредственно на диски; предупреждает при обнаружении проблем (без автоматического исправления).",
       "<strong>Выполняет очистку после обновления:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, затем предлагает перезагрузку, если ядро было обновлено или присутствует <code>/var/run/reboot-required</code>."
@@ -203,7 +203,7 @@
           },
           {
             "pkg": "chntpw",
-            "desc": "Редактирование Windows SAM — полезно для восстановления паролей на виртуальных машинах Windows, переданных вам в управление"
+            "desc": "Редактирование Windows SAM — полезно для восстановления паролей на виртуальных машинах Windows, переданных Вам в управление"
           }
         ]
       }

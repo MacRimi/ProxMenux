@@ -40,7 +40,7 @@
       },
       {
         "method": "<strong>Только через fstab на хосте</strong>",
-        "mountRich": "<code>/mnt/&lt;path&gt;</code> (путь выбираете вы)",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> (путь выбираете Вы)",
         "ui": "Нет",
         "useCaseRich": "Подключение общего ресурса к одному или нескольким контейнерам LXC через bind-монтирование <em>без</em> его регистрации в качестве хранилища Proxmox. Не загромождает интерфейс Datacenter."
       },

@@ -129,7 +129,7 @@
           },
           {
             "tool": "Автоматический TRIM для ZFS",
-            "restores": "Читает /usr/local/share/proxmenux/zfs_autotrim_pools (список пулов, которые ProxMenux действительно изменил) и выполняет zpool set autotrim=off для каждого из них. Пулы, для которых вы вручную включили autotrim до запуска ProxMenux, не затрагиваются."
+            "restores": "Читает /usr/local/share/proxmenux/zfs_autotrim_pools (список пулов, которые ProxMenux действительно изменил) и выполняет zpool set autotrim=off для каждого из них. Пулы, для которых Вы вручную включили autotrim до запуска ProxMenux, не затрагиваются."
           }
         ]
       },
