@@ -12,6 +12,12 @@ pmx_appimage_arch "$(uname -m)" || exit 1
 export PATH="${APPDIR}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/${PMX_APPIMAGE_TRIPLET}:${APPDIR}/usr/lib:${APPDIR}/lib/${PMX_APPIMAGE_TRIPLET}:${APPDIR}/lib:${LD_LIBRARY_PATH}"
 
+# The Monitor reads the output of lsblk, lscpu, apt and others. Under the
+# host locale they print "29,7G" or translated text the parsers don't know,
+# so every command it runs gets the C locale. UTF-8 keeps names readable;
+# the interface has its own translations. The web terminal already used it.
+export LC_ALL=C.UTF-8
+
 # Select the native dependency tree matching the host interpreter.  PVE 8
 # uses CPython 3.11 and PVE 9 uses CPython 3.13; both runtimes are bundled in
 # the same AppImage so its gevent HTTPS/WSS server is independent of the

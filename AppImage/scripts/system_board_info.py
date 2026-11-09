@@ -52,7 +52,8 @@ def parse_lscpu(output: str) -> Dict[str, Any]:
             if number is not None:
                 cpu[_LSCPU_INT[key]] = number
         elif key in _LSCPU_FLOAT:
-            number = _to_number(value, float)
+            # lscpu follows the locale: "1800,0000" on a French host
+            number = _to_number(value.replace(",", "."), float)
             if number is not None:
                 cpu[_LSCPU_FLOAT[key]] = number
     return cpu
