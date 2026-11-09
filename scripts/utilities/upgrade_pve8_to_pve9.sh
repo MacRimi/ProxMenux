@@ -563,10 +563,16 @@ block_downstream_build() {
     line2="$(translate "On PXVIRT, the upgrade to version 9 is a standard Debian upgrade from bookworm to trixie, with the Lierfang source moved to trixie as well.")"
     line3="$(translate "Back up your VMs, containers and host configuration first.")"
 
-    if [[ "${ASSUME_YES:-0}" != "1" ]] && command -v whiptail >/dev/null 2>&1; then
-        whiptail --title "$(translate "PXVIRT detected")" \
-                 --msgbox "${line1}"$'\n\n'"${line2}"$'\n\n'"${line3}" 16 76
-        exit 0
+    if [[ "${ASSUME_YES:-0}" != "1" ]]; then
+        if command -v dialog >/dev/null 2>&1; then
+            dialog --backtitle "ProxMenux" --title "$(translate "PXVIRT detected")" \
+                   --msgbox "\n${line1}\n\n${line2}\n\n${line3}" 16 76
+            exit 0
+        elif command -v whiptail >/dev/null 2>&1; then
+            whiptail --title "$(translate "PXVIRT detected")" \
+                     --msgbox "${line1}"$'\n\n'"${line2}"$'\n\n'"${line3}" 16 76
+            exit 0
+        fi
     fi
     msg_warn "$line1"
     msg_info2 "$line2"
