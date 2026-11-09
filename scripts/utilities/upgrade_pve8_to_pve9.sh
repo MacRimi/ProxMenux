@@ -549,6 +549,33 @@ check_not_web_terminal() {
     done
 }
 
+# PXVIRT ships Proxmox VE from its own repository. This assistant writes the
+# Proxmox and Ceph sources and installs the Proxmox kernel, which would turn the
+# port into upstream Proxmox VE. On PXVIRT the upgrade is a Debian one, so the
+# assistant only explains it. Same detection as the PVE 8 update worker.
+block_downstream_build() {
+    [[ "$(python3 "$LOCAL_SCRIPTS/global/proxmox_platform.py" --field variant 2>/dev/null)" == pxvirt ]] \
+        || [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan bookworm 2>/dev/null)" == downstream ]] \
+        || return 0
+
+    local line1 line2 line3
+    line1="$(translate "This assistant follows the official Proxmox VE upgrade and would replace the PXVIRT sources, so it is not available on PXVIRT.")"
+    line2="$(translate "On PXVIRT, the upgrade to version 9 is a standard Debian upgrade from bookworm to trixie, with the Lierfang source moved to trixie as well.")"
+    line3="$(translate "Back up your VMs, containers and host configuration first.")"
+
+    if [[ "${ASSUME_YES:-0}" != "1" ]] && command -v whiptail >/dev/null 2>&1; then
+        whiptail --title "$(translate "PXVIRT detected")" \
+                 --msgbox "${line1}"$'\n\n'"${line2}"$'\n\n'"${line3}" 16 76
+        exit 0
+    fi
+    msg_warn "$line1"
+    msg_info2 "$line2"
+    msg_info2 "$line3"
+    exit 1
+}
+
+block_downstream_build
+
 ask_run_mode
 
 check_not_web_terminal
