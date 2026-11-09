@@ -9629,6 +9629,15 @@ def _get_hardware_info_uncached():
                         
                         if model_family:
                             storage_device['family'] = model_family
+
+                        # SD cards and eMMC: no SMART, so take what the
+                        # card itself reports to the kernel.
+                        card = disk_identity.mmc_card(disk_name)
+                        for key in ('model', 'serial'):
+                            if card.get(key) and storage_device.get(key) in (None, '', 'Unknown'):
+                                storage_device[key] = card[key]
+                        if card.get('interface'):
+                            storage_device['interface'] = card['interface']
                         
                         storage_devices.append(storage_device)
                 
