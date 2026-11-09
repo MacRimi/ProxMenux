@@ -29,7 +29,7 @@
   },
   "running": {
     "heading": "Запуск скрипта",
-    "body": "Откройте ProxMenux на хосте, перейдите в <strong>Оборудование: графические процессоры и Coral-TPU → Add Coral TPU to LXC</strong>.",
+    "body": "Откройте ProxMenux на хосте, перейдите в <strong>Оборудование: графические процессоры и Coral-TPU → «Добавить Coral TPU в LXC»</strong>.",
     "imageAlt": "Пункт меню «Добавить TPU Coral в LXC» в разделе «Оборудование: GPU и Coral-TPU»"
   },
   "howRuns": {
