@@ -47,7 +47,7 @@
       },
       {
         "title": "GPU и TPU Coral",
-        "description": "Проброс NVIDIA, Intel iGPU, AMD и TPU Coral в виртуальные машины и контейнеры LXC с переключением режимов между VM и LXC.",
+        "description": "Проброс NVIDIA, Intel iGPU, AMD и TPU Coral в виртуальные машины и контейнеры LXC с переключением режимов между ВМ и LXC.",
         "icon": "Cpu",
         "href": "/docs/hardware/nvidia-host"
       },
@@ -89,7 +89,7 @@
       },
       {
         "title": "Справочник команд",
-        "description": "Подборка команд Linux и Proxmox, сгруппированных по темам: система, VM/CT (qm, pct), хранилища, сеть, ZFS, проброс GPU, резервное копирование, повседневные инструменты CLI.",
+        "description": "Подборка команд Linux и Proxmox, сгруппированных по темам: система, ВМ/CT (qm, pct), хранилища, сеть, ZFS, проброс GPU, резервное копирование, повседневные инструменты CLI.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
       }
