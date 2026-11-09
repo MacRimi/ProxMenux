@@ -13,8 +13,8 @@
     "section": "Hjälp och info"
   },
   "intro": {
-    "title": "De flesta installeras av efterinstallationsskriptet",
-    "body": "De flesta av dessa verktyg är inte installerade som standard, inte ens av efterinstallationen med standardvalen. För att lägga till dem erbjuder ProxMenux <utilsLink>installationsprogram för systemverktyg</utilsLink> dem som fördefinierade grupper, till exempel grundverktyg, utveckling, nätverk och analys."
+    "title": "Vissa behöver installeras först",
+    "body": "Flera av dessa verktyg är inte installerade som standard, inte ens av efterinstallationen med standardvalen. För att lägga till dem erbjuder ProxMenux <utilsLink>installationsprogram för systemverktyg</utilsLink> dem som fördefinierade grupper, till exempel grundverktyg, utveckling, nätverk och analys."
   },
   "commandGroups": [
     {

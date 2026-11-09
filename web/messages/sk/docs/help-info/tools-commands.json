@@ -13,8 +13,8 @@
     "section": "Pomoc a informácie"
   },
   "intro": {
-    "title": "Väčšinu nainštaluje skript po inštalácii",
-    "body": "Väčšina týchto nástrojov nie je nainštalovaná predvolene, ani po Post-Install s predvoleným výberom. Na ich doplnenie ich <utilsLink>inštalátor systémových nástrojov</utilsLink> v ProxMenuxe ponúka v preddefinovaných skupinách (základné, vývoj, sieť, analýza, …)."
+    "title": "Niektoré treba najprv nainštalovať",
+    "body": "Viaceré z týchto nástrojov nie sú nainštalované predvolene, ani po Post-Install s predvoleným výberom. Na ich doplnenie ich <utilsLink>inštalátor systémových nástrojov</utilsLink> v ProxMenuxe ponúka v preddefinovaných skupinách (základné, vývoj, sieť, analýza, …)."
   },
   "commandGroups": [
     {

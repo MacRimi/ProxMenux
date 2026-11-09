@@ -13,8 +13,8 @@
     "section": "Hilfe und Informationen"
   },
   "intro": {
-    "title": "Die meisten werden nach der Installation eingerichtet",
-    "body": "Die meisten dieser Werkzeuge sind standardmäßig nicht installiert, auch nicht durch Post-Install mit seiner Standardauswahl. Zum Hinzufügen bietet der <utilsLink>Installer für Systemwerkzeuge</utilsLink> von ProxMenux sie in vordefinierten Gruppen an, etwa Basis, Entwicklung, Netzwerk und Analyse."
+    "title": "Einige müssen zuerst installiert werden",
+    "body": "Mehrere dieser Werkzeuge sind standardmäßig nicht installiert, auch nicht durch Post-Install mit seiner Standardauswahl. Zum Hinzufügen bietet der <utilsLink>Installer für Systemwerkzeuge</utilsLink> von ProxMenux sie in vordefinierten Gruppen an, etwa Basis, Entwicklung, Netzwerk und Analyse."
   },
   "commandGroups": [
     {
