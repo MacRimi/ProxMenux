@@ -176,7 +176,7 @@
     "curlBody": "Запустите обновление PVE и опрашивайте его состояние до завершения — точно такую же последовательность действий выполняет автоматизация Home Assistant или плейбук Ansible:",
     "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
     "haTitle": "Фрагмент конфигурации интеграции с Home Assistant",
-    "haBody": "Датчик <code>rest</code> опрашивает состояние, а <code>rest_command</code> запускает обновление. Свяжите оба компонента с кнопкой на панели управления и с любой нужной автоматизацией:",
+    "haBody": "Датчик <code>rest</code> опрашивает состояние, а <code>rest_command</code> запускает обновление. Свяжите оба компонента с кнопкой на панели мониторинга и с любой нужной автоматизацией:",
     "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Start VM 100 (works for LXC too — same endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup VM 100 to the 'pbs-main' storage\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
   },
   "health": {
@@ -251,7 +251,7 @@
       {
         "endpoint": "/api/storage/summary",
         "method": "GET",
-        "use": "Краткая сводка, используемая в карточках панели управления."
+        "use": "Краткая сводка, используемая в карточках панели мониторинга."
       },
       {
         "endpoint": "/api/proxmox-storage",

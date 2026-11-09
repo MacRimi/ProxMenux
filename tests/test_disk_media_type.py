@@ -49,6 +49,31 @@ class DiskMediaTypeTests(unittest.TestCase):
         # The USB bridge marks sda rotational; smartctl, through the Monitor, says solid state.
         self.assertEqual(disks, {"sda": False, "sdb": False})
 
+    def _card(self, disk, **fields):
+        device = self.root / disk / "device"
+        device.mkdir(parents=True)
+        for field, value in fields.items():
+            (device / field).write_text(value + "\n")
+
+    def test_an_sd_card_reports_its_name_serial_and_kind(self):
+        self._card("mmcblk0", name="SC32G", serial="0x1a2b3c4d", type="SD")
+        self.assertEqual(disk_identity.mmc_card("mmcblk0"),
+                         {"model": "SC32G", "serial": "0x1a2b3c4d", "interface": "SD"})
+
+    def test_an_emmc_is_told_apart_from_an_sd_card(self):
+        self._card("mmcblk1", name="BJTD4R", serial="0x00000abc", type="MMC")
+        self.assertEqual(disk_identity.mmc_card("mmcblk1")["interface"], "MMC")
+
+    def test_missing_or_empty_fields_are_left_out(self):
+        self._card("mmcblk2", name="", type="SD")
+        self.assertEqual(disk_identity.mmc_card("mmcblk2"), {"interface": "SD"})
+        self.assertEqual(disk_identity.mmc_card("mmcblk9"), {})
+
+    def test_other_disks_are_not_cards(self):
+        self._card("sdc", name="SC32G", serial="0x1", type="SD")
+        self.assertEqual(disk_identity.mmc_card("sdc"), {})
+        self.assertEqual(disk_identity.mmc_card("nvme0n1"), {})
+
 
 if __name__ == "__main__":
     unittest.main()

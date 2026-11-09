@@ -1543,7 +1543,8 @@ def _check_lxc_updates(entry: dict, *, refresh_package_cache: bool = True) -> di
 
     if family in ("debian", "ubuntu"):
         ok, stdout, err = _run_pct_pkg_listing(
-            vmid, "apt list --upgradable 2>/dev/null"
+            # C locale: the parser reads "[upgradable from:", which apt translates
+            vmid, "LC_ALL=C apt list --upgradable 2>/dev/null"
         )
         packages = _parse_apt_list_upgradable(stdout) if ok else []
     elif family == "alpine":
