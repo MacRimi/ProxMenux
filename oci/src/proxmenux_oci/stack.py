@@ -62,7 +62,9 @@ def kind(image):
             break
     if repo.startswith('library/'):
         repo = repo[len('library/'):]
-    return repo if repo in {'postgres', 'redis', 'valkey/valkey', 'mariadb', 'linuxserver/mariadb', 'mongo', 'getmeili/meilisearch'} else 'application'
+    if repo in {'postgres', 'pgvector/pgvector', 'pgvector'}:
+        return 'postgres'
+    return repo if repo in {'redis', 'valkey/valkey', 'mariadb', 'linuxserver/mariadb', 'mongo', 'getmeili/meilisearch'} else 'application'
 
 
 DEPENDENCY_VOLUMES = {'mariadb':['/var/lib/mysql'], 'linuxserver/mariadb':['/config'], 'mongo':['/data/db','/data/configdb'],
