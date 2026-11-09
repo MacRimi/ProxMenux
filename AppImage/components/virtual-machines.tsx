@@ -426,6 +426,7 @@ interface LxcMountPoint {
   runtime_fstype?: string
   runtime_options?: string
   runtime_readonly?: boolean
+  runtime_readonly_expected?: boolean
   runtime_reachable?: boolean
   runtime_error?: string | null
   // Sprint 14.x: host-side bind source state. Detects the case where the
@@ -584,7 +585,10 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
 function MountPointCard({ mp }: { mp: LxcMountPoint }) {
   const t = useT()
   const isStale = mp.runtime_reachable === false
-  const isReadonly = !isStale && mp.runtime_readonly === true
+  // Read-only as configured (ro=1, or a remote mount asked to be read-only)
+  // is shown as such without the warning colour.
+  const isReadonlyAsked = !isStale && mp.runtime_readonly === true && mp.runtime_readonly_expected === true
+  const isReadonly = !isStale && mp.runtime_readonly === true && !isReadonlyAsked
   const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
   // "Zombie bind": the host removed the source (e.g. USB pulled, manual
   // umount) but the CT mount namespace still shows the bind as mounted.
@@ -676,7 +680,9 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
                 ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                 : isReadonly
                   ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                  : mp.runtime_mounted === null
+                  : isReadonlyAsked
+                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                    : mp.runtime_mounted === null
                     ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
                     : "bg-green-500/10 text-green-500 border-green-500/20"
           }
@@ -687,7 +693,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
               ? t("vmLxc.details.mountStatus.notMounted")
               : isHostDetached
                 ? t("vmLxc.details.mountStatus.hostDetached")
-                : isReadonly
+                : isReadonly || isReadonlyAsked
                   ? t("vmLxc.details.mountStatus.readOnly")
                   : mp.runtime_mounted === null
                     ? t("vmLxc.details.mountStatus.stopped")

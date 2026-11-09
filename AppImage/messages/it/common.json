@@ -5384,6 +5384,8 @@
       "storageAvailable": "{type} disponibile",
       "storageUsage": "{percent}% utilizzato",
       "mountReachable": "Mount {type} raggiungibile",
+      "mountReachableReadOnly": "Mount {type} raggiungibile, in sola lettura",
+      "mountReadOnlyConfiguredRw": "Mount {type} in sola lettura, ma configurato in lettura e scrittura",
       "rootfsUsed": "Utilizzo rootfs: {percent}% ({size})",
       "runningCtsSafe": "CT in esecuzione con utilizzo rootfs sicuro: {count}",
       "pveStorageSafe": "Storage a blocchi PVE con utilizzo sicuro: {count}",

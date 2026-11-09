@@ -5346,6 +5346,8 @@
       "storageAvailable": "Le stockage {type} est disponible",
       "storageUsage": "{percent} % utilisé",
       "mountReachable": "Le montage {type} est accessible",
+      "mountReachableReadOnly": "Le montage {type} est accessible, en lecture seule",
+      "mountReadOnlyConfiguredRw": "Le montage {type} est en lecture seule, mais configuré en lecture-écriture",
       "rootfsUsed": "Utilisation de rootfs : {percent} % ({size})",
       "runningCtsSafe": "{count} CT en cours d'exécution ont une utilisation de rootfs saine",
       "pveStorageSafe": "{count} stockages bloc PVE ont une utilisation saine",

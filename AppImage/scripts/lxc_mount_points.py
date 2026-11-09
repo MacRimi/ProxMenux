@@ -522,6 +522,28 @@ def _read_ct_proc_mounts(host_pid: str) -> list[dict[str, Any]]:
     return out
 
 
+def _readonly_expected(vmid: str, host_pid: str, rt: dict[str, Any],
+                       config_options: dict[str, Any]) -> bool:
+    """Whether a read-only mount inside a CT is read-only because it was asked to be.
+
+    A mount point with ``ro=1`` is. A remote (NFS/CIFS) mount follows the same
+    rule as the health monitor: it is unexpected only when the configuration
+    that mounts it asks for read-write. A local filesystem without ``ro=1``
+    that turned read-only is not expected (the kernel does that on errors)."""
+    if not rt.get("rt_readonly"):
+        return False
+    if str((config_options or {}).get("ro", "")).lower() in ("1", "yes", "true", "on"):
+        return True
+    try:
+        import mount_monitor
+    except Exception:
+        return False
+    if not mount_monitor._REMOTE_FS_RE.match(rt.get("rt_fstype", "")):
+        return False
+    return mount_monitor.configured_readonly(
+        rt.get("rt_target", ""), vmid, host_pid, mount_monitor._read_proc_mounts()) is not False
+
+
 def _host_source_state(source: str) -> dict[str, Any]:
     """Inspect a host-side bind source to detect 'zombie' binds.
 
@@ -747,6 +769,7 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
                 "runtime_fstype": rt["rt_fstype"],
                 "runtime_options": rt["rt_options"],
                 "runtime_readonly": rt["rt_readonly"],
+                "runtime_readonly_expected": _readonly_expected(vmid, host_pid, rt, entry.get("config_options", {})),
                 "runtime_reachable": health["reachable"],
                 "runtime_error": health["error"],
             })
@@ -798,6 +821,7 @@ def get_lxc_mount_points_runtime(vmid: str) -> dict[str, Any]:
                     "runtime_fstype": rt["rt_fstype"],
                     "runtime_options": rt["rt_options"],
                     "runtime_readonly": rt["rt_readonly"],
+                    "runtime_readonly_expected": _readonly_expected(vmid, host_pid, rt, {}),
                     "runtime_reachable": health["reachable"],
                     "runtime_error": health["error"],
                 })
@@ -892,6 +916,7 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
                 "runtime_fstype": rt["rt_fstype"],
                 "runtime_options": rt["rt_options"],
                 "runtime_readonly": rt["rt_readonly"],
+                "runtime_readonly_expected": _readonly_expected(vmid, host_pid, rt, entry.get("config_options", {})),
                 "runtime_reachable": health["reachable"],
                 "runtime_error": health["error"],
             })
@@ -961,6 +986,7 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
                     "runtime_fstype": rt["rt_fstype"],
                     "runtime_options": rt["rt_options"],
                     "runtime_readonly": rt["rt_readonly"],
+                    "runtime_readonly_expected": _readonly_expected(vmid, host_pid, rt, {}),
                     "runtime_reachable": health["reachable"],
                     "runtime_error": health["error"],
                 })

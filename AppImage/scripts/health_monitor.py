@@ -6031,8 +6031,9 @@ class HealthMonitor:
 
         Stale mounts get a CRITICAL — they're the failure mode that
         actually breaks user workflows (writes silently redirect to the
-        local FS and fill the disk). Read-only that wasn't requested
-        gets a WARNING. The persistence/clear logic mirrors the
+        local FS and fill the disk). A mount that is read-only although
+        its configuration asks for read-write gets a WARNING; one asked
+        to be read-only is healthy. The persistence/clear logic mirrors the
         Proxmox-storage check so the same Health → details panel can
         render the result, and so notifications go through the same
         pipeline (events.py / templates.py) with the standard 1h
@@ -6162,7 +6163,7 @@ class HealthMonitor:
                     'status': 'WARNING',
                     'error_key': error_key,
                     'dismissable': True,
-                    'detail': f'{fstype} mount unexpectedly read-only',
+                    'detail': f'{fstype} mount read-only, configured read-write',
                     'fstype': fstype,
                     'source': m.get('source', ''),
                     'lxc_id': lxc_id,
@@ -6174,9 +6175,9 @@ class HealthMonitor:
                     category='storage',
                     severity='WARNING',
                     reason=(
-                        f'Remote mount {target} inside {ct_label} is read-only'
+                        f'Remote mount {target} inside {ct_label} is read-only but configured read-write'
                         if lxc_id else
-                        f'Remote mount {target} is read-only'
+                        f'Remote mount {target} is read-only but configured read-write'
                     ),
                     details={
                         'mount_target': target,
@@ -6191,7 +6192,9 @@ class HealthMonitor:
             else:
                 checks[check_label] = {
                     'status': 'OK',
-                    'detail': f'{fstype} mount reachable',
+                    'detail': (f'{fstype} mount reachable, read-only'
+                               if m.get('readonly') else f'{fstype} mount reachable'),
+                    'readonly': bool(m.get('readonly')),
                     'fstype': fstype,
                     'source': m.get('source', ''),
                     'lxc_id': lxc_id,

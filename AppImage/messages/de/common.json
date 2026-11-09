@@ -5346,6 +5346,8 @@
       "storageAvailable": "{type} Speicher ist verfügbar",
       "storageUsage": "{percent} % belegt",
       "mountReachable": "{type} Mount ist erreichbar",
+      "mountReachableReadOnly": "{type} Mount ist erreichbar, schreibgeschützt",
+      "mountReadOnlyConfiguredRw": "{type} Mount ist schreibgeschützt, aber für Lesen und Schreiben konfiguriert",
       "rootfsUsed": "Rootfs-Nutzung: {percent} % ({size})",
       "runningCtsSafe": "{count} laufende CTs haben eine sichere Rootfs-Nutzung",
       "pveStorageSafe": "{count} PVE-Blockspeicherziele können sicher verwendet werden",
