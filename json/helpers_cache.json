@@ -1521,7 +1521,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "archivebox",
-      "password": "community-scripts.org"
+      "password": "cat ~/archivebox.creds"
     },
     "os": "debian"
   },
@@ -1861,7 +1861,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "authelia",
-      "password": "authelia"
+      "password": "cat ~/authelia.creds"
     },
     "os": "debian"
   },
@@ -4317,7 +4317,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "community-scripts.org"
+      "password": "cat ~/copyparty.creds"
     },
     "os": "debian"
   },
@@ -7223,7 +7223,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "community-scripts.org"
+      "password": "cat ~/filebrowser.creds"
     },
     "os": "debian"
   },
@@ -7261,7 +7261,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "community-scripts.org"
+      "password": "cat ~/filebrowser.creds"
     },
     "os": "alpine"
   },
@@ -7297,7 +7297,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "community-scripts.org"
+      "password": "cat ~/filebrowser-quantum.creds"
     },
     "os": "debian"
   },
@@ -7333,7 +7333,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "community-scripts.org"
+      "password": "cat ~/filebrowser-quantum.creds"
     },
     "os": "alpine"
   },
@@ -10109,7 +10109,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "admin"
+      "password": "cat ~/homelable.creds"
     },
     "os": "debian"
   },
@@ -11839,7 +11839,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "tmpadm",
-      "password": "admin123"
+      "password": "cat ~/keycloak.creds"
     },
     "os": "debian"
   },
@@ -11911,8 +11911,8 @@
     ],
     "config_path": "",
     "default_credentials": {
-      "username": "admin@community-scripts.org",
-      "password": "community-scripts.org"
+      "username": "admin",
+      "password": "cat ~/kimai.creds"
     },
     "os": "debian"
   },
@@ -14654,7 +14654,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin@community-scripts.org",
-      "password": "community-scripts.org"
+      "password": "cat ~/monica.creds"
     },
     "os": "debian"
   },
@@ -14968,7 +14968,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "nagiosadmin",
-      "password": "nagiosadmin"
+      "password": "cat ~/nagios.creds"
     },
     "os": "debian"
   },
@@ -15110,7 +15110,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "",
-      "password": "admin"
+      "password": "cat ~/neko.creds"
     },
     "os": "debian"
   },
@@ -15991,8 +15991,8 @@
     ],
     "config_path": "",
     "default_credentials": {
-      "username": "helper-scripts",
-      "password": "helper-scripts"
+      "username": "community-scripts",
+      "password": "cat ~/nodebb.creds"
     },
     "os": "ubuntu"
   },
@@ -16204,7 +16204,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin@local.com",
-      "password": "community-scripts.org"
+      "password": "cat ~/npmplus.creds"
     },
     "os": "alpine"
   },
@@ -18234,7 +18234,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin@paymenter.org",
-      "password": "paymenter"
+      "password": "cat ~/paymenter.creds"
     },
     "os": "debian"
   },
@@ -18518,7 +18518,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "changeme"
+      "password": "cat ~/photoprism.creds"
     },
     "os": "debian"
   },
@@ -20414,7 +20414,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "changeme"
+      "password": "cat ~/qbittorrent.creds"
     },
     "os": "debian"
   },
@@ -20575,7 +20575,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "proxmox",
-      "password": "proxmox"
+      "password": "cat ~/rabbitmq.creds"
     },
     "os": "debian"
   },
@@ -22447,7 +22447,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "admin",
-      "password": "admin"
+      "password": "cat ~/snapotter.creds"
     },
     "os": "debian"
   },
@@ -27100,7 +27100,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "root",
-      "password": "root"
+      "password": "cat ~/webmin.creds"
     },
     "os": "debian"
   },
