@@ -2451,7 +2451,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <li>
                       {st("apiTokens.seeGuideBefore")}{" "}
                       <a
-                        href="https://proxmenux.com/docs/monitor/integrations"
+                        href={`https://proxmenux.com/${language}/docs/monitor/integrations/`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-200 hover:text-blue-100 underline underline-offset-2"

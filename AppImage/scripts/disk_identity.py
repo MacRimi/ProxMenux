@@ -91,6 +91,26 @@ def media_type(name: str, rate: int) -> str:
     return "HDD" if rate else "SSD"
 
 
+def mmc_card(name: str) -> Dict[str, str]:
+    """Name, serial and kind ("SD" or "MMC") of an SD card or eMMC.
+
+    These cards have no SMART data, so smartctl leaves model and serial
+    empty. The kernel reads them from the card when it is detected and
+    exposes them under /sys. Empty for any other disk."""
+    if not name.startswith("mmcblk"):
+        return {}
+    card: Dict[str, str] = {}
+    for key, field in (("model", "name"), ("serial", "serial"), ("interface", "type")):
+        try:
+            with open(f"{_SYS_BLOCK}/{name}/device/{field}") as value:
+                text = value.read().strip()
+        except OSError:
+            continue
+        if text:
+            card[key] = text
+    return card
+
+
 def names_for_keys(keys) -> set:
     """Current kernel names of the disks whose identity is in ``keys``."""
     if not keys:
