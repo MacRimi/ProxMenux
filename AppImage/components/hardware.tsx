@@ -33,7 +33,8 @@ const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
 
   // Remove spaces and convert to uppercase
-  const cleaned = sizeStr.trim().toUpperCase()
+  // lsblk follows the locale: "29,7G" on a French host
+  const cleaned = sizeStr.trim().toUpperCase().replace(",", ".")
 
   // Extract number and unit
   const match = cleaned.match(/^([\d.]+)([KMGT]?)$/)

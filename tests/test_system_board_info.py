@@ -68,6 +68,11 @@ class LscpuTests(unittest.TestCase):
         self.assertEqual(cpu["l3_cache"], "16 MiB")
         self.assertEqual(cpu["min_mhz"], 800.0)
 
+    def test_a_comma_decimal_separator_is_read(self):
+        cpu = system_board_info.parse_lscpu("CPU max MHz: 1800,0000\nCPU min MHz: 600,0000\n")
+        self.assertEqual(cpu["max_mhz"], 1800.0)
+        self.assertEqual(cpu["min_mhz"], 600.0)
+
     def test_garbage_never_raises(self):
         self.assertEqual(system_board_info.parse_lscpu(""), {})
         self.assertEqual(system_board_info.parse_lscpu("Socket(s): many\nCPU(s):\n"), {})
