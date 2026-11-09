@@ -267,7 +267,7 @@
       "<strong>Режим HTTPS / WSS:</strong> сервер TLS использует <code>gevent.pywsgi.WSGIServer</code> со стандартным обработчиком; <code>flask-sock</code> обрабатывает соединения WebSocket через TLS."
     ],
     "outro": "Дочерние процессы терминала наследуют <code>User=root</code> от службы. Для открытия WebSocket требуется краткосрочный одноразовый билет, полученный через конечную точку terminal-ticket с аутентификацией и административными правами доступа.",
-    "proxyNote": "Если вы обращаетесь к Monitor через обратный прокси-сервер, убедитесь, что пересылка WebSocket включена (заголовки <code>Upgrade</code> и <code>Connection</code>). Без неё терминал работать не будет."
+    "proxyNote": "Если Вы обращаетесь к Monitor через обратный прокси-сервер, убедитесь, что пересылка WebSocket включена (заголовки <code>Upgrade</code> и <code>Connection</code>). Без неё терминал работать не будет."
   },
   "proxy": {
     "heading": "Обратный прокси и Fail2Ban",

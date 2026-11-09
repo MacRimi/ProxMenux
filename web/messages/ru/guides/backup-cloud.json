@@ -13,7 +13,7 @@
   "intro": {
     "pbsCalloutTitle": "Сначала рассмотрите Proxmox Backup Server",
     "pbsCalloutBody": "На отдельном компьютере, соответствующем требованиям к архитектуре x86-64, <pbsLink>Proxmox Backup Server</pbsLink> позволяет создавать инкрементальные резервные копии с дедупликацией и при необходимости использовать шифрование на стороне клиента. Это решение предназначено для резервного копирования ВМ. В этом руководстве вместо него рассматривается подключение личного облачного хранилища, например Google Drive, Mega, OneDrive или Dropbox, в качестве места хранения резервных копий.",
-    "stepsTitle": "Что вы сделаете",
+    "stepsTitle": "Что Вы сделаете",
     "steps": [
       "Создадите каталог на узле Proxmox и зарегистрируете его как хранилище данных с поддержкой vzdump.",
       "Установите и настроите rclone для своего облачного провайдера.",
@@ -45,19 +45,19 @@
     "body": "<rcloneLink>rclone</rcloneLink> — инструмент для взаимодействия с провайдерами облачных хранилищ. Установите его из репозиториев Debian:",
     "installCode": "apt-get update\napt-get install -y rclone",
     "newerCalloutTitle": "Если нужна более новая версия rclone",
-    "newerCalloutBody": "Если вам нужна более новая версия rclone, чем доступна в Debian, используйте официальный установщик:",
+    "newerCalloutBody": "Если Вам нужна более новая версия rclone, чем доступна в Debian, используйте официальный установщик:",
     "newerCode": "curl https://rclone.org/install.sh | bash",
     "tunnelHeading": "2.1 Аутентификация в браузере через туннель SSH",
     "tunnelBody": "Некоторые провайдеры требуют входа через браузер, но на хосте Proxmox браузера обычно нет. Следуйте <remoteSetupLink>инструкции по удалённой настройке rclone</remoteSetupLink>: используйте браузер на ноутбуке и перенаправьте его обратное подключение к localhost через SSH на rclone на хосте.",
-    "tunnelFrom": "На вашем <strong>ноутбуке</strong> (замените <code>ip_proxmox</code> IP-адресом Proxmox):",
+    "tunnelFrom": "На Вашем <strong>ноутбуке</strong> (замените <code>ip_proxmox</code> IP-адресом Proxmox):",
     "tunnelCode": "ssh -L localhost:53682:localhost:53682 root@ip_proxmox",
-    "tunnelAfter": "Этот сеанс SSH открывает порт 53682 на localhost вашего ноутбука и перенаправляет подключения на тот же порт хоста Proxmox. Не закрывайте сеанс во время настройки rclone, описанной ниже.",
+    "tunnelAfter": "Этот сеанс SSH открывает порт 53682 на localhost Вашего ноутбука и перенаправляет подключения на тот же порт хоста Proxmox. Не закрывайте сеанс во время настройки rclone, описанной ниже.",
     "runHeading": "2.2 Выполните rclone config",
     "runBody": "В только что открытом сеансе SSH выполните:",
     "runCode": "rclone config",
-    "runAfter": "Следуйте подсказкам, чтобы добавить новое удалённое хранилище. Конкретные ответы зависят от вашего провайдера — см. <providerDocsLink>документацию rclone по провайдерам</providerDocsLink> для Google Drive, Mega, Dropbox, OneDrive и т. д. Ключевой шаг — вопрос об аутентификации:",
-    "authPrompt": "Использовать веб-браузер для автоматической аутентификации rclone в удалённом хранилище?\n * Ответьте Y, если на машине, где запущен rclone, есть доступный вам веб-браузер\n * Ответьте N, если rclone запущен на (удалённой) машине без доступа к веб-браузеру\nЕсли не уверены, попробуйте Y. Если с Y не получилось, попробуйте N.\ny) Да\nn) Нет\ny/n> y",
-    "authAfter": "Ответьте <strong>Y</strong> — rclone выведет URL-адрес localhost. Откройте его в <strong>браузере на вашем ноутбуке</strong> (туннель SSH обеспечит правильную маршрутизацию), разрешите приложению rclone доступ к вашему облачному хранилищу, и настройка завершится.",
+    "runAfter": "Следуйте подсказкам, чтобы добавить новое удалённое хранилище. Конкретные ответы зависят от Вашего провайдера — см. <providerDocsLink>документацию rclone по провайдерам</providerDocsLink> для Google Drive, Mega, Dropbox, OneDrive и т. д. Ключевой шаг — вопрос об аутентификации:",
+    "authPrompt": "Использовать веб-браузер для автоматической аутентификации rclone в удалённом хранилище?\n * Ответьте Y, если на машине, где запущен rclone, есть доступный Вам веб-браузер\n * Ответьте N, если rclone запущен на (удалённой) машине без доступа к веб-браузеру\nЕсли не уверены, попробуйте Y. Если с Y не получилось, попробуйте N.\ny) Да\nn) Нет\ny/n> y",
+    "authAfter": "Ответьте <strong>Y</strong> — rclone выведет URL-адрес localhost. Откройте его в <strong>браузере на Вашем ноутбуке</strong> (туннель SSH обеспечит правильную маршрутизацию), разрешите приложению rclone доступ к Вашему облачному хранилищу, и настройка завершится.",
     "nameRemote": "Когда появится запрос имени удалённого хранилища, укажите имя, соответствующее созданному каталогу, например <code>gdrive</code>."
   },
   "mount": {
@@ -78,7 +78,7 @@
     "createCode": "nano /etc/systemd/system/rclone-gdrive.service",
     "pasteIntro": "Вставьте:",
     "unitCode": "[Unit]\nDescription=rclone mount for Proxmox cloud backups\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=notify\nExecStart=/usr/bin/rclone mount \\\n    gdrive:/PBC /mnt/gdrive \\\n    --allow-other \\\n    --allow-non-empty \\\n    --vfs-cache-mode writes \\\n    --log-level INFO \\\n    --log-file /var/log/rclone-gdrive.log\nExecStop=/bin/fusermount -uz /mnt/gdrive\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target",
-    "adjust": "Измените <code>gdrive:/PBC</code> и <code>/mnt/gdrive</code>, если вы использовали другие имена. Сохраните файл (<code>Ctrl+X</code>), затем включите автозапуск и запустите юнит:",
+    "adjust": "Измените <code>gdrive:/PBC</code> и <code>/mnt/gdrive</code>, если Вы использовали другие имена. Сохраните файл (<code>Ctrl+X</code>), затем включите автозапуск и запустите юнит:",
     "enableCode": "systemctl daemon-reload\nsystemctl enable --now rclone-gdrive.service",
     "verifyIntro": "Проверьте:",
     "verifyCode": "systemctl status rclone-gdrive.service\nmount | grep /mnt/gdrive",
@@ -96,7 +96,7 @@
   "retention": {
     "heading": "6. Хранение резервных копий — контролируйте использование облачной квоты",
     "body": "Архивы Proxmox vzdump — это <strong>полные резервные копии, а не инкрементальные</strong>. Их фактический размер зависит от включённых данных и сжатия, а не только от ёмкости виртуального диска. Если один архив занимает 30 ГБ, для хранения пяти архивов потребуется примерно 150 ГБ. Настройте политику хранения, чтобы облачное хранилище не переполнилось.",
-    "uiPath": "В интерфейсе Proxmox: <strong>Datacenter → Backup → [ваше задание] → Хранение</strong>:",
+    "uiPath": "В интерфейсе Proxmox: <strong>Datacenter → Backup → [Ваше задание] → Хранение</strong>:",
     "image7Alt": "Настройки хранения резервных копий в Proxmox",
     "starterIntro": "Разумные начальные значения для домашней или лабораторной среды:",
     "starterItems": [
