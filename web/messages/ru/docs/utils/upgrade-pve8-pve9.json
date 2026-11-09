@@ -89,7 +89,7 @@
         },
         {
           "settingRich": "<code>--force-confold</code>",
-          "effectRich": "Для изменённых файлов: использовать действие dpkg по умолчанию, если оно доступно; иначе <strong>сохранить вашу версию</strong>."
+          "effectRich": "Для изменённых файлов: использовать действие dpkg по умолчанию, если оно доступно; иначе <strong>сохранить Вашу версию</strong>."
         }
       ]
     },
@@ -297,7 +297,7 @@
       {
         "href": "https://www.debian.org/releases/trixie/releasenotes",
         "title": "Примечания к выпуску Debian Trixie",
-        "desc": "PVE 9 поставляется на базе Debian Trixie. Прочитайте примечания к выпуску Debian, чтобы узнать об изменениях базовой ОС, которые также затрагивают ваш хост."
+        "desc": "PVE 9 поставляется на базе Debian Trixie. Прочитайте примечания к выпуску Debian, чтобы узнать об изменениях базовой ОС, которые также затрагивают Ваш хост."
       },
       {
         "href": "https://forum.proxmox.com/forums/proxmox-ve-installation-and-configuration.16/",

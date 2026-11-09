@@ -47,7 +47,7 @@
       },
       {
         "title": "Проверка IOMMU",
-        "bodyRich": "Если IOMMU не включён в командной строке ядра, ProxMenux предлагает включить его. Скрипт изменяет <code>/etc/kernel/cmdline</code> (для systemd-boot) или <code>/etc/default/grub</code> (для GRUB) и добавляет параметр, соответствующий вашему процессору:",
+        "bodyRich": "Если IOMMU не включён в командной строке ядра, ProxMenux предлагает включить его. Скрипт изменяет <code>/etc/kernel/cmdline</code> (для systemd-boot) или <code>/etc/default/grub</code> (для GRUB) и добавляет параметр, соответствующий Вашему процессору:",
         "items": [
           "<code>intel_iommu=on</code> для процессоров Intel.",
           "<code>amd_iommu=on</code> для процессоров AMD."

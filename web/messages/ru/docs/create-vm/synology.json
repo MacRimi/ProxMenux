@@ -355,7 +355,7 @@
           {
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_4.png",
             "alt": "TinyCore MAC-адрес виртуальной машины",
-            "caption": "TinyCore MAC-адрес виртуальной машины — выберите, использовать ли MAC-адрес вашей виртуальной машины или случайный MAC-адрес"
+            "caption": "TinyCore MAC-адрес виртуальной машины — выберите, использовать ли MAC-адрес Вашей виртуальной машины или случайный MAC-адрес"
           }
         ]
       }

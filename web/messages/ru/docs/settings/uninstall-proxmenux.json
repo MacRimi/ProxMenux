@@ -48,7 +48,7 @@
   "restored": {
     "heading": "Что восстанавливается",
     "items": [
-      "Если <code>/root/.bashrc.bak</code> существует → переименовывается обратно в <code>/root/.bashrc</code> (восстанавливается ваш исходный bashrc).",
+      "Если <code>/root/.bashrc.bak</code> существует → переименовывается обратно в <code>/root/.bashrc</code> (восстанавливается Ваш исходный bashrc).",
       "Если <code>/etc/motd.bak</code> существует → переименовывается обратно в <code>/etc/motd</code>. В противном случае строка ProxMenux (<em>“This system is optimised by: ProxMenux”</em>) удаляется из существующего motd с помощью sed."
     ]
   },
