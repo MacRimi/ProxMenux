@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "APT-Repositorys + vollständiges Upgrade",
-      "what": "Deaktiviert die Enterprise-Quellen pve-enterprise.sources und ceph.sources, erstellt eine passende No-Subscription-Quelle für den Debian-Codenamen des Hosts und führt apt update && apt full-upgrade -y aus (offizieller Proxmox-Upgrade-Befehl).",
+      "what": "Deaktiviert die Enterprise-Quellen (pve-enterprise.sources / ceph.sources auf PVE 9, die .list-Dateien auf PVE 8), erstellt eine passende No-Subscription-Quelle für den Debian-Codenamen des Hosts und führt apt update && apt full-upgrade -y aus (dist-upgrade auf PVE 8).",
       "category": "Grundeinstellungen",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "Der erste Schritt der automatisierten Nachinstallation ist das Proxmox-Upgrade. Für einen laufenden Host innerhalb derselben Hauptversion empfiehlt Proxmox selbst:",
     "after": "Diese Zeile ist der offizielle Befehl für aktuelle Proxmox-Versionen. Das automatisierte Skript führt <strong>genau</strong> das aus und ergänzt Repository-Bereinigung und Nacharbeiten gemäß Upgrade-Anleitung — dieselben Schritte wie das separate Werkzeug <link>Proxmox-Systemaktualisierung</link>:",
     "items": [
-      "Deaktiviert die Enterprise-Quellen <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, entfernt alte Repository-Dateien und erstellt eine saubere No-Subscription-Quelle für den Codenamen des Hosts.",
+      "Deaktiviert die Enterprise-Quellen (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> auf PVE 9, die <code>.list</code>-Dateien auf PVE 8), entfernt alte Repository-Dateien und erstellt eine saubere No-Subscription-Quelle für den Codenamen des Hosts.",
       "Führt das Upgrade nicht interaktiv mit <code>DEBIAN_FRONTEND=noninteractive</code> und <code>--force-confdef --force-confold</code> aus. Angepasste Konfigurationsdateien bleiben erhalten, auch wenn sie sich im Upstream geändert haben.",
       "Installiert wichtige Proxmox-Pakete, wenn sie fehlen (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "LVM Metadaten-Sanitätsprüfung, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> und eine Neustartaufforderung nur, wenn der Kernel tatsächlich geändert wurde."

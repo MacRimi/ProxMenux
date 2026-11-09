@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "Dépôts APT + mise à jour complète",
-      "what": "Désactive les dépôts Enterprise pve-enterprise.sources et ceph.sources, crée une source sans abonnement pour le nom de code Debian de l’hôte, puis lance apt update && apt full-upgrade -y (commande officielle de mise à niveau Proxmox).",
+      "what": "Désactive les dépôts Enterprise (pve-enterprise.sources / ceph.sources sur PVE 9, les fichiers .list sur PVE 8), crée une source sans abonnement pour le nom de code Debian de l’hôte, puis lance apt update && apt full-upgrade -y (dist-upgrade sur PVE 8).",
       "category": "Paramètres de base",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "La première étape du parcours automatisé est la mise à niveau Proxmox. Pour un hôte en fonctionnement au sein de la même version majeure, Proxmox recommande :",
     "after": "Cette ligne est la commande officielle des versions actuelles de Proxmox. Le script automatisé l’exécute <strong>exactement</strong> et ajoute le nettoyage des dépôts et les tâches après mise à niveau recommandés par le guide — comme l’utilitaire autonome <link>Mise à jour du système Proxmox</link> :",
     "items": [
-      "Désactive les sources Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, supprime les anciens fichiers de dépôts et crée une source sans abonnement pour le nom de code de l’hôte.",
+      "Désactive les dépôts Enterprise (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> sur PVE 9, les fichiers <code>.list</code> sur PVE 8), supprime les anciens fichiers de dépôts et crée une source sans abonnement pour le nom de code de l’hôte.",
       "Exécute la mise à jour non interactive avec <code>DEBIAN_FRONTEND=noninteractive</code> et <code>--force-confdef --force-confold</code> — les fichiers de configuration que vous avez personnalisés restent les vôtres lorsque l'amont les a également modifiés.",
       "Installe les paquets Proxmox essentiels s’ils manquent (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Vérification de cohérence des métadonnées LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> et demande de redémarrage seulement si le noyau a changé."

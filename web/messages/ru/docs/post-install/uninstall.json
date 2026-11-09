@@ -33,7 +33,7 @@
         "title": "Выполнение отмены",
         "body1": "Для каждого выбранного пункта ProxMenux вызывает соответствующую функцию удаления. В большинстве случаев отмена выполняется по одному из трёх сценариев:",
         "items": [
-          "<strong>Восстановление из резервной копии</strong> — восстановление <code>.bak</code>, сохранённой при применении оптимизации (bashrc, logrotate.conf, journald.conf, параметры командной строки GRUB/ядра).",
+          "<strong>Восстановление из резервной копии</strong>: восстановление <code>.bak</code>, сохранённой при применении оптимизации (bashrc, logrotate.conf). journald.conf перезаписывается стандартными значениями, а из GRUB / командной строки ядра удаляются только параметры ProxMenux.",
           "<strong>Удаление конфигурации</strong> — удаление <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> или юнита systemd, созданных ProxMenux, с последующей перезагрузкой конфигурации.",
           "<strong>Переустановка пакетов</strong> — для изменений интерфейса, таких как баннер подписки, исходные пакеты переустанавливаются с помощью <code>--force-confnew</code>, чтобы восстановить поставляемую с ними конфигурацию."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Удаление баннера подписки",
-            "restores": "Сначала выполняется попытка восстановить файлы интерфейса из собственных резервных копий ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* и, если мобильный интерфейс изменён, index.html.tpl.backup.*). Только если резервная копия отсутствует или повреждена, выполняется переустановка pve-manager, proxmox-widget-toolkit, libjs-extjs и libpve-http-server-perl с force-confnew. Также удаляются кешированные копии .js / .gz."
+            "restores": "В PVE 9 и PBS сначала выполняется попытка восстановить файлы интерфейса из собственных резервных копий ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* и, если мобильный интерфейс изменён, index.html.tpl.backup.*). В PVE 8 или если резервная копия отсутствует или повреждена, выполняется переустановка pve-manager, proxmox-widget-toolkit, libjs-extjs и libpve-http-server-perl с force-confnew. Также удаляются кешированные копии .js / .gz."
           },
           {
             "tool": "Пропуск загрузки переводов APT",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "Увеличение системных лимитов",
-            "restores": "Удаляет /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf и /etc/security/limits.d/99-limits.conf. Восстанавливает прежние ограничения PAM и настройки systemd DefaultLimitNOFILE. При очистке /root/.profile удаляется устаревшая строка ulimit -n 256000; строка ulimit -n 1048576, добавленная текущим установщиком, может остаться и потребовать ручного удаления."
+            "restores": "Удаляет /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf и /etc/security/limits.d/99-limits.conf. Восстанавливает прежние ограничения PAM и настройки systemd DefaultLimitNOFILE. Удаляет из /root/.profile как устаревшую строку ulimit -n 256000, так и текущую строку ulimit -n 1048576."
           },
           {
             "tool": "Профиль подкачки ZRAM",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Автоматические снимки ZFS",
-            "restores": "Удаляет записи cron, добавленные скриптом, и предлагает выполнить apt purge zfs-auto-snapshot. Существующие наборы данных снимков в пулах остаются нетронутыми — при необходимости удалите их отдельно."
+            "restores": "Без запроса выполняет полное удаление (purge) пакета zfs-auto-snapshot, при этом удаляются и его файлы cron. Существующие наборы данных снимков в пулах остаются нетронутыми — при необходимости удалите их отдельно."
           },
           {
             "tool": "Ограничения скорости vzdump",

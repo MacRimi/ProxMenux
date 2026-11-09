@@ -69,11 +69,11 @@
       },
       {
         "title": "Aggiornamento del Registro inviato al Monitor",
-        "body": "Al termine del gruppo, il menu invia una richiesta POST a <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> per ricostruire <code>/usr/local/share/proxmenux/updates_available.json</code>. Dopo tutti gli aggiornamenti scompaiono il contatore nella scheda Ottimizzazioni e la voce condizionale della shell, senza attendere la scansione successiva. La scheda resta disponibile."
+        "body": "Al termine del gruppo, il menu invia una richiesta POST a <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> (https quando SSL di Monitor è abilitato) per ricostruire <code>/usr/local/share/proxmenux/updates_available.json</code>. Dopo tutti gli aggiornamenti scompaiono il contatore nella scheda Ottimizzazioni e la voce condizionale della shell, senza attendere la scansione successiva. La scheda resta disponibile."
       }
     ],
     "jqTitle": "jq è necessario",
-    "jqBody": "La lista del percorso A usa <code>jq</code> per leggere il JSON degli aggiornamenti. Se <code>jq</code> manca, termina senza messaggi: vedresti il menu con il conteggio ma nulla accadrebbe dopo la selezione. Su un’installazione Proxmox moderna <code>jq</code> è presente; in caso di dubbio esegui <code>apt install -y jq</code>."
+    "jqBody": "La lista del percorso A usa <code>jq</code> per leggere il JSON degli aggiornamenti. Senza <code>jq</code> la voce “Apply available updates” è nascosta e, se il selettore viene raggiunto comunque, mostra “jq is required to apply updates from this menu”. Su un’installazione Proxmox moderna <code>jq</code> è presente; in caso di dubbio esegui <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "Come differisce dagli altri percorsi",

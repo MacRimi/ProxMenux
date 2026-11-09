@@ -69,11 +69,11 @@
       },
       {
         "title": "Registrieraktualisierung an den Monitor gesendet",
-        "body": "Nach dem Durchlauf sendet das Menü eine POST-Anfrage an <code>http://127.0.0.1:8008/api/updates/post-install/scan</code>, um <code>/usr/local/share/proxmenux/updates_available.json</code> neu zu erstellen. Nach Anwendung aller Updates verschwinden das Update-Zählabzeichen und der bedingte Shell-Menüeintrag ohne Warten auf den nächsten Scan. Die Optimierungskarte bleibt verfügbar."
+        "body": "Nach dem Durchlauf sendet das Menü eine POST-Anfrage an <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> (https, wenn Monitor SSL aktiviert ist), um <code>/usr/local/share/proxmenux/updates_available.json</code> neu zu erstellen. Nach Anwendung aller Updates verschwinden das Update-Zählabzeichen und der bedingte Shell-Menüeintrag ohne Warten auf den nächsten Scan. Die Optimierungskarte bleibt verfügbar."
       }
     ],
     "jqTitle": "jq ist erforderlich",
-    "jqBody": "Die Path-A-Checkliste basiert auf <code>jq</code>, um die ausstehenden Updates JSON zu analysieren. Wenn <code>jq</code> fehlt, verlässt der Fluss lautlos - Sie würden den Menüeintrag mit einer Zählung sehen, aber nach dem Auswählen von Zeilen würde nichts passieren. Auf jeder modernen Proxmox-Installation ist <code>jq</code> vorhanden; im Zweifelsfall führen Sie <code>apt install -y jq</code> aus."
+    "jqBody": "Die Path-A-Checkliste basiert auf <code>jq</code>, um die ausstehenden Updates JSON zu analysieren. Ohne <code>jq</code> wird der Eintrag „Apply available updates“ ausgeblendet, und wird die Auswahl trotzdem erreicht, zeigt sie „jq is required to apply updates from this menu“. Auf jeder modernen Proxmox-Installation ist <code>jq</code> vorhanden; im Zweifelsfall führen Sie <code>apt install -y jq</code> aus."
   },
   "differs": {
     "heading": "Wie es sich von den anderen Pfaden unterscheidet",

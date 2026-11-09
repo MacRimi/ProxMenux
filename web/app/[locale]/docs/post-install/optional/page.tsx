@@ -111,14 +111,14 @@ export default async function OptionalSettingsPage({
 # On Proxmox VE 9 (Debian trixie) — deb822 format
 cat > /etc/apt/sources.list.d/ceph.sources <<'EOF'
 Types: deb
-URIs: http://download.proxmox.com/debian/ceph-squid
+URIs: https://download.proxmox.com/debian/ceph-squid
 Suites: trixie
 Components: no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
 
 # On Proxmox VE 8 (Debian bookworm) — legacy one-liner
-# echo "deb https://download.proxmox.com/debian/ceph-squid $(lsb_release -cs) no-subscription" \\
+# echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] https://download.proxmox.com/debian/ceph-squid $(lsb_release -cs) no-subscription" \\
 #   > /etc/apt/sources.list.d/ceph-squid.list
 
 # Update package lists

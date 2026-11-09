@@ -33,7 +33,7 @@
         "title": "Exécution de la restauration",
         "body1": "Pour chaque élément sélectionné, ProxMenux appelle sa fonction de désinstallation correspondante. La plupart des renversements suivent l'un des trois modèles suivants :",
         "items": [
-          "<strong>Basé sur la sauvegarde</strong> — restaurer un <code>.bak</code> capturé au moment de l'application (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Basé sur la sauvegarde</strong> : restaurer un <code>.bak</code> capturé au moment de l’application (bashrc, logrotate.conf). journald.conf est réécrit avec les valeurs par défaut d’origine, et seuls les tokens ProxMenux sont retirés de GRUB / de la ligne de commande du noyau.",
           "<strong>Suppression de configuration</strong> — retire les fichiers ProxMenux <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> ou l’unité systemd, puis recharge.",
           "<strong>Réinstallation de paquets</strong> — pour les modifications d’interface comme l’avertissement d’abonnement, réinstalle les paquets originaux avec <code>--force-confnew</code> pour rétablir les réglages fournis."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Suppression de la bannière d'abonnement",
-            "restores": "D'abord essayer de restaurer les fichiers d'interface utilisateur à partir des sauvegardes de ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* et, lorsque l'interface utilisateur mobile est patchée, index.html.tpl.backup.*). Seulement si une sauvegarde est manquante ou corrompue, revient à réinstaller pve-manager, proxmox-widget-toolkit, libjs-extjs et libpve-http-server-perl avec force-confnew. Efface également les copies en cache .js / .gz."
+            "restores": "Sur PVE 9 et PBS, essaie d’abord de restaurer les fichiers d’interface utilisateur à partir des sauvegardes de ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* et, lorsque l’interface utilisateur mobile est patchée, index.html.tpl.backup.*). Sur PVE 8, ou si une sauvegarde est manquante ou corrompue, revient à réinstaller pve-manager, proxmox-widget-toolkit, libjs-extjs et libpve-http-server-perl avec force-confnew. Efface également les copies en cache .js / .gz."
           },
           {
             "tool": "Ignorer les langues APT",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "Augmentation des limites du système",
-            "restores": "Supprime /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf et /etc/security/limits.d/99-limits.conf. Rétablit les limites PAM et DefaultLimitNOFILE systemd. Dans /root/.profile, seul l’ancien ulimit -n 256000 est retiré ; ulimit -n 1048576 de l’installateur actuel peut rester et nécessiter une suppression manuelle."
+            "restores": "Supprime /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf et /etc/security/limits.d/99-limits.conf. Rétablit les limites PAM et DefaultLimitNOFILE systemd. Retire de /root/.profile à la fois l’ancienne ligne ulimit -n 256000 et la ligne actuelle ulimit -n 1048576."
           },
           {
             "tool": "Profil d'échange ZRAM",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Instantanés automatiques ZFS",
-            "restores": "Supprime les tâches cron écrites par le script et propose apt purge zfs-auto-snapshot. Les instantanés existants sur les pools restent intacts ; supprimez-les séparément si nécessaire."
+            "restores": "Purge le paquet zfs-auto-snapshot sans demander, ce qui supprime aussi ses fichiers cron. Les instantanés existants sur les pools restent intacts ; supprimez-les séparément si nécessaire."
           },
           {
             "tool": "Limites de vitesse vzdump",

@@ -34,9 +34,9 @@
       "<strong>PVE 9.x</strong> → spúšťa <code>remove-banner-pve-v3.sh</code> (opravuje desktop <code>proxmoxlib.js</code> aj nový mobilný UI založený na Yew).",
       "<strong>PVE 8.x</strong> → spustí <code>remove-banner-pve8.sh</code> (iba pre počítač)."
     ],
-    "versionOutro": "Pred úpravou ProxMenux zálohuje pôvodné súbory JS/šablón do <code>/usr/local/share/proxmenux/backups/</code> s časovou pečiatkou. Odinštalovanie ich obnoví zo záloh; ak záloha chýba alebo je poškodená, preinštaluje balíky rozhrania Proxmox.",
+    "versionOutro": "Na PVE 9 a PBS ProxMenux pred úpravou zálohuje pôvodné súbory JS/šablón do <code>/usr/local/share/proxmenux/backups/</code> s časovou pečiatkou. Na PVE 8 ponecháva kópiu <code>proxmoxlib.js.bak.&lt;date&gt;</code> vedľa pôvodného súboru. Odinštalovanie používa zálohy PVE 9 / PBS na obnovu pôvodných súborov; ak záloha chýba alebo je poškodená, preinštaluje balíky rozhrania Proxmox.",
     "breakTitle": "Môže sa zlomiť po aktualizáciách Proxmoxu",
-    "breakBody": "Aktualizácie rozhrania Proxmox pravidelne prepisujú <code>proxmoxlib.js</code>, takže upozornenie sa môže vrátiť. Túto možnosť môžete použiť znovu na opätovnú úpravu súboru alebo dovtedy ponechať upozornenie. ProxMenux inštaluje aj hook APT na automatické opakovanie úpravy po aktualizácii balíkov — jeho odstránenie opisuje <link>Odinštalovať optimalizácie</link>.",
+    "breakBody": "Aktualizácie rozhrania Proxmox pravidelne prepisujú <code>proxmoxlib.js</code>, takže upozornenie sa môže vrátiť. Túto možnosť môžete použiť znovu po každej aktualizácii Proxmox na opätovnú úpravu súboru alebo dovtedy ponechať upozornenie. Na PVE 9 a PBS ProxMenux inštaluje aj hook APT na automatické opakovanie úpravy po aktualizácii balíkov; na PVE 8 hook neexistuje, preto po každej aktualizácii rozhrania použite možnosť znovu — jeho odstránenie opisuje <link>Odinštalovať optimalizácie</link>.",
     "legalTitle": "Právne upozornenie (vždy stojí za to zopakovať)",
     "legalBody": "Táto možnosť iba skryje upozornenie rozhrania. <strong>Neposkytuje</strong> podporu Enterprise ani prístup k repozitáru Enterprise a nemení licenciu softvéru. Proxmox VE sa vydáva pod GNU AGPLv3. Predplatné podporuje projekt a umožňuje prístup ku kanálu aktualizácií Enterprise; vyberte si podporu vhodnú pre svoje prostredie."
   },
