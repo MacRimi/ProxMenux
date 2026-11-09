@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Wie das Skript läuft",
-    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Ändern der Containerkonfiguration\". Bis der letzte Dialog beantwortet ist, wird auf dem Host und im CT nichts geändert.",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Ändern der Containerkonfiguration\". Bis zur endgültigen Bestätigung wird nichts in den CT eingebaut.",
     "summary": "ProxMenux blendet das Root-Laufwerk und andere eingehängte Laufwerke, ZFS-Mitglieder, aktive RAID-Mitglieder, vom Host-LVM verwendete Laufwerke und Laufwerke aus, die sich bereits in diesem Container befinden. Von einer anderen VM oder einem anderen CT referenzierte Laufwerke werden als ⚠ In use angezeigt, und RAID-/LVM-Signaturen erhalten eine ⚠-Markierung."
   },
   "prereqs": {

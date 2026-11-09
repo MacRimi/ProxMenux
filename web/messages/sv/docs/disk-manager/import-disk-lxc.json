@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Så körs skriptet",
-    "body": "Flödet har två faser med tydlig åtskillnad mellan \"samla information och beslut\" och \"faktiskt ändra containerkonfig\". Fram till den sista dialogen har besvarats ändras ingenting på värden eller i CT.",
+    "body": "Flödet har två faser med tydlig åtskillnad mellan \"samla information och beslut\" och \"faktiskt ändra containerkonfig\". Fram till den slutliga bekräftelsen monteras ingenting i CT.",
     "summary": "ProxMenux döljer rotdisken och andra monterade diskar, ZFS-medlemmar, aktiva RAID-medlemmar, diskar som används av värdens LVM och diskar som redan finns i denna container. Diskar som refereras av en annan VM eller CT visas som ⚠ In use, och RAID / LVM-signaturer får en ⚠-etikett."
   },
   "prereqs": {

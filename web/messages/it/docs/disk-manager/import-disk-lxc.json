@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Come funziona lo script",
-    "body": "Il flusso ha due fasi distinte: raccolta di informazioni e scelte, poi modifica effettiva della configurazione del contenitore. Finché non si risponde all’ultima finestra di dialogo, non viene modificato nulla sull’host né nel CT.",
+    "body": "Il flusso ha due fasi distinte: raccolta di informazioni e scelte, poi modifica effettiva della configurazione del contenitore. Fino alla conferma finale non viene montato nulla nel CT.",
     "summary": "ProxMenux nasconde il disco root e gli altri dischi montati, i membri ZFS, i membri RAID attivi, i dischi usati dall’LVM dell’host e i dischi già presenti in questo contenitore. I dischi citati da un’altra VM o da un altro CT sono mostrati come ⚠ In use, e le firme RAID / LVM mostrano un’etichetta ⚠."
   },
   "prereqs": {

@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Como o script é executado",
-    "body": "O fluxo tem duas fases com separação clara entre \"coletar informações e decisões\" e \"na verdade mudar a configuração do recipiente\". Até que o último diálogo seja respondido, nada é alterado no host nem no CT.",
+    "body": "O fluxo tem duas fases com separação clara entre \"coletar informações e decisões\" e \"na verdade mudar a configuração do recipiente\". Até à confirmação final, nada é montado no CT.",
     "summary": "O ProxMenux oculta o disco raiz e outros discos montados, membros ZFS, membros RAID ativos, discos usados pelo LVM do host e discos que já estão neste recipiente. Os discos referenciados por outra VM ou CT aparecem como ⚠ In use, e as assinaturas RAID / LVM mostram uma etiqueta ⚠."
   },
   "prereqs": {

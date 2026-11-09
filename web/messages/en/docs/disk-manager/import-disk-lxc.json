@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "How the script runs",
-    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually changing the container config\". Until the last dialog is answered, nothing is changed on the host or in the CT.",
+    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually changing the container config\". Until the final confirmation, nothing is mounted into the CT.",
     "summary": "ProxMenux hides the root disk and other mounted disks, ZFS members, active RAID members, disks used by host LVM and disks already in this container. Disks referenced by another VM or CT are shown as ⚠ In use, and RAID / LVM signatures show a ⚠ label."
   },
   "prereqs": {

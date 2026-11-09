@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script",
-    "body": "El flujo tiene dos fases con separación clara entre \"recopilar información y decisiones\" y \"cambiar realmente la configuración del contenedor\". Hasta que se responde el último diálogo no se cambia nada en el host ni en el CT.",
+    "body": "El flujo tiene dos fases con separación clara entre \"recopilar información y decisiones\" y \"cambiar realmente la configuración del contenedor\". Hasta la confirmación final no se monta nada en el CT.",
     "summary": "ProxMenux oculta el disco raíz y otros discos montados, los miembros ZFS, los miembros RAID activos, los discos usados por LVM del host y los discos que ya están en este contenedor. Los discos referenciados por otra VM o CT se muestran como ⚠ In use, y las firmas RAID / LVM muestran una etiqueta ⚠."
   },
   "prereqs": {

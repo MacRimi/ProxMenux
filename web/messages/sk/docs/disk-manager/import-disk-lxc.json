@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Ako beží skript",
-    "body": "Postup má dve oddelené fázy: zhromaždenie informácií a volieb, potom samotnú zmenu konfigurácie kontajnera. Kým nezodpoviete posledný dialóg, na hostiteľovi ani v CT sa nič nezmení.",
+    "body": "Postup má dve oddelené fázy: zhromaždenie informácií a volieb, potom samotnú zmenu konfigurácie kontajnera. Až do záverečného potvrdenia sa v CT nič nepripája.",
     "summary": "ProxMenux skryje koreňový disk a ďalšie pripojené disky, členov ZFS, aktívnych členov RAID, disky používané LVM hostiteľa a disky, ktoré už sú v tomto kontajneri. Disky uvedené v inej VM alebo CT sa zobrazia ako ⚠ In use a podpisy RAID / LVM zobrazia značku ⚠."
   },
   "prereqs": {

@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Comment fonctionne le script",
-    "body": "Le processus comporte deux phases distinctes : collecte des informations et des choix, puis modification effective de la configuration du conteneur. Rien n’est modifié sur l’hôte ni dans le CT avant que le dernier dialogue ait reçu une réponse.",
+    "body": "Le processus comporte deux phases distinctes : collecte des informations et des choix, puis modification effective de la configuration du conteneur. Rien n’est monté dans le CT avant la confirmation finale.",
     "summary": "ProxMenux masque le disque racine et les autres disques montés, les membres ZFS, les membres RAID actifs, les disques utilisés par le LVM de l’hôte et les disques déjà présents dans ce conteneur. Les disques référencés par une autre VM ou un autre CT sont affichés comme ⚠ In use, et les signatures RAID / LVM portent un symbole ⚠."
   },
   "prereqs": {
