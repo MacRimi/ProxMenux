@@ -812,6 +812,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "apply-icons":
             report = catalog.apply_icons()
             print(translate('Icons resolved: {resolved}; cleared: {cleared}; unchanged: {unchanged}; with a theme variant: {themed}').format(**report))
+            if report["dark"] < 0:
+                print(translate('Pillow is not installed: the dark theme icons were left as they were.'))
+            else:
+                print(translate('Black icons with a version for the dark theme: {dark}').format(**report))
             return 0
         if args.command == "show":
             print(_template_summary_text(catalog.compose(args.app)))

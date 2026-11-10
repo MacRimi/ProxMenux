@@ -14428,6 +14428,18 @@ def api_apps_catalog():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/apps/icon-themes', methods=['GET'])
+@require_auth
+def api_apps_icon_themes():
+    """Catalog icons that need another version on the dark theme:
+    {icon_url: light_version_url | "invert"}."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.oci_icon_themes())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/apps/github-token', methods=['GET'])
 @require_auth
 def api_apps_github_token_status():

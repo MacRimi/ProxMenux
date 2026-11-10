@@ -38,7 +38,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-2fauth"
+      "template_id": "image-2fauth",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/2fauth-light.webp"
     },
     {
       "id": "acestream-http-proxy",
@@ -308,7 +309,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-albyhub"
+      "template_id": "image-albyhub",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/alby-hub-light.webp"
     },
     {
       "id": "alist",
@@ -514,7 +516,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-anythingllm"
+      "template_id": "image-anythingllm",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anythingllm-light.webp"
     },
     {
       "id": "apache-answer",
@@ -915,7 +918,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false,
-      "template_id": "image-backrest"
+      "template_id": "image-backrest",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/backrest-light.webp"
     },
     {
       "id": "bambustudio",
@@ -1014,7 +1018,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-beaverhabittracker"
+      "template_id": "image-beaverhabittracker",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/beaver-habit-tracker-light.webp"
     },
     {
       "id": "beets",
@@ -1693,7 +1698,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-calligra"
+      "template_id": "linuxserver-calligra",
+      "icon_dark": "invert"
     },
     {
       "id": "calnode",
@@ -2231,7 +2237,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": true,
-      "template_id": "image-clumoove"
+      "template_id": "image-clumoove",
+      "icon_dark": "invert"
     },
     {
       "id": "code-server",
@@ -2327,7 +2334,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false,
-      "template_id": "image-commafeed"
+      "template_id": "image-commafeed",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/commafeed-light.webp"
     },
     {
       "id": "convertx",
@@ -2659,7 +2667,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false,
-      "template_id": "image-dagu"
+      "template_id": "image-dagu",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dagu-light.webp"
     },
     {
       "id": "darktable",
@@ -5217,7 +5226,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-frigate"
+      "template_id": "image-frigate",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/frigate-light.webp"
     },
     {
       "id": "gameyfin",
@@ -6268,7 +6278,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-heimdall"
+      "template_id": "linuxserver-heimdall",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/heimdall-light.webp"
     },
     {
       "id": "helium",
@@ -6336,7 +6347,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-hermes"
+      "template_id": "image-hermes",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hermes-agent-light.webp"
     },
     {
       "id": "hertzbeat",
@@ -7222,7 +7234,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-jackett"
+      "template_id": "linuxserver-jackett",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jackett-light.webp"
     },
     {
       "id": "jaeger",
@@ -7653,7 +7666,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": true,
-      "template_id": "image-karakeep"
+      "template_id": "image-karakeep",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/karakeep-light.webp"
     },
     {
       "id": "kasm",
@@ -7914,7 +7928,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false,
-      "template_id": "image-kiwix-serve"
+      "template_id": "image-kiwix-serve",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kiwix-light.webp"
     },
     {
       "id": "kometa",
@@ -8385,7 +8400,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-libreoffice"
+      "template_id": "linuxserver-libreoffice",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/libreoffice-light.webp"
     },
     {
       "id": "librespeed",
@@ -8803,7 +8819,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-llamacpp"
+      "template_id": "image-llamacpp",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/llama-cpp-light.webp"
     },
     {
       "id": "lldap",
@@ -8834,7 +8851,8 @@
       "requires_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-lldap"
+      "template_id": "image-lldap",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lldap-light.webp"
     },
     {
       "id": "lm-studio",
@@ -9164,7 +9182,8 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "multi_container": false
+      "multi_container": false,
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apple-light.webp"
     },
     {
       "id": "mailpit",
@@ -9624,7 +9643,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-medusa"
+      "template_id": "linuxserver-medusa",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa-light.webp"
     },
     {
       "id": "medusa-official",
@@ -9660,7 +9680,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-medusa-official"
+      "template_id": "image-medusa-official",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa-light.webp"
     },
     {
       "id": "meilisearch",
@@ -9989,7 +10010,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-miniflux"
+      "template_id": "image-miniflux",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/miniflux-light.webp"
     },
     {
       "id": "minisatip",
@@ -10454,7 +10476,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false,
-      "template_id": "image-mumble"
+      "template_id": "image-mumble",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mumble-light.webp"
     },
     {
       "id": "myip",
@@ -10487,7 +10510,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false,
-      "template_id": "image-myip"
+      "template_id": "image-myip",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/myip-light.webp"
     },
     {
       "id": "mylar3",
@@ -11617,7 +11641,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-onedev"
+      "template_id": "image-onedev",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/onedev-light.webp"
     },
     {
       "id": "onlyoffice",
@@ -12833,7 +12858,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-phpmyadmin"
+      "template_id": "linuxserver-phpmyadmin",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/phpmyadmin-light.webp"
     },
     {
       "id": "picoshare",
@@ -13436,7 +13462,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": true,
-      "template_id": "image-portainer"
+      "template_id": "image-portainer",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/portainer-light.webp"
     },
     {
       "id": "postgresql",
@@ -16661,7 +16688,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-tailscale"
+      "template_id": "image-tailscale",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tailscale-light.webp"
     },
     {
       "id": "tandoor",
@@ -16940,7 +16968,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-teable"
+      "template_id": "image-teable",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teable-light.webp"
     },
     {
       "id": "technitium",
@@ -17535,7 +17564,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-twingate-connector"
+      "template_id": "image-twingate-connector",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/twingate-light.webp"
     },
     {
       "id": "typesense",
@@ -17631,7 +17661,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": true,
-      "template_id": "image-umami"
+      "template_id": "image-umami",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/umami-light.webp"
     },
     {
       "id": "ungoogled-chromium",
@@ -17968,7 +17999,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-vaultwarden"
+      "template_id": "image-vaultwarden",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vaultwarden-light.webp"
     },
     {
       "id": "victorialogs",
@@ -18033,7 +18065,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-victoriametrics"
+      "template_id": "image-victoriametrics",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/victoriametrics-light.webp"
     },
     {
       "id": "vikunja",
@@ -18365,7 +18398,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-wallabag"
+      "template_id": "image-wallabag",
+      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wallabag-light.webp"
     },
     {
       "id": "wallos",

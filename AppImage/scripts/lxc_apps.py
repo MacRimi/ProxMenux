@@ -5610,6 +5610,37 @@ def _oci_catalog_entries() -> tuple[dict, dict]:
     return icons, templates
 
 
+_oci_icon_themes_cache: tuple[float, dict] | None = None
+
+
+def oci_icon_themes() -> dict:
+    """The icon to draw on the dark theme, keyed by the catalog icon it replaces.
+
+    The catalog marks the icons that are a black mark on a transparent
+    background: they take the light version of their icon set, or "invert"
+    when there is none. Keyed by URL, so an icon saved with an installation
+    or a link gets it as well.
+    """
+    global _oci_icon_themes_cache
+    now = time.time()
+    if _oci_icon_themes_cache and now - _oci_icon_themes_cache[0] < 600:
+        return _oci_icon_themes_cache[1]
+    themes: dict = {}
+    try:
+        with open(_OCI_CATALOG_INDEX, encoding="utf-8") as handle:
+            for item in (json.load(handle) or {}).get("applications", []):
+                icon = (item or {}).get("icon")
+                dark = (item or {}).get("icon_dark")
+                if not (isinstance(icon, str) and icon.startswith("https://")):
+                    continue
+                if dark == "invert" or (isinstance(dark, str) and dark.startswith("https://")):
+                    themes[icon] = dark
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    _oci_icon_themes_cache = (now, themes)
+    return themes
+
+
 def _oci_catalog_first_run(template_id) -> dict:
     """The first_run contract of the current catalog template. An existing
     install keeps a copy from the day it was created; what the catalog added

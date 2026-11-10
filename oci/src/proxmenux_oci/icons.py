@@ -8,6 +8,7 @@ comes from the same CDN as the rest of the interface.
 """
 from __future__ import annotations
 
+import io
 import json
 import re
 import urllib.request
@@ -30,6 +31,10 @@ PUBLISHER_TREES = (
      "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/{path}"),
 )
 TIMEOUT = 30
+MAX_ICON_BYTES = 2 * 1024 * 1024
+# The dark-theme value of an icon that has no light version anywhere: the
+# Monitor draws it inverted, which turns a black mark white.
+DARK_INVERT = "invert"
 VARIANT_SUFFIX_RE = re.compile(r"-(?:dark|light)$")
 # Catalog ids carry the publisher or the accelerator when the same application
 # ships under several images: emby-official, open-webui-cuda, kavita-jvmilazz0.
@@ -71,6 +76,53 @@ def _read(url: str) -> object:
         return json.loads(response.read())
 
 
+def is_dark_mark(data: bytes) -> bool | None:
+    """Whether an image is a black mark on a transparent background.
+
+    Such an icon disappears on the dark theme of the Monitor. A dark icon that
+    carries white or colour of its own (a white glyph on a black tile, a badge)
+    shows on either theme and is not one. None when the image cannot be read,
+    such as an SVG, or when Pillow is not installed.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    try:
+        image = Image.open(io.BytesIO(data)).convert("RGBA")
+    except Exception:
+        return None
+    image.thumbnail((96, 96))
+    visible = [pixel for pixel in image.getdata() if pixel[3] > 64]
+    if not visible:
+        return False
+    gray = dark = light = 0
+    for red, green, blue, _alpha in visible:
+        if max(red, green, blue) - min(red, green, blue) >= 30:
+            continue
+        gray += 1
+        lightness = (max(red, green, blue) + min(red, green, blue)) / 510
+        if lightness < 0.30:
+            dark += 1
+        elif lightness > 0.80:
+            light += 1
+    count = len(visible)
+    return gray / count >= 0.97 and dark / count >= 0.85 and light / count < 0.01
+
+
+def fetch_icon(url: str) -> bytes | None:
+    """The bytes of an icon, or None when it cannot be downloaded."""
+    if not isinstance(url, str) or not url.startswith("https://"):
+        return None
+    request = urllib.request.Request(url, headers={"User-Agent": "ProxMenux"})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            data = response.read(MAX_ICON_BYTES + 1)
+    except Exception:
+        return None
+    return data if len(data) <= MAX_ICON_BYTES else None
+
+
 class IconResolver:
     """Resolve an application id and title to an icon on cdn.jsdelivr.net.
 
@@ -84,6 +136,8 @@ class IconResolver:
     def __init__(self, selfhst: object | None = None, homarr: object | None = None,
                  publishers: list[object] | None = None) -> None:
         self._sets: list[tuple[dict[str, str], set[str], str]] = []
+        # The icons whose set publishes a light version, by icon URL.
+        self._light: dict[str, str] = {}
         self._load_selfhst(selfhst if selfhst is not None else _read(SELFHST_INDEX))
         self._load_homarr(homarr if homarr is not None else _read(HOMARR_INDEX))
         for position, (url, pattern, template) in enumerate(PUBLISHER_TREES):
@@ -127,6 +181,9 @@ class IconResolver:
                     names.setdefault(candidate, reference)
             if entry.get("Dark") == "Yes" or entry.get("Light") == "Yes":
                 themed.add(reference)
+            if entry.get("Light") == "Yes":
+                self._light[SELFHST_ICON.format(name=reference)] = SELFHST_ICON.format(
+                    name=f"{reference}-light")
         self._sets.append((names, themed, SELFHST_ICON))
 
     def _load_homarr(self, tree: object) -> None:
@@ -141,6 +198,8 @@ class IconResolver:
             base = VARIANT_SUFFIX_RE.sub("", stem)
             if base != stem:
                 themed.add(base)
+                if stem.endswith("-light"):
+                    self._light[HOMARR_ICON.format(name=base)] = HOMARR_ICON.format(name=stem)
                 continue
             for candidate in (base.lower(), _key(base)):
                 if candidate:
@@ -164,6 +223,17 @@ class IconResolver:
                 return response.status == 200
         except Exception:
             return False
+
+    def dark_theme_icon(self, url: str | None, data: bytes | None) -> str | None:
+        """The icon to draw on the dark theme instead of `url`, or None when
+        `url` shows on it as it is.
+
+        Only a black mark needs one. Its set's light version is used when
+        there is one, and otherwise the Monitor inverts the icon.
+        """
+        if not url or not data or not is_dark_mark(data):
+            return None
+        return self._light.get(url, DARK_INVERT)
 
     def resolve(self, app_id: str | None, title: str | None = None) -> dict[str, object] | None:
         """The icon for one application, or None when neither set has it."""
