@@ -5326,6 +5326,7 @@
   "Pick a target to remove:": "Wählen Sie ein Ziel zum Entfernen aus:",
   "Pick an SSH private key (auto-detected on this host):": "Wählen Sie einen privaten SSH-Schlüssel (wird auf diesem Host automatisch erkannt):",
   "Pick an alternative way to authorize the new key:": "Wählen Sie eine alternative Möglichkeit zur Autorisierung des neuen Schlüssels:",
+  "Pick the Arr applications you want and install them together, each in its own LXC, with shared media and an optional Jellyfin, Plex or Emby.": "Wählen Sie die gewünschten Arr-Anwendungen aus und installieren Sie sie zusammen, jede in ihrem eigenen LXC, mit gemeinsam genutzten Medien und einem optionalen Jellyfin, Plex oder Emby.",
   "PicoShare": "PicoShare",
   "PicoShare administrator passphrase": "Passphrase für den PicoShare-Administrator",
   "Pidgin is a chat program which lets you log into accounts on multiple chat networks simultaneously. This means that you can be chatting with friends on XMPP and sitting in an IRC channel at the same time.": "Pidgin ist ein Chat-Programm, mit dem Sie sich gleichzeitig in Konten in mehreren Chat-Netzwerken anmelden können. Dies bedeutet, dass sie mit freunden auf xmpp chatten und gleichzeitig in einem irc-kanal sitzen können.",
