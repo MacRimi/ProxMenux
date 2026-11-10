@@ -2369,6 +2369,46 @@
     "os": "debian"
   },
   {
+    "name": "Bifrost",
+    "slug": "bifrost",
+    "desc": "Bifrost is an AI gateway with a unified API for multiple model providers. It provides a web dashboard, virtual keys, usage budgets, request logs, load balancing, and automatic fallbacks.",
+    "script": "ct/bifrost.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bifrost.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bifrost.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Find the generated BIFROST_ADMIN_PASSWORD in /opt/bifrost_data/.env inside the container. Add provider credentials and create virtual keys in the dashboard."
+    ],
+    "warnings": [
+      "Use an HTTPS reverse proxy for access beyond a trusted network. Authentication is enabled for both the dashboard and inference API.",
+      "Keep a backup of /opt/bifrost_data, including .env. Losing or changing BIFROST_ENCRYPTION_KEY makes stored provider credentials unreadable."
+    ],
+    "port": 8080,
+    "website": "https://www.getmaxim.ai/bifrost",
+    "documentation": "https://docs.getbifrost.ai/",
+    "logo": "https://raw.githubusercontent.com/maximhq/bifrost/dev/docs/media/bifrost-logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "BirdNET-Go",
     "slug": "birdnet-go",
     "desc": "BirdNET-Go is an AI-powered solution for continuous avian monitoring and identification, providing 24/7 realtime bird song analysis.",
@@ -23731,6 +23771,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "SurfSense",
+    "slug": "surfsense",
+    "desc": "SurfSense is a self-hosted, privacy-focused alternative to NotebookLM. Upload your documents, chat with them and get answers with citations, and let its agent research, summarize and turn them into reports, decks or podcasts, using local models or any OpenAI-compatible or cloud provider.",
+    "script": "ct/surfsense.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/surfsense.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/surfsense.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "The setup wizard asks for a chat model: an OpenAI-compatible server such as Ollama, a cloud API key, or a local GGUF model, which runs on the CPU."
+    ],
+    "warnings": [
+      "Open http://<IP> right after the install and create the sign-in password: until one is set, whoever opens the page first chooses it."
+    ],
+    "port": 80,
+    "website": "https://www.surfsense.com/",
+    "documentation": "https://www.surfsense.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/surfsense.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
