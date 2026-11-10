@@ -5565,7 +5565,46 @@ def _helper_slug_meta(vmid) -> Optional[dict]:
 
 _OCI_INSTANCE_ROOT = "/usr/local/share/proxmenux/oci/instances"
 _OCI_CATALOG_INDEX = "/usr/local/share/proxmenux/oci/engine/catalog/index.json"
+_OCI_ENGINE_DIR = "/usr/local/share/proxmenux/oci/engine"
 _oci_catalog_cache: tuple[float, dict, dict] | None = None
+_oci_catalog_dir_cache: tuple[float, str, str] | None = None
+
+
+def oci_catalog_dir() -> str:
+    """The catalog the OCI engine is using now.
+
+    A catalog refresh keeps the new catalog in a snapshot of its own and
+    leaves the one shipped with the engine untouched, so the Monitor asks the
+    engine which one is active instead of reading a fixed path. The engine
+    answers in a separate process: importing its package would configure the
+    registry accounts inside the Monitor. The shipped catalog is the fallback.
+    """
+    global _oci_catalog_dir_cache
+    shipped = os.path.dirname(_OCI_CATALOG_INDEX)
+    now = time.time()
+    if (_oci_catalog_dir_cache and _oci_catalog_dir_cache[1] == shipped
+            and now - _oci_catalog_dir_cache[0] < 60):
+        return _oci_catalog_dir_cache[2]
+    active = shipped
+    if os.path.isdir(os.path.join(_OCI_ENGINE_DIR, "src")):
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 "import sys; sys.path.insert(0, sys.argv[1] + '/src'); "
+                 "from proxmenux_oci.catalog_refresh import current_catalog; "
+                 "print(current_catalog(sys.argv[1]))", _OCI_ENGINE_DIR],
+                capture_output=True, text=True, timeout=15)
+            answer = result.stdout.strip()
+            if result.returncode == 0 and os.path.isfile(os.path.join(answer, "index.json")):
+                active = answer
+        except (OSError, subprocess.SubprocessError):
+            pass
+    _oci_catalog_dir_cache = (now, shipped, active)
+    return active
+
+
+def _oci_catalog_index_path() -> str:
+    return os.path.join(oci_catalog_dir(), "index.json")
 
 
 def _oci_catalog_icons() -> dict:
@@ -5590,7 +5629,7 @@ def _oci_catalog_entries() -> tuple[dict, dict]:
     icons: dict = {}
     templates: dict = {}
     try:
-        with open(_OCI_CATALOG_INDEX, encoding="utf-8") as handle:
+        with open(_oci_catalog_index_path(), encoding="utf-8") as handle:
             for item in (json.load(handle) or {}).get("applications", []):
                 item = item or {}
                 icon = item.get("icon")
@@ -5614,12 +5653,12 @@ _oci_icon_themes_cache: tuple[float, dict] | None = None
 
 
 def oci_icon_themes() -> dict:
-    """The icon to draw on the dark theme, keyed by the catalog icon it replaces.
+    """The icon to draw on the dark theme, keyed by the icon it replaces.
 
-    The catalog marks the icons that are a black mark on a transparent
-    background: they take the light version of their icon set, or "invert"
-    when there is none. Keyed by URL, so an icon saved with an installation
-    or a link gets it as well.
+    The OCI catalog and the Community Scripts catalog mark the icons that are
+    a black mark on a transparent background: they take the light version of
+    their icon set, or "invert" when there is none. Keyed by URL, so an icon
+    saved with an installation or a link gets it as well.
     """
     global _oci_icon_themes_cache
     now = time.time()
@@ -5627,7 +5666,7 @@ def oci_icon_themes() -> dict:
         return _oci_icon_themes_cache[1]
     themes: dict = {}
     try:
-        with open(_OCI_CATALOG_INDEX, encoding="utf-8") as handle:
+        with open(_oci_catalog_index_path(), encoding="utf-8") as handle:
             for item in (json.load(handle) or {}).get("applications", []):
                 icon = (item or {}).get("icon")
                 dark = (item or {}).get("icon_dark")
@@ -5636,6 +5675,17 @@ def oci_icon_themes() -> dict:
                 if dark == "invert" or (isinstance(dark, str) and dark.startswith("https://")):
                     themes[icon] = dark
     except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    try:
+        import managed_installs
+        for entry in (managed_installs._fetch_helpers_cache() or {}).values():
+            logo = (entry or {}).get("logo")
+            dark = (entry or {}).get("logo_dark")
+            if not (isinstance(logo, str) and logo.startswith("https://")):
+                continue
+            if dark == "invert" or (isinstance(dark, str) and dark.startswith("https://")):
+                themes.setdefault(logo, dark)
+    except Exception:
         pass
     _oci_icon_themes_cache = (now, themes)
     return themes
@@ -5649,7 +5699,7 @@ def _oci_catalog_first_run(template_id) -> dict:
     if not template:
         return {}
     try:
-        with open(os.path.join(os.path.dirname(_OCI_CATALOG_INDEX), template), encoding="utf-8") as handle:
+        with open(os.path.join(oci_catalog_dir(), template), encoding="utf-8") as handle:
             first_run = (json.load(handle) or {}).get("first_run")
     except (OSError, ValueError, TypeError, AttributeError):
         return {}
