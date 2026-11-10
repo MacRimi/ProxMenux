@@ -105,6 +105,19 @@ function select_linux_iso() {
 
 
 
+# A text padded to a number of columns on screen. printf pads by bytes when the
+# terminal does not use a UTF-8 locale, which leaves accented headings short.
+function _pad_cell() {
+  python3 - "$1" "$2" 2>/dev/null <<'PY' || printf '%-*s' "$2" "$1"
+import sys
+import unicodedata
+text, width = sys.argv[1], int(sys.argv[2])
+used = sum(0 if unicodedata.combining(c) else 2 if unicodedata.east_asian_width(c) in ("F", "W") else 1 for c in text)
+sys.stdout.write(text + " " * max(0, width - used))
+PY
+}
+
+
 function select_linux_iso_official() {
   DISTROS=(
     "Ubuntu 26.10|Desktop|ProxMenux|https://releases.ubuntu.com/26.10/ubuntu-26.10-desktop-amd64.iso"
@@ -161,8 +174,7 @@ function select_linux_iso_official() {
   local width=76 last_tag=$((INDEX - 1))
   local row_width=$((30 + 3 + 10 + 3 + 9))
   local pad=$(( (width - 8 - row_width - ${#last_tag} - 2) / 2 + ${#last_tag} + 4 ))
-  HEADER_TEXT=$(printf "%*s%-30s │ %-10s │ %s" "$pad" "" \
-    "$(translate "Description")" "$(translate "Type")" "$(translate "Source")")
+  HEADER_TEXT="$(printf '%*s' "$pad" "")$(_pad_cell "$(translate "Description")" 30) │ $(_pad_cell "$(translate "Type")" 10) │ $(translate "Source")"
 
   CHOICE=$(dialog --backtitle "ProxMenux" --no-collapse \
     --title "$(translate "Official Linux Distributions")" \
