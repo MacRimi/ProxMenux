@@ -162,7 +162,7 @@
     "title": "Create VM System Linux",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
-    "keywords": "vm virtual linux",
+    "keywords": "vm virtual linux almalinux centos oracle popos zorin cachyos nixos",
     "argument": "3"
   },
   {

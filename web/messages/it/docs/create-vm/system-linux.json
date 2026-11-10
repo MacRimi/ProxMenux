@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Crea VM: sistema Linux | Documentazione ProxMenux",
-    "description": "Crea macchine virtuali Linux su Proxmox VE con ProxMenux. La guida descrive il catalogo di ISO ufficiali (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), il piano di archiviazione comune, il passthrough GPU facoltativo e i consigli dopo l’installazione.",
+    "description": "Crea macchine virtuali Linux su Proxmox VE con ProxMenux. La guida descrive il catalogo di ISO ufficiali (Ubuntu, Debian, Fedora, Arch, Rocky, AlmaLinux, CentOS Stream, Oracle Linux, Mint, openSUSE, Alpine, Kali, Manjaro, Pop!_OS, Zorin OS, CachyOS, NixOS), il piano di archiviazione comune, il passthrough GPU facoltativo e i consigli dopo l’installazione.",
     "ogTitle": "Crea VM: sistema Linux | Documentazione ProxMenux",
     "ogDescription": "Crea VM Linux su Proxmox VE: catalogo di ISO ufficiali, archiviazione, passthrough GPU e consigli dopo l’installazione.",
     "ogImageAlt": "Menu ProxMenux Linux VM"
@@ -152,14 +152,14 @@
       {
         "name": "Ubuntu",
         "variants": [
-          "25.10 Desktop",
-          "24.04 Desktop",
-          "22.04 Desktop",
-          "20.04 Desktop",
-          "25.10 Server",
-          "24.04 Server",
-          "22.04 Server",
-          "20.04 Server"
+          "26.10 Desktop",
+          "26.04 LTS Desktop",
+          "24.04 LTS Desktop",
+          "22.04 LTS Desktop",
+          "26.10 Server",
+          "26.04 LTS Server",
+          "24.04 LTS Server",
+          "22.04 LTS Server"
         ]
       },
       {
@@ -167,16 +167,15 @@
         "variants": [
           "13 Desktop",
           "12 Desktop",
-          "11 Desktop",
           "13 Netinst",
-          "12 Netinst",
-          "11 Netinst"
+          "12 Netinst"
         ]
       },
       {
         "name": "Fedora",
         "variants": [
-          "Workstation 42"
+          "Workstation 45",
+          "Workstation 44"
         ]
       },
       {
@@ -188,37 +187,88 @@
       {
         "name": "Rocky Linux",
         "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "AlmaLinux",
+        "variants": [
+          "10",
+          "10 Minimal",
+          "9"
+        ]
+      },
+      {
+        "name": "CentOS Stream",
+        "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "Oracle Linux",
+        "variants": [
+          "10",
           "9"
         ]
       },
       {
         "name": "Linux Mint",
         "variants": [
-          "22.1 Cinnamon"
+          "22.3 Cinnamon",
+          "22.3 Xfce"
         ]
       },
       {
         "name": "openSUSE",
         "variants": [
-          "Leap 15.6"
+          "Leap 16.1",
+          "Leap 16.0"
         ]
       },
       {
         "name": "Alpine Linux",
         "variants": [
-          "3.21"
+          "3.24"
         ]
       },
       {
         "name": "Kali Linux",
         "variants": [
-          "2026.1"
+          "2026.3"
         ]
       },
       {
         "name": "Manjaro",
         "variants": [
-          "25.0 GNOME"
+          "26.1 GNOME"
+        ]
+      },
+      {
+        "name": "Pop!_OS",
+        "variants": [
+          "24.04"
+        ]
+      },
+      {
+        "name": "Zorin OS",
+        "variants": [
+          "18.1 Core",
+          "18.1 Lite"
+        ]
+      },
+      {
+        "name": "CachyOS",
+        "variants": [
+          "versione più recente"
+        ]
+      },
+      {
+        "name": "NixOS",
+        "variants": [
+          "26.05",
+          "26.05 Minimal"
         ]
       }
     ]

@@ -17,7 +17,9 @@
 #
 # Features:
 # - Curated list of official Linux ISOs (Ubuntu, Debian, Fedora,
-#   Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro) with
+#   Arch, Rocky, AlmaLinux, CentOS Stream, Oracle Linux, Mint,
+#   Pop!_OS, Zorin OS, openSUSE, Alpine, Kali, Manjaro, CachyOS,
+#   NixOS) with
 #   direct download URLs.
 # - Cloud-Init automated installers (community scripts).
 # - Pick an existing ISO from any Proxmox ISO storage.
@@ -105,28 +107,43 @@ function select_linux_iso() {
 
 function select_linux_iso_official() {
   DISTROS=(
-    "Ubuntu 25.10|Desktop|ProxMenux|https://releases.ubuntu.com/25.10/ubuntu-25.10-desktop-amd64.iso"
-    "Ubuntu 24.04|Desktop|ProxMenux|https://releases.ubuntu.com/24.04/ubuntu-24.04.4-desktop-amd64.iso"
-    "Ubuntu 22.04|Desktop|ProxMenux|https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso"
-    "Ubuntu 20.04|Desktop|ProxMenux|https://releases.ubuntu.com/20.04/ubuntu-20.04.6-desktop-amd64.iso"
-    "Ubuntu 25.10 Server|CLI|ProxMenux|https://releases.ubuntu.com/25.10/ubuntu-25.10-live-server-amd64.iso"
-    "Ubuntu 24.04 Server|CLI|ProxMenux|https://releases.ubuntu.com/24.04/ubuntu-24.04.4-live-server-amd64.iso"
-    "Ubuntu 22.04 Server|CLI|ProxMenux|https://releases.ubuntu.com/22.04/ubuntu-22.04.5-live-server-amd64.iso"
-    "Ubuntu 20.04 Server|CLI|ProxMenux|https://releases.ubuntu.com/20.04/ubuntu-20.04.6-live-server-amd64.iso"
+    "Ubuntu 26.10|Desktop|ProxMenux|https://releases.ubuntu.com/26.10/ubuntu-26.10-desktop-amd64.iso"
+    "Ubuntu 26.04 LTS|Desktop|ProxMenux|https://releases.ubuntu.com/26.04/ubuntu-26.04.1-desktop-amd64.iso"
+    "Ubuntu 24.04 LTS|Desktop|ProxMenux|https://releases.ubuntu.com/24.04/ubuntu-24.04.5.1-desktop-amd64.iso"
+    "Ubuntu 22.04 LTS|Desktop|ProxMenux|https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso"
+    "Ubuntu 26.10 Server|CLI|ProxMenux|https://releases.ubuntu.com/26.10/ubuntu-26.10-live-server-amd64.iso"
+    "Ubuntu 26.04 LTS Server|CLI|ProxMenux|https://releases.ubuntu.com/26.04/ubuntu-26.04.1-live-server-amd64.iso"
+    "Ubuntu 24.04 LTS Server|CLI|ProxMenux|https://releases.ubuntu.com/24.04/ubuntu-24.04.5-live-server-amd64.iso"
+    "Ubuntu 22.04 LTS Server|CLI|ProxMenux|https://releases.ubuntu.com/22.04/ubuntu-22.04.5-live-server-amd64.iso"
     "Debian 13|Desktop|ProxMenux|https://cdimage.debian.org/cdimage/archive/13.6.0/amd64/iso-dvd/debian-13.6.0-amd64-DVD-1.iso"
     "Debian 12|Desktop|ProxMenux|https://cdimage.debian.org/cdimage/archive/12.13.0/amd64/iso-dvd/debian-12.13.0-amd64-DVD-1.iso"
-    "Debian 11|Desktop|ProxMenux|https://cdimage.debian.org/cdimage/archive/11.11.0/amd64/iso-dvd/debian-11.11.0-amd64-DVD-1.iso"
     "Debian 13 Netinst|CLI|ProxMenux|https://cdimage.debian.org/cdimage/archive/13.6.0/amd64/iso-cd/debian-13.6.0-amd64-netinst.iso"
     "Debian 12 Netinst|CLI|ProxMenux|https://cdimage.debian.org/cdimage/archive/12.13.0/amd64/iso-cd/debian-12.13.0-amd64-netinst.iso"
-    "Debian 11 Netinst|CLI|ProxMenux|https://cdimage.debian.org/cdimage/archive/11.11.0/amd64/iso-cd/debian-11.11.0-amd64-netinst.iso"
-    "Fedora Workstation 42|Desktop|ProxMenux|https://download.fedoraproject.org/pub/fedora/linux/releases/42/Workstation/x86_64/iso/Fedora-Workstation-Live-42-1.1.x86_64.iso"
+    "Fedora Workstation 45|Desktop|ProxMenux|https://download.fedoraproject.org/pub/fedora/linux/releases/45/Workstation/x86_64/iso/Fedora-Workstation-Live-45-1.4.x86_64.iso"
+    "Fedora Workstation 44|Desktop|ProxMenux|https://download.fedoraproject.org/pub/fedora/linux/releases/44/Workstation/x86_64/iso/Fedora-Workstation-Live-44-1.7.x86_64.iso"
     "Arch Linux|CLI|ProxMenux|https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
+    "Rocky Linux 10|Desktop|ProxMenux|https://download.rockylinux.org/pub/rocky/10/isos/x86_64/Rocky-10-latest-x86_64-dvd.iso"
     "Rocky Linux 9|Desktop|ProxMenux|https://download.rockylinux.org/pub/rocky/9/isos/x86_64/Rocky-9-latest-x86_64-dvd.iso"
-    "Linux Mint 22.1|Desktop|ProxMenux|https://mirrors.edge.kernel.org/linuxmint/stable/22.1/linuxmint-22.1-cinnamon-64bit.iso"
-    "openSUSE Leap 15.6|Desktop|ProxMenux|https://download.opensuse.org/distribution/leap/15.6/iso/openSUSE-Leap-15.6-DVD-x86_64-Media.iso"
-    "Alpine Linux 3.21|Desktop|ProxMenux|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86_64/alpine-virt-3.21.3-x86_64.iso"
-    "Kali Linux 2026.1|Desktop|ProxMenux|https://cdimage.kali.org/kali-2026.1/kali-linux-2026.1-installer-amd64.iso"
-    "Manjaro 25.0|Desktop|ProxMenux|https://download.manjaro.org/gnome/25.0.0/manjaro-gnome-25.0.0-250414-linux612.iso"
+    "AlmaLinux 10|Desktop|ProxMenux|https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-10-latest-x86_64-dvd.iso"
+    "AlmaLinux 10 Minimal|CLI|ProxMenux|https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-10-latest-x86_64-minimal.iso"
+    "AlmaLinux 9|Desktop|ProxMenux|https://repo.almalinux.org/almalinux/9/isos/x86_64/AlmaLinux-9-latest-x86_64-dvd.iso"
+    "CentOS Stream 10|Desktop|ProxMenux|https://mirror.stream.centos.org/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-latest-x86_64-dvd1.iso"
+    "CentOS Stream 9|Desktop|ProxMenux|https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/iso/CentOS-Stream-9-latest-x86_64-dvd1.iso"
+    "Oracle Linux 10|Desktop|ProxMenux|https://yum.oracle.com/ISOS/OracleLinux/OL10/u2/x86_64/OracleLinux-R10-U2-x86_64-dvd.iso"
+    "Oracle Linux 9|Desktop|ProxMenux|https://yum.oracle.com/ISOS/OracleLinux/OL9/u8/x86_64/OracleLinux-R9-U8-x86_64-dvd.iso"
+    "Linux Mint 22.3 Cinnamon|Desktop|ProxMenux|https://mirrors.edge.kernel.org/linuxmint/stable/22.3/linuxmint-22.3-cinnamon-64bit.iso"
+    "Linux Mint 22.3 Xfce|Desktop|ProxMenux|https://mirrors.edge.kernel.org/linuxmint/stable/22.3/linuxmint-22.3-xfce-64bit.iso"
+    "openSUSE Leap 16.1|Desktop|ProxMenux|https://download.opensuse.org/distribution/leap/16.1/offline/Leap-16.1-offline-installer-x86_64.install.iso"
+    "openSUSE Leap 16.0|Desktop|ProxMenux|https://download.opensuse.org/distribution/leap/16.0/offline/Leap-16.0-offline-installer-x86_64.install.iso"
+    "Alpine Linux 3.24|CLI|ProxMenux|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-virt-3.24.4-x86_64.iso"
+    "Kali Linux 2026.3|Desktop|ProxMenux|https://cdimage.kali.org/kali-2026.3/kali-linux-2026.3-installer-amd64.iso"
+    "Manjaro 26.1|Desktop|ProxMenux|https://download.manjaro.org/gnome/26.1.0/manjaro-gnome-26.1.0-260812-linux71.iso"
+    "Pop!_OS 24.04|Desktop|ProxMenux|https://iso.pop-os.org/24.04/amd64/generic/28/pop-os_24.04_amd64_generic_28.iso"
+    "Zorin OS 18.1 Core|Desktop|ProxMenux|https://mirrors.edge.kernel.org/zorinos-isos/18/Zorin-OS-18.1-Core-64-bit.iso"
+    "Zorin OS 18.1 Lite|Desktop|ProxMenux|https://mirrors.edge.kernel.org/zorinos-isos/18/Zorin-OS-18.1-Lite-64-bit.iso"
+    "CachyOS|Desktop|ProxMenux|https://iso.cachyos.org/desktop/260809/cachyos-desktop-linux-260809.iso"
+    "NixOS 26.05|Desktop|ProxMenux|https://channels.nixos.org/nixos-26.05/latest-nixos-graphical-x86_64-linux.iso"
+    "NixOS 26.05 Minimal|CLI|ProxMenux|https://channels.nixos.org/nixos-26.05/latest-nixos-minimal-x86_64-linux.iso"
   )
 
   MENU_OPTIONS=()
