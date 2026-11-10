@@ -156,12 +156,17 @@ function select_linux_iso_official() {
     ((INDEX++))
   done
 
-  HEADER="%-42s │ %-10s │ %s"
-  HEADER_TEXT=$(printf "$HEADER" "            Distribution" "Type" "Script Install")
+  # The heading starts where dialog draws the rows: after the tag column,
+  # with the list centred in its window, as the menu search lines up its own.
+  local width=76 last_tag=$((INDEX - 1))
+  local row_width=$((30 + 3 + 10 + 3 + 9))
+  local pad=$(( (width - 8 - row_width - ${#last_tag} - 2) / 2 + ${#last_tag} + 4 ))
+  HEADER_TEXT=$(printf "%*s%-30s │ %-10s │ %s" "$pad" "" \
+    "$(translate "Description")" "$(translate "Type")" "$(translate "Source")")
 
-  CHOICE=$(dialog --backtitle "ProxMenux" \
+  CHOICE=$(dialog --backtitle "ProxMenux" --no-collapse \
     --title "$(translate "Official Linux Distributions")" \
-    --menu "$(translate "Select the Linux distribution to install:")\n\n$HEADER_TEXT" 20 70 12 \
+    --menu "$(translate "Select the Linux distribution to install:")\n\n$HEADER_TEXT" 22 $width 12 \
     "${MENU_OPTIONS[@]}" \
     3>&1 1>&2 2>&3)
 
