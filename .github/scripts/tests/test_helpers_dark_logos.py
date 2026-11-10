@@ -1,8 +1,10 @@
 """The Community Scripts cache gives each black logo its dark-theme version."""
 import importlib.util
 from pathlib import Path
+import sys
 import types
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -10,7 +12,10 @@ ROOT = Path(__file__).resolve().parents[3]
 def load():
     spec = importlib.util.spec_from_file_location("generate_helpers_cache", ROOT / ".github/scripts/generate_helpers_cache.py")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # The generator downloads with requests; these tests download nothing,
+    # and the offline job does not install it.
+    with mock.patch.dict(sys.modules, {"requests": sys.modules.get("requests") or types.ModuleType("requests")}):
+        spec.loader.exec_module(module)
     return module
 
 

@@ -35,6 +35,7 @@ MAX_ICON_BYTES = 2 * 1024 * 1024
 # The dark-theme value of an icon that has no light version anywhere: the
 # Monitor draws it inverted, which turns a black mark white.
 DARK_INVERT = "invert"
+SVG_NAMED_COLORS = {"black": (0, 0, 0), "currentcolor": (0, 0, 0), "white": (255, 255, 255)}
 VARIANT_SUFFIX_RE = re.compile(r"-(?:dark|light)$")
 # Catalog ids carry the publisher or the accelerator when the same application
 # ships under several images: emby-official, open-webui-cuda, kavita-jvmilazz0.
@@ -50,18 +51,22 @@ CURATED = {
     "blade-of-agony": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/boa-logo.png",
     "budge": "https://cdn.jsdelivr.net/gh/linuxserver/budge@master/frontend/public/logo512.png",
     "changedetection.io": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/changedetection-icon.png",
+    "directus": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/directus.webp",
     "dosbox-staging": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/dosbox-logo.png",
-    "dsh-harness": "https://cdn.jsdelivr.net/gh/deepseek-ai/deepseek-harness@master/apps/web/public/favicon.svg",
+    "dsh-harness": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/deepseek.webp",
     "faster-whisper": "https://cdn.jsdelivr.net/gh/home-assistant/brands@master/core_integrations/wyoming/icon.png",
     "haos-one": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
     "luanti": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/minetest-icon.png",
     "msedge": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/edge-logo.png",
+    "opengist": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opengist.webp",
+    "phpmyadmin": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/phpmyadmin.webp",
     "pyload-ng": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/pyload-logo.png",
     "stable-diffusion-webui-nvidia": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/StableDiffusionWebUI/icon.svg",
     "suite-arr": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/svg/servarr.svg",
     # SWAG publishes no icon of its own; what sits under its name is a 424 KB
     # animated banner. The publisher's mark stands in for it.
     "swag": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/linuxserver-ls-logo.png",
+    "swaggerui": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/swagger.webp",
     "vscodium-web": "https://cdn.jsdelivr.net/gh/linuxserver/docker-templates@master/linuxserver.io/img/vscodium-icon.png",
 }
 
@@ -76,14 +81,40 @@ def _read(url: str) -> object:
         return json.loads(response.read())
 
 
+def _svg_paints(text: str) -> list[tuple[int, int, int]]:
+    """The colours an SVG paints with. An image draws `currentColor`, and a
+    shape without a fill, in black."""
+    paints = []
+    for value in re.findall(r'(?:fill|stroke|stop-color)\s*[:=]\s*["\']?\s*(#[0-9a-fA-F]{3,8}|[A-Za-z]+)', text):
+        value = value.lower()
+        if value in ("none", "transparent", "inherit", "url"):
+            continue
+        if value.startswith("#"):
+            digits = value[1:]
+            if len(digits) in (3, 4):
+                digits = "".join(c * 2 for c in digits[:3])
+            try:
+                paints.append(tuple(int(digits[i:i + 2], 16) for i in (0, 2, 4)))
+            except ValueError:
+                continue
+        else:
+            paints.append(SVG_NAMED_COLORS.get(value, (128, 128, 128)))
+    return paints or [(0, 0, 0)]
+
+
 def is_dark_mark(data: bytes) -> bool | None:
     """Whether an image is a black mark on a transparent background.
 
     Such an icon disappears on the dark theme of the Monitor. A dark icon that
     carries white or colour of its own (a white glyph on a black tile, a badge)
-    shows on either theme and is not one. None when the image cannot be read,
-    such as an SVG, or when Pillow is not installed.
+    shows on either theme and is not one. An SVG is one when everything it
+    paints is black or dark gray. None when a raster image cannot be read, or
+    when Pillow is not installed.
     """
+    head = data.lstrip()[:256].lower()
+    if head.startswith(b"<svg") or (head.startswith(b"<?xml") and b"<svg" in data[:2048].lower()):
+        return all(max(paint) - min(paint) < 30 and (max(paint) + min(paint)) / 510 < 0.30
+                   for paint in _svg_paints(data.decode("utf-8", "ignore")))
     try:
         from PIL import Image
     except ImportError:

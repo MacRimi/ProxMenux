@@ -3037,7 +3037,8 @@
       "requires_relaxed_confinement": false,
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
-      "multi_container": false
+      "multi_container": false,
+      "icon_dark": "invert"
     },
     {
       "id": "dify",
@@ -3123,7 +3124,7 @@
       "repository": "https://github.com/directus/directus",
       "description": "A data platform and API for managing SQL databases through a web interface. This single-image profile uses SQLite for a simple standalone installation.",
       "website": "https://directus.io/",
-      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/directus.webp",
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/directus.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -3715,7 +3716,7 @@
       "repository": "https://ghcr.io/smanx/deepseek-harness",
       "description": "DeepSeek Harness (dsh) is an open-source agent harness developed by DeepSeek AI.",
       "website": "https://www.deepseek.com",
-      "icon": "https://cdn.jsdelivr.net/gh/deepseek-ai/deepseek-harness@master/apps/web/public/favicon.svg",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/deepseek.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -11814,7 +11815,7 @@
       "repository": "https://github.com/thomiceli/opengist",
       "description": "Self-hosted Git-powered pastebin for snippets with syntax highlighting, history, and optional Git-over-SSH access.",
       "website": "https://opengist.io/",
-      "icon": "https://raw.githubusercontent.com/thomiceli/opengist/master/public/img/opengist.svg",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opengist.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -12138,7 +12139,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-opentask"
+      "template_id": "image-opentask",
+      "icon_dark": "invert"
     },
     {
       "id": "openvscode-server",
@@ -12836,7 +12838,7 @@
       "repository": "https://github.com/linuxserver/docker-phpmyadmin",
       "description": "Phpmyadmin is a free software tool written in PHP, intended to handle the administration of MySQL over the Web. phpMyAdmin supports a wide range of operations on MySQL and MariaDB.",
       "website": "https://github.com/phpmyadmin/phpmyadmin/",
-      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/phpmyadmin.webp",
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/phpmyadmin.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -12858,8 +12860,7 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "linuxserver-phpmyadmin",
-      "icon_dark": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/phpmyadmin-light.webp"
+      "template_id": "linuxserver-phpmyadmin"
     },
     {
       "id": "picoshare",
@@ -16325,9 +16326,9 @@
       "provider": "linuxserver.io",
       "template_family": "curated-profile",
       "title": "Suite Arr",
-      "repository": "https://github.com/linuxserver/docker-prowlarr",
-      "description": "Selectable Arr media suite with shared content and a choice of Jellyfin, Plex or Emby.",
-      "website": "https://github.com/Prowlarr/Prowlarr",
+      "repository": "https://github.com/linuxserver",
+      "description": "Installs a set of Arr applications at once, each in its own unprivileged LXC. Prowlarr, Sonarr, Radarr and qBittorrent come selected; Lidarr, Bazarr, SABnzbd, Seerr and Unpackerr can be added. The media applications share one host folder, and Jellyfin, Plex or Emby can be added as the media server. Each container starts on its own: there is no main member.",
+      "website": "https://wiki.servarr.com",
       "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/svg/servarr.svg",
       "architectures": [
         "amd64",
@@ -16350,7 +16351,8 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "hidden": false,
-      "template_id": "image-suite-arr"
+      "template_id": "image-suite-arr",
+      "multi_container": true
     },
     {
       "id": "super-productivity",
@@ -16500,7 +16502,7 @@
       "repository": "https://github.com/swagger-api/swagger-ui",
       "description": "Serve Swagger UI with its bundled Petstore example. Mount or configure an OpenAPI document to browse your own API.",
       "website": "https://github.com/swagger-api/swagger-ui",
-      "icon": "https://cdn.jsdelivr.net/npm/simple-icons@15.2.0/icons/swagger.svg",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/swagger.webp",
       "architectures": [
         "amd64"
       ],

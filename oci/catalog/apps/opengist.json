@@ -14,7 +14,7 @@
     "category_label": "Documents & Notes",
     "author": "thomiceli",
     "developer": "thomiceli",
-    "icon": "https://raw.githubusercontent.com/thomiceli/opengist/master/public/img/opengist.svg",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opengist.webp",
     "thumbnail": null,
     "screenshots": [],
     "architectures": [

@@ -45,7 +45,27 @@ class DarkMarkTests(unittest.TestCase):
 
     def test_an_empty_or_unreadable_icon(self):
         self.assertFalse(is_dark_mark(png(lambda d: None)))
-        self.assertIsNone(is_dark_mark(b'<svg xmlns="http://www.w3.org/2000/svg"/>'))
+        self.assertIsNone(is_dark_mark(b"not an image"))
+
+
+def svg(body):
+    return f'<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">{body}</svg>'.encode()
+
+
+class SvgDarkMarkTests(unittest.TestCase):
+    """An SVG is read by the colours it paints with."""
+
+    def test_an_svg_painted_only_in_black_is_one(self):
+        self.assertTrue(is_dark_mark(svg('<path d="M0 0h50v50z" fill="#000"/>')))
+
+    def test_a_shape_without_a_fill_or_in_current_colour_draws_black(self):
+        self.assertTrue(is_dark_mark(svg('<path d="M0 0h50v50z"/>')))
+        self.assertTrue(is_dark_mark(svg('<path d="M0 0h50v50z" fill="currentColor"/>')))
+
+    def test_white_or_coloured_paint_shows_on_the_dark_theme(self):
+        self.assertFalse(is_dark_mark(svg('<style>.a{fill:#FFFFFF;}</style><path class="a" d="M0 0h50v50z"/>')))
+        self.assertFalse(is_dark_mark(svg('<path d="M0 0h50v50z" fill="#111827"/><path d="M5 5h9v9z" fill="white"/>')))
+        self.assertFalse(is_dark_mark(svg('<path d="M0 0h50v50z" fill="#4D6BFE"/>')))
 
 
 def resolver():
