@@ -25,6 +25,7 @@ import oci_stack_transaction as stack_tx
 import oci_stack_adapters as adapters
 import oci_stack_replay as replay
 import oci_work_backup as work_backup
+import oci_zfs_recovery as zfs_recovery
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
@@ -119,6 +120,8 @@ class NativeAdapter:
         self.acknowledge = acknowledge_external_data
         # Storage where the verified backups of this update are kept.
         self.keep_backup = None
+        self.zfs_backups = None
+        self.zfs_checked = False
 
     def state(self):
         return json.loads(self.journal.read_text())
@@ -350,6 +353,16 @@ class NativeAdapter:
 
     def backup(self, vmid, transaction_id):
         self.validate(self.plan, [vmid])
+        if not getattr(self, 'zfs_checked', False):
+            self.zfs_checked = True
+            prepared_zfs = zfs_recovery.plan(self.records) if not getattr(self, 'keep_backup', None) and not getattr(self, 'keep_backup_requested', False) else None
+            if prepared_zfs:
+                for member_id, record in self.records.items():
+                    carried.carry_backup(self.root, member_id, record, prepared_zfs['configs'][member_id])
+                self.zfs_backups = zfs_recovery.create(self.records, self.journal.parent, prepared_zfs)
+        if getattr(self, 'zfs_backups', None):
+            archive = self.zfs_backups[vmid]
+            return {'archive': str(archive), 'sha256': member_tx.filehash(archive)}
         base = self.work_base()
         if base != self.journal.parent and not (self.journal.parent / work_backup.MARK).exists():
             work_backup.prepare(base)
@@ -370,7 +383,7 @@ class NativeAdapter:
                 raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup['archive']}")
             if member_tx.filehash(backup['archive']) != backup['sha256']:
                 raise ValueError(translate('A backup was modified'))
-            member_tx.run('zstd', '-t', backup['archive'])
+            member_tx.verify_recovery_archive(backup['archive'])
 
     def replace(self, vmid, prepared, identity):
         self.validate(self.plan)
@@ -705,6 +718,7 @@ class NativeAdapter:
             instances.write(instances.location(self.root, vmid), record)
         try:
             self.release_stages(recovered=state['phase'] == 'rolled-back')
+            zfs_recovery.cleanup(self.journal.parent)
             if self.keep_backup and state['phase'] == 'committed':
                 import oci_keep_backup
                 for backup in sorted(work_backup.recall(self.journal.parent).glob('backup-*/vzdump-lxc-*.tar.zst')):
@@ -714,7 +728,7 @@ class NativeAdapter:
             self.prune_backups(include_current=state['phase'] == 'committed')
             for path, _ in image_cache.prune(self.root, lock=False):
                 member_tx.log(f'removed unused image archive: {path}')
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
             member_tx.log(f'cleanup: {exc}')
 
     def release_stages(self, recovered=False):
@@ -816,6 +830,7 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
         journal = directory / 'transaction.json'
         _current['journal'] = journal
         adapter = NativeAdapter(root, journal, plan, acknowledge_external_data)
+        adapter.keep_backup_requested = bool(keep_backup)
         adapter.preflight()
         msg_ok(f"{translate('Stack checked:')} {len(plan['members'])} {translate('containers')}")
         if keep_backup:
@@ -876,7 +891,10 @@ def main():
     parser.add_argument('--operation', choices=['update', 'recreate'], default='update')
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--keep-backup', metavar='STORAGE')
+    parser.add_argument('--recovery-backend', choices=['backup', 'auto'])
     args = parser.parse_args()
+    if args.recovery_backend:
+        os.environ['PROXMENUX_OCI_RECOVERY'] = args.recovery_backend
     if os.geteuid() != 0:
         parser.error(translate('Root privileges on the Proxmox node are required'))
     try:
