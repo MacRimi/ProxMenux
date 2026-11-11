@@ -100,7 +100,7 @@
         "by": "jcastro",
         "date": "2026-11-11",
         "digest": "112c3f03d8ce62411b96efabf0b6ff5b007d99afd7d65c2909743afd74b887b4",
-        "scenario": "PVE 9.2 amd64/ZFS; default/advanced/PUID/PGID, managed/host media, HTTP/owner login and writable library API; restart/Modify; 1.0.18 to 1.0.19/no-op; backup/restore/Manage and automatic readiness rollback. Visual browser blocked; downloads/indexers and ARM not tested."
+        "scenario": "PVE 9.2 amd64/ZFS; default/advanced/PUID/PGID, managed/host media; owner login, Chrome setup/Explore/movie details and metadata; restart/Modify; 1.0.18 to 1.0.19/no-op; backup/restore/Manage and readiness rollback. Fresh install validates automatic DNS files. Downloads/playback/ARM not tested."
       }
     },
     "immich": {
