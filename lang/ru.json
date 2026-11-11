@@ -4230,7 +4230,7 @@
   "Invalid action": "Некорректное действие",
   "Invalid administrator email": "Некорректный адрес электронной почты администратора",
   "Invalid administrator user name": "Некорректное имя пользователя администратора",
-  "Invalid application": "Неверное приложение.",
+  "Invalid application": "Неверное приложение",
   "Invalid application identifier:": "Некорректный идентификатор приложения:",
   "Invalid base VMID": "Некорректный базовый VMID",
   "Invalid bridge": "Некорректный сетевой мост",
