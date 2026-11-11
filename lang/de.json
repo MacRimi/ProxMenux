@@ -9290,5 +9290,9 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Manage shows, movies and music in one self-hosted application.": "Serien, Filme und Musik in einer einzigen selbst gehosteten Anwendung verwalten.",
+  "Create the owner account in the web interface on first visit; there are no default credentials.": "Erstellen Sie beim ersten Aufruf das Besitzerkonto in der Weboberfläche. Es gibt keine voreingestellten Zugangsdaten.",
+  "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Speichern Sie /config auf lokalem Speicher. Wählen Sie in der Webeinrichtung Medien- und Downloadordner unter /media aus.",
+  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Speichern Sie Downloads und Bibliotheken auf demselben Dateisystem, um Hardlinks zu verwenden."
 }

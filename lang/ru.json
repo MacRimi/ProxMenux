@@ -9261,5 +9261,9 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Manage shows, movies and music in one self-hosted application.": "Управляйте сериалами, фильмами и музыкой в одном приложении на своём сервере.",
+  "Create the owner account in the web interface on first visit; there are no default credentials.": "При первом открытии веб-интерфейса создайте учётную запись владельца; учётных данных по умолчанию нет.",
+  "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Храните /config на локальном диске. В мастере веб-настройки выберите папки медиатеки и загрузок внутри /media.",
+  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Храните загрузки и медиатеки в одной файловой системе, чтобы использовать жёсткие ссылки."
 }

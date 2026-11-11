@@ -9289,5 +9289,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Manage shows, movies and music in one self-hosted application.": "Hantera serier, filmer och musik i en enda applikation på din egen server.",
+  "Create the owner account in the web interface on first visit; there are no default credentials.": "Skapa ägarkontot första gången du öppnar webbgränssnittet. Det finns inga förinställda inloggningsuppgifter.",
+  "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Lagra /config lokalt. Välj mappar för media och hämtningar under /media i webbens installationsguide.",
+  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Lagra hämtningar och bibliotek i samma filsystem för att kunna använda hårda länkar.",
+  "BookOrbit Setup Token": "Installationstoken för BookOrbit"
 }
