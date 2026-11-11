@@ -20,14 +20,14 @@ AVAILABLE = [{'vmid': 110, 'title': 'First app'}, {'vmid': 111, 'title': 'Second
 
 
 class SelectionTests(unittest.TestCase):
-    def select(self, picked, available=AVAILABLE, review=True, fresh=None, outcomes=None):
+    def select(self, picked, available=AVAILABLE, review=True, fresh=None):
         ui = Mock()
         ui.checklist.side_effect = picked if isinstance(picked, Exception) else [picked]
         ui.review.return_value = review
         current = [{**row, 'reason': 'matched'} for row in available]
         with patch.object(updates, 'UpdateCheck') as checker, \
                 patch.object(management, 'saved_inventory', return_value=current), \
-                patch.object(management, 'manage_instance', side_effect=outcomes or [True] * len(available)) as run:
+                patch('proxmenux_oci.batch_updates.run_batch') as run:
             checker.return_value.status.return_value = {'available': available if fresh is None else fresh}
             result = updates.select_updates(ROOT, ui, available)
         return result, ui, run
@@ -38,20 +38,16 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(ui.checklist.call_args.args[1][0], ('all', 'Select all'))
         run.assert_not_called()
 
-    def test_only_selected_app_uses_existing_update_flow(self):
+    def test_only_selected_app_enters_batch_preparation(self):
         _, ui, run = self.select(['111'])
-        self.assertEqual(run.call_count, 1)
-        self.assertEqual(run.call_args.args[2]['vmid'], 111)
-        self.assertEqual(run.call_args.kwargs, {'action': 'update', 'heading': 'Update OCI (1/1) · Second app'})
+        self.assertEqual([r['vmid'] for r in run.call_args.args[2]], [111])
         self.assertIn('Second app', ui.review.call_args.args[0])
         self.assertNotIn('First app', ui.review.call_args.args[0])
 
     def test_select_all_includes_every_app_once(self):
         _, ui, run = self.select(['all', '111'])
-        self.assertEqual([c.args[2]['vmid'] for c in run.call_args_list], [110, 111])
-        # Each update shows its place in the batch while its container is checked.
-        self.assertEqual([c.kwargs['heading'] for c in run.call_args_list],
-                         ['Update OCI (1/2) · First app', 'Update OCI (2/2) · Second app'])
+        run.assert_called_once()
+        self.assertEqual([r['vmid'] for r in run.call_args.args[2]], [110, 111])
         self.assertFalse(ui.review.call_args.kwargs['default'])
 
     def test_cancel_does_nothing(self):
@@ -61,23 +57,18 @@ class SelectionTests(unittest.TestCase):
     def test_selection_has_an_update_button_and_no_extra_action(self):
         result, ui, run = self.select([])
         self.assertEqual(ui.checklist.call_args.kwargs['ok_label'], 'Update')
-        # The same height and width as the OCI main menu.
         self.assertEqual(ui.checklist.call_args.kwargs['size'], updates.menu_size())
         self.assertNotIn('extra_button', ui.checklist.call_args.kwargs)
         self.assertFalse(result); ui.review.assert_not_called(); run.assert_not_called()
 
-    def test_changed_app_blocks_batch_before_any_lifecycle(self):
+    def test_changed_app_blocks_batch_before_preparation(self):
         _, ui, run = self.select(['all'], fresh=AVAILABLE[1:])
         run.assert_not_called()
         self.assertIn('changed since', ui.message.call_args.args[0])
 
-    def test_failure_or_per_app_cancel_stops_later_selections(self):
-        _, _, run = self.select(['all'], outcomes=[False])
-        self.assertEqual(run.call_count, 1)
-
-    def test_declining_review_returns_to_selection_instead_of_updating(self):
+    def test_declining_review_returns_to_selection(self):
         ui = Mock(); ui.checklist.side_effect = [['all'], []]; ui.review.return_value = False
-        with patch.object(management, 'manage_instance') as run:
+        with patch('proxmenux_oci.batch_updates.run_batch') as run:
             self.assertFalse(updates.select_updates(ROOT, ui, AVAILABLE))
         run.assert_not_called()
         self.assertEqual(ui.checklist.call_args.args[2], ['110', '111'])

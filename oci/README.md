@@ -152,7 +152,28 @@ Open **Updates available (N)** to choose applications with Space. Nothing is
 preselected, even when there is only one update. **Select all** at the top
 includes every listed application. After reviewing the selection, each
 application uses the existing update workflow, including its identity checks,
-backup prompts and recovery. Cancelling or failing an update stops the batch.
+backup prompts and recovery. All application reviews, recommended-setting
+choices and temporary-backup storage choices are collected **before** the first
+update. A final confirmation starts the prepared batch; no questions or Enter
+pauses interrupt execution. Keep the terminal open until the final summary.
+
+Updates run sequentially through the existing lifecycle helpers, which retain
+their registry locks, backups, health checks and rollback. By default, a failed
+update stops the queue. An upfront option allows continuing after a failure
+that leaves the application in a valid installed state. Pending recovery,
+changed application identity/configuration or interruption always stops it.
+Changes made during preparation or while earlier applications run must be
+reviewed again; the batch never silently accepts them. Selecting multiple
+members of one coordinated application updates that application only once.
+
+The summary shows each application’s outcome and execution time, including
+applications not started. Private reports under
+`/usr/local/share/proxmenux/oci/instances/batch-updates/<id>/report.json`
+record preparation, execution and per-step timings without commands,
+configuration values or credentials. Temporary proposals are removed when the
+batch finishes. Reports are diagnostic records, not resumable queues.
+Cancelling preparation leaves services untouched; already approved external
+configuration adoption or temporary-backup storage choices may still be saved.
 The selection screen has only **Update** and **Cancel** buttons.
 
 Opening the menu reads the Monitor's existing `/etc/proxmenux/apps` results

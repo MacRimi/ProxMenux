@@ -178,7 +178,7 @@ def select_updates(project, ui, available):
         if ui.review(names, translate('Update selected OCI applications'),
                      question=translate('Review and update these applications?'), default=False):
             break
-    from .management import manage_instance, saved_inventory
+    from .management import saved_inventory
     # A change/removal since the check invalidates that application's result.
     checker = UpdateCheck(project)
     still_available = {row['vmid'] for row in checker.status()['available']}
@@ -189,10 +189,6 @@ def select_updates(project, ui, available):
             ui.message(translate('An application changed since the update check. Check for updates again.'),
                        translate('Updates available'))
             return False
-    for index, row in enumerate(selected, 1):
-        # Keep the existing identity checks, backup/storage prompts, update
-        # confirmation, coordinated stack update and recovery path.
-        heading = f"{translate('Update OCI')} ({index}/{len(selected)}) · {row['title']}"
-        if not manage_instance(project, ui, current[row['vmid']], action='update', heading=heading):
-            break  # A cancellation or failure never updates later selections.
+    from .batch_updates import run_batch
+    run_batch(project, ui, [current[row['vmid']] for row in selected])
     return False
