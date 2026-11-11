@@ -52,12 +52,12 @@
       },
       "rows": [
         {
-          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "fileRich": "<code>pveproxy-ssl.pem</code><br></br><code>pveproxy-ssl.key</code>",
           "originRich": "Certificato personalizzato caricato tramite l'UI Proxmox — compreso il certificato Let's Encrypt rilasciato sotto <em>Datacenter → Nodo → Certificati → ACME</em>.",
           "when": "Preferito se entrambi i file esistono; Monitor usa il certificato presentato da Proxmox."
         },
         {
-          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "fileRich": "<code>pve-ssl.pem</code><br></br><code>pve-ssl.key</code>",
           "originRich": "Certificato autofirmato generato al momento di installazione dal Proxmox PKI.",
           "whenRich": "Fallback quando non è presente nessun <code>pveproxy-ssl.pem</code>."
         }

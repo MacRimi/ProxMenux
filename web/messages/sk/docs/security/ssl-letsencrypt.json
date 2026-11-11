@@ -52,12 +52,12 @@
       },
       "rows": [
         {
-          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "fileRich": "<code>pveproxy-ssl.pem</code><br></br><code>pveproxy-ssl.key</code>",
           "originRich": "Vlastný certifikát nahraný cez rozhranie Proxmox vrátane certifikátu Let’s Encrypt vydaného cez <em>Datacenter → Node → Certificates → ACME</em>.",
           "when": "Uprednostní sa, ak existujú oba súbory; Monitor použije certifikát poskytovaný Proxmoxom."
         },
         {
-          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "fileRich": "<code>pve-ssl.pem</code><br></br><code>pve-ssl.key</code>",
           "originRich": "Samopodpísaný certifikát vytvorený v čase inštalácie spoločnosťou Proxmox PKI.",
           "whenRich": "Náhradný certifikát, ak <code>pveproxy-ssl.pem</code> neexistuje."
         }
