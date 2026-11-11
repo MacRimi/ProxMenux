@@ -203,6 +203,20 @@ An update is a transaction:
 
 Settings changed in Proxmox VE after the installation, such as memory, cores or start with the node, are carried into the new record. An operation interrupted by a closed terminal or a reboot is detected the next time the menu opens, and the previous installation can be recovered. A container restored from a backup on another host is registered again from the copy of the record it carries.
 
+Coordinated updates compare each installed image with its resolved candidate. If
+all members are unchanged, they finish without stopping or recreating the stack.
+Otherwise only changed images are recreated (completion jobs are also replayed
+when the stack changes). Every member is still stopped and backed up coherently:
+a new application can migrate an unchanged database. A failed update restores
+the whole recovery point, including members whose LXC configuration did not
+change. Explicit Recreate continues to rebuild every member.
+
+Temporary data holders use a minimal, networkless, never-started rootfs instead
+of extracting the application image a second time. This applies to standalone
+and coordinated image replacement, and to stack recovery. Journals record active
+phase durations in `phase_seconds`; time while an operation is interrupted is
+not counted as work by a subsequent recovery process.
+
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
 For standalone applications, CPU and RAM changes apply live. Supported network settings, environment overrides, directory mounts, additional managed volumes and native devices use a controlled stop/start when needed. Modify does not query the registry or download an image for these native edits, even if the cached archive has already been cleaned. Removing a managed mount detaches its disk without deleting its data; subsequent image updates park that unused disk and return it to the container. An optional retained backup does not force recreation.

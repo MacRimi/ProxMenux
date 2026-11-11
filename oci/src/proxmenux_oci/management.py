@@ -690,11 +690,11 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                              question=translate('Recreate the whole stack?'), default=False):
                 return CANCELLED
         else:
-            if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
-                                       'If there are new versions, all images are downloaded and verified, the application '
-                                       'is stopped, each container is backed up and replaced with its new image. If the operation '
-                                       'fails after a container was changed, the backups are restored. An operation that stops '
-                                       'halfway is recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
+            if not ui.review(translate('All {count} containers of the application are checked together (main CT: {vmid}). If no images changed, '
+                                       'nothing is stopped or recreated. Otherwise the required images are prepared, the application is stopped '
+                                       'and every container is backed up. Only changed members and any required setup jobs are recreated. If '
+                                       "the operation fails after a container was changed, the whole application's backups are restored. "
+                                       'Interrupted operations can be recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
                     translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
                 return CANCELLED
     else:
