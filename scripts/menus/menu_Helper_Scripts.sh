@@ -71,6 +71,18 @@ if ! echo "$CACHE_JSON" | jq -e 'if type == "array" and length > 0 then true els
   exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 fi
 
+# Categories that ProxMenux lists inside a wider one, by name. The cache keeps
+# the category Community Scripts gives each script; only this menu groups it.
+FOLDED_CATEGORIES='{"ZigBee, Z-Wave & Matter": "IoT & Smart Home"}'
+FOLDED_JSON=$(echo "$CACHE_JSON" | jq --argjson fold "$FOLDED_CATEGORIES" '
+  ([.[] | [.categories, .category_names] | transpose[] | {(.[1]): .[0]}] | add) as $ids
+  | map(. as $script
+      | ([$script.categories, $script.category_names] | transpose
+         | map(if ($fold[.[1]] and $ids[$fold[.[1]]]) then [$ids[$fold[.[1]]], $fold[.[1]]] else . end)
+         | unique) as $pairs
+      | $script + {categories: ($pairs | map(.[0])), category_names: ($pairs | map(.[1]))})' 2>/dev/null)
+[[ -n "$FOLDED_JSON" ]] && CACHE_JSON="$FOLDED_JSON"
+
 # The menus are as tall as the main menu, cut to the terminal.
 MENU_HEIGHT=$(( $(tput lines 2>/dev/null || echo 24) - 2 ))
 (( MENU_HEIGHT > 24 )) && MENU_HEIGHT=24
@@ -535,7 +547,7 @@ while true; do
   local_idx=1
   for id in $(printf "%s\n" "${!CATEGORY_COUNT[@]}" | sort); do
     CAT_IDX_TO_ID[$local_idx]="$id"
-    name="${CATEGORY_NAMES[$id]:-Category $id}"
+    name="$(translate "${CATEGORY_NAMES[$id]:-Category $id}")"
     count="${CATEGORY_COUNT[$id]}"
     padded_name=$(printf "%-35s" "$name")
     padded_count=$(printf "(%2d)" "$count")
@@ -585,7 +597,7 @@ while true; do
       | @tsv')
 
     SCRIPT_INDEX=$(dialog --colors --backtitle "ProxMenux" \
-      --title "$(translate "Scripts in") ${CATEGORY_NAMES[$SELECTED]}" \
+      --title "$(translate "Scripts in") $(translate "${CATEGORY_NAMES[$SELECTED]}")" \
       --menu "$(translate "Choose a script to execute:"):" \
       "$MENU_HEIGHT" 75 "$MENU_ROWS" "${SCRIPTS[@]}" 3>&1 1>&2 2>&3) || break
 
