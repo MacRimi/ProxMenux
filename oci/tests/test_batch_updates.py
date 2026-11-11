@@ -121,10 +121,12 @@ class BatchTests(unittest.TestCase):
                 runner([sys.executable,'updater.py',str(v),'--proposal',original.name],'Modify OCI')
             # The cloned proposal exists until the outer preparation context exits.
             # Its path is private to the collector, so observe its own folder.
-            paths.extend(Path(tempfile.gettempdir()).glob('proxmenux-oci-batch-*/*.json'))
+            paths.extend(Path(self.tmp.name).glob('proxmenux-oci-batch-*/*.json'))
             signal.raise_signal(signal.SIGTERM)
         self.prepare_hook=prepare
-        self.assertIsNone(self.start());self.run.assert_not_called()
+        with patch.object(tempfile,'tempdir',self.tmp.name):
+            self.assertIsNone(self.start())
+        self.run.assert_not_called()
         self.assertTrue(paths);self.assertTrue(all(not p.exists()for p in paths))
         self.assertEqual(signal.getsignal(signal.SIGTERM),before)
         self.assertFalse(self.reports())
