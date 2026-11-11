@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Firefox Browser, also known as Mozilla Firefox or simply Firefox, is a free and open-source web browser developed by the Mozilla Foundation and its subsidiary, the Mozilla Corporation. Firefox uses the Gecko layout engine to render web pages, which implements current and anticipated web standards."
+    },
+    "description": {
+      "en_US": "Firefox is a free and open-source web browser developed by the Mozilla Foundation and the Mozilla Corporation. It uses the Gecko layout engine to render web pages and adheres to current web standards. It enables users to browse the internet, access web applications, and manage online media securely."
+    }
   }
 }

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "**Your PDFs never leave your device.** BentoPDF is a privacy-first PDF toolkit that runs entirely in your browser. Every merge, split, conversion, and edit happens locally on your machine — no file is ever uploaded to a server. More than 50 tools are bundled into one clean, fast, ad-free interface.\n\n**One app for every PDF job.** Organize and edit your documents (merge, split, reorder, rotate, crop, watermark, page numbers, redaction, annotations and forms), convert to and from PDF (images, Word, Excel, PowerPoint, EPUB, Markdown and more), run OCR, and secure your files with compression, encryption, digital signatures, and metadata cleanup.\n\n**Made for your private cloud.** Self-hosting BentoPDF on a private cloud device like self-hosted server gives your whole household or team a single, ad-free PDF workshop on hardware you control — fast over the local network, with your documents staying private by design.\n"
+    },
+    "description": {
+      "en_US": "BentoPDF is a privacy-focused PDF toolkit that performs all document operations locally within your web browser. It offers a broad suite of tools to edit, merge, split, annotate, and organize PDF pages without sending data to external servers. Users can also convert documents between PDF and various image or file formats, build automated processing pipelines, and secure files with passwords or digital signatures."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/alam00000/bentopdf/HEAD/public/images/bentopdf-tools.png"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted app for organizing recurring tasks and household chores, with data stored in SQLite."
+    },
+    "description": {
+      "en_US": "Donetick is an open-source task and chore management application designed to help individuals and households organize recurring responsibilities. It supports natural language task input, customizable recurrence schedules, assignee rotation, and nested subtasks that reset automatically upon completion. Users can also gamify chores with a built-in points system and track arbitrary non-task data."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/donetick/donetick/HEAD/assets/screenshot.png"
+    ]
+  }
+}

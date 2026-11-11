@@ -73,6 +73,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "DuckDNS"
+    },
+    "tagline": {
+      "en_US": "Duckdns is a free service which will point a DNS (sub domains of duckdns.org) to an IP of your choice. The service is completely free, and doesn't require reactivation or forum posts to maintain its existence."
+    },
+    "description": {
+      "en_US": "Duck DNS is a dynamic DNS updater that points free subdomains to an IP address of your choice. It periodically detects your network's public IP address and synchronizes DNS records every five minutes. This keeps home networks, remote servers, and self-hosted services accessible from a fixed domain name even when your internet provider changes your IP address."
     }
   }
 }

@@ -34,5 +34,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Save storage space with efficient file processing.\n\nFileFlows lets you monitor and process any file type with custom flows. Videos, audio, images, archives, comics, eBooks—you name it!\n"
+    },
+    "description": {
+      "en_US": "FileFlows is an application that automatically processes files through customizable rule flows. It enables users to convert video files from one format to another and automate media workflows. It can also standardize files, such as ensuring that media always includes a specific audio track like AC3."
+    },
+    "screenshots": [
+      "https://fileflows.com/images/webconsole/dashboard.webp",
+      "https://fileflows.com/images/webconsole/flow-editor-example.webp",
+      "https://fileflows.com/images/reports/processing-summary.webp"
+    ]
   }
 }

@@ -14,6 +14,16 @@
   "catalog_ui": {
     "title": {
       "en_US": "DuckStation"
-    }
+    },
+    "tagline": {
+      "en_US": "DuckStation is a PS1 Emulator aiming for the best accuracy and game support."
+    },
+    "description": {
+      "en_US": "DuckStation is an emulator for the Sony PlayStation 1 console designed with a focus on playability, speed, and long-term maintainability. It aims to provide high accuracy and broad game compatibility. The emulator allows users to run and play classic PlayStation games on modern hardware."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/stenzek/duckstation/md-images/main-qt.png",
+      "https://raw.githubusercontent.com/stenzek/duckstation/md-images/bigduck.png"
+    ]
   }
 }

@@ -14,6 +14,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "VS Code"
-    }
+    },
+    "tagline": {
+      "en_US": "VS Code is an integrated development environment developed by Microsoft. This container runs the full desktop application, for a web native version see Code Server."
+    },
+    "description": {
+      "en_US": "VS Code is an integrated development environment developed by Microsoft. It provides tools for code editing, debugging, and software development within a desktop environment accessible via a web browser. It is useful for managing programming projects and writing code across multiple languages."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/56af271c-949d-454c-a3ea-16188c063414"
+    ]
   }
 }

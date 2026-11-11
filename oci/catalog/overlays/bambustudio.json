@@ -14,6 +14,16 @@
   "catalog_ui": {
     "title": {
       "en_US": "Bambu Studio"
-    }
+    },
+    "tagline": {
+      "en_US": "Bambu Studio is an open-source, cutting-edge, feature-rich slicing software. It contains project-based workflows, systematically optimized slicing algorithms, and an easy-to-use graphical interface, bringing users an incredibly smooth printing experience."
+    },
+    "description": {
+      "en_US": "Bambu Studio is an open-source slicing software designed for 3D printing. It provides project-based workflows, optimized slicing algorithms, and an intuitive graphical interface to prepare 3D models for fabrication. Users can adjust print parameters, slice models into machine instructions, and streamline the printing process."
+    },
+    "screenshots": [
+      "https://portal.bblmw.com/download/feature/studio/en/6.png",
+      "https://portal.bblmw.com/download/pic/studio-en.png"
+    ]
   }
 }

@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web reverse proxy and gateway with a browser-based management interface, certificate management and plugins. Its Docker socket integration is disabled in this profile because the app runs directly in its own LXC."
+    },
+    "description": {
+      "en_US": "Zoraxy is a general-purpose HTTP reverse proxy and forwarding tool with a built-in management interface. It enables routing and load balancing of web traffic with support for HTTP/2, WebSockets, and redirection rules. The system includes automated TLS certificate management via ACME, IP and country-based access controls, stream proxying, and built-in network monitoring utilities."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/tobychui/zoraxy/HEAD/img/screenshots/1.png",
+      "https://raw.githubusercontent.com/tobychui/zoraxy/HEAD/img/screenshots/2.png"
+    ]
+  }
+}

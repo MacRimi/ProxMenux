@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Search the web through a self-hosted interface that sends queries to several search engines."
+    },
+    "description": {
+      "en_US": "SearXNG is a metasearch engine that aggregates results from various search providers. It allows users to search the web without being tracked or profiled."
+    }
+  }
+}

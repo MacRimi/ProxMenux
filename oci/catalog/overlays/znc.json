@@ -27,6 +27,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "ZNC"
-    }
+    },
+    "tagline": {
+      "en_US": "Znc is an IRC network bouncer or BNC. It can detach the client from the actual IRC server, and also from selected channels. Multiple clients from different locations can connect to a single ZNC account simultaneously and therefore appear under the same nickname on IRC."
+    },
+    "description": {
+      "en_US": "Znc is an IRC network bouncer (BNC) that functions as an intermediary between IRC clients and IRC servers. It allows clients to detach from the IRC server and selected channels without losing the active connection. Multiple clients connecting from different locations can attach to a single account simultaneously and appear under the same nickname."
+    },
+    "screenshots": [
+      "https://wiki.znc.in/images/d/d5/Webadmin-settings-dark-clouds.png"
+    ]
   }
 }

@@ -131,9 +131,19 @@ function start_vm_configuration() {
 
 
 # A system type given as argument, as the menu search does, is opened first;
-# the menu follows.
+# the menu follows. A second argument names the system of that type, which is
+# then opened without its menu (truenas-scale, ubuntu, uupdump...).
 PRESELECTED_OPTION="${1:-}"
+VM_PRESET="${2:-}"
+[[ "$VM_PRESET" =~ ^[a-z0-9-]{1,32}$ ]] || VM_PRESET=""
+# Opened from the Monitor's Catalog tab, the script creates that one system
+# and ends, instead of going on to the menus: with 0 once the VM is created,
+# with 130 when it is cancelled or fails before.
+ONE_SHOT=0
+[[ "$PRESELECTED_OPTION" =~ ^[1-5]$ && "${PROXMENUX_CATALOG:-}" == "1" ]] && ONE_SHOT=1
 while true; do
+  [[ "$ONE_SHOT" == "2" ]] && exit 130
+  [[ "$ONE_SHOT" == "1" ]] && ONE_SHOT=2
   VM_STORAGE_IOMMU_PENDING_REBOOT=0
   WIZARD_CONFLICT_POLICY=""
   WIZARD_CONFLICT_SCOPE=""
@@ -142,6 +152,7 @@ while true; do
     OS_TYPE="$PRESELECTED_OPTION"
     PRESELECTED_OPTION=""
   else
+    VM_PRESET=""
     OS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
       --title "$(translate "Select System Type")" \
       --menu "\n$(translate "Choose the type of virtual system to install:")" 20 70 10 \

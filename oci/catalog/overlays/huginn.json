@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted automation platform whose agents can watch websites and services, transform events, and trigger actions. Uses Huginn’s all-in-one image."
+    },
+    "description": {
+      "en_US": "Huginn is a system for building automated agents that perform online tasks. Agents read the web, watch for events, and take actions by creating and consuming data along a directed graph. It allows users to automate complex workflows and monitor services while keeping complete ownership of their data."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/huginn/huginn/master/doc/imgs/your-agents.png",
+      "https://raw.githubusercontent.com/huginn/huginn/master/doc/imgs/new-agent.png",
+      "https://raw.githubusercontent.com/huginn/huginn/master/doc/imgs/events.png",
+      "https://raw.githubusercontent.com/huginn/huginn/master/doc/imgs/my-locations.png"
+    ]
+  }
+}

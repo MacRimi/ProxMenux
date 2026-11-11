@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "CouchDB stores JSON documents and exposes them through an HTTP API, with Fauxton for administration in a browser. This single-node profile uses the official CouchDB image, persistent data storage and a generated administrator password."
+    },
+    "description": {
+      "en_US": "Apache CouchDB is a document-oriented database that stores data as JSON documents. It provides an HTTP API for accessing and querying stored data and includes the Fauxton web interface for database administration. It is designed to handle structured document storage and scalable data management."
+    }
+  }
+}

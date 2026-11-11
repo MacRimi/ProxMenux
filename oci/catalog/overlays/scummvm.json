@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "ScummVM"
+    },
+    "tagline": {
+      "en_US": "ScummVM is a program which allows you to run certain classic graphical adventure and role-playing games, provided you already have their data files. The clever part about this: ScummVM just replaces the executables shipped with the games, allowing you to play them on systems for which they were never designed! ScummVM is a complete rewrite of these games' executables and is not an emulator."
+    },
+    "description": {
+      "en_US": "ScummVM is a program that runs supported classic graphical adventure and role-playing games on modern systems. Rather than emulating hardware, it acts as a complete rewrite of the original game executables to maintain compatibility. Users must provide their own original game data files to play."
     }
   }
 }

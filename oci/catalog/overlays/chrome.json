@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "Google Chrome"
+    },
+    "tagline": {
+      "en_US": "Chrome is the official web browser from Google, built to be fast, secure, and customizable."
+    },
+    "description": {
+      "en_US": "Chrome is a web browser developed by Google designed for browsing websites and running web applications. It provides tools for navigating the internet securely with support for multimedia, web standards, and developer utilities. Users can customize their browsing experience with extensions, bookmarks, and personalized configurations."
     }
   }
 }

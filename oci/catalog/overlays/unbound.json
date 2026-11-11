@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the community-maintained klutchell image of Unbound as a DNS resolver on its own Proxmox LXC. It listens on TCP and UDP port 53 and can load optional custom configuration files."
+    },
+    "description": {
+      "en_US": "Unbound is a validating, recursive, and caching DNS resolver. It handles domain name lookups directly by querying authoritative servers and verifying DNSSEC records. It is useful for improving network privacy, security, and resolution performance through local caching."
+    }
+  }
+}

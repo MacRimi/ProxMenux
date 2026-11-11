@@ -14,6 +14,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "IntelliJ IDEA"
-    }
+    },
+    "tagline": {
+      "en_US": "IntelliJ IDEA helps you write code faster with tools that eliminate tedious tasks and let you focus on what matters – building great software."
+    },
+    "description": {
+      "en_US": "IntelliJ IDEA is an integrated development environment designed to accelerate software engineering. It provides automated tools to eliminate repetitive development tasks, helping developers focus directly on building software."
+    },
+    "tips": [
+      "By default, there is no authentication enabled."
+    ],
+    "screenshots": [
+      "https://www.jetbrains.com/_assets/rr/air-cli-small-DkKty5XR.png"
+    ]
   }
 }

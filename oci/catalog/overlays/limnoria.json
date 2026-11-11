@@ -14,5 +14,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Limnoria A robust, full-featured, and user/programmer-friendly Python IRC bot, with many existing plugins. Successor of the well-known Supybot."
+    },
+    "description": {
+      "en_US": "Limnoria is an extensible Python-based IRC bot and the successor to Supybot. It connects to IRC networks to automate channel tasks, moderate discussions, and respond to commands. The bot is designed to be easily extensible through a wide selection of plugins."
+    },
+    "tips": [
+      "New setups require running the limnoria-wizard command to generate the initial configuration."
+    ]
   }
 }

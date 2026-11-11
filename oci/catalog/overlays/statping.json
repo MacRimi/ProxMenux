@@ -1,0 +1,19 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Status page that monitors websites and services and records their uptime and response times."
+    },
+    "description": {
+      "en_US": "Statping is a status page and monitoring server for websites and applications. It automatically monitors service availability using HTTP GET and POST requests and displays uptime and response times on a customizable status page. The system also supports multiple database backends and sends failure alerts through channels like email and Slack."
+    },
+    "tips": [
+      "Login is admin, password admin."
+    ],
+    "screenshots": [
+      "https://statping-ng.github.io/assets/external/statupsc2.png",
+      "https://statping-ng.github.io/assets/external/statupsiterun.gif",
+      "https://statping-ng.github.io/assets/external/statping_settings.gif",
+      "https://statping-ng.github.io/assets/external/statping_theme.gif"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Start Loki in its built-in single-binary configuration with local filesystem storage."
+    },
+    "description": {
+      "en_US": "Grafana Loki is a multi-tenant log aggregation system inspired by Prometheus. Instead of indexing the full text of logs, it indexes metadata labels and stores compressed, unstructured log data. It operates as a backend service responsible for storing logs and processing queries, typically queried and displayed through Grafana or command-line tools."
+    }
+  }
+}

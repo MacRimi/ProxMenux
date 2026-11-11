@@ -26,6 +26,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "SABnzbd"
-    }
+    },
+    "tagline": {
+      "en_US": "Sabnzbd makes Usenet as simple and streamlined as possible by automating everything we can. All you have to do is add an .nzb. SABnzbd takes over from there, where it will be automatically downloaded, verified, repaired, extracted and filed away with zero human interaction."
+    },
+    "description": {
+      "en_US": "SABnzbd is an automated Usenet download manager designed to streamline handling NZB files. Once an NZB file is added, it automatically downloads, verifies, repairs, and extracts the files without requiring manual intervention. It organizes completed files into designated folders for easy access."
+    },
+    "screenshots": [
+      "https://sabnzbd.org/images/landing/screenshots/interface.png",
+      "https://sabnzbd.org/images/landing/screenshots/phone-interface.png",
+      "https://sabnzbd.org/images/landing/screenshots/history-details.png",
+      "https://sabnzbd.org/images/landing/screenshots/file-lists.png"
+    ]
   }
 }

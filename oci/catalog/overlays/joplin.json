@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Joplin is a free, open source note taking and to-do application, which can handle a large number of notes organised into notebooks."
+    },
+    "description": {
+      "en_US": "Joplin is an open source note-taking and to-do application designed to handle large collections of notes. It allows users to structure their content neatly into notebooks and keep track of daily responsibilities. The application serves as a personal workspace for organizing thoughts, research, and task lists."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/laurent22/joplin/dev/Assets/WebsiteAssets/images/home-top-img.png"
+    ]
   }
 }

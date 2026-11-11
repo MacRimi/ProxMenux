@@ -39,5 +39,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kimai is a professional grade time-tracking application, free and open-source."
+    },
+    "description": {
+      "en_US": "Kimai is an open-source time-tracking application designed for freelancers and organizations of any size. It allows users to track project hours using timers or punch-in and punch-out modes. The platform provides tools for generating invoices, exporting data, and monitoring time and monetary budgets. It also supports customizable roles, customer-specific rates, and detailed activity reporting."
+    },
+    "screenshots": [
+      "https://www.kimai.org/images/screenshots/screenshot-dashboard.webp",
+      "https://www.kimai.org/images/screenshots/screenshot-reporting.webp"
+    ]
   }
 }

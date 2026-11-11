@@ -1278,7 +1278,10 @@ show_menu() {
             script_selection="$preselected"
             exit_status=0
             PRESELECTED_OPTION=""
+            CATALOG_ITEM_DONE=1
         else
+            # Opened from the Monitor's Catalog tab, the option ends the run instead of the menu following.
+            [[ "${PROXMENUX_CATALOG:-}" == "1" && -n "${CATALOG_ITEM_DONE:-}" ]] && exit 0
             exec 3>&1
             script_selection=$(dialog --clear --colors \
                                      --backtitle "ProxMenux" \

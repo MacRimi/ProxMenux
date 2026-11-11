@@ -92,5 +92,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "SnapOtter is an open-source, self-hosted file manipulation suite with 200+ tools across images, video, audio, PDFs, and files. It includes batch processing, reusable pipelines, local AI tools, a browser image editor, and a REST API so files stay on your own server.\n\nThis package uses SnapOtter's single-container embedded mode for an easy self-hosted server install. PostgreSQL 17 and Redis 8 run inside the container when DATABASE_URL and REDIS_URL are left unset, with persistent data stored under /data.\n\nDefault login is admin / admin. SnapOtter asks you to change the default password after first login.\n"
+    },
+    "description": {
+      "en_US": "SnapOtter is a self-hosted file-processing suite that converts, compresses, edits, and transforms files directly in your browser. It includes over 200 tools across images, video, audio, PDFs, and data formats. The platform also features a layer-based image editor, local AI tools for OCR and transcription, automated processing pipelines, and a REST API."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/snapotter-hq/SnapOtter/main/branding/dashboard.gif"
+    ],
+    "repository": "https://github.com/snapotter-hq/SnapOtter"
   }
 }

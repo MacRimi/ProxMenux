@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Dolphin Emulator lets you play GameCube and Wii games with various graphical enhancements and other features are available to improve your game experience."
+    },
+    "description": {
+      "en_US": "Dolphin is an emulator for Nintendo GameCube and Wii video game consoles. It enables users to play titles from both systems with enhanced graphics and improved performance over the original hardware. The software provides various configuration options and features to tailor the gaming experience."
+    },
+    "tips": [
+      "Exit and open dolphin in order for gamepads to work.",
+      "Right click the desktop to open programs."
+    ]
   }
 }

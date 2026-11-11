@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Serve offline websites and reference libraries from ZIM files on your network. This single-container service needs an existing host directory containing at least one .zim file; it does not require a separate application."
+    },
+    "description": {
+      "en_US": "Kiwix Serve is an HTTP daemon designed to serve content stored in ZIM files. It allows users to access and navigate offline websites and reference libraries across a local network without requiring internet connectivity. It is useful for distributing documentation, encyclopedias, and other educational materials offline."
+    }
+  }
+}

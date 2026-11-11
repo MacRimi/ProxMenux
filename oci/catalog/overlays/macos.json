@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Dockur image running QEMU/KVM with a browser console. macOS is a virtual machine, not a Linux container; installation must be completed in the web viewer. Installing Apple's macOS requires accepting its end-user license agreement; install it at your own responsibility."
+    },
+    "description": {
+      "en_US": "macOS is Apple's desktop operating system, providing a graphical user interface and a Unix-based environment. It enables running Mac-specific desktop software, command-line utilities, and development tools. It is useful for testing, building software, and accessing a macOS environment remotely."
+    },
+    "tips": [
+      "In the macOS recovery menu, open Disk Utility, select the largest Apple Inc. VirtIO Block Media disk, and click Erase to format it to APFS.",
+      "After formatting, exit Disk Utility and choose Reinstall macOS, selecting the newly created disk.",
+      "During post-installation setup, select Not now on Migration Assistant, choose Set Up Later and Skip on the Apple ID screen, then set a username and password."
+    ]
+  }
+}

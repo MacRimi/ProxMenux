@@ -51,6 +51,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "Airsonic-Advanced"
-    }
+    },
+    "tagline": {
+      "en_US": "Airsonic-advanced is a free, web-based media streamer, providing ubiquitious access to your music. Use it to share your music with friends, or to listen to your own music while at work. You can stream to multiple players simultaneously, for instance to one player in your kitchen and another in your living room."
+    },
+    "description": {
+      "en_US": "Airsonic Advanced is a free, web-based media streamer designed to provide ubiquitous access to your music library. It allows you to stream audio to multiple players simultaneously across different rooms or locations. It is useful for managing personal audio collections, handling playlists and podcasts, and sharing music with friends."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/kagemomiji/airsonic-advanced/HEAD/contrib/assets/screenshot.png"
+    ]
   }
 }

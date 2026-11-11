@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "MySpeed is a speed test analysis software that stores the speed of your internet for up to 30 days. This can also be useful if you want to know when your network might have drops or if you want to check if your internet matches the booked values from your contract."
+    },
+    "description": {
+      "en_US": "MySpeed is a speed test analysis application that records internet speed for up to 30 days. It automates testing intervals using cron expressions and generates statistics on bandwidth, ping, and network performance. The software supports multiple servers and can send health check notifications via email or messaging platforms in case of errors or downtime."
+    },
+    "screenshots": [
+      "https://i.imgur.com/NHX7Ba9.png",
+      "https://i.imgur.com/5JAFgrk.png",
+      "https://i.imgur.com/kxsrjIe.png",
+      "https://i.imgur.com/hgOR93G.png"
+    ],
+    "repository": "https://github.com/gnmyt/myspeed"
   }
 }

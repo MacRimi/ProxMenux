@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Thunderbird is a free and open-source personal information manager primarily used as an e-mail client with a calendar and contactbook, as well as an RSS feed reader, chat client, and news client."
+    },
+    "description": {
+      "en_US": "Thunderbird is a free and open-source personal information manager. It is primarily used as an email client and includes an integrated calendar and address book. It also functions as an RSS feed reader, chat client, and news client to help manage personal and professional communication."
+    },
+    "screenshots": [
+      "https://www.thunderbird.net/media/img/thunderbird/new/screens/153-mail-screen.png",
+      "https://www.thunderbird.net/media/img/thunderbird/new/screens/calendar-screen.png",
+      "https://www.thunderbird.net/media/img/thunderbird/new/testimonials/unified-inbox.png",
+      "https://www.thunderbird.net/media/img/thunderbird/base/home/exploding-phone.png"
+    ]
   }
 }

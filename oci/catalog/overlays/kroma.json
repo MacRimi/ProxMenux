@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Personal media server for browsing and playing a local video library, with direct play and optional modules."
+    },
+    "description": {
+      "en_US": "KROMA is a self-hosted media server designed to scan and stream local film and series collections to web browsers, mobile devices, desktop apps, and televisions. It uses direct play to stream original media files whenever supported, falling back to on-demand transcoding when required. The server organizes movies and shows by filename, fetches metadata and artwork automatically, and supports optional modular extensions for additional capabilities."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/kromatv/kroma/HEAD/clients/webos/store/shots/00-home.jpg",
+      "https://raw.githubusercontent.com/kromatv/kroma/HEAD/clients/webos/store/shots/02-browse.jpg"
+    ]
+  }
+}

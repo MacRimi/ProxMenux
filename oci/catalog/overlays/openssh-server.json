@@ -140,6 +140,12 @@
     },
     "title": {
       "en_US": "OpenSSH Server"
+    },
+    "tagline": {
+      "en_US": "Openssh-server is a sandboxed environment that allows ssh access without giving keys to the entire server."
+    },
+    "description": {
+      "en_US": "Openssh Server provides secure shell access within a restricted environment. It allows granting SSH access to external users or automated jobs without exposing the entire underlying system. Users are limited to designated folders and specific processes, enabling compartmentalized workflows and isolated access management."
     }
   }
 }

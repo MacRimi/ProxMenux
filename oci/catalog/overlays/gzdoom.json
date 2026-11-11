@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "GZDoom"
+    },
+    "tagline": {
+      "en_US": "GZDoom is a feature centric port for all Doom engine games, based on ZDoom, adding an OpenGL renderer and powerful scripting capabilities."
+    },
+    "description": {
+      "en_US": "GZDoom is a source port for Doom engine games based on ZDoom. It modernizes classic games by providing an OpenGL renderer alongside advanced scripting capabilities."
     }
   }
 }

@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Tautulli is a python based web application for monitoring, analytics and notifications for Plex Media Server."
+    },
+    "description": {
+      "en_US": "Tautulli is a web application designed for monitoring, analytics, and notifications for Plex Media Server. It tracks streaming activity across your media library and provides detailed insights into server usage and playback history. Administrators can observe active streams in real time and monitor system events."
+    },
+    "tips": [
+      "To use the built-in Plex LogViewer, open settings under Plex Media Server, enable Show Advanced, and set the Logs Folder."
+    ],
+    "screenshots": [
+      "https://tautulli.com/images/screenshots/activity-compressed.jpg?v=2"
+    ]
   }
 }

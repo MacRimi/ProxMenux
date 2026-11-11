@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "shadPS4"
+    },
+    "tagline": {
+      "en_US": "shadPS4 is an early PlayStation 4 emulator for Windows, Linux and macOS written in C++."
+    },
+    "description": {
+      "en_US": "shadPS4 is an early PlayStation 4 emulator written in C++. It allows users to run PlayStation 4 software and games on supported operating systems, including Windows, Linux, and macOS."
     }
   }
 }

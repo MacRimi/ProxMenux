@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the Manticore search engine with its HTTP and MySQL-compatible interfaces and persistent local data."
+    },
+    "description": {
+      "en_US": "Manticore Search is an open-source database designed specifically for search and stream filtering. It provides full-text, vector, and hybrid search capabilities with multi-threaded execution across both row-wise and columnar storage. Users can interact with the engine using standard SQL through MySQL-compatible clients or via an HTTP JSON interface."
+    }
+  }
+}

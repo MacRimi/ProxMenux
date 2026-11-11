@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Host and share files with ownCloud Infinite Scale. This single-image profile initializes the built-in admin user and stores its configuration and data in persistent volumes. It does not include separate office-suite integrations."
+    },
+    "description": {
+      "en_US": "ownCloud Infinite Scale is a file sync and share platform built for scalable data management. It enables users to store, organize, and access file spaces across web, desktop, and mobile devices using open APIs. The platform also supports integrations with web office applications for collaborative document editing, alongside modern authentication through OpenID Connect."
+    },
+    "screenshots": [
+      "https://owncloud.com/wp-content/uploads/2022/11/example.png"
+    ]
+  }
+}

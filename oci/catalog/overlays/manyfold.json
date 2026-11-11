@@ -31,5 +31,13 @@
     "SECRET_KEY_BASE": {
       "required": false
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manyfold  is an open source, self-hosted web application for managing a collection of 3D models, particularly focused on 3D printing."
+    },
+    "description": {
+      "en_US": "Manyfold is a self-hosted web application designed for managing collections of 3D models. It focuses on organizing, tracking, and cataloging digital assets specifically for 3D printing workflows."
+    }
   }
 }

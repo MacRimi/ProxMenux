@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Stream a music library to Subsonic-compatible clients, with persistent database and cache."
+    },
+    "description": {
+      "en_US": "Gonic is a lightweight music streaming server that implements the Subsonic API. It scans audio libraries and podcasts, allowing users to browse their collection by folder structure or audio tags. The server supports on-the-fly audio transcoding, gapless jukebox playback, scrobbling, and serves streams to a wide range of Subsonic client applications."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/sentriz/gonic/master/.github/scrot_1.png",
+      "https://raw.githubusercontent.com/sentriz/gonic/master/.github/scrot_2.png",
+      "https://raw.githubusercontent.com/sentriz/gonic/master/.github/scrot_3.png",
+      "https://raw.githubusercontent.com/sentriz/gonic/master/.github/scrot_4.png"
+    ]
+  }
+}

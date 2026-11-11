@@ -29,6 +29,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "QDirStat"
-    }
+    },
+    "tagline": {
+      "en_US": "QDirStat Qt-based directory statistics: KDirStat without any KDE -- from the author of the original KDirStat."
+    },
+    "description": {
+      "en_US": "QDirStat is a Qt-based directory statistics and disk usage analysis tool. It inspects directory structures to show storage consumption across file systems, helping users locate large files and reclaim disk space."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/shundhammer/qdirstat/master/screenshots/QDirStat-main-win.png",
+      "https://raw.githubusercontent.com/shundhammer/qdirstat/master/screenshots/QDirStat-locating-file-types.png",
+      "https://raw.githubusercontent.com/shundhammer/qdirstat/master/screenshots/QDirStat-file-type-stats.png",
+      "https://raw.githubusercontent.com/shundhammer/qdirstat/master/screenshots/QDirStat-column-config.png"
+    ]
   }
 }

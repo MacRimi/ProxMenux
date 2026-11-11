@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The official image includes the Blazor Server application for one user. It persists application data and backups in /app/.OpenHabitTracker."
+    },
+    "description": {
+      "en_US": "OpenHabitTracker is a personal productivity application for taking notes, planning tasks, and tracking habits. It supports Markdown notes rendered directly in the list, scheduled tasks with durations and checklists, and habits evaluated by overdue percentage rather than rigid streaks. It also features detailed statistics, customizable views, flexible date filtering, and synchronization across devices."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Jinjinov/OpenHabitTracker/HEAD/OpenHabitTracker.Web/images/desktop-habits.png",
+      "https://raw.githubusercontent.com/Jinjinov/OpenHabitTracker/HEAD/OpenHabitTracker.Web/images/desktop-tasks.png",
+      "https://raw.githubusercontent.com/Jinjinov/OpenHabitTracker/HEAD/OpenHabitTracker.Web/images/desktop-notes.png",
+      "https://raw.githubusercontent.com/Jinjinov/OpenHabitTracker/HEAD/OpenHabitTracker.Web/images/desktop-habit-detail.png"
+    ]
+  }
+}

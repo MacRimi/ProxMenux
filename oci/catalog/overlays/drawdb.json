@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and export database schemas and entity-relationship diagrams in a web interface."
+    },
+    "description": {
+      "en_US": "DrawDB is a database schema editor and entity relationship diagram tool that runs in your browser. It allows you to build diagrams with a few clicks, export and import SQL scripts, and generate migrations. The editor can be customized and used directly without creating an account."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/drawdb-io/drawdb/HEAD/drawdb.png"
+    ]
+  }
+}

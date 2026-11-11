@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Vivaldi is a Norwegian freeware, cross-platform web browser with a built-in email client developed by Vivaldi Technologies."
+    },
+    "description": {
+      "en_US": "Vivaldi is a cross-platform web browser developed by Vivaldi Technologies. It provides an environment for navigating the web, managing tabs, and viewing online media. The application also includes a built-in email client, allowing users to access and organize their messages directly alongside their browsing sessions."
+    },
+    "screenshots": [
+      "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/hero_light.png?v=6",
+      "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/personal_1.png?v=3",
+      "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/personal_2.png?v=3",
+      "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/personal_3.png?v=3"
+    ]
   }
 }

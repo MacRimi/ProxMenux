@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Keep a private list of subscriptions, payment dates and recurring costs in a web interface. Create the first administrator account from the browser after installation."
+    },
+    "description": {
+      "en_US": "Wallos is an open-source subscription and recurring expense tracker. It allows you to log and monitor recurring payments, categorize expenses, and track costs across multiple currencies with automated exchange rate conversions. The application also provides spending statistics, calendar views, and optional AI-generated recommendations to help identify potential savings."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/ellite/Wallos/HEAD/screenshots/wallos-dashboard-light.png",
+      "https://raw.githubusercontent.com/ellite/Wallos/HEAD/screenshots/wallos-subscriptions-light.png",
+      "https://raw.githubusercontent.com/ellite/Wallos/HEAD/screenshots/wallos-stats.png",
+      "https://raw.githubusercontent.com/ellite/Wallos/HEAD/screenshots/wallos-calendar.png"
+    ]
+  }
+}

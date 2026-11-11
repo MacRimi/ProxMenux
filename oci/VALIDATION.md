@@ -80,7 +80,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Motioneye | NVR & Cameras |
 | Navidrome | Media & Streaming |
 | Nextcloud | Productivity & Workflows |
-| Nextcloud Stack | Productivity & Workflows |
+| Nextcloud + PostgreSQL | Productivity & Workflows |
 | OpenList | Files & Sharing |
 | OpenSSH Server | Remote Access & VPN |
 | Paperless-ngx | Productivity & Workflows |

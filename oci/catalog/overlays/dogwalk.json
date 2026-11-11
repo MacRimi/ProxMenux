@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "DOGWALK is Blender Studio's long awaited second game project, focused on creating a bite-sized interactive storytelling playground. Play as a big adorable dog and explore the winter woods with a little kid."
+    },
+    "description": {
+      "en_US": "DOGWALK is an interactive storytelling game developed by Blender Studio. Players take on the role of a large dog accompanying a young child to explore a winter forest. The game is designed as a bite-sized narrative playground focused on exploration and casual adventure."
+    },
+    "screenshots": [
+      "https://studio.blender.org/files/public/thumbnail/ff/46/ff46e9dffd41c9d16fb0d0994668e0df_s.webp"
+    ]
   }
 }

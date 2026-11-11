@@ -22,6 +22,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "Folding@home"
+    },
+    "tagline": {
+      "en_US": "Folding@home is a distributed computing project for simulating protein dynamics, including the process of protein folding and the movements of proteins implicated in a variety of diseases. It brings together citizen scientists who volunteer to run simulations of protein dynamics on their personal computers. Insights from this data are helping scientists to better understand biology, and providing new opportunities for developing therapeutics."
+    },
+    "description": {
+      "en_US": "Folding@home is a distributed computing project for simulating protein dynamics, including the process of protein folding and the movements of proteins implicated in various diseases. It allows volunteer citizen scientists to run simulations using their personal computing resources. The generated data aids researchers in understanding disease biology and designing new therapeutics."
     }
   }
 }

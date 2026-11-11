@@ -23,6 +23,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "RawTherapee"
-    }
+    },
+    "tagline": {
+      "en_US": "RawTherapee is a free, cross-platform raw image processing program!"
+    },
+    "description": {
+      "en_US": "RawTherapee is a cross-platform raw image processing application. It is designed for developing raw photographs from digital cameras and editing digital images. The program provides advanced tools for non-destructive photo adjustments, color grading, and detail enhancement."
+    },
+    "screenshots": [
+      "http://rawtherapee.com/images/carousel/100_rt59_provence_local_maskxxx.jpg"
+    ]
   }
 }

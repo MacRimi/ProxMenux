@@ -33,6 +33,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "pyLoad"
-    }
+    },
+    "tagline": {
+      "en_US": "pyLoad is a Free and Open Source download manager written in Python and designed to be extremely lightweight, easily extensible and fully manageable via web."
+    },
+    "description": {
+      "en_US": "pyLoad is an extensible download manager designed to be lightweight and operated through a web interface. It allows users to automate, queue, and manage remote file downloads directly from their browser. Its modular design supports integrations and plugins for handling media and file hosting services."
+    },
+    "screenshots": [
+      "https://pyload.net/img/sample.png"
+    ]
   }
 }
