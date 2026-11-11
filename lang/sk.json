@@ -9295,5 +9295,6 @@
   "Manage shows, movies and music in one self-hosted application.": "Spravujte seriály, filmy a hudbu v jednej aplikácii na vlastnom serveri.",
   "Create the owner account in the web interface on first visit; there are no default credentials.": "Pri prvom otvorení webového rozhrania vytvorte účet vlastníka; predvolené prihlasovacie údaje neexistujú.",
   "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Uchovávajte /config na lokálnom úložisku. Vo webovom sprievodcovi vyberte priečinky médií a sťahovania v /media.",
-  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Uchovávajte stiahnuté súbory a knižnice v rovnakom súborovom systéme, aby ste mohli používať pevné odkazy."
+  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Uchovávajte stiahnuté súbory a knižnice v rovnakom súborovom systéme, aby ste mohli používať pevné odkazy.",
+  "Could not prepare the container DNS and hosts files": "Nepodarilo sa pripraviť súbory DNS a hosts kontajnera"
 }

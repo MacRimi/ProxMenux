@@ -9265,5 +9265,6 @@
   "Manage shows, movies and music in one self-hosted application.": "Gestiona series, películas y música en una sola aplicación alojada en tu servidor.",
   "Create the owner account in the web interface on first visit; there are no default credentials.": "Crea la cuenta del propietario al abrir la interfaz web por primera vez; no hay credenciales predeterminadas.",
   "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Guarda /config en almacenamiento local. Selecciona las carpetas de contenido y descargas dentro de /media durante la configuración web.",
-  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Mantén las descargas y las bibliotecas en el mismo sistema de archivos para poder usar enlaces duros."
+  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Mantén las descargas y las bibliotecas en el mismo sistema de archivos para poder usar enlaces duros.",
+  "Could not prepare the container DNS and hosts files": "No se pudieron preparar los archivos DNS y hosts del contenedor"
 }

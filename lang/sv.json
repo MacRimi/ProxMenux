@@ -9294,5 +9294,6 @@
   "Create the owner account in the web interface on first visit; there are no default credentials.": "Skapa ägarkontot första gången du öppnar webbgränssnittet. Det finns inga förinställda inloggningsuppgifter.",
   "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Lagra /config lokalt. Välj mappar för media och hämtningar under /media i webbens installationsguide.",
   "Keep downloads and libraries on the same filesystem to use hardlinks.": "Lagra hämtningar och bibliotek i samma filsystem för att kunna använda hårda länkar.",
-  "BookOrbit Setup Token": "Installationstoken för BookOrbit"
+  "BookOrbit Setup Token": "Installationstoken för BookOrbit",
+  "Could not prepare the container DNS and hosts files": "Det gick inte att förbereda containerns DNS- och hosts-filer"
 }
