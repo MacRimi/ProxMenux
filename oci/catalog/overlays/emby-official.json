@@ -20,6 +20,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "Emby"
-    }
+    },
+    "tagline": {
+      "en_US": "Emby Server is a personal media server that organizes personal videos, music, and photos into a centralized library."
+    },
+    "description": {
+      "en_US": "Emby Server is a personal media server that organizes personal videos, music, and photos into a centralized library. It converts and streams multimedia content to connected client devices across local networks or the internet. The platform includes a web interface for browsing collections, managing metadata, and playing back media across supported devices."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/MediaBrowser/MediaBrowser.Resources/master/apps/html5.png",
+      "https://raw.github.com/MediaBrowser/MediaBrowser.Resources/master/apps/roku2.jpg",
+      "https://raw.github.com/MediaBrowser/MediaBrowser.Resources/master/apps/mbt1.png",
+      "https://raw.github.com/MediaBrowser/MediaBrowser.Resources/master/apps/dashboard.png"
+    ]
   }
 }

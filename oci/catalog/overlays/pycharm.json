@@ -14,6 +14,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "PyCharm"
-    }
+    },
+    "tagline": {
+      "en_US": "PyCharm offers out-of-the-box support for Python, databases, Jupyter, Git, Conda, PyTorch, TensorFlow, Hugging Face, Django, Flask, FastAPI, and more."
+    },
+    "description": {
+      "en_US": "PyCharm is an integrated development environment designed for Python programming. It provides built-in support for databases, Jupyter notebooks, version control, and Conda environments. Developers use it to build applications with web frameworks like Django, Flask, and FastAPI, as well as work on machine learning workflows with PyTorch and TensorFlow."
+    },
+    "screenshots": [
+      "https://www.jetbrains.com/_assets/rr/air-review-BcyNmbRw.png"
+    ]
   }
 }

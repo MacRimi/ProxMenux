@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Zotero is a free, easy-to-use tool to help you collect, organize, annotate, cite, and share research."
+    },
+    "description": {
+      "en_US": "Zotero is a personal research assistant that helps collect, organize, annotate, cite, and share research materials. It manages bibliographic data and related research files, allowing users to keep references structured in a central library. It is widely used to track research sources and generate citations for academic and professional writing."
+    },
+    "screenshots": [
+      "https://www.zotero.org/static/images/home/screenshot-7.0.png"
+    ]
   }
 }

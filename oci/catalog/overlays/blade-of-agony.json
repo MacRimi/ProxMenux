@@ -14,6 +14,19 @@
   "catalog_ui": {
     "title": {
       "en_US": "Blade of Agony"
-    }
+    },
+    "tagline": {
+      "en_US": "Wolfenstein: Blade of Agony is a story-driven WWII shooter inspired by Wolfenstein and Doom."
+    },
+    "description": {
+      "en_US": "Blade of Agony is a story-driven WWII first-person shooter inspired by classic games like Wolfenstein and Doom. It delivers retro-style gameplay with narrative-focused campaign missions. Players engage in combat against enemy forces using period-themed and classic weaponry."
+    },
+    "tips": [
+      "Use Gaming Mode by clicking the small crosshair in the top right of the sidebar for relative mouse and keyboard input.",
+      "Exit Gaming Mode by holding down the escape key for 3 seconds."
+    ],
+    "screenshots": [
+      "https://boa.realm667.com/images/nicepage-images/Screenshot_BoA_20210418_222822.jpg"
+    ]
   }
 }

@@ -47,5 +47,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "2FAuth is a web based self-hosted alternative to One Time Passcode (OTP) generators like Google Authenticator, designed for both mobile and desktop."
+    },
+    "description": {
+      "en_US": "2FAuth is a web-based alternative to One Time Passcode generators designed for mobile and desktop use. It allows users to store and manage two-factor authentication accounts and tokens. The application stores its account data in an SQLite database."
+    },
+    "repository": "https://github.com/Bubka/2fauth",
+    "screenshots": [
+      "https://user-images.githubusercontent.com/858858/100485897-18c21400-3102-11eb-9c72-ea0b1b46ef2e.png"
+    ]
   }
 }

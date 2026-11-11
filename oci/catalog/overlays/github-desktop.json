@@ -23,6 +23,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "GitHub Desktop"
+    },
+    "tagline": {
+      "en_US": "Github Desktop is an open source Electron-based GitHub app. It is written in TypeScript and uses React."
+    },
+    "description": {
+      "en_US": "Github Desktop is an open source graphical application for interacting with Git and GitHub. It allows developers to manage repositories, branch workflows, and commit histories through a visual desktop interface. The tool simplifies source control management without requiring extensive command-line Git commands."
     }
   }
 }

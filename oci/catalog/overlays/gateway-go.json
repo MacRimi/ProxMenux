@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A fast reverse proxy to help you expose a local server behind a NAT or firewall to your client, remote access all your self-hosted server/self-hosted server apps.\n\nUse OpenIoTHub to scan the following QR code add a gateway,then add host,add self-hosted server/self-hosted server host's web page port,finally, enjoy remote control\n"
+    },
+    "description": {
+      "en_US": "gateway-go is a reverse proxy that runs continuously on a local network to receive remote access requests for OpenIoTHub. It allows services and servers situated behind a NAT or firewall to be reached from outside the local environment. Users can connect to local network ports and services remotely through the OpenIoTHub client application."
+    },
+    "tips": [
+      "Scan the displayed QR code using the OpenIoTHub application to pair and add the gateway."
+    ],
+    "repository": "https://github.com/OpenIoTHub/gateway-go"
   }
 }

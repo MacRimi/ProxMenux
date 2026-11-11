@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Immich as a coordinated four-LXC native OCI stack with private PostgreSQL and Valkey services, persistent media and model cache, and selectable hardware acceleration."
+    },
+    "description": {
+      "en_US": "Immich is a self-hosted photo and video management solution. It allows users to upload, organize, and view media through web and mobile interfaces with multi-user support. The application features automatic deduplication, shared albums, facial recognition, and metadata search to help manage personal media collections."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/immich-app/immich/HEAD/design/immich-screenshots.png"
+    ]
   }
 }

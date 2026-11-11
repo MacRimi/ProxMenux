@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted Soulseek client with a web interface for searching, sharing and downloading files. It can start on its own; add Soulseek network credentials in the app before connecting."
+    },
+    "description": {
+      "en_US": "slskd is a client-server application for the Soulseek file-sharing network accessible through a web browser. It allows users to execute multiple searches, sort and filter results, and download files while monitoring speeds and queue positions. The application also supports browsing other users' shared folders, joining public chat rooms, and sending private messages."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/17145758/193288396-dc3cc83d-6d93-414a-93f6-cea0696ac245.png",
+      "https://user-images.githubusercontent.com/17145758/193289840-3aee153f-3656-4f15-b086-8b1ca25d38bb.png",
+      "https://user-images.githubusercontent.com/17145758/193286989-30bd524d-81b6-4721-bd72-e4438c2b7b69.png"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Save, organize and archive bookmarks through a simple web application backed by SQLite."
+    },
+    "description": {
+      "en_US": "Shiori is a bookmark manager designed as a simple clone of Pocket. It allows you to organize links through a web interface or a command-line tool, supporting bookmark creation, editing, deletion, and searching. It can also parse readable content to generate offline archives of saved webpages."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/go-shiori/shiori/master/docs/assets/screenshots/cover.png",
+      "https://raw.githubusercontent.com/go-shiori/shiori/master/docs/assets/screenshots/comparison.png"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run DNS services and manage zones, forwarding, filtering and logs from a browser interface."
+    },
+    "description": {
+      "en_US": "Technitium DNS Server is an authoritative and recursive DNS server managed through a web console. It resolves domain names locally, caches queries for improved performance, and blocks network-wide ads and malware using block lists. It supports encrypted protocols including DNS-over-TLS, DNS-over-HTTPS, and DNS-over-QUIC, alongside a built-in DHCP server and DNSSEC validation."
+    },
+    "screenshots": [
+      "https://technitium.com/dns/ScreenShot1.png"
+    ]
+  }
+}

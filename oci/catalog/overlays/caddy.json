@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Serve static sites or reverse proxy web services with Caddy, using a persistent editable Caddyfile."
+    },
+    "description": {
+      "en_US": "Caddy is an extensible web server platform that enables automatic HTTPS by default. It supports HTTP/1.1, HTTP/2, and HTTP/3, and can serve static sites, handle reverse proxying, and manage TLS certificates. The server can be configured through the human-friendly Caddyfile format, native JSON configuration documents, or dynamically via a JSON API."
+    },
+    "screenshots": [
+      "https://caddyserver.com/resources/images/file-browser/browse-themes.png",
+      "https://caddyserver.com/resources/images/file-browser/browse-gallery-light.png"
+    ]
+  }
+}

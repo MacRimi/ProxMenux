@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted RSS feed generator with thousands of routes. This standalone image uses the bundled Chromium variant so browser-based routes can work without a browser sidecar."
+    },
+    "description": {
+      "en_US": "RSSHub is an extensible feed generator that produces RSS feeds from websites and online platforms that do not support them natively. It aggregates content across thousands of sources through modular routes. Users can follow updates and stay informed from diverse web services directly within standard RSS readers."
+    }
+  }
+}

@@ -13,5 +13,13 @@
         "/tmp/threadfin"
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Threadfin is a M3U proxy server for Plex, Emby, Jellyfin and any client and provider which supports the .TS and .M3U8 (HLS) streaming formats."
+    },
+    "description": {
+      "en_US": "Threadfin is an M3U proxy server designed for media platforms such as Plex, Emby, and Jellyfin. It bridges clients and providers supporting .TS and .M3U8 (HLS) streaming formats. The application also includes support for ffmpeg to manage media streams."
+    }
   }
 }

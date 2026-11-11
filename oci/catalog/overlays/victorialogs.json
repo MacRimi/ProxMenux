@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A standalone log database with built-in ingestion APIs and a query UI. It stores logs on a persistent data volume and does not require a database, collector or other service to start; a separate collector is needed to send it logs."
+    },
+    "description": {
+      "en_US": "VictoriaLogs is a lightweight, schema-free database designed for logs. It handles log storage and querying, scaling from small setups to large deployments. It includes a built-in web interface for exploring log data and integrates with visualization tools like Grafana."
+    }
+  }
+}

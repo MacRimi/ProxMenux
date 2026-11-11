@@ -13,5 +13,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kometa is a powerful tool designed to give you complete control over your media libraries. With Kometa, you can take your customization to the next level, with granular control over metadata, collections, overlays, and much more."
+    },
+    "description": {
+      "en_US": "Kometa is a media library customization and management tool. It provides granular control over media metadata, collections, and visual overlays for your libraries. Users can automate the organization of their media and maintain custom artwork, ratings, and collections based on scheduled runs."
+    }
   }
 }

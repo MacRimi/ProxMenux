@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Yaak is a desktop API client for organizing and executing REST, GraphQL, and gRPC requests. It's built using Tauri, Rust, and ReactJS."
+    },
+    "description": {
+      "en_US": "Yaak is an API client designed for organizing and executing network requests. It supports REST, GraphQL, and gRPC protocols within a unified interface. The tool helps developers inspect responses, debug network endpoints, and manage API workflows."
+    },
+    "screenshots": [
+      "https://yaak.app/static/screenshot.png"
+    ]
   }
 }

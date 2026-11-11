@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Ungoogled Chromium is Google Chromium, sans dependency on Google web services."
+    },
+    "description": {
+      "en_US": "Ungoogled Chromium is a variant of Google Chromium that strips away dependencies on Google web services. It retains the standard Chromium interface and engine while disabling background communication with Google servers. This provides a familiar web browsing environment designed to reduce tracking and telemetry."
+    }
   }
 }

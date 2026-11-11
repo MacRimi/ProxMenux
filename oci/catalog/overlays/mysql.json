@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Install the official MySQL image with a generated root password and a persistent database directory."
+    },
+    "description": {
+      "en_US": "MySQL is an SQL relational database server. It provides services for storing, managing, and querying structured data. It is commonly used as a central backend database for web services and data-driven software."
+    }
+  }
+}

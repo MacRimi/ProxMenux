@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "AirDC++ Web Client using the community-maintained gangefors image. Configuration, downloads and shared content use separate persistent paths."
+    },
+    "description": {
+      "en_US": "AirDC++ Web Client is a web-based client for the Direct Connect file sharing network. It allows users to connect to hubs, browse peers, and manage file transfers through a browser interface. The application supports active and passive connectivity modes for transferring files across networks."
+    }
+  }
+}

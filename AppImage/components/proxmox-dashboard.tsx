@@ -10,6 +10,7 @@ import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import { AppsDashboard } from "./apps-dashboard"
+import { CatalogTab } from "./catalog-tab"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { AuditReport } from "./audit-report"
@@ -39,6 +40,7 @@ import {
   NetworkIcon,
   Boxes,
   Grid3x3,
+  Store,
   Cpu,
   ScrollText,
   SettingsIcon,
@@ -445,6 +447,7 @@ function MonitorDashboard({ product }: { product: Product }) {
       case "datastores": return t("pbs.datastores")
       case "pbs-tasks": return t("pbs.tasksTab")
       case "apps":      return t("navigation.apps")
+      case "catalog":   return t("navigation.catalog")
       case "vms":       return t("navigation.virtualMachines")
       case "storage":   return t("navigation.storage")
       case "network":   return t("navigation.network")
@@ -744,6 +747,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                   case "datastores": return renderDirect("datastores", Database, t("pbs.datastores"))
                   case "pbs-tasks": return renderDirect("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                   case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
+                  case "catalog":  return renderDirect("catalog",  Store,           t("navigation.catalog"))
                   case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
                   case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
                   case "terminal": return renderDirect("terminal", Terminal,        t("navigation.terminal"))
@@ -752,7 +756,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                 }
               }
               return (
-                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-7"} bg-card border border-border`}>
+                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-8"} bg-card border border-border`}>
                   {tabOrder.map(renderTop)}
                 </TabsList>
               )
@@ -816,6 +820,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                           case "datastores": return btn("datastores", Database, t("pbs.datastores"))
                           case "pbs-tasks": return btn("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                           case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
+                          case "catalog":  return btn("catalog",  Store,           t("navigation.catalog"))
                           case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
                           case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
                           case "terminal": return btn("terminal", Terminal,        t("navigation.terminal"))
@@ -882,6 +887,10 @@ function MonitorDashboard({ product }: { product: Product }) {
           {!isPbs && <>
           <TabsContent value="apps" className="space-y-4 md:space-y-6 mt-0">
             <AppsDashboard key={`apps-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="catalog" className="space-y-4 md:space-y-6 mt-0">
+            <CatalogTab key={`catalog-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">

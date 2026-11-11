@@ -1,0 +1,17 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Excalidraw is a virtual hand-drawn style whiteboard platform supporting infinite canvas and end-to-end encrypted collaboration. An intuitive interface offers a hand-drawn experience, ideal for brainstorming, design sketches, or educational scenarios, meeting diverse creative needs.\n\nCore features include an infinite canvas whiteboard and end-to-end encrypted collaboration. Hand-drawn style with shape library support allows creating rich graphics, enhanced by image insertion capabilities. Dark mode improves user experience, catering to diverse users.\n\nIt provides export options including PNG, SVG, and clipboard for easy content sharing. Drawing capabilities cover rectangle, circle, diamond, arrow, line, free-draw, and eraser, with arrow-binding and labeled arrow support. Undo, redo, zoom, and panning functionalities optimize operations. With creativity and security at the core, the platform delivers a modern whiteboard design solution.\n\n**Key Features:**\n- Infinite canvas whiteboard supporting hand-drawn style\n- Shape library support for creating rich graphics\n- Image insertion capability\n- Dark mode\n- Export to PNG, SVG, and clipboard\n- Open format - export drawings as an `.excalidraw` json file\n- Wide range of tools - rectangle, circle, diamond, arrow, line, free-draw, eraser...\n- Arrow-binding & labeled arrows\n- Undo and redo\n- Zoom and panning support\n\n**Learn More:**\n- [Excalidraw Official Website](https://excalidraw.com/)\n- [Excalidraw GitHub](https://github.com/excalidraw/excalidraw)\n"
+    },
+    "description": {
+      "en_US": "Excalidraw is a virtual whiteboard tool that lets you create sketches and diagrams with a hand-drawn feel. It provides an infinite canvas equipped with shapes, arrows, freehand drawing, and image insertion tools. Users can export their work to PNG, SVG, the clipboard, or as JSON files for easy sharing and reuse."
+    },
+    "tips": [
+      "Self-hosting your own instance does not support sharing or collaboration features."
+    ],
+    "repository": "https://github.com/excalidraw/excalidraw",
+    "screenshots": [
+      "https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github%2Fproduct_showcase.png"
+    ]
+  }
+}

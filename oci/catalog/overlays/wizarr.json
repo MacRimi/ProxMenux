@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Invite users to Plex, Jellyfin and Emby with a guided setup."
+    },
+    "description": {
+      "en_US": "Wizarr is an automatic user invitation and management system for media servers such as Plex, Jellyfin, Emby, Audiobookshelf, Komga, Kavita, and Romm. It generates unique invite links to automatically onboard users to connected servers. Invited users are guided through onboarding steps, including downloading client applications and connecting to request platforms."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/wizarrrr/wizarr/HEAD/screenshots/dashboard.png",
+      "https://raw.githubusercontent.com/wizarrrr/wizarr/HEAD/screenshots/invitations.png",
+      "https://raw.githubusercontent.com/wizarrrr/wizarr/HEAD/screenshots/new-accept-plex-invite.png",
+      "https://raw.githubusercontent.com/wizarrrr/wizarr/HEAD/screenshots/users.png"
+    ]
+  }
+}

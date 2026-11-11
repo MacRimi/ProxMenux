@@ -51,7 +51,10 @@ initialize_cache
         if [[ "$PRESELECTED_OPTION" =~ ^[1-6]$ ]]; then
             OPTION="$PRESELECTED_OPTION"
             PRESELECTED_OPTION=""
+            CATALOG_ITEM_DONE=1
         else
+        # Opened from the Monitor's Catalog tab, the option ends the run instead of the menu following.
+        [[ "${PROXMENUX_CATALOG:-}" == "1" && -n "${CATALOG_ITEM_DONE:-}" ]] && exit 0
         OPTION=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Utilities Menu")" \
                         --menu "\n$(translate "Select an option:")" 20 70 11 \
                         "1" "$(translate "UUp Dump ISO creator Custom")" \

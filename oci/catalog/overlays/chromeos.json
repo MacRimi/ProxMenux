@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs ChromeOS Flex as a QEMU virtual machine inside a native LXC, downloaded and installed automatically and used from the browser. Community packaging by Dockur."
+    },
+    "description": {
+      "en_US": "ChromeOS Flex is a cloud-first, lightweight operating system that provides a fast and secure web-focused desktop environment. It runs the Chrome browser and web applications on standard x86 hardware with minimal resource overhead. Through a virtualized instance, it enables accessing the full ChromeOS interface and ecosystem remotely via a web browser."
+    }
+  }
+}

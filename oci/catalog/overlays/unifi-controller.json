@@ -14,6 +14,17 @@
   "catalog_ui": {
     "title": {
       "en_US": "UniFi Controller (legacy)"
-    }
+    },
+    "tagline": {
+      "en_US": "For Unifi to adopt other devices, e.g. an Access Point, it is required to change the inform IP address. Because Unifi runs inside Docker by default it uses an IP address not accessible by other devices. To change this go to Settings > System Settings > Controller Configuration and set the Controller Hostname/IP to a hostname or IP address accessible by your devices. Additionally the checkbox \"Override inform host with controller hostname/IP\" has to be checked, so that devices can connect to the controller during adoption (devices use the inform-endpoint during adoption)."
+    },
+    "description": {
+      "en_US": "Unifi-controller is an enterprise wireless management system designed for high-density client deployments. It provides centralized control and monitoring for UniFi access points, routers, and other network hardware. Administrators can manage network configurations, guest access, and connected devices from a single web dashboard."
+    },
+    "tips": [
+      "Initial configuration is handled through a first run wizard.",
+      "To adopt devices, navigate to Settings > System > Advanced, configure the Inform Host, and enable the Override option.",
+      "The default device password for adoption is ubnt."
+    ]
   }
 }

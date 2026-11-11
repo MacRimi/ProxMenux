@@ -20,6 +20,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "Wiki.js"
+    },
+    "tagline": {
+      "en_US": "Wikijs A modern, lightweight and powerful wiki app built on NodeJS."
+    },
+    "description": {
+      "en_US": "Wikijs is a modern wiki application built on Node.js. It enables individuals and teams to write, organize, and publish documentation and knowledge bases. The platform provides a web interface for creating and managing content with support for different database backends."
     }
   }
 }

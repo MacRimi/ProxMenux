@@ -23,6 +23,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "MediaElch"
-    }
+    },
+    "tagline": {
+      "en_US": "MediaElch is a MediaManager for Kodi. Information about Movies, TV Shows, Concerts and Music are stored as nfo files. Fanarts are downloaded automatically from fanart.tv. Using the nfo generator, MediaElch can be used with other MediaCenters as well."
+    },
+    "description": {
+      "en_US": "MediaElch is a media manager designed primarily for Kodi and compatible media centers. It organizes information about movies, TV shows, concerts, and music by storing metadata in NFO files. The application also automatically downloads fanart and artwork to maintain a well-structured and detailed media library."
+    },
+    "screenshots": [
+      "https://mediaelch.github.io/mediaelch-doc/_images/movie-main.png"
+    ]
   }
 }

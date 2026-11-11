@@ -20,6 +20,17 @@
   "catalog_ui": {
     "title": {
       "en_US": "Apprise API"
-    }
+    },
+    "tagline": {
+      "en_US": "Apprise-api Takes advantage of Apprise through your network with a user-friendly API."
+    },
+    "description": {
+      "en_US": "Apprise API provides a network gateway and API for the Apprise notification library. It enables applications and services across your network to send notifications to more than one hundred external services through a unified interface. The service also includes a simple web interface designed to test and verify notification configurations."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/caronc/apprise-api/master/Screenshot-1.png",
+      "https://raw.githubusercontent.com/caronc/apprise-api/master/Screenshot-2.png",
+      "https://raw.githubusercontent.com/caronc/apprise-api/master/Screenshot-3.png"
+    ]
   }
 }

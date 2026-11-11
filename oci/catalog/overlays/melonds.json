@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "melonDS"
+    },
+    "tagline": {
+      "en_US": "melonDS aims at providing fast and accurate Nintendo DS emulation."
+    },
+    "description": {
+      "en_US": "melonDS is an emulator focused on delivering fast and accurate Nintendo DS emulation. It enables users to run and play Nintendo DS titles on modern systems with authentic performance and behavior."
     }
   }
 }

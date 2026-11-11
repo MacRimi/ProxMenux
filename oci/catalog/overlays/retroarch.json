@@ -14,6 +14,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "RetroArch"
-    }
+    },
+    "tagline": {
+      "en_US": "RetroArch is a frontend for emulators, game engines, and media players."
+    },
+    "description": {
+      "en_US": "RetroArch is a frontend for emulators, game engines, and media players. It enables users to run classic video games across a wide variety of systems through a single graphical interface. The platform centralizes game controls, settings, and emulation cores into a unified experience."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/XMB-main-menu.jpg",
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/ozone-main-menu.jpg",
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/rgui-main-menu.jpg",
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/glui-main-menu.jpg"
+    ]
   }
 }

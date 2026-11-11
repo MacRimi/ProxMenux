@@ -3,15 +3,23 @@
     "title": {
       "en_US": "Jellyfin"
     },
-    "tagline": {
-      "en_US": "LinuxServer Jellyfin with optional GPU passthrough"
-    },
     "tips": [
       "VA-API and OpenCL tone mapping are separate capabilities. The tested LinuxServer image provides AMD VA-API; AMD OpenCL required the official jellyfin-amd mod.",
       "Choose AMD + OpenCL or Intel + OpenCL to install the corresponding official LinuxServer mod at startup. These are options for the same image, not additional catalog variants.",
       "ProxMenux passes explicit device paths through ATTACHED_DEVICES_PERMS so the native LinuxServer init grants the service user access. No privileged LXC or mode 0777 is needed.",
-      "Optional Jellyfin settings are persisted in /config/encoding.xml. AMD OpenCL and VA-API were tested on Lucienne; Intel OpenCL remains untested in this laboratory. Dolby Vision support depends on the source profile and FFmpeg/GPU capabilities."
-    ]
+      "Optional Jellyfin settings are persisted in /config/encoding.xml. AMD OpenCL and VA-API were tested on Lucienne; Intel OpenCL remains untested in this laboratory. Dolby Vision support depends on the source profile and FFmpeg/GPU capabilities.",
+      "Official screenshots of Jellyfin Web 10.8: Jellyfin Project — https://jellyfin.org/. CC BY-ND 4.0 (https://creativecommons.org/licenses/by-nd/4.0/). Original images, unchanged."
+    ],
+    "screenshots": [
+      "https://jellyfin.org/assets/images/10.8-home-4a73a92bf90d1eeffa5081201ca9c7bb.png",
+      "https://jellyfin.org/assets/images/10.8-library-9c07ba46877a03e749c0c8b5ed157e53.png"
+    ],
+    "tagline": {
+      "en_US": "Jellyfin is a media system designed to organize and stream media collections."
+    },
+    "description": {
+      "en_US": "Jellyfin is a media system designed to organize and stream media collections. It serves content from a dedicated server to end-user devices across multiple client applications and web interfaces. The platform provides complete control over personal video and audio libraries without relying on proprietary alternatives."
+    }
   },
   "proxmox": {
     "deployment_profile": {

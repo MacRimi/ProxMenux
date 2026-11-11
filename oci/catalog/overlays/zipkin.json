@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Start the official Zipkin server and its web interface in one container."
+    },
+    "description": {
+      "en_US": "Zipkin is a distributed tracing system designed to collect and search timing data across service architectures. It assists in troubleshooting latency issues by allowing users to look up traces by trace ID or filter by service, operation name, tags, and duration. The interface summarizes execution times, highlights failed operations, and generates dependency diagrams showing request flows between applications."
+    },
+    "screenshots": [
+      "https://zipkin.io/public/img/web-screenshot.png",
+      "https://zipkin.io/public/img/dependency-graph.png"
+    ]
+  }
+}

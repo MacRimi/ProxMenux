@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "DOSBox Staging"
+    },
+    "tagline": {
+      "en_US": "DOSBox Staging is a modern continuation of DOSBox a free and open-source emulator that enables the execution of MS-DOS software, especially video games."
+    },
+    "description": {
+      "en_US": "DOSBox Staging is an open-source emulator that enables the execution of MS-DOS software and classic video games. It serves as a modern continuation of DOSBox, providing updated compatibility and performance enhancements for legacy applications. Users can interact with vintage DOS software directly in a browser session with support for audio, gamepads, and file transfers."
     }
   }
 }

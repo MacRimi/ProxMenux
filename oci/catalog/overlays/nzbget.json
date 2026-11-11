@@ -33,6 +33,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "NZBGet"
-    }
+    },
+    "tagline": {
+      "en_US": "Nzbget is a usenet downloader, written in C++ and designed with performance in mind to achieve maximum download speed by using very little system resources."
+    },
+    "description": {
+      "en_US": "Nzbget is a Usenet downloader written in C++. It is designed with performance in mind to achieve maximum download speeds while using minimal system resources. It offers a web interface for managing, monitoring, and scheduling download queues."
+    },
+    "tips": [
+      "To enable scheduling, configure the time correction value in settings/logging."
+    ]
   }
 }

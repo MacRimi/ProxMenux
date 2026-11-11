@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Webtop - Alpine, Ubuntu, Fedora, and Arch based containers containing full desktop environments in officially supported flavors accessible via any modern web browser."
+    },
+    "description": {
+      "en_US": "Webtop delivers a full Linux desktop environment accessible directly through any modern web browser. It streams complete desktop sessions with support for audio, microphone input, clipboard synchronization, and file transfers. It enables users to operate remote graphical operating system environments without needing dedicated local client software."
+    },
+    "tips": [
+      "By default there is no authentication.",
+      "The web interface includes a terminal with passwordless sudo."
+    ]
   }
 }

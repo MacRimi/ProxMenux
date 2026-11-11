@@ -19,5 +19,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Lollypop is a lightweight modern music player designed to work excellently on the GNOME desktop environment."
+    },
+    "description": {
+      "en_US": "Lollypop is a lightweight modern music player designed for the GNOME desktop environment. It allows users to organize, browse, and play their personal music collections while automatically managing and storing downloaded track metadata."
+    },
+    "screenshots": [
+      "https://gitlab.gnome.org/gnumdk/lollypop-help/raw/master/screenshots/lollypop.jpg",
+      "https://gitlab.gnome.org/gnumdk/lollypop-help/raw/master/screenshots/lollypop2.jpg"
+    ]
   }
 }

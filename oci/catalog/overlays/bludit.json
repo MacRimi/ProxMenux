@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and manage a website with Bludit, a flat-file content management system. Pages, uploads and site data live in the persistent content directory."
+    },
+    "description": {
+      "en_US": "Bludit is a flat-file content management system used to build and maintain websites. It organizes content, pages, and site data directly on the filesystem without needing a separate database. The platform supports customization through add-on themes and plugins."
+    },
+    "screenshots": [
+      "https://www.bludit.com/img/screenshot1.png",
+      "https://www.bludit.com/img/screenshot2.png",
+      "https://www.bludit.com/img/screenshot3.png"
+    ]
+  }
+}

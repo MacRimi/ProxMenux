@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Installs a set of Arr applications at once, each in its own unprivileged LXC. Prowlarr, Sonarr, Radarr and qBittorrent come selected; Lidarr, Bazarr, SABnzbd, Seerr and Unpackerr can be added. The media applications share one host folder, and Jellyfin, Plex or Emby can be added as the media server. Each container starts on its own: there is no main member."
+    },
+    "description": {
+      "en_US": "Prowlarr is an indexer manager and proxy built to integrate with various PVR applications. It supports both Torrent Trackers and Usenet Indexers, seamlessly integrating with apps like Sonarr, Radarr, Lidarr, and Readarr to provide complete indexer management without requiring per-app setup."
+    }
   }
 }

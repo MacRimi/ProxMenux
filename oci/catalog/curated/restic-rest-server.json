@@ -40,8 +40,7 @@
       "The API has no web interface. Use a restic client with a repository URL that includes the username-specific path, for example rest:http://USER@HOST:8000/USER when private repositories are enabled.",
       "The upstream default uses HTTP, which sends Basic Authentication credentials in clear text. Use a trusted LAN or route clients through an HTTPS reverse proxy before remote access.",
       "With --private-repos enabled, each user can access only a matching repository subdirectory. Keep /data persistent; it contains both backups and the authentication file.",
-      "The upstream endpoint uses HTTP. Use an HTTPS reverse proxy for remote clients; the example API URL shown in this entry is HTTP.",
-      "El endpoint original usa HTTP. Para clientes remotos, coloca un proxy HTTPS delante; la URL de ejemplo de esta ficha usa HTTP."
+      "The upstream endpoint uses HTTP. Use an HTTPS reverse proxy for remote clients; the example API URL shown in this entry is HTTP."
     ],
     "mini_changelog": [],
     "display_version": null,

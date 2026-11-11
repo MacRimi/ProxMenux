@@ -19,5 +19,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kali-linux - is an Advanced Penetration Testing Linux distribution used for Penetration Testing, Ethical Hacking and network security assessments. KALI LINUX ™ is a trademark of OffSec."
+    },
+    "description": {
+      "en_US": "Kali Linux is an advanced penetration testing Linux distribution designed for network security assessments, ethical hacking, and digital forensics. It delivers a full security environment accessible directly through a web browser desktop interface. The platform supports desktop streaming with capabilities such as audio, clipboard synchronization, and file transfer."
+    },
+    "tips": [
+      "By default there is no authentication.",
+      "The interface includes a terminal with passwordless sudo."
+    ]
   }
 }

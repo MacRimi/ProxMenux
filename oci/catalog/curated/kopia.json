@@ -40,8 +40,7 @@
       "On first visit, create a repository in Kopia UI at /repository, then add /data as a read-only source and choose /restore for restores. Choose a host bind for /data and for /repository if you want to back up a NAS or other host directory.",
       "The recipe keeps the LXC unprivileged and does not configure FUSE snapshot mounting. Use Kopia UI restore workflows rather than mounting snapshots into the host.",
       "The server uses HTTP on its LXC address. Keep it on a trusted LAN or put it behind an HTTPS reverse proxy before allowing access from untrusted networks.",
-      "This profile uses the web interface to browse and restore files. It does not enable mounting snapshots with FUSE or shared mount propagation.",
-      "Este perfil usa la interfaz web para explorar y restaurar archivos. No habilita el montaje de snapshots con FUSE ni la propagación compartida de montajes."
+      "This profile uses the web interface to browse and restore files. It does not enable mounting snapshots with FUSE or shared mount propagation."
     ],
     "mini_changelog": [],
     "display_version": null,

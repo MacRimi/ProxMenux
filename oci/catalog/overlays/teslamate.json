@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "TeslaMate with PostgreSQL, Grafana and a private Mosquitto broker. Runs as four native OCI LXCs without Docker Engine."
+    },
+    "description": {
+      "en_US": "TeslaMate is a self-hosted data logger for Tesla vehicles. It automatically records high-precision drive data, charging sessions, and vehicle states without causing additional vampire drain. Collected data can be visualized and analyzed through comprehensive dashboards or streamed to home automation platforms via MQTT."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/teslamate-org/teslamate/HEAD/website/static/screenshots/web_interface.png",
+      "https://raw.githubusercontent.com/teslamate-org/teslamate/HEAD/website/static/screenshots/drive.png",
+      "https://raw.githubusercontent.com/teslamate-org/teslamate/HEAD/website/static/screenshots/battery-health.png"
+    ]
+  }
+}

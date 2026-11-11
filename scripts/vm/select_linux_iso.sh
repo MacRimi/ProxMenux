@@ -56,6 +56,37 @@ function select_linux_iso() {
 	fi
 
 
+  # A distribution named by the caller opens its official ISOs directly.
+  local preset="${VM_PRESET:-}" family=""
+  VM_PRESET=""
+  case "$preset" in
+    ubuntu) family="Ubuntu" ;;
+    debian) family="Debian" ;;
+    fedora) family="Fedora" ;;
+    arch) family="Arch Linux" ;;
+    rocky) family="Rocky Linux" ;;
+    mint) family="Linux Mint" ;;
+    opensuse) family="openSUSE" ;;
+    alpine) family="Alpine Linux" ;;
+    kali) family="Kali Linux" ;;
+    manjaro) family="Manjaro" ;;
+    alma) family="AlmaLinux" ;;
+    centos) family="CentOS Stream" ;;
+    oracle) family="Oracle Linux" ;;
+    popos) family="Pop!_OS" ;;
+    zorin) family="Zorin OS" ;;
+    cachyos) family="CachyOS" ;;
+    nixos) family="NixOS" ;;
+  esac
+  if [[ -n "$family" ]]; then
+    select_linux_iso_official "$family"
+    return
+  fi
+  if [[ "$preset" == "iso" ]]; then
+    select_linux_custom_iso
+    return
+  fi
+
   while [[ "$EXIT_FLAG" != "yes" ]]; do
 
     if [[ "$LANGUAGE" == "es" ]]; then
@@ -159,30 +190,37 @@ function select_linux_iso_official() {
     "NixOS 26.05 Minimal|CLI|ProxMenux|https://channels.nixos.org/nixos-26.05/latest-nixos-minimal-x86_64-linux.iso"
   )
 
+  # Only the releases of one distribution when the caller names it.
+  local family="${1:-}"
   MENU_OPTIONS=()
   INDEX=0
   for entry in "${DISTROS[@]}"; do
     IFS='|' read -r NAME TYPE SOURCE URL <<< "$entry"
+    [[ -n "$family" && "$NAME" != "$family"* ]] && continue
     LINE=$(printf "%-30s │ %-10s │ %s" "$NAME" "$TYPE" "$SOURCE")
     MENU_OPTIONS+=("$INDEX" "$LINE")
     URLS[$INDEX]="$entry"
     ((INDEX++))
   done
 
-  # The heading starts where dialog draws the rows: after the tag column,
-  # with the list centred in its window, as the menu search lines up its own.
-  local width=76 last_tag=$((INDEX - 1))
-  local row_width=$((30 + 3 + 10 + 3 + 9))
-  local pad=$(( (width - 8 - row_width - ${#last_tag} - 2) / 2 + ${#last_tag} + 4 ))
-  HEADER_TEXT="$(printf '%*s' "$pad" "")$(_pad_cell "$(translate "Description")" 30) │ $(_pad_cell "$(translate "Type")" 10) │ $(translate "Source")"
+  if [[ -n "$family" && $INDEX -eq 1 ]]; then
+    CHOICE=0
+  else
+    # The heading starts where dialog draws the rows: after the tag column,
+    # with the list centred in its window, as the menu search lines up its own.
+    local width=76 last_tag=$((INDEX - 1))
+    local row_width=$((30 + 3 + 10 + 3 + 9))
+    local pad=$(( (width - 8 - row_width - ${#last_tag} - 2) / 2 + ${#last_tag} + 4 ))
+    HEADER_TEXT="$(printf '%*s' "$pad" "")$(_pad_cell "$(translate "Description")" 30) │ $(_pad_cell "$(translate "Type")" 10) │ $(translate "Source")"
 
-  CHOICE=$(dialog --backtitle "ProxMenux" --no-collapse \
-    --title "$(translate "Official Linux Distributions")" \
-    --menu "$(translate "Select the Linux distribution to install:")\n\n$HEADER_TEXT" 22 $width 12 \
-    "${MENU_OPTIONS[@]}" \
-    3>&1 1>&2 2>&3)
+    CHOICE=$(dialog --backtitle "ProxMenux" --no-collapse \
+      --title "$(translate "Official Linux Distributions")" \
+      --menu "$(translate "Select the Linux distribution to install:")\n\n$HEADER_TEXT" 22 $width 12 \
+      "${MENU_OPTIONS[@]}" \
+      3>&1 1>&2 2>&3)
 
-  [[ $? -ne 0 ]] && return 1
+    [[ $? -ne 0 ]] && return 1
+  fi
 
   SELECTED="${URLS[$CHOICE]}"
   IFS='|' read -r ISO_NAME ISO_TYPE SOURCE ISO_URL <<< "$SELECTED"
@@ -310,15 +348,22 @@ local OTHER_OPTIONS=(
   "4" "$(translate "Return to Main Menu")"
 )
 
-local choice
-choice=$(dialog --backtitle "ProxMenux" \
-  --title "$(translate "Other Prebuilt Linux VMs")" \
-  --menu "\n$(translate "Select one of the ready-to-run Linux VMs:")" 20 70 10 \
-  "${OTHER_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+local choice=""
+case "${VM_PRESET:-}" in
+  haos) choice="1" ;;
+  docker) choice="2" ;;
+  nextcloud) choice="3" ;;
+esac
+VM_PRESET=""
 
-if [[ $? -ne 0 || "$choice" == "4" ]]; then
-  return 1
+if [[ -z "$choice" ]]; then
+  choice=$(dialog --backtitle "ProxMenux" \
+    --title "$(translate "Other Prebuilt Linux VMs")" \
+    --menu "\n$(translate "Select one of the ready-to-run Linux VMs:")" 20 70 10 \
+    "${OTHER_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+  [[ $? -ne 0 ]] && return 1
 fi
+[[ "$choice" == "4" ]] && return 1
 
 case "$choice" in
   1)

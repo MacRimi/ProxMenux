@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Eden is an experimental open-source emulator for the Nintendo Switch, built with performance and stability in mind."
+    },
+    "description": {
+      "en_US": "Eden is an experimental open-source emulator designed for the Nintendo Switch. It is developed with performance and stability in mind, enabling users to run compatible console games and software on standard computing hardware. It delivers a desktop graphical interface accessible directly through a web browser."
+    },
+    "tips": [
+      "By default there is no authentication configured."
+    ]
   }
 }

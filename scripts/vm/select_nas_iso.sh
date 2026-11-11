@@ -221,14 +221,27 @@ function select_nas_iso() {
     "10" "$(translate "Return to Main Menu")"
   )
 
-  local NAS_TYPE
-  NAS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
-    --title "$(translate "NAS Systems")" \
-    --menu "\n$(translate "Select the NAS system to install:")" 22 70 13 \
-    "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+  local NAS_TYPE=""
+  case "${VM_PRESET:-}" in
+    synology) NAS_TYPE="1" ;;
+    truenas-scale) NAS_TYPE="2" ;;
+    truenas-core) NAS_TYPE="3" ;;
+    openmediavault) NAS_TYPE="4" ;;
+    xigmanas) NAS_TYPE="5" ;;
+    rockstor) NAS_TYPE="6" ;;
+    zimaos) NAS_TYPE="7" ;;
+    fygoos) NAS_TYPE="8" ;;
+    umbrel) NAS_TYPE="9" ;;
+  esac
+  VM_PRESET=""
 
-
-  [[ $? -ne 0 ]] && return 1
+  if [[ -z "$NAS_TYPE" ]]; then
+    NAS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
+      --title "$(translate "NAS Systems")" \
+      --menu "\n$(translate "Select the NAS system to install:")" 22 70 13 \
+      "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    [[ $? -ne 0 ]] && return 1
+  fi
 
   case "$NAS_TYPE" in
     1)
