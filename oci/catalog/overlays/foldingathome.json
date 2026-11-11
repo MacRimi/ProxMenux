@@ -18,5 +18,10 @@
     "MACHINE_NAME": {
       "prompt": "Name for this machine in Folding@home (no spaces)"
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Folding@home"
+    }
   }
 }

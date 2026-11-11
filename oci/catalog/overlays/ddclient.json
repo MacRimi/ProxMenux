@@ -13,5 +13,10 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "ddclient"
+    }
   }
 }

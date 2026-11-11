@@ -14,5 +14,10 @@
       "cores": 4,
       "memory_mb": 8192
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "LM Studio"
+    }
   }
 }

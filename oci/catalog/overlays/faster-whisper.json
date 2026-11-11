@@ -2,6 +2,9 @@
   "catalog_ui": {
     "launch": {
       "port": null
+    },
+    "title": {
+      "en_US": "faster-whisper"
     }
   },
   "first_run": {

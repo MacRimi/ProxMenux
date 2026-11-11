@@ -3,7 +3,10 @@
     "tips": [
       "Intel/AMD acceleration is enabled by passing /dev/dri to the LXC; it does not require making the LXC privileged.",
       "The privileged request from the imported Compose is discarded because it is not part of the official jlesage/handbrake requirements."
-    ]
+    ],
+    "title": {
+      "en_US": "HandBrake"
+    }
   },
   "container_contract": {
     "environment": [

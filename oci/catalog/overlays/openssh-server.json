@@ -137,6 +137,9 @@
       "scheme": "http",
       "port": null,
       "path": "/"
+    },
+    "title": {
+      "en_US": "OpenSSH Server"
     }
   }
 }

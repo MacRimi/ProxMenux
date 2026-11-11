@@ -10,5 +10,10 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "NGINX"
+    }
   }
 }

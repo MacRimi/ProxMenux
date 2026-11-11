@@ -34,7 +34,7 @@ from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, ReadableTags, UserCancelled, int
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DISPLAY_ARCHITECTURES = ("amd64", "arm64")
-PUBLISHERS = {"linuxserver.io": "LinuxServer", "official": N_("Official image")}
+PUBLISHERS = {"linuxserver.io": "LinuxServer.io", "official": N_("Official image")}
 STACK_LABELS = {
     "server": N_("Server"),
     "application": N_("Application"),

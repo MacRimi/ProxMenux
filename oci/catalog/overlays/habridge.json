@@ -22,5 +22,10 @@
     "SEC_KEY": {
       "sensitive": true
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "HA Bridge"
+    }
   }
 }

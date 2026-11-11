@@ -497,6 +497,9 @@ class Catalog:
             # locally curated English description from the existing overlay.
             item["description"] = overlay_ui.get("description", {}).get(
                 "en_US", item.get("description"))
+            # The name of the project, spelt as it spells it, for every image
+            # of it: who publishes the image is shown apart.
+            item["title"] = overlay_ui.get("title", {}).get("en_US", item.get("title"))
             path = self.apps_dir / f"{item['id']}.json"
             if not path.exists():
                 item["architectures"] = supported_architectures(

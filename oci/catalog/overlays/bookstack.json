@@ -132,5 +132,10 @@
     "DB_PASSWORD": {
       "prompt": "Password of the MariaDB user"
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "BookStack"
+    }
   }
 }

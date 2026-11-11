@@ -16,5 +16,10 @@
       "required": false,
       "prompt": "Extra parameters for minisatip (optional)"
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "minisatip"
+    }
   }
 }

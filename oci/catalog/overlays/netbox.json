@@ -254,5 +254,10 @@
     "SUPERUSER_PASSWORD": {
       "prompt": "Password of the admin account"
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "NetBox"
+    }
   }
 }
