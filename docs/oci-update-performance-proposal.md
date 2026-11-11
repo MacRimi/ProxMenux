@@ -4,8 +4,11 @@ Status: initial implementation plus a roadmap for later work. Following the
 [maintainer's measurements and priorities](https://github.com/MacRimi/ProxMenux/pull/651#issuecomment-6801389781),
 the initial changes implement minimal data holders, selective stack image
 replacement, an unchanged-stack shortcut, reduced repeated Proxmox queries and
-active phase timings. Layer caching, concurrent preparation, snapshot recovery
-and unattended batch updates remain follow-up design work.
+active phase timings. A further pass keeps a private native PVE read worker
+for one operation, avoiding repeated Perl module startup while refreshing
+pmxcfs state for every read. Unattended batches are implemented separately in
+[PR #653](https://github.com/MacRimi/ProxMenux/pull/653). Layer caching,
+concurrent preparation and snapshot recovery remain follow-up design work.
 
 Updating either a single-image OCI application or a multi-container application
 such as Immich can take a long time. Both are explicitly in scope.
@@ -127,3 +130,49 @@ recreated separately for single-image and multi-image applications. Controlled t
 they must not be extrapolated into a production Immich speedup. Cache, snapshot
 and unattended batch changes should follow separately after reviewing the
 initial measurements and recovery design.
+
+## Operation-scoped native PVE reads
+
+Updates use a private Perl child to call the same native read APIs as `pct`
+and `pvesh`. It starts lazily and closes with the operation; there is no daemon,
+network listener or saved configuration cache. Only the exact existing config,
+status, VM inventory and HA-inventory commands are eligible. All writes and
+other command forms still use the normal CLI.
+
+Every request calls `PVE::Cluster::cfs_update(1)` before the native API, so
+configuration edits, guest creation/deletion, migration and runtime changes
+remain visible. Identity/configuration/device checks before destructive steps
+are retained. The helper uses Proxmox's own pending-config semantics and
+`pct config` rendering, including description escaping and repeated low-level
+LXC options; it does not parse native config files itself.
+
+Responses travel only over private inherited pipes. No configuration values
+are logged. Reports identify request counts, elapsed reader time and whether
+the operation fell back to the CLI. A failed, missing, malformed or stalled
+worker is closed and disabled for that operation; subsequent reads run the
+ordinary CLI afresh. Previous responses are never reused.
+
+`PROXMENUX_OCI_NATIVE_READS=0` disables this optimization for diagnostics or a
+matched benchmark. Unsupported hosts retain the ordinary CLI automatically.
+Native API imports are paid once per operation; this change applies to both
+standalone and coordinated updates, including automatic standalone recovery.
+
+### Measured native-read follow-up
+
+A paired test compares the first optimized implementation (`6c975ee2`) with the
+operation-scoped reader. Both use equivalent disposable Nginx/Redis stacks,
+identical resources/data and the same verified warm Nginx 1.28 → 1.29 candidate.
+
+| Measurement | First implementation | Native reads | Change |
+| --- | ---: | ---: | ---: |
+| Total update | 105.519 s | 55.152 s | 47.7% less |
+| Approximate HTTP downtime | 62.030 s | 42.051 s | 32.2% less |
+| Fresh read checks | 113 | 113 | All retained |
+| Reads through external CLI processes | 113 | 24 | 89 handled by native worker |
+
+The worker handled 53 config, 17 status, 17 VM-inventory and two HA-inventory
+reads in 1.152 s, including startup. No fallback occurred during the measured
+update. Host process startup is eliminated for these calls, not the underlying
+checks. This is one controlled warm-cache sample per variant, not an Immich
+benchmark or a prediction for every host. HTTP polling uses 250 ms intervals
+and a 750 ms timeout; downtime is approximate.

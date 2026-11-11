@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as transaction
 import oci_work_backup as work_backup
 from oci_installation_state import image_from_archive, same_image
@@ -199,7 +200,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
              else translate('Checking the container before modifying it...'))
-    with instances.locked(instances.ROOT):
+    with native_reads.session(log=transaction.log), instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, vmid)
         if record['status'] != 'installed' or record.get('pending_transaction') or record.get('pending_stack_transaction'):
             raise ValueError(translate('The instance is not ready to be updated'))

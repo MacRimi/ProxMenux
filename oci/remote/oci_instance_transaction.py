@@ -28,6 +28,7 @@ import uuid
 from urllib.parse import unquote
 
 import oci_instances as instances
+import oci_native_reads as native_reads
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
@@ -250,7 +251,7 @@ def recover_failed_update(root, journal):
     Stack transactions remain the responsibility of their coordinator.
     """
     try:
-        with instances.locked(root):
+        with native_reads.session(log=log), instances.locked(root):
             state = json.loads(Path(journal).read_text())
             if state.get('coordinated') or state.get('phase') in TERMINAL:
                 return False
@@ -273,6 +274,9 @@ def run(*args):
     if private_description:
         shown[shown.index('--description') + 1] = '[notes redacted]'
     log('$ ' + shlex.join(shown))
+    fresh = native_reads.read(args)
+    if fresh is not None:
+        return fresh
     # OCI extraction enters an unprivileged user namespace; PVE's newly created
     # traversal directories must not inherit a caller's restrictive umask.
     pve_creation = (args[:2] in (('pct', 'create'), ('pct', 'restore'))
@@ -1751,7 +1755,7 @@ def main():
         if args.action == 'pin-host-source':
             pin_host_source(args.root, args.vmid, args.journal, args.source)
             return 0
-        with instances.locked(args.root):
+        with native_reads.session(log=log), instances.locked(args.root):
             if args.action == 'apply':
                 if args.archive is None:
                     raise ValueError(translate('apply requires the OCI archive of the resolved image'))

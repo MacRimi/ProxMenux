@@ -18,6 +18,7 @@ import oci_carried_record as carried
 import oci_stack_public_routes as public_routes
 import oci_compose_jobs as compose_jobs
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as member_tx
 import oci_stack_plan
 import oci_stack_transaction as stack_tx
@@ -762,7 +763,7 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
     msg_info(translate('Checking the interrupted stack operation...') if recover
              else (translate('Checking the stack before recreating...') if operation == 'recreate'
                    else translate('Checking the stack before the update...')))
-    with instances.locked(root):
+    with native_reads.session(log=member_tx.log), instances.locked(root):
         selected = instances.read(root, vmid)
         primary_id = selected.get('stack_member', {}).get('primary_vmid', vmid)
         primary = instances.read(root, primary_id)
