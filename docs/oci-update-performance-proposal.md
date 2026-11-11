@@ -3,7 +3,8 @@
 Status: design discussion. This document proposes improvements; it does not
 implement them or claim measured speedups.
 
-Updating a multi-container application such as Immich can take a long time.
+Updating either a single-image OCI application or a multi-container application
+such as Immich can take a long time. Both are explicitly in scope.
 The goal is to reduce both total update time and service downtime while keeping
 data, configuration, device access and coordinated rollback intact.
 
@@ -12,11 +13,14 @@ data, configuration, device access and coordinated rollback intact.
 The coordinated updater already resolves, downloads and verifies candidates
 before stopping services. Preparation and replacement are sequential, and every
 member is backed up and recreated, including members whose image is unchanged.
-Standalone updates already have an unchanged-image shortcut.
+Standalone updates already have an unchanged-image shortcut and native Modify
+paths for supported resource/settings changes. These existing fast paths must
+be preserved, not presented as new features.
 
 The resolver can reuse complete verified archives. It currently performs full
 archive verification before comparing the cached image with the candidate.
-Backup verification also occurs at multiple points in the coordinated path.
+Image and backup verification occurs at multiple points in the lifecycle.
+Review the single-container and coordinated paths separately.
 Whether these dominate a particular update needs measurement.
 
 Relevant code:
@@ -25,6 +29,25 @@ Relevant code:
 - [Native stack adapter](../oci/remote/oci_stack_native.py)
 - [Image resolution and archive reuse](../oci/remote/oci_update_current.py)
 - [Member transactions and backup verification](../oci/remote/oci_instance_transaction.py)
+
+## Scope: single-image and multi-image applications
+
+Common optimizations belong in shared resolver and member-transaction code so
+both installation types benefit. A single-image app can contain its own database
+or run migrations too; it still needs a coherent data recovery point.
+
+| Idea | Single-image OCI | Multi-image OCI |
+| --- | --- | --- |
+| Phase timings and downtime | Measure its complete update. | Measure each member and the coordinated operation. |
+| No-op when the image is unchanged | Preserve and verify the existing shortcut. | Add a whole-stack shortcut when every image is unchanged. |
+| Replace only changed images | Keep the existing image when unchanged; preserve native Modify fast paths. | Recreate only changed members while retaining coherent recovery coverage. |
+| Metadata-first cache selection | Reject stale archives cheaply before full verification. | Same optimization for each member. |
+| Shared layer reuse | Reuse layers between versions of this image. | Also reuse common layers across members and applications. |
+| Bounded preparation concurrency | Audit existing Skopeo layer parallelism and independent verification work; do not assume serial layer downloads. | Additionally overlap preparation of independent images. |
+| Avoid redundant full checks | Evaluate repeated image/backup checks within its transaction. | Also evaluate checks repeated by the coordinator and member transactions. |
+| Prepare before downtime | Already downloads/verifies before stopping; audit remaining safe preparation. | Already downloads/verifies before stopping; audit remaining safe preparation. |
+| Snapshot recovery where supported | Quiesce the application and cover its rootfs and required managed data volumes. | Coordinate a consistent recovery point across all affected members. |
+| Volumes and readiness | Avoid unnecessary copies, permission walks and fixed waits; retain migration/readiness checks. | Apply the same principles with dependency ordering. |
 
 ## Suggested priorities
 
@@ -54,7 +77,12 @@ credentials, resource settings and original running/stopped states.
 
 ## Validation before implementation is accepted
 
-Compare the existing and proposed paths on equivalent disposable stacks:
+Compare the existing and proposed paths on equivalent disposable installations:
+
+- Single-image applications: unchanged and changed images, small and large
+  archives, persistent managed volumes, host binds, an embedded database, and
+  native Modify changes that must not download or recreate the image.
+- Multi-image applications:
 
 - All images unchanged; only the frontend changed; only a dependency changed;
   and all images changed. Include an Immich-like application/ML/database/cache
@@ -68,8 +96,9 @@ Compare the existing and proposed paths on equivalent disposable stacks:
 - Run `cd oci && python3 -m unittest discover -s tests`, applicable offline/i18n
   checks, and real installation/update checks before publishing runtime changes.
 
-Report total duration, downtime, downloaded bytes, verification time and members
-recreated. There is no measured speedup or implementation validation in this
+Report total duration, downtime, downloaded bytes, verification time and guests
+recreated separately for single-image and multi-image applications. There is no measured speedup or implementation validation in this
 documentation-only proposal. The suggested first implementation is instrumentation
-plus unchanged-image and selective-replacement paths; cache and snapshot changes
+plus preserving single-image fast paths and improving unchanged-image and
+selective-replacement paths for stacks; cache and snapshot changes
 can follow separately after reviewing the measurements and recovery design.
