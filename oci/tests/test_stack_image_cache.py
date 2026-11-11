@@ -122,12 +122,13 @@ class StackImageCacheTests(unittest.TestCase):
                 patch.object(update.transaction, "log"):
             return adapter.prepare(record, operation)
 
-    def test_update_reuses_a_verified_original_archive_without_downloading_layers(self):
+    def test_unchanged_update_needs_no_archive_download_or_layer_verification(self):
         result = self.prepare()
-        self.assertEqual(result["archive"], str(self.saved))
+        self.assertIsNone(result["archive"])
+        self.assertTrue(result["unchanged"])
         self.assertEqual(result["digest"], self.old_image["manifest_digest"])
         self.assertEqual(self.lookups, ["example/app:latest"])
-        self.assertIn(self.saved, self.verifications)
+        self.assertEqual(self.verifications, [])
         self.assertEqual(self.downloads, [])
 
     def test_recreate_pins_the_saved_registry_digest_and_reuses_the_original_archive(self):
@@ -151,14 +152,14 @@ class StackImageCacheTests(unittest.TestCase):
 
     def test_corrupt_original_archive_is_kept_and_replaced_by_a_verified_download(self):
         self.saved.write_bytes(b"not an intact OCI archive")
-        result = self.prepare()
+        result = self.prepare("recreate")
         self.assertEqual(len(self.downloads), 1)
         self.assertEqual(image_from_archive(result["archive"]), self.old_image)
         self.assertEqual(self.saved.read_bytes(), b"not an intact OCI archive")
 
     def test_a_record_without_an_archive_uses_the_normal_download_path(self):
         self.record["observed"].pop("archive_path")
-        result = self.prepare()
+        result = self.prepare("recreate")
         self.assertEqual(len(self.downloads), 1)
         self.assertEqual(image_from_archive(result["archive"]), self.old_image)
 
@@ -166,7 +167,7 @@ class StackImageCacheTests(unittest.TestCase):
         link = self.root / "linked.tar"
         link.symlink_to(self.saved)
         self.record["observed"]["archive_path"] = str(link)
-        self.prepare()
+        self.prepare("recreate")
         self.assertEqual(len(self.downloads), 1)
         self.assertNotIn(link, self.verifications)
         self.assertTrue(link.is_symlink())

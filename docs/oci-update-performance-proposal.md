@@ -1,14 +1,18 @@
 # Proposal: faster OCI application updates
 
-Status: design discussion. This document proposes improvements; it does not
-implement them or claim measured speedups.
+Status: initial implementation plus a roadmap for later work. Following the
+[maintainer's measurements and priorities](https://github.com/MacRimi/ProxMenux/pull/651#issuecomment-6801389781),
+the initial changes implement minimal data holders, selective stack image
+replacement, an unchanged-stack shortcut, reduced repeated Proxmox queries and
+active phase timings. Layer caching, concurrent preparation, snapshot recovery
+and unattended batch updates remain follow-up design work.
 
 Updating either a single-image OCI application or a multi-container application
 such as Immich can take a long time. Both are explicitly in scope.
 The goal is to reduce both total update time and service downtime while keeping
 data, configuration, device access and coordinated rollback intact.
 
-## Current behavior
+## Baseline behavior before these changes
 
 The coordinated updater already resolves, downloads and verifies candidates
 before stopping services. Preparation and replacement are sequential, and every
@@ -29,6 +33,28 @@ Relevant code:
 - [Native stack adapter](../oci/remote/oci_stack_native.py)
 - [Image resolution and archive reuse](../oci/remote/oci_update_current.py)
 - [Member transactions and backup verification](../oci/remote/oci_instance_transaction.py)
+
+## Initial implementation
+
+- Standalone and coordinated transactions park volumes in a never-started,
+  networkless holder built from a 10 KiB directory-only tar and a 1 GiB rootfs,
+  rather than extracting the full application image into the holder.
+- Coordinated Update resolves every image first. When none changed, it does not
+  stop, back up or recreate guests. Otherwise it recreates changed members and
+  replays completion jobs as needed; explicit Recreate still rebuilds all members.
+- Every member remains covered by a coherent stopped backup. Recovery restores
+  the data of unchanged members too: an unchanged LXC configuration is not proof
+  that a database has not received migration writes.
+- Single-member stop, backup and start checks read that member's configuration
+  rather than every member's. Whole-stack checks remain at transaction boundaries
+  and before replacement/recovery. Read-only preflight reuses its validated
+  configuration snapshot; destructive operations still obtain fresh evidence.
+- Private journals record active phase durations. Recovery in another process
+  does not count the interruption as active execution time.
+
+The general optimization ideas below remain useful for both installation types;
+only the initial subset above is implemented here. No production Immich speedup
+is claimed. Validation details and controlled measurements are in the PR.
 
 ## Scope: single-image and multi-image applications
 
@@ -97,8 +123,7 @@ Compare the existing and proposed paths on equivalent disposable installations:
   checks, and real installation/update checks before publishing runtime changes.
 
 Report total duration, downtime, downloaded bytes, verification time and guests
-recreated separately for single-image and multi-image applications. There is no measured speedup or implementation validation in this
-documentation-only proposal. The suggested first implementation is instrumentation
-plus preserving single-image fast paths and improving unchanged-image and
-selective-replacement paths for stacks; cache and snapshot changes
-can follow separately after reviewing the measurements and recovery design.
+recreated separately for single-image and multi-image applications. Controlled test results must identify their workload, cache state and limits;
+they must not be extrapolated into a production Immich speedup. Cache, snapshot
+and unattended batch changes should follow separately after reviewing the
+initial measurements and recovery design.

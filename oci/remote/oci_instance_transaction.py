@@ -21,6 +21,7 @@ import shutil
 import socket
 import subprocess
 import stat
+import tarfile
 import sys
 import time
 import uuid
@@ -323,7 +324,25 @@ def filehash(path):
     return value.hexdigest()
 
 
+_phase_clock_id = uuid.uuid4().hex
+
+
+def time_phase(state, phase, prefix='phase'):
+    """Accumulate active phase durations, never recovery downtime across processes."""
+    now = time.monotonic()
+    previous = state.get('phase')
+    if (previous != phase and state.get('phase_clock_id') == _phase_clock_id
+            and 'phase_started' in state):
+        elapsed = max(0.0, now - state['phase_started'])
+        timings = state.setdefault('phase_seconds', {})
+        timings[previous] = round(timings.get(previous, 0.0) + elapsed, 3)
+        log(f'{prefix} duration: {previous}: {elapsed:.3f}s')
+    if previous != phase or state.get('phase_clock_id') != _phase_clock_id:
+        state.update(phase_clock_id=_phase_clock_id, phase_started=now)
+
+
 def checkpoint(path, state, phase):
+    time_phase(state, phase)
     state['phase'] = phase
     instances.write(path, state)
     log(f'phase: {phase}')
@@ -1234,6 +1253,30 @@ def check_archive(archive):
         log_output(report.getvalue())
 
 
+def create_data_holder(vmid, storage, identity, directory, architecture='amd64'):
+    """A stopped, networkless volume parking CT needs no application rootfs.
+
+    Use a tiny plain rootfs archive, not the candidate OCI image. The holder is
+    never started; its own disk is discarded only after parked volumes return.
+    Keep the same identity marker and recovery journal protocol as before.
+    """
+    archive = Path(directory) / ('data-holder-%s.tar' % uuid.uuid4().hex)
+    with archive.open('xb') as output:
+        with tarfile.open(fileobj=output, mode='w', format=tarfile.USTAR_FORMAT) as tar:
+            for name in ('etc', 'dev', 'proc', 'sys', 'tmp'):
+                entry = tarfile.TarInfo(name)
+                entry.type = tarfile.DIRTYPE
+                entry.mode = 0o1777 if name == 'tmp' else 0o755
+                tar.addfile(entry)
+    try:
+        run('pct', 'create', str(vmid), str(archive), '--rootfs', f'{storage}:1',
+            '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
+            '--arch', architecture, '--memory', '128', '--cores', '1', '--onboot', '0',
+            '--description', 'proxmenux-transaction=' + identity)
+    finally:
+        archive.unlink(missing_ok=True)
+
+
 def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, interrupt_after=None,
           backup_compression='zstd', acknowledge_external_data=False, coordinated=None, progress=None,
           keep_backup=None):
@@ -1364,11 +1407,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     state['stage'] = stage
     state['runtime_deployment']['transaction_source_vmid'] = stage
     checkpoint(journal, state, 'creating-stage')
-    run('pct', 'create', str(stage), str(archive), '--rootfs',
-        f"{record['deployment']['rootfs']['storage']}:{record['deployment']['rootfs']['size_gb']}",
-        '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
-        '--memory', '128', '--cores', '1', '--onboot', '0',
-        '--description', 'proxmenux-transaction=' + state['id'])
+    create_data_holder(stage, record['deployment']['rootfs']['storage'], state['id'],
+                       directory, previous['architecture'])
     checkpoint(journal, state, 'parking-data')
     for mount in actual.values():
         owned(vmid, record['installation_id'])
@@ -1572,7 +1612,10 @@ def recover(root, journal):
     backup = state.get('backup')
     # A failure before the container was changed (while backing it up or
     # creating the temporary container) leaves it exactly as it was.
-    untouched = current_path.exists() and run('pct', 'config', str(vmid)).decode() == state['before_config']
+    # Coordinated recovery also restores unchanged members: an application
+    # migration may have changed their data without changing their config.
+    untouched = (not state.get('coordinated') and current_path.exists()
+                 and run('pct', 'config', str(vmid)).decode() == state['before_config'])
     if not backup or untouched:
         if not untouched:
             raise ValueError(translate('There is no verified backup; a modified container is not touched'))
