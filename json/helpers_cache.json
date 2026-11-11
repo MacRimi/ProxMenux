@@ -1679,10 +1679,10 @@
     "website": "https://community-scripts.org",
     "documentation": "community-scripts/DevScripts/blob/main/tools/arr-stack.sh",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ProxmoxVE.webp",
-    "updateable": true,
+    "updateable": false,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -12738,6 +12738,40 @@
     "os": "debian"
   },
   {
+    "name": "Lightpanda",
+    "slug": "lightpanda",
+    "desc": "Lightpanda is a headless browser built from scratch for AI agents and automation. It runs JavaScript and speaks the Chrome DevTools Protocol, so Puppeteer and Playwright scripts work against it, and it has a built-in MCP server for AI agents.",
+    "script": "ct/lightpanda.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/lightpanda.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/lightpanda.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Connect Puppeteer or Playwright to ws://<IP>:9222. Add http://<IP>:9223/mcp to your AI agent as an HTTP MCP server.",
+      "Requests to private and internal IPs are blocked so an agent can't be steered into your LAN. Remove --block-private-networks from both service files to browse internal sites."
+    ],
+    "warnings": [],
+    "port": 9222,
+    "website": "https://lightpanda.io/",
+    "documentation": "https://lightpanda.io/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/lightpanda.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "LimeSurvey",
     "slug": "limesurvey",
     "desc": "LimeSurvey is the simple, quick and anonymous online survey tool that's bursting with juicy insights. Calling students, professionals and enterprises: design a survey and get the best insights, it’s free and as easy as squeezing a lime. Make a free online survey now!",
@@ -15840,7 +15874,7 @@
     "port": 17000,
     "website": "https://n9e.github.io/",
     "documentation": "https://n9e.github.io/docs/",
-    "logo": "https://cdn.jsdelivr.net/gh/n9e/n9e.github.io@main/static/apple-touch-icon.png",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nightingale-alerting.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -23347,7 +23381,7 @@
     "port": 443,
     "website": "https://stoat.chat",
     "documentation": "https://github.com/stoatchat/self-hosted",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoatchat.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoat.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -24012,7 +24046,7 @@
     "port": 3773,
     "website": "https://t3.codes",
     "documentation": "https://github.com/pingdotgg/t3code/tree/main/docs",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/t3code.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/t3-code.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
