@@ -142,7 +142,8 @@ other command forms still use the normal CLI.
 Every request calls `PVE::Cluster::cfs_update(1)` before the native API, so
 configuration edits, guest creation/deletion, migration and runtime changes
 remain visible. Identity/configuration/device checks before destructive steps
-are retained. The helper uses Proxmox's own pending-config semantics and
+are retained. Proxmox may reuse its own parsed metadata when pmxcfs versions
+match; this worker keeps no response cache. The helper uses Proxmox's own pending-config semantics and
 `pct config` rendering, including description escaping and repeated low-level
 LXC options; it does not parse native config files itself.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Operation-scoped read-only PVE API worker. No socket, cache or write methods.
+# Operation-scoped read-only PVE API worker; no listener or result cache.
 use strict;
 use warnings;
 use JSON::PP;
