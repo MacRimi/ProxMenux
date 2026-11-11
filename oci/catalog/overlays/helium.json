@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Helium is a Chromium-based web browser made for people, with love. Privacy-first with unbiased ad-blocking."
+    },
+    "description": {
+      "en_US": "Helium is a Chromium-based web browser focused on privacy and ad-blocking. It provides a familiar navigation experience while blocking intrusive trackers and advertisements without bias. It can be accessed remotely through a streaming web interface to browse external or local network services within an isolated environment."
+    },
+    "screenshots": [
+      "https://helium.computer/landing/interface/vertical.avif",
+      "https://helium.computer/landing/interface/dynamic-tabs.avif",
+      "https://helium.computer/landing/interface/compact.avif",
+      "https://helium.computer/landing/interface/classic.avif"
+    ]
   }
 }

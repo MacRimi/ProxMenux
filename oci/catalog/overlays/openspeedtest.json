@@ -5,5 +5,17 @@
         "/var/log/letsencrypt"
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "An application for launching HTML5 Network Speed Test Server. You can test download & upload speed from any device within your network with a web browser that is IE10 or new."
+    },
+    "description": {
+      "en_US": "OpenSpeedTest is an open-source HTML5 network performance estimation tool designed for self-hosted environments. It allows users to test download speeds, upload speeds, and ping latency from any device with a modern web browser. Built purely with static assets and standard web APIs, it operates without third-party frameworks, plugins, or client-side software."
+    },
+    "screenshots": [
+      "https://open.cachefly.net/assets/images/OSTV2-SS.png",
+      "https://raw.githubusercontent.com/openspeedtest/v2-Test/main/images/10G-S.gif"
+    ]
   }
 }

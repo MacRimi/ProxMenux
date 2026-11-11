@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage files through a browser interface with upload, download and user permissions. The container can use a local repository and file-based application settings without an external database."
+    },
+    "description": {
+      "en_US": "FileGator is a self-hosted web application for managing files and folders. It allows users to manage files in a local directory or connect to various external storage systems. The application includes multi-user support with custom roles, access permissions, and individual home directories. It supports standard file operations such as viewing, editing, uploading, downloading, and creating zip archives directly in the browser."
+    },
+    "screenshots": [
+      "https://filegator.io/img/animated.gif"
+    ]
+  }
+}

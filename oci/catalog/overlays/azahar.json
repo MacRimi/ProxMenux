@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Azahar is an open-source 3DS emulator based on Citra."
+    },
+    "description": {
+      "en_US": "Azahar is an open-source Nintendo 3DS emulator based on Citra. It enables users to run and play 3DS games on computer hardware. The software recreates the handheld console environment to provide compatible gameplay and graphics rendering."
+    }
   }
 }

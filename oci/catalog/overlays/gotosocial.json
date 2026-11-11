@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a small federated social instance with a web interface, API and SQLite storage."
+    },
+    "description": {
+      "en_US": "GoToSocial is a lightweight, safety-focused ActivityPub social network server. It allows users to follow accounts across the Fediverse, share posts and images, and read chronological timelines without recommendation algorithms or tracking. The application supports granular post visibility settings, reply controls, Markdown text formatting, and customizable profile themes."
+    },
+    "screenshots": [
+      "https://codeberg.org/superseriousbusiness/gotosocial/raw/branch/main/docs/overrides/public/instancesplash.png",
+      "https://codeberg.org/superseriousbusiness/gotosocial/raw/branch/main/docs/overrides/public/user-settings-interaction-policy-1.png",
+      "https://codeberg.org/superseriousbusiness/gotosocial/raw/branch/main/docs/overrides/public/markdown-post.png",
+      "https://codeberg.org/superseriousbusiness/gotosocial/raw/branch/main/docs/overrides/public/profile1.png"
+    ]
+  }
+}

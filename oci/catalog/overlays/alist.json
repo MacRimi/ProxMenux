@@ -27,5 +27,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Alist transforms how you manage and access your files at home, whether on your TV, phone, or any other device. Unlike traditional cloud storage, Alist offers a unified experience across multiple platforms, making it a breeze to keep your media and documents at your fingertips.\n\nWith features like easy installation, support for multiple storage providers (local, Aliyundrive, Onedrive, Google Drive), WebDAV support, dark mode, protected routes with password authentication, file previews for videos, audio, office files, PDFs, code, images, package and batch downloads, single sign-on, offline torrent downloads, file encryption, and additional tools like a text editor and Cloudflare workers proxy, Alist ensures a seamless and secure file management experience.\n\nDeploying Alist on private cloud devices like self-hosted server brings unmatched convenience with multi-device access, ensuring your files are always within reach and secure, no matter where you are.\n"
+    },
+    "description": {
+      "en_US": "AList is a file list program that supports multiple storage backends. It provides a web interface to browse, organize, and manage files consolidated from different locations."
+    },
+    "repository": "https://github.com/Xhofe/alist"
   }
 }

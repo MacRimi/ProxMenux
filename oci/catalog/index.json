@@ -3845,7 +3845,7 @@
       "title": "Duplicati",
       "repository_name": "docker-duplicati",
       "repository": "https://github.com/linuxserver/docker-duplicati",
-      "description": "Duplicati is a backup client that securely stores encrypted, incremental, compressed backups on local storage, cloud storage services and remote file servers. It works with standard protocols like FTP, SSH, WebDAV as well as popular services like Microsoft OneDrive, Amazon S3, Google Drive, box.com, Mega, B2, and many others.",
+      "description": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups.",
       "website": "https://www.duplicati.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
       "architectures": [
@@ -3877,7 +3877,7 @@
       "template_family": "curated-profile",
       "title": "Duplicati",
       "repository": "https://github.com/duplicati/duplicati",
-      "description": "Official Duplicati image: encrypted, incremental backups to local, network and cloud storage.",
+      "description": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups.",
       "website": "https://www.duplicati.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
       "architectures": [
@@ -4005,7 +4005,7 @@
       "title": "Emby",
       "repository_name": "docker-emby",
       "repository": "https://github.com/linuxserver/docker-emby",
-      "description": "Emby organizes video, music, live TV, and photos from personal media libraries and streams them to smart TVs, streaming boxes and mobile devices. This container is packaged as a standalone emby Media Server.",
+      "description": "Emby Server is a personal media server that organizes personal videos, music, and photos into a centralized library.",
       "website": "https://emby.media/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emby.webp",
       "architectures": [
@@ -4037,7 +4037,7 @@
       "template_family": "curated-profile",
       "title": "Emby",
       "repository": "https://hub.docker.com/r/emby/embyserver",
-      "description": "Emby is a personal media management platform that brings home videos, music, and photos together, automatically converting and streaming to any device. An intuitive design makes it ideal for users to enjoy media content anytime, anywhere, meeting family entertainment and media management needs.\n\nCore features include cross-device media streaming and easy access. It supports real-time conversion and streaming of personal media to any device for seamless playback. A connection service enables easy media access while away from home. Live TV functionality supports streaming, managing DVR, and accessing a library of recordings. Mobile sync delivers media to smartphones and tablets for offline access, automatically updating new content.\n\nIt offers parental controls to restrict children's content access, set schedules and time limits, and remotely monitor sessions. Chromecast support enables easy streaming of videos, music, photos, and Live TV. Content is presented elegantly, enhancing visual experience. Cloud sync supports backup, archiving, and multi-resolution storage for optimized streaming. Web-based media management facilitates editing metadata, images, and searching subtitles, while DLNA integration auto-detects network devices for content streaming. With convenience and versatility at the core, the platform delivers a modern media management solution.\n\n**Key Features:**\n- Automatic conversion and streaming of media to any device\n- Easy access via connection service while away from home\n- Live TV streaming, DVR management, and recording library access\n- Mobile sync to smartphones and tablets for offline access\n- Parental controls with content restrictions, schedules, and remote monitoring\n- Chromecast support for streaming videos, music, photos, and Live TV\n- Cloud sync for backup and multi-resolution storage\n- Web-based media management for editing metadata and searching subtitles\n- DLNA integration for auto-detecting network devices and streaming content\n\n**Learn More:**\n- [Emby Official Website](https://emby.media/)\n",
+      "description": "Emby Server is a personal media server that organizes personal videos, music, and photos into a centralized library.",
       "website": "https://emby.media/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emby.webp",
       "architectures": [
@@ -4840,7 +4840,7 @@
       "variant": null,
       "title": "FlareSolverr",
       "repository": "https://ghcr.io/flaresolverr/flaresolverr",
-      "description": "",
+      "description": "FlareSolverr is a proxy server designed to bypass Cloudflare and DDoS-GUARD protection. It receives requests and uses an automated web browser to open the target URL and solve browser challenges. Once solved, it extracts the rendered HTML and clearance cookies, returning them so other HTTP clients can access the protected site.",
       "website": "",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/flaresolverr.webp",
       "architectures": [
@@ -5133,7 +5133,7 @@
       "title": "FreshRSS",
       "repository_name": "docker-freshrss",
       "repository": "https://github.com/linuxserver/docker-freshrss",
-      "description": "Freshrss is a free, self-hostable aggregator for rss feeds.",
+      "description": "FreshRSS is a self-hosted RSS and Atom feed aggregator.",
       "website": "https://freshrss.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freshrss.webp",
       "architectures": [
@@ -5167,7 +5167,7 @@
       "variant": null,
       "title": "FreshRSS",
       "repository": "https://hub.docker.com/r/freshrss/freshrss",
-      "description": "FreshRSS is a self-hosted RSS and Atom feed aggregator. It is lightweight, easy to work with, powerful, and customizable.",
+      "description": "FreshRSS is a self-hosted RSS and Atom feed aggregator.",
       "website": "https://freshrss.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freshrss.webp",
       "architectures": [
@@ -6093,7 +6093,7 @@
       "title": "HandBrake",
       "repository_name": "docker-handbrake",
       "repository": "https://github.com/linuxserver/docker-handbrake",
-      "description": "HandBrake is an open-source tool, built by volunteers, for converting video from nearly any format to a selection of modern, widely supported codecs.",
+      "description": "HandBrake is an open-source tool designed to convert video from nearly any format to modern, widely supported codecs.",
       "website": "https://handbrake.fr/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/handbrake.webp",
       "architectures": [
@@ -6126,7 +6126,7 @@
       "variant": null,
       "title": "HandBrake",
       "repository": "https://hub.docker.com/r/jlesage/handbrake",
-      "description": "Handbrake is a Docker-based application for video transcoding and compression, offering powerful and flexible multimedia processing across multiple platforms.",
+      "description": "HandBrake is an open-source tool designed to convert video from nearly any format to modern, widely supported codecs.",
       "website": "https://handbrake.fr",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/handbrake.webp",
       "architectures": [
@@ -6490,7 +6490,7 @@
       "title": "Home Assistant",
       "repository_name": "docker-homeassistant",
       "repository": "https://github.com/linuxserver/docker-homeassistant",
-      "description": "Home Assistant Core - Open source home automation that puts local control and privacy first. Powered by a worldwide community of tinkerers and DIY enthusiasts. Perfect to run on a Raspberry Pi or a local server",
+      "description": "Home Assistant is an open source home automation platform designed to put local control and privacy first.",
       "website": "https://www.home-assistant.io/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
       "architectures": [
@@ -6524,7 +6524,7 @@
       "variant": null,
       "title": "Home Assistant",
       "repository": "https://hub.docker.com/r/homeassistant/home-assistant",
-      "description": "Home Assistant is a smart home management app prioritizing local control and data privacy, managing devices through an intuitive interface with data stored locally, eliminating cloud dependency. Its robust features and community support make it ideal for DIY enthusiasts and home users creating personalized home experiences.\n\nThe app's core features include customizable dashboards, powerful automations, and a voice assistant. Dashboards support drag-and-drop customization, with various card types to display data and control devices like lights or sensors. It offers an advanced automation engine, such as turning on lights at sunset or alerting users to an open garage door. The Assist voice assistant enables natural language control, compatible with phones, tablets, smartwatches, and even traditional telephones, allowing users to customize interactions and experiment with AI conversations to meet diverse needs.\n\nIt extends functionality through add-ons, supporting tools like AdGuard for ad blocking, NodeRed for third-party automations, or turning devices into Spotify Connect targets. Home energy management optimizes solar production and usage planning to save costs. Home Assistant Cast transforms TVs into dashboard displays, and NFC tags trigger music playback or routine automations. Community documentation aids configuration, with local data processing ensuring privacy, suitable for home or small team smart home management.\n\n**Key Features:**\n- Local data storage, prioritizing privacy\n- Drag-and-drop customizable dashboards for device control and data display\n- Advanced automations for triggering smart home events\n- Assist voice assistant for natural language control\n- Add-ons for integrating AdGuard, NodeRed, and more\n- Home energy management for optimized usage and cost savings\n- Home Assistant Cast for TV dashboard displays\n- NFC tags for triggering music or automation tasks\n\n**Learn More:**\n- [Home Assistant Official Website](https://www.home-assistant.io)\n- [Home Assistant GitHub Repository](https://github.com/home-assistant/core)\n- [Home Assistant Documentation](https://www.home-assistant.io/docs)\n- [Home Assistant Community](https://community.home-assistant.io)\n- [Home Assistant Add-ons](https://www.home-assistant.io/addons)\n",
+      "description": "Home Assistant is an open source home automation platform designed to put local control and privacy first.",
       "website": "https://www.home-assistant.io",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
       "architectures": [
@@ -7308,7 +7308,7 @@
       "title": "Jellyfin",
       "repository_name": "docker-jellyfin",
       "repository": "https://github.com/linuxserver/docker-jellyfin",
-      "description": "Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emby and Plex, to provide media from a dedicated server to end-user devices via multiple apps. Jellyfin is descended from Emby's 3.5.2 release and ported to the .NET Core framework to enable full cross-platform support. There are no strings attached, no premium licenses or features, and no hidden agendas: just a team who want to build something better and work together to achieve it.",
+      "description": "Jellyfin is a media system designed to organize and stream media collections.",
       "website": "https://github.com/jellyfin/jellyfin",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
       "architectures": [
@@ -7340,7 +7340,7 @@
       "template_family": "curated-profile",
       "title": "Jellyfin",
       "repository": "https://github.com/jellyfin/jellyfin-packaging",
-      "description": "Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emby and Plex, to provide media from a dedicated server to end-user devices via multiple apps. Jellyfin is descended from Emby's 3.5.2 release and ported to the .NET Core framework to enable full cross-platform support. There are no strings attached, no premium licenses or features, and no hidden agendas: just a team who want to build something better and work together to achieve it.",
+      "description": "Jellyfin is a media system designed to organize and stream media collections.",
       "website": "https://jellyfin.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
       "architectures": [
@@ -7708,7 +7708,7 @@
       "title": "Kavita",
       "repository_name": "docker-kavita",
       "repository": "https://github.com/linuxserver/docker-kavita",
-      "description": "Kavita is a fast, feature rich, cross platform reading server. Built with a focus for being a full solution for all your reading needs. Setup your own server and share your reading collection with your friends and family!",
+      "description": "Kavita is a cross-platform reading server designed to manage personal reading collections.",
       "website": "https://github.com/Kareadita/Kavita",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kavita.webp",
       "architectures": [
@@ -7742,7 +7742,7 @@
       "variant": null,
       "title": "Kavita",
       "repository": "https://hub.docker.com/r/jvmilazz0/kavita",
-      "description": "Kavita is a self-hosted digital library app designed for managing and reading comics, light novels, and e-books (supporting CBZ, CBR, EPUB, PDF, and more), offering a secure and convenient solution for personal reading collections. Its responsive Web interface allows users to access content effortlessly via any browser, with fullscreen reading and full localization support, ideal for comic and e-book enthusiasts building personalized digital libraries.\n\nThe app's core features include robust library management and an enhanced reading experience. Users can organize content with collections, reading lists, and custom tags, editing metadata to keep libraries neatly arranged. The built-in manga reader supports dual-page mode, Webtoon scrolling, and image splitting, while the e-book reader offers customizable fonts, spacing, and themes, with by-line progress syncing across devices. The PDF reader provides light/dark modes and diverse settings. It supports multi-user management, allowing custom permissions for sharing libraries or restricting content access, perfect for family or team use. Bulk imports and full-text search streamline large collection management.\n\nIt can be flexibly deployed on personal servers or NAS devices, with an active community providing extensive documentation to enhance functionality. Folder monitoring automatically detects file changes without manual scans, and sending content to Kindle or other devices improves cross-device access. Whether creating a personal reading hub or sharing media with others, the app's intuitive interface and high customizability deliver a modern management platform, meeting needs from casual reading to professional collections.\n\n**Key Features:**\n- Serve up Manga/Webtoons/Comics (cbr, cbz, zip/rar/rar5, 7zip, raw images) and Books (epub, pdf)\n- First class responsive readers that work great on any device (phone, tablet, desktop)\n- Customizable theming support: [Theme Repo](https://github.com/Kareadita/Themes) and [Documentation](https://wiki.kavitareader.com/guides/themes/)\n- External metadata integration and scrobbling for read status, ratings, and reviews (available via Kavita+)\n- Rich Metadata support with filtering and searching\n- Ways to group reading material: Collections, Reading Lists (CBL Import), Want to Read\n- Ability to manage users with rich Role-based management for age restrictions, abilities within the app, etc\n- Rich web readers supporting webtoon, continuous reading mode (continue without leaving the reader), virtual pages (epub), etc\n- Ability to customize your dashboard and side nav with smart filters, custom order and visibility toggles\n- Ability to download metadata (available via Kavita+)\n\n**Learn More:**\n- [Kavita Official Website](https://www.kavitareader.com)\n- [Kavita GitHub Repository](https://github.com/Kareadita/Kavita)\n",
+      "description": "Kavita is a cross-platform reading server designed to manage personal reading collections.",
       "website": "https://www.kavitareader.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kavita.webp",
       "architectures": [
@@ -9620,7 +9620,7 @@
       "title": "Medusa",
       "repository_name": "docker-medusa",
       "repository": "https://github.com/linuxserver/docker-medusa",
-      "description": "Medusa is an automatic Video Library Manager for TV Shows. It watches for new episodes of your favorite shows, and when they are posted it does its magic.",
+      "description": "Medusa is an automatic video library manager for television shows.",
       "website": "https://pymedusa.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa.webp",
       "architectures": [
@@ -9655,7 +9655,7 @@
       "variant": null,
       "title": "Medusa",
       "repository": "https://hub.docker.com/r/pymedusa/medusa",
-      "description": "Automatic Video Library Manager for TV Shows. It watches for new episodes of your favorite shows, and when they are posted it does its magic.",
+      "description": "Medusa is an automatic video library manager for television shows.",
       "website": "",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa.webp",
       "architectures": [
@@ -10188,7 +10188,7 @@
       "variant": null,
       "title": "MongoDB 4",
       "repository": "https://hub.docker.com/_/mongo",
-      "description": "The 4.4 series of MongoDB, the document-oriented NoSQL database. MongoDB 5 and later require a CPU with AVX support and will not start without it, which leaves the low-power processors common in home servers unable to run them at all. This entry exists for those machines: it is pinned to the 4.4 series rather than following the latest release. The series reached its end of life in February 2024 and receives no further fixes, so where the processor does support AVX, the MongoDB entry installs a maintained release instead.",
+      "description": "MongoDB 4.4, the last series that runs on a CPU without AVX.",
       "website": "https://www.mongodb.com/",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/MongoDB4/icon.png",
       "architectures": [
@@ -10421,7 +10421,7 @@
       "title": "Mullvad Browser",
       "repository_name": "docker-mullvad-browser",
       "repository": "https://github.com/linuxserver/docker-mullvad-browser",
-      "description": "",
+      "description": "Mullvad Browser is a privacy-focused web browser developed in collaboration between Mullvad VPN and the Tor Project. It is designed to minimize online tracking and digital fingerprinting. The application brings the protections of the Tor Browser to standard internet connections and VPNs without routing traffic through the Tor network.",
       "website": null,
       "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/mullvad-browser.webp",
       "architectures": [
@@ -10926,7 +10926,7 @@
       "title": "Nextcloud",
       "repository_name": "docker-nextcloud",
       "repository": "https://github.com/linuxserver/docker-nextcloud",
-      "description": "Nextcloud gives you access to all your files wherever you are.",
+      "description": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private.",
       "website": "https://nextcloud.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [
@@ -10960,7 +10960,7 @@
       "variant": null,
       "title": "Nextcloud",
       "repository": "https://hub.docker.com/_/nextcloud",
-      "description": "Discover the ultimate solution for remote collaboration with Nextcloud. Unlike traditional office software, Nextcloud seamlessly integrates files, communication, and productivity tools into one platform, enhancing teamwork and streamlining your workflow. Say goodbye to the limitations of conventional tools and embrace a new era of collaboration.\n\nNextcloud stands out with its robust features tailored for every need. Enjoy secure file storage, real-time communication via Talk, comprehensive groupware, and powerful office integration, all in one place. Experience these top-notch features at an affordable price, making it accessible for everyone to elevate their collaboration game.\n\nDeploying Nextcloud on a self-hosted server private cloud device brings unparalleled convenience. Benefit from unlimited storage, secure data privacy, local network speeds, and multi-device access, ensuring you have everything you need at your fingertips.\n",
+      "description": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private.",
       "website": "https://nextcloud.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [
@@ -10992,9 +10992,9 @@
       "id": "nextcloud-stack",
       "provider": "nextcloud",
       "template_family": "curated-profile",
-      "title": "Nextcloud Stack",
+      "title": "Nextcloud + PostgreSQL",
       "repository": "https://github.com/nextcloud/docker",
-      "description": "A three-service Nextcloud deployment adapted to native Proxmox OCI LXC containers.",
+      "description": "Nextcloud with a PostgreSQL database and a Redis cache, each in its own LXC container.",
       "website": "https://nextcloud.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [
@@ -11682,7 +11682,7 @@
       "template_family": "curated-profile",
       "title": "Open WebUI",
       "repository": "https://ghcr.io/open-webui/open-webui",
-      "description": "Open WebUI is a feature-rich, user-friendly self-hosted AI platform designed for fully offline operation, supporting multiple large language model runners and API integration. Its intuitive Web interface provides powerful AI deployment capabilities, ideal for developers, researchers, and AI enthusiasts building localized intelligent applications.\n\nThe tool's core features include local model execution and Retrieval Augmented Generation (RAG). It supports Ollama and OpenAI-compatible APIs (e.g., LMStudio, GroqCloud), enabling seamless model switching and multi-model conversations. RAG enhances chat experiences through local document loading or web search integration (e.g., SearXNG, Google PSE). Granular permissions and role-based access control (RBAC) ensure security with customized user role management.\n\nIt supports Markdown and LaTeX for enriched interactions and offers hands-free voice and video call features for dynamic communication. Image generation integration (e.g., DALL-E, ComfyUI) enriches visual content, and a model builder enables creating and importing custom models via the interface. The Pipelines plugin framework supports Python plugins, extending functionality like function calling and real-time translation. The tool\u2019s offline privacy and flexibility deliver a modern AI interaction solution.\n\n**Key Features:**\n- Local execution of Ollama and OpenAI-compatible APIs with multi-model conversations\n- RAG support with local document and web search integration (e.g., SearXNG, Google PSE)\n- Granular permissions and role-based access control (RBAC)\n- Simultaneous interaction with multiple models, leveraging their strengths\n- Image generation integration with DALL-E, ComfyUI, and more\n- Full Markdown and LaTeX support\n- Hands-free voice and video call functionality\n- Pipelines plugin framework for custom Python functionality\n\n**Learn More:**\n- [Open WebUI Official Website](https://openwebui.com)\n- [Open WebUI Documentation](https://docs.openwebui.com)\n- [Open WebUI GitHub Repository](https://github.com/open-webui/open-webui)\n",
+      "description": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline.",
       "website": "https://openwebui.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
       "architectures": [
@@ -11713,7 +11713,7 @@
       "template_family": "curated-profile",
       "title": "Open WebUI CUDA",
       "repository": "https://ghcr.io/open-webui/open-webui",
-      "description": "Open WebUI is a feature-rich, user-friendly self-hosted AI platform designed for fully offline operation, supporting multiple large language model runners and API integration. Its intuitive Web interface provides powerful AI deployment capabilities, ideal for developers, researchers, and AI enthusiasts building localized intelligent applications.\n\nThe tool's core features include local model execution and Retrieval Augmented Generation (RAG). It supports Ollama and OpenAI-compatible APIs (e.g., LMStudio, GroqCloud), enabling seamless model switching and multi-model conversations. RAG enhances chat experiences through local document loading or web search integration (e.g., SearXNG, Google PSE). Granular permissions and role-based access control (RBAC) ensure security with customized user role management.\n\nIt supports Markdown and LaTeX for enriched interactions and offers hands-free voice and video call features for dynamic communication. Image generation integration (e.g., DALL-E, ComfyUI) enriches visual content, and a model builder enables creating and importing custom models via the interface. The Pipelines plugin framework supports Python plugins, extending functionality like function calling and real-time translation. The tool\u2019s offline privacy and flexibility deliver a modern AI interaction solution.\n\n**Key Features:**\n- Local execution of Ollama and OpenAI-compatible APIs with multi-model conversations\n- RAG support with local document and web search integration (e.g., SearXNG, Google PSE)\n- Granular permissions and role-based access control (RBAC)\n- Simultaneous interaction with multiple models, leveraging their strengths\n- Image generation integration with DALL-E, ComfyUI, and more\n- Full Markdown and LaTeX support\n- Hands-free voice and video call functionality\n- Pipelines plugin framework for custom Python functionality\n\n**Learn More:**\n- [Open WebUI Official Website](https://openwebui.com)\n- [Open WebUI Documentation](https://docs.openwebui.com)\n- [Open WebUI GitHub Repository](https://github.com/open-webui/open-webui)\n",
+      "description": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline.",
       "website": "https://openwebui.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
       "architectures": [
@@ -13231,7 +13231,7 @@
       "variant": null,
       "title": "Playit Agent",
       "repository": "https://ghcr.io/mafen/playit-docker",
-      "description": "",
+      "description": "Playit Agent connects local servers to the playit.gg networking service. It allows users to establish tunnels and link their instance to an online account.",
       "website": "https://playit.gg",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/playit-agent/icon.png",
       "architectures": [
@@ -13265,7 +13265,7 @@
       "title": "Plex",
       "repository_name": "docker-plex",
       "repository": "https://github.com/linuxserver/docker-plex",
-      "description": "Plex organizes video, music and photos from personal media libraries and streams them to smart TVs, streaming boxes and mobile devices. This container is packaged as a standalone Plex Media Server. Straightforward design and bulk actions mean getting things done faster.",
+      "description": "Plex Media Server organizes personal video, music, and photo collections into a centralized library.",
       "website": "https://plex.tv",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
       "architectures": [
@@ -13297,7 +13297,7 @@
       "template_family": "curated-profile",
       "title": "Plex",
       "repository": "https://github.com/plexinc/pms-docker",
-      "description": "Plex organizes video, music and photos from personal media libraries and streams them to smart TVs, streaming boxes and mobile devices. This container is packaged as a standalone Plex Media Server. Straightforward design and bulk actions mean getting things done faster.",
+      "description": "Plex Media Server organizes personal video, music, and photo collections into a centralized library.",
       "website": "https://www.plex.tv/media-server-downloads/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
       "architectures": [
@@ -13960,7 +13960,7 @@
       "title": "qBittorrent",
       "repository_name": "docker-qbittorrent",
       "repository": "https://github.com/linuxserver/docker-qbittorrent",
-      "description": "",
+      "description": "qBittorrent is an open-source BitTorrent client designed as an ad-free alternative to \u00b5Torrent.",
       "website": null,
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qbittorrent.webp",
       "architectures": [
@@ -13994,7 +13994,7 @@
       "variant": null,
       "title": "qBittorrent",
       "repository": "https://ghcr.io/hotio/qbittorrent",
-      "description": "**Elevate Your Home Media Experience**. qBittorrent transforms your home media setup with a polished interface reminiscent of \u00b5Torrent, minus the ads. Unlike traditional download tools, it offers a streamlined, efficient, and ad-free experience. This makes it a perfect fit for those seeking a hassle-free way to manage and enjoy their media collections at home.\n\n**Feature-Rich and User-Friendly**. With qBittorrent, you gain access to a well-integrated and extensible search engine, allowing simultaneous searches across multiple torrent sites, and category-specific searches for books, music, and software. Its support for RSS feeds with advanced filters, magnet links, encrypted connections, and more, ensures you have complete control over your downloads. Available on all major platforms and in around 70 languages, qBittorrent is both versatile and accessible.\n\n**Seamless Integration with Private Clouds like self-hosted server**. Deploying qBittorrent on private cloud devices such as self-hosted server offers unparalleled convenience. Enjoy virtually unlimited storage, enhanced privacy for your data, and local network speeds that make downloading and streaming effortless. This setup ensures that your media library is always at your fingertips, securely and swiftly.\n",
+      "description": "qBittorrent is an open-source BitTorrent client designed as an ad-free alternative to \u00b5Torrent.",
       "website": "https://www.qbittorrent.org",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qbittorrent.webp",
       "architectures": [
@@ -14331,7 +14331,7 @@
       "variant": null,
       "title": "Real-Debrid Torrent Client",
       "repository": "https://hub.docker.com/r/rogerfar/rdtclient",
-      "description": "",
+      "description": "rdt-client is a web interface designed to manage torrents through Real-Debrid. It enables adding torrents via magnet links or files and automatically downloads the finished files to local storage. In addition, it can automatically unpack archives upon completion and provides an emulated qBittorrent API for integration with services like Sonarr.",
       "website": "",
       "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/rdt-client.webp",
       "architectures": [
@@ -14660,7 +14660,7 @@
       "title": "RetroArch",
       "repository_name": "docker-retroarch",
       "repository": "https://github.com/linuxserver/docker-retroarch",
-      "description": "RetroArch is a frontend for emulators, game engines and media players. It enables you to run classic games on a wide range of computers and consoles through its slick graphical interface.",
+      "description": "RetroArch is a frontend for emulators, game engines, and media players.",
       "website": "https://retroarch.com/",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/RetroArch/icon.png",
       "architectures": [
@@ -14694,7 +14694,7 @@
       "variant": null,
       "title": "RetroArch",
       "repository": "https://hub.docker.com/r/inglebard/retroarch-web",
-      "description": "RetroArch-web is a web-based classic game emulator that enables users to enjoy a wide range of retro games directly in modern browsers. Supporting platforms like GBA, N64, DOS games, and NES (FC), it brings nostalgic gaming to life. Built on the open-source RetroArch project, RetroArch-web delivers robust features, including high-quality graphics rendering, audio processing, input controls, and save/load game progress, ensuring a precise and smooth emulation experience.\n\nDesigned for ease of use, RetroArch-web requires no complex software installation, running seamlessly in browsers. Its flexible configuration options let users customize controller setups, visual filters, and audio settings to suit individual preferences. With broad cross-platform compatibility, it ensures stable performance across devices, offering retro gaming enthusiasts a consistent experience on the go.\n\nBacked by an active open-source community, RetroArch-web continually improves performance and expands supported game platforms. Whether revisiting classic arcade titles or exploring vintage console games, RetroArch-web stands out as the ideal choice for retro gamers, combining powerful emulation with a user-friendly interface.\n\n**Key Features:**\n- Polished interface for browsing game collections with thumbnails and animated backgrounds\n- Supports multiple emulators and game engines for running classic games and discs\n- Next-frame response time for near-native hardware low-latency experience\n- Highly configurable settings to tweak game performance and display options\n- Automatic controller configuration for easy multiplayer gaming\n- Shaders to enhance old game rendering and mimic CRT monitor effects\n- Netplay for multiplayer gaming and spectator mode\n- Achievements system to unlock trophies and badges in classic games\n- Recording and streaming for capturing gameplay or live streaming\n\n**Learn More:**\n- [RetroArch Official Website](https://www.retroarch.com)\n- [RetroArch GitHub Repository](https://github.com/libretro/RetroArch)\n",
+      "description": "RetroArch is a frontend for emulators, game engines, and media players.",
       "website": "https://www.retroarch.com",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/RetroArch/icon.png",
       "architectures": [
@@ -20202,9 +20202,9 @@
       "id": "nextcloud-mariadb",
       "provider": "linuxserver",
       "template_family": "curated-profile",
-      "title": "Nextcloud MariaDB",
+      "title": "Nextcloud + MariaDB",
       "repository": "https://github.com/linuxserver/docker-nextcloud",
-      "description": "LinuxServer Nextcloud, MariaDB 10.11 and Redis 7 in three native OCI LXC containers. /config and /data are separate; user files can use a host/NAS directory while database state stays in local managed storage.",
+      "description": "Nextcloud with a MariaDB database and a Redis cache, each in its own LXC container.",
       "website": "https://nextcloud.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [

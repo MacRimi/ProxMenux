@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "NetAlertX discovers devices on your local network and tracks its device inventory in a self-hosted web interface."
+    },
+    "description": {
+      "en_US": "NetAlertX is a network visibility and asset intelligence platform designed for homelabs and IT environments. It provides continuous asset discovery and centralized inventory tracking across local subnets, VLANs, and remote sites from a single interface. The system monitors connection state changes, helps detect unauthorized hardware, and sends alerts through various notification services."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/netalertx/NetAlertX/HEAD/docs/img/devices_split.png",
+      "https://raw.githubusercontent.com/netalertx/NetAlertX/HEAD/docs/img/device_details.png",
+      "https://raw.githubusercontent.com/netalertx/NetAlertX/HEAD/docs/img/events.png",
+      "https://raw.githubusercontent.com/netalertx/NetAlertX/HEAD/docs/img/presence.png"
+    ]
+  }
+}

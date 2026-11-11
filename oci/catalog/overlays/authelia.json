@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "An open-source authentication and authorization server for protecting web applications. This single-image profile provides a local SQLite database and file notifications; configure your domain, reverse proxy and access rules before protecting other services."
+    },
+    "description": {
+      "en_US": "Authelia is an authentication and authorization server that provides two-factor authentication and single sign-on for web applications. Working in conjunction with reverse proxies, it evaluates incoming HTTP requests to allow, deny, or redirect them based on configurable security policies. It supports multi-factor authentication through hardware security keys, time-based one-time passwords, mobile push notifications, and passkeys."
+    },
+    "screenshots": [
+      "https://www.authelia.com/images/light.png",
+      "https://www.authelia.com/images/2fa-methods-light.png"
+    ]
+  }
+}

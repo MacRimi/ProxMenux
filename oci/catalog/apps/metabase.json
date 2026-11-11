@@ -41,8 +41,7 @@
       "The H2 database is stored at /metabase-data/metabase.db. Keep the managed volume persistent and back it up before upgrades or migration.",
       "ProxMenux generates MB_ENCRYPTION_SECRET_KEY at installation. Keep that key with your backups; losing it can prevent Metabase from decrypting saved database connection credentials.",
       "The image follows the v0.64 LTS release track. The installer gives it 2 GiB RAM and caps the Java heap at 1 GiB, leaving memory for the rest of the JVM.",
-      "The embedded H2 application database is suitable for a trial or small instance. Metabase recommends PostgreSQL for production; this profile does not add a separate database service.",
-      "La base de datos H2 integrada sirve para pruebas o instalaciones pequeñas. Metabase recomienda PostgreSQL para producción; este perfil no añade una base de datos aparte."
+      "The embedded H2 application database is suitable for a trial or small instance. Metabase recommends PostgreSQL for production; this profile does not add a separate database service."
     ],
     "mini_changelog": [],
     "display_version": null,

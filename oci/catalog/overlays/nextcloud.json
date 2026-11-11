@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "screenshots": [
+      "https://raw.githubusercontent.com/nextcloud/screenshots/master/nextcloud-hub-25-files.png"
+    ],
+    "tagline": {
+      "en_US": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private."
+    },
+    "description": {
+      "en_US": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private. It enables users to store, synchronize, and share files across multiple devices. The platform also includes tools for managing calendars, contacts, email, and collaborative communication."
+    }
   }
 }

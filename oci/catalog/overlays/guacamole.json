@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Access remote desktops and SSH sessions from your browser."
+    },
+    "description": {
+      "en_US": "Apache Guacamole is an HTML5 web application that provides access to desktop environments using remote desktop protocols. It allows users to connect to remote computers directly through a web browser without requiring client-side plugins."
+    },
+    "screenshots": [
+      "https://guacamole.apache.org/images/home/demo-thumbnail.jpg"
+    ]
+  }
+}

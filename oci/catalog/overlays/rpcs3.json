@@ -14,6 +14,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "RPCS3"
-    }
+    },
+    "tagline": {
+      "en_US": "RPCS3 is a multi-platform open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows, Linux, macOS and FreeBSD."
+    },
+    "description": {
+      "en_US": "RPCS3 is an open-source Sony PlayStation 3 emulator and debugger. It enables modern operating systems and hardware to run and analyze PlayStation 3 software and games. The platform provides configurable settings for system components, graphical rendering, audio output, and controller inputs."
+    },
+    "tips": [
+      "For gamepads to function select SDL as the gamepad driver under \"Handlers\"."
+    ]
   }
 }

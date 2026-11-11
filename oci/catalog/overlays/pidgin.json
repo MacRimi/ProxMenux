@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Pidgin is a chat program which lets you log into accounts on multiple chat networks simultaneously. This means that you can be chatting with friends on XMPP and sitting in an IRC channel at the same time."
+    },
+    "description": {
+      "en_US": "Pidgin is a multi-protocol instant messaging client that allows connecting to multiple chat networks simultaneously. It enables chatting with contacts across various services such as XMPP and IRC at the same time from a single interface. The application supports standard messaging protocols along with a wide range of network plugins."
+    }
   }
 }

@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage document templates and electronic signatures in a single application using its embedded SQLite database."
+    },
+    "description": {
+      "en_US": "DocuSeal is an open-source platform for digital document signing and processing. It allows users to build fillable PDF forms with an interactive WYSIWYG editor and collect electronic signatures from multiple parties on any device. The system supports automated signing, signature verification, and user management."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/7645a4fb-7399-4cce-bb90-e077a8a1ce95",
+      "https://github.com/user-attachments/assets/8344a341-96cf-4df3-aaae-5458a21a65b3",
+      "https://github.com/user-attachments/assets/5c92b842-7687-4341-88a1-64ac26c1e2e0"
+    ]
+  }
+}

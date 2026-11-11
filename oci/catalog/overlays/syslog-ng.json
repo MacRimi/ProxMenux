@@ -5,6 +5,12 @@
     },
     "title": {
       "en_US": "syslog-ng"
+    },
+    "tagline": {
+      "en_US": "syslog-ng allows you to flexibly collect, parse, classify, rewrite and correlate logs from across your infrastructure and store or route them to log analysis tools."
+    },
+    "description": {
+      "en_US": "Syslog-ng is an open-source log management tool designed to handle high volumes of system data. It flexibly collects, parses, classifies, rewrites, and correlates event messages from across your infrastructure. The processed messages can then be stored or routed onwards to various log analysis tools."
     }
   },
   "first_run": {

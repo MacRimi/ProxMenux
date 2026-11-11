@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted dashboard for SMART drive health and historical disk metrics. This profile launches the omnibus image with its web interface and embedded InfluxDB, without automatically passing host disks or elevated device permissions."
+    },
+    "description": {
+      "en_US": "Scrutiny is a hard drive health dashboard and monitoring tool that integrates with smartd to track drive health. It merges manufacturer-provided S.M.A.R.T metrics with real-world failure rates to help predict drive failures before permanent data loss occurs. The application provides historical metric tracking, temperature logging, and configurable alerts for drive issues."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/AnalogJ/scrutiny/HEAD/docs/dashboard.png"
+    ]
+  }
+}

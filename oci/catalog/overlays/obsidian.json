@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Obsidian is a note-taking app that lets you create, link, and organize your notes on your device, with hundreds of plugins and themes to customize your workflow. You can also publish your notes online, access them offline, and sync them securely with end-to-end encryption."
+    },
+    "description": {
+      "en_US": "Obsidian is a note-taking and knowledge management application that stores notes locally on your device. It allows you to create, link, and organize documents while customizing your workflow with plugins and themes. It also supports accessing content offline, publishing notes online, and syncing notes securely using end-to-end encryption."
+    }
   }
 }

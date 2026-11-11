@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Altus is an Electron-based WhatsApp client with themes and multiple account support."
+    },
+    "description": {
+      "en_US": "Altus is an Electron-based WhatsApp client designed for managing multiple accounts within a single interface. It enables users to run and switch between separate WhatsApp sessions conveniently. In addition, the application offers custom theme support to personalize the messaging interface."
+    }
   }
 }

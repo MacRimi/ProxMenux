@@ -23,6 +23,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "BOINC"
-    }
+    },
+    "tagline": {
+      "en_US": "BOINC is a platform for high-throughput computing on a large scale (thousands or millions of computers). It can be used for volunteer computing (using consumer devices) or grid computing (using organizational resources). It supports virtualized, parallel, and GPU-based applications."
+    },
+    "description": {
+      "en_US": "BOINC is a platform for large-scale, high-throughput computing across thousands or millions of machines. It enables volunteer computing using consumer hardware as well as grid computing using organizational infrastructure. The platform supports virtualized, parallel, and GPU-accelerated computing workloads."
+    },
+    "tips": [
+      "By default there is no authentication enabled on the web interface."
+    ],
+    "screenshots": [
+      "https://github.com/user-attachments/assets/87e1f819-1f03-4cc5-850c-97fdf56d3039"
+    ]
   }
 }

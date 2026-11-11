@@ -37,9 +37,7 @@
     "repository": "https://github.com/bytebase/bytebase",
     "tips": [
       "On first visit, complete the web setup wizard to create the initial administrator and workspace; the image has no default login credentials.",
-      "To use Bytebase for database changes, connect the database instances you want to manage from its web interface.",
-      "En la primera visita, completa el asistente web para crear el administrador y el espacio de trabajo inicial; la imagen no tiene credenciales de acceso predeterminadas.",
-      "Para gestionar cambios de bases de datos, conecta desde la interfaz las instancias que quieras administrar."
+      "To use Bytebase for database changes, connect the database instances you want to manage from its web interface."
     ],
     "mini_changelog": [],
     "display_version": null,

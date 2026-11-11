@@ -75,7 +75,7 @@ class SpoolmanRecipeTests(unittest.TestCase):
         data_path = "/home/app/.local/share/spoolman"
         self.assertEqual([volume["container_path"] for volume in contract["volumes"]],
                          [data_path])
-        self.assertIn("SQLite", self.recipe["catalog_ui"]["description"]["en_US"])
+        self.assertIn("SQLite", self.recipe["catalog_ui"]["tagline"]["en_US"])
 
     def test_web_launch_and_first_start_healthcheck_use_container_port_8000(self):
         self.assertEqual(self.recipe["container_contract"]["ports"][0]["container_port"], 8000)

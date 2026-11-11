@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Claims free games and giveaways from Steam, Epic Games, Prime Gaming, GOG and other stores on a schedule, with a browser reachable over noVNC to sign in."
+    },
+    "description": {
+      "en_US": "Free Games Claimer Remaster is an automated tool designed to claim free games, giveaways, and promotional assets across digital game stores such as Epic Games, Steam, GOG, Prime Gaming, and Ubisoft. It checks game platforms and discovery APIs on a customizable schedule, automatically navigating checkout flows and redeeming product keys. For initial sign-ins, two-factor authentication prompts, or manual captchas, an interactive browser session can be accessed directly to complete verification."
+    }
+  }
+}

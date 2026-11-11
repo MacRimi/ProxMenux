@@ -10,5 +10,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Steam is the ultimate destination for playing, discussing, and creating games."
+    },
+    "description": {
+      "en_US": "Steam is a digital distribution and gaming platform developed by Valve. It allows users to purchase, download, install, and play video games, as well as manage their personal game library across different systems. The platform also provides community and multiplayer features, game updates, and cloud save functionality."
+    },
+    "tips": [
+      "By default there is no authentication.",
+      "For mouse and keyboard input, use Gaming Mode via the crosshair icon in the top right of the sidebar; hold Escape for 3 seconds to exit.",
+      "To use a gamepad, force Proton in Properties>Compatibility; Steam Input cannot be used."
+    ]
   }
 }

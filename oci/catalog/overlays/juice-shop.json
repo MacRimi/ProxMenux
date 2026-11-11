@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Launch the OWASP Juice Shop training target as a standalone web application."
+    },
+    "description": {
+      "en_US": "OWASP Juice Shop is an intentionally insecure web application designed for learning web application security. It encompasses vulnerabilities from the entire OWASP Top Ten along with many other security flaws found in real-world applications. The application provides an interactive environment for practicing exploitation techniques and testing security tools."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/juice-shop/juice-shop/HEAD/screenshots/slideshow.gif"
+    ]
+  }
+}

@@ -14,6 +14,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "ONLYOFFICE"
+    },
+    "tagline": {
+      "en_US": "ONLYOFFICE provides a full range of tools to create, edit and collaborate on text documents, spreadsheets, presentations, PDF forms and regular PDF files on web, desktop and mobile platforms."
+    },
+    "description": {
+      "en_US": "ONLYOFFICE is an office suite designed to create, edit, and collaborate on text documents, spreadsheets, and presentations. It provides tools for document management as well as viewing and editing PDF forms and regular PDF files. The suite enables real-time collaboration across multiple platforms."
     }
   }
 }

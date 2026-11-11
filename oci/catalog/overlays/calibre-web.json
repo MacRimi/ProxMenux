@@ -20,6 +20,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "Calibre-Web"
-    }
+    },
+    "tagline": {
+      "en_US": "Calibre-web is a web app providing a clean interface for browsing, reading and downloading eBooks using an existing Calibre database.   It is also possible to integrate google drive and edit metadata and your calibre library through the app itself."
+    },
+    "description": {
+      "en_US": "Calibre-Web is a web application that provides a clean interface for browsing, reading, and downloading eBooks using an existing Calibre database. It allows users to manage their library and edit book metadata directly through a web browser. The application also supports eBook format conversion and integration with Google Drive."
+    },
+    "screenshots": [
+      "https://github.com/janeczku/calibre-web/wiki/images/main_screen.png"
+    ]
   }
 }

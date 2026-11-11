@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official Paperclip image with its embedded PostgreSQL database, persistent agent workspaces and authenticated web interface."
+    },
+    "description": {
+      "en_US": "Paperclip is an orchestration platform designed to manage and coordinate teams of AI agents. It provides a task-manager-style web interface featuring organizational charts, goal alignment, task delegation, and execution governance. Users can track agent workflows, monitor token costs, review outputs, and enforce budgets across multiple agents and projects."
+    }
+  }
+}

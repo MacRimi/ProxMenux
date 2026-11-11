@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Signal is a messaging app with privacy at its core. It is free and easy to use, with strong end-to-end encryption that keeps your communication completely private."
+    },
+    "description": {
+      "en_US": "Signal is a privacy-focused messaging application designed for secure communication. It utilizes strong end-to-end encryption to ensure conversations remain completely private between participants. The service allows users to send messages and keep in touch without compromising their personal data."
+    },
+    "screenshots": [
+      "https://signal.org/assets/images/features/signal-iphone.png"
+    ]
   }
 }

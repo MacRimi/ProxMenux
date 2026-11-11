@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Build database diagrams from schemas and export diagrams or SQL without requiring an API key."
+    },
+    "description": {
+      "en_US": "ChartDB is a web-based database diagramming editor. It visualizes database schemas by importing JSON generated from a single database query, without requiring database credentials or user accounts. Users can interactively edit schema diagrams and export DDL scripts across different database dialects."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/chartdb/chartdb/HEAD/public/chartdb.png"
+    ]
+  }
+}

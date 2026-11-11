@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run Jaeger’s all-in-one image for collecting OTLP traces and viewing them in the web UI. This profile uses the built-in in-memory storage."
+    },
+    "description": {
+      "en_US": "Jaeger is an open source distributed tracing platform. It collects trace data emitted by user applications through OpenTelemetry or Jaeger SDKs, stores the telemetry, and provides a web interface for inspection. It helps teams monitor complex architectures, analyze latency bottlenecks, and troubleshoot distributed systems across services."
+    }
+  }
+}

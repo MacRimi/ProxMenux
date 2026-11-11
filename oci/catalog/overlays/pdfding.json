@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "PdfDing is a selfhosted PDF manager, viewer and editor offering a seamless user experience on multiple devices. It's designed to be minimal, fast, and easy to set up using Docker.\n\nWith features like seamless browser-based PDF viewing that remembers your current position, multi-level tagging, starring and archiving functionalities, PDF editing with comments, highlighting and drawings, clean intuitive UI with dark mode, SSO support via OIDC, PDF sharing with external audience, markdown notes, and progress bars showing reading progress, PdfDing ensures an excellent PDF management experience.\n\nDeploying PdfDing on private cloud devices like self-hosted server brings unmatched convenience with multi-device access, ensuring your PDF collection is always within reach and secure, no matter where you are.\n"
+    },
+    "description": {
+      "en_US": "PdfDing is a self-hosted PDF manager, viewer, and editor. It lets you organize documents using workspaces, collections, and multi-level tags while tracking your reading progress across devices. Users can also annotate PDFs with text, highlights, drawings, and signatures, as well as take markdown notes and share files externally."
+    },
+    "screenshots": [
+      "https://www.pdfding.com/assets/images/pdfding_overview_dark.png",
+      "https://www.pdfding.com/assets/images/pdfding_overview_light.png"
+    ]
+  }
+}

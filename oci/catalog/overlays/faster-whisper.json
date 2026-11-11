@@ -5,6 +5,12 @@
     },
     "title": {
       "en_US": "faster-whisper"
+    },
+    "tagline": {
+      "en_US": "Faster-whisper is a reimplementation of OpenAI's Whisper model using CTranslate2, which is a fast inference engine for Transformer models. This container provides a Wyoming protocol server for faster-whisper."
+    },
+    "description": {
+      "en_US": "Faster-whisper is an implementation of OpenAI's Whisper model powered by CTranslate2, a fast inference engine for Transformer models. It provides a Wyoming protocol server for speech-to-text transcription. The service is designed to process audio and convert spoken language into text locally with high efficiency."
     }
   },
   "first_run": {

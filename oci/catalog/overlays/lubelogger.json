@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Track vehicles, maintenance, fuel, costs and service history through a web interface."
+    },
+    "description": {
+      "en_US": "LubeLogger is a web-based vehicle maintenance and fuel mileage tracker. It allows users to record service history, maintenance tasks, and fuel consumption across their vehicles. The platform provides a centralized system to replace spreadsheets and physical receipts for managing automotive upkeep."
+    },
+    "screenshots": [
+      "https://lubelogger.com/garage.webp",
+      "https://lubelogger.com/dashboard.webp",
+      "https://lubelogger.com/planner.webp",
+      "https://lubelogger.com/servicerecord.webp"
+    ]
+  }
+}

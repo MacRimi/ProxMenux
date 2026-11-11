@@ -19,5 +19,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "UltiMaker Cura is free, easy-to-use 3D printing software trusted by millions of users. Fine-tune your 3D model with 400+ settings for the best slicing and printing results."
+    },
+    "description": {
+      "en_US": "UltiMaker Cura is a 3D printing slicing application that prepares digital 3D models for physical printing. It translates 3D design files into toolpath instructions that 3D printers can read and execute. The software allows users to fine-tune hundreds of settings to customize slicing profiles and optimize print quality."
+    },
+    "tips": [
+      "To prevent out-of-memory crashes, open preferences > confgure cura and disable crash reports, updates, and notifications."
+    ],
+    "screenshots": [
+      "https://ultimaker.com/wp-content/uploads/2023/04/Cura-hero-image.png",
+      "https://ultimaker.com/wp-content/uploads/2025/03/Cura510.png"
+    ]
   }
 }

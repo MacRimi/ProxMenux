@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Heimdall is a way to organise all those links to your most used web sites and web applications in a simple way."
+    },
+    "description": {
+      "en_US": "Heimdall is an application designed to organize links to frequently used websites and web applications in an uncluttered interface. It can serve as a centralized start page or dashboard for navigating services. It also includes an integrated search bar supporting engines such as Google, Bing, and DuckDuckGo."
+    },
+    "screenshots": [
+      "https://i.imgur.com/MrC4QpN.gif"
+    ]
   }
 }

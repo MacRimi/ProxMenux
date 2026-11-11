@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the official WebGoat learning environment with its bundled WebWolf companion endpoint."
+    },
+    "description": {
+      "en_US": "OWASP WebGoat is a deliberately insecure web application designed to teach web application security lessons. Maintained by OWASP, it demonstrates common server-side application flaws through interactive exercises. It helps users understand security vulnerabilities and practice penetration testing techniques in an educational environment."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/WebGoat/WebGoat/HEAD/docs/images/webgoat.png"
+    ]
+  }
+}

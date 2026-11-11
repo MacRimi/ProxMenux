@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Krita is a professional FREE and open source painting program. It is made by artists that want to see affordable art tools for everyone."
+    },
+    "description": {
+      "en_US": "Krita is a professional open source digital painting application designed by artists. It provides tools for digital illustration, concept art, comic creation, and sketching. The software aims to make versatile, high-grade creative tools accessible to everyone."
+    }
   }
 }

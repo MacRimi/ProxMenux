@@ -153,5 +153,13 @@
       "required": false,
       "prompt": "Server IDs to test against, separated by commas (optional)"
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Speedtest-tracker is a self-hosted internet performance tracking application that runs speedtest checks against Ookla's Speedtest service."
+    },
+    "description": {
+      "en_US": "Speedtest Tracker is a self-hosted internet performance tracking application. It runs automated speed tests against Ookla's Speedtest service to monitor download, upload, and latency metrics. Test results are collected over time and presented through a web interface to help observe connection quality and consistency."
+    }
   }
 }

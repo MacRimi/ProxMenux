@@ -14,6 +14,13 @@
   "catalog_ui": {
     "title": {
       "en_US": "Snapdrop"
-    }
+    },
+    "tagline": {
+      "en_US": "Snapdrop is a Progressive Web App (PWA) that allows you to transfer files between devices in the same network without having to install anything."
+    },
+    "description": {
+      "en_US": "Snapdrop is a browser-based local file sharing application inspired by Apple's AirDrop. It allows devices connected to the same network to discover one another and send files directly through their web browsers. The service provides a quick, cross-platform way to exchange data without requiring dedicated client software."
+    },
+    "repository": "https://github.com/snapdrop/snapdrop"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and manage databases through a spreadsheet-style web interface. This single-image profile uses NocoDB’s SQLite quickstart mode."
+    },
+    "description": {
+      "en_US": "NocoDB is a no-code database platform that provides a spreadsheet-style interface for managing relational databases. It allows users to create, read, update, and delete tables, rows, and columns with custom sorting, filtering, and role-based permissions. Data can be displayed across various formats including grid, gallery, form, kanban, and calendar views."
+    },
+    "screenshots": [
+      "https://github.com/nocodb/nocodb/assets/86527202/a127c05e-2121-4af2-a342-128e0e2d0291",
+      "https://github.com/nocodb/nocodb/assets/86527202/674da952-8a06-4848-a0e8-a7b02d5f5c88",
+      "https://github.com/nocodb/nocodb/assets/86527202/cbc5152a-9caf-4f77-a8f7-92a9d06d025b",
+      "https://github.com/nocodb/nocodb/assets/86527202/dc75dfdc-c486-4f5a-a853-2a8f9e6b569a"
+    ]
+  }
+}

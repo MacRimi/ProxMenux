@@ -26,6 +26,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "beets"
+    },
+    "tagline": {
+      "en_US": "Beets is a music library manager and not, for the most part, a music player. It does include a simple player plugin and an experimental Web-based player, but it generally leaves actual sound-reproduction to specialized tools."
+    },
+    "description": {
+      "en_US": "Beets is a music library manager designed to catalog, manage, and organize audio collections. While it leaves actual sound reproduction primarily to specialized players, it includes an experimental web-based player and a simple player plugin. It also supports various plugins to handle metadata retrieval and file organization."
     }
   }
 }

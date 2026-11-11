@@ -14,6 +14,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "digiKam"
-    }
+    },
+    "tagline": {
+      "en_US": "digiKam: Professional Photo Management with the Power of Open Source"
+    },
+    "description": {
+      "en_US": "digiKam is an open-source photo management application designed for professional and advanced digital photography workflows. It provides tools to import, organize, edit, and export large collections of digital photos. Users can process raw images, catalog their media, and manage extensive photography libraries."
+    },
+    "tips": [
+      "When using MySQL internal mode for the database, click the \"Find\" button for all required binaries (mysql_install_db, mysqladmin, mysqld), select each binary file, and press Open."
+    ]
   }
 }

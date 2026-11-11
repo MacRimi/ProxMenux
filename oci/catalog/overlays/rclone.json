@@ -10,5 +10,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official Rclone image adapted as a native Proxmox OCI LXC with persistent configuration, authenticated WebUI and optional FUSE publication for other LXCs."
+    },
+    "description": {
+      "en_US": "Rclone is a program designed to synchronize files and directories to and from numerous cloud storage providers and local filesystems. It supports one-way synchronization, bidirectional syncing, and direct file copying while verifying data integrity using checksums. Additionally, it offers virtual storage features such as on-the-fly encryption, compression, file chunking, and mounting remotes."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/rclone/rclone-webui-react/HEAD/screenshots/dashboard.png",
+      "https://raw.githubusercontent.com/rclone/rclone-webui-react/HEAD/screenshots/remoteexplorer.png",
+      "https://raw.githubusercontent.com/rclone/rclone-webui-react/HEAD/screenshots/config.png"
+    ]
   }
 }

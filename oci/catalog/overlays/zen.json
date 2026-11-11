@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Zen Browser is a free and open-source fork of Mozilla Firefox with a focus on privacy, customizability and design."
+    },
+    "description": {
+      "en_US": "Zen Browser is a free and open-source web browser based on Mozilla Firefox. It emphasizes user privacy, extensive interface customizability, and modern design. It provides a flexible and secure environment for everyday internet browsing."
+    },
+    "screenshots": [
+      "https://zen-browser.app/_astro/ComImage.DV0rTSHO_Z1aH5BP.webp"
+    ]
   }
 }

@@ -28,5 +28,19 @@
     "SUPERUSER_PASSWORD": {
       "prompt": "Password of the superuser account"
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Healthchecks is a watchdog for your cron jobs. It's a web server that listens for pings from your cron jobs, plus a web interface."
+    },
+    "description": {
+      "en_US": "Healthchecks is a watchdog and monitoring service for cron jobs and scheduled tasks. It operates as a web service that listens for periodic pings sent by your automated jobs. When a ping does not arrive on schedule or reports an error, it alerts you through supported notification channels."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/healthchecks/healthchecks/HEAD/static/img/my_checks.png",
+      "https://raw.githubusercontent.com/healthchecks/healthchecks/HEAD/static/img/check_details.png",
+      "https://raw.githubusercontent.com/healthchecks/healthchecks/HEAD/static/img/period_grace.png",
+      "https://raw.githubusercontent.com/healthchecks/healthchecks/HEAD/static/img/cron.png"
+    ]
   }
 }

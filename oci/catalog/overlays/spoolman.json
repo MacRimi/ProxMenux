@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted filament inventory for 3D printers. Manage spools, materials, manufacturers, locations and labels in the web UI, and integrate with Moonraker, OctoPrint and other printer tools. The official image uses SQLite by default; no separate database container is required."
+    },
+    "description": {
+      "en_US": "Spoolman is a filament inventory management service designed for 3D printer setups. It keeps comprehensive records of filament types, manufacturers, and individual spools while monitoring usage in real time. When integrated with 3D printing software like Moonraker or OctoPrint, it automatically updates spool weights as printing progresses. Users can also organize inventory by location and design printable QR code labels for physical identification."
+    }
+  }
+}

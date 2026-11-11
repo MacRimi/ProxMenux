@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Flycast is a multi-platform Sega Dreamcast, Naomi, Naomi 2, and Atomiswave emulator derived from reicast."
+    },
+    "description": {
+      "en_US": "Flycast is a multi-platform emulator derived from reicast. It emulates Sega Dreamcast, Naomi, Naomi 2, and Atomiswave arcade and console systems, allowing users to play compatible games within their environment."
+    }
   }
 }

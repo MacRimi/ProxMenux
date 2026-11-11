@@ -23,6 +23,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "FreeCAD"
-    }
+    },
+    "tagline": {
+      "en_US": "FreeCAD is a general-purpose parametric 3D computer-aided design (CAD) modeler and a building information modeling (BIM) software application with finite element method (FEM) support."
+    },
+    "description": {
+      "en_US": "FreeCAD is a general-purpose parametric 3D computer-aided design modeler and building information modeling application. It enables users to create detailed three-dimensional designs and modify them by adjusting project parameters. The software also includes finite element method support for mechanical engineering analysis and simulation."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/FreeCAD/FreeCAD/HEAD/.github/images/partdesign.jpg"
+    ]
   }
 }

@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted website diagnostics for checking DNS, TLS certificates, HTTP headers, and other web properties."
+    },
+    "description": {
+      "en_US": "Web Check is an open-source intelligence and diagnostics tool for analyzing websites. It provides insights into the inner workings of any site by analyzing server architecture, identifying security configurations, and detecting utilized technologies. It also helps uncover potential attack vectors to assist in understanding, optimizing, and securing web infrastructure."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Lissy93/web-check/master/.github/screenshots/web-check-screenshot1.png",
+      "https://i.ibb.co/r0jXN6s/web-check.png"
+    ]
+  }
+}

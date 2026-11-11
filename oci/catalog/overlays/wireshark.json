@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Wireshark is the world’s foremost and widely-used network protocol analyzer. It lets you see what’s happening on your network at a microscopic level and is the de facto (and often de jure) standard across many commercial and non-profit enterprises, government agencies, and educational institutions. Wireshark development thrives thanks to the volunteer contributions of networking experts around the globe and is the continuation of a project started by Gerald Combs in 1998."
+    },
+    "description": {
+      "en_US": "Wireshark is a network protocol analyzer that enables detailed inspection of network traffic. It captures packets in real time and displays what is happening across network interfaces at a microscopic level. It is used across enterprises, educational institutions, and government agencies for traffic analysis, protocol development, and troubleshooting."
+    },
+    "screenshots": [
+      "https://www.wireshark.org/_astro/WCAFrontpage.CpLJgg4K_fh7bF.png"
+    ]
   }
 }
