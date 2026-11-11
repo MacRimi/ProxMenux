@@ -273,7 +273,7 @@ def run_batch(project, ui, selected):
             translate('Continue with the remaining applications after a safely recovered failure? A pending recovery or changed application always stops the batch.'),
             default=False)
         entries, seen = [], set()
-        with tempfile.TemporaryDirectory(prefix='proxmenux-oci-batch-') as directory:
+        with _interruptions(), tempfile.TemporaryDirectory(prefix='proxmenux-oci-batch-') as directory:
             folder = Path(directory)
             folder.chmod(0o700)
             for index, row in enumerate(selected, 1):
@@ -307,7 +307,7 @@ def run_batch(project, ui, selected):
         ui.message('\n'.join([translate('Batch execution time: {seconds}s').format(seconds=f"{report['seconds']:.1f}"),
                               '', *lines, '', translate('Batch report: {path}').format(path=path)]), heading)
         return report
-    except (UserCancelled, BackRequested):
+    except (UserCancelled, BackRequested, KeyboardInterrupt):
         return None
     except (OSError, ValueError, KeyError, BlockingIOError) as error:
         ui.message(str(error), translate('OCI batch could not be prepared'))

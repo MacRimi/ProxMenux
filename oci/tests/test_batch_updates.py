@@ -113,6 +113,22 @@ class BatchTests(unittest.TestCase):
         self.cancel_app=2402
         self.assertIsNone(self.start());self.run.assert_not_called();self.assertFalse(self.reports())
 
+    def test_sigterm_during_preparation_cleans_private_proposals_and_starts_nothing(self):
+        paths=[];before=signal.getsignal(signal.SIGTERM)
+        def prepare(v,runner):
+            with tempfile.NamedTemporaryFile(mode='w')as original:
+                json.dump({'secret':'preparation-only'},original);original.flush()
+                runner([sys.executable,'updater.py',str(v),'--proposal',original.name],'Modify OCI')
+            # The cloned proposal exists until the outer preparation context exits.
+            # Its path is private to the collector, so observe its own folder.
+            paths.extend(Path(tempfile.gettempdir()).glob('proxmenux-oci-batch-*/*.json'))
+            signal.raise_signal(signal.SIGTERM)
+        self.prepare_hook=prepare
+        self.assertIsNone(self.start());self.run.assert_not_called()
+        self.assertTrue(paths);self.assertTrue(all(not p.exists()for p in paths))
+        self.assertEqual(signal.getsignal(signal.SIGTERM),before)
+        self.assertFalse(self.reports())
+
     def test_final_confirmation_can_cancel_without_runtime_changes(self):
         self.ui.decline='Update selected OCI applications'
         self.assertIsNone(self.start());self.run.assert_not_called();self.assertFalse(self.reports())
