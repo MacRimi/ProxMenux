@@ -393,6 +393,10 @@ const EMPTY_APP: AppConfig = {
 
 const SELFHST_WEBP_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp"
 const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: string }> = {
+  github: {
+    lightTheme: `${SELFHST_WEBP_BASE}/github.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/github-light.webp`,
+  },
   frigate: {
     lightTheme: `${SELFHST_WEBP_BASE}/frigate-dark.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/frigate-light.webp`,
@@ -428,7 +432,7 @@ function selfhstThemeLogos(src: string) {
   const alias = THEMED_LOGO_ALIASES[src.toLowerCase()]
   if (alias) return SELFHST_THEME_LOGOS[alias]
   if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
-  const match = src.toLowerCase().match(/\/(frigate|hermes-agent|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  const match = src.toLowerCase().match(/\/(frigate|github|hermes-agent|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 
