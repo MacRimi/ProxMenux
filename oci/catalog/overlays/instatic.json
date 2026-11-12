@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Single-server website CMS and visual editor with SQLite-backed content, media uploads, forms, and publishing."
+    },
+    "description": {
+      "en_US": "Instatic is a self-hosted website content management system and visual canvas editor. It integrates a visual page builder, structured content engine, media manager, form handling, and publishing tools into a single server. Published pages are compiled directly to semantic HTML and compact CSS without frontend framework runtimes. It allows users to visually design, structure, and publish standalone websites."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/CoreBunch/Instatic/HEAD/docs/assets/readme/analyze-dashboard.webp",
+      "https://raw.githubusercontent.com/CoreBunch/Instatic/HEAD/docs/assets/readme/design-framework.webp",
+      "https://raw.githubusercontent.com/CoreBunch/Instatic/HEAD/docs/assets/readme/build-components.webp",
+      "https://raw.githubusercontent.com/CoreBunch/Instatic/HEAD/docs/assets/readme/manage-media.webp"
+    ]
+  }
+}

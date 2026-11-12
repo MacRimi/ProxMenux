@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run Ansible, Terraform and other automation tools from a web interface."
+    },
+    "description": {
+      "en_US": "Semaphore UI is a web interface for managing DevOps and automation tools. It allows users to execute Ansible playbooks, Terraform and OpenTofu code, as well as Bash and PowerShell scripts. The platform provides scheduling, inventory management, reusable task templates, and notifications for failed tasks."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/914224/134777345-8789d9e4-ff0d-439c-b80e-ddc56b74fcee.png"
+    ]
+  }
+}

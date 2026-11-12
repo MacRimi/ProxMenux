@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "File-sharing appliance with a web panel: publish directories over SMB, NFS or both, with Samba users, client networks and Time Machine destinations. Each directory to share is a container volume or a directory of the host, mounted under /shares."
+    },
+    "description": {
+      "en_US": "ShareCoveX is a file-sharing appliance managed through a web interface that publishes existing host directories over SMB, NFS, or both. Administrators can export entire mounts or individual subfolders, assigning independent users, network access rules, and permissions to each resource. It includes Bonjour network discovery and can configure dedicated macOS Time Machine backup destinations. The system provides file permission diagnostics in the panel without automatically altering host data."
+    }
+  }
+}

@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Actual Budget is a fast, privacy-focused finance management app using local-first envelope budgeting, ensuring full control over data. Its intuitive interface supports offline use, with multi-device sync and optional end-to-end encryption, delivering a secure, efficient financial management experience, ideal for users seeking clear financial oversight.\n\nThe app's core features include envelope budgeting based on real income, rapid transaction handling, and intuitive financial reporting. It helps users track spending and monitor monthly savings clearly, with a streamlined transaction editor for quick categorization, split transactions, and transfers. Built-in net worth and cash flow reports provide financial insights, and a custom report engine allows tailored reports for specific needs. Undo and redo functionality ensures users can easily correct mistakes, maintaining operational flexibility.\n\nIt integrates bank accounts via goCardless (EU/UK) or SimpleFIN (US/Canada), supports multi-device syncing for data privacy, and enables importing transaction data from YNAB4, nYNAB, and QIF, OFX, QFX, CAMT.053, CSV files, simplifying migration of existing financial records. Community documentation enhances usability, and the app's simple operation and high flexibility deliver a modern finance management solution.\n\n**Key Features:**\n- Privacy-focused personal finance management\n- Envelope budgeting methodology\n- Multi-device synchronization\n- End-to-end encryption support\n- Local data ownership\n- Fast and responsive interface\n- Open source and self-hosted\n- Bank account synchronization\n- Detailed financial reporting\n- Budget tracking and analysis\n\n**Learn More:**\n- [Actual Budget Official Website](https://actualbudget.org)\n- [Actual Budget GitHub Repository](https://github.com/actualbudget/actual)\n- [Actual Budget Docker Image](https://hub.docker.com/r/actualbudget/actual-server)\n"
+    },
+    "description": {
+      "en_US": "Actual Budget is a local-first personal finance management application based on envelope budgeting. It allows users to track spending, organize income, and manage accounts with split transactions and transfers. The system provides cash flow and net worth reports, supports imports from multiple file formats, and synchronizes data across devices with optional end-to-end encryption."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/actualbudget/actual/HEAD/demo.png"
+    ]
   }
 }

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted Z-Wave control panel and MQTT gateway. Its web interface can start without a Z-Wave controller; device control requires a compatible USB or serial controller and network security keys."
+    },
+    "description": {
+      "en_US": "Z-Wave JS UI is a control panel and MQTT gateway for Z-Wave networks. It enables users to add, remove, configure, and monitor Z-Wave devices and their values through a web interface. The application can expose network devices to an MQTT broker, visualize node communication paths with a network graph, and perform diagnostics and firmware updates."
+    }
+  }
+}

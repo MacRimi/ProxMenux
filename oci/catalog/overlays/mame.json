@@ -16,5 +16,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "MAME"
+    },
+    "tagline": {
+      "en_US": "MAME is a free and open-source emulator designed to emulate the hardware of arcade games, video game consoles, old computers and other systems in software on modern personal computers."
+    },
+    "description": {
+      "en_US": "MAME is a multi-purpose emulation framework designed to recreate vintage hardware in software. It emulates the internal architecture of classic arcade machines, home video game consoles, and vintage computer systems. The software is used to preserve computational history and faithfully run legacy programs and games on modern hardware."
+    },
+    "tips": [
+      "By default there is no authentication."
+    ]
   }
 }

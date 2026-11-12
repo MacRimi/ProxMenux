@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A privacy-first, open-source platform for knowledge management and collaboration."
+    },
+    "description": {
+      "en_US": "Logseq is a privacy-first platform designed for knowledge management and collaboration. It provides tools for organizing personal notes and interconnected ideas. It can also function as a headless server to expose an HTTP API for programmatic interaction."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/25513724/221387376-4dc419c2-0d0a-460c-a920-2d211e78b456.gif"
+    ]
   }
 }

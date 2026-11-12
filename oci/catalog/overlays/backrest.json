@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage restic repositories, scheduled backup plans, snapshots and restores from a self-hosted web interface. Restic is included and can be installed automatically; no database or Redis service is required."
+    },
+    "description": {
+      "en_US": "Backrest is a web-based backup management tool built on top of restic. It provides an interface to create repositories, browse snapshots, and restore files. In addition, it runs in the background to handle scheduled backups, orchestrate repository maintenance tasks, and execute shell script hooks."
+    },
+    "screenshots": [
+      "https://f000.backblazeb2.com/file/gshare/screenshots/backrest-1.11.1-dashboard.png",
+      "https://f000.backblazeb2.com/file/gshare/screenshots/backrest-1.11.1-browse-snapshot.png",
+      "https://f000.backblazeb2.com/file/gshare/screenshots/backrest-1.11.1-add-plan.png"
+    ]
+  }
+}

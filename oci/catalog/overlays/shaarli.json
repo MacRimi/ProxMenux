@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Save, organize and search bookmarks in your own Shaarli instance. The profile uses the project-maintained image and keeps bookmarks in persistent data storage."
+    },
+    "description": {
+      "en_US": "Shaarli is a personal, minimalist bookmarking and link sharing service. It allows you to save and organize links you discover on your own server without requiring an external database. The application is designed to be fast, handy, and focused on single-user link management."
+    }
+  }
+}

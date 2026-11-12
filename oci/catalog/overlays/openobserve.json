@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Collect and explore logs, metrics and traces in a single-node observability server."
+    },
+    "description": {
+      "en_US": "OpenObserve is an open-source observability platform for logs, metrics, traces, real user monitoring, and AI observability. It stores telemetry data using Parquet columnar storage with object storage support to optimize data retention and query speeds. Users can analyze signals using SQL or PromQL, build dashboards with a visual panel builder, and track alerts and incidents from a single interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/openobserve/openobserve/HEAD/screenshots/home.png",
+      "https://raw.githubusercontent.com/openobserve/openobserve/HEAD/screenshots/logs.png",
+      "https://raw.githubusercontent.com/openobserve/openobserve/HEAD/screenshots/metrics.png",
+      "https://raw.githubusercontent.com/openobserve/openobserve/HEAD/screenshots/dashboards.png"
+    ]
+  }
+}

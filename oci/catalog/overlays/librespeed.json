@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "LibreSpeed"
+    },
+    "tagline": {
+      "en_US": "Librespeed is a very lightweight Speedtest implemented in Javascript, using XMLHttpRequest and Web Workers."
+    },
+    "description": {
+      "en_US": "Librespeed is a lightweight speed test application implemented in JavaScript using XMLHttpRequest and Web Workers. It runs directly inside standard web browsers without requiring browser plugins, Flash, or Java. Users can test their network latency, download rates, and upload performance, and optionally record results to track historical connection statistics."
+    },
+    "screenshots": [
+      "https://speedtest.fdossena.com/mpot_v7.gif"
+    ]
   }
 }

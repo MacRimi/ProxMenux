@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "GIMP"
+    },
+    "tagline": {
+      "en_US": "GIMP is a free and open-source raster graphics editor used for image manipulation (retouching) and image editing, free-form drawing, transcoding between different image file formats, and more specialized tasks. It is extensible by means of plugins, and scriptable."
+    },
+    "description": {
+      "en_US": "GIMP is an open-source raster graphics editor designed for image manipulation and photo retouching. It provides comprehensive tools for free-form drawing, digital painting, and transcoding between various image file formats. The software is scriptable and can be customized or extended through plugins for specialized editing tasks."
+    }
   }
 }

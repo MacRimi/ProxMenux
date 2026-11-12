@@ -178,7 +178,7 @@
     {
       "id": "adguardhome-sync",
       "provider": "linuxserver.io",
-      "title": "Adguardhome Sync",
+      "title": "AdGuard Home Sync",
       "repository_name": "docker-adguardhome-sync",
       "repository": "https://github.com/linuxserver/docker-adguardhome-sync",
       "description": "Adguardhome-sync is a tool to synchronize AdGuardHome config to replica instances.",
@@ -246,7 +246,7 @@
     {
       "id": "airsonic-advanced",
       "provider": "linuxserver.io",
-      "title": "Airsonic Advanced",
+      "title": "Airsonic-Advanced",
       "repository_name": "docker-airsonic-advanced",
       "repository": "https://github.com/linuxserver/docker-airsonic-advanced",
       "description": "Airsonic-advanced is a free, web-based media streamer, providing ubiquitious access to your music. Use it to share your music with friends, or to listen to your own music while at work. You can stream to multiple players simultaneously, for instance to one player in your kitchen and another in your living room.",
@@ -554,7 +554,7 @@
     {
       "id": "apprise-api",
       "provider": "linuxserver.io",
-      "title": "Apprise Api",
+      "title": "Apprise API",
       "repository_name": "docker-apprise-api",
       "repository": "https://github.com/linuxserver/docker-apprise-api",
       "description": "Apprise-api Takes advantage of Apprise through your network with a user-friendly API.",
@@ -858,7 +858,7 @@
     {
       "id": "babybuddy",
       "provider": "linuxserver.io",
-      "title": "Babybuddy",
+      "title": "Baby Buddy",
       "repository_name": "docker-babybuddy",
       "repository": "https://github.com/linuxserver/docker-babybuddy",
       "description": "Babybuddy is a buddy for babies! Helps caregivers track sleep, feedings, diaper changes, tummy time and more to learn about and predict baby's needs without (as much) guess work.",
@@ -924,7 +924,7 @@
     {
       "id": "bambustudio",
       "provider": "linuxserver.io",
-      "title": "Bambustudio",
+      "title": "Bambu Studio",
       "repository_name": "docker-bambustudio",
       "repository": "https://github.com/linuxserver/docker-bambustudio",
       "description": "Bambu Studio is an open-source, cutting-edge, feature-rich slicing software. It contains project-based workflows, systematically optimized slicing algorithms, and an easy-to-use graphical interface, bringing users an incredibly smooth printing experience.",
@@ -1024,7 +1024,7 @@
     {
       "id": "beets",
       "provider": "linuxserver.io",
-      "title": "Beets",
+      "title": "beets",
       "repository_name": "docker-beets",
       "repository": "https://github.com/linuxserver/docker-beets",
       "description": "Beets is a music library manager and not, for the most part, a music player. It does include a simple player plugin and an experimental Web-based player, but it generally leaves actual sound-reproduction to specialized tools.",
@@ -1219,7 +1219,7 @@
     {
       "id": "blade-of-agony",
       "provider": "linuxserver.io",
-      "title": "Blade Of Agony",
+      "title": "Blade of Agony",
       "repository_name": "docker-blade-of-agony",
       "repository": "https://github.com/linuxserver/docker-blade-of-agony",
       "description": "Wolfenstein: Blade of Agony is a story-driven WWII shooter inspired by Wolfenstein and Doom.",
@@ -1350,7 +1350,7 @@
     {
       "id": "boinc",
       "provider": "linuxserver.io",
-      "title": "Boinc",
+      "title": "BOINC",
       "repository_name": "docker-boinc",
       "repository": "https://github.com/linuxserver/docker-boinc",
       "description": "BOINC is a platform for high-throughput computing on a large scale (thousands or millions of computers). It can be used for volunteer computing (using consumer devices) or grid computing (using organizational resources). It supports virtualized, parallel, and GPU-based applications.",
@@ -1414,7 +1414,7 @@
     {
       "id": "bookstack",
       "provider": "linuxserver.io",
-      "title": "Bookstack",
+      "title": "BookStack",
       "repository_name": "docker-bookstack",
       "repository": "https://github.com/linuxserver/docker-bookstack",
       "description": "Bookstack is a free and open source Wiki designed for creating beautiful documentation. Featuring a simple, but powerful WYSIWYG editor it allows for teams to create detailed and useful documentation with ease.",
@@ -1541,6 +1541,38 @@
       "template_id": "linuxserver-budge"
     },
     {
+      "id": "byparr",
+      "provider": "thephaseless",
+      "template_family": "curated-profile",
+      "title": "Byparr",
+      "repository": "https://github.com/ThePhaseless/Byparr",
+      "description": "Proxy server to bypass Cloudflare protection for Prowlarr and Jackett",
+      "website": "https://github.com/ThePhaseless/Byparr",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/byparr.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": "2026-11-09",
+      "main_image": "ghcr.io/thephaseless/byparr:latest",
+      "category": "arr",
+      "category_label": "*Arr Suite",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/byparr.json",
+      "template": "apps/byparr.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-byparr"
+    },
+    {
       "id": "bytebase",
       "provider": "Bytebase",
       "template_family": "curated-profile",
@@ -1639,7 +1671,7 @@
     {
       "id": "calibre-web",
       "provider": "linuxserver.io",
-      "title": "Calibre Web",
+      "title": "Calibre-Web",
       "repository_name": "docker-calibre-web",
       "repository": "https://github.com/linuxserver/docker-calibre-web",
       "description": "Calibre-web is a web app providing a clean interface for browsing, reading and downloading eBooks using an existing Calibre database.   It is also possible to integrate google drive and edit metadata and your calibre library through the app itself.",
@@ -1769,7 +1801,7 @@
     {
       "id": "changedetection.io",
       "provider": "linuxserver.io",
-      "title": "Changedetection.Io",
+      "title": "changedetection.io",
       "repository_name": "docker-changedetection.io",
       "repository": "https://github.com/linuxserver/docker-changedetection.io",
       "description": "Changedetection.io provides free, open-source web page monitoring, notification and change detection.",
@@ -1937,7 +1969,7 @@
     {
       "id": "chrome",
       "provider": "linuxserver.io",
-      "title": "Chrome",
+      "title": "Google Chrome",
       "repository_name": "docker-chrome",
       "repository": "https://github.com/linuxserver/docker-chrome",
       "description": "Chrome is the official web browser from Google, built to be fast, secure, and customizable.",
@@ -2243,7 +2275,7 @@
     {
       "id": "code-server",
       "provider": "linuxserver.io",
-      "title": "Code Server",
+      "title": "code-server",
       "repository_name": "docker-code-server",
       "repository": "https://github.com/linuxserver/docker-code-server",
       "description": "Code-server is VS Code running on a remote server, accessible through the browser.",
@@ -2408,7 +2440,7 @@
     {
       "id": "cops",
       "provider": "linuxserver.io",
-      "title": "Cops",
+      "title": "COPS",
       "repository_name": "docker-cops",
       "repository": "https://github.com/linuxserver/docker-cops",
       "description": "Cops by S\u00e9bastien Lucas, now maintained by MikesPub, stands for Calibre OPDS (and HTML) Php Server.",
@@ -2673,7 +2705,7 @@
     {
       "id": "darktable",
       "provider": "linuxserver.io",
-      "title": "Darktable",
+      "title": "darktable",
       "repository_name": "docker-darktable",
       "repository": "https://github.com/linuxserver/docker-darktable",
       "description": "darktable is an open source photography workflow application and raw developer. A virtual lighttable and darkroom for photographers. It manages your digital negatives in a database, lets you view them through a zoomable lighttable and enables you to develop raw images and enhance them.",
@@ -2805,7 +2837,7 @@
     {
       "id": "ddclient",
       "provider": "linuxserver.io",
-      "title": "Ddclient",
+      "title": "ddclient",
       "repository_name": "docker-ddclient",
       "repository": "https://github.com/linuxserver/docker-ddclient",
       "description": "Ddclient is a Perl client used to update dynamic DNS entries for accounts on Dynamic DNS Network Service Provider. It was originally written by Paul Burry and is now mostly by wimpunk. It has the capability to update more than just dyndns and it can fetch your WAN-ipaddress in a few different ways.",
@@ -3088,7 +3120,7 @@
     {
       "id": "digikam",
       "provider": "linuxserver.io",
-      "title": "Digikam",
+      "title": "digiKam",
       "repository_name": "docker-digikam",
       "repository": "https://github.com/linuxserver/docker-digikam",
       "description": "digiKam: Professional Photo Management with the Power of Open Source",
@@ -3352,7 +3384,7 @@
     {
       "id": "dokuwiki",
       "provider": "linuxserver.io",
-      "title": "Dokuwiki",
+      "title": "DokuWiki",
       "repository_name": "docker-dokuwiki",
       "repository": "https://github.com/linuxserver/docker-dokuwiki",
       "description": "Dokuwiki is a simple to use and highly versatile Open Source wiki software that doesn't require a database. It is loved by users for its clean and readable syntax. The ease of maintenance, backup and integration makes it an administrator's favorite. Built in access controls and authentication connectors make DokuWiki especially useful in the enterprise context and the large number of plugins contributed by its vibrant community allow for a broad range of use cases beyond a traditional wiki.",
@@ -3545,7 +3577,7 @@
     {
       "id": "dosbox-staging",
       "provider": "linuxserver.io",
-      "title": "Dosbox Staging",
+      "title": "DOSBox Staging",
       "repository_name": "docker-dosbox-staging",
       "repository": "https://github.com/linuxserver/docker-dosbox-staging",
       "description": "DOSBox Staging is a modern continuation of DOSBox a free and open-source emulator that enables the execution of MS-DOS software, especially video games.",
@@ -3576,7 +3608,7 @@
     {
       "id": "doublecommander",
       "provider": "linuxserver.io",
-      "title": "Doublecommander",
+      "title": "Double Commander",
       "repository_name": "docker-doublecommander",
       "repository": "https://github.com/linuxserver/docker-doublecommander",
       "description": "Double Commander is a free cross platform open source file manager with two panels side by side. It is inspired by Total Commander and features some new ideas.",
@@ -3745,7 +3777,7 @@
     {
       "id": "duckdns",
       "provider": "linuxserver.io",
-      "title": "Duckdns",
+      "title": "DuckDNS",
       "repository_name": "docker-duckdns",
       "repository": "https://github.com/linuxserver/docker-duckdns",
       "description": "Duckdns is a free service which will point a DNS (sub domains of duckdns.org) to an IP of your choice. The service is completely free, and doesn't require reactivation or forum posts to maintain its existence.",
@@ -3777,7 +3809,7 @@
     {
       "id": "duckstation",
       "provider": "linuxserver.io",
-      "title": "Duckstation",
+      "title": "DuckStation",
       "repository_name": "docker-duckstation",
       "repository": "https://github.com/linuxserver/docker-duckstation",
       "description": "DuckStation is a PS1 Emulator aiming for the best accuracy and game support.",
@@ -3845,7 +3877,7 @@
       "title": "Duplicati",
       "repository_name": "docker-duplicati",
       "repository": "https://github.com/linuxserver/docker-duplicati",
-      "description": "Duplicati is a backup client that securely stores encrypted, incremental, compressed backups on local storage, cloud storage services and remote file servers. It works with standard protocols like FTP, SSH, WebDAV as well as popular services like Microsoft OneDrive, Amazon S3, Google Drive, box.com, Mega, B2, and many others.",
+      "description": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups.",
       "website": "https://www.duplicati.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
       "architectures": [
@@ -3875,9 +3907,9 @@
       "id": "duplicati-official",
       "provider": "duplicati",
       "template_family": "curated-profile",
-      "title": "Duplicati Official",
+      "title": "Duplicati",
       "repository": "https://github.com/duplicati/duplicati",
-      "description": "Official Duplicati image: encrypted, incremental backups to local, network and cloud storage.",
+      "description": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups.",
       "website": "https://www.duplicati.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
       "architectures": [
@@ -4005,7 +4037,7 @@
       "title": "Emby",
       "repository_name": "docker-emby",
       "repository": "https://github.com/linuxserver/docker-emby",
-      "description": "Emby organizes video, music, live TV, and photos from personal media libraries and streams them to smart TVs, streaming boxes and mobile devices. This container is packaged as a standalone emby Media Server.",
+      "description": "Emby Server is a personal media server that organizes personal videos, music, and photos into a centralized library.",
       "website": "https://emby.media/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emby.webp",
       "architectures": [
@@ -4035,9 +4067,9 @@
       "id": "emby-official",
       "provider": "emby",
       "template_family": "curated-profile",
-      "title": "Emby Official",
+      "title": "Emby",
       "repository": "https://hub.docker.com/r/emby/embyserver",
-      "description": "Emby is a personal media management platform that brings home videos, music, and photos together, automatically converting and streaming to any device. An intuitive design makes it ideal for users to enjoy media content anytime, anywhere, meeting family entertainment and media management needs.\n\nCore features include cross-device media streaming and easy access. It supports real-time conversion and streaming of personal media to any device for seamless playback. A connection service enables easy media access while away from home. Live TV functionality supports streaming, managing DVR, and accessing a library of recordings. Mobile sync delivers media to smartphones and tablets for offline access, automatically updating new content.\n\nIt offers parental controls to restrict children's content access, set schedules and time limits, and remotely monitor sessions. Chromecast support enables easy streaming of videos, music, photos, and Live TV. Content is presented elegantly, enhancing visual experience. Cloud sync supports backup, archiving, and multi-resolution storage for optimized streaming. Web-based media management facilitates editing metadata, images, and searching subtitles, while DLNA integration auto-detects network devices for content streaming. With convenience and versatility at the core, the platform delivers a modern media management solution.\n\n**Key Features:**\n- Automatic conversion and streaming of media to any device\n- Easy access via connection service while away from home\n- Live TV streaming, DVR management, and recording library access\n- Mobile sync to smartphones and tablets for offline access\n- Parental controls with content restrictions, schedules, and remote monitoring\n- Chromecast support for streaming videos, music, photos, and Live TV\n- Cloud sync for backup and multi-resolution storage\n- Web-based media management for editing metadata and searching subtitles\n- DLNA integration for auto-detecting network devices and streaming content\n\n**Learn More:**\n- [Emby Official Website](https://emby.media/)\n",
+      "description": "Emby Server is a personal media server that organizes personal videos, music, and photos into a centralized library.",
       "website": "https://emby.media/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emby.webp",
       "architectures": [
@@ -4072,7 +4104,7 @@
       "provider": "linuxserver.io",
       "template_family": "imported-compose",
       "variant": null,
-      "title": "Embystat",
+      "title": "EmbyStat",
       "repository": "https://hub.docker.com/r/linuxserver/embystat",
       "description": "EmbyStat is a personal web server that can calculate all kinds of statistics from your (local) Emby or Jellyfin server. Just install this on your server and let him calculate all kinds of fun stuff. This project is still in Alpha phase, but feel free to pull in on your computer and test it out yourself. When the time is right I will host a full informational website/release for common platforms and Wiki pages.",
       "website": "",
@@ -4376,7 +4408,7 @@
     {
       "id": "faster-whisper",
       "provider": "linuxserver.io",
-      "title": "Faster Whisper",
+      "title": "faster-whisper",
       "repository_name": "docker-faster-whisper",
       "repository": "https://github.com/linuxserver/docker-faster-whisper",
       "description": "Faster-whisper is a reimplementation of OpenAI's Whisper model using CTranslate2, which is a fast inference engine for Transformer models. This container provides a Wyoming protocol server for faster-whisper.",
@@ -4671,7 +4703,7 @@
     {
       "id": "filezilla",
       "provider": "linuxserver.io",
-      "title": "Filezilla",
+      "title": "FileZilla",
       "repository_name": "docker-filezilla",
       "repository": "https://github.com/linuxserver/docker-filezilla",
       "description": "FIleZilla Client is a fast and reliable cross-platform FTP, FTPS and SFTP client with lots of useful features and an intuitive graphical user interface.",
@@ -4840,7 +4872,7 @@
       "variant": null,
       "title": "FlareSolverr",
       "repository": "https://ghcr.io/flaresolverr/flaresolverr",
-      "description": "",
+      "description": "FlareSolverr is a proxy server designed to bypass Cloudflare and DDoS-GUARD protection. It receives requests and uses an automated web browser to open the target URL and solve browser challenges. Once solved, it extracts the rendered HTML and clearance cookies, returning them so other HTTP clients can access the protected site.",
       "website": "",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/flaresolverr.webp",
       "architectures": [
@@ -4904,7 +4936,7 @@
     {
       "id": "flexget",
       "provider": "linuxserver.io",
-      "title": "Flexget",
+      "title": "FlexGet",
       "repository_name": "docker-flexget",
       "repository": "https://github.com/linuxserver/docker-flexget",
       "description": "Flexget is a multipurpose automation tool for all of your media.",
@@ -5002,7 +5034,7 @@
     {
       "id": "foldingathome",
       "provider": "linuxserver.io",
-      "title": "Foldingathome",
+      "title": "Folding@home",
       "repository_name": "docker-foldingathome",
       "repository": "https://github.com/linuxserver/docker-foldingathome",
       "description": "Folding@home is a distributed computing project for simulating protein dynamics, including the process of protein folding and the movements of proteins implicated in a variety of diseases. It brings together citizen scientists who volunteer to run simulations of protein dynamics on their personal computers. Insights from this data are helping scientists to better understand biology, and providing new opportunities for developing therapeutics.",
@@ -5098,7 +5130,7 @@
     {
       "id": "freecad",
       "provider": "linuxserver.io",
-      "title": "Freecad",
+      "title": "FreeCAD",
       "repository_name": "docker-freecad",
       "repository": "https://github.com/linuxserver/docker-freecad",
       "description": "FreeCAD is a general-purpose parametric 3D computer-aided design (CAD) modeler and a building information modeling (BIM) software application with finite element method (FEM) support.",
@@ -5130,10 +5162,10 @@
     {
       "id": "freshrss",
       "provider": "linuxserver.io",
-      "title": "Freshrss",
+      "title": "FreshRSS",
       "repository_name": "docker-freshrss",
       "repository": "https://github.com/linuxserver/docker-freshrss",
-      "description": "Freshrss is a free, self-hostable aggregator for rss feeds.",
+      "description": "FreshRSS is a self-hosted RSS and Atom feed aggregator.",
       "website": "https://freshrss.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freshrss.webp",
       "architectures": [
@@ -5167,7 +5199,7 @@
       "variant": null,
       "title": "FreshRSS",
       "repository": "https://hub.docker.com/r/freshrss/freshrss",
-      "description": "FreshRSS is a self-hosted RSS and Atom feed aggregator. It is lightweight, easy to work with, powerful, and customizable.",
+      "description": "FreshRSS is a self-hosted RSS and Atom feed aggregator.",
       "website": "https://freshrss.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freshrss.webp",
       "architectures": [
@@ -5333,7 +5365,7 @@
     {
       "id": "gimp",
       "provider": "linuxserver.io",
-      "title": "Gimp",
+      "title": "GIMP",
       "repository_name": "docker-gimp",
       "repository": "https://github.com/linuxserver/docker-gimp",
       "description": "GIMP is a free and open-source raster graphics editor used for image manipulation (retouching) and image editing, free-form drawing, transcoding between different image file formats, and more specialized tasks. It is extensible by means of plugins, and scriptable.",
@@ -5401,7 +5433,7 @@
     {
       "id": "github-desktop",
       "provider": "linuxserver.io",
-      "title": "Github Desktop",
+      "title": "GitHub Desktop",
       "repository_name": "docker-github-desktop",
       "repository": "https://github.com/linuxserver/docker-github-desktop",
       "description": "Github Desktop is an open source Electron-based GitHub app. It is written in TypeScript and uses React.",
@@ -5466,7 +5498,7 @@
     {
       "id": "gitqlient",
       "provider": "linuxserver.io",
-      "title": "Gitqlient",
+      "title": "GitQlient",
       "repository_name": "docker-gitqlient",
       "repository": "https://github.com/linuxserver/docker-gitqlient",
       "description": "GitQlient is a multi-platform Git client originally forked from QGit. Nowadays it goes beyond of just a fork and adds a lot of new functionality.",
@@ -5929,7 +5961,7 @@
     {
       "id": "grocy",
       "provider": "linuxserver.io",
-      "title": "Grocy",
+      "title": "grocy",
       "repository_name": "docker-grocy",
       "repository": "https://github.com/linuxserver/docker-grocy",
       "description": "Grocy is an ERP system for your kitchen! Cut down on food waste, and manage your chores with this brilliant utility.",
@@ -6026,7 +6058,7 @@
     {
       "id": "gzdoom",
       "provider": "linuxserver.io",
-      "title": "Gzdoom",
+      "title": "GZDoom",
       "repository_name": "docker-gzdoom",
       "repository": "https://github.com/linuxserver/docker-gzdoom",
       "description": "GZDoom is a feature centric port for all Doom engine games, based on ZDoom, adding an OpenGL renderer and powerful scripting capabilities.",
@@ -6058,7 +6090,7 @@
     {
       "id": "habridge",
       "provider": "linuxserver.io",
-      "title": "Habridge",
+      "title": "HA Bridge",
       "repository_name": "docker-habridge",
       "repository": "https://github.com/linuxserver/docker-habridge",
       "description": "Habridge emulates Philips Hue API to other home automation gateways such as an Amazon Echo/Dot Gen 1 (gen 2 has issues discovering ha-bridge) or other systems that support Philips Hue. The Bridge handles basic commands such as On, Off and brightness commands of the hue protocol. This bridge can control most devices that have a distinct API.",
@@ -6090,10 +6122,10 @@
     {
       "id": "handbrake",
       "provider": "linuxserver.io",
-      "title": "Handbrake",
+      "title": "HandBrake",
       "repository_name": "docker-handbrake",
       "repository": "https://github.com/linuxserver/docker-handbrake",
-      "description": "HandBrake is an open-source tool, built by volunteers, for converting video from nearly any format to a selection of modern, widely supported codecs.",
+      "description": "HandBrake is an open-source tool designed to convert video from nearly any format to modern, widely supported codecs.",
       "website": "https://handbrake.fr/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/handbrake.webp",
       "architectures": [
@@ -6124,9 +6156,9 @@
       "provider": "jlesage",
       "template_family": "imported-compose",
       "variant": null,
-      "title": "handbrake",
+      "title": "HandBrake",
       "repository": "https://hub.docker.com/r/jlesage/handbrake",
-      "description": "Handbrake is a Docker-based application for video transcoding and compression, offering powerful and flexible multimedia processing across multiple platforms.",
+      "description": "HandBrake is an open-source tool designed to convert video from nearly any format to modern, widely supported codecs.",
       "website": "https://handbrake.fr",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/handbrake.webp",
       "architectures": [
@@ -6519,10 +6551,10 @@
     {
       "id": "homeassistant",
       "provider": "linuxserver.io",
-      "title": "Homeassistant",
+      "title": "Home Assistant",
       "repository_name": "docker-homeassistant",
       "repository": "https://github.com/linuxserver/docker-homeassistant",
-      "description": "Home Assistant Core - Open source home automation that puts local control and privacy first. Powered by a worldwide community of tinkerers and DIY enthusiasts. Perfect to run on a Raspberry Pi or a local server",
+      "description": "Home Assistant is an open source home automation platform designed to put local control and privacy first.",
       "website": "https://www.home-assistant.io/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
       "architectures": [
@@ -6556,7 +6588,7 @@
       "variant": null,
       "title": "Home Assistant",
       "repository": "https://hub.docker.com/r/homeassistant/home-assistant",
-      "description": "Home Assistant is a smart home management app prioritizing local control and data privacy, managing devices through an intuitive interface with data stored locally, eliminating cloud dependency. Its robust features and community support make it ideal for DIY enthusiasts and home users creating personalized home experiences.\n\nThe app's core features include customizable dashboards, powerful automations, and a voice assistant. Dashboards support drag-and-drop customization, with various card types to display data and control devices like lights or sensors. It offers an advanced automation engine, such as turning on lights at sunset or alerting users to an open garage door. The Assist voice assistant enables natural language control, compatible with phones, tablets, smartwatches, and even traditional telephones, allowing users to customize interactions and experiment with AI conversations to meet diverse needs.\n\nIt extends functionality through add-ons, supporting tools like AdGuard for ad blocking, NodeRed for third-party automations, or turning devices into Spotify Connect targets. Home energy management optimizes solar production and usage planning to save costs. Home Assistant Cast transforms TVs into dashboard displays, and NFC tags trigger music playback or routine automations. Community documentation aids configuration, with local data processing ensuring privacy, suitable for home or small team smart home management.\n\n**Key Features:**\n- Local data storage, prioritizing privacy\n- Drag-and-drop customizable dashboards for device control and data display\n- Advanced automations for triggering smart home events\n- Assist voice assistant for natural language control\n- Add-ons for integrating AdGuard, NodeRed, and more\n- Home energy management for optimized usage and cost savings\n- Home Assistant Cast for TV dashboard displays\n- NFC tags for triggering music or automation tasks\n\n**Learn More:**\n- [Home Assistant Official Website](https://www.home-assistant.io)\n- [Home Assistant GitHub Repository](https://github.com/home-assistant/core)\n- [Home Assistant Documentation](https://www.home-assistant.io/docs)\n- [Home Assistant Community](https://community.home-assistant.io)\n- [Home Assistant Add-ons](https://www.home-assistant.io/addons)\n",
+      "description": "Home Assistant is an open source home automation platform designed to put local control and privacy first.",
       "website": "https://www.home-assistant.io",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
       "architectures": [
@@ -6719,7 +6751,7 @@
     {
       "id": "htpcmanager",
       "provider": "linuxserver.io",
-      "title": "Htpcmanager",
+      "title": "HTPC Manager",
       "repository_name": "docker-htpcmanager",
       "repository": "https://github.com/linuxserver/docker-htpcmanager",
       "description": "Htpcmanager is a front end for many htpc related applications.",
@@ -7112,7 +7144,7 @@
     {
       "id": "intellij-idea",
       "provider": "linuxserver.io",
-      "title": "Intellij Idea",
+      "title": "IntelliJ IDEA",
       "repository_name": "docker-intellij-idea",
       "repository": "https://github.com/linuxserver/docker-intellij-idea",
       "description": "IntelliJ IDEA helps you write code faster with tools that eliminate tedious tasks and let you focus on what matters \u2013 building great software.",
@@ -7340,7 +7372,7 @@
       "title": "Jellyfin",
       "repository_name": "docker-jellyfin",
       "repository": "https://github.com/linuxserver/docker-jellyfin",
-      "description": "Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emby and Plex, to provide media from a dedicated server to end-user devices via multiple apps. Jellyfin is descended from Emby's 3.5.2 release and ported to the .NET Core framework to enable full cross-platform support. There are no strings attached, no premium licenses or features, and no hidden agendas: just a team who want to build something better and work together to achieve it.",
+      "description": "Jellyfin is a media system designed to organize and stream media collections.",
       "website": "https://github.com/jellyfin/jellyfin",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
       "architectures": [
@@ -7370,9 +7402,9 @@
       "id": "jellyfin-official",
       "provider": "jellyfin",
       "template_family": "curated-profile",
-      "title": "Jellyfin Official",
+      "title": "Jellyfin",
       "repository": "https://github.com/jellyfin/jellyfin-packaging",
-      "description": "Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emby and Plex, to provide media from a dedicated server to end-user devices via multiple apps. Jellyfin is descended from Emby's 3.5.2 release and ported to the .NET Core framework to enable full cross-platform support. There are no strings attached, no premium licenses or features, and no hidden agendas: just a team who want to build something better and work together to achieve it.",
+      "description": "Jellyfin is a media system designed to organize and stream media collections.",
       "website": "https://jellyfin.org/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
       "architectures": [
@@ -7705,7 +7737,7 @@
     {
       "id": "kasm",
       "provider": "linuxserver.io",
-      "title": "Kasm",
+      "title": "Kasm Workspaces",
       "repository_name": "docker-kasm",
       "repository": "https://github.com/linuxserver/docker-kasm",
       "description": "Kasm Workspaces is a docker container streaming platform for delivering browser-based access to desktops, applications, and web services. Kasm uses devops-enabled Containerized Desktop Infrastructure (CDI) to create on-demand, disposable, docker containers that are accessible via web browser. Example use-cases include Remote Browser Isolation (RBI), Data Loss Prevention (DLP), Desktop as a Service (DaaS), Secure Remote Access Services (RAS), and Open Source Intelligence (OSINT) collections.",
@@ -7740,7 +7772,7 @@
       "title": "Kavita",
       "repository_name": "docker-kavita",
       "repository": "https://github.com/linuxserver/docker-kavita",
-      "description": "Kavita is a fast, feature rich, cross platform reading server. Built with a focus for being a full solution for all your reading needs. Setup your own server and share your reading collection with your friends and family!",
+      "description": "Kavita is a cross-platform reading server designed to manage personal reading collections.",
       "website": "https://github.com/Kareadita/Kavita",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kavita.webp",
       "architectures": [
@@ -7774,7 +7806,7 @@
       "variant": null,
       "title": "Kavita",
       "repository": "https://hub.docker.com/r/jvmilazz0/kavita",
-      "description": "Kavita is a self-hosted digital library app designed for managing and reading comics, light novels, and e-books (supporting CBZ, CBR, EPUB, PDF, and more), offering a secure and convenient solution for personal reading collections. Its responsive Web interface allows users to access content effortlessly via any browser, with fullscreen reading and full localization support, ideal for comic and e-book enthusiasts building personalized digital libraries.\n\nThe app's core features include robust library management and an enhanced reading experience. Users can organize content with collections, reading lists, and custom tags, editing metadata to keep libraries neatly arranged. The built-in manga reader supports dual-page mode, Webtoon scrolling, and image splitting, while the e-book reader offers customizable fonts, spacing, and themes, with by-line progress syncing across devices. The PDF reader provides light/dark modes and diverse settings. It supports multi-user management, allowing custom permissions for sharing libraries or restricting content access, perfect for family or team use. Bulk imports and full-text search streamline large collection management.\n\nIt can be flexibly deployed on personal servers or NAS devices, with an active community providing extensive documentation to enhance functionality. Folder monitoring automatically detects file changes without manual scans, and sending content to Kindle or other devices improves cross-device access. Whether creating a personal reading hub or sharing media with others, the app's intuitive interface and high customizability deliver a modern management platform, meeting needs from casual reading to professional collections.\n\n**Key Features:**\n- Serve up Manga/Webtoons/Comics (cbr, cbz, zip/rar/rar5, 7zip, raw images) and Books (epub, pdf)\n- First class responsive readers that work great on any device (phone, tablet, desktop)\n- Customizable theming support: [Theme Repo](https://github.com/Kareadita/Themes) and [Documentation](https://wiki.kavitareader.com/guides/themes/)\n- External metadata integration and scrobbling for read status, ratings, and reviews (available via Kavita+)\n- Rich Metadata support with filtering and searching\n- Ways to group reading material: Collections, Reading Lists (CBL Import), Want to Read\n- Ability to manage users with rich Role-based management for age restrictions, abilities within the app, etc\n- Rich web readers supporting webtoon, continuous reading mode (continue without leaving the reader), virtual pages (epub), etc\n- Ability to customize your dashboard and side nav with smart filters, custom order and visibility toggles\n- Ability to download metadata (available via Kavita+)\n\n**Learn More:**\n- [Kavita Official Website](https://www.kavitareader.com)\n- [Kavita GitHub Repository](https://github.com/Kareadita/Kavita)\n",
+      "description": "Kavita is a cross-platform reading server designed to manage personal reading collections.",
       "website": "https://www.kavitareader.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kavita.webp",
       "architectures": [
@@ -7837,7 +7869,7 @@
     {
       "id": "keepassxc",
       "provider": "linuxserver.io",
-      "title": "Keepassxc",
+      "title": "KeePassXC",
       "repository_name": "docker-keepassxc",
       "repository": "https://github.com/linuxserver/docker-keepassxc",
       "description": "KeePassXC is a free and open-source password manager. It started as a community fork of KeePassX (itself a cross-platform port of KeePass).",
@@ -7869,7 +7901,7 @@
     {
       "id": "kicad",
       "provider": "linuxserver.io",
-      "title": "Kicad",
+      "title": "KiCad",
       "repository_name": "docker-kicad",
       "repository": "https://github.com/linuxserver/docker-kicad",
       "description": "KiCad - A Cross Platform and Open Source Electronics Design Automation Suite.",
@@ -8234,7 +8266,7 @@
     {
       "id": "lazylibrarian",
       "provider": "linuxserver.io",
-      "title": "Lazylibrarian",
+      "title": "LazyLibrarian",
       "repository_name": "docker-lazylibrarian",
       "repository": "https://github.com/linuxserver/docker-lazylibrarian",
       "description": "Lazylibrarian is a program to follow authors and grab metadata for all your digital reading needs. It uses a combination of Goodreads Librarything and optionally GoogleBooks as sources for author info and book info.  This container is based on the DobyTang fork.",
@@ -8266,7 +8298,7 @@
     {
       "id": "ldap-auth",
       "provider": "linuxserver.io",
-      "title": "Ldap Auth",
+      "title": "LDAP Auth",
       "repository_name": "docker-ldap-auth",
       "repository": "https://github.com/linuxserver/docker-ldap-auth",
       "description": "Ldap-auth software is for authenticating users who request protected resources from servers proxied by nginx. It includes a daemon (ldap-auth) that communicates with an authentication server, and a webserver daemon that generates an authentication cookie based on the user\u2019s credentials. The daemons are written in Python for use with a Lightweight Directory Access Protocol (LDAP) authentication server (OpenLDAP or Microsoft Windows Active Directory 2003 and 2012).",
@@ -8406,7 +8438,7 @@
     {
       "id": "libreoffice",
       "provider": "linuxserver.io",
-      "title": "Libreoffice",
+      "title": "LibreOffice",
       "repository_name": "docker-libreoffice",
       "repository": "https://github.com/linuxserver/docker-libreoffice",
       "description": "LibreOffice is a free and powerful office suite, and a successor to OpenOffice.org (commonly known as OpenOffice). Its clean interface and feature-rich tools help you unleash your creativity and enhance your productivity.",
@@ -8439,7 +8471,7 @@
     {
       "id": "librespeed",
       "provider": "linuxserver.io",
-      "title": "Librespeed",
+      "title": "LibreSpeed",
       "repository_name": "docker-librespeed",
       "repository": "https://github.com/linuxserver/docker-librespeed",
       "description": "Librespeed is a very lightweight Speedtest implemented in Javascript, using XMLHttpRequest and Web Workers.",
@@ -8503,7 +8535,7 @@
     {
       "id": "librewolf",
       "provider": "linuxserver.io",
-      "title": "Librewolf",
+      "title": "LibreWolf",
       "repository_name": "docker-librewolf",
       "repository": "https://github.com/linuxserver/docker-librewolf",
       "description": "LibreWolf is a custom and independent version of Firefox, with the primary goals of privacy, security and user freedom. LibreWolf also aims to remove all the telemetry, data collection and annoyances, as well as disabling anti-freedom features like DRM.",
@@ -8890,7 +8922,7 @@
     {
       "id": "lm-studio",
       "provider": "linuxserver.io",
-      "title": "Lm Studio",
+      "title": "LM Studio",
       "repository_name": "docker-lm-studio",
       "repository": "https://github.com/linuxserver/docker-lm-studio",
       "description": "LM Studio can run local AI models like gpt-oss, Llama, Gemma, Qwen, and DeepSeek privately on your computer.",
@@ -9352,7 +9384,7 @@
     {
       "id": "mame",
       "provider": "linuxserver.io",
-      "title": "Mame",
+      "title": "MAME",
       "repository_name": "docker-mame",
       "repository": "https://github.com/linuxserver/docker-mame",
       "description": "MAME is a free and open-source emulator designed to emulate the hardware of arcade games, video game consoles, old computers and other systems in software on modern personal computers.",
@@ -9447,7 +9479,7 @@
     {
       "id": "mariadb",
       "provider": "linuxserver.io",
-      "title": "Mariadb",
+      "title": "MariaDB",
       "repository_name": "docker-mariadb",
       "repository": "https://github.com/linuxserver/docker-mariadb",
       "description": "Mariadb is one of the most popular database servers. Made by the original developers of MySQL.",
@@ -9618,7 +9650,7 @@
     {
       "id": "mediaelch",
       "provider": "linuxserver.io",
-      "title": "Mediaelch",
+      "title": "MediaElch",
       "repository_name": "docker-mediaelch",
       "repository": "https://github.com/linuxserver/docker-mediaelch",
       "description": "MediaElch is a MediaManager for Kodi. Information about Movies, TV Shows, Concerts and Music are stored as nfo files. Fanarts are downloaded automatically from fanart.tv. Using the nfo generator, MediaElch can be used with other MediaCenters as well.",
@@ -9652,7 +9684,7 @@
       "title": "Medusa",
       "repository_name": "docker-medusa",
       "repository": "https://github.com/linuxserver/docker-medusa",
-      "description": "Medusa is an automatic Video Library Manager for TV Shows. It watches for new episodes of your favorite shows, and when they are posted it does its magic.",
+      "description": "Medusa is an automatic video library manager for television shows.",
       "website": "https://pymedusa.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa.webp",
       "architectures": [
@@ -9687,7 +9719,7 @@
       "variant": null,
       "title": "Medusa",
       "repository": "https://hub.docker.com/r/pymedusa/medusa",
-      "description": "Automatic Video Library Manager for TV Shows. It watches for new episodes of your favorite shows, and when they are posted it does its magic.",
+      "description": "Medusa is an automatic video library manager for television shows.",
       "website": "",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/medusa.webp",
       "architectures": [
@@ -9751,7 +9783,7 @@
     {
       "id": "melonds",
       "provider": "linuxserver.io",
-      "title": "Melonds",
+      "title": "melonDS",
       "repository_name": "docker-melonds",
       "repository": "https://github.com/linuxserver/docker-melonds",
       "description": "melonDS aims at providing fast and accurate Nintendo DS emulation.",
@@ -10049,7 +10081,7 @@
     {
       "id": "minisatip",
       "provider": "linuxserver.io",
-      "title": "Minisatip",
+      "title": "minisatip",
       "repository_name": "docker-minisatip",
       "repository": "https://github.com/linuxserver/docker-minisatip",
       "description": "Minisatip is a multi-threaded satip server version 1.2 that runs under Linux and it was tested with DVB-S, DVB-S2, DVB-T, DVB-T2, DVB-C, DVB-C2, ATSC and ISDB-T cards.",
@@ -10220,7 +10252,7 @@
       "variant": null,
       "title": "MongoDB 4",
       "repository": "https://hub.docker.com/_/mongo",
-      "description": "The 4.4 series of MongoDB, the document-oriented NoSQL database. MongoDB 5 and later require a CPU with AVX support and will not start without it, which leaves the low-power processors common in home servers unable to run them at all. This entry exists for those machines: it is pinned to the 4.4 series rather than following the latest release. The series reached its end of life in February 2024 and receives no further fixes, so where the processor does support AVX, the MongoDB entry installs a maintained release instead.",
+      "description": "MongoDB 4.4, the last series that runs on a CPU without AVX.",
       "website": "https://www.mongodb.com/",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/MongoDB4/icon.png",
       "architectures": [
@@ -10387,7 +10419,7 @@
     {
       "id": "msedge",
       "provider": "linuxserver.io",
-      "title": "Msedge",
+      "title": "Microsoft Edge",
       "repository_name": "docker-msedge",
       "repository": "https://github.com/linuxserver/docker-msedge",
       "description": "Microsoft Edge is a cross-platform web browser developed by Microsoft and based on Chromium.",
@@ -10418,7 +10450,7 @@
     {
       "id": "mstream",
       "provider": "linuxserver.io",
-      "title": "Mstream",
+      "title": "mStream",
       "repository_name": "docker-mstream",
       "repository": "https://github.com/linuxserver/docker-mstream",
       "description": "mstream is a personal music streaming server. You can use mStream to stream your music from your home computer to any device, anywhere.  There are mobile apps available for both Android and iPhone.",
@@ -10453,7 +10485,7 @@
       "title": "Mullvad Browser",
       "repository_name": "docker-mullvad-browser",
       "repository": "https://github.com/linuxserver/docker-mullvad-browser",
-      "description": "",
+      "description": "Mullvad Browser is a privacy-focused web browser developed in collaboration between Mullvad VPN and the Tor Project. It is designed to minimize online tracking and digital fingerprinting. The application brings the protections of the Tor Browser to standard internet connections and VPNs without routing traffic through the Tor network.",
       "website": null,
       "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/mullvad-browser.webp",
       "architectures": [
@@ -10648,7 +10680,7 @@
     {
       "id": "mysql-workbench",
       "provider": "linuxserver.io",
-      "title": "Mysql Workbench",
+      "title": "MySQL Workbench",
       "repository_name": "docker-mysql-workbench",
       "repository": "https://github.com/linuxserver/docker-mysql-workbench",
       "description": "MySQL Workbench is a unified visual tool for database architects, developers, and DBAs. MySQL Workbench provides data modeling, SQL development, and comprehensive administration tools for server configuration, user administration, backup, and much more.",
@@ -10851,7 +10883,7 @@
     {
       "id": "netbox",
       "provider": "linuxserver.io",
-      "title": "Netbox",
+      "title": "NetBox",
       "repository_name": "docker-netbox",
       "repository": "https://github.com/linuxserver/docker-netbox",
       "description": "Netbox is an IP address management (IPAM) and data center infrastructure management (DCIM) tool. Initially conceived by the network engineering team at DigitalOcean, NetBox was developed specifically to address the needs of network and infrastructure engineers. It is intended to function as a domain-specific source of truth for network operations.",
@@ -10958,7 +10990,7 @@
       "title": "Nextcloud",
       "repository_name": "docker-nextcloud",
       "repository": "https://github.com/linuxserver/docker-nextcloud",
-      "description": "Nextcloud gives you access to all your files wherever you are.",
+      "description": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private.",
       "website": "https://nextcloud.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [
@@ -10992,7 +11024,7 @@
       "variant": null,
       "title": "Nextcloud",
       "repository": "https://hub.docker.com/_/nextcloud",
-      "description": "Discover the ultimate solution for remote collaboration with Nextcloud. Unlike traditional office software, Nextcloud seamlessly integrates files, communication, and productivity tools into one platform, enhancing teamwork and streamlining your workflow. Say goodbye to the limitations of conventional tools and embrace a new era of collaboration.\n\nNextcloud stands out with its robust features tailored for every need. Enjoy secure file storage, real-time communication via Talk, comprehensive groupware, and powerful office integration, all in one place. Experience these top-notch features at an affordable price, making it accessible for everyone to elevate their collaboration game.\n\nDeploying Nextcloud on a self-hosted server private cloud device brings unparalleled convenience. Benefit from unlimited storage, secure data privacy, local network speeds, and multi-device access, ensuring you have everything you need at your fingertips.\n",
+      "description": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private.",
       "website": "https://nextcloud.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [
@@ -11024,9 +11056,9 @@
       "id": "nextcloud-stack",
       "provider": "nextcloud",
       "template_family": "curated-profile",
-      "title": "Nextcloud Stack",
+      "title": "Nextcloud + PostgreSQL",
       "repository": "https://github.com/nextcloud/docker",
-      "description": "A three-service Nextcloud deployment adapted to native Proxmox OCI LXC containers.",
+      "description": "Nextcloud with a PostgreSQL database and a Redis cache, each in its own LXC container.",
       "website": "https://nextcloud.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [
@@ -11054,7 +11086,7 @@
     {
       "id": "nginx",
       "provider": "linuxserver.io",
-      "title": "Nginx",
+      "title": "NGINX",
       "repository_name": "docker-nginx",
       "repository": "https://github.com/linuxserver/docker-nginx",
       "description": "Nginx is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP proxy server, and mail proxy server.",
@@ -11122,7 +11154,7 @@
     {
       "id": "ngircd",
       "provider": "linuxserver.io",
-      "title": "Ngircd",
+      "title": "ngIRCd",
       "repository_name": "docker-ngircd",
       "repository": "https://github.com/linuxserver/docker-ngircd",
       "description": "Ngircd is a free, portable and lightweight Internet Relay Chat server for small or private networks, developed under the GNU General Public License (GPL). It is easy to configure, can cope with dynamic IP addresses, and supports IPv6, SSL-protected connections as well as PAM for authentication. It is written from scratch and not based on the original IRCd.",
@@ -11417,7 +11449,7 @@
     {
       "id": "nzbget",
       "provider": "linuxserver.io",
-      "title": "Nzbget",
+      "title": "NZBGet",
       "repository_name": "docker-nzbget",
       "repository": "https://github.com/linuxserver/docker-nzbget",
       "description": "Nzbget is a usenet downloader, written in C++ and designed with performance in mind to achieve maximum download speed by using very little system resources.",
@@ -11449,7 +11481,7 @@
     {
       "id": "nzbhydra2",
       "provider": "linuxserver.io",
-      "title": "Nzbhydra2",
+      "title": "NZBHydra 2",
       "repository_name": "docker-nzbhydra2",
       "repository": "https://github.com/linuxserver/docker-nzbhydra2",
       "description": "Nzbhydra2 is a meta search application for NZB indexers, the spiritual successor to NZBmegasearcH, and an evolution of the original application NZBHydra.",
@@ -11680,7 +11712,7 @@
     {
       "id": "onlyoffice",
       "provider": "linuxserver.io",
-      "title": "Onlyoffice",
+      "title": "ONLYOFFICE",
       "repository_name": "docker-onlyoffice",
       "repository": "https://github.com/linuxserver/docker-onlyoffice",
       "description": "ONLYOFFICE provides a full range of tools to create, edit and collaborate on text documents, spreadsheets, presentations, PDF forms and regular PDF files on web, desktop and mobile platforms.",
@@ -11714,7 +11746,7 @@
       "template_family": "curated-profile",
       "title": "Open WebUI",
       "repository": "https://ghcr.io/open-webui/open-webui",
-      "description": "Open WebUI is a feature-rich, user-friendly self-hosted AI platform designed for fully offline operation, supporting multiple large language model runners and API integration. Its intuitive Web interface provides powerful AI deployment capabilities, ideal for developers, researchers, and AI enthusiasts building localized intelligent applications.\n\nThe tool's core features include local model execution and Retrieval Augmented Generation (RAG). It supports Ollama and OpenAI-compatible APIs (e.g., LMStudio, GroqCloud), enabling seamless model switching and multi-model conversations. RAG enhances chat experiences through local document loading or web search integration (e.g., SearXNG, Google PSE). Granular permissions and role-based access control (RBAC) ensure security with customized user role management.\n\nIt supports Markdown and LaTeX for enriched interactions and offers hands-free voice and video call features for dynamic communication. Image generation integration (e.g., DALL-E, ComfyUI) enriches visual content, and a model builder enables creating and importing custom models via the interface. The Pipelines plugin framework supports Python plugins, extending functionality like function calling and real-time translation. The tool\u2019s offline privacy and flexibility deliver a modern AI interaction solution.\n\n**Key Features:**\n- Local execution of Ollama and OpenAI-compatible APIs with multi-model conversations\n- RAG support with local document and web search integration (e.g., SearXNG, Google PSE)\n- Granular permissions and role-based access control (RBAC)\n- Simultaneous interaction with multiple models, leveraging their strengths\n- Image generation integration with DALL-E, ComfyUI, and more\n- Full Markdown and LaTeX support\n- Hands-free voice and video call functionality\n- Pipelines plugin framework for custom Python functionality\n\n**Learn More:**\n- [Open WebUI Official Website](https://openwebui.com)\n- [Open WebUI Documentation](https://docs.openwebui.com)\n- [Open WebUI GitHub Repository](https://github.com/open-webui/open-webui)\n",
+      "description": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline.",
       "website": "https://openwebui.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
       "architectures": [
@@ -11745,7 +11777,7 @@
       "template_family": "curated-profile",
       "title": "Open WebUI CUDA",
       "repository": "https://ghcr.io/open-webui/open-webui",
-      "description": "Open WebUI is a feature-rich, user-friendly self-hosted AI platform designed for fully offline operation, supporting multiple large language model runners and API integration. Its intuitive Web interface provides powerful AI deployment capabilities, ideal for developers, researchers, and AI enthusiasts building localized intelligent applications.\n\nThe tool's core features include local model execution and Retrieval Augmented Generation (RAG). It supports Ollama and OpenAI-compatible APIs (e.g., LMStudio, GroqCloud), enabling seamless model switching and multi-model conversations. RAG enhances chat experiences through local document loading or web search integration (e.g., SearXNG, Google PSE). Granular permissions and role-based access control (RBAC) ensure security with customized user role management.\n\nIt supports Markdown and LaTeX for enriched interactions and offers hands-free voice and video call features for dynamic communication. Image generation integration (e.g., DALL-E, ComfyUI) enriches visual content, and a model builder enables creating and importing custom models via the interface. The Pipelines plugin framework supports Python plugins, extending functionality like function calling and real-time translation. The tool\u2019s offline privacy and flexibility deliver a modern AI interaction solution.\n\n**Key Features:**\n- Local execution of Ollama and OpenAI-compatible APIs with multi-model conversations\n- RAG support with local document and web search integration (e.g., SearXNG, Google PSE)\n- Granular permissions and role-based access control (RBAC)\n- Simultaneous interaction with multiple models, leveraging their strengths\n- Image generation integration with DALL-E, ComfyUI, and more\n- Full Markdown and LaTeX support\n- Hands-free voice and video call functionality\n- Pipelines plugin framework for custom Python functionality\n\n**Learn More:**\n- [Open WebUI Official Website](https://openwebui.com)\n- [Open WebUI Documentation](https://docs.openwebui.com)\n- [Open WebUI GitHub Repository](https://github.com/open-webui/open-webui)\n",
+      "description": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline.",
       "website": "https://openwebui.com",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
       "architectures": [
@@ -12045,7 +12077,7 @@
     {
       "id": "openshot",
       "provider": "linuxserver.io",
-      "title": "Openshot",
+      "title": "OpenShot",
       "repository_name": "docker-openshot",
       "repository": "https://github.com/linuxserver/docker-openshot",
       "description": "OpenShot Video Editor is an award-winning free and open-source video editor for Linux, Mac, and Windows, and is dedicated to delivering high quality video editing and animation solutions to the world.",
@@ -12112,7 +12144,7 @@
     {
       "id": "openssh-server",
       "provider": "linuxserver.io",
-      "title": "Openssh Server",
+      "title": "OpenSSH Server",
       "repository_name": "docker-openssh-server",
       "repository": "https://github.com/linuxserver/docker-openssh-server",
       "description": "Openssh-server is a sandboxed environment that allows ssh access without giving keys to the entire server.",
@@ -12276,7 +12308,7 @@
     {
       "id": "orcaslicer",
       "provider": "linuxserver.io",
-      "title": "Orcaslicer",
+      "title": "OrcaSlicer",
       "repository_name": "docker-orcaslicer",
       "repository": "https://github.com/linuxserver/docker-orcaslicer",
       "description": "Orca Slicer is an open source slicer for FDM printers. OrcaSlicer is fork of Bambu Studio, it was previously known as BambuStudio-SoftFever, Bambu Studio is forked from PrusaSlicer by Prusa Research, which is from Slic3r by Alessandro Ranellucci and the RepRap community",
@@ -12341,7 +12373,7 @@
     {
       "id": "oscam",
       "provider": "linuxserver.io",
-      "title": "Oscam",
+      "title": "OSCam",
       "repository_name": "docker-oscam",
       "repository": "https://github.com/linuxserver/docker-oscam",
       "description": "Oscam is an Open Source Conditional Access Module software used for descrambling DVB transmissions using smart cards. It's both a server and a client.",
@@ -12440,7 +12472,7 @@
     {
       "id": "pairdrop",
       "provider": "linuxserver.io",
-      "title": "Pairdrop",
+      "title": "PairDrop",
       "repository_name": "docker-pairdrop",
       "repository": "https://github.com/linuxserver/docker-pairdrop",
       "description": "PairDrop is a sublime alternative to AirDrop that works on all platforms. Send images, documents or text via peer to peer connection to devices in the same local network/Wi-Fi or to paired devices.",
@@ -12564,7 +12596,7 @@
     {
       "id": "pcsx2",
       "provider": "linuxserver.io",
-      "title": "Pcsx2",
+      "title": "PCSX2",
       "repository_name": "docker-pcsx2",
       "repository": "https://github.com/linuxserver/docker-pcsx2",
       "description": "PCSX2 is an open source PS2 Emulator.",
@@ -12865,7 +12897,7 @@
     {
       "id": "phpmyadmin",
       "provider": "linuxserver.io",
-      "title": "Phpmyadmin",
+      "title": "phpMyAdmin",
       "repository_name": "docker-phpmyadmin",
       "repository": "https://github.com/linuxserver/docker-phpmyadmin",
       "description": "Phpmyadmin is a free software tool written in PHP, intended to handle the administration of MySQL over the Web. phpMyAdmin supports a wide range of operations on MySQL and MariaDB.",
@@ -13263,7 +13295,7 @@
       "variant": null,
       "title": "Playit Agent",
       "repository": "https://ghcr.io/mafen/playit-docker",
-      "description": "",
+      "description": "Playit Agent connects local servers to the playit.gg networking service. It allows users to establish tunnels and link their instance to an online account.",
       "website": "https://playit.gg",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/playit-agent/icon.png",
       "architectures": [
@@ -13297,7 +13329,7 @@
       "title": "Plex",
       "repository_name": "docker-plex",
       "repository": "https://github.com/linuxserver/docker-plex",
-      "description": "Plex organizes video, music and photos from personal media libraries and streams them to smart TVs, streaming boxes and mobile devices. This container is packaged as a standalone Plex Media Server. Straightforward design and bulk actions mean getting things done faster.",
+      "description": "Plex Media Server organizes personal video, music, and photo collections into a centralized library.",
       "website": "https://plex.tv",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
       "architectures": [
@@ -13327,9 +13359,9 @@
       "id": "plex-official",
       "provider": "plex",
       "template_family": "curated-profile",
-      "title": "Plex Official",
+      "title": "Plex",
       "repository": "https://github.com/plexinc/pms-docker",
-      "description": "Plex organizes video, music and photos from personal media libraries and streams them to smart TVs, streaming boxes and mobile devices. This container is packaged as a standalone Plex Media Server. Straightforward design and bulk actions mean getting things done faster.",
+      "description": "Plex Media Server organizes personal video, music, and photo collections into a centralized library.",
       "website": "https://www.plex.tv/media-server-downloads/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
       "architectures": [
@@ -13569,7 +13601,7 @@
     {
       "id": "ppsspp",
       "provider": "linuxserver.io",
-      "title": "Ppsspp",
+      "title": "PPSSPP",
       "repository_name": "docker-ppsspp",
       "repository": "https://github.com/linuxserver/docker-ppsspp",
       "description": "PPSSPP is a free and open-source PSP emulator for Windows, macOS, Linux, iOS, Android, Nintendo Wii U, Nintendo Switch, BlackBerry 10, MeeGo, Pandora, Xbox Series and Symbian with a focus on speed and portability.",
@@ -13600,7 +13632,7 @@
     {
       "id": "projectsend",
       "provider": "linuxserver.io",
-      "title": "Projectsend",
+      "title": "ProjectSend",
       "repository_name": "docker-projectsend",
       "repository": "https://github.com/linuxserver/docker-projectsend",
       "description": "Projectsend is a self-hosted application that lets you upload files and assign them to specific clients that you create yourself. Secure, private and easy. No more depending on external services or e-mail to send those files.",
@@ -13831,7 +13863,7 @@
     {
       "id": "pwndrop",
       "provider": "linuxserver.io",
-      "title": "Pwndrop",
+      "title": "pwndrop",
       "repository_name": "docker-pwndrop",
       "repository": "https://github.com/linuxserver/docker-pwndrop",
       "description": "Pwndrop is a self-deployable file hosting service for sending out red teaming payloads or securely sharing your private files over HTTP and WebDAV.",
@@ -13863,7 +13895,7 @@
     {
       "id": "pycharm",
       "provider": "linuxserver.io",
-      "title": "Pycharm",
+      "title": "PyCharm",
       "repository_name": "docker-pycharm",
       "repository": "https://github.com/linuxserver/docker-pycharm",
       "description": "PyCharm offers out-of-the-box support for Python, databases, Jupyter, Git, Conda, PyTorch, TensorFlow, Hugging Face, Django, Flask, FastAPI, and more.",
@@ -13926,7 +13958,7 @@
     {
       "id": "pyload-ng",
       "provider": "linuxserver.io",
-      "title": "Pyload Ng",
+      "title": "pyLoad",
       "repository_name": "docker-pyload-ng",
       "repository": "https://github.com/linuxserver/docker-pyload-ng",
       "description": "pyLoad is a Free and Open Source download manager written in Python and designed to be extremely lightweight, easily extensible and fully manageable via web.",
@@ -13989,10 +14021,10 @@
     {
       "id": "qbittorrent",
       "provider": "linuxserver.io",
-      "title": "Qbittorrent",
+      "title": "qBittorrent",
       "repository_name": "docker-qbittorrent",
       "repository": "https://github.com/linuxserver/docker-qbittorrent",
-      "description": "",
+      "description": "qBittorrent is an open-source BitTorrent client designed as an ad-free alternative to \u00b5Torrent.",
       "website": null,
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qbittorrent.webp",
       "architectures": [
@@ -14026,7 +14058,7 @@
       "variant": null,
       "title": "qBittorrent",
       "repository": "https://ghcr.io/hotio/qbittorrent",
-      "description": "**Elevate Your Home Media Experience**. qBittorrent transforms your home media setup with a polished interface reminiscent of \u00b5Torrent, minus the ads. Unlike traditional download tools, it offers a streamlined, efficient, and ad-free experience. This makes it a perfect fit for those seeking a hassle-free way to manage and enjoy their media collections at home.\n\n**Feature-Rich and User-Friendly**. With qBittorrent, you gain access to a well-integrated and extensible search engine, allowing simultaneous searches across multiple torrent sites, and category-specific searches for books, music, and software. Its support for RSS feeds with advanced filters, magnet links, encrypted connections, and more, ensures you have complete control over your downloads. Available on all major platforms and in around 70 languages, qBittorrent is both versatile and accessible.\n\n**Seamless Integration with Private Clouds like self-hosted server**. Deploying qBittorrent on private cloud devices such as self-hosted server offers unparalleled convenience. Enjoy virtually unlimited storage, enhanced privacy for your data, and local network speeds that make downloading and streaming effortless. This setup ensures that your media library is always at your fingertips, securely and swiftly.\n",
+      "description": "qBittorrent is an open-source BitTorrent client designed as an ad-free alternative to \u00b5Torrent.",
       "website": "https://www.qbittorrent.org",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qbittorrent.webp",
       "architectures": [
@@ -14057,7 +14089,7 @@
     {
       "id": "qdirstat",
       "provider": "linuxserver.io",
-      "title": "Qdirstat",
+      "title": "QDirStat",
       "repository_name": "docker-qdirstat",
       "repository": "https://github.com/linuxserver/docker-qdirstat",
       "description": "QDirStat Qt-based directory statistics: KDirStat without any KDE -- from the author of the original KDirStat.",
@@ -14294,7 +14326,7 @@
     {
       "id": "rawtherapee",
       "provider": "linuxserver.io",
-      "title": "Rawtherapee",
+      "title": "RawTherapee",
       "repository_name": "docker-rawtherapee",
       "repository": "https://github.com/linuxserver/docker-rawtherapee",
       "description": "RawTherapee is a free, cross-platform raw image processing program!",
@@ -14363,7 +14395,7 @@
       "variant": null,
       "title": "Real-Debrid Torrent Client",
       "repository": "https://hub.docker.com/r/rogerfar/rdtclient",
-      "description": "",
+      "description": "rdt-client is a web interface designed to manage torrents through Real-Debrid. It enables adding torrents via magnet links or files and automatically downloads the finished files to local storage. In addition, it can automatically unpack archives upon completion and provides an emulated qBittorrent API for integration with services like Sonarr.",
       "website": "",
       "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/webp/rdt-client.webp",
       "architectures": [
@@ -14689,10 +14721,10 @@
     {
       "id": "retroarch",
       "provider": "linuxserver.io",
-      "title": "Retroarch",
+      "title": "RetroArch",
       "repository_name": "docker-retroarch",
       "repository": "https://github.com/linuxserver/docker-retroarch",
-      "description": "RetroArch is a frontend for emulators, game engines and media players. It enables you to run classic games on a wide range of computers and consoles through its slick graphical interface.",
+      "description": "RetroArch is a frontend for emulators, game engines, and media players.",
       "website": "https://retroarch.com/",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/RetroArch/icon.png",
       "architectures": [
@@ -14726,7 +14758,7 @@
       "variant": null,
       "title": "RetroArch",
       "repository": "https://hub.docker.com/r/inglebard/retroarch-web",
-      "description": "RetroArch-web is a web-based classic game emulator that enables users to enjoy a wide range of retro games directly in modern browsers. Supporting platforms like GBA, N64, DOS games, and NES (FC), it brings nostalgic gaming to life. Built on the open-source RetroArch project, RetroArch-web delivers robust features, including high-quality graphics rendering, audio processing, input controls, and save/load game progress, ensuring a precise and smooth emulation experience.\n\nDesigned for ease of use, RetroArch-web requires no complex software installation, running seamlessly in browsers. Its flexible configuration options let users customize controller setups, visual filters, and audio settings to suit individual preferences. With broad cross-platform compatibility, it ensures stable performance across devices, offering retro gaming enthusiasts a consistent experience on the go.\n\nBacked by an active open-source community, RetroArch-web continually improves performance and expands supported game platforms. Whether revisiting classic arcade titles or exploring vintage console games, RetroArch-web stands out as the ideal choice for retro gamers, combining powerful emulation with a user-friendly interface.\n\n**Key Features:**\n- Polished interface for browsing game collections with thumbnails and animated backgrounds\n- Supports multiple emulators and game engines for running classic games and discs\n- Next-frame response time for near-native hardware low-latency experience\n- Highly configurable settings to tweak game performance and display options\n- Automatic controller configuration for easy multiplayer gaming\n- Shaders to enhance old game rendering and mimic CRT monitor effects\n- Netplay for multiplayer gaming and spectator mode\n- Achievements system to unlock trophies and badges in classic games\n- Recording and streaming for capturing gameplay or live streaming\n\n**Learn More:**\n- [RetroArch Official Website](https://www.retroarch.com)\n- [RetroArch GitHub Repository](https://github.com/libretro/RetroArch)\n",
+      "description": "RetroArch is a frontend for emulators, game engines, and media players.",
       "website": "https://www.retroarch.com",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/RetroArch/icon.png",
       "architectures": [
@@ -14826,7 +14858,7 @@
     {
       "id": "rpcs3",
       "provider": "linuxserver.io",
-      "title": "Rpcs3",
+      "title": "RPCS3",
       "repository_name": "docker-rpcs3",
       "repository": "https://github.com/linuxserver/docker-rpcs3",
       "description": "RPCS3 is a multi-platform open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows, Linux, macOS and FreeBSD.",
@@ -14889,7 +14921,7 @@
     {
       "id": "rsnapshot",
       "provider": "linuxserver.io",
-      "title": "Rsnapshot",
+      "title": "rsnapshot",
       "repository_name": "docker-rsnapshot",
       "repository": "https://github.com/linuxserver/docker-rsnapshot",
       "description": "Rsnapshot is a filesystem snapshot utility based on rsync. rsnapshot makes it easy to make periodic snapshots of local machines, and remote machines over ssh. The code makes extensive use of hard links whenever possible, to greatly reduce the disk space required.",
@@ -14953,7 +14985,7 @@
     {
       "id": "rustdesk",
       "provider": "linuxserver.io",
-      "title": "Rustdesk",
+      "title": "RustDesk",
       "repository_name": "docker-rustdesk",
       "repository": "https://github.com/linuxserver/docker-rustdesk",
       "description": "RustDesk is a full-featured open source remote control alternative for self-hosting and security with minimal configuration.",
@@ -15018,7 +15050,7 @@
     {
       "id": "sabnzbd",
       "provider": "linuxserver.io",
-      "title": "Sabnzbd",
+      "title": "SABnzbd",
       "repository_name": "docker-sabnzbd",
       "repository": "https://github.com/linuxserver/docker-sabnzbd",
       "description": "Sabnzbd makes Usenet as simple and streamlined as possible by automating everything we can. All you have to do is add an .nzb. SABnzbd takes over from there, where it will be automatically downloaded, verified, repaired, extracted and filed away with zero human interaction.",
@@ -15147,7 +15179,7 @@
     {
       "id": "scummvm",
       "provider": "linuxserver.io",
-      "title": "Scummvm",
+      "title": "ScummVM",
       "repository_name": "docker-scummvm",
       "repository": "https://github.com/linuxserver/docker-scummvm",
       "description": "ScummVM is a program which allows you to run certain classic graphical adventure and role-playing games, provided you already have their data files. The clever part about this: ScummVM just replaces the executables shipped with the games, allowing you to play them on systems for which they were never designed! ScummVM is a complete rewrite of these games' executables and is not an emulator.",
@@ -15371,7 +15403,7 @@
     {
       "id": "shadps4",
       "provider": "linuxserver.io",
-      "title": "Shadps4",
+      "title": "shadPS4",
       "repository_name": "docker-shadps4",
       "repository": "https://github.com/linuxserver/docker-shadps4",
       "description": "shadPS4 is an early PlayStation 4 emulator for Windows, Linux and macOS written in C++.",
@@ -15533,7 +15565,7 @@
     {
       "id": "sickgear",
       "provider": "linuxserver.io",
-      "title": "Sickgear",
+      "title": "SickGear",
       "repository_name": "docker-sickgear",
       "repository": "https://github.com/linuxserver/docker-sickgear",
       "description": "SickGear provides management of TV shows and/or Anime, it detects new episodes, links downloader apps, and more..",
@@ -15696,7 +15728,7 @@
     {
       "id": "smokeping",
       "provider": "linuxserver.io",
-      "title": "Smokeping",
+      "title": "SmokePing",
       "repository_name": "docker-smokeping",
       "repository": "https://github.com/linuxserver/docker-smokeping",
       "description": "Smokeping keeps track of your network latency. For a full example of what this application is capable of visit UCDavis.",
@@ -15731,7 +15763,7 @@
       "provider": "linuxserver.io",
       "template_family": "imported-compose",
       "variant": null,
-      "title": "snapdrop",
+      "title": "Snapdrop",
       "repository": "https://hub.docker.com/r/linuxserver/snapdrop",
       "description": "Snapdrop is a Progressive Web App (PWA) that allows you to transfer files between devices in the same network without having to install anything.",
       "website": "https://snapdrop.net",
@@ -15961,7 +15993,7 @@
     {
       "id": "sqlitebrowser",
       "provider": "linuxserver.io",
-      "title": "Sqlitebrowser",
+      "title": "DB Browser for SQLite",
       "repository_name": "docker-sqlitebrowser",
       "repository": "https://github.com/linuxserver/docker-sqlitebrowser",
       "description": "DB Browser for SQLite is a high quality, visual, open source tool to create, design, and edit database files compatible with SQLite.",
@@ -16497,7 +16529,7 @@
     {
       "id": "swag",
       "provider": "linuxserver.io",
-      "title": "Swag",
+      "title": "SWAG",
       "repository_name": "docker-swag",
       "repository": "https://github.com/linuxserver/docker-swag",
       "description": "Nginx webserver and reverse proxy with php support and a built-in Certbot (Let's Encrypt) client. It also contains fail2ban for intrusion prevention.",
@@ -16595,7 +16627,7 @@
     {
       "id": "synclounge",
       "provider": "linuxserver.io",
-      "title": "Synclounge",
+      "title": "SyncLounge",
       "repository_name": "docker-synclounge",
       "repository": "https://github.com/linuxserver/docker-synclounge",
       "description": "Synclounge is a third party tool that allows you to watch Plex in sync with your friends/family, wherever you are.",
@@ -16659,7 +16691,7 @@
     {
       "id": "syslog-ng",
       "provider": "linuxserver.io",
-      "title": "Syslog Ng",
+      "title": "syslog-ng",
       "repository_name": "docker-syslog-ng",
       "repository": "https://github.com/linuxserver/docker-syslog-ng",
       "description": "syslog-ng allows you to flexibly collect, parse, classify, rewrite and correlate logs from across your infrastructure and store or route them to log analysis tools.",
@@ -17141,7 +17173,7 @@
     {
       "id": "thelounge",
       "provider": "linuxserver.io",
-      "title": "Thelounge",
+      "title": "The Lounge",
       "repository_name": "docker-thelounge",
       "repository": "https://github.com/linuxserver/docker-thelounge",
       "description": "Thelounge (a fork of shoutIRC) is a web IRC client that you host on your own server.",
@@ -17736,7 +17768,7 @@
       "provider": "linuxserver.io",
       "template_family": "imported-compose",
       "variant": null,
-      "title": "Unifi-controller [legacy]",
+      "title": "UniFi Controller (legacy)",
       "repository": "https://hub.docker.com/r/linuxserver/unifi-controller",
       "description": "For Unifi to adopt other devices, e.g. an Access Point, it is required to change the inform IP address. Because Unifi runs inside Docker by default it uses an IP address not accessible by other devices. To change this go to Settings > System Settings > Controller Configuration and set the Controller Hostname/IP to a hostname or IP address accessible by your devices. Additionally the checkbox \"Override inform host with controller hostname/IP\" has to be checked, so that devices can connect to the controller during adoption (devices use the inform-endpoint during adoption).",
       "website": "https://ui.com",
@@ -18205,7 +18237,7 @@
     {
       "id": "vlc",
       "provider": "linuxserver.io",
-      "title": "Vlc",
+      "title": "VLC",
       "repository_name": "docker-vlc",
       "repository": "https://github.com/linuxserver/docker-vlc",
       "description": "VLC Media Player is a free and open source cross-platform multimedia player and framework that delivers dependable performance across multiple devices.",
@@ -18272,7 +18304,7 @@
     {
       "id": "vscode",
       "provider": "linuxserver.io",
-      "title": "Vscode",
+      "title": "VS Code",
       "repository_name": "docker-vscode",
       "repository": "https://github.com/linuxserver/docker-vscode",
       "description": "VS Code is an integrated development environment developed by Microsoft. This container runs the full desktop application, for a web native version see Code Server.",
@@ -18304,7 +18336,7 @@
     {
       "id": "vscodium",
       "provider": "linuxserver.io",
-      "title": "Vscodium",
+      "title": "VSCodium",
       "repository_name": "docker-vscodium",
       "repository": "https://github.com/linuxserver/docker-vscodium",
       "description": "VSCodium is a community-driven, freely-licensed binary distribution of Microsoft\u2019s editor VS Code.",
@@ -18336,7 +18368,7 @@
     {
       "id": "vscodium-web",
       "provider": "linuxserver.io",
-      "title": "Vscodium Web",
+      "title": "VSCodium Web",
       "repository_name": "docker-vscodium-web",
       "repository": "https://github.com/linuxserver/docker-vscodium-web",
       "description": "Vscodium-web is a community-driven, freely-licensed binary distribution of the remote host web component of Microsoft's editor VS Code.",
@@ -18566,7 +18598,7 @@
     {
       "id": "webcord",
       "provider": "linuxserver.io",
-      "title": "Webcord",
+      "title": "WebCord",
       "repository_name": "docker-webcord",
       "repository": "https://github.com/linuxserver/docker-webcord",
       "description": "WebCord can be summarized as a pack of security and privacy hardenings, Discord features reimplementations, Electron / Chromium / Discord bugs workarounds, stylesheets, internal pages and wrapped https://discord.com page, designed to conform with ToS as much as it is possible (or hide the changes that might violate it from Discord's eyes).",
@@ -18665,7 +18697,7 @@
     {
       "id": "webgrabplus",
       "provider": "linuxserver.io",
-      "title": "Webgrabplus",
+      "title": "WebGrab+Plus",
       "repository_name": "docker-webgrabplus",
       "repository": "https://github.com/linuxserver/docker-webgrabplus",
       "description": "Webgrabplus is a multi-site incremental xmltv epg grabber. It collects tv-program guide data from selected tvguide sites for your favourite channels.",
@@ -18906,7 +18938,7 @@
     {
       "id": "wikijs",
       "provider": "linuxserver.io",
-      "title": "Wikijs",
+      "title": "Wiki.js",
       "repository_name": "docker-wikijs",
       "repository": "https://github.com/linuxserver/docker-wikijs",
       "description": "Wikijs A modern, lightweight and powerful wiki app built on NodeJS.",
@@ -19002,7 +19034,7 @@
     {
       "id": "winegui",
       "provider": "linuxserver.io",
-      "title": "Winegui",
+      "title": "WineGUI",
       "repository_name": "docker-winegui",
       "repository": "https://github.com/linuxserver/docker-winegui",
       "description": "WineGUI is a user-interface friendly Wine manager that provides a graphical frontend for creating and managing Wine bottles.",
@@ -19033,7 +19065,7 @@
     {
       "id": "wireguard",
       "provider": "linuxserver.io",
-      "title": "Wireguard",
+      "title": "WireGuard",
       "repository_name": "docker-wireguard",
       "repository": "https://github.com/linuxserver/docker-wireguard",
       "description": "WireGuard\u00ae is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. It aims to be faster, simpler, leaner, and more useful than IPsec, while avoiding the massive headache. It intends to be considerably more performant than OpenVPN. WireGuard is designed as a general purpose VPN for running on embedded interfaces and super computers alike, fit for many different circumstances. Initially released for the Linux kernel, it is now cross-platform (Windows, macOS, BSD, iOS, Android) and widely deployable. It is currently under heavy development, but already it might be regarded as the most secure, easiest to use, and simplest VPN solution in the industry.",
@@ -19130,7 +19162,7 @@
     {
       "id": "wps-office",
       "provider": "linuxserver.io",
-      "title": "Wps Office",
+      "title": "WPS Office",
       "repository_name": "docker-wps-office",
       "repository": "https://github.com/linuxserver/docker-wps-office",
       "description": "WPS Office is a lightweight, feature-rich comprehensive office suite with high compatibility. As a handy and professional office software, WPS Office allows you to edit files in Writer, Presentation, Spreadsheet, and PDF to improve your work efficiency.",
@@ -19161,7 +19193,7 @@
     {
       "id": "xbackbone",
       "provider": "linuxserver.io",
-      "title": "Xbackbone",
+      "title": "XBackBone",
       "repository_name": "docker-xbackbone",
       "repository": "https://github.com/linuxserver/docker-xbackbone",
       "description": "Xbackbone is a simple, self-hosted, lightweight PHP file manager that support the instant sharing tool ShareX and *NIX systems. It supports uploading and displaying images, GIF, video, code, formatted text, and file downloading and uploading. Also have a web UI with multi user management, past uploads history and search support.",
@@ -19193,7 +19225,7 @@
     {
       "id": "xemu",
       "provider": "linuxserver.io",
-      "title": "Xemu",
+      "title": "xemu",
       "repository_name": "docker-xemu",
       "repository": "https://github.com/linuxserver/docker-xemu",
       "description": "xemu is a free and open-source application that emulates the original Microsoft Xbox game console, enabling people to play their original Xbox games on Windows, macOS, and Linux systems.",
@@ -19449,7 +19481,7 @@
     {
       "id": "znc",
       "provider": "linuxserver.io",
-      "title": "Znc",
+      "title": "ZNC",
       "repository_name": "docker-znc",
       "repository": "https://github.com/linuxserver/docker-znc",
       "description": "Znc is an IRC network bouncer or BNC. It can detach the client from the actual IRC server, and also from selected channels. Multiple clients from different locations can connect to a single ZNC account simultaneously and therefore appear under the same nickname on IRC.",
@@ -20234,9 +20266,9 @@
       "id": "nextcloud-mariadb",
       "provider": "linuxserver",
       "template_family": "curated-profile",
-      "title": "Nextcloud MariaDB",
+      "title": "Nextcloud + MariaDB",
       "repository": "https://github.com/linuxserver/docker-nextcloud",
-      "description": "LinuxServer Nextcloud, MariaDB 10.11 and Redis 7 in three native OCI LXC containers. /config and /data are separate; user files can use a host/NAS directory while database state stays in local managed storage.",
+      "description": "Nextcloud with a MariaDB database and a Redis cache, each in its own LXC container.",
       "website": "https://nextcloud.com/",
       "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
       "architectures": [

@@ -22,5 +22,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Syncthing replaces proprietary sync and cloud services with something open, trustworthy and decentralized. Your data is your data alone and you deserve to choose where it is stored, if it is shared with some third party and how it's transmitted over the Internet."
+    },
+    "description": {
+      "en_US": "Syncthing is an open, decentralized file synchronization application. It continuously synchronizes files between multiple devices without relying on third-party cloud services. Users retain full control over where their data is stored and how it is transmitted over local networks or the Internet."
+    },
+    "tips": [
+      "Set a password for the webUI by navigating to Actions -> Settings -> set user/password."
+    ]
   }
 }

@@ -3,6 +3,19 @@
     "tips": [
       "Intel/AMD acceleration is enabled by passing /dev/dri to the LXC; it does not require making the LXC privileged.",
       "The privileged request from the imported Compose is discarded because it is not part of the official jlesage/handbrake requirements."
+    ],
+    "title": {
+      "en_US": "HandBrake"
+    },
+    "tagline": {
+      "en_US": "HandBrake is an open-source tool designed to convert video from nearly any format to modern, widely supported codecs."
+    },
+    "description": {
+      "en_US": "HandBrake is an open-source tool designed to convert video from nearly any format to modern, widely supported codecs. It enables users to process, re-encode, and optimize video files for seamless playback across different devices and media players."
+    },
+    "screenshots": [
+      "https://handbrake.fr/img/slides/slide1_mac.png",
+      "https://handbrake.fr/img/slides/slide2_mac.png"
     ]
   },
   "container_contract": {

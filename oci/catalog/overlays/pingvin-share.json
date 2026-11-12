@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Pingvin-Share is a self-hosted file sharing application compatible with Nextcloud apps, offering a modern and intuitive web interface. It enables users to securely store, organize, and share files without relying on external cloud services. The application supports multiple authentication methods and provides features such as share links, user accounts, and a responsive interface.\n\n**Key features:**\n- Modern, responsive web interface\n- User accounts with a permission system\n- Secure share links for files\n- Drag-and-drop file upload\n- Password-protected shares\n- Multiple authentication methods\n- Docker-based deployment for easy installation\n\n**Learn more:**\n- [Pingvin-Share GitHub](https://github.com/stonith404/pingvin-share)\n"
+    },
+    "description": {
+      "en_US": "Pingvin Share is a self-hosted file sharing platform serving as an alternative to services like WeTransfer. It allows users to upload and share files of any size using custom links without external cloud services. The platform includes options to set expiration dates, configure visitor limits, and protect shares with passwords."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/58886915/225038319-b2ef742c-3a74-4eb6-9689-4207a36842a4.png"
+    ]
   }
 }

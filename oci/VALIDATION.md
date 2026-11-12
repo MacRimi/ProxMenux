@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-76 of 580 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 20 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+76 of 581 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 20 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -51,7 +51,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 |---|---|
 | 2FAuth | Authentication & Security |
 | AdGuard Home | Adblock & DNS |
-| Adguardhome Sync | Adblock & DNS |
+| AdGuard Home Sync | Adblock & DNS |
 | Alby Hub ✨ | Finance & Budgeting |
 | Alist | Files & Sharing |
 | aMule | Files & Downloads |
@@ -61,12 +61,12 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | CodeProject.AI Server | AI |
 | CopyParty | Files & Sharing |
 | Crafty | Gaming & Leisure |
-| Ddclient | Adblock & DNS |
+| ddclient | Adblock & DNS |
 | Duplicati | Backup & Recovery |
 | Etherpad | Documents & Notes |
 | FileBrowser Quantum | Files & Sharing |
 | FlareSolverr | *Arr Suite |
-| Flexget | *Arr Suite |
+| FlexGet | *Arr Suite |
 | Frigate | NVR & Cameras |
 | Grafana | Monitoring & Analytics |
 | HAOS One | IoT & Smart Home |
@@ -74,23 +74,23 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | JDownloader | Files & Downloads |
 | Jenkins CI/CD | AI / Coding & Dev-Tools |
 | Linkwarden | Documents & Notes |
-| Mariadb | Databases |
+| MariaDB | Databases |
 | Memos | Documents & Notes |
 | Mindwtr | Productivity & Workflows |
 | MineOS | Gaming & Leisure |
 | Motioneye | NVR & Cameras |
 | Navidrome | Media & Streaming |
 | Nextcloud | Productivity & Workflows |
-| Nextcloud Stack | Productivity & Workflows |
+| Nextcloud + PostgreSQL | Productivity & Workflows |
 | OpenList | Files & Sharing |
-| Openssh Server | Remote Access & VPN |
+| OpenSSH Server | Remote Access & VPN |
 | Paperless-ngx | Productivity & Workflows |
-| Phpmyadmin | Databases |
+| phpMyAdmin | Databases |
 | Prowlarr | *Arr Suite |
 | Proxmox Backup Server | Backup & Recovery |
 | Proxmox Datacenter Manager | Host Management |
 | Proxmox Mail Gateway | Authentication & Security |
-| Qbittorrent | Files & Downloads |
+| qBittorrent | Files & Downloads |
 | Rclone WebUI | Backup & Recovery |
 | Real-Debrid Torrent Client | Files & Downloads |
 | Scanopy | Network & Firewall |
@@ -98,10 +98,10 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | SnapOtter | Media & Streaming |
 | Sonarr | *Arr Suite |
 | Tandoor Recipes | Productivity & Workflows |
-| Thelounge | Communication & Community |
+| The Lounge | Communication & Community |
 | Trilium | Documents & Notes |
 | Vaultwarden | Authentication & Security |
 | Vikunja | Productivity & Workflows |
 | Windows | Browsers & Web Desktops |
-| Wireguard | Remote Access & VPN |
+| WireGuard | Remote Access & VPN |
 | WireGuard Easy | Remote Access & VPN |

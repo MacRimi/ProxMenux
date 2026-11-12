@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted website analytics service with charts, a small footprint and an embedded SQLite database. The first visit guides you through creating a site and its administrator account; data and ACME files are kept in a persistent volume."
+    },
+    "description": {
+      "en_US": "GoatCounter is an open source web analytics platform designed to offer meaningful, privacy-friendly statistics without tracking users through unique identifiers or cookies. It measures visitor numbers and collects data such as browser details, location, screen size, referring sites, and campaigns. Data can be gathered using a lightweight script, a tracking pixel, backend middleware, or by importing web server log files."
+    },
+    "screenshots": [
+      "https://static.zgo.at/screenshot.png",
+      "https://static.zgo.at/screenshot2.png",
+      "https://static.zgo.at/screenshot3.png"
+    ]
+  }
+}

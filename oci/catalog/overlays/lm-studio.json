@@ -14,5 +14,19 @@
       "cores": 4,
       "memory_mb": 8192
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "LM Studio"
+    },
+    "tagline": {
+      "en_US": "LM Studio can run local AI models like gpt-oss, Llama, Gemma, Qwen, and DeepSeek privately on your computer."
+    },
+    "description": {
+      "en_US": "LM Studio is an application that runs local AI models privately on your computer. It supports running language models such as gpt-oss, Llama, Gemma, Qwen, and DeepSeek entirely offline without relying on external cloud services. Through its developer ecosystem and SDK, it also provides programmatic access to local models and workflows."
+    },
+    "tips": [
+      "LM Studio and LLMster cannot run at the same time because both manage overlapping runtime resources."
+    ]
   }
 }

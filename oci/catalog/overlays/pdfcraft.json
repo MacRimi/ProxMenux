@@ -1,0 +1,28 @@
+{
+  "catalog_ui": {
+    "screenshots": [
+      "https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/docs/images/pdfcraft-viewer.png",
+      "https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/docs/images/pdfcraft-scripts.png",
+      "https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/docs/images/pdfcraft-twoup.png",
+      "https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/docs/images/pdfcraft-dark.png",
+      "https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/docs/images/pdfcraft-find.png",
+      "https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/docs/images/pdfcraft-bookmarks.png"
+    ],
+    "tips": [
+      "This is the native Linux application streamed by Selkies, not the WebAssembly build. Processing and documents stay in the LXC and its mounted directories.",
+      "The image is maintained by junkerderprovinz; ArtCraft publishes the application packages. It is not an official ArtCraft container image.",
+      "Use a trusted HTTPS reverse proxy for browser access. Port 3001 uses the upstream self-signed certificate; port 3000 is for an HTTP reverse-proxy backend.",
+      "The upstream default has no login. Optional CUSTOM_USER and PASSWORD variables enable HTTP basic authentication; do not expose an unauthenticated desktop to untrusted networks.",
+      "/config holds settings and desktop state and is included in Proxmox backups. /storage holds documents and supports a managed volume or an explicitly selected host directory; host directories require separate backups.",
+      "The default installation draws on the CPU. The advanced installation can assign an Intel or AMD GPU, which the desktop, the application and the video stream then use; NVIDIA is offered when the host has its driver and the NVIDIA Container Toolkit.",
+      "Without a GPU, an application may ask to switch to CPU rendering. Choose the CPU option; the application remembers it.",
+      "Screenshot: Copyright (c) 2026 ArtCraft Team and the PdfCraft contributors. Source: https://github.com/storytold/pdfcraft/blob/619a239cebe25054ba59486ce2b878b66613c0ce/README.md. License: MIT (https://raw.githubusercontent.com/storytold/pdfcraft/619a239cebe25054ba59486ce2b878b66613c0ce/LICENSE-MIT). Original image, unchanged."
+    ],
+    "tagline": {
+      "en_US": "PdfCraft from the ArtCraft project, streamed from a native Linux application using the community-maintained junkerderprovinz image. Files are stored on the server, not in browser storage."
+    },
+    "description": {
+      "en_US": "PdfCraft is a PDF reader and editor from the ArtCraft application suite. It enables users to view documents, annotate text, fill out forms, and apply digital signatures. The application also provides capabilities for organizing document pages, redacting sensitive content, and running optical character recognition."
+    }
+  }
+}

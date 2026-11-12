@@ -1,0 +1,25 @@
+{
+  "catalog_ui": {
+    "screenshots": [
+      "https://raw.githubusercontent.com/storytold/cadcraft/ecb362aa558d217e8b51e182d1b1eb07a8d3ea48/docs/images/ui-apartment.png",
+      "https://raw.githubusercontent.com/storytold/cadcraft/ecb362aa558d217e8b51e182d1b1eb07a8d3ea48/docs/images/ui-layout.png",
+      "https://raw.githubusercontent.com/storytold/cadcraft/ecb362aa558d217e8b51e182d1b1eb07a8d3ea48/docs/images/ui-bracket.png"
+    ],
+    "tips": [
+      "This is the native Linux application streamed by Selkies, not the WebAssembly build. Processing and documents stay in the LXC and its mounted directories.",
+      "The image is maintained by junkerderprovinz; ArtCraft publishes the application packages. It is not an official ArtCraft container image.",
+      "Use a trusted HTTPS reverse proxy for browser access. Port 3001 uses the upstream self-signed certificate; port 3000 is for an HTTP reverse-proxy backend.",
+      "The upstream default has no login. Optional CUSTOM_USER and PASSWORD variables enable HTTP basic authentication; do not expose an unauthenticated desktop to untrusted networks.",
+      "/config holds settings and desktop state and is included in Proxmox backups. /storage holds documents and supports a managed volume or an explicitly selected host directory; host directories require separate backups.",
+      "The default installation draws on the CPU. The advanced installation can assign an Intel or AMD GPU, which the desktop, the application and the video stream then use; NVIDIA is offered when the host has its driver and the NVIDIA Container Toolkit.",
+      "Without a GPU, an application may ask to switch to CPU rendering. Choose the CPU option; the application remembers it.",
+      "Screenshot: Copyright (c) 2026 ArtCraft Team and the CADCraft contributors. Source: https://github.com/storytold/cadcraft/blob/ecb362aa558d217e8b51e182d1b1eb07a8d3ea48/README.md. License: MIT (https://raw.githubusercontent.com/storytold/cadcraft/ecb362aa558d217e8b51e182d1b1eb07a8d3ea48/LICENSE-MIT). Original image, unchanged."
+    ],
+    "tagline": {
+      "en_US": "CADCraft from the ArtCraft project, streamed from a native Linux application using the community-maintained junkerderprovinz image. Files are stored on the server, not in browser storage."
+    },
+    "description": {
+      "en_US": "CADCraft is a computer-aided design and drafting application designed for 2D technical drawings. It provides tools for managing layers, blocks, hatches, and dimensions. Users can view, create, and modify standard DXF and DWG CAD files directly within the workspace."
+    }
+  }
+}

@@ -16,5 +16,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "MongoDB is a free and open-source cross-platform document-oriented database program. Classified as a NoSQL database program, MongoDB uses JSON-like documents with schemata. MongoDB is developed by MongoDB Inc., and is published under a combination of the Server Side Public License and the Apache License."
+    },
+    "description": {
+      "en_US": "MongoDB is a cross-platform document-oriented NoSQL database program. It stores data using JSON-like documents with schemata rather than traditional relational tables. It provides flexible and scalable data persistence designed to serve as backend storage for applications and services."
+    },
+    "tips": [
+      "By default Mongo's configuration requires no authentication for access, even for the administrative user."
+    ],
+    "repository": "https://github.com/docker-library/mongo"
   }
 }

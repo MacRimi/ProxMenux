@@ -34,7 +34,7 @@ from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, ReadableTags, UserCancelled, int
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DISPLAY_ARCHITECTURES = ("amd64", "arm64")
-PUBLISHERS = {"linuxserver.io": "LinuxServer", "official": N_("Official image")}
+PUBLISHERS = {"linuxserver.io": "LinuxServer.io", "official": N_("Official image")}
 STACK_LABELS = {
     "server": N_("Server"),
     "application": N_("Application"),
@@ -432,7 +432,8 @@ def _install(catalog: Catalog, ui, item: dict[str, Any], mode: str) -> None:
 
 def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -> dict[str, Any] | None:
     """Configures and installs one template, from the catalog or written from a
-    definition the user gave."""
+    definition the user gave. Returns None only when the user does not approve
+    the installation; a failed one returns an empty result."""
     from .ui import BacktrackUI, RestartWizard
     wizard = BacktrackUI(ui)
     try:
@@ -469,7 +470,7 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
     except InstallError as exc:
         console.msg_error(str(exc))
         console.wait_for_enter(translate("Press Enter to return to the menu..."))
-        return None
+        return {}
     if result:
         from .management import carry_records
         carry_records(PROJECT_ROOT, shown=True)
@@ -486,7 +487,7 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
             else:
                 console.msg_warn(translate("The watchdog could not be enabled. Turn it on from Manage installed OCI applications."))
     console.wait_for_enter(translate("Press Enter to return to the menu..."))
-    return result
+    return result or {}
 
 
 def _rclone_mount(catalog: Catalog, ui) -> None:
@@ -760,6 +761,8 @@ def build_parser() -> argparse.ArgumentParser:
     install_parser.add_argument("--host", default="auto", help=translate("'auto'/'local', or root@IP for development"))
     install_parser.add_argument("--advanced", action="store_true")
     install_parser.add_argument("--dry-run", action="store_true")
+    install_parser.add_argument("--menu", action="store_true",
+                                help=translate("Ask with the dialogs of the menu, as its page of the application does"))
     rclone_parser = subparsers.add_parser("rclone-mount", help=translate("Enable a mount on an installed Rclone OCI"))
     rclone_parser.add_argument("--host", default="auto")
     rclone_parser.add_argument("--dry-run", action="store_true")
@@ -837,6 +840,16 @@ def main(argv: list[str] | None = None) -> int:
             if not template["compatibility"]["automatic_install_candidate"]:
                 raise InstallError(translate("Installation blocked:") + " " + ", ".join(template["compatibility"]["untranslated_blockers"]))
             notice = external_services_notice(template)
+            if args.menu:
+                # The same steps as the page of the application in the menu,
+                # which the Monitor's Catalog tab opens straight away.
+                ui = interactive_ui()
+                if notice and not ui.confirm(f"{notice}\n\n{translate('Continue?')}", False,
+                                             title=source_text(template["catalog_ui"]["title"]) or args.app):
+                    return 130
+                mode = ADVANCED_MODE if args.advanced else DEFAULT_MODE
+                result = install_template(ui, template, args.app, mode)
+                return 130 if result is None else 0 if result else 1
             if notice:
                 print(notice + "\n")
             deployment = build_deployment(template, None, ADVANCED_MODE if args.advanced else DEFAULT_MODE)

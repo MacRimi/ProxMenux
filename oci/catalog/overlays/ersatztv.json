@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Build scheduled linear channels from local media and stream them to IPTV-compatible clients."
+    },
+    "description": {
+      "en_US": "ErsatzTV transforms existing media collections into custom live TV channels. It allows users to schedule content into linear streams complete with an electronic program guide. The software integrates with media servers like Plex, Jellyfin, and Emby, providing IPTV-compatible streams with support for hardware-accelerated transcoding."
+    },
+    "screenshots": [
+      "https://ersatztv.org/images/home/epg-example.png"
+    ]
+  }
+}

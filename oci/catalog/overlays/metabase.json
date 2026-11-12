@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "An open-source business intelligence platform for querying data and building dashboards. This single-container profile uses embedded H2 for a home-lab trial or small instance; PostgreSQL is recommended for production."
+    },
+    "description": {
+      "en_US": "Metabase is an open-source business intelligence and data visualization platform. It allows users to query databases using either a visual question builder or a native SQL editor without requiring deep technical expertise. Users can create interactive dashboards, configure automated alerts, and distribute scheduled reports via email, Slack, or webhooks."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/metabase/metabase/HEAD/docs/images/metabase-product-screenshot-updated.png"
+    ]
+  }
+}

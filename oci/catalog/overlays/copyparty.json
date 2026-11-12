@@ -17,5 +17,19 @@
       "reference": "icewhaletech/copyparty:1.20.13",
       "tag": "1.20.13"
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "**CopyParty** is a fast, privacy-focused file sharing server using a local-first, single-file architecture, ensuring full control over data without cloud dependencies. Its intuitive interface supports offline use, with cross-platform compatibility and multi-protocol access, delivering a secure, efficient file management experience, ideal for users seeking direct data ownership and a lightweight solution.\n\nThe app's core features include accelerated resumable uploads (via the up2k protocol), ensuring reliable large file transfers, and automatic deduplication to optimize storage. It helps users organize folders and media effortlessly, with a web-based file manager that includes a built-in media indexer and thumbnail generator for quick previews. Fine-grained permission controls allow specific user access rules. The \"upload-while-downloading\" feature enhances sharing efficiency, and the zero-dependency design ensures it runs on almost any hardware.\n\nIt integrates multiple access protocols, including HTTP, WebDAV, FTP, and TFTP, supporting connections from standard web browsers, dedicated file clients, and legacy hardware (such as PSP). The app supports Docker and Python for deployment, simplifying setup across various server environments. It facilitates seamless access to local files without complex configuration. Community documentation enhances usability, and the app's simple operation and high flexibility deliver a modern local file service solution.\n\n**Key Features:**\n- Privacy-focused local file sharing\n- Zero-dependency single-file architecture\n- Accelerated resumable uploads\n- Multi-protocol support (HTTP, WebDAV, FTP, etc.)\n- Cross-platform compatibility\n- Media indexing and streaming\n- Smart deduplication\n- User permission management\n\n**Learn More:**\n- [CopyParty GitHub Repository](https://github.com/9001/copyparty)\n"
+    },
+    "description": {
+      "en_US": "CopyParty is a portable file server designed for hosting and managing files independently. It allows users to share files and access data directly from their own hardware without third-party cloud services. The application provides file management features and multi-protocol access for local or remote environments."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/241032/192042695-522b3ec7-6845-494a-abdb-d1c0d0e23801.png",
+      "https://user-images.githubusercontent.com/241032/129636211-abd20fa2-a953-4366-9423-1c88ebb96ba9.png",
+      "https://user-images.githubusercontent.com/241032/129635374-e5136e01-470a-49b1-a762-848e8a4c9cdc.png",
+      "https://user-images.githubusercontent.com/241032/129635371-48fc54ca-fa91-48e3-9b1d-ba413e4b68cb.png"
+    ]
   }
 }

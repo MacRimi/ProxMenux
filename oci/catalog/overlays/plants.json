@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted household plant-care tracker with reminders, photos, and multiple user accounts."
+    },
+    "description": {
+      "en_US": "Plants is a household plant care log and reminder tracker. It provides a daily view of upcoming care tasks such as watering, fertilizing, or repotting, allowing tasks to be marked as done, snoozed, or skipped. The application maintains plant profiles, records photo growth timelines, and supports multiple household user accounts."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/dhrandy/plants/HEAD/docs/screenshots/plants-today-blurred.jpg",
+      "https://raw.githubusercontent.com/dhrandy/plants/HEAD/docs/screenshots/plants-grid-blurred.jpg",
+      "https://raw.githubusercontent.com/dhrandy/plants/HEAD/docs/screenshots/plants-detail-blurred.jpg",
+      "https://raw.githubusercontent.com/dhrandy/plants/HEAD/docs/screenshots/plants-mobile-blurred.jpg"
+    ]
+  }
+}

@@ -16,5 +16,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Kasm Workspaces"
+    },
+    "tagline": {
+      "en_US": "Kasm Workspaces is a docker container streaming platform for delivering browser-based access to desktops, applications, and web services. Kasm uses devops-enabled Containerized Desktop Infrastructure (CDI) to create on-demand, disposable, docker containers that are accessible via web browser. Example use-cases include Remote Browser Isolation (RBI), Data Loss Prevention (DLP), Desktop as a Service (DaaS), Secure Remote Access Services (RAS), and Open Source Intelligence (OSINT) collections."
+    },
+    "description": {
+      "en_US": "Kasm Workspaces delivers browser-based access to on-demand virtual desktops, applications, and web services. It creates disposable workspaces accessible directly through any standard web browser. The platform enables secure remote desktop streaming and isolated browsing environments with integrated graphical rendering."
+    },
+    "tips": [
+      "Complete initial setup using the installation wizard before accessing the main interface.",
+      "The default user accounts are admin@kasm.local and user@kasm.local."
+    ]
   }
 }

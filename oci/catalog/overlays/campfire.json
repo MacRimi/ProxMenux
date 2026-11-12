@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted web application for organizing tabletop role-playing games."
+    },
+    "description": {
+      "en_US": "Campfire is a campaign tracker and tabletop gaming companion designed for role-playing groups. It manages quests, non-player characters, interactive location maps, session recaps, and character sheets with live health tracking. The system also includes an encounter tracker with initiative and dice rolling, battle maps with fog of war, and integrated rules compendiums."
+    }
+  }
+}

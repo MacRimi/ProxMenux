@@ -15,5 +15,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The maintained jlesage JDownloader 2 image adapted as a native Proxmox OCI LXC with persistent configuration and shared downloads."
+    },
+    "description": {
+      "en_US": "JDownloader is an open-source download management application designed to automate and streamline downloading files from the internet. It allows users to start, pause, and stop downloads, enforce bandwidth limitations, and automatically extract downloaded archives. The application also supports remote management, link capture, and captcha resolution through external integrations."
+    }
   }
 }

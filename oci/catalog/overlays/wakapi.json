@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Collect coding activity from compatible editor plugins and view personal statistics in a web dashboard. The image uses SQLite by default and stores its database under /data; no external database is required."
+    },
+    "description": {
+      "en_US": "Wakapi is a minimalist, self-hosted backend for tracking coding statistics that works with WakaTime client tools. It collects telemetry from code editors and IDEs to aggregate time spent across different projects, programming languages, editors, and operating systems. Users can review their development activity in a web dashboard, receive weekly summary emails, and export statistics to external monitoring systems."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/muety/wakapi/HEAD/static/assets/images/screenshot.webp"
+    ]
+  }
+}

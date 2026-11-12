@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted dashboard with bookmark and application editors."
+    },
+    "description": {
+      "en_US": "Flame is a self-hosted startpage and dashboard for organizing server shortcuts and web links. It features built-in graphical editors to manage applications and bookmarks directly in the interface without editing configuration files. It also includes an integrated search bar with web search provider shortcuts, theme customization options, and an optional weather widget."
+    },
+    "screenshots": [
+      "https://i.imgur.com/J4d7Q3D.png"
+    ]
+  }
+}

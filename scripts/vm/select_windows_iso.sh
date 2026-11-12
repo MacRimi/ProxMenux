@@ -46,8 +46,18 @@ function select_windows_iso() {
     header=$(printf "%-43s│ %s" "        $(translate "Description")" "$(translate "Source")")
   fi
 
+  local preset=""
+  case "${VM_PRESET:-}" in
+    uupdump) preset="1" ;;
+    iso) preset="2" ;;
+  esac
+  VM_PRESET=""
+
   while [[ "$EXIT_FLAG" != "yes" ]]; do
-    if [[ "$LANGUAGE" == "es" ]]; then
+    if [[ -n "$preset" ]]; then
+      CHOICE="$preset"
+      preset=""
+    elif [[ "$LANGUAGE" == "es" ]]; then
       CHOICE=$(dialog --clear \
         --backtitle "ProxMenux" \
         --title "Opciones de instalación de Windows" \

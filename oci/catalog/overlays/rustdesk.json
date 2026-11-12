@@ -19,5 +19,22 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "RustDesk"
+    },
+    "tagline": {
+      "en_US": "RustDesk is a full-featured open source remote control alternative for self-hosting and security with minimal configuration."
+    },
+    "description": {
+      "en_US": "RustDesk is an open-source remote control application designed as an alternative to proprietary remote desktop software. It enables users to establish secure connections to remote computers with minimal configuration. It is used to view and interact with remote desktops, troubleshoot systems, and manage self-hosted remote access sessions."
+    },
+    "screenshots": [
+      "https://github.com/rustdesk/rustdesk/assets/28412477/db82d4e7-c4bc-4823-8e6f-6af7eadf7651",
+      "https://user-images.githubusercontent.com/71636191/171661982-430285f0-2e12-4b1d-9957-4a58e375304d.png",
+      "https://github.com/rustdesk/rustdesk/assets/28412477/39511ad3-aa9a-4f8c-8947-1cce286a46ad",
+      "https://github.com/rustdesk/rustdesk/assets/28412477/9baa91e9-3362-4d06-aa1a-7518edcbd7ea"
+    ]
   }
 }

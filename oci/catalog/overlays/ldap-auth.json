@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "title": {
+      "en_US": "LDAP Auth"
+    },
+    "tagline": {
+      "en_US": "Ldap-auth software is for authenticating users who request protected resources from servers proxied by nginx. It includes a daemon (ldap-auth) that communicates with an authentication server, and a webserver daemon that generates an authentication cookie based on the user’s credentials. The daemons are written in Python for use with a Lightweight Directory Access Protocol (LDAP) authentication server (OpenLDAP or Microsoft Windows Active Directory 2003 and 2012)."
+    },
+    "description": {
+      "en_US": "Ldap Auth authenticates users who request protected resources from servers proxied by nginx. It consists of a daemon that communicates with an LDAP directory service and a web server daemon that generates an authentication cookie from user credentials. The software works with OpenLDAP as well as Microsoft Windows Active Directory environments."
+    }
+  }
+}

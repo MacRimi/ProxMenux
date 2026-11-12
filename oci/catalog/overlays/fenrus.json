@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A customizable home page with links, app integrations and smart widgets."
+    },
+    "description": {
+      "en_US": "Fenrus is a personal home page and dashboard application. It provides a customizable start page or new tab page with quick access to personal applications, bookmarks, and other dashboards. It organizes shortcuts into groups and supports basic links as well as smart apps that query and display live status information."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/958400/232895057-f40073d9-5d4a-4324-9ba9-7e837fca7df6.png",
+      "https://user-images.githubusercontent.com/958400/232895199-a4dc5920-8a97-4faa-a842-d950a3834553.png",
+      "https://user-images.githubusercontent.com/958400/232895446-9ad716b4-ff22-4431-a21a-9cd809663944.png",
+      "https://user-images.githubusercontent.com/958400/232894085-4d7d90c5-bf23-4e9a-9262-27b3cec5022b.png"
+    ]
+  }
+}

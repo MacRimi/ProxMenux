@@ -23,5 +23,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A powerful tool for port forwarding, reverse proxy, dynamic DNS, wake-on-LAN, IPv4 NAT traversal, webdav services, task scheduling, and automatic certificate management."
+    },
+    "description": {
+      "en_US": "Lucky is a versatile network and server management tool designed to run efficiently on Linux embedded systems and cross-platform environments. It provides port forwarding capabilities to route public IPv6 traffic to internal IPv4 addresses, alongside reverse proxying and dynamic DNS management. The application also integrates automated ACME SSL certificate renewals, STUN NAT traversal, scheduled tasks, Wake-on-LAN, and network storage mounting."
+    }
   }
 }

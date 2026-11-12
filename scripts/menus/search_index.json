@@ -9,7 +9,8 @@
     "title": "Settings post-install Proxmox",
     "menu": "Settings post-install Proxmox",
     "script": "menus/menu_post_install.sh",
-    "keywords": ""
+    "keywords": "",
+    "docs": "post-install/index"
   },
   {
     "title": "Hardware: GPUs and Coral-TPU",
@@ -21,19 +22,22 @@
     "title": "Create VM from template or script",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
-    "keywords": ""
+    "keywords": "",
+    "docs": "create-vm/index"
   },
   {
     "title": "Disk Manager",
     "menu": "Disk Manager",
     "script": "menus/storage_menu.sh",
-    "keywords": ""
+    "keywords": "",
+    "docs": "disk-manager/index"
   },
   {
     "title": "Storage & Share Manager",
     "menu": "Storage & Share Manager",
     "script": "menus/share_menu.sh",
-    "keywords": ""
+    "keywords": "",
+    "docs": "storage-share/index"
   },
   {
     "title": "Community Scripts",
@@ -45,525 +49,1702 @@
     "title": "OCI manager Apps (Technology Preview)",
     "menu": "OCI manager Apps (Technology Preview)",
     "script": "oci/oci_manager_apps.sh",
-    "keywords": "docker container image contenedor imagen apps"
+    "keywords": "docker container image contenedor imagen apps",
+    "docs": "oci-manager/index"
   },
   {
     "title": "Network Management",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
-    "keywords": "network red vpn bridge nic"
+    "keywords": "network red vpn bridge nic",
+    "docs": "network/index"
   },
   {
     "title": "Security",
     "menu": "Security",
     "script": "menus/security_menu.sh",
-    "keywords": "security seguridad firewall"
+    "keywords": "security seguridad firewall",
+    "docs": "security/index"
   },
   {
     "title": "Utilities and Tools",
     "menu": "Utilities and Tools",
     "script": "menus/utilities_menu.sh",
-    "keywords": ""
+    "keywords": "",
+    "docs": "utils/index"
   },
   {
     "title": "Host Backup & Restore",
     "menu": "Host Backup & Restore",
     "script": "backup_restore/backup_host.sh",
-    "keywords": "backup restore copia respaldo restaurar pbs borg"
+    "keywords": "backup restore copia respaldo restaurar pbs borg",
+    "docs": "backup-restore/index"
+  },
+  {
+    "title": "Backup host configuration",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "1",
+    "keywords": "backup copia respaldo host pbs borg local",
+    "docs": "backup-restore/creating-backups"
+  },
+  {
+    "title": "Restore host configuration",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "2",
+    "keywords": "restore restaurar recuperar host",
+    "docs": "backup-restore/restoring"
+  },
+  {
+    "title": "Manage custom paths (add / remove your folders)",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "3",
+    "keywords": "backup paths rutas carpetas personalizadas",
+    "docs": "backup-restore/how-it-works"
+  },
+  {
+    "title": "Scheduled backups and retention policies",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "4",
+    "keywords": "backup schedule programado retencion timer",
+    "docs": "backup-restore/scheduled-jobs"
+  },
+  {
+    "title": "Configure backup destinations (PBS, Borg, local)",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "5",
+    "keywords": "backup destination destino pbs borg local",
+    "docs": "backup-restore/destinations/index"
+  },
+  {
+    "title": "VM and CT backup jobs (Datacenter > Backup)",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "6",
+    "keywords": "backup vzdump jobs tareas vm ct datacenter",
+    "docs": "backup-restore/index"
+  },
+  {
+    "title": "PVE Host Backup",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "7",
+    "keywords": "backup host community scripts",
+    "docs": "backup-restore/index",
+    "via": "community-scripts",
+    "cs": "host-backup"
+  },
+  {
+    "title": "proxmox_toolbox",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "8",
+    "keywords": "backup toolbox tontonjo",
+    "third_party": "proxmox-toolbox",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/github.webp",
+    "summary": "Toolbox by Tontonjo for one-time settings on Proxmox VE and Backup Server: repositories, updates, security, S.M.A.R.T. tests, SNMP, and backup and restore of the host configuration.",
+    "links": {
+      "repository": "https://github.com/Tontonjo/proxmox_toolbox"
+    }
+  },
+  {
+    "title": "proxsave",
+    "menu": "Host Backup & Restore",
+    "script": "backup_restore/backup_host.sh",
+    "argument": "9",
+    "keywords": "backup proxsave tis24dev",
+    "third_party": "proxsave",
+    "icon": "https://proxsave.dev/wp-content/uploads/2026/10/proxsave-site-icon-300x300.png",
+    "summary": "Online backup and restore of the host configuration of Proxmox VE and Backup Server, to a local disk, a NAS, cloud storage or a Proxmox Backup Server, with scheduling, encryption and retention.",
+    "links": {
+      "website": "https://proxsave.dev",
+      "repository": "https://github.com/tis24dev/proxsave"
+    }
   },
   {
     "title": "Help and Info Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
-    "keywords": ""
+    "keywords": "",
+    "docs": "help-info/index"
   },
   {
     "title": "Settings",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
-    "keywords": "settings ajustes configuracion"
+    "keywords": "settings ajustes configuracion",
+    "docs": "settings/index"
   },
   {
     "title": "Automated post-installation script",
     "menu": "Settings post-install Proxmox",
     "script": "menus/menu_post_install.sh",
     "keywords": "post postinstall optimizations optimizaciones auto",
-    "argument": "Automated post-installation script"
+    "argument": "Automated post-installation script",
+    "docs": "post-install/automated"
   },
   {
     "title": "Customizable post-installation script",
     "menu": "Settings post-install Proxmox",
     "script": "post_install/customizable_post_install.sh",
-    "keywords": "post postinstall optimizations optimizaciones custom log2ram"
+    "keywords": "post postinstall optimizations optimizaciones custom log2ram",
+    "docs": "post-install/customizable",
+    "uses": ["ovh-rtm", "community-scripts"]
   },
   {
     "title": "Uninstall optimizations",
     "menu": "Settings post-install Proxmox",
     "script": "post_install/uninstall-tools.sh",
-    "keywords": "post uninstall desinstalar"
+    "keywords": "post uninstall desinstalar",
+    "docs": "post-install/uninstall"
   },
   {
     "title": "Install/Update NVIDIA Drivers (Host + LXC)",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/nvidia_installer.sh",
-    "keywords": "gpu nvidia driver"
+    "keywords": "gpu nvidia driver",
+    "docs": "hardware/nvidia-host",
+    "uses": ["nvidia-patch"]
   },
   {
     "title": "Install/Update Coral TPU on Host",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/install_coral.sh",
-    "keywords": "coral tpu usb"
+    "keywords": "coral tpu usb",
+    "docs": "hardware/install-coral-tpu-host"
   },
   {
     "title": "Add GPU to LXC   (Intel | AMD | NVIDIA)",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/add_gpu_lxc.sh",
-    "keywords": "gpu passthrough lxc igpu"
+    "keywords": "gpu passthrough lxc igpu",
+    "docs": "hardware/igpu-acceleration-lxc"
   },
   {
     "title": "Add Coral TPU to LXC",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/install_coral_lxc.sh",
-    "keywords": "coral tpu lxc usb"
+    "keywords": "coral tpu lxc usb",
+    "docs": "hardware/coral-tpu-lxc"
   },
   {
     "title": "Add GPU to VM    (Intel | AMD | NVIDIA)",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/add_gpu_vm.sh",
-    "keywords": "gpu passthrough vm"
+    "keywords": "gpu passthrough vm",
+    "docs": "hardware/gpu-vm-passthrough"
   },
   {
     "title": "Switch GPU Mode  (VM <-> LXC)",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/switch_gpu_mode.sh",
-    "keywords": "gpu mode modo"
+    "keywords": "gpu mode modo",
+    "docs": "hardware/switch-gpu-mode"
   },
   {
     "title": "Manual CLI Guide (GPU/TPU)",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "gpu_tpu/gpu-tpu-manual-guide.sh",
-    "keywords": "gpu tpu guide guia"
+    "keywords": "gpu tpu guide guia",
+    "docs": "help-info/gpu-commands"
   },
   {
     "title": "Create VM System NAS",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
-    "keywords": "vm virtual nas truenas openmediavault omv xigmanas rockstor fygoos fygonas fnos",
-    "argument": "1"
+    "keywords": "vm virtual nas omv fygonas fnos",
+    "argument": "1",
+    "docs": "create-vm/system-nas/index"
+  },
+  {
+    "title": "TrueNAS SCALE",
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "truenas-scale"
+    ],
+    "keywords": "truenas scale nas zfs",
+    "docs": "create-vm/system-nas/index",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/truenas-scale.webp",
+    "summary": "Creates a TrueNAS SCALE virtual machine from the latest official ISO: ZFS storage, shares and apps on Linux.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "TrueNAS SCALE is the Linux edition of TrueNAS, the storage operating system by iXsystems. It manages disks with ZFS, with pools, snapshots and replication, shares them over SMB, NFS and iSCSI, and runs apps and virtual machines of its own.",
+    "links": {
+      "website": "https://www.truenas.com/truenas-scale/",
+      "documentation": "https://www.truenas.com/docs/scale/",
+      "repository": "https://github.com/truenas/middleware"
+    }
+  },
+  {
+    "title": "TrueNAS CORE",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/64/TrueNAS-12.0-Core.png/1920px-TrueNAS-12.0-Core.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "4lex11s",
+        "license": "BSD",
+        "page": "https://commons.wikimedia.org/wiki/File:TrueNAS-12.0-Core.png"
+      }
+    ],
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "truenas-core"
+    ],
+    "keywords": "truenas core nas zfs freebsd",
+    "docs": "create-vm/system-nas/index",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/truenas-core.webp",
+    "summary": "Creates a TrueNAS CORE virtual machine from the official ISO: ZFS storage and shares on FreeBSD.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "TrueNAS CORE is the FreeBSD edition of TrueNAS, formerly FreeNAS. It manages disks with ZFS and shares them over SMB, NFS and iSCSI, with plugins and jails for extra services. iXsystems keeps it in maintenance; new features go to TrueNAS SCALE.",
+    "links": {
+      "website": "https://www.truenas.com/truenas-core/",
+      "documentation": "https://www.truenas.com/docs/core/",
+      "repository": "https://github.com/truenas/core-build"
+    }
+  },
+  {
+    "title": "OpenMediaVault",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/1/10/Openmediavault_6-9-Oct2023.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "OMV dev team",
+        "license": "GPLv3",
+        "page": "https://commons.wikimedia.org/wiki/File:Openmediavault_6-9-Oct2023.jpg"
+      }
+    ],
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "openmediavault"
+    ],
+    "keywords": "openmediavault omv nas",
+    "docs": "create-vm/system-nas/system-nas-others",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openmediavault.webp",
+    "summary": "Creates an OpenMediaVault virtual machine from the latest official ISO: a Debian-based NAS managed from the web.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "OpenMediaVault is a NAS system based on Debian and managed from a web interface. It shares disks over SMB, NFS, FTP and rsync, and grows with plugins such as Docker, ZFS or backups through omv-extras.",
+    "links": {
+      "website": "https://www.openmediavault.org/",
+      "documentation": "https://docs.openmediavault.org/",
+      "repository": "https://github.com/openmediavault/openmediavault"
+    }
+  },
+  {
+    "title": "XigmaNAS",
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "xigmanas"
+    ],
+    "keywords": "xigmanas nas freebsd",
+    "docs": "create-vm/system-nas/system-nas-others",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/xigmanas.webp",
+    "summary": "Creates a XigmaNAS virtual machine from the latest official ISO: a FreeBSD-based NAS with ZFS.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "XigmaNAS, formerly NAS4Free, is a NAS system based on FreeBSD. It offers ZFS, software RAID and sharing over SMB, NFS, FTP and iSCSI from a lightweight web interface.",
+    "links": {
+      "website": "https://www.xigmanas.com/",
+      "documentation": "https://www.xigmanas.com/wiki/doku.php",
+      "repository": "https://sourceforge.net/projects/xigmanas/"
+    }
+  },
+  {
+    "title": "Rockstor",
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "rockstor"
+    ],
+    "keywords": "rockstor nas btrfs",
+    "docs": "create-vm/system-nas/system-nas-others",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/rockstor.webp",
+    "summary": "Creates a Rockstor virtual machine from the official ISO: a Btrfs NAS based on openSUSE.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "Rockstor is a NAS system built on openSUSE and the Btrfs file system. It manages pools, snapshots and shares over SMB and NFS from a web interface, and adds applications called Rock-ons.",
+    "links": {
+      "website": "https://rockstor.com/",
+      "documentation": "https://rockstor.com/docs/",
+      "repository": "https://github.com/rockstor/rockstor-core"
+    }
+  },
+  {
+    "title": "FygoOS",
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "fygoos"
+    ],
+    "keywords": "fygoos nas",
+    "docs": "create-vm/system-nas/system-nas-others",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "",
+    "summary": "Creates a FygoOS virtual machine from the latest official ISO: a Debian-based NAS system.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "FygoOS is a NAS system based on Debian, managed from a web interface, for storing and sharing files at home.",
+    "links": {
+      "website": "https://fygonas.com/"
+    }
+  },
+  {
+    "title": "Umbrel OS",
+    "menu": "Create VM System NAS",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "1",
+      "umbrel"
+    ],
+    "keywords": "umbrel umbrelos nas home server",
+    "docs": "create-vm/system-nas/system-nas-others",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/umbrelos.webp",
+    "summary": "Runs the Community Scripts installer of Umbrel OS, a home server system with an app store.",
+    "via": "community-scripts",
+    "cs": "umbrel-os-vm"
   },
   {
     "title": "Create VM System Windows",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
-    "keywords": "vm virtual windows",
-    "argument": "2"
+    "keywords": "vm virtual windows windows win10 win11 10 11 server",
+    "argument": "2",
+    "docs": "create-vm/system-windows"
+  },
+  {
+    "title": "Windows (UUP Dump)",
+    "menu": "Create VM System Windows",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "2",
+      "uupdump"
+    ],
+    "keywords": "windows win10 win11 10 11 server uup dump iso",
+    "docs": "create-vm/system-windows",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/microsoft-windows.webp",
+    "summary": "Builds an up-to-date Windows ISO from Microsoft's servers with UUP Dump and creates a Windows virtual machine with it.",
+    "resources": {
+      "cores": 4,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "Windows is Microsoft's desktop and server operating system. UUP Dump downloads the Windows files from Microsoft's update servers and builds an installation ISO of the release, language and edition you choose, so the virtual machine starts from an up-to-date Windows.",
+    "notes": [
+      "You choose the build on uupdump.net and paste its link; ProxMenux downloads the files and builds the ISO, which takes a while.",
+      "Windows needs its own license key to be activated."
+    ],
+    "links": {
+      "website": "https://www.microsoft.com/windows",
+      "documentation": "https://learn.microsoft.com/windows/",
+      "repository": "https://git.uupdump.net/uup-dump/converter"
+    }
+  },
+  {
+    "title": "Windows (ISO)",
+    "menu": "Create VM System Windows",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "2",
+      "iso"
+    ],
+    "keywords": "windows win10 win11 10 11 server iso",
+    "docs": "create-vm/system-windows",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/microsoft-windows.webp",
+    "summary": "Creates a Windows virtual machine from a Windows ISO already in your Proxmox storage.",
+    "resources": {
+      "cores": 4,
+      "memory_mb": 8192,
+      "disk_gb": 32
+    },
+    "about": "Windows is Microsoft's desktop and server operating system. This option installs it from a Windows ISO you already uploaded to a Proxmox ISO storage, such as one downloaded from Microsoft.",
+    "notes": [
+      "ProxMenux offers to download the latest VirtIO driver ISO or to use one you already have.",
+      "Windows needs its own license key to be activated."
+    ],
+    "links": {
+      "website": "https://www.microsoft.com/windows",
+      "documentation": "https://learn.microsoft.com/windows/",
+      "repository": "https://github.com/virtio-win/virtio-win-pkg-scripts"
+    }
   },
   {
     "title": "Create VM System Linux",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
-    "keywords": "vm virtual linux almalinux centos oracle popos zorin cachyos nixos",
-    "argument": "3"
+    "keywords": "vm virtual linux linux cloud-init iso popos",
+    "argument": "3",
+    "docs": "create-vm/system-linux"
+  },
+  {
+    "title": "Ubuntu",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/1/12/Ubuntu_26.04_LTS_desktop.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "Canonical Ltd.",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Ubuntu_26.04_LTS_desktop.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "ubuntu"
+    ],
+    "keywords": "ubuntu desktop server lts linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubuntu.webp",
+    "summary": "Creates an Ubuntu virtual machine from the official ISO, desktop or server, of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Ubuntu is the Linux distribution by Canonical, released every six months with a long-term support (LTS) release every two years. The desktop edition comes with the GNOME desktop; the server edition installs without a graphical desktop.",
+    "links": {
+      "website": "https://ubuntu.com/",
+      "documentation": "https://documentation.ubuntu.com/",
+      "repository": "https://launchpad.net/ubuntu"
+    }
+  },
+  {
+    "title": "Debian",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Screenshot_of_Debian_12_%28Bookworm%29_GNOME_43.9%E2%80%94English.png/1920px-Screenshot_of_Debian_12_%28Bookworm%29_GNOME_43.9%E2%80%94English.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "Motor8",
+        "license": "CC BY 4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Screenshot_of_Debian_12_(Bookworm)_GNOME_43.9%E2%80%94English.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "debian"
+    ],
+    "keywords": "debian netinst dvd trixie bookworm linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/debian.webp",
+    "summary": "Creates a Debian virtual machine from the official ISO, full DVD or netinst, of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Debian is a community Linux distribution known for its stability, and the base of Ubuntu, Proxmox VE and many others. The DVD image includes a choice of desktops; netinst installs a minimal system and downloads the rest during the installation.",
+    "links": {
+      "website": "https://www.debian.org/",
+      "documentation": "https://www.debian.org/doc/",
+      "repository": "https://salsa.debian.org/"
+    }
+  },
+  {
+    "title": "Fedora",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/3/32/Fedora_44_Workstation.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "The Fedora Project",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Fedora_44_Workstation.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "fedora"
+    ],
+    "keywords": "fedora workstation linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fedora.webp",
+    "summary": "Creates a Fedora Workstation virtual machine from the official ISO of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Fedora Workstation is the desktop edition of Fedora, the community distribution sponsored by Red Hat. It ships recent software with the GNOME desktop.",
+    "links": {
+      "website": "https://fedoraproject.org/workstation/",
+      "documentation": "https://docs.fedoraproject.org/",
+      "repository": "https://src.fedoraproject.org/"
+    }
+  },
+  {
+    "title": "Arch Linux",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Arch_Linux_screenshot%2C_12.06.2024.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "Arch Linux developers",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Arch_Linux_screenshot,_12.06.2024.png"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Arch_Linux_ARM-Asahi_Linux_Desktop_English_07-2023.png/1920px-Arch_Linux_ARM-Asahi_Linux_Desktop_English_07-2023.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "Asahi Linux team",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Arch_Linux_ARM-Asahi_Linux_Desktop_English_07-2023.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "arch"
+    ],
+    "keywords": "arch archlinux linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/arch-linux.webp",
+    "summary": "Creates an Arch Linux virtual machine from the latest official ISO.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Arch Linux is a lightweight rolling-release distribution: it is updated continuously instead of by versions. The ISO starts a console from which the system is installed step by step, with only what you choose.",
+    "links": {
+      "website": "https://archlinux.org/",
+      "documentation": "https://wiki.archlinux.org/",
+      "repository": "https://gitlab.archlinux.org/"
+    }
+  },
+  {
+    "title": "Rocky Linux",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/1/12/RockyLinux_WorkstationDesktop.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "rmnscnce",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:RockyLinux_WorkstationDesktop.png"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Rocky_Linux_8.4_Workstation_screenshot.png/1920px-Rocky_Linux_8.4_Workstation_screenshot.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "The GNOME Project, Rocky Enterprise Software Foundation",
+        "license": "GPLv2",
+        "page": "https://commons.wikimedia.org/wiki/File:Rocky_Linux_8.4_Workstation_screenshot.png"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Rocky_Linux_8.4_Workstation_Activities_Overview%2C_default_desktop_screenshot.png/1920px-Rocky_Linux_8.4_Workstation_Activities_Overview%2C_default_desktop_screenshot.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "The GNOME Project, Rocky Enterprise Software Foundation",
+        "license": "GPLv2",
+        "page": "https://commons.wikimedia.org/wiki/File:Rocky_Linux_8.4_Workstation_Activities_Overview,_default_desktop_screenshot.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "rocky"
+    ],
+    "keywords": "rocky rhel enterprise linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rocky-linux.webp",
+    "summary": "Creates a Rocky Linux virtual machine from the official ISO of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Rocky Linux is a community enterprise distribution compatible with Red Hat Enterprise Linux. It suits servers that need long-term support and stability.",
+    "links": {
+      "website": "https://rockylinux.org/",
+      "documentation": "https://docs.rockylinux.org/",
+      "repository": "https://github.com/rocky-linux"
+    }
+  },
+  {
+    "title": "Linux Mint",
+    "screenshots": [
+      "https://linuxmint-installation-guide.readthedocs.io/en/latest/_images/cinnamon.png"
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "mint"
+    ],
+    "keywords": "mint linuxmint cinnamon desktop linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/linux-mint.webp",
+    "summary": "Creates a Linux Mint virtual machine from the official ISO, with the Cinnamon or Xfce desktop.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Linux Mint is a desktop distribution based on Ubuntu, designed to be easy for people coming from Windows. Cinnamon is its main desktop, with a classic layout of start menu and taskbar; Xfce is lighter for smaller machines.",
+    "links": {
+      "website": "https://linuxmint.com/",
+      "documentation": "https://linuxmint.com/documentation.php",
+      "repository": "https://github.com/linuxmint"
+    }
+  },
+  {
+    "title": "openSUSE",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/OpenSUSE_Leap_16.0_GNOME_screenshot.webp/1920px-OpenSUSE_Leap_16.0_GNOME_screenshot.webp?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "Software: openSUSE and GNOME developersWallpaper: openSUSEScreenshot: DistroWatch, uploaded by VulcanSphere",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:OpenSUSE_Leap_16.0_GNOME_screenshot.webp"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/VirtualBox_OpenSUSE_START_25_01_2021_21_44_08.png/1920px-VirtualBox_OpenSUSE_START_25_01_2021_21_44_08.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "OS distribution by SUSE LLC/Screenshot by PantheraLeo1359531 😺 (talk)☺",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:VirtualBox_OpenSUSE_START_25_01_2021_21_44_08.png"
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/2/22/Cockpit_web_interface_on_openSUSE_screenshot.webp?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "Software: Cockpit teamScreenshot: VulcanSphere",
+        "license": "LGPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Cockpit_web_interface_on_openSUSE_screenshot.webp"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "opensuse"
+    ],
+    "keywords": "opensuse suse leap linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opensuse.webp",
+    "summary": "Creates an openSUSE Leap virtual machine from the official ISO of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "openSUSE Leap is the stable edition of openSUSE, built from the same sources as SUSE Linux Enterprise. Leap 16 installs with the Agama installer and is managed from the web with Cockpit.",
+    "links": {
+      "website": "https://www.opensuse.org/",
+      "documentation": "https://doc.opensuse.org/",
+      "repository": "https://github.com/openSUSE"
+    }
+  },
+  {
+    "title": "Alpine Linux",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Alpine-xfce.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "NMaia",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Alpine-xfce.jpg"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "alpine"
+    ],
+    "keywords": "alpine linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/alpine-linux.webp",
+    "summary": "Creates an Alpine Linux virtual machine from the official ISO.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Alpine Linux is a small, security-focused distribution built on musl and BusyBox. The virt image is made for virtual machines and starts a minimal system that you set up with setup-alpine.",
+    "links": {
+      "website": "https://alpinelinux.org/",
+      "documentation": "https://docs.alpinelinux.org/",
+      "repository": "https://gitlab.alpinelinux.org/alpine"
+    }
+  },
+  {
+    "title": "Kali Linux",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/VirtualBox_Kali_Linux_21.01_x64_Desktop_GER_26_02_2021_16_59_25.png/1920px-VirtualBox_Kali_Linux_21.01_x64_Desktop_GER_26_02_2021_16_59_25.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "OS: Offensive Security/Screenshot: PantheraLeo1359531 😺 (talk)",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:VirtualBox_Kali_Linux_21.01_x64_Desktop_GER_26_02_2021_16_59_25.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "kali"
+    ],
+    "keywords": "kali pentest security linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kali-linux.webp",
+    "summary": "Creates a Kali Linux virtual machine from the official installer ISO.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Kali Linux is a Debian-based distribution for penetration testing and security audits, maintained by OffSec. It ships hundreds of security tools ready to use.",
+    "links": {
+      "website": "https://www.kali.org/",
+      "documentation": "https://www.kali.org/docs/",
+      "repository": "https://gitlab.com/kalilinux"
+    }
+  },
+  {
+    "title": "Manjaro",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Manjaro_20.2_screenshot.png/1920px-Manjaro_20.2_screenshot.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "Manjaro Linux",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Manjaro_20.2_screenshot.png"
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/2/20/Manjaro_Linux_desktop_20210604.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "Standardmodellen",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:Manjaro_Linux_desktop_20210604.png"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/VirtualBox_Manjaro_Linux_with_XFCE_Desktop_23.0.4_231015_08_12_2023_20_08_23.png/1920px-VirtualBox_Manjaro_Linux_with_XFCE_Desktop_23.0.4_231015_08_12_2023_20_08_23.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "Manjaro Linux: Roland Singer, Guillaume Benoit, Philip Müller u. a. * XFCE: André Miranda &lt;gro.ecfx@mdlerdna&gt; Alex",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:VirtualBox_Manjaro_Linux_with_XFCE_Desktop_23.0.4_231015_08_12_2023_20_08_23.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "manjaro"
+    ],
+    "keywords": "manjaro gnome desktop linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/manjaro-linux.webp",
+    "summary": "Creates a Manjaro virtual machine with the GNOME desktop from the official ISO.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Manjaro is a desktop distribution based on Arch Linux that adds a graphical installer and tested updates, so recent software comes without building the system by hand.",
+    "links": {
+      "website": "https://manjaro.org/",
+      "documentation": "https://wiki.manjaro.org/",
+      "repository": "https://github.com/manjaro"
+    }
+  },
+  {
+    "title": "AlmaLinux",
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "alma"
+    ],
+    "keywords": "almalinux alma rhel enterprise server linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/almalinux.webp",
+    "summary": "Creates an AlmaLinux virtual machine from the official ISO, full DVD or minimal, of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "AlmaLinux is a community enterprise distribution, binary compatible with Red Hat Enterprise Linux and run by the AlmaLinux OS Foundation. It suits servers that need long-term support and stability.",
+    "screenshots": [
+      "https://wiki.almalinux.org/images/hero.webp"
+    ],
+    "links": {
+      "website": "https://almalinux.org/",
+      "documentation": "https://wiki.almalinux.org/",
+      "repository": "https://github.com/AlmaLinux"
+    }
+  },
+  {
+    "title": "CentOS Stream",
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "centos"
+    ],
+    "keywords": "centos stream rhel enterprise server linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/centos.webp",
+    "summary": "Creates a CentOS Stream virtual machine from the official ISO of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "CentOS Stream is the distribution where the next minor release of Red Hat Enterprise Linux is developed, published by the CentOS Project. It gets RHEL changes before they are released, which makes it useful to test and build for the coming RHEL.",
+    "links": {
+      "website": "https://www.centos.org/centos-stream/",
+      "documentation": "https://docs.centos.org/",
+      "repository": "https://gitlab.com/redhat/centos-stream"
+    }
+  },
+  {
+    "title": "Oracle Linux",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/OL7-Desktop.png/1920px-OL7-Desktop.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "Djelibeybi.AU",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:OL7-Desktop.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "oracle"
+    ],
+    "keywords": "oracle linux rhel enterprise server",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/oracle.webp",
+    "summary": "Creates an Oracle Linux virtual machine from the official ISO of the release you choose.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Oracle Linux is Oracle's enterprise distribution, compatible with Red Hat Enterprise Linux. It is free to download and use, with optional paid support from Oracle.",
+    "links": {
+      "website": "https://www.oracle.com/linux/",
+      "documentation": "https://docs.oracle.com/en/operating-systems/oracle-linux/",
+      "repository": "https://github.com/oracle/oracle-linux"
+    }
+  },
+  {
+    "title": "Pop!_OS",
+    "screenshots": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/7/74/COSMIC_Epoch_1.0.0_alpha_with_apps.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "author": "System76",
+        "license": "GPLv3",
+        "page": "https://commons.wikimedia.org/wiki/File:COSMIC_Epoch_1.0.0_alpha_with_apps.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "popos"
+    ],
+    "keywords": "popos pop os system76 cosmic desktop linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "",
+    "summary": "Creates a Pop!_OS virtual machine from the official ISO.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Pop!_OS is System76's desktop distribution based on Ubuntu, with its own COSMIC desktop and a focus on developers and creative work.",
+    "links": {
+      "website": "https://system76.com/pop/",
+      "documentation": "https://support.system76.com/",
+      "repository": "https://github.com/pop-os"
+    }
+  },
+  {
+    "title": "Zorin OS",
+    "screenshots": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/VirtualBox_Zorin_OS_15.3_Edu_ENG_Desktop_x64_11_03_2021_20_22_48.png/1920px-VirtualBox_Zorin_OS_15.3_Edu_ENG_Desktop_x64_11_03_2021_20_22_48.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "OS by Artyom Zorin/Screenshot by PantheraLeo1359531 😺 (talk)",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:VirtualBox_Zorin_OS_15.3_Edu_ENG_Desktop_x64_11_03_2021_20_22_48.png"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/VirtualBox_Zorin_OS_15.3_Edu_START_ENG_x64_11_03_2021_20_23_29.png/1920px-VirtualBox_Zorin_OS_15.3_Edu_START_ENG_x64_11_03_2021_20_23_29.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "OS by Artyom Zorin/Screenshot by PantheraLeo1359531 😺 (talk)",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:VirtualBox_Zorin_OS_15.3_Edu_START_ENG_x64_11_03_2021_20_23_29.png"
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/VirtualBox_Zorin_OS_15.3_Edu_About_ENG_x64_11_03_2021_20_23_45.png/1920px-VirtualBox_Zorin_OS_15.3_Edu_About_ENG_x64_11_03_2021_20_23_45.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "author": "OS by Artyom Zorin/Screenshot by PantheraLeo1359531 😺 (talk)",
+        "license": "GPL",
+        "page": "https://commons.wikimedia.org/wiki/File:VirtualBox_Zorin_OS_15.3_Edu_About_ENG_x64_11_03_2021_20_23_45.png"
+      }
+    ],
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "zorin"
+    ],
+    "keywords": "zorin zorinos desktop linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zorin-os.webp",
+    "summary": "Creates a Zorin OS virtual machine from the official ISO, Core or Lite.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Zorin OS is a desktop distribution based on Ubuntu, designed to feel familiar to people coming from Windows or macOS. Core is the full edition; Lite is made for older or smaller machines.",
+    "links": {
+      "website": "https://zorin.com/os/",
+      "documentation": "https://help.zorin.com/",
+      "repository": "https://github.com/ZorinOS"
+    }
+  },
+  {
+    "title": "CachyOS",
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "cachyos"
+    ],
+    "keywords": "cachyos cachy desktop gaming performance linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cachyos.webp",
+    "summary": "Creates a CachyOS virtual machine from the latest official ISO.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "CachyOS is a desktop distribution based on Arch Linux and focused on performance, with a kernel and packages optimized for modern processors and a graphical installer.",
+    "links": {
+      "website": "https://cachyos.org/",
+      "documentation": "https://wiki.cachyos.org/",
+      "repository": "https://github.com/CachyOS"
+    }
+  },
+  {
+    "title": "NixOS",
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "nixos"
+    ],
+    "keywords": "nixos nix declarative reproducible linux",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nixos.webp",
+    "summary": "Creates a NixOS virtual machine from the official ISO, graphical or minimal.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "NixOS is a distribution built on the Nix package manager, where the whole system is described in one configuration file. Changes can be rolled back, and the same file rebuilds the same system on another machine.",
+    "links": {
+      "website": "https://nixos.org/",
+      "documentation": "https://nixos.org/manual/nixos/stable/",
+      "repository": "https://github.com/NixOS/nixpkgs"
+    }
+  },
+  {
+    "title": "Linux (ISO)",
+    "menu": "Create VM System Linux",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "3",
+      "iso"
+    ],
+    "keywords": "linux iso custom own",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/linux.webp",
+    "summary": "Creates a Linux virtual machine from an ISO already in your Proxmox storage.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "Installs any Linux from an ISO you already uploaded to a Proxmox ISO storage: a distribution that is not in the list, a specific release or your own build. The virtual machine gets the same configuration as the official ISOs."
+  },
+  {
+    "title": "Home Assistant OS",
+    "screenshots": [
+      "https://www.home-assistant.io/images/frontpage/hero_screenshot.png"
+    ],
+    "menu": "Create VM System Others (based Linux)",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "5",
+      "haos"
+    ],
+    "keywords": "home assistant haos homeassistant domotica smart home",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "IoT & Smart Home",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
+    "summary": "Runs the Community Scripts installer of Home Assistant OS.",
+    "via": "community-scripts",
+    "cs": "haos-vm"
+  },
+  {
+    "title": "Docker VM",
+    "menu": "Create VM System Others (based Linux)",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "5",
+      "docker"
+    ],
+    "keywords": "docker vm ssh",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Containers & Docker",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp",
+    "summary": "Runs the Community Scripts installer of a Debian virtual machine with SSH and Docker.",
+    "via": "community-scripts",
+    "cs": "docker-vm"
+  },
+  {
+    "title": "Nextcloud VM",
+    "screenshots": [
+      "https://raw.githubusercontent.com/nextcloud/screenshots/master/nextcloud-hub-25-files.png"
+    ],
+    "menu": "Create VM System Others (based Linux)",
+    "script": "menus/create_vm_menu.sh",
+    "argument": [
+      "5",
+      "nextcloud"
+    ],
+    "keywords": "nextcloud vm cloud",
+    "docs": "create-vm/system-linux",
+    "group": "app",
+    "type": "vm",
+    "category": "Files & Downloads",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
+    "summary": "Runs the Community Scripts installer of a Nextcloud virtual machine.",
+    "via": "community-scripts",
+    "cs": "nextcloud-vm"
   },
   {
     "title": "Create VM System macOS (OSX-PROXMOX)",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual macos osx",
-    "argument": "4"
+    "argument": "4",
+    "docs": "create-vm/index",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apple.webp",
+    "summary": "Runs the OSX-PROXMOX installer, which prepares the host and creates a macOS virtual machine on Intel or AMD. The server reboots when it finishes.",
+    "name": "macOS (OSX-PROXMOX)",
+    "about": "macOS is Apple's operating system. OSX-PROXMOX is a community project that prepares Proxmox VE and creates a macOS virtual machine on Intel or AMD processors.",
+    "notes": [
+      "The installer changes the host configuration and reboots the server when it finishes.",
+      "Apple licenses macOS only for its own hardware."
+    ],
+    "links": {
+      "website": "https://osx-proxmox.com/",
+      "repository": "https://github.com/luchina-gabriel/OSX-PROXMOX"
+    },
+    "third_party": "osx-proxmox"
   },
   {
     "title": "Create VM System Others (based Linux)",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual",
-    "argument": "5"
+    "argument": "5",
+    "docs": "create-vm/index"
   },
   {
     "title": "ZimaOS",
+    "screenshots": [
+      "https://raw.githubusercontent.com/IceWhaleTech/ZimaOS/main/assets/20250926-154629.png"
+    ],
     "menu": "Create VM from template or script",
     "script": "vm/zimaos.sh",
-    "keywords": "zima nas vm"
+    "keywords": "zima nas vm",
+    "docs": "create-vm/system-nas/system-nas-others",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zimaos.webp",
+    "summary": "Creates a ZimaOS virtual machine from the latest IceWhale image: a personal cloud and NAS system with an app store.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 64
+    },
+    "about": "ZimaOS is the system by IceWhale, the makers of CasaOS and ZimaBoard. It turns a machine into a personal cloud and NAS, with a web dashboard, storage management and an app store.",
+    "links": {
+      "website": "https://www.zimaspace.com/zimaos",
+      "documentation": "https://www.zimaspace.com/docs/zimaos/",
+      "repository": "https://github.com/IceWhaleTech/ZimaOS"
+    }
   },
   {
     "title": "Synology DSM",
     "menu": "Create VM from template or script",
     "script": "vm/synology.sh",
-    "keywords": "synology dsm nas loader vm"
+    "keywords": "synology dsm nas loader vm",
+    "docs": "create-vm/system-nas/synology",
+    "group": "app",
+    "type": "vm",
+    "category": "Operating Systems & Appliances",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/synology.webp",
+    "summary": "Creates a Synology DSM virtual machine that boots through a loader (Arc, RR, Alpine M-shell or your own), with virtual disks or your physical disks.",
+    "resources": {
+      "cores": 2,
+      "memory_mb": 4096,
+      "disk_gb": 32
+    },
+    "about": "DSM (DiskStation Manager) is the operating system of Synology NAS devices. On Proxmox VE it starts from a community loader that prepares the system disk, and DSM is then installed from Synology's own installer.",
+    "notes": [
+      "Synology does not support DSM outside its own hardware; the loader is a community project."
+    ],
+    "links": {
+      "website": "https://www.synology.com/dsm",
+      "documentation": "https://kb.synology.com/",
+      "repository": "https://github.com/AuxXxilium/arc"
+    }
   },
   {
     "title": "Import Disk to VM",
     "menu": "Disk Manager",
     "script": "storage/disk-passthrough.sh",
-    "keywords": "disk disco passthrough"
+    "keywords": "disk disco passthrough",
+    "docs": "disk-manager/import-disk-vm"
   },
   {
     "title": "Import Disk Image to VM",
     "menu": "Disk Manager",
     "script": "storage/import-disk-image.sh",
-    "keywords": "disk disco import image imagen"
+    "keywords": "disk disco import image imagen",
+    "docs": "disk-manager/import-disk-image-vm"
   },
   {
     "title": "Add Controller or NVMe PCIe to VM",
     "menu": "Disk Manager",
     "script": "storage/add_controller_nvme_vm.sh",
-    "keywords": "nvme pcie controller passthrough"
+    "keywords": "nvme pcie controller passthrough",
+    "docs": "disk-manager/add-controller-nvme-vm"
   },
   {
     "title": "Import Disk to LXC",
     "menu": "Disk Manager",
     "script": "storage/disk-passthrough_ct.sh",
-    "keywords": "disk disco passthrough lxc"
+    "keywords": "disk disco passthrough lxc",
+    "docs": "disk-manager/import-disk-lxc"
   },
   {
     "title": "Format / Wipe Physical Disk (Safe)",
     "menu": "Disk Manager",
     "script": "storage/format-disk.sh",
-    "keywords": "disk disco format formatear wipe"
+    "keywords": "disk disco format formatear wipe",
+    "docs": "disk-manager/format-disk"
   },
   {
     "title": "SMART Disk Health & Test",
     "menu": "Disk Manager",
     "script": "storage/smart-disk-test.sh",
-    "keywords": "smart disk disco health salud"
+    "keywords": "smart disk disco health salud",
+    "docs": "disk-manager/smart-disk-test"
   },
   {
     "title": "Manual CLI Guide (Disk and Storage Manager)",
     "menu": "Disk Manager",
     "script": "storage/disk-storage-manual-guide.sh",
-    "keywords": "disk storage guide guia"
+    "keywords": "disk storage guide guia",
+    "docs": "help-info/storage-commands"
   },
   {
     "title": "Add NFS share    as Proxmox Storage",
     "menu": "Storage & Share Manager",
     "script": "share/nfs_host.sh",
-    "keywords": "nfs storage almacenamiento mount montar"
+    "keywords": "nfs storage almacenamiento mount montar",
+    "docs": "storage-share/host-nfs"
   },
   {
     "title": "Add Samba share  as Proxmox Storage",
     "menu": "Storage & Share Manager",
     "script": "share/samba_host.sh",
-    "keywords": "samba smb cifs storage almacenamiento mount montar"
+    "keywords": "samba smb cifs storage almacenamiento mount montar",
+    "docs": "storage-share/host-samba"
   },
   {
     "title": "Add iSCSI Target as Proxmox Storage",
     "menu": "Storage & Share Manager",
     "script": "share/iscsi_host.sh",
-    "keywords": "iscsi storage almacenamiento"
+    "keywords": "iscsi storage almacenamiento",
+    "docs": "storage-share/host-iscsi"
   },
   {
     "title": "Add Local Disk   as Proxmox Storage",
     "menu": "Storage & Share Manager",
     "script": "share/disk_host.sh",
-    "keywords": "disk disco local storage almacenamiento"
+    "keywords": "disk disco local storage almacenamiento",
+    "docs": "storage-share/host-local-disk"
   },
   {
     "title": "Create Shared Directory on Host",
     "menu": "Storage & Share Manager",
     "script": "share/local-shared-manager.sh",
-    "keywords": "directory directorio carpeta share compartir"
+    "keywords": "directory directorio carpeta share compartir",
+    "docs": "storage-share/host-local-shared"
   },
   {
     "title": "Configure LXC Mount Points    (Host ↔ Container)",
     "menu": "Storage & Share Manager",
     "script": "share/lxc-mount-manager_minimal.sh",
-    "keywords": "mount montaje host container contenedor bind"
+    "keywords": "mount montaje host container contenedor bind",
+    "docs": "storage-share/lxc-mount-points"
   },
   {
     "title": "Configure NFS   Client in LXC (only privileged)",
     "menu": "Storage & Share Manager",
     "script": "share/nfs_client.sh",
-    "keywords": "nfs share lxc"
+    "keywords": "nfs share lxc",
+    "docs": "storage-share/lxc-nfs-client"
   },
   {
     "title": "Configure Samba Client in LXC (only privileged)",
     "menu": "Storage & Share Manager",
     "script": "share/samba_client.sh",
-    "keywords": "smb samba cifs share lxc"
+    "keywords": "smb samba cifs share lxc",
+    "docs": "storage-share/lxc-samba-client"
   },
   {
     "title": "Configure NFS   Server in LXC (only privileged)",
     "menu": "Storage & Share Manager",
     "script": "share/nfs_lxc_server.sh",
-    "keywords": "nfs share lxc"
+    "keywords": "nfs share lxc",
+    "docs": "storage-share/lxc-nfs-server"
   },
   {
     "title": "Configure Samba Server in LXC (only privileged)",
     "menu": "Storage & Share Manager",
     "script": "share/samba_lxc_server.sh",
-    "keywords": "smb samba cifs share lxc"
+    "keywords": "smb samba cifs share lxc",
+    "docs": "storage-share/lxc-samba-server"
   },
   {
     "title": "Help & Info (commands)",
     "menu": "Storage & Share Manager",
     "script": "share/commands_share.sh",
-    "keywords": "help ayuda commands comandos share"
+    "keywords": "help ayuda commands comandos share",
+    "docs": "help-info/storage-commands"
   },
   {
     "title": "Real-time network usage (iftop)",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red iftop traffic trafico",
-    "argument": "Real-time network usage (iftop)"
+    "argument": "Real-time network usage (iftop)",
+    "docs": "network/monitoring"
   },
   {
     "title": "Network monitoring tool (iptraf-ng)",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red iptraf traffic trafico",
-    "argument": "Network monitoring tool (iptraf-ng)"
+    "argument": "Network monitoring tool (iptraf-ng)",
+    "docs": "network/monitoring"
   },
   {
     "title": "Bandwidth test (iperf3)",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red iperf3 speed velocidad",
-    "argument": "Bandwidth test (iperf3)"
+    "argument": "Bandwidth test (iperf3)",
+    "docs": "network/monitoring"
   },
   {
     "title": "Show Routing Table",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red route rutas",
-    "argument": "Show Routing Table"
+    "argument": "Show Routing Table",
+    "docs": "network/diagnostics"
   },
   {
     "title": "Test Connectivity",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red ping conectividad",
-    "argument": "Test Connectivity"
+    "argument": "Test Connectivity",
+    "docs": "network/diagnostics"
   },
   {
     "title": "Advanced Diagnostics",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red diagnostics diagnostico",
-    "argument": "Advanced Diagnostics"
+    "argument": "Advanced Diagnostics",
+    "docs": "network/diagnostics"
   },
   {
     "title": "Analyze Bridge Configuration",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red bridge vmbr puente",
-    "argument": "Analyze Bridge Configuration"
+    "argument": "Analyze Bridge Configuration",
+    "docs": "network/bridge-analysis"
   },
   {
     "title": "Analyze Network Configuration",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red interfaces config",
-    "argument": "Analyze Network Configuration"
+    "argument": "Analyze Network Configuration",
+    "docs": "network/config-analysis"
   },
   {
     "title": "Setup Persistent Network Names",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red nic names nombres interfaces",
-    "argument": "Setup Persistent Network Names"
+    "argument": "Setup Persistent Network Names",
+    "docs": "network/persistent-names"
   },
   {
     "title": "Restart Network Service",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red restart reiniciar red",
-    "argument": "Restart Network Service"
+    "argument": "Restart Network Service",
+    "docs": "network/index"
   },
   {
     "title": "Show Network Config File",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red interfaces config",
-    "argument": "Show Network Config File"
+    "argument": "Show Network Config File",
+    "docs": "network/index"
   },
   {
     "title": "Create Network Backup",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red backup red",
-    "argument": "Create Network Backup"
+    "argument": "Create Network Backup",
+    "docs": "network/backup-restore"
   },
   {
     "title": "Restore Network Backup",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red restore restaurar red",
-    "argument": "Restore Network Backup"
+    "argument": "Restore Network Backup",
+    "docs": "network/backup-restore"
   },
   {
     "title": "Disable NIC Offloading (Intel e1000e)",
     "menu": "Network Management",
     "script": "menus/network_menu.sh",
     "keywords": "network red intel e1000e offloading nic",
-    "argument": "Disable NIC Offloading (Intel e1000e)"
+    "argument": "Disable NIC Offloading (Intel e1000e)",
+    "docs": "network/index",
+    "via": "community-scripts",
+    "cs": "nic-offloading-fix"
   },
   {
     "title": "Fail2Ban - Intrusion Prevention",
     "menu": "Security",
     "script": "security/fail2ban_installer.sh",
-    "keywords": "fail2ban security seguridad ssh"
+    "keywords": "fail2ban security seguridad ssh",
+    "docs": "security/fail2ban"
   },
   {
     "title": "Lynis - Security Audit",
     "menu": "Security",
     "script": "security/lynis_installer.sh",
-    "keywords": "lynis audit auditoria security seguridad"
+    "keywords": "lynis audit auditoria security seguridad",
+    "docs": "security/lynis"
   },
   {
     "title": "UUp Dump ISO creator Custom",
     "menu": "Utilities and Tools",
     "script": "utilities/uup_dump_iso_creator.sh",
-    "keywords": "windows iso uup dump"
+    "keywords": "iso uup dump windows",
+    "docs": "utils/uup-dump-iso-creator"
   },
   {
     "title": "System Utilities Installer",
     "menu": "Utilities and Tools",
     "script": "utilities/system_utils.sh",
-    "keywords": "utilities tools herramientas paquetes packages"
+    "keywords": "utilities tools herramientas paquetes packages",
+    "docs": "utils/system-utils"
   },
   {
     "title": "Proxmox System Update",
     "menu": "Utilities and Tools",
     "script": "menus/utilities_menu.sh",
     "keywords": "update upgrade actualizar apt",
-    "argument": "3"
+    "argument": "3",
+    "docs": "utils/system-update"
   },
   {
     "title": "Upgrade PVE 8 to PVE 9",
     "menu": "Utilities and Tools",
     "script": "menus/utilities_menu.sh",
     "keywords": "upgrade pve8 pve9 actualizar",
-    "argument": "4"
+    "argument": "4",
+    "docs": "utils/upgrade-pve8-pve9"
   },
   {
     "title": "Export VM to OVA or OVF",
     "menu": "Utilities and Tools",
     "script": "utilities/export_vm_ova_ovf.sh",
-    "keywords": "export exportar vm ova ovf"
+    "keywords": "export exportar vm ova ovf",
+    "docs": "utils/export-vm"
   },
   {
     "title": "Import VM from OVA or OVF",
     "menu": "Utilities and Tools",
     "script": "utilities/import_vm_ova_ovf.sh",
-    "keywords": "import importar vm ova ovf"
+    "keywords": "import importar vm ova ovf",
+    "docs": "utils/import-vm"
   },
   {
     "title": "Useful System Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "1"
+    "argument": "1",
+    "docs": "help-info/system-commands"
   },
   {
     "title": "VM and CT Management Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "2"
+    "argument": "2",
+    "docs": "help-info/vm-ct-commands"
   },
   {
     "title": "Storage and Disks Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "3"
+    "argument": "3",
+    "docs": "help-info/storage-commands"
   },
   {
     "title": "Network Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "4"
+    "argument": "4",
+    "docs": "help-info/network-commands"
   },
   {
     "title": "Updates and Packages Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "5"
+    "argument": "5",
+    "docs": "help-info/update-commands"
   },
   {
     "title": "GPU Passthrough Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "6"
+    "argument": "6",
+    "docs": "help-info/gpu-commands"
   },
   {
     "title": "ZFS Management Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "7"
+    "argument": "7",
+    "docs": "help-info/zfs-commands"
   },
   {
     "title": "Backup and Restore Commands",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "8"
+    "argument": "8",
+    "docs": "help-info/backup-commands"
   },
   {
     "title": "System CLI Tools",
     "menu": "Help and Info Commands",
     "script": "help_info_menu.sh",
     "keywords": "help ayuda commands comandos cli",
-    "argument": "9"
+    "argument": "9",
+    "docs": "help-info/tools-commands"
   },
   {
     "title": "Change Language",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "language idioma",
-    "argument": "change_language"
+    "argument": "change_language",
+    "docs": "settings/change-language"
   },
   {
     "title": "Change Release Channel",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "beta stable channel canal",
-    "argument": "change_release_channel"
+    "argument": "change_release_channel",
+    "docs": "settings/beta-program"
   },
   {
     "title": "Show Version Information",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "version",
-    "argument": "show_version_info"
+    "argument": "show_version_info",
+    "docs": "settings/show-version-information"
   },
   {
     "title": "Uninstall ProxMenux",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "uninstall desinstalar",
-    "argument": "uninstall_proxmenu"
+    "argument": "uninstall_proxmenu",
+    "docs": "settings/uninstall-proxmenux"
   },
   {
     "title": "Reset ProxMenux Monitor Password",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "monitor password contraseña",
-    "argument": "reset_monitor_password"
+    "argument": "reset_monitor_password",
+    "docs": "settings/proxmenux-monitor"
   },
   {
     "title": "Show Monitor Service Status",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "monitor service servicio",
-    "argument": "show_monitor_status"
+    "argument": "show_monitor_status",
+    "docs": "settings/proxmenux-monitor"
   },
   {
     "title": "Activate ProxMenux Monitor",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "monitor",
-    "argument": "toggle_monitor"
+    "argument": "toggle_monitor",
+    "docs": "settings/proxmenux-monitor"
   },
   {
     "title": "Deactivate ProxMenux Monitor",
     "menu": "Settings",
     "script": "menus/config_menu.sh",
     "keywords": "monitor",
-    "argument": "toggle_monitor"
+    "argument": "toggle_monitor",
+    "docs": "settings/proxmenux-monitor"
   }
 ]

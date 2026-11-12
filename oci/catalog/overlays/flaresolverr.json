@@ -5,5 +5,15 @@
         "/config"
       ]
     }
+  },
+  "catalog_ui": {
+    "description": {
+      "en_US": "FlareSolverr is a proxy server designed to bypass Cloudflare and DDoS-GUARD protection. It receives requests and uses an automated web browser to open the target URL and solve browser challenges. Once solved, it extracts the rendered HTML and clearance cookies, returning them so other HTTP clients can access the protected site."
+    },
+    "tips": [
+      "DO NOT expose FlareSolverr to the internet, as it can be abused.",
+      "Make sure your client scripts use the exact same User-Agent returned by FlareSolverr along with the clearance cookies, or challenges will trigger again."
+    ],
+    "repository": "https://github.com/flaresolverr/flaresolverr"
   }
 }

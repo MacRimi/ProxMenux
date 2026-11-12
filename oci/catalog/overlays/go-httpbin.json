@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Serve the familiar HTTPBin endpoints from a small, single-process Go service."
+    },
+    "description": {
+      "en_US": "Go HTTPBin is an HTTP request and response testing service implemented in Go. It provides endpoints to test various HTTP client behaviors, such as handling custom status codes, redirects, and request delays. It is useful for debugging network clients, mocking external APIs, and validating web service interactions."
+    }
+  }
+}

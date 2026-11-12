@@ -495,8 +495,13 @@ class Catalog:
             item["hidden"] = overlay_ui.get("hidden", False)
             # The index is rebuilt from upstream README summaries; preserve a
             # locally curated English description from the existing overlay.
-            item["description"] = overlay_ui.get("description", {}).get(
+            # The short line of the overlay comes first: its description is
+            # then the longer text of the application's sheet.
+            item["description"] = (overlay_ui.get("tagline") or overlay_ui.get("description") or {}).get(
                 "en_US", item.get("description"))
+            # The name of the project, spelt as it spells it, for every image
+            # of it: who publishes the image is shown apart.
+            item["title"] = overlay_ui.get("title", {}).get("en_US", item.get("title"))
             path = self.apps_dir / f"{item['id']}.json"
             if not path.exists():
                 item["architectures"] = supported_architectures(

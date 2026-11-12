@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Weixin (WeChat) is an instant messaging, social media, and mobile payment app developed by Tencent."
+    },
+    "description": {
+      "en_US": "Weixin, also known as WeChat, is an instant messaging, social media, and mobile payment platform developed by Tencent. It allows users to stay connected through text, voice, and media messaging, share updates on social feeds, and conduct digital transactions. It serves as an all-in-one communication and everyday services tool."
+    }
   }
 }

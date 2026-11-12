@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "OrcaSlicer"
+    },
+    "tagline": {
+      "en_US": "Orca Slicer is an open source slicer for FDM printers. OrcaSlicer is fork of Bambu Studio, it was previously known as BambuStudio-SoftFever, Bambu Studio is forked from PrusaSlicer by Prusa Research, which is from Slic3r by Alessandro Ranellucci and the RepRap community"
+    },
+    "description": {
+      "en_US": "Orca Slicer is an open source slicer for FDM 3D printers. It is a fork of Bambu Studio, previously known as BambuStudio-SoftFever, which traces its lineage back to PrusaSlicer and Slic3r. The software prepares 3D models for additive manufacturing by converting digital designs into printer instructions."
+    }
   }
 }

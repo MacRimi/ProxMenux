@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Save, organize and share recipes with a self-hosted recipe manager."
+    },
+    "description": {
+      "en_US": "Mealie is a recipe manager, meal planner, and shopping list application designed for households. It allows users to import recipes automatically from website links or enter them manually using a built-in editor. Users can group recipes into custom cookbooks, plan meals for the week, and automatically organize ingredients into categorized shopping lists."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/mealie-recipes/mealie/HEAD/docs/docs/assets/img/home_screenshot.png"
+    ]
+  }
+}

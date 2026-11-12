@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "IT Tools brings common developer and IT utilities together in one self-hosted web interface."
+    },
+    "description": {
+      "en_US": "IT Tools is a collection of utilities created for developers and IT professionals. It gathers various day-to-day conversion, formatting, and generation tools into a unified web interface. The suite is designed to be self-hosted, allowing users to access essential workflow utilities locally without relying on external web services."
+    }
+  }
+}

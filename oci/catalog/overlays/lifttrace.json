@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted strength-training tracker with workout logs, programs, progress photos, and a mobile PWA."
+    },
+    "description": {
+      "en_US": "LiftTrace is a self-hosted weightlifting and strength-training tracker. It allows users to log workouts, track weights, reps, and RPE, run multi-week training programs, and monitor personal records and body statistics. The platform includes comprehensive exercise libraries, progress photos, and offline support for recording sessions in gyms without network connectivity."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/traceapps/lifttrace/HEAD/docs/screenshots/01-diary.png"
+    ]
+  }
+}

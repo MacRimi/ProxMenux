@@ -22,5 +22,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Sonarr (formerly NZBdrone) is a PVR for usenet and bittorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available."
+    },
+    "description": {
+      "en_US": "Sonarr is a personal video recorder designed for Usenet and BitTorrent users to manage television series. It continuously monitors multiple RSS feeds for new episodes, automatically acquiring, sorting, and renaming downloaded files. It can also be configured to track existing media libraries and automatically replace files when higher-quality releases become available."
+    },
+    "screenshots": [
+      "https://sonarr.tv/img/slider/seriesdetails.png",
+      "https://sonarr.tv/img/slider/qualityprofile.png"
+    ]
   }
 }
