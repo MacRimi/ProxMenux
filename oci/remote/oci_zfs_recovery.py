@@ -71,11 +71,11 @@ def tagged(dataset, token, guid=None):
 
 def plan(records):
     """Read-only eligibility. Any unsupported layout retains conventional backup."""
-    if not records or not enabled():
-        return None
-    tx = api()
-    storages, volumes, configs, raw_configs = {}, [], {}, {}
     try:
+        if not records or not enabled():
+            return None
+        tx = api()
+        storages, volumes, configs, raw_configs = {}, [], {}, {}
         jobs = json.loads(run('pvesh', 'get', '/cluster/replication', '--output-format', 'json'))
         if not isinstance(jobs, list) or any(not isinstance(job, dict) for job in jobs):
             return None
