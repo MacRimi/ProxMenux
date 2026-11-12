@@ -14,6 +14,7 @@ import tempfile
 import oci_instances as instances
 import oci_instance_transaction as transaction
 import oci_work_backup as work_backup
+import oci_layer_cache as layer_cache
 from oci_installation_state import image_from_archive, same_image
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -124,9 +125,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         archive.unlink()
     # The compressed layers are what the download writes; nothing was changed yet.
     size, free = int(candidate.get('size') or 0), work_backup.available(archive.parent)
-    if size and free < int(size * 1.1) + 256 * 1024**2:
+    required = int(size * (2.2 if layer_cache.enabled() else 1.1)) + 256 * 1024**2
+    if size and free < required:
         raise ValueError(f"{translate('The new image does not fit on the storage where images are downloaded:')} {storage}. "
-                         f"{translate('Needed:')} {work_backup.gib(int(size * 1.1) + 256 * 1024**2)}. "
+                         f"{translate('Needed:')} {work_backup.gib(required)}. "
                          f"{translate('Free:')} {work_backup.gib(free)}. {translate('The application was not modified.')}")
     # A download can come back complete yet damaged when the connection drops
     # and the transfer resumes; the integrity check catches it, and a second
@@ -138,9 +140,14 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         os.close(fd)
         partial = Path(name)
         try:
-            run_quiet(['skopeo', 'copy', '--override-arch', architecture,
-                'docker://' + repository(reference) + '@' + digest,
-                'oci-archive:' + str(partial)], translate('Could not download the image'))
+            source = 'docker://' + repository(reference) + '@' + digest
+            if layer_cache.enabled():
+                layer_cache.pull(source, architecture, partial, local_archives, candidate,
+                    lambda args: run_quiet(args, translate('Could not download the image')),
+                    available=work_backup.available)
+            else:
+                run_quiet(['skopeo', 'copy', '--override-arch', architecture, source,
+                    'oci-archive:' + str(partial)], translate('Could not download the image'))
             msg_ok(translate('Image downloaded'))
             msg_info(translate('Verifying the image integrity...'))
             if intact(partial):
@@ -238,7 +245,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         current = record['observed']['image'] if operation == 'update' else None
         check = lambda: work_backup.locate(
             instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid)
-        if operation == 'recreate':
+        if operation == 'recreate' or layer_cache.enabled():
             archive, digest = resolve_archive(desired, config, current, check,
                 local_archives=[record['observed'].get('archive_path')])
         else:

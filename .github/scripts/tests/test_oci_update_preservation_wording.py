@@ -169,9 +169,12 @@ class UpdateWording(unittest.TestCase):
         scope = {'instances': instances, 'transaction': transaction,
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(text), 'msg_ok': lambda text: events.append(text),
-                 'resolve_archive': lambda desired, config, current, check: (None, current),
+                 'resolve_archive': lambda desired, config, current, check, **kwargs: (None, current),
                  'kept_settings': lambda *args: self.fail('kept settings on no-op')}
-        extracted(UPDATE, 'update', scope)(101, keep_backup='not-a-real-storage')
+        for enabled in (False, True):
+            with self.subTest(layer_cache=enabled):
+                scope['layer_cache'] = SimpleNamespace(enabled=lambda: enabled)
+                extracted(UPDATE, 'update', scope)(101, keep_backup='not-a-real-storage')
         self.assertIn('The image is already up to date; nothing was changed.', events)
 
     def test_new_keys_extracted_and_shipped_and_missing_locale_fallback(self):
