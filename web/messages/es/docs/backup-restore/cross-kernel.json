@@ -163,7 +163,7 @@
       {
         "label": "Cómo funciona",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — el manifiesto y los colectores que producen el bloque <code>kernel_params</code> del que lee la hidratación."
+        "tailRich": " — el manifiesto y los colectores que producen el bloque <code>kernel_params</code> del que lee la hidratación."
       }
     ]
   }

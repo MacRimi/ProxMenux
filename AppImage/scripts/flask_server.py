@@ -23186,6 +23186,11 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                         and app.get('helper_slug') != 'docker']
             if eligible:
                 filtered_targets.extend(eligible)
+            elif any(other != 'apps' for other in targets):
+                # "apps" stands for every application with an update method.
+                # With none, the other targets are the whole run; only an
+                # application chosen by name reports its missing method.
+                continue
             else:
                 deferred_targets.append(value)
                 reasons.append('no application update method has been selected or is available')

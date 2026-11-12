@@ -189,6 +189,29 @@ class BatchTests(unittest.TestCase):
         report=self.start();self.assertEqual(self.executed,[2401])
         self.assertEqual(report['status'],'interrupted')
 
+    def test_interrupted_helper_with_pending_transaction_requires_recovery(self):
+        def interrupt(v, command):
+            record = instances.read(self.root, v)
+            record['pending_transaction'] = 'pending-journal'
+            instances.write(instances.location(self.root, v), record)
+            raise KeyboardInterrupt
+        self.execute_hook = interrupt
+        report = self.start()
+        self.assertEqual(self.executed, [2401])
+        self.assertEqual([r['status'] for r in report['applications']], ['recovery-required', 'skipped'])
+        self.assertIn('recovered from the OCI management menu', self.ui.events[-1][2])
+        self.assertEqual(json.loads(self.reports()[0].read_text())['applications'][0]['status'], 'recovery-required')
+
+    def test_signalled_helper_with_pending_stack_requires_recovery(self):
+        def interrupt(v, command):
+            record = instances.read(self.root, v)
+            record['pending_stack_transaction'] = 'pending-stack-journal'
+            instances.write(instances.location(self.root, v), record)
+            return -signal.SIGTERM
+        self.execute_hook = interrupt
+        report = self.start()
+        self.assertEqual([r['status'] for r in report['applications']], ['recovery-required', 'skipped'])
+
     def test_private_proposals_outlive_the_source_file_but_never_enter_the_report(self):
         proposals=[]
         def prepare(v,runner):
@@ -278,6 +301,7 @@ class PreparationIntegrationTests(unittest.TestCase):
         with patch.object(management,'_run_lifecycle') as lifecycle:
             self.assertFalse(management._manage_stack(ROOT,self.ui,self.rows[0],action='update',runner=Mock()))
             lifecycle.assert_not_called()
+        self.assertTrue(any('Finish or recover pending' in str(e) for e in self.ui.events))
 
 
 class ProcessTests(unittest.TestCase):

@@ -65,6 +65,7 @@
       "accessAuth": "Prístup a overenie",
       "dashboard": "Panel",
       "dashboardSystemOverview": "Karta Prehľad systému",
+      "dashboardApps": "Karta Aplikácie",
       "dashboardStorage": "Karta Úložisko",
       "dashboardNetwork": "Karta Sieť",
       "dashboardVmsLxcs": "Karta VM a LXC",
@@ -76,6 +77,13 @@
       "dashboardSecurity": "Karta Bezpečnosť",
       "dashboardSettings": "Karta Nastavenia",
       "healthMonitor": "Monitor stavu",
+      "auditReport": "Audit a správy",
+      "auditReportOverview": "Prehľad",
+      "auditReportAssessment": "Hodnotenie a inventár",
+      "auditReportPolicy": "Pravidlá",
+      "auditReportChanges": "Zmeny",
+      "auditReportReports": "Správy a porovnania",
+      "auditReportScope": "Rozsah a záruky",
       "notifications": "Upozornenia",
       "aiAssistant": "AI asistent",
       "apiReference": "API referencia",
@@ -201,15 +209,7 @@
       "backupRestoreJobs": "Plánované úlohy",
       "backupRestoreRestoring": "Obnova",
       "backupRestoreCrossKernel": "Obnova medzi kernelmi",
-      "backupRestoreGlossary": "Slovník pojmov",
-      "dashboardApps": "Karta Aplikácie",
-      "auditReport": "Audit a správy",
-      "auditReportOverview": "Prehľad",
-      "auditReportAssessment": "Hodnotenie a inventár",
-      "auditReportPolicy": "Pravidlá",
-      "auditReportChanges": "Zmeny",
-      "auditReportReports": "Správy a porovnania",
-      "auditReportScope": "Rozsah a záruky"
+      "backupRestoreGlossary": "Slovník pojmov"
     }
   },
   "hero": {

@@ -361,7 +361,7 @@
       "seeAlso": [
         {
           "label": "NVIDIA installationsguide",
-          "href": "/guides/nvidia"
+          "href": "/guides/nvidia-manual"
         }
       ]
     },
@@ -518,7 +518,7 @@
       "seeAlso": [
         {
           "label": "Säkerhetskopiera till personlig molnlagring",
-          "href": "/guides/backup_cloud"
+          "href": "/guides/backup-cloud"
         }
       ]
     },

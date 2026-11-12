@@ -308,7 +308,7 @@ curl -X POST http://<host>:8008/api/auth/login \\
       />
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("password.publicTitle")}</h3>
-      <p className="mb-4 text-gray-800 leading-relaxed">{t("password.publicIntro")}</p>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("password.publicIntro", { code })}</p>
       <ul className="list-disc pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
         {publicItems.map((_, idx) => (
           <li key={idx}>{t.rich(`password.publicItems.${idx}`, { code })}</li>

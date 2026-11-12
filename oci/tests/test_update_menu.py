@@ -27,9 +27,11 @@ class SelectionTests(unittest.TestCase):
         current = [{**row, 'reason': 'matched'} for row in available]
         with patch.object(updates, 'UpdateCheck') as checker, \
                 patch.object(management, 'saved_inventory', return_value=current), \
-                patch('proxmenux_oci.batch_updates.run_batch') as run:
+                patch('proxmenux_oci.batch_updates.run_batch') as run, \
+                patch.object(management, 'manage_instance') as single:
             checker.return_value.status.return_value = {'available': available if fresh is None else fresh}
             result = updates.select_updates(ROOT, ui, available)
+        self.single = single
         return result, ui, run
 
     def test_one_update_is_not_checked_by_default(self):
@@ -38,9 +40,10 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(ui.checklist.call_args.args[1][0], ('all', 'Select all'))
         run.assert_not_called()
 
-    def test_only_selected_app_enters_batch_preparation(self):
+    def test_one_selected_app_keeps_normal_lifecycle_and_image_cleanup(self):
         _, ui, run = self.select(['111'])
-        self.assertEqual([r['vmid'] for r in run.call_args.args[2]], [111])
+        run.assert_not_called()
+        self.single.assert_called_once_with(ROOT, ui, {**AVAILABLE[1], 'reason': 'matched'}, action='update')
         self.assertIn('Second app', ui.review.call_args.args[0])
         self.assertNotIn('First app', ui.review.call_args.args[0])
 

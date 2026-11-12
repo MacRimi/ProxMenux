@@ -30,7 +30,7 @@
     "rows": [
       {
         "action": "Быстрая проверка состояния",
-        "whatRich": "Общий результат PASSED/FAILED и основные атрибуты.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) или <code>nvme smart-log</code> (NVMe).",
+        "whatRich": "Общий результат PASSED/FAILED и основные атрибуты.<br></br><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) или <code>nvme smart-log</code> (NVMe).",
         "dur": "Мгновенно"
       },
       {

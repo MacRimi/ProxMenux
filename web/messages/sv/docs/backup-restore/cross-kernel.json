@@ -163,7 +163,7 @@
       {
         "label": "Hur det fungerar",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — manifestet och insamlingsrutinerna som skapar blocket <code>kernel_params</code> som kompletteringen läser."
+        "tailRich": " — manifestet och insamlingsrutinerna som skapar blocket <code>kernel_params</code> som kompletteringen läser."
       }
     ]
   }

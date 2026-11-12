@@ -163,7 +163,7 @@
       {
         "label": "Come funziona",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — manifesto e raccoglitori che producono il blocco <code>kernel_params</code> letto dall’idratazione."
+        "tailRich": " — manifesto e raccoglitori che producono il blocco <code>kernel_params</code> letto dall’idratazione."
       }
     ]
   }

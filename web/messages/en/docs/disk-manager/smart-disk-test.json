@@ -30,7 +30,7 @@
     "rows": [
       {
         "action": "Quick health status",
-        "whatRich": "Overall PASSED/FAILED + key attributes.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) or <code>nvme smart-log</code> (NVMe).",
+        "whatRich": "Overall PASSED/FAILED + key attributes.<br></br><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) or <code>nvme smart-log</code> (NVMe).",
         "dur": "Instant"
       },
       {

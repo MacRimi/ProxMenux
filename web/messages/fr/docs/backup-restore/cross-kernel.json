@@ -163,7 +163,7 @@
       {
         "label": "Comment ça marche",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — le manifeste et les collecteurs qui produisent le bloc <code>kernel_params</code> lu par l’adaptation."
+        "tailRich": " — le manifeste et les collecteurs qui produisent le bloc <code>kernel_params</code> lu par l’adaptation."
       }
     ]
   }

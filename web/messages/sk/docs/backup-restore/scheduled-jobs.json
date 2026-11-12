@@ -85,7 +85,8 @@
         "content": "Iba nový režim. Služba vyvoláva <code>run_scheduled_backup.sh JOB_ID</code>. Časovač ho naplánuje s <code>Persistent=true</code> (zmeškané spustenia sa vykonajú pri ďalšom štarte) a malým <code>RandomizedDelaySec=120</code> rozložiť zaťaženie, keď viaceré úlohy zdieľa rovnaký OnCalendar výraz."
       },
       {
-        "path": "/etc/vzdump.conf script-hook",
+        "path": "/etc/vzdump.conf",
+        "pathNote": "script-hook",
         "content": "Iba režim pripojenia. Raz ho nainštaluje <code>hb_install_vzdump_hook</code>; porovnáva <code>PVE_STORAGE</code> každej pripojenej úlohy s <code>$STOREID</code>, ktoré PVE odovzdáva hooku."
       }
     ]
