@@ -5338,8 +5338,8 @@
       "Project is currently marked beta upstream and not intended for production use yet."
     ],
     "port": 4444,
-    "website": "https://github.com/fccview/degoog",
-    "documentation": "https://fccview.github.io/degoog/",
+    "website": "https://github.com/degoog-org/degoog",
+    "documentation": "https://degoog-org.github.io/docs/",
     "logo": "https://raw.githubusercontent.com/fccview/degoog/main/src/public/images/degoog-logo.png",
     "updateable": true,
     "privileged": false,
@@ -25280,6 +25280,46 @@
     "os": "alpine"
   },
   {
+    "name": "TrailBase",
+    "slug": "trailbase",
+    "desc": "TrailBase is an open, single-executable Firebase alternative built on Rust, SQLite and Wasmtime. It turns your tables into type-safe REST and realtime APIs with built-in auth, file uploads, an MCP server and an admin UI, and runs custom server logic as WebAssembly components.",
+    "script": "ct/trailbase.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/trailbase.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/trailbase.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Databases",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in to the admin UI at http://<IP>:4000/_/admin/ with the email and password from /opt/trailbase_data/.env.",
+      "Auth emails and OAuth redirects use PUBLIC_URL in /opt/trailbase_data/.env; change it when TrailBase is reached through a domain."
+    ],
+    "warnings": [],
+    "port": 4000,
+    "website": "https://trailbase.io/",
+    "documentation": "https://trailbase.io/getting-started/install",
+    "logo": "https://cdn.jsdelivr.net/gh/trailbaseio/trailbase@main/assets/logo.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@localhost",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Transmission",
     "slug": "transmission",
     "desc": "Transmission is a free, open-source BitTorrent client known for its fast download speeds and ease of use. It supports various platforms such as Windows, Linux, and macOS and has features like web interface, peer exchange, and encrypted transfers.",
@@ -25444,7 +25484,7 @@
     "warnings": [],
     "port": 8080,
     "website": "https://github.com/TriliumNext/trilium",
-    "documentation": "https://github.com/TriliumNext/trilium/wiki",
+    "documentation": "https://docs.triliumnotes.org/user-guide/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/trilium-notes.webp",
     "updateable": true,
     "privileged": false,
