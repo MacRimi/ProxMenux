@@ -14,9 +14,10 @@ For one menu invocation:
 PROXMENUX_OCI_LAYER_CACHE=1 menu
 ```
 
-The default remains the existing complete-archive transfer. An unchanged image
-still returns before downloads, backup retention checks or guest changes.
-Supported native Modify operations retain their existing fast paths.
+The default remains the existing complete-archive transfer. Standalone Update
+retains its unchanged-image shortcut, including its return before backup
+retention checks. Native Modify fast paths and the existing coordinated-update
+lifecycle are unchanged.
 
 The cache is `.proxmenux-oci-layer-cache` beside the template-store image
 archives. `PROXMENUX_OCI_LAYER_CACHE_ROOT` can select another private directory.
