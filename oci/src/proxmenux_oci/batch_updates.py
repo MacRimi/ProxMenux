@@ -49,7 +49,9 @@ def _backend(project):
 def _snapshot(project, vmid):
     """Fresh local files, not stale UI/Monitor caches or repeated PVE processes."""
     instances = _backend(project)
-    with instances.locked(instances.ROOT):
+    # Wait like the other engine operations: a short hold by the watchdog
+    # or another reader is not a changed application.
+    with instances.locked(instances.ROOT, timeout=30):
         selected = instances.read(instances.ROOT, vmid)
         primary_id = selected.get('stack_member', {}).get('primary_vmid', vmid)
         primary = instances.read(instances.ROOT, primary_id)

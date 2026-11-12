@@ -6,6 +6,7 @@ use JSON::PP;
 use IO::Handle;
 BEGIN { die "root required\n" if $> != 0; }
 use PVE::Cluster;
+use PVE::INotify;
 use PVE::RPCEnvironment;
 use PVE::API2::Cluster;
 use PVE::API2::HA::Resources;
