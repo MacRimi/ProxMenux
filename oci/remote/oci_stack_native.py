@@ -18,12 +18,14 @@ import oci_carried_record as carried
 import oci_stack_public_routes as public_routes
 import oci_compose_jobs as compose_jobs
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as member_tx
 import oci_stack_plan
 import oci_stack_transaction as stack_tx
 import oci_stack_adapters as adapters
 import oci_stack_replay as replay
 import oci_work_backup as work_backup
+import oci_zfs_recovery as zfs_recovery
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
@@ -118,6 +120,8 @@ class NativeAdapter:
         self.acknowledge = acknowledge_external_data
         # Storage where the verified backups of this update are kept.
         self.keep_backup = None
+        self.zfs_backups = None
+        self.zfs_checked = False
 
     def state(self):
         return json.loads(self.journal.read_text())
@@ -126,7 +130,7 @@ class NativeAdapter:
         name = self.services.get(vmid, {}).get('name')
         return f'{name} (CT {vmid})' if name else f'CT {vmid}'
 
-    def validate(self, plan):
+    def validate(self, plan, vmids=None):
         resources = json.loads(instances.command('pvesh', 'get', '/cluster/resources',
             '--type', 'vm', '--output-format', 'json'))
         if not isinstance(resources, list):
@@ -139,21 +143,25 @@ class NativeAdapter:
             if row['vmid'] in inventory:
                 raise ValueError(translate('Duplicated VMID in the Proxmox inventory'))
             inventory[row['vmid']] = row
-        for vmid, record in self.records.items():
+        state = self.state() if self.journal.exists() else {}
+        checked_configs = {}
+        for vmid in self.records if vmids is None else vmids:
+            record = self.records[vmid]
             row = inventory.get(vmid)
             if row:
                 if row['type'] != 'lxc' or row.get('node') != socket.gethostname().split('.')[0]:
                     raise ValueError(translate('A member VMID is in use by another guest or is on another node'))
                 config = instances.command('pct', 'config', str(vmid))
+                checked_configs[vmid] = config
                 public_routes.check(config, record['deployment'], vmid, record['installation_id'])
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
-                if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config, ignore_tags=True):
+                if not state.get('replacement_intent') and not instances.same_config_except_notes(record, config, ignore_tags=True):
                     raise ValueError(translate('A member configuration changed during the preparation'))
             else:
                 if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
                     raise ValueError(translate('The Proxmox inventory and the local configurations differ'))
-                if not self.journal.exists() or not self.state().get('replacement_intent'):
+                if not state.get('replacement_intent'):
                     raise ValueError(translate('A member is missing before the replacement'))
             current = instances.read(self.root, vmid)
             if current['installation_id'] != record['installation_id']:
@@ -161,6 +169,7 @@ class NativeAdapter:
             pending = current.get('pending_stack_transaction')
             if pending and pending != str(self.journal):
                 raise ValueError(translate('Another stack operation is pending'))
+        return checked_configs
 
     def _migration_backups(self):
         if not any(self.is_job(vmid) for vmid in self.services):
@@ -183,7 +192,7 @@ class NativeAdapter:
                 raise ValueError(translate('Migration jobs cannot safely restore database or unclassified backend data from host directories'))
 
     def preflight(self):
-        self.validate(self.plan)
+        checked_configs = self.validate(self.plan) or {}
         self._migration_backups()
         ha = json.loads(instances.command('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
         if not isinstance(ha, list) or any(r.get('sid') == 'ct:%s' % vmid for r in ha for vmid in self.records):
@@ -193,7 +202,8 @@ class NativeAdapter:
                 raise ValueError(translate('A member has a pending operation'))
             if record['deployment'].get('post_start_configurations'):
                 raise ValueError(translate('The recipe requires configuration at startup; its coordinated replay is not available'))
-            config = instances.command('pct', 'config', str(vmid))
+            # Reuse this read-only preflight snapshot, never destructive checks.
+            config = checked_configs.get(vmid) or instances.command('pct', 'config', str(vmid))
             member_tx.preflight(record, record, config, coordinated=True)
             member_tx.freeze_host_sources(record, record, self.acknowledge)
             check = self.services[vmid].get('healthcheck', {})
@@ -254,22 +264,27 @@ class NativeAdapter:
     def is_running(self, vmid):
         return instances.command('pct', 'status', str(vmid)).strip() == b'status: running'
 
-    def prepare(self, record, operation):
-        for vmid in self.records:
-            current = instances.read(self.root, vmid)
-            current['pending_stack_transaction'] = str(self.journal)
-            instances.write(instances.location(self.root, vmid), current)
+    def prepare(self, record, operation, force=False, required_digest=None):
+        if not getattr(self, '_marked_pending', False):
+            for vmid in self.records:
+                current = instances.read(self.root, vmid)
+                current['pending_stack_transaction'] = str(self.journal)
+                instances.write(instances.location(self.root, vmid), current)
+            self._marked_pending = True
         config = instances.command('pct', 'config', str(record['vmid']))
-        # Installations and updates use different cache names. The resolver
-        # verifies both the saved archive's integrity and its resolved image
-        # before reusing it; a genuinely changed image is still downloaded.
         local_archives = (record.get('observed', {}).get('archive_path'),)
         if operation == 'recreate':
             digest = record.get('observed', {}).get('resolved_registry_digest')
             archive, digest = resolve_archive(record, config, required_digest=digest,
                                               local_archives=local_archives)
         else:
-            archive, digest = resolve_archive(record, config, local_archives=local_archives)
+            kwargs = {'local_archives': local_archives,
+                      'current': None if force else record['observed']['image']}
+            if required_digest:
+                kwargs['required_digest'] = required_digest
+            archive, digest = resolve_archive(record, config, **kwargs)
+            if archive is None:
+                return {'archive': None, 'digest': digest, 'unchanged': True}
         image = image_from_archive(str(archive))
         old = record['observed']['image']
         validate_database_transition(old, image)
@@ -293,6 +308,13 @@ class NativeAdapter:
             if config_hash:
                 proposal['base_config_sha256'] = config_hash
         return {'archive': str(archive), 'digest': digest, 'proposal': proposal}
+
+    def prepare_changed_stack(self, state):
+        for vmid in self.records:
+            prepared = state['prepared'][str(vmid)]
+            if prepared.get('unchanged') is True and self.is_job(vmid):
+                state['prepared'][str(vmid)] = self.prepare(self.records[vmid], 'update',
+                    force=True, required_digest=prepared['digest'])
 
     def probe_nextcloud_image(self, record, archive, image):
         """Import but never start a disposable rootfs before stopping the stack."""
@@ -325,12 +347,22 @@ class NativeAdapter:
             descriptor.unlink()
 
     def stop(self, vmid):
-        self.validate(self.plan)
+        self.validate(self.plan, [vmid])
         if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
             member_tx.stop(vmid, self.records[vmid]['deployment'].get('shutdown_timeout_seconds', 60))
 
     def backup(self, vmid, transaction_id):
-        self.validate(self.plan)
+        self.validate(self.plan, [vmid])
+        if not getattr(self, 'zfs_checked', False):
+            self.zfs_checked = True
+            prepared_zfs = zfs_recovery.plan(self.records) if not getattr(self, 'keep_backup', None) and not getattr(self, 'keep_backup_requested', False) else None
+            if prepared_zfs:
+                for member_id, record in self.records.items():
+                    carried.carry_backup(self.root, member_id, record, prepared_zfs['configs'][member_id])
+                self.zfs_backups = zfs_recovery.create(self.records, self.journal.parent, prepared_zfs)
+        if getattr(self, 'zfs_backups', None):
+            archive = self.zfs_backups[vmid]
+            return {'archive': str(archive), 'sha256': member_tx.filehash(archive)}
         base = self.work_base()
         if base != self.journal.parent and not (self.journal.parent / work_backup.MARK).exists():
             work_backup.prepare(base)
@@ -351,7 +383,7 @@ class NativeAdapter:
                 raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup['archive']}")
             if member_tx.filehash(backup['archive']) != backup['sha256']:
                 raise ValueError(translate('A backup was modified'))
-            member_tx.run('zstd', '-t', backup['archive'])
+            member_tx.verify_recovery_archive(backup['archive'])
 
     def replace(self, vmid, prepared, identity):
         self.validate(self.plan)
@@ -432,7 +464,7 @@ class NativeAdapter:
         return compose_jobs.ensure_completed(vmid, self.services[vmid]['healthcheck']['job'], force=force)
 
     def start(self, vmid):
-        self.validate(self.plan)
+        self.validate(self.plan, [vmid])
         if self.is_job(vmid):
             self._ensure_job(vmid)
             return
@@ -490,6 +522,13 @@ class NativeAdapter:
     def validate_candidates(self, state):
         self.validate(self.plan)
         for vmid, original in self.records.items():
+            if state['prepared'][str(vmid)].get('unchanged') is True:
+                config = member_tx.owned(vmid, original['installation_id'])
+                if not instances.same_config_except_notes(original, config, ignore_tags=True):
+                    raise ValueError(translate('A member configuration changed after the stack was checked'))
+                member_tx.check_runtime_mounts(config, original['deployment'])
+                member_tx.gpu_devices.check(config, original['deployment'])
+                continue
             current = instances.read(self.root, vmid)
             journal = Path(current['pending_transaction'])
             child = json.loads(journal.read_text())
@@ -530,6 +569,13 @@ class NativeAdapter:
 
     def publish(self, state):
         for vmid, original in self.records.items():
+            if state['prepared'][str(vmid)].get('unchanged') is True:
+                config = member_tx.owned(vmid, original['installation_id'])
+                if not instances.same_config_except_notes(original, config, ignore_tags=True):
+                    raise ValueError(translate('A member configuration changed after the stack was checked'))
+                member_tx.check_runtime_mounts(config, original['deployment'])
+                member_tx.gpu_devices.check(config, original['deployment'])
+                continue
             current = instances.read(self.root, vmid)
             journal = Path(current['pending_transaction'])
             child = json.loads(journal.read_text())
@@ -602,12 +648,8 @@ class NativeAdapter:
             instances.write(journal, child)
         stage = child['stage']
         if not Path('/etc/pve/lxc/%s.conf' % stage).exists():
-            archive = self.state()['prepared'][str(vmid)]['archive']
-            member_tx.run('pct', 'create', str(stage), archive, '--rootfs',
-                '%s:%s' % (original['deployment']['rootfs']['storage'], original['deployment']['rootfs']['size_gb']),
-                '--hostname', 'oci-stack-recovery-holder', '--ostype', 'unmanaged',
-                '--unprivileged', '1', '--memory', '128', '--cores', '1', '--onboot', '0',
-                '--description', 'proxmenux-transaction=' + child['id'])
+            member_tx.create_data_holder(stage, original['deployment']['rootfs']['storage'],
+                child['id'], journal.parent, original['observed']['image']['architecture'])
         pending = copy.deepcopy(original)
         pending.update(status='updating', pending_transaction=str(journal), transaction_id=child['id'],
                        pending_stack_transaction=str(self.journal))
@@ -676,6 +718,7 @@ class NativeAdapter:
             instances.write(instances.location(self.root, vmid), record)
         try:
             self.release_stages(recovered=state['phase'] == 'rolled-back')
+            zfs_recovery.cleanup(self.journal.parent)
             if self.keep_backup and state['phase'] == 'committed':
                 import oci_keep_backup
                 for backup in sorted(work_backup.recall(self.journal.parent).glob('backup-*/vzdump-lxc-*.tar.zst')):
@@ -685,7 +728,7 @@ class NativeAdapter:
             self.prune_backups(include_current=state['phase'] == 'committed')
             for path, _ in image_cache.prune(self.root, lock=False):
                 member_tx.log(f'removed unused image archive: {path}')
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
             member_tx.log(f'cleanup: {exc}')
 
     def release_stages(self, recovered=False):
@@ -734,7 +777,7 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
     msg_info(translate('Checking the interrupted stack operation...') if recover
              else (translate('Checking the stack before recreating...') if operation == 'recreate'
                    else translate('Checking the stack before the update...')))
-    with instances.locked(root):
+    with native_reads.session(log=member_tx.log), instances.locked(root):
         selected = instances.read(root, vmid)
         primary_id = selected.get('stack_member', {}).get('primary_vmid', vmid)
         primary = instances.read(root, primary_id)
@@ -787,6 +830,7 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
         journal = directory / 'transaction.json'
         _current['journal'] = journal
         adapter = NativeAdapter(root, journal, plan, acknowledge_external_data)
+        adapter.keep_backup_requested = bool(keep_backup)
         adapter.preflight()
         msg_ok(f"{translate('Stack checked:')} {len(plan['members'])} {translate('containers')}")
         if keep_backup:
@@ -804,6 +848,9 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
         with oci_operation_notice.operation([member['vmid'] for member in plan['members']], operation,
                                             oci_update_current.application_name(primary, primary_id), primary_id):
             result = stack_tx.execute(journal, adapter, plan)
+        if result.get('no_change'):
+            msg_ok(translate('The image is already up to date; nothing was changed.'))
+            return result
         msg_ok(translate('Stack recreation completed. Data kept.') if operation == 'recreate'
                else translate('Stack update completed. Data kept.'))
         return result
@@ -844,7 +891,10 @@ def main():
     parser.add_argument('--operation', choices=['update', 'recreate'], default='update')
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--keep-backup', metavar='STORAGE')
+    parser.add_argument('--recovery-backend', choices=['backup', 'auto'])
     args = parser.parse_args()
+    if args.recovery_backend:
+        os.environ['PROXMENUX_OCI_RECOVERY'] = args.recovery_backend
     if os.geteuid() != 0:
         parser.error(translate('Root privileges on the Proxmox node are required'))
     try:

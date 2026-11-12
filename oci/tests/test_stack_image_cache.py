@@ -122,12 +122,13 @@ class StackImageCacheTests(unittest.TestCase):
                 patch.object(update.transaction, "log"):
             return adapter.prepare(record, operation)
 
-    def test_update_reuses_a_verified_original_archive_without_downloading_layers(self):
+    def test_unchanged_update_needs_no_archive_download_or_layer_verification(self):
         result = self.prepare()
-        self.assertEqual(result["archive"], str(self.saved))
+        self.assertIsNone(result["archive"])
+        self.assertTrue(result["unchanged"])
         self.assertEqual(result["digest"], self.old_image["manifest_digest"])
         self.assertEqual(self.lookups, ["example/app:latest"])
-        self.assertIn(self.saved, self.verifications)
+        self.assertEqual(self.verifications, [])
         self.assertEqual(self.downloads, [])
 
     def test_recreate_pins_the_saved_registry_digest_and_reuses_the_original_archive(self):
@@ -136,6 +137,7 @@ class StackImageCacheTests(unittest.TestCase):
         self.assertEqual(result["archive"], str(self.saved))
         self.assertEqual(result["proposal"]["operation"], "recreate")
         self.assertEqual(self.downloads, [])
+        self.assertEqual(self.verifications, [self.saved])
 
     def test_changed_image_rejects_the_old_archive_and_downloads_the_new_digest(self):
         new_image = archive_fixture(self.source, "new")
@@ -148,17 +150,62 @@ class StackImageCacheTests(unittest.TestCase):
         self.assertIn("docker://example/app@" + new_image["manifest_digest"], self.downloads[0])
         self.assertEqual(image_from_archive(result["archive"]), new_image)
         self.assertEqual(self.saved.read_bytes(), before)
+        self.assertNotIn(self.saved, self.verifications)
+        self.assertEqual(len(self.verifications), 1)  # The replacement is fully checked.
 
     def test_corrupt_original_archive_is_kept_and_replaced_by_a_verified_download(self):
         self.saved.write_bytes(b"not an intact OCI archive")
-        result = self.prepare()
+        result = self.prepare("recreate")
         self.assertEqual(len(self.downloads), 1)
         self.assertEqual(image_from_archive(result["archive"]), self.old_image)
         self.assertEqual(self.saved.read_bytes(), b"not an intact OCI archive")
 
+    def test_matching_metadata_does_not_allow_a_corrupted_layer(self):
+        # Only alter a layer byte. Manifest/config metadata still parses and
+        # matches; a full digest/gzip check must reject the archive.
+        with tarfile.open(self.saved) as tar:
+            members = [m for m in tar.getmembers() if m.name.startswith('blobs/')]
+            layer = next(m for m in members if tar.extractfile(m).read(2) == b'\x1f\x8b')
+            offset = layer.offset_data + layer.size // 2
+        with self.saved.open('r+b') as stream:
+            stream.seek(offset); value = stream.read(1)
+            stream.seek(offset); stream.write(bytes([value[0] ^ 1]))
+        self.assertEqual(image_from_archive(str(self.saved)), self.old_image)
+        result = self.prepare('recreate')
+        self.assertIn(self.saved, self.verifications)
+        self.assertEqual(len(self.downloads), 1)
+        self.assertEqual(image_from_archive(result['archive']), self.old_image)
+        with self.assertRaises(RuntimeError):
+            verify_archive(self.saved)  # Never delete the recorded original.
+
+    def test_format_conversion_still_reuses_a_fully_verified_matching_image(self):
+        # Docker-to-OCI conversion can change the manifest digest while keeping
+        # the same layers and build time. Preserve the canonical comparator.
+        self.candidate['manifest_digest'] = 'sha256:' + 'c' * 64
+        result = self.prepare('recreate')
+        self.assertEqual(result['archive'], str(self.saved))
+        self.assertEqual(self.verifications, [self.saved])
+        self.assertEqual(self.downloads, [])
+
+    def test_metadata_is_checked_again_after_full_verification(self):
+        original = update.image_from_archive
+        saved_reads = []
+        def changed(path):
+            image = original(path)
+            if Path(path) == self.saved:
+                saved_reads.append(path)
+                if len(saved_reads) >= 2:
+                    image = dict(image, manifest_digest='sha256:' + 'd' * 64, layers=['different'])
+            return image
+        with patch.object(update, 'image_from_archive', side_effect=changed):
+            result = self.prepare('recreate')
+        self.assertEqual(len(self.downloads), 1)
+        self.assertIn(self.saved, self.verifications)
+        self.assertEqual(image_from_archive(result['archive']), self.old_image)
+
     def test_a_record_without_an_archive_uses_the_normal_download_path(self):
         self.record["observed"].pop("archive_path")
-        result = self.prepare()
+        result = self.prepare("recreate")
         self.assertEqual(len(self.downloads), 1)
         self.assertEqual(image_from_archive(result["archive"]), self.old_image)
 
@@ -166,7 +213,7 @@ class StackImageCacheTests(unittest.TestCase):
         link = self.root / "linked.tar"
         link.symlink_to(self.saved)
         self.record["observed"]["archive_path"] = str(link)
-        self.prepare()
+        self.prepare("recreate")
         self.assertEqual(len(self.downloads), 1)
         self.assertNotIn(link, self.verifications)
         self.assertTrue(link.is_symlink())

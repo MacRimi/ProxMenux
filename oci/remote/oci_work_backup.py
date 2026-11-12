@@ -145,6 +145,8 @@ def clear(directory):
     """Delete the backups of a closed operation, and its folder on another
     storage once it is empty. The journal and the log of the operation stay."""
     directory = Path(directory)
+    import oci_zfs_recovery
+    oci_zfs_recovery.cleanup(directory)
     base = recall(directory)
     if base != directory and not base.exists():
         return
@@ -173,14 +175,20 @@ def _remove_empty(folder):
 def forget(root, vmid):
     """Before the record of an application is deleted: remove what its
     operations left on another storage."""
-    transactions = instances.location(root, vmid).parent / 'transactions'
-    if not transactions.is_dir():
-        return
-    for directory in transactions.iterdir():
-        base = recall(directory)
-        if base != directory and base.exists() and FOLDER in base.parts:
-            shutil.rmtree(base, ignore_errors=True)
-            _remove_empty(base.parent)
+    application_directory = instances.location(root, vmid).parent
+    for name in ('transactions', 'stack-transactions'):
+        transactions = application_directory / name
+        if not transactions.is_dir() or transactions.is_symlink():
+            continue
+        for directory in transactions.iterdir():
+            if directory.is_symlink() or not directory.is_dir():
+                continue
+            import oci_zfs_recovery
+            oci_zfs_recovery.cleanup(directory)
+            base = recall(directory)
+            if base != directory and base.exists() and FOLDER in base.parts:
+                shutil.rmtree(base, ignore_errors=True)
+                _remove_empty(base.parent)
 
 
 def application(root, vmid):

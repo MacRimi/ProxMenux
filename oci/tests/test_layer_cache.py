@@ -111,7 +111,7 @@ class Resolver(unittest.TestCase):
     result,digest=update.resolve_archive(record,b'arch: amd64\n',local_archives=[str(old)])
    self.assertEqual(result,destination);self.assertEqual(digest,candidate['manifest_digest'])
    self.assertEqual(calls,[('docker://example/app@'+candidate['manifest_digest'],'amd64',[str(old)])])
-   self.assertEqual(len(verified),2);self.assertEqual(old.read_bytes(),before)
+   self.assertTrue(verified);self.assertNotEqual(verified[-1],old);self.assertEqual(old.read_bytes(),before)
    verify_archive(destination)
 
 if __name__=="__main__":unittest.main()

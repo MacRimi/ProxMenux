@@ -162,11 +162,12 @@ class UpdateWording(unittest.TestCase):
         record = {'status': 'installed', 'observed': {'image': {'manifest_digest': 'sha256:current'}}}
         instances = SimpleNamespace(ROOT=Path('/inert'), locked=lambda root: nullcontext(),
                                     read=lambda root, vmid: record, command=lambda *args: b'arch: amd64')
-        transaction = SimpleNamespace(candidate_contract=lambda *args: {'deployment': {}},
+        transaction = SimpleNamespace(log=lambda text: None, candidate_contract=lambda *args: {'deployment': {}},
                                       external_changes=lambda *args: {}, preflight=lambda *args: None,
                                       require_backup_space=lambda *args: self.fail('backup space checked on no-op'),
                                       apply=lambda *args, **kwargs: self.fail('apply on no-op'))
         scope = {'instances': instances, 'transaction': transaction,
+                 'native_reads': SimpleNamespace(session=lambda **kwargs: nullcontext()),
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(text), 'msg_ok': lambda text: events.append(text),
                  'resolve_archive': lambda desired, config, current, check, **kwargs: (None, current),

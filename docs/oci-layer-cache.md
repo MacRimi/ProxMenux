@@ -39,8 +39,8 @@ the exported archive, checking both filesystems when the cache is elsewhere.
   includes its manifest, config and all referenced layers, with native-import
   readable ownership and permissions. Normal full archive verification stays
   in place; no verification proofs are reused or persisted.
-- Shared/exclusive locks protect readers, publication and pruning. There is no
-  parallel image preparation, verification shortcut or recovery-backend change.
+- Shared/exclusive locks protect readers, publication and pruning. Layer reuse itself does not
+  add parallel preparation, skip archive verification or change recovery.
 - An explicit `REGISTRY_AUTH_FILE` is preserved. Otherwise the cache reader
   discovers `/etc/pve/priv/proxmenux/registry-auth.json` at pull time, including a
   login saved after module import. No credentials are copied into the cache.
@@ -63,10 +63,12 @@ installed V1 archives were allowed seeds, and complete V2 archives were absent.
 | Preparation phase | 17.751 s | 4.525 s |
 
 That is **12.339 s (12.1%) less total time in this experiment**, not a universal
-speedup. The reference included earlier update optimizations from commit
-`8b96aa14`; this independent patch does not require or include those changes.
-The PR records validation of the isolated implementation separately. Other
+speedup. The reference included earlier update work at commit `8b96aa14`. This PR is
+stacked on #656 and its parents so the existing coordinated-recovery fix stays
+in its base: matching container configurations do not prove that migration
+writes left data unchanged. The new feature here is layer reuse only. Other
 experimental optimizations and their combined measurement are out of scope.
+The PR records the additional isolated-branch measurements separately.
 
 ## Tests
 

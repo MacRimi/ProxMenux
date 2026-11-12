@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as transaction
 import oci_work_backup as work_backup
 import oci_layer_cache as layer_cache
@@ -91,8 +92,14 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
 
     def intact(path):
         try:
+            # Metadata is only a rejection filter. A stale archive is never
+            # read/decompressed in full just to discover it is the old image.
+            if not same_image(candidate, image_from_archive(str(path))):
+                return False
             run_quiet([sys.executable, str(verifier), str(path)],
                       translate('The image did not pass the integrity check'))
+            # Recheck the contract after verification as well: a candidate
+            # must still match before it can be returned to the transaction.
             return same_image(candidate, image_from_archive(str(path)))
         except (RuntimeError, OSError, ValueError, KeyError, tarfile.TarError):
             return False
@@ -206,7 +213,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
              else translate('Checking the container before modifying it...'))
-    with instances.locked(instances.ROOT):
+    with native_reads.session(log=transaction.log), instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, vmid)
         if record['status'] != 'installed' or record.get('pending_transaction') or record.get('pending_stack_transaction'):
             raise ValueError(translate('The instance is not ready to be updated'))
@@ -272,7 +279,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         with oci_operation_notice.operation([vmid], kind, application_name(record, vmid)):
             transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
                               registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
-                              keep_backup=file_storage)
+                              keep_backup=file_storage, **({'force_archive': True} if keep_backup else {}))
     marker = os.environ.get('OCI_RECREATED_MARKER')
     if marker:
         Path(marker).touch()

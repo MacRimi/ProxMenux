@@ -152,7 +152,28 @@ Open **Updates available (N)** to choose applications with Space. Nothing is
 preselected, even when there is only one update. **Select all** at the top
 includes every listed application. After reviewing the selection, each
 application uses the existing update workflow, including its identity checks,
-backup prompts and recovery. Cancelling or failing an update stops the batch.
+backup prompts and recovery. All application reviews, recommended-setting
+choices and temporary-backup storage choices are collected **before** the first
+update. A final confirmation starts the prepared batch; no questions or Enter
+pauses interrupt execution. Keep the terminal open until the final summary.
+
+Updates run sequentially through the existing lifecycle helpers, which retain
+their registry locks, backups, health checks and rollback. By default, a failed
+update stops the queue. An upfront option allows continuing after a failure
+that leaves the application in a valid installed state. Pending recovery,
+changed application identity/configuration or interruption always stops it.
+Changes made during preparation or while earlier applications run must be
+reviewed again; the batch never silently accepts them. Selecting multiple
+members of one coordinated application updates that application only once.
+
+The summary shows each application’s outcome and execution time, including
+applications not started. Private reports under
+`/usr/local/share/proxmenux/oci/instances/batch-updates/<id>/report.json`
+record preparation, execution and per-step timings without commands,
+configuration values or credentials. Temporary proposals are removed when the
+batch finishes. Reports are diagnostic records, not resumable queues.
+Cancelling preparation leaves services untouched; already approved external
+configuration adoption or temporary-backup storage choices may still be saved.
 The selection screen has only **Update** and **Cancel** buttons.
 
 Opening the menu reads the Monitor's existing `/etc/proxmenux/apps` results
@@ -202,6 +223,31 @@ An update is a transaction:
 5. The application is checked. When it answers, the record is published with the new digest. When it does not, the previous container is restored from the backup.
 
 Settings changed in Proxmox VE after the installation, such as memory, cores or start with the node, are carried into the new record. An operation interrupted by a closed terminal or a reboot is detected the next time the menu opens, and the previous installation can be recovered. A container restored from a backup on another host is registered again from the copy of the record it carries.
+
+Coordinated updates compare each installed image with its resolved candidate. If
+all members are unchanged, they finish without stopping or recreating the stack.
+Otherwise only changed images are recreated (completion jobs are also replayed
+when the stack changes). Every member is still stopped and backed up coherently:
+a new application can migrate an unchanged database. A failed update restores
+the whole recovery point, including members whose LXC configuration did not
+change. Explicit Recreate continues to rebuild every member.
+
+Temporary data holders use a minimal, networkless, never-started rootfs instead
+of extracting the application image a second time. This applies to standalone
+and coordinated image replacement, and to stack recovery. Journals record active
+phase durations in `phase_seconds`; time while an operation is interrupted is
+not counted as work by a subsequent recovery process.
+
+An opt-in experiment can use protected local ZFS recovery clones instead of a
+full temporary archive for eligible layouts. Conventional backups remain the
+default; this is not a portable/PBS backup. See [ZFS recovery](ZFS-RECOVERY.md)
+for eligibility, recovery boundaries and measurement guidance.
+
+Cache selection compares the archive's checked manifest/config metadata before
+reading and decompressing every blob. An obsolete archive is rejected cheaply;
+a matching candidate still receives full layer verification and a second
+metadata comparison before reuse. Both standalone and coordinated updates share
+this resolver. No verification result is persisted or reused across operations.
 
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
