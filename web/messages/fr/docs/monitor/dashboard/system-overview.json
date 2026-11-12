@@ -92,10 +92,10 @@
       "<strong>Stockage VM/LXC</strong> — espace utilisé, libre et pourcentage des stockages des invités, avec un compteur s'il y en a plusieurs.",
       "<strong>Stockage local (système)</strong> — montage racine ou système de l'hôte, séparé du pool des invités."
     ],
-    "storageDrillIn": "Les détails se trouvent dans l'<link>onglet Stockage</link> : SMART par disque, pools ZFS, historique des observations, etc.",
+    "storageDrillIn": "Les détails se trouvent dans l’<link>onglet Stockage</link> : SMART par disque, pools ZFS, historique des observations, etc.",
     "networkTitle": "Carte d'aperçu du réseau",
     "networkBody1": "La ligne supérieure montre le nombre d'interfaces actives (physiques + ponts combinés). En dessous, deux rangées de badges colorés pour les interfaces qui sont <code>up</code> — NIC physiques en bleu, ponts en couleur secondaire. Un sélecteur de temps en haut à droite (1 heure / 24 heures / 7 jours / 30 jours / 1 année) contrôle une petite carte de trafic RX / TX.",
-    "networkBody2": "Les détails par interface (IP/MAC, graphique RRD, membres du pont, mode bond, etc.) sont dans l'<link>onglet Réseau</link>."
+    "networkBody2": "Les détails par interface (IP/MAC, graphique RRD, membres du pont, mode bond, etc.) sont dans l’<link>onglet Réseau</link>."
   },
   "refresh": {
     "heading": "Modèle d'actualisation",
