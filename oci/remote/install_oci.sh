@@ -1029,6 +1029,16 @@ oci_valid_extra_hostname() {
   [[ ${#1} -le 253 && $1 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]
 }
 
+prepare_unmanaged_network_files() {
+  [[ $(sed -n 's/^ostype: //p' "$CONF") == unmanaged ]] || return 0
+  local rootfs="/var/lib/lxc/${VMID}/rootfs" failed=0
+  mount_ct_rootfs
+  oci_quiet python3 "${SCRIPT_DIR}/oci_network_files.py" "$rootfs" "$CONF" "$DEPLOYMENT_FILE" \
+    || failed=1
+  oci_quiet pct unmount "$VMID" || failed=1
+  (( failed == 0 )) || die "$(translate "Could not prepare the container DNS and hosts files")"
+}
+
 apply_extra_hosts() {
   local count rootfs hosts_file temporary address hostname bridge_address failed=0
   count=$(jq '.extra_hosts? // [] | length' "$DEPLOYMENT_FILE")
@@ -2148,6 +2158,7 @@ prepare_managed_format_directories() {
 }
 
 prepare_managed_format_directories "/var/lib/lxc/${VMID}/rootfs"
+prepare_unmanaged_network_files
 apply_extra_hosts
 apply_installer_profile
 # Render tmpfs entries after the image and installer profile have set the

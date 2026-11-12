@@ -10833,5 +10833,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Manage shows, movies and music in one self-hosted application.": "Gestisci serie, film e musica in un’unica applicazione ospitata sul tuo server.",
+  "Create the owner account in the web interface on first visit; there are no default credentials.": "Crea l’account del proprietario al primo accesso all’interfaccia web; non sono previste credenziali predefinite.",
+  "Keep /config on local storage. Select media and download folders under /media in the web setup.": "Mantieni /config su uno spazio di archiviazione locale. Seleziona le cartelle dei contenuti e dei download sotto /media nella configurazione web.",
+  "Keep downloads and libraries on the same filesystem to use hardlinks.": "Mantieni download e librerie nello stesso file system per utilizzare i collegamenti fisici.",
+  "Could not prepare the container DNS and hosts files": "Impossibile preparare i file DNS e hosts del contenitore"
 }

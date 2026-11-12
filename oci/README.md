@@ -983,6 +983,8 @@ independent backup policy; no shared path is created unless `host-bind` was
 chosen. The default LXC is unprivileged and uses an 8 GB thin-provisioned
 rootfs.
 
+Unmanaged images (including scratch images) do not receive DNS files from Proxmox’s OS setup. Before their first start, the installer supplies missing `/etc/resolv.conf` and `/etc/hosts` using the Proxmox DNS/search settings or the host resolver. A host loopback stub uses systemd-resolved’s upstreams for a dedicated container network. Existing files, image symlinks, explicit mounts and `.pve-ignore.*` markers are preserved. Files are prepared on creation/recreation before Compose host aliases are appended.
+
 ## Validation lifecycle
 
 Generated templates start as `generated-unvalidated`. Promotion requires:
