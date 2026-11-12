@@ -1548,7 +1548,7 @@
       "repository": "https://github.com/ThePhaseless/Byparr",
       "description": "Proxy server to bypass Cloudflare protection for Prowlarr and Jackett",
       "website": "https://github.com/ThePhaseless/Byparr",
-      "icon": "https://raw.githubusercontent.com/ThePhaseless/Byparr/main/icon/1080x1080.png",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/byparr.webp",
       "architectures": [
         "amd64",
         "arm64"
