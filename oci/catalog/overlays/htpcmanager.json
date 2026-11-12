@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "HTPC Manager"
+    },
+    "tagline": {
+      "en_US": "Htpcmanager is a front end for many htpc related applications."
+    },
+    "description": {
+      "en_US": "Htpcmanager is a web-based front end designed to integrate various home theater PC services into a single interface. It provides a unified dashboard to monitor and interact with multimedia applications and download tools."
+    },
+    "screenshots": [
+      "http://i.imgur.com/6QEWPFf.png"
+    ]
   }
 }

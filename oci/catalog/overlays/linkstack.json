@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create a customizable landing page that collects your social and website links. LinkStack stores its application files and data in /htdocs."
+    },
+    "description": {
+      "en_US": "LinkStack is a customizable link sharing platform designed to host multiple links on a single landing page. It allows users to create a personal profile page to share their web presence across platforms that only permit a single link. The platform includes an administrative panel for managing links and page customization."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/LinkStackOrg/stargazer/main/preview.png",
+      "https://raw.githubusercontent.com/LinkStackOrg/Magic-Kingdom/main/preview.png",
+      "https://raw.githubusercontent.com/LinkStackOrg/polygon/main/preview.png",
+      "https://raw.githubusercontent.com/LinkStackOrg/PolySleek/main/preview.png"
+    ]
+  }
+}

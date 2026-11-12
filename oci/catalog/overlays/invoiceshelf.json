@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted invoicing and estimates with customer portals, recurring billing, payments, and expense tracking."
+    },
+    "description": {
+      "en_US": "InvoiceShelf is an open-source invoicing and financial management application built for freelancers and small businesses. It enables users to generate invoices, create estimates, and export documents as PDF files. The platform also provides tools to track expenses, manage customer payments, schedule recurring billing, and maintain client portals."
+    }
+  }
+}

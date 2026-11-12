@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "PCSX2"
+    },
+    "tagline": {
+      "en_US": "PCSX2 is an open source PS2 Emulator."
+    },
+    "description": {
+      "en_US": "PCSX2 is an open-source PlayStation 2 emulator that replicates the console hardware on modern computers. It allows users to run and play PS2 video games directly from discs or game images with support for custom graphics configurations and controller setups."
+    },
+    "tips": [
+      "Set the proper graphics settings manually, as Automatic will not work and OpenGL is the most compatible.",
+      "By default there is no authentication configured."
+    ]
   }
 }

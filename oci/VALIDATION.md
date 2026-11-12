@@ -50,7 +50,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 |---|---|
 | 2FAuth | Authentication & Security |
 | AdGuard Home | Adblock & DNS |
-| Adguardhome Sync | Adblock & DNS |
+| AdGuard Home Sync | Adblock & DNS |
 | Alby Hub ✨ | Finance & Budgeting |
 | Alist | Files & Sharing |
 | aMule | Files & Downloads |
@@ -60,12 +60,12 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | CodeProject.AI Server | AI |
 | CopyParty | Files & Sharing |
 | Crafty | Gaming & Leisure |
-| Ddclient | Adblock & DNS |
+| ddclient | Adblock & DNS |
 | Duplicati | Backup & Recovery |
 | Etherpad | Documents & Notes |
 | FileBrowser Quantum | Files & Sharing |
 | FlareSolverr | *Arr Suite |
-| Flexget | *Arr Suite |
+| FlexGet | *Arr Suite |
 | Frigate | NVR & Cameras |
 | Grafana | Monitoring & Analytics |
 | HAOS One | IoT & Smart Home |
@@ -73,23 +73,23 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | JDownloader | Files & Downloads |
 | Jenkins CI/CD | AI / Coding & Dev-Tools |
 | Linkwarden | Documents & Notes |
-| Mariadb | Databases |
+| MariaDB | Databases |
 | Memos | Documents & Notes |
 | Mindwtr | Productivity & Workflows |
 | MineOS | Gaming & Leisure |
 | Motioneye | NVR & Cameras |
 | Navidrome | Media & Streaming |
 | Nextcloud | Productivity & Workflows |
-| Nextcloud Stack | Productivity & Workflows |
+| Nextcloud + PostgreSQL | Productivity & Workflows |
 | OpenList | Files & Sharing |
-| Openssh Server | Remote Access & VPN |
+| OpenSSH Server | Remote Access & VPN |
 | Paperless-ngx | Productivity & Workflows |
-| Phpmyadmin | Databases |
+| phpMyAdmin | Databases |
 | Prowlarr | *Arr Suite |
 | Proxmox Backup Server | Backup & Recovery |
 | Proxmox Datacenter Manager | Host Management |
 | Proxmox Mail Gateway | Authentication & Security |
-| Qbittorrent | Files & Downloads |
+| qBittorrent | Files & Downloads |
 | Rclone WebUI | Backup & Recovery |
 | Real-Debrid Torrent Client | Files & Downloads |
 | Scanopy | Network & Firewall |
@@ -97,10 +97,10 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | SnapOtter | Media & Streaming |
 | Sonarr | *Arr Suite |
 | Tandoor Recipes | Productivity & Workflows |
-| Thelounge | Communication & Community |
+| The Lounge | Communication & Community |
 | Trilium | Documents & Notes |
 | Vaultwarden | Authentication & Security |
 | Vikunja | Productivity & Workflows |
 | Windows | Browsers & Web Desktops |
-| Wireguard | Remote Access & VPN |
+| WireGuard | Remote Access & VPN |
 | WireGuard Easy | Remote Access & VPN |

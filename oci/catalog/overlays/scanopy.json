@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Scanopy discovers the hosts and services of your network and keeps its diagrams up to date. This recipe installs the server, PostgreSQL and the scanning daemon, each in its own Proxmox OCI LXC."
+    },
+    "description": {
+      "en_US": "Scanopy scans networks on a schedule to discover hosts and services without requiring agents on every device. It continuously maps infrastructure across physical Layer 2, logical Layer 3, workload, and application dependency views. The application maintains an up-to-date device inventory with open ports, VLAN details, and hardware facts, and it can export or share current network models."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/scanopy/scanopy/HEAD/media/hero.png",
+      "https://raw.githubusercontent.com/scanopy/scanopy/HEAD/media/l2.webp",
+      "https://raw.githubusercontent.com/scanopy/scanopy/HEAD/media/l3.png",
+      "https://raw.githubusercontent.com/scanopy/scanopy/HEAD/media/wl.png"
+    ]
+  }
+}

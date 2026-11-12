@@ -56,6 +56,14 @@ def is_multi_container(template: dict[str, Any]) -> bool:
     return template.get("id") in MULTI_CONTAINER_TEMPLATES or driver in ("generic-multi-lxc-stack", "arr-suite")
 
 
+def _pillow_available() -> bool:
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 class Catalog:
     def __init__(self, root: Path, source: GitHubSource | None = None, *,
                  catalog_dir: Path | None = None) -> None:
@@ -139,7 +147,41 @@ class Catalog:
                 item["template_id"] = template_id
         index_path.write_text(json.dumps(index, ensure_ascii=True, indent=2) + "\n",
                               encoding="utf-8")
+        report.update(self.apply_dark_icons(resolver))
         return report
+
+    def apply_dark_icons(self, resolver: Any = None, fetch: Any = None) -> dict[str, int]:
+        """Give every black icon of the index its version for the dark theme.
+
+        A black mark on a transparent background disappears on the dark theme
+        of the Monitor, so its index entry carries `icon_dark`: the light
+        version its icon set publishes, or "invert" when there is none. The
+        Monitor reads it for any place that shows that icon. The templates are
+        not touched, so the template schema stays the same.
+        """
+        from .icons import IconResolver, fetch_icon
+
+        if not _pillow_available():
+            # Without Pillow the icons cannot be read; what the index already
+            # says is kept rather than cleared.
+            return {"dark": -1}
+        resolver = resolver or IconResolver()
+        fetch = fetch or fetch_icon
+        index = json.loads(self.index_path.read_text(encoding="utf-8"))
+        cache: dict[str, str | None] = {}
+        dark = 0
+        for item in index.get("applications", []):
+            url = item.get("icon")
+            if url not in cache:
+                cache[url] = resolver.dark_theme_icon(url, fetch(url)) if url else None
+            if cache[url]:
+                item["icon_dark"] = cache[url]
+                dark += 1
+            else:
+                item.pop("icon_dark", None)
+        self.index_path.write_text(json.dumps(index, ensure_ascii=True, indent=2) + "\n",
+                                   encoding="utf-8")
+        return {"dark": dark}
 
     def sync_index(self) -> dict[str, Any]:
         repos = self.source.list_linuxserver_repositories()
@@ -453,8 +495,13 @@ class Catalog:
             item["hidden"] = overlay_ui.get("hidden", False)
             # The index is rebuilt from upstream README summaries; preserve a
             # locally curated English description from the existing overlay.
-            item["description"] = overlay_ui.get("description", {}).get(
+            # The short line of the overlay comes first: its description is
+            # then the longer text of the application's sheet.
+            item["description"] = (overlay_ui.get("tagline") or overlay_ui.get("description") or {}).get(
                 "en_US", item.get("description"))
+            # The name of the project, spelt as it spells it, for every image
+            # of it: who publishes the image is shown apart.
+            item["title"] = overlay_ui.get("title", {}).get("en_US", item.get("title"))
             path = self.apps_dir / f"{item['id']}.json"
             if not path.exists():
                 item["architectures"] = supported_architectures(

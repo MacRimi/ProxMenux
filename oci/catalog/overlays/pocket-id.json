@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a lightweight identity provider that uses passkeys for sign-in and can provide OpenID Connect to other applications. ProxMenux creates an encryption key and sets the application URL to this container address."
+    },
+    "description": {
+      "en_US": "Pocket ID is an OpenID Connect and OAuth 2.0 provider designed for simplicity. It allows users to authenticate to self-hosted applications exclusively using passkeys instead of passwords. This enables secure, passwordless logins across multiple services with hardware keys or biometrics."
+    },
+    "screenshots": [
+      "https://pocket-id.org/_astro/landing-my-apps-light.DfJnoLmh_2MQsz.webp?dpl=dpl_D2ZnGi3YatECjiVyvX2C2jmT2PvF",
+      "https://pocket-id.org/_astro/landing-my-apps-dark.B3IN2JPO_cNWhu.webp?dpl=dpl_D2ZnGi3YatECjiVyvX2C2jmT2PvF",
+      "https://pocket-id.org/_astro/landing-login-code-light.DKjInQf0_ZHA5YI.webp?dpl=dpl_D2ZnGi3YatECjiVyvX2C2jmT2PvF",
+      "https://pocket-id.org/_astro/landing-login-code-dark.CdAZKc49_2uByLm.webp?dpl=dpl_D2ZnGi3YatECjiVyvX2C2jmT2PvF"
+    ]
+  }
+}

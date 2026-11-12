@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted comment server for blogs and websites, with a browser-based dashboard."
+    },
+    "description": {
+      "en_US": "Artalk is a self-hosted comment system designed for blogs, websites, and web applications. It provides an embeddable frontend alongside a backend server that offers multi-site isolation and centralized management. The system supports comment moderation, Markdown formatting, image uploads, notifications, and page view tracking."
+    }
+  }
+}

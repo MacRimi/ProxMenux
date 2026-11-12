@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Draw together on shared whiteboards in real time. WBO saves board state in its server-data directory."
+    },
+    "description": {
+      "en_US": "WBO is an online collaborative whiteboard application that allows multiple users to draw simultaneously on a virtual canvas. Edits appear in real time for all connected participants, and boards are automatically saved as SVG files on the server. It is useful for sketching ideas, building collaborative diagrams, brainstorming, and online teaching."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/552629/59885574-06e02b80-93bc-11e9-9150-0670a1c5d4f3.png",
+      "https://user-images.githubusercontent.com/552629/59915054-07101380-941c-11e9-97c9-4980f50d302a.png",
+      "https://user-images.githubusercontent.com/552629/59915737-a386e580-941d-11e9-81ff-db9e37f140db.png",
+      "https://user-images.githubusercontent.com/552629/120919822-dc2c3200-c6bb-11eb-94cd-57a4254fbe0a.png"
+    ]
+  }
+}

@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "code-server"
+    },
+    "tagline": {
+      "en_US": "Code-server is VS Code running on a remote server, accessible through the browser."
+    },
+    "description": {
+      "en_US": "Code-server runs VS Code on a remote server and makes it accessible through any web browser. It provides a consistent development environment across different client devices such as Chromebooks, tablets, and laptops. All intensive workloads, compilations, and tests execute directly on the remote server, preserving local battery life and system resources."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/coder/code-server/HEAD/docs/assets/screenshot-2.png",
+      "https://raw.githubusercontent.com/coder/code-server/HEAD/docs/assets/screenshot-1.png"
+    ]
   }
 }

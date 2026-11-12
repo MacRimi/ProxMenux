@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Wraps a TCP service in TLS, such as DNS over TLS on port 853 in front of a DNS server."
+    },
+    "description": {
+      "en_US": "Stunnel is a proxy designed to add TLS encryption functionality to existing clients and servers without requiring any modifications to the programs' code. It can operate in server mode to terminate TLS connections before forwarding plain traffic, or in client mode to encrypt unencrypted connections across the network. It supports custom certificates or can generate self-signed certificates automatically."
+    }
+  }
+}

@@ -8,17 +8,17 @@
       "en_US": "Suite Arr"
     },
     "tagline": {
-      "en_US": "Prowlarr is a indexer manager/proxy built on the popular arr .net/reactjs base stack to integrate with your various PVR apps. Prowlarr supports both Torrent Trackers and Usenet Indexers. It integrates seamlessly with Sonarr, Radarr, Lidarr, and Readarr offering complete management of your indexers with no per app Indexer setup required (we do it all)."
+      "en_US": "Pick the Arr applications you want and install them together, each in its own LXC, with shared media and an optional Jellyfin, Plex or Emby."
     },
     "description": {
-      "en_US": "Selectable Arr media suite with shared content and a choice of Jellyfin, Plex or Emby."
+      "en_US": "Installs a set of Arr applications at once, each in its own unprivileged LXC. Prowlarr, Sonarr, Radarr and qBittorrent come selected; Lidarr, Bazarr, SABnzbd, Seerr and Unpackerr can be added. The media applications share one host folder, and Jellyfin, Plex or Emby can be added as the media server. Each container starts on its own: there is no main member."
     },
     "category": "arr",
     "category_label": "*Arr Suite",
     "author": "LinuxServer.io",
     "developer": null,
     "icon": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/prowlarr-icon.png",
-    "thumbnail": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/prowlarr-banner.png",
+    "thumbnail": null,
     "screenshots": [],
     "architectures": [
       "amd64",
@@ -29,9 +29,9 @@
       "port": 9696,
       "path": "/"
     },
-    "website": "https://github.com/Prowlarr/Prowlarr",
-    "documentation": "https://docs.linuxserver.io/images/docker-prowlarr/",
-    "repository": "https://github.com/linuxserver/docker-prowlarr",
+    "website": "https://wiki.servarr.com",
+    "documentation": "https://proxmenux.com/en/docs/oci-manager/stacks",
+    "repository": "https://github.com/linuxserver",
     "tips": [],
     "mini_changelog": [
       {

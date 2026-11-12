@@ -19,5 +19,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "DB Browser for SQLite"
+    },
+    "tagline": {
+      "en_US": "DB Browser for SQLite is a high quality, visual, open source tool to create, design, and edit database files compatible with SQLite."
+    },
+    "description": {
+      "en_US": "DB Browser for SQLite is a visual tool designed to create, design, and edit database files compatible with SQLite. It offers a graphical interface that simplifies managing database structures, tables, and records without relying solely on command-line utilities. Users can inspect data, alter schemas, and handle database contents directly."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/sqlitebrowser/sqlitebrowser/master/images/sqlitebrowser.png"
+    ]
   }
 }

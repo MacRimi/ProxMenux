@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "WineGUI"
+    },
+    "tagline": {
+      "en_US": "WineGUI is a user-interface friendly Wine manager that provides a graphical frontend for creating and managing Wine bottles."
+    },
+    "description": {
+      "en_US": "WineGUI is a graphical Wine manager designed to simplify running Windows software. It provides an intuitive interface for creating, configuring, and managing Wine bottles. Users can organize their applications and handle prefix configurations without relying on command-line tools."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/winegui/winegui/HEAD/misc/winegui_screenshots.gif"
+    ]
   }
 }

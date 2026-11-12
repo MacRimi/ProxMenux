@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Calligra is an office and graphic art suite by KDE. It is available for desktop PCs, tablet computers, and smartphones. It contains applications for word processing, spreadsheets, presentation, vector graphics, and editing databases."
+    },
+    "description": {
+      "en_US": "Calligra is an integrated office and graphic art suite developed by KDE. It provides a comprehensive set of tools for document creation, visual design, and data management. The suite contains specialized tools for word processing, spreadsheets, slide presentations, vector graphics, and editing databases."
+    }
   }
 }

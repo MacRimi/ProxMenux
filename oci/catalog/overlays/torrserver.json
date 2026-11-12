@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted torrent streaming server that reads a magnet link or torrent and serves the resulting media over HTTP for browser and player clients. It keeps its configuration and streaming cache in local persistent storage and does not need a separate database or helper service."
+    },
+    "description": {
+      "en_US": "TorrServer is a streaming server that enables viewing torrents directly without requiring entire files to be downloaded beforehand. It caches incoming torrent data and delivers media over HTTP to browsers, media players, and smart devices. The server also includes support for external subtitles, Torznab indexer searching, and DLNA streaming."
+    }
+  }
+}

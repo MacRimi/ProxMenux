@@ -16,5 +16,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Memos is a lightweight, open-source, self-hosted note-taking application that offers a secure and streamlined solution for users prioritizing privacy and data control. All notes are stored on the user’s own server, eliminating risks associated with third-party cloud services. Its minimalist Web interface supports Markdown syntax and tag-based organization, enabling effortless capture of ideas, personal knowledge management, or small-scale team collaboration. The open-source design ensures transparency, long-term maintainability, and no subscription costs, making it ideal for users seeking data ownership and cost efficiency.\n\nDesigned for simplicity and efficiency, Memos caters to a variety of use cases. Whether jotting down daily thoughts, organizing study notes, or sharing task memos in small teams, Memos delivers a seamless experience through its intuitive tag system and Markdown formatting. Accessible via any web browser, it requires no proprietary clients or complex setup, allowing users to manage notes anytime, anywhere.\n\nWhether used for long-term personal knowledge archiving or as a lightweight tool for team collaboration, Memos offers a secure, flexible, and user-friendly solution, empowering users to maintain full control over their data while enjoying a streamlined note-taking experience.\n"
+    },
+    "description": {
+      "en_US": "Memos is a lightweight note-taking service designed for capturing thoughts and organizing information. It features a web interface with support for Markdown syntax and tag-based classification. The platform helps individuals track daily tasks, manage personal knowledge, and share notes."
+    },
+    "repository": "https://github.com/usememos/memos",
+    "screenshots": [
+      "https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/previews/timeline-light.png",
+      "https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/previews/timeline-dark.png"
+    ]
   }
 }

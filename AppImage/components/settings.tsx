@@ -1471,37 +1471,39 @@ export function Settings() {
                       return (
                         <div
                           key={s.error_key}
-                          className={`flex items-start sm:items-center justify-between gap-3 px-3 py-2.5 rounded-md border transition-colors ${
+                          className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2.5 rounded-md border transition-colors ${
                             isQueued
                               ? "border-green-500/40 bg-green-500/5"
                               : "border-border hover:bg-muted/30"
                           }`}
                         >
-                          <div className={`flex items-start gap-2 min-w-0 flex-1 ${isQueued ? "opacity-60" : ""}`}>
+                          {/* On a phone the badge and the button share the first line
+                              and the alert takes the whole width below them. */}
+                          <div className={`order-1 shrink-0 ${isQueued ? "opacity-60" : ""}`}>
                             {s.permanent ? (
-                              <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-amber-400 border-amber-400/40 mt-0.5 font-normal">
+                              <Badge variant="outline" className="text-sm px-2 py-0.5 text-amber-400 border-amber-400/40 font-normal">
                                 {t("settings.healthMonitor.permanent")}
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-blue-400 border-blue-400/30 mt-0.5 font-normal">
+                              <Badge variant="outline" className="text-sm px-2 py-0.5 text-blue-400 border-blue-400/30 font-normal">
                                 {remainingLabel}
                               </Badge>
                             )}
-                            <div className="min-w-0 flex-1">
-                              <div className={`text-xs sm:text-sm font-medium text-foreground truncate ${isQueued ? "line-through" : ""}`} title={s.error_key}>
-                                {tFallback(`settings.healthMonitor.errorNames.${s.error_key}`, normalizeErrorKey(s.error_key))}
-                              </div>
-                              <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                                <span>{t("settings.healthMonitor.labels.category")}: <span className="font-medium text-foreground/80">{s.category ? tFallback(`settings.healthMonitor.categories.${s.category}`, s.category) : "—"}</span></span>
-                                {s.severity && <span>{t("settings.healthMonitor.labels.severity")}: <span className="font-medium text-foreground/80">{tFallback(`status.${s.severity.toLowerCase()}`, s.severity)}</span></span>}
-                                {dismissedAtLabel && <span>{t("settings.healthMonitor.labels.dismissed")}: {dismissedAtLabel}</span>}
-                              </div>
+                          </div>
+                          <div className={`order-3 basis-full min-w-0 sm:order-2 sm:basis-0 sm:flex-1 ${isQueued ? "opacity-60" : ""}`}>
+                            <div className={`text-xs sm:text-sm font-medium text-foreground truncate ${isQueued ? "line-through" : ""}`} title={s.error_key}>
+                              {tFallback(`settings.healthMonitor.errorNames.${s.error_key}`, normalizeErrorKey(s.error_key))}
+                            </div>
+                            <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                              <span>{t("settings.healthMonitor.labels.category")}: <span className="font-medium text-foreground/80">{s.category ? tFallback(`settings.healthMonitor.categories.${s.category}`, s.category) : "—"}</span></span>
+                              {s.severity && <span>{t("settings.healthMonitor.labels.severity")}: <span className="font-medium text-foreground/80">{tFallback(`status.${s.severity.toLowerCase()}`, s.severity)}</span></span>}
+                              {dismissedAtLabel && <span>{t("settings.healthMonitor.labels.dismissed")}: {dismissedAtLabel}</span>}
                             </div>
                           </div>
                           <Button
                             size="sm"
                             variant="outline"
-                            className={`h-7 px-2.5 text-xs shrink-0 bg-transparent ${
+                            className={`order-2 sm:order-3 h-7 px-2.5 text-xs shrink-0 bg-transparent ${
                               isQueued
                                 ? "border-green-500/50 text-green-400 hover:bg-green-500/10"
                                 : "hover:bg-green-500/10 hover:border-green-500/50"

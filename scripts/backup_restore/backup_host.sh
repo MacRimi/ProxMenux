@@ -4151,9 +4151,36 @@ _bk_community_proxsave() {
 # ==========================================================
 # MAIN MENU
 # ==========================================================
+# One option of the menu, by its key.
+_bk_run_option() {
+    case "$1" in
+        1) backup_menu ;;
+        2) restore_menu ;;
+        3) _bk_manage_extra_paths ;;
+        4) _bk_scheduler ;;
+        5) _bk_manage_destinations ;;
+        6) bash "$LOCAL_SCRIPTS/backup_restore/vm_backup_jobs.sh" ;;
+        7) _bk_community_pve_host_backup ;;
+        8) _bk_community_proxmox_toolbox ;;
+        9) _bk_community_proxsave ;;
+        *) return 1 ;;
+    esac
+}
+
 main_menu() {
+    # An option given as argument, as the menu search does, is opened first;
+    # the menu follows.
+    local PRESELECTED_OPTION="${1:-}" CATALOG_ITEM_DONE=""
     while true; do
         local choice
+
+        if [[ "$PRESELECTED_OPTION" =~ ^[1-9]$ ]]; then
+            _bk_run_option "$PRESELECTED_OPTION"
+            PRESELECTED_OPTION=""
+            CATALOG_ITEM_DONE=1
+        fi
+        # Opened from the Monitor's Catalog tab, the option ends the run instead of the menu following.
+        [[ "${PROXMENUX_CATALOG:-}" == "1" && -n "$CATALOG_ITEM_DONE" ]] && exit 0
 
         choice=$(dialog --colors --backtitle "ProxMenux" \
             --title "$(translate "Host Config Backup / Restore")" \
@@ -4177,20 +4204,12 @@ main_menu() {
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
-            1) backup_menu ;;
-            2) restore_menu ;;
-            3) _bk_manage_extra_paths ;;
-            4) _bk_scheduler ;;
-            5) _bk_manage_destinations ;;
-            6) bash "$LOCAL_SCRIPTS/backup_restore/vm_backup_jobs.sh" ;;
-            7) _bk_community_pve_host_backup ;;
-            8) _bk_community_proxmox_toolbox ;;
-            9) _bk_community_proxsave ;;
             0) break ;;
+            *) _bk_run_option "$choice" ;;
         esac
     done
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main_menu
+    main_menu "$@"
 fi

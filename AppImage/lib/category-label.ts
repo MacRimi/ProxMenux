@@ -32,6 +32,12 @@ const CATEGORY_KEY_BY_VALUE: Record<string, string> = {
   "Remote Access & VPN": "remoteAccessVpn",
   "Webservers & Proxies": "webserversProxies",
   "ZigBee, Z-Wave & Matter": "zigbeeZwaveMatter",
+  // Categories only the OCI catalog uses.
+  "Creative & Design": "creativeDesign",
+  "Files & Sharing": "filesSharing",
+  "Browsers & Web Desktops": "browsersWebDesktops",
+  "Tools": "tools",
+  "Messaging & Queues": "messagingQueues",
 }
 
 export function getCategoryLabel(t: Translate, value: string): string {

@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Label Studio is an open source data labeling tool. It lets you label data types like audio, text, images, videos, and time series with a simple and straightforward UI and export to various model formats. It can be used to prepare raw data or improve existing training data to get more accurate ML models."
+    },
+    "description": {
+      "en_US": "Label Studio is an open source data labeling tool designed to annotate various data formats including audio, text, images, videos, and time series. It helps teams prepare raw datasets and refine existing training data for machine learning models. The application provides customizable labeling templates, multi-user project workflows, and integrations to connect machine learning models for assisted pre-labeling."
+    },
+    "repository": "https://github.com/HumanSignal/label-studio",
+    "screenshots": [
+      "https://raw.githubusercontent.com/HumanSignal/label-studio/HEAD/images/annotation_examples.gif"
+    ]
   }
 }

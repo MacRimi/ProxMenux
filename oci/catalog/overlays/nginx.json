@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "NGINX"
+    },
+    "tagline": {
+      "en_US": "Nginx is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP proxy server, and mail proxy server."
+    },
+    "description": {
+      "en_US": "Nginx is an HTTP web server, reverse proxy, content cache, and load balancer. It also functions as a TCP/UDP proxy server and mail proxy server. It is designed to efficiently route network traffic, accelerate content delivery, and serve web applications."
+    }
   }
 }

@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official Tandoor Recipes deployment with its integrated web server and an isolated PostgreSQL dependency."
+    },
+    "description": {
+      "en_US": "Tandoor Recipes is an application designed to manage, organize, and share digital recipe collections. It enables users to plan meals for each day, generate shopping lists directly from recipes or meal plans, and group recipes into cookbooks. It also supports importing recipes from supported websites or other recipe managers, customizable tagging, and collaboration with family and friends."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/vabene1111/recipes/HEAD/docs/preview.png"
+    ]
   }
 }

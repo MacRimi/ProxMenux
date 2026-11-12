@@ -14428,6 +14428,43 @@ def api_apps_catalog():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/apps/icon-themes', methods=['GET'])
+@require_auth
+def api_apps_icon_themes():
+    """Catalog icons that need another version on the dark theme:
+    {icon_url: light_version_url | "invert"}."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.oci_icon_themes())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items', methods=['GET'])
+@require_auth
+def api_catalog_items():
+    """Every item of the Catalog tab: OCI applications and Community Scripts."""
+    try:
+        import catalog_tab
+        return jsonify(catalog_tab.list_items(request.args.get('lang', 'en')))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items/<kind>/<item_id>', methods=['GET'])
+@require_auth
+def api_catalog_item(kind, item_id):
+    """The sheet of one item of the Catalog tab."""
+    try:
+        import catalog_tab
+        detail = catalog_tab.item_detail(kind, item_id, request.args.get('lang', 'en'))
+        if detail is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify(detail)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/apps/github-token', methods=['GET'])
 @require_auth
 def api_apps_github_token_status():

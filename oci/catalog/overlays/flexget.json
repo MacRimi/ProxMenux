@@ -91,5 +91,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "FlexGet"
+    },
+    "tagline": {
+      "en_US": "Flexget is a multipurpose automation tool for all of your media."
+    },
+    "description": {
+      "en_US": "Flexget is a multipurpose automation tool designed to manage and process media. It automates content workflows across various sources, helping users retrieve, organize, and sort their media feeds according to custom rules."
+    }
   }
 }

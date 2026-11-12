@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted document management for storing, organizing, searching, and sharing personal documents."
+    },
+    "description": {
+      "en_US": "Papra is a minimalistic document management and archiving platform designed for long-term document storage. It enables users to upload, organize, and retrieve files like receipts and warranties through full-text search and automated content extraction. Features include automatic ingestion via email or folders, customizable tagging rules, organization management, and secure document sharing."
+    },
+    "screenshots": [
+      "https://papra.app/_astro/papra-screenshot.D_UPa7Z8_Z1MvwLt.webp"
+    ]
+  }
+}

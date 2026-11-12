@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Создание ВМ: система Linux | Документация ProxMenux",
-    "description": "Создавайте ВМ Linux на Proxmox VE с помощью ProxMenux. Здесь описаны каталог отобранных официальных ISO-образов (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), единый план настройки хранилища, проброс GPU по желанию и советы после установки.",
+    "description": "Создавайте ВМ Linux на Proxmox VE с помощью ProxMenux. Здесь описаны каталог отобранных официальных ISO-образов (Ubuntu, Debian, Fedora, Arch, Rocky, AlmaLinux, CentOS Stream, Oracle Linux, Mint, openSUSE, Alpine, Kali, Manjaro, Pop!_OS, Zorin OS, CachyOS, NixOS), единый план настройки хранилища, проброс GPU по желанию и советы после установки.",
     "ogTitle": "Создание ВМ: система Linux | Документация ProxMenux",
     "ogDescription": "Создавайте ВМ Linux на Proxmox VE с помощью ProxMenux. Каталог отобранных ISO-образов, единый план настройки хранилища, проброс GPU по желанию и советы после установки.",
     "ogImageAlt": "Меню ВМ Linux в ProxMenux"
@@ -152,31 +152,30 @@
       {
         "name": "Ubuntu",
         "variants": [
-          "25.10 — настольная версия",
-          "24.04 — настольная версия",
-          "22.04 — настольная версия",
-          "20.04 — настольная версия",
-          "25.10 — серверная версия",
-          "24.04 — серверная версия",
-          "22.04 — серверная версия",
-          "20.04 — серверная версия"
+          "26.10 Desktop",
+          "26.04 LTS Desktop",
+          "24.04 LTS Desktop",
+          "22.04 LTS Desktop",
+          "26.10 Server",
+          "26.04 LTS Server",
+          "24.04 LTS Server",
+          "22.04 LTS Server"
         ]
       },
       {
         "name": "Debian",
         "variants": [
-          "13 — настольная версия",
-          "12 — настольная версия",
-          "11 — настольная версия",
+          "13 Desktop",
+          "12 Desktop",
           "13 Netinst",
-          "12 Netinst",
-          "11 Netinst"
+          "12 Netinst"
         ]
       },
       {
         "name": "Fedora",
         "variants": [
-          "Workstation 42"
+          "Workstation 45",
+          "Workstation 44"
         ]
       },
       {
@@ -188,37 +187,88 @@
       {
         "name": "Rocky Linux",
         "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "AlmaLinux",
+        "variants": [
+          "10",
+          "10 Minimal",
+          "9"
+        ]
+      },
+      {
+        "name": "CentOS Stream",
+        "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "Oracle Linux",
+        "variants": [
+          "10",
           "9"
         ]
       },
       {
         "name": "Linux Mint",
         "variants": [
-          "22.1 Cinnamon"
+          "22.3 Cinnamon",
+          "22.3 Xfce"
         ]
       },
       {
         "name": "openSUSE",
         "variants": [
-          "Leap 15.6"
+          "Leap 16.1",
+          "Leap 16.0"
         ]
       },
       {
         "name": "Alpine Linux",
         "variants": [
-          "3.21"
+          "3.24"
         ]
       },
       {
         "name": "Kali Linux",
         "variants": [
-          "2026.1"
+          "2026.3"
         ]
       },
       {
         "name": "Manjaro",
         "variants": [
-          "25.0 GNOME"
+          "26.1 GNOME"
+        ]
+      },
+      {
+        "name": "Pop!_OS",
+        "variants": [
+          "24.04"
+        ]
+      },
+      {
+        "name": "Zorin OS",
+        "variants": [
+          "18.1 Core",
+          "18.1 Lite"
+        ]
+      },
+      {
+        "name": "CachyOS",
+        "variants": [
+          "последняя версия"
+        ]
+      },
+      {
+        "name": "NixOS",
+        "variants": [
+          "26.05",
+          "26.05 Minimal"
         ]
       }
     ]

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Store and query time-series metrics through a Prometheus-compatible HTTP API and web interface."
+    },
+    "description": {
+      "en_US": "VictoriaMetrics is a fast, scalable time series database and monitoring solution designed to collect, store, and process large volumes of metrics data. It functions as long-term storage or a drop-in replacement for Prometheus and Graphite, supporting both PromQL and MetricsQL query languages. The platform ingests telemetry across numerous industry-standard protocols while offering high compression and low resource usage."
+    }
+  }
+}

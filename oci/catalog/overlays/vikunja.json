@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage personal and shared tasks, lists and projects through a web interface."
+    },
+    "description": {
+      "en_US": "Vikunja is an open-source task manager designed for managing personal and collaborative work. It allows users to organize tasks, lists, and projects through a centralized interface. The platform helps individuals and teams keep track of their to-dos and workflow."
+    },
+    "screenshots": [
+      "https://vikunja.io/_astro/01-task-overview.C06F5JRi_1iEUW6.png",
+      "https://vikunja.io/_astro/01-task-overview-dark.DZifw4H5_15xtMS.png",
+      "https://vikunja.io/_astro/02-task-list.D6f42-ar_Z1aamXE.png",
+      "https://vikunja.io/_astro/02-task-list-dark.DDS1Ayjs_RLmyq.png"
+    ]
+  }
+}

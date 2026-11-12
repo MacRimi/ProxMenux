@@ -104,5 +104,14 @@
         "/romm"
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "RomM is a self-hosted game collection management app designed for emulator enthusiasts, offering a convenient way to scan, enrich, browse, and play games. Its responsive Web interface allows users to manage collections via any modern browser, supporting over 400 platforms, ideal for retro gaming fans building personal game libraries.\n\nThe app's core features include robust library management and seamless gameplay. It fetches metadata from IGDB, Screenscraper, and MobyGames, and custom artwork from SteamGridDB, enhancing the visual appeal of collections. Users can play games directly in the browser using EmulatorJS and RuffleRS, with support for multi-disk games, DLCs, patches, and manuals. It also enables parsing and filtering by filename tags for tailored organization. Additionally, it supports multi-user accounts with limited access permissions, allowing library sharing with friends and displaying RetroAchievements.\n\nIt can be flexibly deployed on personal servers or NAS devices, with official apps for Playnite and muOS enhancing cross-device access. Users can upload, update, or delete games via the Web interface, with community support documentation expanding functionality. Whether managing a personal retro game library or sharing with others, the app's intuitive interface and high customizability deliver a modern game management platform, meeting diverse needs.\n\n**Key Features:**\n- Scan and enhance your game library with metadata from IGDB, Screenscraper and MobyGames\n- Fetch custom artwork from SteamGridDB\n- Display your achievements from Retroachievements\n- Metadata available for 400+ platforms\n- Play games directly from the browser using EmulatorJS and RuffleRS\n- Share your library with friends with limited access and permissions\n- Official apps for Playnite and muOS\n- Supports multi-disk games, DLCs, mods, hacks, patches, and manuals\n- Parse and filter by tags in filenames\n- View, upload, update, and delete games from any modern web browser\n\n**Learn More:**\n- [RomM Official Website](https://romm.app)\n- [RomM GitHub Repository](https://github.com/rommapp/romm)\n"
+    },
+    "description": {
+      "en_US": "RomM (ROM Manager) is a game collection management system designed for emulator enthusiasts. It scans, enriches, and organizes retro game libraries across more than 400 platforms. Users can view and manage their collections, download assets, and play games directly in modern web browsers using integrated web emulators."
+    },
+    "repository": "https://github.com/rommapp/romm"
   }
 }

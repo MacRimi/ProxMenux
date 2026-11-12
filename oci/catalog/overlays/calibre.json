@@ -19,5 +19,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Calibre is a powerful and easy to use e-book manager. Users say it's outstanding and a must-have. It'll allow you to do nearly everything and it takes things a step beyond normal e-book software. It's also completely free and open source and great for both casual users and computer experts."
+    },
+    "description": {
+      "en_US": "Calibre is an open-source e-book management application. It provides comprehensive tools to organize, view, and manage personal digital book collections. It also includes capabilities to share libraries over the network and read books across various formats."
+    },
+    "tips": [
+      "Keep the default library location as the path for books during the initial setup wizard.",
+      "The built-in webserver is disabled by default and can be enabled in Preferences under Sharing over the net."
+    ]
   }
 }

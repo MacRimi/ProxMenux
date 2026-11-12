@@ -20,5 +20,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Background archive extraction for Arr download queues. No web interface."
+    },
+    "description": {
+      "en_US": "Unpackerr is an archive extraction daemon for download hosts and seedboxes. It identifies completed downloads and extracts archives recursively so media managers like Lidarr, Radarr, Readarr, and Sonarr can automatically import them. It can also operate standalone to monitor designated watch folders and automatically extract archives or split audio files using cue sheets."
+    }
   }
 }

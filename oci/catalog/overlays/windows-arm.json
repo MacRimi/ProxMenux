@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs Windows for ARM as a QEMU virtual machine inside a native LXC on ARM64 hosts, installed automatically from Microsoft images and reachable from the browser or by RDP. Community packaging by Dockur."
+    },
+    "description": {
+      "en_US": "Windows ARM runs Windows operating systems on ARM64 systems using hardware-assisted virtualization. It automatically deploys selected Windows editions without requiring manual setup. Users can interact with a complete desktop environment remotely through a web browser interface or standard remote desktop connections."
+    }
+  }
+}

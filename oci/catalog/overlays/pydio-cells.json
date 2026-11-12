@@ -56,5 +56,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Pydio-cells is the nextgen file sharing platform for organizations. It is a full rewrite of the Pydio project using the Go language following a micro-service architecture."
+    },
+    "description": {
+      "en_US": "Pydio Cells is a file sharing platform designed for organizations. It is written in Go and built on a microservice architecture to provide a collaborative document management and sharing environment."
+    },
+    "tips": [
+      "A MySQL database must be created before setting up the application.",
+      "First-time configuration is completed through a web GUI setup wizard."
+    ],
+    "screenshots": [
+      "https://www.pydio.com/hs-fs/hubfs/01.png?width=600&name=01.png"
+    ]
   }
 }

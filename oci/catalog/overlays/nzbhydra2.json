@@ -16,5 +16,25 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "NZBHydra 2"
+    },
+    "tagline": {
+      "en_US": "Nzbhydra2 is a meta search application for NZB indexers, the spiritual successor to NZBmegasearcH, and an evolution of the original application NZBHydra."
+    },
+    "description": {
+      "en_US": "Nzbhydra2 is a meta search application for NZB indexers, serving as an evolution of the original NZBHydra and successor to NZBmegasearcH. It provides unified access to multiple raw and newznab-based indexers. The application allows users to query multiple indexers from one place and connect search results directly to download clients."
+    },
+    "tips": [
+      "Set up indexers and connections to your nzb download applications upon first opening the interface."
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/theotherp/nzbhydra2/master/misc/screenshots/03-results.png",
+      "https://raw.githubusercontent.com/theotherp/nzbhydra2/master/misc/screenshots/01-search-form.png",
+      "https://raw.githubusercontent.com/theotherp/nzbhydra2/master/misc/screenshots/02-search-suggestions.png",
+      "https://raw.githubusercontent.com/theotherp/nzbhydra2/master/misc/screenshots/07-stats.png"
+    ]
   }
 }

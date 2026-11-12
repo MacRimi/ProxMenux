@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Follow and organize RSS feeds in a responsive web interface. This image variant uses the embedded H2 database, so the service runs as one image without an external database."
+    },
+    "description": {
+      "en_US": "CommaFeed is a self-hosted RSS reader inspired by Google Reader. It allows users to follow, read, and organize feeds through a responsive web interface featuring multiple layouts and light and dark themes. It also supports OPML import and export, keyboard shortcuts, push notifications, and mobile synchronization via Google Reader and Fever compatible APIs."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/1256795/184886828-1973f148-58a9-4c6d-9587-ee5e5d3cc2cb.png"
+    ]
+  }
+}

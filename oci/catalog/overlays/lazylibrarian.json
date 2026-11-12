@@ -22,5 +22,21 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "LazyLibrarian"
+    },
+    "tagline": {
+      "en_US": "Lazylibrarian is a program to follow authors and grab metadata for all your digital reading needs. It uses a combination of Goodreads Librarything and optionally GoogleBooks as sources for author info and book info.  This container is based on the DobyTang fork."
+    },
+    "description": {
+      "en_US": "Lazylibrarian is an automated book and digital reading management tool. It tracks authors and gathers metadata about books and audiobooks using services such as HardCover, OpenLibrary, LibraryThing, and Goodreads. The application can also assist with ebook library management and audiobook processing."
+    },
+    "screenshots": [
+      "https://lazylibrarian.gitlab.io/assets/screenshots/llmainpage.png",
+      "https://lazylibrarian.gitlab.io/assets/screenshots/llauthdetail.png",
+      "https://lazylibrarian.gitlab.io/assets/screenshots/llmags.png"
+    ]
   }
 }

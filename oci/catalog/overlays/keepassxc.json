@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "KeePassXC"
+    },
+    "tagline": {
+      "en_US": "KeePassXC is a free and open-source password manager. It started as a community fork of KeePassX (itself a cross-platform port of KeePass)."
+    },
+    "description": {
+      "en_US": "KeePassXC is a free and open-source password manager. It allows users to securely store, organize, and manage credentials and sensitive information. The application originated as a community fork of KeePassX, which was a cross-platform port of KeePass."
+    }
   }
 }

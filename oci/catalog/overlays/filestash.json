@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Connect to file servers and storage services through a single web interface with a persistent admin configuration."
+    },
+    "description": {
+      "en_US": "Filestash is a web-based file management platform that connects to various storage backends and protocols, including SFTP, S3, SMB, WebDAV, FTP, and NFS. It allows users to browse, manage, and interact with files directly in the browser through an extensible plugin architecture. Filestash also supports specialized file viewers across numerous formats, workflow automation, and unified access across disparate storage systems."
+    },
+    "screenshots": [
+      "https://www.filestash.app/img/screenshots/theme_github.png",
+      "https://www.filestash.app/img/screenshots/theme_apple.png",
+      "https://www.filestash.app/img/screenshots/theme_dropbox.png",
+      "https://www.filestash.app/img/screenshots/theme_ibm.png"
+    ]
+  }
+}

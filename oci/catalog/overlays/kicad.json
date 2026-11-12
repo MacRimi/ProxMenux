@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "KiCad"
+    },
+    "tagline": {
+      "en_US": "KiCad - A Cross Platform and Open Source Electronics Design Automation Suite."
+    },
+    "description": {
+      "en_US": "KiCad is an open-source electronics design automation suite. It provides tools for creating electronic schematics and designing printed circuit boards. The software is useful for designing, editing, and managing hardware schematics and circuit layouts."
+    }
   }
 }

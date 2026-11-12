@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
+import concurrent.futures
+import importlib.util
 import json
 import re
 import sys
@@ -120,6 +124,55 @@ def build_script_path(type_name: str, slug: str) -> str:
         return ""
 
     return f"{prefix}/{slug}.sh"
+
+
+def _icon_tools():
+    """The engine's icon checks, loaded from their file so the engine package
+    and its registry setup are not imported. None without Pillow."""
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        return None
+    path = REPO_ROOT / "oci/src/proxmenux_oci/icons.py"
+    spec = importlib.util.spec_from_file_location("proxmenux_icons", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def apply_dark_logos(cache: list[dict[str, Any]], previous: list[dict[str, Any]], icons=None, resolver=None) -> int:
+    """Give each logo its version for the dark theme of the Monitor.
+
+    A logo drawn as a black mark on a transparent background disappears on
+    the dark theme, so its entry carries ``logo_dark``: the light version its
+    icon set publishes, or "invert" when there is none. A logo that shows on
+    both themes carries an empty ``logo_dark``. A logo already checked in the
+    previous file keeps its answer, so a run only reads the new logos. Without
+    Pillow the previous answers are kept and nothing new is checked.
+    """
+    known = {e["logo"]: e["logo_dark"] for e in previous
+             if isinstance(e, dict) and e.get("logo") and isinstance(e.get("logo_dark"), str)}
+    pending = sorted({e["logo"] for e in cache if e.get("logo") and e["logo"] not in known})
+    if pending and icons is not None:
+        resolver = resolver or icons.IconResolver()
+
+        def check(logo: str) -> tuple[str, str]:
+            data = icons.fetch_icon(logo)
+            if data is None:
+                return logo, None
+            return logo, resolver.dark_theme_icon(logo, data) or ""
+
+        with concurrent.futures.ThreadPoolExecutor(8) as pool:
+            for logo, dark in pool.map(check, pending):
+                if dark is not None:
+                    known[logo] = dark
+    dark_count = 0
+    for entry in cache:
+        logo = entry.get("logo")
+        if logo in known:
+            entry["logo_dark"] = known[logo]
+            dark_count += bool(known[logo])
+    return dark_count
 
 
 def main() -> int:
@@ -250,6 +303,13 @@ def main() -> int:
             print(f"[{len(cache):03d}] {slug:<24} → {script_path:<28} type={type_name:<7} os={os_name or 'n/a'}")
 
     cache.sort(key=lambda x: (x.get("slug") or "", x.get("script") or ""))
+
+    try:
+        previous = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous = []
+    dark = apply_dark_logos(cache, previous if isinstance(previous, list) else [], _icon_tools())
+    print(f"   Black logos with a version for the dark theme: {dark}")
 
     with OUTPUT_FILE.open("w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)

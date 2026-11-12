@@ -23,5 +23,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Alist-Sync is a storage synchronization tool based on the Web interface. It can achieve data synchronization and mutual backup among multiple network disks, and also has practical functions such as multi-task management, scheduled synchronization and difference handling.\n"
+    },
+    "description": {
+      "en_US": "Alist-Sync is a web-based storage synchronization tool designed for managing backups and file transfers across storage providers configured in Alist. It allows users to set up multi-task workflows, schedule automated jobs using cron expressions, and monitor task execution progress. The application provides multiple synchronization modes, including directory backups, direct file syncs, and file moves, along with customizable handling policies for file differences."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/数据同步.png",
+      "https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/查看任务进度.png",
+      "https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件同步.png",
+      "https://raw.githubusercontent.com/xjxjin/alist-sync/main/static/images/文件移动.png"
+    ],
+    "repository": "https://github.com/xjxjin/alist-sync"
   }
 }

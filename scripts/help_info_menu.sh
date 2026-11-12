@@ -1116,6 +1116,7 @@ while true; do
     if [[ "$PRESELECTED_OPTION" =~ ^[1-9]$ ]]; then
         OPTION="$PRESELECTED_OPTION"
         PRESELECTED_OPTION=""
+        CATALOG_ITEM_DONE=1
         case $OPTION in
             1) show_system_commands ;;
             2) show_vm_ct_commands ;;
@@ -1129,6 +1130,8 @@ while true; do
         esac
         continue
     fi
+    # Opened from the Monitor's Catalog tab, the option ends the run instead of the menu following.
+    [[ "${PROXMENUX_CATALOG:-}" == "1" && -n "${CATALOG_ITEM_DONE:-}" ]] && exit 0
     OPTION=$(dialog --stdout \
         --title "$(translate 'Help and Info')" \
         --menu "$(translate 'Select a category of useful commands:')" 20 70 9 \

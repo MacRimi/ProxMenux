@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted notes with rich text and Markdown, tags, workspaces, attachments, sharing and a REST API."
+    },
+    "description": {
+      "en_US": "Poznote is a self-hosted note-taking and knowledge management platform. It allows users to write notes in rich text or Markdown, organize content across workspaces and folders, and track projects using interactive task lists. The application supports multi-user collaboration with revision history, full-text search, attachments, and automated backups."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/timothepoznanski/poznote/HEAD/images/pres1.png"
+    ]
+  }
+}

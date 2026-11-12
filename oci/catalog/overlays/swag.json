@@ -149,5 +149,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "SWAG"
+    },
+    "tagline": {
+      "en_US": "Nginx webserver and reverse proxy with php support and a built-in Certbot (Let's Encrypt) client. It also contains fail2ban for intrusion prevention."
+    },
+    "description": {
+      "en_US": "SWAG (Secure Web Application Gateway) is an Nginx web server and reverse proxy with built-in PHP support. It integrates an automated Certbot client for SSL certificate generation and renewals from providers like Let's Encrypt and ZeroSSL. Additionally, it incorporates fail2ban for intrusion prevention and network security."
+    },
+    "tips": [
+      "HTTP access via unencrypted connections is disabled by default."
+    ],
+    "website": "https://docs.linuxserver.io/general/swag"
   }
 }

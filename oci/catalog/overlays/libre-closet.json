@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted wardrobe catalog for organizing clothing, outfits, and personal style with SQLite and local file storage."
+    },
+    "description": {
+      "en_US": "Libre Closet is an open-source wardrobe catalog and management application. It allows you to catalog clothes, upload photos with automatic background removal, and assemble garments into saved outfits using an interactive outfit builder. It also features outfit scheduling integrated with weather forecasts and wardrobe sharing capabilities."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/lazztech/Libre-Closet/HEAD/public/assets/screenshots/Screenshot_1.webp",
+      "https://raw.githubusercontent.com/lazztech/Libre-Closet/HEAD/public/assets/screenshots/Screenshot_2.webp",
+      "https://raw.githubusercontent.com/lazztech/Libre-Closet/HEAD/public/assets/screenshots/Screenshot_3.webp",
+      "https://raw.githubusercontent.com/lazztech/Libre-Closet/HEAD/public/assets/screenshots/Screenshot_4.webp"
+    ]
+  }
+}
