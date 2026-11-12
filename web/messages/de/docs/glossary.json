@@ -361,7 +361,7 @@
       "seeAlso": [
         {
           "label": "NVIDIA Installationsleitfaden",
-          "href": "/guides/nvidia"
+          "href": "/guides/nvidia-manual"
         }
       ]
     },
@@ -518,7 +518,7 @@
       "seeAlso": [
         {
           "label": "Sicherungen in persönlichem Cloud-Speicher",
-          "href": "/guides/backup_cloud"
+          "href": "/guides/backup-cloud"
         }
       ]
     },

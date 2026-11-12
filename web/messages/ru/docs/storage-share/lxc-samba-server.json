@@ -18,9 +18,9 @@
     "heading": "Что делает этот инструмент",
     "body": "Контейнер становится сервером SMB/CIFS: запускает <code>smbd</code>, предоставляет общий доступ к папке через <code>/etc/samba/smb.conf</code> и принимает клиентские подключения на портах <code>139</code> / <code>445</code>. Клиенты видят общий ресурс по адресу <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> в Проводнике Windows, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> в Finder на macOS или через <code>mount.cifs</code> в Linux.",
     "diagramServerLabel": "LXC (привилегированный) — сервер Samba",
-    "diagramServerDetail": "/mnt/data\n(папка для общего доступа)\n\nsmbd + nmbd запущены\n\nПользователь: <username>\n(через smbpasswd)\n\nПринудительно заданная группа:\nsharedfiles",
+    "diagramServerDetail": "/mnt/data\n(папка для общего доступа)\n\nsmbd + nmbd запущены\n\nПользователь: &lt;username&gt;\n(через smbpasswd)\n\nПринудительно заданная группа:\nsharedfiles",
     "diagramClientLabel": "Любой клиент в сети",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramClientDetail": "Windows: \\\\&lt;ip&gt;\\&lt;share&gt;\nmacOS:   smb://&lt;ip&gt;/&lt;share&gt;\nLinux:   mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {

@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Default export options — read this first",
     "warnTitle": "Default options include no_root_squash",
-    "warnBody": "ProxMenux defaults to <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. This means <strong>any client root user can write as root on the export</strong> — appropriate for a trusted home LAN but never for an untrusted network. If your CT is reachable from an untrusted segment (a public network, a VPS, a hostile VLAN), <strong>change the export options to <code>root_squash</code></strong> in the custom-options dialog."
+    "warnBody": "ProxMenux defaults to <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. This means <strong>any client root user can write as root on the export</strong> — appropriate for a trusted home LAN but never for an untrusted network. If your CT is reachable from an untrusted segment (a public network, a VPS, a hostile VLAN), <strong>change the export options to <code>root_squash</code></strong> in the custom-options dialog."
   },
   "opening": {
     "heading": "Opening the tool",

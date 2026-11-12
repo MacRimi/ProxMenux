@@ -9,10 +9,10 @@
   },
   "intro": {
     "p1": "L'onglet <strong>App</strong> enregistre les applications du LXC. Une fiche peut contenir simplement un nom et un lien web, ou aussi un détecteur de version installée et une source amont.",
-    "p2": "La procédure qui modifie le logiciel se configure séparément dans l'<link>onglet Mises à jour</link>. Enregistrer une application ne lance jamais d'installateur ni de programme de mise à jour.",
+    "p2": "La procédure qui modifie le logiciel se configure séparément dans l’<link>onglet Mises à jour</link>. Enregistrer une application ne lance jamais d'installateur ni de programme de mise à jour.",
     "callout": "L'enregistrement, le suivi et la mise à jour des versions sont trois capacités indépendantes. Chacun peut être utilisé sans exiger les deux autres.",
     "dashboardTitle": "De l'inscription au lanceur Apps",
-    "dashboard": "Chaque lien web enregistré ici apparaît aussi dans l'<appsLink>onglet Apps</appsLink> principal. Cette page du LXC reste la référence pour le nom, le logo, les liens et le suivi de version."
+    "dashboard": "Chaque lien web enregistré ici apparaît aussi dans l’<appsLink>onglet Apps</appsLink> principal. Cette page du LXC reste la référence pour le nom, le logo, les liens et le suivi de version."
   },
   "overview": {
     "heading": "Ce que peut fournir une fiche d'application",
@@ -145,7 +145,7 @@
   },
   "updater": {
     "heading": "Le suivi et la mise à jour des versions sont indépendants",
-    "lead": "L'<link>onglet Mises à jour</link> crée une section dès qu'une fiche d'application est enregistrée.",
+    "lead": "L’<link>onglet Mises à jour</link> crée une section dès qu'une fiche d'application est enregistrée.",
     "items": [
       "Un enregistrement link-only montre que le suivi des versions n'est pas configuré, mais peut toujours recevoir une commande de mise à jour personnalisée.",
       "Une application avec suivi mais sans méthode exécutable affiche un message neutre demandant une commande personnalisée.",

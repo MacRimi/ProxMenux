@@ -106,7 +106,7 @@
     "feedsIntro": "Gli eventi alimentano tre cose contemporaneamente:",
     "feedsHealth": "La <strong>vista Monitoraggio integrità</strong> nel dashboard (elenchi attivi + ignorati).",
     "feedsChannels": "Il <strong>motore di notifica</strong> — Telegram, Discord, Email, Gotify, Pushover e Apprise (multicanale). Ogni canale è configurato in modo indipendente e le categorie per evento possono essere silenziate.",
-    "feedsAI": "L'<strong>assistente AI</strong> opzionale: se abilitato, il provider configurato (OpenAI, Anthropic, Gemini, Groq, Ollama o OpenRouter) spiega gli eventi in arrivo in un linguaggio semplice e, se abilitato nelle impostazioni AI, propone i passaggi successivi.",
+    "feedsAI": "L’<strong>assistente AI</strong> opzionale: se abilitato, il provider configurato (OpenAI, Anthropic, Gemini, Groq, Ollama o OpenRouter) spiega gli eventi in arrivo in un linguaggio semplice e, se abilitato nelle impostazioni AI, propone i passaggi successivi.",
     "suppressionTitle": "Sopprimere singoli avvisi anziché silenziare tutto",
     "suppressionBody": "Ogni categoria ha la propria <em>Durata di soppressione</em>: una volta ignorato un avviso, lo stesso avviso viene silenziato per quella finestra (predefinito 24 ore, configurabile per categoria fino a permanente). Escalation reali – ad es. CPU temperatura che supera la soglia critica: riattivazione sempre indipendentemente dalla soppressione."
   },

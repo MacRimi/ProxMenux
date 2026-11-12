@@ -73,6 +73,23 @@ class WebDocsCatalogTests(unittest.TestCase):
             result = self.run_check(root)
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
 
+    def test_complete_mode_accepts_translated_labels_but_not_literals(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = {"headerPath": "Path", "path": "Backups tab → Create backup",
+                      "aboutFaq": "FAQ", "headerVm": "VM"}
+            self.write_catalog(root, "en", source)
+            self.write_catalog(root, "de", source | {
+                "headerPath": "Pfad", "path": "Registerkarte Backups → Backup erstellen",
+                "aboutFaq": "Häufige Fragen",
+            })
+            valid = self.run_check(root, "--require-complete")
+            self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
+            self.write_catalog(root, "de", source | {"headerVm": "VMs"})
+            invalid = self.run_check(root, "--require-complete")
+            self.assertEqual(invalid.returncode, 1, invalid.stdout + invalid.stderr)
+            self.assertIn("rendering metadata differ", invalid.stdout)
+
     def test_shipped_web_catalogs_keep_literal_contracts(self):
         messages = SCRIPT.parents[2] / "web" / "messages"
         result = subprocess.run(

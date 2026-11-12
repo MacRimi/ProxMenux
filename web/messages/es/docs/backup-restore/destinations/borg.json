@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (cualquier ruta absoluta)",
+        "url": "/backup/borgbackup",
+        "urlNote": "cualquier ruta absoluta",
         "detail": "El repositorio vive en un directorio local. Sólo tiene sentido cuando el directorio está en un disco físico distinto — un repositorio en el mismo disco que el origen protege contra error humano pero no contra fallo de disco."
       }
     ]

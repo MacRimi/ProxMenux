@@ -39,6 +39,7 @@ import oci_runtime_settings as runtime_settings
 import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
+from oci_runtime import creatable_archive
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 

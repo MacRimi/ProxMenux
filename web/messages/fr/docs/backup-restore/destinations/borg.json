@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "Le dépôt vit dans un répertoire local. Signifiant seulement lorsque le répertoire cible est sur un disque physique séparé — un dépôt sur le même disque que la source protège contre l'erreur de l'opérateur mais pas contre la défaillance du disque."
       }
     ]

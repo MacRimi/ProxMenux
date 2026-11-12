@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Options d'exportation par défaut — lire cette première",
     "warnTitle": "Les options par défaut incluent no_root_squash",
-    "warnBody": "ProxMenux utilise par défaut <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Tout utilisateur root d’un client peut écrire comme root sur l’export.</strong> Réservez cette option à un réseau local de confiance. Si le CT est accessible depuis un réseau non fiable (VPS ou VLAN non fiable), <strong>remplacez l’option par <code>root_squash</code></strong> dans le dialogue des options personnalisées."
+    "warnBody": "ProxMenux utilise par défaut <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. <strong>Tout utilisateur root d’un client peut écrire comme root sur l’export.</strong> Réservez cette option à un réseau local de confiance. Si le CT est accessible depuis un réseau non fiable (VPS ou VLAN non fiable), <strong>remplacez l’option par <code>root_squash</code></strong> dans le dialogue des options personnalisées."
   },
   "opening": {
     "heading": "Ouverture de l'outil",

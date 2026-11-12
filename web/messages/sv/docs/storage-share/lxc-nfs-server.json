@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Standardexportalternativ - läs detta första",
     "warnTitle": "Standardalternativ inkluderar no_root_squash",
-    "warnBody": "ProxMenux använder som standard <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Varje root-användare på en klient kan skriva som root på exporten.</strong> Använd detta endast i ett betrott hemnätverk. Om CT:n kan nås från ett obetrott nätverk (VPS eller obetrott VLAN), <strong>byt alternativet till <code>root_squash</code></strong> i dialogen för egna alternativ."
+    "warnBody": "ProxMenux använder som standard <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. <strong>Varje root-användare på en klient kan skriva som root på exporten.</strong> Använd detta endast i ett betrott hemnätverk. Om CT:n kan nås från ett obetrott nätverk (VPS eller obetrott VLAN), <strong>byt alternativet till <code>root_squash</code></strong> i dialogen för egna alternativ."
   },
   "opening": {
     "heading": "Öppna verktyget",

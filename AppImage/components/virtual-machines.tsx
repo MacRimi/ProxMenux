@@ -2060,6 +2060,9 @@ export function VirtualMachines() {
   const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
   const [scheduleTarget, setScheduleTarget] = useState<"os" | "app" | "both">("both")
   const [scheduleTargets, setScheduleTargets] = useState<string[]>(["os", "apps"])
+  // The applications the schedule can update, as the open container shows
+  // them; "apps" is saved only while there is one to update.
+  const scheduleAppChoicesRef = useRef<{ vmid: number; ids: string[] } | null>(null)
   const [scheduleReleaseDelayDays, setScheduleReleaseDelayDays] = useState(0)
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
@@ -2306,7 +2309,13 @@ export function VirtualMachines() {
     const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
     // A container installed by OCI manager Apps has one thing to update on
     // a schedule: its image.
-    const targetsToSave = ociInstance ? ["oci_image"] : scheduleTargets
+    const shownAppChoices = scheduleAppChoicesRef.current
+    const withoutHiddenApps = shownAppChoices?.vmid === vmid && shownAppChoices.ids.length === 0
+      ? scheduleTargets.filter((value) => value !== "apps")
+      : scheduleTargets
+    const targetsToSave = ociInstance
+      ? ["oci_image"]
+      : withoutHiddenApps.length ? withoutHiddenApps : scheduleTargets
     const hasOsTarget = targetsToSave.includes("os")
     const hasAppTarget = targetsToSave.some((value) => value !== "os")
     const derivedTarget: "os" | "app" | "both" = hasOsTarget && hasAppTarget ? "both" : hasOsTarget ? "os" : "app"
@@ -5886,6 +5895,12 @@ export function VirtualMachines() {
                           if (app.update_command?.trim()) return true
                           return helperExists && app.update_method === "helper" && app.helper_slug === uc?.helper_slug
                         }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
+                        if (uc) {
+                          scheduleAppChoicesRef.current = {
+                            vmid: selectedVM.vmid,
+                            ids: scheduledAppChoices.map((choice) => choice.id),
+                          }
+                        }
                         const versionTrackedScheduleAppIds = new Set(
                           registeredApps
                             .filter((app) => (

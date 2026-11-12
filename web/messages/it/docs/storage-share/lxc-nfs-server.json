@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Opzioni di esportazione predefinite — leggere questo primo",
     "warnTitle": "Opzioni di default includono no_root_squash",
-    "warnBody": "ProxMenux usa per impostazione predefinita <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Qualsiasi utente root di un client può scrivere come root sull’esportazione.</strong> Usalo solo in una LAN domestica affidabile. Se il CT è raggiungibile da reti non fidate (VPS o VLAN non fidata), <strong>cambia l’opzione in <code>root_squash</code></strong> nel dialogo delle opzioni personalizzate."
+    "warnBody": "ProxMenux usa per impostazione predefinita <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. <strong>Qualsiasi utente root di un client può scrivere come root sull’esportazione.</strong> Usalo solo in una LAN domestica affidabile. Se il CT è raggiungibile da reti non fidate (VPS o VLAN non fidata), <strong>cambia l’opzione in <code>root_squash</code></strong> nel dialogo delle opzioni personalizzate."
   },
   "opening": {
     "heading": "Apertura dello strumento",

@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Un lanceur, pas un installateur d'applications",
-    "body": "L'onglet <strong>Apps</strong> n'installe pas de logiciel et ne découvre pas lui-même les services. Il regroupe les liens sauvegardés dans une grille de recherche. Les liens LXC se configurent dans l'<appTabLink>onglet App</appTabLink> de l'invité ; les liens personnalisés ajoutent services VM, proxies inverses et tableaux de bord externes."
+    "body": "L'onglet <strong>Apps</strong> n'installe pas de logiciel et ne découvre pas lui-même les services. Il regroupe les liens sauvegardés dans une grille de recherche. Les liens LXC se configurent dans l’<appTabLink>onglet App</appTabLink> de l'invité ; les liens personnalisés ajoutent services VM, proxies inverses et tableaux de bord externes."
   },
   "sources": {
     "heading": "Ce qui apparaît dans Apps",
@@ -36,7 +36,7 @@
       }
     ],
     "relationshipTitle": "Les applications et l'onglet LXC App ont des tâches différentes",
-    "relationshipBody": "L'<appTabLink>onglet App</appTabLink> du LXC gère l'identité, les liens web et le suivi facultatif des versions. <strong>Apps</strong> utilise ces liens pour les ouvrir rapidement. Modifier une carte LXC renvoie donc à la fiche de l'invité sans dupliquer la configuration."
+    "relationshipBody": "L’<appTabLink>onglet App</appTabLink> du LXC gère l'identité, les liens web et le suivi facultatif des versions. <strong>Apps</strong> utilise ces liens pour les ouvrir rapidement. Modifier une carte LXC renvoie donc à la fiche de l'invité sans dupliquer la configuration."
   },
   "cards": {
     "heading": "Comment utiliser une carte",
@@ -101,7 +101,7 @@
       }
     ],
     "editTitle": "Modifier la source de la vérité",
-    "editBody": "Le mode édition affiche des crayons uniquement pour les liens personnalisés. Pour une carte LXC, ouvrez l'<appTabLink>onglet App</appTabLink> de l'invité et modifiez le lien sauvegardé."
+    "editBody": "Le mode édition affiche des crayons uniquement pour les liens personnalisés. Pour une carte LXC, ouvrez l’<appTabLink>onglet App</appTabLink> de l'invité et modifiez le lien sauvegardé."
   },
   "categories": {
     "heading": "Catégories et signaux de mise à jour",
@@ -110,7 +110,7 @@
       "L'enregistrement LXC assisté par catalogue peut préremplir une catégorie, mais il reste modifiable.",
       "Les noms de catégorie personnalisés peuvent être créés à partir du même sélecteur, puis réutilisés par le filtre.",
       "Les couleurs de catégorie sont déterministes et s'adaptent au thème clair ou sombre. Les gammes violet et rouge sont réservées aux états de mise à jour et de danger.",
-      "Pour Docker, ProxMenux associe la carte à son conteneur ou son image et indique les mises à jour de cette image. Celles de Docker Engine restent dans l'<updatesLink>onglet Mises à jour</updatesLink> du LXC."
+      "Pour Docker, ProxMenux associe la carte à son conteneur ou son image et indique les mises à jour de cette image. Celles de Docker Engine restent dans l’<updatesLink>onglet Mises à jour</updatesLink> du LXC."
     ]
   },
   "persistence": {

@@ -18,9 +18,9 @@
     "heading": "Was das macht",
     "body": "Der Container wird zu einem SMB/CIFS-Server: Er führt <code>smbd</code> aus, stellt einen Ordner über <code>/etc/samba/smb.conf</code> frei und akzeptiert Clientverbindungen an den Ports <code>139</code> / <code>445</code>. Clients sehen die Freigabe unter <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> im Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> im macOS Finder oder über <code>mount.cifs</code> unter Linux.",
     "diagramServerLabel": "LXC (privilegiert) — Samba-Server",
-    "diagramServerDetail": "/mnt/data\n(freigegebener Ordner)\n\nsmbd + nmbd laufen\n\nBenutzer: <username>\n(via smbpasswd)\n\nErzwungene Gruppe:\nsharedfiles",
+    "diagramServerDetail": "/mnt/data\n(freigegebener Ordner)\n\nsmbd + nmbd laufen\n\nBenutzer: &lt;username&gt;\n(via smbpasswd)\n\nErzwungene Gruppe:\nsharedfiles",
     "diagramClientLabel": "Jeder Client im Netzwerk",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux: mount.cifs",
+    "diagramClientDetail": "Windows: \\\\&lt;ip&gt;\\&lt;share&gt;\nmacOS:   smb://&lt;ip&gt;/&lt;share&gt;\nLinux: mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {
