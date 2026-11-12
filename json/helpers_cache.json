@@ -75,6 +75,41 @@
     "os": "debian"
   },
   {
+    "name": "9Router",
+    "slug": "9router",
+    "desc": "9Router is a local AI gateway for coding tools such as Claude Code, Codex, Cursor, Cline and Copilot. It exposes one OpenAI-compatible endpoint and routes requests across 40+ AI providers with multi-tier fallback, format translation, token-saving filters and per-key usage tracking, managed from a web dashboard.",
+    "script": "ct/9router.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/9router.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/9router.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in at http://<IP>:20128/dashboard with INITIAL_PASSWORD from /opt/9router_data/.env."
+    ],
+    "warnings": [
+      "Update with the update command in the container, not the dashboard's Update button: that one restarts 9Router outside its service."
+    ],
+    "port": 20128,
+    "website": "https://9router.com/",
+    "documentation": "https://github.com/decolua/9router#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/9router.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Activepieces",
     "slug": "activepieces",
     "desc": "Activepieces is an open-source workflow automation platform and Zapier alternative. Flows are built visually from hundreds of integrations, branches, loops, approvals and TypeScript code steps, run on schedules, webhooks or app events, and every integration is also available as an MCP tool.",
@@ -3001,6 +3036,79 @@
     "os": "debian"
   },
   {
+    "name": "Bugsink",
+    "slug": "bugsink",
+    "desc": "Bugsink is a self-hosted error tracker that accepts events from the official Sentry SDKs, so existing apps only need a new DSN. It groups exceptions into issues with full stack traces, source context, releases and tags, and sends alerts by email or webhook, while staying light enough for a single small server.",
+    "script": "ct/bugsink.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bugsink.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bugsink.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Monitoring & Analytics",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in at http://<IP>:8000 with the email and password from /opt/bugsink_data/.env."
+    ],
+    "warnings": [
+      "DSNs and allowed hosts come from BASE_URL in /opt/bugsink_data/bugsink_conf.py, set to the container IP. Change it and restart bugsink when the IP changes or Bugsink moves behind a domain."
+    ],
+    "port": 8000,
+    "website": "https://www.bugsink.com/",
+    "documentation": "https://www.bugsink.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bugsink.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@localhost",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
+    "name": "Bulwark Webmail",
+    "slug": "bulwark",
+    "desc": "Bulwark is a self-hosted webmail client for Stalwart Mail Server that speaks JMAP. It brings mail, calendar, contacts and Stalwart's file storage together in one interface, with threading, full-text search, Sieve filters, S/MIME, 2FA, multiple accounts and an installable PWA.",
+    "script": "ct/bulwark.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bulwark.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bulwark.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Without a preset JMAP URL, finish the setup wizard with the token from `journalctl -u bulwark`. It expires after an hour; `systemctl restart bulwark` issues a new one.",
+      "COOKIE_SECURE=false in /opt/bulwark_data/.env lets sign-in work over plain HTTP; remove it once Bulwark is served through HTTPS."
+    ],
+    "warnings": [
+      "Needs Stalwart 0.16.6 or newer over HTTPS with a certificate both the browser and Bulwark trust, and Permissive CORS enabled. A private CA goes into NODE_EXTRA_CA_CERTS in /opt/bulwark_data/.env."
+    ],
+    "port": 3000,
+    "website": "https://bulwarkmail.org/",
+    "documentation": "https://bulwarkmail.org/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bulwark.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "BunkerWeb",
     "slug": "bunkerweb",
     "desc": "BunkerWeb is a security-focused web server that enhances web application protection. It guards against common web vulnerabilities like SQL injection, XSS, and CSRF. It features simple setup and configuration using a YAML file, customizable security rules, and provides detailed logs for traffic monitoring and threat detection.",
@@ -3805,6 +3913,43 @@
     "os": "debian"
   },
   {
+    "name": "Chroma",
+    "slug": "chroma",
+    "desc": "Chroma is an open-source search and retrieval database for AI applications. It stores embeddings together with documents and metadata and answers vector similarity, metadata-filtered and full-text queries over an HTTP API, with official Python and JavaScript clients.",
+    "script": "ct/chroma.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/chroma.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/chroma.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Databases",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Connect with chromadb.HttpClient(host=\"<IP>\", port=8000); the API reference is served at http://<IP>:8000/docs."
+    ],
+    "warnings": [
+      "The Chroma server has no authentication. Keep port 8000 on a trusted network or put a reverse proxy with authentication in front of it."
+    ],
+    "port": 8000,
+    "website": "https://www.trychroma.com/",
+    "documentation": "https://docs.trychroma.com/docs/run-chroma/client-server",
+    "logo": "https://cdn.jsdelivr.net/gh/chroma-core/chroma@main/docs/mintlify/images/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Cinephage",
     "slug": "cinephage",
     "desc": "Cinephage is a self-hosted media manager that covers in one app what usually takes Radarr, Sonarr, Prowlarr, Bazarr and Overseerr: it discovers, searches, downloads and organizes movies and TV shows, manages indexers and subtitles, and adds smart lists, .strm streaming and Live TV. Cloudflare-protected indexers are handled by a built-in headless browser (Camoufox) instead of FlareSolverr. Downloads go to external clients such as qBittorrent, SABnzbd or NZBGet.",
@@ -4361,6 +4506,43 @@
     "os": "debian"
   },
   {
+    "name": "Convex",
+    "slug": "convex",
+    "desc": "Convex is an open-source reactive database and backend for app developers. Queries, mutations and actions are TypeScript functions, and clients subscribe to query results that update in realtime. File storage, scheduled jobs, crons, text and vector search and a web dashboard are built in.",
+    "script": "ct/convex.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/convex.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/convex.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Databases",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Log in to the dashboard with the deployment URL http://<IP>:3210 and CONVEX_SELF_HOSTED_ADMIN_KEY from /opt/convex_data/.env.",
+      "To deploy a project, put CONVEX_SELF_HOSTED_URL=http://<IP>:3210 and the same admin key into its .env.local and run npx convex dev.",
+      "Behind a domain or reverse proxy, set CONVEX_CLOUD_ORIGIN and CONVEX_SITE_ORIGIN in /opt/convex_data/.env to the public URLs and restart convex."
+    ],
+    "warnings": [],
+    "port": 6791,
+    "website": "https://www.convex.dev/",
+    "documentation": "https://docs.convex.dev/self-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/get-convex/convex-backend@main/npm-packages/dashboard-self-hosted/public/convex-logo-only.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "CookCLI",
     "slug": "cookcli",
     "desc": "CookCLI is a recipe management CLI and embedded web server in a single binary. It serves a Cooklang recipe collection as a web interface with shopping lists, pantry tracking, and meal planning.",
@@ -4851,6 +5033,41 @@
       "lxc"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Cypht",
+    "slug": "cypht",
+    "desc": "Cypht is a lightweight webmail aggregator that combines several existing mail accounts in one web interface. It connects to IMAP/SMTP, JMAP and Exchange (EWS) servers as well as Gmail and Outlook via OAuth2, and shows unread, flagged and sent messages from all of them in combined views, with contacts, Sieve filters, feeds and PGP as optional modules.",
+    "script": "ct/cypht.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cypht.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cypht.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Sign in with the username and generated password stored as CYPHT_ADMIN_USER and CYPHT_ADMIN_PASS in /opt/cypht_data/.env."
+    ],
+    "warnings": [
+      "Added mail accounts and settings are only kept after Save (or Save and Logout), encrypted with the login password. There is no password reset."
+    ],
+    "port": 80,
+    "website": "https://www.cypht.org/",
+    "documentation": "https://www.cypht.org/documentation/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cypht.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -6133,7 +6350,8 @@
       "Webservers & Proxies"
     ],
     "notes": [
-      "FTP server credentials: `cat ~/ftp.creds`"
+      "FTP server credentials: `cat ~/ftp.creds`",
+      "If you change the name of the project you are uploading to the container, remember to change the target `.dll` file in the systemd service `/etc/systemd/system/kestrel-aspnetapi.service`"
     ],
     "warnings": [],
     "port": 80,
@@ -6691,6 +6909,41 @@
     "os": "debian"
   },
   {
+    "name": "Engram",
+    "slug": "engram",
+    "desc": "Engram is a persistent memory system for AI coding agents such as Claude Code, Codex, Cursor and OpenCode. Agents save and search memories across sessions through MCP, and Engram Cloud replicates selected projects between machines and team members with a browser dashboard.",
+    "script": "ct/engram.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/engram.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/engram.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in to the dashboard with ENGRAM_CLOUD_ADMIN from /opt/engram_data/.env. Clients sync with ENGRAM_CLOUD_TOKEN: engram cloud config --server https://<IP>, then engram cloud enroll <project>."
+    ],
+    "warnings": [
+      "Clients only send their token over trusted HTTPS. Add /etc/ssl/engram/engram.crt to each client's trust store, or put Engram behind a reverse proxy with a valid certificate."
+    ],
+    "port": 443,
+    "website": "https://engram.gentlemanprogramming.com/",
+    "documentation": "https://github.com/Gentleman-Programming/engram/blob/main/docs/engram-cloud/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/Gentleman-Programming/engram@main/assets/branding/engram-logo-only.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Ente",
     "slug": "ente",
     "desc": "Ente is a service that provides a fully open source, end-to-end encrypted platform for you to store your data in the cloud without needing to trust the service provider. On top of this platform, we have built two apps so far: Ente Photos (an alternative to Apple and Google Photos) and Ente Auth (a 2FA alternative to the deprecated Authy).",
@@ -6930,6 +7183,41 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Euro-Office",
+    "slug": "euro-office",
+    "desc": "Euro-Office Document Server is a European-led, open-source fork of ONLYOFFICE Docs with online editors for text documents, spreadsheets, presentations and PDFs, including real-time co-editing. It is not a standalone app: platforms such as Nextcloud or Seafile store the files and open them in its editors.",
+    "script": "ct/euro-office.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/euro-office.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/euro-office.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Connect Euro-Office from Nextcloud, Seafile or another integration with http://<IP> and the JWT secret shown by documentserver-jwt-status.sh inside the container."
+    ],
+    "warnings": [
+      "To try the editors without an integration, run systemctl enable --now ds-example and open http://<IP>/example/. The example has no login, so keep it off on shared networks."
+    ],
+    "port": 80,
+    "website": "https://github.com/Euro-Office",
+    "documentation": "https://euro-office.github.io/documentation/",
+    "logo": "https://cdn.jsdelivr.net/gh/Euro-Office/documentation@main/docs/assets/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -7826,6 +8114,44 @@
     ],
     "config_path": "",
     "os": "ubuntu"
+  },
+  {
+    "name": "Flipt",
+    "slug": "flipt",
+    "desc": "Flipt is a Git-native feature flag and remote configuration platform. Flags, segments and rollouts are stored as files in a Git repository and managed through a web UI or the REST and gRPC APIs, with OpenFeature support and SDKs for many languages.",
+    "script": "ct/flipt.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/flipt.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/flipt.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in to the web UI with the admin user and password from /opt/flipt_data/.env.",
+      "API and SDK clients authenticate with API_TOKEN from /opt/flipt_data/.env as a Bearer token, over HTTP on port 8080 or gRPC on port 9000."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://www.flipt.io/",
+    "documentation": "https://docs.flipt.io/v2/introduction",
+    "logo": "https://cdn.jsdelivr.net/gh/flipt-io/flipt@v2/ui/public/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
   },
   {
     "name": "Floci",
@@ -9112,6 +9438,44 @@
     "os": "debian"
   },
   {
+    "name": "GoatCounter",
+    "slug": "goatcounter",
+    "desc": "GoatCounter is lightweight, privacy-friendly web analytics without tracking cookies or unique identifiers. It records pageviews, referrers, campaigns, browsers, screen sizes and locations through a small script, a no-JavaScript pixel, a REST API or imported server logs, and shows them on a simple, accessible dashboard.",
+    "script": "ct/goatcounter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/goatcounter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/goatcounter.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Sign in at http://<IP>:8080 with the email and password from /opt/goatcounter_data/.env.",
+      "The tracking code on the dashboard points to https://<site domain>/count. Serve GoatCounter on that domain through an HTTPS reverse proxy, or change the URLs to http://<IP>:8080."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://www.goatcounter.com/",
+    "documentation": "https://www.goatcounter.com/help/start",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/goatcounter.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@goatcounter.local",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "GoDoxy",
     "slug": "godoxy",
     "desc": "GoDoxy is a lightweight, performant reverse proxy with an embedded WebUI, file-based routes, automatic certificates, and Proxmox integration.",
@@ -9320,6 +9684,41 @@
     "default_credentials": {
       "username": "admin",
       "password": "admin"
+    },
+    "os": "debian"
+  },
+  {
+    "name": "GOWA",
+    "slug": "gowa",
+    "desc": "GOWA (Go WhatsApp Web Multi-Device) is a self-hosted WhatsApp REST API gateway with a built-in web dashboard. Link one or more WhatsApp accounts by QR or pairing code, then send and receive messages, media, stickers and polls, manage groups, forward events to webhooks, and drive it from AI agents through its MCP endpoint.",
+    "script": "ct/gowa.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gowa.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gowa.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Open https://<IP>, accept the self-signed certificate and sign in with APP_BASIC_AUTH from /opt/gowa_data/.env. The dashboard does not load over plain HTTP."
+    ],
+    "warnings": [
+      "GOWA is an unofficial WhatsApp client. WhatsApp can ban a number linked through it, so use one you can afford to lose."
+    ],
+    "port": 443,
+    "website": "https://github.com/aldinokemal/go-whatsapp-web-multidevice",
+    "documentation": "https://gowa-docs.mintlify.site/",
+    "logo": "https://cdn.jsdelivr.net/gh/aldinokemal/go-whatsapp-web-multidevice@main/gallery/gowa.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
     },
     "os": "debian"
   },
@@ -9845,6 +10244,48 @@
     "os": "debian"
   },
   {
+    "name": "Hatchet",
+    "slug": "hatchet",
+    "desc": "Hatchet is a platform for background tasks and durable workflows built on PostgreSQL. Workers written with its Python, TypeScript, Go or Ruby SDKs pick up tasks with retries, scheduling, cron triggers, concurrency control and rate limits, while the dashboard shows every run, its logs and its timing.",
+    "script": "ct/hatchet.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hatchet.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hatchet.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Automation & Scheduling",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in at http://<IP>:8888 with ADMIN_EMAIL and ADMIN_PASSWORD from /opt/hatchet_data/.env. Sign-up is off; set SERVER_ALLOW_SIGNUP=t there to allow it.",
+      "Workers need an API token from the dashboard and HATCHET_CLIENT_TLS_STRATEGY=none, because gRPC on port 7077 runs without TLS."
+    ],
+    "warnings": [
+      "Tokens and logins are bound to the container IP in the .env. Use a static IP, or after a change update SERVER_URL, SERVER_GRPC_BROADCAST_ADDRESS and SERVER_AUTH_COOKIE_DOMAIN and create new tokens."
+    ],
+    "port": 8888,
+    "website": "https://hatchet.run/",
+    "documentation": "https://docs.hatchet.run/self-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/hatchet-dev/hatchet@main/frontend/app/public/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@example.com",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Headscale",
     "slug": "headscale",
     "desc": "An open source, self-hosted implementation of the Tailscale control server",
@@ -10001,7 +10442,7 @@
     "notes": [
       "After container startup, login, switch to the hermes user (su - hermes) and run 'hermes setup' to configure your model provider and gateway server.",
       "OpenAI-compatible API server available at http://<container-ip>:8642/v1. API key is stored in /home/hermes/.hermes/.env.",
-      "Access the web dashboard via SSH tunnel: ssh -fNL 9119:localhost:9119 root@<container-ip>, then open http://localhost:9119"
+      "The dashboard only listens inside the container. Set a password with 'passwd hermes' in the container console, then run on your own computer: ssh -fNL 9119:localhost:9119 hermes@<container-ip> and open http://localhost:9119\""
     ],
     "warnings": [
       "Installation sources scripts outside of Community Scripts repo. Please check the source before installing.",
@@ -10910,6 +11351,43 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Inngest",
+    "slug": "inngest",
+    "desc": "Inngest is a durable execution engine for background jobs, queues, scheduled tasks and event-driven workflows. Apps define functions with retried steps, sleeps and waits through the Inngest SDKs, the server triggers them from events or cron schedules, and its dashboard shows every run, step and event.",
+    "script": "ct/inngest.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/inngest.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/inngest.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Automation & Scheduling",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Connect your apps with INNGEST_DEV=0, INNGEST_BASE_URL=http://<IP>:8288 and the INNGEST_EVENT_KEY and INNGEST_SIGNING_KEY from /opt/inngest_data/.env."
+    ],
+    "warnings": [
+      "The dashboard on port 8288 has no login: anyone who can reach it can read event data and cancel or rerun functions. Keep it on a trusted network or put an authenticating proxy in front."
+    ],
+    "port": 8288,
+    "website": "https://www.inngest.com/",
+    "documentation": "https://www.inngest.com/docs/self-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/inngest/inngest@main/ui/apps/dashboard/public/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -12543,6 +13021,40 @@
     "os": "debian"
   },
   {
+    "name": "Langflow",
+    "slug": "langflow",
+    "desc": "Langflow is a visual low-code builder for AI agents and RAG workflows. Drag components such as language models, vector stores and tools onto a canvas, test the flow in the built-in playground, and serve it as an API or MCP server. It works with OpenAI-compatible endpoints, local models through Ollama and the major cloud providers.",
+    "script": "ct/langflow.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/langflow.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/langflow.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in with LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD from /opt/langflow_data/.env.",
+      "Model servers, vector stores and databases on your LAN are blocked until you add their host or subnet (e.g. 192.168.1.0/24) to LANGFLOW_SSRF_ALLOWED_HOSTS in /opt/langflow_data/.env and restart Langflow."
+    ],
+    "warnings": [],
+    "port": 7860,
+    "website": "https://www.langflow.org/",
+    "documentation": "https://docs.langflow.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/langflow.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Langfuse",
     "slug": "langfuse",
     "desc": "Langfuse is an open-source LLM engineering platform. It records traces, token usage and costs from LLM applications and agents, and adds evaluations, prompt management and analytics dashboards.",
@@ -14052,6 +14564,42 @@
     ],
     "config_path": "",
     "os": "alpine"
+  },
+  {
+    "name": "Martin",
+    "slug": "martin",
+    "desc": "Martin is a fast, lightweight map tile server from the MapLibre project. It generates vector tiles on the fly from PostGIS tables and functions and serves PMTiles and MBTiles archives, sprites, fonts and styles, with a built-in web UI to browse and inspect every source.",
+    "script": "ct/martin.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/martin.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/martin.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00021"
+    ],
+    "category_names": [
+      "Webservers & Proxies"
+    ],
+    "notes": [
+      "Copy .pmtiles or .mbtiles files into /opt/martin_data/tiles; Martin publishes them without a restart.",
+      "For PostGIS, add a postgres connection_string to /opt/martin_data/config.yaml and restart Martin. It then publishes every spatial table and function that database user can read."
+    ],
+    "warnings": [
+      "Martin has no authentication: the web UI and every source are open to anyone who can reach port 3000."
+    ],
+    "port": 3000,
+    "website": "https://maplibre.org/martin/",
+    "documentation": "https://maplibre.org/martin/",
+    "logo": "https://cdn.jsdelivr.net/gh/maplibre/martin@main/graphics/m.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "Mastodon",
@@ -15696,6 +16244,46 @@
     "os": "debian"
   },
   {
+    "name": "New API",
+    "slug": "new-api",
+    "desc": "New API is a self-hosted LLM gateway that puts one OpenAI-compatible API in front of OpenAI, Claude, Gemini and many other providers. Its web console manages channels, users, API keys, quotas, model pricing and billing, and it converts requests between the OpenAI, Claude and Gemini formats.",
+    "script": "ct/new-api.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/new-api.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/new-api.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in with the admin user and password stored in /opt/new-api_data/.env.",
+      "Behind an HTTPS reverse proxy, set SESSION_COOKIE_SECURE=true and SESSION_COOKIE_TRUSTED_URL to the public origin in /opt/new-api_data/.env, then restart new-api."
+    ],
+    "warnings": [
+      "Self-registration is open by default. Turn it off under System Settings > Basic Authentication if others can reach the instance."
+    ],
+    "port": 3000,
+    "website": "https://www.newapi.ai/",
+    "documentation": "https://docs.newapi.ai/en/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/new-api.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Newt",
     "slug": "newt",
     "desc": "Newt is a lightweight, headless, fully user-space WireGuard tunnel client and TCP/UDP proxy for Pangolin. It connects a site to a Pangolin server to securely expose private resources without port forwarding or opening inbound firewall ports.",
@@ -17179,7 +17767,7 @@
       "Database / RabbitMQ Credentials: `cat ~/onlyoffice.creds`"
     ],
     "warnings": [],
-    "port": 80,
+    "port": 8083,
     "website": "https://onlyoffice.com/",
     "documentation": "https://helpcenter.onlyoffice.com/docs",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/onlyoffice.webp",
@@ -18812,6 +19400,43 @@
     ],
     "config_path": "",
     "os": "debian"
+  },
+  {
+    "name": "pgAdmin 4",
+    "slug": "pgadmin",
+    "desc": "pgAdmin 4 is the web-based administration and development platform for PostgreSQL. It browses and edits database objects, runs queries in a SQL editor with explain plans, and handles backups, restores, roles and server monitoring for any number of PostgreSQL servers.",
+    "script": "tools/addon/pgadmin.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/pgadmin.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/pgadmin.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
+    "categories": [
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Databases"
+    ],
+    "notes": [
+      "Run it inside an existing Debian or Ubuntu LXC (amd64 only), typically the one running PostgreSQL. pgAdmin is served at http://<IP>/pgadmin4.",
+      "Lost the password: run `/usr/pgadmin4/venv/bin/python3 /usr/pgadmin4/web/setup.py update-user <email> --password <new>` in the container. Saved server passwords must then be entered again."
+    ],
+    "warnings": [
+      "The login email and a generated password are shown once at the end of the install and are not saved anywhere else."
+    ],
+    "port": 80,
+    "website": "https://www.pgadmin.org/",
+    "documentation": "https://www.pgadmin.org/docs/pgadmin4/latest/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pgadmin.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc",
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
   },
   {
     "name": "PhotoPrism",
@@ -23123,6 +23748,41 @@
     "os": "debian"
   },
   {
+    "name": "Spacebot",
+    "slug": "spacebot",
+    "desc": "Spacebot is a self-hosted AI agent for teams and communities that talks to many people at once on Discord, Slack, Telegram, email and its own web chat. Conversation, thinking and work run as separate processes, so the agent stays responsive while workers run shell, browser and coding tasks, and it keeps a shared memory graph, tasks and schedules in embedded databases.",
+    "script": "ct/spacebot.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/spacebot.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/spacebot.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Without a preset endpoint, add an LLM provider key under Settings in the web UI before the agent can reply."
+    ],
+    "warnings": [
+      "The web UI and API have no login. Anyone who reaches port 19898 controls the agent, which can run shell commands, so keep it on a trusted network or behind an authenticating reverse proxy."
+    ],
+    "port": 19898,
+    "website": "https://spacebot.sh/",
+    "documentation": "https://docs.spacebot.sh/",
+    "logo": "https://cdn.jsdelivr.net/gh/spacedriveapp/spacebot@main/.github/Ball.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "SparkyFitness",
     "slug": "sparkyfitness",
     "desc": "A self-hosted, privacy-first alternative to MyFitnessPal. Track nutrition, exercise, body metrics, and health data while keeping full control of your data.",
@@ -24771,6 +25431,42 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Temporal",
+    "slug": "temporal",
+    "desc": "Temporal is an open-source durable execution platform. Workflows written in Go, Java, Python, TypeScript, .NET, PHP or Ruby keep their state across crashes, restarts and retries, and the server handles timers, retries, signals and schedules so application code does not have to.",
+    "script": "ct/temporal.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/temporal.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/temporal.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Point workers and SDK clients at <IP>:7233. The temporal CLI is installed in the container and already talks to the local server; the default namespace is created with a 72h retention.",
+      "The database password lives in /etc/temporal/temporal.env; the server config in /etc/temporal/config/production.yaml reads it from there. Restart temporal after changing either file."
+    ],
+    "warnings": [
+      "The gRPC endpoint on port 7233 and the UI on 8080 have no authentication. Keep the container on a trusted network or put it behind a firewall and a TLS proxy."
+    ],
+    "port": 8080,
+    "website": "https://temporal.io/",
+    "documentation": "https://docs.temporal.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/temporalio/ui@main/src/lib/vendor/apple-touch-icon.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -27154,6 +27850,44 @@
     "os": "debian"
   },
   {
+    "name": "Warpgate",
+    "slug": "warpgate",
+    "desc": "Warpgate is a transparent bastion host and PAM for SSH, HTTPS, Kubernetes, MySQL, PostgreSQL, RDP and VNC that needs no client software. Users connect straight through to their targets with their usual tools, every session is recorded and can be replayed in the web UI, and access is controlled per user and role with passwords, keys, TOTP and OIDC SSO.",
+    "script": "ct/warpgate.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/warpgate.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/warpgate.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Open https://<IP>:8888/@warpgate, accept the self-signed certificate and sign in as admin with the password from /opt/warpgate_data/.env.",
+      "Users reach a target through Warpgate with their normal client, e.g. ssh <user>:<target>@<IP> -p 2222."
+    ],
+    "warnings": [],
+    "port": 8888,
+    "website": "https://warpgate.null.page/",
+    "documentation": "https://warpgate.null.page/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/warpgate.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Warracker",
     "slug": "warracker",
     "desc": "Warracker is an open source, self-hostable warranty tracker to monitor expirations, store receipts, files. You own the data, your rules!",
@@ -27426,6 +28160,41 @@
       "username": "",
       "password": "See ~/wealthfolio.creds"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Weaviate",
+    "slug": "weaviate",
+    "desc": "Weaviate is an open-source vector database that stores objects together with their vector embeddings. It combines vector similarity search with keyword and hybrid search, structured filtering and multi-tenancy, and is used through REST, GraphQL and gRPC APIs with client libraries for Python, TypeScript, Go and Java.",
+    "script": "ct/weaviate.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/weaviate.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/weaviate.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Databases",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "There is no web UI. Clients connect to REST on port 8080 and gRPC on port 50051 with the API key from AUTHENTICATION_APIKEY_ALLOWED_KEYS in /opt/weaviate_data/.env."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://weaviate.io/",
+    "documentation": "https://docs.weaviate.io/weaviate",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/weaviate.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
