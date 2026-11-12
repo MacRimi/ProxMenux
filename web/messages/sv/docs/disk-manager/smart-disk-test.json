@@ -30,7 +30,7 @@
     "rows": [
       {
         "action": "Snabb hälsostatus",
-        "whatRich": "Totalt PASSED/FAILED + nyckelattribut.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) eller <code>nvme smart-log</code> (NVMe).",
+        "whatRich": "Totalt PASSED/FAILED + nyckelattribut.<br></br><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) eller <code>nvme smart-log</code> (NVMe).",
         "dur": "Omedelbart"
       },
       {

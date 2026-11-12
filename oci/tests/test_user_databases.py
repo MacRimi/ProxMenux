@@ -189,5 +189,36 @@ class AddUserDatabaseTests(unittest.TestCase):
             self.assertEqual(list(self.folder.glob("*.partial")), [])
 
 
+    def test_a_scratch_image_is_created_from_a_copy_that_is_removed_afterwards(self):
+        build(self.source, [[("updater", "dir"), ("updater/app", "file")]])
+        original = self.source.read_bytes()
+        with runtime.creatable_archive(self.source) as source:
+            self.assertNotEqual(source, self.source)
+            self.assertEqual(source.parent, self.folder)
+            self.assertEqual(runtime.missing_user_databases(source), [])
+        self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
+        self.assertEqual(self.source.read_bytes(), original)
+
+    def test_an_image_with_its_user_databases_is_created_as_it_is(self):
+        build(self.source, [[("etc/passwd", "file"), ("etc/group", "file")]])
+        with runtime.creatable_archive(self.source) as source:
+            self.assertEqual(source, self.source)
+        self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
+
+    def test_a_named_user_leaves_no_copy_behind(self):
+        build(self.source, [[("app", "file")]], user="app")
+        with self.assertRaises(runtime.RuntimeResolutionError):
+            with runtime.creatable_archive(self.source):
+                pass
+        self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
+
+    def test_updates_create_their_temporary_containers_from_a_creatable_archive(self):
+        for name, hostname in (("oci_instance_transaction.py", "'oci-data-holder'"),
+                               ("oci_stack_native.py", "'oci-stack-recovery-holder'")):
+            script = (ROOT / "remote" / name).read_text()
+            create = script.index(hostname)
+            self.assertIn("creatable_archive(archive) as source", script[create - 400:create], name)
+
+
 if __name__ == "__main__":
     unittest.main()

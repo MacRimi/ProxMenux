@@ -75,6 +75,27 @@ class WebDocsI18nTests(unittest.TestCase):
             self.assertTrue(MODULE.should_copy(value, ("cards", 0, "flow")))
             self.assertFalse(MODULE.should_copy(value, ("label",)))
 
+    def test_labels_named_after_literal_columns_keep_their_translation(self):
+        labels = {
+            "headerPath": ("Path", "Путь"),
+            "captionCode": ("feature", "Característica"),
+            "path": ("Backups tab → Create backup", "вкладка «Резервные копии» → «Создать резервную копию»"),
+            "aboutFaq": ("FAQ", "Časté otázky"),
+        }
+        literals = {"headerVm": "VM", "headerNvidia": "NVIDIA", "headerNum": "#", "url": "/backup/borgbackup"}
+        source = {key: english for key, (english, _) in labels.items()} | literals
+        target = {key: translated for key, (_, translated) in labels.items()} | {
+            key: "translated" for key in literals
+        }
+        for key, (english, _) in labels.items():
+            with self.subTest(key=key):
+                self.assertFalse(MODULE.should_copy(english, (key,)))
+        for key, value in literals.items():
+            with self.subTest(key=key):
+                self.assertTrue(MODULE.should_copy(value, (key,)))
+        self.assertEqual(MODULE.merge_tree(source, target, {}),
+                         {key: translated for key, (_, translated) in labels.items()} | literals)
+
     def test_literal_only_examples_and_api_routes_are_not_translation_gaps(self):
         for source in ("<code>apt update</code>",
                        "<code>net0</code> / <code>net1</code>.",

@@ -90,3 +90,11 @@ experimental mode disabled, partial clone creation failure, an existing-snapshot
 fallback and a retained conventional archive. The quota spelling and inherited
 mountpoint handling were corrected after early trials, then retested, including
 another update after a restore. These trials did not update production services.
+
+### Conservative preflight and retained points
+
+Eligibility falls back to the ordinary backup path on any read-only backend error. Before snapshots, the planner requires enough available ZFS space for a complete rewrite of the currently referenced data (the larger of physical and logical referenced bytes), plus 10% and 1 GiB per dataset pool. Space and absence of external snapshots are checked again immediately before protection. This is a preflight reserve, not a guarantee against unlimited writes or unrelated pool consumers.
+
+All recovery clones exercise the restore property set before any promotion. Recovery datasets use `proxmenux-oci-recovery-…`, outside Proxmox's `subvol-<VMID>-…` disk namespace, and disable automatic snapshots on the clone. Metadata from the earlier experimental naming scheme remains readable. Sources are checked again for external snapshots before promotion.
+
+A blocked cleanup warns and retains its metadata, while other operation directories are still cleaned. Selecting an application shows any unreleased points; these can continue consuming space until the underlying dependency is resolved. Removing an application moves blocked cleanup journals to `instances/retained-zfs-recovery/<VMID>/…` rather than deleting their only description. No recursive ZFS destroy is introduced.

@@ -361,7 +361,7 @@
       "seeAlso": [
         {
           "label": "Guide d'installation NVIDIA",
-          "href": "/guides/nvidia"
+          "href": "/guides/nvidia-manual"
         }
       ]
     },
@@ -518,7 +518,7 @@
       "seeAlso": [
         {
           "label": "Sauvegarder vers un cloud personnel",
-          "href": "/guides/backup_cloud"
+          "href": "/guides/backup-cloud"
         }
       ]
     },

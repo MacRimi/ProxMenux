@@ -361,7 +361,7 @@
       "seeAlso": [
         {
           "label": "Inštalačný návod NVIDIA",
-          "href": "/guides/nvidia"
+          "href": "/guides/nvidia-manual"
         }
       ]
     },
@@ -518,7 +518,7 @@
       "seeAlso": [
         {
           "label": "Zálohy do osobného cloudu",
-          "href": "/guides/backup_cloud"
+          "href": "/guides/backup-cloud"
         }
       ]
     },

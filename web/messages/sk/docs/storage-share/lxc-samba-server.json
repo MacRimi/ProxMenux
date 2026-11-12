@@ -18,9 +18,9 @@
     "heading": "Čo to robí?",
     "body": "Kontajner sa stáva SMB/CIFS serverom: prevádzkuje <code>smbd</code>, vystavuje priečinok cez <code>/etc/samba/smb.conf</code> a prijíma klientske pripojenia na portoch <code>139</code> / <code>445</code>. Klienti vidia zdieľanie na <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> vo Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> v macOS Finder, alebo prostredníctvom <code>mount.cifs</code> na Linuxe.",
     "diagramServerLabel": "LXC (privilegovaný) — server Samba",
-    "diagramServerDetail": "/mnt/data\n(sprístupnený priečinok)\n\nsmbd + nmbd spustené\n\nPoužívateľ: <username>\n(via smbpasswd)\n\nVynútená skupina:\nsharedfiles",
+    "diagramServerDetail": "/mnt/data\n(sprístupnený priečinok)\n\nsmbd + nmbd spustené\n\nPoužívateľ: &lt;username&gt;\n(via smbpasswd)\n\nVynútená skupina:\nsharedfiles",
     "diagramClientLabel": "Každý klient v sieti",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramClientDetail": "Windows: \\\\&lt;ip&gt;\\&lt;share&gt;\nmacOS:   smb://&lt;ip&gt;/&lt;share&gt;\nLinux:   mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {

@@ -140,7 +140,7 @@
   },
   "sample": {
     "heading": "Exemple de rapport",
-    "intro": "ProxMenux Monitor produit pour chaque exécution de Lynis un PDF de plusieurs pages depuis l'<link>onglet Sécurité</link>. La première page résume score de durcissement, informations système et état de sécurité. Les suivantes détaillent les avertissements, les suggestions classées par impact et l'inventaire des paquets utilisé lors de l'audit.",
+    "intro": "ProxMenux Monitor produit pour chaque exécution de Lynis un PDF de plusieurs pages depuis l’<link>onglet Sécurité</link>. La première page résume score de durcissement, informations système et état de sécurité. Les suivantes détaillent les avertissements, les suggestions classées par impact et l'inventaire des paquets utilisé lors de l'audit.",
     "imageAlt": "Première page du rapport d'audit de sécurité de Lynis PDF — résumé avec l'index de durcissement 71/100, bloc d'information système, et vue d'ensemble de la posture de sécurité avec pare-feu, scanner de malware et les paquets installés",
     "captionPrefix": "Première page d'un exemple de rapport. Le PDF complet (",
     "captionLink": "échantillon",

@@ -163,7 +163,7 @@
       {
         "label": "Wie es funktioniert",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — Manifest und Erfassungsroutinen, die den von der Ergänzung gelesenen Block <code>kernel_params</code> erzeugen."
+        "tailRich": " — Manifest und Erfassungsroutinen, die den von der Ergänzung gelesenen Block <code>kernel_params</code> erzeugen."
       }
     ]
   }
