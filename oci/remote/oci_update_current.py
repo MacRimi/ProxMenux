@@ -134,7 +134,7 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         archive.unlink()
     # The compressed layers are what the download writes; nothing was changed yet.
     size, free = int(candidate.get('size') or 0), work_backup.available(archive.parent)
-    required = int(size * (2.2 if layer_cache.enabled() else 1.1)) + 256 * 1024**2
+    required = int(size * 1.1) + 256 * 1024**2
     if size and free < required:
         raise ValueError(f"{translate('The new image does not fit on the storage where images are downloaded:')} {storage}. "
                          f"{translate('Needed:')} {work_backup.gib(required)}. "
@@ -150,11 +150,18 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         partial = Path(name)
         try:
             source = 'docker://' + repository(reference) + '@' + digest
+            cached = False
             if layer_cache.enabled():
-                layer_cache.pull(source, architecture, partial, local_archives, candidate,
-                    lambda args: run_quiet(args, translate('Could not download the image')),
-                    available=work_backup.available)
-            else:
+                try:
+                    layer_cache.pull(source, architecture, partial, local_archives, candidate,
+                        lambda args: run_quiet(args, translate('Could not download the image')),
+                        available=work_backup.available)
+                    cached = True
+                except layer_cache.CacheUnavailable as error:
+                    transaction.log(f'optional layer cache unavailable: {error}')
+                    msg_warn(translate('The shared layer cache is unavailable; downloading the image normally.'))
+                    partial.unlink(missing_ok=True)
+            if not cached:
                 run_quiet(['skopeo', 'copy', '--override-arch', architecture, source,
                     'oci-archive:' + str(partial)], translate('Could not download the image'))
             msg_ok(translate('Image downloaded'))

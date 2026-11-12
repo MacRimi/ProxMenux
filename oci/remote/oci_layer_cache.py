@@ -12,9 +12,14 @@ import tarfile
 import tempfile
 
 from oci_installation_state import private_directory
+from oci_ui import translate, msg_warn
 
 KIND = 'proxmenux.shared-oci-blobs.v1'
 HEX = re.compile(r'[0-9a-f]{64}')
+class CacheUnavailable(ValueError):
+    """Optional cache failure; the caller can use a normal OCI transfer."""
+
+
 REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
 
 
@@ -48,8 +53,14 @@ def prepare(root):
         else:
             if any(p.name != '.bootstrap.lock' for p in root.iterdir()):
                 raise ValueError('Unrecognized shared layer cache')
-            with marker.open('x') as output:json.dump({'kind': KIND}, output)
-            marker.chmod(0o600)
+            marker_fd, temporary = tempfile.mkstemp(prefix='.format-', dir=root)
+            try:
+                with os.fdopen(marker_fd, 'w') as output:
+                    json.dump({'kind': KIND}, output)
+                    output.flush(); os.fsync(output.fileno())
+                os.replace(temporary, marker)
+            finally:
+                Path(temporary).unlink(missing_ok=True)
         for folder in (root/'sha256', root/'locks'):
             if folder.is_symlink():raise ValueError('Unsafe shared layer cache directory')
             private_directory(folder)
@@ -78,13 +89,15 @@ def hash_file(path):
     finally:os.close(fd)
 
 
-def validate_blobs(root):
+def validate_blobs(root, wanted=None):
     removed=[]
     for path in (root/'sha256').iterdir():
         if path.name.startswith('.seed-') and not path.is_symlink() and path.is_file():
             continue
         if not HEX.fullmatch(path.name) or path.is_symlink() or not path.is_file():
             raise ValueError('Unsafe shared blob entry')
+        if wanted is not None and 'sha256:' + path.name not in wanted:
+            continue
         with locked(root,blob=path.name):
             if not path.exists():continue
             if hash_file(path)!=path.name:
@@ -143,22 +156,23 @@ def pack(layout, root, destination):
             info.uname = info.gname = ''
             info.mode = 0o644
             with path.open('rb') as source:archive.addfile(info, source)
-        for name in('oci-layout','index.json'):
-            add(layout/name,name)
         for digest in sorted(references):
             if not re.fullmatch(r'sha256:[0-9a-f]{64}',digest):raise ValueError('Invalid shared blob digest')
             path=root/'sha256'/digest[7:]
             if path.is_symlink()or not path.is_file():raise ValueError('Unsafe shared blob')
             add(path,'blobs/sha256/'+digest[7:])
             os.utime(path,None)
+        # Metadata last also makes accidental partial exports less reusable.
+        for name in ('oci-layout', 'index.json'):
+            add(layout/name, name)
 
 
 def prune(root, maximum=None):
     root=Path(root)
     if not root.exists():return 0
     prepare(root)
-    maximum=int(os.environ.get('PROXMENUX_OCI_LAYER_CACHE_BYTES',str(2*1024**3)))if maximum is None else maximum
-    if maximum<0:raise ValueError('Invalid shared layer cache budget')
+    maximum = budget() if maximum is None else maximum
+    if maximum < 0: raise ValueError('Invalid shared layer cache budget')
     with locked(root,exclusive=True):
         for temporary in (root/'sha256').glob('.seed-*'):
             if temporary.is_file() and not temporary.is_symlink():temporary.unlink()
@@ -169,6 +183,8 @@ def prune(root, maximum=None):
         for path in files:
             if total<=maximum:break
             size=path.stat().st_size;path.unlink();freed+=size;total-=size
+            # Exclusive cache lock excludes all users of these per-blob locks.
+            (root/'locks'/(path.name+'.lock')).unlink(missing_ok=True)
     return freed
 
 
@@ -183,20 +199,41 @@ def check_space(cache, archive_directory, size, available=None):
         raise OSError(errno.ENOSPC, os.strerror(errno.ENOSPC), str(cache))
 
 
+def budget():
+    value = int(os.environ.get('PROXMENUX_OCI_LAYER_CACHE_BYTES', str(2*1024**3)))
+    if value < 0:
+        raise ValueError('Invalid shared layer cache budget')
+    return value
+
+
 def pull(source, architecture, destination, archives, candidate, run, available=None):
     # Resolve at use time too: a login may have been saved since imports.
     # Keep an explicitly selected auth file, as the other image readers do.
     if not os.environ.get('REGISTRY_AUTH_FILE') and os.path.isfile(REGISTRY_AUTH_FILE):
         os.environ['REGISTRY_AUTH_FILE'] = REGISTRY_AUTH_FILE
-    root=root_for(destination);prepare(root)
-    check_space(root, Path(destination).parent, int(candidate.get('size') or 0), available)
+    root = root_for(destination)
     try:
-        with locked(root):
-            validate_blobs(root)
-            seed(root,archives,set(candidate.get('layers') or []))
-            with tempfile.TemporaryDirectory(prefix='layout-',dir=root)as directory:
-                layout=Path(directory)
-                run(['skopeo','copy','--override-arch',architecture,'--dest-shared-blob-dir',str(root),source,'oci:'+str(layout)+':candidate'])
-                pack(layout,root,destination)
-    finally:
-        prune(root)
+        maximum = budget()  # Validate before Skopeo; cleanup cannot mask its error.
+        prepare(root)
+        check_space(root, Path(destination).parent, int(candidate.get('size') or 0), available)
+        try:
+            with locked(root):
+                wanted = set(candidate.get('layers') or [])
+                if candidate.get('manifest_digest'):
+                    wanted.add(candidate['manifest_digest'])
+                validate_blobs(root, wanted)
+                seed(root, archives, wanted)
+                with tempfile.TemporaryDirectory(prefix='layout-', dir=root) as directory:
+                    layout = Path(directory)
+                    run(['skopeo','copy','--override-arch',architecture,'--dest-shared-blob-dir',str(root),source,'oci:'+str(layout)+':candidate'])
+                    pack(layout, root, destination)
+        finally:
+            try:
+                prune(root, maximum)
+            except (OSError, ValueError, TypeError, KeyError):
+                msg_warn(translate('The final cleanup did not complete:') + ' ' + str(root))
+                # Optional maintenance must never replace the transfer error or
+                # invalidate an already complete export. Retry on the next pull.
+                pass
+    except (OSError, ValueError, TypeError, KeyError, tarfile.TarError) as error:
+        raise CacheUnavailable(str(error)) from error

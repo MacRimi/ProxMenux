@@ -31,7 +31,7 @@ the exported archive, checking both filesystems when the cache is elsewhere.
 
 ## Integrity and credentials
 
-- Existing blobs are hashed before Skopeo can reuse them. Damaged entries are
+- Candidate blobs are hashed before Skopeo can reuse them. Damaged entries are
   discarded; symlinks and unrecognized cache directories are rejected.
 - Installed archives can seed only the candidate's required layer digests.
   Seeded bytes are hashed before atomic publication.
@@ -44,8 +44,8 @@ the exported archive, checking both filesystems when the cache is elsewhere.
 - An explicit `REGISTRY_AUTH_FILE` is preserved. Otherwise the cache reader
   discovers `/etc/pve/priv/proxmenux/registry-auth.json` at pull time, including a
   login saved after module import. No credentials are copied into the cache.
-- Resolution, pulling and verification remain before services stop. Cache,
-  registry or disk-space failures follow the existing preparation-error path.
+- Resolution, pulling and verification remain before services stop. Cache-local errors fall back to normal transfer; registry or normal-download
+  disk-space failures follow the existing preparation-error path.
 
 ## Measurement
 
@@ -63,12 +63,14 @@ installed V1 archives were allowed seeds, and complete V2 archives were absent.
 | Preparation phase | 17.751 s | 4.525 s |
 
 That is **12.339 s (12.1%) less total time in this experiment**, not a universal
-speedup. The reference included earlier update work at commit `8b96aa14`. This PR is
-stacked on #656 and its parents so the existing coordinated-recovery fix stays
-in its base: matching container configurations do not prove that migration
-writes left data unchanged. The new feature here is layer reuse only. Other
-experimental optimizations and their combined measurement are out of scope.
-The PR records the additional isolated-branch measurements separately.
+speedup. Measurements depend on the images, network and storage in use.
+
+If the optional cache cannot be used (permissions, filesystem semantics,
+malformed metadata, invalid budget or a foreign entry), the updater warns and
+uses the ordinary OCI-archive download. Registry errors retain the normal retry
+behavior. The candidate's cached layers are validated; unrelated layer contents
+are not rehashed. Every exported archive still receives the full integrity check,
+including existence and descriptor sizes of all referenced blobs.
 
 ## Tests
 
