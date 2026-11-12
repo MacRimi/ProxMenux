@@ -40,6 +40,7 @@ import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
 import oci_zfs_recovery as zfs_recovery
+from oci_runtime import creatable_archive
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -308,7 +309,7 @@ def release_local_recovery(directory):
     """An already healthy guest stays recovered if optional cleanup is blocked."""
     try:
         zfs_recovery.cleanup(directory)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
         log(f'cleanup: {error}')
         msg_warn(f"{translate('The final cleanup did not complete:')} {error}")
 
@@ -1213,7 +1214,7 @@ def discard_stage(state):
     Returns whether the holder CT was removed."""
     try:
         return release_stage(state, discard=True)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
         log(f'cleanup: {error}')
         return False
 

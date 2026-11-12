@@ -18,9 +18,9 @@
     "heading": "Vad detta gör",
     "body": "Containern blir en SMB/CIFS-server: den kör <code>smbd</code>, exponerar en mapp via <code>/etc/samba/smb.conf</code> och accepterar klientanslutningar på portar <code>139</code>/<code>445</code>. Klienterna ser delningen på <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> i Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> i macOS Finder, eller via <code>mount.cifs</code> på Linux.",
     "diagramServerLabel": "LXC (privilegierad) - Samba server",
-    "diagramServerDetail": "/mnt/data\n(mappen du delar)\n\nsmbd + nmbd körs\n\nAnvändare: <username>\n(via smbpasswd)\n\nTvingad grupp:\nsharedfiles",
+    "diagramServerDetail": "/mnt/data\n(mappen du delar)\n\nsmbd + nmbd körs\n\nAnvändare: &lt;username&gt;\n(via smbpasswd)\n\nTvingad grupp:\nsharedfiles",
     "diagramClientLabel": "Valfri klient i nätverket",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramClientDetail": "Windows: \\\\&lt;ip&gt;\\&lt;share&gt;\nmacOS:   smb://&lt;ip&gt;/&lt;share&gt;\nLinux:   mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {

@@ -136,9 +136,46 @@ def plan(records):
         pool = volumes[0]['pool'].split('/')[0]
         if run('zpool', 'list', '-H', '-o', 'health', pool) != 'ONLINE':
             return None
+        check_space(volumes)
         return {'volumes': volumes, 'configs': configs, 'raw_configs': raw_configs}
-    except (OSError, ValueError, KeyError, RuntimeError):
+    except Exception:
+        # Eligibility is read-only; any unsupported backend falls back to vzdump.
         return None
+
+
+def check_space(volumes):
+    """Reserve a complete rewrite of retained data, plus 1 GiB per dataset pool.
+
+    This is a preflight bound, not a promise about indefinitely retained points.
+    Check again after stopping and immediately before creating snapshots.
+    """
+    required = {}
+    for volume in volumes:
+        values = properties(volume['source'], ('referenced', 'logicalreferenced'))
+        size = max(int(values['referenced']), int(values['logicalreferenced']))
+        required[volume['pool']] = required.get(volume['pool'], 1024**3) + int(size * 1.1)
+    for pool, needed in required.items():
+        if int(properties(pool, ('available',))['available']) < needed:
+            raise ValueError('Insufficient available space for ZFS recovery')
+
+
+def backup_name(volume, token):
+    # Deliberately outside PVE's subvol-<vmid>-* managed-volume namespace.
+    return f"{volume['pool']}/proxmenux-oci-recovery-{token}-{volume['vmid']}-{volume['key']}"
+
+
+def valid_backup(volume, token):
+    # Continue to recover/clean points created by the initial opt-in prototype.
+    legacy = f"{volume['pool']}/subvol-{volume['vmid']}-oci-recovery-{token}-{volume['key']}"
+    return volume['backup'] in (backup_name(volume, token), legacy)
+
+
+def clone_options(volume):
+    options = []
+    for key, value in volume['properties'].items():
+        setting = 'none' if key in ('quota', 'refquota') and value == '0' else value
+        options += ['-o', key + '=' + setting]
+    return options
 
 
 def metadata_tar(path, config, firewall=None, manifest=None):
@@ -195,8 +232,7 @@ def _validate(data):
     if not isinstance(volumes, list) or not volumes or len({v['key'] for v in volumes}) != len(volumes) or 'rootfs' not in {v['key'] for v in volumes}:
         raise ValueError('Invalid ZFS recovery volumes')
     for v in volumes:
-        expected = f"{v['pool']}/subvol-{vmid}-oci-recovery-{token}-{v['key']}"
-        if (v['vmid'] != vmid or v['backup'] != expected or v['snapshot'] != 'oci-' + token
+        if (v['vmid'] != vmid or not valid_backup(v, token) or v['snapshot'] != 'oci-' + token
                 or not re.fullmatch(r'rootfs|mp\d+', v['key']) or not valid_dataset(v['pool'])
                 or not valid_dataset(v['source']) or not v['source'].startswith(v['pool'] + '/subvol-' + str(vmid) + '-')
                 or not re.fullmatch(r'[A-Za-z0-9._-]+', v['storage'])
@@ -251,7 +287,7 @@ def create(records, directory, prepared):
              'volumes': prepared['volumes'], 'released': False}
     path = directory / 'zfs-build.json'
     for v in state['volumes']:
-        v.update(backup=f"{v['pool']}/subvol-{v['vmid']}-oci-recovery-{token}-{v['key']}", snapshot='oci-' + token)
+        v.update(backup=backup_name(v, token), snapshot='oci-' + token)
     instances.write(path, state)
     for vmid, record in records.items():
         if tx.owned(vmid, record['installation_id']).decode() != prepared['configs'][vmid]:
@@ -261,15 +297,24 @@ def create(records, directory, prepared):
     for v in state['volumes']:
         if properties(v['source'], ('guid', 'origin')) != {'guid': v['source_guid'], 'origin': '-'}:
             raise ValueError('Source volume changed before snapshotting')
+    check_space(state['volumes'])
+    for v in state['volumes']:
+        if run('zfs', 'list', '-H', '-r', '-t', 'snapshot', '-o', 'name', v['source']):
+            raise ValueError('Source acquired snapshots before recovery protection')
     run('zfs', 'snapshot', '-o', TAG + '=' + token,
         *[v['source'] + '@' + v['snapshot'] for v in state['volumes']])
     for v in state['volumes']:
         v['snapshot_guid'] = properties(v['source'] + '@' + v['snapshot'], ('guid',))['guid']
         instances.write(path, state)
-        run('zfs', 'clone', '-o', 'mountpoint=none', '-o', 'canmount=off', '-o', TAG + '=' + token,
+        # Exercise every restore property before any promotion/replacement.
+        run('zfs', 'clone', *clone_options(v), '-o', 'mountpoint=none', '-o', 'canmount=off',
+            '-o', 'com.sun:auto-snapshot=false', '-o', TAG + '=' + token,
             v['source'] + '@' + v['snapshot'], v['backup'])
         v['backup_guid'] = tagged(v['backup'], token)
         instances.write(path, state)
+    for v in state['volumes']:
+        if run('zfs', 'list', '-H', '-r', '-t', 'snapshot', '-o', 'name', v['source']).splitlines() != [v['source'] + '@' + v['snapshot']]:
+            raise ValueError('Source acquired external snapshots before promotion')
         run('zfs', 'promote', v['backup'])
     result = {}
     for vmid, record in records.items():
@@ -315,11 +360,7 @@ def restore(path, vmid):
             # Inherit the parent mountpoint exactly like native ZFS allocation.
             # A local mountpoint would become stale when PVE moves/renames mpN.
             options = ['-o', 'canmount=on', '-o', TAG + '=' + data['token']]
-            for key, value in v['properties'].items():
-                # `zfs get -p` reports an unlimited quota as 0, while `zfs
-                # clone -o` only accepts the writable spelling `none`.
-                setting = 'none' if key in ('quota', 'refquota') and value == '0' else value
-                options += ['-o', key + '=' + setting]
+            options += clone_options(v)
             run('zfs', 'clone', *options, v['backup'] + '@' + v['snapshot'], ds)
         target['guid'] = tagged(ds, data['token'], target['guid'])
         if properties(ds, ('origin',))['origin'] != v['backup'] + '@' + v['snapshot']:
@@ -392,8 +433,7 @@ def cleanup(directory):
         cleanup_restore_attempts(path.parent, state)
         for v in state['volumes']:
             backup, snap = v['backup'], v['snapshot']
-            expected = f"{v['pool']}/subvol-{v['vmid']}-oci-recovery-{token}-{v['key']}"
-            if backup != expected or snap != 'oci-' + token:
+            if not valid_backup(v, token) or snap != 'oci-' + token:
                 raise ValueError('Invalid recovery cleanup target')
             if not exists(backup):
                 # An early failure may only have created the owned source snapshot.

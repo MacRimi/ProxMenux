@@ -3,6 +3,7 @@
 Unused volumes must leave the old CT before destroy/restore and return before
 validation/commit, including an interruption during volume reassignment.
 """
+import contextlib
 import copy
 import json
 from pathlib import Path
@@ -91,7 +92,7 @@ class UpdateRetainedDiskTests(unittest.TestCase):
             return int(match[1]) in self.configs if match else original_exists(path)
         patches=[patch.object(transaction,'run',side_effect=run),patch.object(transaction,'open_log'),
             patch.object(transaction,'log'),patch.object(transaction,'stop'),
-            patch.object(transaction,'check_archive'),patch.object(transaction,'image_from_archive',return_value=self.image),
+            patch.object(transaction,'check_archive'),patch.object(transaction,'creatable_archive',side_effect=contextlib.nullcontext),patch.object(transaction,'image_from_archive',return_value=self.image),
             patch.object(transaction,'verified_backup',return_value=self.backup),
             patch.object(transaction,'install_candidate',side_effect=install),
             patch.object(transaction,'healthcheck',return_value='running'),

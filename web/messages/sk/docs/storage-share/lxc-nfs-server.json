@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Predvolené voľby exportu — prečítajte si najprv",
     "warnTitle": "Štandardné možnosti zahŕňajú no_root_squash",
-    "warnBody": "ProxMenux predvolene používa <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Každý používateľ root na klientovi môže do exportu zapisovať ako root.</strong> Používajte to iba v dôveryhodnej domácej LAN. Ak je CT dostupný z nedôveryhodnej siete (VPS alebo nedôveryhodná VLAN), <strong>zmeňte voľbu na <code>root_squash</code></strong> v dialógu vlastných volieb."
+    "warnBody": "ProxMenux predvolene používa <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. <strong>Každý používateľ root na klientovi môže do exportu zapisovať ako root.</strong> Používajte to iba v dôveryhodnej domácej LAN. Ak je CT dostupný z nedôveryhodnej siete (VPS alebo nedôveryhodná VLAN), <strong>zmeňte voľbu na <code>root_squash</code></strong> v dialógu vlastných volieb."
   },
   "opening": {
     "heading": "Otvorenie nástroja",

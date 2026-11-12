@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "Repository bor på en lokal katalog. Meningsfullt endast när målkatalogen är på en separat fysisk disk - ett förvar på samma disk som källan skyddar mot operatörsfel men inte mot diskfel."
       }
     ]

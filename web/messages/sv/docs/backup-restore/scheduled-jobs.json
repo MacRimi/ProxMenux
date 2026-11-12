@@ -85,7 +85,8 @@
         "content": "Nytt läge bara. Tjänsten anropar <code>run_scheduled_backup.sh JOB_ID</code>. Timern schemalägger det med <code>Persistent=true</code> (missade körningar utförs vid nästa start) och en liten <code>RandomizedDelaySec=120</code> att sprida belastning när flera jobb delar samma OnCalendar uttryck."
       },
       {
-        "path": "/etc/vzdump.conf script-hook",
+        "path": "/etc/vzdump.conf",
+        "pathNote": "script-hook",
         "content": "Fäst läge bara. Installerad en gång av <code>hb_install_vzdump_hook</code>; matchar varje bifogat jobb <code>PVE_STORAGE</code> mot <code>$STOREID</code> PVE passerar till krokskriptet."
       }
     ]

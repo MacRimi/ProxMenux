@@ -451,7 +451,13 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
     if row['reason'] != 'matched':
         ui.message(translate('The selected CT does not match its OCI record. Its configuration will not be modified or deleted.'), translate('OCI management'))
         return False
+    import oci_work_backup
+    import oci_instances as instances
+    retained = oci_work_backup.unreleased(instances.ROOT, row['vmid'])
+    if retained:
+        ui.message(translate('The final cleanup did not complete:') + '\n' + '\n'.join(retained), translate('OCI management'))
     if runner is not None and (row.get('pending') or row.get('stack_pending')):
+        ui.message(translate('Finish or recover pending OCI operations before preparing a batch.'), translate('OCI management'))
         return False
     if row['stack']:
         if runner is not None:
@@ -654,6 +660,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=(), runner=None)
     primary = instances.read(instances.ROOT, primary_id)
     pending = primary.get('pending_stack_transaction')
     if pending and runner is not None:
+        ui.message(translate('Finish or recover pending OCI operations before preparing a batch.'), translate('OCI management'))
         return False
     if not pending:
         members = primary.get('stack', {}).get('members', [])

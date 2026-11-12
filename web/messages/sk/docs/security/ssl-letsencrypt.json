@@ -52,12 +52,12 @@
       },
       "rows": [
         {
-          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "fileRich": "<code>pveproxy-ssl.pem</code><br></br><code>pveproxy-ssl.key</code>",
           "originRich": "Vlastný certifikát nahraný cez rozhranie Proxmox vrátane certifikátu Let’s Encrypt vydaného cez <em>Datacenter → Node → Certificates → ACME</em>.",
           "when": "Uprednostní sa, ak existujú oba súbory; Monitor použije certifikát poskytovaný Proxmoxom."
         },
         {
-          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "fileRich": "<code>pve-ssl.pem</code><br></br><code>pve-ssl.key</code>",
           "originRich": "Samopodpísaný certifikát vytvorený v čase inštalácie spoločnosťou Proxmox PKI.",
           "whenRich": "Náhradný certifikát, ak <code>pveproxy-ssl.pem</code> neexistuje."
         }
@@ -127,7 +127,7 @@
       "<strong>Súkromný kľúč</strong>: zodpovedajúci kľúč vo formáte PEM (<code>.key</code>)."
     ],
     "outro": "Oba súbory načíta proces Monitora pri štarte. Musia zostať čitateľné pre používateľa, pod ktorým beží jednotka systemd (predvolene root). Bežné umiestnenia pri správe ACME mimo Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Symlink ciele vs. súbory",
       "bodyRich": "<code>certbot</code> ukladá skutočné súbory do <code>/etc/letsencrypt/archive/</code> a cesta <code>live/</code> je symbolický odkaz. Nasmerujte monitor na symbolický odkaz <code>live/</code>, nie na súbor <code>archive/</code> – takto každý cyklus obnovy jednoducho prepíše cieľ symbolického odkazu a monitor si pri ďalšom spustení služby vyberie nový certifikát."
@@ -145,7 +145,7 @@
     "heading": "Dôverujte samopodpísanej CA spoločnosti Proxmox",
     "intro1Rich": "Ak chcete zachovať predvolený certifikát Proxmox bez ACME, importujte koreňovú CA klastra do úložiska dôveryhodných certifikátov systému alebo prehliadača. Monitor rozpozná <code>/etc/pve/local/pve-ssl.pem</code> ako náhradný certifikát. Klient tak dôveruje vydavateľovi; URL musí stále zodpovedať názvu v certifikáte.",
     "intro2Rich": "CA súbor žije v <code>/etc/pve/pve-root-ca.pem</code> na každom uzle. V klastri cesta je na zdieľanom <code>pmxcfs</code> súborovom systéme, takže všetky uzly zdieľajú rovnaký koreň a jeden import pokrýva celý dátový stred. Skopírujte ho do svojho stroja:",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Potom ho importovať na strane klienta:",
     "items": [
       "<strong>Linux (celý systém):</strong> spustite <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> a potom <code>sudo update-ca-certificates</code>. Prehliadače používajúce systémové úložisko certifikátov (Chromium, Edge) rozpoznajú CA po reštarte; Firefox má vlastné úložisko a potrebuje ručný import uvedený nižšie.",

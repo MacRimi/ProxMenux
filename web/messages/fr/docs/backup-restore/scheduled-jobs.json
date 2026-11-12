@@ -85,7 +85,8 @@
         "content": "Nouveau mode seulement. Le service invoque <code>run_scheduled_backup.sh JOB_ID</code>. Le minuteur le planifie avec <code>Persistent=true</code> (exécutions manquées rattrapées au prochain démarrage) et un petit <code>RandomizedDelaySec=120</code> pour répartir la charge lorsque plusieurs tâches partagent la même expression OnCalendar."
       },
       {
-        "path": "/etc/vzdump.conf script-hook",
+        "path": "/etc/vzdump.conf",
+        "pathNote": "script-hook",
         "content": "Mode d’association uniquement. Installé une fois par <code>hb_install_vzdump_hook</code> ; compare le <code>PVE_STORAGE</code> de chaque tâche associée au <code>$STOREID</code> transmis par PVE au hook."
       }
     ]

@@ -8,7 +8,7 @@
     "description": "Examiner chaque cible de mise à jour en un seul endroit, l'exécuter de façon indépendante ou combiner des cibles sélectionnées dans une action en vrac contrôlée."
   },
   "intro": {
-    "p1": "L'onglet <strong>Mises à jour</strong> sépare la détection des versions de leur installation. Enregistrement et suivi facultatif se trouvent dans l'<link>onglet App</link> ; les méthodes exécutables se gèrent ici.",
+    "p1": "L'onglet <strong>Mises à jour</strong> sépare la détection des versions de leur installation. Enregistrement et suivi facultatif se trouvent dans l’<link>onglet App</link> ; les méthodes exécutables se gèrent ici.",
     "p2": "Une application enregistrée apparaît dans Mises à jour même avec un seul lien web. Le suivi de version est facultatif ; son programme de mise à jour peut être configuré séparément.",
     "callout": "L'enregistrement ne choisit aucun programme de mise à jour. Si un programme Community Scripts correspondant est détecté, choisissez et enregistrez <strong>Community Scripts</strong> ou <strong>Commande personnalisée</strong>. La détection ne garantit pas la compatibilité. Le choix appartient à chaque application, même dans un LXC partagé."
   },

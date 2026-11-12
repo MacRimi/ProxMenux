@@ -163,7 +163,7 @@
       {
         "label": "How it works",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — the manifest and collectors that produce the <code>kernel_params</code> block hydration reads from."
+        "tailRich": " — the manifest and collectors that produce the <code>kernel_params</code> block hydration reads from."
       }
     ]
   }

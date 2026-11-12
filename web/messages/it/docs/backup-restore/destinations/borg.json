@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "Repository vive su una directory locale. Significativo solo quando la directory di destinazione è su un disco fisico separato — un repository sullo stesso disco della fonte protegge dall'errore dell'operatore, ma non dall'errore del disco."
       }
     ]
