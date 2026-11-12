@@ -127,7 +127,7 @@
       "<strong>Chiave privata</strong>: chiave corrispondente in PEM (<code>.key</code>)."
     ],
     "outro": "Entrambi i file sono letti dal processo Monitor all'avvio. Assicurarsi che rimangano leggibili dall'utente l'unità systemd viene eseguita come (root per impostazione predefinita). Località comuni quando ACME è gestito fuori Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Obiettivi Symlink vs. file",
       "bodyRich": "<code>certbot</code> memorizza i file reali in <code>/etc/letsencrypt/archive/</code> e il percorso <code>live/</code> è un symlink. Indirizzi il Monitor al simlink <code>live/</code>, non il file <code>archive/</code> — in questo modo ogni ciclo di rinnovo semplicemente riscrive l'obiettivo di symlink e il Monitor raccoglie il nuovo cert all'inizio del servizio successivo."
@@ -145,7 +145,7 @@
     "heading": "Considerare attendibile la CA autofirmata di Proxmox",
     "intro1Rich": "Per mantenere il certificato predefinito Proxmox senza ACME, importa la CA radice del cluster nell'archivio di fiducia del sistema o del browser. Monitor rileva <code>/etc/pve/local/pve-ssl.pem</code> come certificato alternativo. Il client considera attendibile l'emittente; l'URL deve comunque corrispondere a un nome del certificato.",
     "intro2Rich": "Il file CA vive a <code>/etc/pve/pve-root-ca.pem</code> su ogni nodo. In un cluster il percorso è sul filesystem <code>pmxcfs</code> condiviso in modo che tutti i nodi condividono la stessa radice, e una singol'importazione copre l'intero datacenter. Copialo sulla tua macchina:",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Poi importarlo sul lato cliente:",
     "items": [
       "<strong>Linux (intero sistema):</strong> esegui <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> e poi <code>sudo update-ca-certificates</code>. I browser che usano l'archivio di sistema (Chromium, Edge) riconoscono la CA dopo il riavvio; Firefox usa un archivio proprio e richiede l'importazione manuale seguente.",

@@ -127,7 +127,7 @@
       "<strong>Закрытый ключ</strong> — соответствующий ключ в формате PEM (<code>.key</code>)."
     ],
     "outro": "Оба файла считываются процессом Monitor при запуске. Убедитесь, что они остаются доступными для чтения пользователю, от имени которого запускается юнит systemd (по умолчанию root). Типичные расположения файлов, когда ACME управляется вне Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Символические ссылки и файлы, на которые они указывают",
       "bodyRich": "<code>certbot</code> хранит сами файлы в <code>/etc/letsencrypt/archive/</code>, а путь <code>live/</code> является символической ссылкой. Укажите для Monitor символическую ссылку <code>live/</code>, а не файл <code>archive/</code> — тогда при каждом продлении будет достаточно обновить цель символической ссылки, и Monitor подхватит новый сертификат при следующем запуске службы."
@@ -145,7 +145,7 @@
     "heading": "Доверие самоподписанному центру сертификации Proxmox",
     "intro1Rich": "Чтобы сохранить стандартный сертификат, созданный Proxmox, без использования ACME, импортируйте корневой сертификат центра сертификации кластера в хранилище доверенных сертификатов ОС или браузера. Monitor определяет <code>/etc/pve/local/pve-ssl.pem</code> как резервный сертификат. После импорта клиент будет доверять его издателю; при этом имя узла в URL по-прежнему должно совпадать с одним из имён в сертификате.",
     "intro2Rich": "Файл сертификата центра сертификации находится по пути <code>/etc/pve/pve-root-ca.pem</code> на каждом узле. В кластере этот путь расположен в общей файловой системе <code>pmxcfs</code>, поэтому все узлы используют один корневой сертификат, и одного импорта достаточно для всего центра обработки данных. Скопируйте его на свой компьютер:",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Затем импортируйте его на стороне клиента:",
     "items": [
       "<strong>Linux (для всей системы):</strong> <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code>, затем <code>sudo update-ca-certificates</code>. Браузеры, использующие системное хранилище (Chromium, Edge), подхватят сертификат после перезапуска; Firefox использует собственное хранилище и требует ручного импорта, описанного ниже.",

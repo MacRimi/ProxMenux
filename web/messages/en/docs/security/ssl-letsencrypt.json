@@ -127,7 +127,7 @@
       "<strong>Private key</strong> — matching key in PEM (<code>.key</code>)."
     ],
     "outro": "Both files are read by the Monitor process at startup. Make sure they remain readable by the user the systemd unit runs as (root by default). Common locations when ACME is managed outside Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Symlink targets vs. files",
       "bodyRich": "<code>certbot</code> stores the actual files in <code>/etc/letsencrypt/archive/</code> and the <code>live/</code> path is a symlink. Point the Monitor at the <code>live/</code> symlink, not the <code>archive/</code> file — that way each renewal cycle simply rewrites the symlink target and the Monitor picks up the new cert at the next service start."
@@ -145,7 +145,7 @@
     "heading": "Trust the Proxmox self-signed CA",
     "intro1Rich": "To keep the default Proxmox-generated certificate without ACME, import the cluster root CA into the OS or browser trust store. The Monitor detects <code>/etc/pve/local/pve-ssl.pem</code> as the fallback certificate. This makes the client trust its issuer; the URL must still match a name in the certificate.",
     "intro2Rich": "The CA file lives at <code>/etc/pve/pve-root-ca.pem</code> on every node. In a cluster the path is on the shared <code>pmxcfs</code> filesystem so all nodes share the same root, and a single import covers the whole datacenter. Copy it to your machine:",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Then import it on the client side:",
     "items": [
       "<strong>Linux (system-wide):</strong> <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> followed by <code>sudo update-ca-certificates</code>. Browsers using the system store (Chromium, Edge) pick it up after restart; Firefox uses its own store and needs the manual import below.",

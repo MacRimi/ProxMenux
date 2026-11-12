@@ -127,7 +127,7 @@
       "<strong>Clé privée</strong> : clé correspondante en PEM (<code>.key</code>)."
     ],
     "outro": "Les deux fichiers sont lus par le processus Monitor au démarrage. Assurez-vous qu'ils restent lisibles par l'utilisateur que l'unité systemd fonctionne comme (root par défaut). Emplacements communs lorsque l'ACME est géré à l'extérieur de Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Symlink cibles vs fichiers",
       "bodyRich": "<code>certbot</code> stocke les fichiers réels dans <code>/etc/letsencrypt/archive/</code> et le chemin <code>live/</code> est un lien symbolique. Pointez le moniteur sur le lien symbolique <code>live/</code> et non sur le fichier <code>archive/</code> — de cette façon, chaque cycle de renouvellement réécrit simplement la cible de lien symbolique et le moniteur récupère le nouveau certificat au début du service suivant."
@@ -145,7 +145,7 @@
     "heading": "Faites confiance à l'AC autosignée Proxmox",
     "intro1Rich": "Pour conserver le certificat Proxmox par défaut sans ACME, importez l'AC racine du cluster dans le magasin de confiance du système ou du navigateur. Monitor détecte <code>/etc/pve/local/pve-ssl.pem</code> comme certificat de repli. Le client fait alors confiance à l'émetteur ; l'URL doit toujours correspondre à un nom du certificat.",
     "intro2Rich": "Le fichier CA vit à <code>/etc/pve/pve-root-ca.pem</code> sur chaque nœud. Dans un cluster, le chemin est sur le système de fichiers partagé <code>pmxcfs</code> de sorte que tous les nœuds partagent la même racine, et une seule importation couvre l'ensemble du datacenter. Copiez-le sur votre machine :",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Importez-le du côté client :",
     "items": [
       "<strong>Linux (tout le système) :</strong> exécutez <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code>, puis <code>sudo update-ca-certificates</code>. Les navigateurs utilisant le magasin système (Chromium, Edge) la reconnaissent après redémarrage ; Firefox utilise son propre magasin et nécessite l'importation manuelle ci-dessous.",
