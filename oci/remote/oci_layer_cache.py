@@ -48,7 +48,10 @@ def prepare(root):
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         if marker.exists():
-            if marker.is_symlink() or json.loads(marker.read_text()).get('kind') != KIND:
+            if marker.is_symlink():
+                raise ValueError('Unrecognized shared layer cache')
+            saved = json.loads(marker.read_text())
+            if not isinstance(saved, dict) or saved.get('kind') != KIND:
                 raise ValueError('Unrecognized shared layer cache')
         else:
             if any(p.name != '.bootstrap.lock' for p in root.iterdir()):

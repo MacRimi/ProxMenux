@@ -80,11 +80,12 @@ class OptionalCache(unittest.TestCase):
                 cache.pull('docker://image','amd64',self.root.parent/'out',[],{},Mock(side_effect=RuntimeError('registry rejected credentials')))
 
     def test_cache_local_errors_fall_back_to_complete_download_and_verification(self):
-        for fault in ('empty-marker','foreign-entry','permissions','invalid-budget'):
+        for fault in ('empty-marker','invalid-marker-type','foreign-entry','permissions','invalid-budget'):
             with self.subTest(fault=fault), tempfile.TemporaryDirectory() as d:
                 root=Path(d);local=root/'cache';cache.prepare(local)
                 env={'PROXMENUX_OCI_LAYER_CACHE':'1','PROXMENUX_OCI_LAYER_CACHE_ROOT':str(local)}
                 if fault=='empty-marker':(local/'format.json').write_text('')
+                elif fault=='invalid-marker-type':(local/'format.json').write_text('[]')
                 elif fault=='foreign-entry':(local/'sha256'/'foreign').write_text('keep')
                 elif fault=='permissions':local.chmod(0o755)
                 elif fault=='invalid-budget':env['PROXMENUX_OCI_LAYER_CACHE_BYTES']='broken'
