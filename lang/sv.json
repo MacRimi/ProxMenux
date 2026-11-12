@@ -4207,6 +4207,7 @@
   "Interrupted": "Avbruten",
   "Interrupted operation": "Avbruten operation",
   "Interrupted operation:": "Avbruten operation:",
+  "Interrupted operations can be recovered from the OCI management menu.": "Avbrutna åtgärder kan återställas via menyn för OCI-hantering.",
   "Interrupted stack operation found": "Avbruten stack operation hittades",
   "Invalid 'proxmox-ve' candidate (not 9.x or none). Please verify your repository configuration and network, then retry.": "Ogiltig 'proxmox-ve'-kandidat (inte 9.x eller ingen). Verifiera din arkivkonfiguration och ditt nätverk och försök sedan igen.",
   "Invalid ALLOWED_HOSTS value": "Invalid ALLOWED_HOSTS värde",

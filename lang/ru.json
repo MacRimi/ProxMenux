@@ -4202,6 +4202,7 @@
   "Interrupted": "Прервано",
   "Interrupted operation": "Операция прервана",
   "Interrupted operation:": "Операция прервана:",
+  "Interrupted operations can be recovered from the OCI management menu.": "Прерванные операции можно восстановить через меню управления OCI.",
   "Interrupted stack operation found": "Обнаружена прерванная операция со стеком",
   "Invalid 'proxmox-ve' candidate (not 9.x or none). Please verify your repository configuration and network, then retry.": "Недопустимая версия-кандидат пакета 'proxmox-ve' (не 9.x или отсутствует). Проверьте настройки репозиториев и сетевое подключение, затем повторите попытку.",
   "Invalid ALLOWED_HOSTS value": "Недопустимое значение ALLOWED_HOSTS",

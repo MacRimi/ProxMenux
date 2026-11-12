@@ -4207,6 +4207,7 @@
   "Interrupted": "Interrompue",
   "Interrupted operation": "Interruption du opera",
   "Interrupted operation:": "Interruption du opera :",
+  "Interrupted operations can be recovered from the OCI management menu.": "Les opérations interrompues peuvent être récupérées depuis le menu de gestion OCI.",
   "Interrupted stack operation found": "Opération de stack interrompue détectée",
   "Invalid 'proxmox-ve' candidate (not 9.x or none). Please verify your repository configuration and network, then retry.": "Candidat 'proxmox-ve' non valide (pas 9.x, ou aucun). Vérifiez la configuration de vos dépôts et votre réseau, puis réessayez.",
   "Invalid ALLOWED_HOSTS value": "Valeur ALLOWED_HOSTS invalide",

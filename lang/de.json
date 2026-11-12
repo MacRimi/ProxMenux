@@ -4207,6 +4207,7 @@
   "Interrupted": "Unterbrochen",
   "Interrupted operation": "Unterbrochene operation",
   "Interrupted operation:": "Unterbrochene operation:",
+  "Interrupted operations can be recovered from the OCI management menu.": "Unterbrochene Vorgänge können über das OCI-Verwaltungsmenü wiederhergestellt werden.",
   "Interrupted stack operation found": "Unterbrochener Stapel operation gefunden",
   "Invalid 'proxmox-ve' candidate (not 9.x or none). Please verify your repository configuration and network, then retry.": "Ungültiger „proxmox-ve“-Kandidat (nicht 9.x oder keiner). Bitte überprüfen Sie Ihre Repository-Konfiguration und Ihr Netzwerk und versuchen Sie es dann erneut.",
   "Invalid ALLOWED_HOSTS value": "Ungültiger Wert für ALLOWED_HOSTS",
