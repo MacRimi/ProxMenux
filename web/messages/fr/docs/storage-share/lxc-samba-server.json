@@ -18,9 +18,9 @@
     "heading": "Ce que ça fait",
     "body": "Le conteneur devient un serveur SMB/CIFS : il exécute <code>smbd</code>, expose un dossier via <code>/etc/samba/smb.conf</code> et accepte les connexions clientes sur les ports <code>139</code> / <code>445</code>. Les clients voient le partage à <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> dans Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> dans macOS Finder, ou via <code>mount.cifs</code> sur Linux.",
     "diagramServerLabel": "LXC (privilégié) — Serveur Samba",
-    "diagramServerDetail": "/mnt/data\n(dossier exposé)\n\nsmbd + nmbd en cours d’exécution\n\nUtilisateur: <username>\n(via smbpasswd)\n\nGroupe imposé:\nsharedfiles",
+    "diagramServerDetail": "/mnt/data\n(dossier exposé)\n\nsmbd + nmbd en cours d’exécution\n\nUtilisateur: &lt;username&gt;\n(via smbpasswd)\n\nGroupe imposé:\nsharedfiles",
     "diagramClientLabel": "Tout client sur le réseau",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramClientDetail": "Windows: \\\\&lt;ip&gt;\\&lt;share&gt;\nmacOS:   smb://&lt;ip&gt;/&lt;share&gt;\nLinux:   mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {

@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "Úložisko žije v lokálnom adresári. Zmysluplné iba vtedy, keď je cieľový adresár na samostatnom fyzickom disku – úložisko na rovnakom disku ako zdroj chráni pred chybou operátora, ale nie pred zlyhaním disku."
       }
     ]

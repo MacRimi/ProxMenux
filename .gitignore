@@ -68,7 +68,6 @@ Thumbs.db
 *.tmp
 
 # Ensure these directories are not ignored
-!guides/
 !web/
 
 # GitHub authentication

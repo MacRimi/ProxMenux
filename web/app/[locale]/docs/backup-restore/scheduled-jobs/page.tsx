@@ -40,7 +40,7 @@ export async function generateMetadata({
 
 type ModeRow = { mode: string; backends: string; schedule: string; retention: string }
 type StepRow = { step: string; detail: string }
-type LayoutRow = { path: string; content: string }
+type LayoutRow = { path: string; pathNote?: string; content: string }
 type MgmtRow = { action: string; detail: string }
 type WhereNextItem = { label: string; href: string; tail: string }
 
@@ -208,7 +208,7 @@ export default async function ScheduledJobsPage({
           <tbody className="text-gray-800">
             {layoutRows.map((row, idx) => (
               <tr key={row.path} className={idx < layoutRows.length - 1 ? "border-b border-gray-100" : ""}>
-                <td className="px-3 py-2 align-top font-mono text-xs">{row.path}</td>
+                <td className="px-3 py-2 align-top font-mono text-xs">{row.path}{row.pathNote && ` (${row.pathNote})`}</td>
                 <td className="px-3 py-2 align-top">{t.rich(`storageLayout.rows.${idx}.content`, { code })}</td>
               </tr>
             ))}

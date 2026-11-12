@@ -30,7 +30,7 @@
     "rows": [
       {
         "action": "État de santé rapide",
-        "whatRich": "État global PASSED/FAILED et attributs clés.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) ou <code>nvme smart-log</code> (NVMe).",
+        "whatRich": "État global PASSED/FAILED et attributs clés.<br></br><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) ou <code>nvme smart-log</code> (NVMe).",
         "dur": "Instantané"
       },
       {
