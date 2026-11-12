@@ -23,6 +23,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "OpenShot"
-    }
+    },
+    "tagline": {
+      "en_US": "OpenShot Video Editor is an award-winning free and open-source video editor for Linux, Mac, and Windows, and is dedicated to delivering high quality video editing and animation solutions to the world."
+    },
+    "description": {
+      "en_US": "OpenShot is an open-source video editor designed for creating and editing multimedia content. It provides tools for assembling video clips and building animations. The software offers an accessible solution for producing personal or professional video projects."
+    },
+    "screenshots": [
+      "https://cdn.openshot.org/images/gallery/color-view-with-lut-720.webp",
+      "https://cdn.openshot.org/images/gallery/effects-lens-flare-720.webp",
+      "https://cdn.openshot.org/images/gallery/keyframe-editing-720.webp",
+      "https://cdn.openshot.org/images/gallery/2-track-timeline-720.webp"
+    ]
   }
 }

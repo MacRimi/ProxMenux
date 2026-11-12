@@ -14440,6 +14440,31 @@ def api_apps_icon_themes():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/catalog/items', methods=['GET'])
+@require_auth
+def api_catalog_items():
+    """Every item of the Catalog tab: OCI applications and Community Scripts."""
+    try:
+        import catalog_tab
+        return jsonify(catalog_tab.list_items(request.args.get('lang', 'en')))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items/<kind>/<item_id>', methods=['GET'])
+@require_auth
+def api_catalog_item(kind, item_id):
+    """The sheet of one item of the Catalog tab."""
+    try:
+        import catalog_tab
+        detail = catalog_tab.item_detail(kind, item_id, request.args.get('lang', 'en'))
+        if detail is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify(detail)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/apps/github-token', methods=['GET'])
 @require_auth
 def api_apps_github_token_status():

@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Collect, store and explore time-series data through the integrated InfluxDB web interface."
+    },
+    "description": {
+      "en_US": "InfluxDB is an open source time series database designed to collect, process, transform, and store event and time series data. It is optimized for real-time ingestion and fast query response times to support interactive dashboards and automation systems. It supports SQL and InfluxQL query languages and persists data using Parquet files on local disk or object storage."
+    },
+    "screenshots": [
+      "https://images.ctfassets.net/o7xu9whrs0u9/36SD3Tiixo2mPOquORK1jl/15c1e7fcb3c39b6eef5c03d60490c7d9/access-monitoring-mob.png",
+      "https://images.ctfassets.net/o7xu9whrs0u9/1KEBbqATEunaMleXDxIknG/81e6029b3615ca17fa76f457896b7f3a/hero.png",
+      "https://images.ctfassets.net/o7xu9whrs0u9/1HLX8Nzwlletw6aFRHJDbR/a6555d9d6bf19f15c3e42450ce7f73f4/time-series-database.png"
+    ]
+  }
+}

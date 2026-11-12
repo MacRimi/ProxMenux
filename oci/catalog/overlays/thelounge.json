@@ -19,6 +19,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "The Lounge"
-    }
+    },
+    "tagline": {
+      "en_US": "Thelounge (a fork of shoutIRC) is a web IRC client that you host on your own server."
+    },
+    "description": {
+      "en_US": "The Lounge is a self-hosted web IRC client for chatting on IRC networks. It provides a browser-based interface to manage connections and communicate across multiple channels. Once set up, it keeps you connected and preserves chat scrollback history."
+    },
+    "tips": [
+      "After logging in, you can add IRC networks, with defaults preset for networks such as Freenode."
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/thelounge/thelounge.github.io/master/img/thelounge-screenshot.png"
+    ]
   }
 }

@@ -36,5 +36,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Teable is a new generation open-source database platform. It provides an intuitive spreadsheet-like experience, while being powered by a high-performance Postgres database underneath, combining ease of use with powerful data processing capabilities.\n\n**Key Features:**\n- **High Performance**: Built on the Postgres core, it effortlessly handles millions of records with extremely fast response times.\n- **Modern Interface**: Offers multiple views including grid, kanban, gallery, and forms, with a clean and user-friendly design.\n- **Real-time Collaboration**: Supports multi-user online collaboration with real-time data synchronisation.\n- **Automation & API**: Provides powerful RESTful APIs to enable flexible integration and automation.\n\n**Learn More:**\n- [Teable Official Website](https://teable.ai)\n- [Teable GitHub Repository](https://github.com/teableio/teable)\n- [Help Documentation](https://help.teable.ai)\n"
+    },
+    "description": {
+      "en_US": "Teable is a no-code database platform built on Postgres that provides a spreadsheet-like interface for managing relational data. It allows users to edit cells, evaluate formulas, filter, sort, and aggregate large volumes of records with fast response times. The platform supports multiple data views including grid and form layouts, direct SQL querying, and real-time multi-user collaboration."
+    },
+    "repository": "https://github.com/teableio/teable"
   }
 }

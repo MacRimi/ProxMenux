@@ -13,6 +13,7 @@
 # ==========================================================
 """Search across the ProxMenux menu, the OCI catalog and the Helper-Scripts."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -36,6 +37,41 @@ SOURCES = ('ProxMenux', 'OCI Manager', 'Community Scripts')
 OCI_KEYWORDS = {'sharecovex': 'samba smb cifs nfs share compartir archivos time machine'}
 
 _translations = None
+# The Monitor asks in the language of its own interface.
+_language = None
+# The page of the documentation that explains each section of the
+# customizable post-installation script.
+POST_INSTALL_DOCS = {
+    'Basic Settings': 'post-install/basic-settings', 'System': 'post-install/system',
+    'Virtualization': 'post-install/virtualization', 'Network': 'post-install/network',
+    'Storage': 'post-install/storage', 'Security': 'post-install/security',
+    'Customization': 'post-install/customization', 'Monitoring': 'post-install/monitoring',
+    'Performance': 'post-install/performance', 'Optional': 'post-install/optional',
+}
+# The section of those pages that explains each setting.
+POST_INSTALL_SECTIONS = {
+    'APTUPGRADE': 'post-install/basic-settings#upgrade', 'TIMESYNC': 'post-install/basic-settings#time',
+    'NOAPTLANG': 'post-install/basic-settings#languages', 'UTILS': 'post-install/basic-settings#utilities',
+    'JOURNALD': 'post-install/system#journald', 'LOGROTATE': 'post-install/system#logrotate',
+    'LIMITS': 'post-install/system#limits', 'MEMORYFIXES': 'post-install/system#memory',
+    'KEXEC': 'post-install/system#kexec', 'KERNELPANIC': 'post-install/system#panic',
+    'GUESTAGENT': 'post-install/virtualization#guestAgent', 'VFIO_IOMMU': 'post-install/virtualization#vfio',
+    'APTIPV4': 'post-install/network#ipv4', 'NET': 'post-install/network#sysctl',
+    'OPENVSWITCH': 'post-install/network#ovs', 'TCPFASTOPEN': 'post-install/network#bbr',
+    'PERSISNET': 'post-install/network#names',
+    'ZFSARC': 'post-install/storage#arc', 'ZFSAUTOSNAPSHOT': 'post-install/storage#autoSnap',
+    'ZFSAUTOTRIM': 'post-install/storage#autotrim', 'VZDUMP': 'post-install/storage#vzdump',
+    'DISABLERPC': 'post-install/security#rpcbind',
+    'BASHRC': 'post-install/customization#bashrc', 'MOTD': 'post-install/customization#motd',
+    'NOSUBBANNER': 'post-install/customization#banner',
+    'OVHRTM': 'post-install/monitoring#ovh', 'PIGZ': 'post-install/performance#pigz',
+    'ZRAM_SWAP': 'post-install/optional#zram', 'AMDFIXES': 'post-install/optional#amd',
+    'FASTFETCH': 'post-install/optional#fastfetch', 'PVEAM': 'post-install/optional#pveam',
+    'CEPH': 'post-install/optional#ceph', 'ENABLE_HA': 'post-install/optional#ha',
+    'FIGURINE': 'post-install/optional#figurine', 'LOG2RAM': 'post-install/optional#log2ram',
+}
+# The automated script names a few settings after a variant of its own.
+AUTO_POST_INSTALL_ALIASES = {'install_log2ram_auto': 'LOG2RAM'}
 
 
 def translate(text):
@@ -44,7 +80,7 @@ def translate(text):
     if _translations is None:
         _translations = {}
         try:
-            language = json.loads((BASE / 'config.json').read_text()).get('language', 'en')
+            language = _language or json.loads((BASE / 'config.json').read_text()).get('language', 'en')
             if isinstance(language, str) and re.fullmatch(r'[a-z]{2}', language) and language != 'en':
                 loaded = json.loads((BASE / 'lang' / f'{language}.json').read_text(encoding='utf-8'))
                 if isinstance(loaded, dict):
@@ -53,6 +89,11 @@ def translate(text):
             pass
     value = _translations.get(text)
     return value if isinstance(value, str) and value else text
+
+
+def option_key(option_id):
+    """A short key for an option, safe in a URL and in the Monitor's terminal."""
+    return hashlib.sha1(option_id.encode('utf-8')).hexdigest()[:16]
 
 
 def tidy(text):
@@ -72,6 +113,149 @@ def returns_to_a_menu(script):
         return False
 
 
+# What the Monitor's Catalog tab shows of an option: a VM it creates is an
+# application, with its logo and category.
+CATALOG_FIELDS = ('name', 'group', 'type', 'icon', 'category', 'via', 'resources', 'links', 'screenshots')
+# Scripts that are not in the ProxMenux repository and that the menus run,
+# whole or in one of their steps: who maintains each and where its scripts
+# are downloaded from. An option of the index names the one it is
+# ("third_party") or the ones it uses ("uses").
+THIRD_PARTY = {
+    'community-scripts': dict(name='Community Scripts', url='https://community-scripts.org',
+                              scripts=('https://raw.githubusercontent.com/community-scripts/ProxmoxVE/',)),
+    'osx-proxmox': dict(name='OSX-PROXMOX', url='https://osx-proxmox.com', scripts=('https://install.osx-proxmox.com',)),
+    'proxmox-toolbox': dict(name='Tontonjo', url='https://github.com/Tontonjo/proxmox_toolbox',
+                            scripts=('https://raw.githubusercontent.com/Tontonjo/proxmox_toolbox/',)),
+    'proxsave': dict(name='tis24dev', url='https://github.com/tis24dev/proxsave',
+                     scripts=('https://raw.githubusercontent.com/tis24dev/proxsave/',)),
+    'nvidia-patch': dict(name='keylase/nvidia-patch', url='https://github.com/keylase/nvidia-patch',
+                         scripts=('https://raw.githubusercontent.com/keylase/nvidia-patch/',)),
+    'ovh-rtm': dict(name='OVHcloud', url='https://www.ovhcloud.com',
+                    scripts=('https://last-public-ovh-infra-yak.snap.mirrors.ovh.net/',)),
+}
+# Settings of the customizable post-installation script that use one.
+POST_INSTALL_USES = {'OVHRTM': ['ovh-rtm'], 'BASHRC': ['community-scripts']}
+
+
+def third_party(names):
+    """Who maintains the third-party scripts named, with their page."""
+    return [dict(name=THIRD_PARTY[n]['name'], url=THIRD_PARTY[n]['url']) for n in names if n in THIRD_PARTY]
+
+
+# The Catalog tab shows the sections of the main menu, each listing what its
+# own menu lists. The menu's settings and the two catalogs stay out: the tab
+# shows the applications and the scripts in its own way.
+CATALOG_OUTSIDE = {'Community Scripts', 'OCI manager Apps (Technology Preview)', 'Settings'}
+# A menu opened from inside a section belongs to that section.
+SUBMENUS = {
+    'Customizable post-installation script': 'Settings post-install Proxmox',
+    'System Utilities Installer': 'Utilities and Tools',
+    'Create VM System NAS': 'Create VM from template or script',
+    'Create VM System Windows': 'Create VM from template or script',
+    'Create VM System Linux': 'Create VM from template or script',
+    'Create VM System Others (based Linux)': 'Create VM from template or script',
+}
+
+
+def main_sections():
+    """The sections of the main menu, in its order: (name, script)."""
+    try:
+        text = (SCRIPTS / 'menus/main_menu.sh').read_text()
+    except OSError:
+        return []
+    names = re.findall(r'^\s*([0-9a-z])\s+"\$\(translate "([^"]+)"\)"', text, re.M)
+    scripts = dict(re.findall(r'^\s*([0-9a-z])\) (?:exec )?bash "\$LOCAL_SCRIPTS/([^"]+)"', text, re.M))
+    return [(name, scripts[key]) for key, name in names if key in scripts]
+
+
+def section_externals(script):
+    """The Community Scripts scripts that a section's menu offers itself, by
+    slug, in its order."""
+    try:
+        text = (SCRIPTS / script).read_text()
+    except OSError:
+        return []
+    slugs = re.findall(r'^[^#\n]*community-scripts/ProxmoxVE/main/tools/pve/([a-z0-9-]+)\.sh', text, re.M)
+    return list(dict.fromkeys(slugs))
+
+
+def external_keys(name, script, placed):
+    """The third-party scripts a section's menu lists apart, in its order: a
+    Community Scripts script by its slug, any other by the option that runs
+    it. An option that only opens a menu of them gives way to what that menu
+    runs."""
+    keys = []
+
+    def add(item):
+        key = f"cs:{item['cs']}" if item.get('cs') else f"pmx:{option_key(item['id'])}" if item.get('third_party') else ''
+        if key and key not in keys:
+            keys.append(key)
+    for item in sorted((i for i in placed if i['section'] == name and i['menu'] == name and i.get('apart')),
+                       key=lambda i: i['order']):
+        children = [c for c in placed if c['menu'] == item.get('english')]
+        if item.get('cs') or item.get('third_party') or not children:
+            add(item)
+        else:
+            for child in children:
+                add(child)
+    for slug in section_externals(script):
+        if f"cs:{slug}" not in keys:
+            keys.append(f"cs:{slug}")
+    return keys
+
+
+def catalog_sections(placed=()):
+    return [dict(name=name, title=tidy(translate(name)), external=external_keys(name, script, placed))
+            for name, script in main_sections() if name not in CATALOG_OUTSIDE]
+
+
+def catalog_placement(entries):
+    """Where the Catalog tab shows each option: the section of the main menu
+    it belongs to, whether opening that section lists it, as its menu does,
+    or only a search finds it, and its place in that menu."""
+    scripts = {name: script for name, script in main_sections() if name not in CATALOG_OUTSIDE}
+    texts = {}
+    for item in entries:
+        menu = item.get('menu', '')
+        section = SUBMENUS.get(menu, menu)
+        item['section'] = section if section in scripts else ''
+        english = item.get('english', '')
+        if item['section'] not in texts:
+            try:
+                texts[item['section']] = (SCRIPTS / scripts[item['section']]).read_text() if item['section'] else ''
+            except OSError:
+                texts[item['section']] = ''
+        # Where the menu lists the option: a line of its table of options, or
+        # a row of its dialog, a key and then the text.
+        text = texts[item['section']]
+        position = text.find(f'"{english}|') if english else -1
+        if english and position < 0:
+            row = re.search(r'^\s*"?[0-9a-z]+"?\s+"\$\([^\n]*?["\']' + re.escape(english) + r'["\']', text, re.M)
+            position = row.start() if row else -1
+        item['order'] = position if position >= 0 else 1 << 30
+        # The menu lists it below its heading of external scripts.
+        heading = re.search(r'translate ["\']External Scripts["\']', text)
+        item['apart'] = bool(heading) and position > heading.start()
+        item['browse'] = position >= 0 and menu == section and english != section and item.get('via') != 'community-scripts'
+    # A section whose menu is a single script lists that script.
+    for section in scripts:
+        members = [item for item in entries if item['section'] == section]
+        if members and not any(item['browse'] for item in members):
+            for item in members:
+                item['browse'] = item.get('english') == section
+    return entries
+
+
+def linux_releases(family):
+    """The official ISOs the Linux selector offers of one distribution."""
+    try:
+        text = (SCRIPTS / 'vm/select_linux_iso.sh').read_text()
+    except OSError:
+        return []
+    return [f"{name} · {kind}" for name, kind in
+            re.findall(r'^\s*"([^"|]+)\|([^"|]+)\|[^"|]*\|https://', text, re.M) if name.startswith(family)]
+
+
 def own_entries():
     try:
         index = json.loads(INDEX.read_text(encoding='utf-8'))
@@ -85,10 +269,21 @@ def own_entries():
         title = tidy(translate(item['title']))
         # An option that lives inside a menu is given to that menu, which
         # opens it first.
-        option = [item['argument']] if item.get('argument') else []
-        entries.append(dict(title=title, source='ProxMenux', kind=tidy(translate(item['menu'])),
+        # A list names the system as well, which then opens without its menu.
+        argument = item.get('argument') or []
+        option = [str(value) for value in (argument if isinstance(argument, list) else [argument])]
+        entries.append(dict(title=title, english=item['title'], source='ProxMenux', kind=tidy(translate(item['menu'])), menu=item['menu'],
                             terms=f"{title} {tidy(item['title'])} {item.get('keywords', '')}", related='',
-                            action=['bash', str(script), *option], handoff=returns_to_a_menu(script)))
+                            action=['bash', str(script), *option], handoff=returns_to_a_menu(script),
+                            id=f"menu:{item['script']}:{' '.join(option)}:{item['title']}", docs=item.get('docs', ''),
+                            description=translate(item['summary']) if item.get('summary') else '',
+                            about=translate(item['about']) if item.get('about') else '',
+                            notes=[translate(note) for note in item.get('notes') or []],
+                            releases=linux_releases(item['title']) if option[:1] == ['3'] and len(option) > 1 else [],
+                            includes=post_install_includes(item.get('docs', '')),
+                            third_party=(third_party([item['third_party']]) or [None])[0] if item.get('third_party') else None,
+                            uses=third_party(item.get('uses') or []), cs=item.get('cs', ''),
+                            **{key: item.get(key, '') for key in CATALOG_FIELDS}))
     return entries
 
 
@@ -102,27 +297,74 @@ def utility_entries():
     if not block or not installer.is_file():
         return []
     kind = tidy(translate('System Utilities Installer'))
-    return [dict(title=package, source='ProxMenux', kind=kind, terms=f'{package} {command}',
+    return [dict(title=package, source='ProxMenux', kind=kind, menu='System Utilities Installer', terms=f'{package} {command}',
                  related=f'{description} {translate(description)}',
-                 action=['bash', str(installer), package], handoff=False)
+                 action=['bash', str(installer), package], handoff=False,
+                 id=f'utility:{package}', docs='utils/system-utils', description=translate(description))
             for package, command, description in
             re.findall(r'^\s*"([^":]+):([^":]+):([^"\n]+)"', block.group(1), re.M)]
 
 
-def post_install_entries():
-    script = SCRIPTS / 'post_install/customizable_post_install.sh'
+def post_install_settings():
+    """The settings of the customizable post-installation script, in its order:
+    (category, title, token)."""
     try:
-        block = re.search(r'^\s*local options=\(\s*\n(.*?)^\s*\)', script.read_text(), re.M | re.S)
+        block = re.search(r'^\s*local options=\(\s*\n(.*?)^\s*\)', (SCRIPTS / 'post_install/customizable_post_install.sh').read_text(),
+                          re.M | re.S)
     except OSError:
         return []
-    if not block:
+    return re.findall(r'^\s*"([^"|]+)\|([^"|]+)\|([A-Za-z0-9_]+)"', block.group(1), re.M) if block else []
+
+
+def automated_post_install_tokens():
+    """The settings the automated post-installation script applies, in its
+    order, named by the token of the same setting in the customizable one."""
+    try:
+        custom = (SCRIPTS / 'post_install/customizable_post_install.sh').read_text()
+        auto = (SCRIPTS / 'post_install/auto_post_install.sh').read_text()
+    except OSError:
         return []
+    token_of = {function: token for token, function in re.findall(r'^\s*([A-Z0-9_]+)\)\s*([a-z0-9_]+)\s*;;', custom, re.M)}
+    token_of.update(AUTO_POST_INSTALL_ALIASES)
+    body = re.search(r'^run_complete_optimization\(\)\s*\{\n(.*?)^\}', auto, re.M | re.S)
+    calls = re.findall(r'^\s*([a-z0-9_]+)\s*$', body.group(1), re.M) if body else []
+    return [token_of[call] for call in calls if call in token_of]
+
+
+def post_install_includes(docs):
+    """What the automated or the customizable script does, setting by setting:
+    a list of groups, each with the names of its settings."""
+    settings = post_install_settings()
+    if docs == 'post-install/automated':
+        title_of = {token: title for _, title, token in settings}
+        return [dict(group='', items=[tidy(translate(title_of[token])) for token in automated_post_install_tokens()
+                                      if token in title_of])]
+    if docs == 'post-install/customizable':
+        # In the order of the categories of its checklist.
+        try:
+            order = {name: int(rank) for name, rank in re.findall(
+                r'\["([^"]+)"\]=(\d+)', (SCRIPTS / 'post_install/customizable_post_install.sh').read_text())}
+        except OSError:
+            order = {}
+        groups = []
+        for category, title, _ in sorted(settings, key=lambda s: order.get(s[0], 999)):
+            if not groups or groups[-1]['category'] != category:
+                groups.append(dict(category=category, group=tidy(translate(category)), items=[]))
+            groups[-1]['items'].append(tidy(translate(title)))
+        return [dict(group=g['group'], items=g['items']) for g in groups]
+    return []
+
+
+def post_install_entries():
+    script = SCRIPTS / 'post_install/customizable_post_install.sh'
     kind = tidy(translate('Customizable post-installation script'))
-    return [dict(title=tidy(translate(title)), source='ProxMenux', kind=kind,
+    return [dict(title=tidy(translate(title)), source='ProxMenux', kind=kind, menu='Customizable post-installation script',
                  terms=f'{translate(title)} {title} {token}', related=f'{category} post postinstall',
-                 action=['bash', str(script), token], handoff=False)
-            for category, title, token in
-            re.findall(r'^\s*"([^"|]+)\|([^"|]+)\|([A-Za-z0-9_]+)"', block.group(1), re.M)]
+                 action=['bash', str(script), token], handoff=False,
+                 id=f'post:{token}', docs=POST_INSTALL_DOCS.get(category, 'post-install/customizable'),
+                 explains=POST_INSTALL_SECTIONS.get(token, ''), description='',
+                 uses=third_party(POST_INSTALL_USES.get(token, [])))
+            for category, title, token in post_install_settings()]
 
 
 def oci_entries():
@@ -279,7 +521,39 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--search', metavar='QUERY', help='print the matches as JSON and exit')
     parser.add_argument('--handoff', type=Path, help='file that receives the sub-menu the main menu has to open')
+    parser.add_argument('--list', action='store_true', help="print the menu's own options as JSON and exit")
+    parser.add_argument('--run', metavar='ID', help='open one of the options --list prints')
+    parser.add_argument('--language', help='language of the texts --list prints')
+    parser.add_argument('--sections', action='store_true', help='print the sections of the main menu the Catalog tab shows')
     args = parser.parse_args()
+    global _language
+    if args.language and re.fullmatch(r'[a-z]{2}', args.language):
+        _language = args.language
+    if args.sections:
+        placed = catalog_placement(own_entries() + utility_entries() + post_install_entries())
+        print(json.dumps(catalog_sections(placed), ensure_ascii=False))
+        return
+    if args.list or args.run:
+        own = own_entries() + utility_entries() + post_install_entries()
+        if args.list:
+            catalog_placement(own)
+            print(json.dumps([{**{key: item[key] for key in ('id', 'title', 'kind', 'terms', 'description', 'docs', 'handoff',
+                                                              'section', 'browse', 'order')},
+                               'apart': item.get('apart', False), 'third_party': item.get('third_party'),
+                               'uses': item.get('uses') or [],
+                               **{key: item.get(key, '') for key in CATALOG_FIELDS},
+                               **{key: item.get(key) or [] if key not in ('about', 'explains') else item.get(key, '')
+                                  for key in ('about', 'notes', 'releases', 'includes', 'explains')},
+                               'menu': item.get('menu', ''),
+                               'key': option_key(item['id'])} for item in own], ensure_ascii=False))
+            return
+        # Only an option of the list itself is opened, never a command from outside.
+        item = next((entry for entry in own if args.run in (entry['id'], option_key(entry['id']))), None)
+        if item is None:
+            raise SystemExit(f"{translate('No matches for:')} {args.run}")
+        # The Catalog tab lets this script, and no other menu, be drawn.
+        os.environ['PROXMENUX_CATALOG_TARGET'] = item['action'][1]
+        os.execvp(item['action'][0], item['action'])
     if args.search is not None:
         print(json.dumps(search(catalog(), args.search), ensure_ascii=False, indent=2))
         return

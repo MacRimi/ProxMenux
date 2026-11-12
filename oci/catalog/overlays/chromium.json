@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Chromium is an open-source browser project that aims to build a safer, faster, and more stable way for all users to experience the web."
+    },
+    "description": {
+      "en_US": "Chromium is an open-source web browser designed to provide a fast, safe, and stable browsing experience. It serves as the open-source foundation for numerous modern browsers and supports modern web standards and rich web applications. When streamed remotely, it allows users to access a full desktop browser session directly from another web browser."
+    }
   }
 }

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run one Valkey server with persistent data stored in its data directory."
+    },
+    "description": {
+      "en_US": "Valkey is a high-performance data structure server designed primarily for key/value workloads. It supports native data structures alongside an extensible plugin system that enables additional structures and access patterns. The application was forked from the open-source Redis project."
+    }
+  }
+}

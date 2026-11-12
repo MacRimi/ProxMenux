@@ -23,6 +23,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "MySQL Workbench"
+    },
+    "tagline": {
+      "en_US": "MySQL Workbench is a unified visual tool for database architects, developers, and DBAs. MySQL Workbench provides data modeling, SQL development, and comprehensive administration tools for server configuration, user administration, backup, and much more."
+    },
+    "description": {
+      "en_US": "MySQL Workbench is a unified visual design and administration tool for database architects, developers, and administrators. It provides features for visual data modeling, SQL query development, and comprehensive server management. Users can design database schemas, test queries, manage user permissions, and perform database backups and restorations through a graphical interface."
     }
   }
 }

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Synchronize TRaSH Guides quality profiles, custom formats and naming settings with Sonarr and Radarr."
+    },
+    "description": {
+      "en_US": "Recyclarr is a command-line application that automatically synchronizes recommended settings from the TRaSH Guides to Sonarr and Radarr. It applies and maintains quality profiles, custom formats with scoring, file size definitions, and media naming conventions across your instances."
+    }
+  }
+}

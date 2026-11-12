@@ -14,6 +14,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "DokuWiki"
-    }
+    },
+    "tagline": {
+      "en_US": "Dokuwiki is a simple to use and highly versatile Open Source wiki software that doesn't require a database. It is loved by users for its clean and readable syntax. The ease of maintenance, backup and integration makes it an administrator's favorite. Built in access controls and authentication connectors make DokuWiki especially useful in the enterprise context and the large number of plugins contributed by its vibrant community allow for a broad range of use cases beyond a traditional wiki."
+    },
+    "description": {
+      "en_US": "Dokuwiki is an open-source wiki application that does not require a database. It features clean, readable syntax and simple maintenance and backups. The application includes built-in access controls and authentication connectors for managing permissions, while a broad range of community plugins allows for functionality beyond a traditional wiki."
+    },
+    "tips": [
+      "Set \"Use nice URLs\" in the admin/Configuration Settings panel to .htaccess and tick \"Use slash as namespace separator in URLs\" to enable nice URLs."
+    ]
   }
 }

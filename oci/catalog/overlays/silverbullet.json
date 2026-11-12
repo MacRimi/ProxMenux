@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and connect Markdown notes in a self-hosted, wiki-like workspace. The required SB_USER variable enables the initial single-user login, and /data holds the workspace."
+    },
+    "description": {
+      "en_US": "SilverBullet is a browser-based personal knowledge database and note-taking system. It combines a live-preview Markdown editor with bidirectional wiki-style links, outlining tools, and task management. A built-in database with a query language and an integrated Lua scripting environment allows users to dynamically generate content, page templates, and custom widgets."
+    },
+    "screenshots": [
+      "https://silverbullet.md/media/og/default.jpg",
+      "https://silverbullet.md/media/stills/tour-personal-journal.webp",
+      "https://silverbullet.md/media/stills/tour-team-architecture.webp",
+      "https://silverbullet.md/media/stills/tour-docs-navigation.webp"
+    ]
+  }
+}

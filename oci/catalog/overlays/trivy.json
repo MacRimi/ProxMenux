@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Start Trivy in server mode to expose its client API from port 4954."
+    },
+    "description": {
+      "en_US": "Trivy is a comprehensive security scanner designed to find vulnerabilities and misconfigurations across multiple targets. It can scan container images, filesystems, remote Git repositories, virtual machine images, and Kubernetes clusters. The tool detects known CVEs, software dependencies, infrastructure-as-code issues, sensitive secrets, and license compliance."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/aquasecurity/trivy/HEAD/docs/imgs/trivy-k8s.png"
+    ]
+  }
+}

@@ -136,6 +136,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "BookStack"
+    },
+    "tagline": {
+      "en_US": "Bookstack is a free and open source Wiki designed for creating beautiful documentation. Featuring a simple, but powerful WYSIWYG editor it allows for teams to create detailed and useful documentation with ease."
+    },
+    "description": {
+      "en_US": "BookStack is an open source wiki platform built for organizing and storing documentation. It features a WYSIWYG editor alongside a Markdown editor to help teams create structured and readable content. The application uses a SQL database to store notes, manuals, and internal knowledge."
     }
   }
 }

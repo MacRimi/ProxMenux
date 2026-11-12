@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Explore and query property graphs using FalkorDB’s Redis-compatible server and bundled browser UI in one image."
+    },
+    "description": {
+      "en_US": "FalkorDB is a multi-tenant property graph database designed for low-latency data representation and retrieval. It leverages sparse matrices to represent graph adjacency matrices and uses linear algebra for efficient query execution. The database adheres to the Property Graph Model, supporting nodes and relationships with attributes, and provides compatibility with the OpenCypher query language."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/131867d4-fa2b-41f8-ac72-5c5f6eaf4e12"
+    ]
+  }
+}

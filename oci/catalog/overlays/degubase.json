@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A single-container web interface for building small relational workspaces backed by SQLite."
+    },
+    "description": {
+      "en_US": "Degubase is a relational database workspace application backed by SQLite. It provides a web interface featuring multiple views such as tabular grids, Kanban boards, timelines, matrices, and card galleries. Users can link records across tables, trigger custom Lua automations on data changes, and connect AI assistants through an integrated Model Context Protocol server."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/saintedlama/degubase/HEAD/screenshots/03-task-tracker-board.png",
+      "https://raw.githubusercontent.com/saintedlama/degubase/HEAD/screenshots/04-bug-tracker-grid.png",
+      "https://raw.githubusercontent.com/saintedlama/degubase/HEAD/screenshots/07-content-calendar-timeline.png",
+      "https://raw.githubusercontent.com/saintedlama/degubase/HEAD/screenshots/08-row-detail.png"
+    ]
+  }
+}

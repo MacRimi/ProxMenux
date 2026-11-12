@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "An open smart home platform that connects devices and services through adapters, automation and visualizations. Its one persistent data directory allows the service to start before any hardware adapters are configured."
+    },
+    "description": {
+      "en_US": "ioBroker is an open smart home platform designed to integrate diverse devices and services. It connects hardware and online systems using a modular adapter architecture, enabling centralized automation and custom visualization dashboards. Users can unify fragmented IoT ecosystems and control home automation logic from a single interface."
+    }
+  }
+}

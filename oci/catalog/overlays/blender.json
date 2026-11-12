@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Blender is a free and open-source 3D computer graphics software toolset used for creating animated films, visual effects, art, 3D printed models, motion graphics, interactive 3D applications, virtual reality, and computer games. **This image does not support GPU rendering out of the box only accelerated workspace experience**"
+    },
+    "description": {
+      "en_US": "Blender is a 3D computer graphics software toolset used for modeling, animation, and digital content creation. It enables the creation of animated films, visual effects, digital art, 3D printed models, motion graphics, interactive 3D applications, and video game assets. The application provides an integrated pipeline for digital artists, animators, and designers."
+    },
+    "screenshots": [
+      "https://code.blender.org/wp-content/uploads/2018/12/springrg.jpg"
+    ]
   }
 }

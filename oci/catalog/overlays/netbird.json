@@ -19,5 +19,19 @@
       "example": "https://api.netbird.io:443",
       "prompt": "Address of the NetBird management server"
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "NetBird combines a WireGuard®-based overlay network with Zero Trust Network Access, providing a unified open source platform for reliable and secure connectivity.\n\n- Secure Remote Access – Enable least privilege network access in a few clicks\n- Zero-Config Deployment – Replace legacy VPNs with a peer-to-peer WireGuard®-based network\n- Seamless SSO with MFA – Secure your network access with session-based SSO & MFA\n- Dynamic Posture Checks – Grant access only to devices meeting your security rules\n- Centralized Network Management – Control your private network from a single place\n- Detailed Activity Logging – Identify who did what, and when in your network\n\n**Learn More:**\n- [NetBird Website](https://netbird.io)\n- [Documentation](https://docs.netbird.io)\n- [Self-Hosting Guide](https://docs.netbird.io/selfhosted/selfhosted-quickstart)\n- [NetBird GitHub](https://github.com/netbirdio/netbird)\n- [Slack Community](https://docs.netbird.io/slack-url)\n"
+    },
+    "description": {
+      "en_US": "NetBird is an open-source Zero Trust networking platform that combines a WireGuard-based overlay network with identity-aware access controls. It connects remote users, hybrid-cloud environments, and edge devices through direct, encrypted peer-to-peer connections without requiring open ports or complex firewall configurations. Administrators can segment networks, configure private DNS nameservers, enforce device posture checks, and audit activity from a centralized dashboard."
+    },
+    "screenshots": [
+      "https://netbird.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcentralized-network-management.67616bd3.png&w=1920&q=75&dpl=dpl_C2wV9wjN8dNt1X4nYH8iiP6Kjb5q",
+      "https://netbird.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fsecure-remote-access-access-control-policy.49f5261d.png&w=1920&q=75&dpl=dpl_C2wV9wjN8dNt1X4nYH8iiP6Kjb5q",
+      "https://netbird.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fnetwork-activity-logging-activity-events.9483679c.png&w=1920&q=75&dpl=dpl_C2wV9wjN8dNt1X4nYH8iiP6Kjb5q",
+      "https://netbird.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fdevice-context-posture-checks.a04dfd92.png&w=1080&q=75&dpl=dpl_C2wV9wjN8dNt1X4nYH8iiP6Kjb5q"
+    ]
   }
 }

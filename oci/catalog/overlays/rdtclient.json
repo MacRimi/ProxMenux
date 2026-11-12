@@ -16,5 +16,11 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "description": {
+      "en_US": "rdt-client is a web interface designed to manage torrents through Real-Debrid. It enables adding torrents via magnet links or files and automatically downloads the finished files to local storage. In addition, it can automatically unpack archives upon completion and provides an emulated qBittorrent API for integration with services like Sonarr."
+    },
+    "repository": "https://github.com/rogerfar/rdt-client"
   }
 }

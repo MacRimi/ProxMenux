@@ -26,6 +26,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "grocy"
-    }
+    },
+    "tagline": {
+      "en_US": "Grocy is an ERP system for your kitchen! Cut down on food waste, and manage your chores with this brilliant utility."
+    },
+    "description": {
+      "en_US": "Grocy is an enterprise resource planning system designed for your home and kitchen. It helps track purchases, monitor inventory, and cut down on food waste. The platform also includes tools to organize household chores and track battery charging."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/grocy/grocy/master/.github/publication_assets/stock.png",
+      "https://raw.githubusercontent.com/grocy/grocy/master/.github/publication_assets/mealplan.png",
+      "https://raw.githubusercontent.com/grocy/grocy/master/.github/publication_assets/shoppinglist.png",
+      "https://raw.githubusercontent.com/grocy/grocy/master/.github/publication_assets/chores.png"
+    ]
   }
 }

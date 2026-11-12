@@ -20,6 +20,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "ProjectSend"
-    }
+    },
+    "tagline": {
+      "en_US": "Projectsend is a self-hosted application that lets you upload files and assign them to specific clients that you create yourself. Secure, private and easy. No more depending on external services or e-mail to send those files."
+    },
+    "description": {
+      "en_US": "Projectsend is a file sharing platform designed for distributing files to specific clients. It allows administrators to upload documents, media, or archives and assign access to custom client accounts. The platform provides a private environment for file exchange without relying on third-party cloud hosting or email attachments."
+    },
+    "screenshots": [
+      "https://www.projectsend.org/_next/image?url=%2F_next%2Fstatic%2Fimmutable%2Fmedia%2Fdashboard-2.0.0n8xh_tb3pw62.png&w=3840&q=75"
+    ]
   }
 }

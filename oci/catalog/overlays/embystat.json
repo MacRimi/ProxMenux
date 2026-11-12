@@ -14,6 +14,17 @@
   "catalog_ui": {
     "title": {
       "en_US": "EmbyStat"
-    }
+    },
+    "tagline": {
+      "en_US": "EmbyStat is a personal web server that can calculate all kinds of statistics from your (local) Emby or Jellyfin server. Just install this on your server and let him calculate all kinds of fun stuff. This project is still in Alpha phase, but feel free to pull in on your computer and test it out yourself. When the time is right I will host a full informational website/release for common platforms and Wiki pages."
+    },
+    "description": {
+      "en_US": "Embystat is a personal web server designed to calculate statistics from a local Emby or Jellyfin media server. It connects to your media server to analyze collection details, media counts, and viewing habits. The tool provides a centralized dashboard of insights regarding your media library and playback activity."
+    },
+    "tips": [
+      "Follow the setup wizard on initial install",
+      "Configure the required services after completing setup"
+    ],
+    "repository": "https://github.com/mregni/EmbyStat"
   }
 }

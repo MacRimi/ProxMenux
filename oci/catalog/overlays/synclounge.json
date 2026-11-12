@@ -2,6 +2,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "SyncLounge"
+    },
+    "tagline": {
+      "en_US": "Synclounge is a third party tool that allows you to watch Plex in sync with your friends/family, wherever you are."
+    },
+    "description": {
+      "en_US": "Synclounge is a third-party synchronization tool designed for Plex media servers. It enables multiple users in different locations to watch movies and television shows together in real time by keeping playback synchronized across their Plex clients."
     }
   }
 }

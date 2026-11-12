@@ -23,5 +23,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Raneto - is an open source Knowledgebase platform that uses static Markdown files to power your Knowledgebase."
+    },
+    "description": {
+      "en_US": "Raneto is an open-source knowledge base platform powered by static Markdown files. It provides a web interface designed for reading and editing documentation pages. It is useful for creating and maintaining lightweight knowledge bases directly from flat files without requiring a complex database setup."
+    },
+    "tips": [
+      "The web interface is only for editing Markdown files"
+    ],
+    "screenshots": [
+      "https://raneto.com/v0.0.1/img/raneto-screenshot.webp"
+    ]
   }
 }

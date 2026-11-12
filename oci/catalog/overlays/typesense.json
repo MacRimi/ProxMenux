@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run Typesense as a single-node search service with a generated API key and persistent index data."
+    },
+    "description": {
+      "en_US": "Typesense is an open-source, typo-tolerant search engine designed for low-latency search experiences. It indexes structured documents and vector embeddings, enabling applications to perform keyword, semantic, and hybrid searches. The engine supports dynamic sorting, faceting, filtering, federated search across multiple collections, and geographic queries. It runs as a self-contained service and exposes HTTP APIs alongside multiple client libraries for application integration."
+    }
+  }
+}

@@ -12,5 +12,16 @@
     "TWINGATE_LABEL_HOSTNAME": {
       "required": false
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "It's a connector for Twingate\"."
+    },
+    "description": {
+      "en_US": "The Twingate Connector is a network component deployed behind firewalls to facilitate Zero Trust Network Access. It acts as a bridge to provide secure access to private resources without requiring changes to network architecture."
+    },
+    "tips": [
+      "An Access Token and a Refresh Token generated via the Twingate Admin Console or API are required to run the Connector"
+    ]
   }
 }

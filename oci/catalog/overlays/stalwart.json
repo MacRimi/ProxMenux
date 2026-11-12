@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A single server for email protocols, JMAP, WebDAV and a browser-based management console."
+    },
+    "description": {
+      "en_US": "Stalwart Mail Server is an open-source mail and collaboration server written in Rust. It provides complete protocol support for JMAP, IMAP4, POP3, SMTP, CalDAV, CardDAV, and WebDAV. The platform includes built-in spam and phishing filters, mailbox encryption at rest, and automated authentication standards like DMARC and DKIM. Administrators can configure domains, accounts, storage backends, and security settings through an integrated web dashboard."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/stalwartlabs/mail-server/HEAD/img/demo.gif"
+    ]
+  }
+}

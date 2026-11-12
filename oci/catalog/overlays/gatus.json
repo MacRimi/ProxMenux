@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Monitor HTTP endpoints and display their status in a lightweight dashboard. The profile supplies a minimal configuration, stores history in SQLite and checks the local Gatus page."
+    },
+    "description": {
+      "en_US": "Gatus is a health dashboard designed to monitor services using protocols such as HTTP, ICMP, TCP, and DNS. It evaluates service health through customizable conditions on response times, status codes, certificate expirations, and response bodies. The application displays real-time uptime metrics on a visual status page and sends alerts through various notification providers when issues occur."
+    }
+  }
+}

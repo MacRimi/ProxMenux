@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The Brave browser is a fast, private and secure web browser for PC, Mac and mobile."
+    },
+    "description": {
+      "en_US": "Brave is a privacy-oriented web browser designed for fast and secure navigation. It allows users to browse websites, manage multiple tabs, and access web applications while protecting user privacy. It serves as an everyday browsing solution tailored for secure and private web exploration."
+    },
+    "screenshots": [
+      "https://brave.com/home-assets/images/desktop-brave-allrecipes.png",
+      "https://brave.com/home-assets/images/mobile-brave-allrecipes.jpg"
+    ]
   }
 }

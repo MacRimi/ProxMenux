@@ -47,5 +47,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Wallabag is a web page saving app that allows users to save articles for offline reading, extracting content for a distraction-free experience. Its intuitive Web interface enables saving articles with a click, ensuring users can read them at their convenience.\n\nThe app's core features include convenient web page saving, optimized reading, and flexible content organization. It extracts only the article's content, removing pop-ups and ads, and displays it in a clean, comfortable view. Users can organize saved articles with tags and automatic tagging rules, creating a personalized content library accessible on demand. Browser extensions enable quick saving, compatible with Chrome, Firefox, Opera, and more. Cross-platform clients cover Android, iOS, and other devices, ensuring a seamless reading experience. It also supports multi-user collaboration for sharing saved articles.\n\nIt enables importing data from services like Pocket, Readability, Instapaper, or Pinboard, simplifying content library migration. RSS generation allows users to access saved articles in RSS readers. Community documentation enhances usability, and the app's high flexibility and intuitive operation deliver a modern web content management solution.\n\n**Key Features:**\n- Save web pages for offline reading\n- Extract pure content for a distraction-free reading view\n- Article classification with automatic tagging rules for a personalized content library\n- Browser extensions for quick web page saving\n- Cross-platform clients (Android, iOS, Chrome, Firefox, Opera)\n- Multi-user collaboration for sharing saved articles\n- Import data from Pocket, Readability, Instapaper, Pinboard and other services\n- RSS generation for accessing saved articles in readers\n\n**Learn More:**\n- [Wallabag Official Website](https://wallabag.org)\n- [Wallabag GitHub Repository](https://github.com/wallabag/wallabag)\n- [Wallabag Documentation](https://doc.wallabag.org)\n- [Wallabag Docker Image](https://hub.docker.com/r/wallabag/wallabag)\n"
+    },
+    "description": {
+      "en_US": "Wallabag is an open-source application designed for saving web pages and reading them later. It extracts the core content of articles and removes distractions like pop-ups and advertisements for a clean reading view. Users can organize their saved articles with tags, access content offline, and synchronize their reading lists across devices."
+    },
+    "screenshots": [
+      "https://wallabag.org/img/screenshot.png"
+    ]
   }
 }

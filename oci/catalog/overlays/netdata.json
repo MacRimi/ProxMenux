@@ -8,6 +8,16 @@
       "LXCFS is skipped only in the monitor CT so that the limited container RAM/CPU is not shown.",
       "Uses lxc.include with /etc/pve/proxmenux/host-monitor, which every node of the cluster shares; vzdump does not include it, so it must be copied when restoring outside the cluster.",
       "The CPU limit is applied as cpulimit, without hiding processors through affinity."
+    ],
+    "tagline": {
+      "en_US": "Netdata is a real-time performance and health monitoring solution that helps you visualize and understand the behavior of your systems."
+    },
+    "description": {
+      "en_US": "Netdata is a real-time infrastructure monitoring platform designed to monitor, detect, and act across systems. It automatically discovers metrics across hardware, operating system resources, virtual machines, and packaged applications with per-second data collection. The platform includes built-in anomaly detection, interactive visualizations, and alerting while retaining metric data locally."
+    },
+    "repository": "https://github.com/netdata/netdata",
+    "screenshots": [
+      "https://www.netdata.cloud/img/dashboard-screens/metrics-tab_hu_83e18f5551d40399.webp"
     ]
   },
   "container_contract": {

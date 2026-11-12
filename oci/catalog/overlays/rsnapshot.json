@@ -30,6 +30,12 @@
   "catalog_ui": {
     "title": {
       "en_US": "rsnapshot"
+    },
+    "tagline": {
+      "en_US": "Rsnapshot is a filesystem snapshot utility based on rsync. rsnapshot makes it easy to make periodic snapshots of local machines, and remote machines over ssh. The code makes extensive use of hard links whenever possible, to greatly reduce the disk space required."
+    },
+    "description": {
+      "en_US": "Rsnapshot is a filesystem snapshot utility based on rsync. It facilitates periodic snapshots of local machines as well as remote machines over SSH. The system makes extensive use of hard links whenever possible to substantially reduce the amount of disk space required for backups."
     }
   }
 }

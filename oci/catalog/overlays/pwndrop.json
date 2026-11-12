@@ -14,6 +14,15 @@
   "catalog_ui": {
     "title": {
       "en_US": "pwndrop"
-    }
+    },
+    "tagline": {
+      "en_US": "Pwndrop is a self-deployable file hosting service for sending out red teaming payloads or securely sharing your private files over HTTP and WebDAV."
+    },
+    "description": {
+      "en_US": "Pwndrop is a self-hosted file hosting service designed for red teaming operations and file distribution. It allows users to securely share private files and deliver payloads over HTTP and WebDAV. The platform provides a web management interface where transfers and shared files can be configured and tracked."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/kgretzky/pwndrop/master/media/demo1.gif"
+    ]
   }
 }

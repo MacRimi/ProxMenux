@@ -8,7 +8,13 @@
   "catalog_ui": {
     "architectures": [
       "amd64"
-    ]
+    ],
+    "tagline": {
+      "en_US": "OpenClaw is an open-source personal AI assistant designed to extend the capabilities of large language models (LLMs) into intelligent agents that actively execute tasks, interact across multiple platforms, and operate continuously. It supports 24/7 operation on the user's own device or server and provides intelligent automation services through common communication tools. OpenClaw connects AI to existing chat channels (such as WhatsApp, Telegram, Discord, etc.) via a locally running \"gateway + agent\" architecture, enabling it not only to answer questions but also to proactively perform actions, manage schedules, process emails, automate workflows, and more.\n\n**Key Features**:\n\n- Multi-channel Communication Integration: Interact directly with AI through common communication platforms like WhatsApp, Telegram, Slack, Discord, Signal, iMessage, Microsoft Teams, etc., without the need for additional applications.\n\n- Continuous Online & Long-term Memory: OpenClaw can run 24/7, possessing persistent memory and context retention capabilities, allowing it to remember preferences, historical conversations, and provide personalized services.\n\n- Real Action Execution: Beyond text replies, it can perform system tasks (e.g., clear inbox, send emails, fill forms, schedule appointments, browse web, control browser, etc.).\n\n- Skill Expansion & Automated Workflows: Supports community plugins, extended skills, and custom automation scripts, enabling the AI to execute complex tasks in various scenarios.\n\n**Learn More:**\n\n- [Official Website](https://openclaw.ai)\n\n- [Official Documentation](https://docs.openclaw.ai/)\n\n- [OpenClaw GitHub Repository](https://github.com/openclaw/openclaw)\n\n- [Configure Guide](https://www.self-hosted serverspace.com/docs/self-hosted server/How-to-Deploy-OpenClaw)"
+    },
+    "description": {
+      "en_US": "OpenClaw is an open-source personal AI assistant and autonomous agent platform. It connects large language models to common messaging channels like WhatsApp, Telegram, and Discord, allowing users to interact with an agent directly from their existing chat applications. The platform maintains persistent memory across conversations and can interact with host systems to manage calendars, process emails, browse the web, and execute automated tasks."
+    }
   },
   "proxmox": {
     "defaults": {

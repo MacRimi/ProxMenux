@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Receive notifications from scripts and services through Gotify clients and its web interface. ProxMenux generates a unique initial administrator password."
+    },
+    "description": {
+      "en_US": "Gotify is a self-hosted server designed for sending and receiving push notifications in real time. It enables clients to send messages through a REST API and receive them via WebSocket connections. The platform includes tools to manage users, clients, applications, and plugins through an integrated web interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/gotify/server/HEAD/ui.png"
+    ]
+  }
+}

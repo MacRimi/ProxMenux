@@ -1,0 +1,17 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Netronome is a complete network performance monitoring solution with speed tests, continuous packet-loss monitoring, distributed server agents, automated alerts, visualizations, and historical tracking."
+    },
+    "description": {
+      "en_US": "Netronome is a network speed testing and server monitoring application. It tests network performance using Speedtest.net, iperf3, or LibreSpeed, while also tracing routes and tracking packet loss and DNS resolvers. Agents deployed across servers collect system and bandwidth data, triggering notifications whenever metrics exceed specified thresholds."
+    },
+    "tips": [
+      "Create your user when you first access the application."
+    ],
+    "repository": "https://github.com/autobrr/netronome",
+    "screenshots": [
+      "https://netrono.me/_astro/dashboard.BR3J8vdf_ZD0KL9.webp"
+    ]
+  }
+}

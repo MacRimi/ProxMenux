@@ -19,5 +19,10 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "description": {
+      "en_US": "Mullvad Browser is a privacy-focused web browser developed in collaboration between Mullvad VPN and the Tor Project. It is designed to minimize online tracking and digital fingerprinting. The application brings the protections of the Tor Browser to standard internet connections and VPNs without routing traffic through the Tor network."
+    }
   }
 }

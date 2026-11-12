@@ -23,5 +23,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Experience Seamless Knowledge Management with SiYuan. SiYuan redefines knowledge management by seamlessly integrating with your home TV, mobile devices, and other platforms. Unlike traditional knowledge systems, SiYuan offers a cohesive and flexible environment that adapts to your lifestyle, allowing you to access and organize information effortlessly across all your devices. Whether you are a creator or a regular consumer, SiYuan's innovative approach ensures your knowledge is always at your fingertips.\n\nPowerful Features, Minimal Cost. SiYuan stands out with its robust set of features, most of which are free, even for commercial use. Enjoy block-level referencing, two-way links, custom attributes, SQL query embeds, and the unique protocol siyuan://. The editor supports block-style, markdown WYSIWYG, list outlines, and block zoom-in. Handle large documents with ease and include mathematical formulas, charts, flowcharts, and more. Capture web content, annotate PDFs, and export in various formats including Markdown, PDF, Word, and HTML. SiYuan also offers AI-powered writing and Q/A chat via OpenAI API, Tesseract OCR, and multi-tab support for a comprehensive and seamless experience.\n\nUnlimited Storage, Local Speed, Multi-Device Access. Deploying Alist on self-hosted server private cloud devices brings unparalleled convenience. Enjoy unlimited storage, blazing-fast local network speeds, and access from multiple devices. This setup ensures that your data is always available, secure, and quickly accessible, providing a superior alternative to traditional cloud services.\n"
+    },
+    "description": {
+      "en_US": "SiYuan is a personal knowledge management system and note-taking application. It supports block-level referencing, two-way links, custom attributes, and SQL query embeds. The built-in editor offers block-style editing, Markdown WYSIWYG capabilities, list outlines, and document exports to formats like Markdown, PDF, Word, and HTML."
+    },
+    "repository": "https://github.com/siyuan-note/siyuan",
+    "screenshots": [
+      "https://raw.githubusercontent.com/siyuan-note/siyuan/HEAD/screenshots/feature5-1.png",
+      "https://raw.githubusercontent.com/siyuan-note/siyuan/HEAD/screenshots/feature0.png"
+    ]
   }
 }

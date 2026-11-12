@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Track projects, issues, milestones, time and documentation in a self-hosted web application. This single-image profile uses Redmine’s built-in SQLite database and persists it alongside uploaded files."
+    },
+    "description": {
+      "en_US": "Redmine is a project management web application written using the Ruby on Rails framework. It allows users to organize and oversee work by tracking projects, issues, milestones, and time. It also provides tools to manage project documentation in a centralized interface."
+    }
+  }
+}

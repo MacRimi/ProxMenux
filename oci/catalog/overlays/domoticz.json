@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A home automation system with a web dashboard for devices, sensors and automations. The official image starts without USB hardware; pass serial devices only when needed."
+    },
+    "description": {
+      "en_US": "Domoticz is a home automation system designed to monitor and configure a wide variety of devices and sensors. It allows users to control switches and lighting while tracking readings from temperature, rain, wind, UV, electricity, gas, and water meters. The system can also send notifications and alerts directly to mobile devices."
+    },
+    "screenshots": [
+      "https://www.domoticz.com/images/slider-img1.jpg",
+      "https://www.domoticz.com/images/slider-img2.jpg",
+      "https://www.domoticz.com/images/slider-img6.jpg"
+    ]
+  }
+}

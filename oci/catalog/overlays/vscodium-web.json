@@ -14,6 +14,18 @@
   "catalog_ui": {
     "title": {
       "en_US": "VSCodium Web"
-    }
+    },
+    "tagline": {
+      "en_US": "Vscodium-web is a community-driven, freely-licensed binary distribution of the remote host web component of Microsoft's editor VS Code."
+    },
+    "description": {
+      "en_US": "Vscodium Web is a community-driven, freely-licensed distribution of the remote host web component of the VS Code editor. It provides a full-featured code editor accessible directly within a web browser. Users can write code, manage files, and access an integrated terminal without needing a local desktop client."
+    },
+    "tips": [
+      "For GitHub integration, open a terminal from the top menu to set your Git username and email."
+    ],
+    "screenshots": [
+      "https://vscodium.com/img/vscodium.png"
+    ]
   }
 }
