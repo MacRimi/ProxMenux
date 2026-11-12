@@ -85,7 +85,8 @@
         "content": "Apenas modo novo. O serviço invoca o <code>run_scheduled_backup.sh JOB_ID</code>. O timer agenda-o com <code>Persistent=true</code> (execuções perdidas recuperadas na próxima inicialização) e um pequeno <code>RandomizedDelaySec=120</code> para espalhar carga quando vários trabalhos compartilham a mesma expressão OnCalendar."
       },
       {
-        "path": "/etc/vzdump.conf script-hook",
+        "path": "/etc/vzdump.conf",
+        "pathNote": "script-hook",
         "content": "Somente modo de anexação. Instalado uma vez por <code>hb_install_vzdump_hook</code>; compara <code>PVE_STORAGE</code> de cada trabalho anexado com <code>$STOREID</code>, passado pelo PVE ao hook."
       }
     ]

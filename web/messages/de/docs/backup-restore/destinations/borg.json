@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "Repository lebt in einem lokalen Verzeichnis. Bedeutsam nur, wenn sich das Zielverzeichnis auf einer separaten physischen Festplatte befindet – ein Repository auf derselben Festplatte wie die Quelle schützt vor Operatorfehlern, aber nicht vor Festplattenausfällen."
       }
     ]

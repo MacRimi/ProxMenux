@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "O repositório vive numa pasta local. Significativo apenas quando o diretório alvo está em um disco físico separado — um repositório no mesmo disco que a fonte protege contra o erro do operador, mas não contra a falha do disco."
       }
     ]
