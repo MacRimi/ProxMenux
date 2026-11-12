@@ -189,6 +189,11 @@ def select_updates(project, ui, available):
             ui.message(translate('An application changed since the update check. Check for updates again.'),
                        translate('Updates available'))
             return False
-    from .batch_updates import run_batch
-    run_batch(project, ui, [current[row['vmid']] for row in selected])
+    if len(selected) == 1:
+        # Preserve the normal single-app flow, including image cleanup.
+        from .management import manage_instance
+        manage_instance(project, ui, current[selected[0]['vmid']], action='update')
+    else:
+        from .batch_updates import run_batch
+        run_batch(project, ui, [current[row['vmid']] for row in selected])
     return False

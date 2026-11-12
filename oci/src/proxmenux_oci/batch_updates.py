@@ -220,7 +220,9 @@ def execute_batch(project, entries, continue_after_failure=False, preparation_se
                             step_result['seconds'] = round(time.monotonic() - step_started, 3)
                             save()
                         if code:
-                            result['status'] = 'interrupted' if code < 0 else _failure_status(project, entry)
+                            result['status'] = _failure_status(project, entry)
+                            if code < 0 and result['status'] != 'recovery-required':
+                                result['status'] = 'interrupted'
                             break
                     else:
                         after = _snapshot(project, entry['vmid'])
@@ -254,7 +256,11 @@ def execute_batch(project, entries, continue_after_failure=False, preparation_se
     except KeyboardInterrupt:
         report['status'] = 'interrupted'
         if current is not None and current['status'] == 'running':
-            current['status'] = 'interrupted'
+            # The helper has been reaped by _run_command: inspect the journal
+            # before reporting an interruption as harmless. Never start another app.
+            current['status'] = _failure_status(project, entry)
+            if current['status'] != 'recovery-required':
+                current['status'] = 'interrupted'
     finally:
         if any(r['status'] == 'interrupted' for r in report['applications']):
             report['status'] = 'interrupted'
@@ -306,6 +312,9 @@ def run_batch(project, ui, selected):
                    else translate('OCI batch stopped or finished with errors'))
         lines = [f"CT {r['vmid']} · {r['title']}: {translate(LABELS[r['status']])} ({r['seconds']:.1f}s)"
                  for r in report['applications']]
+        if any(r['status'] == 'recovery-required' for r in report['applications']):
+            lines += ['', translate('Interrupted operations can be recovered from the OCI management menu.'),
+                      translate('Recover the previous installation')]
         ui.message('\n'.join([translate('Batch execution time: {seconds}s').format(seconds=f"{report['seconds']:.1f}"),
                               '', *lines, '', translate('Batch report: {path}').format(path=path)]), heading)
         return report
