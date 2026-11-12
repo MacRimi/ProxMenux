@@ -6125,28 +6125,30 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00020"
+      "scriptcat00020",
+      "scriptcat00021"
     ],
     "category_names": [
-      "AI / Coding & Dev-Tools"
+      "AI / Coding & Dev-Tools",
+      "Webservers & Proxies"
     ],
     "notes": [
       "FTP server credentials: `cat ~/ftp.creds`"
     ],
     "warnings": [],
     "port": 80,
-    "website": "https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-nginx?view=aspnetcore-9.0&tabs=linux-ubuntu",
-    "documentation": "https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-nginx?view=aspnetcore-9.0&tabs=linux-ubuntu",
+    "website": "https://learn.microsoft.com/en-us/dotnet/core/install/linux-debian",
+    "documentation": "https://learn.microsoft.com/en-us/dotnet/core/install/linux-debian",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/asp-net-core.webp",
     "updateable": true,
-    "privileged": true,
+    "privileged": false,
     "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "",
-    "os": "ubuntu"
+    "os": "debian"
   },
   {
     "name": "Downtify",
@@ -12538,6 +12540,47 @@
       "lxc"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Langfuse",
+    "slug": "langfuse",
+    "desc": "Langfuse is an open-source LLM engineering platform. It records traces, token usage and costs from LLM applications and agents, and adds evaluations, prompt management and analytics dashboards.",
+    "script": "ct/langfuse.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/langfuse.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/langfuse.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Monitoring & Analytics",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "The admin login and the Default project's API keys are saved to ~/langfuse.creds inside the container. Sign-up is off, invited users included; set AUTH_DISABLE_SIGNUP=false in /opt/langfuse_data/.env and restart langfuse-web while adding users.",
+      "Behind a reverse proxy, set NEXTAUTH_URL in /opt/langfuse_data/.env to the external URL and restart langfuse-web.",
+      "Media uploads and batch exports are not configured; they need an S3 endpoint reachable by clients."
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://langfuse.com/",
+    "documentation": "https://langfuse.com/self-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/langfuse.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@example.com",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -19144,7 +19187,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
