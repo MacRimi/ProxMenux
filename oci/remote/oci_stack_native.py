@@ -718,7 +718,7 @@ class NativeAdapter:
             instances.write(instances.location(self.root, vmid), record)
         try:
             self.release_stages(recovered=state['phase'] == 'rolled-back')
-            zfs_recovery.cleanup(self.journal.parent)
+            member_tx.release_local_recovery(self.journal.parent)
             if self.keep_backup and state['phase'] == 'committed':
                 import oci_keep_backup
                 for backup in sorted(work_backup.recall(self.journal.parent).glob('backup-*/vzdump-lxc-*.tar.zst')):
