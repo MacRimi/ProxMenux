@@ -999,7 +999,7 @@
     "logo": "https://raw.githubusercontent.com/fccview/degoog/main/src/public/images/degoog-logo.png",
     "repo": "fccview/degoog",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
-    "website": "https://github.com/fccview/degoog"
+    "website": "https://github.com/degoog-org/degoog"
   },
   "directus": {
     "default_ports": [
