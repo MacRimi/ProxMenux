@@ -37,6 +37,7 @@ import oci_runtime_settings as runtime_settings
 import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
+from oci_runtime import creatable_archive
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -1364,11 +1365,12 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     state['stage'] = stage
     state['runtime_deployment']['transaction_source_vmid'] = stage
     checkpoint(journal, state, 'creating-stage')
-    run('pct', 'create', str(stage), str(archive), '--rootfs',
-        f"{record['deployment']['rootfs']['storage']}:{record['deployment']['rootfs']['size_gb']}",
-        '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
-        '--memory', '128', '--cores', '1', '--onboot', '0',
-        '--description', 'proxmenux-transaction=' + state['id'])
+    with creatable_archive(archive) as source:
+        run('pct', 'create', str(stage), str(source), '--rootfs',
+            f"{record['deployment']['rootfs']['storage']}:{record['deployment']['rootfs']['size_gb']}",
+            '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
+            '--memory', '128', '--cores', '1', '--onboot', '0',
+            '--description', 'proxmenux-transaction=' + state['id'])
     checkpoint(journal, state, 'parking-data')
     for mount in actual.values():
         owned(vmid, record['installation_id'])

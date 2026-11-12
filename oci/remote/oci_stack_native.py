@@ -603,11 +603,12 @@ class NativeAdapter:
         stage = child['stage']
         if not Path('/etc/pve/lxc/%s.conf' % stage).exists():
             archive = self.state()['prepared'][str(vmid)]['archive']
-            member_tx.run('pct', 'create', str(stage), archive, '--rootfs',
-                '%s:%s' % (original['deployment']['rootfs']['storage'], original['deployment']['rootfs']['size_gb']),
-                '--hostname', 'oci-stack-recovery-holder', '--ostype', 'unmanaged',
-                '--unprivileged', '1', '--memory', '128', '--cores', '1', '--onboot', '0',
-                '--description', 'proxmenux-transaction=' + child['id'])
+            with member_tx.creatable_archive(archive) as source:
+                member_tx.run('pct', 'create', str(stage), str(source), '--rootfs',
+                    '%s:%s' % (original['deployment']['rootfs']['storage'], original['deployment']['rootfs']['size_gb']),
+                    '--hostname', 'oci-stack-recovery-holder', '--ostype', 'unmanaged',
+                    '--unprivileged', '1', '--memory', '128', '--cores', '1', '--onboot', '0',
+                    '--description', 'proxmenux-transaction=' + child['id'])
         pending = copy.deepcopy(original)
         pending.update(status='updating', pending_transaction=str(journal), transaction_id=child['id'],
                        pending_stack_transaction=str(self.journal))
