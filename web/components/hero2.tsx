@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, BookOpen } from "lucide-react"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
+import { ProxMenuxMark } from "@/components/proxmenux-mark"
 
 export default function Hero() {
   return (
@@ -11,7 +12,7 @@ export default function Hero() {
       {/* Mobile version (visible only on small screens) */}
       <section className="md:hidden py-20 px-4 sm:px-6 text-center">
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-6">
-          ProxMenux{" "}
+          <ProxMenuxMark weight={800} />{" "}
           <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 font-bold">
             An Interactive Menu and Web Dashboard for Proxmox VE
           </span>
@@ -57,7 +58,7 @@ export default function Hero() {
             </div>
             <div className="w-0.5 h-40 lg:h-48 xl:h-56 bg-white mx-6 self-center"></div>
             <div className="text-left max-w-md lg:max-w-lg xl:max-w-xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">ProxMenux</h1>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight"><ProxMenuxMark weight={800} /></h1>
               <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 font-bold leading-tight">
                 An Interactive Menu and Web Dashboard for Proxmox VE
               </p>
