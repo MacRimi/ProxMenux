@@ -39,6 +39,7 @@ import oci_runtime_settings as runtime_settings
 import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
+import oci_zfs_recovery as zfs_recovery
 from oci_runtime import creatable_archive, USER_DATABASES
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
@@ -295,6 +296,22 @@ def run(*args):
     if result.returncode:
         raise RuntimeError(f"{args[0]} {translate('failed with exit code')} {result.returncode}")
     return result.stdout
+
+
+def verify_recovery_archive(path, compression='zstd'):
+    if zfs_recovery.is_fast(path):
+        zfs_recovery.verify(path)
+    else:
+        run('gzip' if compression == 'gzip' else 'zstd', '-t', str(path))
+
+
+def release_local_recovery(directory):
+    """An already healthy guest stays recovered if optional cleanup is blocked."""
+    try:
+        zfs_recovery.cleanup(directory)
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
+        log(f'cleanup: {error}')
+        msg_warn(f"{translate('The final cleanup did not complete:')} {error}")
 
 
 def verified_backup(vmid, directory, compression, unidentified, show=False):
@@ -1220,7 +1237,7 @@ def discard_stage(state):
     Returns whether the holder CT was removed."""
     try:
         return release_stage(state, discard=True)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
         log(f'cleanup: {error}')
         return False
 
@@ -1314,7 +1331,7 @@ def create_data_holder(vmid, storage, identity, directory, architecture='amd64')
 
 def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, interrupt_after=None,
           backup_compression='zstd', acknowledge_external_data=False, coordinated=None, progress=None,
-          keep_backup=None):
+          keep_backup=None, force_archive=False):
     # A coordinated member is shown by its stack; progress prefixes the installer steps.
     show = not coordinated
     update = operation == 'update'
@@ -1426,13 +1443,19 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         backup = coordinated['backup']
         if filehash(backup['archive']) != backup['sha256']:
             raise ValueError(translate('The coordinated backup was modified'))
-        run('zstd', '-t', backup['archive'])
+        verify_recovery_archive(backup['archive'])
         state.update(backup=backup['archive'], backup_sha256=backup['sha256'])
     else:
         backup_dir = work / 'backup'
         private_directory(backup_dir)
-        backup = verified_backup(vmid, backup_dir, backup_compression,
-                                 translate('The backup could not be identified; the image is not replaced'), show)
+        prepared_zfs = zfs_recovery.plan({vmid: record}) if not keep_backup and not force_archive and backup_compression == 'zstd' else None
+        if prepared_zfs:
+            import oci_carried_record
+            oci_carried_record.carry_backup(root, vmid, record, before.decode())
+            backup = zfs_recovery.create({vmid: record}, directory, prepared_zfs)[vmid]
+        else:
+            backup = verified_backup(vmid, backup_dir, backup_compression,
+                                     translate('The backup could not be identified; the image is not replaced'), show)
         state.update(backup=str(backup), backup_sha256=filehash(backup))
     checkpoint(journal, state, 'backup-ready')
     if show:
@@ -1590,7 +1613,11 @@ def complete_recovery(root, journal, state):
     if show:
         # A member of a stack is released when the whole stack is back.
         if discard_stage(state):
-            msg_ok(translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.'))
+            message = translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.')
+            if zfs_recovery.is_fast(state.get('backup', '')):
+                message = translate('Previous installation restored')
+            release_local_recovery(journal.parent)
+            msg_ok(message)
         else:
             msg_ok(translate('Recovery completed; the backup is kept.'))
             if state.get('stage'):
@@ -1656,6 +1683,8 @@ def recover(root, journal):
         if not untouched:
             raise ValueError(translate('There is no verified backup; a modified container is not touched'))
         release_stage(state)
+        if not state.get('coordinated'):
+            release_local_recovery(journal.parent)
         if state['was_running'] and run('pct', 'status', str(vmid)).strip() == b'status: stopped':
             run('pct', 'start', str(vmid))
         instances.write(instances.location(root, vmid), state['record'])
@@ -1667,7 +1696,7 @@ def recover(root, journal):
         raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup}")
     if filehash(backup) != state['backup_sha256']:
         raise ValueError(translate('The backup was altered; recovery blocked'))
-    run('gzip' if state.get('backup_compression') == 'gzip' else 'zstd', '-t', backup)
+    verify_recovery_archive(backup, state.get('backup_compression', 'zstd'))
     if show:
         msg_ok(translate('Backup of the previous installation verified'))
     if state['phase'] == 'checking-recovery' and state.get('restore_config_sha256'):
@@ -1715,8 +1744,9 @@ def recover(root, journal):
             used.add(key)
     checkpoint(journal, state, 'restoring-backup')
     host_mounts.verify_sources(state.get('original_host_sources', {}))
-    run('pct', 'restore', str(vmid), backup, '--force', '1', '--storage',
-        state['record']['deployment']['rootfs']['storage'])
+    restore_archive, restore_args = zfs_recovery.restore(backup, vmid) if zfs_recovery.is_fast(backup) else (backup, [])
+    run('pct', 'restore', str(vmid), str(restore_archive), '--force', '1', '--storage',
+        state['record']['deployment']['rootfs']['storage'], *restore_args)
     move_retained_unused(state, to_stage=False)
     state['restore_config_sha256'] = sha(owned(vmid, state['record']['installation_id']))
     checkpoint(journal, state, 'checking-recovery')
@@ -1775,7 +1805,10 @@ def main():
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--interrupt-after', choices=['data-parked', 'candidate-installed'])
     parser.add_argument('--backup-compression', choices=['zstd', 'gzip'], default='zstd')
+    parser.add_argument('--recovery-backend', choices=['backup', 'auto'])
     args = parser.parse_args()
+    if args.recovery_backend:
+        os.environ['PROXMENUX_OCI_RECOVERY'] = args.recovery_backend
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
     # The shared installer reads the output of these two actions: their messages go to stderr.

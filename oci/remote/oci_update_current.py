@@ -266,7 +266,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         with oci_operation_notice.operation([vmid], kind, application_name(record, vmid)):
             transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
                               registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
-                              keep_backup=file_storage)
+                              keep_backup=file_storage, **({'force_archive': True} if keep_backup else {}))
     marker = os.environ.get('OCI_RECREATED_MARKER')
     if marker:
         Path(marker).touch()

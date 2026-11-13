@@ -19,7 +19,7 @@ import socket
 import subprocess
 
 import oci_instances as instances
-from oci_ui import translate
+from oci_ui import translate, msg_warn
 
 FOLDER = 'proxmenux-oci-work'
 KEY = 'work_storage'
@@ -145,6 +145,12 @@ def clear(directory):
     """Delete the backups of a closed operation, and its folder on another
     storage once it is empty. The journal and the log of the operation stay."""
     directory = Path(directory)
+    import oci_zfs_recovery
+    try:
+        oci_zfs_recovery.cleanup(directory)
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
+        msg_warn(f"{translate('The final cleanup did not complete:')} {directory}: {error}")
+        return False  # Keep metadata/archives; continue other operation directories.
     base = recall(directory)
     if base != directory and not base.exists():
         return
@@ -173,14 +179,44 @@ def _remove_empty(folder):
 def forget(root, vmid):
     """Before the record of an application is deleted: remove what its
     operations left on another storage."""
-    transactions = instances.location(root, vmid).parent / 'transactions'
-    if not transactions.is_dir():
-        return
-    for directory in transactions.iterdir():
-        base = recall(directory)
-        if base != directory and base.exists() and FOLDER in base.parts:
-            shutil.rmtree(base, ignore_errors=True)
-            _remove_empty(base.parent)
+    application_directory = instances.location(root, vmid).parent
+    failed = False
+    for name in ('transactions', 'stack-transactions'):
+        transactions = application_directory / name
+        if not transactions.is_dir() or transactions.is_symlink():
+            continue
+        for directory in transactions.iterdir():
+            if directory.is_symlink() or not directory.is_dir():
+                continue
+            if clear(directory) is False:
+                retained = Path(root) / 'retained-zfs-recovery' / str(vmid) / name
+                try:
+                    retained.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    directory.rename(retained / directory.name)
+                    msg_warn(f"{translate('The final cleanup did not complete:')} {retained / directory.name}")
+                except OSError as error:
+                    msg_warn(f"{translate('The final cleanup did not complete:')} {directory}: {error}")
+                    failed = True
+                continue
+            base = recall(directory)
+            if base != directory and base.exists() and FOLDER in base.parts:
+                shutil.rmtree(base, ignore_errors=True)
+                _remove_empty(base.parent)
+    return False if failed else None
+
+
+def unreleased(root, vmid):
+    """Cheap local status: retained points remain visible without ZFS subprocesses."""
+    directory = instances.location(Path(root), vmid).parent
+    paths = []
+    for name in ('transactions', 'stack-transactions'):
+        for path in (directory / name).glob('*/zfs-build.json'):
+            try:
+                if path.is_symlink() or not json.loads(path.read_text()).get('released'):
+                    paths.append(str(path))
+            except (OSError, ValueError, AttributeError):
+                paths.append(str(path))
+    return paths
 
 
 def application(root, vmid):

@@ -214,6 +214,11 @@ Coordinated updates compare each installed image with its resolved candidate. If
 
 Temporary data holders use a minimal, networkless, never-started rootfs instead of extracting the application image a second time. This applies to standalone and coordinated image replacement, and to stack recovery. Journals record active phase durations in `phase_seconds`; time while an operation is interrupted is not counted as work by a subsequent recovery process.
 
+An opt-in experiment can use protected local ZFS recovery clones instead of a
+full temporary archive for eligible layouts. Conventional backups remain the
+default; this is not a portable/PBS backup. See [ZFS recovery](ZFS-RECOVERY.md)
+for eligibility, recovery boundaries and measurement guidance.
+
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
 For standalone applications, CPU and RAM changes apply live. Supported network settings, environment overrides, directory mounts, additional managed volumes and native devices use a controlled stop/start when needed. Modify does not query the registry or download an image for these native edits, even if the cached archive has already been cleaned. Removing a managed mount detaches its disk without deleting its data; subsequent image updates park that unused disk and return it to the container. An optional retained backup does not force recreation.
