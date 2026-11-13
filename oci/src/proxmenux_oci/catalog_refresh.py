@@ -450,11 +450,13 @@ def worker(root, channel, force=False):
             prune_snapshots(root)
 
 
-def visible_recipes(catalog):
+def visible_recipes(catalog, applications=None):
     """Same availability rule as the menu; count new IDs, not net growth."""
     result = {}
     policies = {}
-    for item in catalog.load_index()["applications"]:
+    if applications is None:
+        applications = catalog.load_index()["applications"]
+    for item in applications:
         if item.get("hidden") or not item.get("automatic_install_candidate"):
             continue
         if item.get("_retained_recipe") and item.get("_retained_recipe_hash"):
@@ -484,12 +486,64 @@ def visible_recipes(catalog):
     return result
 
 
+def menu_catalog(catalog):
+    """Reuse menu metadata while every recipe and policy input is unchanged.
+
+    This caches display data only. Installation still reads and validates the
+    selected recipe normally. No TTL can hide a newly published local file.
+    """
+    def signature():
+        directories = {catalog.catalog_dir}
+        if catalog._include_local and source_settings(catalog.root).get('local_apps'):
+            directories.add(catalog.root / 'catalog')
+        paths = {Path(__file__), Path(__file__).with_name('catalog.py'),
+                 catalog.schema_path, catalog.root.parent / 'catalog-source.json'}
+        for directory in directories:
+            paths.update(directory / name for name in ROOT_FILES)
+            for folder in ('apps', 'curated', 'overlays'):
+                paths.update((directory / folder).glob('*.json'))
+        rows = []
+        for path in sorted(paths):
+            try:
+                s = path.stat()
+                rows.append((str(path), s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns))
+            except FileNotFoundError:
+                rows.append((str(path), None))
+        return hashlib.sha256(json.dumps([str(catalog.catalog_dir), rows]).encode()).hexdigest()
+
+    cache = cache_root(catalog.root) / ('menu-' + channel_for(catalog.root) + '.json')
+    before = None
+    try:
+        before = signature()
+        value = read_json(cache)
+        if value.get('version') == 1 and value.get('signature') == before:
+            payload, recipes = value['index'], value['recipes']
+            apps = payload['applications']
+            local = value['local_app_ids']
+            if (isinstance(apps, list) and all(isinstance(app, dict) and isinstance(app.get('id'), str) for app in apps)
+                    and isinstance(recipes, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in recipes.items())
+                    and isinstance(local, list) and all(isinstance(v, str) for v in local)):
+                catalog.local_app_ids = set(local)
+                return payload, recipes
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    payload = catalog.load_index()
+    recipes = visible_recipes(catalog, payload['applications'])
+    try:
+        if before is not None and signature() == before:
+            write_json(cache, {'version': 1, 'signature': before, 'index': payload,
+                               'recipes': recipes, 'local_app_ids': sorted(catalog.local_app_ids)})
+    except OSError:
+        pass  # A read-only cache must never prevent opening OCI.
+    return payload, recipes
+
+
 class CatalogRefresh:
-    def __init__(self, root, catalog):
+    def __init__(self, root, catalog, applications=None, recipes=None):
         self.root = Path(root)
         self.channel = channel_for(root)
         self.seen_path = cache_root(root) / f"{self.channel}-seen.json"
-        self.recipes = visible_recipes(catalog)
+        self.recipes = visible_recipes(catalog, applications) if recipes is None else recipes
         self.displayed_directory = catalog.catalog_dir
         baseline = read_json(self.seen_path).get("recipes")
         self.process = None

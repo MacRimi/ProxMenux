@@ -610,8 +610,8 @@ def _installed_count() -> int | None:
         return None
 
 
-def _catalog_options(catalog):
-    applications = _installable(catalog.load_index()["applications"])
+def _catalog_options(catalog, payload=None):
+    applications = _installable((catalog.load_index() if payload is None else payload)["applications"])
     categories: dict[str, list[dict[str, Any]]] = {}
     labels: dict[str, str] = {}
     for item in applications:
@@ -635,21 +635,23 @@ def _catalog_options(catalog):
 
 def interactive(catalog: Catalog) -> int:
     from .ui import MenuRefresh
-    from .catalog_refresh import CatalogRefresh, visible_recipes
+    from .catalog_refresh import CatalogRefresh, menu_catalog
     from .updates import UpdateCheck, select_updates
     ui = interactive_ui()
     if not catalog.index_path.exists():
         ui.message(translate("The OCI catalog is not installed. Update ProxMenux and try again."))
         return 1
-    applications, categories, labels, category_by_index, options = _catalog_options(catalog)
+    payload, recipes = menu_catalog(catalog)
+    applications, categories, labels, category_by_index, options = _catalog_options(catalog, payload)
     selection = "search"
     refresh_requested = False
-    with CatalogRefresh(PROJECT_ROOT, catalog) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
+    with CatalogRefresh(PROJECT_ROOT, catalog, applications, recipes) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
         while True:
             if catalog_refresh.consume():
                 catalog = Catalog(PROJECT_ROOT)
-                applications, categories, labels, category_by_index, options = _catalog_options(catalog)
-                catalog_refresh.recipes = visible_recipes(catalog)
+                payload, recipes = menu_catalog(catalog)
+                applications, categories, labels, category_by_index, options = _catalog_options(catalog, payload)
+                catalog_refresh.recipes = recipes
             if refresh_requested:
                 # Only a refresh the user asked for says that it failed.
                 refresh_requested = False

@@ -397,13 +397,15 @@ class Catalog:
         if self._include_local:
             from .catalog_refresh import source_settings
             requested = source_settings(self.root).get("local_apps", [])
+            self.local_app_ids = set()
             if isinstance(requested, list) and requested:
-                bundled = Catalog(self.root, catalog_dir=self.root / "catalog").load_index()
                 present = {item["id"] for item in payload["applications"]}
-                local = [item for item in bundled["applications"]
-                         if item["id"] in requested and item["id"] not in present]
-                self.local_app_ids = {item["id"] for item in local}
-                payload["applications"].extend(local)
+                missing = {app_id for app_id in requested if isinstance(app_id, str)} - present
+                if missing:
+                    bundled = Catalog(self.root, catalog_dir=self.root / "catalog").load_index()
+                    local = [item for item in bundled["applications"] if item["id"] in missing]
+                    self.local_app_ids = {item["id"] for item in local}
+                    payload["applications"].extend(local)
         return payload
 
     def categories(self) -> dict[str, Any]:
