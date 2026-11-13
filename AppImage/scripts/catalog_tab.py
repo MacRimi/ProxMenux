@@ -24,16 +24,18 @@ import lxc_apps
 import managed_installs
 
 # Two spellings the OCI index still carries for categories that Community
-# Scripts names in full, and a category of Community Scripts that ProxMenux
-# lists inside a wider one, as its menu does. An installed script keeps the
+# Scripts names in full, and the categories of Community Scripts that ProxMenux
+# lists under one of its own, as its menu does. An installed script keeps the
 # category Community Scripts gives it.
 _CATEGORY_ALIASES = {"Monitoring": "Monitoring & Analytics", "Media": "Media & Streaming",
-                     "ZigBee, Z-Wave & Matter": "IoT & Smart Home"}
+                     "ZigBee, Z-Wave & Matter": "IoT & Smart Home",
+                     "Messaging & Queues": "Messaging & Notifications"}
 _SCRIPT_TYPES = {"lxc": "lxc", "vm": "vm", "pve": "host", "addon": "addon", "turnkey": "lxc"}
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 _scripts_lock = threading.Lock()
 _scripts_cache: tuple[float, list] | None = None
+_scripts_renewing = False
 _SCRIPTS_TTL = 6 * 3600
 _SCRIPTS_DISK = "/var/lib/proxmenux/catalog_scripts.json"
 
@@ -353,38 +355,81 @@ def _oci_detail(app_id: str, language: str = "en") -> dict | None:
 # Community Scripts
 # ---------------------------------------------------------------------------
 
+def _download_scripts(timeout: int) -> list:
+    request = urllib.request.Request(managed_installs._HELPERS_CACHE_URL,
+                                     headers={"User-Agent": "ProxMenux-Monitor"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        raw = json.loads(response.read().decode("utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("unexpected catalog")
+    return raw
+
+
+def _keep_scripts(raw: list) -> None:
+    """The new catalog in memory and on disk, for the next start."""
+    global _scripts_cache
+    now = time.time()
+    _scripts_cache = (now, raw)
+    try:
+        os.makedirs(os.path.dirname(_SCRIPTS_DISK), exist_ok=True)
+        tmp = f"{_SCRIPTS_DISK}.tmp.{os.getpid()}"
+        with open(tmp, "w", encoding="utf-8") as handle:
+            json.dump({"ts": now, "scripts": raw}, handle)
+        os.replace(tmp, _SCRIPTS_DISK)
+    except OSError:
+        pass
+
+
+def _renew_scripts() -> None:
+    global _scripts_renewing, _scripts_cache
+    try:
+        raw = _download_scripts(20)
+        with _scripts_lock:
+            _keep_scripts(raw)
+    except Exception:
+        with _scripts_lock:
+            # Try again in five minutes, still serving the copy there is.
+            if _scripts_cache:
+                _scripts_cache = (time.time() - _SCRIPTS_TTL + 300, _scripts_cache[1])
+    finally:
+        _scripts_renewing = False
+
+
 def _scripts_raw() -> list:
     """The full Community Scripts catalog ProxMenux publishes, the same file
-    the menu reads, kept for six hours and on disk across restarts."""
-    global _scripts_cache
+    the menu reads. The copy there is, in memory or on disk, is served at once
+    and renewed in the background after six hours; only a host that never had
+    one waits for the download."""
+    global _scripts_cache, _scripts_renewing
     with _scripts_lock:
-        now = time.time()
-        if _scripts_cache and now - _scripts_cache[0] < _SCRIPTS_TTL:
+        if _scripts_cache is None:
+            disk = _read_json(_SCRIPTS_DISK) or {}
+            if isinstance(disk.get("scripts"), list):
+                _scripts_cache = (float(disk.get("ts") or 0), disk["scripts"])
+        if _scripts_cache is not None:
+            if time.time() - _scripts_cache[0] >= _SCRIPTS_TTL and not _scripts_renewing:
+                _scripts_renewing = True
+                threading.Thread(target=_renew_scripts, daemon=True).start()
             return _scripts_cache[1]
         try:
-            request = urllib.request.Request(managed_installs._HELPERS_CACHE_URL,
-                                             headers={"User-Agent": "ProxMenux-Monitor"})
-            with urllib.request.urlopen(request, timeout=20) as response:
-                raw = json.loads(response.read().decode("utf-8"))
-            if not isinstance(raw, list):
-                raise ValueError("unexpected catalog")
-            _scripts_cache = (now, raw)
-            try:
-                os.makedirs(os.path.dirname(_SCRIPTS_DISK), exist_ok=True)
-                tmp = f"{_SCRIPTS_DISK}.tmp.{os.getpid()}"
-                with open(tmp, "w", encoding="utf-8") as handle:
-                    json.dump({"ts": now, "scripts": raw}, handle)
-                os.replace(tmp, _SCRIPTS_DISK)
-            except OSError:
-                pass
+            raw = _download_scripts(5)
+            _keep_scripts(raw)
             return raw
         except Exception:
-            if _scripts_cache:
-                return _scripts_cache[1]
-            disk = _read_json(_SCRIPTS_DISK) or {}
-            raw = disk.get("scripts") if isinstance(disk.get("scripts"), list) else []
-            _scripts_cache = (now - _SCRIPTS_TTL + 300, raw)
-            return raw
+            # Nothing to show yet: try again in five minutes.
+            _scripts_cache = (time.time() - _SCRIPTS_TTL + 300, [])
+            return []
+
+
+def warm() -> None:
+    """Prepare the list once when the Monitor starts, in English and in the
+    language of ProxMenux, so the first visit to the tab finds it ready."""
+    config = _read_json("/usr/local/share/proxmenux/config.json") or {}
+    for language in dict.fromkeys(["en", _language(config.get("language") or "en")]):
+        try:
+            list_items(language)
+        except Exception:
+            pass
 
 
 def _script_entries() -> dict:
@@ -397,8 +442,10 @@ def _script_entries() -> dict:
 
 
 # Tools of Community Scripts: the scripts run on the host. Each category of
-# Community Scripts is a section of its own in the tab.
+# Community Scripts is a section of its own in the tab; a host script they
+# have not filed yet joins their host tools.
 _CS_SECTION_PREFIX = "cs:"
+_CS_UNFILED_TOOLS = "Host Management"
 
 
 def _script_item(entry: dict) -> dict:
@@ -418,7 +465,7 @@ def _script_item(entry: dict) -> dict:
         "architectures": ["amd64", "arm64"] if entry.get("has_arm") else ["amd64"],
         "type": kind,
         "group": "tool" if tool else "app",
-        "section": f"{_CS_SECTION_PREFIX}{names[0] if names else ''}" if tool else "",
+        "section": f"{_CS_SECTION_PREFIX}{names[0] if names else _CS_UNFILED_TOOLS}" if tool else "",
         "runs_in": [str(x) for x in entry.get("execute_in") or [] if isinstance(x, str)],
         "shot": _shot(f"cs:{entry['slug']}", entry.get("name") or entry["slug"]),
         "updateable": bool(entry.get("updateable")),
@@ -683,9 +730,48 @@ def _runs_here(entry: dict, product: str) -> bool:
     return product in where or (product == "pve" and bool(where & {"lxc", "vm"}))
 
 
+# The tab refreshes the OCI catalog the way the OCI menu does: the engine's
+# own worker runs on its own, at most once every six hours, and the tab keeps
+# showing the current catalog meanwhile. A newer catalog replaces it quietly.
+_REFRESH_EVERY = 6 * 3600
+_refresh_lock = threading.Lock()
+_REFRESH_CODE = ("import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1] + '/src'); "
+                 "from proxmenux_oci import catalog_refresh as c; "
+                 "root = Path(sys.argv[1]); c.worker(root, c.channel_for(root))")
+
+
+def _refresh_catalog() -> bool:
+    """Start a catalog refresh in the background when the last one is old;
+    whether one was started."""
+    engine = lxc_apps._OCI_ENGINE_DIR
+    if not os.path.isdir(os.path.join(engine, "src")):
+        return False
+    # The engine keeps its catalog cache beside it; the mark lives there too.
+    stamp = os.path.join(os.path.dirname(engine), "catalog-cache", "monitor-refresh.stamp")
+    with _refresh_lock:
+        try:
+            if time.time() - os.path.getmtime(stamp) < _REFRESH_EVERY:
+                return False
+        except OSError:
+            pass
+        try:
+            os.makedirs(os.path.dirname(stamp), exist_ok=True)
+            with open(stamp, "w", encoding="utf-8") as handle:
+                handle.write(str(int(time.time())))
+            process = subprocess.Popen([sys.executable, "-c", _REFRESH_CODE, engine],
+                                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError:
+            return False
+    # Reaped when it ends, so no finished worker is left behind.
+    threading.Thread(target=process.wait, daemon=True).start()
+    return True
+
+
 def list_items(language: str = "en") -> dict:
     """Every item of the tab and the sections of its tools, with what the
-    search, the cards and the tiles need."""
+    search, the cards and the tiles need. `catalog` names the OCI catalog in
+    use, and `refreshing` says a newer one may arrive shortly."""
     language = _language(language)
     product = _product()
     scripts = [_script_item(e) for e in _script_entries().values() if _runs_here(e, product)]
@@ -707,7 +793,8 @@ def list_items(language: str = "en") -> dict:
             "external": [key for key in section.get("external") or []
                          if isinstance(key, str) and key.startswith(("cs:", "pmx:"))]}
            for section in sections]
-    return {"items": oci + scripts + options, "sections": pmx + cs}
+    return {"items": oci + scripts + options, "sections": pmx + cs,
+            "catalog": os.path.basename(lxc_apps.oci_catalog_dir()), "refreshing": _refresh_catalog()}
 
 
 def item_detail(kind: str, item_id: str, language: str = "en") -> dict | None:
