@@ -20,9 +20,6 @@ const nextConfig = {
   // next-intl already include the trailing slash, so this aligns
   // export, runtime navigation and Pages serving.
   trailingSlash: true,
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     unoptimized: true,
     remotePatterns: [
