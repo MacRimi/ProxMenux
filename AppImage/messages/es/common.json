@@ -4111,7 +4111,7 @@
       "physical": "Físico",
       "bridge": "Puente",
       "bridges": "Puentes",
-      "bond": "Vínculo",
+      "bond": "Bond",
       "vlan": "VLAN",
       "virtual": "Virtual",
       "other": "Otro"
@@ -4122,8 +4122,8 @@
       "avg": "promedio",
       "bitsReceived": "bits recibidos",
       "bitsSent": "bits enviados",
-      "bondingMode": "Modo de vinculación",
-      "bondMembers": "Miembros de bonos",
+      "bondingMode": "Modo del bond",
+      "bondMembers": "Miembros del bond",
       "bytesReceived": "Bytes recibidos",
       "bytesSent": "Bytes enviados",
       "current": "Actual",
@@ -4203,7 +4203,7 @@
       "trafficSinceBoot": "Tráfico desde el último arranque",
       "inactiveTitle": "Interfaz inactiva",
       "inactiveDescription": "Esta interfaz está actualmente inactiva. Las estadísticas de tráfico de red no están disponibles.",
-      "bondConfiguration": "Configuración de bonos",
+      "bondConfiguration": "Configuración del bond",
       "bridgeConfiguration": "Configuración del puente"
     },
     "flow": {
