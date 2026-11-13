@@ -1622,19 +1622,40 @@ if [[ $SKOPEO_IMAGE_REF != "$IMAGE_REF" ]]; then
   oci_log "Digest-pinned reference; Skopeo-compatible form: $SKOPEO_IMAGE_REF"
 fi
 msg_info "$(translate "Checking the image in the registry...")"
-INSPECT=$(resolve_image_manifest "$SKOPEO_IMAGE_REF") \
-  || die "$(translate "Could not resolve the OCI manifest of the image:") $IMAGE_REF"
-DIGEST=$(jq -er '.Digest' <<<"$INSPECT")
+SAFE_APP=$(tr -cs 'a-zA-Z0-9._-' '_' <<<"$APP_ID" | sed 's/_$//')
+SAVED_IMAGE=0
+if INSPECT=$(resolve_image_manifest "$SKOPEO_IMAGE_REF"); then
+  DIGEST=$(jq -er '.Digest' <<<"$INSPECT")
+  CREATED=$(jq -r '.Created // empty' <<<"$INSPECT")
+  IMAGE_VERSION=$(jq -r '.Labels["org.opencontainers.image.version"] // .Labels.build_version // empty' <<<"$INSPECT")
+  TOTAL_LAYER_BYTES=$(jq -r '[.LayersData[]?.Size] | add // 0' <<<"$INSPECT")
+  TOTAL_LAYER_COUNT=$(jq -r '[.LayersData[]?] | length' <<<"$INSPECT")
+else
+  # Without the registry, the image kept from an earlier installation of this
+  # application is installed, if there is one.
+  PINNED_DIGEST=""
+  [[ $SKOPEO_IMAGE_REF != *@sha256:* ]] || PINNED_DIGEST="sha256:${SKOPEO_IMAGE_REF##*@sha256:}"
+  ARCHIVE_DIR=$(dirname "$(pvesm path "${TEMPLATE_STORAGE}:vztmpl/${SAFE_APP}_${ARCH}_0000000000000000.tar")")
+  SAVED=$(python3 "${SCRIPT_DIR}/oci_image_cache.py" saved "$ARCHIVE_DIR" "$APP_ID" "$ARCH" \
+    ${PINNED_DIGEST:+"$PINNED_DIGEST"} 2>>"${OCI_LOG:-/dev/null}") \
+    || die "$(translate "Could not resolve the OCI manifest of the image:") $IMAGE_REF"
+  SAVED_IMAGE=1
+  DIGEST=$(jq -er '.digest' <<<"$SAVED")
+  CREATED=$(jq -r '.created' <<<"$SAVED")
+  IMAGE_VERSION=""
+  TOTAL_LAYER_BYTES=0
+  TOTAL_LAYER_COUNT=0
+  msg_warn "$(translate "The registry could not be reached; the image kept from an earlier installation is used.")"
+fi
 oci_log "Selected digest: $DIGEST"
-CREATED=$(jq -r '.Created // empty' <<<"$INSPECT")
-IMAGE_VERSION=$(jq -r '.Labels["org.opencontainers.image.version"] // .Labels.build_version // empty' <<<"$INSPECT")
-TOTAL_LAYER_BYTES=$(jq -r '[.LayersData[]?.Size] | add // 0' <<<"$INSPECT")
-TOTAL_LAYER_COUNT=$(jq -r '[.LayersData[]?] | length' <<<"$INSPECT")
 DIGEST_SHORT=${DIGEST#sha256:}
 DIGEST_SHORT=${DIGEST_SHORT:0:16}
 msg_ok "$(translate "Image:") $IMAGE_REF (${IMAGE_VERSION:-sha256:${DIGEST_SHORT:0:12}})"
-SAFE_APP=$(tr -cs 'a-zA-Z0-9._-' '_' <<<"$APP_ID" | sed 's/_$//')
-ARCHIVE_NAME="${SAFE_APP}_${ARCH}_${DIGEST_SHORT}.tar"
+if [[ $SAVED_IMAGE == 1 ]]; then
+  ARCHIVE_NAME=$(basename "$(jq -er '.archive' <<<"$SAVED")")
+else
+  ARCHIVE_NAME="${SAFE_APP}_${ARCH}_${DIGEST_SHORT}.tar"
+fi
 ARCHIVE_VOLUME="${TEMPLATE_STORAGE}:vztmpl/${ARCHIVE_NAME}"
 ARCHIVE_PATH=$(pvesm path "$ARCHIVE_VOLUME")
 mkdir -p "$(dirname "$ARCHIVE_PATH")"
@@ -1732,6 +1753,8 @@ if [[ -s $ARCHIVE_PATH ]]; then
 fi
 
 if [[ ! -s $ARCHIVE_PATH ]]; then
+  [[ $SAVED_IMAGE == 0 ]] \
+    || die "$(translate "The kept image is damaged and the registry cannot be reached:") $IMAGE_REF"
   for attempt in 1 2; do
     download_and_verify_archive "$attempt" && break
     if (( attempt == 2 )); then

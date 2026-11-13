@@ -90,7 +90,7 @@ class InventoryMessages(unittest.TestCase):
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
                  'Path': inert_path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
-                 'image_cache': SimpleNamespace(prune=lambda root, lock: []),
+                 'image_cache': SimpleNamespace(prune=lambda root, lock: [], keep_for_reinstall=lambda record: None),
                  'work_backup': SimpleNamespace(forget=lambda root, vmid: None),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),
                  're': re, 'guest_node': lambda vmid: None,
