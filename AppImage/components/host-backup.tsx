@@ -443,6 +443,20 @@ const formatRunAt = (iso: string | null) => {
 // belong to matches "the key is a PBS thing" without dragging in
 // the fuller management surface.
 // ──────────────────────────────────────────────────────────────
+// The keyfile is downloaded through an <a download> link, which cannot send
+// the Authorization header: a single-use ticket on the URL signs it in.
+async function downloadPbsKeyfile() {
+  const ticket = await fetchTerminalTicket()
+  let url = getApiUrl("/api/host-backups/pbs-encryption/download-keyfile")
+  if (ticket) url += `?ticket=${encodeURIComponent(ticket)}`
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "pbs-key.conf"
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
   const t = useT()
   const { data: info, mutate: mutateInfo } = useSWR<{
@@ -488,16 +502,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
     setErr(null)
   }
 
-  const download = () => {
-    // Same plain-<a>-download trick used elsewhere: bypasses fetch so
-    // an ad-blocker or a stale SWR cache can't intervene.
-    const a = document.createElement("a")
-    a.href = "/api/host-backups/pbs-encryption/download-keyfile"
-    a.download = "pbs-key.conf"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
+  const download = downloadPbsKeyfile
 
   const runUpload = async () => {
     if (!importFile && !importPath.trim()) {
@@ -791,14 +796,7 @@ function KeyfileActionsBar({
     (pendingMode === "full" && !!pass1 && pass1 === pass2)        // passphrase update
   )
 
-  const download = () => {
-    const a = document.createElement("a")
-    a.href = "/api/host-backups/pbs-encryption/download-keyfile"
-    a.download = "pbs-key.conf"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
+  const download = downloadPbsKeyfile
 
   return (
     <div className="space-y-3">

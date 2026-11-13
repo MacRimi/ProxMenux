@@ -18583,7 +18583,7 @@ def api_pbs_encryption_import():
 
 
 @app.route('/api/host-backups/pbs-encryption/download-keyfile', methods=['GET'])
-@require_auth
+@require_auth_or_ticket
 def api_pbs_encryption_download_keyfile():
     """Send the installed PBS keyfile as a downloadable attachment.
     This is how the operator gets an offsite copy without exposing
