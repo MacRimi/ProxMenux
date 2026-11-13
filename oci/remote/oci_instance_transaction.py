@@ -39,6 +39,7 @@ import oci_runtime_settings as runtime_settings
 import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
+import oci_layer_paths as layer_paths
 import oci_zfs_recovery as zfs_recovery
 from oci_runtime import creatable_archive, USER_DATABASES
 import oci_ui
@@ -1420,6 +1421,12 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         state['preserved_stack_config'] = dict(state['kept_config'])
         if operation == 'update' and 'cpuunits' in cfg:
             state['preserved_stack_config']['cpuunits'] = cfg['cpuunits']
+    if coordinated and 'import_image' in coordinated:
+        state['import_image'] = coordinated['import_image']
+        layer_paths.validate(archive, state['import_image'])
+    else:
+        # Build any import-only path adaptation while the old app still runs.
+        state['import_image'] = layer_paths.prepare(archive, directory / 'pve-import-image.tar')
     checkpoint(journal, state, 'prepared')
     pending = copy.deepcopy(record)
     pending.update(status='updating', pending_transaction=str(journal), transaction_id=state['id'])

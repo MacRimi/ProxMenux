@@ -1819,15 +1819,24 @@ fi
 msg_info "$(translate "Creating the container...")"
 # Proxmox resolves the image User through /etc/passwd and /etc/group, even a
 # numeric one, and cannot create the container from an image without them.
+# Import compatibility is prepared before downtime by update/stack transactions.
+# Fresh installs create their own short-lived copy; the registry archive stays intact.
+CREATE_IMAGE_PATH=$ARCHIVE_PATH
+if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
+  CREATE_IMAGE_PATH=$(python3 "$SCRIPT_DIR/oci_layer_paths.py" journal "$ARCHIVE_PATH" "$PROXMENUX_OCI_TRANSACTION" 2>>"${OCI_LOG:-/dev/stderr}") \
+    || die "$(translate "Cannot prepare the OCI archive:")"
+
+fi
+CREATE_ARGS[1]=$CREATE_IMAGE_PATH
 user_databases_rc=0
-missing_user_databases=$(python3 "$OCI_RUNTIME_RESOLVER" --user-databases "$ARCHIVE_PATH" \
+missing_user_databases=$(python3 "$OCI_RUNTIME_RESOLVER" --user-databases "$CREATE_IMAGE_PATH" \
   2>>"${OCI_LOG:-/dev/stderr}") || user_databases_rc=$?
 if (( user_databases_rc == 3 )); then
   oci_log "The image declares a user but lacks: ${missing_user_databases}"
   # A numeric User is created from a copy with those files; the cached image
   # and its digest stay as they were downloaded.
   USER_DATABASES_ARCHIVE="${ARCHIVE_PATH%.tar}.user-databases.$$.tar"
-  python3 "$OCI_RUNTIME_RESOLVER" --add-user-databases "$ARCHIVE_PATH" "$USER_DATABASES_ARCHIVE" \
+  python3 "$OCI_RUNTIME_RESOLVER" --add-user-databases "$CREATE_IMAGE_PATH" "$USER_DATABASES_ARCHIVE" \
     >>"${OCI_LOG:-/dev/null}" 2>&1 \
     || die "$(translate "Proxmox VE cannot create a container from this image: it declares a user but does not include /etc/passwd and /etc/group. Nothing was created.")"
   CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE

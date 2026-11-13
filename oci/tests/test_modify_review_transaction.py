@@ -92,7 +92,7 @@ class UpdateRetainedDiskTests(unittest.TestCase):
             return int(match[1]) in self.configs if match else original_exists(path)
         patches=[patch.object(transaction,'run',side_effect=run),patch.object(transaction,'open_log'),
             patch.object(transaction,'log'),patch.object(transaction,'stop'),
-            patch.object(transaction,'check_archive'),patch.object(transaction,'creatable_archive',side_effect=contextlib.nullcontext),patch.object(transaction,'image_from_archive',return_value=self.image),
+            patch.object(transaction,'check_archive'),patch.object(transaction.layer_paths,'prepare',return_value=None),patch.object(transaction,'creatable_archive',side_effect=contextlib.nullcontext),patch.object(transaction,'image_from_archive',return_value=self.image),
             patch.object(transaction,'verified_backup',return_value=self.backup),
             patch.object(transaction,'install_candidate',side_effect=install),
             patch.object(transaction,'healthcheck',return_value='running'),
@@ -107,6 +107,16 @@ class UpdateRetainedDiskTests(unittest.TestCase):
     def apply(self,**kwargs):return transaction.apply(self.root,115,self.archive,'update',registry_digest=NEW,**kwargs)
 
     def journal(self):return next(instances.location(self.root,115).parent.glob('transactions/*/transaction.json'))
+
+    def test_unsafe_import_is_rejected_before_stopping_or_backing_up(self):
+        original=dict(self.configs)
+        with patch.object(transaction.layer_paths,'prepare',side_effect=ValueError('unsafe layer path')):
+            with self.assertRaisesRegex(ValueError,'unsafe layer path'):
+                self.apply()
+        transaction.stop.assert_not_called()
+        transaction.verified_backup.assert_not_called()
+        self.assertEqual(self.configs,original)
+        self.assertFalse(instances.read(self.root,115).get('pending_transaction'))
 
     def assert_retained(self):
         self.assertEqual(transaction.unused_volumes(self.configs[115]),{

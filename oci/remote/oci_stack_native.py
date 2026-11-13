@@ -296,10 +296,11 @@ class NativeAdapter:
         if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in paths)
                for p in set(image['defaults'].get('Volumes') or {}) - transient):
             raise ValueError(translate('The new image requires additional persistent paths'))
+        import_image = member_tx.layer_paths.prepare(archive, self.journal.parent / 'image-imports' / f'pve-import-{record["vmid"]}.tar')
         profile = record['deployment'].get('replay_profile', {})
         if profile.get('adapter') in adapters.ADAPTERS:
             msg_info(f"{translate('Checking the new image without starting it:')} {self.describe(record['vmid'])}")
-            self.probe_nextcloud_image(record, archive, image)
+            self.probe_nextcloud_image(record, Path(import_image['path']) if import_image else archive, image)
             msg_ok(f"{translate('New image compatible:')} {self.describe(record['vmid'])}")
         proposal = None
         if operation == 'recreate':
@@ -307,7 +308,7 @@ class NativeAdapter:
             config_hash = record.get('observed', {}).get('config_sha256')
             if config_hash:
                 proposal['base_config_sha256'] = config_hash
-        return {'archive': str(archive), 'digest': digest, 'proposal': proposal}
+        return {'archive': str(archive), 'digest': digest, 'proposal': proposal, 'import_image': import_image}
 
     def prepare_changed_stack(self, state):
         for vmid in self.records:
@@ -328,10 +329,13 @@ class NativeAdapter:
         try:
             member_tx.log('image probe: CT %s' % record['vmid'])
             root = record['deployment']['rootfs']
-            member_tx.run('pct', 'create', str(vmid), str(archive), '--rootfs',
-                '%s:%s' % (root['storage'], root['size_gb']), '--hostname', 'oci-image-probe',
-                '--ostype', 'unmanaged', '--unprivileged', '1', '--memory', '128',
-                '--cores', '1', '--onboot', '0', '--description', marker)
+            import oci_native_import
+            with member_tx.creatable_archive(archive) as prepared:
+                with oci_native_import.import_archive(prepared, str(prepared), 100000, 100000) as source:
+                    member_tx.run('pct', 'create', str(vmid), str(source), '--rootfs',
+                        '%s:%s' % (root['storage'], root['size_gb']), '--hostname', 'oci-image-probe',
+                        '--ostype', 'unmanaged', '--unprivileged', '1', '--memory', '128',
+                        '--cores', '1', '--onboot', '0', '--description', marker)
             member_tx.owned(vmid, marker)
             member_tx.run('pct', 'mount', str(vmid))
             mounted = True
@@ -390,6 +394,8 @@ class NativeAdapter:
         state = self.state()
         context = {'journal': str(self.journal), 'id': identity,
                    'backup': state['backups'][str(vmid)]}
+        if 'import_image' in prepared:
+            context['import_image'] = prepared['import_image']
         for flag in adapters.REPLAY_FLAGS:
             if self.plan.get(flag):
                 context.update({flag: True, 'effective_record': self.records[vmid]})

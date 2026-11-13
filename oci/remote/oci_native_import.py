@@ -18,6 +18,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import tarfile
 
 STAGING_ROOT = Path('/var/tmp')  # Deliberately independent of a private TMPDIR.
 FICLONE = 0x40049409
@@ -107,12 +108,34 @@ def import_archive(source, original, uid, gid):
         shutil.rmtree(directory)
 
 
+@contextmanager
+def compatible_archive(source):
+    """Use the common preparation for every OCI entry point, including stacks.
+
+    Plain rootfs tar archives retain their native path; Proxmox still validates
+    every archive. No filename/registry/app-specific exception is involved.
+    """
+    source = Path(source)
+    is_oci = False
+    if tarfile.is_tarfile(source):
+        with tarfile.open(source) as archive:
+            is_oci = any(item.name.removeprefix('./') == 'oci-layout' for item in archive.getmembers())
+    if not is_oci:
+        yield source
+        return
+    from oci_runtime import creatable_archive
+    with creatable_archive(source) as prepared:
+        yield prepared
+
+
 def create(vmid, original, source, options):
     uid, gid = reader_ids(options)
-    with import_archive(source, original, uid, gid) as archive:
-        result = subprocess.run(['pct', 'create', vmid, archive, *options],
-                                close_fds=True, umask=0o022)
-        return 128 - result.returncode if result.returncode < 0 else result.returncode
+    with compatible_archive(source) as prepared:
+        reference = original if Path(prepared) == Path(source) else str(prepared)
+        with import_archive(prepared, reference, uid, gid) as archive:
+            result = subprocess.run(['pct', 'create', vmid, archive, *options],
+                                    close_fds=True, umask=0o022)
+            return 128 - result.returncode if result.returncode < 0 else result.returncode
 
 
 def main():
@@ -131,7 +154,7 @@ def main():
         return create(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:])
     except KeyboardInterrupt:
         return 130
-    except OSError as error:
+    except (OSError, RuntimeError, ValueError, KeyError, tarfile.TarError) as error:
         print(error, file=sys.stderr)
         return 1
 

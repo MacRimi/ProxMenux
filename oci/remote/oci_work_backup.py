@@ -151,6 +151,10 @@ def clear(directory):
     except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
         msg_warn(f"{translate('The final cleanup did not complete:')} {directory}: {error}")
         return False  # Keep metadata/archives; continue other operation directories.
+    # Only the operation's derived import copies; publisher archives are kept.
+    for imported in [directory / 'pve-import-image.tar', *list((directory / 'image-imports').glob('pve-import-*.tar'))]:
+        if imported.is_file() and not imported.is_symlink():
+            imported.unlink()
     base = recall(directory)
     if base != directory and not base.exists():
         return

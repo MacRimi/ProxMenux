@@ -28,6 +28,20 @@ class PrivateImageImportTests(unittest.TestCase):
         self.source.write_bytes(b'OCI image fixture\x00private layers')
         self.source.chmod(0o600)
 
+    def test_common_entry_prepares_absolute_oci_paths_and_preserves_publisher_archive(self):
+        from test_layer_paths import fixture
+        import oci_layer_paths
+        fixture(self.source,[('/app','file',b'application')])
+        before=self.source.read_bytes()
+        def create(args,**kwargs):
+            self.assertEqual(args[:3],['pct','create','9161'])
+            self.assertTrue(all(not changed for changed in oci_layer_paths.changed_layers(Path(args[3]))))
+            return types.SimpleNamespace(returncode=0)
+        with patch.object(imports,'readable',return_value=True),patch.object(imports.subprocess,'run',side_effect=create):
+            self.assertEqual(imports.create('9161',str(self.source),str(self.source),['--unprivileged','1']),0)
+        self.assertEqual(self.source.read_bytes(),before)
+        self.assertEqual(list(self.root.iterdir()),[self.source])
+
     def staging(self):
         return patch.object(imports, 'trusted_staging_root', return_value=self.root)
 

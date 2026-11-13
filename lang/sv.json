@@ -9464,6 +9464,7 @@
   "Unrecognized volume definition": "Unrecognized volymdefinition",
   "Unresolved variable:": "Olöst variabel:",
   "Unsafe OCI archive path": "Osäkra OCI arkiv väg",
+  "Unsafe OCI layer path:": "Osäker sökväg i ett OCI-lager:",
   "Unsafe dependency contract": "Osäkert beroendeavtal",
   "Unsafe dependency hook contract": "Osäkert beroende hook kontrakt",
   "Unsafe instance directory": "Unsafe instans katalog",
