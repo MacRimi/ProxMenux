@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "Three interactive monitoring tools, each behind its own menu entry. The first time you launch one, the package is installed silently via <code>apt-get</code>. Subsequent launches start instantly. None of these tools modify the host network configuration."
+    "body": "Three interactive monitoring tools, each behind its own menu entry. The first time you launch one, the package is installed via <code>apt-get</code>. Subsequent launches start instantly. None of these tools modify the host network configuration."
   },
   "when": {
     "heading": "When to use which",
@@ -105,7 +105,7 @@
   },
   "install": {
     "heading": "First launch installs the package",
-    "body": "All three launchers check for the binary and run <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> if missing. The install is silent: the menu may appear frozen for 10–30 seconds the first time. Subsequent launches start instantly."
+    "body": "All three launchers check for the binary. If it is missing, ProxMenux first checks the repositories (on a host without a subscription it may offer to switch to the no-subscription repository, followed by <code>apt-get update</code>), then runs <code>apt-get install -y &lt;pkg&gt;</code> with an \"Installing…\" message on screen. Subsequent launches start instantly."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",

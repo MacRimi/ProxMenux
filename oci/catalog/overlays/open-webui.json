@@ -9,6 +9,22 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 4096
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline."
+    },
+    "description": {
+      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline. It connects to local large language models through Ollama and supports OpenAI-compatible APIs for both local and cloud models. The platform provides a unified environment to chat with models, manage AI interactions, and run private AI workflows."
+    },
+    "screenshots": [
+      "https://cdn.openwebui.com/open-webui-demo.gif"
+    ],
+    "repository": "https://github.com/open-webui/open-webui"
   }
 }

@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "PPSSPP"
+    },
+    "tagline": {
+      "en_US": "PPSSPP is a free and open-source PSP emulator for Windows, macOS, Linux, iOS, Android, Nintendo Wii U, Nintendo Switch, BlackBerry 10, MeeGo, Pandora, Xbox Series and Symbian with a focus on speed and portability."
+    },
+    "description": {
+      "en_US": "PPSSPP is a free and open-source PlayStation Portable emulator designed with a focus on speed and portability. It allows users to run PSP games and homebrew software on modern systems. When accessed through a browser, it streams the emulator desktop interface, enabling remote gameplay with support for audio, file transfers, and gamepads."
+    },
+    "tips": [
+      "By default there is no authentication configured."
+    ]
   }
 }

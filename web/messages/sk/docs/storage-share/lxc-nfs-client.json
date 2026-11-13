@@ -68,9 +68,9 @@
   },
   "unmount": {
     "heading": "Odpojiť zdieľanie NFS",
-    "body": "Spojí aktívne pripojenia a položky fstab do jedného zoznamu, umožní výber a <strong>odstráni príslušný riadok z <code>/etc/fstab</code></strong>. Skript <em>nespúšťa</em> <code>umount</code> na aktívnom pripojení — upozorní, že odpojenie sa prejaví až po reštarte CT.",
-    "warnTitle": "Skript odstráni položky fstab, nie aktívne pripojenia",
-    "warnBody": "Ide o zámerné správanie: <code>umount</code> zlyhá s „device busy“, ak pripojenie stále používa proces v CT. Odstránenie záznamu z fstab zabezpečí, že sa pri ďalšom spustení CT neobnoví. Ak ho chcete odpojiť <em>hneď</em> a ste si istí, že ho nič nepoužíva, po skončení skriptu ručne vykonajte <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code>."
+    "body": "Spojí aktívne pripojenia a položky fstab do jedného zoznamu, umožní výber, <strong>odstráni príslušný riadok z <code>/etc/fstab</code></strong> a odpojí ho vnútri CT pomocou <code>umount</code>. Ak je pripojenie obsadené, použije sa lazy <code>umount -l</code>.",
+    "warnTitle": "Ak odpojenie zlyhá, reštartujte CT",
+    "warnBody": "Ak zlyhajú <code>umount</code> aj <code>umount -l</code>, skript vás upozorní, aby ste reštartovali LXC a uvoľnili pripojenie. Záznam fstab je už odstránený, takže sa pripojenie pri ďalšom spustení CT neobnoví."
   },
   "test": {
     "heading": "Test NFS konektivita",

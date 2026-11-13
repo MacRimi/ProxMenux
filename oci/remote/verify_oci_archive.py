@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import struct
 import sys
 import tarfile
@@ -95,17 +96,74 @@ def verify_archive(path: Path) -> None:
     try:
         with tarfile.open(path, mode="r:*") as archive:
             members = archive.getmembers()
-            names = {member.name.lstrip("./") for member in members}
-            missing = {"index.json", "oci-layout"} - names
+            files = {}
+            for member in members:
+                name = member.name.removeprefix('./')
+                if member.isdir():
+                    continue
+                if name in files or not member.isfile():
+                    raise VerificationError(translate('Missing OCI metadata:') + ' duplicate or non-regular member: ' + name)
+                files[name] = member
+            missing = {'index.json', 'oci-layout'} - files.keys()
             if missing:
-                raise VerificationError(
-                    f"{translate('Missing OCI metadata:')} " + ", ".join(sorted(missing))
-                )
+                raise VerificationError(translate('Missing OCI metadata:') + ' ' + ', '.join(sorted(missing)))
+
+            def document(name):
+                member = files[name]
+                if member.size > 16 * 1024**2:
+                    raise ValueError('Oversized OCI metadata')
+                value = json.load(archive.extractfile(member))
+                if not isinstance(value, dict):
+                    raise ValueError('Invalid OCI metadata object')
+                return value
+
+            def referenced(descriptor):
+                if not isinstance(descriptor, dict) or not re.fullmatch(r'sha256:[a-f0-9]{64}', descriptor.get('digest', '')):
+                    raise ValueError('Invalid OCI blob descriptor')
+                name = 'blobs/' + descriptor['digest'].replace(':', '/')
+                if name not in files:
+                    raise ValueError('Missing referenced blob: ' + descriptor['digest'])
+                if type(descriptor.get('size')) is not int or descriptor['size'] != files[name].size:
+                    raise ValueError('Wrong referenced blob size: ' + descriptor['digest'])
+                return name
+
+            visited = set()
+            def manifest(descriptor, depth=0):
+                if depth > 16:
+                    raise ValueError('OCI manifest nesting exceeds limit')
+                name = referenced(descriptor)
+                if name in visited:
+                    return
+                visited.add(name)
+                data = document(name)
+                if 'manifests' in data:
+                    children = data['manifests']
+                    if not isinstance(children, list) or not children:
+                        raise ValueError('Invalid OCI manifest index')
+                    for child in children:
+                        manifest(child, depth+1)
+                else:
+                    document(referenced(data['config']))
+                    if not isinstance(data['layers'], list):
+                        raise ValueError('Invalid OCI layer list')
+                    for layer in data['layers']:
+                        referenced(layer)
+
+            try:
+                if document('oci-layout').get('imageLayoutVersion') != '1.0.0':
+                    raise ValueError('Unsupported OCI layout')
+                index = document('index.json')
+                if not isinstance(index.get('manifests'), list) or not index['manifests']:
+                    raise ValueError('Missing OCI manifests')
+                for descriptor in index['manifests']:
+                    manifest(descriptor)
+            except (ValueError, KeyError, TypeError, RecursionError) as error:
+                raise VerificationError(translate('Missing OCI metadata:') + ' ' + str(error)) from error
             blobs = [
                 member
                 for member in members
                 if member.isfile()
-                and member.name.lstrip("./").startswith("blobs/sha256/")
+                and member.name.removeprefix("./").startswith("blobs/sha256/")
             ]
             if not blobs:
                 raise VerificationError(translate("The OCI archive contains no SHA-256 blobs"))

@@ -19,5 +19,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Ardour is an open source, collaborative effort of a worldwide team including musicians, programmers, and professional recording engineers."
+    },
+    "description": {
+      "en_US": "Ardour is an open source audio software project created through the collaborative effort of a worldwide team of musicians, programmers, and professional recording engineers. It provides an environment tailored for audio production and recording workflows. The application is built to serve the practical needs of musicians and audio engineers."
+    },
+    "screenshots": [
+      "https://ardour.org/images/ardour-og.png",
+      "https://ardour.org/images/retina_no_plugs2.png",
+      "https://ardour.org/images/editor4.png",
+      "https://ardour.org/images/mixer4.png"
+    ]
   }
 }

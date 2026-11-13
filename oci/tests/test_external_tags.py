@@ -163,6 +163,7 @@ class TagReplayTests(unittest.TestCase):
         with (patch.object(transaction.instances, 'read', return_value=saved),
               patch.object(transaction, 'run', side_effect=command),
               patch.object(transaction, 'check_archive'),
+              patch.object(transaction.layer_paths, 'prepare', return_value=None),
               patch.object(transaction, 'image_from_archive', return_value=image),
               patch.object(transaction.work_backup, 'locate', side_effect=lambda directory, *_: directory),
               patch.object(transaction, 'open_log'),

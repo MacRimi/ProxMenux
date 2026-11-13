@@ -17,6 +17,7 @@ on:
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
       - 'scripts/**/*.py'
+      - 'scripts/menus/search_index.json'
       - 'menu'
       - 'install_proxmenux.sh'
       - 'install_proxmenux_beta.sh'

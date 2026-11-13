@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "What this script does",
-    "body": "The Windows flow asks where the ISO comes from (UUP Dump or a local copy already in <code>/var/lib/vz/template/iso</code>) and then runs the shared VM wizard. It applies Windows-friendly defaults — <code>q35</code> + OVMF + TPM 2.0 — attaches the VirtIO drivers ISO to a second CD-ROM slot, and leaves you with a VM ready to boot the Windows installer."
+    "body": "The Windows flow asks where the ISO comes from (UUP Dump or a local ISO from any Proxmox storage with ISO content) and then runs the shared VM wizard. It applies Windows-friendly defaults — <code>q35</code> + OVMF + TPM 2.0 — attaches the VirtIO drivers ISO to a second CD-ROM slot, and leaves you with a VM ready to boot the Windows installer."
   },
   "image": {
     "alt": "ProxMenux Windows installation options",
@@ -165,7 +165,7 @@
     ],
     "uupLearnMore": "Learn more about UUP Dump ISO Creator",
     "localTitle": "Install with local ISO",
-    "localBody": "Uses a Windows ISO you have already uploaded to the host's local storage (<code>/var/lib/vz/template/iso</code>). The script lists every non-VirtIO ISO it finds and lets you pick one.",
+    "localBody": "Uses a Windows ISO you have already uploaded to any Proxmox storage with ISO content (local, NFS, CIFS…). The script lists every non-VirtIO ISO it finds, with its storage, and lets you pick one.",
     "localImageAlt": "Local ISO selection menu",
     "localImageCaption": "Local ISO selection menu"
   },

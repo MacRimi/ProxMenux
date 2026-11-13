@@ -89,8 +89,8 @@
     "items": [
       "Wählen Sie den Datenträger.",
       "Wählen Sie \"Vorhandenes Dateisystem verwenden\".",
-      "Speicher-ID, Mount-Pfad und Inhaltstyp-Voreinstellung.",
-      "ProxMenux berührt die Daten <strong>nicht</strong>: Es erstellt den Mount-Punkt, mountet die Festplatte, fügt einen UUID-Eintrag zu <code>/etc/fstab</code> hinzu und registriert ihn als Proxmox-<code>dir</code>-Speicher."
+      "Mount-Methode: <strong>Host-fstab-Mount</strong> (Standard), <strong>Proxmox-Speicher</strong> oder beides. Danach ein Mount-Name oder eine Speicher-ID, der Mount-Pfad und, nur für Proxmox-Speicher, die Inhaltstyp-Voreinstellung.",
+      "ProxMenux berührt die Daten <strong>nicht</strong>: Es erstellt den Mount-Punkt, mountet die Festplatte und fügt einen UUID-Eintrag zu <code>/etc/fstab</code> hinzu. Einen Proxmox-<code>dir</code>-Speicher registriert es nur, wenn Sie diese Methode gewählt haben."
     ],
     "warnTitle": "Wiederverwendungspfad behandelt keine ZFS-Pools",
     "warnBody": "Wenn die Festplatte bereits einen ZFS-Pool enthält, versucht der <em>reuse</em>-Pfad hier nur, ihn als reguläres Dateisystem zu montieren - was fehlschlägt. Um einen vorhandenen ZFS-Pool zu importieren, verwenden Sie <code>zpool import &lt;name&gt;</code> auf der Kommandozeile und registrieren Sie ihn dann manuell bei <code>pvesm add zfspool</code>."
@@ -133,13 +133,13 @@
   },
   "view": {
     "heading": "Datenträgerspeicher anzeigen",
-    "body": "Listet alle plattengestützten Proxmox-Speicher auf (sowohl <code>dir</code> als auch <code>zfspool</code>, die vom Benutzer erstellt wurden – Systempools wie <code>rpool</code> sind ausgeblendet). Zeigt den Mount-Pfad / Pool-Namen, Inhaltstypen und Live-Status an."
+    "body": "Listet alle plattengestützten Proxmox-Speicher auf (sowohl <code>dir</code> als auch <code>zfspool</code>, die vom Benutzer erstellt wurden; Systempools wie <code>rpool</code> sind ausgeblendet) sowie die reinen fstab-Mounts lokaler Festplatten. Zeigt den Mount-Pfad / Pool-Namen, Inhaltstypen und Live-Status an."
   },
   "remove": {
     "heading": "Disk Storage entfernen",
-    "body": "Hebt die Registrierung des Speichers bei Proxmox auf (<code>pvesm remove</code>) und bietet an, den passenden Eintrag in <code>/etc/fstab</code> zu bereinigen. Für ZFS pools zerstört das Skript <strong>nicht</strong> automatisch das pool – das ist ein separater <code>zpool destroy &lt;name&gt;</code>-Schritt, den Sie manuell ausführen, wenn Sie sicher sind.",
+    "body": "Die Auswahl listet Proxmox-Speicher und reine fstab-Mounts lokaler Festplatten auf. Nach einer Bestätigung hebt ProxMenux die Registrierung des Speichers auf (<code>pvesm remove</code>), hängt den Pfad aus und entfernt seine Zeile aus <code>/etc/fstab</code>. Für ZFS pools führt es <code>zpool export &lt;pool&gt;</code> aus, zerstört das pool aber <strong>nicht</strong>; das ist ein separater <code>zpool destroy &lt;name&gt;</code>-Schritt, den Sie manuell ausführen, wenn Sie sicher sind. Am Ende bietet es an, den Host neu zu starten.",
     "warnTitle": "Daten und bestehende VM Abhängigkeiten",
-    "warnBody": "Das Entfernen des Speichers berührt nicht das Dateisystem oder den Pool - die Daten bleiben auf der Festplatte. Aber VMs / CTs, die diesen Speicher nach ID referenzieren, können nach dem Entfernen nicht starten. Verschieben Sie diese VM-Festplatten in einen anderen Speicher (oder nehmen Sie ein Backup), bevor Sie sie entfernen."
+    "warnBody": "Das Entfernen des Speichers formatiert die Festplatte nicht und zerstört den Pool nicht: Die Daten bleiben auf der Festplatte, aber die Festplatte wird ausgehängt und ein ZFS pool exportiert. VMs / CTs, die diesen Speicher nach ID referenzieren, können nach dem Entfernen nicht starten. Verschieben Sie diese VM-Festplatten in einen anderen Speicher (oder nehmen Sie ein Backup), bevor Sie sie entfernen."
   },
   "list": {
     "heading": "Liste der verfügbaren Datenträger",

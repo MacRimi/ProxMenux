@@ -122,12 +122,12 @@ class UserDatabaseTests(unittest.TestCase):
 
     def test_installer_creates_from_a_copy_with_the_missing_files(self):
         script = (ROOT / "remote/install_oci.sh").read_text()
-        check = script.index('--user-databases "$ARCHIVE_PATH"')
+        check = script.index('--user-databases "$CREATE_IMAGE_PATH"')
         create = script.index('oci_create_container "${CREATE_ARGS[@]}"')
         self.assertLess(check, create)
         block = script[check:create]
         self.assertIn("user_databases_rc == 3", block)
-        self.assertIn('--add-user-databases "$ARCHIVE_PATH" "$USER_DATABASES_ARCHIVE"', block)
+        self.assertIn('--add-user-databases "$CREATE_IMAGE_PATH" "$USER_DATABASES_ARCHIVE"', block)
         self.assertIn("CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE", block)
         self.assertIn('rm -f "$USER_DATABASES_ARCHIVE"', script[create:create + 300])
 
@@ -187,6 +187,45 @@ class AddUserDatabaseTests(unittest.TestCase):
                 runtime.add_user_databases(self.source, self.copy)
             self.assertFalse(self.copy.exists())
             self.assertEqual(list(self.folder.glob("*.partial")), [])
+
+
+    def test_a_scratch_image_is_created_from_a_copy_that_is_removed_afterwards(self):
+        build(self.source, [[("updater", "dir"), ("updater/app", "file")]])
+        original = self.source.read_bytes()
+        with runtime.creatable_archive(self.source) as source:
+            self.assertNotEqual(source, self.source)
+            self.assertEqual(source.parent, self.folder)
+            self.assertEqual(runtime.missing_user_databases(source), [])
+        self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
+        self.assertEqual(self.source.read_bytes(), original)
+
+    def test_an_image_with_its_user_databases_is_created_as_it_is(self):
+        build(self.source, [[("etc/passwd", "file"), ("etc/group", "file")]])
+        with runtime.creatable_archive(self.source) as source:
+            self.assertEqual(source, self.source)
+        self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
+
+    def test_a_named_user_leaves_no_copy_behind(self):
+        build(self.source, [[("app", "file")]], user="app")
+        with self.assertRaises(runtime.RuntimeResolutionError):
+            with runtime.creatable_archive(self.source):
+                pass
+        self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
+
+    def test_update_data_holder_supplies_native_user_databases_without_an_image(self):
+        import oci_instance_transaction as transaction
+        calls=[]
+        def create(*args):
+            calls.append(args)
+            with tarfile.open(args[3]) as archive:
+                for name, body in runtime.USER_DATABASES.items():
+                    self.assertTrue(archive.getmember(name).isfile())
+                    self.assertEqual(archive.extractfile(name).read(),body)
+            self.assertNotIn('--net0',args)
+        with tempfile.TemporaryDirectory() as folder, patch.object(transaction,'run',side_effect=create):
+            transaction.create_data_holder(9904,'fixture','marker',Path(folder))
+            self.assertEqual(list(Path(folder).iterdir()),[])
+        self.assertEqual(len(calls),1)
 
 
 if __name__ == "__main__":

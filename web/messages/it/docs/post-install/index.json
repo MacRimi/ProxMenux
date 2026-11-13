@@ -19,7 +19,7 @@
   "openingMenu": {
     "heading": "Apertura del menu",
     "body": "Dal menu principale di ProxMenux, selezionare <strong>Impostazioni post-installazione Proxmox</strong>. Vedrai questo:",
-    "imageAlt": "Menu degli script post-installazione: Automatizzato, Personalizzabile, la voce condizionale Applica aggiornamenti disponibili (solo se ci sono aggiornamenti in attesa) e Disinstalla, seguiti dalla sezione Script della community"
+    "imageAlt": "Menu degli script post-installazione: Automatizzato, Personalizzabile, la voce condizionale Applica aggiornamenti disponibili (solo se ci sono aggiornamenti in attesa) e Disinstalla, seguiti dalla sezione Script esterni"
   },
   "threeWays": {
     "heading": "Quattro modi per applicare le ottimizzazioni",
@@ -70,7 +70,7 @@
   "mixing": {
     "heading": "Combinare con altri script post-installazione",
     "stackTitle": "Non impilare più script post-installazione",
-    "stackBody": "Eseguire più script post-installazione sullo stesso host può creare file di configurazione duplicati, voci sysctl in conflitto o persino interrompere la rete dopo il riavvio. Se hai già applicato <strong>Helper-Scripts Post Install</strong>, alcune ottimizzazioni ProxMenux possono sovrapporsi alla sua configurazione. Usa un solo strumento post-installazione per host.",
+    "stackBody": "Eseguire più script post-installazione sullo stesso host può creare file di configurazione duplicati, voci sysctl in conflitto o persino interrompere la rete dopo il riavvio. Se hai già applicato <strong>Community Scripts Post Install</strong>, alcune ottimizzazioni ProxMenux possono sovrapporsi alla sua configurazione. Usa un solo strumento post-installazione per host.",
     "xshokTitle": "xshok-proxmox: deprecato",
     "xshokBody": "Le versioni precedenti di ProxMenux indicavano <a>xshok-proxmox</a> come strumento post-installazione complementare. Il progetto è ora deprecato e non è più offerto da ProxMenux. Se una vecchia esecuzione ha lasciato marcatori sull’host, ProxMenux li rileva ancora e avvisa. Oggi non è però uno strumento da installare accanto a ProxMenux."
   },

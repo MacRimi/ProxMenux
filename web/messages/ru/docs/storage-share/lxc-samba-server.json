@@ -12,15 +12,15 @@
   },
   "privReq": {
     "title": "Требуется привилегированный контейнер",
-    "body": "Samba принимает идентификатор подключающегося пользователя с помощью <code>setgroups()</code> при каждом подключении к общему ресурсу (в момент, когда клиент открывает этот ресурс). В непривилегированном контейнере LXC ядро отклоняет этот системный вызов, поскольку пространство имён пользователей контейнера создано с <code>setgroups=deny</code>, а <code>smbd</code> в ответ аварийно завершает рабочий процесс с <code>PANIC: sys_setgroups failed</code>. В результате <code>smbd</code> запускается и привязывается к портам 139/445, но каждое клиентское подключение завершается ошибкой <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. По этой причине скрипт требует привилегированный CT и <strong>прерывает работу, если контейнер непривилегированный</strong>. Корректного решения на стороне сервера нет: используйте привилегированный CT или запускайте Samba в виртуальной машине."
+    "body": "Samba принимает идентификатор подключающегося пользователя с помощью <code>setgroups()</code> при каждом подключении к общему ресурсу (в момент, когда клиент открывает этот ресурс). В непривилегированном контейнере LXC ядро отклоняет этот системный вызов, поскольку пространство имён пользователей контейнера создано с <code>setgroups=deny</code>, а <code>smbd</code> в ответ аварийно завершает рабочий процесс с <code>PANIC: sys_setgroups failed</code>. В результате <code>smbd</code> запускается и привязывается к портам 139/445, но каждое клиентское подключение завершается ошибкой <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. По этой причине скрипт требует привилегированный CT и <strong>прерывает работу, если контейнер непривилегированный</strong>. Корректного решения на стороне сервера нет: используйте привилегированный CT или запускайте Samba в ВМ."
   },
   "what": {
     "heading": "Что делает этот инструмент",
     "body": "Контейнер становится сервером SMB/CIFS: запускает <code>smbd</code>, предоставляет общий доступ к папке через <code>/etc/samba/smb.conf</code> и принимает клиентские подключения на портах <code>139</code> / <code>445</code>. Клиенты видят общий ресурс по адресу <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> в Проводнике Windows, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> в Finder на macOS или через <code>mount.cifs</code> в Linux.",
     "diagramServerLabel": "LXC (привилегированный) — сервер Samba",
-    "diagramServerDetail": "/mnt/data\n(папка для общего доступа)\n\nsmbd + nmbd запущены\n\nПользователь: <username>\n(через smbpasswd)\n\nПринудительно заданная группа:\nsharedfiles",
+    "diagramServerDetail": "/mnt/data\n(папка для общего доступа)\n\nsmbd + nmbd запущены\n\nПользователь: &lt;username&gt;\n(через smbpasswd)\n\nПринудительно заданная группа:\nsharedfiles",
     "diagramClientLabel": "Любой клиент в сети",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramClientDetail": "Windows: \\\\&lt;ip&gt;\\&lt;share&gt;\nmacOS:   smb://&lt;ip&gt;/&lt;share&gt;\nLinux:   mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {
@@ -30,12 +30,12 @@
     "headerAction": "Что делает скрипт",
     "bindType": "Bind-mount с хоста",
     "bindTypeSubRich": "определяется по выводу <code>mount</code>",
-    "bindActionRich": "Создаёт группу <code>sharedfiles</code> (GID по умолчанию — 999; если он занят, подбирается свободный), добавляет в неё пользователя Samba, затем применяет <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — новые файлы наследуют группу). Если пользователь по-прежнему не может выполнять запись, применяет <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "bindActionRich": "Создаёт группу <code>sharedfiles</code> (GID по умолчанию — 101000; если он занят, подбирается свободный) и добавляет в неё пользователя Samba. Затем проверяет файловую систему: там, где работает <code>chown</code>, применяет <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID, новые файлы наследуют группу), а там, где поддерживаются ACL, применяет ACL доступа и ACL по умолчанию (<code>u:&lt;user&gt;:rwx,g:sharedfiles:rwx</code>, рекурсивно). На vfat / exfat / ntfs оба шага пропускаются, и выводится подсказка, как перемонтировать раздел с нужными uid/gid. В конце проверяется доступ на запись.",
     "localType": "Локальная папка внутри CT",
     "localTypeSub": "bind-монтирование не обнаружено",
     "localActionRich": "Стандартное назначение владельца и группы: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Общая группа не нужна, поскольку другие CT не выполняют запись в эту папку. Если доступ на запись по-прежнему отсутствует, применяется <code>setfacl</code>.",
-    "gidTitle": "GID группы 'sharedfiles' отличается от используемого при настройке сервера NFS",
-    "gidBody": "Скрипт сервера Samba использует GID <strong>999</strong> для <code>sharedfiles</code>, а <nfsLink>процедура настройки сервера NFS</nfsLink> — GID <strong>101000</strong>. Если вы запускаете оба сервера в одном контейнере и хотите использовать единую общую группу для обоих протоколов, после установки измените GID одной из групп так, чтобы он совпадал с GID другой (например, <code>groupmod -g 101000 sharedfiles</code>), и заново назначьте владельца и группу затронутым папкам. Это известное несоответствие в текущих скриптах."
+    "gidTitle": "GID группы «sharedfiles»",
+    "gidBody": "Скрипт сервера Samba создаёт <code>sharedfiles</code> с GID <strong>101000</strong> — тем же GID, что использует <nfsLink>процедура настройки сервера NFS</nfsLink>, поэтому оба протокола используют одну группу. Если внутри CT GID 101000 уже занят другой группой, скрипт создаёт <code>sharedfiles</code> со свободным GID. Проверить его можно командой <code>getent group sharedfiles</code>."
   },
   "opening": {
     "heading": "Открытие инструмента",
@@ -47,7 +47,7 @@
   },
   "modes": {
     "heading": "Три режима общего доступа",
-    "intro": "Каждый режим записывает отдельный блок конфигурации в <code>smb.conf</code>. Все три включают <code>valid users = &lt;username&gt;</code> (без анонимного доступа), <code>force group = sharedfiles</code> (чтобы новые файлы принадлежали общей группе) и <code>veto files = /lost+found/</code> (скрывает lost+found от клиентов).",
+    "intro": "Каждый режим записывает отдельный блок конфигурации в <code>smb.conf</code>. Все три включают <code>comment</code>, <code>valid users = &lt;username&gt;</code> (без анонимного доступа), <code>force user = &lt;username&gt;</code> и <code>force group = sharedfiles</code> (чтобы записываемые файлы получали единообразного владельца) и <code>veto files = /lost+found/</code> (скрывает lost+found от клиентов).",
     "headerMode": "Режим",
     "headerBlock": "Блок, записываемый в smb.conf",
     "rwMode": "Чтение и запись",
@@ -91,7 +91,7 @@
   "troubleshoot": {
     "heading": "Устранение неполадок",
     "privTitle": "Требуется привилегированный контейнер (скрипт прекращает работу)",
-    "privBody": "Выбранный CT — непривилегированный контейнер, и <code>smbd</code> не может предоставлять в нём доступ к файлам. Если обойти проверку и настроить Samba вручную, <code>smbd</code> запустится и порты откроются, но первое подключение клиента вызовет аварийный сбой с <code>PANIC: sys_setgroups failed</code> в <code>/var/log/samba/log.&lt;client&gt;</code>, а клиент увидит <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Причина — наличие <code>setgroups=deny</code> в непривилегированном пространстве имён пользователей: это блокирует переключение Samba на учётную запись пользователя для каждого подключения. Ни <code>features=keyctl=1</code>, ни удаление <code>force user</code> / <code>force group</code> этого не меняют. Единственные рабочие варианты: преобразовать CT в привилегированный контейнер или перенести Samba в виртуальную машину.",
+    "privBody": "Выбранный CT — непривилегированный контейнер, и <code>smbd</code> не может предоставлять в нём доступ к файлам. Если обойти проверку и настроить Samba вручную, <code>smbd</code> запустится и порты откроются, но первое подключение клиента вызовет аварийный сбой с <code>PANIC: sys_setgroups failed</code> в <code>/var/log/samba/log.&lt;client&gt;</code>, а клиент увидит <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Причина — наличие <code>setgroups=deny</code> в непривилегированном пространстве имён пользователей: это блокирует переключение Samba на учётную запись пользователя для каждого подключения. Ни <code>features=keyctl=1</code>, ни удаление <code>force user</code> / <code>force group</code> этого не меняют. Единственные рабочие варианты: преобразовать CT в привилегированный контейнер или перенести Samba в ВМ.",
     "aptTitle": "Ошибка при выполнении apt-get install",
     "aptIntro": "Скрипт рассчитан на CT с системой семейства Debian. В Alpine / Arch / Rocky / Alma установите Samba вручную:",
     "aptItems": [
@@ -107,7 +107,7 @@
     "groupTitle": "Файлы, записанные клиентом, имеют неверную группу на сервере",
     "groupBody": "Скрипт задаёт <code>force group = sharedfiles</code> в блоке общего ресурса, поэтому новые файлы должны принадлежать группе <code>sharedfiles</code>. Если это не так, возможно, с родительского каталога был снят бит SGID (кто-то вручную выполнил <code>chmod</code>). Установите его повторно: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
     "bothTitle": "Общий доступ к одной папке одновременно через NFS и Samba",
-    "bothBody": "ProxMenux использует разные GID для <code>sharedfiles</code> в каждом скрипте (Samba: 999, NFS: 101000). Если вы предоставляете доступ к одной папке через оба протокола, выберите один GID и приведите оба значения к нему. Самое простое решение: после выполнения обоих скриптов измените меньший GID:"
+    "bothBody": "Оба скрипта используют GID 101000 для <code>sharedfiles</code>, поэтому для папки, доступной по обоим протоколам, дополнительных действий не требуется. Если скрипт Samba выбрал свободный GID, потому что 101000 был занят, освободите этот GID и выровняйте группу вручную:"
   },
   "related": {
     "heading": "Связанные материалы",
@@ -125,7 +125,7 @@
       {
         "href": "/docs/storage-share/host-samba",
         "label": "Samba / CIFS в качестве хранилища Proxmox",
-        "tailRich": " — когда ваш CT начнёт предоставлять общий ресурс, зарегистрируйте этот ресурс в Proxmox, чтобы он появился в <em>Datacenter → Storage</em>."
+        "tailRich": " — когда Ваш CT начнёт предоставлять общий ресурс, зарегистрируйте этот ресурс в Proxmox, чтобы он появился в <em>Datacenter → Storage</em>."
       }
     ]
   }

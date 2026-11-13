@@ -64,7 +64,7 @@
     "doesLabel": "Vad det gör:",
     "doesItems": [
       "Tyst laddar ner och installerar den senaste versionen av Fastfetch",
-      "Låter dig välja en anpassad logotyp (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong>, eller en anpassad)",
+      "Låter dig välja en anpassad logotyp (<strong>ProxMenux, Proxmox, Helper-Scripts, Community Scripts, Home-Labs-Club, Proxmology</strong>, eller en anpassad)",
       "Konfigurerar Fastfetch för att visa <em> \"System optimerad av ProxMenux\"</em>",
       "Ställ in Fastfetch för att köra automatiskt vid konsolinloggning"
     ],

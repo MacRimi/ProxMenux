@@ -1,29 +1,43 @@
 #!/usr/bin/env python3
 """Image archives that ProxMenux downloaded to the template storage and that
-no installation uses any more are removed after a successful operation."""
+no installation uses any more are removed after a successful operation. The
+newest archive of an application that is no longer installed is kept, so it can
+be installed again when the registry cannot be reached."""
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import sys
 import time
 
 import oci_instances as instances
+from oci_installation_state import image_from_archive
 from oci_ui import translate
 
 # Names given by the OCI installers and by updates; other archives are never touched.
 NAME = re.compile(r'(?:proxmenux-update-[a-z0-9]+-[0-9a-f]{64}'
                   r'|(?:image|linuxserver)-[A-Za-z0-9._-]+_[a-z0-9]+_[0-9a-f]{16})\.tar')
+# The archive an installation downloads: <application>_<architecture>_<digest>.tar
+APP_ARCHIVE = re.compile(r'((?:image|linuxserver)-[A-Za-z0-9._-]+_[a-z0-9]+)_([0-9a-f]{16})\.tar')
+UPDATE_ARCHIVE = re.compile(r'proxmenux-update-([a-z0-9]+)-([0-9a-f]{64})\.tar')
 IN_PROGRESS = {'installing', 'assembling', 'updating', 'recovering'}
 # A recent archive may belong to an installation that has not saved its record yet.
 MIN_AGE_SECONDS = 3600
 
 
+def safe_app(app_id):
+    """The application part of an archive name, as the installer writes it."""
+    name = re.sub(r'[^A-Za-z0-9._-]+', '_', f'{app_id}\n')
+    return name[:-1] if name.endswith('_') else name
+
+
 def unused_archives(root=instances.ROOT):
-    """Archives no installed guest uses; empty while any operation is pending
-    or a record cannot be read."""
-    keep, folders = set(), set()
+    """Archives no installed guest uses, except the newest one of each
+    application that is no longer installed; empty while any operation is
+    pending or a record cannot be read."""
+    keep, folders, installed = set(), set(), set()
     for path in Path(root).glob('*/oci-compose.json'):
         try:
             record = json.loads(path.read_text())
@@ -34,22 +48,77 @@ def unused_archives(root=instances.ROOT):
         if (record.get('pending_transaction') or record.get('pending_stack_transaction')
                 or (exists and record.get('status') in IN_PROGRESS)):
             return []
-        archive = (record.get('observed') or {}).get('archive_path')
+        observed = record.get('observed') or {}
+        archive = observed.get('archive_path')
         if not archive:
             continue
         folders.add(Path(archive).parent)
         if exists:
             keep.add(Path(archive))
+            architecture = (observed.get('image') or {}).get('architecture')
+            app_id = (record.get('template') or {}).get('id')
+            if architecture and app_id:
+                installed.add((Path(archive).parent, f'{safe_app(app_id)}_{architecture}'))
     now = time.time()
-    result = []
+    result, newest = [], {}
     for folder in folders:
         for candidate in folder.glob('*.tar'):
             if candidate in keep or not NAME.fullmatch(candidate.name) or candidate.is_symlink():
                 continue
             info = candidate.stat()
-            if candidate.is_file() and now - info.st_mtime >= MIN_AGE_SECONDS:
-                result.append((candidate, info.st_size))
-    return result
+            if not candidate.is_file() or now - info.st_mtime < MIN_AGE_SECONDS:
+                continue
+            result.append((candidate, info.st_size))
+            match = APP_ARCHIVE.fullmatch(candidate.name)
+            group = (folder, match.group(1)) if match else None
+            if group and group not in installed and (
+                    group not in newest or info.st_mtime > newest[group].stat().st_mtime):
+                newest[group] = candidate
+    kept = set(newest.values())
+    return [(candidate, size) for candidate, size in result if candidate not in kept]
+
+
+def keep_for_reinstall(record):
+    """The archive an updated installation uses carries the update's name: it
+    is linked under the application's name, so the archive is kept when the
+    installation is removed and found when the application is installed again."""
+    archive = (record.get('observed') or {}).get('archive_path')
+    match = UPDATE_ARCHIVE.fullmatch(Path(archive).name) if archive else None
+    app_id = (record.get('template') or {}).get('id')
+    if not match or not app_id:
+        return None
+    path = Path(archive)
+    target = path.with_name(f'{safe_app(app_id)}_{match.group(1)}_{match.group(2)[:16]}.tar')
+    if not APP_ARCHIVE.fullmatch(target.name) or path.is_symlink() or not path.is_file() or target.exists():
+        return None
+    try:
+        os.link(path, target)
+    except OSError:
+        return None
+    return target
+
+
+def saved_archive(folder, app_id, architecture, digest=None):
+    """The newest archive kept for this application, for an installation that
+    cannot reach the registry. A reference pinned to a digest accepts only that
+    image. The registry digest of a multi-platform image is not stored in the
+    archive: the image's own manifest digest stands for it then."""
+    group = f'{safe_app(app_id)}_{architecture}'
+    found = []
+    for candidate in Path(folder).glob(f'{group}_*.tar'):
+        match = APP_ARCHIVE.fullmatch(candidate.name)
+        if (not match or match.group(1) != group or candidate.is_symlink() or not candidate.is_file()
+                or (digest and not digest.startswith(f'sha256:{match.group(2)}'))):
+            continue
+        found.append(candidate)
+    if not found:
+        return None
+    path = max(found, key=lambda p: p.stat().st_mtime)
+    image = image_from_archive(path)
+    if image['architecture'] != architecture:
+        return None
+    return {'archive': str(path), 'digest': digest or image['manifest_digest'],
+            'created': image.get('created') or ''}
 
 
 def prune(root=instances.ROOT, lock=True):
@@ -81,6 +150,12 @@ def archives_of(vmids, root=instances.ROOT):
 
 def main(arguments):
     command = arguments[0] if arguments else 'prune'
+    if command == 'saved' and len(arguments) in (4, 5):
+        saved = saved_archive(*arguments[1:])
+        if not saved:
+            return 1
+        print(json.dumps(saved))
+        return 0
     if command == 'prune':
         for path, size in prune():
             print(translate('removed unused image archive: {path} ({size} bytes)').format(path=path, size=size))

@@ -18,10 +18,11 @@ REMOVE = ROOT / 'oci/remote/oci_remove.py'
 PREVIEW_HOST = 'Host paths found in container configs or saved records (not targeted for removal):'
 EMPTY_HOST = 'No host directories found in the available container configs or saved records.'
 POST_HOST = 'Host directory listed in saved records (not targeted for removal):'
-UPDATE = ('All {count} containers of the application are updated together (main CT: {vmid}). If there are new '
-          'versions, all images are downloaded and verified, the application is stopped, each container is backed '
-          'up and replaced with its new image. If the operation fails after a container was changed, the backups are '
-          'restored. An operation that stops halfway is recovered from the OCI management menu.')
+UPDATE = ('All {count} containers of the application are checked together (main CT: {vmid}). If no images changed, '
+          'nothing is stopped or recreated. Otherwise the required images are prepared, the application is stopped '
+          'and every container is backed up. Only changed members and any required setup jobs are recreated. If '
+          "the operation fails after a container was changed, the whole application's backups are restored. "
+          'Interrupted operations can be recovered from the OCI management menu.')
 PENDING = ('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack '
            'where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.')
 KEYS = (PREVIEW_HOST, EMPTY_HOST, POST_HOST, UPDATE, PENDING)
@@ -89,7 +90,7 @@ class InventoryMessages(unittest.TestCase):
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
                  'Path': inert_path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
-                 'image_cache': SimpleNamespace(prune=lambda root, lock: []),
+                 'image_cache': SimpleNamespace(prune=lambda root, lock: [], keep_for_reinstall=lambda record: None),
                  'work_backup': SimpleNamespace(forget=lambda root, vmid: None),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),
                  're': re, 'guest_node': lambda vmid: None,
@@ -122,7 +123,8 @@ class RecoveryMessages(unittest.TestCase):
         instances = ModuleType('oci_instances')
         instances.ROOT = Path('/inert')
         instances.read = lambda root, vmid: self.primary
-        self.modules = {'oci_instances': instances, 'oci_stack_replay': ModuleType('oci_stack_replay')}
+        self.modules = {'oci_instances': instances, 'oci_stack_replay': ModuleType('oci_stack_replay'),
+                        'oci_stack_adapters': SimpleNamespace(menu_ready=lambda *args: False)}
         self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path, 'CANCELLED': None,
                       'translate': lambda text: text, 'images': SimpleNamespace(offer_removal=lambda *args: None),
                       '_remove': lambda *args: self.fail('remove must not run'),
@@ -168,7 +170,7 @@ class RecoveryMessages(unittest.TestCase):
         events = []
         scope = {'TERMINAL': {'committed', 'rolled-back'},
                  'translate': lambda message: message,
-                 'member_tx': SimpleNamespace(log=lambda message: None),
+                 'member_tx': SimpleNamespace(log=lambda message: None, time_phase=lambda *args: None),
                  'write': lambda path, state: Path(path).write_text(json.dumps(state)),
                  'msg_info': lambda message: None, 'msg_ok': lambda message: None,
                  'member': lambda adapter, vmid: f'CT {vmid}'}

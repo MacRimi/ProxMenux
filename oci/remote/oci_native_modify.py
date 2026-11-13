@@ -17,6 +17,7 @@ import oci_instance_transaction as transaction
 import oci_resource_modify as resources
 import oci_gpu_devices as devices
 import oci_host_mounts as host_mounts
+import oci_mount_idmap as mount_idmap
 from oci_installation_state import parse_config, sha
 from oci_ui import translate, msg_info, msg_ok, msg_warn
 
@@ -102,7 +103,7 @@ def changes(record, candidate, config):
                 fields = {k for k in original.keys() | mount.keys() if original.get(k) != mount.get(k)}
                 native_fields = {'read_only', 'backup', 'create_if_missing'}
                 if original['type'] == mount['type'] == 'host-bind':
-                    native_fields.add('source')
+                    native_fields.update(('source', 'idmap'))
                 if fields - native_fields:
                     return None
     return changed
@@ -203,6 +204,9 @@ def plan(record, candidate, config):
                     source = host_mounts.valid_path(mount['source'])
                     if not Path(source).is_dir() and not mount.get('create_if_missing'):
                         raise ValueError(translate('The host directory does not exist'))
+                fields.pop('idmap', None)
+                if mapping := mount_idmap.normalize_idmap(mount.get('idmap')):
+                    fields['idmap'] = mapping
                 fields.update(mp=target, backup='1' if mount['backup'] else '0',
                               ro='1' if mount.get('read_only') else '0')
                 values[actual[target]['key']] = source+','+','.join(k+'='+v for k, v in fields.items())
@@ -221,6 +225,8 @@ def plan(record, candidate, config):
                         raise ValueError(translate('The host directory does not exist'))
             values[key] = (f"{source},mp={target},backup={1 if mount['backup'] else 0},"
                            f"ro={1 if mount.get('read_only') else 0}")
+            if mapping := mount_idmap.normalize_idmap(mount.get('idmap')):
+                values[key] += ',idmap=' + mapping
     return {'values': values, 'delete': delete, 'restart': bool(changed - {'resources'}),
             'changed': sorted(changed)}
 
@@ -339,6 +345,35 @@ def recover(root, journal):
     msg_ok(translate('Previous installation restored'))
 
 
+def removed_volumes(candidate, config):
+    """The container volumes of the paths the modification removes."""
+    wanted = {m['container_path'] for m in candidate['deployment'].get('mounts', [])}
+    return [mount['volume'] for target, mount in transaction.mounts(config).items()
+            if target not in wanted and not mount['volume'].startswith('/')]
+
+
+def delete_removed_volumes(root, vmid, volumes):
+    """Removing a path leaves its volume as a detached disk, which the next
+    update would not carry. The user confirmed its deletion, so it is deleted
+    once the modification is saved, and the record observes the result."""
+    try:
+        for volume in volumes:
+            config = parse_config(instances.command('pct', 'config', str(vmid)))
+            key = next((k for k, v in config.items() if re.fullmatch(r'unused[0-9]+', k) and v == volume), None)
+            if key:
+                transaction.run('pct', 'set', str(vmid), '--delete', key)
+                msg_ok(f"{translate('Container volume deleted:')} {volume}")
+        record = instances.read(root, vmid)
+        observed = record['observed']
+        record['observed'] = instances.observe(vmid, record['installation_id'], observed['archive_path'],
+                                               observed['resolved_registry_digest'], observed['image'])
+        instances.write(instances.location(root, vmid), record)
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+        transaction.log(f'removed volume cleanup: {error}')
+        msg_warn(f"{translate('The volume of the removed path is still a detached disk of the container:')} "
+                 + ', '.join(volumes))
+
+
 def apply(root, record, candidate, config, acknowledge_external_data=False):
     operation = plan(record, candidate, config)
     if not operation:
@@ -368,7 +403,7 @@ def apply(root, record, candidate, config, acknowledge_external_data=False):
         host_mounts.verify_sources(desired_sources)
         for mount in candidate['deployment'].get('mounts', []):
             if mount['type'] == 'host-bind' and mount.get('create_if_missing'):
-                Path(mount['source']).mkdir(parents=True, exist_ok=True)
+                mount_idmap.create_host_directory(mount, candidate['deployment'], candidate['template'], config)
         host_mounts.verify_sources(original_sources)
         # Capture newly-created directories before installing their mounts.
         pinned = {p: host_mounts.validate_source(p, declared=value.get('declared', False))
@@ -424,6 +459,9 @@ def apply(root, record, candidate, config, acknowledge_external_data=False):
             transaction.log('native rollback failed: '+type(error).__name__)
             msg_warn(translate('The settings could not be fully rolled back. Review the container and its saved modification before continuing.'))
         raise
+    removed = removed_volumes(candidate, config)
+    if removed:
+        delete_removed_volumes(root, vmid, removed)
     try:
         import oci_carried_record
         oci_carried_record.carry(root, vmid, mount_stopped=False)

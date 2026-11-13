@@ -6,6 +6,7 @@ import { Login } from "../components/login"
 import { AuthSetup } from "../components/auth-setup"
 import { getApiUrl } from "../lib/api-config"
 import { completeOIDCLogin } from "../lib/oidc-login"
+import { AccessProvider, FULL_ACCESS, type AccessMode, type Capabilities } from "../lib/access"
 import { useT } from "../lib/i18n/provider"
 
 export default function Home() {
@@ -15,11 +16,17 @@ export default function Home() {
     authEnabled: boolean
     authConfigured: boolean
     authenticated: boolean
+    accessMode: AccessMode
+    capabilities: Capabilities
+    setupCodeRequired: boolean
   }>({
     loading: true,
     authEnabled: false,
     authConfigured: false,
     authenticated: false,
+    accessMode: "password",
+    capabilities: FULL_ACCESS,
+    setupCodeRequired: false,
   })
 
   useEffect(() => {
@@ -51,6 +58,9 @@ export default function Home() {
           authEnabled: true,
           authConfigured: true,
           authenticated: false,
+          accessMode: "password",
+          capabilities: FULL_ACCESS,
+          setupCodeRequired: false,
         })
         return
       }
@@ -89,6 +99,9 @@ export default function Home() {
         authEnabled: data.auth_enabled,
         authConfigured: data.auth_configured,
         authenticated,
+        accessMode: data.access_mode || (data.auth_configured ? "password" : "undecided"),
+        capabilities: data.capabilities || FULL_ACCESS,
+        setupCodeRequired: !!data.setup_code_required,
       })
     } catch {
       // API not available - assume no auth configured (silent fail, no console error)
@@ -97,6 +110,9 @@ export default function Home() {
         authEnabled: false,
         authConfigured: false,
         authenticated: true,
+        accessMode: "password",
+        capabilities: FULL_ACCESS,
+        setupCodeRequired: false,
       })
     }
   }
@@ -124,15 +140,23 @@ export default function Home() {
     )
   }
 
+  // Until someone chooses how to reach the Monitor, only the first-run
+  // screen exists: nothing behind it loads.
+  if (authStatus.accessMode === "undecided") {
+    return (
+      <div className="min-h-screen bg-background">
+        <AuthSetup onComplete={handleAuthComplete} setupCodeRequired={authStatus.setupCodeRequired} />
+      </div>
+    )
+  }
+
   if (authStatus.authEnabled && !authStatus.authenticated) {
     return <Login onLogin={handleLoginSuccess} />
   }
 
-  // Show dashboard in all other cases
   return (
-    <>
-      {!authStatus.authConfigured && <AuthSetup onComplete={handleAuthComplete} />}
+    <AccessProvider value={{ mode: authStatus.accessMode, capabilities: authStatus.capabilities }}>
       <ProxmoxDashboard />
-    </>
+    </AccessProvider>
   )
 }

@@ -62,7 +62,8 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (any absolute path)",
+        "url": "/backup/borgbackup",
+        "urlNote": "any absolute path",
         "detail": "Repository lives on a local directory. Meaningful only when the target directory is on a separate physical disk — a repository on the same disk as the source protects against user error but not against disk failure."
       }
     ]

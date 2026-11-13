@@ -65,6 +65,6 @@
   },
   "componentStatus": {
     "heading": "Stav komponentu",
-    "body": "Obaja inštalátori registrujú svoj stav v <code>/usr/local/share/proxmenux/components_status.json</code> v kategórii <code>security</code>. ProxMenux používa tento súbor na rozhodnutie, či zobraziť inštaláciu alebo menu správy pri následných spusteniach, a rovnaké dáta napája palubnú dosku v ProxMenux Monitor keď je prítomný."
+    "body": "Obaja inštalátori registrujú svoj stav v <code>/usr/local/share/proxmenux/components_status.json</code> v kategórii <code>security</code>. Menu sa medzi inštaláciou a správou rozhodujú priamou detekciou nainštalovaného binárneho súboru (<code>fail2ban-client</code>, <code>lynis</code>); súbor napája palubné dosky v ProxMenux Monitor, keď je prítomný."
   }
 }

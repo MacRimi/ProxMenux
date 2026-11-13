@@ -22,5 +22,26 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Jellyfin"
+    },
+    "screenshots": [
+      "https://jellyfin.org/assets/images/10.8-home-4a73a92bf90d1eeffa5081201ca9c7bb.png",
+      "https://jellyfin.org/assets/images/10.8-library-9c07ba46877a03e749c0c8b5ed157e53.png"
+    ],
+    "tips": [
+      "Configuration and cache use persistent Proxmox volumes by default; media defaults to a shared host directory.",
+      "Hardware tone mapping is configured persistently after first start when VA-API or NVIDIA is selected.",
+      "DLNA multicast behavior depends on the selected Proxmox bridge and firewall.",
+      "Official screenshots of Jellyfin Web 10.8: Jellyfin Project — https://jellyfin.org/. CC BY-ND 4.0 (https://creativecommons.org/licenses/by-nd/4.0/). Original images, unchanged."
+    ],
+    "tagline": {
+      "en_US": "Jellyfin is a media system designed to organize and stream media collections."
+    },
+    "description": {
+      "en_US": "Jellyfin is a media system designed to organize and stream media collections. It serves content from a dedicated server to end-user devices across multiple client applications and web interfaces. The platform provides complete control over personal video and audio libraries without relying on proprietary alternatives."
+    }
   }
 }

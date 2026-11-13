@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "VM and CT Management",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, cloning."
+        "description": "qm list / config / start / stop / shutdown / suspend, pct list / config / enter / exec / push / pull, config file editing."
       },
       {
         "icon": "HardDrive",
@@ -46,7 +46,7 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Network Commands",
-        "description": "ip / ss / nmcli, bridge inspection, ping / traceroute, DNS lookups, fail2ban-client."
+        "description": "ip / ss / nmcli, bridge inspection, ping / traceroute / mtr, DNS lookups, pve-firewall, tcpdump."
       },
       {
         "icon": "Package",
@@ -64,19 +64,19 @@
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "ZFS Management",
-        "description": "zpool / zfs commands for status, datasets, snapshots, send/receive, ARC tuning, trimming."
+        "description": "zpool / zfs commands for status, datasets, snapshots, send/receive, scrubs, arc_summary."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Backup and Restore",
-        "description": "vzdump, qmrestore / pct restore, Proxmox Backup Server helpers, snapshot operations."
+        "description": "vzdump, qmrestore / pct restore, vzdump.conf and backup jobs, listing and cleaning dumps."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "System CLI Tools",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — daily-driver admin tools."
+        "description": "tmux, screen, htop / atop / glances, iotop, lsof, nmap, tcpdump, rsync, ssh: daily-driver admin tools."
       }
     ]
   },

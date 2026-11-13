@@ -57,6 +57,80 @@ def _example_default(name: str, example: str | None, timezone: str | None = None
     return example
 
 
+# The share of the node's RAM a proposed default may take; the user can still
+# set any value, since a Proxmox memory limit reserves nothing.
+HOST_MEMORY_SHARE = 0.75
+
+
+def fit_memory_to_host(memory_mb: int, host_mb: int | None) -> tuple[int, str | None]:
+    """The proposed RAM, lowered to what this node can give, with the reason."""
+    limit = int(host_mb * HOST_MEMORY_SHARE) // 256 * 256 if host_mb else 0
+    if not limit or memory_mb <= limit:
+        return memory_mb, None
+    fitted = max(512, limit)
+    return fitted, translate("This node has {host} MB of RAM, so {fitted} MB are proposed instead of {wanted} MB.").format(
+        host=host_mb, fitted=fitted, wanted=memory_mb)
+
+
+def proportional_cores(cores: int, memory_mb: int, host_cpus: int | None) -> int:
+    """One core for every 2 GiB of RAM, between the template's own and 8, and
+    never more than the node has."""
+    wanted = max(int(cores), min(8, -(-int(memory_mb) // 2048)))
+    return max(1, min(wanted, host_cpus)) if host_cpus else wanted
+
+
+# Below this, an AMD GPU's own memory is the carve-out of an integrated GPU.
+INTEGRATED_GPU_VRAM_MB = 4096
+# An Intel integrated GPU allocates the model inside the container's memory,
+# next to what the CPU keeps of it.
+INTEGRATED_GPU_MEMORY_MB = 12288
+
+
+def context_budget(memory_mb: int, gpu: dict[str, Any] | None) -> int:
+    """The memory that holds a model and its context window: the GPU's own,
+    the system memory an AMD integrated GPU maps, or the container's."""
+    gpu = gpu or {}
+    dedicated = int(gpu.get("dedicated_mb") or 0)
+    if gpu.get("vendor") == "intel" and not dedicated:
+        # Measured: the GPU buffers count in the container, about a third more.
+        return int(memory_mb) * 2 // 3
+    if gpu.get("vendor") == "amd" and dedicated < INTEGRATED_GPU_VRAM_MB:
+        return int(gpu.get("shared_mb") or 0) or int(memory_mb)
+    return max(int(memory_mb), dedicated)
+
+
+# Bytes per value of each context cache type.
+CACHE_TYPE_BYTES = {"f32": 4, "f16": 2, "bf16": 2, "q8_0": 1, "q5_1": 0.69, "q5_0": 0.69,
+                    "q4_1": 0.56, "q4_0": 0.56, "iq4_nl": 0.56}
+
+
+def cache_size_factor(variable: str, environment: list[dict[str, Any]]) -> float:
+    """How large the context cache is next to the 8-bit one the context
+    tables are measured with: 2 uncompressed, 1.5 with only keys compressed."""
+    values = {entry["name"]: str(entry.get("value") or "").lower() for entry in environment}
+    if variable.startswith("OLLAMA_"):
+        keys = vals = values.get("OLLAMA_KV_CACHE_TYPE") or "f16"
+    else:
+        keys = values.get("LLAMA_ARG_CACHE_TYPE_K") or "f16"
+        vals = values.get("LLAMA_ARG_CACHE_TYPE_V") or "f16"
+    return (CACHE_TYPE_BYTES.get(keys, 2) + CACHE_TYPE_BYTES.get(vals, 2)) / 2
+
+
+def value_for_memory(table: Any, memory_mb: int) -> str | None:
+    """The value of a variable that depends on the container's RAM, from
+    [[minimum MiB, value], ...] in ascending order."""
+    if not isinstance(table, list):
+        return None
+    selected = None
+    for row in table:
+        if (not isinstance(row, list) or len(row) != 2 or isinstance(row[0], bool)
+                or not isinstance(row[0], int) or not isinstance(row[1], str)):
+            raise InstallError(translate("Invalid memory-dependent default"))
+        if memory_mb >= row[0]:
+            selected = row[1]
+    return selected
+
+
 def _compose_example(template: dict[str, Any], name: str) -> str | None:
     """The value the image's own Compose file shows for a variable, as a hint."""
     try:
@@ -74,6 +148,30 @@ def _compose_example(template: dict[str, Any], name: str) -> str | None:
         value = " ".join(str(value).split())
         return value if len(value) <= 60 else value[:57] + "..."
     return None
+
+
+def choose_environment_value(item: dict[str, Any], ui, default: str | None) -> str:
+    """Select a declared value using the same menu as the rest of the installer.
+
+    Values are image arguments, not shell commands. Labels can be translated,
+    but the value saved in the deployment must remain exactly as declared.
+    """
+    choices = item["choices"]
+    values = [choice["value"] for choice in choices]
+    if not values or len(set(values)) != len(values) or any(not value for value in values):
+        raise InstallError(f"{item['name']}: invalid or duplicate choices")
+    if item.get("sensitive") or item.get("container_address") or item.get("prompt_user") is False:
+        raise InstallError(f"{item['name']}: choices require an interactive, non-secret variable")
+    if default not in (None, "") and default not in values:
+        raise InstallError(f"{item['name']}: default is not among the declared choices")
+    label = translate(item["prompt"]) if item.get("prompt") else f"{translate('Value for')} {item['name']}"
+    selected = ui.choose(label, [(choice["value"], translate(choice["label"])) for choice in choices],
+                         default if default in values else values[0])
+    if selected is None:
+        raise UserCancelled(label)
+    if selected not in values:
+        raise InstallError(f"{item['name']}: selected value is not among the declared choices")
+    return selected
 
 
 def _image_documentation(template: dict[str, Any]) -> str | None:
@@ -453,7 +551,12 @@ def build_deployment(
     hostname_default = _hostname_default(runtime_profile.get("hostname")
                                          or template["container_contract"]["container_name"])
     cpu_shares = installer_profile.get("resources", {}).get("cpu_shares")
-    memory_default = installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])
+    memory_default, memory_note = fit_memory_to_host(
+        int(installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])),
+        host.memory_total_mb())
+    cores_default = proportional_cores(int(defaults["cores"]), memory_default, host.cpu_count())
+    if memory_note and not _answers_from_recipe(ui):
+        ui.info(memory_note)
     mac_address = installer_profile.get("network", {}).get("mac_address")
     timezone = host.timezone()
     # A default installation still asks its storage, its address and how it
@@ -462,7 +565,7 @@ def build_deployment(
     if advanced:
         vmid_text = ui.ask(translate("VMID (empty = next free)"), "", required=False)
         hostname = ui.ask(translate("Hostname"), hostname_default)
-        cores = int(ui.ask(translate("CPU cores"), str(defaults["cores"])))
+        cores = int(ui.ask(translate("CPU cores"), str(cores_default)))
         cpu_units = (int(ui.ask(translate("Relative CPU priority (cpuunits)"),
                                 str(_cpu_units_default(int(cpu_shares)))))
                      if cpu_shares is not None else None)
@@ -488,7 +591,7 @@ def build_deployment(
             volume_storage = rootfs_storage
         template_storage = ask_storage(ui, "", "vztmpl", defaults["template_storage"], DEFAULT_MODE)
         rootfs_size = int(defaults["rootfs_size_gb"])
-        cores = int(defaults["cores"])
+        cores = cores_default
         cpu_units = _cpu_units_default(int(cpu_shares)) if cpu_shares is not None else None
         memory = int(memory_default)
         swap = int(defaults["swap_mb"])
@@ -566,7 +669,7 @@ def build_deployment(
 
     tmpfs_mounts: list[dict[str, Any]] = []
     for item in installer_profile.get("tmpfs_mounts", []):
-        size_mb = int(item["default_size_mb"])
+        size_mb = max(1, memory // 2) if item.get("size_from_memory") else int(item["default_size_mb"])
         if advanced and item.get("prompt_size", True):
             size_prompt = (translate(item["size_prompt"]) if item.get("size_prompt")
                            else f"{translate('tmpfs size in MB for')} {item['container_path']}")
@@ -611,8 +714,10 @@ def build_deployment(
     host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
     environment: list[dict[str, str]] = []
+    memory_dependent: list[tuple[dict[str, Any], str, str | None]] = []
+    choice_defaults: dict[str, str] = {}
     optional_explained = False
-    for item in template["container_contract"]["environment"]:
+    for environment_index, item in enumerate(template["container_contract"]["environment"]):
         name = item["name"]
         if item.get("prompt"):
             label = translate(item["prompt"])
@@ -620,8 +725,27 @@ def build_deployment(
             label = f"{translate('Password or secret')} ({name})"
         else:
             label = f"{translate('Value for')} {name}"
-        default = _example_default(name, item["example"], timezone)
+        default = _example_default(name, choice_defaults.get(name, item["example"]), timezone)
+        # A setting that grows with the memory the model will use, such as its
+        # context window, is decided once the GPU is chosen.
+        if item.get("default_by_memory_mb"):
+            memory_dependent.append((item, label, default))
+            continue
         generated = installer_profile.get("generated_sensitive_environment", {}).get(name)
+        if "choices" in item:
+            value = choose_environment_value(item, ui, default)
+            selected_choice = next(choice for choice in item["choices"] if choice["value"] == value)
+            suggested = selected_choice.get("environment_defaults", {})
+            subsequent = {entry["name"]: entry for entry in template["container_contract"]["environment"][
+                environment_index + 1:]}
+            for target, example in suggested.items():
+                entry = subsequent.get(target)
+                if (entry is None or entry.get("sensitive") or entry.get("container_address")
+                        or entry.get("prompt_user") is False or "choices" in entry or not isinstance(example, str)):
+                    raise InstallError(f"{name}: invalid choice default for {target}")
+            choice_defaults.update(suggested)
+            environment.append({"name": name, "value": value, "sensitive": False})
+            continue
         if item.get("container_address"):
             # The address of the container is known or will be: nothing to ask.
             # The advanced installation shows it, for a name or a proxy in front.
@@ -683,6 +807,36 @@ def build_deployment(
 
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
+    hardware_profile = next((profile for profile in installer_profile.get("hardware_acceleration", {}).get("profiles", [])
+                             if profile.get("id") == selected_hardware_profile), {})
+    # Some GPU images are several times larger than the CPU one: give the
+    # container the disk its image needs instead of failing to unpack it.
+    minimum_rootfs = int(hardware_profile.get("rootfs_minimum_gb") or 0)
+    if rootfs_size < minimum_rootfs:
+        ui.info(translate("The image for this acceleration needs a larger disk: {size} GB are used instead of {previous} GB.").format(
+            size=minimum_rootfs, previous=rootfs_size))
+        rootfs_size = minimum_rootfs
+    if memory_dependent:
+        gpu = host.gpu_memory(selected_hardware_profile, devices)
+        if gpu.get("vendor") == "intel" and not gpu.get("dedicated_mb") and not advanced:
+            # An Intel integrated GPU allocates inside the container: give it
+            # room for the model, its context and what the CPU keeps of it.
+            raised, note = fit_memory_to_host(max(memory, INTEGRATED_GPU_MEMORY_MB), host.memory_total_mb())
+            if raised > memory:
+                ui.info(translate("The integrated GPU uses the container's memory: {memory} MB are proposed.").format(
+                    memory=raised))
+                memory = raised
+                cores = proportional_cores(cores, memory, host.cpu_count())
+        budget = context_budget(memory, gpu)
+        chosen = {entry["name"] for entry in environment}
+        for item, label, fallback in memory_dependent:
+            if item["name"] in chosen:
+                continue  # the acceleration profile sets it
+            effective = int(budget / cache_size_factor(item["name"], environment))
+            default = value_for_memory(item["default_by_memory_mb"], effective) or fallback
+            value = ui.ask(label, default, required=item["required"]) if advanced else default
+            if value or item["required"]:
+                environment.append({"name": item["name"], "value": value or "", "sensitive": False})
     devices, completion_notes = configure_detector(installer_profile, devices, ui)
     # What the selected acceleration profile leaves for the user to set.
     completion_notes = [*next((profile.get("completion_notes", [])
@@ -739,7 +893,7 @@ def build_deployment(
                                          "keyctl, 2 cores, 2048 MB RAM, rootfs of at least 12 GB and /mnt/data "
                                          "of at least 16 GB on a container volume included in backups"))
 
-    return {
+    deployment = {
         "host_monitor": host_monitor,
         "monitor_scope": monitor_scope,
         "host_firewall": host_firewall,
@@ -793,6 +947,12 @@ def build_deployment(
         "post_start_configurations": post_start_configurations,
         "extra_hosts": installer_profile.get("extra_hosts", []),
     }
+    if advanced and not _answers_from_recipe(ui):
+        from . import mount_idmap
+        if mount_idmap.eligible(deployment) and mount_idmap.backend().supported():
+            mount_idmap.configure(ui, deployment, installer_profile, ask=True)
+    return deployment
+
 
 
 def _build_rclone_deployment(
@@ -1610,7 +1770,7 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
             shutil.copy2(project_root / 'remote' / 'oci_image_mountpoints.py', temporary / 'oci_image_mountpoints.py')
-            for helper in ('oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
@@ -1647,7 +1807,7 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')

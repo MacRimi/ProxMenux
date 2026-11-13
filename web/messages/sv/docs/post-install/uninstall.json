@@ -33,7 +33,7 @@
         "title": "Återställningen körs",
         "body1": "För varje valt objekt kallar ProxMenux sin matchande avinstallationsfunktion. De flesta omkastningar följer ett av tre mönster:",
         "items": [
-          "<strong>Från säkerhetskopia</strong> — återställer en <code>.bak</code> skapad vid ändringen (bashrc, logrotate.conf, journald.conf, GRUB-/kärnkommandorad).",
+          "<strong>Från säkerhetskopia</strong>: återställer en <code>.bak</code> skapad vid ändringen (bashrc, logrotate.conf). journald.conf skrivs om med standardvärdena och i GRUB / kärnkommandoraden tas bara ProxMenux tokens bort.",
           "<strong>Ta bort konfiguration</strong> — tar bort ProxMenux-filerna <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> eller systemd-enheten och laddar om.",
           "<strong>Ominstallation av paket</strong> — för gränssnittsändringar som prenumerationsvarningen installeras ursprungspaketen om med <code>--force-confnew</code> för att återställa levererad konfiguration."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Borttagning av prenumerationsvarning",
-            "restores": "Försöker först återställa gränssnittsfiler från ProxMenux säkerhetskopior (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* och index.html.tpl.backup.* om mobilgränssnittet ändrats). Bara om kopian saknas eller är skadad installeras pve-manager, proxmox-widget-toolkit, libjs-extjs och libpve-http-server-perl om med force-confnew. Rensar även cachade .js-/ .gz-kopior."
+            "restores": "På PVE 9 och PBS försöker först återställa gränssnittsfiler från ProxMenux säkerhetskopior (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* och index.html.tpl.backup.* om mobilgränssnittet ändrats). På PVE 8, eller om kopian saknas eller är skadad, installeras pve-manager, proxmox-widget-toolkit, libjs-extjs och libpve-http-server-perl om med force-confnew. Rensar även cachade .js-/ .gz-kopior."
           },
           {
             "tool": "Hoppa över APT-språkfiler",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "Höjning av systemgränser",
-            "restores": "Tar bort /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf och /etc/security/limits.d/99-limits.conf. Återställer PAM-gränser och systemd DefaultLimitNOFILE. I /root/.profile tas bara äldre ulimit -n 256000 bort; nuvarande ulimit -n 1048576 kan bli kvar och behöva tas bort manuellt."
+            "restores": "Tar bort /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf och /etc/security/limits.d/99-limits.conf. Återställer PAM-gränser och systemd DefaultLimitNOFILE. Tar bort både den äldre raden ulimit -n 256000 och den nuvarande raden ulimit -n 1048576 från /root/.profile."
           },
           {
             "tool": "ZRAM swap profil",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Automatiska ZFS-ögonblicksbilder",
-            "restores": "Ta bort cron-posterna som manuset skrev och erbjuder till apt purge zfs-auto-snapshot. Befintliga snapshot-dataset på poolerna lämnas intakt - ta bort dem separat om du vill ha dem borta."
+            "restores": "Rensar paketet zfs-auto-snapshot utan att fråga, vilket också tar bort dess cron-filer. Befintliga snapshot-dataset på poolerna lämnas intakt - ta bort dem separat om du vill ha dem borta."
           },
           {
             "tool": "Hastighetsgränser för vzdump",

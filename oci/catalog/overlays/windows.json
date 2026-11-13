@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs Windows as a QEMU virtual machine inside a native LXC, installed automatically from Microsoft images and reachable from the browser or by RDP. For Windows as a native Proxmox VM, use Create VM in the ProxMenux menu. Community packaging by Dockur."
+    },
+    "description": {
+      "en_US": "Windows is a graphical operating system that provides a personal computer and server environment with broad software compatibility. It enables users to run native desktop software, system utilities, and services with remote access available through Remote Desktop Protocol or a web interface. It is useful for hosting Windows-specific software, testing configurations, and running legacy operating system environments."
+    }
+  }
+}

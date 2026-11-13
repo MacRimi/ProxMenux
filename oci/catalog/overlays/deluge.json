@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Deluge is a lightweight, Free Software, cross-platform BitTorrent client."
+    },
+    "description": {
+      "en_US": "Deluge is a lightweight, cross-platform BitTorrent client. It features full encryption, a web-based user interface, and an extensible plugin system. The application allows users to manage and automate torrent downloads remotely or locally."
+    },
+    "tips": [
+      "Change the password by going to Preferences->Interface->Password."
+    ]
   }
 }

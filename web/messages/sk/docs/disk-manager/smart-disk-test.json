@@ -30,7 +30,7 @@
     "rows": [
       {
         "action": "Rýchly zdravotný stav",
-        "whatRich": "Celkový stav PASSED/FAILED a kľúčové atribúty.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) alebo <code>nvme smart-log</code> (NVMe).",
+        "whatRich": "Celkový stav PASSED/FAILED a kľúčové atribúty.<br></br><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) alebo <code>nvme smart-log</code> (NVMe).",
         "dur": "Okamžite"
       },
       {

@@ -2957,10 +2957,10 @@ configure_fastfetch() {
 
     while true; do
         # Define logo options
-        local logo_options=("ProxMenux" "Proxmox (default)" "JC Channel" "Comunidad Helper-Scripts" "Home-Labs-Club" "Proxmology" "Custom")
+        local logo_options=("ProxMenux" "Proxmox (default)" "JC Channel" "Helper-Scripts (tteck)" "Community Scripts" "Home-Labs-Club" "Proxmology" "Custom")
         local choice
 
-        choice=$(whiptail --title "$(translate "Fastfetch Logo Selection")" --menu "$(translate "Choose a logo for Fastfetch:")" 20 78 7 \
+        choice=$(whiptail --title "$(translate "Fastfetch Logo Selection")" --menu "$(translate "Choose a logo for Fastfetch:")" 20 78 8 \
             "1" "${logo_options[0]}" \
             "2" "${logo_options[1]}" \
             "3" "${logo_options[2]}" \
@@ -2968,6 +2968,7 @@ configure_fastfetch() {
             "5" "${logo_options[4]}" \
             "6" "${logo_options[5]}" \
             "7" "${logo_options[6]}" \
+            "8" "${logo_options[7]}" \
             3>&1 1>&2 2>&3)
 
         case $choice in
@@ -3011,6 +3012,17 @@ configure_fastfetch() {
                 break
                 ;;
             5)
+                msg_info "$(translate "Downloading Community Scripts logo...")"
+                local community_scripts_logo_path="$logos_dir/Community_Scripts.txt"
+                if download_fastfetch_logo "$community_scripts_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/Community_Scripts.txt"; then
+                    apply_fastfetch_config --arg path "$community_scripts_logo_path" '. + {logo: $path}'
+                    msg_ok "$(translate "Community Scripts logo applied")"
+                else
+                    msg_error "$(translate "Failed to download Community Scripts logo")"
+                fi
+                break
+                ;;
+            6)
                 msg_info "$(translate "Downloading Home-Labs-Club logo...")"
                 local home_lab_club_logo_path="$logos_dir/home_labsclub.txt"
                 if download_fastfetch_logo "$home_lab_club_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/home_labsclub.txt"; then
@@ -3021,7 +3033,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            6)
+            7)
                 msg_info "$(translate "Downloading Proxmology logo...")"
                 local proxmology_logo_path="$logos_dir/proxmology.txt"
                 if download_fastfetch_logo "$proxmology_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/proxmology.txt"; then
@@ -3032,7 +3044,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            7)
+            8)
                 whiptail --title "$(translate "Custom Logo Instructions")" --msgbox "$(translate "To use a custom Fastfetch logo, place your ASCII logo file in:\n\n/usr/local/share/fastfetch/logos/\n\nThe file should not exceed 35 lines to fit properly in the terminal.\n\nPress OK to continue and select your logo.")" 15 70
 
                 local logo_files=($(ls "$logos_dir"/*.txt 2>/dev/null))

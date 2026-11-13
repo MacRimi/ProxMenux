@@ -25,5 +25,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Double Commander"
+    },
+    "tagline": {
+      "en_US": "Double Commander is a free cross platform open source file manager with two panels side by side. It is inspired by Total Commander and features some new ideas."
+    },
+    "description": {
+      "en_US": "Double Commander is an open source file manager featuring two panels side by side, inspired by Total Commander. It provides dual-pane navigation to organize, browse, and manipulate files and directories efficiently. It is useful for managing everyday file operations and handling compressed archive formats."
+    }
   }
 }

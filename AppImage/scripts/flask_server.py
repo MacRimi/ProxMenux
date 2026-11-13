@@ -54,6 +54,7 @@ import urllib.parse
 import uuid
 import disk_identity
 import ovs_topology
+import system_board_info
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -105,8 +106,9 @@ from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
+from notification_templates import health_linked_event  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
+from jwt_middleware import require_auth, require_admin_or_ticket, require_admin_scope, has_full_access  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -341,6 +343,35 @@ def check_fail2ban_ban():
             "success": False,
             "message": "Access denied. Your IP has been temporarily banned due to too many failed login attempts."
         }), 403
+
+
+# Until someone chooses how to reach the Monitor, only the first-run screen is
+# served: its static files and the routes that take that decision. The
+# internal routes keep their own loopback checks, so the scripts and Proxmox
+# itself reach them as before.
+_UNDECIDED_ROUTES = frozenset({
+    '/api/auth/status', '/api/auth/setup', '/api/auth/mode',
+    '/api/auth/skip', '/api/auth/decline',
+    '/api/notifications/webhook', '/api/updates/post-install/scan',
+})
+
+
+@app.before_request
+def require_access_decision():
+    path = request.path or '/'
+    if not (path.startswith('/api/') or path.startswith('/ws/')):
+        return None
+    if path in _UNDECIDED_ROUTES or path.startswith('/api/internal/'):
+        return None
+    try:
+        from auth_manager import access_mode
+        undecided = access_mode() == 'undecided'
+    except Exception:
+        undecided = True  # An unreadable state never opens the Monitor.
+    if undecided:
+        return jsonify({"error": "setup_required",
+                        "message": "Choose how to access ProxMenux Monitor first"}), 403
+    return None
 
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
@@ -1505,35 +1536,10 @@ def _health_collector_loop():
             details = result.get('details', {})
             degraded = []
             
-            # Map health categories to specific event types for toggle checks.
-            # `_CATEGORY_EVENT_MAP` is keyword-based for sub-types (network_down vs
-            # network_latency). `_BROAD_CATEGORY_TO_EVENT` is the catch-all fallback
-            # used when no keyword matches: if the user has muted the direct
-            # Resources/Storage event for a category (e.g. ram_high, cpu_high), do
-            # not re-emit the same condition under the Health Monitor banner. This
-            # closes the "muted ram_high but still got health_degraded for memory"
-            # double-event reported by users.
-            _CATEGORY_EVENT_MAP = {
-                # (category, reason_contains) -> event_type to check
-                ('network', 'latency'): 'network_latency',
-                ('network', 'connectivity'): 'network_down',
-                ('network', 'unreachable'): 'network_down',
-            }
-            _BROAD_CATEGORY_TO_EVENT = {
-                'cpu': 'cpu_high',
-                'memory': 'ram_high',
-                'load': 'load_high',
-                'temperature': 'temp_high',
-                'disk': 'disk_space_low',
-                'disks': 'disk_io_error',
-                'smart': 'disk_io_error',
-                'zfs': 'disk_io_error',
-                'storage': 'storage_unavailable',
-                # 'network' intentionally not here — handled by the keyword map above.
-                'pve_services': 'service_fail',
-                'security': 'auth_fail',
-                'updates': 'update_summary',
-            }
+            # Each health category is linked to the direct event that reports
+            # the same condition (network latency, RAM, CPU...). When every
+            # channel has muted that event, the category is not re-sent under
+            # the Health Monitor banner; each channel filters it again.
 
             # Sub-categories already rolled up into details['storage']
             # by _check_proxmox_storage_status. Emitting them as their
@@ -1559,26 +1565,12 @@ def _health_collector_loop():
 
                 if cur_rank > prev_rank and cur_rank >= 2:  # WARNING or CRITICAL
                     reason = cat_data.get('reason', f'{cat_key} status changed to {cur_status}')
-                    reason_lower = reason.lower()
                     cat_name = _CAT_NAMES.get(cat_key, cat_key)
 
-                    # Check if this specific notification type is enabled.
-                    skip_notification = False
-                    keyword_matched = False
-                    for (map_cat, map_keyword), event_type in _CATEGORY_EVENT_MAP.items():
-                        if cat_key == map_cat and map_keyword in reason_lower:
-                            keyword_matched = True
-                            if not notification_manager.is_event_enabled(event_type):
-                                skip_notification = True
-                            break
-
-                    # Broad category fallback — only when no keyword sub-type matched.
-                    # If the user explicitly muted the linked Resources/Storage event,
-                    # don't surface the same condition through health_degraded.
-                    if not keyword_matched and not skip_notification:
-                        broad_event = _BROAD_CATEGORY_TO_EVENT.get(cat_key)
-                        if broad_event and not notification_manager.is_event_enabled(broad_event):
-                            skip_notification = True
+                    linked_event = health_linked_event(cat_key, reason)
+                    skip_notification = bool(
+                        linked_event and not notification_manager.is_event_enabled(linked_event)
+                    )
 
                     # Startup grace period: skip transient issues from categories
                     # that typically need time to stabilize after boot
@@ -6278,6 +6270,18 @@ def _resolve_bridge_owner(iface_name):
     return master
 
 
+# The OVS port a guest interface reaches. Behind the Proxmox firewall the
+# guest's veth/tap sits on fwbrNiM, and its VLAN tag and trunks are set on the
+# fwlnNoM port of the OVS bridge.
+def _ovs_port_detail(iface_name, ports):
+    if iface_name in ports:
+        return ports[iface_name]
+    master = _iface_master(iface_name)
+    if master and master.startswith('fwbr'):
+        return ports.get(re.sub(r'i(\d+)$', r'o\1', 'fwln' + master[len('fwbr'):]), {})
+    return {}
+
+
 # ─── ethtool: max link speed per NIC ────────────────────────────
 # Parses "Supported link modes:" — the highest baseT value is the
 # hardware ceiling. Cached per-iface because subprocess + parse runs
@@ -6736,7 +6740,7 @@ def get_network_info():
             master = ovs.get('owners', {}).get(interface_name) or master
             if master:
                 interface_info['bridge_owner'] = master
-            interface_info.update(ovs.get('ports', {}).get(interface_name, {}))
+            interface_info.update(_ovs_port_detail(interface_name, ovs.get('ports', {})))
 
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
@@ -8351,9 +8355,9 @@ def get_detailed_gpu_info(gpu):
                             temp_elem = gpu_elem.find('.//temperature/gpu_temp')
                             if temp_elem is not None and temp_elem.text:
                                 try:
-                                    # Remove ' C' suffix and convert to int
+                                    # Recent drivers report decimals, such as "70.57 C".
                                     temp_str = temp_elem.text.replace(' C', '').strip()
-                                    detailed_info['temperature'] = int(temp_str)
+                                    detailed_info['temperature'] = float(temp_str)
                                     # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                     pass
                                     data_retrieved = True
@@ -9437,41 +9441,8 @@ def _get_hardware_info_uncached():
         try:
             result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                cpu_info = {}
-                for line in result.stdout.split('\n'):
-                    if ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        
-                        if key == 'Model name':
-                            cpu_info['model'] = value
-                        elif key == 'CPU(s)':
-                            cpu_info['total_threads'] = int(value)
-                        elif key == 'Core(s) per socket':
-                            cpu_info['cores_per_socket'] = int(value)
-                        elif key == 'Socket(s)':
-                            cpu_info['sockets'] = int(value)
-                        elif key == 'CPU MHz':
-                            cpu_info['current_mhz'] = float(value)
-                        elif key == 'CPU max MHz':
-                            cpu_info['max_mhz'] = float(value)
-                        elif key == 'CPU min MHz':
-                            cpu_info['min_mhz'] = float(value)
-                        elif key == 'Virtualization':
-                            cpu_info['virtualization'] = value
-                        elif key == 'L1d cache':
-                            cpu_info['l1d_cache'] = value
-                        elif key == 'L1i cache':
-                            cpu_info['l1i_cache'] = value
-                        elif key == 'L2 cache':
-                            cpu_info['l2_cache'] = value
-                        elif key == 'L3 cache':
-                            cpu_info['l3_cache'] = value
-                
-                hardware_data['cpu'] = cpu_info
-                # print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
-                pass
+                # Tolerant parsing: lscpu prints "-" for Socket(s) on ARM.
+                hardware_data['cpu'] = system_board_info.parse_lscpu(result.stdout)
         except Exception as e:
             # print(f"[v0] Error getting CPU info: {e}")
             pass
@@ -9498,6 +9469,10 @@ def _get_hardware_info_uncached():
         except Exception as e:
             # print(f"[v0] Error getting motherboard info: {e}")
             pass
+        
+        # Boards without DMI (Raspberry Pi, SBCs) describe themselves in the device tree
+        if not hardware_data['motherboard']:
+            hardware_data['motherboard'] = system_board_info.read_device_tree_board()
         
         # BIOS Information
         try:
@@ -9697,6 +9672,15 @@ def _get_hardware_info_uncached():
                         
                         if model_family:
                             storage_device['family'] = model_family
+
+                        # SD cards and eMMC: no SMART, so take what the
+                        # card itself reports to the kernel.
+                        card = disk_identity.mmc_card(disk_name)
+                        for key in ('model', 'serial'):
+                            if card.get(key) and storage_device.get(key) in (None, '', 'Unknown'):
+                                storage_device[key] = card[key]
+                        if card.get('interface'):
+                            storage_device['interface'] = card['interface']
                         
                         storage_devices.append(storage_device)
                 
@@ -9720,7 +9704,7 @@ def _get_hardware_info_uncached():
                             gpu_name = parts[0]
                             mem_total = parts[1]
                             mem_used = parts[2]
-                            temp = parts[3] if parts[3] != 'N/A' else None
+                            temp = parts[3].strip() if parts[3].strip() not in ('N/A', '[N/A]') else None
                             power = parts[4] if parts[4] != 'N/A' else None
                             gpu_util = parts[5] if parts[5] != 'N/A' else None
                             mem_util = parts[6] if parts[6] != 'N/A' else None
@@ -9748,7 +9732,7 @@ def _get_hardware_info_uncached():
                                 'slot': pci_slot,
                                 'memory_total': mem_total,
                                 'memory_used': mem_used,
-                                'temperature': int(temp) if temp else None,
+                                'temperature': float(temp) if temp else None,
                                 'power_draw': power,
                                 'utilization_gpu': gpu_util,
                                 'utilization_memory': mem_util,
@@ -10360,6 +10344,9 @@ def api_processes():
             results.sort(key=lambda r: r['mem'], reverse=True)
             processes = results[:limit]
 
+        if not has_full_access():
+            # A command line can carry a password: read-only access sees the name.
+            processes = [dict(p, cmdline=p.get('command') or '') for p in processes]
         return jsonify({
             'processes': processes,
             'sort': sort,
@@ -10532,6 +10519,8 @@ def api_process_detail(pid):
             info['fd_count'] = None
 
         info['captured_at'] = int(time.time())
+        if not has_full_access():
+            info['cmdline'] = None  # It can carry a password.
         return jsonify(info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -14487,6 +14476,43 @@ def api_apps_catalog():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/apps/icon-themes', methods=['GET'])
+@require_auth
+def api_apps_icon_themes():
+    """Catalog icons that need another version on the dark theme:
+    {icon_url: light_version_url | "invert"}."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.oci_icon_themes())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items', methods=['GET'])
+@require_auth
+def api_catalog_items():
+    """Every item of the Catalog tab: OCI applications and Community Scripts."""
+    try:
+        import catalog_tab
+        return jsonify(catalog_tab.list_items(request.args.get('lang', 'en')))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items/<kind>/<item_id>', methods=['GET'])
+@require_auth
+def api_catalog_item(kind, item_id):
+    """The sheet of one item of the Catalog tab."""
+    try:
+        import catalog_tab
+        detail = catalog_tab.item_detail(kind, item_id, request.args.get('lang', 'en'))
+        if detail is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify(detail)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/apps/github-token', methods=['GET'])
 @require_auth
 def api_apps_github_token_status():
@@ -15818,6 +15844,17 @@ def api_vms_modal_cache_all():
 
 
 # The endpoint returns the complete IP information.
+# Guest settings that hold credentials: left out for read-only access.
+_GUEST_SECRET_KEYS = ('cipassword', 'sshkeys')
+
+
+def _guest_details_for_reader(details):
+    if has_full_access() or not isinstance(details.get('config'), dict):
+        return details
+    config = {key: value for key, value in details['config'].items() if key not in _GUEST_SECRET_KEYS}
+    return dict(details, config=config)
+
+
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 @require_auth
 def get_vm_config(vmid):
@@ -15825,7 +15862,7 @@ def get_vm_config(vmid):
     try:
         cached = _vm_conf_cache_get(_vm_details_cache, 'details', vmid, _VM_DETAILS_TTL)
         if cached is not None:
-            return jsonify(_lxc_runtime_details(cached))
+            return jsonify(_guest_details_for_reader(_lxc_runtime_details(cached)))
 
         # Taken before reading the .conf, so an edit during the build is seen next time.
         signature = _vm_conf_signature(vmid)
@@ -15865,7 +15902,7 @@ def get_vm_config(vmid):
             response_data['hardware_info'] = hardware_info
 
         _vm_conf_cache_put(_vm_details_cache, 'details', vmid, response_data, signature)
-        return jsonify(_lxc_runtime_details(response_data))
+        return jsonify(_guest_details_for_reader(_lxc_runtime_details(response_data)))
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -16533,8 +16570,10 @@ def execute_script():
         script_path = os.path.join(BASE_SCRIPTS_DIR, script_relative_path)
 
 
-        script_path = os.path.abspath(script_path)
-        if not script_path.startswith(BASE_SCRIPTS_DIR):
+        # Inside the scripts folder only: a sibling such as `scripts-other`
+        # shares the prefix, and a symlink could point anywhere.
+        script_path = os.path.realpath(script_path)
+        if os.path.commonpath([script_path, os.path.realpath(BASE_SCRIPTS_DIR)]) != os.path.realpath(BASE_SCRIPTS_DIR):
             return jsonify({'error': 'Invalid script path'}), 403
 
         
@@ -18605,7 +18644,7 @@ def api_pbs_encryption_import():
 
 
 @app.route('/api/host-backups/pbs-encryption/download-keyfile', methods=['GET'])
-@require_auth
+@require_admin_or_ticket
 def api_pbs_encryption_download_keyfile():
     """Send the installed PBS keyfile as a downloadable attachment.
     This is how the operator gets an offsite copy without exposing
@@ -21540,7 +21579,7 @@ def api_host_backups_remote_archive_export_status(task_id):
 
 
 @app.route('/api/host-backups/remote-archives/export/<task_id>/download', methods=['GET'])
-@require_auth_or_ticket
+@require_admin_or_ticket
 def api_host_backups_remote_archive_export_download(task_id):
     """Stream the packed export to the browser. Same auth + send_file
     pattern as the local archive download. Cleans up the tarball after
@@ -22340,7 +22379,7 @@ def api_host_backups_archive_prepare_restore(archive_id):
 
 
 @app.route('/api/host-backups/archives/<path:archive_id>/download', methods=['GET'])
-@require_auth_or_ticket
+@require_admin_or_ticket
 def api_host_backups_archive_download(archive_id):
     """Stream the .tar.zst archive back to the operator with a sane
     Content-Disposition. send_file handles range requests + streaming
@@ -23208,6 +23247,11 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                         and app.get('helper_slug') != 'docker']
             if eligible:
                 filtered_targets.extend(eligible)
+            elif any(other != 'apps' for other in targets):
+                # "apps" stands for every application with an update method.
+                # With none, the other targets are the whole run; only an
+                # application chosen by name reports its missing method.
+                continue
             else:
                 deferred_targets.append(value)
                 reasons.append('no application update method has been selected or is available')
@@ -23733,6 +23777,14 @@ if __name__ == '__main__':
         print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
+
+    # The Catalog tab opens with its list already prepared.
+    try:
+        import catalog_tab
+        if hasattr(catalog_tab, 'warm'):
+            threading.Thread(target=catalog_tab.warm, daemon=True, name='catalog-prewarm').start()
+    except Exception as e:
+        print(f"[ProxMenux] Catalog prewarm failed to start: {e}")
 
     # Linked Monitors for the header node selector, renewed every 5 minutes.
     try:

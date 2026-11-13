@@ -16,5 +16,16 @@
       "required": false,
       "prompt": "Extra parameters for minisatip (optional)"
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "minisatip"
+    },
+    "tagline": {
+      "en_US": "Minisatip is a multi-threaded satip server version 1.2 that runs under Linux and it was tested with DVB-S, DVB-S2, DVB-T, DVB-T2, DVB-C, DVB-C2, ATSC and ISDB-T cards."
+    },
+    "description": {
+      "en_US": "Minisatip is a multi-threaded SAT>IP server designed for Linux systems. It streams digital television signals across a local network and supports DVB-S, DVB-S2, DVB-T, DVB-T2, DVB-C, DVB-C2, ATSC, and ISDB-T tuner cards. The application allows tuner hardware to be shared with network-connected clients and media server platforms like TVHeadend."
+    }
   }
 }

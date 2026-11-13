@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Host a Mumble voice chat server with TCP and UDP client connectivity. The official image persists its SQLite database and configuration in /data; the SuperUser password is generated at install time."
+    },
+    "description": {
+      "en_US": "Mumble Server is an open-source voice chat server designed for low-latency, high-quality audio communication. It manages connected clients, channels, and encrypted voice streams for connected users. It provides self-hosted group voice infrastructure for communities and teams."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/mumble-voip/mumble/HEAD/screenshots/Mumble.png"
+    ]
+  }
+}

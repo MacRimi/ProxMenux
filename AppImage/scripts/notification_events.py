@@ -1872,6 +1872,16 @@ class JournalWatcher:
             }, entity='cluster', entity_id=self._hostname)
             return
         
+        # A peer whose Corosync is stopped cleanly says so before it leaves:
+        #   [CFG   ] Node 2 was shut down by sysadmin
+        stopped = re.search(r'\bNode (\d+) was shut down by sysadmin', msg)
+        if stopped:
+            node_name = self._corosync_node_names().get(stopped.group(1))
+            if node_name:
+                with _JOURNAL_EMIT_LOCK:
+                    self._cluster_clean_stops()[node_name] = time.time()
+            return
+
         # Corosync membership change. This is what corosync really logs on
         # the surviving nodes when a peer leaves or comes back:
         #   [TOTEM ] A new membership (1.55) was formed. Members left: 2
@@ -1906,11 +1916,17 @@ class JournalWatcher:
     # still away after this grace; a quick return is reported as one rejoin.
     CLUSTER_LEAVE_GRACE_SECONDS = 60
     CLUSTER_OWN_JOIN_WINDOW_SECONDS = 30
+    CLUSTER_CLEAN_STOP_WINDOW_SECONDS = 30
 
     def _cluster_pending(self) -> Dict[str, Any]:
         if not hasattr(self, '_cluster_pending_nodes'):
             self._cluster_pending_nodes = {}
         return self._cluster_pending_nodes
+
+    def _cluster_clean_stops(self) -> Dict[str, float]:
+        if not hasattr(self, '_cluster_clean_stop_at'):
+            self._cluster_clean_stop_at = {}
+        return self._cluster_clean_stop_at
 
     def _hold_node_disconnect(self, node_name: str):
         pending = self._cluster_pending()
@@ -1935,14 +1951,19 @@ class JournalWatcher:
     def _node_rejoined(self, node_name: str):
         with _JOURNAL_EMIT_LOCK:
             held = self._cluster_pending().pop(node_name, None)
+            stopped_at = self._cluster_clean_stops().pop(node_name, None)
         if held is not None:
             left_at, timer = held
             timer.cancel()
-            self._emit('node_reconnect', 'INFO', {
+            data = {
                 'node_name': node_name,
                 'downtime_seconds': max(1, int(round(time.time() - left_at))),
                 'hostname': self._hostname,
-            }, entity='cluster', entity_id=node_name)
+            }
+            # The clean stop is logged just before the node leaves.
+            if stopped_at is not None and 0 <= left_at - stopped_at <= self.CLUSTER_CLEAN_STOP_WINDOW_SECONDS:
+                data['clean_stop'] = True
+            self._emit('node_reconnect', 'INFO', data, entity='cluster', entity_id=node_name)
             return
         if time.time() - getattr(self, '_cluster_own_join_at', 0) < self.CLUSTER_OWN_JOIN_WINDOW_SECONDS:
             return  # we joined them, they did not come back
@@ -3034,6 +3055,27 @@ class PollingCollector:
     
     # ── Health errors (independent of suppression) ─────────────
     
+    _STORAGE_EVENT_PREFIXES = (
+        ('lxc_disk_', 'lxc_disk_low'),
+        ('vm_disk_', 'vm_disk_low'),
+        ('lxc_mount_', 'lxc_mount_low'),
+        ('pve_storage_full_', 'pve_storage_full'),
+        ('zfs_pool_full_', 'zfs_pool_full'),
+        ('disk_space_', 'disk_space_low'),
+        ('storage_unavailable_', 'storage_unavailable'),
+        ('mount_stale_', 'mount_stale'),
+        ('mount_readonly_', 'mount_readonly'),
+    )
+
+    def _alert_event_type(self, category: str, error_key: str) -> str:
+        """The event an active health error is reported as. Storage errors
+        use the specific template their key prefix names."""
+        if category == 'storage':
+            for prefix, event_type in self._STORAGE_EVENT_PREFIXES:
+                if error_key.startswith(prefix):
+                    return event_type
+        return self._CATEGORY_TO_EVENT_TYPE.get(category, 'system_problem')
+
     def _check_persistent_health(self):
         """Read ALL active errors from health_persistence and decide
         whether each one warrants a notification right now.
@@ -3149,36 +3191,8 @@ class PollingCollector:
                 if error_is_stale:
                     continue
             
-            # Map to our event type
-            event_type = self._CATEGORY_TO_EVENT_TYPE.get(category, 'system_problem')
+            event_type = self._alert_event_type(category, error_key)
             entity, eid = self._ENTITY_MAP.get(category, ('node', ''))
-
-            # Refine the storage event_type from the error_key prefix.
-            # The category-only mapping was sending every storage error
-            # through the generic `storage_unavailable` template — the
-            # specialised templates (lxc_disk_low, mount_stale, etc.)
-            # were never reached. Sprint 14.5 adds three new prefixes
-            # (lxc_mount_, pve_storage_full_, zfs_pool_full_) and at the
-            # same time fixes the dispatch for the existing ones.
-            if category == 'storage':
-                if error_key.startswith('lxc_disk_'):
-                    event_type = 'lxc_disk_low'
-                elif error_key.startswith('vm_disk_'):
-                    event_type = 'vm_disk_low'
-                elif error_key.startswith('lxc_mount_'):
-                    event_type = 'lxc_mount_low'
-                elif error_key.startswith('pve_storage_full_'):
-                    event_type = 'pve_storage_full'
-                elif error_key.startswith('zfs_pool_full_'):
-                    event_type = 'zfs_pool_full'
-                elif error_key.startswith('disk_space_'):
-                    event_type = 'disk_space_low'
-                elif error_key.startswith('storage_unavailable_'):
-                    event_type = 'storage_unavailable'
-                elif error_key.startswith('mount_stale_'):
-                    event_type = 'mount_stale'
-                elif error_key.startswith('mount_readonly_'):
-                    event_type = 'mount_readonly'
             
             # ── Disk I/O notification policy ──
             # Disk I/O errors are ALWAYS notified (even when SMART says Passed)
@@ -3411,6 +3425,8 @@ class PollingCollector:
                 'first_seen': first_seen,
                 'duration': duration_label,
                 'is_recovery': True,
+                # A channel only hears of a recovery whose alert it accepts.
+                'alert_event_type': self._alert_event_type(category, key),
             }
             # Spread the original details blob so the resolved notification
             # can use the same {storage_name}/{vm_name}/{device} placeholders

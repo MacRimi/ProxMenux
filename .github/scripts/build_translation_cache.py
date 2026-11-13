@@ -54,6 +54,7 @@ PROTECTED_TECHNICAL_TERMS = (
     "feranick/gasket-driver",
     "libedgetpu1-std",
     "Proxmox VE Helper-Scripts",
+    "Community Scripts",
     "Docker Compose",
     "gasket-driver",
     "gasket-dkms",
@@ -374,9 +375,31 @@ def extract_python_texts(directories: Iterable[Path]) -> list[str]:
     return sorted(found)
 
 
-def extract_catalog_texts(directories: Iterable[Path]) -> list[str]:
+def extract_menu_index_texts(scripts_dir: Path) -> list[str]:
+    """What the Monitor's Catalog tab shows of the menu's options (the summary
+    of their card, the description and the notes of their sheet), stored in
+    English in the menu search index."""
+    try:
+        index = json.loads((scripts_dir / "menus/search_index.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    found: set[str] = set()
+    for item in index if isinstance(index, list) else []:
+        if not isinstance(item, dict):
+            continue
+        texts = [item.get("summary"), item.get("about"), *(item.get("notes") or [])]
+        found |= {text.strip() for text in texts if isinstance(text, str) and text.strip()}
+    return sorted(found)
+
+
+def extract_catalog_texts(directories: Iterable[Path], descriptions: bool = False) -> list[str]:
     """User-visible text stored in the OCI catalog JSON: prompts, labels,
-    warnings, completion notes, category labels and descriptive usernames."""
+    warnings, completion notes, category labels and descriptive usernames.
+
+    With ``descriptions``, also what the Monitor's Catalog tab shows of every
+    application: its description, though it has a tagline, the description
+    the index gives its card, and the notes of its recipe. Only the language
+    cache asks for them; the terminal checks keep their own set of strings."""
     found: dict[str, None] = {}
 
     def add(value: object) -> None:
@@ -399,7 +422,12 @@ def extract_catalog_texts(directories: Iterable[Path]) -> list[str]:
                     # catalog stores the source English; the translation lives
                     # in the language cache with every other string.
                     tagline = (child.get("tagline") or {}).get("en_US")
-                    add(tagline or (child.get("description") or {}).get("en_US"))
+                    description = (child.get("description") or {}).get("en_US")
+                    add(tagline or description)
+                    if descriptions:
+                        add(description)
+                        for note in child.get("tips") or []:
+                            add(note)
                 elif child_key == "labels" and key == "" and isinstance(child, dict):
                     for item in child.values():
                         add(item)
@@ -411,9 +439,14 @@ def extract_catalog_texts(directories: Iterable[Path]) -> list[str]:
     for directory in directories:
         for path in sorted(directory.rglob("*.json")):
             try:
-                walk(json.loads(path.read_text(encoding="utf-8")))
+                content = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 continue
+            walk(content)
+            if descriptions and path.name == "index.json" and isinstance(content, dict):
+                for application in content.get("applications") or []:
+                    if isinstance(application, dict) and not application.get("hidden"):
+                        add(application.get("description"))
     return sorted(found)
 
 
@@ -528,10 +561,12 @@ def clean_translation(value: str) -> str:
         "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
         "|Preložiť|Prelož|Preloz"          # sk
         "|Översätta|Översätt"              # sv
+        "|Перевести|Переведите|Перевод"    # ru
     )
     context_labels = (
         "Context|Contexto|Contexte|Kontext|Contesto"
         "|Sammanhang"                      # sv alternate
+        "|Контекст"                        # ru
     )
     value = re.sub(
         rf"^.*?({translate_labels}){separator}",
@@ -593,7 +628,15 @@ def translate_text(
     translated = restore_technical_terms(clean_translation(translated), protected_terms)
     translated = restore_placeholders(translated, placeholders)
     assert_no_sentinel_residue(translated)
+    translated = restore_leading_capital(text, translated)
     return restore_sentence_spacing(translated) if translated else text
+
+
+def restore_leading_capital(source: str, translated: str) -> str:
+    """Stripping the context prompt can leave the sentence starting lowercase."""
+    if source[:1].isupper() and translated[:1].islower():
+        return translated[0].upper() + translated[1:]
+    return translated
 
 
 def load_language_cache(path: Path) -> dict[str, str]:
@@ -778,9 +821,10 @@ def main() -> int:
         if directory.is_dir():
             texts += extract_translate_texts(directory.resolve())
     texts += extract_python_texts(d.resolve() for d in args.python_dir if d.is_dir())
+    texts += extract_menu_index_texts(scripts_dir)
     catalog_dirs = [d.resolve() for d in args.catalog_dir if d.is_dir()]
     protect_catalog_titles(catalog_dirs)
-    texts += extract_catalog_texts(catalog_dirs)
+    texts += extract_catalog_texts(catalog_dirs, descriptions=True)
     texts = sorted(dict.fromkeys(text for text in texts if "$" not in text and "`" not in text))
     if args.limit > 0:
         texts = texts[: args.limit]

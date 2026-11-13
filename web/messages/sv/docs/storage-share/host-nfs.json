@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Öppna verktyget",
-    "body": "Öppna <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong> i ProxMenux huvudmeny. Undermenyn har fyra alternativ:",
+    "body": "Öppna <strong>Storage &amp; Share Manager → Add NFS share as Proxmox Storage</strong> i ProxMenux huvudmeny. Undermenyn har fyra alternativ (plus Exit):",
     "imageAlt": "NFS-värdmeny — Montera / Visa / Ta bort / Testa anslutning"
   },
   "howRuns": {
@@ -124,17 +124,17 @@
   },
   "view": {
     "heading": "Visa konfigurerade NFS lager",
-    "body": "Listar varje NFS-post i Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) med server, export, innehållstyper, monteringsväg och levande status. <strong>Note:</strong> visar endast pvesm-registrerade lager - fstab-bara fästen är inte listade här. Kontrollera dem med <code>findmnt -t nfs</code> eller <code>grep nfs /etc/fstab</code>."
+    "body": "Listar NFS-lagringarna registrerade i Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) med server, export, innehållstyper, monteringsväg och levande status, följt av värdens NFS-monteringar i <code>/etc/fstab</code> med server, export, sökväg, alternativ och om var och en är monterad."
   },
   "remove": {
     "heading": "Ta bort NFS lagring",
-    "body": "Kör <code>pvesm remove &lt;storage-id&gt;</code> efter en bekräftelse som visar server / export / innehåll. Endast Proxmox-side-registreringen tas bort - <strong>Den avlägsna NFS-servern själv är aldrig rörd</strong>, inga filer raderas. För att ta bort en fstab-bara montering, redigera <code>/etc/fstab</code> för hand och kör <code>umount &lt;path&gt;</code>.",
+    "body": "Väljaren listar både Proxmox-lagringar (<code>[pvesm]</code>) och värdens fstab-monteringar (<code>[fstab]</code>). För en Proxmox-lagring körs <code>pvesm remove &lt;storage-id&gt;</code> efter en bekräftelse som visar server / export / innehåll. För en fstab-montering avmonteras sökvägen, <code>/etc/fstab</code> säkerhetskopieras till <code>/etc/fstab.proxmenux.bak</code>, raden tas bort och monteringskatalogen raderas om den är tom. <strong>Den avlägsna NFS-servern själv är aldrig rörd</strong>, inga filer raderas.",
     "warnTitle": "Säkerhetskopiera beroenden först",
     "warnBody": "Om VM, CT eller backup jobb fortfarande refererar till detta lagringsutrymme (genom ID), ta bort det lämnar dem pekar på en lagring som inte längre finns. Proxmox kommer att flagga felet men inte städa upp. Flytta eller släppa dessa referenser först, sedan ta bort lagringen."
   },
   "test": {
     "heading": "Test NFS-anslutning",
-    "body": "Kör ett diagnostiskt pass över varje NFS-lagring registrerad i Proxmox: kontrollerar att <code>showmount</code> är tillgänglig, att <code>rpcbind</code> körs, pings varje server, probes port 2049, kallar <code>showmount -e</code>, och slutligen rapporterar Proxmox egen vy (<code>pvesm status</code>). Bra första stopp när en förvaring visar som <em>inactive</em> i Proxmox UI."
+    "body": "Kör ett diagnostiskt pass över varje NFS-lagring registrerad i Proxmox och varje NFS-montering i värdens <code>/etc/fstab</code>: kontrollerar att <code>showmount</code> är tillgänglig, att <code>rpcbind</code> körs, pings varje server, probes port 2049, kallar <code>showmount -e</code>, och slutligen rapporterar Proxmox egen vy (<code>pvesm status</code>). Bra första stopp när en förvaring visar som <em>inactive</em> i Proxmox UI."
   },
   "troubleshoot": {
     "heading": "Felsökning",

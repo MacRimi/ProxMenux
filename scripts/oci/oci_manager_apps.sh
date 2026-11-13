@@ -32,8 +32,9 @@ initialize_cache
 
 ensure_oci_dependencies() {
     local -a missing=()
-    # One Python start when both are present; each is checked only if not.
-    if ! python3 -c 'import yaml, jsonschema' >/dev/null 2>&1; then
+    # Check installed modules without importing jsonschema's whole dependency
+    # tree in a throwaway process before starting the actual engine.
+    if ! python3 -c 'from importlib.util import find_spec; raise SystemExit(not all(find_spec(name) for name in ("yaml", "jsonschema")))' >/dev/null 2>&1; then
         python3 -c 'import yaml' >/dev/null 2>&1 || missing+=("python3-yaml")
         python3 -c 'import jsonschema' >/dev/null 2>&1 || missing+=("python3-jsonschema")
     fi

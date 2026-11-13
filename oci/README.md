@@ -148,11 +148,18 @@ downloaded and no containers are changed. The menu remains usable during the
 check. Leaving the OCI menu closes its request; the Monitor may finish
 metadata queries already in progress before stopping the remaining checks.
 
-Open **Updates available (N)** to choose applications with Space. Nothing is
-preselected, even when there is only one update. **Select all** at the top
-includes every listed application. After reviewing the selection, each
-application uses the existing update workflow, including its identity checks,
-backup prompts and recovery. Cancelling or failing an update stops the batch.
+Open **Updates available (N)** to choose applications with Space. Nothing is preselected, even when there is only one update. **Select all** at the top includes every listed application. A selection of one application keeps the usual single-application workflow, including the option to remove downloaded images afterwards. For several applications, each application uses the existing update workflow, including its identity checks, backup prompts and recovery. All application reviews, recommended-setting choices and temporary-backup storage choices are collected **before** the first update. A final confirmation starts the prepared batch; no questions or Enter pauses interrupt execution. Keep the terminal open until the final summary.
+
+Updates run sequentially through the existing lifecycle helpers, which retain their registry locks, backups, health checks and rollback. By default, a failed update stops the queue. An upfront option allows continuing after a failure that leaves the application in a valid installed state. Pending recovery, changed application identity/configuration or interruption always stops it. Interrupting terminates the current helper; if it leaves an incomplete transaction, the summary explicitly marks that application as requiring recovery and points to OCI management. An SSH disconnect may prevent displaying the summary; the private report and recovery journal remain available. The baseline for each application is captured after its own review dialogs finish, including any settings accepted during that review. Subsequent identity/configuration changes, including changes while later applications are being reviewed or earlier updates run, stop the queue and require a fresh review. Selecting multiple members of one coordinated application updates that application only once.
+
+The summary shows each application’s outcome and execution time, including
+applications not started. Private reports under
+`/usr/local/share/proxmenux/oci/instances/batch-updates/<id>/report.json`
+record preparation, execution and per-step timings without commands,
+configuration values or credentials. Temporary proposals are removed when the
+batch finishes. Reports are diagnostic records, not resumable queues.
+Cancelling preparation leaves services untouched; already approved external
+configuration adoption or temporary-backup storage choices may still be saved.
 The selection screen has only **Update** and **Cancel** buttons.
 
 Opening the menu reads the Monitor's existing `/etc/proxmenux/apps` results
@@ -202,6 +209,21 @@ An update is a transaction:
 5. The application is checked. When it answers, the record is published with the new digest. When it does not, the previous container is restored from the backup.
 
 Settings changed in Proxmox VE after the installation, such as memory, cores or start with the node, are carried into the new record. An operation interrupted by a closed terminal or a reboot is detected the next time the menu opens, and the previous installation can be recovered. A container restored from a backup on another host is registered again from the copy of the record it carries.
+
+Coordinated updates compare each installed image with its resolved candidate. If all members are unchanged, they finish without stopping or recreating the stack. Otherwise only changed images are recreated (completion jobs are also replayed when the stack changes). Every member is still stopped and backed up coherently: a new application can migrate an unchanged database. A failed update restores the whole recovery point, including members whose LXC configuration did not change. Explicit Recreate continues to rebuild every member.
+
+Temporary data holders use a minimal, networkless, never-started rootfs instead of extracting the application image a second time. This applies to standalone and coordinated image replacement, and to stack recovery. Journals record active phase durations in `phase_seconds`; time while an operation is interrupted is not counted as work by a subsequent recovery process.
+
+An opt-in experiment can use protected local ZFS recovery clones instead of a
+full temporary archive for eligible layouts. Conventional backups remain the
+default; this is not a portable/PBS backup. See [ZFS recovery](ZFS-RECOVERY.md)
+for eligibility, recovery boundaries and measurement guidance.
+
+Cache selection compares the archive's checked manifest/config metadata before
+reading and decompressing every blob. An obsolete archive is rejected cheaply;
+a matching candidate still receives full layer verification and a second
+metadata comparison before reuse. Both standalone and coordinated updates share
+this resolver. No verification result is persisted or reused across operations.
 
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
@@ -317,6 +339,7 @@ each key becomes a field of the oci-compose:
 | `cpu_shares` | `proxmox.installer_profile.resources.cpu_shares` | `cpuunits` of the LXC |
 | `ulimits` | `proxmox.installer_profile.resources.rlimits` | `lxc.prlimit.*` |
 | `shm_size` | `proxmox.installer_profile.tmpfs_mounts` | A tmpfs at `/dev/shm` of that size |
+| `tmpfs`, `volumes` with `type: tmpfs` | `proxmox.installer_profile.tmpfs_mounts` | A volatile native LXC mount, with no persistent disk or host directory |
 | `user`, `working_dir`, `entrypoint`, `command`, `hostname`, `group_add` | `proxmox.installer_profile.runtime` | The process the LXC starts, its user, directory and groups |
 | `extra_hosts` | `proxmox.installer_profile.extra_hosts` | Entries of `/etc/hosts` in the container |
 | `devices` | `proxmox.installer_profile.device_requests` | A `devN` entry for each device, confirmed during the installation |
@@ -436,6 +459,36 @@ The first TCP port is taken as the web address unless `first_run.endpoints` says
 
 The variables the image itself defines are imported with it and are not written here.
 
+An interactive, non-secret variable can declare a fixed list of `choices`.
+The installer shows its normal selection menu in both default and advanced
+mode; it saves the selected `value`, not its translated `label`. `example`
+selects the initial entry and must match one of the values. Values must be
+unique. Cancelling the menu cancels the installation.
+
+```json
+{
+  "name": "VERSION",
+  "example": "11",
+  "required": true,
+  "sensitive": false,
+  "prompt": "Windows version",
+  "choices": [
+    { "value": "11", "label": "Windows 11 Pro" },
+    { "value": "2025", "label": "Windows Server 2025" }
+  ]
+}
+```
+
+`choices` cannot be combined with a secret, `container_address` or
+`prompt_user: false`. Recipes without `choices` keep their existing behaviour.
+
+A choice can also declare `environment_defaults`, for example
+`{"RAM_SIZE": "512M", "CPU_CORES": "1"}` for a legacy operating system.
+These become the proposed values of variables declared **after** the selector;
+advanced mode can still change them. They cannot target undeclared variables,
+secrets, fixed variables, address substitutions or another selector. The saved
+recipe is not modified by the choice.
+
 **`volumes`**. One entry for each path that has to survive an update.
 
 | Field | Default | What it is |
@@ -448,6 +501,63 @@ The variables the image itself defines are imported with it and are not written 
 | `read_only` | `false` | Mounts the path read-only |
 
 Where a path goes follows one rule. A path that holds content of the user, such as `/media`, `/downloads`, `/music` or `/backups`, is offered as a container disk or as a host directory, and the installation asks which. The list is in `catalog/volume-policy.json`. Every other path is state of the application and goes to a container disk without asking. Writing `"installation_choice": ["managed-volume", "host-bind"]` or `"default": "host-bind"` on a volume offers the host directory for a path that is not in that list.
+
+### Host directory ID mappings
+
+On Proxmox hosts that support per-mount `idmap`, an advanced installation can
+configure **Mount user mapping (idmap)** for host directories. The same setting
+is available in **Modify**. It is optional: an installation without a mapping
+continues to use the normal unprivileged container IDs.
+
+The first supported profile is a standalone, unprivileged, single-image
+application with directory bind mounts on a supported local filesystem.
+Managed volumes, application stacks, system mounts, directories containing
+nested host mounts and NFS directories are not supported by this profile.
+The container must use Proxmox's default unprivileged user namespace.
+A host that cannot apply a saved mapping
+refuses the operation instead of dropping the mapping.
+
+For example, a container that writes as `0:0` can share a directory owned by
+host user/group `2000:2000`:
+
+```json
+{
+  "type": "host-bind",
+  "source": "/srv/shared/downloads",
+  "container_path": "/downloads",
+  "backup": false,
+  "read_only": false,
+  "create_if_missing": true,
+  "idmap": "u:0:2000:1;g:0:2000:1"
+}
+```
+
+The Proxmox mount entry includes
+`idmap=u:0:2000:1;g:0:2000:1`. A file written by container root is owned by
+`2000:2000` on the host. For an application running as `1000:1000`, use
+`u:1000:2000:1;g:1000:2000:1` instead. The editor offers root/container-user
+presets and a custom mapping; the final review shows the selected mapping.
+
+For images that support them, `PUID`/`PGID` select the application's user
+inside its container; `idmap`
+controls how that user corresponds to owners on this mount. An ACL grants
+access but does not change the ownership of newly created files. An idmap
+does not recursively change ownership or alter the container's global
+`lxc.idmap`.
+
+A new host directory is created with the mapped application UID/GID only
+when both are explicitly covered by the mapping. An existing directory
+keeps its owners and contents. Overlapping ranges, host UID/GID zero,
+unsupported application identities and incompatible filesystems are
+rejected before the operation changes the container. Review the effective
+application user when using an image with its own `USER` or an entrypoint
+that changes users.
+
+The mapping is saved in `deployment.mounts` and preserved during image
+updates, modification, recreation and restore of the OCI record. A Proxmox
+backup still **does not contain host-directory data**: on another host,
+restore or mount that directory separately at the recorded source path,
+and ensure that the filesystem and Proxmox support the saved idmap.
 
 **`restart`**. With `unless-stopped`, `always` or `on-failure`, the watchdog is proposed by default: an application that stops on its own is started again.
 Its running history belongs to the installation UUID, not just the VMID. Before
@@ -496,6 +606,29 @@ Updates, removals, intentional stops and guests first seen stopped remain left a
 ```
 
 Only what differs from the defaults is written. The defaults are 2 cores, 1024 MB of memory, 512 MB of swap, an 8 GB rootfs, an unprivileged LXC with `nesting=1`, DHCP on `vmbr0`, the firewall on, and no start with the node. The fields are `cores`, `memory_mb`, `swap_mb`, `rootfs_size_gb`, `unprivileged`, `features`, `onboot` and `shutdown_timeout_seconds`. The storage and the bridge proposed are the ones of the node.
+
+Compose tmpfs mounts are supported for individual images and for each member
+of a multi-image stack. Both `tmpfs: /tmp` / `tmpfs: ["/tmp:size=512m,mode=1777"]`
+and long `volumes` syntax (`type: tmpfs`, `target`, optional `read_only`,
+`tmpfs.size` and `tmpfs.mode`) use the same native mount renderer. Supported
+paths are `/tmp`, `/run`, their subdirectories, `/var/cache/` subdirectories
+and `/dev/shm`; other paths remain blocked for review. Supported short options
+are `size`, `mode`, numeric `uid`/`gid`, `rw`/`ro`, `nosuid`, `nodev` and `noexec`.
+Unknown options, duplicate/overlapping mounts, and conflicts with persistent
+volumes or `shm_size` are blocked rather than dropped.
+
+Sizes are rounded up to MiB, as with `shm_size`. Without an explicit size,
+the capacity is half the selected LXC RAM, not half the Proxmox host's RAM.
+The confirmation summary shows each path and its capacity. The native default
+is mode `1777`, owner `0:0`, `nosuid,nodev`; explicit numeric owners are guest
+IDs mapped by the unprivileged LXC, not host IDs. For long syntax, quote octal
+modes (for example, `mode: "1777"`) or use a YAML octal number.
+
+Tmpfs contents disappear when the container stops; backups and updates retain
+the mount configuration, not its files. Its pages count against the LXC memory
+limit (and may use swap); setting a capacity reserves no memory and does not
+increase that limit. Keep persistent data outside these paths and size large
+uploads together with the application memory budget.
 
 ### `proxmox.installer_profile`: what Compose cannot say
 
@@ -703,6 +836,14 @@ The sections that follow are the design and laboratory notes of the engine.
   enables the official FUSE mount and publishes distinct read/write and
   recursively read-only paths for other native LXCs.
 
+- The curated `stopliga` profile uses the developer-published image with the
+  UniFi backend. It requires a local API key and an existing VPN Client network;
+  it has no web interface. `/data` preserves state as UID/GID 10001 and `/tmp`
+  is a bounded native tmpfs. `STOPLIGA_DRY_RUN=true` previews routing changes.
+  The profile keeps the native LXC rootfs and security defaults; it does not
+  claim Docker's read-only rootfs or `cap_drop: ALL` hardening. Omada and OPNsense
+  are upstream backends, not configured or runtime-validated by this profile.
+
 ## Catalog maintenance
 
 The catalog is generated rather than written by hand. A contributor adding an
@@ -863,6 +1004,8 @@ Host bind paths selected by the user are created when missing and need an
 independent backup policy; no shared path is created unless `host-bind` was
 chosen. The default LXC is unprivileged and uses an 8 GB thin-provisioned
 rootfs.
+
+Unmanaged images (including scratch images) do not receive DNS files from Proxmox’s OS setup. Before their first start, the installer supplies missing `/etc/resolv.conf` and `/etc/hosts` using the Proxmox DNS/search settings or the host resolver. A host loopback stub uses systemd-resolved’s upstreams for a dedicated container network. Existing files, image symlinks, explicit mounts and `.pve-ignore.*` markers are preserved. Files are prepared on creation/recreation before Compose host aliases are appended.
 
 ## Validation lifecycle
 
@@ -1122,6 +1265,4 @@ No fixed-version exception or deployment has been introduced.
 
 ## Automatic catalog refresh
 
-OCI Manager opens with its local catalog and checks for new applications and recipes
-in the background. **Refresh catalog** repeats the check manually. See
-[Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility.
+OCI Manager opens with its local catalog and checks for new applications and recipes in the background. **Refresh catalog** repeats the check manually. See [Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility. 

@@ -43,7 +43,7 @@ type CategoryRow = { category: string; paths: string; reason: string }
 type PhaseRow = { phase: string; detail: string }
 type ScenarioRow = { scenario: string; detail: string }
 type CodeRefRow = { component: string; location: string }
-type WhereNextItem = { label: string; href: string; tail: string }
+type WhereNextItem = { label: string; href: string; tail?: string; tailRich?: string }
 
 export default async function CrossKernelPage({
   params,
@@ -279,12 +279,12 @@ export default async function CrossKernelPage({
       </h2>
 
       <ul className="mb-6 space-y-2">
-        {whereNextItems.map((item) => (
+        {whereNextItems.map((item, idx) => (
           <li key={item.href} className="text-gray-800 leading-relaxed">
             <Link href={item.href} className="text-blue-600 hover:underline font-medium">
               {item.label}
             </Link>
-            <span>{item.tail}</span>
+            <span>{item.tailRich ? t.rich(`whereNext.items.${idx}.tailRich`, { code }) : item.tail}</span>
           </li>
         ))}
       </ul>

@@ -19,5 +19,25 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "LibreWolf"
+    },
+    "tagline": {
+      "en_US": "LibreWolf is a custom and independent version of Firefox, with the primary goals of privacy, security and user freedom. LibreWolf also aims to remove all the telemetry, data collection and annoyances, as well as disabling anti-freedom features like DRM."
+    },
+    "description": {
+      "en_US": "LibreWolf is a custom, independent version of Firefox focused on privacy, security, and user freedom. It functions as a web browser engineered to remove telemetry and data collection while eliminating built-in annoyances and disabling anti-freedom features such as DRM. It provides users with a secure web browsing experience without tracking."
+    },
+    "tips": [
+      "By default there is no authentication."
+    ],
+    "screenshots": [
+      "https://librewolf.net/screenshot-dark.png",
+      "https://librewolf.net/screenshot-light.png",
+      "https://librewolf.net/screenshot-dark.avif",
+      "https://librewolf.net/screenshot-dark.webp"
+    ]
   }
 }

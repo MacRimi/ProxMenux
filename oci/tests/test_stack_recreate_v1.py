@@ -37,10 +37,12 @@ class StackRecreateV1Tests(unittest.TestCase):
                 patch.object(native.instances, "location", return_value=Path("/registry/138.json")), \
                 patch.object(native.instances, "command", return_value=b"arch: amd64\n"), \
                 patch.object(native, "resolve_archive", return_value=(Path("/cache/blinko.tar"), DIGEST)) as resolve, \
-                patch.object(native, "image_from_archive", return_value=image):
+                patch.object(native, "image_from_archive", return_value=image), \
+                patch.object(native.member_tx.layer_paths, "prepare", return_value=None):
             prepared = adapter.prepare(MEMBER, "recreate")
 
-        resolve.assert_called_once_with(MEMBER, b"arch: amd64\n", required_digest=DIGEST)
+        resolve.assert_called_once_with(MEMBER, b"arch: amd64\n", required_digest=DIGEST,
+                                        local_archives=(None,))
         self.assertEqual(prepared["digest"], DIGEST)
         self.assertEqual(prepared["proposal"]["operation"], "recreate")
         self.assertEqual(prepared["proposal"]["candidate"], MEMBER)

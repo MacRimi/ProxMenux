@@ -30,8 +30,8 @@
   },
   "running": {
     "heading": "Kör installatören",
-    "body": "Öppna <strong>Hardware Graphics → NVIDIA GPU Driver Installer</strong> i ProxMenux. Menyn beror på om en drivrutin redan är aktiv.",
-    "imageAlt": "Hårdvarumeny med NVIDIA-installationen markerad"
+    "body": "Öppna <strong>Hardware: GPUs and Coral-TPU → Install/Update NVIDIA Drivers (Host + LXC)</strong> i ProxMenux. Menyn beror på om en drivrutin redan är aktiv.",
+    "imageAlt": "Menyn Hardware: GPUs and Coral-TPU med posten Install/Update NVIDIA Drivers markerad"
   },
   "howRuns": {
     "heading": "Så fungerar skriptet",

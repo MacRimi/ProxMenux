@@ -68,9 +68,9 @@
   },
   "unmount": {
     "heading": "Unmount NFS share",
-    "body": "Combines the live mounts and the fstab entries into one list, lets you pick one, and <strong>removes the corresponding line from <code>/etc/fstab</code></strong>. The script does <em>not</em> run <code>umount</code> on the live mount — instead it tells you a CT reboot is needed for the unmount to take effect.",
-    "warnTitle": "The script removes fstab entries, not live mounts",
-    "warnBody": "This is a deliberate design choice: <code>umount</code> on a busy mount fails with \"device busy\" when something inside the CT is still using it. Removing the fstab entry guarantees the mount disappears cleanly on the next CT start. If you want the mount gone <em>now</em> and you are sure nothing is using it, run <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> by hand after the script finishes."
+    "body": "Combines the live mounts and the fstab entries into one list, lets you pick one, <strong>removes the corresponding line from <code>/etc/fstab</code></strong> and unmounts it inside the CT with <code>umount</code>. If the mount is busy it falls back to a lazy <code>umount -l</code>.",
+    "warnTitle": "If the unmount fails, reboot the CT",
+    "warnBody": "When both <code>umount</code> and <code>umount -l</code> fail, the script warns you to reboot the LXC to release the mount. The fstab entry is already gone, so the mount does not come back on the next CT start."
   },
   "test": {
     "heading": "Test NFS connectivity",

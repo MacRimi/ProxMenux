@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run Shopify’s Toxiproxy API server, then define proxies and failure conditions through its REST API."
+    },
+    "description": {
+      "en_US": "Toxiproxy is a framework for simulating network conditions in development, testing, and continuous integration environments. It functions as a TCP proxy that allows developers to deterministically tamper with network connections or inject randomized chaos. By routing traffic through the proxy and manipulating connection behavior via an HTTP REST API, teams can verify and ensure their applications remain resilient during service disruptions."
+    }
+  }
+}

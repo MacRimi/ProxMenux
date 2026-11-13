@@ -68,6 +68,21 @@
         "required": true,
         "sensitive": false,
         "source": "docker-compose"
+      },
+      {
+        "name": "VIKUNJA_SERVICE_SECRET",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "VIKUNJA_SERVICE_PUBLICURL",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "upstream-documentation",
+        "prompt": "Public URL of Vikunja behind a reverse proxy or a custom name (leave empty for direct LAN access)"
       }
     ],
     "volumes": [
@@ -413,6 +428,24 @@
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
         }
+      ],
+      "generated_sensitive_environment": {
+        "VIKUNJA_SERVICE_SECRET": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": false
+        }
+      },
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 3456,
+        "path": "/api/v1/info",
+        "timeout_seconds": 120,
+        "stability_seconds": 10
+      },
+      "completion_notes": [
+        "Create the first account on the registration page. Registration stays open; disable it with VIKUNJA_SERVICE_ENABLEREGISTRATION=false once your users exist.",
+        "Set VIKUNJA_SERVICE_PUBLICURL to the address used in the browser before using a reverse proxy or a custom name."
       ]
     }
   },

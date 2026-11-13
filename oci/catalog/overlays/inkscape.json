@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Inkscape is professional quality vector graphics software which runs on Linux, Mac OS X and Windows desktop computers."
+    },
+    "description": {
+      "en_US": "Inkscape is professional vector graphics software designed for creating and editing illustrations and artwork. It provides a rich set of tools to create, manipulate, and render scalable graphic formats. The application offers a complete design environment for working with paths, shapes, and complex digital drawings."
+    }
   }
 }

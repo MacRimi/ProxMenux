@@ -53,7 +53,10 @@ class PBSRepositoryPolicyTest(unittest.TestCase):
                                                    'repositories': [repo('pbs-no-subscription', uri='http://download.proxmox.com/debian/pbs')]})
             self.repositories['digest'] += '+'
             return ''
-        with patch.object(self.module, 'run', side_effect=run):
+        # The local downstream probe reads the real /etc/apt and dpkg; keep these
+        # fixtures independent from the machine running the tests.
+        with patch.object(self.module, 'run', side_effect=run), \
+             patch.object(self.module, 'local_downstream', return_value=False):
             return self.module.evaluate('trixie', apply=apply, product='pbs')
 
     def writes(self):

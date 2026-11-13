@@ -1478,6 +1478,15 @@ TEMPLATES = {
         'group': 'updates',
         'default_enabled': True,
     },
+    # Notifications sent by scripts and the API, including event types that
+    # have no template of their own: one switch that the user can turn off.
+    'custom': {
+        'title': '{title}',
+        'body': '{message}',
+        'label': 'Script and API notifications',
+        'group': 'system',
+        'default_enabled': True,
+    },
     'webhook_test': {
         'title': '{hostname}: Webhook test received',
         'body': 'PVE webhook connectivity test successful.\n{reason}',
@@ -1859,14 +1868,46 @@ TEMPLATES = {
         'hidden': True,
     },
     'burst_generic': {
-        'title': '{hostname}: +{count} more {event_type} events in {window}',
-        'body': '+{count} additional events of type {event_type} in {window} ({total_count} total).\n\nAdditional events:\n{details}',
+        'title': '{hostname}: {event_type} (+{count} more in {window})',
+        'body': '{event_type}: {count} more in {window} ({total_count} in total).\n\nAdditional events:\n{details}',
         'label': 'Generic burst',
         'group': 'other',
         'default_enabled': True,
         'hidden': True,
     },
 }
+
+# A degraded health category reports the same condition as a direct event;
+# that event's switches decide whether the category is notified.
+_HEALTH_KEYWORD_EVENTS = (
+    ('network', 'latency', 'network_latency'),
+    ('network', 'connectivity', 'network_down'),
+    ('network', 'unreachable', 'network_down'),
+)
+_HEALTH_CATEGORY_EVENTS = {
+    'cpu': 'cpu_high',
+    'memory': 'ram_high',
+    'load': 'load_high',
+    'temperature': 'temp_high',
+    'disk': 'disk_space_low',
+    'disks': 'disk_io_error',
+    'smart': 'disk_io_error',
+    'zfs': 'disk_io_error',
+    'storage': 'storage_unavailable',
+    'pve_services': 'service_fail',
+    'security': 'auth_fail',
+    'updates': 'update_summary',
+}
+
+
+def health_linked_event(category: str, reason: str = '') -> Optional[str]:
+    """The event whose switches also govern a degraded health category."""
+    reason_lower = str(reason or '').lower()
+    for linked_category, keyword, event_type in _HEALTH_KEYWORD_EVENTS:
+        if category == linked_category and keyword in reason_lower:
+            return event_type
+    return _HEALTH_CATEGORY_EVENTS.get(category)
+
 
 # ─── Event Groups (for UI filtering) ─────────────────────────────
 
@@ -1968,8 +2009,10 @@ def render_template(event_type: str, data: Dict[str, Any],
         if localized:
             template[field] = localized
     if event_type == 'node_reconnect' and data.get('downtime_seconds'):
-        # A node that left and came back within the grace: one notice.
-        rejoined = runtime_message('cluster.rejoinedBody', language,
+        # A node that left and came back within the grace: one notice. It
+        # names Corosync only when the node announced stopping it.
+        key = 'cluster.restartedBody' if data.get('clean_stop') else 'cluster.rejoinedBody'
+        rejoined = runtime_message(key, language,
                                    node_name=data.get('node_name', ''),
                                    seconds=data['downtime_seconds'])
         if rejoined:
@@ -2047,6 +2090,12 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
+    if event_type == 'burst_generic' and data.get('event_type') in TEMPLATES:
+        # A grouped burst names its events as the user knows them, never by
+        # their internal type.
+        grouped = data['event_type']
+        variables['event_type'] = (runtime_message(f'templates.{grouped}.label', language)
+                                   or TEMPLATES[grouped].get('label') or grouped)
     if event_type in ('backup_fail', 'backup_complete'):
         # The provider has already substituted raw Display Names. Insert the
         # resolved title as a value, never reinterpret its literal braces.

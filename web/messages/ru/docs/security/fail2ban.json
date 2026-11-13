@@ -127,14 +127,14 @@
     "neverBansTitle": "Fail2Ban работает, но ничего не блокирует",
     "neverBansBody": "Проверьте, появляется ли запись в <code>tail -f /var/log/ssh-auth.log</code> после попытки входа через SSH с неверным паролем с другого компьютера. Если журнал остаётся пустым, проверьте <code>systemctl status ssh-auth-logger.service</code>. Если служба журналирования активна, просмотрите последние события SSH с помощью <code>journalctl -u ssh.service -n 50 --no-pager -p info</code> и проверьте, разрешён ли уровень <em>info</em> в дополнительном файле конфигурации journald.",
     "monitorEmptyTitle": "В jail ProxMenux Monitor нет записей даже после неудачных попыток входа",
-    "monitorEmptyBody": "Jail <code>[proxmenux]</code> читает <code>/var/log/proxmenux-auth.log</code>, куда записи вносит приложение ProxMenux Monitor Flask, а не служба журналирования journald. Если вы не используете Monitor, файл остаётся пустым и jail никогда не срабатывает. Это ожидаемое поведение; конфигурация jail не причиняет вреда. Если вы используете Monitor, но журнал пуст, проверьте настройки журналирования Flask.",
+    "monitorEmptyBody": "Jail <code>[proxmenux]</code> читает <code>/var/log/proxmenux-auth.log</code>, куда записи вносит приложение ProxMenux Monitor Flask, а не служба журналирования journald. Если Вы не используете Monitor, файл остаётся пустым и jail никогда не срабатывает. Это ожидаемое поведение; конфигурация jail не причиняет вреда. Если Вы используете Monitor, но журнал пуст, проверьте настройки журналирования Flask.",
     "selfBanTitle": "Я заблокировал собственный IP-адрес",
     "selfBanIntro": "Через консоль / IPMI / iKVM (или с другого IP-адреса из списка разрешённых):",
     "selfBanCode": "fail2ban-client unban <YOUR_IP>\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
     "aptFailTitle": "Ошибка apt-get: «Не удалось найти пакет fail2ban»",
     "aptFailBody": "На хосте отсутствуют репозитории Debian (это часто встречается в минимальных установках Proxmox). Установщик обнаруживает это и перед повторной попыткой создаёт <code>/etc/apt/sources.list.d/debian.sources</code> с правильным кодовым именем выпуска (<code>bookworm</code> / <code>trixie</code>). Если ошибка сохраняется, проверьте наличие <code>VERSION_CODENAME</code> в <code>/etc/os-release</code> и убедитесь, что URL репозитория доступен.",
     "lockoutTitle": "SSH блокирует мне доступ после установки",
-    "lockoutBody": "Установщик задаёт <code>MaxAuthTries=3</code>. Если ваш менеджер паролей или агент перебирает несколько ключей, этот предел может быть превышен за одну попытку подключения. Ограничьте число предлагаемых ключей: <code>ssh -o IdentitiesOnly=yes -i ~/.ssh/specific_key user@host</code>. Либо временно увеличьте <code>MaxAuthTries</code> в <code>sshd_config</code> на время диагностики."
+    "lockoutBody": "Установщик задаёт <code>MaxAuthTries=3</code>. Если Ваш менеджер паролей или агент перебирает несколько ключей, этот предел может быть превышен за одну попытку подключения. Ограничьте число предлагаемых ключей: <code>ssh -o IdentitiesOnly=yes -i ~/.ssh/specific_key user@host</code>. Либо временно увеличьте <code>MaxAuthTries</code> в <code>sshd_config</code> на время диагностики."
   },
   "files": {
     "heading": "Записываемые файлы",
@@ -143,7 +143,7 @@
   "related": {
     "heading": "Связанные материалы",
     "monitorLabel": "Вкладка ProxMenux Monitor → Безопасность",
-    "monitorTail": " — та же установка доступна с панели управления; кроме того, в браузере можно отслеживать состояние jail и заблокированные IP-адреса в реальном времени, а также настраивать число попыток и длительность блокировки для каждого jail.",
+    "monitorTail": " — та же установка доступна с панели мониторинга; кроме того, в браузере можно отслеживать состояние jail и заблокированные IP-адреса в реальном времени, а также настраивать число попыток и длительность блокировки для каждого jail.",
     "lynisLabel": "Lynis",
     "lynisTail": " — выполните аудит безопасности до и после изменений, чтобы убедиться в выполнении требования SSH-7408.",
     "securityLabel": "Обзор безопасности",

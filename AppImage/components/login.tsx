@@ -1,5 +1,6 @@
 "use client"
 
+import { ProxMenuxMark } from "./proxmenux-mark"
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
@@ -175,7 +176,7 @@ export function Login({ onLogin }: LoginProps) {
             </div>
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{t("app.title")}</h1>
+            <h1 className="text-3xl font-bold" aria-label={t("app.title")}><ProxMenuxMark weight={700} /> Monitor</h1>
             <p className="text-muted-foreground mt-2">{t("login.subtitle")}</p>
           </div>
         </div>

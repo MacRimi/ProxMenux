@@ -1,0 +1,20 @@
+{
+  "proxmox": {
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 4096
+    }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "AnythingLLM is the easiest to use, all-in-one AI application that can do RAG, AI Agents, and much more with no code or infrastructure headaches."
+    },
+    "description": {
+      "en_US": "AnythingLLM is an AI application that transforms documents and content into context for language models to reference during conversations. It allows users to connect various commercial or open-source LLMs and vector databases within a unified interface. Documents are organized into isolated workspaces to keep contexts separated, and the platform includes multi-user access controls and AI agent capabilities."
+    },
+    "screenshots": [
+      "https://github.com/Mintplex-Labs/anything-llm/assets/16845892/cfc5f47c-bd91-4067-986c-f3f49621a859"
+    ],
+    "repository": "https://github.com/Mintplex-Labs/anything-llm"
+  }
+}

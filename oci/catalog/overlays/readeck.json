@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Save web articles and read them later through a clean interface, with the application database persisted on disk."
+    },
+    "description": {
+      "en_US": "Readeck is a bookmark manager and read-later web application. It extracts and stores the readable content, text, and images from web pages for privacy and long-term archival. Users can organize items with labels, annotations, and saved search collections, perform full-text searches, and export content as EPUB e-books."
+    },
+    "screenshots": [
+      "https://codeberg.org/readeck/readeck/raw/branch/main/screenshots/bookmark-list.webp"
+    ]
+  }
+}

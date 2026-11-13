@@ -412,6 +412,98 @@ class CatalogRefreshTests(unittest.TestCase):
         # Seeing the menu does not acknowledge it: only opening the list does.
         self.assertEqual(len(next_visit.new_ids()), 1)
 
+    def test_menu_snapshot_hit_does_not_read_and_parse_recipes_again(self):
+        catalog = Catalog(self.root)
+        expected = refresh.menu_catalog(catalog)
+        with patch.object(Catalog, 'load_index', side_effect=AssertionError('duplicate catalog scan')), \
+                patch.object(refresh, 'visible_recipes', side_effect=AssertionError('duplicate recipe hash')):
+            self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
+
+    def test_menu_snapshot_invalidates_recipe_overlay_and_policy_changes(self):
+        refresh.menu_catalog(Catalog(self.root))
+        for relative in (f'apps/{self.item["id"]}.json', f'overlays/{self.item["id"]}.json',
+                         'categories.json', 'verification.json', 'volume-policy.json', 'index.json'):
+            path = self.root / 'catalog' / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text((path.read_text() if path.exists() else '{}') + ' ')
+            original = Catalog.load_index
+            calls = []
+            def load(instance):
+                calls.append(True)
+                return original(instance)
+            with self.subTest(path=relative), patch.object(Catalog, 'load_index', load):
+                refresh.menu_catalog(Catalog(self.root))
+                self.assertTrue(calls)
+
+    def test_menu_snapshot_handles_corrupt_or_unwritable_cache(self):
+        expected = refresh.menu_catalog(Catalog(self.root))
+        cache = refresh.cache_root(self.root) / ('menu-' + refresh.channel_for(self.root) + '.json')
+        cache.write_text('{broken')
+        with patch.object(refresh, 'write_json', side_effect=OSError('read-only fixture')):
+            self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
+
+    def test_malformed_menu_cache_is_rebuilt_for_the_next_visit(self):
+        expected = refresh.menu_catalog(Catalog(self.root))
+        cache = refresh.cache_root(self.root) / ('menu-' + refresh.channel_for(self.root) + '.json')
+        value = json.loads(cache.read_text());value['index'] = []
+        cache.write_text(json.dumps(value))
+        self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
+        with patch.object(Catalog, 'load_index', side_effect=AssertionError('cache was not repaired')):
+            self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
+
+    def test_menu_snapshot_restores_local_only_app_identity(self):
+        self.add_app()
+        for name, data in self.files.items():
+            path = self.root / 'catalog' / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        index = json.loads(self.files['index.json']);index['applications'] = [self.item]
+        self.files['index.json'] = json.dumps(index).encode()
+        for name in ('apps/sample-added.json', 'curated/sample-added.json'):
+            self.files.pop(name)
+        with patch.object(refresh, 'source_settings', return_value={'local_apps': ['sample-added']}):
+            self.sync()
+            refresh.menu_catalog(Catalog(self.root))
+            catalog = Catalog(self.root)
+            refresh.menu_catalog(catalog)
+            self.assertEqual(catalog.local_app_ids, {'sample-added'})
+            path = self.root / 'catalog/apps/sample-added.json'
+            path.write_text(path.read_text() + ' ')
+            original = Catalog.load_index
+            with patch.object(Catalog, 'load_index', autospec=True, side_effect=original) as load:
+                refresh.menu_catalog(Catalog(self.root))
+                self.assertTrue(load.called)
+
+    def test_menu_recipe_fingerprints_reuse_the_displayed_index(self):
+        catalog = Catalog(self.root)
+        applications = catalog.load_index()["applications"]
+        expected = refresh.visible_recipes(catalog)
+        with patch.object(catalog, 'load_index', side_effect=AssertionError('duplicate catalog scan')):
+            self.assertEqual(refresh.visible_recipes(catalog, applications), expected)
+            self.assertEqual(refresh.CatalogRefresh(self.root, catalog, applications).recipes, expected)
+            self.assertEqual(refresh.visible_recipes(catalog, []), {})
+
+    def test_existing_local_app_does_not_load_the_entire_bundled_catalog(self):
+        self.sync()
+        catalog = Catalog(self.root)
+        original = Catalog._enrich_index_from_templates
+        scanned = []
+        def enrich(instance, payload):
+            scanned.append(instance.catalog_dir)
+            return original(instance, payload)
+        with patch.object(refresh, 'source_settings', return_value={'local_apps': [self.item['id']]}), \
+                patch.object(Catalog, '_enrich_index_from_templates', enrich):
+            result = catalog.load_index()
+        self.assertEqual(scanned, [catalog.catalog_dir])
+        self.assertEqual(len(result['applications']), 1)
+
+    def test_invalid_local_app_entries_do_not_break_the_menu(self):
+        self.sync()
+        catalog = Catalog(self.root)
+        with patch.object(refresh, 'source_settings', return_value={'local_apps': [{}, [], None]}):
+            self.assertEqual(len(catalog.load_index()['applications']), 1)
+            self.assertEqual(catalog.local_app_ids, set())
+
     def test_explicit_local_apps_survive_refresh_without_preventing_upstream_removal(self):
         # This app is a local preview, not a member of the upstream manifest.
         self.add_app()

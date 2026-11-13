@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official StopLiga image. This catalog profile configures the UniFi backend; a local API key and an existing VPN Client network are required. It runs in the background without a web interface."
+    },
+    "description": {
+      "en_US": "StopLiga is an automated route and firewall rule synchronizer that reads public block status feeds and manages network routing on supported gateways. It keeps policy routes, aliases, or firewall rules updated and toggled on or off based on active block periods. The service is useful for dynamically rerouting or bypassing specific traffic through alternative gateways or VPNs when block events occur."
+    },
+    "tips": [
+      "On OPNsense, an existing firewall rule must be created manually with the exact description StopLiga before the application can toggle it."
+    ]
+  }
+}

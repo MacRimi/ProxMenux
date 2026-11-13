@@ -247,6 +247,7 @@ class Routes(unittest.TestCase):
     def setUp(self):
         auth=ModuleType('auth_manager')
         auth.load_auth_config=lambda:{'enabled':True}
+        auth.access_mode=lambda config=None:'password'
         auth.verify_token=lambda token:'fixture' if token=='admin' else None
         auth.verify_token_full=lambda token:('fixture','full_admin') if token=='admin' else ('fixture','read_only') if token=='reader' else (None,None)
         patches={'auth_manager':auth,'health_monitor':SimpleNamespace(health_monitor=object()),

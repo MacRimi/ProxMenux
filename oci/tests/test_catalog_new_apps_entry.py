@@ -55,7 +55,8 @@ class ManualRefreshTests(unittest.TestCase):
         catalog = Mock()
         catalog.index_path.exists.return_value = True
         catalog.load_index.return_value = {'applications': []}
-        with patch('proxmenux_oci.catalog_refresh.CatalogRefresh', return_value=context), \
+        with patch('proxmenux_oci.catalog_refresh.menu_catalog', return_value=({'applications': []}, {})), \
+                patch('proxmenux_oci.catalog_refresh.CatalogRefresh', return_value=context), \
                 patch('proxmenux_oci.updates.UpdateCheck', return_value=checker_context), \
                 patch.object(cli, 'interactive_ui', return_value=ui):
             self.assertEqual(cli.interactive(catalog), 0)

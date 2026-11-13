@@ -132,7 +132,7 @@ dd if=/dev/urandom of=/tmp/test.bin bs=1M count=1024 status=none
 time gzip -k /tmp/test.bin       # uses pigz — parallel
 rm /tmp/test.bin.gz
 
-time /bin/gzip.original -k /tmp/test.bin   # original single-threaded gzip
+time /usr/bin/gzip.distrib -k /tmp/test.bin   # original single-threaded gzip (/bin/ on PVE 8)
 rm /tmp/test.bin /tmp/test.bin.gz`}
         className="my-4"
       />

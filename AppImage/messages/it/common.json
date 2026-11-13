@@ -1,4 +1,111 @@
 {
+  "catalog": {
+    "searchPlaceholder": "Cerca app e strumenti…",
+    "settings": "Impostazioni del catalogo",
+    "settingsIncludeCs": "Includi Community Scripts",
+    "settingsIncludeCsHint": "Mostra i loro script nella ricerca, nelle sezioni, nelle categorie e nelle app in evidenza.",
+    "settingsBroad": "Ricerca estesa",
+    "settingsBroadHint": "Trova anche ciò che menziona le parole nella descrizione o nella categoria, dopo le corrispondenze per nome.",
+    "featured": "In evidenza",
+    "featuredOpen": "Vedi dettagli",
+    "categories": "Categorie di app",
+    "allApps": "Tutte le app",
+    "toolsPmx": "Strumenti di ProxMenux",
+    "thirdParty": "Terze parti",
+    "publisherOfficial": "Ufficiale",
+    "publisherOfficialHint": "Immagine pubblicata dal progetto stesso",
+    "toolsCs": "Strumenti di Community Scripts",
+    "externalScripts": "Script esterni",
+    "addonInGuest": "In un LXC o una VM esistente",
+    "addonOnHost": "Sull'host Proxmox",
+    "plugins": "Plugin di ProxMenux",
+    "pluginsSoon": "Prossimamente",
+    "groups": {
+      "apps": "App",
+      "tools": "Strumenti"
+    },
+    "itemsCount": "{count} elementi",
+    "noResults": "Nessun risultato per «{query}».",
+    "back": "Catalogo",
+    "emptyView": "Qui non c'è ancora nulla.",
+    "sourceOci": "OCI manager Apps",
+    "sourceCs": "Community Scripts",
+    "tested": "Testata",
+    "updateable": "Aggiornabile",
+    "stack": "Più container",
+    "oneContainer": "1 container",
+    "loadError": "Impossibile caricare il catalogo. Riprova tra poco.",
+    "terminalInstall": "Installa {name}",
+    "terminalRun": "Esegui {name}",
+    "terminalOpen": "Apri {name}",
+    "terminalDescription": "Gli stessi passaggi del menu di ProxMenux.",
+    "type": {
+      "lxc": "LXC",
+      "vm": "VM",
+      "host": "Host",
+      "addon": "Add-on"
+    },
+    "sheet": {
+      "whatItIs": "Cos'è",
+      "whatItDoes": "Cosa fa",
+      "alsoAvailable": "Disponibile anche",
+      "imageSource": "Fonte dell'immagine",
+      "containersCreated": "Container creati ({count})",
+      "containersIntro": "Ogni servizio gira nel proprio LXC. ProxMenux li installa e li gestisce insieme, come un'unica applicazione.",
+      "mainContainer": "Principale",
+      "publisher": "Pubblicata da",
+      "thirdPartyLink": "Vedi progetto",
+      "usesThirdParty": "Usa uno script di terze parti: {name}.",
+      "settingsApplied": "Impostazioni applicate ({count})",
+      "settingsOffered": "Impostazioni a scelta ({count})",
+      "whereInMenu": "Dove si trova nel menu",
+      "notes": "Note",
+      "defaultLogin": "Accesso predefinito",
+      "user": "Utente",
+      "password": "Password",
+      "suggested": "Installazione suggerita",
+      "scriptResources": "Risorse dello script",
+      "cores": "core",
+      "ram": "RAM",
+      "swap": "swap",
+      "disk": "disco",
+      "system": "sistema",
+      "access": "Accesso",
+      "accessPort": "Porta {port} sull'IP del container",
+      "storage": "Archiviazione",
+      "volume": "volume del container da {size} GB",
+      "volumeOrHost": "volume del container o cartella dell'host",
+      "hostFolder": "cartella dell'host",
+      "image": "Immagine",
+      "config": "Configurazione",
+      "script": "Script",
+      "viewCode": "Vedi codice",
+      "version": "Versione",
+      "links": "Link",
+      "website": "Sito ufficiale",
+      "documentation": "Documentazione",
+      "repository": "Codice sorgente",
+      "install": "Installa",
+      "installAdvanced": "Installazione avanzata",
+      "runScript": "Esegui script",
+      "createVm": "Crea VM",
+      "addonNote": "Si installa in un LXC o in una VM che hai già; non ne crea uno nuovo.",
+      "proxmenuxDocs": "Documentazione di ProxMenux",
+      "releases": "Versioni disponibili",
+      "suiteApps": "Applicazioni a scelta",
+      "byDefault": "Selezionata per impostazione predefinita",
+      "suiteDefaults": "Quelle spuntate sono preselezionate; ognuna ha il proprio LXC.",
+      "mediaServer": "Server multimediale",
+      "mediaServerChoice": "{players} o nessuno",
+      "defaultSettings": "Impostazioni predefinite",
+      "open": "Apri",
+      "scriptBy": "Script di",
+      "moreInfo": "Per maggiori informazioni, visita",
+      "unprivileged": "LXC non privilegiato",
+      "privileged": "LXC privilegiato",
+      "loadError": "Impossibile caricare i dettagli."
+    }
+  },
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
@@ -33,6 +140,7 @@
   "navigation": {
     "overview": "Panoramica",
     "apps": "Applicazioni",
+    "catalog": "Catalogo",
     "storage": "Storage",
     "network": "Rete",
     "virtualMachines": "VM e LXC",
@@ -1407,23 +1515,23 @@
       "osUpToDate": "Sistema operativo aggiornato",
       "osStatusUnavailable": "Impossibile determinare lo stato degli aggiornamenti del sistema operativo.",
       "installedByHelperPrefix": "Installato da",
-      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperScriptsName": "Community Scripts",
       "helperCommandEditHint": "Se modifichi questo comando di avvio, verrà salvato come comando personalizzato.",
       "customOnlineDescription": "Oppure usa uno script online fornito dallo sviluppatore:",
       "customOnlineExampleNote": "Sostituisci l’URL di esempio con quello dello script ufficiale della tua applicazione.",
       "customExamplesHeading": "Esempi da adattare:",
       "updaterChoiceHint": "Scegli e salva un metodo di aggiornamento.",
       "updaterMethodLabel": "Metodo di aggiornamento",
-      "helperMethod": "Helper-Scripts",
+      "helperMethod": "Community Scripts",
       "customMethod": "Comando personalizzato",
-      "helperMethodHelp": "Informazioni su Helper-Scripts",
+      "helperMethodHelp": "Informazioni su Community Scripts",
       "customMethodHelp": "Informazioni sui comandi personalizzati",
-      "helperDetectedChoice": "Rilevato un programma di aggiornamento Helper-Scripts per questa applicazione.",
-      "helperUnavailableChoice": "Il programma di aggiornamento Helper-Scripts selezionato non è più disponibile.",
+      "helperDetectedChoice": "Rilevato un programma di aggiornamento Community Scripts per questa applicazione.",
+      "helperUnavailableChoice": "Il programma di aggiornamento Community Scripts selezionato non è più disponibile.",
       "disableUpdater": "Disattiva",
       "disableUpdaterConfirm": "Disattivare il metodo di aggiornamento di {name}? I piani e le pianificazioni manterranno le selezioni, ma questa applicazione non verrà eseguita finché non sarà configurato nuovamente un metodo.",
       "noUpdaterSelected": "Non hai selezionato un metodo di aggiornamento.",
-      "helperMethodDescription": "ProxMenux esegue il programma di aggiornamento rilevato in questo LXC e ne mostra il registro e il risultato. Il programma è mantenuto da Proxmox VE Helper-Scripts.",
+      "helperMethodDescription": "ProxMenux esegue il programma di aggiornamento rilevato in questo LXC e ne mostra il registro e il risultato. Il programma è mantenuto da Community Scripts.",
       "customMethodDescription": "Puoi usare il programma di aggiornamento dell’applicazione, un gestore di pacchetti o un nuovo binario. Il comando viene eseguito in questo LXC con privilegi di amministratore.",
       "updaterInstructions": "Consulta le istruzioni del programma di aggiornamento.",
       "helperDocumentation": "Documentazione aggiornamenti",
@@ -1437,7 +1545,7 @@
       "customPackageDescription": "Sostituisci my-package con il pacchetto da aggiornare.",
       "customBinaryTitle": "Binario",
       "customBinaryDescription": "Prima scarica e verifica il binario ufficiale per la versione e l’architettura corrette in /tmp/my-app.new. Questo esempio conserva un backup del binario precedente e riavvia il relativo servizio.",
-      "helperUpdatesRun": "Installato da Proxmox Helper-Scripts.",
+      "helperUpdatesRun": "Installato da Community Scripts.",
       "installedPrefix": "installato",
       "upstreamAvailable": "versione upstream {version} disponibile",
       "upToDateAt": "Aggiornato a",
@@ -2208,6 +2316,7 @@
         "smart_test_complete": "Test SMART completato",
         "smart_test_failed": "Test SMART non riuscito",
         "gpu_mode_switch": "Modalità GPU cambiata",
+        "custom": "Notifiche da script e API",
         "gpu_passthrough_blocked": "Passthrough GPU bloccato",
         "pci_passthrough_conflict": "Conflitto dispositivo PCIe",
         "load_high": "Carico sistema elevato",
@@ -2739,7 +2848,22 @@
     "avatarHint": "PNG, JPEG, WebP o GIF · massimo 2 MB · ritaglia prima l’immagine in formato quadrato per un risultato migliore.",
     "settingUp": "Configurazione in corso...",
     "setupAuthentication": "Imposta autenticazione",
-    "back": "Indietro"
+    "back": "Indietro",
+    "setupCode": "Codice di configurazione",
+    "setupCodeHint": "È stato mostrato nella console durante l'installazione di ProxMenux. Se non ce l'hai, esegui menu sul server e apri Impostazioni → Mostra codice di configurazione del Monitor.",
+    "codeInvalid": "Il codice di configurazione non è valido.",
+    "codeRateLimited": "Troppi tentativi. Attendi qualche minuto e riprova.",
+    "noPasswordTitle": "Senza password",
+    "noPasswordDescription": "Scegli cosa può fare chiunque raggiunga questo indirizzo.",
+    "readOnlyTitle": "Sola lettura",
+    "readOnlyDescription": "Chiunque raggiunga il Monitor può visualizzarlo, ma non può aprire terminali, eseguire script o modificare alcunché. Potrai aggiungere una password in seguito.",
+    "openTitle": "Aperto, accettando il rischio",
+    "openDescription": "Chiunque raggiunga il Monitor ottiene il pieno controllo di questo server, terminale root incluso. Selezionalo solo su una rete in cui ti fidi di chiunque possa raggiungerlo.",
+    "chooseReadOnly": "Usa sola lettura",
+    "chooseOpen": "Apri senza password"
+  },
+  "access": {
+    "readOnlyBanner": "Accesso in sola lettura: puoi visualizzare questo server, ma non eseguire né modificare alcunché. Per gestirlo, aggiungi una password in Sicurezza."
   },
   "securityPage": {
     "title": "Sicurezza",
@@ -2773,7 +2897,8 @@
       "none": "Nessuno",
       "external": "Esterno",
       "up": "Attiva",
-      "down": "Inattiva"
+      "down": "Inattiva",
+      "readOnly": "Sola lettura"
     },
     "errors": {
       "deleteReportNoFiles": "Nessun rapporto o log di Lynis da rimuovere trovato.",
@@ -2849,7 +2974,8 @@
       "sslCertificateReloaded": "Il certificato rinnovato è ora attivo. Le connessioni esistenti non sono state interrotte.",
       "sslCertificateUnchanged": "Il certificato attivo corrisponde già ai file del certificato correnti.",
       "reportDeleted": "Rapporto di audit eliminato.",
-      "twoFactorEnabled": "L'autenticazione a due fattori è abilitata."
+      "twoFactorEnabled": "L'autenticazione a due fattori è abilitata.",
+      "readOnlyReloading": "La dashboard è ora in sola lettura. Ricaricamento in corso..."
     },
     "confirm": {
       "disableAuth": "Disabilitare l'autenticazione? Chiunque riesca a raggiungere la dashboard potrà aprirla.",
@@ -2884,7 +3010,10 @@
       "confirmNewPasswordPlaceholder": "Ripeti la nuova password",
       "changing": "Modifica in corso...",
       "enterYourPassword": "Inserisci la password",
-      "disable": "Disabilita l'autenticazione"
+      "disable": "Disabilita l'autenticazione",
+      "readOnlyMode": "La dashboard è in sola lettura senza password: può essere visualizzata, ma non è possibile eseguire né modificare nulla.",
+      "useReadOnly": "Passa a sola lettura",
+      "disableChoose": "Senza password, come deve essere raggiungibile la dashboard?"
     },
     "twoFactor": {
       "title": "Autenticazione a due fattori",
@@ -5383,6 +5512,8 @@
       "storageAvailable": "{type} disponibile",
       "storageUsage": "{percent}% utilizzato",
       "mountReachable": "Mount {type} raggiungibile",
+      "mountReachableReadOnly": "Mount {type} raggiungibile, in sola lettura",
+      "mountReadOnlyConfiguredRw": "Mount {type} in sola lettura, ma configurato in lettura e scrittura",
       "rootfsUsed": "Utilizzo rootfs: {percent}% ({size})",
       "runningCtsSafe": "CT in esecuzione con utilizzo rootfs sicuro: {count}",
       "pveStorageSafe": "Storage a blocchi PVE con utilizzo sicuro: {count}",
@@ -5875,7 +6006,12 @@
       "productivityWorkflows": "Produttività e flussi di lavoro",
       "remoteAccessVpn": "Accesso remoto e VPN",
       "webserversProxies": "Server web e proxy",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave e Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave e Matter",
+      "creativeDesign": "Creatività e design",
+      "filesSharing": "File e condivisione",
+      "browsersWebDesktops": "Browser e desktop web",
+      "tools": "Strumenti",
+      "messagingQueues": "Messaggistica e code"
     },
     "emptyTitle": "Ancora nessuna app con collegamento web.",
     "emptyHint": "Registra un collegamento web per un'app (scheda App di un CT) per visualizzarla qui.",
@@ -6993,7 +7129,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Il nodo {node_name} ha riavviato il servizio del cluster ed è rientrato dopo {seconds} s."
+        "rejoinedBody": "Il nodo {node_name} ha perso il contatto con il cluster ed è rientrato dopo {seconds} s.",
+        "restartedBody": "Corosync, il servizio di comunicazione del cluster, è stato arrestato sul nodo {node_name} e avviato di nuovo. Il nodo è rientrato nel cluster dopo {seconds} s."
       },
       "templates": {
         "state_change": {
@@ -7376,6 +7513,11 @@
           "body": "Informazioni sul pacchetto upstream inoltrate da Proxmox VE tramite apt-listchanges. Il testo seguente proviene dal manutentore del pacchetto e non è una raccomandazione ProxMenux.\n\n{reason}",
           "label": "Avvisi pacchetti apt-listchanges"
         },
+        "custom": {
+          "title": "{title}",
+          "body": "{message}",
+          "label": "Notifiche da script e API"
+        },
         "webhook_test": {
           "title": "{hostname}: test webhook ricevuto",
           "body": "Test di connettività del webhook PVE riuscito.\n{reason}",
@@ -7517,8 +7659,8 @@
           "label": "Picco di problemi di sistema"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} altri eventi {event_type} in {window}",
-          "body": "+{count} eventi aggiuntivi di tipo {event_type} in {window} ({total_count} in totale).\n\nEventi aggiuntivi:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} altri in {window})",
+          "body": "{event_type}: altri {count} in {window} ({total_count} in totale).\n\nEventi aggiuntivi:\n{details}",
           "label": "Picco di eventi"
         },
         "kernel_warning": {

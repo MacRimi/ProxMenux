@@ -30,8 +30,8 @@
   },
   "running": {
     "heading": "Spustenie inštalátora",
-    "body": "V ProxMenuxe otvorte <strong>Hardware Graphics → NVIDIA GPU Driver Installer</strong>. Ponuka závisí od prítomnosti aktívneho ovládača.",
-    "imageAlt": "Ponuka hardvéru so zvýrazneným inštalátorom NVIDIA"
+    "body": "V ProxMenuxe otvorte <strong>Hardware: GPUs and Coral-TPU → Install/Update NVIDIA Drivers (Host + LXC)</strong>. Ponuka závisí od prítomnosti aktívneho ovládača.",
+    "imageAlt": "Ponuka Hardware: GPUs and Coral-TPU so zvýrazneným Install/Update NVIDIA Drivers"
   },
   "howRuns": {
     "heading": "Ako skript funguje",

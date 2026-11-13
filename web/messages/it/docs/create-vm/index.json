@@ -19,8 +19,8 @@
   },
   "opening": {
     "heading": "Apertura del menu",
-    "body": "Nel menu principale di ProxMenux seleziona <strong>Crea VM</strong>. Vedrai:",
-    "imageAlt": "Menu Crea VM con tre opzioni ProxMenux (NAS/Windows/Linux) e la sezione Community Scripts sotto (macOS/Altri)"
+    "body": "Nel menu principale di ProxMenux seleziona <strong>Crea VM da template o script</strong>. Vedrai:",
+    "imageAlt": "Menu Crea VM con tre opzioni ProxMenux (NAS/Windows/Linux) e la sezione Script esterni sotto (macOS/Altri)"
   },
   "families": {
     "heading": "Tre famiglie OS",
@@ -52,7 +52,7 @@
         "description": "Edizioni Windows 10, 11 e Server con default Windows (q35 + OVMF + TPM 2.0) e driver VirtIO pre-montati.",
         "bullets": [
           "UUP Dump per le ISO aggiornate",
-          "O ISO locale da /var/lib/vz/template/iso",
+          "Oppure una ISO locale da qualsiasi storage ISO di Proxmox",
           "TPM 2.0 aggiunto automaticamente",
           "ISO dei driver VirtIO collegata a ide3",
           "Canale agente ospite abilitato"
@@ -78,9 +78,9 @@
   },
   "community": {
     "title": "Script della comunità (non documentati qui)",
-    "intro": "Le due voci sotto il separatore <em>Community Scripts</em> eseguono codice che <strong>non fa parte di ProxMenux</strong>, quindi sono volutamente escluse da questa documentazione:",
+    "intro": "Le due voci sotto il separatore <em>Script esterni</em> eseguono codice che <strong>non fa parte di ProxMenux</strong>, quindi sono volutamente escluse da questa documentazione:",
     "macosRich": "<strong>Sistema macOS</strong>: esegue l’installatore esterno <osxLink>OSX-PROXMOX</osxLink>. Clona il repository originale, prepara l’host e <strong>lo riavvia automaticamente al termine</strong>. Consulta la documentazione del progetto.",
-    "othersRich": "<strong>Altri sistemi (basati su Linux)</strong>: carica una selezione di installatori della comunità per server domestici, router, firewall e simili. Ogni script viene mantenuto fuori da ProxMenux."
+    "othersRich": "<strong>Altri sistemi (basati su Linux)</strong>: carica un breve elenco di VM Linux precompilate dalla comunità: Home Assistant OS, una VM Docker (Debian + SSH + Docker) e Nextcloud. Ogni script viene mantenuto fuori da ProxMenux."
   },
   "afterPick": {
     "heading": "Cosa succede dopo aver scelto un sistema operativo",

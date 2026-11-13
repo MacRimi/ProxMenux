@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to robí?",
-    "body": "Tri interaktívne monitorovacie nástroje, každý za vlastným vstupom do menu. Pri prvom spustení jedného sa balík inštaluje ticho cez <code>apt-get</code>. Následné štarty začínajú okamžite. Žiadny z týchto nástrojov nemení konfiguráciu hostiteľskej siete."
+    "body": "Tri interaktívne monitorovacie nástroje, každý za vlastným vstupom do menu. Pri prvom spustení jedného sa balík nainštaluje cez <code>apt-get</code>. Následné štarty začínajú okamžite. Žiadny z týchto nástrojov nemení konfiguráciu hostiteľskej siete."
   },
   "when": {
     "heading": "Kedy použiť ktorý",
@@ -105,7 +105,7 @@
   },
   "install": {
     "heading": "Prvé spustenie nainštaluje balík",
-    "body": "Všetky tri spúšťače overia prítomnosť programu a ak chýba, spustia <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code>. Inštalácia prebieha bez výpisu: pri prvom použití môže menu pôsobiť zamrznuto 10–30 sekúnd. Ďalšie spustenia sú okamžité."
+    "body": "Všetky tri spúšťače overia prítomnosť programu. Ak chýba, ProxMenux najprv skontroluje repozitáre (na hostiteľovi bez predplatného môže ponúknuť prepnutie na repozitár no-subscription a následne <code>apt-get update</code>) a potom spustí <code>apt-get install -y &lt;pkg&gt;</code> so správou „Installing…“ na obrazovke. Ďalšie spustenia sú okamžité."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",

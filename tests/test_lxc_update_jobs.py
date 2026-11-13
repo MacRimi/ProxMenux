@@ -465,6 +465,7 @@ class RouteTests(unittest.TestCase):
         self.app = Flask(__name__)
         self.auth = ModuleType("auth_manager")
         self.auth.load_auth_config = lambda: {"enabled": True}
+        self.auth.access_mode = lambda config=None: "password"
         self.auth.verify_token = lambda token: "fixture" if token == "valid" else None
         self.auth.verify_token_full = lambda token: (
             ("fixture", "full_admin") if token == "valid" else

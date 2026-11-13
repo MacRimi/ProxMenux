@@ -1,11 +1,15 @@
 {
   "catalog_ui": {
+    "tagline": {
+      "en_US": "Ollama is a tool for running large language models locally, designed to help users quickly deploy and manage AI models via a simple command-line interface and server. Its intuitive Web interface and efficient design make it ideal for developers, researchers, and AI enthusiasts working on local hardware.\n\nThe tool's core features include local model execution and multi-model support. It enables running models like Llama 3, Mistral, and Gemma, with simple commands for downloading and switching models. All data processing occurs locally, ensuring privacy. Low resource usage optimizes model loading, allowing smooth operation on limited hardware.\n\nIt offers a RESTful API for application integration and supports tool calling (e.g., Llama 3.1) for complex tasks. Model management via Modelfile bundles weights and configurations for ease of use. The tool's efficiency and user control deliver a modern local AI solution.\n\n**Key Features:**\n- **Local Execution**: Run LLMs directly on your hardware without internet dependency\n- **Multiple Model Support**: Access to dozens of pre-trained models including Llama 3, Mistral, Gemma, Code Llama, and more\n- **Easy Model Management**: Simple commands to pull, run, and manage different models\n- **API Integration**: RESTful API for building applications and integrations\n- **Memory Efficient**: Optimized model loading and memory management\n- **Privacy-Focused**: All processing happens locally, ensuring data privacy\n\n**Supported Models:**\n- DeepSeek-R1 (1.5B, 7B, 8B, 14B, 32B, 70B, 671B parameters)\n- Gemma3n (2B, 4B parameters)\n- Gemma3 (1B, 4B, 12B, 27B parameters)\n- Qwen3 (0.6B, 1.7B, 4B, 8B, 14B, 30B, 32B, 235B parameters)\n- Qwen2.5vl (3B, 7B, 32B, 72B parameters)\n- Llama3.1 (8B, 70B, 405B parameters)\n- Llama3.2 (1B, 3B parameters)\n- Mistral (7B parameters)\n- And many more...\n\n**Use Cases:**\n- Local AI development and experimentation\n- Educational purposes and research\n- Building AI-powered applications\n- Code generation and assistance\n- Text generation and completion\n- Chatbots and conversational AI\n- Data analysis and insights\n\n**Learn More:**\n- [Ollama Official Website](https://ollama.com/)\n- [Ollama GitHub Repository](https://github.com/ollama/ollama)\n- [Model Library](https://ollama.com/library)\n"
+    },
     "description": {
       "en_US": "Ollama runs large language models locally through a command-line interface and an HTTP API. The Ollama server does not include an interactive Web UI; pair it with a frontend such as Open WebUI if you want browser-based chat.\n\nIt supports many models, including Llama, Mistral, Gemma, and Qwen, and provides an API for applications and integrations. Local models run on your own hardware; cloud models require an internet connection.\n\n**Key Features:**\n- **Local model execution**: Run supported models on your own hardware\n- **Model management**: Pull, run, and manage models with the CLI or API\n- **API integration**: Connect other applications to the Ollama server\n- **Privacy options**: Keep inference local when using local models\n\n**Learn More:**\n- [Ollama Official Website](https://ollama.com/)\n- [Ollama GitHub Repository](https://github.com/ollama/ollama)\n- [Model Library](https://ollama.com/library)\n"
     },
     "launch": {
       "path": "/api/version"
-    }
+    },
+    "repository": "https://github.com/jmorganca/ollama"
   },
   "first_run": {
     "endpoints": [
@@ -39,7 +43,13 @@
               "digest": null,
               "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
             },
-            "device_requests": []
+            "device_requests": [],
+            "environment": [
+              {
+                "name": "OLLAMA_KV_CACHE_TYPE",
+                "value": "q8_0"
+              }
+            ]
           },
           {
             "id": "nvidia",
@@ -177,6 +187,39 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 8192
     }
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "OLLAMA_CONTEXT_LENGTH",
+      "example": "32768",
+      "prompt": "Context window in tokens (more context needs more RAM)",
+      "default_by_memory_mb": [
+        [
+          0,
+          "8192"
+        ],
+        [
+          4096,
+          "16384"
+        ],
+        [
+          6144,
+          "32768"
+        ],
+        [
+          10240,
+          "65536"
+        ],
+        [
+          24576,
+          "131072"
+        ]
+      ]
+    }
+  ]
 }

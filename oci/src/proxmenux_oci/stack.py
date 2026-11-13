@@ -14,7 +14,7 @@ import yaml
 
 from .casaos import convert_casaos_compose, canonical_image_repository
 from .converter import ConversionError
-from .converter import _image_contract, _split_short_mount, _port_contract
+from .converter import _image_contract, _split_short_mount, _port_contract, _compose_tmpfs_mounts
 from .i18n import translate
 
 
@@ -28,6 +28,8 @@ VARIABLE = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*
 def normalized_mounts(mounts):
     result = []
     for mount in mounts:
+        if isinstance(mount, dict) and mount.get('type') == 'tmpfs':
+            continue
         if isinstance(mount, str):
             source, target, mode = _split_short_mount(mount)
             if mode not in (None, 'rw', 'ro'):
@@ -60,7 +62,9 @@ def kind(image):
             break
     if repo.startswith('library/'):
         repo = repo[len('library/'):]
-    return repo if repo in {'postgres', 'redis', 'valkey/valkey', 'mariadb', 'linuxserver/mariadb', 'mongo', 'getmeili/meilisearch'} else 'application'
+    if repo in {'postgres', 'pgvector/pgvector', 'pgvector'}:
+        return 'postgres'
+    return repo if repo in {'redis', 'valkey/valkey', 'mariadb', 'linuxserver/mariadb', 'mongo', 'getmeili/meilisearch'} else 'application'
 
 
 DEPENDENCY_VOLUMES = {'mariadb':['/var/lib/mysql'], 'linuxserver/mariadb':['/config'], 'mongo':['/data/db','/data/configdb'],
@@ -177,12 +181,14 @@ def ordered_services(template):
 def service_template(parent, service, main=False):
     c = copy.deepcopy(service['compose'])
     mounts = normalized_mounts(c.get('volumes', []))
-    explicit_targets = {m['target'] for m in mounts}
+    volatile = _compose_tmpfs_mounts(c) or []
+    explicit_targets = {m['target'] for m in mounts} | {m['container_path'] for m in volatile}
     for target in DEPENDENCY_VOLUMES.get(kind(service['image']), []):
         if not any(target == t or target.startswith(t.rstrip('/')+'/') for t in explicit_targets):
             mounts.append({'type':'volume','target':target})
     targets = {m['target'] for m in mounts}
-    c['volumes'] = mounts
+    c['volumes'] = mounts + [m for m in c.get('volumes', [])
+                             if isinstance(m, dict) and m.get('type') == 'tmpfs']
     for key in ('depends_on', 'networks', 'healthcheck', 'expose'):
         c.pop(key, None)
     c['environment'] = environment(c.get('environment'))
@@ -223,7 +229,15 @@ def service_template(parent, service, main=False):
     # declare one of them is not affected by it.
     transient = parent.get('proxmox', {}).get('installer_profile', {}).get('non_persistent_image_volumes')
     if transient:
-        single['proxmox'].setdefault('installer_profile', {})['non_persistent_image_volumes'] = list(transient)
+        # Compose-derived paths belong to their own service. Only explicit
+        # parent-wide exceptions are inherited by every member.
+        main_compose = next((s['compose'] for s in parent['compose_stack']['services']
+                             if s['name'] == parent['compose_stack']['main_service']), {})
+        main_tmpfs = {m['container_path'] for m in (_compose_tmpfs_mounts(main_compose) or [])}
+        transient = [path for path in transient if path not in main_tmpfs]
+        profile = single['proxmox'].setdefault('installer_profile', {})
+        profile['non_persistent_image_volumes'] = list(dict.fromkeys(
+            [*profile.get('non_persistent_image_volumes', []), *transient]))
     return single
 
 
@@ -245,7 +259,7 @@ def service_endpoint(service, include_expose=False):
     return None
 
 
-def public_environment_bindings(services, main_name, environments=None):
+def public_environment_bindings(services, main_name, environments=None, *, static_frontends=None):
     """Bind loopback URL origins to the service publishing their Compose host port."""
     frontends = [service for service in services if service_endpoint(service)]
     result = {}
@@ -253,6 +267,24 @@ def public_environment_bindings(services, main_name, environments=None):
         bindings = {}
         values = (environments or {}).get(service['name'], environment(service['compose'].get('environment')))
         for key, value in values.items():
+            # Explicit native LAN URLs belong to this frontend, including
+            # aliases whose names are plural (for example *_PUBLIC_URLS).
+            # Configure them before the first web check needs that origin.
+            if (service in frontends and '@STACK_LAN_IP@' in value
+                    and (static_frontends is None or service['name'] in static_frontends)):
+                try:
+                    explicit = urlsplit(value.replace('@STACK_LAN_IP@', '127.0.0.1'))
+                    port = explicit.port or (443 if explicit.scheme == 'https' else 80)
+                except ValueError as error:
+                    raise StackError(translate('Invalid service check URL')) from error
+                if explicit.scheme in {'http', 'https'} and explicit.hostname == '127.0.0.1':
+                    ports = _port_contract(service['compose'].get('ports'), set())
+                    if (value.count('@STACK_LAN_IP@') != 1 or any(c in value for c in '\r\n')
+                            or not any(p['protocol'] == 'tcp' and p['container_port'] == port
+                                       and not p.get('container_port_end') for p in ports)):
+                        raise StackError(translate('Invalid service check URL'))
+                    bindings[key] = {'target_service': service['name'], 'container_port': port, 'value': value}
+                    continue
             words = key.upper().split('_')
             if not ({'PUBLIC', 'EXTERNAL'} & set(words[:-1]) and words[-1] in {'URL', 'URI', 'ORIGIN'}):
                 continue
@@ -686,7 +718,9 @@ def build_stack(template, ui, mode='advanced'):
             if not value or any(c in value for c in '\r\n'):
                 raise StackError(translate('External credential is empty or spans multiple lines'))
             envs[service_name][field['name']] = value
-    public_bindings = public_environment_bindings(services, template['compose_stack']['main_service'], envs) if custom else {}
+    public_bindings = public_environment_bindings(
+        services, template['compose_stack']['main_service'], envs,
+        static_frontends={name for name, address in addresses.items() if address != 'dhcp'}) if custom else {}
     if any(addresses[binding['target_service']] == 'dhcp' for bindings in public_bindings.values() for binding in bindings.values()):
         raise StackError(translate('Automatic public URLs require static frontend addresses or explicit URLs'))
     plans = []
@@ -714,6 +748,10 @@ def build_stack(template, ui, mode='advanced'):
         plan['mounts'] = drafts[index]['deployment']['mounts']
         if s['name'] in selected_resources:
             plan['resources'].update(selected_resources[s['name']])
+        for mount in single['proxmox'].get('installer_profile', {}).get('tmpfs_mounts', []):
+            if mount.get('size_from_memory'):
+                next(item for item in plan['tmpfs_mounts']
+                     if item['container_path'] == mount['container_path'])['size_mb'] = max(1, plan['resources']['memory_mb'] // 2)
         explicit_check = compose_healthcheck(s) if custom else None
         if s['name'] in jobs:
             health = {'type': 'completed', 'timeout_seconds': 300}

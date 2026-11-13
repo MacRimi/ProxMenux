@@ -1,19 +1,19 @@
 {
   "meta": {
     "title": "Create VM: System Linux | ProxMenux Documentation",
-    "description": "Create Linux virtual machines on Proxmox VE with ProxMenux. Covers the curated official ISO catalogue (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), the unified storage plan, optional GPU passthrough and post-install tips.",
+    "description": "Create Linux virtual machines on Proxmox VE with ProxMenux. Covers the curated official ISO catalogue (Ubuntu, Debian, Fedora, Arch, Rocky, AlmaLinux, CentOS Stream, Oracle Linux, Mint, openSUSE, Alpine, Kali, Manjaro, Pop!_OS, Zorin OS, CachyOS, NixOS), the unified storage plan, optional GPU passthrough and post-install tips.",
     "ogTitle": "Create VM: System Linux | ProxMenux Documentation",
     "ogDescription": "Create Linux VMs on Proxmox VE with ProxMenux. Curated ISO catalogue, unified storage plan, optional GPU passthrough and post-install tips.",
     "ogImageAlt": "ProxMenux Linux VM menu"
   },
   "header": {
     "title": "Create VM: System Linux",
-    "description": "Create a Linux VM on Proxmox VE. ProxMenux ships with a curated catalogue of official Linux ISOs ready to download, plus a local-ISO picker, and routes everything through the shared VM wizard, the unified storage plan and the optional GPU passthrough assistant.",
+    "description": "Create a Linux VM on Proxmox VE. ProxMenux ships with a curated catalogue of official Linux ISOs ready to download, plus a local-ISO picker and the community Cloud-Init scripts, and routes everything through the shared VM wizard, the unified storage plan and the optional GPU passthrough assistant.",
     "section": "Virtual Machines"
   },
   "intro": {
     "title": "What this script does",
-    "body": "The Linux selector offers two ProxMenux-managed sources of installation media: an official ISO from the curated list (auto-downloaded) or a local ISO you uploaded yourself. Whichever you pick, the rest of the flow is the shared wizard: CPU / RAM / BIOS → storage plan → optional GPU passthrough → VM creation."
+    "body": "The Linux selector offers three options: an official ISO from the curated list (auto-downloaded), a local ISO you uploaded yourself, or a Cloud-Init script from the community Helper-Scripts (Arch, Debian, Ubuntu). For the first two, the rest of the flow is the shared wizard: CPU / RAM / BIOS → storage plan → optional GPU passthrough → VM creation."
   },
   "image": {
     "alt": "ProxMenux Linux installation options",
@@ -145,21 +145,21 @@
     "officialImageAlt": "Linux distribution selection",
     "officialImageCaption": "Linux distribution selection",
     "localHeading": "Local ISO",
-    "localBody": "Uses any Linux ISO already present in <code>/var/lib/vz/template/iso</code>. The script lists every <code>*.iso</code> it finds and lets you pick one.",
+    "localBody": "Uses any Linux ISO already present in a Proxmox storage with ISO content (local, NFS, CIFS…). The script lists every ISO it finds, with its storage, and lets you pick one.",
     "localImageAlt": "Local ISO selection menu",
     "localImageCaption": "Local ISO selection menu",
     "distros": [
       {
         "name": "Ubuntu",
         "variants": [
-          "25.10 Desktop",
-          "24.04 Desktop",
-          "22.04 Desktop",
-          "20.04 Desktop",
-          "25.10 Server",
-          "24.04 Server",
-          "22.04 Server",
-          "20.04 Server"
+          "26.10 Desktop",
+          "26.04 LTS Desktop",
+          "24.04 LTS Desktop",
+          "22.04 LTS Desktop",
+          "26.10 Server",
+          "26.04 LTS Server",
+          "24.04 LTS Server",
+          "22.04 LTS Server"
         ]
       },
       {
@@ -167,16 +167,15 @@
         "variants": [
           "13 Desktop",
           "12 Desktop",
-          "11 Desktop",
           "13 Netinst",
-          "12 Netinst",
-          "11 Netinst"
+          "12 Netinst"
         ]
       },
       {
         "name": "Fedora",
         "variants": [
-          "Workstation 42"
+          "Workstation 45",
+          "Workstation 44"
         ]
       },
       {
@@ -188,37 +187,88 @@
       {
         "name": "Rocky Linux",
         "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "AlmaLinux",
+        "variants": [
+          "10",
+          "10 Minimal",
+          "9"
+        ]
+      },
+      {
+        "name": "CentOS Stream",
+        "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "Oracle Linux",
+        "variants": [
+          "10",
           "9"
         ]
       },
       {
         "name": "Linux Mint",
         "variants": [
-          "22.1 Cinnamon"
+          "22.3 Cinnamon",
+          "22.3 Xfce"
         ]
       },
       {
         "name": "openSUSE",
         "variants": [
-          "Leap 15.6"
+          "Leap 16.1",
+          "Leap 16.0"
         ]
       },
       {
         "name": "Alpine Linux",
         "variants": [
-          "3.21"
+          "3.24"
         ]
       },
       {
         "name": "Kali Linux",
         "variants": [
-          "2026.1"
+          "2026.3"
         ]
       },
       {
         "name": "Manjaro",
         "variants": [
-          "25.0 GNOME"
+          "26.1 GNOME"
+        ]
+      },
+      {
+        "name": "Pop!_OS",
+        "variants": [
+          "24.04"
+        ]
+      },
+      {
+        "name": "Zorin OS",
+        "variants": [
+          "18.1 Core",
+          "18.1 Lite"
+        ]
+      },
+      {
+        "name": "CachyOS",
+        "variants": [
+          "latest"
+        ]
+      },
+      {
+        "name": "NixOS",
+        "variants": [
+          "26.05",
+          "26.05 Minimal"
         ]
       }
     ]

@@ -18,11 +18,14 @@ import oci_carried_record as carried
 import oci_stack_public_routes as public_routes
 import oci_compose_jobs as compose_jobs
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as member_tx
 import oci_stack_plan
 import oci_stack_transaction as stack_tx
+import oci_stack_adapters as adapters
 import oci_stack_replay as replay
 import oci_work_backup as work_backup
+import oci_zfs_recovery as zfs_recovery
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
@@ -49,27 +52,28 @@ def validate_database_transition(previous, candidate):
         raise ValueError(translate('The new image changes the PostgreSQL major version; the data must be migrated before updating'))
 
 
-def nextcloud_plan(primary, records, inventory, lifecycle, operation):
-    """Translate only the known three-member stack and retain rollback contracts."""
-    intent = primary.get('native_stack_intent', {})
-    if intent.get('adapter', {}).get('name') != 'install_nextcloud_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Nextcloud")
-    translated = {vmid: replay.nextcloud_record(record) for vmid, record in records.items()}
-    roles = {record['deployment']['replay_profile']['role']: vmid
-             for vmid, record in translated.items()}
-    if len(translated) != 3 or set(roles) != {'application', 'cache', 'database'} or roles['application'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Nextcloud")
+def adapter_plan(script, primary, records, inventory, lifecycle, operation):
+    """Translate the members of a stack its adapter installed and keep the
+    contracts a rollback needs. What differs between adapters (its members, their
+    start order and the readiness check of the application) is declared in
+    oci_stack_adapters."""
+    adapter = adapters.ADAPTERS[script]
+    label = adapter['label']
+    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != script:
+        raise ValueError(f"{translate('Unrecognized stack adapter:')} {label}")
+    translated = {vmid: adapter['record'](record) for vmid, record in records.items()}
+    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
+    expected = {adapter['main_role'], *adapter['dependencies']}
+    if len(translated) != len(expected) or set(roles) != expected or roles[adapter['main_role']] != primary['vmid']:
+        raise ValueError(f"{translate('Unrecognized stack structure:')} {label}")
     dependencies = lifecycle.get('dependencies', [])
     if (lifecycle.get('schema') != 1
-            or [d.get('vmid') for d in dependencies] != [roles['database'], roles['cache']]):
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Nextcloud")
+            or [d.get('vmid') for d in dependencies] != [roles[role] for role in adapter['dependencies']]):
+        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} {label}")
     services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])}
                 for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Nextcloud', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['php', '-r',
-            '$s=json_decode(file_get_contents("http://127.0.0.1/status.php"),true);'
-            'exit(is_array($s)&&!empty($s["installed"])&&empty($s["maintenance"])'
-            '&&empty($s["needsDbUpgrade"])?0:1);']}})
+    services.append({'vmid': primary['vmid'], 'name': label, 'healthcheck': {
+        'type': 'exec', 'timeout_seconds': 600, 'argv': list(adapter['healthcheck'])}})
     parent = translated[primary['vmid']]
     parent['stack']['deployment']['services'] = services
     parent['stack']['members'] = []
@@ -79,92 +83,7 @@ def nextcloud_plan(primary, records, inventory, lifecycle, operation):
         parent['stack']['members'].append(snapshot)
     plan = oci_stack_plan.build(parent, translated, inventory, operation)
     plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['nextcloud_replay'] = True
-    return plan
-
-
-def paperless_plan(primary, records, inventory, lifecycle, operation):
-    """Prepare the known Paperless stack without publishing translated recipes."""
-    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_paperless_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Paperless")
-    translated = {vmid: replay.paperless_record(record) for vmid, record in records.items()}
-    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
-    if len(translated) != 3 or set(roles) != {'application', 'database', 'broker'} or roles['application'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Paperless")
-    dependencies = lifecycle.get('dependencies', [])
-    if lifecycle.get('schema') != 1 or [d.get('vmid') for d in dependencies] != [roles['database'], roles['broker']]:
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Paperless")
-    services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])}
-                for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Paperless', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['python3', '-c',
-            'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/", timeout=10).read(1)']}})
-    parent = translated[primary['vmid']]
-    parent['stack']['deployment']['services'] = services
-    parent['stack']['members'] = []
-    for service in services:
-        snapshot = copy.deepcopy(translated[service['vmid']])
-        snapshot.pop('stack', None)
-        parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, operation)
-    plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['paperless_replay'] = True
-    return plan
-
-
-def tandoor_plan(primary, records, inventory, lifecycle, operation):
-    """Prepare exactly the application and PostgreSQL without publishing state."""
-    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_tandoor_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Tandoor")
-    translated = {vmid: replay.tandoor_record(record) for vmid, record in records.items()}
-    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
-    if len(translated) != 2 or set(roles) != {'application', 'database'} or roles['application'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Tandoor")
-    dependencies = lifecycle.get('dependencies', [])
-    if lifecycle.get('schema') != 1 or [d.get('vmid') for d in dependencies] != [roles['database']]:
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Tandoor")
-    services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])}
-                for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Tandoor', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['python3', '-c',
-            'import urllib.request; urllib.request.urlopen("http://127.0.0.1/", timeout=10).read(1)']}})
-    parent = translated[primary['vmid']]
-    parent['stack']['deployment']['services'] = services
-    parent['stack']['members'] = []
-    for service in services:
-        snapshot = copy.deepcopy(translated[service['vmid']])
-        snapshot.pop('stack', None)
-        parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, operation)
-    plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['tandoor_replay'] = True
-    return plan
-
-
-def immich_plan(primary, records, inventory, lifecycle, operation):
-    if primary.get('native_stack_intent', {}).get('adapter', {}).get('name') != 'install_immich_stack.sh':
-        raise ValueError(f"{translate('Unrecognized stack adapter:')} Immich")
-    translated = {vmid: replay.immich_record(record) for vmid, record in records.items()}
-    roles = {r['deployment']['replay_profile']['role']: vmid for vmid, r in translated.items()}
-    if len(translated) != 4 or set(roles) != {'server', 'database', 'valkey', 'machine-learning'} or roles['server'] != primary['vmid']:
-        raise ValueError(f"{translate('Unrecognized stack structure:')} Immich")
-    dependencies = lifecycle.get('dependencies', [])
-    if lifecycle.get('schema') != 1 or [d.get('vmid') for d in dependencies] != [roles['database'], roles['valkey'], roles['machine-learning']]:
-        raise ValueError(f"{translate('Unrecognized dependency order of the stack:')} Immich")
-    services = [{'vmid': d['vmid'], 'name': d['label'], 'healthcheck': copy.deepcopy(d['healthcheck'])} for d in dependencies]
-    services.append({'vmid': primary['vmid'], 'name': 'Immich', 'healthcheck': {
-        'type': 'exec', 'timeout_seconds': 600, 'argv': ['node', '-e',
-            'fetch("http://127.0.0.1:2283/api/server/ping").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))']}})
-    parent = translated[primary['vmid']]
-    parent['stack']['deployment']['services'] = services
-    parent['stack']['members'] = []
-    for service in services:
-        snapshot = copy.deepcopy(translated[service['vmid']])
-        snapshot.pop('stack', None)
-        parent['stack']['members'].append(snapshot)
-    plan = oci_stack_plan.build(parent, translated, inventory, operation)
-    plan['original_members'] = copy.deepcopy(list(records.values()))
-    plan['immich_replay'] = True
+    plan[f"{adapter['name']}_replay"] = True
     return plan
 
 
@@ -201,6 +120,8 @@ class NativeAdapter:
         self.acknowledge = acknowledge_external_data
         # Storage where the verified backups of this update are kept.
         self.keep_backup = None
+        self.zfs_backups = None
+        self.zfs_checked = False
 
     def state(self):
         return json.loads(self.journal.read_text())
@@ -209,7 +130,7 @@ class NativeAdapter:
         name = self.services.get(vmid, {}).get('name')
         return f'{name} (CT {vmid})' if name else f'CT {vmid}'
 
-    def validate(self, plan):
+    def validate(self, plan, vmids=None):
         resources = json.loads(instances.command('pvesh', 'get', '/cluster/resources',
             '--type', 'vm', '--output-format', 'json'))
         if not isinstance(resources, list):
@@ -222,21 +143,25 @@ class NativeAdapter:
             if row['vmid'] in inventory:
                 raise ValueError(translate('Duplicated VMID in the Proxmox inventory'))
             inventory[row['vmid']] = row
-        for vmid, record in self.records.items():
+        state = self.state() if self.journal.exists() else {}
+        checked_configs = {}
+        for vmid in self.records if vmids is None else vmids:
+            record = self.records[vmid]
             row = inventory.get(vmid)
             if row:
                 if row['type'] != 'lxc' or row.get('node') != socket.gethostname().split('.')[0]:
                     raise ValueError(translate('A member VMID is in use by another guest or is on another node'))
                 config = instances.command('pct', 'config', str(vmid))
+                checked_configs[vmid] = config
                 public_routes.check(config, record['deployment'], vmid, record['installation_id'])
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
-                if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config, ignore_tags=True):
+                if not state.get('replacement_intent') and not instances.same_config_except_notes(record, config, ignore_tags=True):
                     raise ValueError(translate('A member configuration changed during the preparation'))
             else:
                 if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
                     raise ValueError(translate('The Proxmox inventory and the local configurations differ'))
-                if not self.journal.exists() or not self.state().get('replacement_intent'):
+                if not state.get('replacement_intent'):
                     raise ValueError(translate('A member is missing before the replacement'))
             current = instances.read(self.root, vmid)
             if current['installation_id'] != record['installation_id']:
@@ -244,6 +169,7 @@ class NativeAdapter:
             pending = current.get('pending_stack_transaction')
             if pending and pending != str(self.journal):
                 raise ValueError(translate('Another stack operation is pending'))
+        return checked_configs
 
     def _migration_backups(self):
         if not any(self.is_job(vmid) for vmid in self.services):
@@ -266,7 +192,7 @@ class NativeAdapter:
                 raise ValueError(translate('Migration jobs cannot safely restore database or unclassified backend data from host directories'))
 
     def preflight(self):
-        self.validate(self.plan)
+        checked_configs = self.validate(self.plan) or {}
         self._migration_backups()
         ha = json.loads(instances.command('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
         if not isinstance(ha, list) or any(r.get('sid') == 'ct:%s' % vmid for r in ha for vmid in self.records):
@@ -276,7 +202,8 @@ class NativeAdapter:
                 raise ValueError(translate('A member has a pending operation'))
             if record['deployment'].get('post_start_configurations'):
                 raise ValueError(translate('The recipe requires configuration at startup; its coordinated replay is not available'))
-            config = instances.command('pct', 'config', str(vmid))
+            # Reuse this read-only preflight snapshot, never destructive checks.
+            config = checked_configs.get(vmid) or instances.command('pct', 'config', str(vmid))
             member_tx.preflight(record, record, config, coordinated=True)
             member_tx.freeze_host_sources(record, record, self.acknowledge)
             check = self.services[vmid].get('healthcheck', {})
@@ -337,17 +264,27 @@ class NativeAdapter:
     def is_running(self, vmid):
         return instances.command('pct', 'status', str(vmid)).strip() == b'status: running'
 
-    def prepare(self, record, operation):
-        for vmid in self.records:
-            current = instances.read(self.root, vmid)
-            current['pending_stack_transaction'] = str(self.journal)
-            instances.write(instances.location(self.root, vmid), current)
+    def prepare(self, record, operation, force=False, required_digest=None):
+        if not getattr(self, '_marked_pending', False):
+            for vmid in self.records:
+                current = instances.read(self.root, vmid)
+                current['pending_stack_transaction'] = str(self.journal)
+                instances.write(instances.location(self.root, vmid), current)
+            self._marked_pending = True
         config = instances.command('pct', 'config', str(record['vmid']))
+        local_archives = (record.get('observed', {}).get('archive_path'),)
         if operation == 'recreate':
             digest = record.get('observed', {}).get('resolved_registry_digest')
-            archive, digest = resolve_archive(record, config, required_digest=digest)
+            archive, digest = resolve_archive(record, config, required_digest=digest,
+                                              local_archives=local_archives)
         else:
-            archive, digest = resolve_archive(record, config)
+            kwargs = {'local_archives': local_archives,
+                      'current': None if force else record['observed']['image']}
+            if required_digest:
+                kwargs['required_digest'] = required_digest
+            archive, digest = resolve_archive(record, config, **kwargs)
+            if archive is None:
+                return {'archive': None, 'digest': digest, 'unchanged': True}
         image = image_from_archive(str(archive))
         old = record['observed']['image']
         validate_database_transition(old, image)
@@ -359,10 +296,11 @@ class NativeAdapter:
         if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in paths)
                for p in set(image['defaults'].get('Volumes') or {}) - transient):
             raise ValueError(translate('The new image requires additional persistent paths'))
+        import_image = member_tx.layer_paths.prepare(archive, self.journal.parent / 'image-imports' / f'pve-import-{record["vmid"]}.tar')
         profile = record['deployment'].get('replay_profile', {})
-        if profile.get('adapter') in ('install_nextcloud_stack.sh', 'install_paperless_stack.sh', 'install_tandoor_stack.sh', 'install_immich_stack.sh'):
+        if profile.get('adapter') in adapters.ADAPTERS:
             msg_info(f"{translate('Checking the new image without starting it:')} {self.describe(record['vmid'])}")
-            self.probe_nextcloud_image(record, archive, image)
+            self.probe_nextcloud_image(record, Path(import_image['path']) if import_image else archive, image)
             msg_ok(f"{translate('New image compatible:')} {self.describe(record['vmid'])}")
         proposal = None
         if operation == 'recreate':
@@ -370,7 +308,14 @@ class NativeAdapter:
             config_hash = record.get('observed', {}).get('config_sha256')
             if config_hash:
                 proposal['base_config_sha256'] = config_hash
-        return {'archive': str(archive), 'digest': digest, 'proposal': proposal}
+        return {'archive': str(archive), 'digest': digest, 'proposal': proposal, 'import_image': import_image}
+
+    def prepare_changed_stack(self, state):
+        for vmid in self.records:
+            prepared = state['prepared'][str(vmid)]
+            if prepared.get('unchanged') is True and self.is_job(vmid):
+                state['prepared'][str(vmid)] = self.prepare(self.records[vmid], 'update',
+                    force=True, required_digest=prepared['digest'])
 
     def probe_nextcloud_image(self, record, archive, image):
         """Import but never start a disposable rootfs before stopping the stack."""
@@ -384,18 +329,18 @@ class NativeAdapter:
         try:
             member_tx.log('image probe: CT %s' % record['vmid'])
             root = record['deployment']['rootfs']
-            member_tx.run('pct', 'create', str(vmid), str(archive), '--rootfs',
-                '%s:%s' % (root['storage'], root['size_gb']), '--hostname', 'oci-image-probe',
-                '--ostype', 'unmanaged', '--unprivileged', '1', '--memory', '128',
-                '--cores', '1', '--onboot', '0', '--description', marker)
+            import oci_native_import
+            with member_tx.creatable_archive(archive) as prepared:
+                with oci_native_import.import_archive(prepared, str(prepared), 100000, 100000) as source:
+                    member_tx.run('pct', 'create', str(vmid), str(source), '--rootfs',
+                        '%s:%s' % (root['storage'], root['size_gb']), '--hostname', 'oci-image-probe',
+                        '--ostype', 'unmanaged', '--unprivileged', '1', '--memory', '128',
+                        '--cores', '1', '--onboot', '0', '--description', marker)
             member_tx.owned(vmid, marker)
             member_tx.run('pct', 'mount', str(vmid))
             mounted = True
             profile = record['deployment']['replay_profile']
-            check = {'install_paperless_stack.sh': replay.paperless_prerequisites,
-                     'install_nextcloud_stack.sh': replay.nextcloud_prerequisites,
-                     'install_tandoor_stack.sh': replay.tandoor_prerequisites,
-                     'install_immich_stack.sh': replay.immich_prerequisites}[profile['adapter']]
+            check = adapters.ADAPTERS[profile['adapter']]['prerequisites']
             check(Path('/var/lib/lxc') / str(vmid) / 'rootfs', profile['role'], image)
         finally:
             if mounted:
@@ -406,12 +351,22 @@ class NativeAdapter:
             descriptor.unlink()
 
     def stop(self, vmid):
-        self.validate(self.plan)
+        self.validate(self.plan, [vmid])
         if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
-            member_tx.stop(vmid)
+            member_tx.stop(vmid, self.records[vmid]['deployment'].get('shutdown_timeout_seconds', 60))
 
     def backup(self, vmid, transaction_id):
-        self.validate(self.plan)
+        self.validate(self.plan, [vmid])
+        if not getattr(self, 'zfs_checked', False):
+            self.zfs_checked = True
+            prepared_zfs = zfs_recovery.plan(self.records) if not getattr(self, 'keep_backup', None) and not getattr(self, 'keep_backup_requested', False) else None
+            if prepared_zfs:
+                for member_id, record in self.records.items():
+                    carried.carry_backup(self.root, member_id, record, prepared_zfs['configs'][member_id])
+                self.zfs_backups = zfs_recovery.create(self.records, self.journal.parent, prepared_zfs)
+        if getattr(self, 'zfs_backups', None):
+            archive = self.zfs_backups[vmid]
+            return {'archive': str(archive), 'sha256': member_tx.filehash(archive)}
         base = self.work_base()
         if base != self.journal.parent and not (self.journal.parent / work_backup.MARK).exists():
             work_backup.prepare(base)
@@ -432,21 +387,18 @@ class NativeAdapter:
                 raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup['archive']}")
             if member_tx.filehash(backup['archive']) != backup['sha256']:
                 raise ValueError(translate('A backup was modified'))
-            member_tx.run('zstd', '-t', backup['archive'])
+            member_tx.verify_recovery_archive(backup['archive'])
 
     def replace(self, vmid, prepared, identity):
         self.validate(self.plan)
         state = self.state()
         context = {'journal': str(self.journal), 'id': identity,
                    'backup': state['backups'][str(vmid)]}
-        if self.plan.get('nextcloud_replay'):
-            context.update(nextcloud_replay=True, effective_record=self.records[vmid])
-        if self.plan.get('paperless_replay'):
-            context.update(paperless_replay=True, effective_record=self.records[vmid])
-        if self.plan.get('tandoor_replay'):
-            context.update(tandoor_replay=True, effective_record=self.records[vmid])
-        if self.plan.get('immich_replay'):
-            context.update(immich_replay=True, effective_record=self.records[vmid])
+        if 'import_image' in prepared:
+            context['import_image'] = prepared['import_image']
+        for flag in adapters.REPLAY_FLAGS:
+            if self.plan.get(flag):
+                context.update({flag: True, 'effective_record': self.records[vmid]})
         operation = self.plan['operation']
         member_tx.apply(self.root, vmid, Path(prepared['archive']), operation,
             proposal=prepared.get('proposal'), registry_digest=prepared['digest'],
@@ -518,7 +470,7 @@ class NativeAdapter:
         return compose_jobs.ensure_completed(vmid, self.services[vmid]['healthcheck']['job'], force=force)
 
     def start(self, vmid):
-        self.validate(self.plan)
+        self.validate(self.plan, [vmid])
         if self.is_job(vmid):
             self._ensure_job(vmid)
             return
@@ -576,6 +528,13 @@ class NativeAdapter:
     def validate_candidates(self, state):
         self.validate(self.plan)
         for vmid, original in self.records.items():
+            if state['prepared'][str(vmid)].get('unchanged') is True:
+                config = member_tx.owned(vmid, original['installation_id'])
+                if not instances.same_config_except_notes(original, config, ignore_tags=True):
+                    raise ValueError(translate('A member configuration changed after the stack was checked'))
+                member_tx.check_runtime_mounts(config, original['deployment'])
+                member_tx.gpu_devices.check(config, original['deployment'])
+                continue
             current = instances.read(self.root, vmid)
             journal = Path(current['pending_transaction'])
             child = json.loads(journal.read_text())
@@ -616,6 +575,13 @@ class NativeAdapter:
 
     def publish(self, state):
         for vmid, original in self.records.items():
+            if state['prepared'][str(vmid)].get('unchanged') is True:
+                config = member_tx.owned(vmid, original['installation_id'])
+                if not instances.same_config_except_notes(original, config, ignore_tags=True):
+                    raise ValueError(translate('A member configuration changed after the stack was checked'))
+                member_tx.check_runtime_mounts(config, original['deployment'])
+                member_tx.gpu_devices.check(config, original['deployment'])
+                continue
             current = instances.read(self.root, vmid)
             journal = Path(current['pending_transaction'])
             child = json.loads(journal.read_text())
@@ -688,12 +654,8 @@ class NativeAdapter:
             instances.write(journal, child)
         stage = child['stage']
         if not Path('/etc/pve/lxc/%s.conf' % stage).exists():
-            archive = self.state()['prepared'][str(vmid)]['archive']
-            member_tx.run('pct', 'create', str(stage), archive, '--rootfs',
-                '%s:%s' % (original['deployment']['rootfs']['storage'], original['deployment']['rootfs']['size_gb']),
-                '--hostname', 'oci-stack-recovery-holder', '--ostype', 'unmanaged',
-                '--unprivileged', '1', '--memory', '128', '--cores', '1', '--onboot', '0',
-                '--description', 'proxmenux-transaction=' + child['id'])
+            member_tx.create_data_holder(stage, original['deployment']['rootfs']['storage'],
+                child['id'], journal.parent, original['observed']['image']['architecture'])
         pending = copy.deepcopy(original)
         pending.update(status='updating', pending_transaction=str(journal), transaction_id=child['id'],
                        pending_stack_transaction=str(self.journal))
@@ -713,7 +675,7 @@ class NativeAdapter:
             record['observed'] = instances.observe(vmid, record['installation_id'],
                 original['observed']['archive_path'], original['observed']['resolved_registry_digest'],
                 original['observed']['image'])
-            if any(self.plan.get(flag) for flag in ('nextcloud_replay', 'paperless_replay', 'tandoor_replay', 'immich_replay')):
+            if any(self.plan.get(flag) for flag in adapters.REPLAY_FLAGS):
                 record['deployment']['native_config'] = record['observed']['config']
                 record['deployment']['member_replay_projection'] = replay.normalize(record)
             if self.is_job(vmid) and self.state().get('replacement_intent'):
@@ -762,6 +724,7 @@ class NativeAdapter:
             instances.write(instances.location(self.root, vmid), record)
         try:
             self.release_stages(recovered=state['phase'] == 'rolled-back')
+            member_tx.release_local_recovery(self.journal.parent)
             if self.keep_backup and state['phase'] == 'committed':
                 import oci_keep_backup
                 for backup in sorted(work_backup.recall(self.journal.parent).glob('backup-*/vzdump-lxc-*.tar.zst')):
@@ -771,7 +734,7 @@ class NativeAdapter:
             self.prune_backups(include_current=state['phase'] == 'committed')
             for path, _ in image_cache.prune(self.root, lock=False):
                 member_tx.log(f'removed unused image archive: {path}')
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
             member_tx.log(f'cleanup: {exc}')
 
     def release_stages(self, recovered=False):
@@ -820,7 +783,7 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
     msg_info(translate('Checking the interrupted stack operation...') if recover
              else (translate('Checking the stack before recreating...') if operation == 'recreate'
                    else translate('Checking the stack before the update...')))
-    with instances.locked(root):
+    with native_reads.session(log=member_tx.log), instances.locked(root):
         selected = instances.read(root, vmid)
         primary_id = selected.get('stack_member', {}).get('primary_vmid', vmid)
         primary = instances.read(root, primary_id)
@@ -858,17 +821,12 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
             records[member_id] = instances.read(root, member_id)
             inventory[member_id] = instances.identity(instances.command('pct', 'config', str(member_id)))
         adapter_name = primary.get('native_stack_intent', {}).get('adapter', {}).get('name')
-        builders = {'install_nextcloud_stack.sh': nextcloud_plan,
-                    'install_paperless_stack.sh': paperless_plan,
-                    'install_tandoor_stack.sh': tandoor_plan,
-                    'install_immich_stack.sh': immich_plan}
-        if adapter_name in builders:
+        if adapter_name in adapters.ADAPTERS:
             lifecycle = Path('/etc/pve/priv/proxmenux-stack-%s.json' % primary_id)
             info = lifecycle.lstat()
             if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
                 raise ValueError(translate('Unsafe dependency contract'))
-            builder = builders[adapter_name]
-            plan = builder(primary, records, inventory, json.loads(lifecycle.read_text()), operation)
+            plan = adapter_plan(adapter_name, primary, records, inventory, json.loads(lifecycle.read_text()), operation)
         else:
             plan = oci_stack_plan.build(primary, records, inventory, operation)
         stack_tx.validate_plan(plan)
@@ -878,6 +836,7 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
         journal = directory / 'transaction.json'
         _current['journal'] = journal
         adapter = NativeAdapter(root, journal, plan, acknowledge_external_data)
+        adapter.keep_backup_requested = bool(keep_backup)
         adapter.preflight()
         msg_ok(f"{translate('Stack checked:')} {len(plan['members'])} {translate('containers')}")
         if keep_backup:
@@ -895,6 +854,9 @@ def run(vmid, recover=False, acknowledge_external_data=False, keep_backup=None, 
         with oci_operation_notice.operation([member['vmid'] for member in plan['members']], operation,
                                             oci_update_current.application_name(primary, primary_id), primary_id):
             result = stack_tx.execute(journal, adapter, plan)
+        if result.get('no_change'):
+            msg_ok(translate('The image is already up to date; nothing was changed.'))
+            return result
         msg_ok(translate('Stack recreation completed. Data kept.') if operation == 'recreate'
                else translate('Stack update completed. Data kept.'))
         return result
@@ -935,7 +897,10 @@ def main():
     parser.add_argument('--operation', choices=['update', 'recreate'], default='update')
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--keep-backup', metavar='STORAGE')
+    parser.add_argument('--recovery-backend', choices=['backup', 'auto'])
     args = parser.parse_args()
+    if args.recovery_backend:
+        os.environ['PROXMENUX_OCI_RECOVERY'] = args.recovery_backend
     if os.geteuid() != 0:
         parser.error(translate('Root privileges on the Proxmox node are required'))
     try:

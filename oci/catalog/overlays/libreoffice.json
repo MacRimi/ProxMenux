@@ -19,5 +19,22 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "LibreOffice"
+    },
+    "tagline": {
+      "en_US": "LibreOffice is a free and powerful office suite, and a successor to OpenOffice.org (commonly known as OpenOffice). Its clean interface and feature-rich tools help you unleash your creativity and enhance your productivity."
+    },
+    "description": {
+      "en_US": "LibreOffice is an open-source office suite and successor to OpenOffice.org. It provides tools for word processing, spreadsheets, presentations, and document editing. It allows users to create, edit, and manage standard office documents directly within a web browser interface."
+    },
+    "screenshots": [
+      "https://www.libreoffice.org/media/screenshot_writer_hero.png",
+      "https://www.libreoffice.org/media/screenshot_impress.png",
+      "https://www.libreoffice.org/media/screenshot_writer.png",
+      "https://www.libreoffice.org/media/screenshot_calc.png"
+    ]
   }
 }

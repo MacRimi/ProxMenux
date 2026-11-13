@@ -134,5 +134,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "You have found the easiest way to install & manage WireGuard on any Linux host!"
+    },
+    "description": {
+      "en_US": "WireGuard Easy combines a WireGuard VPN server with a web-based administration interface. It allows users to create, manage, enable, and disable client profiles directly from a browser. The platform also provides connection statistics, traffic charts, configuration downloads, and QR code generation for quick client setups."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/wg-easy/wg-easy/HEAD/assets/screenshot.png"
+    ],
+    "website": "https://wg-easy.github.io/wg-easy/latest/",
+    "repository": "https://github.com/wg-easy/wg-easy"
   }
 }

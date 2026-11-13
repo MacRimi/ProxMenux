@@ -215,20 +215,33 @@ function select_nas_iso() {
     "7" "ZimaOS         VM          (Proxmox-zimaos)"
     "8" "FygoOS         VM          (Debian based)"
     ""  ""
-    ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn"
+    ""  "\Z4───────────────── $(translate "External Scripts") ─────────────────\Zn"
     ""  ""
-    "9" "Umbrel OS      VM          (Helper-Scripts)"
+    "9" "Umbrel OS      VM          (Community Scripts)"
     "10" "$(translate "Return to Main Menu")"
   )
 
-  local NAS_TYPE
-  NAS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
-    --title "$(translate "NAS Systems")" \
-    --menu "\n$(translate "Select the NAS system to install:")" 22 70 13 \
-    "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+  local NAS_TYPE=""
+  case "${VM_PRESET:-}" in
+    synology) NAS_TYPE="1" ;;
+    truenas-scale) NAS_TYPE="2" ;;
+    truenas-core) NAS_TYPE="3" ;;
+    openmediavault) NAS_TYPE="4" ;;
+    xigmanas) NAS_TYPE="5" ;;
+    rockstor) NAS_TYPE="6" ;;
+    zimaos) NAS_TYPE="7" ;;
+    fygoos) NAS_TYPE="8" ;;
+    umbrel) NAS_TYPE="9" ;;
+  esac
+  VM_PRESET=""
 
-
-  [[ $? -ne 0 ]] && return 1
+  if [[ -z "$NAS_TYPE" ]]; then
+    NAS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
+      --title "$(translate "NAS Systems")" \
+      --menu "\n$(translate "Select the NAS system to install:")" 22 70 13 \
+      "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    [[ $? -ne 0 ]] && return 1
+  fi
 
   case "$NAS_TYPE" in
     1)
@@ -274,7 +287,7 @@ function select_nas_iso() {
       read -r
       
       whiptail --title "Proxmox VE - Umbrel OS" \
-        --msgbox "$(translate "Umbrel OS installer script by Helper Scripts\n\nVisit the GitHub repo to learn more, contribute, or support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE/scripts?id=umbrel-os-vm")" 15 70
+        --msgbox "$(translate "Umbrel OS installer script by Community Scripts\n\nVisit the GitHub repo to learn more, contribute, or support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE/scripts?id=umbrel-os-vm")" 15 70
 
       return 1
       ;;

@@ -88,7 +88,7 @@
       {
         "markerRich": "<strong>РЕКОМЕНДАЦИЯ</strong>",
         "meaning": "Есть возможность усилить защиту",
-        "action": "Примените рекомендацию, если она соответствует вашей модели угроз"
+        "action": "Примените рекомендацию, если она соответствует Вашей модели угроз"
       }
     ],
     "outro": "Сам Lynis записывает полный отчёт и машиночитаемые данные в <code>/var/log/lynis.log</code> и <code>/var/log/lynis-report.dat</code>."
@@ -130,7 +130,7 @@
     "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
     "sshTitle": "Audit выводит «Предупреждение: тест SSH-7408 — параметр MaxAuthTries задан неверно»",
     "sshIntro": "Служба SSH допускает слишком много попыток аутентификации на одно соединение. Установите <link>Fail2Ban</link> из ProxMenux (при этом <code>MaxAuthTries=3</code> задаётся автоматически) либо отредактируйте <code>/etc/ssh/sshd_config</code> вручную:",
-    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "sshCode": "sed -i -E 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
     "scoreTitle": "Оценка снизилась после обновления Proxmox",
     "scoreBody": "Сначала выполните <code>lynis update info</code> — обновление Lynis могло добавить новые проверки, выявляющие проблемы в существующей конфигурации. Обновите Lynis через меню, повторите аудит и устраните выявленные новые проблемы."
   },
@@ -153,7 +153,7 @@
       {
         "href": "/docs/monitor/dashboard/security",
         "label": "Вкладка ProxMenux Monitor → Безопасность",
-        "tail": " — запускайте аудит, просматривайте предыдущие отчёты и скачивайте PDF прямо из панели управления."
+        "tail": " — запускайте аудит, просматривайте предыдущие отчёты и скачивайте PDF прямо из панели мониторинга."
       },
       {
         "href": "/docs/security/fail2ban",

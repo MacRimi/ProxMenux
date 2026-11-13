@@ -76,38 +76,54 @@ class StackEditorSlovakTests(unittest.TestCase):
         self.original = copy.deepcopy(self.primary)
         return self.member
 
+    def open_member(self, choice, *paths):
+        # Modify opened on one container: the menu of what to change answers
+        # `choice`, and the editor of paths answers `paths` in order; every
+        # other question is left unanswered.
+        answers = list(paths)
+
+        def choose(text, options, default=None, **kwargs):
+            keys = [key for key, label in options]
+            if 'resources' in keys:
+                return choice if choice in keys else None
+            return answers.pop(0) if answers else None
+        self.ui.choose.side_effect = choose
+        return editor.modify_stack(ROOT / 'oci', self.ui, self.primary, self.lifecycle,
+                                   member_vmid=self.member['vmid'])
+
     def changes(self, **values):
         return {'add_mounts': [], 'remove_mounts': [], 'add_devices': [],
                 'remove_devices': [], **values}
 
-    def test_editor_only_offers_extra_paths_and_leaves_database_out(self):
-        self.assertFalse(editor.modify_stack(ROOT / 'oci', self.ui, self.primary, self.lifecycle))
+    def test_editor_lists_every_path_and_never_removes_the_data_of_the_application(self):
+        self.assertFalse(self.open_member('paths', '/opt/recipes/mediafiles', 'done'))
         shown = self.shown()
-        self.assertIn('odznačené sa odstránia po potvrdení', shown)
+        menu = self.ui.choose.call_args_list[1].args[1]
+        self.assertEqual([key for key, label in menu],
+                         ['/opt/recipes/mediafiles', '/extra', '/shared', 'add', 'done'])
+        self.assertIn('nemožno ju zmeniť ani odstrániť', shown)
         self.assertIn('odznačené sa odpoja po potvrdení', shown)
-        options = self.ui.checklist.call_args_list[0].args[1]
-        self.assertEqual([path for path, label in options], ['/extra', '/shared'])
         self.assertNotIn('zásobník', shown)
 
     def test_declining_volume_deletion_keeps_it_and_only_detaches_host_path_in_draft(self):
-        self.ui.checklist.side_effect = [[], ['/dev/ttyACM7']]
-        self.assertFalse(editor.modify_stack(ROOT / 'oci', self.ui, self.primary, self.lifecycle))
+        self.ui.checklist.side_effect = [['/dev/ttyACM7']]
+        self.assertFalse(self.open_member('paths', '/extra', 'remove', '/shared', 'remove', 'done'))
         warning = self.ui.confirm.call_args_list[0].args[0]
         self.assertIn('trvalé úložisko aj všetky údaje v ňom', warning)
         self.assertIn('/extra', warning)
         summary = self.ui.review.call_args.args[0]
         self.assertIn('- /shared', summary)
         self.assertNotIn('- /extra', summary)
-        self.assertIn('Spustený kontajner sa reštartuje', summary)
+        self.assertIn('spustený kontajner reštartujú', summary)
         self.assertIn('zastavený zostane zastavený', summary)
-        self.assertIn('Databáza ani ostatné kontajnery sa nemenia', summary)
+        self.assertIn('konfigurácia ostatných kontajnerov sa nemenia', summary)
 
     def test_declined_review_describes_confirmed_volume_deletion_without_performing_it(self):
-        self.ui.checklist.side_effect = [[], []]
-        self.ui.confirm.side_effect = [True, False, False]
-        self.assertFalse(editor.modify_stack(ROOT / 'oci', self.ui, self.primary, self.lifecycle))
+        self.ui.checklist.side_effect = [[]]
+        self.ui.confirm.side_effect = [True, False]
+        self.assertFalse(self.open_member('paths', '/extra', 'remove', '/shared', 'remove', 'done'))
         self.assertIn('- /extra', self.ui.review.call_args.args[0])
-        self.assertIn('vymažú aj údaje', self.ui.review.call_args.args[0])
+        self.assertIn('vymaže aj s jeho údajmi', self.ui.review.call_args.args[0])
         self.assertEqual(self.ui.review.call_args.kwargs['question'], 'Použiť tieto zmeny?')
 
     def test_member_selection_cancels_before_any_configuration_read(self):
@@ -129,9 +145,9 @@ class StackEditorSlovakTests(unittest.TestCase):
 
     def test_immich_action_menu_identifies_recognition_instead_of_video_transcoding(self):
         self.immich()
-        self.assertFalse(editor.modify_stack(ROOT / 'oci', self.ui, self.primary, self.lifecycle))
+        self.assertFalse(self.open_member(None))
         self.assertIn('Vybrať CPU alebo GPU pre rozpoznávanie', self.shown())
-        self.assertIn('Upraviť pripojené cesty a zariadenia', self.shown())
+        self.assertIn('Cesty a zariadenia', self.shown())
 
     def test_cpu_only_host_explains_why_no_gpu_choice_is_offered(self):
         member = self.immich()
@@ -231,7 +247,7 @@ class StackEditorSlovakTests(unittest.TestCase):
             with self.subTest(language=language, empty_cache=not cache), \
                     patch.object(i18n, '_language', language), patch.object(i18n, '_cache', cache):
                 text = editor.summary(self.member, changes)
-                self.assertIn('A running container is restarted', text)
+                self.assertIn('restart a running container', text)
                 self.assertIn('- /extra', text)
 
 

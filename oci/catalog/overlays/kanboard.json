@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Plan tasks and projects with a simple web-based Kanban board. This one-image profile uses the built-in SQLite database and persists application data."
+    },
+    "description": {
+      "en_US": "Kanboard is a project management application focused on the Kanban methodology. It allows users to visually organize, plan, and track tasks and projects."
+    },
+    "screenshots": [
+      "https://kanboard.org/assets/img/board.png"
+    ]
+  }
+}

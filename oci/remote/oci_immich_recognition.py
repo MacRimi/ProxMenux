@@ -96,8 +96,9 @@ def add_device(vmid, path):
         f'path={path},gid={info.st_gid},mode=0660')
 
 
-def configure(vmid, acceleration, render_device, gfx_override):
+def configure(vmid, acceleration, render_device, gfx_override, previous=None):
     """Give the stopped container what the new choice needs."""
+    ram = memory(acceleration, int(settings(vmid).get('memory') or 0), previous)
     strip_gpu(vmid)
     if acceleration in ('openvino', 'rocm'):
         add_device(vmid, render_device)
@@ -116,7 +117,7 @@ def configure(vmid, acceleration, render_device, gfx_override):
             'die() { msg_error "$*"; exit 1; }; oci_log() { :; }; '
             'source "$SCRIPT_DIR/oci_nvidia_setup.sh"; source "$SCRIPT_DIR/oci_immich_ml.sh"; '
             f'configure_immich_nvidia {int(vmid)} {NVIDIA_CAPABILITIES}')
-    run('pct', 'set', str(vmid), '--memory', str(memory(acceleration)))
+    run('pct', 'set', str(vmid), '--memory', str(ram))
     values = settings(vmid)
     limited = 'cpulimit' in values and 'cores' not in values
     # Intel keeps the CPU topology and limits its share of time; the others
@@ -144,24 +145,30 @@ def validate(acceleration, render_device, gfx_override):
         raise ValueError(translate('Invalid ROCm generation override'))
 
 
-def recorded(record, acceleration, render_device, gfx_override):
+def recorded(record, acceleration, render_device, gfx_override, ram=None):
     """The recognition settings of a record after the change."""
     settings = dict(record['deployment'].get('machine_learning') or {})
     settings.update(acceleration=acceleration,
                     render_device=render_device if acceleration in ('openvino', 'rocm') else None,
                     gfx_override=gfx_override if acceleration == 'rocm' else None)
-    settings['resources'] = dict(settings.get('resources') or {}, memory_mb=memory(acceleration),
+    settings['resources'] = dict(settings.get('resources') or {}, memory_mb=ram or memory(acceleration),
                                  cpu_allocation='quota' if acceleration == 'openvino' else 'cpuset')
     return settings
 
 
-def memory(acceleration):
-    return 4096 if acceleration == 'cpu' else 8192
+def memory(acceleration, current=0, previous=None):
+    """The RAM of the container for a choice: what that choice needs, or what
+    the user gave it when that is more. The RAM a previous choice set itself
+    follows the new choice."""
+    needed = 4096 if acceleration == 'cpu' else 8192
+    if not current or (previous is not None and current == memory(previous)):
+        return needed
+    return max(current, needed)
 
 
-def resources(current, acceleration):
+def resources(current, acceleration, ram=None):
     """The resources a record declares for the container of the new choice."""
-    result = dict(current, memory_mb=memory(acceleration))
+    result = dict(current, memory_mb=ram or memory(acceleration))
     result.pop('cpu_allocation', None)
     if acceleration == 'openvino':
         result['cpu_allocation'] = 'quota'
@@ -178,14 +185,14 @@ def declared(environment, acceleration, gfx_override):
     return result
 
 
-def declare(record, acceleration, gfx_override):
+def declare(record, acceleration, gfx_override, ram=None):
     """A record an update already rebuilt describes its container by itself:
     it takes the variables, the resources and the disk of the new choice."""
     plan = record['deployment']
     if 'native_config' in plan:
         return
     plan['environment'] = declared(plan.get('environment', []), acceleration, gfx_override)
-    plan['resources'] = resources(plan.get('resources') or {}, acceleration)
+    plan['resources'] = resources(plan.get('resources') or {}, acceleration, ram)
     size = re.search(r'size=([0-9]+)G', settings(record['vmid']).get('rootfs', ''))
     if size and isinstance(plan.get('rootfs'), dict):
         plan['rootfs']['size_gb'] = int(size[1])
@@ -211,18 +218,19 @@ def stop(vmid):
 
 def apply(root, primary_id, vmid, images, acceleration, render_device, gfx_override):
     """Give the stopped container and the records one choice."""
-    configure(vmid, acceleration, render_device, gfx_override)
+    configure(vmid, acceleration, render_device, gfx_override, chosen(instances.read(root, vmid))[0])
+    ram = int(settings(vmid).get('memory') or 0) or None
     learning = instances.read(root, vmid)
     learning['template']['container_contract']['image']['reference'] = images[acceleration]
-    learning['deployment']['machine_learning'] = recorded(learning, acceleration, render_device, gfx_override)
-    declare(learning, acceleration, gfx_override)
+    learning['deployment']['machine_learning'] = recorded(learning, acceleration, render_device, gfx_override, ram)
+    declare(learning, acceleration, gfx_override, ram)
     instances.write(instances.location(root, vmid), learning)
     primary = instances.read(root, primary_id)
     primary['stack']['deployment']['machine_learning'] = recorded(
-        {'deployment': primary['stack']['deployment']}, acceleration, render_device, gfx_override)
+        {'deployment': primary['stack']['deployment']}, acceleration, render_device, gfx_override, ram)
     intent = (primary.get('native_stack_intent') or {}).get('deployment')
     if isinstance(intent, dict) and 'machine_learning' in intent:
-        intent['machine_learning'] = recorded({'deployment': intent}, acceleration, render_device, gfx_override)
+        intent['machine_learning'] = recorded({'deployment': intent}, acceleration, render_device, gfx_override, ram)
     instances.write(instances.location(root, primary_id), primary)
     oci_stack_modify.register(root, vmid)
 

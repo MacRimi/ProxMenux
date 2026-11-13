@@ -387,6 +387,38 @@ def _work_backup_ready(project, ui, vmid):
     return True
 
 
+def _apply_recommended(project, ui, vmid, record, runner=None):
+    """Before an interactive update, offer once the settings the current
+    catalog recipe recommends. False only when applying them failed."""
+    if getattr(ui, 'unattended', False):
+        return True
+    try:
+        from . import host
+        from .recommended import latest_template, recommendation
+        latest = latest_template(project, record)
+        deployment = record.get('deployment', {})
+        gpu = host.gpu_memory(deployment.get('hardware_profile'), deployment.get('devices', []))
+        offer = recommendation(record, latest, host.memory_total_mb(), host.cpu_count(), gpu) if latest else None
+    except Exception:
+        return True  # an offer never stands in the way of the update
+    if not offer:
+        return True
+    text = (translate('The catalog now recommends these settings for this application:') + '\n\n'
+            + '\n'.join(f'  {line}' for line in offer['details']) + '\n\n'
+            + translate('They are applied without recreating the container. Settings you changed yourself are kept.'))
+    if not ui.review(text, translate('Recommended settings'), question=translate('Apply them before updating?'),
+                     default=True):
+        return True
+    proposal = {'operation': 'recreate', 'candidate': offer['candidate']}
+    if record.get('observed', {}).get('config_sha256'):
+        proposal['base_config_sha256'] = record['observed']['config_sha256']
+    command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(vmid), '--acknowledge-external-data']
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
+        json.dump(proposal, file)
+        file.flush()
+        return (runner or _run_lifecycle)(command + ['--proposal', file.name], translate('Modify OCI'))
+
+
 def _toggle_watchdog(project, ui, vmid, enabled):
     """Ask and change the watchdog of an application from its menu."""
     question = (translate('This application is under watchdog: it is restarted automatically when it crashes. Turn the watchdog off?')
@@ -403,7 +435,7 @@ def _toggle_watchdog(project, ui, vmid, enabled):
     return True
 
 
-def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=None):
+def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=None, runner=None):
     """What the menu does with one instance once it is selected. `action`
     skips the choice of operation, as ProxMenux Monitor does; the extra
     `lifecycle_args` are passed to the program that performs it. A `heading`
@@ -419,7 +451,17 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
     if row['reason'] != 'matched':
         ui.message(translate('The selected CT does not match its OCI record. Its configuration will not be modified or deleted.'), translate('OCI management'))
         return False
+    import oci_work_backup
+    import oci_instances as instances
+    retained = oci_work_backup.unreleased(instances.ROOT, row['vmid'])
+    if retained:
+        ui.message(translate('The final cleanup did not complete:') + '\n' + '\n'.join(retained), translate('OCI management'))
+    if runner is not None and (row.get('pending') or row.get('stack_pending')):
+        ui.message(translate('Finish or recover pending OCI operations before preparing a batch.'), translate('OCI management'))
+        return False
     if row['stack']:
+        if runner is not None:
+            return _manage_stack(project, ui, row, action, lifecycle_args, runner=runner)
         return _manage_stack(project, ui, row, action, lifecycle_args)
     # Rebuilding as it is exists only for a multi-container application.
     if action == 'recreate':
@@ -474,7 +516,12 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
                 return CANCELLED
             if proposal is None:
                 return False
-        elif not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
+        else:
+            recommended = (_apply_recommended(project, ui, row['vmid'], record, runner=runner)
+                           if runner is not None else _apply_recommended(project, ui, row['vmid'], record))
+            if not recommended:
+                return False
+        if proposal is None and not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
             return CANCELLED
         # Opening/cancelling a confirmation needs no disk or storage probes.
@@ -495,17 +542,17 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
             os.environ['OCI_RECREATED_MARKER'] = str(marker)
             try:
                 if proposal is None:
-                    completed = _run_lifecycle(command, title)
+                    completed = (runner or _run_lifecycle)(command, title)
                 else:
                     # Saved environment/secrets must never be passed on the command line.
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
                         json.dump(proposal, file)
                         file.flush()
-                        completed = _run_lifecycle(command + ['--proposal', file.name], title)
+                        completed = (runner or _run_lifecycle)(command + ['--proposal', file.name], title)
             finally:
                 os.environ.pop('OCI_RECREATED_MARKER', None)
             recreated = marker.exists()
-        if completed and recreated and not getattr(ui, 'unattended', False):
+        if completed and recreated and runner is None and not getattr(ui, 'unattended', False):
             images.offer_removal(ui, [row['vmid']])
         return completed
     action = ui.choose(translate('Interrupted operation'), [('status', translate('View status')),
@@ -605,26 +652,25 @@ def _remove(project, ui, vmid):
                           translate('Remove OCI'))
 
 
-def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
+def _manage_stack(project, ui, row, action=None, lifecycle_args=(), runner=None):
     sys.path.insert(0, str(project / 'remote'))
     import oci_instances as instances
     record = instances.read(instances.ROOT, row['vmid'])
     primary_id = record.get('stack_member', {}).get('primary_vmid', row['vmid'])
     primary = instances.read(instances.ROOT, primary_id)
     pending = primary.get('pending_stack_transaction')
+    if pending and runner is not None:
+        ui.message(translate('Finish or recover pending OCI operations before preparing a batch.'), translate('OCI management'))
+        return False
     if not pending:
         members = primary.get('stack', {}).get('members', [])
-        import oci_stack_replay
+        import oci_stack_adapters
         needs_replay = any(m.get('native_stack_intent') or
                 m.get('deployment', {}).get('rootfs_adaptation_replay_required') for m in members)
         if not members:
             ui.message(translate('This stack has no saved members to update.'), translate('OCI stack management'))
             return False
-        updatable = not needs_replay or (
-                oci_stack_replay.nextcloud_menu_ready(primary) or
-                oci_stack_replay.paperless_menu_ready(primary) or
-                oci_stack_replay.tandoor_menu_ready(primary) or
-                oci_stack_replay.immich_menu_ready(primary))
+        updatable = not needs_replay or oci_stack_adapters.menu_ready(primary)
         if not updatable and action in (None, 'update'):
             ui.message(translate('This stack needs rootfs adaptations that coordinated updates cannot replay yet.'), translate('OCI stack management'))
             if action == 'update':
@@ -632,7 +678,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         if action is None:
             # A stack that cannot be updated can still be removed.
             options = [('update', translate('Update every container of the application'))] if updatable else []
-            options.append(('modify', translate('Modify extra paths and devices')))
+            options.append(('modify', translate('Modify: resources, variables, paths and devices of a container')))
             if updatable:
                 options.append(('recreate', translate('Recreate every container with its saved configuration')))
             watched = primary.get('deployment', {}).get('watchdog') is True
@@ -648,7 +694,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
             return _remove(project, ui, primary_id)
         if action == 'modify':
             from .stack_recreation import modify_stack
-            return modify_stack(project, ui, primary, _run_lifecycle)
+            return modify_stack(project, ui, primary, _run_lifecycle,
+                                member_vmid=row['vmid'] if row['vmid'] != primary_id else None)
         if action == 'recreate':
             if not ui.review(translate('All {count} containers of the application will be recreated from their saved '
                                        'image digests (main CT: {vmid}). The stack is stopped, every container is '
@@ -659,11 +706,11 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                              question=translate('Recreate the whole stack?'), default=False):
                 return CANCELLED
         else:
-            if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
-                                       'If there are new versions, all images are downloaded and verified, the application '
-                                       'is stopped, each container is backed up and replaced with its new image. If the operation '
-                                       'fails after a container was changed, the backups are restored. An operation that stops '
-                                       'halfway is recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
+            if not ui.review(translate('All {count} containers of the application are checked together (main CT: {vmid}). If no images changed, '
+                                       'nothing is stopped or recreated. Otherwise the required images are prepared, the application is stopped '
+                                       'and every container is backed up. Only changed members and any required setup jobs are recreated. If '
+                                       "the operation fails after a container was changed, the whole application's backups are restored. "
+                                       'Interrupted operations can be recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
                     translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
                 return CANCELLED
     else:
@@ -685,8 +732,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         command.append('--acknowledge-external-data')
     title = (translate('Recover OCI stack') if pending else translate('Recreate OCI stack')
              if action == 'recreate' else translate('Update OCI stack'))
-    completed = _run_lifecycle(command, title)
-    if completed and not pending and not getattr(ui, 'unattended', False):
+    completed = (runner or _run_lifecycle)(command, title)
+    if completed and not pending and runner is None and not getattr(ui, 'unattended', False):
         images.offer_removal(ui, [int(member['vmid']) for member in members])
     return completed
 

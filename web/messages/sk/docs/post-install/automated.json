@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "Repozitáre APT + úplná aktualizácia",
-      "what": "Zakáže podnikové zdroje pve-enterprise.sources a ceph.sources, vytvorí čistý zdroj no-subscription pre kódový názov Debianu na hostiteľovi a spustí apt update && apt full-upgrade -y, čo je oficiálny príkaz Proxmoxu na aktualizáciu.",
+      "what": "Zakáže podnikové repozitáre (pve-enterprise.sources / ceph.sources na PVE 9, súbory .list na PVE 8), vytvorí čistý zdroj no-subscription pre kódový názov Debianu na hostiteľovi a spustí apt update && apt full-upgrade -y (dist-upgrade na PVE 8).",
       "category": "Základné nastavenia",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "Prvým krokom automatického postupu je aktualizácia Proxmoxu. Oficiálny návod pre bežiaci hostiteľ v rámci rovnakej hlavnej verzie odporúča spustiť:",
     "after": "Tento riadok je oficiálny príkaz pre aktuálne verzie Proxmoxu. Automatický skript vykoná <strong>presne</strong> tento príkaz a pridá čistenie repozitárov a kroky po aktualizácii podľa oficiálneho návodu — rovnako ako samostatný nástroj <link>Aktualizácia systému Proxmox</link>:",
     "items": [
-      "Zakáže podnikové zdroje <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré súbory repozitárov a zapíše čistý zdroj bez predplatného pre kódový názov distribúcie hostiteľa.",
+      "Zakáže podnikové repozitáre (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> na PVE 9, súbory <code>.list</code> na PVE 8), odstráni staré súbory repozitárov a zapíše čistý zdroj bez predplatného pre kódový názov distribúcie hostiteľa.",
       "Spustí inováciu neinteraktívne pomocou <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> – konfiguračné súbory, ktoré ste si prispôsobili, zostanú vaše, aj keď ich upstream zmení.",
       "Nainštaluje základné balíky Proxmox, ak chýbajú (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Kontrola konzistentnosti metadát LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> a výzva na reštart iba pri zmene jadra."

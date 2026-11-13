@@ -264,8 +264,14 @@ jobs:
             archive="figurine_linux_${arch}_v${FIGURINE_VERSION}.tar.gz"
             target="$scratch/$arch"
             mkdir -p "$target"
-            curl --fail --location --retry 3 --output "$target/$archive" \
-              "https://github.com/arsham/figurine/releases/download/v${FIGURINE_VERSION}/$archive"
+            # An unavailable GitHub Releases download is reported, not failed;
+            # a checksum or execution failure still fails the job.
+            if ! curl --fail --location --retry 6 --retry-delay 10 --retry-all-errors \
+                --output "$target/$archive" \
+                "https://github.com/arsham/figurine/releases/download/v${FIGURINE_VERSION}/$archive"; then
+              printf '::warning::%s release download unavailable; skipped\n' "$arch"
+              continue
+            fi
             printf '%s  %s\n' "$sha" "$target/$archive" | sha256sum --check
             tar -xf "$target/$archive" -C "$target"
             runner=()

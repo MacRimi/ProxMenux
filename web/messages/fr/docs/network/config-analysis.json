@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Sauvegarde de sécurité",
-        "body": "Copie <code>/etc/network/interfaces</code> vers <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Chemin montré avant et après.",
+        "body": "Copie <code>/etc/network/interfaces</code> vers <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Un nom indicatif est montré avant la copie ; le chemin exact est montré après.",
         "tone": "blue"
       },
       {

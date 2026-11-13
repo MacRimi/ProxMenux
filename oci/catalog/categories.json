@@ -365,7 +365,7 @@
     "tandoor": "productivity",
     "tasks-md": "productivity",
     "tasmoadmin": "smarthome",
-    "tdarr": "media",
+    "tdarr": "arr",
     "tdengine": "databases",
     "technitium": "adblock",
     "telegram": "communication",
@@ -411,6 +411,7 @@
     "whoogle": "network",
     "winegui": "desktop",
     "wireshark": "network",
+    "wizarr": "arr",
     "wps-office": "documents",
     "xbackbone": "sharing",
     "xemu": "gaming",
@@ -436,6 +437,16 @@
     "kitchenowl": "productivity",
     "unbound": "adblock",
     "spoolman": "tools",
-    "zwave-js-ui": "smarthome"
+    "zwave-js-ui": "smarthome",
+    "miniserve": "sharing",
+    "restreamer": "media",
+    "proxmox-backup": "backup",
+    "proxmox-dm": "management",
+    "proxmox-mail": "security",
+    "windows": "desktop",
+    "windows-arm": "desktop",
+    "chromeos": "desktop",
+    "baserow": "productivity",
+    "mindwtr": "productivity"
   }
 }

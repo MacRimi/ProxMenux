@@ -1,9 +1,12 @@
 """Native mapped readers may read an image without exposing its private cache."""
 import errno
+import json
+import uuid
 import importlib.util
 import os
 from pathlib import Path
 import signal
+import shutil
 import stat
 import subprocess
 import sys
@@ -27,6 +30,73 @@ class PrivateImageImportTests(unittest.TestCase):
         self.source = self.root / 'private-image.tar'
         self.source.write_bytes(b'OCI image fixture\x00private layers')
         self.source.chmod(0o600)
+
+    def test_common_entry_prepares_absolute_oci_paths_and_preserves_publisher_archive(self):
+        from test_layer_paths import fixture
+        import oci_layer_paths
+        fixture(self.source,[('/app','file',b'application')])
+        before=self.source.read_bytes()
+        def create(args,**kwargs):
+            self.assertEqual(args[:3],['pct','create','9161'])
+            self.assertTrue(all(not changed for changed in oci_layer_paths.changed_layers(Path(args[3]))))
+            return types.SimpleNamespace(returncode=0)
+        with patch.object(imports,'readable',return_value=True),patch.object(imports.subprocess,'run',side_effect=create):
+            self.assertEqual(imports.create('9161',str(self.source),str(self.source),['--unprivileged','1']),0)
+        self.assertEqual(self.source.read_bytes(),before)
+        self.assertEqual(list(self.root.iterdir()),[self.source])
+
+    def transaction(self, adapted=False):
+        import oci_instances
+        self.registry=self.root/'instances'
+        self.journal=self.root/'operation'/'transaction.json';self.journal.parent.mkdir()
+        identity=str(uuid.uuid4());operation=uuid.uuid4().hex
+        source=self.source
+        proof=None
+        if adapted:
+            source=self.root/'import.tar';source.write_bytes(self.source.read_bytes())
+            proof={'path':str(source),'sha256':'a'*64,'source_sha256':'b'*64}
+        self.state={'vmid':9161,'phase':'installing-candidate','id':operation,
+                    'archive':str(self.source),'import_image':proof,'record':{'installation_id':identity}}
+        self.pending={'schema_version':1,'vmid':9161,'status':'updating','installation_id':identity,
+                      'pending_transaction':str(self.journal),'transaction_id':operation}
+        oci_instances.write(self.journal,self.state)
+        oci_instances.write(oci_instances.location(self.registry,9161),self.pending)
+        self.environment={'PROXMENUX_OCI_TRANSACTION':str(self.journal),'PROXMENUX_OCI_INSTANCE_ROOT':str(self.registry)}
+        return source
+
+    def test_create_skips_layer_scan_for_the_exact_active_prepared_transaction(self):
+        import oci_layer_paths
+        for adapted in (False,True):
+            with self.subTest(adapted=adapted):
+                if hasattr(self,'journal'):shutil.rmtree(self.journal.parent)
+                source=self.transaction(adapted)
+                with patch.dict(os.environ,self.environment),patch.object(imports,'readable',return_value=True), \
+                     patch.object(oci_layer_paths,'prepare',side_effect=AssertionError('layer rescan during downtime')), \
+                     patch('oci_runtime.add_user_databases',return_value=[]), \
+                     patch.object(imports.subprocess,'run',return_value=types.SimpleNamespace(returncode=0)) as run:
+                    self.assertEqual(imports.create('9161',str(source),str(source),['--unprivileged','1']),0)
+                    self.assertEqual(run.call_args.args[0][3],str(source))
+
+    def test_stale_unprepared_or_unrelated_journal_never_authorizes_skip(self):
+        source=self.transaction()
+        mutations=[lambda s:s.pop('import_image'),lambda s:s.update(phase='committed'),
+                   lambda s:s.update(vmid=9162),lambda s:s.update(archive='/different/image.tar'),
+                   lambda s:s.update(import_image={}),lambda s:s['record'].update(installation_id=str(uuid.uuid4()))]
+        import copy,oci_instances
+        for mutation in mutations:
+            state=copy.deepcopy(self.state);mutation(state);oci_instances.write(self.journal,state)
+            with self.subTest(state=state),patch.dict(os.environ,self.environment):
+                self.assertFalse(imports.transaction_prepared('9161',source))
+        oci_instances.write(self.journal,self.state)
+        pending=dict(self.pending,status='installed');oci_instances.write(oci_instances.location(self.registry,9161),pending)
+        with patch.dict(os.environ,self.environment):self.assertFalse(imports.transaction_prepared('9161',source))
+
+    def test_prepared_journal_must_be_private_and_regular(self):
+        source=self.transaction()
+        with patch.dict(os.environ,self.environment):
+            self.journal.chmod(0o644);self.assertFalse(imports.transaction_prepared('9161',source))
+            self.journal.chmod(0o600);real=self.journal.with_suffix('.real');self.journal.rename(real);self.journal.symlink_to(real)
+            self.assertFalse(imports.transaction_prepared('9161',source))
 
     def staging(self):
         return patch.object(imports, 'trusted_staging_root', return_value=self.root)
@@ -100,6 +170,33 @@ class PrivateImageImportTests(unittest.TestCase):
         with patch.object(imports.fcntl, 'ioctl', side_effect=OSError(errno.EOPNOTSUPP, 'fixture')):
             imports._copy(self.source, target)
         self.assertEqual(target.read_bytes(), self.source.read_bytes())
+
+    def test_reflink_permission_denied_stages_a_private_copy_without_changing_source(self):
+        before = self.source.stat()
+        with self.staging(), patch.object(imports.os, 'chown'), \
+             patch.object(imports, 'readable', return_value=False), \
+             patch.object(imports.fcntl, 'ioctl', side_effect=PermissionError(errno.EPERM, 'fixture')):
+            with imports.import_archive(self.source, str(self.source), 100000, 100000) as path:
+                staged = Path(path)
+                self.assertEqual(staged.read_bytes(), self.source.read_bytes())
+                self.assertEqual(stat.S_IMODE(staged.stat().st_mode), 0o440)
+                self.assertEqual(stat.S_IMODE(staged.parent.stat().st_mode), 0o750)
+            self.assertFalse(staged.parent.exists())
+        after = self.source.stat()
+        self.assertEqual((before.st_uid, before.st_gid, before.st_mode),
+                         (after.st_uid, after.st_gid, after.st_mode))
+
+    def test_reflink_io_error_is_not_hidden_by_a_fallback_copy(self):
+        with self.staging(), patch.object(imports, 'readable', return_value=False), \
+             patch.object(imports.fcntl, 'ioctl', side_effect=OSError(errno.EIO, 'fixture')), \
+             patch.object(imports.shutil, 'copyfileobj') as copy, \
+             patch.object(imports.subprocess, 'run') as run:
+            with self.assertRaises(OSError) as raised:
+                imports.create('9161', str(self.source), str(self.source), ['--unprivileged', '1'])
+            self.assertEqual(raised.exception.errno, errno.EIO)
+            copy.assert_not_called()
+            run.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [self.source])
 
     def test_local_and_ssh_installer_stage_the_native_helper(self):
         import ast

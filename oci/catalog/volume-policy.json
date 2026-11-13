@@ -164,6 +164,33 @@
     ],
     "nextcloud-mariadb": [
       "/data"
+    ],
+    "restreamer": [
+      "/core/data"
+    ],
+    "unmanic": [
+      "/library"
+    ],
+    "listmonk": [
+      "/listmonk/uploads"
+    ],
+    "proxmox-backup": [
+      "/var/lib/proxmox-backup"
+    ],
+    "windows": [
+      "/storage"
+    ],
+    "windows-arm": [
+      "/storage"
+    ],
+    "chromeos": [
+      "/storage"
+    ],
+    "macos": [
+      "/storage"
+    ],
+    "baserow": [
+      "/baserow/data"
     ]
   },
   "sizes": {

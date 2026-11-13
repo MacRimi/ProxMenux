@@ -16,8 +16,8 @@
   },
   "howRuns": {
     "heading": "Come funziona lo script",
-    "body": "Il flusso ha due fasi distinte: raccolta delle informazioni e delle scelte, poi collegamento effettivo dei dischi alla VM. La configurazione resta invariata fino alla conferma finale.",
-    "summary": "ProxMenux esclude i candidati non sicuri: disco root, dischi montati sull’host, membri attivi ZFS/LVM/RAID e dischi citati in configurazioni VM/LXC. I dischi con metadati <em>obsoleti</em>, cioè vecchie firme ZFS/RAID/LVM non più in uso, sono segnalati con ⚠ ma non bloccati."
+    "body": "Il flusso ha due fasi distinte: raccolta delle informazioni e delle scelte, poi collegamento effettivo dei dischi alla VM. La configurazione della VM resta invariata finché non si risponde all’ultima finestra di dialogo; non c’è una conferma finale separata, quindi annulla con Esc in una qualsiasi finestra precedente.",
+    "summary": "ProxMenux esclude ciò che non può passare in sicurezza: il disco root e gli altri dischi montati sull’host, i dischi usati dall’LVM dell’host, i membri ZFS (attivi o obsoleti), i membri RAID attivi e i dischi già presenti nella configurazione di questa VM. I dischi usati da un’altra VM o da un altro CT sono mostrati come ⚠ In use, e le firme RAID / LVM residue ricevono un’etichetta ⚠ ma non sono bloccate."
   },
   "prereqs": {
     "heading": "Prerequisiti",
@@ -39,7 +39,7 @@
         "title": "Scegli i dischi fisici da collegare",
         "img": "/disk/disk-selection.png",
         "caption": "Dischi liberi rilevati sull’host, con ⚠ per i metadati obsoleti",
-        "body": "Lo script esamina i dischi dell’host e propone solo quelli collegabili senza conflitti. Puoi selezionarne più di uno. I dischi con vecchie firme ZFS/LVM/RAID restano visibili con ⚠, per indicare che occorre cancellare le firme prima che il guest li formatti."
+        "body": "Lo script esamina i dischi dell’host e propone solo quelli collegabili senza conflitti. Puoi selezionarne più di uno. I dischi con vecchie firme LVM / RAID restano visibili con ⚠ (i dischi con firme ZFS sono nascosti), per indicare che occorre cancellare le firme prima che il guest li formatti."
       },
       {
         "title": "Scegli l’interfaccia bus",
@@ -65,7 +65,7 @@
     "migrationTitle": "La migrazione dal vivo non è possibile",
     "migrationBody": "Una VM con un disco fisico collegato direttamente è <strong>legata all’host che espone quel disco</strong>. Un altro nodo normalmente non ha lo stesso percorso <code>/dev/disk/by-id/…</code> né i dati. Salva e trasferisci i dati separatamente, oppure usa dischi virtuali gestiti su storage condiviso o con replica supportata. Non presumere che la replica storage di Proxmox includa questo dispositivo.",
     "shareTitle": "Non condividere un disco fisico tra VM",
-    "shareBody": "Attaccare lo stesso disco fisico a due VM allo stesso tempo corromperà i dati sulla prossima scrittura. ProxMenux rileva questa situazione e lo blocca, ma se si bypassa lo script (diretto <code>qm set</code>), assicurarsi che solo un ospite monta mai il disco."
+    "shareBody": "Attaccare lo stesso disco fisico a due VM allo stesso tempo corromperà i dati sulla prossima scrittura. ProxMenux lo blocca quando l'altro ospite è in esecuzione e chiede conferma quando è fermo, ma se si bypassa lo script (diretto <code>qm set</code>), assicurarsi che solo un ospite monta mai il disco."
   },
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",

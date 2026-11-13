@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Sauvegarde de sécurité",
-        "body": "Copie <code>/etc/network/interfaces</code> vers <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Le chemin exact de sauvegarde est affiché avant la copie et à nouveau après, avec la commande rollback.",
+        "body": "Copie <code>/etc/network/interfaces</code> vers <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. La boîte de dialogue avant la copie affiche un nom indicatif ; le chemin exact du fichier créé est affiché après la copie, avec la commande rollback.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Aperçu des modifications proposées",
-        "body": "Liste précisément les ponts concernés et les remplacements de ports prévus. Si aucune réparation n’est plus nécessaire parce que le port est réapparu entre les vérifications, la procédure se termine avec <em>« Aucune modification nécessaire. »</em>",
+        "body": "Liste les ponts concernés et les changements de ports suggérés. Si aucune réparation n’est plus nécessaire parce que le port est réapparu entre les vérifications, la procédure se termine avec <em>« Aucune modification nécessaire. »</em>",
         "tone": "blue"
       },
       {
         "title": "4. Appliquer les modifications",
-        "body": "Pour chaque pont touché, exécute <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contre <code>/etc/network/interfaces</code>. Si un pont n'avait pas de remplacement valide disponible, la substitution est ignorée et signalée à l'étape 5.",
+        "body": "Pour chaque pont touché, exécute <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contre <code>/etc/network/interfaces</code>. La nouvelle valeur <code>bridge-ports</code> ne conserve que les ports qui existent encore, de sorte qu’un port invalide à côté d’un port valide est simplement retiré. Si aucun port valide ne reste, elle utilise la première carte réseau physique détectée ; si l’hôte n’en a aucune, la ligne est écrite vide. L’étape 5 signale le résultat.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "L’analyse s’arrête avec « Pile réseau non prise en charge »",
     "unsupportedBody": "L'hôte exécute netplan, systemd-networkd ou NetworkManager. L'outil ne prend en charge que <code>/etc/network/interfaces</code>. Passez d'abord l'hôte à la pile classique ou modifiez la configuration avec l'outil natif du gestionnaire (p. ex. <code>netplan apply</code>).",
     "noSuggestTitle": "Aucune suggestion n'est imprimée pour un port invalide",
-    "noSuggestBody": "L'hôte a zéro interfaces physiques libres (tout est déjà dans un autre pont ou n'existe pas). L'analyse revient à suggérer <code>bridge-ports none</code> afin que le pont puisse au moins monter sans port. Ajouter un NIC ou migrer les ports entre les ponts manuellement avant de recommencer.",
+    "noSuggestBody": "ProxMenux n’a détecté aucune interface physique (la liste ne filtre que les noms virtuels tels que <code>vmbr</code>, <code>bond</code>, <code>veth</code> ou <code>tap</code> ; elle ne vérifie pas si une carte réseau est déjà dans un autre pont). L’analyse revient à suggérer <code>bridge-ports none</code> afin que le pont puisse au moins monter sans port. Ajouter un NIC ou migrer les ports entre les ponts manuellement avant de recommencer.",
     "stillDownTitle": "La réparation s'achève mais le pont est toujours DOWN",
     "stillDownBody": "<code>sed</code> a mis à jour le fichier, mais <code>systemctl restart networking</code> a été refusé. Exécutez-le manuellement une fois que la nouvelle configuration est vérifiée, ou redémarrez. Si le redémarrage a été accepté et que le pont est toujours DOWN, exécutez <code>ip link show</code> pour confirmer l'existence du nouveau port, puis vérifiez <code>journalctl -u networking</code> pour l'erreur réelle (câble débranché, lien non négocié, port déjà membre d'un autre pont).",
     "lostSshTitle": "J'ai perdu l'accès SSH juste après le redémarrage du réseau",

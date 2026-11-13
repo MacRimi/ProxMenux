@@ -19,5 +19,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kdenlive is a powerful free and open source cross-platform video editing program made by the KDE community. Feature rich and production ready."
+    },
+    "description": {
+      "en_US": "Kdenlive is a free and open-source video editing application created by the KDE community. It provides a production-ready environment for non-linear video editing across multiple platforms. The application allows users to cut, arrange, and produce finished multimedia projects."
+    }
   }
 }

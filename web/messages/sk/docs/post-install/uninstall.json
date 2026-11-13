@@ -33,7 +33,7 @@
         "title": "Spustenie obnovy",
         "body1": "Pre každú vybranú položku ProxMenux volá zodpovedajúcu funkciu odinštalovania. Väčšina zvratov nasleduje jeden z troch vzorov:",
         "items": [
-          "<strong>Zo zálohy</strong> — obnoví <code>.bak</code> vytvorený pri použití úpravy (bashrc, logrotate.conf, journald.conf, príkazový riadok GRUB/jadra).",
+          "<strong>Zo zálohy</strong>: obnoví <code>.bak</code> vytvorený pri použití úpravy (bashrc, logrotate.conf). journald.conf sa prepíše štandardnými predvolenými hodnotami a z GRUB / príkazového riadka jadra sa odstránia iba tokeny ProxMenux.",
           "<strong>Odstránenie konfigurácie</strong> — odstráni súbory ProxMenux <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> alebo jednotku systemd a znovu načíta nastavenia.",
           "<strong>Preinštalovanie balíkov</strong> — pri zmenách rozhrania, napríklad upozornení na predplatné, preinštaluje pôvodné balíky s <code>--force-confnew</code> na obnovu dodanej konfigurácie."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Odstránenie upozornenia na predplatné",
-            "restores": "Najprv skúsi obnoviť súbory rozhrania zo záloh ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* a index.html.tpl.backup.* pri upravenom mobilnom rozhraní). Iba pri chýbajúcej alebo poškodenej zálohe preinštaluje pve-manager, proxmox-widget-toolkit, libjs-extjs a libpve-http-server-perl s force-confnew. Vyčistí aj kópie .js / .gz v cache."
+            "restores": "Na PVE 9 a PBS sa najprv pokúsi obnoviť súbory rozhrania zo záloh ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* a index.html.tpl.backup.* pri upravenom mobilnom rozhraní). Na PVE 8 alebo ak záloha chýba či je poškodená, preinštaluje pve-manager, proxmox-widget-toolkit, libjs-extjs a libpve-http-server-perl s force-confnew. Vyčistí aj kópie .js / .gz v cache."
           },
           {
             "tool": "Preskočiť jazykové súbory APT",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "Zvýšenie systémových limitov",
-            "restores": "Odstráni /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf a /etc/security/limits.d/99-limits.conf. Obnoví limity PAM a DefaultLimitNOFILE systemd. V /root/.profile odstraňuje iba starý ulimit -n 256000; aktuálny ulimit -n 1048576 môže zostať a vyžadovať ručné odstránenie."
+            "restores": "Odstráni /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf a /etc/security/limits.d/99-limits.conf. Obnoví limity PAM a DefaultLimitNOFILE systemd. Z /root/.profile odstráni starý riadok ulimit -n 256000 aj aktuálny riadok ulimit -n 1048576."
           },
           {
             "tool": "Profil výmeny ZRAM",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Automatické snímky ZFS",
-            "restores": "Odstráni položky cron zapísané skriptom a ponúkne apt purge zfs-auto-snapshot. Existujúce snímky v pooloch zostanú zachované; v prípade potreby ich odstráňte samostatne."
+            "restores": "Odstráni balík zfs-auto-snapshot bez opýtania, čím sa odstránia aj jeho súbory cron. Existujúce snímky v pooloch zostanú zachované; v prípade potreby ich odstráňte samostatne."
           },
           {
             "tool": "Obmedzenia rýchlosti vzdump",

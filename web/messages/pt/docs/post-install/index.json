@@ -19,7 +19,7 @@
   "openingMenu": {
     "heading": "Abrir o menu",
     "body": "No menu principal do ProxMenux, selecione <strong>Configurações pós-instalação Proxmox</strong>. Você verá isto:",
-    "imageAlt": "Menu de Scripts pós-instalação — Automatizado, Personalizável, o condicional Aplicar Atualizações Disponíveis (somente quando as atualizações estão pendentes) e Desinstalar, seguido da seção de scripts comunitários"
+    "imageAlt": "Menu de Scripts pós-instalação — Automatizado, Personalizável, o condicional Aplicar Atualizações Disponíveis (somente quando as atualizações estão pendentes) e Desinstalar, seguido da seção Scripts externos"
   },
   "threeWays": {
     "heading": "Quatro maneiras de aplicar otimizações",
@@ -70,7 +70,7 @@
   "mixing": {
     "heading": "Combinar com outros scripts pós-instalação",
     "stackTitle": "Não empilhar vários scripts pós-instalação",
-    "stackBody": "Executar vários scripts pós-instalação no mesmo host pode causar arquivos de configuração duplicados, entradas de sysctl conflitantes, ou pior — rede quebrada após reinicialização. Se você já aplicou o <strong>Helper-Scripts Post Install</strong>, algumas otimizações ProxMenux podem se sobrepor ao que ele já configurou. Atenha-se a uma ferramenta pós-instalação por máquina.",
+    "stackBody": "Executar vários scripts pós-instalação no mesmo host pode causar arquivos de configuração duplicados, entradas de sysctl conflitantes, ou pior — rede quebrada após reinicialização. Se você já aplicou o <strong>Community Scripts Post Install</strong>, algumas otimizações ProxMenux podem se sobrepor ao que ele já configurou. Atenha-se a uma ferramenta pós-instalação por máquina.",
     "xshokTitle": "xshok-proxmox: desactualizado",
     "xshokBody": "As versões anteriores do ProxMenux indicavam <a>xshok-proxmox</a> como ferramenta pós-instalação complementar. O projeto está obsoleto e já não é oferecido no ProxMenux. Se uma execução antiga tiver deixado marcadores no host, o ProxMenux continua a detetá-los e avisa. Hoje não é uma ferramenta que deva instalar em conjunto com o ProxMenux."
   },

@@ -19,5 +19,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "WebCord"
+    },
+    "tagline": {
+      "en_US": "WebCord can be summarized as a pack of security and privacy hardenings, Discord features reimplementations, Electron / Chromium / Discord bugs workarounds, stylesheets, internal pages and wrapped https://discord.com page, designed to conform with ToS as much as it is possible (or hide the changes that might violate it from Discord's eyes)."
+    },
+    "description": {
+      "en_US": "WebCord is an alternative client that wraps the Discord web interface with enhanced privacy and security hardenings. It provides reimplementations of Discord features alongside workarounds for common Electron and Chromium issues. The application also supports custom stylesheets and internal pages designed to protect user privacy while maintaining service compatibility."
+    }
   }
 }

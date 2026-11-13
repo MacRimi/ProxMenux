@@ -334,10 +334,26 @@ The same criterion applies to the Monitor (`AppImage/messages/es`), the terminal
 - **Spain vocabulary:** *pulsar* (not *presionar*), *introducir* (not *ingresar*), *volver* (not *regresar*), *elegir* or *seleccionar*, *hacer clic*, *añadir* (not *agregar*), *fallo* (not *falla* as a noun), *usuario* (not *operador*), *monitorización* (not *monitoreo*). The key is **Intro**, not *Enter* or *Entrar*.
 - **Destructive actions use *eliminar*,** not *quitar*.
 - **Activate and deactivate:** an action or switch of the user is *activar/desactivar*; a technical state can stay *habilitado/deshabilitado*.
-- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Helper-Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
+- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Community Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
 - **Translated:** *pila* (stack), *puente* (bridge), *pasarela* (gateway) when they are common nouns; *Secure Gateway* is a product name and stays as it is.
 - **One canonical form for repeated phrases,** for example «Pulsa Intro para volver al menú…».
 - **Documentation quotes screen texts exactly as the Spanish interface shows them,** and page titles end in «Documentación de ProxMenux».
+
+---
+
+## Language style: Russian (ru)
+
+The same criterion applies to the Monitor (`AppImage/messages/ru`), the terminal menus (`lang/ru.json`) and the documentation (`web/messages/ru`). It is modern written Russian: respectful and plain, without officialese or machine-translation calques.
+
+- **Address the reader as *Вы*, capitalized in all case forms** (*Вас, Вам, Ваш, Вами*): «Ваш диск исправен!», «Замените URL в примере официальным URL скрипта для Вашего приложения.» A full instruction sentence uses the polite *-те* imperative that goes with it: «Убедитесь, что monitor.service работает корректно.», «Войдите, чтобы открыть панель мониторинга». Lowercase *вы* only where the text does not address the reader.
+- **Buttons, menu options, tab names and short action labels use the infinitive or the noun, without address:** «Сохранить», «Удалить», «Изменить», «Отмена», «Закрыть», «Копировать в буфер обмена», «Выход», «Назад».
+- **Status messages say what happened or what is true, never «мы»:** «В норме», «Предупреждение», «Скопировано», «Не удалось подключиться к серверу ProxMenux».
+- **One canonical term per concept** (as it ships in the merged Russian catalogs): *backup* → «резервная копия», «создать резервную копию» (not the colloquial «бэкап»), *snapshot* → «снимок», *backup destination* → «место назначения», *backup jobs* → «задания резервного копирования», *node* → «узел», *pool* → «пул», *storage* → «хранилище», *Dashboard* (of ProxMenux) → «панель мониторинга», *backend* → «серверная часть» in UI strings (*backend* stays in raw API errors).
+- **VM is «ВМ».** In running Russian text write «ВМ» («Активные ВМ и LXC»); *LXC* and *CT* stay as they are.
+- **Screen texts are quoted with «ёлочки».** Russian prose quoting a menu item names it exactly as the translated catalog renders it — «Удалить ProxMenux», «Скрипты сообщества», «Установить/обновить Coral TPU на хосте».
+- **Kept in Latin:** product and component names (ProxMenux, Proxmox VE, Proxmox Backup Server, ZFS, LXC, QEMU, Borg, Coral TPU), CLI commands and flags, config keys, file names, URLs, the OCI manager Apps and Community Scripts categories, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox VE web UI). The site tagline keeps its established wording «Интерактивное меню и веб-панель управления для Proxmox VE» — «веб-панель управления» is correct there even though the app's dashboard is «панель мониторинга».
+- **Documentation page titles** follow the existing SEO-style title of each page; brand names inside them stay in Latin («ProxMenux Monitor — Веб-панель мониторинга для Proxmox VE…»); there is no fixed «Документация ProxMenux» suffix. The site nav label stays «Документация».
+- **Punctuation and placeholders:** «ёлочки» balanced, the em dash where Russian requires it; `{time}`, `{{count}}`, `%s` and ICU plural syntax stay byte-identical to the English source.
 
 ---
 

@@ -22,7 +22,7 @@
         "name": "community-scripts / ProxmoxVE",
         "url": "https://community-scripts.github.io/ProxmoxVE/",
         "description": "Идейный преемник вспомогательных скриптов tteck. Обширный каталог скриптов для разового выполнения: развёртывание контейнеров LXC (Home Assistant, Plex, Frigate, …), виртуальных машин и дополнений, а также настройка PVE.",
-        "usedIn": "Средство запуска Helper Scripts, раздел «Сеть» (исправление аппаратной разгрузки сетевого адаптера Intel e1000e)"
+        "usedIn": "Средство запуска Community Scripts, раздел «Сеть» (исправление аппаратной разгрузки сетевого адаптера Intel e1000e)"
       }
     ]
   },

@@ -16,8 +16,8 @@
   },
   "howRuns": {
     "heading": "Comment fonctionne le script",
-    "body": "Le processus comporte deux phases distinctes : collecte des informations et des choix, puis connexion des disques à la VM. La configuration reste inchangée jusqu’à la confirmation finale.",
-    "summary": "ProxMenux exclut les candidats non sûrs : disque racine, disques montés sur l’hôte, membres actifs ZFS/LVM/RAID et disques référencés dans une configuration VM/LXC. Ceux comportant d’<em>anciennes</em> métadonnées ZFS/RAID/LVM inutilisées sont marqués ⚠, sans être bloqués."
+    "body": "Le processus comporte deux phases distinctes : collecte des informations et des choix, puis connexion des disques à la VM. La configuration de la VM reste inchangée tant que le dernier dialogue n’a pas reçu de réponse ; il n’y a pas de confirmation finale distincte, donc annulez avec Échap à n’importe quel dialogue précédent.",
+    "summary": "ProxMenux exclut tout ce qu’il ne peut pas transmettre en toute sécurité : le disque racine et les autres disques montés sur l’hôte, les disques utilisés par le LVM de l’hôte, les membres ZFS (actifs ou anciens), les membres RAID actifs et les disques déjà présents dans la configuration de cette VM. Les disques utilisés par une autre VM ou un autre CT sont affichés comme ⚠ In use, et les signatures RAID / LVM résiduelles reçoivent un symbole ⚠ sans être bloquées."
   },
   "prereqs": {
     "heading": "Préalables",
@@ -39,7 +39,7 @@
         "title": "Choisissez le ou les disques physiques à attacher",
         "img": "/disk/disk-selection.png",
         "caption": "Disques libres détectés sur l’hôte, avec ⚠ pour les anciennes métadonnées",
-        "body": "Le script examine les disques de l’hôte et ne propose que ceux pouvant être connectés sans conflit. La liste permet d’en sélectionner plusieurs. Les disques avec d’anciennes signatures ZFS/LVM/RAID restent affichés avec ⚠ pour indiquer qu’il faut effacer ces signatures avant leur formatage par l’invité."
+        "body": "Le script examine les disques de l’hôte et ne propose que ceux pouvant être connectés sans conflit. La liste permet d’en sélectionner plusieurs. Les disques avec d’anciennes signatures LVM / RAID restent affichés avec ⚠ (les disques avec des signatures ZFS sont masqués) pour indiquer qu’il faut les effacer avant leur formatage par l’invité."
       },
       {
         "title": "Choisissez l'interface du bus",
@@ -65,7 +65,7 @@
     "migrationTitle": "La migration à chaud est impossible",
     "migrationBody": "Une VM avec un disque physique connecté directement est <strong>liée à l’hôte qui expose ce disque</strong>. Un autre nœud ne dispose généralement ni du même chemin <code>/dev/disk/by-id/…</code> ni des données. Sauvegardez et transférez ces données séparément, ou utilisez des disques virtuels gérés sur stockage partagé ou avec réplication prise en charge. Ne supposez pas que la réplication Proxmox couvre ce périphérique.",
     "shareTitle": "Ne partagez pas de disque physique entre VMs",
-    "shareBody": "La fixation du même disque physique à deux VMs en même temps corrompra les données sur l'écriture suivante. ProxMenux détecte cette situation et la bloque, mais si vous contournez le script (direct <code>qm set</code>), assurez-vous qu'un seul invité monte le disque."
+    "shareBody": "La fixation du même disque physique à deux VMs en même temps corrompra les données à l’écriture suivante. ProxMenux la bloque lorsque l’autre invité est en cours d’exécution et demande une confirmation lorsqu’il est arrêté, mais si vous contournez le script (<code>qm set</code> direct), assurez-vous qu’un seul invité monte le disque."
   },
   "troubleshoot": {
     "heading": "Dépannage",

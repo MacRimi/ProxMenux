@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Säkerhetskopia",
-        "body": "Kopierar <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Den exakta sökvägen visas före och efter kopieringen, tillsammans med återställningskommandot.",
+        "body": "Kopierar <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Dialogen före kopieringen visar ett vägledande namn; den exakta sökvägen till den skapade filen visas efter kopieringen, tillsammans med återställningskommandot.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Förhandsgranska föreslagna ändringar",
-        "body": "Listar exakt vilka bryggor som berörs och vilka portbyten som planeras. Om ingen reparation längre behövs eftersom porten har dykt upp igen mellan kontrollerna avslutas flödet med <em>”Inga ändringar behövs.”</em>",
+        "body": "Listar vilka bryggor som berörs och de föreslagna portändringarna. Om ingen reparation längre behövs eftersom porten har dykt upp igen mellan kontrollerna avslutas flödet med <em>”Inga ändringar behövs.”</em>",
         "tone": "blue"
       },
       {
         "title": "4. Tillämpa ändringarna",
-        "body": "För varje drabbad bro kör <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> mot <code>/etc/network/interfaces</code>. Om en bro inte hade någon giltig ersättning tillgänglig, är ersättningen hoppad och rapporterad i steg 5.",
+        "body": "För varje drabbad bro kör <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> mot <code>/etc/network/interfaces</code>. Det nya värdet för <code>bridge-ports</code> behåller bara de portar som fortfarande finns, så en ogiltig port bredvid en giltig tas helt enkelt bort. Om ingen giltig port återstår används det första fysiska nätverkskortet som hittats; om värden inte har något skrivs raden tom. Steg 5 rapporterar resultatet.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "Analysen avbryts med ”Nätverksstacken stöds inte”",
     "unsupportedBody": "Värden kör netplan, systemd-networkd eller NetworkManager. Verktyget stöder endast <code>/etc/network/interfaces</code>. Byt först till den klassiska stacken eller redigera konfigurationen med nätverkshanterarens egna verktyg, till exempel <code>netplan apply</code>.",
     "noSuggestTitle": "Inget förslag trycks för en ogiltig port",
-    "noSuggestBody": "Värden har noll fria fysiska gränssnitt (allt är antingen redan i en annan bro eller inte existerar). Analysen faller tillbaka för att föreslå <code>bridge-ports none</code> så att bron åtminstone kan komma upp utan en port. Lägg till en NIC eller migrera portar mellan broar manuellt innan du kör.",
+    "noSuggestBody": "ProxMenux upptäckte inga fysiska gränssnitt alls (listan filtrerar bara bort virtuella namn som <code>vmbr</code>, <code>bond</code>, <code>veth</code> eller <code>tap</code>; den kontrollerar inte om ett nätverkskort redan finns i en annan bro). Analysen faller tillbaka för att föreslå <code>bridge-ports none</code> så att bron åtminstone kan komma upp utan en port. Lägg till en NIC eller migrera portar mellan broar manuellt innan du kör.",
     "stillDownTitle": "Reparationen slutförs men bron är fortfarande DOWN",
     "stillDownBody": "<code>sed</code> uppdaterade filen men <code>systemctl restart networking</code> avböjdes. Kör kommandot manuellt när den nya konfigurationen har kontrollerats eller starta om. Om omstarten godkändes och bryggan fortfarande är DOWN, kör <code>ip link show</code> för att kontrollera att den nya porten finns och granska sedan <code>journalctl -u networking</code> för det verkliga felet: urkopplad kabel, länk som inte förhandlats fram eller port som redan tillhör en annan brygga.",
     "lostSshTitle": "Jag förlorade SSH-åtkomst direkt efter att ha startat om nätverk",

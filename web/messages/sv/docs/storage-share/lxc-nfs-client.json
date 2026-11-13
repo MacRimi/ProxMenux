@@ -68,9 +68,9 @@
   },
   "unmount": {
     "heading": "Avmontera NFS-delning",
-    "body": "Kombinerar live-monteringarna och fstab-posterna till en lista, låter dig välja en och <strong>tar bort motsvarande rad från <code>/etc/fstab</code></strong>. Skriptet kör <em>inte</em> <code>umount</code> på live-monteringen – istället talar om för dig att en CT omstart krävs för att avmonteringen ska träda i kraft.",
-    "warnTitle": "Skriptet tar bort fstab-poster, inte levande fästen",
-    "warnBody": "Detta är ett avsiktligt designval: <code>umount</code> på en upptagen montering misslyckas med \"enhet upptagen\" när något inuti CT fortfarande använder det. Ta bort fstab-posten garanterar att fästet försvinner rent på nästa CT-start. Om du vill monteringen borttagen <em>nu</em> och du är säker på att ingenting använder det, kör <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> för hand efter skriptet avslutas."
+    "body": "Kombinerar live-monteringarna och fstab-posterna till en lista, låter dig välja en, <strong>tar bort motsvarande rad från <code>/etc/fstab</code></strong> och avmonterar den inne i CT med <code>umount</code>. Om monteringen är upptagen faller skriptet tillbaka till en lat <code>umount -l</code>.",
+    "warnTitle": "Om avmonteringen misslyckas, starta om CT",
+    "warnBody": "När både <code>umount</code> och <code>umount -l</code> misslyckas varnar skriptet dig att starta om LXC för att frigöra monteringen. fstab-posten är redan borta, så monteringen kommer inte tillbaka vid nästa CT-start."
   },
   "test": {
     "heading": "Test NFS-anslutning",

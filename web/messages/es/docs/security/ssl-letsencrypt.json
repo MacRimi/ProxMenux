@@ -52,12 +52,12 @@
       },
       "rows": [
         {
-          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "fileRich": "<code>pveproxy-ssl.pem</code><br></br><code>pveproxy-ssl.key</code>",
           "originRich": "Certificado personalizado subido vía la UI de Proxmox — incluyendo el certificado Let's Encrypt emitido en <em>Datacenter → Node → Certificates → ACME</em>.",
           "when": "Se prefiere cuando existen ambos archivos; Monitor usa el certificado presentado por Proxmox."
         },
         {
-          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "fileRich": "<code>pve-ssl.pem</code><br></br><code>pve-ssl.key</code>",
           "originRich": "Certificado self-signed generado en el momento de la instalación por el PKI de Proxmox.",
           "whenRich": "Fallback cuando no hay <code>pveproxy-ssl.pem</code> presente."
         }
@@ -127,7 +127,7 @@
       "<strong>Clave privada</strong>: clave correspondiente en PEM (<code>.key</code>)."
     ],
     "outro": "Ambos archivos los lee el proceso del Monitor al arrancar. Asegúrate de que se mantengan legibles por el usuario con el que corre la unidad systemd (root por defecto). Ubicaciones comunes cuando ACME se gestiona fuera de Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Destinos de symlink vs. archivos",
       "bodyRich": "<code>certbot</code> almacena los archivos reales en <code>/etc/letsencrypt/archive/</code> y la ruta <code>live/</code> es un symlink. Apunta el Monitor al symlink de <code>live/</code>, no al archivo de <code>archive/</code> — así cada ciclo de renovación simplemente reescribe el destino del symlink y el Monitor toma el nuevo certificado en el siguiente arranque del servicio."
@@ -138,14 +138,14 @@
     "bodyRich": "Guardar el cambio escribe <code>/etc/proxmenux/ssl_config.json</code> y dispara un reinicio de la unidad systemd <code>proxmenux-monitor</code>. La pestaña del navegador perderá su conexión actual — recárgala en <code>https://&lt;host&gt;:8008/</code>. La primera carga con un certificado Let's Encrypt no debería mostrar warning; con el certificado self-signed de Proxmox el navegador requerirá una excepción, la misma que para el puerto 8006.",
     "reverse": {
       "heading": "Proxies inversos y webhooks",
-      "bodyRich": "Cuando el Monitor cambia a HTTPS, las URLs de webhook de Proxmox VE registradas para notificaciones también pasan de <code>http://</code> a <code>https://</code> automáticamente. Las entradas de webhook existentes se reescriben la próxima vez que una regla de notificación se guarda o se vuelve a detectar, así que no hace falta edición manual de la configuración de notificaciones de Proxmox."
+      "bodyRich": "Cuando el Monitor cambia a HTTPS, las URLs de webhook de Proxmox VE registradas para notificaciones también pasan de <code>http://</code> a <code>https://</code> automáticamente. Si ya hay un webhook de ProxMenux registrado en Proxmox, se vuelve a registrar con el nuevo esquema al activar o desactivar HTTPS, así que no hace falta edición manual de la configuración de notificaciones de Proxmox."
     }
   },
   "trustCa": {
     "heading": "Confiar en la CA self-signed de Proxmox",
     "intro1Rich": "Para conservar el certificado predeterminado de Proxmox sin ACME, importa la CA raíz del clúster en el almacén de confianza del sistema o navegador. Monitor detecta <code>/etc/pve/local/pve-ssl.pem</code> como certificado alternativo. El cliente confiará en su emisor; la URL aún debe coincidir con un nombre del certificado.",
     "intro2Rich": "El archivo de la CA vive en <code>/etc/pve/pve-root-ca.pem</code> en cada nodo. En un clúster la ruta está en el sistema de archivos compartido <code>pmxcfs</code>, así que todos los nodos comparten la misma raíz, y una sola importación cubre el datacenter entero. Cópialo a tu máquina:",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Después impórtalo en el lado del cliente:",
     "items": [
       "<strong>Linux (todo el sistema):</strong> ejecuta <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> y después <code>sudo update-ca-certificates</code>. Los navegadores que usan el almacén del sistema (Chromium, Edge) lo reconocen tras reiniciar; Firefox usa su propio almacén y requiere la importación manual siguiente.",

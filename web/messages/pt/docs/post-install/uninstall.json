@@ -33,7 +33,7 @@
         "title": "Execução da reversão",
         "body1": "Para cada item selecionado, ProxMenux chama sua função de desinstalação correspondente. A maioria das reversões segue um dos três padrões:",
         "items": [
-          "<strong>A partir de cópia</strong> — restaura um <code>.bak</code> criado ao aplicar a alteração (bashrc, logrotate.conf, journald.conf, linha de comandos GRUB/kernel).",
+          "<strong>A partir de cópia</strong>: restaura um <code>.bak</code> criado ao aplicar a alteração (bashrc, logrotate.conf). O journald.conf é reescrito com os valores padrão de origem, e na linha de comandos GRUB / kernel apenas os tokens do ProxMenux são removidos.",
           "<strong>Remoção da configuração</strong> — remove os ficheiros ProxMenux <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> ou a unidade systemd e recarrega.",
           "<strong>Reinstale o pacote</strong> — para alterações de UI como o banner de assinatura, reinstale os pacotes upstream com <code>--force-confnew</code> para restaurar a configuração enviada."
         ],
@@ -54,7 +54,7 @@
         "items": [
           {
             "tool": "Remoção da Banner de Assinatura",
-            "restores": "Primeiro tenta restaurar os ficheiros da interface a partir das cópias ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* e index.html.tpl.backup.* se a interface móvel foi modificada). Só quando a cópia falta ou está danificada reinstala pve-manager, proxmox-widget-toolkit, libjs-extjs e libpve-http-server-perl com force-confnew. Também limpa cópias .js / .gz em cache."
+            "restores": "No PVE 9 e no PBS, tenta primeiro restaurar os ficheiros da interface a partir das cópias do próprio ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* e, se a interface móvel foi modificada, index.html.tpl.backup.*). No PVE 8, ou se a cópia falta ou está danificada, reinstala pve-manager, proxmox-widget-toolkit, libjs-extjs e libpve-http-server-perl com force-confnew. Também limpa cópias .js / .gz em cache."
           },
           {
             "tool": "Ignorar idiomas do APT",
@@ -83,7 +83,7 @@
           },
           {
             "tool": "Aumento dos limites do sistema",
-            "restores": "Remove /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf e /etc/security/limits.d/99-limits.conf. Repõe limites PAM e DefaultLimitNOFILE systemd. Em /root/.profile só remove o antigo ulimit -n 256000; ulimit -n 1048576 do instalador atual pode permanecer e exigir remoção manual."
+            "restores": "Remove /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf e /etc/security/limits.d/99-limits.conf. Repõe limites PAM e DefaultLimitNOFILE systemd. Remove de /root/.profile tanto a antiga linha ulimit -n 256000 como a atual ulimit -n 1048576."
           },
           {
             "tool": "Perfil de troca ZRAM",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Snapshots automáticos do ZFS",
-            "restores": "Remove as entradas cron escritas pelo script e oferece apt purge zfs-auto-snapshot. Os instantâneos existentes nos pools são preservados; remova-os separadamente se necessário."
+            "restores": "Purga o pacote zfs-auto-snapshot sem perguntar, o que também remove os seus ficheiros cron. Os instantâneos existentes nos pools são preservados; remova-os separadamente se necessário."
           },
           {
             "tool": "Limites de velocidade do vzdump",

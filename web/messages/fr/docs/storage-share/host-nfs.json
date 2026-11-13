@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Ouverture de l'outil",
-    "body": "Dans le menu principal de ProxMenux, ouvrez <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong>. Le sous-menu comporte quatre options :",
+    "body": "Dans le menu principal de ProxMenux, ouvrez <strong>Storage &amp; Share Manager → Add NFS share as Proxmox Storage</strong>. Le sous-menu comporte quatre options (plus Exit) :",
     "imageAlt": "Menu NFS Host Manager — Monter / Afficher / Supprimer / Tester la connectivité"
   },
   "howRuns": {
@@ -124,17 +124,17 @@
   },
   "view": {
     "heading": "Affichage configuré NFS stockages",
-    "body": "Liste toutes les entrées NFS dans Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) avec serveur, exportation, types de contenu, chemin de montage et statut en direct. <strong>Note:</strong> cette vue affiche uniquement les stockages enregistrés par pvesm — les montages uniquement par fstab ne sont pas listés ici. Vérifiez ceux avec <code>findmnt -t nfs</code> ou <code>grep nfs /etc/fstab</code>."
+    "body": "Liste les stockages NFS enregistrés dans Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) avec serveur, exportation, types de contenu, chemin de montage et statut en direct, suivis des montages NFS de <code>/etc/fstab</code> de l’hôte avec serveur, exportation, chemin, options et indication de leur état monté."
   },
   "remove": {
     "heading": "Supprimer le stockage NFS",
-    "body": "Exécute <code>pvesm remove &lt;storage-id&gt;</code> après une confirmation qui affiche le serveur / export / contenu. Seul l'enregistrement côté Proxmox est supprimé — <strong>le serveur NFS distant lui-même n'est jamais touché</strong>, aucun fichier n'est supprimé. Pour supprimer un montage uniquement fstab, modifiez <code>/etc/fstab</code> à la main et exécutez <code>umount &lt;path&gt;</code>.",
+    "body": "Le sélecteur liste à la fois les stockages Proxmox (<code>[pvesm]</code>) et les montages fstab de l’hôte (<code>[fstab]</code>). Pour un stockage Proxmox, il exécute <code>pvesm remove &lt;storage-id&gt;</code> après une confirmation qui affiche le serveur / export / contenu. Pour un montage fstab, il démonte le chemin, sauvegarde <code>/etc/fstab</code> vers <code>/etc/fstab.proxmenux.bak</code>, supprime la ligne et supprime le répertoire de montage s’il est vide. <strong>Le serveur NFS distant lui-même n’est jamais touché</strong>, aucun fichier n’est supprimé.",
     "warnTitle": "Sauvegarder les dépendances d'abord",
     "warnBody": "Si les VM, les CT ou les tâches de sauvegarde renvoient encore à ce stockage (par ID), l'enlever les laisse pointer vers un magasin disparu. Proxmox va signaler l'erreur mais pas nettoyer. Déplacez ou supprimez ces références d'abord, puis supprimez le stockage."
   },
   "test": {
     "heading": "Tester la connectivité NFS",
-    "body": "Exécute une passe diagnostique sur chaque stockage NFS enregistré dans Proxmox : vérifie que <code>showmount</code> est disponible, que <code>rpcbind</code> est en cours d'exécution, pinge chaque serveur, sonde le port 2049, appelle <code>showmount -e</code>, et enfin rapporte la propre vue de Proxmox (<code>pvesm status</code>). Bon premier arrêt quand un stockage affiche comme <em>inactive</em> dans l'interface utilisateur Proxmox."
+    "body": "Exécute une passe diagnostique sur chaque stockage NFS enregistré dans Proxmox et chaque montage NFS du <code>/etc/fstab</code> de l’hôte : vérifie que <code>showmount</code> est disponible, que <code>rpcbind</code> est en cours d’exécution, pinge chaque serveur, sonde le port 2049, appelle <code>showmount -e</code>, et enfin rapporte la propre vue de Proxmox (<code>pvesm status</code>). Bon premier arrêt quand un stockage affiche comme <em>inactive</em> dans l’interface utilisateur Proxmox."
   },
   "troubleshoot": {
     "heading": "Dépannage",

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Organize service links, widgets and integrations in a home dashboard."
+    },
+    "description": {
+      "en_US": "Homarr is a customizable dashboard designed to organize and access self-hosted applications and services in one place. It features a drag-and-drop grid system and integrates directly with numerous third-party tools to display real-time widget data and status updates. The platform also includes user management with role-based permissions and a built-in search tool to find items across connected services."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/homarr-labs/homarr/dev/docs/img/screenshot.png"
+    ]
+  }
+}

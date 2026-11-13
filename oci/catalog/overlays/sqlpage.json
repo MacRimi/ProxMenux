@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create web pages by writing SQL queries that SQLPage turns into a website. This profile uses the project’s DuckDB image variant, which includes its embedded database driver and needs no database sidecar. A small starter page is created on first install."
+    },
+    "description": {
+      "en_US": "SQLPage is an SQL-only web application builder that transforms database queries into interactive websites. It reads SQL files and maps returned query data to predefined interface components such as tables, lists, plots, and forms. This allows developers and analysts to build data-centric user interfaces and internal tools quickly using only database queries."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/sqlpage/SQLPage/HEAD/docs/cards.png",
+      "https://raw.githubusercontent.com/sqlpage/SQLPage/HEAD/docs/demo-graph.png",
+      "https://raw.githubusercontent.com/sqlpage/SQLPage/HEAD/docs/demo-form.png"
+    ]
+  }
+}

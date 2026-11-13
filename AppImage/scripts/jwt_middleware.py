@@ -1,30 +1,87 @@
 """
 JWT Middleware Module
-Provides decorator to protect Flask routes with JWT authentication
-Automatically checks auth status and validates tokens
+Decorators that protect the Flask routes according to the access mode of the
+Monitor (see `auth_manager.access_mode`):
+
+- undecided: nothing is served until someone chooses how to reach the Monitor.
+- password:  a valid token is required; `read_only` tokens may only read.
+- read_only: no account; every request may read, nothing else.
+- open:      no account and no limits, chosen knowing the risk.
 """
 
 from flask import request, jsonify, g
 from functools import wraps
-from auth_manager import load_auth_config, verify_token, verify_token_full
+from auth_manager import load_auth_config, verify_token_full, access_mode
 
 _READ_METHODS = ('GET', 'HEAD', 'OPTIONS')
 
 
+def _setup_required():
+    return jsonify({"error": "setup_required",
+                    "message": "Choose how to access ProxMenux Monitor first"}), 403
+
+
+def _insufficient(scope):
+    if scope == 'read_only':
+        return jsonify({"error": "Insufficient scope",
+                        "message": "This action is not available with read-only access"}), 403
+    return jsonify({"error": "Insufficient scope",
+                    "message": f"This action requires a full_admin token (your token: {scope})"}), 403
+
+
+def _token_scope():
+    """(scope, error response) for the Bearer token of the request, when the
+    Monitor has an account."""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        verify_token_full(None)  # Guarded, credential-free rejection diagnostic.
+        return None, (jsonify({"error": "Authentication required",
+                               "message": "No authorization header provided"}), 401)
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != 'bearer':
+        verify_token_full(None)
+        return None, (jsonify({"error": "Invalid authorization header",
+                               "message": "Authorization header must be in format: Bearer <token>"}), 401)
+    username, scope = verify_token_full(parts[1])
+    if not username:
+        return None, (jsonify({"error": "Invalid or expired token",
+                               "message": "Please log in again"}), 401)
+    return scope, None
+
+
+def request_scope():
+    """(mode, scope, error response) of the current request. `scope` is
+    'full_admin', 'read_only' or None; in read-only and open modes a token is
+    not needed and not looked at."""
+    mode = access_mode(load_auth_config())
+    if mode == 'undecided':
+        return mode, None, _setup_required()
+    if mode == 'open':
+        return mode, 'full_admin', None
+    if mode == 'read_only':
+        return mode, 'read_only', None
+    scope, error = _token_scope()
+    return mode, scope, error
+
+
+def has_full_access():
+    """Whether the current request has full access: for routes that leave out
+    secrets, such as passwords on a command line, when the access is read-only."""
+    try:
+        if getattr(g, '_internal_call', False):
+            return True
+    except RuntimeError:
+        pass
+    _mode, scope, error = request_scope()
+    return error is None and scope == 'full_admin'
+
+
 def require_auth(f):
     """
-    Decorator to protect Flask routes with JWT authentication
-    
-    Behavior:
-    - If auth is disabled or declined: Allow access (no token required)
-    - If auth is enabled: Require valid JWT token in Authorization header
-    - Returns 401 if auth required but token missing/invalid
-    
-    Usage:
-        @app.route('/api/protected')
-        @require_auth
-        def protected_route():
-            return jsonify({"data": "secret"})
+    Decorator to protect Flask routes.
+
+    Reading methods are served to any accepted request; a method that can
+    change state needs full access (a `full_admin` token, or an open Monitor).
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -39,80 +96,42 @@ def require_auth(f):
         except RuntimeError:
             pass  # No request context yet — treat as normal auth flow.
 
-        # Check if authentication is enabled
-        config = load_auth_config()
-
-        # If auth is disabled or declined, allow access
-        if not config.get("enabled", False) or config.get("declined", False):
-            return f(*args, **kwargs)
-        
-        # Auth is enabled, require token
-        auth_header = request.headers.get('Authorization')
-        
-        if not auth_header:
-            verify_token_full(None)  # Guarded, credential-free rejection diagnostic.
-            return jsonify({
-                "error": "Authentication required",
-                "message": "No authorization header provided"
-            }), 401
-        
-        # Extract token from "Bearer <token>" format
-        parts = auth_header.split()
-        if len(parts) != 2 or parts[0].lower() != 'bearer':
-            verify_token_full(None)
-            return jsonify({
-                "error": "Invalid authorization header",
-                "message": "Authorization header must be in format: Bearer <token>"
-            }), 401
-        
-        token = parts[1]
-        
-        # Verify token
-        username, scope = verify_token_full(token)
-        if not username:
-            return jsonify({
-                "error": "Invalid or expired token",
-                "message": "Please log in again"
-            }), 401
-
-        # read_only tokens may only read; any method that can change
+        _mode, scope, error = request_scope()
+        if error:
+            return error
+        # read_only access may only read; any method that can change
         # state needs full_admin.
         if request.method not in _READ_METHODS and scope != 'full_admin':
-            return jsonify({"error": "Insufficient scope",
-                            "message": f"This action requires a full_admin token (your token: {scope})"}), 403
-        
-        # Token is valid, allow access
+            return _insufficient(scope)
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 
-def require_auth_or_ticket(f):
-    """Like `require_auth` but ALSO accepts a single-use `?ticket=...`
-    query parameter (same tickets `/api/terminal/ticket` issues for
-    WebSockets). Use on endpoints that the browser needs to invoke
-    from an <a download href="..."> tag — anchor tags can't send the
-    Authorization header, so the caller fetches a ticket first and
-    appends it to the URL.
-
-    Use only for streaming downloads where adding `?ticket=...` is
-    the only practical way to authenticate; everything else stays
-    on plain Bearer-token auth."""
+def require_admin_or_ticket(f):
+    """Like `require_auth`, for downloads that carry secrets, such as the PBS
+    encryption key and host backups: full access is required. A single-use
+    `?ticket=...` is accepted too, since only full access can get one; an
+    <a download> link cannot send the Authorization header."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        config = load_auth_config()
-        if not config.get("enabled", False) or config.get("declined", False):
+        mode = access_mode(load_auth_config())
+        if mode == 'undecided':
+            return _setup_required()
+        if mode == 'open':
             return f(*args, **kwargs)
 
-        # First try the Bearer header (fetch from JS uses this).
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            parts = auth_header.split()
-            if len(parts) == 2 and parts[0].lower() == 'bearer':
-                if verify_token(parts[1]):
-                    return f(*args, **kwargs)
+        if mode == 'password':
+            auth_header = request.headers.get('Authorization')
+            if auth_header:
+                parts = auth_header.split()
+                if len(parts) == 2 and parts[0].lower() == 'bearer':
+                    username, scope = verify_token_full(parts[1])
+                    if username and scope == 'full_admin':
+                        return f(*args, **kwargs)
+                    if username:
+                        return _insufficient(scope)
 
-        # Fall through to single-use ticket (works for <a download>).
         try:
             from flask_terminal_routes import _consume_terminal_ticket
             if _consume_terminal_ticket(request.args.get('ticket', '')):
@@ -120,74 +139,32 @@ def require_auth_or_ticket(f):
         except ImportError:
             pass
 
+        if mode == 'read_only':
+            return _insufficient('read_only')
         return jsonify({
             "error": "Authentication required",
-            "message": "Provide a Bearer token in the Authorization header or a fresh ?ticket=... from /api/terminal/ticket"
+            "message": "Provide a full_admin Bearer token in the Authorization header or a fresh ?ticket=... from /api/terminal/ticket"
         }), 401
 
     return decorated_function
 
 
 def require_admin_scope(f):
-    """Like `require_auth` but ALSO requires the token's `scope == full_admin`.
+    """Like `require_auth` but full access is required for every method,
+    reading ones included.
 
-    Use on mutating routes that should be off-limits to read-only API
-    tokens (e.g. script execution, SSL disable, auth setup). Tokens
+    Use on actions and on readings that carry secrets, which read-only access
+    (a `read_only` token or a read-only Monitor) must not reach. Tokens
     generated by the session login flow inherit `full_admin` implicitly;
     long-lived API tokens default to `read_only` unless the caller
     opted in. Audit Tier 6 — Tokens API JWT 365 días sin scope.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        config = load_auth_config()
-        if not config.get("enabled", False) or config.get("declined", False):
-            return f(*args, **kwargs)
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return jsonify({"error": "Authentication required",
-                            "message": "No authorization header provided"}), 401
-        parts = auth_header.split()
-        if len(parts) != 2 or parts[0].lower() != 'bearer':
-            return jsonify({"error": "Invalid authorization header",
-                            "message": "Authorization header must be in format: Bearer <token>"}), 401
-        username, scope = verify_token_full(parts[1])
-        if not username:
-            return jsonify({"error": "Invalid or expired token",
-                            "message": "Please log in again"}), 401
+        _mode, scope, error = request_scope()
+        if error:
+            return error
         if scope != 'full_admin':
-            return jsonify({"error": "Insufficient scope",
-                            "message": f"This action requires a full_admin token (your token: {scope})"}), 403
+            return _insufficient(scope)
         return f(*args, **kwargs)
-    return decorated_function
-
-
-def optional_auth(f):
-    """
-    Decorator for routes that can optionally use auth
-    Passes username if authenticated, None otherwise
-    
-    Usage:
-        @app.route('/api/optional')
-        @optional_auth
-        def optional_route(username=None):
-            if username:
-                return jsonify({"message": f"Hello {username}"})
-            return jsonify({"message": "Hello guest"})
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        config = load_auth_config()
-        username = None
-        
-        if config.get("enabled", False):
-            auth_header = request.headers.get('Authorization')
-            if auth_header:
-                parts = auth_header.split()
-                if len(parts) == 2 and parts[0].lower() == 'bearer':
-                    username = verify_token(parts[1])
-        
-        # Inject username into kwargs
-        kwargs['username'] = username
-        return f(*args, **kwargs)
-    
     return decorated_function

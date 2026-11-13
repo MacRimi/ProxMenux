@@ -1,0 +1,28 @@
+{
+  "catalog_ui": {
+    "screenshots": [
+      "https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/docs/images/shot-1-hero.png",
+      "https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/docs/images/shot-2-components.png",
+      "https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/docs/images/shot-3-prototype.png",
+      "https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/docs/images/shot-4-devmode.png",
+      "https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/docs/images/shot-5-vector.png",
+      "https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/docs/images/shot-6-dashboard-light.png"
+    ],
+    "tips": [
+      "This is the native Linux application streamed by Selkies, not the WebAssembly build. Processing and documents stay in the LXC and its mounted directories.",
+      "The image is maintained by junkerderprovinz; ArtCraft publishes the application packages. It is not an official ArtCraft container image.",
+      "Use a trusted HTTPS reverse proxy for browser access. Port 3001 uses the upstream self-signed certificate; port 3000 is for an HTTP reverse-proxy backend.",
+      "The upstream default has no login. Optional CUSTOM_USER and PASSWORD variables enable HTTP basic authentication; do not expose an unauthenticated desktop to untrusted networks.",
+      "/config holds settings and desktop state and is included in Proxmox backups. /storage holds documents and supports a managed volume or an explicitly selected host directory; host directories require separate backups.",
+      "The default installation draws on the CPU. The advanced installation can assign an Intel or AMD GPU, which the desktop, the application and the video stream then use; NVIDIA is offered when the host has its driver and the NVIDIA Container Toolkit.",
+      "Without a GPU, an application may ask to switch to CPU rendering. Choose the CPU option; the application remembers it.",
+      "Screenshot: Copyright (c) 2026 ArtCraft Team and the FigCraft contributors. Source: https://github.com/storytold/figcraft/blob/8415de0bad4372c03465f592205cadc24fd04c8b/README.md. License: MIT (https://raw.githubusercontent.com/storytold/figcraft/8415de0bad4372c03465f592205cadc24fd04c8b/LICENSE-MIT). Original image, unchanged."
+    ],
+    "tagline": {
+      "en_US": "FigCraft from the ArtCraft project, streamed from a native Linux application using the community-maintained junkerderprovinz image. Files are stored on the server, not in browser storage."
+    },
+    "description": {
+      "en_US": "FigCraft is an interface design and prototyping application from the ArtCraft suite. It allows users to build user interface layouts using frames, auto layout, reusable components, and interactive prototypes. The application streams directly to a web browser while storing files and project assets locally on the server."
+    }
+  }
+}

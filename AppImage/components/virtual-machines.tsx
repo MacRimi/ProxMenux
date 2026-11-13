@@ -426,6 +426,7 @@ interface LxcMountPoint {
   runtime_fstype?: string
   runtime_options?: string
   runtime_readonly?: boolean
+  runtime_readonly_expected?: boolean
   runtime_reachable?: boolean
   runtime_error?: string | null
   // Sprint 14.x: host-side bind source state. Detects the case where the
@@ -584,7 +585,10 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
 function MountPointCard({ mp }: { mp: LxcMountPoint }) {
   const t = useT()
   const isStale = mp.runtime_reachable === false
-  const isReadonly = !isStale && mp.runtime_readonly === true
+  // Read-only as configured (ro=1, or a remote mount asked to be read-only)
+  // is shown as such without the warning colour.
+  const isReadonlyAsked = !isStale && mp.runtime_readonly === true && mp.runtime_readonly_expected === true
+  const isReadonly = !isStale && mp.runtime_readonly === true && !isReadonlyAsked
   const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
   // "Zombie bind": the host removed the source (e.g. USB pulled, manual
   // umount) but the CT mount namespace still shows the bind as mounted.
@@ -676,7 +680,9 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
                 ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                 : isReadonly
                   ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                  : mp.runtime_mounted === null
+                  : isReadonlyAsked
+                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                    : mp.runtime_mounted === null
                     ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
                     : "bg-green-500/10 text-green-500 border-green-500/20"
           }
@@ -687,7 +693,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
               ? t("vmLxc.details.mountStatus.notMounted")
               : isHostDetached
                 ? t("vmLxc.details.mountStatus.hostDetached")
-                : isReadonly
+                : isReadonly || isReadonlyAsked
                   ? t("vmLxc.details.mountStatus.readOnly")
                   : mp.runtime_mounted === null
                     ? t("vmLxc.details.mountStatus.stopped")
@@ -2054,6 +2060,9 @@ export function VirtualMachines() {
   const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
   const [scheduleTarget, setScheduleTarget] = useState<"os" | "app" | "both">("both")
   const [scheduleTargets, setScheduleTargets] = useState<string[]>(["os", "apps"])
+  // The applications the schedule can update, as the open container shows
+  // them; "apps" is saved only while there is one to update.
+  const scheduleAppChoicesRef = useRef<{ vmid: number; ids: string[] } | null>(null)
   const [scheduleReleaseDelayDays, setScheduleReleaseDelayDays] = useState(0)
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
@@ -2300,7 +2309,13 @@ export function VirtualMachines() {
     const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
     // A container installed by OCI manager Apps has one thing to update on
     // a schedule: its image.
-    const targetsToSave = ociInstance ? ["oci_image"] : scheduleTargets
+    const shownAppChoices = scheduleAppChoicesRef.current
+    const withoutHiddenApps = shownAppChoices?.vmid === vmid && shownAppChoices.ids.length === 0
+      ? scheduleTargets.filter((value) => value !== "apps")
+      : scheduleTargets
+    const targetsToSave = ociInstance
+      ? ["oci_image"]
+      : withoutHiddenApps.length ? withoutHiddenApps : scheduleTargets
     const hasOsTarget = targetsToSave.includes("os")
     const hasAppTarget = targetsToSave.some((value) => value !== "os")
     const derivedTarget: "os" | "app" | "both" = hasOsTarget && hasAppTarget ? "both" : hasOsTarget ? "os" : "app"
@@ -5496,8 +5511,18 @@ export function VirtualMachines() {
                                     <Info className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
                                     <span>{t("vmLxc.ociUpdates.memberNote", { primary: primaryLabel, count: ociInstance.members.length })}</span>
                                   </div>
-                                  {primaryVM && (
-                                    <div className="flex justify-end">
+                                  <div className="flex flex-wrap justify-end gap-2">
+                                    {!ociInstance.pending && (
+                                      <Button
+                                        size="sm"
+                                        className={neutralBtnCls}
+                                        onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "modify" })}
+                                      >
+                                        <Settings2 className="h-4 w-4 mr-1.5" />
+                                        {t("vmLxc.ociUpdates.modify")}
+                                      </Button>
+                                    )}
+                                    {primaryVM && (
                                       <Button
                                         size="sm"
                                         className={neutralBtnCls}
@@ -5508,8 +5533,8 @@ export function VirtualMachines() {
                                         <ChevronRight className="h-4 w-4 mr-1.5" />
                                         {t("vmLxc.ociUpdates.openPrimary")}
                                       </Button>
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               ) : (
                               <>
@@ -5870,6 +5895,12 @@ export function VirtualMachines() {
                           if (app.update_command?.trim()) return true
                           return helperExists && app.update_method === "helper" && app.helper_slug === uc?.helper_slug
                         }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
+                        if (uc) {
+                          scheduleAppChoicesRef.current = {
+                            vmid: selectedVM.vmid,
+                            ids: scheduledAppChoices.map((choice) => choice.id),
+                          }
+                        }
                         const versionTrackedScheduleAppIds = new Set(
                           registeredApps
                             .filter((app) => (
@@ -6565,7 +6596,7 @@ export function VirtualMachines() {
                                       {helperExists && (
                                         <div className="mb-3 flex items-start gap-2.5">
                                           <img
-                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/community-scripts.webp"
                                             alt=""
                                             className="h-7 w-7 rounded-sm object-contain flex-shrink-0"
                                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
@@ -7228,7 +7259,7 @@ export function VirtualMachines() {
                                     return (
                                       <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 rounded-md bg-muted/40 border border-border/50">
                                         <img
-                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/community-scripts.webp"
                                           alt=""
                                           className="h-5 w-5 rounded-sm object-contain flex-shrink-0 mt-0.5"
                                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}

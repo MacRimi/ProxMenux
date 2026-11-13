@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Options d'exportation par défaut — lire cette première",
     "warnTitle": "Les options par défaut incluent no_root_squash",
-    "warnBody": "ProxMenux utilise par défaut <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Tout utilisateur root d’un client peut écrire comme root sur l’export.</strong> Réservez cette option à un réseau local de confiance. Si le CT est accessible depuis un réseau non fiable (VPS ou VLAN non fiable), <strong>remplacez l’option par <code>root_squash</code></strong> dans le dialogue des options personnalisées."
+    "warnBody": "ProxMenux utilise par défaut <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. <strong>Tout utilisateur root d’un client peut écrire comme root sur l’export.</strong> Réservez cette option à un réseau local de confiance. Si le CT est accessible depuis un réseau non fiable (VPS ou VLAN non fiable), <strong>remplacez l’option par <code>root_squash</code></strong> dans le dialogue des options personnalisées."
   },
   "opening": {
     "heading": "Ouverture de l'outil",
@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Désinstaller le serveur NFS",
-    "body": "Nettoyage complet après confirmation : arrête et désactive <code>nfs-kernel-server</code> et <code>rpcbind</code>, vide <code>/etc/exports</code>, supprime les paquets NFS avec <code>apt-get purge</code>, retire le groupe <code>sharedfiles</code> et les utilisateurs <code>remap_*</code>, puis termine les processus restants. Les <strong>dossiers exportés eux-mêmes ne sont pas supprimés</strong> ; seules la configuration NFS et les paquets le sont.",
+    "body": "Nettoyage complet après confirmation : arrête et désactive <code>nfs-kernel-server</code> et <code>rpcbind</code>, vide <code>/etc/exports</code>, exécute <code>apt-get purge</code> sur <code>nfs-kernel-server</code> et <code>nfs-common</code>, retire les utilisateurs <code>remap_*</code> et le groupe <code>sharedfiles</code> (seulement si aucun utilisateur ordinaire n’en est encore membre, ce qui n’est généralement pas le cas), puis termine les processus restants. Les <strong>dossiers exportés eux-mêmes ne sont pas supprimés</strong> ; seules la configuration NFS et les paquets le sont.",
     "warnTitle": "Le script s'arrête à la ligne d'exportation, pas aux données",
     "warnBody": "<em>Supprimer un export</em> et <em>Désinstaller le serveur NFS</em> retirent la configuration d’export. Les données du dossier sont conservées. Pour les supprimer aussi, utilisez explicitement <code>rm -rf</code> après la fin du script et sauvegardez-les d’abord si quelqu’un peut encore en avoir besoin."
   },

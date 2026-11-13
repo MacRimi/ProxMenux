@@ -57,7 +57,7 @@
       "Search results can prefill the canonical name, logo and common web ports.",
       "Known version detectors are based on real package names, binaries, files, Python distributions, OCI labels or commands rather than a universal <code>/root/.app</code> assumption.",
       "Verified runtime overrides take precedence when an installation uses a path that differs from its installer metadata.",
-      "Proxmox VE Helper-Scripts markers such as <code>/root/.slug</code> remain one compatibility signal for newer helper installations, not the only detector.",
+      "Community Scripts markers such as <code>/root/.slug</code> remain one compatibility signal for newer helper installations, not the only detector.",
       "Every proposed value can be edited before saving to cover official installers and manual installations."
     ]
   },
@@ -125,7 +125,7 @@
     "items": [
       "A link-only record shows that version tracking is not configured, but can still receive a custom update command.",
       "An app with tracking but without an executable method shows a neutral message asking for a custom command.",
-      "An app with a verified Proxmox VE Helper-Scripts wrapper can use that integrated updater even when the registration began from a web link.",
+      "An app with a verified Community Scripts wrapper can use that integrated updater even when the registration began from a web link.",
       "Adding or editing an updater does not change the detector or upstream source stored on the App tab."
     ]
   },

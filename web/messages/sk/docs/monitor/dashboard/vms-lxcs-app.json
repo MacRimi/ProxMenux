@@ -57,7 +57,7 @@
       "Výsledky môžu predvyplniť kanonický názov, logo a bežné webové porty.",
       "Známe detektory používajú skutočné balíky, binárne súbory, súbory, Python distribúcie, OCI značky alebo príkazy, nie univerzálny predpoklad <code>/root/.app</code>.",
       "Overené opravy z reálnych inštalácií majú prednosť, keď sa cesta líši od údajov inštalátora.",
-      "Markery Proxmox VE Helper-Scripts, napríklad <code>/root/.slug</code>, zostávajú jedným signálom kompatibility pre nové inštalácie, nie jediným detektorom.",
+      "Markery Community Scripts, napríklad <code>/root/.slug</code>, zostávajú jedným signálom kompatibility pre nové inštalácie, nie jediným detektorom.",
       "Každú navrhnutú hodnotu možno pred uložením upraviť pre oficiálne aj manuálne inštalácie."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "Záznam iba s odkazom uvádza, že sledovanie verzie nie je nastavené, ale stále môže dostať vlastný aktualizačný príkaz.",
       "Aplikácia so sledovaním bez spustiteľnej metódy zobrazí neutrálnu požiadavku na vlastný príkaz.",
-      "Aplikácia s overeným wrapperom Proxmox VE Helper-Scripts môže použiť integrovaný aktualizátor aj vtedy, keď registrácia začala iba webovým odkazom.",
+      "Aplikácia s overeným wrapperom Community Scripts môže použiť integrovaný aktualizátor aj vtedy, keď registrácia začala iba webovým odkazom.",
       "Pridanie alebo úprava aktualizátora nemení detektor ani zdroj dostupnej verzie na karte App."
     ]
   },

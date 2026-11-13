@@ -141,7 +141,7 @@ run_case custom_replaces_helper RUN_HELPER=1 UPDATE_COMMAND='replace-helper'
 [[ $CASE_RC -eq 0 ]] || fail "custom_replaces_helper returned $CASE_RC"
 [[ $(count HELPER_EXEC) -eq 0 ]] || fail "custom_replaces_helper unexpectedly ran helper"
 [[ $(count CUSTOM_EXEC) -eq 1 ]] || fail "custom_replaces_helper did not run custom exactly once"
-grep -qF 'skipping Proxmox VE Helper-Scripts updater' "$TEST_ROOT/custom_replaces_helper.out" \
+grep -qF 'skipping Community Scripts updater' "$TEST_ROOT/custom_replaces_helper.out" \
   || fail "custom_replaces_helper did not report the replacement rule"
 
 run_case explicit_multi_app RUN_HELPER=1 ALLOW_HELPER_WITH_CUSTOM=1 UPDATE_COMMAND='update-another-app'

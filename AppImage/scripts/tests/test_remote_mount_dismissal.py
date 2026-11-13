@@ -36,7 +36,8 @@ class RemoteMountDismissal(unittest.TestCase):
     def check(self, host, lxc=()):
         persistence = _Persistence()
         mounts = SimpleNamespace(scan_remote_mounts=lambda force: list(host),
-                                 scan_lxc_mounts=lambda force: list(lxc))
+                                 scan_lxc_mounts=lambda force: list(lxc),
+                                 storage_for_mount=lambda target, source, host_mounts=None: None)
         with patch.object(health_monitor, "MOUNT_MONITOR_AVAILABLE", True), \
                 patch.object(health_monitor, "mount_monitor", mounts, create=True), \
                 patch.object(health_monitor, "health_persistence", persistence):

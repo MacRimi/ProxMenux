@@ -1,22 +1,27 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { Shield, Lock, User, AlertCircle, Eye, EyeOff, Upload, Trash2 } from "lucide-react"
+import { Shield, Lock, User, AlertCircle, Eye, EyeOff, Upload, Trash2, KeyRound, ShieldAlert } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 
 interface AuthSetupProps {
   onComplete: () => void
+  // A new installation asks for the code the installer showed in the console.
+  setupCodeRequired?: boolean
 }
 
-export function AuthSetup({ onComplete }: AuthSetupProps) {
+// The first-run screen: nothing else of the Monitor is served until it is
+// answered. With a password, an account is created; without one, the owner
+// chooses read-only or open.
+export function AuthSetup({ onComplete, setupCodeRequired = false }: AuthSetupProps) {
   const t = useT()
-  const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<"choice" | "setup">("choice")
+  const [step, setStep] = useState<"choice" | "setup" | "mode">("choice")
+  const [setupCode, setSetupCode] = useState("")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -33,61 +38,30 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const response = await fetch(getApiUrl("/api/auth/status"))
-        
-        // Check if response is valid JSON before parsing
-        if (!response.ok) {
-          // API not available - don't show modal in preview
-          return
-        }
-        
-        const contentType = response.headers.get("content-type")
-        if (!contentType || !contentType.includes("application/json")) {
-          return
-        }
-        
-        const data = await response.json()
+  // A refused setup code gets its own explanation; anything else, the message.
+  const errorText = (data: { error?: string; message?: string }, fallback: string) => {
+    if (data.error === "setup_code_invalid") return t("authSetup.codeInvalid")
+    if (data.error === "setup_code_rate_limited") return t("authSetup.codeRateLimited")
+    return data.error || data.message || fallback
+  }
 
-        // Show modal if auth is not configured and not declined
-        if (!data.auth_configured) {
-          setTimeout(() => setOpen(true), 500)
-        }
-      } catch {
-        // API not available (preview environment) - don't show modal
-      }
-    }
-
-    checkOnboardingStatus()
-  }, [])
-
-  const handleSkipAuth = async () => {
+  const handleChooseMode = async (mode: "read_only" | "open") => {
     setLoading(true)
     setError("")
 
     try {
-      const response = await fetch(getApiUrl("/api/auth/skip"), {
+      const response = await fetch(getApiUrl("/api/auth/mode"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, setup_code: setupCode }),
       })
-
-      const data = await response.json()
-
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(data.error || t("authSetup.skipFailed"))
+        throw new Error(errorText(data, t("authSetup.savePreferenceFailed")))
       }
-
-      if (data.auth_declined) {
-      }
-
-      localStorage.setItem("proxmenux-auth-declined", "true")
       localStorage.removeItem("proxmenux-auth-token") // Remove any old token
-      setOpen(false)
       onComplete()
     } catch (err) {
-      console.error("Auth skip error:", err)
       setError(err instanceof Error ? err.message : t("authSetup.savePreferenceFailed"))
     } finally {
       setLoading(false)
@@ -133,13 +107,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
         body: JSON.stringify({
           username,
           password,
+          setup_code: setupCode,
         }),
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
-        throw new Error(data.error || t("authSetup.setupFailed"))
+        throw new Error(errorText(data, t("authSetup.setupFailed")))
       }
 
       if (data.token) {
@@ -202,7 +177,6 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
         window.dispatchEvent(new CustomEvent("proxmenux:profile-changed"))
       }
 
-      setOpen(false)
       onComplete()
     } catch (err) {
       console.error("Auth setup error:", err)
@@ -212,11 +186,46 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     }
   }
 
+  const errorBox = error && (
+    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
+      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+      <p className="text-sm text-red-500">{error}</p>
+    </div>
+  )
+
+  const setupCodeField = setupCodeRequired && (
+    <div className="space-y-2">
+      <Label htmlFor="setup-code" className="text-sm">
+        {t("authSetup.setupCode")}
+      </Label>
+      <div className="relative">
+        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          id="setup-code"
+          type="text"
+          placeholder="XXXX-XXXX-XXXX"
+          value={setupCode}
+          onChange={(e) => setSetupCode(e.target.value)}
+          className="pl-10 text-base font-mono uppercase tracking-wider"
+          disabled={loading}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+      <p className="text-[11px] text-muted-foreground">{t("authSetup.setupCodeHint")}</p>
+    </div>
+  )
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={() => { /* the first-run screen stays until it is answered */ }}>
+      <DialogContent
+        hideClose
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        className="max-w-md max-h-[90vh] overflow-y-auto"
+      >
         <DialogTitle className="sr-only">
-          {step === "choice" ? t("authSetup.choiceTitle") : t("authSetup.passwordTitle")}
+          {step === "choice" ? t("authSetup.choiceTitle") : step === "mode" ? t("authSetup.noPasswordTitle") : t("authSetup.passwordTitle")}
         </DialogTitle>
         {step === "choice" ? (
           <div className="space-y-6 py-2">
@@ -236,7 +245,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                 {t("authSetup.setupPassword")}
               </Button>
               <Button
-                onClick={handleSkipAuth}
+                onClick={() => { setError(""); setStep("mode") }}
                 variant="outline"
                 className="w-full bg-transparent"
                 size="lg"
@@ -248,6 +257,49 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
             <p className="text-xs text-center text-muted-foreground">{t("authSetup.enableLater")}</p>
           </div>
+        ) : step === "mode" ? (
+          <div className="space-y-6 py-2">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">{t("authSetup.noPasswordTitle")}</h2>
+              <p className="text-muted-foreground text-sm">{t("authSetup.noPasswordDescription")}</p>
+            </div>
+
+            {errorBox}
+            {setupCodeField}
+
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border bg-accent/40 p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Eye className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">{t("authSetup.readOnlyTitle")}</p>
+                    <p className="text-sm text-muted-foreground">{t("authSetup.readOnlyDescription")}</p>
+                  </div>
+                </div>
+                <Button onClick={() => handleChooseMode("read_only")} className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>
+                  {t("authSetup.chooseReadOnly")}
+                </Button>
+              </div>
+
+              <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">{t("authSetup.openTitle")}</p>
+                    <p className="text-sm text-muted-foreground">{t("authSetup.openDescription")}</p>
+                  </div>
+                </div>
+                <Button onClick={() => handleChooseMode("open")} variant="outline"
+                  className="w-full border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500" disabled={loading}>
+                  {t("authSetup.chooseOpen")}
+                </Button>
+              </div>
+            </div>
+
+            <Button onClick={() => { setError(""); setStep("choice") }} variant="ghost" className="w-full" disabled={loading}>
+              {t("authSetup.back")}
+            </Button>
+          </div>
         ) : (
           <div className="space-y-6 py-2">
             <div className="text-center space-y-2">
@@ -258,14 +310,11 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
               <p className="text-muted-foreground text-sm">{t("authSetup.setupDescription")}</p>
             </div>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-500">{error}</p>
-              </div>
-            )}
+            {errorBox}
 
             <div className="space-y-4">
+              {setupCodeField}
+
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-sm">
                   {t("authSetup.username")}
@@ -438,7 +487,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
               <Button onClick={handleSetupAuth} className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>
                 {loading ? t("authSetup.settingUp") : t("authSetup.setupAuthentication")}
               </Button>
-              <Button onClick={() => setStep("choice")} variant="ghost" className="w-full" disabled={loading}>
+              <Button onClick={() => { setError(""); setStep("choice") }} variant="ghost" className="w-full" disabled={loading}>
                 {t("authSetup.back")}
               </Button>
             </div>

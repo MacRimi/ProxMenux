@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Search the web through a self-hosted Google results frontend without displaying ads or requiring client-side Google scripts. This recipe enables the optional built-in login."
+    },
+    "description": {
+      "en_US": "Whoogle Search is a privacy-focused frontend that delivers Google search results without advertisements, tracking cookies, JavaScript, or AMP links. It strips user-identifying data, blocks tracking tags, and prevents requests from being linked to the client's IP address. It can be integrated as a primary search engine on desktop and mobile browsers, supporting search bangs and proxy routing."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/benbusby/whoogle-search/HEAD/docs/screenshot_desktop.png",
+      "https://raw.githubusercontent.com/benbusby/whoogle-search/HEAD/docs/screenshot_mobile.png"
+    ]
+  }
+}

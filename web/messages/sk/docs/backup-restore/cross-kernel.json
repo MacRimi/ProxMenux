@@ -163,7 +163,7 @@
       {
         "label": "Ako to funguje",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — manifest a zberné funkcie vytvárajúce blok <code>kernel_params</code>, z ktorého doplnenie číta."
+        "tailRich": " — manifest a zberné funkcie vytvárajúce blok <code>kernel_params</code>, z ktorého doplnenie číta."
       }
     ]
   }

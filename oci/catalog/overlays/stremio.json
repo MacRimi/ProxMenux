@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Stremio offers a secure, modern and seamless entertainment experience. With its easy-to-use interface and diverse content library, including 4K HDR support, users can enjoy their favorite movies and TV shows across all their devices. And with its commitment to security, Stremio is the ultimate choice for a worry-free, high-quality streaming experience."
+    },
+    "description": {
+      "en_US": "Stremio is a media streaming platform that lets users browse and watch video entertainment such as movies and television shows. It integrates a streaming server with a web-based media player to handle content delivery and video transcoding. The platform enables centralized access to media libraries directly from a web browser across devices."
+    },
+    "repository": "https://github.com/tsaridas/stremio-docker",
+    "screenshots": [
+      "https://www.stremio.com/assets/tv-mockup-C63daBc2.png",
+      "https://www.stremio.com/assets/devices-home-mobile@2x-Dmb3s3tn.png",
+      "https://www.stremio.com/assets/screencapture-mobile-app-v2@2x-oHguJi0h.png"
+    ]
   }
 }

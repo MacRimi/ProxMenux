@@ -19,7 +19,7 @@
   "openingMenu": {
     "heading": "Otvorenie menu",
     "body": "V hlavnom menu ProxMenux vyberte <strong>Nastavenie Proxmoxu po inštalácii</strong>. Zobrazí sa toto:",
-    "imageAlt": "Ponuka Skripty po inštalácii – Automatizované, Prispôsobiteľné, podmienené Použiť dostupné aktualizácie (iba keď čakajú aktualizácie) a Odinštalovať, po ktorej nasleduje sekcia Komunitné skripty"
+    "imageAlt": "Ponuka Skripty po inštalácii – Automatizované, Prispôsobiteľné, podmienené Použiť dostupné aktualizácie (iba keď čakajú aktualizácie) a Odinštalovať, po ktorej nasleduje sekcia Externé skripty"
   },
   "threeWays": {
     "heading": "Štyri spôsoby, ako uplatniť optimalizáciu",
@@ -70,7 +70,7 @@
   "mixing": {
     "heading": "Miešanie s inými postinštalačnými skriptmi",
     "stackTitle": "Nekombinujte viacero skriptov po inštalácii",
-    "stackBody": "Spustenie viacerých skriptov po inštalácii na rovnakom hostiteľovi môže vytvoriť duplicitné konfiguračné súbory, konfliktné položky sysctl alebo dokonca nefunkčnú sieť po reštarte. Ak ste už použili <strong>Helper-Scripts Post Install</strong>, niektoré optimalizácie ProxMenux sa môžu prekrývať s jeho konfiguráciou. Používajte jeden nástroj po inštalácii na hostiteľa.",
+    "stackBody": "Spustenie viacerých skriptov po inštalácii na rovnakom hostiteľovi môže vytvoriť duplicitné konfiguračné súbory, konfliktné položky sysctl alebo dokonca nefunkčnú sieť po reštarte. Ak ste už použili <strong>Community Scripts Post Install</strong>, niektoré optimalizácie ProxMenux sa môžu prekrývať s jeho konfiguráciou. Používajte jeden nástroj po inštalácii na hostiteľa.",
     "xshokTitle": "xshok-proxmox: deprekovaný",
     "xshokBody": "Staršie verzie ProxMenux uvádzali <a>xshok-proxmox</a> ako doplnkový nástroj po inštalácii. Projekt je už zastaraný a ProxMenux ho neponúka. Ak predchádzajúce spustenie zanechalo značky na hostiteľovi, ProxMenux ich stále zistí a upozorní vás. Dnes ho však nemáte inštalovať popri ProxMenux."
   },

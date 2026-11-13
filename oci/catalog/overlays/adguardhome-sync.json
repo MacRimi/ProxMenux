@@ -136,5 +136,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "AdGuard Home Sync"
+    },
+    "tagline": {
+      "en_US": "Adguardhome-sync is a tool to synchronize AdGuardHome config to replica instances."
+    },
+    "description": {
+      "en_US": "Adguardhome Sync is a synchronization tool for AdGuard Home. It automatically copies and syncs configuration settings from a primary instance to one or more replica instances. This helps maintain consistent DNS filtering rules and system settings across multiple network deployments."
+    }
   }
 }

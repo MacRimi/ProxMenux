@@ -87,7 +87,7 @@
     "intro": "Open-source projekty a vybrané zoznamy zo širšej komunity Proxmox. Nie sú pridružené k Proxmox Server Solutions ani k ProxMenuxu; sú tu uvedené, pretože sa osvedčili.",
     "cards": {
       "helperScripts": {
-        "title": "Proxmox VE Helper-Scripts",
+        "title": "Community Scripts",
         "description": "Komunitou udržiavaný katalóg skriptov na jednoduché nasadenie kontajnerov LXC, VM a úprav PVE, napríklad pre Home Assistant, Plex či Frigate. Nadväzuje na pomocné skripty od ttecka."
       },
       "awesome": {

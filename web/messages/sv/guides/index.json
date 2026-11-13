@@ -87,7 +87,7 @@
     "intro": "Projekt med öppen källkod och utvalda listor från Proxmox-gemenskapen. De är fristående från Proxmox Server Solutions och ProxMenux och finns med eftersom de visat sig användbara.",
     "cards": {
       "helperScripts": {
-        "title": "Proxmox VE Helper-Scripts",
+        "title": "Community Scripts",
         "description": "En gemenskapsunderhållen skriptkatalog för att enkelt skapa LXC-containrar, virtuella maskiner och PVE-anpassningar, till exempel för Home Assistant, Plex och Frigate. För vidare idén bakom ttecks hjälpskript."
       },
       "awesome": {

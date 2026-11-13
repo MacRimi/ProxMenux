@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "Repositórios APT + atualização completa",
-      "what": "Desativa as fontes Enterprise pve-enterprise.sources e ceph.sources, cria uma fonte no-subscription para o nome de código Debian do host e executa apt update && apt full-upgrade -y (comando oficial de atualização Proxmox).",
+      "what": "Desativa os repositórios Enterprise (pve-enterprise.sources / ceph.sources no PVE 9, os ficheiros .list no PVE 8), cria uma fonte no-subscription para o nome de código Debian do host e executa apt update && apt full-upgrade -y (dist-upgrade no PVE 8).",
       "category": "Configurações básicas",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "O primeiro passo do percurso automatizado é atualizar o Proxmox. Para um host em funcionamento dentro da mesma versão principal, o Proxmox recomenda:",
     "after": "Esta linha é o comando oficial das versões atuais do Proxmox. O script automatizado executa <strong>exatamente</strong> isso e acrescenta a limpeza dos repositórios e as tarefas após atualização recomendadas pelo guia — como o utilitário independente <link>Atualização do sistema Proxmox</link>:",
     "items": [
-      "Desativa as fontes Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, remove ficheiros antigos de repositórios e cria uma fonte no-subscription para o nome de código do host.",
+      "Desativa os repositórios Enterprise (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> no PVE 9, os ficheiros <code>.list</code> no PVE 8), remove ficheiros antigos de repositórios e cria uma fonte no-subscription para o nome de código do host.",
       "Executa a atualização não-interativa com <code>DEBIAN_FRONTEND=noninteractive</code> e <code>--force-confdef --force-confold</code> — os arquivos de configuração que você personalizou permanecem seus quando o upstream também os alterou.",
       "Instala pacotes essenciais do Proxmox em falta (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Verificação de sanidade de metadados LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, e um prompt de reinicialização apenas se o kernel realmente mudou."

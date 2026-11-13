@@ -378,9 +378,14 @@ def remove(root, vmid):
         lifecycle.unlink()
     for member in members:
         record = instances.read(root, member)
+        image_cache.keep_for_reinstall(record)
         compose_jobs.forget_completed(member, record['installation_id'])
         directory = instances.location(root, member).parent
-        work_backup.forget(root, member)
+        if work_backup.forget(root, member) is False:
+            # Never erase the only description of a retained recovery point.
+            instances.location(root, member).unlink(missing_ok=True)
+            incomplete = True
+            continue
         if directory.is_dir() and not directory.is_symlink():
             shutil.rmtree(directory)
     msg_ok(translate('Saved record removed'))

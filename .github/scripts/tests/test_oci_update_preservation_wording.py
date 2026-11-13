@@ -139,6 +139,7 @@ class UpdateWording(unittest.TestCase):
                  'images': SimpleNamespace(offer_removal=lambda *args: None),
                  'carry_records': lambda project, **options: {},
                  '_work_backup_ready': lambda project, ui, vmid: True,
+                 '_apply_recommended': lambda project, ui, vmid, record: True,
                  '_run_lifecycle': lambda command, title: events.append(('run', command, title)) or True}
         row = {'vmid': 101, 'reason': 'matched', 'stack': False, 'pending': False, 'status': 'installed'}
         decision = False
@@ -161,16 +162,20 @@ class UpdateWording(unittest.TestCase):
         record = {'status': 'installed', 'observed': {'image': {'manifest_digest': 'sha256:current'}}}
         instances = SimpleNamespace(ROOT=Path('/inert'), locked=lambda root: nullcontext(),
                                     read=lambda root, vmid: record, command=lambda *args: b'arch: amd64')
-        transaction = SimpleNamespace(candidate_contract=lambda *args: {'deployment': {}},
+        transaction = SimpleNamespace(log=lambda text: None, candidate_contract=lambda *args: {'deployment': {}},
                                       external_changes=lambda *args: {}, preflight=lambda *args: None,
                                       require_backup_space=lambda *args: self.fail('backup space checked on no-op'),
                                       apply=lambda *args, **kwargs: self.fail('apply on no-op'))
         scope = {'instances': instances, 'transaction': transaction,
+                 'native_reads': SimpleNamespace(session=lambda **kwargs: nullcontext()),
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(text), 'msg_ok': lambda text: events.append(text),
-                 'resolve_archive': lambda desired, config, current, check: (None, current),
+                 'resolve_archive': lambda desired, config, current, check, **kwargs: (None, current),
                  'kept_settings': lambda *args: self.fail('kept settings on no-op')}
-        extracted(UPDATE, 'update', scope)(101, keep_backup='not-a-real-storage')
+        for enabled in (False, True):
+            with self.subTest(layer_cache=enabled):
+                scope['layer_cache'] = SimpleNamespace(enabled=lambda: enabled)
+                extracted(UPDATE, 'update', scope)(101, keep_backup='not-a-real-storage')
         self.assertIn('The image is already up to date; nothing was changed.', events)
 
     def test_new_keys_extracted_and_shipped_and_missing_locale_fallback(self):

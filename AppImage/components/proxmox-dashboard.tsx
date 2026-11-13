@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { MenuxMark } from "./menux-mark"
+import { ProxMenuxMark } from "./proxmenux-mark"
 import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -10,6 +12,7 @@ import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import { AppsDashboard } from "./apps-dashboard"
+import { CatalogTab } from "./catalog-tab"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { AuditReport } from "./audit-report"
@@ -51,6 +54,7 @@ import {
   Database,
   ChevronDown,
   Clock,
+  Rocket,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -64,6 +68,7 @@ import {
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
 import { useTabOrder, firstActualTab, type TabId } from "../lib/tab-order"
+import { useAccess } from "../lib/access"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -129,7 +134,10 @@ function MonitorDashboard({ product }: { product: Product }) {
   useSWR(isPbs ? null : "/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
   useSWR(isPbs ? null : "/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
   const { order: userTabOrder } = useTabOrder()
-  const tabOrder: TopTab[] = isPbs ? PBS_TABS : userTabOrder
+  const { mode: accessMode, capabilities } = useAccess()
+  // A session that cannot open terminals does not get the tab.
+  const tabOrder: TopTab[] = (isPbs ? PBS_TABS : userTabOrder)
+    .filter((tab) => tab !== "terminal" || capabilities.terminal)
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -149,6 +157,11 @@ function MonitorDashboard({ product }: { product: Product }) {
   useEffect(() => {
     setActiveTab(isPbs ? "overview" : firstActualTab())
   }, [isPbs])
+  // A session without terminals never lands on that tab, whatever the
+  // saved order or a link from another part of the dashboard says.
+  useEffect(() => {
+    if (activeTab === "terminal" && !capabilities.terminal) setActiveTab("overview")
+  }, [activeTab, capabilities.terminal])
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
@@ -445,6 +458,7 @@ function MonitorDashboard({ product }: { product: Product }) {
       case "datastores": return t("pbs.datastores")
       case "pbs-tasks": return t("pbs.tasksTab")
       case "apps":      return t("navigation.apps")
+      case "catalog":   return "Menux"
       case "vms":       return t("navigation.virtualMachines")
       case "storage":   return t("navigation.storage")
       case "network":   return t("navigation.network")
@@ -519,7 +533,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                 <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">{t("app.title")}</h1>
+                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate" aria-label={t("app.title")}><ProxMenuxMark /> Monitor</h1>
                 <p className="text-xs md:text-sm text-muted-foreground">{t(isPbs ? "app.descriptionPbs" : "app.description")}</p>
                 <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                   <Clock className="h-3 w-3" />
@@ -636,6 +650,14 @@ function MonitorDashboard({ product }: { product: Product }) {
         </div>
       </header>
 
+      {accessMode === "read_only" && (
+        <div className="border-b border-blue-500/20 bg-blue-500/10">
+          <div className="container mx-auto px-4 lg:px-6 py-2 text-sm text-blue-600 dark:text-blue-300">
+            {t("access.readOnlyBanner")}
+          </div>
+        </div>
+      )}
+
       <div
         className={`sticky [@media(max-height:500px)]:static z-40 bg-background
           top-[120px] lg:top-[76px]
@@ -744,6 +766,12 @@ function MonitorDashboard({ product }: { product: Product }) {
                   case "datastores": return renderDirect("datastores", Database, t("pbs.datastores"))
                   case "pbs-tasks": return renderDirect("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                   case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
+                  case "catalog":  return (
+                    <TabsTrigger key="catalog" value="catalog" className={triggerActiveClass}>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      <MenuxMark />
+                    </TabsTrigger>
+                  )
                   case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
                   case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
                   case "terminal": return renderDirect("terminal", Terminal,        t("navigation.terminal"))
@@ -752,7 +780,10 @@ function MonitorDashboard({ product }: { product: Product }) {
                 }
               }
               return (
-                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-7"} bg-card border border-border`}>
+                // One column per visible tab: the first sits at the left
+                // edge, the last at the right, whatever the session shows.
+                <TabsList className="hidden lg:grid w-full bg-card border border-border"
+                  style={{ gridTemplateColumns: `repeat(${tabOrder.length}, minmax(0, 1fr))` }}>
                   {tabOrder.map(renderTop)}
                 </TabsList>
               )
@@ -767,7 +798,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                       activeTab ? "bg-blue-500/10 text-blue-500" : "bg-card"
                     }`}
                   >
-                    <span>{getActiveTabLabel()}</span>
+                    {activeTab === "catalog" ? <MenuxMark /> : <span>{getActiveTabLabel()}</span>}
                     <Menu className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
@@ -816,6 +847,13 @@ function MonitorDashboard({ product }: { product: Product }) {
                           case "datastores": return btn("datastores", Database, t("pbs.datastores"))
                           case "pbs-tasks": return btn("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                           case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
+                          case "catalog":  return (
+                            <Button key="catalog" variant="ghost" onClick={() => select("catalog")}
+                                    className={itemClass(activeTab === "catalog")}>
+                              <Rocket className="h-5 w-5" />
+                              <MenuxMark className="h-3.5 w-auto" />
+                            </Button>
+                          )
                           case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
                           case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
                           case "terminal": return btn("terminal", Terminal,        t("navigation.terminal"))
@@ -884,6 +922,10 @@ function MonitorDashboard({ product }: { product: Product }) {
             <AppsDashboard key={`apps-${componentKey}`} />
           </TabsContent>
 
+          <TabsContent value="catalog" className="space-y-4 md:space-y-6 mt-0">
+            <CatalogTab key={`catalog-${componentKey}`} />
+          </TabsContent>
+
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">
             <StorageOverview key={`storage-${componentKey}`} />
           </TabsContent>
@@ -921,9 +963,11 @@ function MonitorDashboard({ product }: { product: Product }) {
           </TabsContent>
           </>}
 
-          <TabsContent value="terminal" className="mt-0">
-            <TerminalPanel key={`terminal-${componentKey}`} />
-          </TabsContent>
+          {capabilities.terminal && (
+            <TabsContent value="terminal" className="mt-0">
+              <TerminalPanel key={`terminal-${componentKey}`} />
+            </TabsContent>
+          )}
 
           <TabsContent value="security" className="space-y-4 md:space-y-6 mt-0">
             <Security key={`security-${componentKey}`} hostType={product} />

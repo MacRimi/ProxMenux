@@ -57,7 +57,7 @@
       "Os resultados da pesquisa podem preencher o nome canônico, logotipo e portas web comuns.",
       "Detectores de versão conhecidos são baseados em nomes de pacotes reais, binários, arquivos, distribuições Python, etiquetas OCI ou comandos em vez de uma suposição universal <code>/root/.app</code>.",
       "As sobreposições de tempo de execução verificadas têm precedência quando uma instalação usa um caminho que difere dos metadados do instalador.",
-      "Marcadores Proxmox VE Helper-Scripts como <code>/root/.slug</code> continuam a ser um sinal de compatibilidade para novas instalações auxiliares, não o único detector.",
+      "Marcadores Community Scripts como <code>/root/.slug</code> continuam a ser um sinal de compatibilidade para novas instalações auxiliares, não o único detector.",
       "Cada valor proposto pode ser editado antes de salvar para cobrir instaladores oficiais e instalações manuais."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "Um registro somente de links mostra que o rastreamento de versões não está configurado, mas ainda pode receber um comando de atualização personalizado.",
       "Um aplicativo com rastreamento mas sem um método executável mostra uma mensagem neutra pedindo um comando personalizado.",
-      "Um aplicativo com um wrapper Proxmox VE Helper-Scripts verificado pode usar esse updater integrado mesmo quando o registro começou a partir de um link da web.",
+      "Um aplicativo com um wrapper Community Scripts verificado pode usar esse updater integrado mesmo quando o registro começou a partir de um link da web.",
       "Adicionar ou editar um updater não altera o detector ou fonte upstream armazenado na aba App."
     ]
   },

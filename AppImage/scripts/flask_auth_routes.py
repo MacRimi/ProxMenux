@@ -12,7 +12,7 @@ import time
 from collections import defaultdict, deque
 from flask import Blueprint, jsonify, request
 import auth_manager
-from jwt_middleware import require_auth, require_admin_scope
+from jwt_middleware import require_auth, require_admin_scope, request_scope
 import jwt
 import datetime
 
@@ -97,6 +97,51 @@ def _get_client_ip():
             return real_ip.strip()
     return request.remote_addr or "unknown"
 
+# Choosing how to reach a Monitor without an account asks for the setup code
+# when there is one: the same limit as signing in, and a wrong code is logged
+# as an authentication failure, so the Fail2Ban jail covers it too.
+_setup_code_limiter = _LoginRateLimiter(max_attempts=5, window_seconds=300)
+
+
+def _setup_code_error(data):
+    """The response refusing a first-run decision without the setup code, or None."""
+    if not auth_manager.setup_code_required():
+        return None
+    client_ip = _get_client_ip()
+    allowed, retry_after = _setup_code_limiter.check_and_record(client_ip)
+    if not allowed:
+        return jsonify({"success": False, "error": "setup_code_rate_limited",
+                        "message": "Too many attempts. Please wait and try again.",
+                        "retry_after": retry_after}), 429
+    if auth_manager.check_setup_code((data or {}).get("setup_code")):
+        return None
+    auth_logger.warning("authentication failure; rhost=%s user=setup-code", client_ip)
+    return jsonify({"success": False, "error": "setup_code_invalid",
+                    "message": "The setup code is not valid"}), 403
+
+
+def _choose_mode(mode, data):
+    """Leave the Monitor read-only or open: with an account, its full session
+    decides; without one, the setup code when one is required."""
+    if mode not in ("read_only", "open"):
+        return jsonify({"success": False, "message": "Unknown access mode"}), 400
+    if auth_manager.access_mode() == "password":
+        _mode, scope, error = request_scope()
+        if error:
+            return error
+        if scope != "full_admin":
+            return jsonify({"success": False, "message": "This action requires full access"}), 403
+    else:
+        error = _setup_code_error(data)
+        if error:
+            return error
+    success, message = auth_manager.choose_access_mode(mode)
+    if not success:
+        return jsonify({"success": False, "message": message}), 500
+    auth_manager.consume_setup_code()
+    return jsonify({"success": True, "message": message, "access_mode": mode})
+
+
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/api/auth/status', methods=['GET'])
@@ -104,13 +149,16 @@ def auth_status():
     """Get current authentication status"""
     try:
         status = auth_manager.get_auth_status()
-        
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if token:
-            username = auth_manager.verify_token(token)
-            if username:
-                status['authenticated'] = True
-        
+
+        if status["access_mode"] == "password":
+            token = request.headers.get('Authorization', '').replace('Bearer ', '')
+            if token:
+                username, scope = auth_manager.verify_token_full(token)
+                if username:
+                    status['authenticated'] = True
+                    status['username'] = username
+                    status['capabilities'] = auth_manager.capabilities("password", scope)
+
         return jsonify(status)
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
@@ -121,6 +169,7 @@ def auth_status():
 # -------------------------------------------------------------------
 
 @auth_bp.route('/api/ssl/status', methods=['GET'])
+@require_auth
 def ssl_status():
     """Get current SSL configuration status and detect available certificates"""
     try:
@@ -367,17 +416,12 @@ def auth_decline():
     requirement to authenticate. See audit Tier 1 #5.
     """
     try:
-        if auth_manager.load_auth_config().get("configured", False):
+        if auth_manager.access_mode() != "undecided":
             return jsonify({
                 "success": False,
                 "message": "Authentication is already configured; cannot decline."
             }), 403
-        success, message = auth_manager.decline_auth()
-
-        if success:
-            return jsonify({"success": True, "message": message})
-        else:
-            return jsonify({"success": False, "message": message}), 400
+        return _choose_mode("open", request.get_json(silent=True))
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -437,13 +481,19 @@ def auth_login():
 def auth_setup():
     """Set up authentication with username and password (create user + enable auth)"""
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         username = data.get('username')
         password = data.get('password')
+
+        if auth_manager.access_mode() != "password":
+            error = _setup_code_error(data)
+            if error:
+                return error
 
         success, message = auth_manager.setup_auth(username, password)
 
         if success:
+            auth_manager.consume_setup_code()
             # Generate a token so the user is logged in immediately
             token = auth_manager.generate_token(username)
             return jsonify({"success": True, "token": token, "message": message})
@@ -454,6 +504,7 @@ def auth_setup():
 
 
 @auth_bp.route('/api/auth/enable', methods=['POST'])
+@require_admin_scope
 def auth_enable():
     """Enable authentication (must already be configured)"""
     try:
@@ -477,10 +528,11 @@ def auth_disable():
     validates the token and its full_admin scope before the body runs.
     """
     try:
-        success, message = auth_manager.disable_auth()
+        mode = (request.get_json(silent=True) or {}).get("mode") or "read_only"
+        success, message = auth_manager.disable_auth(mode)
         
         if success:
-            return jsonify({"success": True, "message": message})
+            return jsonify({"success": True, "message": message, "access_mode": mode})
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
@@ -527,6 +579,16 @@ def auth_change_password():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@auth_bp.route('/api/auth/mode', methods=['POST'])
+def auth_mode():
+    """Choose how the Monitor is reached without an account: read-only or open."""
+    try:
+        data = request.get_json(silent=True) or {}
+        return _choose_mode(data.get("mode"), data)
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @auth_bp.route('/api/auth/skip', methods=['POST'])
 def auth_skip():
     """Skip authentication setup (same as decline).
@@ -535,22 +597,12 @@ def auth_skip():
     locked. See audit Tier 1 #5.
     """
     try:
-        if auth_manager.load_auth_config().get("configured", False):
+        if auth_manager.access_mode() != "undecided":
             return jsonify({
                 "success": False,
                 "message": "Authentication is already configured; cannot skip."
             }), 403
-        success, message = auth_manager.decline_auth()
-
-        if success:
-            # Return success with clear indication that APIs should be accessible
-            return jsonify({
-                "success": True,
-                "message": message,
-                "auth_declined": True  # Add explicit flag for frontend
-            })
-        else:
-            return jsonify({"success": False, "message": message}), 400
+        return _choose_mode("open", request.get_json(silent=True))
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 

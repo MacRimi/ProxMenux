@@ -23,5 +23,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Baby Buddy"
+    },
+    "tagline": {
+      "en_US": "Babybuddy is a buddy for babies! Helps caregivers track sleep, feedings, diaper changes, tummy time and more to learn about and predict baby's needs without (as much) guess work."
+    },
+    "description": {
+      "en_US": "Babybuddy helps caregivers track daily infant activities including sleep, feedings, diaper changes, and tummy time. By logging these routines, it allows parents and guardians to better understand patterns and predict their baby's needs."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/babybuddy/babybuddy/HEAD/screenshot.png",
+      "https://raw.githubusercontent.com/babybuddy/babybuddy/HEAD/screenshot_mobile.png"
+    ]
   }
 }

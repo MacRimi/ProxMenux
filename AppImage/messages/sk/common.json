@@ -1,4 +1,111 @@
 {
+  "catalog": {
+    "searchPlaceholder": "Hľadať aplikácie a nástroje…",
+    "settings": "Nastavenia katalógu",
+    "settingsIncludeCs": "Zahrnúť Community Scripts",
+    "settingsIncludeCsHint": "Zobrazuje ich skripty vo vyhľadávaní, v sekciách, kategóriách a medzi odporúčanými aplikáciami.",
+    "settingsBroad": "Rozšírené vyhľadávanie",
+    "settingsBroadHint": "Nájde aj položky, ktoré slová spomínajú v popise alebo kategórii, až po zhodách v názve.",
+    "featured": "Odporúčané",
+    "featuredOpen": "Zobraziť podrobnosti",
+    "categories": "Kategórie aplikácií",
+    "allApps": "Všetky aplikácie",
+    "toolsPmx": "Nástroje ProxMenux",
+    "thirdParty": "Tretia strana",
+    "publisherOfficial": "Oficiálny",
+    "publisherOfficialHint": "Obraz zverejnený samotným projektom",
+    "toolsCs": "Nástroje Community Scripts",
+    "externalScripts": "Externé skripty",
+    "addonInGuest": "V existujúcom LXC alebo VM",
+    "addonOnHost": "Na hostiteľovi Proxmox",
+    "plugins": "Doplnky ProxMenux",
+    "pluginsSoon": "Už čoskoro",
+    "groups": {
+      "apps": "Aplikácie",
+      "tools": "Nástroje"
+    },
+    "itemsCount": "Položky: {count}",
+    "noResults": "Pre „{query}“ sa nič nenašlo.",
+    "back": "Katalóg",
+    "emptyView": "Zatiaľ tu nič nie je.",
+    "sourceOci": "OCI manager Apps",
+    "sourceCs": "Community Scripts",
+    "tested": "Otestované",
+    "updateable": "Aktualizovateľné",
+    "stack": "Viac kontajnerov",
+    "oneContainer": "1 kontajner",
+    "loadError": "Katalóg sa nepodarilo načítať. Skúste to znova o chvíľu.",
+    "terminalInstall": "Inštalovať {name}",
+    "terminalRun": "Spustiť {name}",
+    "terminalOpen": "Otvoriť {name}",
+    "terminalDescription": "Rovnaké kroky ako v ponuke ProxMenux.",
+    "type": {
+      "lxc": "LXC",
+      "vm": "VM",
+      "host": "Hostiteľ",
+      "addon": "Add-on"
+    },
+    "sheet": {
+      "whatItIs": "Čo to je",
+      "whatItDoes": "Čo robí",
+      "alsoAvailable": "Dostupné aj",
+      "imageSource": "Zdroj obrázka",
+      "containersCreated": "Vytvorené kontajnery ({count})",
+      "containersIntro": "Každá služba beží vo vlastnom LXC. ProxMenux ich inštaluje a spravuje spoločne ako jednu aplikáciu.",
+      "mainContainer": "Hlavný",
+      "publisher": "Zverejnil",
+      "thirdPartyLink": "Zobraziť projekt",
+      "usesThirdParty": "Používa skript tretej strany: {name}.",
+      "settingsApplied": "Použité nastavenia ({count})",
+      "settingsOffered": "Nastavenia na výber ({count})",
+      "whereInMenu": "Kde je v ponuke",
+      "notes": "Poznámky",
+      "defaultLogin": "Predvolené prihlásenie",
+      "user": "Používateľ",
+      "password": "Heslo",
+      "suggested": "Odporúčaná inštalácia",
+      "scriptResources": "Prostriedky skriptu",
+      "cores": "jadrá",
+      "ram": "RAM",
+      "swap": "swap",
+      "disk": "disk",
+      "system": "systém",
+      "access": "Prístup",
+      "accessPort": "Port {port} na IP adrese kontajnera",
+      "storage": "Úložisko",
+      "volume": "zväzok kontajnera s veľkosťou {size} GB",
+      "volumeOrHost": "zväzok kontajnera alebo priečinok hostiteľa",
+      "hostFolder": "priečinok hostiteľa",
+      "image": "Obraz",
+      "config": "Konfigurácia",
+      "script": "Skript",
+      "viewCode": "Zobraziť kód",
+      "version": "Verzia",
+      "links": "Odkazy",
+      "website": "Oficiálna webová stránka",
+      "documentation": "Dokumentácia",
+      "repository": "Zdrojový kód",
+      "install": "Inštalovať",
+      "installAdvanced": "Pokročilá inštalácia",
+      "runScript": "Spustiť skript",
+      "createVm": "Vytvoriť VM",
+      "addonNote": "Inštaluje sa do existujúceho LXC alebo VM; nový nevytvára.",
+      "proxmenuxDocs": "Dokumentácia ProxMenux",
+      "releases": "Dostupné verzie",
+      "suiteApps": "Aplikácie na výber",
+      "byDefault": "Predvolene vybraté",
+      "suiteDefaults": "Označené sú predvybraté; každá dostane vlastný LXC.",
+      "mediaServer": "Mediálny server",
+      "mediaServerChoice": "{players} alebo žiadny",
+      "defaultSettings": "Predvolené nastavenia",
+      "open": "Otvoriť",
+      "scriptBy": "Skript od",
+      "moreInfo": "Viac informácií nájdete na",
+      "unprivileged": "Neprivilegovaný LXC",
+      "privileged": "Privilegovaný LXC",
+      "loadError": "Podrobnosti sa nepodarilo načítať."
+    }
+  },
   "app": {
     "title": "ProxMenux Monitor",
     "description": "Prehľad systému Proxmox",
@@ -32,6 +139,7 @@
   "navigation": {
     "overview": "Prehľad",
     "apps": "Aplikácie",
+    "catalog": "Katalóg",
     "storage": "Úložiská",
     "network": "Sieť",
     "virtualMachines": "VM a LXC",
@@ -1440,23 +1548,23 @@
       "osUpToDate": "Systém je aktuálny",
       "osStatusUnavailable": "Stav aktualizácií operačného systému sa nepodarilo zistiť.",
       "installedByHelperPrefix": "Nainštalované cez",
-      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperScriptsName": "Community Scripts",
       "helperCommandEditHint": "Ak upravíte tento spúšťací príkaz, uloží sa ako vlastný príkaz.",
       "customOnlineDescription": "Alebo použite online skript poskytnutý vývojárom:",
       "customOnlineExampleNote": "Nahraďte vzorovú URL adresu adresou oficiálneho skriptu vašej aplikácie.",
       "customExamplesHeading": "Príklady na prispôsobenie:",
       "updaterChoiceHint": "Vyberte a uložte spôsob aktualizácie.",
       "updaterMethodLabel": "Spôsob aktualizácie",
-      "helperMethod": "Helper-Scripts",
+      "helperMethod": "Community Scripts",
       "customMethod": "Vlastný príkaz",
-      "helperMethodHelp": "O Helper-Scripts",
+      "helperMethodHelp": "O Community Scripts",
       "customMethodHelp": "O vlastných príkazoch",
-      "helperDetectedChoice": "Pre túto aplikáciu bol zistený aktualizátor Helper-Scripts.",
-      "helperUnavailableChoice": "Vybraný aktualizátor Helper-Scripts už nie je dostupný.",
+      "helperDetectedChoice": "Pre túto aplikáciu bol zistený aktualizátor Community Scripts.",
+      "helperUnavailableChoice": "Vybraný aktualizátor Community Scripts už nie je dostupný.",
       "disableUpdater": "Deaktivovať",
       "disableUpdaterConfirm": "Deaktivovať spôsob aktualizácie pre {name}? Uložené plány a naplánované úlohy si zachovajú svoj výber, ale táto aplikácia sa nespustí, kým znova nenastavíte spôsob aktualizácie.",
       "noUpdaterSelected": "Nevybrali ste spôsob aktualizácie.",
-      "helperMethodDescription": "ProxMenux spustí zistený aktualizátor v tomto LXC a zobrazí jeho protokol a výsledok. Aktualizátor spravuje Proxmox VE Helper-Scripts.",
+      "helperMethodDescription": "ProxMenux spustí zistený aktualizátor v tomto LXC a zobrazí jeho protokol a výsledok. Aktualizátor spravuje Community Scripts.",
       "customMethodDescription": "Môžete použiť aktualizátor aplikácie, správcu balíkov alebo nový binárny súbor. Príkaz sa spustí v tomto LXC s oprávneniami správcu.",
       "updaterInstructions": "Prečítajte si pokyny aktualizátora.",
       "helperDocumentation": "Dokumentácia aktualizácií",
@@ -1470,7 +1578,7 @@
       "customPackageDescription": "Nahraďte my-package balíkom, ktorý chcete aktualizovať.",
       "customBinaryTitle": "Binárny súbor",
       "customBinaryDescription": "Najprv stiahnite a overte oficiálny binárny súbor správnej verzie a architektúry v /tmp/my-app.new. Tento príklad zachová kópiu predchádzajúceho binárneho súboru a reštartuje príslušnú službu.",
-      "helperUpdatesRun": "Inštalované pomocou Proxmox Helper-Scripts.",
+      "helperUpdatesRun": "Inštalované pomocou Community Scripts.",
       "installedPrefix": "nainštalovaná verzia",
       "upstreamAvailable": "dostupná verzia {version}",
       "upToDateAt": "Aktuálna verzia",
@@ -2209,6 +2317,7 @@
         "smart_test_complete": "SMART test bol dokončený",
         "smart_test_failed": "SMART test zlyhal",
         "gpu_mode_switch": "Režim GPU bol zmenený",
+        "custom": "Upozornenia zo skriptov a API",
         "gpu_passthrough_blocked": "GPU passthrough bol zablokovaný",
         "pci_passthrough_conflict": "Konflikt PCIe zariadenia",
         "load_high": "Vysoká záťaž systému",
@@ -2738,7 +2847,22 @@
     "avatarHint": "PNG, JPEG, WebP alebo GIF · najviac 2 MB · najlepšie funguje štvorcový obrázok.",
     "settingUp": "Nastavujem...",
     "setupAuthentication": "Nastaviť prihlásenie",
-    "back": "Späť"
+    "back": "Späť",
+    "setupCode": "Nastavovací kód",
+    "setupCodeHint": "Zobrazil sa v konzole pri inštalácii ProxMenux. Ak ho nemáte, spustite na serveri menu a otvorte Nastavenia → Zobraziť nastavovací kód Monitora.",
+    "codeInvalid": "Nastavovací kód nie je platný.",
+    "codeRateLimited": "Príliš veľa pokusov. Počkajte niekoľko minút a skúste to znova.",
+    "noPasswordTitle": "Bez hesla",
+    "noPasswordDescription": "Vyberte, čo môže robiť každý, kto navštívi túto adresu.",
+    "readOnlyTitle": "Iba na čítanie",
+    "readOnlyDescription": "Každý, kto sa pripojí k Monitoru, ho môže vidieť, ale nemôže otvárať terminály, spúšťať skripty ani nič meniť. Heslo môžete pridať neskôr.",
+    "openTitle": "Otvoriť a prijať riziko",
+    "openDescription": "Každý, kto sa pripojí k Monitoru, získa plnú kontrolu nad týmto serverom vrátane terminálu root. Zvoľte túto možnosť iba v sieti, kde dôverujete každému, kto má k nej prístup.",
+    "chooseReadOnly": "Použiť režim iba na čítanie",
+    "chooseOpen": "Otvoriť bez hesla"
+  },
+  "access": {
+    "readOnlyBanner": "Prístup iba na čítanie: tento server môžete vidieť, ale nemôžete nič spúšťať ani meniť. Ak ho chcete spravovať, pridajte heslo v sekcii Security."
   },
   "securityPage": {
     "title": "Bezpečnosť",
@@ -2772,7 +2896,8 @@
       "none": "Žiadne",
       "external": "Externé",
       "up": "Beží",
-      "down": "Nebeží"
+      "down": "Nebeží",
+      "readOnly": "Iba na čítanie"
     },
     "errors": {
       "deleteReportNoFiles": "Nenašli sa žiadne súbory správy ani logov Lynis na odstránenie.",
@@ -2848,7 +2973,8 @@
       "sslCertificateReloaded": "Obnovený certifikát je teraz aktívny. Existujúce pripojenia neboli prerušené.",
       "sslCertificateUnchanged": "Aktívny certifikát už zodpovedá aktuálnym súborom certifikátu.",
       "reportDeleted": "Správa z auditu bola vymazaná.",
-      "twoFactorEnabled": "Dvojfaktorové overenie je zapnuté."
+      "twoFactorEnabled": "Dvojfaktorové overenie je zapnuté.",
+      "readOnlyReloading": "Ovládací panel je teraz iba na čítanie. Znovu sa načítava..."
     },
     "confirm": {
       "disableAuth": "Vypnúť prihlásenie? Každý, kto sa dostane k dashboardu, ho bude môcť otvoriť.",
@@ -2883,7 +3009,10 @@
       "confirmNewPasswordPlaceholder": "Zadajte nové heslo znova",
       "changing": "Mením...",
       "enterYourPassword": "Zadajte heslo",
-      "disable": "Vypnúť prihlásenie"
+      "disable": "Vypnúť prihlásenie",
+      "readOnlyMode": "Ovládací panel je bez hesla iba na čítanie: je možné si ho prezerať, ale nemožno nič spúšťať ani meniť.",
+      "useReadOnly": "Prepnúť na režim iba na čítanie",
+      "disableChoose": "Ako má byť ovládací panel prístupný bez hesla?"
     },
     "twoFactor": {
       "title": "Dvojfaktorové overenie",
@@ -5391,6 +5520,8 @@
       "storageAvailable": "Úložisko {type} je dostupné",
       "storageUsage": "{percent} % využité",
       "mountReachable": "Pripojenie {type} je dostupné",
+      "mountReachableReadOnly": "Pripojenie {type} je dostupné, iba na čítanie",
+      "mountReadOnlyConfiguredRw": "Pripojenie {type} je iba na čítanie, ale je nastavené na čítanie a zápis",
       "rootfsUsed": "Využitie rootfs: {percent} % ({size})",
       "runningCtsSafe": "Bežiace CT s bezpečným využitím rootfs: {count}",
       "pveStorageSafe": "PVE blokové úložiská s bezpečným využitím: {count}",
@@ -5879,7 +6010,12 @@
       "productivityWorkflows": "Produktivita a pracovné postupy",
       "remoteAccessVpn": "Vzdialený prístup a VPN",
       "webserversProxies": "Webové servery a proxy",
-      "zigbeeZwaveMatter": "Zigbee, Z-Wave a Matter"
+      "zigbeeZwaveMatter": "Zigbee, Z-Wave a Matter",
+      "creativeDesign": "Tvorba a dizajn",
+      "filesSharing": "Súbory a zdieľanie",
+      "browsersWebDesktops": "Prehliadače a webové pracovné plochy",
+      "tools": "Nástroje",
+      "messagingQueues": "Správy a fronty"
     }
   },
   "audit": {
@@ -6992,7 +7128,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "Uzol {node_name} reštartoval službu klastra a po {seconds} s sa znova pripojil."
+        "rejoinedBody": "Uzol {node_name} stratil spojenie s klastrom a po {seconds} s sa znova pripojil.",
+        "restartedBody": "Corosync, komunikačná služba klastra, sa na uzle {node_name} zastavil a znova spustil. Uzol sa po {seconds} s znova pripojil ku klastru."
       },
       "templates": {
         "state_change": {
@@ -7375,6 +7512,11 @@
           "body": "Informácie o balíkoch od ich tvorcov preposlané systémom Proxmox VE cez apt-listchanges. Nasledujúci text pochádza od správcu balíka a nie je odporúčaním ProxMenux.\n\n{reason}",
           "label": "Oznámenia o balíkoch apt-listchanges"
         },
+        "custom": {
+          "title": "{title}",
+          "body": "{message}",
+          "label": "Upozornenia zo skriptov a API"
+        },
         "webhook_test": {
           "title": "{hostname}: Prijatý test webhooku",
           "body": "Test pripojenia webhooku PVE bol úspešný.\n{reason}",
@@ -7516,8 +7658,8 @@
           "label": "Viacero systémových problémov"
         },
         "burst_generic": {
-          "title": "{hostname}: Ďalšie udalosti {event_type} za {window}: +{count}",
-          "body": "Za {window} bolo zaznamenaných ďalších {count} udalostí typu {event_type} (spolu {total_count}).\n\nĎalšie udalosti:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} ďalších za {window})",
+          "body": "{event_type}: {count} ďalších za {window} (celkovo {total_count}).\n\nĎalšie udalosti:\n{details}",
           "label": "Viacero súvisiacich udalostí"
         },
         "kernel_warning": {

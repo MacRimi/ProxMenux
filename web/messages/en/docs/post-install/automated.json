@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "APT repositories + full upgrade",
-      "what": "Disables the enterprise pve-enterprise.sources and ceph.sources, writes a clean no-subscription source for the host's Debian codename, then runs apt update && apt full-upgrade -y (Proxmox's official upgrade command).",
+      "what": "Disables the enterprise repositories (pve-enterprise.sources / ceph.sources on PVE 9, the .list files on PVE 8), writes a clean no-subscription source for the host's Debian codename, then runs apt update && apt full-upgrade -y (dist-upgrade on PVE 8).",
       "category": "Basic Settings",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "The very first step of the Automated bundle is the Proxmox upgrade. Proxmox's own upgrade guidance for a running host (within the same major version) is to run:",
     "after": "That single line is the official command on any current Proxmox release. The Automated script runs <strong>exactly</strong> that, and wraps it with the repo hygiene and post-upgrade cleanup the official upgrade guide also recommends — same steps as the standalone <link>Proxmox System Update</link> utility:",
     "items": [
-      "Disables the enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, removes legacy repo files, writes a clean no-subscription source for the host's codename.",
+      "Disables the enterprise repositories (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> on PVE 9, the <code>.list</code> files on PVE 8), removes legacy repo files, writes a clean no-subscription source for the host's codename.",
       "Runs the upgrade non-interactively with <code>DEBIAN_FRONTEND=noninteractive</code> and <code>--force-confdef --force-confold</code> — config files you customised stay yours when upstream also changed them.",
       "Installs essential Proxmox packages if missing (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "LVM metadata sanity check, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, and a reboot prompt only if the kernel actually changed."

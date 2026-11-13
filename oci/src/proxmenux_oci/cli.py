@@ -34,7 +34,7 @@ from .ui import APP_TITLE, DETAIL_WINDOW_WIDTH, ReadableTags, UserCancelled, int
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DISPLAY_ARCHITECTURES = ("amd64", "arm64")
-PUBLISHERS = {"linuxserver.io": "LinuxServer", "official": N_("Official image")}
+PUBLISHERS = {"linuxserver.io": "LinuxServer.io", "official": N_("Official image")}
 STACK_LABELS = {
     "server": N_("Server"),
     "application": N_("Application"),
@@ -265,6 +265,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
             child = service["deployment"]
             lines.append(f"  {service['name']}: {child['resources']['cores']} CPU, "
                          f"{child['resources']['memory_mb']} MB RAM")
+            for mount in child.get('tmpfs_mounts', []):
+                lines.append(f"    tmpfs {mount['container_path']} → {mount['size_mb']} MiB RAM")
             check = service.get('healthcheck', {}).get('type')
             if check:
                 label = {'running': translate('Process running only (no health check declared)'),
@@ -277,6 +279,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                           f"{translate('Host directory (not included in Proxmox backups)')}: {mount['source']}")
                 if mount['type'] == 'managed-volume' and mount.get('backup'):
                     target += f" ({translate('in backups')})"
+                if mount.get('idmap'):
+                    target += f" · idmap={mount['idmap']}"
                 lines.append(f"    {mount['container_path']} → {target}")
         for key, label in (("media", N_("Library")), ("application", N_("Application data")), ("transfer", N_("Consume/export"))):
             storage = plan.get(key)
@@ -294,6 +298,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                           else f"{translate('Container volume')} {mount.get('size_gb', '-')} GB {on} {mount['source']}")
                 if mount.get("read_only"):
                     target += f" ({translate('read-only')})"
+                if mount.get('idmap'):
+                    target += f" · idmap={mount['idmap']}"
                 lines.append(f"  {mount['container_path']} → {target}")
         if plan.get("extra_devices"):
             row(translate("Devices"), ", ".join(device["host_path"] for device in plan["extra_devices"]))
@@ -309,6 +315,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
         row(translate("Storage"), f"rootfs {rootfs['size_gb']} GB {on} {rootfs['storage']} · "
                                   f"{translate('image cache on')} {plan.get('template_storage', '-')}")
     mounts = plan.get("mounts", [])
+    for mount in plan.get('tmpfs_mounts', []):
+        row('tmpfs', f"{mount['container_path']} → {mount['size_mb']} MiB RAM")
     if mounts:
         lines.append(f"{translate('Data') + ':':<16}")
         for mount in mounts:
@@ -320,6 +328,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     target += f" ({translate('in backups')})"
             if mount.get("read_only"):
                 target += f" ({translate('read-only')})"
+            if mount.get('idmap'):
+                target += f" · idmap={mount['idmap']}"
             lines.append(f"  {mount['container_path']} → {target}")
     network = plan.get("network", {})
     if plan.get("host_monitor"):
@@ -422,7 +432,8 @@ def _install(catalog: Catalog, ui, item: dict[str, Any], mode: str) -> None:
 
 def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -> dict[str, Any] | None:
     """Configures and installs one template, from the catalog or written from a
-    definition the user gave."""
+    definition the user gave. Returns None only when the user does not approve
+    the installation; a failed one returns an empty result."""
     from .ui import BacktrackUI, RestartWizard
     wizard = BacktrackUI(ui)
     try:
@@ -459,7 +470,7 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
     except InstallError as exc:
         console.msg_error(str(exc))
         console.wait_for_enter(translate("Press Enter to return to the menu..."))
-        return None
+        return {}
     if result:
         from .management import carry_records
         carry_records(PROJECT_ROOT, shown=True)
@@ -476,7 +487,7 @@ def install_template(ui, template: dict[str, Any], identifier: str, mode: str) -
             else:
                 console.msg_warn(translate("The watchdog could not be enabled. Turn it on from Manage installed OCI applications."))
     console.wait_for_enter(translate("Press Enter to return to the menu..."))
-    return result
+    return result or {}
 
 
 def _rclone_mount(catalog: Catalog, ui) -> None:
@@ -599,8 +610,8 @@ def _installed_count() -> int | None:
         return None
 
 
-def _catalog_options(catalog):
-    applications = _installable(catalog.load_index()["applications"])
+def _catalog_options(catalog, payload=None):
+    applications = _installable((catalog.load_index() if payload is None else payload)["applications"])
     categories: dict[str, list[dict[str, Any]]] = {}
     labels: dict[str, str] = {}
     for item in applications:
@@ -624,21 +635,23 @@ def _catalog_options(catalog):
 
 def interactive(catalog: Catalog) -> int:
     from .ui import MenuRefresh
-    from .catalog_refresh import CatalogRefresh, visible_recipes
+    from .catalog_refresh import CatalogRefresh, menu_catalog
     from .updates import UpdateCheck, select_updates
     ui = interactive_ui()
     if not catalog.index_path.exists():
         ui.message(translate("The OCI catalog is not installed. Update ProxMenux and try again."))
         return 1
-    applications, categories, labels, category_by_index, options = _catalog_options(catalog)
+    payload, recipes = menu_catalog(catalog)
+    applications, categories, labels, category_by_index, options = _catalog_options(catalog, payload)
     selection = "search"
     refresh_requested = False
-    with CatalogRefresh(PROJECT_ROOT, catalog) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
+    with CatalogRefresh(PROJECT_ROOT, catalog, applications, recipes) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
         while True:
             if catalog_refresh.consume():
                 catalog = Catalog(PROJECT_ROOT)
-                applications, categories, labels, category_by_index, options = _catalog_options(catalog)
-                catalog_refresh.recipes = visible_recipes(catalog)
+                payload, recipes = menu_catalog(catalog)
+                applications, categories, labels, category_by_index, options = _catalog_options(catalog, payload)
+                catalog_refresh.recipes = recipes
             if refresh_requested:
                 # Only a refresh the user asked for says that it failed.
                 refresh_requested = False
@@ -686,7 +699,7 @@ def interactive(catalog: Catalog) -> int:
                     if not new or _new_applications(catalog, ui, new, catalog_refresh):
                         # Asked for: wait for it and say if it could not be done.
                         catalog_refresh.start(force=True)
-                        ui.info(translate("Refreshing the application catalog..."))
+                        ui.gauge(catalog_refresh.progress, translate("Refresh catalog"))
                         catalog_refresh.wait()
                         refresh_requested = True
                 elif selection == "updates":
@@ -750,6 +763,8 @@ def build_parser() -> argparse.ArgumentParser:
     install_parser.add_argument("--host", default="auto", help=translate("'auto'/'local', or root@IP for development"))
     install_parser.add_argument("--advanced", action="store_true")
     install_parser.add_argument("--dry-run", action="store_true")
+    install_parser.add_argument("--menu", action="store_true",
+                                help=translate("Ask with the dialogs of the menu, as its page of the application does"))
     rclone_parser = subparsers.add_parser("rclone-mount", help=translate("Enable a mount on an installed Rclone OCI"))
     rclone_parser.add_argument("--host", default="auto")
     rclone_parser.add_argument("--dry-run", action="store_true")
@@ -802,6 +817,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "apply-icons":
             report = catalog.apply_icons()
             print(translate('Icons resolved: {resolved}; cleared: {cleared}; unchanged: {unchanged}; with a theme variant: {themed}').format(**report))
+            if report["dark"] < 0:
+                print(translate('Pillow is not installed: the dark theme icons were left as they were.'))
+            else:
+                print(translate('Black icons with a version for the dark theme: {dark}').format(**report))
             return 0
         if args.command == "show":
             print(_template_summary_text(catalog.compose(args.app)))
@@ -823,6 +842,16 @@ def main(argv: list[str] | None = None) -> int:
             if not template["compatibility"]["automatic_install_candidate"]:
                 raise InstallError(translate("Installation blocked:") + " " + ", ".join(template["compatibility"]["untranslated_blockers"]))
             notice = external_services_notice(template)
+            if args.menu:
+                # The same steps as the page of the application in the menu,
+                # which the Monitor's Catalog tab opens straight away.
+                ui = interactive_ui()
+                if notice and not ui.confirm(f"{notice}\n\n{translate('Continue?')}", False,
+                                             title=source_text(template["catalog_ui"]["title"]) or args.app):
+                    return 130
+                mode = ADVANCED_MODE if args.advanced else DEFAULT_MODE
+                result = install_template(ui, template, args.app, mode)
+                return 130 if result is None else 0 if result else 1
             if notice:
                 print(notice + "\n")
             deployment = build_deployment(template, None, ADVANCED_MODE if args.advanced else DEFAULT_MODE)

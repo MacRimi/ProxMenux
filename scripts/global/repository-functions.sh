@@ -27,6 +27,10 @@ ensure_repositories() {
     decision=$(repository_policy plan "$suite") || return 1
     case "$decision" in
         preserve) return 0 ;;
+        downstream)
+            # PXVIRT and similar ports: their own sources already serve PVE packages.
+            msg_info2 "$(translate 'Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.')"
+            return 0 ;;
         offer) ;;
         *) msg_error "$(translate 'Repository policy returned an unexpected result.')"; return 1 ;;
     esac
@@ -75,6 +79,9 @@ ensure_pbs_repositories() {
     decision=$(repository_policy plan "$suite" pbs) || return 1
     case "$decision" in
         preserve) return 0 ;;
+        downstream)
+            msg_info2 "$(translate 'Downstream Proxmox Backup Server build detected (PXVIRT): APT sources left unchanged.')"
+            return 0 ;;
         offer) ;;
         *) msg_error "$(translate 'Repository policy returned an unexpected result.')"; return 1 ;;
     esac

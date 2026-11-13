@@ -10,5 +10,22 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "changedetection.io"
+    },
+    "tagline": {
+      "en_US": "Changedetection.io provides free, open-source web page monitoring, notification and change detection."
+    },
+    "description": {
+      "en_US": "Changedetection.io is an open-source web page monitoring and change detection tool. It monitors websites and detects changes in web content, automatically alerting users when modifications occur. It helps users stay informed about updates across multiple sites without having to check them manually."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/dgtlmoon/changedetection.io/HEAD/docs/screenshot.png",
+      "https://raw.githubusercontent.com/dgtlmoon/changedetection.io/HEAD/docs/LLM-change-summary.jpeg",
+      "https://raw.githubusercontent.com/dgtlmoon/changedetection.io/master/docs/visualselector-anim.gif",
+      "https://raw.githubusercontent.com/dgtlmoon/changedetection.io/HEAD/docs/browsersteps-anim.gif"
+    ]
   }
 }

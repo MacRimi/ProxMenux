@@ -64,12 +64,24 @@ CACHE_JSON=$(curl -fsSL --connect-timeout 5 --max-time 15 "$HELPERS_JSON_URL")
 
 # Validate that the JSON loaded correctly
 if ! echo "$CACHE_JSON" | jq -e 'if type == "array" and length > 0 then true else false end' >/dev/null 2>&1; then
-  dialog --title "Helper Scripts" \
+  dialog --title "Community Scripts" \
     --msgbox "Error: Could not load helpers cache.\nCheck your internet connection and try again.\n\nURL: $HELPERS_JSON_URL" 10 70
   # Opened for one script, as the menu search does: back to where it came from.
   [[ -n "${1:-}" ]] && exit 1
   exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 fi
+
+# Categories that ProxMenux lists inside a wider one, by name. The cache keeps
+# the category Community Scripts gives each script; only this menu groups it.
+FOLDED_CATEGORIES='{"ZigBee, Z-Wave & Matter": "IoT & Smart Home"}'
+FOLDED_JSON=$(echo "$CACHE_JSON" | jq --argjson fold "$FOLDED_CATEGORIES" '
+  ([.[] | [.categories, .category_names] | transpose[] | {(.[1]): .[0]}] | add) as $ids
+  | map(. as $script
+      | ([$script.categories, $script.category_names] | transpose
+         | map(if ($fold[.[1]] and $ids[$fold[.[1]]]) then [$ids[$fold[.[1]]], $fold[.[1]]] else . end)
+         | unique) as $pairs
+      | $script + {categories: ($pairs | map(.[0])), category_names: ($pairs | map(.[1]))})' 2>/dev/null)
+[[ -n "$FOLDED_JSON" ]] && CACHE_JSON="$FOLDED_JSON"
 
 # The menus are as tall as the main menu, cut to the terminal.
 MENU_HEIGHT=$(( $(tput lines 2>/dev/null || echo 24) - 2 ))
@@ -119,7 +131,7 @@ download_script() {
   # The script is downloaded whole before anything runs: a download that
   # fails or comes back empty runs nothing, on the host or in a container.
   if ! script_content=$(curl -fsSL --connect-timeout 5 --max-time 60 "$url") || [[ -z "${script_content//[[:space:]]/}" ]]; then
-    dialog --title "Helper Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
+    dialog --title "Community Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
     return 1
   fi
   clear
@@ -253,7 +265,7 @@ run_script_by_slug() {
     '.[] | select(.slug == $slug) | @base64')
 
   if [[ ${#script_infos[@]} -eq 0 ]]; then
-    dialog --title "Helper Scripts" \
+    dialog --title "Community Scripts" \
       --msgbox "$(translate "Error: No script data found for slug:") $slug" 8 60
     return
   fi
@@ -374,7 +386,7 @@ run_script_by_slug() {
     if [[ -n "$mirror_url" ]]; then
       download_script "$mirror_url"
     else
-      dialog --title "Helper Scripts" \
+      dialog --title "Community Scripts" \
         --msgbox "$(translate "Mirror URL not available for this script.")" 8 60
       RETURN_TO_MAIN=false
       return
@@ -535,7 +547,7 @@ while true; do
   local_idx=1
   for id in $(printf "%s\n" "${!CATEGORY_COUNT[@]}" | sort); do
     CAT_IDX_TO_ID[$local_idx]="$id"
-    name="${CATEGORY_NAMES[$id]:-Category $id}"
+    name="$(translate "${CATEGORY_NAMES[$id]:-Category $id}")"
     count="${CATEGORY_COUNT[$id]}"
     padded_name=$(printf "%-35s" "$name")
     padded_count=$(printf "(%2d)" "$count")
@@ -543,7 +555,7 @@ while true; do
     ((local_idx++))
   done
   SELECTED_IDX=$(dialog --backtitle "ProxMenux" \
-    --title "Proxmox VE Helper-Scripts" \
+    --title "Community Scripts" \
     --menu "$(translate "Select a category or search for scripts:")" \
     "$MENU_HEIGHT" 75 "$MENU_ROWS" "${MENU_ITEMS[@]}" 3>&1 1>&2 2>&3) || {
       dialog --clear --title "ProxMenux" \
@@ -585,7 +597,7 @@ while true; do
       | @tsv')
 
     SCRIPT_INDEX=$(dialog --colors --backtitle "ProxMenux" \
-      --title "$(translate "Scripts in") ${CATEGORY_NAMES[$SELECTED]}" \
+      --title "$(translate "Scripts in") $(translate "${CATEGORY_NAMES[$SELECTED]}")" \
       --menu "$(translate "Choose a script to execute:"):" \
       "$MENU_HEIGHT" 75 "$MENU_ROWS" "${SCRIPTS[@]}" 3>&1 1>&2 2>&3) || break
 

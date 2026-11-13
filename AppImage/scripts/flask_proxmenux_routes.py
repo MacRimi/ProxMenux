@@ -3,7 +3,7 @@ import json
 import os
 import re
 
-from jwt_middleware import require_auth
+from jwt_middleware import require_auth, require_admin_scope, request_scope
 
 # Sprint 12A: dynamic post-install version detector. The TOOL_METADATA
 # table below still owns the user-facing display names + deprecated
@@ -175,6 +175,7 @@ def _extract_bash_function(function_name: str) -> dict:
     return {'source': '', 'error': 'Function not found in available scripts'}
 
 @proxmenux_bp.route('/api/proxmenux/update-status', methods=['GET'])
+@require_auth
 def get_update_status():
     """Get ProxMenux update availability status from config.json"""
     config_path = '/usr/local/share/proxmenux/config.json'
@@ -214,6 +215,7 @@ def get_update_status():
 
 
 @proxmenux_bp.route('/api/proxmenux/installed-tools', methods=['GET'])
+@require_auth
 def get_installed_tools():
     """Get list of installed ProxMenux tools/optimizations.
 
@@ -319,6 +321,7 @@ def get_installed_tools():
 
 
 @proxmenux_bp.route('/api/updates/post-install', methods=['GET'])
+@require_auth
 def get_post_install_updates():
     """Sprint 12A: list of post-install function updates available.
 
@@ -347,6 +350,18 @@ def get_post_install_updates():
         }), 500
 
 
+def _from_this_host():
+    """Whether the request comes from the host itself (loopback)."""
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address((request.remote_addr or '').split('%')[0])
+    except ValueError:
+        return False
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    return addr.is_loopback
+
+
 @proxmenux_bp.route('/api/updates/post-install/scan', methods=['POST'])
 def rescan_post_install_updates():
     """Sprint 12A: force a re-scan of the post-install scripts.
@@ -355,8 +370,15 @@ def rescan_post_install_updates():
     when the user has just finished applying updates. The scan parses
     both post-install scripts and re-reads installed_tools.json, so it
     picks up version bumps applied by a `git pull` or by a previous
-    Update click in the same session.
+    Update click in the same session. The menu calls it from the host
+    without a token; from anywhere else it needs full access.
     """
+    if not _from_this_host():
+        _mode, scope, error = request_scope()
+        if error:
+            return error
+        if scope != 'full_admin':
+            return jsonify({'success': False, 'error': 'This action requires full access'}), 403
     try:
         snapshot = post_install_versions.scan(persist=True)
         return jsonify({
@@ -373,6 +395,7 @@ def rescan_post_install_updates():
 
 
 @proxmenux_bp.route('/api/proxmenux/snippets-storage', methods=['GET'])
+@require_admin_scope
 def get_snippets_storage():
     """Sprint 13 / issue #195: list candidate storages for snippets and
     the currently selected preference.
@@ -497,6 +520,7 @@ def set_snippets_storage():
 
 
 @proxmenux_bp.route('/api/proxmenux/tool-source/<tool_key>', methods=['GET'])
+@require_auth
 def get_tool_source(tool_key):
     """Get the bash source code of a specific optimization function.
 

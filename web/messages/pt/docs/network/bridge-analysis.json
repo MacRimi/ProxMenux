@@ -66,7 +66,7 @@
     "steps": [
       {
         "title": "1. Cópia de segurança",
-        "body": "Copia <code>/etc/network/interfaces</code> para <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. O caminho exato de backup é mostrado antes da cópia e novamente depois, com o comando rollback.",
+        "body": "Copia <code>/etc/network/interfaces</code> para <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. A janela antes da cópia mostra um nome indicativo; o caminho exato do arquivo criado é mostrado depois da cópia, com o comando rollback.",
         "tone": "blue"
       },
       {
@@ -76,12 +76,12 @@
       },
       {
         "title": "3. Antever as alterações propostas",
-        "body": "Lista exatamente os bridges afetados e as substituições de portas previstas. Se já não for necessária reparação porque a porta reapareceu entre as verificações, o processo termina com <em>«Não são necessárias alterações.»</em>",
+        "body": "Lista os bridges afetados e as alterações de portas sugeridas. Se já não for necessária reparação porque a porta reapareceu entre as verificações, o processo termina com <em>«Não são necessárias alterações.»</em>",
         "tone": "blue"
       },
       {
         "title": "4. Aplicar alterações",
-        "body": "Para cada ponte afetada, executa <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contra <code>/etc/network/interfaces</code>. Se uma ponte não tiver nenhuma substituição válida disponível, a substituição é ignorada e relatada na etapa 5.",
+        "body": "Para cada ponte afetada, executa <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contra <code>/etc/network/interfaces</code>. O novo valor de <code>bridge-ports</code> mantém apenas as portas que ainda existem, portanto uma porta inválida ao lado de uma válida é simplesmente removida. Se não restar nenhuma porta válida, usa a primeira NIC física detetada; se o host não tiver nenhuma, a linha é escrita vazia. A etapa 5 relata o resultado.",
         "tone": "amber"
       },
       {
@@ -102,7 +102,7 @@
     "unsupportedTitle": "A análise para com «Pilha de rede não suportada»",
     "unsupportedBody": "O host usa netplan, systemd-networkd ou NetworkManager. A ferramenta só suporta <code>/etc/network/interfaces</code>. Mude primeiro o host para a pilha clássica ou altere a configuração com as ferramentas nativas do gestor (por exemplo <code>netplan apply</code>).",
     "noSuggestTitle": "Nenhuma sugestão é impressa para uma porta inválida",
-    "noSuggestBody": "O host tem zero interfaces físicas livres (tudo já está em outra ponte ou não existe). A análise remonta a sugerir <code>bridge-ports none</code> para que a ponte possa pelo menos subir sem um porto. Adicionar um NIC ou migrar portas entre pontes manualmente antes de repetir.",
+    "noSuggestBody": "O ProxMenux não detetou nenhuma interface física (a lista só filtra nomes virtuais como <code>vmbr</code>, <code>bond</code>, <code>veth</code> ou <code>tap</code>; não verifica se uma NIC já está noutra ponte). A análise remonta a sugerir <code>bridge-ports none</code> para que a ponte possa pelo menos subir sem um porto. Adicionar um NIC ou migrar portas entre pontes manualmente antes de repetir.",
     "stillDownTitle": "O reparo completa, mas a ponte ainda está em baixo",
     "stillDownBody": "<code>sed</code> atualizou o arquivo, mas <code>systemctl restart networking</code> foi recusado. Execute-o manualmente assim que a nova configuração for verificada, ou reinicie. Se o reinício foi aceito e a ponte ainda estiver baixa, execute <code>ip link show</code> para confirmar a nova porta existe, em seguida, verifique <code>journalctl -u networking</code> para o erro real (cabo desconectado, link não negociado, porto já um membro de outra ponte).",
     "lostSshTitle": "Perdi o acesso SSH logo após reiniciar a rede",

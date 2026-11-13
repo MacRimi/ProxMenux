@@ -19,8 +19,8 @@
   },
   "opening": {
     "heading": "Öppna menyn",
-    "body": "Välj <strong>Skapa VM</strong> i ProxMenux huvudmeny. Du ser då:",
-    "imageAlt": "Menyn Skapa VM med tre ProxMenux-val (NAS/Windows/Linux) följda av Community Scripts (macOS/Övriga)"
+    "body": "Välj <strong>Create VM from template or script</strong> i ProxMenux huvudmeny. Du ser då:",
+    "imageAlt": "Menyn Skapa VM med tre ProxMenux-val (NAS/Windows/Linux) följda av Externa skript (macOS/Övriga)"
   },
   "families": {
     "heading": "Tre OS-familjer",
@@ -52,7 +52,7 @@
         "description": "Windows 10, 11 och Server-utgåvor med Windows-vänliga standarder (q35 + OVMF + TPM 2.0) och VirtIO-drivrutiner premonterade.",
         "bullets": [
           "UUP Dump för aktuella ISO-filer",
-          "Eller lokal ISO från /var/lib/vz/template/iso",
+          "Eller lokal ISO från valfri Proxmox ISO-lagring",
           "TPM 2.0 adderas automatiskt",
           "VirtIO-drivrutins-ISO ansluten till ide3",
           "Guest agent kanal aktiverad"
@@ -78,9 +78,9 @@
   },
   "community": {
     "title": "Gemenskapskript (ej dokumenterat här)",
-    "intro": "De två posterna under <em>Community Scripts</em> separator kör kod som är <strong> inte en del av ProxMenux</strong>, så de är avsiktligt kvar utanför denna dokumentation:",
+    "intro": "De två posterna under <em>Externa skript</em> separator kör kod som är <strong> inte en del av ProxMenux</strong>, så de är avsiktligt kvar utanför denna dokumentation:",
     "macosRich": "<strong>macOS-system</strong>: kör den externa installeraren <osxLink>OSX-PROXMOX</osxLink>. Den klonar originalarkivet, förbereder värden och <strong>startar om automatiskt när den är klar</strong>. Se projektets egen dokumentation.",
-    "othersRich": "<strong>Övriga system (Linuxbaserade)</strong>: läser in ett urval av gemenskapens installerare för hemservrar, routrar, brandväggar med mera. Varje skript underhålls utanför ProxMenux."
+    "othersRich": "<strong>Övriga system (Linuxbaserade)</strong>: läser in en kort lista med färdiga Linux-VM:ar från gemenskapen: Home Assistant OS, en Docker-VM (Debian + SSH + Docker) och Nextcloud. Varje skript underhålls utanför ProxMenux."
   },
   "afterPick": {
     "heading": "Vad händer när du väljer ett OS",

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Start a standalone MockServer endpoint. Add expectations through its API to define the responses your test clients should receive."
+    },
+    "description": {
+      "en_US": "MockServer mocks, records, and chaos-tests any HTTP or HTTPS dependency an application connects to. It can return canned, templated, or callback responses, or operate as a proxy to inspect and modify real traffic in flight. Additionally, it supports chaos engineering by injecting latency, dropped connections, and errors to test application resilience."
+    }
+  }
+}

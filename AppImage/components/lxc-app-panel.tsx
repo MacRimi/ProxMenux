@@ -393,6 +393,10 @@ const EMPTY_APP: AppConfig = {
 
 const SELFHST_WEBP_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp"
 const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: string }> = {
+  github: {
+    lightTheme: `${SELFHST_WEBP_BASE}/github.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/github-light.webp`,
+  },
   frigate: {
     lightTheme: `${SELFHST_WEBP_BASE}/frigate-dark.webp`,
     darkTheme: `${SELFHST_WEBP_BASE}/frigate-light.webp`,
@@ -428,11 +432,40 @@ function selfhstThemeLogos(src: string) {
   const alias = THEMED_LOGO_ALIASES[src.toLowerCase()]
   if (alias) return SELFHST_THEME_LOGOS[alias]
   if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
-  const match = src.toLowerCase().match(/\/(frigate|hermes-agent|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  const match = src.toLowerCase().match(/\/(frigate|github|hermes-agent|llama-cpp|portainer|tailscale|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 
 const LOCAL_LOGO_CACHE_PATH = /^\/api\/vms\/[1-9]\d*\/apps\/logo-cache\/[a-f0-9]{32}$/
+
+// Catalog icons that are a black mark on a transparent background, with the
+// version to draw on the dark theme: the light one of their icon set, or
+// "invert". The catalog keeps the list, so a new application gets it with a
+// catalog refresh. Read once for every logo on the page.
+let iconThemes: Record<string, string> | null = null
+let iconThemesRequest: Promise<void> | null = null
+const iconThemeListeners = new Set<() => void>()
+
+function loadIconThemes() {
+  if (iconThemes || iconThemesRequest) return
+  iconThemesRequest = fetchApi<Record<string, string>>("/api/apps/icon-themes")
+    .then(map => {
+      iconThemes = map && typeof map === "object" && !Array.isArray(map) ? map : {}
+    })
+    .catch(() => { iconThemes = {} })
+    .finally(() => iconThemeListeners.forEach(listener => listener()))
+}
+
+function useIconThemes() {
+  const [, setVersion] = useState(0)
+  useEffect(() => {
+    const listener = () => setVersion(version => version + 1)
+    iconThemeListeners.add(listener)
+    loadIconThemes()
+    return () => { iconThemeListeners.delete(listener) }
+  }, [])
+  return iconThemes
+}
 
 function CachedLocalLogo({ src, className }: { src: string; className: string }) {
   const [image, setImage] = useState<{ src: string; url: string } | null>(null)
@@ -465,13 +498,17 @@ function CachedLocalLogo({ src, className }: { src: string; className: string })
 }
 
 export function ThemeAwareLogo({ src, className }: { src: string; className: string }) {
+  const themes = useIconThemes()
   if (LOCAL_LOGO_CACHE_PATH.test(src)) return <CachedLocalLogo src={src} className={className} />
+  const catalogDark = themes?.[src]
   const themed = selfhstThemeLogos(src)
+    ?? (catalogDark && catalogDark !== "invert" ? { lightTheme: src, darkTheme: catalogDark } : null)
   const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = "none"
   }
   if (!themed) {
-    return <img src={src} alt="" className={className} onError={hideBroken} />
+    const inverted = catalogDark === "invert" ? " dark:invert" : ""
+    return <img src={src} alt="" className={`${className}${inverted}`} onError={hideBroken} />
   }
   return (
     <>

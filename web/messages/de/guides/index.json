@@ -87,7 +87,7 @@
     "intro": "Open-Source-Projekte und ausgewählte Listen aus der Proxmox-Community. Unabhängig von Proxmox Server Solutions und ProxMenux; hier aufgeführt, weil sie sich als nützlich erwiesen haben.",
     "cards": {
       "helperScripts": {
-        "title": "Proxmox VE Helper-Scripts",
+        "title": "Community Scripts",
         "description": "Von der Community gepflegter Katalog von Skripten zur einfachen Bereitstellung von LXC-Containern und VMs sowie für PVE-Anpassungen, etwa für Home Assistant, Plex oder Frigate. Führt die Idee von ttecks Helper-Scripts fort."
       },
       "awesome": {

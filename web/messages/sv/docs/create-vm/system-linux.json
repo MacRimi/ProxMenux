@@ -1,19 +1,19 @@
 {
   "meta": {
     "title": "Skapa VM: Linux-system | ProxMenux-dokumentation",
-    "description": "Skapa virtuella Linux-maskiner på Proxmox VE med ProxMenux. Beskriver katalogen med utvalda officiella ISO-avbildningar (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), den gemensamma lagringsplanen, valfri GPU-passthrough och tips efter installationen.",
+    "description": "Skapa virtuella Linux-maskiner på Proxmox VE med ProxMenux. Beskriver katalogen med utvalda officiella ISO-avbildningar (Ubuntu, Debian, Fedora, Arch, Rocky, AlmaLinux, CentOS Stream, Oracle Linux, Mint, openSUSE, Alpine, Kali, Manjaro, Pop!_OS, Zorin OS, CachyOS, NixOS), den gemensamma lagringsplanen, valfri GPU-passthrough och tips efter installationen.",
     "ogTitle": "Skapa VM: Linux-system | ProxMenux-dokumentation",
     "ogDescription": "Skapa Linux VM på Proxmox VE med ProxMenux. Curated ISO katalog, enhetlig lagringsplan, valfri GPU genomgång och post-install tips.",
     "ogImageAlt": "ProxMenux Linux VM-menyn"
   },
   "header": {
     "title": "Skapa VM: Linux-system",
-    "description": "Skapa en Linux-VM på Proxmox VE. ProxMenux har en katalog med utvalda officiella Linux-ISO:er för nedladdning och en väljare för lokala ISO:er. Alla alternativ använder den gemensamma VM-guiden, lagringsplanen och den valfria guiden för GPU-passthrough.",
+    "description": "Skapa en Linux-VM på Proxmox VE. ProxMenux har en katalog med utvalda officiella Linux-ISO:er för nedladdning, en väljare för lokala ISO:er och gemenskapens Cloud-Init-skript. Alla alternativ använder den gemensamma VM-guiden, lagringsplanen och den valfria guiden för GPU-passthrough.",
     "section": "Virtuella maskiner"
   },
   "intro": {
     "title": "Vad skriptet gör",
-    "body": "Välj en officiell Linux-ISO för automatisk nedladdning eller en lokal ISO som redan har laddats upp. Den gemensamma guiden går sedan igenom CPU, RAM och BIOS, lagringsplan, valfri GPU-passthrough och skapandet av VM:n."
+    "body": "Linux-väljaren erbjuder tre alternativ: en officiell ISO från den utvalda listan (hämtas automatiskt), en lokal ISO som du själv har laddat upp, eller ett Cloud-Init-skript från gemenskapens Helper-Scripts (Arch, Debian, Ubuntu). För de två första är resten av flödet den gemensamma guiden: CPU / RAM / BIOS, lagringsplan, valfri GPU-passthrough och skapandet av VM:n."
   },
   "image": {
     "alt": "ProxMenux Linux installationsalternativ",
@@ -145,21 +145,21 @@
     "officialImageAlt": "Val av Linux-distribution",
     "officialImageCaption": "Val av Linux-distribution",
     "localHeading": "Lokalt ISO",
-    "localBody": "Använder en Linux-ISO som redan finns i <code>/var/lib/vz/template/iso</code>. Skriptet listar alla <code>*.iso</code>-filer det hittar och låter dig välja en.",
+    "localBody": "Använder en Linux-ISO som redan finns i en Proxmox-lagring med ISO-innehåll (local, NFS, CIFS…). Skriptet listar alla ISO-filer det hittar, med respektive lagring, och låter dig välja en.",
     "localImageAlt": "Lokala ISO urvalsmenyn",
     "localImageCaption": "Lokala ISO urvalsmenyn",
     "distros": [
       {
         "name": "Ubuntu",
         "variants": [
-          "25.10 Desktop",
-          "24.04 Desktop",
-          "22.04 Desktop",
-          "20.04 Desktop",
-          "25.10 Server",
-          "24.04 Server",
-          "22.04 Server",
-          "20.04 Server"
+          "26.10 Desktop",
+          "26.04 LTS Desktop",
+          "24.04 LTS Desktop",
+          "22.04 LTS Desktop",
+          "26.10 Server",
+          "26.04 LTS Server",
+          "24.04 LTS Server",
+          "22.04 LTS Server"
         ]
       },
       {
@@ -167,16 +167,15 @@
         "variants": [
           "13 Desktop",
           "12 Desktop",
-          "11 Desktop",
           "13 Netinst",
-          "12 Netinst",
-          "11 Netinst"
+          "12 Netinst"
         ]
       },
       {
         "name": "Fedora",
         "variants": [
-          "Workstation 42"
+          "Workstation 45",
+          "Workstation 44"
         ]
       },
       {
@@ -188,37 +187,88 @@
       {
         "name": "Rocky Linux",
         "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "AlmaLinux",
+        "variants": [
+          "10",
+          "10 Minimal",
+          "9"
+        ]
+      },
+      {
+        "name": "CentOS Stream",
+        "variants": [
+          "10",
+          "9"
+        ]
+      },
+      {
+        "name": "Oracle Linux",
+        "variants": [
+          "10",
           "9"
         ]
       },
       {
         "name": "Linux Mint",
         "variants": [
-          "22.1 Cinnamon"
+          "22.3 Cinnamon",
+          "22.3 Xfce"
         ]
       },
       {
         "name": "openSUSE",
         "variants": [
-          "Leap 15.6"
+          "Leap 16.1",
+          "Leap 16.0"
         ]
       },
       {
         "name": "Alpine Linux",
         "variants": [
-          "3.21"
+          "3.24"
         ]
       },
       {
         "name": "Kali Linux",
         "variants": [
-          "2026.1"
+          "2026.3"
         ]
       },
       {
         "name": "Manjaro",
         "variants": [
-          "25.0 GNOME"
+          "26.1 GNOME"
+        ]
+      },
+      {
+        "name": "Pop!_OS",
+        "variants": [
+          "24.04"
+        ]
+      },
+      {
+        "name": "Zorin OS",
+        "variants": [
+          "18.1 Core",
+          "18.1 Lite"
+        ]
+      },
+      {
+        "name": "CachyOS",
+        "variants": [
+          "senaste versionen"
+        ]
+      },
+      {
+        "name": "NixOS",
+        "variants": [
+          "26.05",
+          "26.05 Minimal"
         ]
       }
     ]

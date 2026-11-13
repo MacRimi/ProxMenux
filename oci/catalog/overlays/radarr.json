@@ -22,5 +22,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Radarr - A fork of Sonarr to work with movies à la Couchpotato."
+    },
+    "description": {
+      "en_US": "Radarr is a movie collection manager designed as a fork of Sonarr. It helps users organize and maintain their personal movie collections. The application monitors movie releases and integrates with download managers to process and organize media files."
+    }
   }
 }

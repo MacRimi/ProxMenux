@@ -47,7 +47,7 @@ def deliver(event_type, data, severity='INFO', language='en', manual=False, quie
         text, tags = visible(markup)
         captured.append(dict(title=title, body=body, severity=severity, data=dict(data), html=markup, text=text, tags=tags))
         return {'success':True}
-    manager = types.SimpleNamespace(_config={'email.rich_format':'true'}, _lock=threading.RLock(),
+    manager = types.SimpleNamespace(_config={'email.rich_format':'true'}, _lock=threading.RLock(), _enabled=True,
         _channels={'email':types.SimpleNamespace(send=sink)},
         _group_limiter=types.SimpleNamespace(allow=lambda group:True),
         _claim_delivery=lambda event:'inert', _finish_delivery_claim=lambda *a,**kw:None,
@@ -56,6 +56,7 @@ def deliver(event_type, data, severity='INFO', language='en', manual=False, quie
         _record_history=record_history, _stats={'total_sent':0,'total_errors':0},
         is_event_enabled=lambda event:True)
     ns = dict(vars(typing), NotificationEvent=types.SimpleNamespace, TEMPLATES=templates.TEMPLATES, render_template=templates.render_template,
+        health_linked_event=templates.health_linked_event,
         resolve_notification_hostname=lambda host, config:host or 'node-a',
         enrich_with_emojis=templates.enrich_with_emojis, datetime=datetime.datetime,
         format_backup_diagnostics_with_ai=templates.format_backup_diagnostics_with_ai,
@@ -72,7 +73,8 @@ def deliver(event_type, data, severity='INFO', language='en', manual=False, quie
                     ns[target.id] = frozenset(ast.literal_eval(node.value.args[0]))
     for name in ('_should_bypass_ai', '_format_backup_with_ai_bounded'):
         extract(manager_path, name, None, ns)
-    for name in ('_dispatch_to_channels', '_dispatch_event', 'send_notification'):
+    for name in ('_filter_event', '_channel_allows', '_health_degraded_for_channel',
+                 '_dispatch_to_channels', '_dispatch_event', 'send_notification'):
         setattr(manager, name, types.MethodType(extract(SCRIPTS/'notification_manager.py', name, 'NotificationManager', ns), manager))
     with tempfile.TemporaryDirectory(prefix='notification-final-') as scratch:
         db = Path(scratch)/'pending.sqlite'
@@ -84,7 +86,7 @@ def deliver(event_type, data, severity='INFO', language='en', manual=False, quie
             qns = dict(vars(typing), sqlite3=sqlite3, DB_PATH=db, time=time, datetime=datetime.datetime,
                 _resolve_display_hostname=lambda config:'node-a', runtime_message=templates.runtime_message,
                 EVENT_EMOJI=templates.EVENT_EMOJI, CATEGORY_EMOJI=templates.CATEGORY_EMOJI)
-            for name in ('_buffer_quiet_event', '_flush_quiet_for_channel', '_compose_digest_body'):
+            for name in ('_buffer_quiet_event', '_flush_quiet_for_channel', '_compose_digest_body', '_drop_unwanted_rows'):
                 setattr(manager,name,types.MethodType(extract(SCRIPTS/'notification_manager.py',name,'NotificationManager',qns),manager))
             for earlier in quiet_before:
                 manager._dispatch_event(types.SimpleNamespace(**earlier,source='inert',entity_type='node',entity_id='',event_id='inert',fingerprint='inert'))

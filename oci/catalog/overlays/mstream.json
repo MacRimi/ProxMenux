@@ -16,5 +16,21 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "mStream"
+    },
+    "tagline": {
+      "en_US": "mstream is a personal music streaming server. You can use mStream to stream your music from your home computer to any device, anywhere.  There are mobile apps available for both Android and iPhone."
+    },
+    "description": {
+      "en_US": "mStream is a personal music streaming server. It enables users to stream music from their personal computer to any device, anywhere. The server features a built-in web interface and supports mobile clients on both Android and iPhone."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/IrosTheBeggar/mStream/HEAD/docs/designs/mstreamv5.png",
+      "https://raw.githubusercontent.com/IrosTheBeggar/mStream/HEAD/docs/designs/shared.png",
+      "https://raw.githubusercontent.com/IrosTheBeggar/mStream/HEAD/docs/designs/admin.png"
+    ]
   }
 }

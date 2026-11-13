@@ -29,7 +29,7 @@ class PBSI18nTests(unittest.TestCase):
         self.server = {"name": "Fixture", "url": "https://pbs.invalid:8007", "token_id": "audit@pbs!monitor", "token_secret": "fake-fixture-secret", "fingerprint": ""}
         self.id = pbs.save_server(self.server)
         pbs._remote_get.reset_mock(); pbs._status_cache.clear()
-        auth = types.SimpleNamespace(load_auth_config=auth_manager.load_auth_config, verify_token=lambda _: "fixture",
+        auth = types.SimpleNamespace(load_auth_config=auth_manager.load_auth_config, access_mode=auth_manager.access_mode, verify_token=lambda _: "fixture",
             verify_token_full=lambda token: ("fixture", "full_admin" if token == "admin" else "read_only"))
         spec = importlib.util.spec_from_file_location("fixture_pbs_jwt", ROOT / "AppImage/scripts/jwt_middleware.py")
         middleware = importlib.util.module_from_spec(spec)
@@ -79,7 +79,8 @@ class PBSI18nTests(unittest.TestCase):
         for path, method in [("/api/pbs/servers", "POST"), ("/api/pbs/servers/login", "POST"), ("/api/pbs/servers/" + self.id, "DELETE")]:
             for role, status in [(None, 401), ("reader", 403)]:
                 self.assertEqual(self.send(method, path, self.server, role).status_code, status)
-        (self.root / "auth.json").write_text(json.dumps({"enabled": False}))
+        # An open Monitor (no password, chosen by its owner) still keeps PBS credentials out.
+        (self.root / "auth.json").write_text(json.dumps({"enabled": False, "declined": True}))
         for path in ("/api/pbs/servers", "/api/pbs/servers/login"):
             response = self.send(path=path, data=self.server)
             self.assertEqual(response.status_code, 409)

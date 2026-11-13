@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Telegram is a cloud-based mobile and desktop messaging app."
+    },
+    "description": {
+      "en_US": "Telegram is a cloud-based mobile and desktop messaging application. It allows users to communicate and exchange messages across devices from a single account."
+    }
   }
 }

@@ -19,5 +19,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Audacity is an easy-to-use, multi-track audio editor and recorder. Developed by a group of volunteers as open source."
+    },
+    "description": {
+      "en_US": "Audacity is an open-source, multi-track audio editor and recorder. It enables users to record live audio and manipulate sound clips across multiple tracks. The software is used for producing, editing, and mixing various audio projects."
+    },
+    "screenshots": [
+      "https://www.audacityteam.org/_astro/hero-surface-studio-darkened.Bg6vZ4zE_Z1E7Af.webp",
+      "https://www.audacityteam.org/_astro/audacity-0.8.BLUesJEs_2cs37a.webp"
+    ]
   }
 }

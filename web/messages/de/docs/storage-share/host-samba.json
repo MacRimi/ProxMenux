@@ -16,7 +16,7 @@
   },
   "opening": {
     "heading": "Öffnen des Tools",
-    "body": "Öffnen Sie im Hauptmenü von ProxMenux <strong>Speicher &amp; Freigabe-Manager → Samba Freigabe auf Host bereitstellen</strong>. Sie sehen dieses sub-Menü mit vier Optionen:",
+    "body": "Öffnen Sie im Hauptmenü von ProxMenux <strong>Speicher &amp; Freigabe-Manager → Samba Freigabe als Proxmox-Speicher hinzufügen</strong>. Sie sehen dieses sub-Menü mit vier Optionen (zuzüglich Exit):",
     "imageAlt": "Samba-Host-Menü — Einhängen / Anzeigen / Entfernen / Verbindung testen"
   },
   "howRuns": {

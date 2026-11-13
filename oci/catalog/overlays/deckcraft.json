@@ -1,0 +1,28 @@
+{
+  "catalog_ui": {
+    "screenshots": [
+      "https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/docs/images/editor.png",
+      "https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/docs/images/shape-format.png",
+      "https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/docs/images/format-pane.png",
+      "https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/docs/images/slide-sorter.png",
+      "https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/docs/images/dark-mode.png",
+      "https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/docs/images/sample-deck.png"
+    ],
+    "tips": [
+      "This is the native Linux application streamed by Selkies, not the WebAssembly build. Processing and documents stay in the LXC and its mounted directories.",
+      "The image is maintained by junkerderprovinz; ArtCraft publishes the application packages. It is not an official ArtCraft container image.",
+      "Use a trusted HTTPS reverse proxy for browser access. Port 3001 uses the upstream self-signed certificate; port 3000 is for an HTTP reverse-proxy backend.",
+      "The upstream default has no login. Optional CUSTOM_USER and PASSWORD variables enable HTTP basic authentication; do not expose an unauthenticated desktop to untrusted networks.",
+      "/config holds settings and desktop state and is included in Proxmox backups. /storage holds documents and supports a managed volume or an explicitly selected host directory; host directories require separate backups.",
+      "The default installation draws on the CPU. The advanced installation can assign an Intel or AMD GPU, which the desktop, the application and the video stream then use; NVIDIA is offered when the host has its driver and the NVIDIA Container Toolkit.",
+      "Without a GPU, an application may ask to switch to CPU rendering. Choose the CPU option; the application remembers it.",
+      "Screenshot: Copyright (c) 2026 ArtCraft Team and the DeckCraft contributors. Source: https://github.com/storytold/deckcraft/blob/cf0d7fbb147ed482d754042f7924b174a7d96acf/README.md. License: MIT (https://raw.githubusercontent.com/storytold/deckcraft/cf0d7fbb147ed482d754042f7924b174a7d96acf/LICENSE-MIT). Original image, unchanged."
+    ],
+    "tagline": {
+      "en_US": "DeckCraft from the ArtCraft project, streamed from a native Linux application using the community-maintained junkerderprovinz image. Files are stored on the server, not in browser storage."
+    },
+    "description": {
+      "en_US": "DeckCraft is a presentation application from the ArtCraft suite designed for creating and delivering slide shows. It enables users to open and save PowerPoint slide decks directly. The application runs native Linux software streamed to the browser with integrated audio support."
+    }
+  }
+}

@@ -30,7 +30,7 @@
     "rows": [
       {
         "action": "Situazione rapida della salute",
-        "whatRich": "Complessivamente PASSED/FAILED + attributi chiave.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) o <code>nvme smart-log</code> (NVMe).",
+        "whatRich": "Complessivamente PASSED/FAILED + attributi chiave.<br></br><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) o <code>nvme smart-log</code> (NVMe).",
         "dur": "istantaneamente"
       },
       {

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kopia provides encrypted, deduplicated backups with a web interface for repositories, policies, snapshots and restores. This profile supports browsing and restoring files through the UI; mounting snapshots with FUSE is not enabled."
+    },
+    "description": {
+      "en_US": "Kopia is an open-source backup and restore tool that creates encrypted snapshots of data and saves them to local, network, or cloud storage. It is designed to back up critical files and directories rather than entire drive images. The software provides built-in compression, deduplication, error correction, and user-controlled end-to-end encryption. It can be operated through both a command-line interface and a graphical user interface."
+    }
+  }
+}

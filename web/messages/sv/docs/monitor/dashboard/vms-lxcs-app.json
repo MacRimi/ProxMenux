@@ -57,7 +57,7 @@
       "Sökresultat kan fylla det kanoniska namnet, logotypen och vanliga webbportar.",
       "Kända versionsdetektorer är baserade på riktiga paketnamn, binärer, filer, Python-distributioner, OCI-etiketter eller kommandon snarare än ett universellt <code>/root/.app</code>-antagande.",
       "Verifierade korrigeringar för verkliga installationer har företräde när en sökväg skiljer sig från installationsprogrammets metadata.",
-      "Proxmox VE Helper-Scripts markörer som <code>/root/.slug</code> förblir en kompatibilitetssignal för nyare hjälparinstallationer, inte den enda detektorn.",
+      "Community Scripts markörer som <code>/root/.slug</code> förblir en kompatibilitetssignal för nyare hjälparinstallationer, inte den enda detektorn.",
       "Varje föreslaget värde kan redigeras innan du sparar för att täcka officiella installatörer och manuella installationer."
     ]
   },
@@ -149,7 +149,7 @@
     "items": [
       "En post med enbart länkar visar att versionsspårning inte är inställd men kan ändå få ett eget uppdateringskommando.",
       "En app med spårning men utan en körbar metod visar ett neutralt meddelande som ber om ett anpassat kommando.",
-      "En app med ett verifierat Proxmox VE Helper-Scripts-omslagsskript kan använda det inbyggda uppdateringsprogrammet även om registreringen började med en webblänk.",
+      "En app med ett verifierat Community Scripts-omslagsskript kan använda det inbyggda uppdateringsprogrammet även om registreringen började med en webblänk.",
       "Lägga till eller redigera en uppdaterare ändrar inte detektorn eller uppströmskällan lagrad på fliken App."
     ]
   },

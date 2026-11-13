@@ -19,5 +19,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "WPS Office"
+    },
+    "tagline": {
+      "en_US": "WPS Office is a lightweight, feature-rich comprehensive office suite with high compatibility. As a handy and professional office software, WPS Office allows you to edit files in Writer, Presentation, Spreadsheet, and PDF to improve your work efficiency."
+    },
+    "description": {
+      "en_US": "WPS Office is an office productivity suite designed for creating and editing documents, presentations, spreadsheets, and PDF files. It provides dedicated tools including Writer, Presentation, and Spreadsheet to handle daily office workflows. The suite enables users to draft text, format data sheets, build slide decks, and view or edit PDF documents with high format compatibility."
+    },
+    "screenshots": [
+      "https://global-static.wpscdn.com/cms/official-website/v2/_nuxt/collab-cloud-docs.Dc4W3rlY.jpg"
+    ]
   }
 }

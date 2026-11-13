@@ -124,6 +124,7 @@ class VzdumpAIIntegrityTests(unittest.TestCase):
         manager = NotificationManager()
         channel = _CapturingChannel()
         manager._channels = {"telegram": channel}
+        manager._enabled = True
         manager._config = {"telegram.rich_format": "false"}
         with (
             patch.object(manager, "_build_ai_config", return_value=dict(AI_CONFIG)),

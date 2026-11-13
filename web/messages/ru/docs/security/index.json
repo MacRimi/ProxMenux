@@ -65,6 +65,6 @@
   },
   "componentStatus": {
     "heading": "Состояние компонентов",
-    "body": "Оба установщика записывают своё состояние в <code>/usr/local/share/proxmenux/components_status.json</code> в категории <code>security</code>. При последующих запусках ProxMenux использует этот файл, чтобы определить, какое меню показывать: установки или управления. Эти же данные используются на информационных панелях в ProxMenux Monitor, если он доступен."
+    "body": "Оба установщика записывают своё состояние в <code>/usr/local/share/proxmenux/components_status.json</code> в категории <code>security</code>. Меню выбирает между установкой и управлением, напрямую проверяя наличие установленного исполняемого файла (<code>fail2ban-client</code>, <code>lynis</code>); файл используется на информационных панелях в ProxMenux Monitor, если он доступен."
   }
 }

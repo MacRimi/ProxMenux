@@ -15,6 +15,56 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 8192
     }
+  },
+  "environment_additions": [
+    {
+      "name": "OLLAMA_CONTEXT_LENGTH",
+      "example": "32768",
+      "prompt": "Context window in tokens (more context needs more RAM)",
+      "default_by_memory_mb": [
+        [
+          0,
+          "8192"
+        ],
+        [
+          4096,
+          "16384"
+        ],
+        [
+          6144,
+          "32768"
+        ],
+        [
+          10240,
+          "65536"
+        ],
+        [
+          24576,
+          "131072"
+        ]
+      ]
+    },
+    {
+      "name": "OLLAMA_KV_CACHE_TYPE",
+      "example": "q8_0",
+      "prompt": "Context cache type (q8_0 halves its memory; f16 keeps it uncompressed)"
+    }
+  ],
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Open WebUI is a feature-rich, user-friendly self-hosted AI platform designed for fully offline operation, supporting multiple large language model runners and API integration. Its intuitive Web interface provides powerful AI deployment capabilities, ideal for developers, researchers, and AI enthusiasts building localized intelligent applications.\n\nThe tool's core features include local model execution and Retrieval Augmented Generation (RAG). It supports Ollama and OpenAI-compatible APIs (e.g., LMStudio, GroqCloud), enabling seamless model switching and multi-model conversations. RAG enhances chat experiences through local document loading or web search integration (e.g., SearXNG, Google PSE). Granular permissions and role-based access control (RBAC) ensure security with customized user role management.\n\nIt supports Markdown and LaTeX for enriched interactions and offers hands-free voice and video call features for dynamic communication. Image generation integration (e.g., DALL-E, ComfyUI) enriches visual content, and a model builder enables creating and importing custom models via the interface. The Pipelines plugin framework supports Python plugins, extending functionality like function calling and real-time translation. The tool’s offline privacy and flexibility deliver a modern AI interaction solution.\n\n**Key Features:**\n- Local execution of Ollama and OpenAI-compatible APIs with multi-model conversations\n- RAG support with local document and web search integration (e.g., SearXNG, Google PSE)\n- Granular permissions and role-based access control (RBAC)\n- Simultaneous interaction with multiple models, leveraging their strengths\n- Image generation integration with DALL-E, ComfyUI, and more\n- Full Markdown and LaTeX support\n- Hands-free voice and video call functionality\n- Pipelines plugin framework for custom Python functionality\n\n**Learn More:**\n- [Open WebUI Official Website](https://openwebui.com)\n- [Open WebUI Documentation](https://docs.openwebui.com)\n- [Open WebUI GitHub Repository](https://github.com/open-webui/open-webui)\n"
+    },
+    "description": {
+      "en_US": "Open WebUI is an extensible, self-hosted platform designed for interacting with artificial intelligence models offline. It connects directly with local runners such as Ollama as well as OpenAI-compatible APIs for local and cloud models. The application provides an interface for chatting, running intelligent workloads, and managing model interactions entirely on your own hardware."
+    },
+    "screenshots": [
+      "https://cdn.openwebui.com/open-webui-demo.gif"
+    ],
+    "repository": "https://github.com/open-webui/open-webui"
   }
 }

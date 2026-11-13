@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted form builder using its bundled SQLite configuration for a single-container setup. The application key is required to encrypt stored data."
+    },
+    "description": {
+      "en_US": "Input is an open-source, no-code application for building clean and customizable forms. It serves as a self-hosted alternative to proprietary form builders like TypeForm. Users can design conversational forms and adjust visual styles to match their organization's branding."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/deck9/input/HEAD/public/images/product-screenshot.png"
+    ]
+  }
+}

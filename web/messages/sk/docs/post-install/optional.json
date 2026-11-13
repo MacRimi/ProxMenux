@@ -64,7 +64,7 @@
     "doesLabel": "Čo robí:",
     "doesItems": [
       "Ticho stiahne a nainštaluje najnovšiu verziu Fastfetch",
-      "Umožňuje vám vybrať si vlastné logo (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong> alebo vlastné logo)",
+      "Umožňuje vám vybrať si vlastné logo (<strong>ProxMenux, Proxmox, Helper-Scripts, Community Scripts, Home-Labs-Club, Proxmology</strong> alebo vlastné logo)",
       "Nastaví Fastfetch na zobrazenie <em>„Systém optimalizovaný cez ProxMenux“</em>",
       "Nastaví Fastfetch pre automatické spustenie pri prihlásení konzoly"
     ],

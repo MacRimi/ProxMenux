@@ -16,5 +16,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Difference from Traditional Ad Blockers. Unlike traditional ad-blocking plugins that work only on individual devices, AdGuard Home offers a network-wide solution. By setting it up, you can block ads and trackers across all your home devices without needing to install any additional software on each device. This means comprehensive protection with minimal effort.\n\nHow AdGuard Home Works and How to Use It. AdGuard Home functions as a DNS server that reroutes tracking domains to a \"black hole,\" effectively preventing your devices from connecting to these servers. This blocks ads and trackers not only on your computer but also on your smartphone and smart home devices. To start using AdGuard Home, deploy it on your device, then change the DNS address assigned by DHCP on your router to the IP address of your AdGuard Home server.\n\nBenefits of Deploying AdGuard Home on self-hosted server Private Cloud. Deploying AdGuard Home on a self-hosted server device simplifies network-wide ad and tracker blocking, providing a seamless and secure browsing experience for all your home devices. With self-hosted server, you gain the flexibility to monitor network activity and create custom filtering rules tailored to your needs.\n"
+    },
+    "description": {
+      "en_US": "AdGuard Home is a network-wide DNS server designed to block ads and trackers across all connected devices without requiring client-side software. It functions by intercepting and filtering DNS requests across your entire local network. In addition to filtering, it can serve as a DHCP server and supports encrypted DNS protocols such as DNS-over-HTTPS, DNS-over-TLS, and DNS-over-QUIC."
+    },
+    "screenshots": [
+      "https://cdn.adguard.com/public/Adguard/Common/adguard_home.gif"
+    ],
+    "repository": "https://github.com/AdguardTeam/AdGuardHome"
   }
 }

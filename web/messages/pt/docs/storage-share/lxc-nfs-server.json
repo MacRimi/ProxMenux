@@ -34,7 +34,7 @@
   "defaults": {
     "heading": "Opções de exportação padrão — leia isto primeiro",
     "warnTitle": "Opções padrão incluem no_root_squash",
-    "warnBody": "O ProxMenux usa por padrão <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Qualquer usuário root de um cliente pode gravar como root na exportação.</strong> Use isso apenas em uma LAN doméstica confiável. Se o CT for acessível por uma rede não confiável (VPS ou VLAN não confiável), <strong>troque a opção por <code>root_squash</code></strong> no diálogo de opções personalizadas."
+    "warnBody": "O ProxMenux usa por padrão <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. <strong>Qualquer usuário root de um cliente pode gravar como root na exportação.</strong> Use isso apenas em uma LAN doméstica confiável. Se o CT for acessível por uma rede não confiável (VPS ou VLAN não confiável), <strong>troque a opção por <code>root_squash</code></strong> no diálogo de opções personalizadas."
   },
   "opening": {
     "heading": "Abrir a ferramenta",
@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Desinstalar servidor NFS",
-    "body": "Limpeza completa após confirmação: para e desativa <code>nfs-kernel-server</code> e <code>rpcbind</code>, esvazia <code>/etc/exports</code>, remove os pacotes NFS com <code>apt-get purge</code>, remove o grupo <code>sharedfiles</code> e os usuários <code>remap_*</code> e encerra processos restantes. As <strong>pastas exportadas não são apagadas</strong>; apenas a configuração NFS e os pacotes são removidos.",
+    "body": "Limpeza completa após confirmação: para e desativa <code>nfs-kernel-server</code> e <code>rpcbind</code>, esvazia <code>/etc/exports</code>, executa <code>apt-get purge</code> em <code>nfs-kernel-server</code> e <code>nfs-common</code>, remove os usuários <code>remap_*</code> e o grupo <code>sharedfiles</code> (apenas se nenhum usuário normal ainda for membro, o que normalmente não acontece) e encerra processos restantes. As <strong>pastas exportadas não são apagadas</strong>; apenas a configuração NFS e os pacotes são removidos.",
     "warnTitle": "O script pára na linha de exportação, não nos dados",
     "warnBody": "<em>Excluir exportação</em> e <em>Desinstalar servidor NFS</em> removem a configuração da exportação. Os dados da pasta são preservados. Para apagá-los também, use explicitamente <code>rm -rf</code> após o término do script e faça backup antes se alguém ainda puder precisar deles."
   },

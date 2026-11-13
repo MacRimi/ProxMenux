@@ -65,7 +65,10 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.repositories['digest'] = f'write-{self.writes}'
             self.after_write()
             return ''
-        with patch.object(self.module, 'run', side_effect=run):
+        # The local downstream probe reads the real /etc/apt and dpkg; keep these
+        # fixtures independent from the machine running the tests.
+        with patch.object(self.module, 'run', side_effect=run), \
+             patch.object(self.module, 'local_downstream', return_value=False):
             return self.module.evaluate(suite, apply=apply)
 
     def test_authentic_pve92_public_capture_preserved_without_subscription_or_writes(self):

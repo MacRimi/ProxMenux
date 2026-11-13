@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "hiSHtory is a better shell history. It stores your shell history in context (what directory you ran the command in, whether it succeeded or failed, how long it took, etc). This is all stored locally and end-to-end encrypted for syncing to to all your other computers."
+    },
+    "description": {
+      "en_US": "Hishtory Server is the backend service for hiSHtory, an enhanced shell history utility. It allows command history to be stored alongside rich context, such as the execution directory, run duration, and exit status. All history records are kept locally on client machines and synchronized across devices using end-to-end encryption."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/ddworken/hishtory/master/backend/web/landing/www/img/webui.png"
+    ]
+  }
+}

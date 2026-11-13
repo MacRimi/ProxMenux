@@ -28,5 +28,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Tdarr keeps a media library in the formats and codecs chosen for it: it scans the library, checks the health of every file and transcodes what does not match, with its own worker node inside the container. The web interface is on port 8265 and the node listens on 8266."
+    },
+    "description": {
+      "en_US": "Tdarr is a distributed conditional-based transcoding system designed to automate media library transcode and remux management. It employs FFmpeg and HandBrake along with video health checks to process audio and video files based on defined rules. Media processing can be distributed across multiple worker nodes to utilize available CPU and GPU hardware."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/43864057/163762996-65381fc8-0a57-4651-ba20-b5cba28e39d3.png",
+      "https://user-images.githubusercontent.com/43864057/163763000-35742f0e-ae67-40b4-a44c-eee60eae61cf.png"
+    ]
   }
 }

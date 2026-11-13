@@ -248,6 +248,7 @@ class BackupAIDiagnosticsTests(unittest.TestCase):
         manager = NotificationManager()
         channel = CapturingChannel()
         manager._channels = {'telegram': channel}
+        manager._enabled = True
         with patch.object(manager, '_build_ai_config', return_value=CONFIG), patch.object(manager, '_record_history'):
             result = manager.send_notification('backup_fail', 'CRITICAL', '', '', data=data,
                                                 skip_toggle_check=True)
@@ -327,6 +328,7 @@ class BackupAIDiagnosticsTests(unittest.TestCase):
         manager = NotificationManager()
         channel = CapturingChannel()
         manager._channels = {'telegram': channel}
+        manager._enabled = True
         with patch.object(manager, '_build_ai_config', return_value=CONFIG), patch.object(manager, '_record_history'):
             manager.send_notification('update_available', 'INFO', 'test: Updates',
                                       'Two package updates.', skip_toggle_check=True)

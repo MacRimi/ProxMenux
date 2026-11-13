@@ -1,4 +1,111 @@
 {
+  "catalog": {
+    "searchPlaceholder": "Busca apps y herramientas…",
+    "settings": "Ajustes del catálogo",
+    "settingsIncludeCs": "Incluir Community Scripts",
+    "settingsIncludeCsHint": "Muestra sus scripts en la búsqueda, las secciones, las categorías y las destacadas.",
+    "settingsBroad": "Búsqueda amplia",
+    "settingsBroadHint": "Encuentra también lo que menciona las palabras en su descripción o categoría, después de lo que coincide por nombre.",
+    "featured": "Destacadas",
+    "featuredOpen": "Ver detalles",
+    "categories": "Categorías de apps",
+    "allApps": "Todas las apps",
+    "toolsPmx": "Herramientas de ProxMenux",
+    "thirdParty": "Terceros",
+    "publisherOfficial": "Oficial",
+    "publisherOfficialHint": "Imagen publicada por el propio proyecto",
+    "toolsCs": "Herramientas de Community Scripts",
+    "externalScripts": "Scripts externos",
+    "addonInGuest": "En un LXC o VM existente",
+    "addonOnHost": "En el host de Proxmox",
+    "plugins": "Plugins de ProxMenux",
+    "pluginsSoon": "Próximamente",
+    "groups": {
+      "apps": "Apps",
+      "tools": "Herramientas"
+    },
+    "itemsCount": "{count} elementos",
+    "noResults": "Nada coincide con «{query}».",
+    "back": "Catálogo",
+    "emptyView": "Aquí no hay nada todavía.",
+    "sourceOci": "OCI manager Apps",
+    "sourceCs": "Community Scripts",
+    "tested": "Probada",
+    "updateable": "Actualizable",
+    "stack": "Varios contenedores",
+    "oneContainer": "1 contenedor",
+    "loadError": "No se pudo cargar el catálogo. Inténtalo de nuevo en un momento.",
+    "terminalInstall": "Instalar {name}",
+    "terminalRun": "Ejecutar {name}",
+    "terminalOpen": "Abrir {name}",
+    "terminalDescription": "Los mismos pasos que en el menú de ProxMenux.",
+    "type": {
+      "lxc": "LXC",
+      "vm": "VM",
+      "host": "Host",
+      "addon": "Add-on"
+    },
+    "sheet": {
+      "whatItIs": "Qué es",
+      "whatItDoes": "Qué hace",
+      "alsoAvailable": "También disponible",
+      "imageSource": "Fuente de la imagen",
+      "containersCreated": "Contenedores que se crean ({count})",
+      "containersIntro": "Cada servicio va en su propio LXC. ProxMenux los instala y los gestiona juntos, como una sola aplicación.",
+      "mainContainer": "Principal",
+      "publisher": "Publicada por",
+      "thirdPartyLink": "Ver proyecto",
+      "usesThirdParty": "Usa un script de terceros: {name}.",
+      "settingsApplied": "Ajustes que aplica ({count})",
+      "settingsOffered": "Ajustes que puedes elegir ({count})",
+      "whereInMenu": "Dónde está en el menú",
+      "notes": "Notas",
+      "defaultLogin": "Acceso por defecto",
+      "user": "Usuario",
+      "password": "Contraseña",
+      "suggested": "Instalación sugerida",
+      "scriptResources": "Recursos del script",
+      "cores": "núcleos",
+      "ram": "RAM",
+      "swap": "swap",
+      "disk": "disco",
+      "system": "sistema",
+      "access": "Acceso",
+      "accessPort": "Puerto {port} en la IP del contenedor",
+      "storage": "Almacenamiento",
+      "volume": "volumen del contenedor de {size} GB",
+      "volumeOrHost": "volumen del contenedor o carpeta del host",
+      "hostFolder": "carpeta del host",
+      "image": "Imagen",
+      "config": "Configuración",
+      "script": "Script",
+      "viewCode": "Ver código",
+      "version": "Versión",
+      "links": "Enlaces",
+      "website": "Web oficial",
+      "documentation": "Documentación",
+      "repository": "Código fuente",
+      "install": "Instalar",
+      "installAdvanced": "Instalación avanzada",
+      "runScript": "Ejecutar script",
+      "createVm": "Crear VM",
+      "addonNote": "Se instala dentro de un LXC o una VM que ya tengas; no crea uno nuevo.",
+      "proxmenuxDocs": "Documentación de ProxMenux",
+      "releases": "Versiones disponibles",
+      "suiteApps": "Aplicaciones a elegir",
+      "byDefault": "Seleccionada por defecto",
+      "suiteDefaults": "Las marcadas vienen seleccionadas; cada una va en su propio LXC.",
+      "mediaServer": "Servidor multimedia",
+      "mediaServerChoice": "{players} o ninguno",
+      "defaultSettings": "Configuración por defecto",
+      "open": "Abrir",
+      "scriptBy": "Script de",
+      "moreInfo": "Para más información, visita",
+      "unprivileged": "LXC sin privilegios",
+      "privileged": "LXC con privilegios",
+      "loadError": "No se pudieron cargar los detalles."
+    }
+  },
   "pbs": {
     "title": "Proxmox Backup Server",
     "server": "Servidor PBS",
@@ -186,6 +293,7 @@
   "navigation": {
     "overview": "General",
     "apps": "Apps",
+    "catalog": "Catálogo",
     "storage": "Almacenamiento",
     "network": "Red",
     "virtualMachines": "VM y LXC",
@@ -1560,23 +1668,23 @@
       "osUpToDate": "SO actualizado",
       "osStatusUnavailable": "No se ha podido determinar el estado de las actualizaciones del SO.",
       "installedByHelperPrefix": "Instalado por",
-      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperScriptsName": "Community Scripts",
       "helperCommandEditHint": "Si modificas este lanzador, se guardará como comando personalizado.",
       "customOnlineDescription": "O utiliza un script online proporcionado por el desarrollador:",
       "customOnlineExampleNote": "Sustituye la URL de ejemplo por la del script oficial de tu aplicación.",
       "customExamplesHeading": "Ejemplos para adaptar:",
       "updaterChoiceHint": "Elige y guarda un método de actualización.",
       "updaterMethodLabel": "Método de actualización",
-      "helperMethod": "Helper-Scripts",
+      "helperMethod": "Community Scripts",
       "customMethod": "Comando personalizado",
-      "helperMethodHelp": "Acerca de Helper-Scripts",
+      "helperMethodHelp": "Acerca de Community Scripts",
       "customMethodHelp": "Acerca del comando personalizado",
-      "helperDetectedChoice": "Actualizador de Helper-Scripts detectado para esta aplicación.",
-      "helperUnavailableChoice": "El actualizador de Helper-Scripts seleccionado ya no está disponible.",
+      "helperDetectedChoice": "Actualizador de Community Scripts detectado para esta aplicación.",
+      "helperUnavailableChoice": "El actualizador de Community Scripts seleccionado ya no está disponible.",
       "disableUpdater": "Desactivar",
       "disableUpdaterConfirm": "¿Desactivar el método de actualización de {name}? Los planes y las programaciones conservarán sus selecciones, pero esta aplicación no se ejecutará hasta que vuelvas a configurar un método.",
       "noUpdaterSelected": "No se ha configurado un método de actualización.",
-      "helperMethodDescription": "ProxMenux ejecuta el actualizador detectado dentro de este LXC y muestra su registro y resultado. Este lo mantiene Proxmox VE Helper-Scripts.",
+      "helperMethodDescription": "ProxMenux ejecuta el actualizador detectado dentro de este LXC y muestra su registro y resultado. Este lo mantiene Community Scripts.",
       "customMethodDescription": "Puedes utilizar el actualizador de la aplicación, un gestor de paquetes o un binario nuevo. El comando se ejecuta dentro de este LXC con privilegios de administrador.",
       "updaterInstructions": "Revisa las indicaciones del actualizador.",
       "helperDocumentation": "Documentación de actualización",
@@ -1590,7 +1698,7 @@
       "customPackageDescription": "Sustituye my-package por el paquete que quieras actualizar.",
       "customBinaryTitle": "Binario",
       "customBinaryDescription": "Primero descarga y verifica el binario oficial de la versión y arquitectura correctas en /tmp/my-app.new. Este ejemplo conserva una copia del binario anterior y reinicia su servicio.",
-      "helperUpdatesRun": "Instalado por Proxmox Helper-Scripts.",
+      "helperUpdatesRun": "Instalado por Community Scripts.",
       "installedPrefix": "instalado",
       "upstreamAvailable": "versión {version} disponible",
       "upToDateAt": "Actualizado en",
@@ -2361,6 +2469,7 @@
         "smart_test_complete": "Prueba SMART completada",
         "smart_test_failed": "La prueba SMART falló",
         "gpu_mode_switch": "Modo GPU cambiado",
+        "custom": "Notificaciones de scripts y API",
         "gpu_passthrough_blocked": "Paso de GPU bloqueado",
         "pci_passthrough_conflict": "Conflicto de dispositivo PCIe",
         "load_high": "Alta carga del sistema",
@@ -2892,7 +3001,22 @@
     "avatarHint": "PNG, JPEG, WebP o GIF · hasta 2 MB · cuadrado precortado para obtener mejores resultados.",
     "settingUp": "Configurando...",
     "setupAuthentication": "Configurar autenticación",
-    "back": "Atrás"
+    "back": "Atrás",
+    "setupCode": "Código de configuración",
+    "setupCodeHint": "Se mostró en la consola al instalar ProxMenux. Si no lo tienes, ejecuta menu en el servidor y abre Ajustes → Mostrar el código de configuración del Monitor.",
+    "codeInvalid": "El código de configuración no es válido.",
+    "codeRateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "noPasswordTitle": "Sin contraseña",
+    "noPasswordDescription": "Elige qué puede hacer cualquiera que acceda a esta dirección.",
+    "readOnlyTitle": "Solo lectura",
+    "readOnlyDescription": "Cualquiera que acceda al Monitor puede verlo, pero no puede abrir terminales, ejecutar scripts ni cambiar nada. Puedes añadir una contraseña más tarde.",
+    "openTitle": "Abierto, asumiendo el riesgo",
+    "openDescription": "Cualquiera que acceda al Monitor obtiene el control total de este servidor, incluida la terminal de root. Elígelo solo en una red en la que confíes en todos los que puedan acceder a él.",
+    "chooseReadOnly": "Usar solo lectura",
+    "chooseOpen": "Abrir sin contraseña"
+  },
+  "access": {
+    "readOnlyBanner": "Acceso de solo lectura: puedes ver este servidor, pero no ejecutar ni cambiar nada. Para administrarlo, añade una contraseña en Seguridad."
   },
   "securityPage": {
     "title": "Seguridad",
@@ -2926,7 +3050,8 @@
       "none": "Ninguno",
       "external": "Externo",
       "up": "Arriba",
-      "down": "Abajo"
+      "down": "Abajo",
+      "readOnly": "Solo lectura"
     },
     "errors": {
       "deleteReportNoFiles": "No se encontraron archivos de informe ni registros de Lynis para eliminar.",
@@ -3002,7 +3127,8 @@
       "sslCertificateReloaded": "El certificado renovado ya está activo. No se ha interrumpido ninguna conexión.",
       "sslCertificateUnchanged": "El certificado activo ya coincide con los archivos actuales.",
       "reportDeleted": "Se eliminó el informe de auditoría.",
-      "twoFactorEnabled": "La autenticación de dos factores está habilitada."
+      "twoFactorEnabled": "La autenticación de dos factores está habilitada.",
+      "readOnlyReloading": "El panel ahora es de solo lectura. Recargando..."
     },
     "confirm": {
       "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda alcanzar el tablero podrá abrirlo.",
@@ -3037,7 +3163,10 @@
       "confirmNewPasswordPlaceholder": "Introduce la nueva contraseña nuevamente",
       "changing": "Cambio...",
       "enterYourPassword": "Introduce tu contraseña",
-      "disable": "Deshabilitar la autenticación"
+      "disable": "Deshabilitar la autenticación",
+      "readOnlyMode": "El panel es de solo lectura sin contraseña: se puede ver, pero no se puede ejecutar ni cambiar nada.",
+      "useReadOnly": "Cambiar a solo lectura",
+      "disableChoose": "Sin contraseña, ¿cómo se debería acceder al panel?"
     },
     "twoFactor": {
       "title": "Autenticación de dos factores",
@@ -3863,21 +3992,21 @@
     }
   },
   "onboarding": {
-    "dialogTitle": "Incorporación de ProxMenux",
+    "dialogTitle": "Presentación de ProxMenux",
     "previous": "Anterior",
     "skip": "Saltar",
-    "next": "Próximo",
-    "getStarted": "¡Empieza!",
-    "dontShowAgain": "No vuelvas a mostrar esto",
+    "next": "Siguiente",
+    "getStarted": "Empezar",
+    "dontShowAgain": "No volver a mostrar",
     "goToSlide": "Ir a la diapositiva {number}",
     "slides": {
       "welcome": {
         "title": "¡Bienvenido a ProxMenux Monitor!",
-        "description": "Tu nueva herramienta de seguimiento para Proxmox. Descubra las funciones que le ayudarán a gestionar y supervisar su infraestructura más fácilmente."
+        "description": "Tu nueva herramienta de supervisión para Proxmox. Descubre las funciones que te ayudarán a gestionar y supervisar tu infraestructura más fácilmente."
       },
       "overview": {
-        "title": "Descripción general del sistema",
-        "description": "Supervise su servidor en tiempo real: CPU, memoria, temperatura, carga del sistema y más, todo en un panel claro."
+        "title": "Resumen del sistema",
+        "description": "Supervisa tu servidor en tiempo real: CPU, memoria, temperatura, carga del sistema y más, todo en un panel claro."
       },
       "storage": {
         "title": "Gestión de almacenamiento",
@@ -3885,11 +4014,11 @@
       },
       "network": {
         "title": "Métricas de red",
-        "description": "Supervise el tráfico de la red en tiempo real, incluidas las interfaces activas, las velocidades de transferencia y los gráficos de uso histórico."
+        "description": "Supervisa el tráfico de red en tiempo real, con las interfaces activas, las velocidades de transferencia y los gráficos de uso histórico."
       },
       "virtualMachines": {
         "title": "Máquinas virtuales y contenedores",
-        "description": "Mantén las máquinas virtuales y los contenedores LXC en un solo lugar. Ver estado, recursos asignados, uso actual y controles rápidos."
+        "description": "Ten las máquinas virtuales y los contenedores LXC en un solo lugar: su estado, los recursos asignados, el uso actual y los controles rápidos."
       },
       "hardware": {
         "title": "Información de hardware",
@@ -4002,7 +4131,7 @@
       "physical": "Físico",
       "bridge": "Puente",
       "bridges": "Puentes",
-      "bond": "Vínculo",
+      "bond": "Bond",
       "vlan": "VLAN",
       "virtual": "Virtual",
       "other": "Otro"
@@ -4013,8 +4142,8 @@
       "avg": "promedio",
       "bitsReceived": "bits recibidos",
       "bitsSent": "bits enviados",
-      "bondingMode": "Modo de vinculación",
-      "bondMembers": "Miembros de bonos",
+      "bondingMode": "Modo del bond",
+      "bondMembers": "Miembros del bond",
       "bytesReceived": "Bytes recibidos",
       "bytesSent": "Bytes enviados",
       "current": "Actual",
@@ -4094,7 +4223,7 @@
       "trafficSinceBoot": "Tráfico desde el último arranque",
       "inactiveTitle": "Interfaz inactiva",
       "inactiveDescription": "Esta interfaz está actualmente inactiva. Las estadísticas de tráfico de red no están disponibles.",
-      "bondConfiguration": "Configuración de bonos",
+      "bondConfiguration": "Configuración del bond",
       "bridgeConfiguration": "Configuración del puente"
     },
     "flow": {
@@ -5498,6 +5627,8 @@
       "storageAvailable": "Almacenamiento {type} disponible",
       "storageUsage": "{percent} % en uso",
       "mountReachable": "Montaje {type} accesible",
+      "mountReachableReadOnly": "Montaje {type} accesible, de solo lectura",
+      "mountReadOnlyConfiguredRw": "Montaje {type} en solo lectura, pero configurado como lectura y escritura",
       "rootfsUsed": "Uso de rootfs: {percent}% ({size})",
       "runningCtsSafe": "{count} los CT en ejecución tienen un uso seguro de rootfs",
       "pveStorageSafe": "{count} Los objetivos de almacenamiento en bloque PVE tienen un uso seguro",
@@ -6006,34 +6137,39 @@
     "customLinkSaveError": "Error al guardar",
     "customLinkDeleteError": "Error al eliminar",
     "categoryLabels": {
-      "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "AI / Coding & Dev-Tools",
-      "adblockDns": "Adblock & DNS",
-      "authenticationSecurity": "Authentication & Security",
-      "automationScheduling": "Automation & Scheduling",
-      "backupRecovery": "Backup & Recovery",
-      "businessErp": "Business & ERP",
-      "communicationCommunity": "Communication & Community",
-      "containersDocker": "Containers & Docker",
-      "dashboardsFrontends": "Dashboards & Frontends",
-      "databases": "Databases",
-      "documentsNotes": "Documents & Notes",
-      "filesDownloads": "Files & Downloads",
-      "financeBudgeting": "Finance & Budgeting",
-      "gamingLeisure": "Gaming & Leisure",
-      "hostManagement": "Host Management",
-      "iotSmartHome": "IoT & Smart Home",
-      "mediaStreaming": "Media & Streaming",
-      "messagingNotifications": "Messaging & Notifications",
-      "miscellaneous": "Miscellaneous",
-      "monitoringAnalytics": "Monitoring & Analytics",
-      "nvrCameras": "NVR & Cameras",
-      "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Operating Systems & Appliances",
-      "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Remote Access & VPN",
-      "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "creativeDesign": "Creatividad y diseño",
+      "filesSharing": "Archivos y uso compartido",
+      "browsersWebDesktops": "Navegadores y escritorios web",
+      "tools": "Herramientas",
+      "messagingQueues": "Mensajería y colas",
+      "arrSuite": "Suite *Arr",
+      "aiCodingDevTools": "IA, programación y herramientas de desarrollo",
+      "adblockDns": "Bloqueo de anuncios y DNS",
+      "authenticationSecurity": "Autenticación y seguridad",
+      "automationScheduling": "Automatización y programación de tareas",
+      "backupRecovery": "Backups y recuperación",
+      "businessErp": "Empresa y ERP",
+      "communicationCommunity": "Comunicación y comunidad",
+      "containersDocker": "Contenedores y Docker",
+      "dashboardsFrontends": "Paneles e interfaces",
+      "databases": "Bases de datos",
+      "documentsNotes": "Documentos y notas",
+      "filesDownloads": "Archivos y descargas",
+      "financeBudgeting": "Finanzas y presupuestos",
+      "gamingLeisure": "Juegos y ocio",
+      "hostManagement": "Gestión del host",
+      "iotSmartHome": "IoT y hogar inteligente",
+      "mediaStreaming": "Multimedia y streaming",
+      "messagingNotifications": "Mensajería y notificaciones",
+      "miscellaneous": "Varios",
+      "monitoringAnalytics": "Monitorización y analítica",
+      "nvrCameras": "NVR y cámaras",
+      "networkFirewall": "Red y cortafuegos",
+      "operatingSystemsAppliances": "Sistemas operativos y appliances",
+      "productivityWorkflows": "Productividad y flujos de trabajo",
+      "remoteAccessVpn": "Acceso remoto y VPN",
+      "webserversProxies": "Servidores web y proxies",
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave y Matter"
     }
   },
   "audit": {
@@ -7174,7 +7310,8 @@
   "runtime": {
     "notifications": {
       "cluster": {
-        "rejoinedBody": "El nodo {node_name} reinició su servicio de clúster y volvió a unirse tras {seconds} s."
+        "rejoinedBody": "El nodo {node_name} perdió el contacto con el clúster y volvió a unirse tras {seconds} s.",
+        "restartedBody": "Corosync, el servicio de comunicación del clúster, se detuvo en el nodo {node_name} y volvió a arrancar. El nodo volvió a unirse al clúster tras {seconds} s."
       },
       "templates": {
         "state_change": {
@@ -7557,6 +7694,11 @@
           "body": "Información del paquete ascendente reenviada por Proxmox VE a través de apt-listchanges. El siguiente texto proviene del responsable del paquete y no es una recomendación ProxMenux.\n\n{reason}",
           "label": "avisos del paquete apt-listchanges"
         },
+        "custom": {
+          "title": "{title}",
+          "body": "{message}",
+          "label": "Notificaciones de scripts y API"
+        },
         "webhook_test": {
           "title": "{hostname}: prueba de webhook recibida",
           "body": "Prueba de conectividad del webhook PVE exitosa.\n{reason}",
@@ -7698,8 +7840,8 @@
           "label": "Ráfaga de problemas del sistema"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} eventos {event_type} más en {window}",
-          "body": "+{count} eventos adicionales de tipo {event_type} en {window} ({total_count} en total).\n\nEventos adicionales:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} más en {window})",
+          "body": "{event_type}: {count} más en {window} ({total_count} en total).\n\nEventos adicionales:\n{details}",
           "label": "Ráfaga genérica"
         },
         "kernel_warning": {

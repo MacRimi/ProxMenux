@@ -1,5 +1,6 @@
 """Conservative recreation editor: preserve saved state and add data routes."""
 import copy
+import os
 import re
 from pathlib import Path, PurePosixPath
 
@@ -108,6 +109,33 @@ def edit_environment(deployment, ui):
             environment.append(item)
 
 
+# Host paths a recipe mounts as they are, such as /dev or /proc for a host
+# monitor, and single files are not offered for editing.
+SYSTEM_PATHS = ('/dev/', '/proc/', '/sys/', '/run/', '/var/run/')
+
+
+def editable_paths(deployment):
+    """The mounts the editor of paths shows: volumes and host directories."""
+    return [m for m in deployment.get('mounts', [])
+            if m['type'] == 'managed-volume'
+            or (m['type'] == 'host-bind' and not str(m.get('source', '')).startswith(SYSTEM_PATHS)
+                and not os.path.isfile(m.get('source', '')))]
+
+
+def apply_path_changes(deployment, changes):
+    """Take the result of the editor of paths into the deployment. A new host
+    directory of an existing path is created when it does not exist."""
+    mounts = [m for m in deployment.get('mounts', []) if m['container_path'] not in changes['remove']]
+    for mount in mounts:
+        change = changes['change'].get(mount['container_path'], {})
+        if 'source' in change:
+            mount['source'] = change['source']
+            mount['create_if_missing'] = True
+        if 'read_only' in change:
+            mount['read_only'] = change['read_only']
+    deployment['mounts'] = mounts + changes['add']
+
+
 def modification_options(candidate):
     """Only offer supported settings; never put environment values in the menu."""
     deployment = candidate['deployment']
@@ -125,9 +153,11 @@ def modification_options(candidate):
         ('network', row(translate('Network'),
                         f"{network.get('bridge', '-')} · {'DHCP' if address == 'dhcp' else address}"
                         + (f" · VLAN {network['vlan_tag']}" if network.get('vlan_tag') else ''))),
-        # Only the paths added by hand: the application's own volumes are not extra.
-        ('paths', row(translate('Extra paths'), sum(1 for m in deployment.get('mounts', []) if m.get('custom')))),
+        ('paths', row(translate('Paths'), len(editable_paths(deployment)))),
     ]
+    from . import mount_idmap
+    if not candidate.get('stack') and mount_idmap.eligible(deployment) and mount_idmap.backend().supported():
+        options.append(('idmap', translate('Mount user mapping (idmap)')))
     if profile.get('shared_directories'):
         options.append(('shares', translate('Shared directories')))
     if profile.get('hardware_acceleration'):
@@ -160,14 +190,26 @@ def edit_setting(candidate, ui, setting):
         resources['memory_mb'] = positive_integer(ui, translate('RAM in MiB'), resources['memory_mb'], 128)
     elif setting == 'network':
         edit_network(deployment, ui)
+    elif setting == 'idmap':
+        from . import mount_idmap
+        if candidate.get('stack') or not mount_idmap.eligible(deployment):
+            raise ValueError(translate('Mount user mapping is only available for standalone unprivileged containers'))
+        mount_idmap.backend().ensure_supported()
+        mount_idmap.configure(ui, deployment, profile,
+                              config=candidate.get('observed', {}).get('config', '').encode())
     elif setting == 'shares':
         from .installer import ask_shared_directories
         deployment['mounts'] += ask_shared_directories(
             ui, template, deployment['mounts'], deployment['rootfs']['storage'], True, optional=True,
             unprivileged=deployment.get('security', {}).get('unprivileged', True))
     elif setting == 'paths':
-        from .custom_mounts import ask_custom_mounts
-        deployment['mounts'] = ask_custom_mounts(ui, deployment['mounts'], deployment['rootfs']['storage'])
+        from .custom_mounts import edit_paths
+        shown = editable_paths(deployment)
+        changes = edit_paths(ui, [{'container_path': m['container_path'], 'type': m['type'], 'source': m['source'],
+                                   'size': f"{m['size_gb']} GB" if m.get('size_gb') else None,
+                                   'read_only': bool(m.get('read_only')), 'extra': bool(m.get('custom'))}
+                                  for m in shown], deployment['rootfs']['storage'])
+        apply_path_changes(deployment, changes)
     elif setting == 'acceleration':
         edit_acceleration(candidate, ui, confirm=False)
     elif setting == 'detector':
@@ -328,7 +370,8 @@ def refresh_template(candidate, ui):
     for item in profile.get('tmpfs_mounts', []):
         if any(m['container_path'] == item['container_path'] for m in tmpfs):
             continue
-        size = item['default_size_mb']
+        size = (max(1, int(deployment['resources']['memory_mb']) // 2)
+                if item.get('size_from_memory') else item['default_size_mb'])
         if item.get('prompt_size', True):
             size = positive_integer(ui, f"{translate('Tmpfs size in MiB for')} {item['container_path']}", size, item.get('minimum_size_mb', 1))
         tmpfs_mount = {'container_path': item['container_path'], 'size_mb': size,

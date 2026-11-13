@@ -89,8 +89,8 @@
     "items": [
       "Pick the disk.",
       "Pick \"Use existing filesystem\".",
-      "Storage ID, mount path, content-type preset.",
-      "ProxMenux does <strong>not</strong> touch the data: it creates the mount point, mounts the disk, adds a UUID entry to <code>/etc/fstab</code>, and registers it as a Proxmox <code>dir</code> storage."
+      "Mount method: <strong>host fstab mount</strong> (default), <strong>Proxmox storage</strong>, or both. Then a mount name or storage ID, the mount path and, for Proxmox storage only, the content-type preset.",
+      "ProxMenux does <strong>not</strong> touch the data: it creates the mount point, mounts the disk and adds a UUID entry to <code>/etc/fstab</code>. It registers a Proxmox <code>dir</code> storage only if you chose that method."
     ],
     "warnTitle": "Reuse path does not handle ZFS pools",
     "warnBody": "If the disk already contains a ZFS pool, the <em>reuse</em> path here just tries to mount it as a regular filesystem — which fails. To import an existing ZFS pool use <code>zpool import &lt;name&gt;</code> on the command line and then register it manually with <code>pvesm add zfspool</code>."
@@ -133,13 +133,13 @@
   },
   "view": {
     "heading": "View disk storages",
-    "body": "Lists every disk-backed Proxmox storage (both <code>dir</code> and <code>zfspool</code> that are user-created — system pools like <code>rpool</code> are hidden). Shows the mount path / pool name, content types and live status."
+    "body": "Lists every disk-backed Proxmox storage (both <code>dir</code> and <code>zfspool</code> that are user-created; system pools like <code>rpool</code> are hidden) and the fstab-only local-disk mounts. Shows the mount path / pool name, content types and live status."
   },
   "remove": {
     "heading": "Remove disk storage",
-    "body": "Unregisters the storage from Proxmox (<code>pvesm remove</code>) and offers to clean up the matching entry in <code>/etc/fstab</code>. For ZFS pools the script does <strong>not</strong> automatically destroy the pool — that is a separate <code>zpool destroy &lt;name&gt;</code> step you do by hand when you are sure.",
+    "body": "The picker lists Proxmox storages and fstab-only local-disk mounts. After one confirmation, ProxMenux unregisters the storage (<code>pvesm remove</code>), unmounts the path and removes its line from <code>/etc/fstab</code>. For ZFS pools it runs <code>zpool export &lt;pool&gt;</code> but does <strong>not</strong> destroy the pool; that is a separate <code>zpool destroy &lt;name&gt;</code> step you do by hand when you are sure. At the end it offers to reboot the host.",
     "warnTitle": "Data and existing VM dependencies",
-    "warnBody": "Removing the storage does not touch the filesystem or the pool — the data stays on the disk. But VMs / CTs that reference this storage by ID will fail to start after removal. Move those VM disks to another storage (or take a backup) before removing."
+    "warnBody": "Removing the storage does not format the disk or destroy the pool: the data stays on the disk, but the disk is unmounted and a ZFS pool is exported. But VMs / CTs that reference this storage by ID will fail to start after removal. Move those VM disks to another storage (or take a backup) before removing."
   },
   "list": {
     "heading": "List available disks",

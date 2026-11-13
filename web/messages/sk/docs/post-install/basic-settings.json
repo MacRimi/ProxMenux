@@ -35,15 +35,15 @@
     "doesTitle": "Čo robí možnosť ProxMenux — overené podľa skriptu",
     "doesIntro": "Aktualizácia ProxMenux vykoná uvedené príkazy apt a pridá prípravné aj záverečné kroky, na ktoré by ste inak museli myslieť sami. Nasledujúce položky zodpovedajú výberovému skriptu; podrobnosti sú v <link>Aktualizácia systému Proxmox</link>.",
     "doesItems": [
-      "<strong>Najprv poriadok v repozitároch.</strong> Zakáže podnikové zdroje <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré súbory repozitárov z predchádzajúcich verzií PVE a vytvorí čistý <code>proxmox.sources</code> s bezplatným kanálom <em>pve-no-subscription</em> podľa kódového názvu Debianu na hostiteľovi: trixie pre PVE 9, bookworm pre PVE 8.",
-      "<strong>Prepíše repozitáre Debian</strong> s main / updates / security a <code>non-free-firmware</code>, aby počas aktualizácie zmizlo upozornenie na firmvér.",
+      "<strong>Najprv poriadok v repozitároch.</strong> Na PVE 9: zakáže podnikové <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré súbory repozitárov z predchádzajúcich verzií PVE a vytvorí čistý <code>proxmox.sources</code> s bezplatným kanálom <em>pve-no-subscription</em> pre trixie. Na PVE 8: zakomentuje <code>pve-enterprise.list</code> / <code>ceph.list</code> a zapíše <code>pve-public-repo.list</code> s <em>pve-no-subscription</em> pre bookworm.",
+      "<strong>Prepíše repozitáre Debian</strong> (na PVE 8 <code>/etc/apt/sources.list</code> po zálohe s časovou pečiatkou) s main / updates / security a <code>non-free-firmware</code>, aby počas aktualizácie zmizlo upozornenie na firmvér.",
       "<strong>Spustí oficiálnu aktualizáciu.</strong> <code>apt-get update</code> a potom <code>apt full-upgrade -y</code> (PVE 9) alebo <code>apt dist-upgrade -y</code> (PVE 8), neinteraktívne s <code>--force-confdef --force-confold</code> na zachovanie upravených konfiguračných súborov.",
       "<strong>Nainštaluje základné balíky</strong>, ak chýbajú: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
       "<strong>Skontroluje metadáta LVM.</strong> Hľadá VM s priamo priradenými diskami, ktoré mohli na surové disky zapísať staré hlavičky fyzických zväzkov. Upozorní na nezrovnalosti bez automatickej opravy.",
       "<strong>Potom vyčistí:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, potom vyzve na reštart, ak jadro bolo aktualizované alebo <code>/var/run/reboot-required</code> je prítomný."
     ],
     "shortTitle": "Stručne povedané",
-    "shortBody": "Možnosť spustí odporúčaný príkaz <code>apt update && apt full-upgrade -y</code>, doplní úpravu repozitárov a záverečné čistenie uvedené v oficiálnom návode a ponúkne reštart. Pozrite <link>Aktualizácia systému Proxmox</link> s celým diagramom; rovnaký aktualizátor je samostatne dostupný v hlavnom menu.",
+    "shortBody": "Možnosť spustí odporúčaný príkaz Proxmoxu (<code>apt full-upgrade</code> na PVE 9, <code>dist-upgrade</code> na PVE 8), doplní úpravu repozitárov a záverečné čistenie uvedené v oficiálnom návode a na konci ponúkne reštart. Pozrite <link>Aktualizácia systému Proxmox</link>; rovnaký aktualizátor je samostatne dostupný v hlavnom menu, s celým diagramom.",
     "subTitle": "Nepoužívajte na hostiteľovi s predplatným",
     "subBody": "Ak máte predplatné Proxmox a chcete ponechať repozitáre Enterprise, túto možnosť vynechajte. Zakáže Enterprise a prepne hostiteľa na komunitný kanál. Aktualizácia balíkov ani prepísanie repozitárov sa nedajú vrátiť cez Odinštalovať optimalizácie. Neskoršiu zmenu kanála musíte vykonať úpravou konfigurácie repozitárov.",
     "safetyTitle": "Bezpečnostná kontrola po aktualizácii",

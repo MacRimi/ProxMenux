@@ -9,10 +9,10 @@
   },
   "intro": {
     "p1": "L'onglet <strong>App</strong> enregistre les applications du LXC. Une fiche peut contenir simplement un nom et un lien web, ou aussi un détecteur de version installée et une source amont.",
-    "p2": "La procédure qui modifie le logiciel se configure séparément dans l'<link>onglet Mises à jour</link>. Enregistrer une application ne lance jamais d'installateur ni de programme de mise à jour.",
+    "p2": "La procédure qui modifie le logiciel se configure séparément dans l’<link>onglet Mises à jour</link>. Enregistrer une application ne lance jamais d'installateur ni de programme de mise à jour.",
     "callout": "L'enregistrement, le suivi et la mise à jour des versions sont trois capacités indépendantes. Chacun peut être utilisé sans exiger les deux autres.",
     "dashboardTitle": "De l'inscription au lanceur Apps",
-    "dashboard": "Chaque lien web enregistré ici apparaît aussi dans l'<appsLink>onglet Apps</appsLink> principal. Cette page du LXC reste la référence pour le nom, le logo, les liens et le suivi de version."
+    "dashboard": "Chaque lien web enregistré ici apparaît aussi dans l’<appsLink>onglet Apps</appsLink> principal. Cette page du LXC reste la référence pour le nom, le logo, les liens et le suivi de version."
   },
   "overview": {
     "heading": "Ce que peut fournir une fiche d'application",
@@ -57,7 +57,7 @@
       "Les résultats de recherche peuvent préremplir le nom canonique, le logo et les ports web communs.",
       "Les détecteurs connus utilisent les vrais noms de paquets, exécutables, fichiers, distributions Python, étiquettes OCI ou commandes, plutôt qu'une hypothèse universelle comme <code>/root/.app</code>.",
       "Les corrections vérifiées dans les installations réelles sont prioritaires lorsque le chemin diffère des métadonnées de l'installateur.",
-      "Les marqueurs Proxmox VE Helper-Scripts tels que <code>/root/.slug</code> restent un signal de compatibilité pour les nouvelles installations d'aide, pas le seul détecteur.",
+      "Les marqueurs Community Scripts tels que <code>/root/.slug</code> restent un signal de compatibilité pour les nouvelles installations d'aide, pas le seul détecteur.",
       "Chaque valeur proposée peut être modifiée avant d'enregistrer pour couvrir les installateurs officiels et les installations manuelles."
     ]
   },
@@ -145,11 +145,11 @@
   },
   "updater": {
     "heading": "Le suivi et la mise à jour des versions sont indépendants",
-    "lead": "L'<link>onglet Mises à jour</link> crée une section dès qu'une fiche d'application est enregistrée.",
+    "lead": "L’<link>onglet Mises à jour</link> crée une section dès qu'une fiche d'application est enregistrée.",
     "items": [
       "Un enregistrement link-only montre que le suivi des versions n'est pas configuré, mais peut toujours recevoir une commande de mise à jour personnalisée.",
       "Une application avec suivi mais sans méthode exécutable affiche un message neutre demandant une commande personnalisée.",
-      "Une application avec un wrapper Proxmox VE Helper-Scripts vérifié peut utiliser ce programme intégré même si sa fiche a commencé par un simple lien web.",
+      "Une application avec un wrapper Community Scripts vérifié peut utiliser ce programme intégré même si sa fiche a commencé par un simple lien web.",
       "Ajouter ou modifier un programme de mise à jour ne change ni le détecteur ni la source amont enregistrés dans App."
     ]
   },

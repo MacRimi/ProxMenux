@@ -52,12 +52,12 @@
       },
       "rows": [
         {
-          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "fileRich": "<code>pveproxy-ssl.pem</code><br></br><code>pveproxy-ssl.key</code>",
           "originRich": "Anpassade certifikat som laddats upp via Proxmox UI - inklusive Let's Encrypt-certifikatet som utfärdats under <em>Datacenter → Node → Certifikat → ACME</em>.",
           "when": "Föredras när båda filerna finns; Monitor använder certifikatet som Proxmox presenterar."
         },
         {
-          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "fileRich": "<code>pve-ssl.pem</code><br></br><code>pve-ssl.key</code>",
           "originRich": "Självsignerat certifikat som genereras vid installationstid av Proxmox PKI.",
           "whenRich": "Fallback när ingen <code>pveproxy-ssl.pem</code> finns."
         }
@@ -127,7 +127,7 @@
       "<strong>Privat nyckel</strong>: matchande nyckel i PEM-format (<code>.key</code>)."
     ],
     "outro": "Båda filerna läses av Monitor-processen vid start. De måste kunna läsas av användaren som systemd-enheten körs som (root som standard). Vanliga sökvägar när ACME hanteras utanför Proxmox:",
-    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "code": "# certbot\n/etc/letsencrypt/live/&lt;your-host&gt;/fullchain.pem\n/etc/letsencrypt/live/&lt;your-host&gt;/privkey.pem\n\n# acme.sh\n~/.acme.sh/&lt;your-host&gt;_ecc/fullchain.cer\n~/.acme.sh/&lt;your-host&gt;_ecc/&lt;your-host&gt;.key",
     "symlinkCallout": {
       "title": "Symlink mål vs. filer",
       "bodyRich": "<code>certbot</code> lagrar de faktiska filerna i <code>/etc/letsencrypt/archive/</code> och <code>live/</code>-vägen är en symlänk. Peka Monitorn på <code>live/</code> symlink, inte <code>archive/</code>-filen - på så sätt omskriver varje förnyelsecykel helt enkelt symlinkmålet och Monitorn plockar upp den nya certen vid nästa servicestart."
@@ -138,14 +138,14 @@
     "bodyRich": "Att spara förändringen skriver <code>/etc/proxmenux/ssl_config.json</code> och utlöser en omstart av <code>proxmenux-monitor</code> systemd-enheten. Fliken webbläsare kommer att förlora sin nuvarande anslutning - ladda den på <code>https://&lt;host&gt;:8008/</code>. Den första belastningen med en Let's Encrypt-cert bör inte visa någon varning; med Proxmox självsignerad cert kommer webbläsaren att kräva ett undantag, samma som för port 8006.",
     "reverse": {
       "heading": "Omvända proxyservrar och webhooks",
-      "bodyRich": "När Monitorn byter till HTTPS, Proxmox VE webhook URL-adresser registrerade för meddelanden också vända från <code>http://</code> till <code>https://</code> automatiskt. Befintliga webhook-poster skrivs om nästa gång en anmälningsregel sparas eller återupptäcks, så ingen manuell redigering av Proxmox-meddelandekonfig behövs."
+      "bodyRich": "När Monitorn byter till HTTPS vänds Proxmox VE webhook URL-adresser registrerade för meddelanden också från <code>http://</code> till <code>https://</code> automatiskt. Om en ProxMenux-webhook redan är registrerad i Proxmox registreras den på nytt med det nya schemat när HTTPS aktiveras eller inaktiveras, så ingen manuell redigering av Proxmox-meddelandekonfig behövs."
     }
   },
   "trustCa": {
     "heading": "Lita på Proxmox självsignerade CA",
     "intro1Rich": "För att behålla Proxmox standardcertifikat utan ACME importerar du klustrets rot-CA i systemets eller webbläsarens betrodda certifikatlager. Monitor upptäcker <code>/etc/pve/local/pve-ssl.pem</code> som reservcertifikat. Klienten litar då på utfärdaren; URL:en måste fortfarande matcha ett namn i certifikatet.",
     "intro2Rich": "CA-filen bor på <code>/etc/pve/pve-root-ca.pem</code> på varje nod. I ett kluster är vägen på det delade <code>pmxcfs</code>-filsystemet så att alla noder delar samma rot, och en enda import täcker hela datacentret. Kopiera den till din maskin:",
-    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "code": "scp root@&lt;your-host&gt;:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Importera sedan den på klientsidan:",
     "items": [
       "<strong>Linux (hela systemet):</strong> kör <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> följt av <code>sudo update-ca-certificates</code>. Webbläsare med systemets certifikatlager (Chromium, Edge) känner igen CA:n efter omstart; Firefox har ett eget lager och behöver den manuella importen nedan.",

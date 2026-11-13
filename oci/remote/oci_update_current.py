@@ -12,8 +12,10 @@ import tarfile
 import tempfile
 
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as transaction
 import oci_work_backup as work_backup
+import oci_layer_cache as layer_cache
 from oci_installation_state import image_from_archive, same_image
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -90,10 +92,18 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
 
     def intact(path):
         try:
+            # Metadata is only a rejection filter. A stale archive is never
+            # read/decompressed in full just to discover it is the old image.
+            if not same_image(candidate, image_from_archive(str(path))):
+                return False
             run_quiet([sys.executable, str(verifier), str(path)],
                       translate('The image did not pass the integrity check'))
+            # Recheck the contract after verification as well: a candidate
+            # must still match before it can be returned to the transaction.
             return same_image(candidate, image_from_archive(str(path)))
-        except (RuntimeError, OSError, ValueError, KeyError, tarfile.TarError):
+        # An unverified archive may hold well-formed JSON of the wrong shape;
+        # it is rejected and downloaded again, never a reason to stop.
+        except (RuntimeError, OSError, ValueError, KeyError, TypeError, AttributeError, tarfile.TarError):
             return False
 
     # Initial installations and updates use different archive names. The
@@ -124,9 +134,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         archive.unlink()
     # The compressed layers are what the download writes; nothing was changed yet.
     size, free = int(candidate.get('size') or 0), work_backup.available(archive.parent)
-    if size and free < int(size * 1.1) + 256 * 1024**2:
+    required = int(size * 1.1) + 256 * 1024**2
+    if size and free < required:
         raise ValueError(f"{translate('The new image does not fit on the storage where images are downloaded:')} {storage}. "
-                         f"{translate('Needed:')} {work_backup.gib(int(size * 1.1) + 256 * 1024**2)}. "
+                         f"{translate('Needed:')} {work_backup.gib(required)}. "
                          f"{translate('Free:')} {work_backup.gib(free)}. {translate('The application was not modified.')}")
     # A download can come back complete yet damaged when the connection drops
     # and the transfer resumes; the integrity check catches it, and a second
@@ -138,9 +149,21 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         os.close(fd)
         partial = Path(name)
         try:
-            run_quiet(['skopeo', 'copy', '--override-arch', architecture,
-                'docker://' + repository(reference) + '@' + digest,
-                'oci-archive:' + str(partial)], translate('Could not download the image'))
+            source = 'docker://' + repository(reference) + '@' + digest
+            cached = False
+            if layer_cache.enabled():
+                try:
+                    layer_cache.pull(source, architecture, partial, local_archives, candidate,
+                        lambda args: run_quiet(args, translate('Could not download the image')),
+                        available=work_backup.available)
+                    cached = True
+                except layer_cache.CacheUnavailable as error:
+                    transaction.log(f'optional layer cache unavailable: {error}')
+                    msg_warn(translate('The shared layer cache is unavailable; downloading the image normally.'))
+                    partial.unlink(missing_ok=True)
+            if not cached:
+                run_quiet(['skopeo', 'copy', '--override-arch', architecture, source,
+                    'oci-archive:' + str(partial)], translate('Could not download the image'))
             msg_ok(translate('Image downloaded'))
             msg_info(translate('Verifying the image integrity...'))
             if intact(partial):
@@ -199,7 +222,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
              else translate('Checking the container before modifying it...'))
-    with instances.locked(instances.ROOT):
+    with native_reads.session(log=transaction.log), instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, vmid)
         if record['status'] != 'installed' or record.get('pending_transaction') or record.get('pending_stack_transaction'):
             raise ValueError(translate('The instance is not ready to be updated'))
@@ -238,7 +261,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         current = record['observed']['image'] if operation == 'update' else None
         check = lambda: work_backup.locate(
             instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid)
-        if operation == 'recreate':
+        if operation == 'recreate' or layer_cache.enabled():
             archive, digest = resolve_archive(desired, config, current, check,
                 local_archives=[record['observed'].get('archive_path')])
         else:
@@ -265,7 +288,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         with oci_operation_notice.operation([vmid], kind, application_name(record, vmid)):
             transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
                               registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
-                              keep_backup=file_storage)
+                              keep_backup=file_storage, **({'force_archive': True} if keep_backup else {}))
     marker = os.environ.get('OCI_RECREATED_MARKER')
     if marker:
         Path(marker).touch()

@@ -32,6 +32,7 @@ DEFAULT_CONTEXT = (
 
 TECHNICAL_TERMS = (
     "Proxmox VE Helper-Scripts",
+    "Community Scripts",
     "Proxmox Backup Server",
     "Proxmox Mail Gateway",
     "Proxmox VE",
@@ -222,6 +223,9 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
     # This UI breadcrumb is prose, rather than a filesystem path.
     if last == "uipath" and "<strong>" in source:
         return False
+    # Slovak names the sidebar FAQ entry in words; "FAQ" is not a literal here.
+    if last == "aboutfaq":
+        return False
     if last == "flow" and source in {"loader", "dedicated"}:
         return True
     # These exact values drive rendering/navigation; similarly named visible
@@ -232,10 +236,14 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
         return True
     if last == "key" and source in {"linux", "nas", "windows"}:
         return True
-    if last in NON_TRANSLATABLE_KEYS or any(
+    # Table headers, captions and menu breadcrumbs are visible labels, even when
+    # their key names a column of paths or codes. The value checks below still
+    # keep literals such as "VM" or "#" protected.
+    label = last.startswith(("header", "caption")) or (last == "path" and "→" in source)
+    if not label and (last in NON_TRANSLATABLE_KEYS or any(
         last.endswith(suffix)
         for suffix in ("url", "href", "path", "command", "code", "icon")
-    ):
+    )):
         return True
     if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/\S+", source):
         return True

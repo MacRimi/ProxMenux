@@ -345,18 +345,34 @@ cleanup_corrupted_files() {
     fi
 }
 
+# Resolve the host's Monitor AppImage flavour with the same helper the
+# build uses (PMX_APPIMAGE_ARCH / PMX_APPIMAGE_SUFFIX). x86_64 keeps the
+# historical unsuffixed file names; aarch64 uses `-aarch64`.
+select_monitor_appimage_arch() {
+    local helper="$TEMP_DIR/AppImage/scripts/appimage_arch.sh"
+    [ -f "$helper" ] || return 1
+    # shellcheck source=AppImage/scripts/appimage_arch.sh
+    source "$helper" && pmx_appimage_arch "$(uname -m)" 2>/dev/null
+}
+
 detect_latest_appimage() {
     local appimage_dir="$TEMP_DIR/AppImage"
     [ ! -d "$appimage_dir" ] && return 1
     local latest
-    latest=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" -type f | sort -V | tail -1)
+    if [ -n "$PMX_APPIMAGE_SUFFIX" ]; then
+        latest=$(find "$appimage_dir" -name "ProxMenux-*${PMX_APPIMAGE_SUFFIX}.AppImage" -type f | sort -V | tail -1)
+    else
+        latest=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" ! -name "ProxMenux-*-aarch64.AppImage" -type f | sort -V | tail -1)
+    fi
     [ -z "$latest" ] && return 1
     echo "$latest"
 }
 
 get_appimage_version() {
     local filename
-    filename=$(basename "$1")
+    filename=$(basename "$1" .AppImage)
+    # Drop the architecture suffix so it is not read as a pre-release tag.
+    filename="${filename%"${PMX_APPIMAGE_SUFFIX:-}"}"
     # Match any dotted number sequence + optional pre-release suffix
     # (e.g. "-beta"). The previous `[0-9]+\.[0-9]+\.[0-9]+` was hardcoded
     # to three segments and dropped both the fourth segment AND the
@@ -412,12 +428,45 @@ extract_appimage_to_runtime_dir() {
 }
 
 # ── Monitor install ────────────────────────────────────────
+# A Monitor installed for the first time asks for this code on its first
+# visit, so nobody else on the network can choose how it is reached before its
+# owner does. Updates and reinstallations keep the access already chosen.
+MONITOR_SETUP_CODE=""
+
+monitor_is_new() {
+    [ ! -f "$MONITOR_SERVICE_FILE" ] && [ ! -d "$MONITOR_RUNTIME_DIR" ] \
+        && [ ! -f /root/.config/proxmenux-monitor/auth.json ]
+}
+
+create_monitor_setup_code() {
+    local raw
+    raw=$(LC_ALL=C tr -dc 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' </dev/urandom 2>/dev/null | head -c 12)
+    [ ${#raw} -eq 12 ] || return 1
+    MONITOR_SETUP_CODE="${raw:0:4}-${raw:4:4}-${raw:8:4}"
+    mkdir -p "$BASE_DIR"
+    ( umask 077; printf '%s\n' "$MONITOR_SETUP_CODE" > "$BASE_DIR/monitor-setup-code" ) || { MONITOR_SETUP_CODE=""; return 1; }
+    chmod 600 "$BASE_DIR/monitor-setup-code" 2>/dev/null || true
+}
+
 install_proxmenux_monitor() {
+    local monitor_new=0
+    monitor_is_new && monitor_new=1
+
+    if [ "$monitor_new" = 1 ]; then
+        create_monitor_setup_code || msg_warn "Could not create the Monitor setup code."
+    fi
+
+    if ! select_monitor_appimage_arch; then
+        msg_error "ProxMenux Monitor is not available for this architecture ($(uname -m))."
+        update_config "proxmenux_monitor" "unsupported_arch"
+        return 1
+    fi
+
     local appimage_source
     appimage_source=$(detect_latest_appimage)
 
     if [ -z "$appimage_source" ] || [ ! -f "$appimage_source" ]; then
-        msg_error "ProxMenux Monitor AppImage not found in $TEMP_DIR/AppImage/"
+        msg_error "ProxMenux Monitor AppImage ($PMX_APPIMAGE_ARCH) not found in $TEMP_DIR/AppImage/"
         msg_warn "Make sure the AppImage directory exists in the develop branch."
         update_config "proxmenux_monitor" "appimage_not_found"
         return 1
@@ -432,7 +481,7 @@ install_proxmenux_monitor() {
     local service_exists=false
     [ -f "$MONITOR_SERVICE_FILE" ] && service_exists=true
 
-    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor.AppImage.sha256"
+    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor${PMX_APPIMAGE_SUFFIX}.AppImage.sha256"
     if [ -f "$sha256_file" ]; then
         msg_info "Verifying AppImage integrity..."
         local expected_hash actual_hash
@@ -663,9 +712,11 @@ install_beta() {
             update_config "jq" "installed"
         else
             discard_apt_error
-            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+            local jq_arch=amd64
+            [ "$(uname -m)" = "aarch64" ] && jq_arch=arm64
+            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${jq_arch}"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq \
-               && command -v jq > /dev/null 2>&1; then
+               && jq --version > /dev/null 2>&1; then
                 update_config "jq" "installed_from_github"
             else
                 msg_error "Failed to install jq. Please install it manually and re-run."
@@ -818,6 +869,8 @@ install_beta() {
         create_monitor_service
     elif [ $monitor_status -eq 2 ]; then
         msg_ok "ProxMenux Monitor beta updated successfully."
+    else
+        msg_warn "ProxMenux installed, but ProxMenux Monitor could not be installed."
     fi
 
     # Reset the update indicator flag after successful installation
@@ -898,6 +951,10 @@ msg_title "ProxMenux Beta installed successfully"
 if systemctl is-active --quiet proxmenux-monitor.service; then
     local_ip=$(get_server_ip)
     echo -e "${GN}🌐  ProxMenux Monitor (beta) is running${CL}: ${BL}http://${local_ip}:${MONITOR_PORT}${CL}"
+    if [ -n "$MONITOR_SETUP_CODE" ]; then
+        echo -e "${GN}🔑  Setup code for the first visit${CL}: ${YWB}${MONITOR_SETUP_CODE}${CL}"
+        echo -e "    You can see it again with: menu → Settings → Show Monitor Setup Code"
+    fi
     echo
 fi
 

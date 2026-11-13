@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "Repository APT + aggiornamento completo",
-      "what": "Disabilita le sorgenti Enterprise pve-enterprise.sources e ceph.sources, crea una sorgente no-subscription per il nome in codice Debian dell’host, quindi esegue apt update && apt full-upgrade -y (comando ufficiale di aggiornamento Proxmox).",
+      "what": "Disabilita i repository Enterprise (pve-enterprise.sources / ceph.sources su PVE 9, i file .list su PVE 8), crea una sorgente no-subscription per il nome in codice Debian dell’host, quindi esegue apt update && apt full-upgrade -y (dist-upgrade su PVE 8).",
       "category": "Impostazioni di base",
       "categorySlug": "basic-settings"
     },
@@ -115,7 +115,7 @@
     "intro": "Il primo passo del pacchetto automatizzato è l'aggiornamento Proxmox. La guida di aggiornamento di Proxmox per un host in esecuzione (nella stessa versione principale) è quella di eseguire:",
     "after": "Questa riga è il comando ufficiale delle versioni attuali di Proxmox. Lo script automatizzato esegue <strong>esattamente</strong> questo e aggiunge la pulizia dei repository e le operazioni successive consigliate dalla guida — come l’utilità separata <link>Aggiornamento del sistema Proxmox</link>:",
     "items": [
-      "Disabilita le sorgenti Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, rimuove i vecchi file dei repository e crea una sorgente no-subscription per il nome in codice dell’host.",
+      "Disabilita i repository Enterprise (<code>pve-enterprise.sources</code> / <code>ceph.sources</code> su PVE 9, i file <code>.list</code> su PVE 8), rimuove i vecchi file dei repository e crea una sorgente no-subscription per il nome in codice dell’host.",
       "Esegue l’aggiornamento senza interazione con <code>DEBIAN_FRONTEND=noninteractive</code> e <code>--force-confdef --force-confold</code>: conserva i file personalizzati anche quando sono cambiati nel progetto originale.",
       "Installa pacchetti Proxmox essenziali se mancanti (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "Controllo di coerenza dei metadati LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> e richiesta di riavvio solo se il kernel è cambiato."

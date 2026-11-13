@@ -1153,7 +1153,7 @@ declare -a PROXMENUX_SCRIPTS=(
 
 
 declare -a COMMUNITY_SCRIPTS=(
-    "Disable NIC Offloading (Intel e1000e)|Helper-Scripts|confirm_and_run \"Helper-Scripts\" \"bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/nic-offloading-fix.sh)\""
+    "Disable NIC Offloading (Intel e1000e)|Community Scripts|confirm_and_run \"Community Scripts\" \"bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/nic-offloading-fix.sh)\""
 )
 
 # ==========================================================
@@ -1253,7 +1253,7 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("" "\Z4───────────────────── $(translate "Community Scripts") ──────────────────────\Zn")
+        menu_items+=("" "\Z4───────────────────── $(translate "External Scripts") ──────────────────────\Zn")
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
@@ -1278,7 +1278,10 @@ show_menu() {
             script_selection="$preselected"
             exit_status=0
             PRESELECTED_OPTION=""
+            CATALOG_ITEM_DONE=1
         else
+            # Opened from the Monitor's Catalog tab, the option ends the run instead of the menu following.
+            [[ "${PROXMENUX_CATALOG:-}" == "1" && -n "${CATALOG_ITEM_DONE:-}" ]] && exit 0
             exec 3>&1
             script_selection=$(dialog --clear --colors \
                                      --backtitle "ProxMenux" \

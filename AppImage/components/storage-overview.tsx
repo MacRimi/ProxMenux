@@ -1665,6 +1665,11 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                 .map((mount) => {
                   const isStale = mount.status === "stale"
                   const isReadonly = mount.status === "readonly"
+                  const mountStatusClass = isStale
+                    ? "bg-red-500/10 text-red-500 border-red-500/20"
+                    : isReadonly
+                      ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                      : "bg-green-500/10 text-green-500 border-green-500/20"
                   const cardClasses = isStale
                     ? "border-red-500/50 bg-red-500/5 sm:hover:bg-red-500/10"
                     : isReadonly
@@ -1677,13 +1682,17 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                       className={`cursor-pointer border rounded-lg p-3 transition-colors ${cardClasses}`}
                     >
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                              isStale ? "bg-red-500" : isReadonly ? "bg-amber-500" : "bg-green-500"
-                            }`}
-                          />
-                          <h3 className="font-mono text-sm truncate">{mount.target}</h3>
+                        {/* On a phone the path takes a line of its own, whole,
+                            and the badges follow below it. */}
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 basis-full sm:basis-auto">
+                            <div
+                              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                isStale ? "bg-red-500" : isReadonly ? "bg-amber-500" : "bg-green-500"
+                              }`}
+                            />
+                            <h3 className="font-mono text-sm break-all sm:truncate">{mount.target}</h3>
+                          </div>
                           <Badge className={getStorageTypeBadge(mount.fstype)}>{mount.fstype}</Badge>
                           {/* Sprint 13.18: makes it explicit that the
                               row corresponds to an entry already in the
@@ -1691,30 +1700,32 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                               keeps it visually consistent with the
                               adjacent type badge. */}
                           {mount.proxmox_managed && (
-                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 whitespace-nowrap">
                               {t("storage.managedByProxmox")}
                             </Badge>
                           )}
                           {mount.readonly && (
-                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                            <Badge
+                              className={
+                                isReadonly
+                                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  : "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                              }
+                            >
                               {t("storage.readOnlyShort")}
                             </Badge>
                           )}
+                          {/* The state goes with the other badges on a phone. */}
+                          <Badge className={`sm:hidden ${mountStatusClass}`}>
+                            {remoteMountStatusLabel(mount.status)}
+                          </Badge>
                         </div>
-                        <Badge
-                          className={
-                            isStale
-                              ? "bg-red-500/10 text-red-500 border-red-500/20"
-                              : isReadonly
-                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                : "bg-green-500/10 text-green-500 border-green-500/20"
-                          }
-                        >
+                        <Badge className={`hidden sm:inline-flex ${mountStatusClass}`}>
                           {remoteMountStatusLabel(mount.status)}
                         </Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-2 truncate">
-                        <span className="font-medium text-foreground">{t("storage.source")}:</span>{" "}
+                      <div className="text-xs text-muted-foreground mt-2 break-all sm:truncate">
+                        <span className="font-medium text-foreground">{t("storage.source")}</span>{" "}
                         <span className="font-mono">{mount.source || "—"}</span>
                       </div>
                       {isStale && mount.error && (

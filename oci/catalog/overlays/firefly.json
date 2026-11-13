@@ -10,5 +10,11 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "screenshots": [
+      "https://qq.uusec.com/_media/qq-web.png",
+      "https://qq.uusec.com/_media/mac-client.png"
+    ]
   }
 }

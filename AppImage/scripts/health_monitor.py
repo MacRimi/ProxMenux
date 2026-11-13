@@ -1709,6 +1709,7 @@ class HealthMonitor:
                         'status': ram_status,
                         'detail': 'High RAM usage sustained' if ram_status != 'OK' else 'Normal',
                         'dismissable': True,
+                        'error_key': 'memory_ram_usage',
                     },
                     'swap_usage': {
                         'status': swap_status,
@@ -1717,6 +1718,7 @@ class HealthMonitor:
                             else ('Normal' if swap.total > 0 else 'No swap configured')
                         ),
                         'dismissable': True,
+                        'error_key': 'memory_swap_usage',
                     }
                 }
             }
@@ -5944,18 +5946,21 @@ class HealthMonitor:
             # During grace period, report as INFO instead of CRITICAL
             checks = {}
             for st_name, st_info in storage_details.items():
+                # The key the error is recorded under, so Dismiss acknowledges it.
                 if in_grace_period:
                     checks[st_name] = {
                         'status': 'INFO',
                         'detail': f"[Startup] {st_info.get('reason', 'Unavailable')} (checking...)",
                         'dismissable': True,
-                        'grace_period': True
+                        'grace_period': True,
+                        'error_key': f'storage_unavailable_{st_name}',
                     }
                 else:
                     checks[st_name] = {
                         'status': 'CRITICAL',
                         'detail': st_info.get('reason', 'Unavailable'),
-                        'dismissable': True
+                        'dismissable': True,
+                        'error_key': f'storage_unavailable_{st_name}',
                     }
             
             # Add excluded unavailable storages as INFO (not as errors)
@@ -6026,8 +6031,9 @@ class HealthMonitor:
 
         Stale mounts get a CRITICAL — they're the failure mode that
         actually breaks user workflows (writes silently redirect to the
-        local FS and fill the disk). Read-only that wasn't requested
-        gets a WARNING. The persistence/clear logic mirrors the
+        local FS and fill the disk). A mount that is read-only although
+        its configuration asks for read-write gets a WARNING; one asked
+        to be read-only is healthy. The persistence/clear logic mirrors the
         Proxmox-storage check so the same Health → details panel can
         render the result, and so notifications go through the same
         pipeline (events.py / templates.py) with the standard 1h
@@ -6065,6 +6071,33 @@ class HealthMonitor:
         checks: Dict[str, Dict[str, Any]] = {}
         critical_targets: list[str] = []
         warning_targets: list[str] = []
+
+        # A mount of a storage excluded from health monitoring is shown but
+        # never raises an error; one it already had is cleared below.
+        try:
+            excluded_names = health_persistence.get_excluded_storage_names('health')
+        except Exception:
+            excluded_names = set()
+        monitored = []
+        for m in mounts:
+            m['storage_name'] = mount_monitor.storage_for_mount(
+                m.get('target', ''), m.get('source', ''), host_mounts) or ''
+            if m['storage_name'] and m['storage_name'] in excluded_names:
+                lxc_id = m.get('lxc_id', '') or ''
+                label = (f"CT {lxc_id}" + (f" ({m.get('lxc_name')})" if m.get('lxc_name') else '')
+                         + f" {m.get('target', '?')}") if lxc_id else m.get('target', '?')
+                checks[label] = {
+                    'status': 'INFO',
+                    'detail': f"{m.get('fstype', '?')} mount of storage {m['storage_name']} excluded from monitoring",
+                    'excluded': True,
+                    'fstype': m.get('fstype', '?'),
+                    'source': m.get('source', ''),
+                    'lxc_id': lxc_id,
+                    'lxc_name': m.get('lxc_name', '') or '',
+                }
+            else:
+                monitored.append(m)
+        mounts = monitored
 
         for m in mounts:
             target = m.get('target', '?')
@@ -6122,6 +6155,7 @@ class HealthMonitor:
                         'lxc_id': lxc_id,
                         'lxc_name': lxc_name,
                         'lxc_scope': lxc_scope,
+                        'storage_name': m.get('storage_name', ''),
                     },
                 )
             elif status == 'readonly':
@@ -6129,7 +6163,7 @@ class HealthMonitor:
                     'status': 'WARNING',
                     'error_key': error_key,
                     'dismissable': True,
-                    'detail': f'{fstype} mount unexpectedly read-only',
+                    'detail': f'{fstype} mount read-only, configured read-write',
                     'fstype': fstype,
                     'source': m.get('source', ''),
                     'lxc_id': lxc_id,
@@ -6141,9 +6175,9 @@ class HealthMonitor:
                     category='storage',
                     severity='WARNING',
                     reason=(
-                        f'Remote mount {target} inside {ct_label} is read-only'
+                        f'Remote mount {target} inside {ct_label} is read-only but configured read-write'
                         if lxc_id else
-                        f'Remote mount {target} is read-only'
+                        f'Remote mount {target} is read-only but configured read-write'
                     ),
                     details={
                         'mount_target': target,
@@ -6152,12 +6186,15 @@ class HealthMonitor:
                         'lxc_id': lxc_id,
                         'lxc_name': lxc_name,
                         'lxc_scope': lxc_scope,
+                        'storage_name': m.get('storage_name', ''),
                     },
                 )
             else:
                 checks[check_label] = {
                     'status': 'OK',
-                    'detail': f'{fstype} mount reachable',
+                    'detail': (f'{fstype} mount reachable, read-only'
+                               if m.get('readonly') else f'{fstype} mount reachable'),
+                    'readonly': bool(m.get('readonly')),
                     'fstype': fstype,
                     'source': m.get('source', ''),
                     'lxc_id': lxc_id,

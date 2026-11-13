@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A browser-based toolbox for IP geolocation, DNS and WebRTC leak checks, connectivity, latency and other network diagnostics. The official quick start is one container on port 18966 and does not require persistent storage."
+    },
+    "description": {
+      "en_US": "MyIP is an IP toolbox and network diagnostics platform. It identifies public IPv4 and IPv6 addresses across multiple independent sources to display detailed geolocation, ASN topology, and browser fingerprinting data. The application also provides privacy and connectivity analysis tools, including DNS and WebRTC leak tests, global latency checks, MTR routing analysis, and Whois lookups."
+    }
+  }
+}

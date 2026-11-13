@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Start GreptimeDB in standalone mode with its dashboard, HTTP API, gRPC, MySQL and PostgreSQL-compatible endpoints."
+    },
+    "description": {
+      "en_US": "GreptimeDB is an open-source observability database designed for metrics, logs, and traces. It runs on a unified columnar engine where all telemetry signals share a common table model of tags, timestamps, and fields. Users can ingest data through protocols like OpenTelemetry, Prometheus Remote Write, and Loki Push, and query across signals using SQL and PromQL without moving data between separate databases."
+    }
+  }
+}

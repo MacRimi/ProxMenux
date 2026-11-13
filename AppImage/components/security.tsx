@@ -77,6 +77,8 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
   const authErrorText = (message: unknown, fallbackKey: string) => {
     const raw = typeof message === "string" ? message : ""
     const normalized = raw.toLowerCase()
+    if (raw === "setup_code_invalid") return t("authSetup.codeInvalid")
+    if (raw === "setup_code_rate_limited") return t("authSetup.codeRateLimited")
     if (normalized.includes("authentication is already configured")) {
       return st("errors.authAlreadyConfigured")
     }
@@ -95,6 +97,12 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
     return raw || st(fallbackKey)
   }
   const [authEnabled, setAuthEnabled] = useState(false)
+  // How the Monitor is reached without a password: read-only or open.
+  const [accessMode, setAccessMode] = useState<string>("password")
+  const [setupCodeRequired, setSetupCodeRequired] = useState(false)
+  const [setupCode, setSetupCode] = useState("")
+  const [choosingMode, setChoosingMode] = useState(false)
+  const [openingFromReadOnly, setOpeningFromReadOnly] = useState(false)
   const [totpEnabled, setTotpEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -873,9 +881,60 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
       
       const data = await response.json()
       setAuthEnabled(data.auth_enabled || false)
+      setAccessMode(data.access_mode || (data.auth_enabled ? "password" : "open"))
+      setSetupCodeRequired(!!data.setup_code_required)
       setTotpEnabled(data.totp_enabled || false)
     } catch {
       // API not available (preview environment)
+    }
+  }
+
+  // An open Monitor can become read-only at any time; leaving read-only
+  // goes through a password, which asks for the setup code.
+  const handleUseReadOnly = async () => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      const response = await fetch(getApiUrl("/api/auth/mode"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "read_only" }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(authErrorText(data.error || data.message, "errors.disableAuthRetry"))
+      }
+      setSuccess(st("messages.readOnlyReloading"))
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st("errors.disableAuthRetry"))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Leaving read-only for open asks for the setup code, as a password does.
+  const handleOpenFromReadOnly = async () => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      const response = await fetch(getApiUrl("/api/auth/mode"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "open", setup_code: setupCode }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(authErrorText(data.error || data.message, "errors.disableAuthRetry"))
+      }
+      setSuccess(st("messages.authDisabledReloading"))
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st("errors.disableAuthRetry"))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -909,6 +968,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
           username,
           password,
           enable_auth: true,
+          setup_code: setupCode,
         }),
       })
 
@@ -927,6 +987,9 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
       setUsername("")
       setPassword("")
       setConfirmPassword("")
+      setSetupCode("")
+      // What this session can do changes with the account: load it again.
+      setTimeout(() => window.location.reload(), 1000)
     } catch (err) {
       setError(err instanceof Error ? err.message : st("errors.enableAuthFailed"))
     } finally {
@@ -934,15 +997,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
     }
   }
 
-  const handleDisableAuth = async () => {
-    if (
-      !confirm(
-        st("confirm.disableAuth"),
-      )
-    ) {
-      return
-    }
-
+  const handleDisableAuth = async (mode: "read_only" | "open") => {
     setLoading(true)
     setError("")
     setSuccess("")
@@ -955,6 +1010,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ mode }),
       })
 
       const data = await response.json()
@@ -1889,14 +1945,15 @@ ${(report.sections && report.sections.length > 0) ? `
               <div>
                 <p className="font-medium">{st("auth.statusTitle")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {authEnabled ? st("auth.passwordEnabled") : st("auth.noPasswordProtection")}
+                  {authEnabled ? st("auth.passwordEnabled")
+                    : accessMode === "read_only" ? st("auth.readOnlyMode") : st("auth.noPasswordProtection")}
                 </p>
               </div>
             </div>
             <div
               className={`px-3 py-1 rounded-full text-sm font-medium ${authEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}
             >
-              {authEnabled ? st("values.enabled") : st("values.disabled")}
+              {authEnabled ? st("values.enabled") : accessMode === "read_only" ? st("values.readOnly") : st("values.disabled")}
             </div>
           </div>
 
@@ -1908,16 +1965,74 @@ ${(report.sections && report.sections.length > 0) ? `
                   {st("auth.enableHint")}
                 </p>
               </div>
-              <Button onClick={() => setShowSetupForm(true)} className="bg-blue-500 hover:bg-blue-600">
-                <Shield className="h-4 w-4 mr-2" />
-                {st("auth.enable")}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setShowSetupForm(true)} className="bg-blue-500 hover:bg-blue-600">
+                  <Shield className="h-4 w-4 mr-2" />
+                  {st("auth.enable")}
+                </Button>
+                {accessMode === "open" && (
+                  <Button onClick={handleUseReadOnly} variant="outline" disabled={loading}>
+                    {st("auth.useReadOnly")}
+                  </Button>
+                )}
+                {accessMode === "read_only" && !openingFromReadOnly && (
+                  <Button onClick={() => setOpeningFromReadOnly(true)} variant="outline" disabled={loading}>
+                    {t("authSetup.chooseOpen")}
+                  </Button>
+                )}
+              </div>
+              {accessMode === "read_only" && openingFromReadOnly && (
+                <div className="space-y-3 border border-red-500/30 bg-red-500/5 rounded-lg p-4">
+                  <p className="text-sm">{t("authSetup.openDescription")}</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="open-setup-code">{t("authSetup.setupCode")}</Label>
+                    <Input
+                      id="open-setup-code"
+                      type="text"
+                      placeholder="XXXX-XXXX-XXXX"
+                      value={setupCode}
+                      onChange={(e) => setSetupCode(e.target.value)}
+                      className="font-mono uppercase tracking-wider"
+                      disabled={loading}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <p className="text-xs text-muted-foreground">{t("authSetup.setupCodeHint")}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={handleOpenFromReadOnly} variant="destructive" disabled={loading}>
+                      {t("authSetup.chooseOpen")}
+                    </Button>
+                    <Button onClick={() => setOpeningFromReadOnly(false)} variant="outline" disabled={loading}>
+                      {t("actions.cancel")}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {!authEnabled && showSetupForm && (
             <div className="space-y-4 border border-border rounded-lg p-4">
               <h3 className="font-semibold">{st("auth.setupTitle")}</h3>
+
+              {setupCodeRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="setup-code">{t("authSetup.setupCode")}</Label>
+                  <Input
+                    id="setup-code"
+                    type="text"
+                    placeholder="XXXX-XXXX-XXXX"
+                    value={setupCode}
+                    onChange={(e) => setSetupCode(e.target.value)}
+                    className="font-mono uppercase tracking-wider"
+                    disabled={loading}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <p className="text-xs text-muted-foreground">{t("authSetup.setupCodeHint")}</p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="setup-username">{st("auth.username")}</Label>
@@ -2180,9 +2295,27 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               )}
 
-              <Button onClick={handleDisableAuth} variant="destructive" disabled={loading}>
-                {st("auth.disable")}
-              </Button>
+              {!choosingMode ? (
+                <Button onClick={() => setChoosingMode(true)} variant="destructive" disabled={loading}>
+                  {st("auth.disable")}
+                </Button>
+              ) : (
+                <div className="space-y-3 border border-border rounded-lg p-4">
+                  <p className="text-sm">{st("auth.disableChoose")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => handleDisableAuth("read_only")} className="bg-blue-500 hover:bg-blue-600" disabled={loading}>
+                      {t("authSetup.chooseReadOnly")}
+                    </Button>
+                    <Button onClick={() => handleDisableAuth("open")} variant="destructive" disabled={loading}>
+                      {t("authSetup.chooseOpen")}
+                    </Button>
+                    <Button onClick={() => setChoosingMode(false)} variant="outline" disabled={loading}>
+                      {t("actions.cancel")}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("authSetup.openDescription")}</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -2454,7 +2587,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <li>
                       {st("apiTokens.seeGuideBefore")}{" "}
                       <a
-                        href="https://proxmenux.com/docs/monitor/integrations"
+                        href={`https://proxmenux.com/${language}/docs/monitor/integrations/`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-200 hover:text-blue-100 underline underline-offset-2"

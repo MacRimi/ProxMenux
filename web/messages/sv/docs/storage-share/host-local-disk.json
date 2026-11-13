@@ -89,8 +89,8 @@
     "items": [
       "Välj disken.",
       "Välj \"Använd befintliga filsystem\".",
-      "Lagring ID, monteringsväg, innehållstyp förinställd.",
-      "ProxMenux vidrör <strong>inte</strong> data: den skapar monteringspunkten, monterar disken, lägger till en UUID-post till <code>/etc/fstab</code> och registrerar den som en Proxmox <code>dir</code>-lagring."
+      "Monteringsmetod: <strong>montering via värdens fstab</strong> (standard), <strong>Proxmox-lagring</strong> eller båda. Därefter ett monteringsnamn eller lagrings-ID, monteringsväg och, endast för Proxmox-lagring, förinställd innehållstyp.",
+      "ProxMenux vidrör <strong>inte</strong> data: den skapar monteringspunkten, monterar disken och lägger till en UUID-post till <code>/etc/fstab</code>. Den registrerar den som en Proxmox <code>dir</code>-lagring endast om du valde den metoden."
     ],
     "warnTitle": "Återanvändningsväg hanterar inte ZFS pooler",
     "warnBody": "Om disken redan innehåller en ZFS pool, <em>reuse</em> väg här försöker bara montera den som ett vanligt filsystem - som misslyckas. För att importera en befintlig ZFS pool använda <code>zpool import &lt;name&gt;</code> på kommandoraden och sedan registrera den manuellt med <code>pvesm add zfspool</code>."
@@ -133,13 +133,13 @@
   },
   "view": {
     "heading": "Visa disklagringar",
-    "body": "Listar varje diskstödd Proxmox-lagring (både <code>dir</code> och <code>zfspool</code> som är användarskapade - systempooler som <code>rpool</code> är dolda). Visar monteringsvägen / poolnamn, innehållstyper och aktuell status."
+    "body": "Listar varje diskstödd Proxmox-lagring (både <code>dir</code> och <code>zfspool</code> som är användarskapade; systempooler som <code>rpool</code> är dolda) och de lokala diskmonteringar som bara finns i fstab. Visar monteringsvägen / poolnamn, innehållstyper och aktuell status."
   },
   "remove": {
     "heading": "Ta bort disklagring",
-    "body": "Avregistrerar lagringen från Proxmox (<code>pvesm remove</code>) och erbjuder att rensa upp den matchande posten i <code>/etc/fstab</code>. För ZFS pools förstör skriptet <strong>inte</strong> automatiskt pool – det är ett separat <code>zpool destroy &lt;name&gt;</code> steg du gör för hand när du är säker.",
+    "body": "Väljaren listar Proxmox-lagringar och lokala diskmonteringar som bara finns i fstab. Efter en bekräftelse avregistrerar ProxMenux lagringen (<code>pvesm remove</code>), avmonterar sökvägen och tar bort dess rad från <code>/etc/fstab</code>. För ZFS pools körs <code>zpool export &lt;pool&gt;</code> men poolen förstörs <strong>inte</strong>; det är ett separat <code>zpool destroy &lt;name&gt;</code> steg du gör för hand när du är säker. I slutet erbjuds omstart av värden.",
     "warnTitle": "Data och befintliga VM beroenden",
-    "warnBody": "Ta bort lagringen rör inte filsystemet eller poolen - data stannar på disken. Men VMs / CT som refererar till denna lagring av ID kommer inte att starta efter borttagning. Flytta dessa VM-skivor till en annan lagring (eller ta en säkerhetskopia) innan du tar bort."
+    "warnBody": "Att ta bort lagringen formaterar inte disken och förstör inte poolen: data stannar på disken, men disken avmonteras och en ZFS pool exporteras. Men VMs / CT som refererar till denna lagring av ID kommer inte att starta efter borttagning. Flytta dessa VM-skivor till en annan lagring (eller ta en säkerhetskopia) innan du tar bort."
   },
   "list": {
     "heading": "Lista tillgängliga diskar",

@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Qué hace",
-    "body": "Tres herramientas de monitorización interactivas, cada una con su entrada de menú. La primera vez que lanzas una, el paquete se instala silenciosamente vía <code>apt-get</code>. Los siguientes lanzamientos arrancan al instante. Ninguna de estas herramientas modifica la configuración de red del host."
+    "body": "Tres herramientas de monitorización interactivas, cada una con su entrada de menú. La primera vez que lanzas una, el paquete se instala vía <code>apt-get</code>. Los siguientes lanzamientos arrancan al instante. Ninguna de estas herramientas modifica la configuración de red del host."
   },
   "when": {
     "heading": "Cuándo usar cuál",
@@ -105,7 +105,7 @@
   },
   "install": {
     "heading": "El primer lanzamiento instala el paquete",
-    "body": "Los tres lanzadores comprueban si el binario está y ejecutan <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> si falta. La instalación es silenciosa: el menú puede parecer congelado durante 10–30 segundos la primera vez. Los siguientes lanzamientos arrancan al instante."
+    "body": "Los tres lanzadores comprueban si el binario está. Si falta, ProxMenux comprueba primero los repositorios (en un host sin suscripción puede ofrecer cambiar al repositorio no-subscription, seguido de <code>apt-get update</code>) y después ejecuta <code>apt-get install -y &lt;pkg&gt;</code> con un mensaje \"Installing…\" en pantalla. Los siguientes lanzamientos arrancan al instante."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",

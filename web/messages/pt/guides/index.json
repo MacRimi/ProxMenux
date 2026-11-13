@@ -87,7 +87,7 @@
     "intro": "Projetos de código aberto e listas selecionadas da comunidade Proxmox. Não são afiliados à Proxmox Server Solutions nem ao ProxMenux; estão aqui porque demonstraram ser úteis.",
     "cards": {
       "helperScripts": {
-        "title": "Proxmox VE Helper-Scripts",
+        "title": "Community Scripts",
         "description": "Catálogo de scripts mantido pela comunidade para disponibilizar facilmente contentores LXC, VM e ajustes PVE, por exemplo para Home Assistant, Plex ou Frigate. Dá continuidade à ideia dos helper scripts de tteck."
       },
       "awesome": {

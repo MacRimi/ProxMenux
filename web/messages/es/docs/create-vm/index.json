@@ -19,8 +19,8 @@
   },
   "opening": {
     "heading": "Abrir el menú",
-    "body": "Desde el menú principal de ProxMenux, selecciona <strong>Crear VM</strong>. Verás esto:",
-    "imageAlt": "Dispatcher de Crear VM con 3 opciones de ProxMenux (NAS / Windows / Linux) seguidas de la sección Community Scripts (macOS / Others)"
+    "body": "Desde el menú principal de ProxMenux, selecciona <strong>Crear VM desde plantilla o script</strong>. Verás esto:",
+    "imageAlt": "Dispatcher de Crear VM con 3 opciones de ProxMenux (NAS / Windows / Linux) seguidas de la sección Scripts externos (macOS / Others)"
   },
   "families": {
     "heading": "Tres familias de SO",
@@ -52,7 +52,7 @@
         "description": "Ediciones de Windows 10, 11 y Server con valores por defecto pensados para Windows (q35 + OVMF + TPM 2.0) y los drivers VirtIO pre-montados.",
         "bullets": [
           "UUP Dump para ISOs actualizadas",
-          "O ISO local desde /var/lib/vz/template/iso",
+          "O una ISO local de cualquier almacenamiento ISO de Proxmox",
           "TPM 2.0 añadido automáticamente",
           "ISO de drivers VirtIO adjuntada en ide3",
           "Canal del guest agent habilitado"
@@ -78,9 +78,9 @@
   },
   "community": {
     "title": "Community scripts (no documentados aquí)",
-    "intro": "Las dos entradas bajo el separador <em>Community Scripts</em> ejecutan código que <strong>no forma parte de ProxMenux</strong>, así que se dejan intencionadamente fuera de esta documentación:",
+    "intro": "Las dos entradas bajo el separador <em>Scripts externos</em> ejecutan código que <strong>no forma parte de ProxMenux</strong>, así que se dejan intencionadamente fuera de esta documentación:",
     "macosRich": "<strong>System macOS</strong> — ejecuta el instalador externo <osxLink>OSX-PROXMOX</osxLink>. Clona el repositorio upstream, prepara el host y <strong>reinicia automáticamente al terminar</strong>. Consulta la documentación del propio proyecto.",
-    "othersRich": "<strong>System Others (basados en Linux)</strong> — carga una lista curada de instaladores de la comunidad basados en Linux (SO de servidor doméstico, appliances de router/firewall, etc.). Cada community script se mantiene fuera de ProxMenux."
+    "othersRich": "<strong>System Others (basados en Linux)</strong> — carga una lista corta de VMs Linux prediseñadas de la comunidad: Home Assistant OS, una VM Docker (Debian + SSH + Docker) y Nextcloud. Cada community script se mantiene fuera de ProxMenux."
   },
   "afterPick": {
     "heading": "Qué pasa después de elegir un SO",

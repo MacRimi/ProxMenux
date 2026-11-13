@@ -1029,6 +1029,16 @@ oci_valid_extra_hostname() {
   [[ ${#1} -le 253 && $1 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]
 }
 
+prepare_unmanaged_network_files() {
+  [[ $(sed -n 's/^ostype: //p' "$CONF") == unmanaged ]] || return 0
+  local rootfs="/var/lib/lxc/${VMID}/rootfs" failed=0
+  mount_ct_rootfs
+  oci_quiet python3 "${SCRIPT_DIR}/oci_network_files.py" "$rootfs" "$CONF" "$DEPLOYMENT_FILE" \
+    || failed=1
+  oci_quiet pct unmount "$VMID" || failed=1
+  (( failed == 0 )) || die "$(translate "Could not prepare the container DNS and hosts files")"
+}
+
 apply_extra_hosts() {
   local count rootfs hosts_file temporary address hostname bridge_address failed=0
   count=$(jq '.extra_hosts? // [] | length' "$DEPLOYMENT_FILE")
@@ -1612,19 +1622,40 @@ if [[ $SKOPEO_IMAGE_REF != "$IMAGE_REF" ]]; then
   oci_log "Digest-pinned reference; Skopeo-compatible form: $SKOPEO_IMAGE_REF"
 fi
 msg_info "$(translate "Checking the image in the registry...")"
-INSPECT=$(resolve_image_manifest "$SKOPEO_IMAGE_REF") \
-  || die "$(translate "Could not resolve the OCI manifest of the image:") $IMAGE_REF"
-DIGEST=$(jq -er '.Digest' <<<"$INSPECT")
+SAFE_APP=$(tr -cs 'a-zA-Z0-9._-' '_' <<<"$APP_ID" | sed 's/_$//')
+SAVED_IMAGE=0
+if INSPECT=$(resolve_image_manifest "$SKOPEO_IMAGE_REF"); then
+  DIGEST=$(jq -er '.Digest' <<<"$INSPECT")
+  CREATED=$(jq -r '.Created // empty' <<<"$INSPECT")
+  IMAGE_VERSION=$(jq -r '.Labels["org.opencontainers.image.version"] // .Labels.build_version // empty' <<<"$INSPECT")
+  TOTAL_LAYER_BYTES=$(jq -r '[.LayersData[]?.Size] | add // 0' <<<"$INSPECT")
+  TOTAL_LAYER_COUNT=$(jq -r '[.LayersData[]?] | length' <<<"$INSPECT")
+else
+  # Without the registry, the image kept from an earlier installation of this
+  # application is installed, if there is one.
+  PINNED_DIGEST=""
+  [[ $SKOPEO_IMAGE_REF != *@sha256:* ]] || PINNED_DIGEST="sha256:${SKOPEO_IMAGE_REF##*@sha256:}"
+  ARCHIVE_DIR=$(dirname "$(pvesm path "${TEMPLATE_STORAGE}:vztmpl/${SAFE_APP}_${ARCH}_0000000000000000.tar")")
+  SAVED=$(python3 "${SCRIPT_DIR}/oci_image_cache.py" saved "$ARCHIVE_DIR" "$APP_ID" "$ARCH" \
+    ${PINNED_DIGEST:+"$PINNED_DIGEST"} 2>>"${OCI_LOG:-/dev/null}") \
+    || die "$(translate "Could not resolve the OCI manifest of the image:") $IMAGE_REF"
+  SAVED_IMAGE=1
+  DIGEST=$(jq -er '.digest' <<<"$SAVED")
+  CREATED=$(jq -r '.created' <<<"$SAVED")
+  IMAGE_VERSION=""
+  TOTAL_LAYER_BYTES=0
+  TOTAL_LAYER_COUNT=0
+  msg_warn "$(translate "The registry could not be reached; the image kept from an earlier installation is used.")"
+fi
 oci_log "Selected digest: $DIGEST"
-CREATED=$(jq -r '.Created // empty' <<<"$INSPECT")
-IMAGE_VERSION=$(jq -r '.Labels["org.opencontainers.image.version"] // .Labels.build_version // empty' <<<"$INSPECT")
-TOTAL_LAYER_BYTES=$(jq -r '[.LayersData[]?.Size] | add // 0' <<<"$INSPECT")
-TOTAL_LAYER_COUNT=$(jq -r '[.LayersData[]?] | length' <<<"$INSPECT")
 DIGEST_SHORT=${DIGEST#sha256:}
 DIGEST_SHORT=${DIGEST_SHORT:0:16}
 msg_ok "$(translate "Image:") $IMAGE_REF (${IMAGE_VERSION:-sha256:${DIGEST_SHORT:0:12}})"
-SAFE_APP=$(tr -cs 'a-zA-Z0-9._-' '_' <<<"$APP_ID" | sed 's/_$//')
-ARCHIVE_NAME="${SAFE_APP}_${ARCH}_${DIGEST_SHORT}.tar"
+if [[ $SAVED_IMAGE == 1 ]]; then
+  ARCHIVE_NAME=$(basename "$(jq -er '.archive' <<<"$SAVED")")
+else
+  ARCHIVE_NAME="${SAFE_APP}_${ARCH}_${DIGEST_SHORT}.tar"
+fi
 ARCHIVE_VOLUME="${TEMPLATE_STORAGE}:vztmpl/${ARCHIVE_NAME}"
 ARCHIVE_PATH=$(pvesm path "$ARCHIVE_VOLUME")
 mkdir -p "$(dirname "$ARCHIVE_PATH")"
@@ -1722,6 +1753,8 @@ if [[ -s $ARCHIVE_PATH ]]; then
 fi
 
 if [[ ! -s $ARCHIVE_PATH ]]; then
+  [[ $SAVED_IMAGE == 0 ]] \
+    || die "$(translate "The kept image is damaged and the registry cannot be reached:") $IMAGE_REF"
   for attempt in 1 2; do
     download_and_verify_archive "$attempt" && break
     if (( attempt == 2 )); then
@@ -1766,6 +1799,10 @@ if [[ $UNPRIVILEGED_FLAG == 0 ]]; then
   # Import with the standard idmap, unshift once while stopped, then switch the config.
   CREATE_UNPRIVILEGED_FLAG=1
 fi
+if jq -e 'any(.mounts[]?; .idmap != null and .idmap != "")' "$DEPLOYMENT_FILE" >/dev/null; then
+  oci_quiet python3 "$SCRIPT_DIR/oci_mount_idmap.py" validate --deployment "$DEPLOYMENT_FILE" --template "$TEMPLATE_FILE" --archive "$ARCHIVE_PATH" \
+    || die "$(translate "Could not validate the mount ID mapping")"
+fi
 CREATE_ARGS=(
   "$VMID" "$ARCHIVE_VOLUME"
   --hostname "$HOSTNAME"
@@ -1805,18 +1842,32 @@ fi
 msg_info "$(translate "Creating the container...")"
 # Proxmox resolves the image User through /etc/passwd and /etc/group, even a
 # numeric one, and cannot create the container from an image without them.
-user_databases_rc=0
-missing_user_databases=$(python3 "$OCI_RUNTIME_RESOLVER" --user-databases "$ARCHIVE_PATH" \
-  2>>"${OCI_LOG:-/dev/stderr}") || user_databases_rc=$?
-if (( user_databases_rc == 3 )); then
-  oci_log "The image declares a user but lacks: ${missing_user_databases}"
-  # A numeric User is created from a copy with those files; the cached image
-  # and its digest stay as they were downloaded.
-  USER_DATABASES_ARCHIVE="${ARCHIVE_PATH%.tar}.user-databases.$$.tar"
-  python3 "$OCI_RUNTIME_RESOLVER" --add-user-databases "$ARCHIVE_PATH" "$USER_DATABASES_ARCHIVE" \
-    >>"${OCI_LOG:-/dev/null}" 2>&1 \
-    || die "$(translate "Proxmox VE cannot create a container from this image: it declares a user but does not include /etc/passwd and /etc/group. Nothing was created.")"
-  CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE
+# Import compatibility is prepared before downtime by update/stack transactions.
+# Fresh installs create their own short-lived copy; the registry archive stays intact.
+CREATE_IMAGE_PATH=$ARCHIVE_PATH
+if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
+  CREATE_IMAGE_PATH=$(python3 "$SCRIPT_DIR/oci_layer_paths.py" journal "$ARCHIVE_PATH" "$PROXMENUX_OCI_TRANSACTION" 2>>"${OCI_LOG:-/dev/stderr}") \
+    || die "$(translate "Cannot prepare the OCI archive:")"
+
+fi
+CREATE_ARGS[1]=$CREATE_IMAGE_PATH
+# Active, prepared transactions reach the common wrapper with this exact
+# validated source. It handles any numeric-user files without scanning paths
+# again. Keep the legacy/fresh-install flow for callers without that proof.
+if [[ -z ${PROXMENUX_OCI_TRANSACTION:-} ]] || ! jq -e 'has("import_image")' "$PROXMENUX_OCI_TRANSACTION" >/dev/null; then
+  user_databases_rc=0
+  missing_user_databases=$(python3 "$OCI_RUNTIME_RESOLVER" --user-databases "$CREATE_IMAGE_PATH" \
+    2>>"${OCI_LOG:-/dev/stderr}") || user_databases_rc=$?
+  if (( user_databases_rc == 3 )); then
+    oci_log "The image declares a user but lacks: ${missing_user_databases}"
+    # A numeric User is created from a copy with those files; the cached image
+    # and its digest stay as they were downloaded.
+    USER_DATABASES_ARCHIVE="${ARCHIVE_PATH%.tar}.user-databases.$$.tar"
+    python3 "$OCI_RUNTIME_RESOLVER" --add-user-databases "$CREATE_IMAGE_PATH" "$USER_DATABASES_ARCHIVE" \
+      >>"${OCI_LOG:-/dev/null}" 2>&1 \
+      || die "$(translate "Proxmox VE cannot create a container from this image: it declares a user but does not include /etc/passwd and /etc/group. Nothing was created.")"
+    CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE
+  fi
 fi
 create_status=0
 oci_create_container "${CREATE_ARGS[@]}" || create_status=$?
@@ -1970,6 +2021,16 @@ fi
 while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSING GRANT_ACCESS; do
   [[ -n $TYPE ]] || continue
   [[ $TARGET == /* && $TARGET != *","* ]] || die "$(translate "Invalid container path:") $TARGET"
+  IDMAP=$(jq -r --arg target "$TARGET" '[.mounts[] | select(.container_path == $target) | .idmap] | first // empty' "$DEPLOYMENT_FILE")
+  IDMAP_OPT=""
+  [[ -z $IDMAP ]] || IDMAP_OPT=",idmap=${IDMAP}"
+  MOUNT_BIND_UID=$HOST_BIND_UID
+  MOUNT_BIND_GID=$HOST_BIND_GID
+  if [[ -n $IDMAP && ! -e $SOURCE && $CREATE_IF_MISSING == true ]]; then
+    OWNERS=$(python3 "$SCRIPT_DIR/oci_mount_idmap.py" owners --deployment "$DEPLOYMENT_FILE" --template "$TEMPLATE_FILE" --config "$CONF" --target "$TARGET") \
+      || die "$(translate "Could not validate the mount ID mapping")"
+    IFS=$'\t' read -r MOUNT_BIND_UID MOUNT_BIND_GID <<<"$OWNERS"
+  fi
   RO_OPT=""
   [[ $READ_ONLY == true ]] && RO_OPT=",ro=1"
   if [[ $TYPE == managed-volume ]]; then
@@ -1999,8 +2060,8 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
   elif [[ $TYPE == host-bind ]]; then
     [[ $SOURCE == /* && $SOURCE != *","* ]] || die "$(translate "Invalid host path:") $SOURCE"
     if [[ ! -e $SOURCE && $CREATE_IF_MISSING == true ]]; then
-      install -d -m 0775 -o "$HOST_BIND_UID" -g "$HOST_BIND_GID" "$SOURCE"
-      oci_log "Shared directory created: $SOURCE (uid=$HOST_BIND_UID gid=$HOST_BIND_GID)"
+      install -d -m 0775 -o "$MOUNT_BIND_UID" -g "$MOUNT_BIND_GID" "$SOURCE"
+      oci_log "Shared directory created: $SOURCE (uid=$MOUNT_BIND_UID gid=$MOUNT_BIND_GID)"
       MOUNT_NOTES+=("$(translate "Shared directory created:") $SOURCE")
     fi
     [[ -e $SOURCE ]] || die "$(translate "The host bind source does not exist:") $SOURCE"
@@ -2018,7 +2079,7 @@ while IFS=$'\t' read -r TYPE TARGET SOURCE SIZE BACKUP READ_ONLY CREATE_IF_MISSI
         python3 "${SCRIPT_DIR}/oci_instance_transaction.py" --root "$INSTANCE_ROOT" \
           pin-host-source "$VMID" --journal "$PROXMENUX_OCI_TRANSACTION" --source "$SOURCE"
       fi
-      MP_VALUE="${SOURCE},mp=${TARGET},backup=0${RO_OPT}"
+      MP_VALUE="${SOURCE},mp=${TARGET},backup=0${RO_OPT}${IDMAP_OPT}"
     elif [[ -f $SOURCE ]]; then
       [[ $SOURCE != *[[:space:]]* && $TARGET != *[[:space:]]* ]] \
         || die "$(translate "File bind mounts do not support spaces:") $SOURCE -> $TARGET"
@@ -2134,6 +2195,7 @@ prepare_managed_format_directories() {
 }
 
 prepare_managed_format_directories "/var/lib/lxc/${VMID}/rootfs"
+prepare_unmanaged_network_files
 apply_extra_hosts
 apply_installer_profile
 # Render tmpfs entries after the image and installer profile have set the

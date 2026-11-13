@@ -91,9 +91,12 @@ export default async function PersistentNamesPage({
       />
 
       <p className="mt-6 mb-4 text-gray-800 leading-relaxed">{t("howWorks.minimalIntro")}</p>
-      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# /etc/systemd/network/10-eno1.link
+      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# /etc/systemd/network/10-proxmenux-eno1.link
+# Managed by ProxMenux — do not edit
+
 [Match]
-MACAddress=aa:bb:cc:dd:ee:ff
+MACAddress=AA:BB:CC:DD:EE:FF
+Kind=!bridge
 
 [Link]
 Name=eno1`}</pre>
@@ -128,8 +131,8 @@ Name=eno1`}</pre>
         {t.rich("safety.intro", { code })}
       </p>
       <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`/etc/systemd/network/backup-20260426-143012/
-├── 10-eno1.link    (previous version)
-└── 10-enp3s0.link  (previous version)`}</pre>
+├── 10-proxmenux-eno1.link    (previous version)
+└── 10-proxmenux-enp3s0.link  (previous version)`}</pre>
       <p className="mt-4 mb-6 text-gray-800 leading-relaxed">{t("safety.outro")}</p>
 
       <Callout variant="warning" title={t("safety.rebootTitle")}>

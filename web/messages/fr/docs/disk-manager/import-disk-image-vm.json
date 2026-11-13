@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Comment fonctionne le script",
-    "body": "Le flux a deux phases. La phase 1 recueille toutes les décisions (VM, stockage, répertoire source, images, options par image) directement via des dialogues. La phase 2 exécute <code>qm importdisk</code> pour chaque image sélectionnée. Jusqu'à ce que la phase 2 commence, rien n'est copié et la configuration VM n'est pas touchée."
+    "body": "Le flux a deux phases. La phase 1 recueille toutes les décisions (VM, stockage, répertoire source, images, options par image) directement via des dialogues. La phase 2 exécute <code>qm importdisk</code> pour chaque image sélectionnée. La phase 2 démarre juste après la dernière question par image, sans confirmation finale distincte ; jusque-là, rien n’est copié et la configuration VM n’est pas touchée."
   },
   "prereqs": {
     "heading": "Préalables",

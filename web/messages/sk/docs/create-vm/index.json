@@ -19,8 +19,8 @@
   },
   "opening": {
     "heading": "Otvorenie menu",
-    "body": "V hlavnej ponuke ProxMenux vyberte <strong>Vytvoriť VM</strong>. Zobrazí sa:",
-    "imageAlt": "Ponuka Vytvoriť VM s tromi možnosťami ProxMenux (NAS/Windows/Linux) a časťou Community Scripts pod nimi (macOS/Ostatné)"
+    "body": "V hlavnej ponuke ProxMenux vyberte <strong>Create VM from template or script</strong>. Zobrazí sa:",
+    "imageAlt": "Ponuka Vytvoriť VM s tromi možnosťami ProxMenux (NAS/Windows/Linux) a časťou Externé skripty pod nimi (macOS/Ostatné)"
   },
   "families": {
     "heading": "Tri rodiny OS",
@@ -52,7 +52,7 @@
         "description": "Edície Windows 10, 11 a Server s vhodnými predvoľbami (q35 + OVMF + TPM 2.0) a vopred pripojeným ISO ovládačov VirtIO.",
         "bullets": [
           "UUP Dump pre aktuálne ISO",
-          "Alebo miestne ISO z /var/lib/vz/template/iso",
+          "Alebo miestne ISO z ľubovoľného úložiska ISO v Proxmoxe",
           "TPM 2.0 pridaný automaticky",
           "ISO ovládačov VirtIO pripojené k ide3",
           "Zapnutý kanál hosťovského agenta"
@@ -78,9 +78,9 @@
   },
   "community": {
     "title": "Komunitné skripty (tu nie sú zdokumentované)",
-    "intro": "Dve položky pod oddeľovačom <em>Community Scripts</em> spúšťajú kód, ktorý <strong>nie je súčasťou ProxMenux</strong>, preto sú zámerne mimo tejto dokumentácie:",
+    "intro": "Dve položky pod oddeľovačom <em>Externé skripty</em> spúšťajú kód, ktorý <strong>nie je súčasťou ProxMenux</strong>, preto sú zámerne mimo tejto dokumentácie:",
     "macosRich": "<strong>Systém macOS</strong>: spustí externý inštalátor <osxLink>OSX-PROXMOX</osxLink>. Naklonuje pôvodný repozitár, pripraví hostiteľa a <strong>po dokončení ho automaticky reštartuje</strong>. Pozrite si dokumentáciu daného projektu.",
-    "othersRich": "<strong>Ostatné systémy (založené na Linuxe)</strong> — načíta upravený zoznam komunitných inštalátorov založených na Linuxe (operačné systémy domáceho servera, zariadenia smerovača/brány firewall atď.). Každý skript komunity je udržiavaný mimo ProxMenux."
+    "othersRich": "<strong>Ostatné systémy (založené na Linuxe)</strong> — načíta krátky zoznam komunitných vopred pripravených VM s Linuxom: Home Assistant OS, VM s Dockerom (Debian + SSH + Docker) a Nextcloud. Každý skript komunity je udržiavaný mimo ProxMenux."
   },
   "afterPick": {
     "heading": "Čo sa stane potom, čo si vyberiete OS",
