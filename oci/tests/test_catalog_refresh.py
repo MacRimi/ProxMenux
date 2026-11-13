@@ -442,6 +442,15 @@ class CatalogRefreshTests(unittest.TestCase):
         with patch.object(refresh, 'write_json', side_effect=OSError('read-only fixture')):
             self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
 
+    def test_malformed_menu_cache_is_rebuilt_for_the_next_visit(self):
+        expected = refresh.menu_catalog(Catalog(self.root))
+        cache = refresh.cache_root(self.root) / ('menu-' + refresh.channel_for(self.root) + '.json')
+        value = json.loads(cache.read_text());value['index'] = []
+        cache.write_text(json.dumps(value))
+        self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
+        with patch.object(Catalog, 'load_index', side_effect=AssertionError('cache was not repaired')):
+            self.assertEqual(refresh.menu_catalog(Catalog(self.root)), expected)
+
     def test_menu_snapshot_restores_local_only_app_identity(self):
         self.add_app()
         for name, data in self.files.items():

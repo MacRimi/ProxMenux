@@ -512,6 +512,7 @@ def menu_catalog(catalog):
         return hashlib.sha256(json.dumps([str(catalog.catalog_dir), rows]).encode()).hexdigest()
 
     cache = cache_root(catalog.root) / ('menu-' + channel_for(catalog.root) + '.json')
+    before = None
     try:
         before = signature()
         value = read_json(cache)
@@ -525,7 +526,7 @@ def menu_catalog(catalog):
                 catalog.local_app_ids = set(local)
                 return payload, recipes
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        before = None
+        pass
     payload = catalog.load_index()
     recipes = visible_recipes(catalog, payload['applications'])
     try:
