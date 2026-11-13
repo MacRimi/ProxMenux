@@ -666,7 +666,9 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
 
           {d && (
             <div className="grid gap-6 px-5 sm:px-6 pt-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-              <div className="grid gap-6 content-start min-w-0">
+              {/* A long URL in a note or a description wraps anywhere, so it
+                  never widens this column over the side panel. */}
+              <div className="grid gap-6 content-start min-w-0 [&>*]:min-w-0 [overflow-wrap:anywhere]">
                 <section>
                   <Heading>{item.group === "tool" ? t("catalog.sheet.whatItDoes") : t("catalog.sheet.whatItIs")}</Heading>
                   <p className="m-0 leading-relaxed max-w-[68ch] whitespace-pre-line">{d.about || item.summary}</p>
@@ -717,7 +719,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
                     <Heading>{t("catalog.sheet.notes")}</Heading>
                     <div className="grid gap-2">
                       {notes.map((n, i) => (
-                        <div key={i} className={`rounded-md border border-border border-l-[3px] bg-muted/30 px-3 py-2.5 text-sm ${n.type === "warning" ? "border-l-amber-500" : "border-l-cyan-500"}`}>
+                        <div key={i} className={`min-w-0 rounded-md border border-border border-l-[3px] bg-muted/30 px-3 py-2.5 text-sm ${n.type === "warning" ? "border-l-amber-500" : "border-l-cyan-500"}`}>
                           {n.text}
                           {n.link && <>{" "}<a href={n.link} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline underline-offset-2 hover:text-foreground">{t("catalog.sheet.thirdPartyLink")} ↗</a></>}
                         </div>
