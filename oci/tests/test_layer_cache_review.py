@@ -1,5 +1,7 @@
 """Complete OCI references and optional-cache failures must not break updates."""
 import hashlib
+import concurrent.futures
+import threading
 import io
 import json
 import os
@@ -50,6 +52,23 @@ class OptionalCache(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name)/'cache';cache.prepare(self.root)
+
+    def test_concurrent_prepare_waits_for_the_atomic_marker_publication(self):
+        root=self.root.parent/'initializing'
+        writing=threading.Event(); release=threading.Event()
+        replace=os.replace
+        def delayed(source,destination):
+            if Path(destination)==root/'format.json':
+                writing.set(); self.assertTrue(release.wait(5))
+            return replace(source,destination)
+        with patch.object(cache.os,'replace',side_effect=delayed), concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            first=pool.submit(cache.prepare,root)
+            self.assertTrue(writing.wait(5))
+            second=pool.submit(cache.prepare,root)
+            release.set()
+            first.result(); second.result()
+        self.assertEqual(json.loads((root/'format.json').read_text())['kind'],cache.KIND)
+        self.assertEqual(list(root.glob('.format-*')),[])
 
     def test_only_candidate_blob_contents_are_hashed(self):
         paths=[]

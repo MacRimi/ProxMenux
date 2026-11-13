@@ -41,9 +41,8 @@ def prepare(root):
     if info.st_uid != os.geteuid() or info.st_mode & 0o077:
         raise ValueError('Shared layer cache must be private and owned by this user')
     marker = root / 'format.json'
-    names = {p.name for p in root.iterdir()}
-    if not marker.exists() and not names <= {'.bootstrap.lock', 'format.json', 'sha256', 'locks'}:
-        raise ValueError('Unrecognized shared layer cache')
+    # Inspect initialization files only after taking the bootstrap lock: an
+    # atomic marker writer may currently own a temporary file in this directory.
     fd = os.open(root/'.bootstrap.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
