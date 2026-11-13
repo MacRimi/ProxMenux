@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { MenuxMark } from "./menux-mark"
+import { ProxMenuxMark } from "./proxmenux-mark"
 import useSWR from "swr"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -40,7 +42,6 @@ import {
   NetworkIcon,
   Boxes,
   Grid3x3,
-  Store,
   Cpu,
   ScrollText,
   SettingsIcon,
@@ -53,6 +54,7 @@ import {
   Database,
   ChevronDown,
   Clock,
+  Rocket,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -447,7 +449,7 @@ function MonitorDashboard({ product }: { product: Product }) {
       case "datastores": return t("pbs.datastores")
       case "pbs-tasks": return t("pbs.tasksTab")
       case "apps":      return t("navigation.apps")
-      case "catalog":   return t("navigation.catalog")
+      case "catalog":   return "Menux"
       case "vms":       return t("navigation.virtualMachines")
       case "storage":   return t("navigation.storage")
       case "network":   return t("navigation.network")
@@ -522,7 +524,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                 <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">{t("app.title")}</h1>
+                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate" aria-label={t("app.title")}><ProxMenuxMark /> Monitor</h1>
                 <p className="text-xs md:text-sm text-muted-foreground">{t(isPbs ? "app.descriptionPbs" : "app.description")}</p>
                 <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                   <Clock className="h-3 w-3" />
@@ -747,7 +749,12 @@ function MonitorDashboard({ product }: { product: Product }) {
                   case "datastores": return renderDirect("datastores", Database, t("pbs.datastores"))
                   case "pbs-tasks": return renderDirect("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                   case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
-                  case "catalog":  return renderDirect("catalog",  Store,           t("navigation.catalog"))
+                  case "catalog":  return (
+                    <TabsTrigger key="catalog" value="catalog" className={triggerActiveClass}>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      <MenuxMark />
+                    </TabsTrigger>
+                  )
                   case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
                   case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
                   case "terminal": return renderDirect("terminal", Terminal,        t("navigation.terminal"))
@@ -771,7 +778,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                       activeTab ? "bg-blue-500/10 text-blue-500" : "bg-card"
                     }`}
                   >
-                    <span>{getActiveTabLabel()}</span>
+                    {activeTab === "catalog" ? <MenuxMark /> : <span>{getActiveTabLabel()}</span>}
                     <Menu className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
@@ -820,7 +827,13 @@ function MonitorDashboard({ product }: { product: Product }) {
                           case "datastores": return btn("datastores", Database, t("pbs.datastores"))
                           case "pbs-tasks": return btn("pbs-tasks", ListChecks, t("pbs.tasksTab"))
                           case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
-                          case "catalog":  return btn("catalog",  Store,           t("navigation.catalog"))
+                          case "catalog":  return (
+                            <Button key="catalog" variant="ghost" onClick={() => select("catalog")}
+                                    className={itemClass(activeTab === "catalog")}>
+                              <Rocket className="h-5 w-5" />
+                              <MenuxMark className="h-3.5 w-auto" />
+                            </Button>
+                          )
                           case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
                           case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
                           case "terminal": return btn("terminal", Terminal,        t("navigation.terminal"))

@@ -23717,6 +23717,14 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
 
+    # The Catalog tab opens with its list already prepared.
+    try:
+        import catalog_tab
+        if hasattr(catalog_tab, 'warm'):
+            threading.Thread(target=catalog_tab.warm, daemon=True, name='catalog-prewarm').start()
+    except Exception as e:
+        print(f"[ProxMenux] Catalog prewarm failed to start: {e}")
+
     # Linked Monitors for the header node selector, renewed every 5 minutes.
     try:
         import monitor_links

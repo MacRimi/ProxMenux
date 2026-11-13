@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { Fragment, useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import {
@@ -21,6 +21,7 @@ import {
 import Image from "next/image"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
+import { ProxMenuxMark } from "./proxmenux-mark"
 
 interface OnboardingSlide {
   id: number
@@ -213,7 +214,14 @@ export function OnboardingCarousel() {
 
           <div className="p-4 md:p-8 space-y-3 md:space-y-6 max-h-[60vh] md:max-h-none overflow-y-auto">
             <div className="space-y-2 md:space-y-3">
-              <h2 className="text-xl md:text-3xl font-bold text-foreground text-balance">{slideTitle}</h2>
+              <h2 className="text-xl md:text-3xl font-bold text-foreground text-balance" aria-label={slideTitle}>
+                {slideTitle.split("ProxMenux").map((part, index) => (
+                  <Fragment key={index}>
+                    {index > 0 && <ProxMenuxMark weight={700} />}
+                    {part}
+                  </Fragment>
+                ))}
+              </h2>
               <p className="text-sm md:text-lg text-muted-foreground leading-relaxed text-pretty">
                 {slideDescription}
               </p>
