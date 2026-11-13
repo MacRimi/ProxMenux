@@ -153,11 +153,12 @@ function writeSettings(settings: Settings) {
 
 // Every word of the query has to start a word of the text, as in the menu
 // search: "tru" finds TrueNAS, not "intrusion".
-// A name that joins its words with capitals, like ShareCoveX, also has each
-// of them as a word: "share" and "cove" are whole words of it.
+// A name that joins its words with capitals, like ShareCoveX or CADCraft, also
+// has each of them as a word: "share" and "cove", or "cad" and "craft".
 const words = (text: string) => {
   const joined = fold(text).split(/[^a-z0-9]+/).filter(Boolean)
-  const parts = fold(text.replace(/([a-z0-9])([A-Z])/g, "$1 $2")).split(/[^a-z0-9]+/).filter(Boolean)
+  const split = text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+  const parts = fold(split).split(/[^a-z0-9]+/).filter(Boolean)
   return [...new Set([...joined, ...parts])]
 }
 function matchesAll(text: string, wanted: string[]) {

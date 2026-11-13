@@ -237,6 +237,12 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("Jellyfin", [item["title"] for item in self.found("jelly")])
         self.assertTrue(any(item["source"] == "OCI Manager" for item in self.found("plex")))
 
+    def test_each_word_of_a_name_joined_with_capitals_is_found(self):
+        titles = [item["title"] for item in self.found("craft")]
+        for name in ("CADCraft", "DeckCraft", "PdfCraft", "WordCraft"):
+            self.assertIn(name, titles)
+        self.assertIn("CADCraft", [item["title"] for item in self.found("cad")])
+
     def test_accents_and_case_do_not_matter(self):
         self.assertEqual([item["title"] for item in self.found("NVIDIA")],
                          [item["title"] for item in self.found("nvidia")])

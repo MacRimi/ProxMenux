@@ -429,6 +429,13 @@ def catalog(refresh=True):
     return own_entries() + utility_entries() + post_install_entries() + oci_entries() + helper_entries(refresh)
 
 
+def name_words(title):
+    """A name that joins its words with capitals, like DeckCraft or CADCraft,
+    also has each of them as a word, as in the search of the Monitor."""
+    split = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', title)
+    return re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', split)
+
+
 def search(items, query):
     """What matches every word of the query: by its name first, then by its
     category. The long description of an application is not searched, as it
@@ -445,7 +452,7 @@ def search(items, query):
     ranked = []
     for item in items:
         name = fold(item['title'])
-        terms = fold(item['terms'])
+        terms = fold(f"{item['terms']} {name_words(item['title'])}")
         if has_all(terms):
             depth = 0
         elif has_all(f"{terms} {fold(item['related'])}"):
