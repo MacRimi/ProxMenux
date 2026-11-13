@@ -8912,6 +8912,7 @@
   "The share already exists in smb.conf:": "Общий ресурс уже существует в smb.conf:",
   "The shared destination is not a directory": "Целевой путь общего ресурса не является каталогом",
   "The shared directory points to a protected host path": "Общий каталог указывает на защищённый путь хоста",
+  "The shared layer cache is unavailable; downloading the image normally.": "Общий кеш слоёв недоступен; образ будет загружен обычным способом.",
   "The shared path exists but is not a directory:": "Путь общего ресурса существует, но не является каталогом:",
   "The shutdown timeout must be a positive number of seconds": "Время ожидания выключения должно быть положительным числом секунд",
   "The single-container setup uses SQLite; the production Compose example adds PostgreSQL and Caddy.": "Одноконтейнерная конфигурация использует SQLite; рабочий пример Compose добавляет PostgreSQL и Caddy.",

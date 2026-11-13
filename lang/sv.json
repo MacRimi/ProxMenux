@@ -8938,6 +8938,7 @@
   "The share already exists in smb.conf:": "Delningen finns redan i smb.conf:",
   "The shared destination is not a directory": "Den delade destinationen är inte en katalog",
   "The shared directory points to a protected host path": "Den delade katalogen pekar på en skyddad värdväg",
+  "The shared layer cache is unavailable; downloading the image normally.": "Den delade lagercachen är inte tillgänglig; avbildningen hämtas på vanligt sätt.",
   "The shared path exists but is not a directory:": "Den gemensamma vägen finns men är inte en katalog:",
   "The shutdown timeout must be a positive number of seconds": "Tidsgränsen för avstängning måste vara ett positivt antal sekunder",
   "The single-container setup uses SQLite; the production Compose example adds PostgreSQL and Caddy.": "Installationen med en enda container använder SQLite; Compose-exemplet för produktion lägger till PostgreSQL och Caddy.",

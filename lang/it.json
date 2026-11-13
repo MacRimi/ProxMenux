@@ -8938,6 +8938,7 @@
   "The share already exists in smb.conf:": "La condivisione esiste già in smb.conf:",
   "The shared destination is not a directory": "La destinazione condivisa non è una directory",
   "The shared directory points to a protected host path": "La directory condivisa punta a un percorso protetto dell'host",
+  "The shared layer cache is unavailable; downloading the image normally.": "La cache condivisa dei livelli non è disponibile; l’immagine verrà scaricata normalmente.",
   "The shared path exists but is not a directory:": "Il percorso condiviso esiste ma non è una directory:",
   "The shutdown timeout must be a positive number of seconds": "Il tempo massimo per lo spegnimento deve essere un numero positivo di secondi",
   "The single-container setup uses SQLite; the production Compose example adds PostgreSQL and Caddy.": "La configurazione a singolo container utilizza SQLite; l'esempio Compose di produzione aggiunge PostgreSQL e Caddy.",

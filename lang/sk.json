@@ -8939,6 +8939,7 @@
   "The share already exists in smb.conf:": "Zdieľanie už existuje v smb.conf:",
   "The shared destination is not a directory": "Zdieľaná destinácia nie je adresár",
   "The shared directory points to a protected host path": "Zdieľaný adresár ukazuje na chránenú cestu hostiteľa",
+  "The shared layer cache is unavailable; downloading the image normally.": "Zdieľaná vyrovnávacia pamäť vrstiev nie je dostupná; obraz sa stiahne bežným spôsobom.",
   "The shared path exists but is not a directory:": "Spoločná cesta existuje, ale nie je adresárom:",
   "The shutdown timeout must be a positive number of seconds": "Časový limit vypnutia musí byť kladný počet sekúnd",
   "The single-container setup uses SQLite; the production Compose example adds PostgreSQL and Caddy.": "Nastavenie s jedným kontajnerom používa SQLite; produkčný príklad Compose pridáva PostgreSQL a Caddy.",

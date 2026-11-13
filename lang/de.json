@@ -8938,6 +8938,7 @@
   "The share already exists in smb.conf:": "Die Freigabe existiert bereits in smb.conf:",
   "The shared destination is not a directory": "Das gemeinsame Ziel ist kein Verzeichnis",
   "The shared directory points to a protected host path": "Das Shared Directory zeigt auf einen geschützten Hostpfad",
+  "The shared layer cache is unavailable; downloading the image normally.": "Der gemeinsame Layer-Cache ist nicht verfügbar; das Image wird regulär heruntergeladen.",
   "The shared path exists but is not a directory:": "Der gemeinsame Pfad existiert, ist aber kein Verzeichnis:",
   "The shutdown timeout must be a positive number of seconds": "Das Zeitlimit für das Herunterfahren muss eine positive Anzahl von Sekunden sein",
   "The single-container setup uses SQLite; the production Compose example adds PostgreSQL and Caddy.": "Das Einzel-Container-Setup verwendet SQLite; das Produktions-Compose-Beispiel fügt PostgreSQL und Caddy hinzu.",
