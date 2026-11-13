@@ -2966,6 +2966,41 @@
     "os": "debian"
   },
   {
+    "name": "Browserless",
+    "slug": "browserless",
+    "desc": "Browserless runs headless Chromium as a service that Puppeteer and Playwright scripts connect to over a WebSocket. Its REST API turns a URL or HTML into screenshots, PDFs, rendered content or scraped data and runs custom functions, and a built-in debugger lets you write and test scripts in the browser.",
+    "script": "ct/browserless.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/browserless.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/browserless.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Every request needs the token: ws://<IP>:3000?token=<TOKEN> for Puppeteer and Playwright, ?token=<TOKEN> on REST calls and the debugger. It is TOKEN in /opt/browserless_data/.env."
+    ],
+    "warnings": [
+      "Browserless is licensed under SSPL-1.0. Using it for commercial or closed-source software requires a commercial licence from browserless.io."
+    ],
+    "port": 3000,
+    "website": "https://www.browserless.io/",
+    "documentation": "https://docs.browserless.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/browserless/browserless@main/assets/logo.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Budget-Board",
     "slug": "budget-board",
     "desc": "Budget-Board is a simple self-hosted app for tracking monthly spending and working towards financial goals. It pairs a .NET web API with a web client backed by PostgreSQL.",
@@ -5007,6 +5042,43 @@
     "os": "debian"
   },
   {
+    "name": "Cryptgeon",
+    "slug": "cryptgeon",
+    "desc": "Cryptgeon is a secure note and file sharing service in the style of PrivNote. Notes are encrypted in the browser before upload, the server only keeps the ciphertext in memory and deletes it once the set number of views or the expiry time is reached.",
+    "script": "ct/cryptgeon.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cryptgeon.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cryptgeon.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006",
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Authentication & Security",
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Open https://<IP> and accept the self-signed certificate; the browser only allows the encryption over HTTPS."
+    ],
+    "warnings": [
+      "There is no login: anyone who reaches the page can create notes. Limits like SIZE_LIMIT and MAX_VIEWS are set in /opt/cryptgeon_data/.env."
+    ],
+    "port": 443,
+    "website": "https://cryptgeon.org/",
+    "documentation": "https://github.com/cupcakearmy/cryptgeon#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cryptgeon.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "CryptPad",
     "slug": "cryptpad",
     "desc": "CryptPad is a collaboration suite that is end-to-end encrypted and open-source. It is designed to facilitate collaboration by synchronizing changes to documents in real time. Since all the user data is encrypted, in the event of a breach, attackers have no way of accessing the stored content",
@@ -6094,6 +6166,40 @@
     "execute_in": [
       "lxc",
       "vm"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Docling Serve",
+    "slug": "docling-serve",
+    "desc": "Docling Serve runs IBM's Docling document converter as an API service. It turns PDF, DOCX, PPTX, HTML and images into Markdown, JSON or plain text, with layout analysis, table structure recognition and OCR, and ships a web UI for trying conversions.",
+    "script": "ct/docling-serve.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docling-serve.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/docling-serve.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Every API call needs the X-Api-Key header with DOCLING_SERVE_API_KEY from /opt/docling-serve_data/.env. In the web UI, enter it under Set API key.",
+      "Only the default layout, table, picture and OCR models are installed. Enrichments such as code, formula or picture description need theirs first: /opt/docling-serve/.venv/bin/docling-tools models download -o /opt/docling-serve_data/models <model>"
+    ],
+    "warnings": [],
+    "port": 5001,
+    "website": "https://www.docling.ai/",
+    "documentation": "https://github.com/docling-project/docling-serve/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/docling-project/docling@main/docs/assets/logo.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -7378,6 +7484,37 @@
     "os": "debian"
   },
   {
+    "name": "Evolution API",
+    "slug": "evolution-api",
+    "desc": "Evolution API is an open-source WhatsApp integration API. Connect WhatsApp numbers as instances through WhatsApp Web (Baileys) or the official Cloud API, then send and receive messages over a REST API and webhooks, with built-in bridges to Chatwoot, Typebot, n8n, Dify, Flowise and OpenAI and a web manager.",
+    "script": "ct/evolution-api.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/evolution-api.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/evolution-api.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Open http://<IP>:8080/manager and sign in with the server URL and the global API key (AUTHENTICATION_API_KEY in /opt/evolution-api_data/.env)."
+    ],
+    "warnings": [
+      "WhatsApp Web instances use an unofficial protocol; WhatsApp can ban numbers used for bulk or automated messaging."
+    ],
+    "port": 8080,
+    "website": "https://evolutionfoundation.com.br/",
+    "documentation": "https://docs.evolutionfoundation.com.br/evolution-api",
+    "logo": "https://cdn.jsdelivr.net/gh/evolution-foundation/evolution-api@main/public/images/evolution-logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "ExcaliDash",
     "slug": "excalidash",
     "desc": "Self-hosted dashboard and organizer for Excalidraw with persistent storage, real-time collaboration, version history, multi-user authentication, and scoped sharing.",
@@ -7709,6 +7846,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Fider",
+    "slug": "fider",
+    "desc": "Fider is an open platform to collect and prioritize customer feedback. Users post ideas, vote and comment on them, while the team responds, sets each idea's status and shares a roadmap, so the most requested features rise to the top.",
+    "script": "ct/fider.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/fider.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/fider.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "Without SMTP, submit the setup form, then run su postgres -c \"psql fider -tAc 'select key from email_verifications order by id desc limit 1'\" and open http://<IP>:3000/signup/verify?k=<key>."
+    ],
+    "warnings": [
+      "Fider signs users in with emailed links: fill in the SMTP fields when creating the container, or set EMAIL_SMTP_* in /opt/fider_data/.env and run systemctl restart fider."
+    ],
+    "port": 3000,
+    "website": "https://fider.io/",
+    "documentation": "https://docs.fider.io/self-hosted/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fider.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -12279,6 +12451,43 @@
     "os": "debian"
   },
   {
+    "name": "Joomla",
+    "slug": "joomla",
+    "desc": "Joomla is an open-source content management system for building websites, from blogs and company sites to community portals. It manages articles, categories, menus and media, with fine-grained user groups and access levels, built-in multilingual content and a web services API. Templates control the look, and thousands of extensions add shops, forms, galleries and more.",
+    "script": "ct/joomla.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/joomla.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/joomla.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Log in at http://<IP>/administrator with the admin user and the generated password from /opt/joomla_data/.env inside the container."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://www.joomla.org/",
+    "documentation": "https://docs.joomla.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/joomla.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Joplin Server",
     "slug": "joplin-server",
     "desc": "Joplin - the privacy-focused note taking app with sync capabilities for Windows, macOS, Linux, Android and iOS.",
@@ -14893,7 +15102,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -15324,6 +15533,46 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "MediaWiki",
+    "slug": "mediawiki",
+    "desc": "MediaWiki is the wiki software behind Wikipedia, built for collaborative documentation at any scale. Every page keeps a full revision history, and templates, categories, file uploads and a visual editor make it easy to structure and grow a knowledge base. Thousands of extensions add features like Lua modules, syntax highlighting and two-factor login.",
+    "script": "ct/mediawiki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mediawiki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mediawiki.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Log in with the admin user and generated password from /opt/mediawiki_data/.env inside the container.",
+      "Links and redirects use the container IP. For a domain or reverse proxy, set $wgServer in /opt/mediawiki_data/LocalSettings.php."
+    ],
+    "warnings": [
+      "By default anyone can read, edit and create an account. Restrict this with $wgGroupPermissions in /opt/mediawiki_data/LocalSettings.php before exposing the wiki."
+    ],
+    "port": 80,
+    "website": "https://www.mediawiki.org/",
+    "documentation": "https://www.mediawiki.org/wiki/Manual:Contents",
+    "logo": "https://cdn.jsdelivr.net/gh/wikimedia/mediawiki@master/resources/assets/mediawiki_compact.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "Admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -17136,6 +17385,43 @@
     "os": "debian"
   },
   {
+    "name": "NocoBase",
+    "slug": "nocobase",
+    "desc": "NocoBase is an extensible no-code and low-code platform for building internal tools and business applications. You model data in collections, assemble pages from tables, forms, kanban and chart blocks, automate processes with workflows and extend everything through plugins.",
+    "script": "ct/nocobase.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nocobase.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nocobase.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in with INIT_ROOT_EMAIL and INIT_ROOT_PASSWORD from /opt/nocobase_data/.env."
+    ],
+    "warnings": [],
+    "port": 13000,
+    "website": "https://www.nocobase.com/",
+    "documentation": "https://docs.nocobase.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nocobase.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@nocobase.com",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "NocoDB",
     "slug": "nocodb",
     "desc": "NocoDB is a document-oriented database management system. It uses the NoSQL (Not Only SQL) data model, which allows for more flexible and scalable data storage than traditional relational databases. NoCoDB stores data in JSON format, making it easier to manage and query complex data structures, and supports a range of data types, including strings, numbers, arrays, and objects. The software provides a web-based interface for managing and querying data, and includes features such as real-time data synchronization, auto-indexing, and full-text search. NoCoDB is designed to be scalable, and can be used for a range of applications, from small projects to large enterprise systems. The software is free and open-source, and is designed to be easy to use and integrate with other applications.",
@@ -18862,6 +19148,43 @@
     "os": "debian"
   },
   {
+    "name": "Organizr",
+    "slug": "organizr",
+    "desc": "Organizr is a homelab services organizer that puts apps like Sonarr, Radarr, Plex or Home Assistant into tabs of a single web dashboard. It handles users and groups with per-tab access, single sign-on into many supported apps, and a homepage with widgets for downloads, calendars and media.",
+    "script": "ct/organizr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/organizr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/organizr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [
+      "The setup wizard is completed during install. Sign in with the admin user and generated password from /opt/organizr_data/.env inside the container."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://organizr.app/",
+    "documentation": "https://docs.organizr.app/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/organizr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "OTS",
     "slug": "ots",
     "desc": "One-Time-Secret sharing platform with a symmetric 256bit AES encryption in the browser.",
@@ -19837,6 +20160,41 @@
     ],
     "config_path": "",
     "os": ""
+  },
+  {
+    "name": "PG Back Web",
+    "slug": "pgbackweb",
+    "desc": "PG Back Web is a web interface for scheduled PostgreSQL backups with pg_dump. It runs backups of PostgreSQL 13 to 18 servers on cron schedules, stores them on local disk or any number of S3 buckets with retention, and restores or downloads them from the browser, with execution logs and webhooks for monitoring.",
+    "script": "ct/pgbackweb.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pgbackweb.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pgbackweb.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00007",
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Backup & Recovery",
+      "Databases"
+    ],
+    "notes": [],
+    "warnings": [
+      "Create the admin account right after the install: until then anyone who can reach port 8085 can claim it."
+    ],
+    "port": 8085,
+    "website": "https://github.com/eduardolat/pgbackweb",
+    "documentation": "https://github.com/eduardolat/pgbackweb#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pg-back-web.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "PhotoPrism",
@@ -21727,6 +22085,43 @@
     "os": "debian"
   },
   {
+    "name": "Pydio Cells",
+    "slug": "pydio-cells",
+    "desc": "Pydio Cells is a self-hosted document sharing and collaboration platform. It organizes files into workspaces with fine-grained permissions, public and private share links, versioning and automated flows, and connects desktop sync and mobile clients.",
+    "script": "ct/pydio-cells.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pydio-cells.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pydio-cells.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Open https://<IP>:8080 and accept the self-signed certificate, the web UI needs HTTPS. Log in as admin with the password from /opt/pydio-cells_data/.env."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://pydio.com/",
+    "documentation": "https://docs.pydio.com/cells-v5/",
+    "logo": "https://cdn.jsdelivr.net/gh/pydio/cells@v5.1.1/frontend/assets/gui.ajax/res/themes/common/images/PydioLogoSquare.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "pyLoad",
     "slug": "pyload",
     "desc": "pyLoad is a lightweight download manager written in Python. It handles one-click hosters, container files (DLC, RSDF, CCF) and direct links, supports premium accounts, captcha solving and a plugin system, and is controlled through a web interface, a CLI or third-party clients.",
@@ -22685,6 +23080,42 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Rivet Engine",
+    "slug": "rivet",
+    "desc": "Rivet is an open alternative to Cloudflare Durable Objects. Rivet Actors are long-lived stateful processes with their own SQLite database that run inside your Node.js, Bun or Rust apps, while the engine schedules, routes and persists them. This is the self-hosted engine those apps connect to.",
+    "script": "ct/rivet.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rivet.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rivet.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Connect your RivetKit app with RIVET_ENDPOINT=http://default:<token>@<IP>:6420, using auth.admin_token from /opt/rivet_data/config.json. The default node pool already exists.",
+      "Port 6420 is the API and actor gateway, not a web UI; the self-hosted engine ships no dashboard."
+    ],
+    "warnings": [
+      "The admin token has full access to every namespace. Keep it on your backend and put the engine behind HTTPS before exposing it beyond your LAN."
+    ],
+    "port": 6420,
+    "website": "https://www.rivet.dev/",
+    "documentation": "https://rivet.dev/docs/deploy/self-host/control-plane/",
+    "logo": "https://cdn.jsdelivr.net/gh/rivet-dev/rivet@main/.github/media/platforms/rivet-bg.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -24871,7 +25302,7 @@
     "port": 443,
     "website": "https://stoat.chat",
     "documentation": "https://github.com/stoatchat/self-hosted",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoatchat.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoat.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -25266,6 +25697,43 @@
       "lxc"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Apache Superset",
+    "slug": "superset",
+    "desc": "Apache Superset is a data exploration and visualization platform. It connects to most SQL databases, offers SQL Lab for writing queries, a no-code chart builder with dozens of chart types, and interactive dashboards with filters and fine-grained access control.",
+    "script": "ct/superset.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/superset.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/superset.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Log in as admin with SUPERSET_ADMIN_PASSWORD from /opt/superset_data/.env."
+    ],
+    "warnings": [],
+    "port": 8088,
+    "website": "https://superset.apache.org/",
+    "documentation": "https://superset.apache.org/user-docs/intro",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache-superset.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
