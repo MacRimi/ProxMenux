@@ -22,7 +22,7 @@ import json
 import tempfile
 import base64
 
-from jwt_middleware import require_admin_scope
+from jwt_middleware import require_admin_scope, require_auth
 
 # Allowed shape for interaction_id used as a file path component when writing
 # the response file. Bounded length, no separators, no path traversal. See
@@ -86,19 +86,21 @@ def _consume_terminal_ticket(ticket):
 def _ws_auth_check():
     """Return True iff the current WebSocket handshake is authorized to proceed.
 
-    When auth is enabled and not declined, require a single-use ticket in the
-    `ticket` query parameter. When auth is disabled (fresh install or user
-    explicitly skipped setup), allow the handshake to proceed unauthenticated
-    — same semantics as the @require_auth decorator on REST routes.
+    Every WebSocket runs something: a root terminal, a script or an update.
+    An open Monitor lets it through, as its owner chose; with an account a
+    single-use ticket in the `ticket` query parameter is required, and a
+    Monitor that is read-only or not yet set up refuses it.
     """
     try:
-        from auth_manager import load_auth_config
-        config = load_auth_config()
-        if not config.get("enabled", False) or config.get("declined", False):
-            return True
+        from auth_manager import access_mode
+        mode = access_mode()
     except Exception:
         # If auth status can't be loaded (DB error / missing module), fail
         # closed — better to refuse a terminal than to grant root unauth.
+        return False
+    if mode == 'open':
+        return True
+    if mode != 'password':
         return False
     return _consume_terminal_ticket(request.args.get('ticket', ''))
 
@@ -285,6 +287,7 @@ def host_update_viewer(ws, run_id):
 
 
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
+@require_auth
 def terminal_health():
     """Health check for terminal service"""
     return {'success': True, 'active_sessions': len(active_sessions)}
@@ -308,6 +311,7 @@ def issue_terminal_ticket_route():
     })
 
 @terminal_bp.route('/api/terminal/search-command', methods=['GET'])
+@require_admin_scope
 def search_command():
     """Proxy endpoint for cheat.sh API to avoid CORS issues"""
     query = request.args.get('q', '')

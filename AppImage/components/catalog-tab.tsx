@@ -11,6 +11,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { ArrowLeft, BadgeCheck, Check, ChevronLeft, Container, Server, ChevronRight, ExternalLink, Loader2, Search, Settings2, X } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useI18n, useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 import { categoryChipStyle, hueForCategory, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
 import { ThemeAwareLogo } from "./lxc-app-panel"
@@ -542,6 +543,9 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
   const titles = useContext(SectionTitles)
   const { language } = useI18n()
   const isLight = useIsLightTheme()
+  // Installing or running opens a terminal on the host: a session that
+  // cannot run anything reads the sheet without those buttons.
+  const { capabilities } = useAccess()
   const [detail, setDetail] = useState<CatalogDetail | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -839,7 +843,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
                   )}
                 </dl>
 
-                <div className="grid gap-2">
+                {capabilities.execute && <div className="grid gap-2">
                   {item.kind === "oci" ? (
                     <>
                       <button type="button" disabled={d.installable === false} onClick={() => onRun(false)}
@@ -858,7 +862,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
                         : item.kind === "pmx" && item.type === "vm" ? t("catalog.sheet.createVm") : t("catalog.sheet.open")}
                     </button>
                   )}
-                </div>
+                </div>}
 
                 {links.length > 0 && (
                   <section>

@@ -2848,7 +2848,22 @@
     "avatarHint": "PNG, JPEG, WebP ou GIF · jusqu'à 2 Mo · recadrez en carré au préalable pour un meilleur résultat.",
     "settingUp": "Configuration…",
     "setupAuthentication": "Configurer l'authentification",
-    "back": "Retour"
+    "back": "Retour",
+    "setupCode": "Code de configuration",
+    "setupCodeHint": "Il a été affiché dans la console lors de l'installation de ProxMenux. Si vous ne l'avez pas, exécutez menu sur le serveur et ouvrez Paramètres → Afficher le code de configuration du Monitor.",
+    "codeInvalid": "Le code de configuration n'est pas valide.",
+    "codeRateLimited": "Trop de tentatives. Attendez quelques minutes puis réessayez.",
+    "noPasswordTitle": "Sans mot de passe",
+    "noPasswordDescription": "Choisissez ce que toute personne accédant à cette adresse peut faire.",
+    "readOnlyTitle": "Lecture seule",
+    "readOnlyDescription": "Toute personne accédant au Monitor peut le consulter, mais ne peut pas ouvrir de terminaux, exécuter de scripts ni modifier quoi que ce soit. Vous pourrez ajouter un mot de passe plus tard.",
+    "openTitle": "Ouvrir, en acceptant les risques",
+    "openDescription": "Toute personne accédant au Monitor obtient le contrôle total de ce serveur, terminal root inclus. Ne choisissez cette option que sur un réseau où vous faites confiance à toutes les personnes pouvant y accéder.",
+    "chooseReadOnly": "Utiliser la lecture seule",
+    "chooseOpen": "Ouvrir sans mot de passe"
+  },
+  "access": {
+    "readOnlyBanner": "Accès en lecture seule : vous pouvez voir ce serveur, mais vous ne pouvez rien exécuter ni modifier. Pour le gérer, ajoutez un mot de passe dans Sécurité."
   },
   "securityPage": {
     "title": "Sécurité",
@@ -2882,7 +2897,8 @@
       "none": "Aucun",
       "external": "Externe",
       "up": "Actif",
-      "down": "Inactif"
+      "down": "Inactif",
+      "readOnly": "Lecture seule"
     },
     "errors": {
       "deleteReportNoFiles": "Aucun rapport ni journal Lynis à supprimer n’a été trouvé.",
@@ -2958,7 +2974,8 @@
       "sslCertificateReloaded": "Le certificat renouvelé est maintenant actif. Les connexions existantes n’ont pas été interrompues.",
       "sslCertificateUnchanged": "Le certificat actif correspond déjà aux fichiers de certificat actuels.",
       "reportDeleted": "Le rapport d'audit a été supprimé.",
-      "twoFactorEnabled": "L'authentification à deux facteurs est activée."
+      "twoFactorEnabled": "L'authentification à deux facteurs est activée.",
+      "readOnlyReloading": "Le tableau de bord est désormais en lecture seule. Rechargement..."
     },
     "confirm": {
       "disableAuth": "Désactiver l'authentification ? Toute personne pouvant accéder au tableau de bord pourra l’ouvrir.",
@@ -2993,7 +3010,10 @@
       "confirmNewPasswordPlaceholder": "Saisissez à nouveau le nouveau mot de passe",
       "changing": "Modification…",
       "enterYourPassword": "Saisissez votre mot de passe",
-      "disable": "Désactiver l'authentification"
+      "disable": "Désactiver l'authentification",
+      "readOnlyMode": "Le tableau de bord est en lecture seule sans mot de passe : il peut être consulté, mais rien ne peut être exécuté ni modifié.",
+      "useReadOnly": "Passer en lecture seule",
+      "disableChoose": "Sans mot de passe, comment le tableau de bord doit-il être accessible ?"
     },
     "twoFactor": {
       "title": "Authentification à deux facteurs",

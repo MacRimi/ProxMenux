@@ -2848,7 +2848,22 @@
     "avatarHint": "PNG, JPEG, WebP oder GIF · bis zu 2 MB · Quadrat vor dem Zuschneiden für beste Ergebnisse.",
     "settingUp": "Einrichten...",
     "setupAuthentication": "Authentifizierung einrichten",
-    "back": "Zurück"
+    "back": "Zurück",
+    "setupCode": "Einrichtungscode",
+    "setupCodeHint": "Er wurde bei der Installation von ProxMenux in der Konsole angezeigt. Falls Sie ihn nicht haben, führen Sie menu auf dem Server aus und öffnen Sie Einstellungen → Monitor-Einrichtungscode anzeigen.",
+    "codeInvalid": "Der Einrichtungscode ist ungültig.",
+    "codeRateLimited": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut.",
+    "noPasswordTitle": "Ohne Passwort",
+    "noPasswordDescription": "Wählen Sie aus, was jeder tun darf, der diese Adresse aufruft.",
+    "readOnlyTitle": "Schreibgeschützt",
+    "readOnlyDescription": "Jeder, der den Monitor aufruft, kann ihn sehen, aber keine Terminals öffnen, Skripte ausführen oder Änderungen vornehmen. Sie können später ein Passwort hinzufügen.",
+    "openTitle": "Offen, Risiko akzeptieren",
+    "openDescription": "Jeder, der den Monitor aufruft, erhält die vollständige Kontrolle über diesen Server, einschließlich Root-Terminal. Wählen Sie dies nur in einem Netzwerk, in dem Sie allen vertrauen, die darauf zugreifen können.",
+    "chooseReadOnly": "Schreibgeschützt verwenden",
+    "chooseOpen": "Ohne Passwort öffnen"
+  },
+  "access": {
+    "readOnlyBanner": "Schreibgeschützter Zugriff: Sie können diesen Server sehen, aber nichts ausführen oder ändern. Um ihn zu verwalten, fügen Sie unter Security ein Passwort hinzu."
   },
   "securityPage": {
     "title": "Sicherheit",
@@ -2882,7 +2897,8 @@
       "none": "Keiner",
       "external": "Extern",
       "up": "Hoch",
-      "down": "Inaktiv"
+      "down": "Inaktiv",
+      "readOnly": "Schreibgeschützt"
     },
     "errors": {
       "deleteReportNoFiles": "Es wurden keine Lynis-Berichts- oder Protokolldateien zum Entfernen gefunden.",
@@ -2958,7 +2974,8 @@
       "sslCertificateReloaded": "Das erneuerte Zertifikat ist jetzt aktiv. Bestehende Verbindungen wurden nicht unterbrochen.",
       "sslCertificateUnchanged": "Das aktive Zertifikat entspricht bereits den aktuellen Zertifikatsdateien.",
       "reportDeleted": "Auditbericht wurde gelöscht.",
-      "twoFactorEnabled": "Die Zwei-Faktor-Authentifizierung ist aktiviert."
+      "twoFactorEnabled": "Die Zwei-Faktor-Authentifizierung ist aktiviert.",
+      "readOnlyReloading": "Das Dashboard ist jetzt schreibgeschützt. Wird neu geladen..."
     },
     "confirm": {
       "disableAuth": "Authentifizierung deaktivieren? Jeder, der das Dashboard erreichen kann, kann es öffnen.",
@@ -2993,7 +3010,10 @@
       "confirmNewPasswordPlaceholder": "Geben Sie erneut das neue Passwort ein",
       "changing": "Ändern...",
       "enterYourPassword": "Geben Sie Ihr Passwort ein",
-      "disable": "Deaktivieren Sie die Authentifizierung"
+      "disable": "Deaktivieren Sie die Authentifizierung",
+      "readOnlyMode": "Das Dashboard ist ohne Passwort schreibgeschützt: Es kann eingesehen werden, aber es kann nichts ausgeführt oder geändert werden.",
+      "useReadOnly": "Zu schreibgeschützt wechseln",
+      "disableChoose": "Wie soll das Dashboard ohne Passwort erreichbar sein?"
     },
     "twoFactor": {
       "title": "Zwei-Faktor-Authentifizierung",

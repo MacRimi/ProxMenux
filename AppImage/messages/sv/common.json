@@ -2848,7 +2848,22 @@
     "avatarHint": "PNG, JPEG, WebP eller GIF · upp till 2 MB · förbeskär kvadrat för bästa resultat.",
     "settingUp": "Konfigurerar...",
     "setupAuthentication": "Ställ in autentisering",
-    "back": "Tillbaka"
+    "back": "Tillbaka",
+    "setupCode": "Konfigurationskod",
+    "setupCodeHint": "Den visades i konsolen när ProxMenux installerades. Om du inte har den kör du menu på servern och öppnar Inställningar → Visa konfigurationskod för Monitor.",
+    "codeInvalid": "Konfigurationskoden är inte giltig.",
+    "codeRateLimited": "För många försök. Vänta några minuter och försök igen.",
+    "noPasswordTitle": "Utan lösenord",
+    "noPasswordDescription": "Välj vad alla som når denna adress får göra.",
+    "readOnlyTitle": "Endast läsning",
+    "readOnlyDescription": "Alla som når Monitor kan se den, men kan inte öppna terminaler, köra skript eller ändra något. Du kan lägga till ett lösenord senare.",
+    "openTitle": "Öppna, acceptera risken",
+    "openDescription": "Alla som når Monitor får full kontroll över denna server, inklusive root-terminal. Välj detta endast i ett nätverk där du litar på alla som kan nå den.",
+    "chooseReadOnly": "Använd endast läsning",
+    "chooseOpen": "Öppna utan lösenord"
+  },
+  "access": {
+    "readOnlyBanner": "Skrivskyddad åtkomst: du kan se denna server, men inte köra eller ändra något. För att hantera den lägger du till ett lösenord i Säkerhet."
   },
   "securityPage": {
     "title": "Säkerhet",
@@ -2882,7 +2897,8 @@
       "none": "Ingen",
       "external": "Extern",
       "up": "Upp",
-      "down": "Ner"
+      "down": "Ner",
+      "readOnly": "Endast läsning"
     },
     "errors": {
       "deleteReportNoFiles": "Inga Lynis-rapport- eller loggfiler hittades att ta bort.",
@@ -2958,7 +2974,8 @@
       "sslCertificateReloaded": "Det förnyade certifikatet är nu aktivt. Befintliga anslutningar avbröts inte.",
       "sslCertificateUnchanged": "Det aktiva certifikatet motsvarar redan de aktuella certifikatfilerna.",
       "reportDeleted": "Revisionsrapporten togs bort.",
-      "twoFactorEnabled": "Tvåfaktorsautentisering är aktiverad."
+      "twoFactorEnabled": "Tvåfaktorsautentisering är aktiverad.",
+      "readOnlyReloading": "Instrumentpanelen är nu skrivskyddad. Laddar om..."
     },
     "confirm": {
       "disableAuth": "Inaktivera autentisering? Alla som kan nå instrumentpanelen kommer att kunna öppna den.",
@@ -2993,7 +3010,10 @@
       "confirmNewPasswordPlaceholder": "Ange det nya lösenordet igen",
       "changing": "Skiftande...",
       "enterYourPassword": "Ange ditt lösenord",
-      "disable": "Inaktivera autentisering"
+      "disable": "Inaktivera autentisering",
+      "readOnlyMode": "Instrumentpanelen är skrivskyddad utan lösenord: den kan visas, men inget kan köras eller ändras.",
+      "useReadOnly": "Växla till endast läsning",
+      "disableChoose": "Hur ska instrumentpanelen nås utan lösenord?"
     },
     "twoFactor": {
       "title": "Tvåfaktorsautentisering",

@@ -157,6 +157,98 @@ def save_auth_config(config):
         return False
 
 
+# ── Access to the Monitor ─────────────────────────────────────────────
+# undecided  nobody has chosen yet: only the first-run screen is served.
+# password   an account: everything, after signing in.
+# read_only  no account: anyone who reaches it can look; nothing runs or changes.
+# open       no account and no limits, chosen knowing the risk.
+ACCESS_MODES = ("undecided", "password", "read_only", "open")
+
+# A new installation writes a one-time code here and shows it in the console;
+# the first-run screen asks for it before anyone can decide for the owner.
+SETUP_CODE_FILE = Path("/usr/local/share/proxmenux/monitor-setup-code")
+
+_NO_CAPABILITIES = {"view": False, "execute": False, "terminal": False, "admin": False}
+_VIEW_CAPABILITIES = {"view": True, "execute": False, "terminal": False, "admin": False}
+_ALL_CAPABILITIES = {"view": True, "execute": True, "terminal": True, "admin": True}
+
+
+def access_mode(config=None):
+    """The access mode the configuration describes."""
+    config = load_auth_config() if config is None else config
+    # Enabled without credentials stays closed: nobody can sign in.
+    if config.get("enabled"):
+        return "password"
+    if config.get("access_mode") in ("read_only", "open"):
+        return config["access_mode"]
+    # Declining the password, before the access modes existed, left the
+    # Monitor open: that choice stays as it was.
+    if config.get("declined"):
+        return "open"
+    return "undecided"
+
+
+def capabilities(mode, scope=None):
+    """What a request can do: `scope` is the scope of its valid token, if any."""
+    if mode == "open" or (mode == "password" and scope == "full_admin"):
+        return dict(_ALL_CAPABILITIES)
+    if mode == "read_only" or (mode == "password" and scope):
+        return dict(_VIEW_CAPABILITIES)
+    return dict(_NO_CAPABILITIES)
+
+
+def setup_code_required(config=None):
+    """Choosing how to reach a Monitor without an account asks for the setup
+    code: on a new installation, which has one, and to leave read-only mode."""
+    mode = access_mode(config)
+    if mode == "undecided":
+        return SETUP_CODE_FILE.is_file()
+    return mode == "read_only"
+
+
+def check_setup_code(code):
+    """Whether `code` is the setup code, ignoring case, spaces and dashes."""
+    try:
+        stored = SETUP_CODE_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    normalize = lambda value: "".join(ch for ch in str(value or "").upper() if ch.isalnum())
+    return bool(normalize(stored)) and hmac.compare_digest(normalize(code), normalize(stored))
+
+
+def consume_setup_code():
+    """The code is used once: a decision taken with it removes it."""
+    try:
+        SETUP_CODE_FILE.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def choose_access_mode(mode):
+    """Leave the Monitor without an account, read-only or open. Any account
+    and its second factor are removed, as disabling the password always did."""
+    if mode not in ("read_only", "open"):
+        return False, "Unknown access mode"
+    config = load_auth_config()
+    config.update({
+        "enabled": False,
+        "declined": mode == "open",
+        "configured": True,
+        "access_mode": mode,
+        "username": None,
+        "password_hash": None,
+        "totp_enabled": False,
+        "totp_secret": None,
+        "backup_codes": [],
+    })
+    # API tokens and the revocation list are kept, as before: a revoked
+    # token must stay revoked if a password is set again later.
+    _invalidate_revoked_cache()
+    if save_auth_config(config):
+        return True, "Access mode saved"
+    return False, "Failed to save configuration"
+
+
 def _get_jwt_secret():
     """Return the per-install JWT signing secret, generating one on first use.
 
@@ -648,12 +740,17 @@ def get_auth_status():
     }
     """
     config = load_auth_config()
+    mode = access_mode(config)
     return {
-        "auth_enabled": config.get("enabled", False),
-        "auth_configured": config.get("configured", False),
-        "declined": config.get("declined", False),
-        "username": config.get("username") if config.get("enabled") else None,
+        "auth_enabled": mode == "password",
+        "auth_configured": mode != "undecided",
+        "declined": mode == "open",
+        "access_mode": mode,
+        "setup_code_required": setup_code_required(config),
+        # The account name is told only to a signed-in session (see the route).
+        "username": None,
         "authenticated": False,
+        "capabilities": capabilities(mode),
         "totp_enabled": config.get("totp_enabled", False)  # Include 2FA status
     }
 
@@ -685,6 +782,7 @@ def setup_auth(username, password):
         "password_hash": hash_password(password),
         "declined": False,
         "configured": True,
+        "access_mode": "password",
         "totp_enabled": False,
         "totp_secret": None,
         "backup_codes": []
@@ -698,49 +796,21 @@ def setup_auth(username, password):
 
 def decline_auth():
     """
-    Mark authentication as declined by user
+    Mark authentication as declined by user: the Monitor stays open.
     Returns (success: bool, message: str)
     """
-    config = load_auth_config()
-    config["enabled"] = False
-    config["declined"] = True
-    config["configured"] = True
-    config["username"] = None
-    config["password_hash"] = None
-    config["totp_enabled"] = False
-    config["totp_secret"] = None
-    config["backup_codes"] = []
-    
-    if save_auth_config(config):
-        return True, "Authentication declined"
-    else:
-        return False, "Failed to save configuration"
+    success, message = choose_access_mode("open")
+    return success, ("Authentication declined" if success else message)
 
 
-def disable_auth():
+def disable_auth(mode="read_only"):
     """
-    Disable authentication (different from decline - can be re-enabled)
+    Remove the password, leaving the Monitor read-only or open: never back
+    to the undecided state of a new installation.
     Returns (success: bool, message: str)
     """
-    config = load_auth_config()
-    config["enabled"] = False
-    config["username"] = None
-    config["password_hash"] = None
-    config["declined"] = False
-    config["configured"] = False
-    config["totp_enabled"] = False
-    config["totp_secret"] = None
-    config["backup_codes"] = []
-    # Intentionally preserve `api_tokens` and `revoked_tokens` across
-    # disable→re-enable cycles. Wiping them allowed a previously revoked
-    # token to verify again because nothing on the deny-list would reject
-    # it. Audit Tier 5 — disable_auth() borra revoked_tokens.
-    _invalidate_revoked_cache()
-
-    if save_auth_config(config):
-        return True, "Authentication disabled"
-    else:
-        return False, "Failed to save configuration"
+    success, message = choose_access_mode(mode)
+    return success, ("Authentication disabled" if success else message)
 
 
 def enable_auth():
@@ -755,7 +825,8 @@ def enable_auth():
     
     config["enabled"] = True
     config["declined"] = False
-    
+    config["access_mode"] = "password"
+
     if save_auth_config(config):
         return True, "Authentication enabled"
     else:

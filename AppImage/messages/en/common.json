@@ -2975,7 +2975,22 @@
     "avatarHint": "PNG, JPEG, WebP or GIF · up to 2 MB · pre-crop square for best results.",
     "settingUp": "Setting up...",
     "setupAuthentication": "Setup Authentication",
-    "back": "Back"
+    "back": "Back",
+    "setupCode": "Setup code",
+    "setupCodeHint": "It was shown in the console when ProxMenux was installed. If you don't have it, run menu on the server and open Settings → Show Monitor Setup Code.",
+    "codeInvalid": "The setup code is not valid.",
+    "codeRateLimited": "Too many attempts. Wait a few minutes and try again.",
+    "noPasswordTitle": "Without a password",
+    "noPasswordDescription": "Choose what anyone who reaches this address can do.",
+    "readOnlyTitle": "Read-only",
+    "readOnlyDescription": "Anyone who reaches the Monitor can see it, but cannot open terminals, run scripts or change anything. You can add a password later.",
+    "openTitle": "Open, accepting the risk",
+    "openDescription": "Anyone who reaches the Monitor gets full control of this server, root terminal included. Choose it only on a network where you trust everyone who can reach it.",
+    "chooseReadOnly": "Use read-only",
+    "chooseOpen": "Open without a password"
+  },
+  "access": {
+    "readOnlyBanner": "Read-only access: you can see this server, but not run or change anything. To manage it, add a password in Security."
   },
   "securityPage": {
     "title": "Security",
@@ -3009,7 +3024,8 @@
       "none": "None",
       "external": "External",
       "up": "Up",
-      "down": "Down"
+      "down": "Down",
+      "readOnly": "Read-only"
     },
     "errors": {
       "deleteReportNoFiles": "No Lynis report or log files were found to remove.",
@@ -3085,7 +3101,8 @@
       "sslCertificateReloaded": "The renewed certificate is now active. Existing connections were not interrupted.",
       "sslCertificateUnchanged": "The active certificate already matches the current certificate files.",
       "reportDeleted": "Audit report was deleted.",
-      "twoFactorEnabled": "Two-factor authentication is enabled."
+      "twoFactorEnabled": "Two-factor authentication is enabled.",
+      "readOnlyReloading": "The dashboard is now read-only. Reloading..."
     },
     "confirm": {
       "disableAuth": "Disable authentication? Anyone who can reach the dashboard will be able to open it.",
@@ -3120,7 +3137,10 @@
       "confirmNewPasswordPlaceholder": "Enter new password again",
       "changing": "Changing...",
       "enterYourPassword": "Enter your password",
-      "disable": "Disable authentication"
+      "disable": "Disable authentication",
+      "readOnlyMode": "The dashboard is read-only without a password: it can be viewed, but nothing can be run or changed.",
+      "useReadOnly": "Switch to read-only",
+      "disableChoose": "Without a password, how should the dashboard be reached?"
     },
     "twoFactor": {
       "title": "Two-factor authentication",

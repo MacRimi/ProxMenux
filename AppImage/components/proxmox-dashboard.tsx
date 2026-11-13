@@ -68,6 +68,7 @@ import {
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
 import { useTabOrder, firstActualTab, type TabId } from "../lib/tab-order"
+import { useAccess } from "../lib/access"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -133,7 +134,10 @@ function MonitorDashboard({ product }: { product: Product }) {
   useSWR(isPbs ? null : "/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
   useSWR(isPbs ? null : "/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
   const { order: userTabOrder } = useTabOrder()
-  const tabOrder: TopTab[] = isPbs ? PBS_TABS : userTabOrder
+  const { mode: accessMode, capabilities } = useAccess()
+  // A session that cannot open terminals does not get the tab.
+  const tabOrder: TopTab[] = (isPbs ? PBS_TABS : userTabOrder)
+    .filter((tab) => tab !== "terminal" || capabilities.terminal)
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -153,6 +157,11 @@ function MonitorDashboard({ product }: { product: Product }) {
   useEffect(() => {
     setActiveTab(isPbs ? "overview" : firstActualTab())
   }, [isPbs])
+  // A session without terminals never lands on that tab, whatever the
+  // saved order or a link from another part of the dashboard says.
+  useEffect(() => {
+    if (activeTab === "terminal" && !capabilities.terminal) setActiveTab("overview")
+  }, [activeTab, capabilities.terminal])
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
@@ -641,6 +650,14 @@ function MonitorDashboard({ product }: { product: Product }) {
         </div>
       </header>
 
+      {accessMode === "read_only" && (
+        <div className="border-b border-blue-500/20 bg-blue-500/10">
+          <div className="container mx-auto px-4 lg:px-6 py-2 text-sm text-blue-600 dark:text-blue-300">
+            {t("access.readOnlyBanner")}
+          </div>
+        </div>
+      )}
+
       <div
         className={`sticky [@media(max-height:500px)]:static z-40 bg-background
           top-[120px] lg:top-[76px]
@@ -763,7 +780,10 @@ function MonitorDashboard({ product }: { product: Product }) {
                 }
               }
               return (
-                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-8"} bg-card border border-border`}>
+                // One column per visible tab: the first sits at the left
+                // edge, the last at the right, whatever the session shows.
+                <TabsList className="hidden lg:grid w-full bg-card border border-border"
+                  style={{ gridTemplateColumns: `repeat(${tabOrder.length}, minmax(0, 1fr))` }}>
                   {tabOrder.map(renderTop)}
                 </TabsList>
               )
@@ -943,9 +963,11 @@ function MonitorDashboard({ product }: { product: Product }) {
           </TabsContent>
           </>}
 
-          <TabsContent value="terminal" className="mt-0">
-            <TerminalPanel key={`terminal-${componentKey}`} />
-          </TabsContent>
+          {capabilities.terminal && (
+            <TabsContent value="terminal" className="mt-0">
+              <TerminalPanel key={`terminal-${componentKey}`} />
+            </TabsContent>
+          )}
 
           <TabsContent value="security" className="space-y-4 md:space-y-6 mt-0">
             <Security key={`security-${componentKey}`} hostType={product} />

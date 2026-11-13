@@ -33,6 +33,7 @@ class StorageRetentionAuthorizationTests(unittest.TestCase):
         scripts = Path(__file__).resolve().parents[1] / "AppImage/scripts"
         auth = types.ModuleType("auth_manager")
         auth.load_auth_config = lambda: {"enabled": True}
+        auth.access_mode = lambda config=None: "password"
         auth.verify_token = lambda token: "tester" if token in ("admin", "reader") else None
         auth.verify_token_full = lambda token: ("tester", "full_admin" if token == "admin" else "read_only")
         spec = importlib.util.spec_from_file_location("storage_retention_middleware", scripts / "jwt_middleware.py")

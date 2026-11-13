@@ -2848,7 +2848,22 @@
     "avatarHint": "PNG, JPEG, WebP o GIF · massimo 2 MB · ritaglia prima l’immagine in formato quadrato per un risultato migliore.",
     "settingUp": "Configurazione in corso...",
     "setupAuthentication": "Imposta autenticazione",
-    "back": "Indietro"
+    "back": "Indietro",
+    "setupCode": "Codice di configurazione",
+    "setupCodeHint": "È stato mostrato nella console durante l'installazione di ProxMenux. Se non ce l'hai, esegui menu sul server e apri Impostazioni → Mostra codice di configurazione del Monitor.",
+    "codeInvalid": "Il codice di configurazione non è valido.",
+    "codeRateLimited": "Troppi tentativi. Attendi qualche minuto e riprova.",
+    "noPasswordTitle": "Senza password",
+    "noPasswordDescription": "Scegli cosa può fare chiunque raggiunga questo indirizzo.",
+    "readOnlyTitle": "Sola lettura",
+    "readOnlyDescription": "Chiunque raggiunga il Monitor può visualizzarlo, ma non può aprire terminali, eseguire script o modificare alcunché. Potrai aggiungere una password in seguito.",
+    "openTitle": "Aperto, accettando il rischio",
+    "openDescription": "Chiunque raggiunga il Monitor ottiene il pieno controllo di questo server, terminale root incluso. Selezionalo solo su una rete in cui ti fidi di chiunque possa raggiungerlo.",
+    "chooseReadOnly": "Usa sola lettura",
+    "chooseOpen": "Apri senza password"
+  },
+  "access": {
+    "readOnlyBanner": "Accesso in sola lettura: puoi visualizzare questo server, ma non eseguire né modificare alcunché. Per gestirlo, aggiungi una password in Sicurezza."
   },
   "securityPage": {
     "title": "Sicurezza",
@@ -2882,7 +2897,8 @@
       "none": "Nessuno",
       "external": "Esterno",
       "up": "Attiva",
-      "down": "Inattiva"
+      "down": "Inattiva",
+      "readOnly": "Sola lettura"
     },
     "errors": {
       "deleteReportNoFiles": "Nessun rapporto o log di Lynis da rimuovere trovato.",
@@ -2958,7 +2974,8 @@
       "sslCertificateReloaded": "Il certificato rinnovato è ora attivo. Le connessioni esistenti non sono state interrotte.",
       "sslCertificateUnchanged": "Il certificato attivo corrisponde già ai file del certificato correnti.",
       "reportDeleted": "Rapporto di audit eliminato.",
-      "twoFactorEnabled": "L'autenticazione a due fattori è abilitata."
+      "twoFactorEnabled": "L'autenticazione a due fattori è abilitata.",
+      "readOnlyReloading": "La dashboard è ora in sola lettura. Ricaricamento in corso..."
     },
     "confirm": {
       "disableAuth": "Disabilitare l'autenticazione? Chiunque riesca a raggiungere la dashboard potrà aprirla.",
@@ -2993,7 +3010,10 @@
       "confirmNewPasswordPlaceholder": "Ripeti la nuova password",
       "changing": "Modifica in corso...",
       "enterYourPassword": "Inserisci la password",
-      "disable": "Disabilita l'autenticazione"
+      "disable": "Disabilita l'autenticazione",
+      "readOnlyMode": "La dashboard è in sola lettura senza password: può essere visualizzata, ma non è possibile eseguire né modificare nulla.",
+      "useReadOnly": "Passa a sola lettura",
+      "disableChoose": "Senza password, come deve essere raggiungibile la dashboard?"
     },
     "twoFactor": {
       "title": "Autenticazione a due fattori",

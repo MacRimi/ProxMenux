@@ -28,6 +28,7 @@ class MonitorLinksI18nTests(unittest.TestCase):
             self.addCleanup(patch.stop)
         auth_provider = types.SimpleNamespace(
             load_auth_config=lambda: {"enabled": True},
+            access_mode=lambda config=None: "password",
             verify_token=lambda token: "fixture" if token in ("admin", "reader") else None,
             verify_token_full=lambda token: ("fixture", "full_admin" if token == "admin" else "read_only")
             if token in ("admin", "reader") else (None, None))

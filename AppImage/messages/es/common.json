@@ -3001,7 +3001,22 @@
     "avatarHint": "PNG, JPEG, WebP o GIF · hasta 2 MB · cuadrado precortado para obtener mejores resultados.",
     "settingUp": "Configurando...",
     "setupAuthentication": "Configurar autenticación",
-    "back": "Atrás"
+    "back": "Atrás",
+    "setupCode": "Código de configuración",
+    "setupCodeHint": "Se mostró en la consola al instalar ProxMenux. Si no lo tienes, ejecuta menu en el servidor y abre Ajustes → Mostrar el código de configuración del Monitor.",
+    "codeInvalid": "El código de configuración no es válido.",
+    "codeRateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "noPasswordTitle": "Sin contraseña",
+    "noPasswordDescription": "Elige qué puede hacer cualquiera que acceda a esta dirección.",
+    "readOnlyTitle": "Solo lectura",
+    "readOnlyDescription": "Cualquiera que acceda al Monitor puede verlo, pero no puede abrir terminales, ejecutar scripts ni cambiar nada. Puedes añadir una contraseña más tarde.",
+    "openTitle": "Abierto, asumiendo el riesgo",
+    "openDescription": "Cualquiera que acceda al Monitor obtiene el control total de este servidor, incluida la terminal de root. Elígelo solo en una red en la que confíes en todos los que puedan acceder a él.",
+    "chooseReadOnly": "Usar solo lectura",
+    "chooseOpen": "Abrir sin contraseña"
+  },
+  "access": {
+    "readOnlyBanner": "Acceso de solo lectura: puedes ver este servidor, pero no ejecutar ni cambiar nada. Para administrarlo, añade una contraseña en Seguridad."
   },
   "securityPage": {
     "title": "Seguridad",
@@ -3035,7 +3050,8 @@
       "none": "Ninguno",
       "external": "Externo",
       "up": "Arriba",
-      "down": "Abajo"
+      "down": "Abajo",
+      "readOnly": "Solo lectura"
     },
     "errors": {
       "deleteReportNoFiles": "No se encontraron archivos de informe ni registros de Lynis para eliminar.",
@@ -3111,7 +3127,8 @@
       "sslCertificateReloaded": "El certificado renovado ya está activo. No se ha interrumpido ninguna conexión.",
       "sslCertificateUnchanged": "El certificado activo ya coincide con los archivos actuales.",
       "reportDeleted": "Se eliminó el informe de auditoría.",
-      "twoFactorEnabled": "La autenticación de dos factores está habilitada."
+      "twoFactorEnabled": "La autenticación de dos factores está habilitada.",
+      "readOnlyReloading": "El panel ahora es de solo lectura. Recargando..."
     },
     "confirm": {
       "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda alcanzar el tablero podrá abrirlo.",
@@ -3146,7 +3163,10 @@
       "confirmNewPasswordPlaceholder": "Introduce la nueva contraseña nuevamente",
       "changing": "Cambio...",
       "enterYourPassword": "Introduce tu contraseña",
-      "disable": "Deshabilitar la autenticación"
+      "disable": "Deshabilitar la autenticación",
+      "readOnlyMode": "El panel es de solo lectura sin contraseña: se puede ver, pero no se puede ejecutar ni cambiar nada.",
+      "useReadOnly": "Cambiar a solo lectura",
+      "disableChoose": "Sin contraseña, ¿cómo se debería acceder al panel?"
     },
     "twoFactor": {
       "title": "Autenticación de dos factores",
@@ -3972,21 +3992,21 @@
     }
   },
   "onboarding": {
-    "dialogTitle": "Incorporación de ProxMenux",
+    "dialogTitle": "Presentación de ProxMenux",
     "previous": "Anterior",
     "skip": "Saltar",
-    "next": "Próximo",
-    "getStarted": "¡Empieza!",
-    "dontShowAgain": "No vuelvas a mostrar esto",
+    "next": "Siguiente",
+    "getStarted": "Empezar",
+    "dontShowAgain": "No volver a mostrar",
     "goToSlide": "Ir a la diapositiva {number}",
     "slides": {
       "welcome": {
         "title": "¡Bienvenido a ProxMenux Monitor!",
-        "description": "Tu nueva herramienta de seguimiento para Proxmox. Descubra las funciones que le ayudarán a gestionar y supervisar su infraestructura más fácilmente."
+        "description": "Tu nueva herramienta de supervisión para Proxmox. Descubre las funciones que te ayudarán a gestionar y supervisar tu infraestructura más fácilmente."
       },
       "overview": {
-        "title": "Descripción general del sistema",
-        "description": "Supervise su servidor en tiempo real: CPU, memoria, temperatura, carga del sistema y más, todo en un panel claro."
+        "title": "Resumen del sistema",
+        "description": "Supervisa tu servidor en tiempo real: CPU, memoria, temperatura, carga del sistema y más, todo en un panel claro."
       },
       "storage": {
         "title": "Gestión de almacenamiento",
@@ -3994,11 +4014,11 @@
       },
       "network": {
         "title": "Métricas de red",
-        "description": "Supervise el tráfico de la red en tiempo real, incluidas las interfaces activas, las velocidades de transferencia y los gráficos de uso histórico."
+        "description": "Supervisa el tráfico de red en tiempo real, con las interfaces activas, las velocidades de transferencia y los gráficos de uso histórico."
       },
       "virtualMachines": {
         "title": "Máquinas virtuales y contenedores",
-        "description": "Mantén las máquinas virtuales y los contenedores LXC en un solo lugar. Ver estado, recursos asignados, uso actual y controles rápidos."
+        "description": "Ten las máquinas virtuales y los contenedores LXC en un solo lugar: su estado, los recursos asignados, el uso actual y los controles rápidos."
       },
       "hardware": {
         "title": "Información de hardware",

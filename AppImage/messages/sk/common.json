@@ -2847,7 +2847,22 @@
     "avatarHint": "PNG, JPEG, WebP alebo GIF · najviac 2 MB · najlepšie funguje štvorcový obrázok.",
     "settingUp": "Nastavujem...",
     "setupAuthentication": "Nastaviť prihlásenie",
-    "back": "Späť"
+    "back": "Späť",
+    "setupCode": "Nastavovací kód",
+    "setupCodeHint": "Zobrazil sa v konzole pri inštalácii ProxMenux. Ak ho nemáte, spustite na serveri menu a otvorte Nastavenia → Zobraziť nastavovací kód Monitora.",
+    "codeInvalid": "Nastavovací kód nie je platný.",
+    "codeRateLimited": "Príliš veľa pokusov. Počkajte niekoľko minút a skúste to znova.",
+    "noPasswordTitle": "Bez hesla",
+    "noPasswordDescription": "Vyberte, čo môže robiť každý, kto navštívi túto adresu.",
+    "readOnlyTitle": "Iba na čítanie",
+    "readOnlyDescription": "Každý, kto sa pripojí k Monitoru, ho môže vidieť, ale nemôže otvárať terminály, spúšťať skripty ani nič meniť. Heslo môžete pridať neskôr.",
+    "openTitle": "Otvoriť a prijať riziko",
+    "openDescription": "Každý, kto sa pripojí k Monitoru, získa plnú kontrolu nad týmto serverom vrátane terminálu root. Zvoľte túto možnosť iba v sieti, kde dôverujete každému, kto má k nej prístup.",
+    "chooseReadOnly": "Použiť režim iba na čítanie",
+    "chooseOpen": "Otvoriť bez hesla"
+  },
+  "access": {
+    "readOnlyBanner": "Prístup iba na čítanie: tento server môžete vidieť, ale nemôžete nič spúšťať ani meniť. Ak ho chcete spravovať, pridajte heslo v sekcii Security."
   },
   "securityPage": {
     "title": "Bezpečnosť",
@@ -2881,7 +2896,8 @@
       "none": "Žiadne",
       "external": "Externé",
       "up": "Beží",
-      "down": "Nebeží"
+      "down": "Nebeží",
+      "readOnly": "Iba na čítanie"
     },
     "errors": {
       "deleteReportNoFiles": "Nenašli sa žiadne súbory správy ani logov Lynis na odstránenie.",
@@ -2957,7 +2973,8 @@
       "sslCertificateReloaded": "Obnovený certifikát je teraz aktívny. Existujúce pripojenia neboli prerušené.",
       "sslCertificateUnchanged": "Aktívny certifikát už zodpovedá aktuálnym súborom certifikátu.",
       "reportDeleted": "Správa z auditu bola vymazaná.",
-      "twoFactorEnabled": "Dvojfaktorové overenie je zapnuté."
+      "twoFactorEnabled": "Dvojfaktorové overenie je zapnuté.",
+      "readOnlyReloading": "Ovládací panel je teraz iba na čítanie. Znovu sa načítava..."
     },
     "confirm": {
       "disableAuth": "Vypnúť prihlásenie? Každý, kto sa dostane k dashboardu, ho bude môcť otvoriť.",
@@ -2992,7 +3009,10 @@
       "confirmNewPasswordPlaceholder": "Zadajte nové heslo znova",
       "changing": "Mením...",
       "enterYourPassword": "Zadajte heslo",
-      "disable": "Vypnúť prihlásenie"
+      "disable": "Vypnúť prihlásenie",
+      "readOnlyMode": "Ovládací panel je bez hesla iba na čítanie: je možné si ho prezerať, ale nemožno nič spúšťať ani meniť.",
+      "useReadOnly": "Prepnúť na režim iba na čítanie",
+      "disableChoose": "Ako má byť ovládací panel prístupný bez hesla?"
     },
     "twoFactor": {
       "title": "Dvojfaktorové overenie",

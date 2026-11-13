@@ -182,6 +182,7 @@ class RouteTests(unittest.TestCase):
     def setUp(self):
         auth = types.ModuleType("auth_manager")
         auth.load_auth_config = lambda: {"enabled": True}
+        auth.access_mode = lambda config=None: "password"
         auth.verify_token = lambda token: "tester" if token == "admin" else None
         auth.verify_token_full = lambda token: ("tester", "full_admin" if token == "admin" else "read_only")
         spec = importlib.util.spec_from_file_location("guest_backup_test_middleware", SCRIPTS / "jwt_middleware.py")

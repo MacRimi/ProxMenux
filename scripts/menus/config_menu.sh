@@ -467,6 +467,76 @@ toggle_monitor_service() {
     fi
 }
 
+MONITOR_SETUP_CODE_FILE="$BASE_DIR/monitor-setup-code"
+
+# How the Monitor is reached, as the Monitor reads its auth.json: undecided,
+# password, read_only or open.
+monitor_access_mode() {
+    local auth_file="$MONITOR_CONFIG_DIR/auth.json"
+    [ -f "$auth_file" ] || { echo "undecided"; return; }
+    python3 - "$auth_file" <<'PY' 2>/dev/null || echo "undecided"
+import json, sys
+config = json.load(open(sys.argv[1]))
+if config.get("enabled"):
+    print("password")
+elif config.get("access_mode") in ("read_only", "open"):
+    print(config["access_mode"])
+elif config.get("declined"):
+    print("open")
+else:
+    print("undecided")
+PY
+}
+
+# A one-time code: the Monitor asks for it before anyone can create its account
+# or choose how it is reached, so nobody else on the network can do it first.
+create_monitor_setup_code() {
+    local raw
+    raw=$(LC_ALL=C tr -dc 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' </dev/urandom 2>/dev/null | head -c 12)
+    [ ${#raw} -eq 12 ] || return 1
+    ( umask 077; printf '%s\n' "${raw:0:4}-${raw:4:4}-${raw:8:4}" > "$MONITOR_SETUP_CODE_FILE" ) || return 1
+    chmod 600 "$MONITOR_SETUP_CODE_FILE" 2>/dev/null || true
+}
+
+show_monitor_setup_code() {
+    local mode server_ip code
+    mode=$(monitor_access_mode)
+    case "$mode" in
+        password)
+            dialog --clear --backtitle "$BACKTITLE" \
+                   --title "$(translate "Show Monitor Setup Code")" \
+                   --msgbox "\n$(translate "ProxMenux Monitor already has an account: no setup code is needed.")\n\n$(translate "To start again without an account, use:") $(translate "Reset ProxMenux Monitor Password")" 12 70
+            return
+            ;;
+        open)
+            dialog --clear --backtitle "$BACKTITLE" \
+                   --title "$(translate "Show Monitor Setup Code")" \
+                   --msgbox "\n$(translate "ProxMenux Monitor is open without a password: no setup code is needed to add one.")" 10 70
+            return
+            ;;
+    esac
+
+    if [ ! -s "$MONITOR_SETUP_CODE_FILE" ]; then
+        if ! dialog --clear --backtitle "$BACKTITLE" \
+                    --title "$(translate "Show Monitor Setup Code")" \
+                    --yesno "\n$(translate "There is no setup code. Do you want to create a new one?")" 9 70; then
+            return
+        fi
+        if ! create_monitor_setup_code; then
+            dialog --clear --backtitle "$BACKTITLE" \
+                   --title "$(translate "Show Monitor Setup Code")" \
+                   --msgbox "\n\n$(translate "Could not create the setup code.")" 9 60
+            return
+        fi
+    fi
+
+    code=$(head -n 1 "$MONITOR_SETUP_CODE_FILE")
+    server_ip=$(hostname -I | awk '{print $1}')
+    dialog --clear --backtitle "$BACKTITLE" \
+           --title "$(translate "Show Monitor Setup Code")" \
+           --msgbox "\n$(translate "Setup code:")  $code\n\n$(translate "Enter it in ProxMenux Monitor to create its account or choose how it is reached. It can be used once.")\n\nhttp://${server_ip:-<IP>}:8008" 14 74
+}
+
 reset_monitor_password() {
     # Recovery path for operators who lost the Monitor login credentials.
     # Wipes only the identity claims from auth.json (username / password /
@@ -530,6 +600,7 @@ reset_monitor_password() {
           | .username      = ""
           | .password_hash = ""
           | .declined      = false
+          | del(.access_mode)
           | .totp_enabled  = false
           | .totp_secret   = null
           | .backup_codes  = []
@@ -554,6 +625,13 @@ reset_monitor_password() {
         msg_warn "$(translate "Could not restart the service — start it manually with systemctl start") $MONITOR_SERVICE"
     fi
 
+    # The next visit decides again: a new setup code keeps that decision to
+    # whoever reset it from this console.
+    local setup_code=""
+    if create_monitor_setup_code; then
+        setup_code=$(head -n 1 "$MONITOR_SETUP_CODE_FILE")
+    fi
+
     local server_ip
     server_ip=$(hostname -I | awk '{print $1}')
     echo ""
@@ -564,6 +642,9 @@ reset_monitor_password() {
         echo -e "${TAB}${BL}http://${server_ip}:8008${CL}"
     else
         msg_info2 "$(translate "Open the dashboard from this host on port 8008 to create a new admin account.")"
+    fi
+    if [ -n "$setup_code" ]; then
+        echo -e "${TAB}$(translate "Setup code:") ${YWB}${setup_code}${CL}"
     fi
     echo ""
     msg_success "$(translate "Press Enter to return to menu...")"
@@ -634,6 +715,10 @@ show_config_menu() {
             menu_options+=("$option_num" "$(translate "Reset ProxMenux Monitor Password")")
             option_actions[$option_num]="reset_monitor_password"
             ((option_num++))
+
+            menu_options+=("$option_num" "$(translate "Show Monitor Setup Code")")
+            option_actions[$option_num]="show_monitor_setup_code"
+            ((option_num++))
         fi
 
         menu_options+=("$option_num" "$(translate "Change Release Channel")")
@@ -683,6 +768,9 @@ show_config_menu() {
                 ;;
             "reset_monitor_password")
                 reset_monitor_password
+                ;;
+            "show_monitor_setup_code")
+                show_monitor_setup_code
                 ;;
             "change_release_channel")
                 change_release_channel

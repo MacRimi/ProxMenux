@@ -544,7 +544,34 @@ extract_appimage_to_runtime_dir() {
     return 0
 }
 
+# A Monitor installed for the first time asks for this code on its first
+# visit, so nobody else on the network can choose how it is reached before its
+# owner does. Updates and reinstallations keep the access already chosen.
+MONITOR_SETUP_CODE=""
+
+monitor_is_new() {
+    [ ! -f "$MONITOR_SERVICE_FILE" ] && [ ! -d "$MONITOR_RUNTIME_DIR" ] \
+        && [ ! -f /root/.config/proxmenux-monitor/auth.json ]
+}
+
+create_monitor_setup_code() {
+    local raw
+    raw=$(LC_ALL=C tr -dc 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' </dev/urandom 2>/dev/null | head -c 12)
+    [ ${#raw} -eq 12 ] || return 1
+    MONITOR_SETUP_CODE="${raw:0:4}-${raw:4:4}-${raw:8:4}"
+    mkdir -p "$BASE_DIR"
+    ( umask 077; printf '%s\n' "$MONITOR_SETUP_CODE" > "$BASE_DIR/monitor-setup-code" ) || { MONITOR_SETUP_CODE=""; return 1; }
+    chmod 600 "$BASE_DIR/monitor-setup-code" 2>/dev/null || true
+}
+
 install_proxmenux_monitor() {
+    local monitor_new=0
+    monitor_is_new && monitor_new=1
+
+    if [ "$monitor_new" = 1 ]; then
+        create_monitor_setup_code || msg_warn "Could not create the Monitor setup code."
+    fi
+
     if ! select_monitor_appimage_arch; then
         msg_error "ProxMenux Monitor is not available for this architecture ($(uname -m))."
         update_config "proxmenux_monitor" "unsupported_arch"
@@ -1020,6 +1047,10 @@ install_proxmenux() {
     if systemctl is-active --quiet proxmenux-monitor.service; then
         local server_ip=$(get_server_ip)
         echo -e "${GN}🌐  ProxMenux Monitor activated${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
+        if [ -n "$MONITOR_SETUP_CODE" ]; then
+            echo -e "${GN}🔑  Setup code for the first visit${CL}: ${YWB}${MONITOR_SETUP_CODE}${CL}"
+            echo -e "    You can see it again with: menu → Settings → Show Monitor Setup Code"
+        fi
         echo
     fi
 
