@@ -28,8 +28,10 @@ available. The identity provider controls MFA for OIDC login.
    retaining your local administrator session.
 
 The issuer's discovery document must expose authorization, token and JWKS HTTPS
-endpoints. TLS certificate verification is always enabled; install a private CA
-in the host trust store rather than disabling verification. No provider access
+endpoints. TLS certificate verification is always enabled. A provider with a
+certificate from a private CA is verified against the host trust store: copy the
+CA certificate to `/usr/local/share/ca-certificates/` with a `.crt` extension and
+run `update-ca-certificates`. No provider access
 tokens are stored or used as Monitor API credentials. A verified allowed subject
 receives a normal 24-hour Monitor session with an OIDC identity marker. Disabling
 OIDC or saving new settings immediately invalidates those OIDC sessions; local

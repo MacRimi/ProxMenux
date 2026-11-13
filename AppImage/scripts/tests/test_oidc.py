@@ -316,6 +316,26 @@ class OIDCTests(unittest.TestCase):
         with self.assertRaises(oidc.OIDCError):
             oidc.save_config(self.config)
 
+    def test_a_provider_with_an_internal_ca_is_verified_against_the_host_store(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = os.path.join(folder, "ca-certificates.crt")
+            with mock.patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("REQUESTS_CA_BUNDLE", None)
+                with mock.patch.object(oidc, "SYSTEM_CA_BUNDLE", store):
+                    self.assertIs(oidc._ca_bundle(), True)  # no host store: the bundle of requests
+                    Path(store).write_text("fixture")
+                    self.assertEqual(oidc._ca_bundle(), store)
+                    with mock.patch.dict(os.environ, {"REQUESTS_CA_BUNDLE": "/explicit.pem"}):
+                        self.assertEqual(oidc._ca_bundle(), "/explicit.pem")
+                    seen = []
+                    def request(method, url, **kwargs):
+                        seen.append(kwargs["verify"])
+                        raise requests.Timeout("fixture")
+                    with mock.patch.object(requests, "request", side_effect=request):
+                        with self.assertRaises(oidc.OIDCError):
+                            oidc.save_config(self.config)
+                    self.assertEqual(seen, [store])
+
     def test_provider_errors_do_not_reveal_credentials(self):
         with mock.patch.object(requests, "request", side_effect=requests.Timeout("private-client-secret")):
             with self.assertRaises(oidc.OIDCError) as caught:

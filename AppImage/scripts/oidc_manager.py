@@ -73,9 +73,25 @@ def public_config():
     )}, "has_client_secret": bool(config.get("client_secret")), "available": available()}
 
 
+# A provider in a homelab often has a certificate from an internal CA. The
+# host's store holds the public CAs and any CA added with
+# update-ca-certificates; the bundle of requests only holds the public ones.
+SYSTEM_CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
+
+
+def _ca_bundle():
+    """The CAs that verify the provider: an explicit REQUESTS_CA_BUNDLE, else
+    the host's store, else the bundle requests ships."""
+    explicit = os.environ.get("REQUESTS_CA_BUNDLE")
+    if explicit:
+        return explicit
+    return SYSTEM_CA_BUNDLE if os.path.isfile(SYSTEM_CA_BUNDLE) else True
+
+
 def _request_json(method, url, **kwargs):
     try:
-        response = requests.request(method, _url(url), timeout=10, allow_redirects=False, **kwargs)
+        response = requests.request(method, _url(url), timeout=10, allow_redirects=False,
+                                    verify=_ca_bundle(), **kwargs)
         if response.status_code != 200 or len(response.content) > 1024 * 1024:
             raise OIDCError("The identity provider returned an invalid response.")
         document = response.json()
