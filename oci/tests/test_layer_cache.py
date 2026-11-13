@@ -71,6 +71,7 @@ class LayerCache(unittest.TestCase):
   verify_archive(exported)
   with tarfile.open(exported)as archive:
    self.assertTrue(all(m.uid==m.gid==0 and m.mode==0o644 for m in archive.getmembers()))
+   self.assertEqual(archive.getnames()[-2:],['oci-layout','index.json'])
  def test_concurrent_initialization_has_one_complete_private_format(self):
   root=self.root.parent/'concurrent'
   with concurrent.futures.ThreadPoolExecutor(max_workers=4)as executor:
