@@ -5,6 +5,7 @@ import { ProxmoxDashboard } from "../components/proxmox-dashboard"
 import { Login } from "../components/login"
 import { AuthSetup } from "../components/auth-setup"
 import { getApiUrl } from "../lib/api-config"
+import { completeOIDCLogin } from "../lib/oidc-login"
 import { AccessProvider, FULL_ACCESS, type AccessMode, type Capabilities } from "../lib/access"
 import { useT } from "../lib/i18n/provider"
 
@@ -34,6 +35,7 @@ export default function Home() {
 
   const checkAuthStatus = async () => {
     try {
+      await completeOIDCLogin()
       const token = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/status"), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},

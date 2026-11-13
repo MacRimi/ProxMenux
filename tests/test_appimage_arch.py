@@ -68,6 +68,21 @@ class AppImageArchitectureTests(unittest.TestCase):
             for abi in ['cp311', 'cp313']:
                 self.assertIn('--abi ' + abi, result.stdout)
 
+    def test_oidc_crypto_installer_uses_native_platform_for_both_abis(self):
+        source = (SCRIPTS / 'build_appimage.sh').read_text()
+        function = source[source.index('install_oidc_crypto_runtime() {'):source.index('\ninstall_oidc_crypto_runtime "3.11"')]
+        for machine in ['x86_64', 'aarch64']:
+            with tempfile.TemporaryDirectory() as folder:
+                command = ('source "$1"; pmx_appimage_arch "$2"; APP_DIR="$3"; '
+                           'python3() { printf "%s\\n" "$*"; }; ' + function +
+                           '\ninstall_oidc_crypto_runtime 3.11 cp311\ninstall_oidc_crypto_runtime 3.13 cp313')
+                result = subprocess.run(['bash', '-c', command, 'fixture', str(SCRIPTS / 'appimage_arch.sh'), machine, folder],
+                                        capture_output=True, text=True, check=True)
+            for platform in ['manylinux_2_28_', 'manylinux2014_']:
+                self.assertEqual(result.stdout.count('--platform ' + platform + machine), 2)
+            for abi in ['cp311', 'cp313']:
+                self.assertIn('--abi ' + abi, result.stdout)
+
     def test_apprun_uses_native_library_paths_and_matching_host_python_tree(self):
         for machine in ['x86_64', 'aarch64']:
             with tempfile.TemporaryDirectory() as folder:

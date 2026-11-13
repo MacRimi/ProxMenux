@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class AuthReasons(unittest.TestCase):
     def setUp(self):
         source = ast.parse((ROOT / 'AppImage/scripts/auth_manager.py').read_text())
-        names = {'verify_token_full', '_log_auth_failure_throttled', 'generate_token'}
+        names = {'verify_token_full', '_session_is_current', '_log_auth_failure_throttled', 'generate_token'}
         nodes = [n for n in source.body if isinstance(n, ast.FunctionDef) and n.name in names]
         constants = {n.targets[0].id: ast.literal_eval(n.value) for n in source.body
                      if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)
