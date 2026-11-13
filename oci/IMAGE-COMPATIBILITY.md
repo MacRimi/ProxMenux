@@ -21,8 +21,8 @@ installations and dedicated stack installers also use the common import wrapper.
 The existing numeric-user database adaptation composes with path compatibility.
 
 Only ordinary absolute directory/file names are rewritten. Parent components,
-ambiguous aliases, absolute link headers/targets and unsupported sparse entries
-are refused. Relative symlink targets are preserved for Proxmox to validate.
+ambiguous aliases, absolute link member names, absolute hard-link targets and unsupported sparse entries
+are refused. Symlink targets are preserved for Proxmox to validate.
 No native extraction checks are disabled. Images that cannot be prepared are
 rejected during update preparation while the current application still runs.
 

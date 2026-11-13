@@ -101,10 +101,13 @@ class PathCopies(unittest.TestCase):
                 fixture(self.source,entries)
                 with self.assertRaises(runtime.RuntimeResolutionError):paths.prepare(self.source,self.target)
 
-    def test_relative_symlink_targets_are_preserved_for_native_validation(self):
-        fixture(self.source,[('/usr/bin/app','file',b'app'),('bin/link','sym','../usr/bin/app')])
-        paths.prepare(self.source,self.target)
-        self.assertEqual(contents(self.target)[1][-1][4],'../usr/bin/app')
+    def test_symlink_targets_are_preserved_for_native_validation(self):
+        for target in ('../usr/bin/app','/usr/bin/app'):
+            with self.subTest(target=target):
+                fixture(self.source,[('/usr/bin/app','file',b'app'),('bin/link','sym',target)])
+                paths.prepare(self.source,self.target)
+                self.assertEqual(contents(self.target)[1][-1][4],target)
+                self.target.unlink()
 
     def test_existing_targets_are_never_overwritten(self):
         fixture(self.source,[('/app','file',b'app')]);self.target.write_text('keep')
