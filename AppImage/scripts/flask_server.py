@@ -8312,9 +8312,9 @@ def get_detailed_gpu_info(gpu):
                             temp_elem = gpu_elem.find('.//temperature/gpu_temp')
                             if temp_elem is not None and temp_elem.text:
                                 try:
-                                    # Remove ' C' suffix and convert to int
+                                    # Recent drivers report decimals, such as "70.57 C".
                                     temp_str = temp_elem.text.replace(' C', '').strip()
-                                    detailed_info['temperature'] = int(temp_str)
+                                    detailed_info['temperature'] = float(temp_str)
                                     # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                     pass
                                     data_retrieved = True
@@ -9661,7 +9661,7 @@ def _get_hardware_info_uncached():
                             gpu_name = parts[0]
                             mem_total = parts[1]
                             mem_used = parts[2]
-                            temp = parts[3] if parts[3] != 'N/A' else None
+                            temp = parts[3].strip() if parts[3].strip() not in ('N/A', '[N/A]') else None
                             power = parts[4] if parts[4] != 'N/A' else None
                             gpu_util = parts[5] if parts[5] != 'N/A' else None
                             mem_util = parts[6] if parts[6] != 'N/A' else None
@@ -9689,7 +9689,7 @@ def _get_hardware_info_uncached():
                                 'slot': pci_slot,
                                 'memory_total': mem_total,
                                 'memory_used': mem_used,
-                                'temperature': int(temp) if temp else None,
+                                'temperature': float(temp) if temp else None,
                                 'power_draw': power,
                                 'utilization_gpu': gpu_util,
                                 'utilization_memory': mem_util,
