@@ -450,11 +450,13 @@ def worker(root, channel, force=False):
             prune_snapshots(root)
 
 
-def visible_recipes(catalog):
+def visible_recipes(catalog, applications=None):
     """Same availability rule as the menu; count new IDs, not net growth."""
     result = {}
     policies = {}
-    for item in catalog.load_index()["applications"]:
+    if applications is None:
+        applications = catalog.load_index()["applications"]
+    for item in applications:
         if item.get("hidden") or not item.get("automatic_install_candidate"):
             continue
         if item.get("_retained_recipe") and item.get("_retained_recipe_hash"):
@@ -485,11 +487,11 @@ def visible_recipes(catalog):
 
 
 class CatalogRefresh:
-    def __init__(self, root, catalog):
+    def __init__(self, root, catalog, applications=None):
         self.root = Path(root)
         self.channel = channel_for(root)
         self.seen_path = cache_root(root) / f"{self.channel}-seen.json"
-        self.recipes = visible_recipes(catalog)
+        self.recipes = visible_recipes(catalog, applications)
         self.displayed_directory = catalog.catalog_dir
         baseline = read_json(self.seen_path).get("recipes")
         self.process = None

@@ -412,6 +412,36 @@ class CatalogRefreshTests(unittest.TestCase):
         # Seeing the menu does not acknowledge it: only opening the list does.
         self.assertEqual(len(next_visit.new_ids()), 1)
 
+    def test_menu_recipe_fingerprints_reuse_the_displayed_index(self):
+        catalog = Catalog(self.root)
+        applications = catalog.load_index()["applications"]
+        expected = refresh.visible_recipes(catalog)
+        with patch.object(catalog, 'load_index', side_effect=AssertionError('duplicate catalog scan')):
+            self.assertEqual(refresh.visible_recipes(catalog, applications), expected)
+            self.assertEqual(refresh.CatalogRefresh(self.root, catalog, applications).recipes, expected)
+            self.assertEqual(refresh.visible_recipes(catalog, []), {})
+
+    def test_existing_local_app_does_not_load_the_entire_bundled_catalog(self):
+        self.sync()
+        catalog = Catalog(self.root)
+        original = Catalog._enrich_index_from_templates
+        scanned = []
+        def enrich(instance, payload):
+            scanned.append(instance.catalog_dir)
+            return original(instance, payload)
+        with patch.object(refresh, 'source_settings', return_value={'local_apps': [self.item['id']]}), \
+                patch.object(Catalog, '_enrich_index_from_templates', enrich):
+            result = catalog.load_index()
+        self.assertEqual(scanned, [catalog.catalog_dir])
+        self.assertEqual(len(result['applications']), 1)
+
+    def test_invalid_local_app_entries_do_not_break_the_menu(self):
+        self.sync()
+        catalog = Catalog(self.root)
+        with patch.object(refresh, 'source_settings', return_value={'local_apps': [{}, [], None]}):
+            self.assertEqual(len(catalog.load_index()['applications']), 1)
+            self.assertEqual(catalog.local_app_ids, set())
+
     def test_explicit_local_apps_survive_refresh_without_preventing_upstream_removal(self):
         # This app is a local preview, not a member of the upstream manifest.
         self.add_app()

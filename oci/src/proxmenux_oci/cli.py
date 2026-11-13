@@ -644,12 +644,12 @@ def interactive(catalog: Catalog) -> int:
     applications, categories, labels, category_by_index, options = _catalog_options(catalog)
     selection = "search"
     refresh_requested = False
-    with CatalogRefresh(PROJECT_ROOT, catalog) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
+    with CatalogRefresh(PROJECT_ROOT, catalog, applications) as catalog_refresh, UpdateCheck(PROJECT_ROOT) as updates:
         while True:
             if catalog_refresh.consume():
                 catalog = Catalog(PROJECT_ROOT)
                 applications, categories, labels, category_by_index, options = _catalog_options(catalog)
-                catalog_refresh.recipes = visible_recipes(catalog)
+                catalog_refresh.recipes = visible_recipes(catalog, applications)
             if refresh_requested:
                 # Only a refresh the user asked for says that it failed.
                 refresh_requested = False
