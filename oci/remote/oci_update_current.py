@@ -91,10 +91,18 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
 
     def intact(path):
         try:
+            # Metadata is only a rejection filter. A stale archive is never
+            # read/decompressed in full just to discover it is the old image.
+            if not same_image(candidate, image_from_archive(str(path))):
+                return False
             run_quiet([sys.executable, str(verifier), str(path)],
                       translate('The image did not pass the integrity check'))
+            # Recheck the contract after verification as well: a candidate
+            # must still match before it can be returned to the transaction.
             return same_image(candidate, image_from_archive(str(path)))
-        except (RuntimeError, OSError, ValueError, KeyError, tarfile.TarError):
+        # An unverified archive may hold well-formed JSON of the wrong shape;
+        # it is rejected and downloaded again, never a reason to stop.
+        except (RuntimeError, OSError, ValueError, KeyError, TypeError, AttributeError, tarfile.TarError):
             return False
 
     # Initial installations and updates use different archive names. The

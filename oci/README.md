@@ -219,6 +219,12 @@ full temporary archive for eligible layouts. Conventional backups remain the
 default; this is not a portable/PBS backup. See [ZFS recovery](ZFS-RECOVERY.md)
 for eligibility, recovery boundaries and measurement guidance.
 
+Cache selection compares the archive's checked manifest/config metadata before
+reading and decompressing every blob. An obsolete archive is rejected cheaply;
+a matching candidate still receives full layer verification and a second
+metadata comparison before reuse. Both standalone and coordinated updates share
+this resolver. No verification result is persisted or reused across operations.
+
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
 For standalone applications, CPU and RAM changes apply live. Supported network settings, environment overrides, directory mounts, additional managed volumes and native devices use a controlled stop/start when needed. Modify does not query the registry or download an image for these native edits, even if the cached archive has already been cleaned. Removing a managed mount detaches its disk without deleting its data; subsequent image updates park that unused disk and return it to the container. An optional retained backup does not force recreation.
