@@ -9469,6 +9469,7 @@
   "Unrecognized volume definition": "Definizione volume non riconosciuta",
   "Unresolved variable:": "Variabile non risolta:",
   "Unsafe OCI archive path": "Percorso archivio OCI non sicuro",
+  "Unsafe OCI layer path:": "Percorso non sicuro in un livello OCI:",
   "Unsafe dependency contract": "Contratto dipendenze non sicuro",
   "Unsafe dependency hook contract": "Contratto hook dipendenze non sicuro",
   "Unsafe instance directory": "Directory istanza non sicura",

@@ -9441,6 +9441,7 @@
   "Unrecognized volume definition": "Нераспознанное определение тома",
   "Unresolved variable:": "Переменная, значение которой не удалось определить:",
   "Unsafe OCI archive path": "Небезопасный путь к архиву OCI",
+  "Unsafe OCI layer path:": "Небезопасный путь в слое OCI:",
   "Unsafe dependency contract": "Небезопасный контракт зависимости",
   "Unsafe dependency hook contract": "Небезопасный контракт хука зависимости",
   "Unsafe instance directory": "Небезопасный каталог экземпляра",

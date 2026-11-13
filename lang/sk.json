@@ -9469,6 +9469,7 @@
   "Unrecognized volume definition": "Nerozpoznaná definícia dátového zväzku",
   "Unresolved variable:": "Nevyriešená premenná:",
   "Unsafe OCI archive path": "Nebezpečná cesta k archívu OCI",
+  "Unsafe OCI layer path:": "Nebezpečná cesta vo vrstve OCI:",
   "Unsafe dependency contract": "Nebezpečné nastavenie závislostí",
   "Unsafe dependency hook contract": "Nebezpečné nastavenie spúšťacieho skriptu závislostí",
   "Unsafe instance directory": "Nebezpečný priečinok inštancie",

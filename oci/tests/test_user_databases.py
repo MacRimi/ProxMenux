@@ -122,12 +122,12 @@ class UserDatabaseTests(unittest.TestCase):
 
     def test_installer_creates_from_a_copy_with_the_missing_files(self):
         script = (ROOT / "remote/install_oci.sh").read_text()
-        check = script.index('--user-databases "$ARCHIVE_PATH"')
+        check = script.index('--user-databases "$CREATE_IMAGE_PATH"')
         create = script.index('oci_create_container "${CREATE_ARGS[@]}"')
         self.assertLess(check, create)
         block = script[check:create]
         self.assertIn("user_databases_rc == 3", block)
-        self.assertIn('--add-user-databases "$ARCHIVE_PATH" "$USER_DATABASES_ARCHIVE"', block)
+        self.assertIn('--add-user-databases "$CREATE_IMAGE_PATH" "$USER_DATABASES_ARCHIVE"', block)
         self.assertIn("CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE", block)
         self.assertIn('rm -f "$USER_DATABASES_ARCHIVE"', script[create:create + 300])
 
