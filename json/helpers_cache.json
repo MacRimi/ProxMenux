@@ -7205,7 +7205,8 @@
       "Documents & Notes"
     ],
     "notes": [
-      "Connect Euro-Office from Nextcloud, Seafile or another integration with http://<IP> and the JWT secret shown by documentserver-jwt-status.sh inside the container."
+      "Connect Euro-Office from Nextcloud, Seafile or another integration with http://<IP> and the JWT secret shown by documentserver-jwt-status.sh inside the container.",
+      "The admin panel at http://<IP>/admin asks for a 12-character bootstrap code from /var/log/euro-office/documentserver/adminpanel/out.log. It is valid for one hour; restarting ds-adminpanel issues a new one."
     ],
     "warnings": [
       "To try the editors without an integration, run systemctl enable --now ds-example and open http://<IP>/example/. The example has no login, so keep it off on shared networks."
@@ -14564,6 +14565,41 @@
     ],
     "config_path": "",
     "os": "alpine"
+  },
+  {
+    "name": "marimo",
+    "slug": "marimo",
+    "desc": "marimo is a reactive Python notebook: change a cell or move a UI element and every cell that depends on it updates, so code, outputs and state never drift apart. Notebooks are stored as plain Python files that work with git, run as scripts and can be served as interactive web apps, with SQL over dataframes and databases built in.",
+    "script": "ct/marimo.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/marimo.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/marimo.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in with the password MARIMO_TOKEN_PASSWORD from /opt/marimo_data/.env. Notebooks are stored in /opt/marimo_data/notebooks."
+    ],
+    "warnings": [
+      "Everyone who can sign in runs arbitrary Python as root inside the container. Keep the password private and port 2718 on a trusted network."
+    ],
+    "port": 2718,
+    "website": "https://marimo.io/",
+    "documentation": "https://docs.marimo.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/marimo-team/marimo@main/frontend/public/apple-touch-icon.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "Martin",
