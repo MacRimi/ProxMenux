@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "26"
           cache: 'npm'
           cache-dependency-path: 'web/package-lock.json'
 
