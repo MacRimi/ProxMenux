@@ -126,7 +126,8 @@ class RegistryMenuTests(unittest.TestCase):
         catalog = SimpleNamespace(index_path=SimpleNamespace(exists=lambda: True),
                                   load_index=lambda: {'applications': []})
         ui = UI(['registries', None])
-        with patch('proxmenux_oci.catalog_refresh.CatalogRefresh') as refresh_type, \
+        with patch('proxmenux_oci.catalog_refresh.menu_catalog', return_value=({'applications': []}, {})), \
+                patch('proxmenux_oci.catalog_refresh.CatalogRefresh') as refresh_type, \
                 patch.object(cli, 'interactive_ui', return_value=ui), \
                 patch.object(accounts, 'open_registry_accounts') as open_accounts:
             refresher = refresh_type.return_value.__enter__.return_value
