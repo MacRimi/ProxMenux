@@ -470,7 +470,7 @@ toggle_monitor_service() {
 MONITOR_SETUP_CODE_FILE="$BASE_DIR/monitor-setup-code"
 
 # How the Monitor is reached, as the Monitor reads its auth.json: undecided,
-# password, read_only or open.
+# password, proxmox, read_only or open.
 monitor_access_mode() {
     local auth_file="$MONITOR_CONFIG_DIR/auth.json"
     [ -f "$auth_file" ] || { echo "undecided"; return; }
@@ -479,6 +479,8 @@ import json, sys
 config = json.load(open(sys.argv[1]))
 if config.get("enabled"):
     print("password")
+elif config.get("pve_auth"):
+    print("proxmox")
 elif config.get("access_mode") in ("read_only", "open"):
     print(config["access_mode"])
 elif config.get("declined"):
@@ -502,7 +504,7 @@ show_monitor_setup_code() {
     local mode server_ip code
     mode=$(monitor_access_mode)
     case "$mode" in
-        password)
+        password|proxmox)
             dialog --clear --backtitle "$BACKTITLE" \
                    --title "$(translate "Show Monitor Setup Code")" \
                    --msgbox "\n$(translate "ProxMenux Monitor already has an account: no setup code is needed.")\n\n$(translate "To start again without an account, use:") $(translate "Reset ProxMenux Monitor Password")" 12 70
@@ -604,6 +606,8 @@ reset_monitor_password() {
           | .totp_enabled  = false
           | .totp_secret   = null
           | .backup_codes  = []
+          | .users         = []
+          | .pve_auth      = false
         ' "$auth_file" > "$tmp" 2>/dev/null; then
         chmod 0600 "$tmp" 2>/dev/null || true
         mv "$tmp" "$auth_file"

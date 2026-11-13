@@ -2873,6 +2873,54 @@
     "sharedSession": "Ste prihlásení do webového rozhrania Proxmox VE? Otvorte dashboard cez HTTPS na rovnakej adrese a táto relácia vás prihlási aj sem.",
     "saveFailed": "Zmenu sa nepodarilo uložiť."
   },
+  "users": {
+    "title": "Používatelia",
+    "description": "Lokálni používatelia Monitora, každý s vlastným heslom, vlastným dvojfaktorovým overením a vlastným profilom.",
+    "you": "Vy",
+    "primary": "Hlavný",
+    "profile": "Profil",
+    "profiles": {
+      "admin": "Administrátor",
+      "operator": "Operátor s terminálom",
+      "operator_no_terminal": "Operátor bez terminálu",
+      "observer": "Pozorovateľ"
+    },
+    "profileHints": {
+      "admin": "všetko vrátane používateľov, nastavení Monitora a tajných údajov.",
+      "operator": "spúšťa skripty a nástroje, ovláda VM a LXC, spravuje zálohy, aktualizuje a otvára terminály.",
+      "operator_no_terminal": "to isté ako operátor s terminálom, bez otvárania terminálov.",
+      "observer": "vidí dashboard bez tajných údajov; nič nespúšťa ani nemení."
+    },
+    "add": "Pridať používateľa",
+    "username": "Používateľské meno",
+    "usernameHint": "Najviac 32 písmen, číslic, bodiek, pomlčiek a podčiarkovníkov.",
+    "password": "Heslo",
+    "confirmPassword": "Potvrdiť heslo",
+    "newPassword": "Nové heslo",
+    "setPassword": "Nastaviť heslo",
+    "removeTotp": "Odstrániť 2FA",
+    "remove": "Odstrániť",
+    "confirmRemove": "Odstrániť používateľa",
+    "removeHint": "Jeho relácie a API tokeny prestanú fungovať.",
+    "passwordsDiffer": "Heslá sa nezhodujú.",
+    "added": "Používateľ bol pridaný.",
+    "passwordSet": "Heslo bolo uložené.",
+    "profileChanged": "Profil bol uložený. Ihneď platí pre jeho otvorené relácie.",
+    "totpRemoved": "Dvojfaktorové overenie bolo odstránené. Dá sa znova nastaviť v časti Zabezpečenie.",
+    "removed": "Používateľ bol odstránený.",
+    "errors": {
+      "username_invalid": "Používateľské meno môže mať najviac 32 písmen, číslic, bodiek, pomlčiek a podčiarkovníkov.",
+      "username_taken": "Toto používateľské meno sa už používa.",
+      "profile_unknown": "Neznámy profil.",
+      "last_admin": "Monitor potrebuje aspoň jedného administrátora.",
+      "user_not_found": "Tento používateľ už neexistuje.",
+      "remove_self": "Nemôžete odstrániť vlastný účet.",
+      "password_short": "Heslo musí mať aspoň 10 znakov.",
+      "password_mix": "Heslo musí kombinovať aspoň tri z: malé písmená, veľké písmená, číslice a symboly.",
+      "password_common": "Toto heslo je príliš bežné. Zvoľte iné.",
+      "user_change_failed": "Zmenu sa nepodarilo uložiť."
+    }
+  },
   "pveLogin": {
     "tab": "Proxmox VE",
     "localAccount": "Lokálny účet",

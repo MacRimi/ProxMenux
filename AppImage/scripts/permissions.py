@@ -38,6 +38,7 @@ _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Readings that carry secrets or another action's output.
 _READING = {
     "/api/auth/oidc/config": "admin",
+    "/api/auth/users": "admin",
     "/api/notifications/settings": "admin",
     "/api/notifications/proxmox/read-cfg": "admin",
     "/api/proxmenux/snippets-storage": "admin",

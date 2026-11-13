@@ -12,6 +12,7 @@ import os
 import json
 import hashlib
 import hmac
+import re
 import secrets
 import base64
 import threading
@@ -87,20 +88,12 @@ def ensure_config_dir():
 
 def load_auth_config():
     """
-    Load authentication configuration from file
-    Returns dict with structure:
-    {
-        "enabled": bool,
-        "username": str,
-        "password_hash": str,
-        "declined": bool,
-        "configured": bool,
-        "totp_enabled": bool,  # 2FA enabled flag
-        "totp_secret": str,    # TOTP secret key
-        "backup_codes": list,  # List of backup codes
-        "api_tokens": list,    # List of stored API token metadata
-        "revoked_tokens": list # List of revoked token hashes
-    }
+    Load authentication configuration from file.
+
+    The local accounts live in `users` (see _normalize_users); `username`,
+    `password_hash` and the 2FA fields at the top level repeat the main
+    administrator, so an older version and the menu keep finding it.
+    API tokens, the revocation list and the JWT secret are shared.
     """
     if not AUTH_CONFIG_FILE.exists():
         return {
@@ -115,8 +108,9 @@ def load_auth_config():
             "api_tokens": [],
             "revoked_tokens": [],
             "display_name": None,
+            "users": [],
         }
-    
+
     try:
         with open(AUTH_CONFIG_FILE, 'r') as f:
             config = json.load(f)
@@ -129,7 +123,9 @@ def load_auth_config():
             config.setdefault("api_tokens", [])
             config.setdefault("revoked_tokens", [])
             config.setdefault("display_name", None)
-            return config
+        if _normalize_users(config):
+            save_auth_config(config)
+        return config
     except Exception as e:
         print(f"Error loading auth config: {e}")
         return {
@@ -144,12 +140,191 @@ def load_auth_config():
             "api_tokens": [],
             "revoked_tokens": [],
             "display_name": None,
+            "users": [],
         }
 
 
+# ── Local accounts ────────────────────────────────────────────────────
+# Each user has a password, an optional second factor, a display name, an
+# avatar and a profile (permissions.py). A token names its user by `uid`, so
+# a user removed and created again under the same name gets none of the old
+# sessions back. Tokens from before users existed carry no `uid`: they belong
+# to the user marked `legacy`, the account the Monitor had then (or the first
+# one created afterwards), as they always belonged to the only account.
+USER_FIELDS = ("username", "password_hash", "display_name", "totp_enabled",
+               "totp_secret", "backup_codes", "last_totp_counter")
+_NEW_USERNAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$")
+
+
+def _new_user(username, password_hash, profile, legacy=False, **fields):
+    user = {"uid": secrets.token_hex(8), "username": username, "password_hash": password_hash,
+            "display_name": None, "totp_enabled": False, "totp_secret": None, "backup_codes": [],
+            "last_totp_counter": None, "profile": profile, "legacy": legacy,
+            "created_at": datetime.utcnow().isoformat() + "Z"}
+    user.update(fields)
+    return user
+
+
+def _user_from_top_level(config):
+    return _new_user(config["username"], config["password_hash"], "admin", legacy=True,
+                     display_name=config.get("display_name"),
+                     totp_enabled=bool(config.get("totp_enabled")),
+                     totp_secret=config.get("totp_secret"),
+                     backup_codes=config.get("backup_codes") or [],
+                     last_totp_counter=config.get("last_totp_counter"))
+
+
+def _primary(config):
+    """The main administrator: the one repeated at the top level."""
+    admins = [u for u in config.get("users") or [] if u.get("profile") == "admin"]
+    return next((u for u in admins if u.get("legacy")), admins[0] if admins else None)
+
+
+def _normalize_users(config):
+    """Bring `users` in line with the rest of the file; True when they changed.
+
+    Local accounts exist only while the password is on: turning it off, here
+    or with the menu's password reset, leaves none. An account from before
+    users existed becomes the first administrator. When something else wrote
+    the top-level account (an older version, or a reset and a new setup), it
+    is the account the Monitor follows."""
+    users = config.get("users")
+    if not config.get("enabled"):
+        config["users"] = []
+        return bool(users)
+    top, top_hash = config.get("username"), config.get("password_hash")
+    if not isinstance(users, list) or not users:
+        config["users"] = [_user_from_top_level(config)] if top and top_hash else []
+        return bool(config["users"])
+    if not (top and top_hash):
+        return False
+    if not any(u.get("username") == top for u in users):
+        config["users"] = [_user_from_top_level(config)]
+        return True
+    primary = _primary(config)
+    changed = False
+    if primary and primary.get("username") == top:
+        for field in ("password_hash", "totp_enabled", "totp_secret", "backup_codes"):
+            if config.get(field) != primary.get(field):
+                primary[field] = config.get(field)
+                changed = True
+    return changed
+
+
+def find_user(username, config=None):
+    """The local user called `username`, or None."""
+    config = load_auth_config() if config is None else config
+    if not isinstance(username, str):
+        return None
+    return next((u for u in config.get("users") or [] if u.get("username") == username), None)
+
+
+def _admins(config):
+    return [u for u in config.get("users") or [] if u.get("profile") == "admin"]
+
+
+def list_users():
+    """The local users, as an administrator sees them: never a secret."""
+    config = load_auth_config()
+    primary = _primary(config)
+    return [{"username": u.get("username"), "display_name": u.get("display_name"),
+             "profile": u.get("profile"), "totp_enabled": bool(u.get("totp_enabled")),
+             "created_at": u.get("created_at"), "primary": u is primary}
+            for u in config.get("users") or []]
+
+
+def create_user(username, password, profile):
+    """Add a local user. Returns (success, message)."""
+    config = load_auth_config()
+    if not config.get("enabled"):
+        return False, "Set up the local account first"
+    if not isinstance(username, str) or not _NEW_USERNAME.match(username):
+        return False, "The username can have up to 32 letters, digits, dots, dashes and underscores"
+    if any(u.get("username", "").lower() == username.lower() for u in config["users"]):
+        return False, "That username is already in use"
+    if profile not in permissions.PROFILES:
+        return False, "Unknown profile"
+    if not isinstance(password, str):
+        return False, "Password is required"
+    pw_err = _validate_password_strength(password)
+    if pw_err:
+        return False, pw_err
+    config["users"].append(_new_user(username, hash_password(password), profile))
+    if save_auth_config(config):
+        return True, "User created"
+    return False, "Failed to save configuration"
+
+
+def update_user(username, profile=None, password=None, reset_totp=False):
+    """Change another user's profile, set a new password for them, or remove
+    their second factor when they lost it. Returns (success, message)."""
+    config = load_auth_config()
+    user = find_user(username, config)
+    if not user:
+        return False, "User not found"
+    if profile is not None:
+        if profile not in permissions.PROFILES:
+            return False, "Unknown profile"
+        if user.get("profile") == "admin" and profile != "admin" and len(_admins(config)) == 1:
+            return False, "The Monitor needs at least one administrator"
+        user["profile"] = profile
+    if password is not None:
+        pw_err = _validate_password_strength(password) if isinstance(password, str) else "Password is required"
+        if pw_err:
+            return False, pw_err
+        user["password_hash"] = hash_password(password)
+    if reset_totp:
+        user.update(totp_enabled=False, totp_secret=None, backup_codes=[])
+    if save_auth_config(config):
+        return True, "User updated"
+    return False, "Failed to save configuration"
+
+
+def delete_user(username):
+    """Remove a local user with its sessions, API tokens and avatar."""
+    config = load_auth_config()
+    user = find_user(username, config)
+    if not user:
+        return False, "User not found"
+    if user.get("profile") == "admin" and len(_admins(config)) == 1:
+        return False, "The Monitor needs at least one administrator"
+    owned = [t for t in config.get("api_tokens", []) if _token_owner(t, config) is user]
+    config.setdefault("revoked_tokens", [])
+    for token in owned:
+        if token.get("token_hash") and token["token_hash"] not in config["revoked_tokens"]:
+            config["revoked_tokens"].append(token["token_hash"])
+    config["api_tokens"] = [t for t in config.get("api_tokens", []) if t not in owned]
+    config["users"] = [u for u in config["users"] if u is not user]
+    if not save_auth_config(config):
+        return False, "Failed to save configuration"
+    _invalidate_revoked_cache()
+    if not user.get("legacy"):
+        for path in _avatar_paths(user):
+            try:
+                path.unlink()
+            except OSError:
+                pass
+    return True, "User removed"
+
+
+def _token_owner(entry, config):
+    """The user an API token belongs to: tokens from before users existed
+    belong to the legacy user."""
+    uid = entry.get("owner_uid")
+    users = config.get("users") or []
+    if uid:
+        return next((u for u in users if u.get("uid") == uid), None)
+    return next((u for u in users if u.get("legacy")), None)
+
+
 def save_auth_config(config):
-    """Save authentication configuration to file"""
+    """Save authentication configuration to file, with the main administrator
+    repeated at the top level (see load_auth_config)."""
     ensure_config_dir()
+    primary = _primary(config)
+    if primary:
+        for field in USER_FIELDS:
+            config[field] = primary.get(field)
     try:
         with open(AUTH_CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
@@ -192,17 +367,26 @@ def access_mode(config=None):
 
 def profile_for(mode, username=None, scope=None):
     """The profile of a request (see permissions.py): an open Monitor is
-    administered by whoever reaches it, a read-only one is observed; with an
-    account, the session of `username` with its token `scope` decides."""
+    administered by whoever reaches it, a read-only one is observed. With an
+    account, a local user has their own profile, and a token with read-only
+    scope never does more than observe; Proxmox VE accounts follow the scope
+    their privileges give."""
     if mode == "open":
         return "admin"
     if mode == "read_only":
         return "observer"
-    if mode in ("password", "proxmox") and username:
-        if scope == "full_admin":
-            return "admin"
-        if scope == "read_only":
-            return "observer"
+    if mode not in ("password", "proxmox") or not username:
+        return None
+    user = find_user(username)
+    if user is not None:
+        profile = user.get("profile")
+        if profile not in permissions.PROFILES:
+            return None
+        return "observer" if scope == "read_only" else profile
+    if scope == "full_admin":
+        return "admin"
+    if scope == "read_only":
+        return "observer"
     return None
 
 
@@ -243,8 +427,9 @@ def consume_setup_code():
 
 
 def choose_access_mode(mode):
-    """Leave the Monitor without an account, read-only or open. Any account
-    and its second factor are removed, as disabling the password always did."""
+    """Leave the Monitor without an account, read-only or open. Every local
+    user and their second factor are removed, as disabling the password
+    always did."""
     if mode not in ("read_only", "open"):
         return False, "Unknown access mode"
     config = load_auth_config()
@@ -259,6 +444,7 @@ def choose_access_mode(mode):
         "totp_enabled": False,
         "totp_secret": None,
         "backup_codes": [],
+        "users": [],
     })
     # API tokens and the revocation list are kept, as before: a revoked
     # token must stay revoked if a password is set again later.
@@ -442,12 +628,16 @@ def _maybe_rehash_password(password, current_hash):
 
 
 def generate_token(username, *, oidc_identity=None):
-    """Generate a JWT token for the given username"""
+    """Generate a JWT token for the given local user"""
     if not JWT_AVAILABLE:
+        return None
+    user = find_user(username)
+    if user is None:
         return None
 
     payload = {
         'username': username,
+        'uid': user['uid'],
         'exp': datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS),
         'iat': datetime.utcnow(),
         'iss': JWT_ISSUER,
@@ -499,13 +689,24 @@ def _invalidate_revoked_cache():
     _REVOKED_CACHE['set'] = None
 
 
+def _token_user(payload):
+    """The local user a verified token belongs to, or None (see USER_FIELDS)."""
+    config = load_auth_config()
+    uid = payload.get('uid')
+    for user in config.get("users") or []:
+        if (user.get("uid") == uid) if uid else user.get("legacy"):
+            return user
+    return None
+
+
 def verify_token_full(token):
     """Like `verify_token` but also returns the `scope` claim.
 
     Returns `(username, scope)` on success, `(None, None)` otherwise.
     Tokens issued before scope was added (no claim) get `'full_admin'`
     so legacy sessions keep working unchanged. Audit Tier 6 — Tokens
-    API JWT 365 días sin scope.
+    API JWT 365 días sin scope. The username is that of the local user
+    the token belongs to; a removed user's tokens are no longer valid.
     """
     pve_session = _pve_ticket_session(token) if token else None
     if pve_session is not None:
@@ -528,7 +729,11 @@ def verify_token_full(token):
             payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         if not _session_is_current(payload):
             return None, None
-        return payload.get('username'), payload.get('scope', 'full_admin')
+        user = _token_user(payload)
+        if user is None:
+            _log_auth_failure_throttled("Session rejected: no such user")
+            return None, None
+        return user['username'], payload.get('scope', 'full_admin')
     except jwt.ExpiredSignatureError:
         _log_auth_failure_throttled("Session rejected: expired")
         return None, None
@@ -580,47 +785,11 @@ def _session_is_current(payload):
 
 def verify_token(token):
     """
-    Verify a JWT token
-    Returns username if valid, None otherwise
-    Also checks if the token has been revoked
+    Verify a JWT token or a Proxmox VE ticket.
+    Returns the username if valid, None otherwise; a revoked token, or one
+    whose user was removed, is not valid.
     """
-    pve_session = _pve_ticket_session(token) if token else None
-    if pve_session is not None:
-        return pve_session[0]
-    if not JWT_AVAILABLE or not token:
-        return None
-
-    try:
-        # Revoked-token list is cached in memory (TTL + mtime) so high-RPS
-        # endpoints don't reread auth.json from disk on every @require_auth call.
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        if token_hash in _get_revoked_tokens_cached():
-            return None
-
-        # Verify against the per-install secret first. Tokens issued under the
-        # legacy hardcoded secret were forgeable by anyone with read access to
-        # the public repo — those are intentionally rejected so users get a
-        # one-time relogin to mint a fresh token.
-        # `iss`/`aud` claims are validated when present; tokens issued before
-        # the iss/aud rollout (no claims) fall back to a permissive decode so
-        # active sessions don't break on upgrade.
-        try:
-            payload = jwt.decode(
-                token,
-                _get_jwt_secret(),
-                algorithms=[JWT_ALGORITHM],
-                audience=JWT_AUDIENCE,
-                issuer=JWT_ISSUER,
-            )
-        except (jwt.MissingRequiredClaimError, jwt.InvalidAudienceError, jwt.InvalidIssuerError):
-            payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
-        return payload.get('username') if _session_is_current(payload) else None
-    except jwt.ExpiredSignatureError:
-        _log_auth_failure_throttled("Token has expired")
-        return None
-    except jwt.InvalidTokenError as e:
-        _log_auth_failure_throttled(f"Invalid token: {e}")
-        return None
+    return verify_token_full(token)[0] if token else None
 
 
 def _jwt_secret_fingerprint(secret: str = None) -> str:
@@ -637,10 +806,11 @@ def _jwt_secret_fingerprint(secret: str = None) -> str:
     return hashlib.sha256(sec.encode()).hexdigest()[:16]
 
 
-def store_api_token_metadata(token, token_name="API Token"):
+def store_api_token_metadata(token, token_name="API Token", scope="read_only", owner=None):
     """
-    Store API token metadata (hash, name, creation date) for listing and revocation.
-    The actual token is never stored - only a hash for identification.
+    Store API token metadata (hash, name, scope, owner, creation date) for
+    listing and revocation. The actual token is never stored - only a hash
+    for identification.
 
     Also records the fingerprint of the jwt_secret that minted this token
     (`signed_with`). At list time we compare this against the current
@@ -651,12 +821,15 @@ def store_api_token_metadata(token, token_name="API Token"):
     config = load_auth_config()
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     token_id = token_hash[:16]
+    user = find_user(owner, config)
 
     token_entry = {
         "id": token_id,
         "name": token_name,
         "token_hash": token_hash,
         "token_prefix": token[:12] + "...",
+        "scope": scope,
+        "owner_uid": user["uid"] if user else None,
         "created_at": datetime.utcnow().isoformat() + "Z",
         "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z",
         "signed_with": _jwt_secret_fingerprint(),
@@ -668,10 +841,12 @@ def store_api_token_metadata(token, token_name="API Token"):
     return token_entry
 
 
-def list_api_tokens():
-    """List stored API token metadata (no actual tokens are returned).
+def list_api_tokens(owner=None):
+    """List stored API token metadata (no actual tokens are returned): those
+    of the user `owner`, or every one when it is None.
 
     Each entry carries:
+      * `owner`    — the user it belongs to.
       * `revoked`  — token hash is in the revocation list.
       * `valid`    — JWT can still be verified with the current secret.
                      `True` when `signed_with` matches the current
@@ -694,6 +869,9 @@ def list_api_tokens():
 
     result = []
     for t in tokens:
+        user = _token_owner(t, config)
+        if owner is not None and (user is None or user.get("username") != owner):
+            continue
         signed_with = t.get("signed_with")
         if signed_with is None:
             valid = None  # legacy entry — unknown
@@ -715,6 +893,7 @@ def list_api_tokens():
             # as full_admin, so the list reflects that rather than the
             # read-only default a new token gets.
             "scope": t.get("scope", "full_admin"),
+            "owner": user.get("username") if user else None,
             "token_prefix": t.get("token_prefix", "***"),
             "created_at": t.get("created_at"),
             "expires_at": t.get("expires_at"),
@@ -727,35 +906,39 @@ def list_api_tokens():
     return result
 
 
-def revoke_api_token(token_id):
+def revoke_api_token(token_id, owner=None):
     """
-    Revoke an API token by its ID.
-    Adds the token hash to the revoked list so it fails verification.
+    Revoke an API token by its ID: one of the user `owner`, or any when it
+    is None. Adds the token hash to the revoked list so it fails verification.
     Returns (success: bool, message: str)
     """
     config = load_auth_config()
     tokens = config.get("api_tokens", [])
-    
+
     target = None
     for t in tokens:
         if t.get("id") == token_id:
             target = t
             break
-    
+
+    if target and owner is not None:
+        user = _token_owner(target, config)
+        if user is None or user.get("username") != owner:
+            target = None
     if not target:
         return False, "Token not found"
-    
+
     token_hash = target.get("token_hash")
     config.setdefault("revoked_tokens", [])
-    
+
     if token_hash in config["revoked_tokens"]:
         return False, "Token is already revoked"
-    
+
     config["revoked_tokens"].append(token_hash)
-    
+
     # Remove from the active tokens list
     config["api_tokens"] = [t for t in tokens if t.get("id") != token_id]
-    
+
     if save_auth_config(config):
         _invalidate_revoked_cache()
         return True, "Token revoked successfully"
@@ -797,7 +980,7 @@ def get_auth_status():
 
 def setup_auth(username, password):
     """
-    Set up authentication with username and password
+    Set up the first local account, an administrator.
     Returns (success: bool, message: str)
     """
     # Refuse if real credentials already exist. Without this guard an
@@ -806,7 +989,7 @@ def setup_auth(username, password):
     # setup is marked configured but deliberately has no credentials, so it
     # must remain possible to finish setup later. See audit Tier 1 #4.
     existing = load_auth_config()
-    if existing.get("username") and existing.get("password_hash"):
+    if existing.get("users") or (existing.get("username") and existing.get("password_hash")):
         return False, "Authentication is already configured"
 
     if not username or not password:
@@ -816,16 +999,16 @@ def setup_auth(username, password):
     if pw_err:
         return False, pw_err
 
+    # It is the account of the Monitor, as the only one was before users
+    # existed: API tokens kept from then belong to it.
+    # It keeps the display name and avatar the Monitor had without an account.
+    existing["users"] = [_new_user(username, hash_password(password), "admin", legacy=True,
+                                   display_name=existing.get("display_name"))]
     existing.update({
         "enabled": True,
-        "username": username,
-        "password_hash": hash_password(password),
         "declined": False,
         "configured": True,
         "access_mode": "password",
-        "totp_enabled": False,
-        "totp_secret": None,
-        "backup_codes": []
     })
 
     if save_auth_config(existing):
@@ -887,10 +1070,10 @@ def enable_auth():
     Returns (success: bool, message: str)
     """
     config = load_auth_config()
-    
-    if not config.get("username") or not config.get("password_hash"):
+
+    if not config.get("users") and not (config.get("username") and config.get("password_hash")):
         return False, "Authentication not configured. Please set up username and password first."
-    
+
     config["enabled"] = True
     config["declined"] = False
     config["access_mode"] = "password"
@@ -901,9 +1084,9 @@ def enable_auth():
         return False, "Failed to save configuration"
 
 
-def change_password(old_password, new_password, totp_code=None):
+def change_password(username, old_password, new_password, totp_code=None):
     """
-    Change the authentication password.
+    Change the password of the local user `username`.
 
     When 2FA is enabled on the account, a valid TOTP code (or backup code) is
     REQUIRED in addition to the current password — otherwise an attacker who
@@ -914,11 +1097,13 @@ def change_password(old_password, new_password, totp_code=None):
     Returns (success: bool, message: str).
     """
     config = load_auth_config()
-
     if not config.get("enabled"):
         return False, "Authentication is not enabled"
+    user = find_user(username, config)
+    if user is None:
+        return False, "This account has no local password"
 
-    if not verify_password(old_password, config.get("password_hash", "")):
+    if not verify_password(old_password, user.get("password_hash", "")):
         return False, "Current password is incorrect"
 
     pw_err = _validate_password_strength(new_password)
@@ -927,8 +1112,7 @@ def change_password(old_password, new_password, totp_code=None):
 
     # 2FA gate: if the account has TOTP enabled, the caller must prove they
     # also hold the second factor.
-    if config.get("totp_enabled"):
-        username = config.get("username")
+    if user.get("totp_enabled"):
         if not totp_code:
             return False, "2FA code required to change password"
         # Try TOTP first, then fall back to backup code (same UX as login).
@@ -939,8 +1123,9 @@ def change_password(old_password, new_password, totp_code=None):
             return False, "Invalid 2FA code"
         # Reload after possible backup-code consumption inside verify_totp.
         config = load_auth_config()
+        user = find_user(username, config)
 
-    config["password_hash"] = hash_password(new_password)
+    user["password_hash"] = hash_password(new_password)
 
     if save_auth_config(config):
         return True, "Password changed successfully"
@@ -1009,32 +1194,33 @@ def setup_totp(username):
     """
     if not TOTP_AVAILABLE:
         return False, None, None, None, "2FA is not available (pyotp/segno not installed)"
-    
+
     config = load_auth_config()
-    
+
     if not config.get("enabled"):
         return False, None, None, None, "Authentication must be enabled first"
-    
-    if config.get("username") != username:
+
+    user = find_user(username, config)
+    if user is None:
         return False, None, None, None, "Invalid username"
-    
+
     # Generate new secret and backup codes
     secret = generate_totp_secret()
     qr_code = generate_totp_qr(username, secret)
     backup_codes_plain = []
     backup_codes_hashed = generate_backup_codes()
-    
+
     # Generate plain text backup codes for display (only returned once)
     for i in range(8):
         code = ''.join(secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(8))
         formatted = f"{code[:4]}-{code[4:]}"
         backup_codes_plain.append(formatted)
         backup_codes_hashed[i]["code"] = hashlib.sha256(formatted.encode()).hexdigest()
-    
+
     # Store secret and hashed backup codes (not enabled yet until verified)
-    config["totp_secret"] = secret
-    config["backup_codes"] = backup_codes_hashed
-    
+    user["totp_secret"] = secret
+    user["backup_codes"] = backup_codes_hashed
+
     if save_auth_config(config):
         return True, secret, qr_code, backup_codes_plain, "2FA setup initiated"
     else:
@@ -1043,36 +1229,36 @@ def setup_totp(username):
 
 def verify_totp(username, token, use_backup=False):
     """
-    Verify a TOTP token or backup code
+    Verify a TOTP token or backup code of the local user `username`
     Returns (success: bool, message: str)
     """
     if not TOTP_AVAILABLE and not use_backup:
         return False, "2FA is not available"
-    
+
     config = load_auth_config()
-    
-    if not config.get("totp_enabled"):
-        return False, "2FA is not enabled"
-    
-    if config.get("username") != username:
+    user = find_user(username, config)
+    if user is None:
         return False, "Invalid username"
-    
+
+    if not user.get("totp_enabled"):
+        return False, "2FA is not enabled"
+
     # Check backup code
     if use_backup:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        for backup_code in config.get("backup_codes", []):
+        for backup_code in user.get("backup_codes", []):
             if backup_code["code"] == token_hash and not backup_code["used"]:
                 backup_code["used"] = True
                 save_auth_config(config)
                 return True, "Backup code accepted"
         return False, "Invalid or already used backup code"
-    
+
     # Check TOTP token. `valid_window=1` accepts the previous, current and
     # next 30s timesteps, which is friendly to clock skew but lets a leaked
     # OTP be replayed for up to ~90s. Track the last successfully-used
     # timestep counter per account and reject anything <= that.
     import time as _time
-    totp = pyotp.TOTP(config.get("totp_secret"))
+    totp = pyotp.TOTP(user.get("totp_secret"))
     if not totp.verify(token, valid_window=1):
         return False, "Invalid 2FA code"
 
@@ -1099,19 +1285,16 @@ def verify_totp(username, token, use_backup=False):
         # `verify()` succeeded but we couldn't map to a counter — fail closed.
         return False, "Invalid 2FA code"
 
-    # `last_counter` may be stored as `null` in auth.json for accounts
-    # that haven't authenticated since the anti-replay tracking was
-    # introduced. `dict.get(k, default)` only returns the default when
-    # the key is MISSING, not when it's present-but-None — so `null`
-    # would slip through as Python None and crash the `<=` comparison
-    # below. Normalise to -1 (meaning "no previous counter").
-    last_counter = config.get("last_totp_counter")
+    # `last_totp_counter` may be stored as `null` for accounts that haven't
+    # authenticated since the anti-replay tracking was introduced; it means
+    # "no previous counter".
+    last_counter = user.get("last_totp_counter")
     if last_counter is None:
         last_counter = -1
     if matched_counter <= last_counter:
         return False, "2FA code already used; wait for the next one"
 
-    config["last_totp_counter"] = matched_counter
+    user["last_totp_counter"] = matched_counter
     save_auth_config(config)
     return True, "2FA verification successful"
 
@@ -1123,22 +1306,22 @@ def enable_totp(username, verification_token):
     """
     if not TOTP_AVAILABLE:
         return False, "2FA is not available"
-    
+
     config = load_auth_config()
-    
-    if not config.get("totp_secret"):
-        return False, "2FA has not been set up. Please set up 2FA first."
-    
-    if config.get("username") != username:
+    user = find_user(username, config)
+    if user is None:
         return False, "Invalid username"
-    
+
+    if not user.get("totp_secret"):
+        return False, "2FA has not been set up. Please set up 2FA first."
+
     # Verify the token before enabling
-    totp = pyotp.TOTP(config.get("totp_secret"))
+    totp = pyotp.TOTP(user.get("totp_secret"))
     if not totp.verify(verification_token, valid_window=1):
         return False, "Invalid verification code. Please try again."
-    
-    config["totp_enabled"] = True
-    
+
+    user["totp_enabled"] = True
+
     if save_auth_config(config):
         return True, "2FA enabled successfully"
     else:
@@ -1158,15 +1341,15 @@ def disable_totp(username, password, totp_code=None):
     Returns (success: bool, message: str).
     """
     config = load_auth_config()
-
-    if config.get("username") != username:
+    user = find_user(username, config)
+    if user is None:
         return False, "Invalid username"
 
-    if not verify_password(password, config.get("password_hash", "")):
+    if not verify_password(password, user.get("password_hash", "")):
         return False, "Invalid password"
 
     # If TOTP is currently active, require the second factor to disable it.
-    if config.get("totp_enabled"):
+    if user.get("totp_enabled"):
         if not totp_code:
             return False, "2FA code required to disable 2FA"
         ok, _ = verify_totp(username, totp_code, use_backup=False)
@@ -1176,10 +1359,11 @@ def disable_totp(username, password, totp_code=None):
             return False, "Invalid 2FA code"
         # Reload in case a backup code was consumed.
         config = load_auth_config()
+        user = find_user(username, config)
 
-    config["totp_enabled"] = False
-    config["totp_secret"] = None
-    config["backup_codes"] = []
+    user["totp_enabled"] = False
+    user["totp_secret"] = None
+    user["backup_codes"] = []
 
     if save_auth_config(config):
         return True, "2FA disabled successfully"
@@ -1589,27 +1773,28 @@ def get_ssl_context():
 
 def authenticate(username, password, totp_token=None):
     """
-    Authenticate a user with username, password, and optional TOTP
+    Authenticate a local user with username, password, and optional TOTP
     Returns (success: bool, token: str or None, requires_totp: bool, message: str)
     """
     config = load_auth_config()
-    
+
     if not config.get("enabled"):
         return False, None, False, "Authentication is not enabled"
-    
-    if username != config.get("username"):
+
+    user = find_user(username, config)
+    if user is None:
         return False, None, False, "Invalid username or password"
-    
-    if not verify_password(password, config.get("password_hash", "")):
+
+    if not verify_password(password, user.get("password_hash", "")):
         return False, None, False, "Invalid username or password"
 
     # Lazy migration: if the stored hash is the legacy unsalted SHA-256, replace
     # it with a fresh PBKDF2 hash now that we have the cleartext in hand. The
     # next login uses the new hash; the legacy code path stays around only as
     # the recognition entry in `verify_password`. Audit Tier 4 #23.
-    upgraded = _maybe_rehash_password(password, config.get("password_hash", ""))
+    upgraded = _maybe_rehash_password(password, user.get("password_hash", ""))
     if upgraded:
-        config["password_hash"] = upgraded
+        user["password_hash"] = upgraded
         try:
             save_auth_config(config)
         except Exception as e:
@@ -1617,18 +1802,18 @@ def authenticate(username, password, totp_token=None):
             # authenticated and we can rehash on a future login attempt.
             print(f"[auth] Failed to persist rehashed password: {e}")
 
-    if config.get("totp_enabled"):
+    if user.get("totp_enabled"):
         if not totp_token:
             # First step: password OK, now request TOTP code (not a failure)
             return False, None, True, "2FA code required"
-        
+
         # Verify TOTP token or backup code
         success, message = verify_totp(username, totp_token, use_backup=len(totp_token) == 9)  # Backup codes are formatted XXXX-XXXX
         if not success:
             # TOTP code is wrong: return requires_totp=False so the caller
             # logs it as a real authentication failure for Fail2Ban
             return False, None, False, "Invalid 2FA code"
-    
+
     token = generate_token(username)
     if token:
         return True, token, False, "Authentication successful"
@@ -1652,48 +1837,79 @@ def authenticate(username, password, totp_token=None):
 # claims, but we don't ask the operator for an email manually.
 
 
-def get_user_profile():
-    """Return the active user's profile decorations.
+def get_user_profile(username=None):
+    """Return the profile decorations of the signed-in user `username`.
 
     Returns a dict with:
       {
         "username":        str | None,
         "display_name":    str | None,  # may equal username
+        "profile":         str | None,  # admin, observer, operator...
+        "local":           bool,        # a local user, who can edit them
         "has_avatar":      bool,
         "avatar_mtime":    float | None,  # for cache-busting URLs
         "avatar_content_type": str | None,
       }
-    Username falls back to None when auth isn't configured/enabled.
+    Without a local user (an open Monitor, or a Proxmox VE account), the
+    display name and avatar kept for the Monitor itself are shown.
     """
     config = load_auth_config()
-    username = config.get("username") if config.get("enabled") else None
-    display_name = config.get("display_name") or None
+    user = find_user(username, config)
+    avatar_file, type_file = _avatar_paths(user)
+    # A Proxmox VE account has neither: those of the Monitor belong to
+    # whoever reaches it without an account.
+    own = user is not None or username is None
+    display_name = ((user or config).get("display_name") or None) if own else None
 
-    has_avatar = AVATAR_FILE.exists() and AVATAR_FILE.stat().st_size > 0
+    has_avatar = own and avatar_file.exists() and avatar_file.stat().st_size > 0
     avatar_mtime = None
     avatar_content_type = None
     if has_avatar:
         try:
-            avatar_mtime = AVATAR_FILE.stat().st_mtime
+            avatar_mtime = avatar_file.stat().st_mtime
         except OSError:
             avatar_mtime = None
         try:
-            if AVATAR_CONTENT_TYPE_FILE.exists():
-                avatar_content_type = AVATAR_CONTENT_TYPE_FILE.read_text().strip() or None
+            if type_file.exists():
+                avatar_content_type = type_file.read_text().strip() or None
         except OSError:
             avatar_content_type = None
 
     return {
         "username": username,
         "display_name": display_name,
+        "profile": user.get("profile") if user else None,
+        "local": user is not None,
         "has_avatar": has_avatar,
         "avatar_mtime": avatar_mtime,
         "avatar_content_type": avatar_content_type,
     }
 
 
-def set_display_name(display_name):
-    """Persist (or clear) the user's display name.
+def _avatar_paths(user):
+    """(image, content type) files of a user's avatar. The account the
+    Monitor had before users existed keeps the files it used then, which are
+    also shown without a local user."""
+    if user is None or user.get("legacy"):
+        return AVATAR_FILE, AVATAR_CONTENT_TYPE_FILE
+    folder = CONFIG_DIR / "avatars"
+    return folder / f"{user['uid']}.bin", folder / f"{user['uid']}.type"
+
+
+def _profile_owner(username):
+    """(user, error) for changing the profile decorations of `username`: a
+    Proxmox VE account keeps them in Proxmox VE."""
+    if username is None:
+        return None, None
+    user = find_user(username)
+    if user is None:
+        return None, "This account is managed in Proxmox VE"
+    return user, None
+
+
+def set_display_name(display_name, username=None):
+    """Persist (or clear) the display name of the local user `username`,
+    or of the Monitor itself without one.
 
     Accepts any string up to 64 chars. An empty / whitespace-only value
     clears the field — the dropdown then falls back to the raw username
@@ -1707,15 +1923,20 @@ def set_display_name(display_name):
     if any(ord(ch) < 0x20 for ch in cleaned):
         return False, "Display name contains control characters"
 
+    owner, error = _profile_owner(username)
+    if error:
+        return False, error
     config = load_auth_config()
-    config["display_name"] = cleaned or None
+    target = find_user(username, config) if owner else config
+    target["display_name"] = cleaned or None
     if not save_auth_config(config):
         return False, "Failed to save profile"
     return True, "Display name updated"
 
 
-def save_avatar(content_bytes, content_type):
-    """Persist a new avatar image. Best-effort validation:
+def save_avatar(content_bytes, content_type, username=None):
+    """Persist a new avatar image for the local user `username`. Best-effort
+    validation:
 
       • Content-Type must be one of `AVATAR_ALLOWED_CONTENT_TYPES`.
       • Size must be <= `AVATAR_MAX_BYTES` (2 MB).
@@ -1728,6 +1949,9 @@ def save_avatar(content_bytes, content_type):
     `object-cover`, so any aspect ratio displays correctly. Operators
     who want a smaller file can compress before upload.
     """
+    owner, error = _profile_owner(username)
+    if error:
+        return False, error
     if not isinstance(content_bytes, (bytes, bytearray)) or not content_bytes:
         return False, "No image data"
     if len(content_bytes) > AVATAR_MAX_BYTES:
@@ -1746,18 +1970,20 @@ def save_avatar(content_bytes, content_type):
     if not looks_valid:
         return False, "Image bytes don't match a supported format"
 
+    avatar_file, type_file = _avatar_paths(owner)
     try:
         ensure_config_dir()
+        avatar_file.parent.mkdir(parents=True, exist_ok=True)
         # Write atomically — tmp + rename so a crashed write never leaves
         # a half-written avatar file that the GET endpoint would serve as
         # corrupt bytes.
-        tmp_avatar = AVATAR_FILE.with_suffix(AVATAR_FILE.suffix + ".tmp")
+        tmp_avatar = avatar_file.with_suffix(avatar_file.suffix + ".tmp")
         with open(tmp_avatar, "wb") as f:
             f.write(content_bytes)
-        os.replace(tmp_avatar, AVATAR_FILE)
-        AVATAR_CONTENT_TYPE_FILE.write_text(content_type)
+        os.replace(tmp_avatar, avatar_file)
+        type_file.write_text(content_type)
         try:
-            os.chmod(AVATAR_FILE, 0o600)
+            os.chmod(avatar_file, 0o600)
         except OSError:
             # Best-effort permission tighten; not fatal if the FS doesn't
             # support it (e.g. some bind-mounted scenarios).
@@ -1767,33 +1993,40 @@ def save_avatar(content_bytes, content_type):
         return False, f"Failed to save avatar: {e}"
 
 
-def delete_avatar():
-    """Remove the stored avatar file. Returns (success, message). No-op
-    when there's nothing to delete (still returns success)."""
+def delete_avatar(username=None):
+    """Remove the stored avatar file of the local user `username`. Returns
+    (success, message). No-op when there's nothing to delete (still returns
+    success)."""
+    owner, error = _profile_owner(username)
+    if error:
+        return False, error
     try:
-        if AVATAR_FILE.exists():
-            AVATAR_FILE.unlink()
-        if AVATAR_CONTENT_TYPE_FILE.exists():
-            AVATAR_CONTENT_TYPE_FILE.unlink()
+        for path in _avatar_paths(owner):
+            if path.exists():
+                path.unlink()
         return True, "Avatar removed"
     except Exception as e:
         return False, f"Failed to remove avatar: {e}"
 
 
-def get_avatar_bytes():
-    """Return (bytes, content_type) for the stored avatar, or (None, None)
-    if no avatar is set or the file is unreadable. The caller is
+def get_avatar_bytes(username=None):
+    """Return (bytes, content_type) for the avatar of `username`, or
+    (None, None) if no avatar is set or the file is unreadable. The caller is
     responsible for the HTTP response; this only handles the I/O."""
-    if not AVATAR_FILE.exists():
+    user = find_user(username)
+    if username is not None and user is None:
+        return None, None  # A Proxmox VE account has no avatar here.
+    avatar_file, type_file = _avatar_paths(user)
+    if not avatar_file.exists():
         return None, None
     try:
-        data = AVATAR_FILE.read_bytes()
+        data = avatar_file.read_bytes()
     except OSError:
         return None, None
     content_type = "application/octet-stream"
     try:
-        if AVATAR_CONTENT_TYPE_FILE.exists():
-            ct = AVATAR_CONTENT_TYPE_FILE.read_text().strip()
+        if type_file.exists():
+            ct = type_file.read_text().strip()
             if ct in AVATAR_ALLOWED_CONTENT_TYPES:
                 content_type = ct
     except OSError:

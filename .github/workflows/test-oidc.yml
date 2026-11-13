@@ -15,6 +15,7 @@ on:
       - 'AppImage/scripts/tests/test_access_modes.py'
       - 'AppImage/scripts/tests/test_pve_auth.py'
       - 'AppImage/scripts/tests/test_permissions.py'
+      - 'AppImage/scripts/tests/test_users.py'
       - 'AppImage/components/oidc-settings.tsx'
       - 'AppImage/components/login.tsx'
       - 'AppImage/lib/oidc-login.ts'
@@ -77,6 +78,7 @@ jobs:
           python -B -m unittest discover -s AppImage/scripts/tests -p test_access_modes.py -v
           python -B -m unittest discover -s AppImage/scripts/tests -p test_pve_auth.py -v
           python -B -m unittest discover -s AppImage/scripts/tests -p test_permissions.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_users.py -v
           bash -n AppImage/scripts/build_appimage.sh
       - uses: actions/setup-node@v6
         if: matrix.python == '3.11' && matrix.runner == 'ubuntu-22.04'

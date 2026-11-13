@@ -295,7 +295,7 @@ class PBSManagerTests(unittest.TestCase):
 
     def test_appimage_copies_and_imports_pbs_dependencies_outside_source_tree(self):
         builder = (ROOT / "AppImage/scripts/build_appimage.sh").read_text()
-        modules = ("pbs_manager", "flask_pbs_routes", "auth_manager", "jwt_middleware")
+        modules = ("pbs_manager", "flask_pbs_routes", "auth_manager", "jwt_middleware", "permissions")
         copies = []
         for name in modules:
             matches = [line for line in builder.splitlines() if line.startswith(f'cp "$SCRIPT_DIR/{name}.py"')]

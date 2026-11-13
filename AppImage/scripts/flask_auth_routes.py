@@ -10,7 +10,7 @@ import subprocess
 import threading
 import time
 from collections import defaultdict, deque
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 import auth_manager
 from jwt_middleware import require_auth, require_admin_scope, permission_error
 import jwt
@@ -144,6 +144,19 @@ def _choose_mode(mode, data):
     return jsonify({"success": True, "message": message, "access_mode": mode})
 
 
+def _session_username():
+    """The account of the request, as its decorator found it: None without
+    one (an open or read-only Monitor)."""
+    identity = getattr(g, "identity", None)
+    return identity["username"] if identity else None
+
+
+def _tokens_owner(username, scope):
+    """Whose API tokens a session manages: an administrator, every one."""
+    profile = auth_manager.profile_for(auth_manager.access_mode(), username, scope)
+    return None if profile == "admin" else username
+
+
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/api/auth/status', methods=['GET'])
@@ -163,6 +176,9 @@ def auth_status():
                     status['auth_method'] = "pve" if pve_auth.is_ticket(token) else "local"
                     status['profile'] = auth_manager.profile_for(status["access_mode"], username, scope)
                     status['capabilities'] = auth_manager.capabilities(status["access_mode"], profile=status['profile'])
+                    user = auth_manager.find_user(username)
+                    status['local_user'] = user is not None
+                    status['totp_enabled'] = bool(user and user.get("totp_enabled"))
 
         return jsonify(status)
     except Exception as e:
@@ -580,7 +596,7 @@ def auth_change_password():
                 "message": "Invalid 2FA code",
             }), 400
 
-        success, message = auth_manager.change_password(old_password, new_password, totp_code)
+        success, message = auth_manager.change_password(_session_username(), old_password, new_password, totp_code)
 
         if success:
             return jsonify({"success": True, "message": message})
@@ -843,6 +859,7 @@ def generate_api_token():
             # iss/aud match the values the verifier expects in Sprint 10E.
             api_token = jwt.encode({
                 'username': username,
+                'uid': auth_manager.find_user(username)['uid'],
                 'token_name': token_name,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
                 'iat': datetime.datetime.utcnow(),
@@ -852,7 +869,7 @@ def generate_api_token():
             }, auth_manager._get_jwt_secret(), algorithm='HS256')
             
             # Store token metadata for listing and revocation
-            auth_manager.store_api_token_metadata(api_token, token_name)
+            auth_manager.store_api_token_metadata(api_token, token_name, scope=scope, owner=username)
             
             return jsonify({
                 "success": True, 
@@ -886,10 +903,11 @@ def list_api_tokens():
             return jsonify({"success": True, "tokens": []})
 
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if not token or not auth_manager.verify_token(token):
+        username, scope = auth_manager.verify_token_full(token) if token else (None, None)
+        if not username:
             return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-        tokens = auth_manager.list_api_tokens()
+        tokens = auth_manager.list_api_tokens(owner=_tokens_owner(username, scope))
         return jsonify({"success": True, "tokens": tokens})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
@@ -912,7 +930,7 @@ def revoke_api_token_route(token_id):
         if scope != 'full_admin':
             return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
 
-        success, message = auth_manager.revoke_api_token(token_id)
+        success, message = auth_manager.revoke_api_token(token_id, owner=_tokens_owner(username, scope))
 
         if success:
             return jsonify({"success": True, "message": message})
@@ -944,7 +962,7 @@ def get_profile():
     """Return the active user's profile (username + display name + avatar
     metadata). Falls back to None values when auth isn't configured."""
     try:
-        profile = auth_manager.get_user_profile()
+        profile = auth_manager.get_user_profile(_session_username())
         return jsonify({
             "success": True,
             **profile,
@@ -965,12 +983,12 @@ def update_profile():
                 "success": False,
                 "message": "Missing 'display_name' field",
             }), 400
-        ok, message = auth_manager.set_display_name(data.get("display_name") or "")
+        ok, message = auth_manager.set_display_name(data.get("display_name") or "", _session_username())
         if not ok:
             return jsonify({"success": False, "message": message}), 400
         # Return the fresh profile so the frontend can update without a
         # second roundtrip.
-        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile(_session_username())})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -981,7 +999,7 @@ def get_avatar():
     """Serve the stored avatar bytes. Returns 404 if no avatar set."""
     try:
         from flask import Response
-        data, content_type = auth_manager.get_avatar_bytes()
+        data, content_type = auth_manager.get_avatar_bytes(_session_username())
         if data is None:
             return jsonify({"success": False, "message": "No avatar set"}), 404
         return Response(
@@ -1026,10 +1044,10 @@ def upload_avatar():
         if not content_bytes:
             return jsonify({"success": False, "message": "No image data received"}), 400
 
-        ok, message = auth_manager.save_avatar(content_bytes, content_type)
+        ok, message = auth_manager.save_avatar(content_bytes, content_type, _session_username())
         if not ok:
             return jsonify({"success": False, "message": message}), 400
-        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile(_session_username())})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -1039,9 +1057,72 @@ def upload_avatar():
 def remove_avatar():
     """Remove the stored avatar (no-op if none set)."""
     try:
-        ok, message = auth_manager.delete_avatar()
+        ok, message = auth_manager.delete_avatar(_session_username())
         if not ok:
             return jsonify({"success": False, "message": message}), 400
-        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile(_session_username())})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Local users: an administrator adds them, chooses their profile, sets a new
+# password or removes a lost second factor. The Monitor always keeps one
+# administrator. See auth_manager (local accounts) and permissions.py.
+# ---------------------------------------------------------------------------
+
+_USER_ERRORS = {
+    "The username can have up to 32 letters, digits, dots, dashes and underscores": "username_invalid",
+    "That username is already in use": "username_taken",
+    "Unknown profile": "profile_unknown",
+    "The Monitor needs at least one administrator": "last_admin",
+    "User not found": "user_not_found",
+    "You cannot remove your own account": "remove_self",
+    "Password must be at least 10 characters": "password_short",
+    "Password must mix at least 3 of: lowercase, uppercase, digits, symbols": "password_mix",
+    "That password is in the common-passwords list — pick something else": "password_common",
+}
+
+
+def _answer(result, status=400):
+    success, message = result
+    if success:
+        return jsonify({"success": True, "message": message, "users": auth_manager.list_users()})
+    # A known refusal has a code the interface translates; any other, such
+    # as a weak password, is shown as it is.
+    return jsonify({"success": False, "message": message,
+                    "error": _USER_ERRORS.get(message, "user_change_failed")}), status
+
+
+@auth_bp.route('/api/auth/users', methods=['GET'])
+@require_admin_scope
+def users_list():
+    return jsonify({"success": True, "users": auth_manager.list_users(),
+                    "profiles": list(auth_manager.permissions.PROFILES)})
+
+
+@auth_bp.route('/api/auth/users', methods=['POST'])
+@require_admin_scope
+def users_create():
+    data = request.get_json(silent=True) or {}
+    return _answer(auth_manager.create_user(data.get("username"), data.get("password"),
+                                            data.get("profile")))
+
+
+@auth_bp.route('/api/auth/users/<username>', methods=['PUT'])
+@require_admin_scope
+def users_update(username):
+    data = request.get_json(silent=True) or {}
+    return _answer(auth_manager.update_user(username, profile=data.get("profile"),
+                                            password=data.get("password"),
+                                            reset_totp=data.get("reset_totp") is True),
+                   404 if not auth_manager.find_user(username) else 400)
+
+
+@auth_bp.route('/api/auth/users/<username>', methods=['DELETE'])
+@require_admin_scope
+def users_delete(username):
+    if username == _session_username():
+        return _answer((False, "You cannot remove your own account"))
+    return _answer(auth_manager.delete_user(username),
+                   404 if not auth_manager.find_user(username) else 400)

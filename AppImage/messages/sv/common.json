@@ -2874,6 +2874,54 @@
     "sharedSession": "Inloggad i Proxmox VE-webbgränssnittet? Öppna instrumentpanelen över HTTPS på samma adress så loggar den sessionen in dig även här.",
     "saveFailed": "Ändringen kunde inte sparas."
   },
+  "users": {
+    "title": "Användare",
+    "description": "Lokala användare i Monitor, var och en med eget lösenord, egen tvåfaktorsautentisering och egen profil.",
+    "you": "Du",
+    "primary": "Huvudkonto",
+    "profile": "Profil",
+    "profiles": {
+      "admin": "Administratör",
+      "operator": "Operatör med terminal",
+      "operator_no_terminal": "Operatör utan terminal",
+      "observer": "Observatör"
+    },
+    "profileHints": {
+      "admin": "allt, inklusive användare, inställningar för Monitor och hemligheter.",
+      "operator": "kör skript och verktyg, styr VM och LXC, hanterar säkerhetskopior, uppdaterar och öppnar terminaler.",
+      "operator_no_terminal": "samma som en operatör med terminal, utan att öppna terminaler.",
+      "observer": "ser instrumentpanelen utan hemligheter; kör och ändrar ingenting."
+    },
+    "add": "Lägg till användare",
+    "username": "Användarnamn",
+    "usernameHint": "Upp till 32 bokstäver, siffror, punkter, bindestreck och understreck.",
+    "password": "Lösenord",
+    "confirmPassword": "Bekräfta lösenord",
+    "newPassword": "Nytt lösenord",
+    "setPassword": "Ange lösenord",
+    "removeTotp": "Ta bort 2FA",
+    "remove": "Ta bort",
+    "confirmRemove": "Ta bort användare",
+    "removeHint": "Användarens sessioner och API-token slutar fungera.",
+    "passwordsDiffer": "Lösenorden stämmer inte överens.",
+    "added": "Användaren har lagts till.",
+    "passwordSet": "Lösenordet har sparats.",
+    "profileChanged": "Profilen har sparats. Den gäller direkt för öppna sessioner.",
+    "totpRemoved": "Tvåfaktorsautentiseringen har tagits bort. Den kan ställas in igen under Säkerhet.",
+    "removed": "Användaren har tagits bort.",
+    "errors": {
+      "username_invalid": "Användarnamnet får ha upp till 32 bokstäver, siffror, punkter, bindestreck och understreck.",
+      "username_taken": "Användarnamnet används redan.",
+      "profile_unknown": "Okänd profil.",
+      "last_admin": "Monitor behöver minst en administratör.",
+      "user_not_found": "Användaren finns inte längre.",
+      "remove_self": "Du kan inte ta bort ditt eget konto.",
+      "password_short": "Lösenordet måste ha minst 10 tecken.",
+      "password_mix": "Lösenordet måste blanda minst tre av: små bokstäver, stora bokstäver, siffror och symboler.",
+      "password_common": "Lösenordet är för vanligt. Välj ett annat.",
+      "user_change_failed": "Ändringen kunde inte sparas."
+    }
+  },
   "pveLogin": {
     "tab": "Proxmox VE",
     "localAccount": "Lokalt konto",

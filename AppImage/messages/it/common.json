@@ -2874,6 +2874,54 @@
     "sharedSession": "Hai effettuato l'accesso all'interfaccia web di Proxmox VE? Apri la dashboard tramite HTTPS allo stesso indirizzo e quella sessione ti farà accedere anche qui.",
     "saveFailed": "Impossibile salvare la modifica."
   },
+  "users": {
+    "title": "Utenti",
+    "description": "Utenti locali del Monitor, ciascuno con la propria password, la propria autenticazione a due fattori e il proprio profilo.",
+    "you": "Tu",
+    "primary": "Principale",
+    "profile": "Profilo",
+    "profiles": {
+      "admin": "Amministratore",
+      "operator": "Operatore con terminale",
+      "operator_no_terminal": "Operatore senza terminale",
+      "observer": "Osservatore"
+    },
+    "profileHints": {
+      "admin": "tutto, compresi gli utenti, le impostazioni del Monitor e i segreti.",
+      "operator": "esegue script e strumenti, controlla VM e LXC, gestisce i backup, aggiorna e apre terminali.",
+      "operator_no_terminal": "come un operatore con terminale, senza aprire terminali.",
+      "observer": "vede la dashboard senza segreti; non esegue né modifica nulla."
+    },
+    "add": "Aggiungi utente",
+    "username": "Nome utente",
+    "usernameHint": "Fino a 32 lettere, cifre, punti, trattini e trattini bassi.",
+    "password": "Password",
+    "confirmPassword": "Conferma password",
+    "newPassword": "Nuova password",
+    "setPassword": "Imposta password",
+    "removeTotp": "Rimuovi 2FA",
+    "remove": "Rimuovi",
+    "confirmRemove": "Rimuovi utente",
+    "removeHint": "Le sue sessioni e i suoi token API smettono di funzionare.",
+    "passwordsDiffer": "Le password non coincidono.",
+    "added": "Utente aggiunto.",
+    "passwordSet": "Password salvata.",
+    "profileChanged": "Profilo salvato. Si applica subito alle sue sessioni aperte.",
+    "totpRemoved": "Autenticazione a due fattori rimossa. Si può configurare di nuovo da Sicurezza.",
+    "removed": "Utente rimosso.",
+    "errors": {
+      "username_invalid": "Il nome utente può contenere fino a 32 lettere, cifre, punti, trattini e trattini bassi.",
+      "username_taken": "Questo nome utente è già in uso.",
+      "profile_unknown": "Profilo sconosciuto.",
+      "last_admin": "Il Monitor ha bisogno di almeno un amministratore.",
+      "user_not_found": "Questo utente non esiste più.",
+      "remove_self": "Non puoi rimuovere il tuo account.",
+      "password_short": "La password deve avere almeno 10 caratteri.",
+      "password_mix": "La password deve combinare almeno tre tra: minuscole, maiuscole, cifre e simboli.",
+      "password_common": "Questa password è troppo comune. Scegline un'altra.",
+      "user_change_failed": "Non è stato possibile salvare la modifica."
+    }
+  },
   "pveLogin": {
     "tab": "Proxmox VE",
     "localAccount": "Account locale",
