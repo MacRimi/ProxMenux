@@ -102,7 +102,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -663,7 +663,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -3065,7 +3065,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -3101,7 +3101,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -3913,6 +3913,45 @@
     "os": "debian"
   },
   {
+    "name": "ChirpStack",
+    "slug": "chirpstack",
+    "desc": "ChirpStack is an open-source LoRaWAN Network Server. It manages gateways, devices and applications, handles device activation and the LoRaWAN MAC layer, and forwards uplink data to MQTT, HTTP and many other integrations.",
+    "script": "ct/chirpstack.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/chirpstack.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/chirpstack.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00016"
+    ],
+    "category_names": [
+      "IoT & Smart Home"
+    ],
+    "notes": [
+      "The install asks for the gateway region ID (e.g. eu868, us915_0); unattended installs must set var_region. It must be listed in enabled_regions in /etc/chirpstack/chirpstack.toml."
+    ],
+    "warnings": [
+      "Change the default admin password after the first login."
+    ],
+    "port": 8080,
+    "website": "https://www.chirpstack.io/",
+    "documentation": "https://www.chirpstack.io/docs/",
+    "logo": "https://raw.githubusercontent.com/chirpstack/chirpstack-docs/refs/heads/master/theme/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Chroma",
     "slug": "chroma",
     "desc": "Chroma is an open-source search and retrieval database for AI applications. It stores embeddings together with documents and metadata and answers vector similarity, metadata-filtered and full-text queries over an HTTP API, with official Python and JavaScript clients.",
@@ -3942,7 +3981,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4362,7 +4401,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4535,7 +4574,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -5059,7 +5098,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -6204,6 +6243,44 @@
     "os": "debian"
   },
   {
+    "name": "DokuWiki",
+    "slug": "dokuwiki",
+    "desc": "DokuWiki is a simple to use and highly versatile wiki that needs no database: pages are stored as plain text files that stay readable outside the wiki. It brings revision history, access control lists, a media manager and full-text search, and over a thousand community plugins and templates extend it.",
+    "script": "ct/dokuwiki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dokuwiki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/dokuwiki.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Log in with the admin user and the generated password from /opt/dokuwiki_data/.env inside the container.",
+      "Everyone can read the wiki, only logged-in users can edit and upload. Self-registration is off: add accounts under Admin > User Manager, change the policy under Admin > Access Control List."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://www.dokuwiki.org/",
+    "documentation": "https://www.dokuwiki.org/manual",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dokuwiki.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Dolibarr",
     "slug": "dolibarr",
     "desc": "Dolibarr ERP CRM is a modern software package to manage your company or foundation's activity (contacts, suppliers, invoices, orders, stocks, agenda, accounting, ...). it's an open source Web application (written in PHP) designed for businesses of any sizes, foundations and freelancers.",
@@ -6653,6 +6730,48 @@
     "os": "debian"
   },
   {
+    "name": "Easy!Appointments",
+    "slug": "easyappointments",
+    "desc": "Easy!Appointments is a self-hosted appointment scheduler that lets customers book appointments online from a public booking page. Admins manage services, providers, working plans and secretaries in a backend calendar, with email notifications, Google Calendar and CalDAV sync, LDAP login and a REST API.",
+    "script": "ct/easyappointments.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/easyappointments.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/easyappointments.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019",
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Automation & Scheduling",
+      "Business & ERP"
+    ],
+    "notes": [
+      "Sign in at http://<IP>/index.php/login with the admin login saved in /opt/easyappointments_data/.env inside the container.",
+      "Email notifications need an SMTP server: set protocol and the smtp_* values in /opt/easyappointments/application/config/email.php."
+    ],
+    "warnings": [
+      "Behind a reverse proxy, add fastcgi_param PROXY_IPS <proxy-ip>; to /etc/nginx/sites-available/easyappointments, or all visitors share one login rate limit."
+    ],
+    "port": 80,
+    "website": "https://easyappointments.org/",
+    "documentation": "https://github.com/alextselegidis/easyappointments/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/easy-appointments.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "ebusd",
     "slug": "ebusd",
     "desc": "ebusd is a daemon for handling communication with eBUS devices connected to a 2-wire `energy bus` used by numerous heating systems.",
@@ -6936,7 +7055,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -7218,7 +7337,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -8188,6 +8307,45 @@
       "lxc"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Floppy",
+    "slug": "floppy",
+    "desc": "Floppy is a self-hosted media tracker and diary for movies, TV, anime, books, comics, manga, games, board games, music and podcasts, a private alternative to Trakt, Letterboxd and Goodreads. It keeps progress, ratings, lists, collections, a release calendar and yearly statistics, and fills in history from Plex, Jellyfin, Emby, Pocket Casts or Last.fm.",
+    "script": "ct/floppy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/floppy.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/floppy.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Sign in with DJANGO_SUPERUSER_USERNAME and DJANGO_SUPERUSER_PASSWORD from /opt/floppy_data/.env.",
+      "Registration is closed. To let others sign up, set REGISTRATION=True in /opt/floppy_data/.env and run systemctl restart floppy.",
+      "Movie, TV and anime search work out of the box. Game search needs your own IGDB (Twitch) client ID and secret under Settings > Metadata."
+    ],
+    "warnings": [],
+    "port": 8000,
+    "website": "https://github.com/dannyvfilms/Floppy",
+    "documentation": "https://github.com/dannyvfilms/Floppy/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/floppy.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -9313,6 +9471,42 @@
     "os": "debian"
   },
   {
+    "name": "GlitchTip",
+    "slug": "glitchtip",
+    "desc": "GlitchTip is an open-source error tracking platform that accepts events from the Sentry SDKs, so existing apps only need a new DSN. It groups exceptions into issues with stack traces and releases, and also offers uptime monitoring, performance traces, log ingestion and alerts by email, webhook or chat.",
+    "script": "ct/glitchtip.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/glitchtip.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/glitchtip.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Self-signup is off. Add users in the Django admin at /admin/, or set ENABLE_USER_REGISTRATION=True in /opt/glitchtip_data/.env.",
+      "Emails (invites, password resets) only go to the service log until you set EMAIL_URL to your SMTP server in /opt/glitchtip_data/.env."
+    ],
+    "warnings": [
+      "Behind a domain or reverse proxy, set GLITCHTIP_DOMAIN in /opt/glitchtip_data/.env: project DSNs are built from it."
+    ],
+    "port": 8000,
+    "website": "https://glitchtip.com/",
+    "documentation": "https://glitchtip.com/documentation",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glitchtip.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "GlobaLeaks",
     "slug": "globaleaks",
     "desc": "GlobaLeaks is a free and open-source whistleblowing software enabling anyone to easily set up and maintain a secure reporting platform.",
@@ -9465,7 +9659,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -10275,7 +10469,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -10949,6 +11143,41 @@
     "os": "debian"
   },
   {
+    "name": "Hoppscotch",
+    "slug": "hoppscotch",
+    "desc": "Hoppscotch is an open-source API development platform and Postman alternative. It sends REST, GraphQL, WebSocket, SSE, Socket.IO and MQTT requests from the browser and organises them in collections and environments that teams share, with an admin dashboard for users and settings.",
+    "script": "ct/hoppscotch.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hoppscotch.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hoppscotch.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Behind a domain or HTTPS proxy, change the URLs in /opt/hoppscotch_data/frontend.env and WHITELISTED_ORIGINS in /opt/hoppscotch_data/.env, then restart hoppscotch-backend and hoppscotch-webapp."
+    ],
+    "warnings": [
+      "Hoppscotch has no password login: it needs SMTP (magic links) or a GitHub, Google or Microsoft OAuth app. Open http://<IP>/admin to set one up; the first user who signs in there becomes admin."
+    ],
+    "port": 80,
+    "website": "https://hoppscotch.io/",
+    "documentation": "https://docs.hoppscotch.io/documentation/self-host/getting-started",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hoppscotch.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "HortusFox",
     "slug": "hortusfox",
     "desc": "HortusFox is a collaborative plant management system for plant enthusiasts. Manage, document and track your entire plant collection – self-hosted and privacy-friendly.",
@@ -11386,7 +11615,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -12230,6 +12459,38 @@
     "os": "ubuntu"
   },
   {
+    "name": "K3s",
+    "slug": "k3s-vm",
+    "desc": "K3s is a lightweight, fully conformant Kubernetes distribution in a single binary. This VM runs a server node ready to join agents.",
+    "script": "vm/k3s-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/k3s-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/k3s-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "ArgoCD is installed on first boot by default. Set INSTALL_ARGOCD_BOOTSTRAP=0 to skip it.",
+      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
+    ],
+    "warnings": [
+      "Cloud-Init sets up credentials, SSH keys and networking. If you turn it off on Debian, root logs in on the console without a password, so set one right away."
+    ],
+    "port": 0,
+    "website": "https://k3s.io/",
+    "documentation": "https://docs.k3s.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/k3s.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "Kan",
     "slug": "kan",
     "desc": "Kan is an open-source Kanban board and project management tool built with Next.js and PostgreSQL.",
@@ -13022,6 +13283,44 @@
     "os": "debian"
   },
   {
+    "name": "Label Studio",
+    "slug": "label-studio",
+    "desc": "Label Studio is an open source data labeling tool for images, text, audio, video, HTML and time series. Teams build labeling interfaces from templates or XML configs, annotate tasks together, and export the results in a standardized format or common ML formats to train and evaluate models.",
+    "script": "ct/label-studio.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/label-studio.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/label-studio.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in with LABEL_STUDIO_USERNAME and LABEL_STUDIO_PASSWORD from /opt/label-studio_data/.env.",
+      "Open signup is disabled. Add users through the invite link (Invite Members on the home page)."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://labelstud.io/",
+    "documentation": "https://labelstud.io/guide/",
+    "logo": "https://cdn.jsdelivr.net/gh/HumanSignal/label-studio@develop/docs/themes/v2/source/images/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@localhost",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Langflow",
     "slug": "langflow",
     "desc": "Langflow is a visual low-code builder for AI agents and RAG workflows. Drag components such as language models, vector stores and tools onto a canvas, test the flow in the built-in playground, and serve it as an API or MCP server. It works with OpenAI-compatible endpoints, local models through Ollama and the major cloud providers.",
@@ -13048,7 +13347,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14630,7 +14929,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -16098,6 +16397,36 @@
     "os": "debian"
   },
   {
+    "name": "NetBird Server",
+    "slug": "netbird-server",
+    "desc": "NetBird builds a WireGuard-based overlay network between your machines. This VM runs the self-hosted management server, signal service and relay.",
+    "script": "vm/netbird-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/netbird-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/netbird-server.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Needs a public domain whose DNS A record points at this VM, with 80/tcp, 443/tcp and 3478/udp reachable. The install asks for it; unattended installs must set VM_NETBIRD_DOMAIN.",
+      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://netbird.io/",
+    "documentation": "https://docs.netbird.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netbird.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "netboot.xyz",
     "slug": "netboot-xyz",
     "desc": "netboot.xyz is a network boot utility that lets you boot into any type of operating system or utility disk directly from a BIOS/UEFI, without needing a physical boot media. It uses iPXE to present a user-friendly menu of operating systems and tools.",
@@ -16308,7 +16637,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -16756,7 +17085,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -18633,6 +18962,41 @@
       "password": "abc123"
     },
     "os": "debian"
+  },
+  {
+    "name": "ownCloud Infinite Scale",
+    "slug": "owncloud-ocis-vm",
+    "desc": "ownCloud Infinite Scale (oCIS) is the current ownCloud server, a single Go binary with a built-in web UI. This VM runs the official owncloud/ocis container on a Debian or Ubuntu cloud image with Docker and works on a plain IP address straight away.",
+    "script": "vm/owncloud-ocis-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/owncloud-ocis-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/owncloud-ocis-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Log in as admin at https://<VM-IP>:9200 and accept the self-signed certificate. The generated password is shown at the end and saved to /tmp/<hostname>-<VMID>-ocis-credentials.txt on the Proxmox host.",
+      "All links use the IP the VM has on first boot. Reserve the DHCP lease, or put a reverse proxy with a domain in front and set OCIS_URL in the container.",
+      "If you use Cloud-init, checkout cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
+    ],
+    "warnings": [],
+    "port": 9200,
+    "website": "https://owncloud.com/",
+    "documentation": "https://doc.owncloud.com/ocis/next/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/owncloud.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": ""
   },
   {
     "name": "ownCloud",
@@ -20521,6 +20885,41 @@
     "os": "debian"
   },
   {
+    "name": "Prefect",
+    "slug": "prefect",
+    "desc": "Prefect is a workflow orchestration platform for Python. Turn any Python function into a flow with retries, caching and schedules, deploy it to a work pool and follow every run, its logs and task states in a web UI. It covers data pipelines, ML jobs and general automation.",
+    "script": "ct/prefect.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/prefect.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/prefect.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "The UI asks for the full user:password auth string from /opt/prefect_data/.env. Clients need it as PREFECT_API_AUTH_STRING, plus PREFECT_API_URL=http://<IP>:4200/api."
+    ],
+    "warnings": [
+      "Anyone with the auth string can deploy flows that run as root in this container. Install the packages your flows need with uv pip install --python /opt/prefect/.venv/bin/python."
+    ],
+    "port": 4200,
+    "website": "https://www.prefect.io/",
+    "documentation": "https://docs.prefect.io/v3/",
+    "logo": "https://cdn.jsdelivr.net/gh/PrefectHQ/prefect@main/docs/logos/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "PriceBuddy",
     "slug": "pricebuddy",
     "desc": "PriceBuddy is a self-hosted price tracker. Paste a product URL from almost any store and it checks price and stock on a schedule, keeps the price history, compares the same product across retailers, and notifies you by email, Pushover, Gotify, ntfy, Telegram, Discord or Apprise when a deal moves in your favour.",
@@ -21701,6 +22100,42 @@
     "os": "debian"
   },
   {
+    "name": "Rallly",
+    "slug": "rallly",
+    "desc": "Rallly is an open-source scheduling and collaboration tool and a self-hosted alternative to Doodle. Create a meeting poll with date and time options, share the link, and participants vote on what suits them without an account; the organizer then picks the final date and everyone gets notified.",
+    "script": "ct/rallly.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rallly.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rallly.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Without SMTP, request a code on the login page and read it in the container: su postgres -c \"psql rallly -tAc 'select value from verifications'\" (the digits before the colon).",
+      "Sign in with the admin email and open /control-panel to claim the admin role. Until registration is turned off there, anyone who reaches the page can create an account."
+    ],
+    "warnings": [
+      "Rallly signs users in with codes sent by email: fill in the SMTP fields when creating the container, or set SMTP_* in /opt/rallly_data/.env and run systemctl restart rallly."
+    ],
+    "port": 3000,
+    "website": "https://rallly.co/",
+    "documentation": "https://support.rallly.co/self-hosting/introduction",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rallly.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Rauthy",
     "slug": "rauthy",
     "desc": "Rauthy is a single sign-on identity and access management server. It is an OpenID Connect and OAuth 2 provider with an admin UI, passkey (FIDO2/WebAuthn) and OTP multi-factor login, upstream login providers, SCIM, forward auth and PAM/SSH login.",
@@ -22114,6 +22549,44 @@
     ],
     "config_path": "",
     "os": "alpine"
+  },
+  {
+    "name": "Redmine",
+    "slug": "redmine",
+    "desc": "Redmine is a flexible project management web application. It handles multiple projects with per-project roles, issue tracking with custom fields and workflows, Gantt charts and calendars, wikis, forums, time tracking and repository browsing for Git, Subversion and Mercurial.",
+    "script": "ct/redmine.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/redmine.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/redmine.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "Sign in as admin with the generated password from /opt/redmine_data/.env inside the container.",
+      "Email notifications stay off until email_delivery is set in /opt/redmine_data/configuration.yml; restart the redmine service afterwards."
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://www.redmine.org/",
+    "documentation": "https://www.redmine.org/projects/redmine/wiki/Guide",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/redmine.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
   },
   {
     "name": "Reitti",
@@ -23360,6 +23833,39 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "SiYuan",
+    "slug": "siyuan",
+    "desc": "SiYuan is a privacy-first personal knowledge management system with block-level references, bidirectional links and a Markdown WYSIWYG editor. It adds databases, flashcards, PDF annotation and optional end-to-end encrypted sync, all stored as local files in your workspace.",
+    "script": "ct/siyuan.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/siyuan.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/siyuan.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Unlock the web UI with the access auth code (SIYUAN_ACCESS_AUTH_CODE) from /opt/siyuan_data/.env."
+    ],
+    "warnings": [],
+    "port": 6806,
+    "website": "https://b3log.org/siyuan/en/",
+    "documentation": "https://github.com/siyuan-note/siyuan#docker-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/siyuan.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
     "is_dev": true,
     "execute_in": [
       "lxc"
@@ -23811,7 +24317,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -25502,7 +26008,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -26083,7 +26589,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -27034,6 +27540,44 @@
     "os": "debian"
   },
   {
+    "name": "Unleash",
+    "slug": "unleash",
+    "desc": "Unleash is an open-source feature flag management platform. It lets teams turn features on and off without a deploy, roll them out gradually with activation strategies, constraints and segments, and run A/B tests with variants. SDKs for many languages evaluate flags locally against the Unleash API.",
+    "script": "ct/unleash.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/unleash.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/unleash.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in with UNLEASH_DEFAULT_ADMIN_USERNAME and UNLEASH_DEFAULT_ADMIN_PASSWORD from /opt/unleash_data/.env.",
+      "Invite and password-reset links use UNLEASH_URL in /opt/unleash_data/.env; change it when Unleash is reached through a domain."
+    ],
+    "warnings": [],
+    "port": 4242,
+    "website": "https://www.getunleash.io/",
+    "documentation": "https://docs.getunleash.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/Unleash/unleash@main/frontend/public/logo-unleash.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Unmanic",
     "slug": "unmanic",
     "desc": "Unmanic is a simple tool for optimising your file library. You can use it to convert your files into a single, uniform format, manage file movements based on timestamps, or execute custom commands against a file based on its file size.",
@@ -27127,7 +27671,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -28121,6 +28665,47 @@
     "os": "debian"
   },
   {
+    "name": "Waydroid",
+    "slug": "waydroid-vm",
+    "desc": "Waydroid boots a full Android system in a container on a regular Linux system and shows Android apps natively through a Wayland compositor. This VM runs it on Ubuntu 24.04 or Debian 13.",
+    "script": "vm/waydroid-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/waydroid-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/waydroid-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00020",
+      "scriptcat00003"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools",
+      "Containers & Docker"
+    ],
+    "notes": [
+      "Log in as ubuntu (debian on Debian 13) with your Cloud-Init credentials and download Android once: sudo waydroid init && sudo systemctl restart waydroid-container.",
+      "On the VM console (noVNC, not the serial console), run weston: Android opens full-screen, and closing it returns to the console.",
+      "GPU acceleration needs a VirtIO GPU or GPU passthrough."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://waydro.id/",
+    "documentation": "https://docs.waydro.id/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/waydroid.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "ubuntu",
+      "password": ""
+    },
+    "os": ""
+  },
+  {
     "name": "Wazuh",
     "slug": "wazuh",
     "desc": "Wazuh is an open-source security monitoring solution that provides endpoint protection, network monitoring, and log analysis capabilities.",
@@ -28226,7 +28811,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -29633,6 +30218,38 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Zulip",
+    "slug": "zulip",
+    "desc": "Zulip is an open-source team chat server that organizes conversations into channels and topics, so discussions stay readable and can be followed up later. It offers search, threads, integrations, bots and desktop and mobile apps.",
+    "script": "ct/zulip.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/zulip.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/zulip.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Create your organization with the single-use link in ~/zulip.creds inside the container, then accept the self-signed certificate."
+    ],
+    "warnings": [
+      "The hostname is fixed at install (default: the container IP). Give the container a static IP or set var_zulip_hostname to a DNS name.",
+      "Invitations and password resets need outgoing email; configure SMTP in /etc/zulip/settings.py."
+    ],
+    "port": 443,
+    "website": "https://zulip.com/",
+    "documentation": "https://zulip.readthedocs.io/en/stable/production/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zulip.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
