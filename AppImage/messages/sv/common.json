@@ -7639,8 +7639,8 @@
           "label": "Systemproblem sprack"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} fler {event_type} händelser i {window}",
-          "body": "+{count} ytterligare händelser av typen {event_type} i {window} ({total_count} totalt).\n\nYtterligare evenemang:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} fler under {window})",
+          "body": "{event_type}: {count} fler under {window} ({total_count} totalt).\n\nYtterligare evenemang:\n{details}",
           "label": "Generisk burst"
         },
         "kernel_warning": {

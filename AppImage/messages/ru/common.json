@@ -7791,8 +7791,8 @@
           "label": "Всплеск системных проблем"
         },
         "burst_generic": {
-          "title": "{hostname}: ещё +{count} событий типа {event_type} за {window}",
-          "body": "Ещё +{count} событий типа {event_type} за {window} (всего: {total_count}).\n\nДополнительные события:\n{details}",
+          "title": "{hostname}: {event_type} (ещё +{count} за {window})",
+          "body": "{event_type}: ещё {count} за {window} (всего {total_count}).\n\nДополнительные события:\n{details}",
           "label": "Всплеск общего типа"
         },
         "kernel_warning": {

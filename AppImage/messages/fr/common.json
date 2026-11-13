@@ -7639,8 +7639,8 @@
           "label": "Rafale de problèmes système"
         },
         "burst_generic": {
-          "title": "{hostname} : +{count} événements {event_type} supplémentaires en {window}",
-          "body": "+{count} événements supplémentaires de type {event_type} en {window} ({total_count} au total).\n\nÉvénements supplémentaires :\n{details}",
+          "title": "{hostname} : {event_type} (+{count} de plus en {window})",
+          "body": "{event_type} : {count} de plus en {window} ({total_count} au total).\n\nÉvénements supplémentaires :\n{details}",
           "label": "Rafale générique"
         },
         "kernel_warning": {

@@ -7639,8 +7639,8 @@
           "label": "Picco di problemi di sistema"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} altri eventi {event_type} in {window}",
-          "body": "+{count} eventi aggiuntivi di tipo {event_type} in {window} ({total_count} in totale).\n\nEventi aggiuntivi:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} altri in {window})",
+          "body": "{event_type}: altri {count} in {window} ({total_count} in totale).\n\nEventi aggiuntivi:\n{details}",
           "label": "Picco di eventi"
         },
         "kernel_warning": {

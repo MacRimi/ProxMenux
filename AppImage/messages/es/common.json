@@ -7792,8 +7792,8 @@
           "label": "Ráfaga de problemas del sistema"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} eventos {event_type} más en {window}",
-          "body": "+{count} eventos adicionales de tipo {event_type} en {window} ({total_count} en total).\n\nEventos adicionales:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} más en {window})",
+          "body": "{event_type}: {count} más en {window} ({total_count} en total).\n\nEventos adicionales:\n{details}",
           "label": "Ráfaga genérica"
         },
         "kernel_warning": {

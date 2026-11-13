@@ -7638,8 +7638,8 @@
           "label": "Viacero systémových problémov"
         },
         "burst_generic": {
-          "title": "{hostname}: Ďalšie udalosti {event_type} za {window}: +{count}",
-          "body": "Za {window} bolo zaznamenaných ďalších {count} udalostí typu {event_type} (spolu {total_count}).\n\nĎalšie udalosti:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} ďalších za {window})",
+          "body": "{event_type}: {count} ďalších za {window} (celkovo {total_count}).\n\nĎalšie udalosti:\n{details}",
           "label": "Viacero súvisiacich udalostí"
         },
         "kernel_warning": {

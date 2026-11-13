@@ -7639,8 +7639,8 @@
           "label": "Explosão de problemas do sistema"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} mais eventos {event_type} em {window}",
-          "body": "+{count} eventos adicionais do tipo {event_type} em {window} ({total_count} total).\n\nEventos adicionais:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} a mais em {window})",
+          "body": "{event_type}: {count} a mais em {window} ({total_count} no total).\n\nEventos adicionais:\n{details}",
           "label": "Explosão genérica"
         },
         "kernel_warning": {

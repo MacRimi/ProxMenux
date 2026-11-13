@@ -1868,8 +1868,8 @@ TEMPLATES = {
         'hidden': True,
     },
     'burst_generic': {
-        'title': '{hostname}: +{count} more {event_type} events in {window}',
-        'body': '+{count} additional events of type {event_type} in {window} ({total_count} total).\n\nAdditional events:\n{details}',
+        'title': '{hostname}: {event_type} (+{count} more in {window})',
+        'body': '{event_type}: {count} more in {window} ({total_count} in total).\n\nAdditional events:\n{details}',
         'label': 'Generic burst',
         'group': 'other',
         'default_enabled': True,
@@ -2090,6 +2090,12 @@ def render_template(event_type: str, data: Dict[str, Any],
         'log_file': '',
     }
     variables.update(data)
+    if event_type == 'burst_generic' and data.get('event_type') in TEMPLATES:
+        # A grouped burst names its events as the user knows them, never by
+        # their internal type.
+        grouped = data['event_type']
+        variables['event_type'] = (runtime_message(f'templates.{grouped}.label', language)
+                                   or TEMPLATES[grouped].get('label') or grouped)
     if event_type in ('backup_fail', 'backup_complete'):
         # The provider has already substituted raw Display Names. Insert the
         # resolved title as a value, never reinterpret its literal braces.

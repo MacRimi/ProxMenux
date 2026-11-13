@@ -769,34 +769,45 @@ class BurstAggregator:
     
     @staticmethod
     def _summarize_event(event: NotificationEvent) -> str:
-        """Extract a concise one-line summary from an event's data."""
+        """Extract a concise one-line summary from an event's data.
+
+        The summary names what the event is about. The burst title already
+        names the kind of event, so the line never repeats its internal type.
+        """
         d = event.data
         etype = event.event_type
-        
+
         # Service failures: show service name
         if etype in ('service_fail', 'service_fail_batch'):
             return d.get('service_name', d.get('display_name', etype))
-        
-        # System problems: first 120 chars of reason
-        if 'reason' in d:
-            reason = d['reason'].split('\n')[0][:120]
-            return reason
-        
+
+        # OCI operations: the application and its container
+        app_name = str(d.get('app_name') or '').strip()
+        vmid = str(d.get('vmid') or '').strip()
+        if app_name:
+            return f"{app_name} (CT {vmid})" if vmid and app_name != f'CT {vmid}' else app_name
+
+        # System problems and jobs: the meaningful lines of the reason,
+        # without headings such as "VM/CT:" whose values follow on the
+        # next lines. An empty reason falls through to the fields below.
+        lines = [line.strip() for line in str(d.get('reason') or '').splitlines()]
+        lines = [line for line in lines if line and not line.endswith(':')]
+        if lines:
+            return ' · '.join(lines[:3])[:120]
+
         # Auth / IP: show username or IP
-        if 'username' in d:
-            return f"{etype}: {d['username']}"
-        if 'ip' in d:
-            return f"{etype}: {d['ip']}"
-        
+        if d.get('username'):
+            return str(d['username'])
+        if d.get('ip'):
+            return str(d['ip'])
+
         # VM/CT events: show vmid + name
-        if 'vmid' in d:
+        if vmid:
             name = d.get('vmname', '')
-            return f"{etype}: {name} ({d['vmid']})" if name else f"{etype}: {d['vmid']}"
-        
-        # Fallback: event type + entity_id
-        if event.entity_id:
-            return f"{etype}: {event.entity_id}"
-        return etype
+            return f"{name} ({vmid})" if name else vmid
+
+        # Fallback: entity_id
+        return event.entity_id or ''
 
 
 # ─── AI rewrite timeout ────────────────────────────────────────────

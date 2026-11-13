@@ -7639,8 +7639,8 @@
           "label": "Systemprobleme platzen"
         },
         "burst_generic": {
-          "title": "{hostname}: +{count} weitere {event_type} Ereignisse in {window}",
-          "body": "+{count} zusätzliche Ereignisse vom Typ {event_type} in {window} ({total_count} insgesamt).\n\nZusätzliche Veranstaltungen:\n{details}",
+          "title": "{hostname}: {event_type} (+{count} weitere in {window})",
+          "body": "{event_type}: {count} weitere in {window} ({total_count} insgesamt).\n\nZusätzliche Veranstaltungen:\n{details}",
           "label": "Allgemeiner Burst"
         },
         "kernel_warning": {
