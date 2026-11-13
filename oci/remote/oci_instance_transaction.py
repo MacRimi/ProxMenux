@@ -39,7 +39,7 @@ import oci_runtime_settings as runtime_settings
 import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
-from oci_runtime import creatable_archive
+from oci_runtime import USER_DATABASES
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
@@ -1273,6 +1273,13 @@ def create_data_holder(vmid, storage, identity, directory, architecture='amd64')
                 entry.type = tarfile.DIRTYPE
                 entry.mode = 0o1777 if name == 'tmp' else 0o755
                 tar.addfile(entry)
+            # Match current PVE's user lookup requirements without unpacking
+            # the application image into this stopped volume holder.
+            for name, body in USER_DATABASES.items():
+                entry = tarfile.TarInfo(name)
+                entry.mode = 0o644
+                entry.size = len(body)
+                tar.addfile(entry, io.BytesIO(body))
     try:
         run('pct', 'create', str(vmid), str(archive), '--rootfs', f'{storage}:1',
             '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
