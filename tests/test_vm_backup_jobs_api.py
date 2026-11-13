@@ -36,6 +36,7 @@ class StorageRetentionAuthorizationTests(unittest.TestCase):
         auth.access_mode = lambda config=None: "password"
         auth.verify_token = lambda token: "tester" if token in ("admin", "reader") else None
         auth.verify_token_full = lambda token: ("tester", "full_admin" if token == "admin" else "read_only")
+        auth.profile_for = lambda mode, username=None, scope=None: {"full_admin": "admin", "read_only": "observer"}.get(scope)
         spec = importlib.util.spec_from_file_location("storage_retention_middleware", scripts / "jwt_middleware.py")
         middleware = importlib.util.module_from_spec(spec)
         with patch.dict(sys.modules, auth_manager=auth):

@@ -27,6 +27,7 @@ def wire_fixture():
     auth.access_mode = lambda config=None: 'password'
     auth.verify_token = lambda token: 'fixture' if token == 'valid' else None
     auth.verify_token_full = lambda token: ('fixture', 'full_admin') if token == 'valid' else ('fixture', 'read_only') if token == 'read-only' else (None, None)
+    auth.profile_for = lambda mode, username=None, scope=None: {'full_admin': 'admin', 'read_only': 'observer'}.get(scope)
     sys.modules['auth_manager'] = auth
     import flask_terminal_routes as routes
     import host_update_jobs as jobs

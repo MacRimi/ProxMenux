@@ -470,6 +470,7 @@ class RouteTests(unittest.TestCase):
         self.auth.verify_token_full = lambda token: (
             ("fixture", "full_admin") if token == "valid" else
             ("fixture", "read_only") if token == "read-only" else (None, None))
+        self.auth.profile_for = lambda mode, username=None, scope=None: {"full_admin": "admin", "read_only": "observer"}.get(scope)
         self.auth_patch = patch.dict(sys.modules, {"auth_manager": self.auth})
         self.auth_patch.start()
         self.addCleanup(self.auth_patch.stop)
@@ -489,6 +490,7 @@ class RouteTests(unittest.TestCase):
                      _TERMINAL_TICKETS={}, _TICKETS_LOCK=threading.Lock(),
                      _TICKET_TTL=5, _TICKET_MAX_INFLIGHT=256,
                      time=time, secrets=__import__("secrets"), json=json,
+                     permissions=__import__("permissions"), g=__import__("flask").g,
                      _run_script_completion_hook=self.callback)
         names = {"_issue_terminal_ticket", "_consume_terminal_ticket", "_ws_auth_check",
                  "issue_terminal_ticket_route", "lxc_update_jobs_status", "lxc_update_viewer"}

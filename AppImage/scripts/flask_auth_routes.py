@@ -12,7 +12,7 @@ import time
 from collections import defaultdict, deque
 from flask import Blueprint, jsonify, request
 import auth_manager
-from jwt_middleware import require_auth, require_admin_scope, request_scope
+from jwt_middleware import require_auth, require_admin_scope, permission_error
 import jwt
 import datetime
 
@@ -127,11 +127,9 @@ def _choose_mode(mode, data):
     if mode not in ("read_only", "open", "proxmox"):
         return jsonify({"success": False, "message": "Unknown access mode"}), 400
     if auth_manager.access_mode() in ("password", "proxmox"):
-        _mode, scope, error = request_scope()
+        error = permission_error("admin")
         if error:
             return error
-        if scope != "full_admin":
-            return jsonify({"success": False, "message": "This action requires full access"}), 403
     else:
         error = _setup_code_error(data)
         if error:
@@ -163,7 +161,8 @@ def auth_status():
                     status['authenticated'] = True
                     status['username'] = username
                     status['auth_method'] = "pve" if pve_auth.is_ticket(token) else "local"
-                    status['capabilities'] = auth_manager.capabilities(status["access_mode"], scope)
+                    status['profile'] = auth_manager.profile_for(status["access_mode"], username, scope)
+                    status['capabilities'] = auth_manager.capabilities(status["access_mode"], profile=status['profile'])
 
         return jsonify(status)
     except Exception as e:
@@ -493,12 +492,10 @@ def auth_setup():
 
         mode = auth_manager.access_mode()
         if mode == "proxmox":
-            # Proxmox VE accounts sign in here: only a full session adds a local one.
-            _mode, scope, error = request_scope()
+            # Proxmox VE accounts sign in here: only an administrator adds a local one.
+            error = permission_error("admin")
             if error:
                 return error
-            if scope != "full_admin":
-                return jsonify({"success": False, "message": "This action requires full access"}), 403
         elif mode != "password":
             error = _setup_code_error(data)
             if error:

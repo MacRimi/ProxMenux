@@ -250,6 +250,7 @@ class Routes(unittest.TestCase):
         auth.access_mode=lambda config=None:'password'
         auth.verify_token=lambda token:'fixture' if token=='admin' else None
         auth.verify_token_full=lambda token:('fixture','full_admin') if token=='admin' else ('fixture','read_only') if token=='reader' else (None,None)
+        auth.profile_for=lambda mode, username=None, scope=None: {'full_admin': 'admin', 'read_only': 'observer'}.get(scope)
         patches={'auth_manager':auth,'health_monitor':SimpleNamespace(health_monitor=object()),
                  'health_persistence':SimpleNamespace(health_persistence=object()),'mount_monitor':ModuleType('mount_monitor')}
         self.modules=patch.dict(sys.modules,patches);self.modules.start();self.addCleanup(self.modules.stop)

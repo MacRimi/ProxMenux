@@ -114,8 +114,8 @@ class AccessModes(unittest.TestCase):
     def ws_check(self, ticket_ok=False):
         terminal = functions(SCRIPTS / "flask_terminal_routes.py", "_ws_auth_check",
                              request=types.SimpleNamespace(args={"ticket": "t"}),
-                             _consume_terminal_ticket=lambda ticket: ticket_ok)
-        return terminal["_ws_auth_check"]()
+                             _consume_terminal_ticket=lambda ticket, need: ticket_ok)
+        return terminal["_ws_auth_check"]("terminal")
 
     # ── the mode a configuration describes ───────────────────────────
     def test_modes_from_existing_configurations(self):
@@ -129,8 +129,8 @@ class AccessModes(unittest.TestCase):
                 self.assertEqual(auth_manager.access_mode(config), mode)
 
     def test_capabilities_follow_the_mode_and_the_token(self):
-        everything = {"view": True, "execute": True, "terminal": True, "admin": True}
-        view = {"view": True, "execute": False, "terminal": False, "admin": False}
+        everything = dict.fromkeys(("view", "execute", "guests", "backup", "update", "terminal", "admin"), True)
+        view = dict(dict.fromkeys(everything, False), view=True)
         self.assertEqual(auth_manager.capabilities("open"), everything)
         self.assertEqual(auth_manager.capabilities("password", "full_admin"), everything)
         self.assertEqual(auth_manager.capabilities("password", "read_only"), view)

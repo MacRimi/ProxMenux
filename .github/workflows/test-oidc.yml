@@ -7,9 +7,14 @@ on:
       - 'AppImage/scripts/*oidc*.py'
       - 'AppImage/scripts/auth_manager.py'
       - 'AppImage/scripts/jwt_middleware.py'
-      - 'AppImage/scripts/flask_server.py'
       - 'AppImage/scripts/build_appimage.sh'
       - 'AppImage/scripts/tests/test_oidc.py'
+      - 'AppImage/scripts/permissions.py'
+      - 'AppImage/scripts/pve_auth.py'
+      - 'AppImage/scripts/flask_*.py'
+      - 'AppImage/scripts/tests/test_access_modes.py'
+      - 'AppImage/scripts/tests/test_pve_auth.py'
+      - 'AppImage/scripts/tests/test_permissions.py'
       - 'AppImage/components/oidc-settings.tsx'
       - 'AppImage/components/login.tsx'
       - 'AppImage/lib/oidc-login.ts'
@@ -19,6 +24,10 @@ on:
     paths:
       - 'AppImage/scripts/*oidc*.py'
       - 'AppImage/scripts/auth_manager.py'
+      - 'AppImage/scripts/jwt_middleware.py'
+      - 'AppImage/scripts/permissions.py'
+      - 'AppImage/scripts/pve_auth.py'
+      - 'AppImage/scripts/flask_*.py'
       - 'AppImage/scripts/build_appimage.sh'
       - '.github/workflows/test-oidc.yml'
   workflow_dispatch:
@@ -65,6 +74,9 @@ jobs:
         run: |
           python -B -m unittest discover -s AppImage/scripts/tests -p test_oidc.py -v
           python -B -m unittest discover -s AppImage/scripts/tests -p test_auth_manager_setup.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_access_modes.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_pve_auth.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_permissions.py -v
           bash -n AppImage/scripts/build_appimage.sh
       - uses: actions/setup-node@v6
         if: matrix.python == '3.11' && matrix.runner == 'ubuntu-22.04'

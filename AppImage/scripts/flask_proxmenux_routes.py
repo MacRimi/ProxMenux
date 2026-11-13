@@ -3,7 +3,7 @@ import json
 import os
 import re
 
-from jwt_middleware import require_auth, require_admin_scope, request_scope
+from jwt_middleware import require_auth, require_admin_scope, permission_error
 
 # Sprint 12A: dynamic post-install version detector. The TOOL_METADATA
 # table below still owns the user-facing display names + deprecated
@@ -374,11 +374,9 @@ def rescan_post_install_updates():
     without a token; from anywhere else it needs full access.
     """
     if not _from_this_host():
-        _mode, scope, error = request_scope()
+        error = permission_error('update')
         if error:
             return error
-        if scope != 'full_admin':
-            return jsonify({'success': False, 'error': 'This action requires full access'}), 403
     try:
         snapshot = post_install_versions.scan(persist=True)
         return jsonify({

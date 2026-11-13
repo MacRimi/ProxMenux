@@ -30,7 +30,8 @@ class PBSI18nTests(unittest.TestCase):
         self.id = pbs.save_server(self.server)
         pbs._remote_get.reset_mock(); pbs._status_cache.clear()
         auth = types.SimpleNamespace(load_auth_config=auth_manager.load_auth_config, access_mode=auth_manager.access_mode, verify_token=lambda _: "fixture",
-            verify_token_full=lambda token: ("fixture", "full_admin" if token == "admin" else "read_only"))
+            verify_token_full=lambda token: ("fixture", "full_admin" if token == "admin" else "read_only"),
+            profile_for=auth_manager.profile_for)
         spec = importlib.util.spec_from_file_location("fixture_pbs_jwt", ROOT / "AppImage/scripts/jwt_middleware.py")
         middleware = importlib.util.module_from_spec(spec)
         with mock.patch.dict(sys.modules, {"auth_manager": auth}): spec.loader.exec_module(middleware)

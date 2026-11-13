@@ -31,7 +31,8 @@ class MonitorLinksI18nTests(unittest.TestCase):
             access_mode=lambda config=None: "password",
             verify_token=lambda token: "fixture" if token in ("admin", "reader") else None,
             verify_token_full=lambda token: ("fixture", "full_admin" if token == "admin" else "read_only")
-            if token in ("admin", "reader") else (None, None))
+            if token in ("admin", "reader") else (None, None),
+            profile_for=lambda mode, username=None, scope=None: {"full_admin": "admin", "read_only": "observer"}.get(scope))
         middleware_spec = importlib.util.spec_from_file_location("fixture_jwt_middleware", ROOT / "AppImage/scripts/jwt_middleware.py")
         middleware = importlib.util.module_from_spec(middleware_spec)
         # Execute the shipped decorators; only credential verification is faked.

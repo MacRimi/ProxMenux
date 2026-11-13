@@ -19,6 +19,8 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import permissions
+
 try:
     import jwt
     JWT_AVAILABLE = True
@@ -169,9 +171,6 @@ ACCESS_MODES = ("undecided", "password", "proxmox", "read_only", "open")
 # the first-run screen asks for it before anyone can decide for the owner.
 SETUP_CODE_FILE = Path("/usr/local/share/proxmenux/monitor-setup-code")
 
-_NO_CAPABILITIES = {"view": False, "execute": False, "terminal": False, "admin": False}
-_VIEW_CAPABILITIES = {"view": True, "execute": False, "terminal": False, "admin": False}
-_ALL_CAPABILITIES = {"view": True, "execute": True, "terminal": True, "admin": True}
 
 
 def access_mode(config=None):
@@ -191,14 +190,29 @@ def access_mode(config=None):
     return "undecided"
 
 
-def capabilities(mode, scope=None):
-    """What a request can do: `scope` is the scope of its valid token, if any."""
-    signed_in = mode in ("password", "proxmox")
-    if mode == "open" or (signed_in and scope == "full_admin"):
-        return dict(_ALL_CAPABILITIES)
-    if mode == "read_only" or (signed_in and scope):
-        return dict(_VIEW_CAPABILITIES)
-    return dict(_NO_CAPABILITIES)
+def profile_for(mode, username=None, scope=None):
+    """The profile of a request (see permissions.py): an open Monitor is
+    administered by whoever reaches it, a read-only one is observed; with an
+    account, the session of `username` with its token `scope` decides."""
+    if mode == "open":
+        return "admin"
+    if mode == "read_only":
+        return "observer"
+    if mode in ("password", "proxmox") and username:
+        if scope == "full_admin":
+            return "admin"
+        if scope == "read_only":
+            return "observer"
+    return None
+
+
+def capabilities(mode, scope=None, profile=None):
+    """What a request can do, permission by permission: `scope` is the scope
+    of its valid token, if any."""
+    if profile is None:
+        profile = profile_for(mode, "session" if scope else None, scope)
+    granted = permissions.permissions_of(profile)
+    return {name: name in granted for name in permissions.PERMISSIONS}
 
 
 def setup_code_required(config=None):
@@ -775,6 +789,7 @@ def get_auth_status():
         # The account name is told only to a signed-in session (see the route).
         "username": None,
         "authenticated": False,
+        "profile": profile_for(mode),
         "capabilities": capabilities(mode),
         "totp_enabled": config.get("totp_enabled", False)  # Include 2FA status
     }
