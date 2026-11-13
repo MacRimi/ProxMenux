@@ -36,6 +36,15 @@ class Review(unittest.TestCase):
         with patch.object(zfs, 'properties', side_effect=lambda ds,n: {'available': str(1024**3 + 300)} if n == ('available',) else {'referenced':'200','logicalreferenced':'100'}), self.assertRaises(ValueError):
             zfs.check_space(volumes)
 
+    def test_storage_datasets_cannot_double_spend_shared_pool_space(self):
+        volumes=manifest()['volumes']
+        second=copy.deepcopy(volumes[0]);second['pool']='rpool/other';second['source']='rpool/other/subvol-9905-disk-0'
+        def values(ds,names):
+            if names==('available',):return {'available':str(2*1024**3 if ds=='rpool' else 3*1024**3)}
+            return {'referenced':'200','logicalreferenced':'200'}
+        with patch.object(zfs,'properties',side_effect=values),self.assertRaisesRegex(ValueError,'shared pool space'):
+            zfs.check_space(volumes+[second])
+
     def test_new_recovery_dataset_names_are_not_native_disks(self):
         volume = manifest()['volumes'][0]
         name = zfs.backup_name(volume, TOKEN)

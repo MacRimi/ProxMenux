@@ -154,9 +154,17 @@ def check_space(volumes):
         values = properties(volume['source'], ('referenced', 'logicalreferenced'))
         size = max(int(values['referenced']), int(values['logicalreferenced']))
         required[volume['pool']] = required.get(volume['pool'], 1024**3) + int(size * 1.1)
+    physical = {}
     for pool, needed in required.items():
         if int(properties(pool, ('available',))['available']) < needed:
             raise ValueError('Insufficient available space for ZFS recovery')
+        physical_pool = pool.split('/', 1)[0]
+        physical[physical_pool] = physical.get(physical_pool, 0) + needed
+    # Distinct storage datasets can each report the same shared free pool bytes.
+    # Check their combined reserve too, rather than spending that space twice.
+    for pool, needed in physical.items():
+        if int(properties(pool, ('available',))['available']) < needed:
+            raise ValueError('Insufficient shared pool space for ZFS recovery')
 
 
 def backup_name(volume, token):

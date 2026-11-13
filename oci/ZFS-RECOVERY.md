@@ -93,7 +93,7 @@ another update after a restore. These trials did not update production services.
 
 ### Conservative preflight and retained points
 
-Eligibility falls back to the ordinary backup path on any read-only backend error. Before snapshots, the planner requires enough available ZFS space for a complete rewrite of the currently referenced data (the larger of physical and logical referenced bytes), plus 10% and 1 GiB per dataset pool. Space and absence of external snapshots are checked again immediately before protection. This is a preflight reserve, not a guarantee against unlimited writes or unrelated pool consumers.
+Eligibility falls back to the ordinary backup path on any read-only backend error. Before snapshots, the planner requires enough available ZFS space for a complete rewrite of the currently referenced data (the larger of physical and logical referenced bytes), plus 10% and 1 GiB per dataset pool. Both dataset quotas and the combined reserve on the physical pool are checked, so separate storages cannot count the same free bytes twice. Space and absence of external snapshots are checked again immediately before protection. This is a preflight reserve, not a guarantee against unlimited writes or unrelated pool consumers.
 
 All recovery clones exercise the restore property set before any promotion. Recovery datasets use `proxmenux-oci-recovery-…`, outside Proxmox's `subvol-<VMID>-…` disk namespace, and disable automatic snapshots on the clone. Metadata from the earlier experimental naming scheme remains readable. Sources are checked again for external snapshots before promotion.
 
