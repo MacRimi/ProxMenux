@@ -266,7 +266,8 @@ class PBSManagerTests(unittest.TestCase):
         read_only = {"Authorization": "Bearer " + jwt.encode(payload, "s" * 48, algorithm="HS256")}
         self.assertEqual(self.client.post("/api/pbs/servers", headers=read_only, json=self.server).status_code, 403)
         self.assertEqual(self.client.get("/api/pbs/servers", headers=read_only).status_code, 200)
-        auth_manager.save_auth_config({"enabled": False})
+        # An open Monitor (no password, chosen by its owner) still keeps PBS credentials out.
+        auth_manager.save_auth_config({"enabled": False, "declined": True})
         self.assertEqual(self.client.post("/api/pbs/servers", json=self.server).status_code, 409)
 
     def test_health_uses_pbs_services_and_skips_pve_only_checks(self):

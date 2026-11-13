@@ -24,6 +24,7 @@ def wire_fixture():
     sys.path.insert(0, str(ROOT / 'AppImage/scripts'))
     auth = ModuleType('auth_manager')
     auth.load_auth_config = lambda: {'enabled': True}
+    auth.access_mode = lambda config=None: 'password'
     auth.verify_token = lambda token: 'fixture' if token == 'valid' else None
     auth.verify_token_full = lambda token: ('fixture', 'full_admin') if token == 'valid' else ('fixture', 'read_only') if token == 'read-only' else (None, None)
     sys.modules['auth_manager'] = auth
