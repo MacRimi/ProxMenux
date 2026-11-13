@@ -93,8 +93,8 @@ def changed_layers(source):
             with layer_tar(archive, descriptor) as layer:
                 for item in layer:
                     name = canonical(item)
-                    key = name.removeprefix('./').rstrip('/')
-                    if key in names and names[key] != item.name:
+                    key = '/'.join(part for part in name.split('/') if part not in ('', '.'))
+                    if key in names and names[key] != item.name and (names[key].startswith('/') or item.name.startswith('/')):
                         raise RuntimeResolutionError(translate('Unsafe OCI layer path:') + ' ' + repr(item.name))
                     names[key] = item.name
                     touched |= name != item.name

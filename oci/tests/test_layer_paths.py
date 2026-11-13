@@ -87,6 +87,11 @@ class PathCopies(unittest.TestCase):
         self.assertIsNone(paths.prepare(self.source,self.target))
         self.assertFalse(self.target.exists());self.assertEqual(self.source.read_bytes(),before)
 
+    def test_existing_relative_aliases_keep_native_archive_semantics(self):
+        fixture(self.source,[('./etc','dir',None),('etc','dir',None),('etc/config','file',b'config')])
+        self.assertIsNone(paths.prepare(self.source,self.target))
+        self.assertFalse(self.target.exists())
+
     def test_parent_traversal_and_ambiguous_aliases_are_rejected(self):
         cases=[[('/usr/../escape','file',b'x')],[('usr/../../escape','file',b'x')],[('/usr/bin/app','file',b'a'),('usr/bin/app','file',b'b')]]
         for entries in cases:
