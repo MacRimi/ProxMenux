@@ -3,6 +3,7 @@
 import NextLink from "next/link"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
+import { ProxMenuxMark } from "@/components/proxmenux-mark"
 import { Book, GitBranch, FileText, Github, Menu, Rss } from "lucide-react"
 import { useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
@@ -45,7 +46,7 @@ export default function Navbar() {
               className="w-8 h-8"
               unoptimized
             />
-            <span className="text-xl font-bold">ProxMenux</span>
+            <span className="text-xl font-bold"><ProxMenuxMark /></span>
           </Link>
 
           {/* Right side — search (responsive) + desktop nav + mobile menu button */}

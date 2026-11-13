@@ -3,7 +3,12 @@
     "title": "USB/IP over SSH",
     "menu": "Hardware: GPUs and Coral-TPU",
     "script": "devices/usbip_menu.sh",
-    "keywords": "usbip usb ip ssh remote zigbee bluetooth printer impresora remoto"
+    "keywords": "usbip usb ip ssh remote zigbee bluetooth printer impresora remoto",
+    "summary": "Shares USB devices of this host over the network through SSH with key authentication, so a Linux VM on another node can use them, such as a Zigbee or Bluetooth dongle or a printer. It also connects this machine to a device shared by another USB/IP server.",
+    "notes": [
+      "A shared device is no longer available to local applications and guests, and only one remote client can use it at a time.",
+      "The client runs inside the Linux VM that uses the device, so the VM keeps it after a migration while the physical device stays on the server."
+    ]
   },
   {
     "title": "Settings post-install Proxmox",

@@ -126,7 +126,7 @@ const publisherRank = (item: CatalogItem) => item.publisher ? PUBLISHER_ORDER[it
 const RUN_SCRIPT = "/usr/local/share/proxmenux/scripts/catalog/run_item.sh"
 const SETTINGS_KEY = "proxmenux-catalog-settings"
 
-const itemsCache = new Map<string, { items: CatalogItem[]; sections: Section[] }>()
+const itemsCache = new Map<string, { items: CatalogItem[]; sections: Section[]; catalog?: string }>()
 
 const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
 
@@ -430,10 +430,12 @@ function Featured({ items, onOpen }: { items: CatalogItem[]; onOpen: (item: Cata
       className="relative h-[240px] overflow-hidden rounded-2xl border border-border text-white sm:h-[260px]"
       style={{ background: `linear-gradient(120deg, hsl(${hue} 55% 28%), hsl(${hue} 45% 11%) 75%)` }}>
       {/* The application's screenshot, like a window rising from the bottom;
-          without one, its logo in large. */}
+          without one, its logo in large. The shadow follows what it draws:
+          a screenshot with its own frame and a transparent margin gets no
+          second frame around it. */}
       {item.shot && !broken.has(item.shot) ? (
         <img key={item.shot} src={item.shot} alt="" onError={() => setBroken(b => new Set(b).add(item.shot!))}
-          className="absolute right-6 top-8 hidden h-[calc(100%-8px)] w-[46%] rounded-t-lg border border-white/15 object-cover object-left-top shadow-2xl md:block" />
+          className="absolute right-6 top-8 hidden h-[calc(100%-8px)] w-[46%] rounded-t-lg object-cover object-left-top [filter:drop-shadow(0_18px_28px_rgba(0,0,0,0.45))] md:block" />
       ) : (
         <div className="absolute right-12 top-1/2 hidden h-36 w-36 -translate-y-1/2 place-items-center rounded-3xl border border-white/10 bg-card md:grid">
           <div className="scale-[2.2]"><ItemIcon item={item} size="card" /></div>
@@ -573,10 +575,44 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
   if (d?.links.proxmenux) links.push([t("catalog.sheet.proxmenuxDocs"), d.links.proxmenux])
   const host = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, "") } catch { return url } }
 
+  const badges = (
+    <>
+      {item.category && (
+        <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium" style={categoryChipStyle(chipKey(item), isLight)}>
+          {categoryText(t, item, titles)}
+        </span>
+      )}
+      {item.kind === "oci" && (
+        <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
+          {item.multi ? t("catalog.stack") : t("catalog.oneContainer")}
+        </span>
+      )}
+      {item.kind !== "oci" && item.type && (
+        <TypeBadge item={item} size="sheet" />
+      )}
+      {item.kind === "oci" && d && (
+        <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500">
+          {d.unprivileged ? t("catalog.sheet.unprivileged") : t("catalog.sheet.privileged")}
+        </span>
+      )}
+      {item.kind === "cs" && item.updateable && (
+        <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500">{t("catalog.updateable")}</span>
+      )}
+      {item.tested && (
+        <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500">
+          <Check className="h-3 w-3" />{t("catalog.tested")}
+        </span>
+      )}
+      {item.architectures.length > 0 && (
+        <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-mono text-indigo-400">{item.architectures.join(" · ")}</span>
+      )}
+    </>
+  )
+
   return (
     <Dialog open onOpenChange={open => { if (!open) onClose() }}>
       <DialogContent hideClose className="max-w-5xl w-[calc(100vw-1.5rem)] p-0 gap-0 flex flex-col overflow-hidden h-[88vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-24px)]">
-        <div className="flex items-start gap-4 px-5 sm:px-6 pt-5 pb-4">
+        <div className="flex items-start gap-4 px-5 sm:px-6 pt-5 pb-3 sm:pb-4">
           <div className="h-[60px] w-[60px] flex-shrink-0 rounded-xl border border-border bg-muted/40 grid place-items-center overflow-hidden">
             <ItemIcon item={item} size="sheet" />
           </div>
@@ -585,43 +621,15 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
             {(d?.tagline || ((item.kind !== "pmx" || item.third_party) && item.summary)) && (
               <p className="m-0 text-sm text-muted-foreground line-clamp-2">{d?.tagline || item.summary}</p>
             )}
-            <div className="flex flex-wrap gap-1.5">
-              {item.category && (
-                <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium" style={categoryChipStyle(chipKey(item), isLight)}>
-                  {categoryText(t, item, titles)}
-                </span>
-              )}
-              {item.kind === "oci" && (
-                <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
-                  {item.multi ? t("catalog.stack") : t("catalog.oneContainer")}
-                </span>
-              )}
-              {item.kind !== "oci" && item.type && (
-                <TypeBadge item={item} size="sheet" />
-              )}
-              {item.kind === "oci" && d && (
-                <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500">
-                  {d.unprivileged ? t("catalog.sheet.unprivileged") : t("catalog.sheet.privileged")}
-                </span>
-              )}
-              {item.kind === "cs" && item.updateable && (
-                <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500">{t("catalog.updateable")}</span>
-              )}
-              {item.tested && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500">
-                  <Check className="h-3 w-3" />{t("catalog.tested")}
-                </span>
-              )}
-              {item.architectures.length > 0 && (
-                <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-mono text-indigo-400">{item.architectures.join(" · ")}</span>
-              )}
-            </div>
+            {/* Beside the icon on a wide screen; on a phone, in a row of their own below. */}
+            <div className="hidden sm:flex flex-wrap gap-1.5">{badges}</div>
           </div>
           <button type="button" onClick={onClose} aria-label={t("actions.close")}
             className="h-9 w-9 flex-shrink-0 rounded-lg border border-border grid place-items-center hover:bg-muted">
             <X className="h-4 w-4" />
           </button>
         </div>
+        <div className="flex flex-wrap gap-1.5 px-5 pb-4 sm:hidden">{badges}</div>
 
         <div className="flex-1 overflow-y-auto pb-6">
           {/* A script that is not in the ProxMenux repository says who
@@ -930,14 +938,26 @@ export function CatalogTab() {
     if (cached) { setItems(cached.items); setSections(cached.sections); return }
     setItems(null)
     setFailed(false)
-    fetchApi<{ items: CatalogItem[]; sections?: Section[] }>(`/api/catalog/items?lang=${language}`)
-      .then(data => {
-        const loaded = { items: data.items || [], sections: data.sections || [] }
-        itemsCache.set(language, loaded)
-        setItems(loaded.items)
-        setSections(loaded.sections)
-      })
-      .catch(() => setFailed(true))
+    let active = true
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const load = (quiet: boolean) =>
+      fetchApi<{ items: CatalogItem[]; sections?: Section[]; catalog?: string; refreshing?: boolean }>(`/api/catalog/items?lang=${language}`)
+        .then(data => {
+          if (!active) return
+          const previous = itemsCache.get(language)
+          // A quiet reload only replaces the cards when a newer catalog arrived.
+          if (quiet && previous?.catalog === data.catalog) return
+          const loaded = { items: data.items || [], sections: data.sections || [], catalog: data.catalog }
+          itemsCache.set(language, loaded)
+          setItems(loaded.items)
+          setSections(loaded.sections)
+          // The catalog is being refreshed in the background: look again
+          // later, without telling the user anything.
+          if (!quiet && data.refreshing) timers.push(setTimeout(() => load(true), 45000), setTimeout(() => load(true), 120000))
+        })
+        .catch(() => { if (active && !quiet) setFailed(true) })
+    load(false)
+    return () => { active = false; timers.forEach(clearTimeout) }
   }, [language])
 
   useEffect(() => {
