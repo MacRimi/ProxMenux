@@ -238,7 +238,7 @@ function SortableList({
             id={id}
             idx={idx}
             meta={meta}
-            label={t(meta.labelKey)}
+            label={meta.id === "catalog" ? "Menux" : t(meta.labelKey)}
             editable={editable}
             isDragging={!!isDragging}
             hoverIdx={hoverIdx}
