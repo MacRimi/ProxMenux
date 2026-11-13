@@ -358,7 +358,8 @@ class OIDCTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         public = self.client.get("/api/auth/oidc/status").json
         self.assertEqual(set(public), {"enabled", "provider_name", "login_url"})
-        auth_manager.save_auth_config({**self.local, "enabled": False})
+        # Without a local password (an open Monitor), OIDC is off and cannot be configured.
+        auth_manager.save_auth_config({**self.local, "enabled": False, "declined": True})
         self.assertFalse(self.client.get("/api/auth/oidc/status").json["enabled"])
         self.assertEqual(self.client.put("/api/auth/oidc/config", json={"enabled": True}).status_code, 409)
 
