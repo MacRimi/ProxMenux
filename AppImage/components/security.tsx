@@ -15,6 +15,7 @@ import {
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
 import { OIDCSettings } from "./oidc-settings"
+import { PveAccountsSettings } from "./pve-accounts-settings"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { SecureGatewaySetup } from "./secure-gateway-setup"
 import { useI18n } from "../lib/i18n/provider"
@@ -880,7 +881,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
       if (!contentType || !contentType.includes("application/json")) return
       
       const data = await response.json()
-      setAuthEnabled(data.auth_enabled || false)
+      setAuthEnabled(data.local_account ?? data.auth_enabled ?? false)
       setAccessMode(data.access_mode || (data.auth_enabled ? "password" : "open"))
       setSetupCodeRequired(!!data.setup_code_required)
       setTotpEnabled(data.totp_enabled || false)
@@ -896,9 +897,10 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
     setError("")
     setSuccess("")
     try {
+      const sessionToken = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/mode"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
         body: JSON.stringify({ mode: "read_only" }),
       })
       const data = await response.json().catch(() => ({}))
@@ -961,9 +963,10 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
     setLoading(true)
 
     try {
+      const sessionToken = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/setup"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
         body: JSON.stringify({
           username,
           password,
@@ -1946,7 +1949,8 @@ ${(report.sections && report.sections.length > 0) ? `
                 <p className="font-medium">{st("auth.statusTitle")}</p>
                 <p className="text-sm text-muted-foreground">
                   {authEnabled ? st("auth.passwordEnabled")
-                    : accessMode === "read_only" ? st("auth.readOnlyMode") : st("auth.noPasswordProtection")}
+                    : accessMode === "read_only" ? st("auth.readOnlyMode")
+                    : accessMode === "proxmox" ? st("auth.pveMode") : st("auth.noPasswordProtection")}
                 </p>
               </div>
             </div>
@@ -1970,9 +1974,15 @@ ${(report.sections && report.sections.length > 0) ? `
                   <Shield className="h-4 w-4 mr-2" />
                   {st("auth.enable")}
                 </Button>
-                {accessMode === "open" && (
+                {(accessMode === "open" || accessMode === "proxmox") && (
                   <Button onClick={handleUseReadOnly} variant="outline" disabled={loading}>
                     {st("auth.useReadOnly")}
+                  </Button>
+                )}
+                {accessMode === "proxmox" && (
+                  <Button onClick={() => handleDisableAuth("open")} variant="outline" disabled={loading}
+                    className="border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500">
+                    {t("authSetup.chooseOpen")}
                   </Button>
                 )}
                 {accessMode === "read_only" && !openingFromReadOnly && (
@@ -2320,6 +2330,8 @@ ${(report.sections && report.sections.length > 0) ? `
           )}
         </CardContent>
       </Card>
+
+      <PveAccountsSettings />
 
       <OIDCSettings />
 

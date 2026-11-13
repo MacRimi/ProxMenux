@@ -160,9 +160,10 @@ def save_auth_config(config):
 # ── Access to the Monitor ─────────────────────────────────────────────
 # undecided  nobody has chosen yet: only the first-run screen is served.
 # password   an account: everything, after signing in.
+# proxmox    no local account: Proxmox VE accounts sign in (pve_auth.py).
 # read_only  no account: anyone who reaches it can look; nothing runs or changes.
 # open       no account and no limits, chosen knowing the risk.
-ACCESS_MODES = ("undecided", "password", "read_only", "open")
+ACCESS_MODES = ("undecided", "password", "proxmox", "read_only", "open")
 
 # A new installation writes a one-time code here and shows it in the console;
 # the first-run screen asks for it before anyone can decide for the owner.
@@ -179,6 +180,8 @@ def access_mode(config=None):
     # Enabled without credentials stays closed: nobody can sign in.
     if config.get("enabled"):
         return "password"
+    if config.get("pve_auth"):
+        return "proxmox"
     if config.get("access_mode") in ("read_only", "open"):
         return config["access_mode"]
     # Declining the password, before the access modes existed, left the
@@ -190,9 +193,10 @@ def access_mode(config=None):
 
 def capabilities(mode, scope=None):
     """What a request can do: `scope` is the scope of its valid token, if any."""
-    if mode == "open" or (mode == "password" and scope == "full_admin"):
+    signed_in = mode in ("password", "proxmox")
+    if mode == "open" or (signed_in and scope == "full_admin"):
         return dict(_ALL_CAPABILITIES)
-    if mode == "read_only" or (mode == "password" and scope):
+    if mode == "read_only" or (signed_in and scope):
         return dict(_VIEW_CAPABILITIES)
     return dict(_NO_CAPABILITIES)
 
@@ -235,6 +239,7 @@ def choose_access_mode(mode):
         "declined": mode == "open",
         "configured": True,
         "access_mode": mode,
+        "pve_auth": False,
         "username": None,
         "password_hash": None,
         "totp_enabled": False,
@@ -488,6 +493,9 @@ def verify_token_full(token):
     so legacy sessions keep working unchanged. Audit Tier 6 — Tokens
     API JWT 365 días sin scope.
     """
+    pve_session = _pve_ticket_session(token) if token else None
+    if pve_session is not None:
+        return pve_session
     if not JWT_AVAILABLE or not token:
         _log_auth_failure_throttled("Session rejected: missing token or verifier unavailable")
         return None, None
@@ -562,6 +570,9 @@ def verify_token(token):
     Returns username if valid, None otherwise
     Also checks if the token has been revoked
     """
+    pve_session = _pve_ticket_session(token) if token else None
+    if pve_session is not None:
+        return pve_session[0]
     if not JWT_AVAILABLE or not token:
         return None
 
@@ -754,7 +765,9 @@ def get_auth_status():
     config = load_auth_config()
     mode = access_mode(config)
     return {
-        "auth_enabled": mode == "password",
+        "auth_enabled": mode in ("password", "proxmox"),
+        "local_account": mode == "password",
+        "pve_auth": bool(config.get("pve_auth")),
         "auth_configured": mode != "undecided",
         "declined": mode == "open",
         "access_mode": mode,
@@ -804,6 +817,34 @@ def setup_auth(username, password):
         return True, "Authentication configured successfully"
     else:
         return False, "Failed to save authentication configuration"
+
+
+def set_pve_auth(enabled):
+    """Let Proxmox VE accounts sign in to the Monitor, with or without a local
+    account. Without one, turning them off goes through choose_access_mode."""
+    config = load_auth_config()
+    if not enabled and access_mode(config) == "proxmox":
+        return False, "Choose another way to reach the Monitor first"
+    config["pve_auth"] = bool(enabled)
+    if enabled:
+        config.update({"configured": True, "declined": False})
+        if not config.get("enabled"):
+            config["access_mode"] = "proxmox"
+    _invalidate_revoked_cache()
+    if save_auth_config(config):
+        return True, "Proxmox VE accounts saved"
+    return False, "Failed to save configuration"
+
+
+def _pve_ticket_session(token):
+    """(username, scope) of a Proxmox VE ticket when those accounts may sign
+    in, else None: the token is not a ticket."""
+    import pve_auth
+    if not pve_auth.is_ticket(token):
+        return None
+    if not load_auth_config().get("pve_auth"):
+        return (None, None)
+    return pve_auth.validate(token)
 
 
 def decline_auth():

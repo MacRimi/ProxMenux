@@ -2860,7 +2860,34 @@
     "openTitle": "Öppna, acceptera risken",
     "openDescription": "Alla som når Monitor får full kontroll över denna server, inklusive root-terminal. Välj detta endast i ett nätverk där du litar på alla som kan nå den.",
     "chooseReadOnly": "Använd endast läsning",
-    "chooseOpen": "Öppna utan lösenord"
+    "chooseOpen": "Öppna utan lösenord",
+    "pveTitle": "Eller använd kontona från Proxmox VE",
+    "pveDescription": "Logga in med användare och realms från Proxmox VE samt deras tvåfaktorsautentisering, utan något eget konto i Monitor.",
+    "choosePve": "Använd Proxmox VE-konton"
+  },
+  "pveAccounts": {
+    "title": "Proxmox VE-konton",
+    "description": "Logga in med användare och realms från Proxmox VE, inklusive deras tvåfaktorsautentisering.",
+    "enable": "Tillåt inloggning med Proxmox VE-konton",
+    "onlyWay": "Proxmox VE-konton används för att nå instrumentpanelen. Om du vill sluta använda dem lägger du till ett lokalt lösenord eller väljer skrivskyddad eller öppen åtkomst ovan.",
+    "whoGetsIn": "Användare med behörigheten Sys.Modify på / får full åtkomst; användare med endast Sys.Audit på / får skrivskyddad åtkomst. Andra användare kan inte logga in.",
+    "sharedSession": "Inloggad i Proxmox VE-webbgränssnittet? Öppna instrumentpanelen över HTTPS på samma adress så loggar den sessionen in dig även här.",
+    "saveFailed": "Ändringen kunde inte sparas."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Lokalt konto",
+    "username": "Användare",
+    "password": "Lösenord",
+    "realm": "Realm",
+    "code": "Tvåfaktorskod",
+    "codeHint": "Den sexsiffriga koden från din autentiseringsapp, eller en av dina återställningsnycklar.",
+    "failed": "Inloggningen misslyckades. Kontrollera användare, lösenord och realm.",
+    "fillFields": "Ange användare och lösenord.",
+    "tooManyAttempts": "För många försök. Vänta några minuter och försök igen.",
+    "useWebInterface": "Det här kontot loggar in med en säkerhetsnyckel. Logga in i Proxmox VE-webbgränssnittet och återvänd sedan till den här sidan.",
+    "webInterface": "Logga in i Proxmox VE-webbgränssnittet",
+    "webInterfaceHint": "Med Monitor öppnad över HTTPS på samma adress loggar sessionen från Proxmox VE-webbgränssnittet in dig här när du kommer tillbaka."
   },
   "access": {
     "readOnlyBanner": "Skrivskyddad åtkomst: du kan se denna server, men inte köra eller ändra något. För att hantera den lägger du till ett lösenord i Säkerhet."
@@ -3013,7 +3040,8 @@
       "disable": "Inaktivera autentisering",
       "readOnlyMode": "Instrumentpanelen är skrivskyddad utan lösenord: den kan visas, men inget kan köras eller ändras.",
       "useReadOnly": "Växla till endast läsning",
-      "disableChoose": "Hur ska instrumentpanelen nås utan lösenord?"
+      "disableChoose": "Hur ska instrumentpanelen nås utan lösenord?",
+      "pveMode": "Instrumentpanelen loggar in med kontona från Proxmox VE."
     },
     "twoFactor": {
       "title": "Tvåfaktorsautentisering",

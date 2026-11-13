@@ -45,7 +45,7 @@ export function AuthSetup({ onComplete, setupCodeRequired = false }: AuthSetupPr
     return data.error || data.message || fallback
   }
 
-  const handleChooseMode = async (mode: "read_only" | "open") => {
+  const handleChooseMode = async (mode: "read_only" | "open" | "proxmox") => {
     setLoading(true)
     setError("")
 
@@ -487,6 +487,14 @@ export function AuthSetup({ onComplete, setupCodeRequired = false }: AuthSetupPr
               <Button onClick={handleSetupAuth} className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>
                 {loading ? t("authSetup.settingUp") : t("authSetup.setupAuthentication")}
               </Button>
+              {/* The accounts of Proxmox VE instead of one of the Monitor's own. */}
+              <div className="rounded-lg border border-border bg-accent/40 p-3 space-y-2">
+                <p className="text-sm font-medium">{t("authSetup.pveTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("authSetup.pveDescription")}</p>
+                <Button onClick={() => handleChooseMode("proxmox")} variant="outline" className="w-full" disabled={loading}>
+                  {t("authSetup.choosePve")}
+                </Button>
+              </div>
               <Button onClick={() => { setError(""); setStep("choice") }} variant="ghost" className="w-full" disabled={loading}>
                 {t("authSetup.back")}
               </Button>

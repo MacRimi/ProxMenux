@@ -26,6 +26,8 @@ class AuthReasons(unittest.TestCase):
         self.scope = dict(jwt=jwt, JWT_AVAILABLE=True, hashlib=hashlib, time=time,
                           _get_jwt_secret=lambda: 'fixture-only-secret-for-offline-auth-tests',
                           _get_revoked_tokens_cached=lambda: self.revoked,
+                          # These are Monitor JWTs, never Proxmox VE tickets.
+                          _pve_ticket_session=lambda token: None,
                           _AUTH_LOG_LOCK=threading.Lock(),
                           _AUTH_LOG_RATE=dict(last_ts=0., suppressed=0, last_msg=''),
                           datetime=datetime, timedelta=timedelta, **constants)

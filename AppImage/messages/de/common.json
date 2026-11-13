@@ -2860,7 +2860,34 @@
     "openTitle": "Offen, Risiko akzeptieren",
     "openDescription": "Jeder, der den Monitor aufruft, erhält die vollständige Kontrolle über diesen Server, einschließlich Root-Terminal. Wählen Sie dies nur in einem Netzwerk, in dem Sie allen vertrauen, die darauf zugreifen können.",
     "chooseReadOnly": "Schreibgeschützt verwenden",
-    "chooseOpen": "Ohne Passwort öffnen"
+    "chooseOpen": "Ohne Passwort öffnen",
+    "pveTitle": "Oder Konten von Proxmox VE verwenden",
+    "pveDescription": "Melden Sie sich mit den Benutzern und Realms von Proxmox VE und deren Zwei-Faktor-Authentifizierung an, ohne ein eigenes Konto für den Monitor zu benötigen.",
+    "choosePve": "Proxmox VE-Konten verwenden"
+  },
+  "pveAccounts": {
+    "title": "Proxmox VE-Konten",
+    "description": "Melden Sie sich mit den Benutzern und Realms von Proxmox VE an, einschließlich deren Zwei-Faktor-Authentifizierung.",
+    "enable": "Anmeldung über Proxmox VE-Konten zulassen",
+    "onlyWay": "Proxmox VE-Konten dienen als Zugang zum Dashboard. Um diese nicht mehr zu verwenden, legen Sie ein lokales Passwort fest oder wählen Sie oben schreibgeschützten oder offenen Zugriff.",
+    "whoGetsIn": "Benutzer mit der Berechtigung Sys.Modify auf / erhalten Vollzugriff; Benutzer mit nur Sys.Audit auf / erhalten Lesezugriff. Andere Benutzer können sich nicht anmelden.",
+    "sharedSession": "An der Proxmox VE-Weboberfläche angemeldet? Öffnen Sie das Dashboard über HTTPS unter derselben Adresse, und diese Sitzung meldet Sie auch hier an.",
+    "saveFailed": "Die Änderung konnte nicht gespeichert werden."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Lokales Konto",
+    "username": "Benutzer",
+    "password": "Passwort",
+    "realm": "Realm",
+    "code": "Zwei-Faktor-Code",
+    "codeHint": "Der sechsstellige Code aus Ihrer Authentifikator-App oder einer Ihrer Wiederherstellungsschlüssel.",
+    "failed": "Anmeldung fehlgeschlagen. Überprüfen Sie Benutzer, Passwort und Realm.",
+    "fillFields": "Geben Sie Benutzer und Passwort ein.",
+    "tooManyAttempts": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut.",
+    "useWebInterface": "Dieses Konto meldet sich mit einem Sicherheitsschlüssel an. Melden Sie sich auf der Proxmox VE-Weboberfläche an und kehren Sie dann zu dieser Seite zurück.",
+    "webInterface": "Auf der Proxmox VE-Weboberfläche anmelden",
+    "webInterfaceHint": "Wenn der Monitor über HTTPS unter derselben Adresse geöffnet ist, meldet Sie die Sitzung der Proxmox VE-Weboberfläche hier an, sobald Sie zurückkehren."
   },
   "access": {
     "readOnlyBanner": "Schreibgeschützter Zugriff: Sie können diesen Server sehen, aber nichts ausführen oder ändern. Um ihn zu verwalten, fügen Sie unter Security ein Passwort hinzu."
@@ -3013,7 +3040,8 @@
       "disable": "Deaktivieren Sie die Authentifizierung",
       "readOnlyMode": "Das Dashboard ist ohne Passwort schreibgeschützt: Es kann eingesehen werden, aber es kann nichts ausgeführt oder geändert werden.",
       "useReadOnly": "Zu schreibgeschützt wechseln",
-      "disableChoose": "Wie soll das Dashboard ohne Passwort erreichbar sein?"
+      "disableChoose": "Wie soll das Dashboard ohne Passwort erreichbar sein?",
+      "pveMode": "Das Dashboard nutzt zur Anmeldung die Konten von Proxmox VE."
     },
     "twoFactor": {
       "title": "Zwei-Faktor-Authentifizierung",

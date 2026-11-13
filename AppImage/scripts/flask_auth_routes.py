@@ -121,11 +121,12 @@ def _setup_code_error(data):
 
 
 def _choose_mode(mode, data):
-    """Leave the Monitor read-only or open: with an account, its full session
-    decides; without one, the setup code when one is required."""
-    if mode not in ("read_only", "open"):
+    """Leave the Monitor read-only or open, or let Proxmox VE accounts sign in:
+    with an account, its full session decides; without one, the setup code
+    when one is required."""
+    if mode not in ("read_only", "open", "proxmox"):
         return jsonify({"success": False, "message": "Unknown access mode"}), 400
-    if auth_manager.access_mode() == "password":
+    if auth_manager.access_mode() in ("password", "proxmox"):
         _mode, scope, error = request_scope()
         if error:
             return error
@@ -135,7 +136,10 @@ def _choose_mode(mode, data):
         error = _setup_code_error(data)
         if error:
             return error
-    success, message = auth_manager.choose_access_mode(mode)
+    if mode == "proxmox":
+        success, message = auth_manager.set_pve_auth(True)
+    else:
+        success, message = auth_manager.choose_access_mode(mode)
     if not success:
         return jsonify({"success": False, "message": message}), 500
     auth_manager.consume_setup_code()
@@ -150,14 +154,16 @@ def auth_status():
     try:
         status = auth_manager.get_auth_status()
 
-        if status["access_mode"] == "password":
+        if status["access_mode"] in ("password", "proxmox"):
             token = request.headers.get('Authorization', '').replace('Bearer ', '')
             if token:
                 username, scope = auth_manager.verify_token_full(token)
                 if username:
+                    import pve_auth
                     status['authenticated'] = True
                     status['username'] = username
-                    status['capabilities'] = auth_manager.capabilities("password", scope)
+                    status['auth_method'] = "pve" if pve_auth.is_ticket(token) else "local"
+                    status['capabilities'] = auth_manager.capabilities(status["access_mode"], scope)
 
         return jsonify(status)
     except Exception as e:
@@ -485,7 +491,15 @@ def auth_setup():
         username = data.get('username')
         password = data.get('password')
 
-        if auth_manager.access_mode() != "password":
+        mode = auth_manager.access_mode()
+        if mode == "proxmox":
+            # Proxmox VE accounts sign in here: only a full session adds a local one.
+            _mode, scope, error = request_scope()
+            if error:
+                return error
+            if scope != "full_admin":
+                return jsonify({"success": False, "message": "This action requires full access"}), 403
+        elif mode != "password":
             error = _setup_code_error(data)
             if error:
                 return error
@@ -577,6 +591,92 @@ def auth_change_password():
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ── Proxmox VE accounts ──────────────────────────────────────────────
+# The ticket stays the session: these routes only obtain, read or renew it
+# from the local Proxmox VE API. See pve_auth.py.
+
+def _pve_enabled():
+    return bool(auth_manager.load_auth_config().get("pve_auth"))
+
+
+def _pve_answer(result):
+    response = jsonify({"success": True, **result})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@auth_bp.route('/api/auth/pve/realms', methods=['GET'])
+def pve_realms():
+    import pve_auth
+    if not _pve_enabled():
+        return jsonify({"enabled": False, "realms": []})
+    return jsonify({"enabled": True, "realms": pve_auth.realms()})
+
+
+@auth_bp.route('/api/auth/pve/login', methods=['POST'])
+def pve_login():
+    """Sign in with a Proxmox VE account: the user, password and realm, then
+    the second factor when Proxmox VE asks for one."""
+    import pve_auth
+    if not _pve_enabled():
+        return jsonify({"success": False, "message": "Proxmox VE accounts are not enabled"}), 404
+    client_ip = _get_client_ip()
+    allowed, retry_after = _login_limiter.check_and_record(client_ip)
+    if not allowed:
+        return jsonify({"success": False, "message": "Too many login attempts. Please wait and try again.",
+                        "retry_after": retry_after}), 429
+    data = request.get_json(silent=True) or {}
+    try:
+        if data.get("challenge"):
+            result = pve_auth.second_factor(data.get("username"), data.get("challenge"), data.get("code"))
+        else:
+            result = pve_auth.login(data.get("username"), data.get("password"), data.get("realm"))
+    except pve_auth.PVEAuthError as exc:
+        auth_logger.warning("authentication failure; rhost=%s user=%s", client_ip,
+                            str(data.get("username") or "unknown")[:80])
+        return jsonify({"success": False, "message": str(exc)}), 401
+    return _pve_answer(result)
+
+
+@auth_bp.route('/api/auth/pve/session', methods=['GET'])
+def pve_session():
+    """The Proxmox VE session of this browser: the cookie the Proxmox VE web
+    interface keeps for this host reaches the Monitor when both are opened over
+    HTTPS by the same name."""
+    import pve_auth
+    ticket = request.cookies.get("PVEAuthCookie", "")
+    if not _pve_enabled() or not ticket:
+        return jsonify({"success": False}), 404
+    username, scope = pve_auth.validate(ticket)
+    if not username:
+        return jsonify({"success": False}), 401
+    return _pve_answer({"ticket": ticket, "username": username, "scope": scope})
+
+
+@auth_bp.route('/api/auth/pve/renew', methods=['POST'])
+def pve_renew():
+    """A fresh ticket for the one in use, before it expires."""
+    import pve_auth
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not _pve_enabled() or not pve_auth.is_ticket(token):
+        return jsonify({"success": False}), 401
+    try:
+        return _pve_answer(pve_auth.renew(token))
+    except pve_auth.PVEAuthError:
+        return jsonify({"success": False}), 401
+
+
+@auth_bp.route('/api/auth/pve/config', methods=['PUT'])
+@require_admin_scope
+def pve_config():
+    """Let Proxmox VE accounts sign in next to the local account, or not."""
+    enabled = (request.get_json(silent=True) or {}).get("enabled")
+    if not isinstance(enabled, bool):
+        return jsonify({"success": False, "message": "An enabled flag is required"}), 400
+    success, message = auth_manager.set_pve_auth(enabled)
+    return jsonify({"success": success, "message": message}), (200 if success else 409)
 
 
 @auth_bp.route('/api/auth/mode', methods=['POST'])

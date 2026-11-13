@@ -5,6 +5,7 @@ Monitor (see `auth_manager.access_mode`):
 
 - undecided: nothing is served until someone chooses how to reach the Monitor.
 - password:  a valid token is required; `read_only` tokens may only read.
+- proxmox:   the same, with Proxmox VE tickets (see pve_auth.py).
 - read_only: no account; every request may read, nothing else.
 - open:      no account and no limits, chosen knowing the risk.
 """
@@ -121,7 +122,7 @@ def require_admin_or_ticket(f):
         if mode == 'open':
             return f(*args, **kwargs)
 
-        if mode == 'password':
+        if mode in ('password', 'proxmox'):
             auth_header = request.headers.get('Authorization')
             if auth_header:
                 parts = auth_header.split()

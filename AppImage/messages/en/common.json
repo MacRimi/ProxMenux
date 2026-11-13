@@ -2987,7 +2987,34 @@
     "openTitle": "Open, accepting the risk",
     "openDescription": "Anyone who reaches the Monitor gets full control of this server, root terminal included. Choose it only on a network where you trust everyone who can reach it.",
     "chooseReadOnly": "Use read-only",
-    "chooseOpen": "Open without a password"
+    "chooseOpen": "Open without a password",
+    "pveTitle": "Or use the accounts of Proxmox VE",
+    "pveDescription": "Sign in with the users and realms of Proxmox VE and their two-factor authentication, without an account of the Monitor's own.",
+    "choosePve": "Use Proxmox VE accounts"
+  },
+  "pveAccounts": {
+    "title": "Proxmox VE accounts",
+    "description": "Sign in with the users and realms of Proxmox VE, including their two-factor authentication.",
+    "enable": "Let Proxmox VE accounts sign in",
+    "onlyWay": "Proxmox VE accounts are the way into the dashboard. To stop using them, add a local password or choose read-only or open access above.",
+    "whoGetsIn": "Users with the Sys.Modify privilege on / get full access; users with only Sys.Audit on /, read-only access. Other users cannot sign in.",
+    "sharedSession": "Signed in to the Proxmox VE web interface? Open the dashboard over HTTPS at the same address and that session signs you in here too.",
+    "saveFailed": "The change could not be saved."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Local account",
+    "username": "User",
+    "password": "Password",
+    "realm": "Realm",
+    "code": "Two-factor code",
+    "codeHint": "The six-digit code of your authenticator app, or one of your recovery keys.",
+    "failed": "Login failed. Check the user, password and realm.",
+    "fillFields": "Enter the user and password.",
+    "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
+    "useWebInterface": "This account signs in with a security key. Sign in on the Proxmox VE web interface, then come back to this page.",
+    "webInterface": "Sign in on the Proxmox VE web interface",
+    "webInterfaceHint": "With the Monitor opened over HTTPS at the same address, the session of the Proxmox VE web interface signs you in here when you come back."
   },
   "access": {
     "readOnlyBanner": "Read-only access: you can see this server, but not run or change anything. To manage it, add a password in Security."
@@ -3140,7 +3167,8 @@
       "disable": "Disable authentication",
       "readOnlyMode": "The dashboard is read-only without a password: it can be viewed, but nothing can be run or changed.",
       "useReadOnly": "Switch to read-only",
-      "disableChoose": "Without a password, how should the dashboard be reached?"
+      "disableChoose": "Without a password, how should the dashboard be reached?",
+      "pveMode": "The dashboard signs in with the accounts of Proxmox VE."
     },
     "twoFactor": {
       "title": "Two-factor authentication",

@@ -2860,7 +2860,34 @@
     "openTitle": "Ouvrir, en acceptant les risques",
     "openDescription": "Toute personne accédant au Monitor obtient le contrôle total de ce serveur, terminal root inclus. Ne choisissez cette option que sur un réseau où vous faites confiance à toutes les personnes pouvant y accéder.",
     "chooseReadOnly": "Utiliser la lecture seule",
-    "chooseOpen": "Ouvrir sans mot de passe"
+    "chooseOpen": "Ouvrir sans mot de passe",
+    "pveTitle": "Ou utiliser les comptes de Proxmox VE",
+    "pveDescription": "Connectez-vous avec les utilisateurs et les domaines de Proxmox VE ainsi que leur authentification à deux facteurs, sans compte propre à Monitor.",
+    "choosePve": "Utiliser les comptes Proxmox VE"
+  },
+  "pveAccounts": {
+    "title": "Comptes Proxmox VE",
+    "description": "Connectez-vous avec les utilisateurs et les domaines de Proxmox VE, y compris leur authentification à deux facteurs.",
+    "enable": "Autoriser la connexion avec les comptes Proxmox VE",
+    "onlyWay": "Les comptes Proxmox VE permettent d'accéder au tableau de bord. Pour ne plus les utiliser, ajoutez un mot de passe local ou choisissez l'accès en lecture seule ou libre ci-dessus.",
+    "whoGetsIn": "Les utilisateurs disposant du privilège Sys.Modify sur / bénéficient d'un accès complet ; ceux disposant uniquement de Sys.Audit sur /, d'un accès en lecture seule. Les autres utilisateurs ne peuvent pas se connecter.",
+    "sharedSession": "Connecté à l'interface web de Proxmox VE ? Ouvrez le tableau de bord en HTTPS à la même adresse et cette session vous connectera ici aussi.",
+    "saveFailed": "La modification n'a pas pu être enregistrée."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Compte local",
+    "username": "Utilisateur",
+    "password": "Mot de passe",
+    "realm": "Domaine",
+    "code": "Code à deux facteurs",
+    "codeHint": "Le code à six chiffres de votre application d'authentification ou l'une de vos clés de récupération.",
+    "failed": "Échec de la connexion. Vérifiez l'utilisateur, le mot de passe et le domaine.",
+    "fillFields": "Saisissez l'utilisateur et le mot de passe.",
+    "tooManyAttempts": "Trop de tentatives. Attendez quelques minutes et réessayez.",
+    "useWebInterface": "Ce compte se connecte avec une clé de sécurité. Connectez-vous sur l'interface web de Proxmox VE, puis revenez sur cette page.",
+    "webInterface": "Se connecter sur l'interface web de Proxmox VE",
+    "webInterfaceHint": "Lorsque Monitor est ouvert en HTTPS à la même adresse, la session de l'interface web de Proxmox VE vous connecte automatiquement ici à votre retour."
   },
   "access": {
     "readOnlyBanner": "Accès en lecture seule : vous pouvez voir ce serveur, mais vous ne pouvez rien exécuter ni modifier. Pour le gérer, ajoutez un mot de passe dans Sécurité."
@@ -3013,7 +3040,8 @@
       "disable": "Désactiver l'authentification",
       "readOnlyMode": "Le tableau de bord est en lecture seule sans mot de passe : il peut être consulté, mais rien ne peut être exécuté ni modifié.",
       "useReadOnly": "Passer en lecture seule",
-      "disableChoose": "Sans mot de passe, comment le tableau de bord doit-il être accessible ?"
+      "disableChoose": "Sans mot de passe, comment le tableau de bord doit-il être accessible ?",
+      "pveMode": "Le tableau de bord utilise les comptes de Proxmox VE pour la connexion."
     },
     "twoFactor": {
       "title": "Authentification à deux facteurs",

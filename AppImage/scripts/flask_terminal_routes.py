@@ -100,7 +100,7 @@ def _ws_auth_check():
         return False
     if mode == 'open':
         return True
-    if mode != 'password':
+    if mode not in ('password', 'proxmox'):
         return False
     return _consume_terminal_ticket(request.args.get('ticket', ''))
 

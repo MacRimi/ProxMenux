@@ -7,6 +7,7 @@ import { AuthSetup } from "../components/auth-setup"
 import { getApiUrl } from "../lib/api-config"
 import { completeOIDCLogin } from "../lib/oidc-login"
 import { AccessProvider, FULL_ACCESS, type AccessMode, type Capabilities } from "../lib/access"
+import { adoptPveSession } from "../components/pve-login"
 import { useT } from "../lib/i18n/provider"
 
 export default function Home() {
@@ -19,6 +20,8 @@ export default function Home() {
     accessMode: AccessMode
     capabilities: Capabilities
     setupCodeRequired: boolean
+    pveAuth: boolean
+    localAccount: boolean
   }>({
     loading: true,
     authEnabled: false,
@@ -27,13 +30,35 @@ export default function Home() {
     accessMode: "password",
     capabilities: FULL_ACCESS,
     setupCodeRequired: false,
+    pveAuth: false,
+    localAccount: true,
   })
 
   useEffect(() => {
     checkAuthStatus()
   }, [])
 
-  const checkAuthStatus = async () => {
+  // A Proxmox VE ticket lasts two hours: renew it as the Proxmox VE web
+  // interface does, well before it expires.
+  useEffect(() => {
+    const renew = async () => {
+      const token = localStorage.getItem("proxmenux-auth-token") || ""
+      if (!token.startsWith("PVE:")) return
+      try {
+        const response = await fetch(getApiUrl("/api/auth/pve/renew"), {
+          method: "POST", headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json().catch(() => ({}))
+        if (response.ok && typeof data.ticket === "string") localStorage.setItem("proxmenux-auth-token", data.ticket)
+      } catch {
+        // The next attempt, or the next check of the session, decides.
+      }
+    }
+    const timer = setInterval(renew, 10 * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const checkAuthStatus = async (retried = false): Promise<void> => {
     try {
       await completeOIDCLogin()
       const token = localStorage.getItem("proxmenux-auth-token")
@@ -61,6 +86,8 @@ export default function Home() {
           accessMode: "password",
           capabilities: FULL_ACCESS,
           setupCodeRequired: false,
+          pveAuth: false,
+          localAccount: true,
         })
         return
       }
@@ -76,6 +103,12 @@ export default function Home() {
       }
 
       const data = await response.json()
+
+      // Signed in to the Proxmox VE web interface of this host: that session
+      // signs in here too.
+      if (data.pve_auth && data.auth_enabled && !data.authenticated && !retried && await adoptPveSession()) {
+        return checkAuthStatus(true)
+      }
 
       const authenticated = data.auth_enabled ? data.authenticated : true
 
@@ -102,6 +135,8 @@ export default function Home() {
         accessMode: data.access_mode || (data.auth_configured ? "password" : "undecided"),
         capabilities: data.capabilities || FULL_ACCESS,
         setupCodeRequired: !!data.setup_code_required,
+        pveAuth: !!data.pve_auth,
+        localAccount: data.local_account ?? !!data.auth_enabled,
       })
     } catch {
       // API not available - assume no auth configured (silent fail, no console error)
@@ -113,6 +148,8 @@ export default function Home() {
         accessMode: "password",
         capabilities: FULL_ACCESS,
         setupCodeRequired: false,
+        pveAuth: false,
+        localAccount: true,
       })
     }
   }
@@ -151,7 +188,7 @@ export default function Home() {
   }
 
   if (authStatus.authEnabled && !authStatus.authenticated) {
-    return <Login onLogin={handleLoginSuccess} />
+    return <Login onLogin={handleLoginSuccess} pveAuth={authStatus.pveAuth} localAccount={authStatus.localAccount} />
   }
 
   return (

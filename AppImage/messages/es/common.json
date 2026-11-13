@@ -3013,7 +3013,34 @@
     "openTitle": "Abierto, asumiendo el riesgo",
     "openDescription": "Cualquiera que acceda al Monitor obtiene el control total de este servidor, incluida la terminal de root. Elígelo solo en una red en la que confíes en todos los que puedan acceder a él.",
     "chooseReadOnly": "Usar solo lectura",
-    "chooseOpen": "Abrir sin contraseña"
+    "chooseOpen": "Abrir sin contraseña",
+    "pveTitle": "O usa las cuentas de Proxmox VE",
+    "pveDescription": "Inicia sesión con los usuarios y realms de Proxmox VE y su segundo factor, sin una cuenta propia del Monitor.",
+    "choosePve": "Usar las cuentas de Proxmox VE"
+  },
+  "pveAccounts": {
+    "title": "Cuentas de Proxmox VE",
+    "description": "Inicia sesión con los usuarios y realms de Proxmox VE, incluido su segundo factor.",
+    "enable": "Permitir el inicio de sesión con cuentas de Proxmox VE",
+    "onlyWay": "Las cuentas de Proxmox VE son la forma de entrar al panel. Para dejar de usarlas, añade una contraseña local o elige el acceso de solo lectura o abierto más arriba.",
+    "whoGetsIn": "Los usuarios con el privilegio Sys.Modify en / tienen acceso completo; los que solo tienen Sys.Audit en /, acceso de solo lectura. El resto no puede iniciar sesión.",
+    "sharedSession": "¿Has iniciado sesión en la interfaz web de Proxmox VE? Abre el panel por HTTPS en la misma dirección y esa sesión también te da acceso aquí.",
+    "saveFailed": "No se ha podido guardar el cambio."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Cuenta local",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "realm": "Realm",
+    "code": "Código del segundo factor",
+    "codeHint": "El código de seis cifras de tu aplicación de autenticación, o una de tus claves de recuperación.",
+    "failed": "No se ha podido iniciar sesión. Comprueba el usuario, la contraseña y el realm.",
+    "fillFields": "Introduce el usuario y la contraseña.",
+    "tooManyAttempts": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "useWebInterface": "Esta cuenta inicia sesión con una llave de seguridad. Inicia sesión en la interfaz web de Proxmox VE y vuelve después a esta página.",
+    "webInterface": "Iniciar sesión en la interfaz web de Proxmox VE",
+    "webInterfaceHint": "Con el Monitor abierto por HTTPS en la misma dirección, la sesión de la interfaz web de Proxmox VE te da acceso aquí al volver."
   },
   "access": {
     "readOnlyBanner": "Acceso de solo lectura: puedes ver este servidor, pero no ejecutar ni cambiar nada. Para administrarlo, añade una contraseña en Seguridad."
@@ -3166,7 +3193,8 @@
       "disable": "Deshabilitar la autenticación",
       "readOnlyMode": "El panel es de solo lectura sin contraseña: se puede ver, pero no se puede ejecutar ni cambiar nada.",
       "useReadOnly": "Cambiar a solo lectura",
-      "disableChoose": "Sin contraseña, ¿cómo se debería acceder al panel?"
+      "disableChoose": "Sin contraseña, ¿cómo se debería acceder al panel?",
+      "pveMode": "El panel inicia sesión con las cuentas de Proxmox VE."
     },
     "twoFactor": {
       "title": "Autenticación de dos factores",
