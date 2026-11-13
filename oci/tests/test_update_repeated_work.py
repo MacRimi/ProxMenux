@@ -105,7 +105,7 @@ class SelectiveStackTests(unittest.TestCase):
 
 
 class DataHolderTests(unittest.TestCase):
-    def test_holder_has_only_empty_directories_and_no_network_or_candidate_image(self):
+    def test_holder_has_only_directories_and_root_databases_without_network_or_candidate(self):
         import tarfile
         with tempfile.TemporaryDirectory() as folder:
             def create(*args):
@@ -113,8 +113,10 @@ class DataHolderTests(unittest.TestCase):
                 archive = Path(args[3])
                 self.assertLessEqual(archive.stat().st_size, 10240)
                 with tarfile.open(archive) as tar:
-                    self.assertTrue(all(entry.isdir() for entry in tar))
-                    self.assertEqual(set(tar.getnames()), {'etc', 'dev', 'proc', 'sys', 'tmp'})
+                    self.assertEqual(set(tar.getnames()), {'etc', 'dev', 'proc', 'sys', 'tmp', 'etc/passwd', 'etc/group'})
+                    self.assertTrue(all(entry.isdir() or entry.name in ('etc/passwd', 'etc/group') for entry in tar))
+                    self.assertIn(b'root:x:0:0:', tar.extractfile('etc/passwd').read())
+                    self.assertEqual(tar.extractfile('etc/group').read(), b'root:x:0:\n')
                 self.assertNotIn('--net0', args)
                 self.assertEqual(args[args.index('--rootfs')+1], 'local-zfs:1')
                 self.assertEqual(args[args.index('--arch')+1], 'arm64')

@@ -212,12 +212,20 @@ class AddUserDatabaseTests(unittest.TestCase):
                 pass
         self.assertEqual(sorted(path.name for path in self.folder.iterdir()), ["image.tar"])
 
-    def test_updates_create_their_temporary_containers_from_a_creatable_archive(self):
-        for name, hostname in (("oci_instance_transaction.py", "'oci-data-holder'"),
-                               ("oci_stack_native.py", "'oci-stack-recovery-holder'")):
-            script = (ROOT / "remote" / name).read_text()
-            create = script.index(hostname)
-            self.assertIn("creatable_archive(archive) as source", script[create - 400:create], name)
+    def test_update_data_holder_supplies_native_user_databases_without_an_image(self):
+        import oci_instance_transaction as transaction
+        calls=[]
+        def create(*args):
+            calls.append(args)
+            with tarfile.open(args[3]) as archive:
+                for name, body in runtime.USER_DATABASES.items():
+                    self.assertTrue(archive.getmember(name).isfile())
+                    self.assertEqual(archive.extractfile(name).read(),body)
+            self.assertNotIn('--net0',args)
+        with tempfile.TemporaryDirectory() as folder, patch.object(transaction,'run',side_effect=create):
+            transaction.create_data_holder(9904,'fixture','marker',Path(folder))
+            self.assertEqual(list(Path(folder).iterdir()),[])
+        self.assertEqual(len(calls),1)
 
 
 if __name__ == "__main__":
