@@ -1,9 +1,4 @@
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 import createNextIntlPlugin from 'next-intl/plugin'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 // Wires the next-intl request config at ./i18n/request.ts into the
 // Next.js build. Every page rendered under /[locale]/... gets the
@@ -25,9 +20,6 @@ const nextConfig = {
   // next-intl already include the trailing slash, so this aligns
   // export, runtime navigation and Pages serving.
   trailingSlash: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -42,11 +34,6 @@ const nextConfig = {
     ],
   },
   staticPageGenerationTimeout: 180,
-  webpack: (config, { isServer }) => {
-    config.resolve.alias["@guides"] = join(__dirname, "..", "guides")
-    config.resolve.alias["@changelog"] = join(__dirname, "..", "CHANGELOG.md")
-    return config
-  },
 }
 
 export default withNextIntl(nextConfig)
