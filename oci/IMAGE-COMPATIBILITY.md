@@ -15,7 +15,7 @@ upstream release.
 
 Standalone updates and coordinated updates prepare the copy before stopping
 existing applications. The journal binds it to the source and result SHA-256
-hashes; they are checked again before creation. Images with canonical paths need
+hashes; they are checked again before creation. The native create wrapper binds the already-prepared source to the active pending journal/VMID/identity and skips its redundant layer-path scan during downtime. Fresh installs and legacy or unrelated callers keep normal preparation. Numeric-user compatibility and native extraction checks still run. Images with canonical paths need
 no rewritten copy, and unchanged-image updates retain their early return. Fresh
 installations and dedicated stack installers also use the common import wrapper.
 The existing numeric-user database adaptation composes with path compatibility.

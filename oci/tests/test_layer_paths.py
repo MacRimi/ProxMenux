@@ -134,6 +134,14 @@ class PathCopies(unittest.TestCase):
         self.assertFalse(self.target.exists());self.assertFalse(Path(str(self.target)+'.partial').exists())
         self.assertEqual(list(self.source.parent.glob('oci-paths-*')),[])
 
+    def test_prepared_paths_still_add_numeric_user_files_without_rescanning(self):
+        fixture(self.source,[('app','file',b'app')])
+        with patch.object(paths,'prepare',side_effect=AssertionError('duplicate path scan')):
+            with runtime.creatable_archive(self.source,paths_prepared=True) as compatible:
+                self.assertEqual(runtime.missing_user_databases(compatible),[])
+                verify_archive(compatible)
+        self.assertEqual(list(self.source.parent.iterdir()),[self.source])
+
     def test_creatable_archive_composes_path_and_numeric_user_adaptations(self):
         fixture(self.source,[('/app','file',b'app')]);before=self.source.read_bytes()
         with runtime.creatable_archive(self.source)as compatible:

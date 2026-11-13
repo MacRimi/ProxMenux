@@ -1,9 +1,12 @@
 """Native mapped readers may read an image without exposing its private cache."""
 import errno
+import json
+import uuid
 import importlib.util
 import os
 from pathlib import Path
 import signal
+import shutil
 import stat
 import subprocess
 import sys
@@ -41,6 +44,59 @@ class PrivateImageImportTests(unittest.TestCase):
             self.assertEqual(imports.create('9161',str(self.source),str(self.source),['--unprivileged','1']),0)
         self.assertEqual(self.source.read_bytes(),before)
         self.assertEqual(list(self.root.iterdir()),[self.source])
+
+    def transaction(self, adapted=False):
+        import oci_instances
+        self.registry=self.root/'instances'
+        self.journal=self.root/'operation'/'transaction.json';self.journal.parent.mkdir()
+        identity=str(uuid.uuid4());operation=uuid.uuid4().hex
+        source=self.source
+        proof=None
+        if adapted:
+            source=self.root/'import.tar';source.write_bytes(self.source.read_bytes())
+            proof={'path':str(source),'sha256':'a'*64,'source_sha256':'b'*64}
+        self.state={'vmid':9161,'phase':'installing-candidate','id':operation,
+                    'archive':str(self.source),'import_image':proof,'record':{'installation_id':identity}}
+        self.pending={'schema_version':1,'vmid':9161,'status':'updating','installation_id':identity,
+                      'pending_transaction':str(self.journal),'transaction_id':operation}
+        oci_instances.write(self.journal,self.state)
+        oci_instances.write(oci_instances.location(self.registry,9161),self.pending)
+        self.environment={'PROXMENUX_OCI_TRANSACTION':str(self.journal),'PROXMENUX_OCI_INSTANCE_ROOT':str(self.registry)}
+        return source
+
+    def test_create_skips_layer_scan_for_the_exact_active_prepared_transaction(self):
+        import oci_layer_paths
+        for adapted in (False,True):
+            with self.subTest(adapted=adapted):
+                if hasattr(self,'journal'):shutil.rmtree(self.journal.parent)
+                source=self.transaction(adapted)
+                with patch.dict(os.environ,self.environment),patch.object(imports,'readable',return_value=True), \
+                     patch.object(oci_layer_paths,'prepare',side_effect=AssertionError('layer rescan during downtime')), \
+                     patch('oci_runtime.add_user_databases',return_value=[]), \
+                     patch.object(imports.subprocess,'run',return_value=types.SimpleNamespace(returncode=0)) as run:
+                    self.assertEqual(imports.create('9161',str(source),str(source),['--unprivileged','1']),0)
+                    self.assertEqual(run.call_args.args[0][3],str(source))
+
+    def test_stale_unprepared_or_unrelated_journal_never_authorizes_skip(self):
+        source=self.transaction()
+        mutations=[lambda s:s.pop('import_image'),lambda s:s.update(phase='committed'),
+                   lambda s:s.update(vmid=9162),lambda s:s.update(archive='/different/image.tar'),
+                   lambda s:s.update(import_image={}),lambda s:s['record'].update(installation_id=str(uuid.uuid4()))]
+        import copy,oci_instances
+        for mutation in mutations:
+            state=copy.deepcopy(self.state);mutation(state);oci_instances.write(self.journal,state)
+            with self.subTest(state=state),patch.dict(os.environ,self.environment):
+                self.assertFalse(imports.transaction_prepared('9161',source))
+        oci_instances.write(self.journal,self.state)
+        pending=dict(self.pending,status='installed');oci_instances.write(oci_instances.location(self.registry,9161),pending)
+        with patch.dict(os.environ,self.environment):self.assertFalse(imports.transaction_prepared('9161',source))
+
+    def test_prepared_journal_must_be_private_and_regular(self):
+        source=self.transaction()
+        with patch.dict(os.environ,self.environment):
+            self.journal.chmod(0o644);self.assertFalse(imports.transaction_prepared('9161',source))
+            self.journal.chmod(0o600);real=self.journal.with_suffix('.real');self.journal.rename(real);self.journal.symlink_to(real)
+            self.assertFalse(imports.transaction_prepared('9161',source))
 
     def staging(self):
         return patch.object(imports, 'trusted_staging_root', return_value=self.root)

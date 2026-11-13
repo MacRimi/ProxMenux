@@ -10,7 +10,9 @@ from contextlib import contextmanager
 import errno
 import ctypes
 import fcntl
+import json
 import os
+import re
 from pathlib import Path
 import shutil
 import signal
@@ -108,29 +110,69 @@ def import_archive(source, original, uid, gid):
         shutil.rmtree(directory)
 
 
+def transaction_prepared(vmid, source):
+    """Only an active transaction can vouch for the earlier layer-path scan.
+
+    install_oci.sh has already authorized this journal and verified its source
+    and optional import-copy hashes. Bind the fast path to that exact source,
+    VMID and pending registry identity; other callers keep normal preparation.
+    Native PVE extraction validation and mapped-reader staging still run.
+    """
+    value = os.environ.get('PROXMENUX_OCI_TRANSACTION')
+    if not value:
+        return False
+    try:
+        journal = Path(value)
+        info = journal.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+            return False
+        state = json.loads(journal.read_text())
+        if ('import_image' not in state or state['vmid'] != int(vmid)
+                or state['phase'] != 'installing-candidate'):
+            return False
+        prepared = state['import_image']
+        if prepared is not None and (not isinstance(prepared, dict)
+                or not isinstance(prepared.get('path'), str)
+                or any(not re.fullmatch(r'[a-f0-9]{64}', str(prepared.get(key, '')))
+                       for key in ('sha256', 'source_sha256'))):
+            return False
+        selected = prepared['path'] if prepared is not None else state['archive']
+        if Path(source) != Path(selected) or Path(source).is_symlink():
+            return False
+        import oci_instances
+        root = Path(os.environ.get('PROXMENUX_OCI_INSTANCE_ROOT', str(oci_instances.ROOT)))
+        record = oci_instances.read(root, int(vmid))
+        return (record.get('status') == 'updating'
+                and record.get('pending_transaction') == str(journal)
+                and record.get('transaction_id') == state['id']
+                and record.get('installation_id') == state['record']['installation_id'])
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return False
+
+
 @contextmanager
-def compatible_archive(source):
+def compatible_archive(source, *, paths_prepared=False):
     """Use the common preparation for every OCI entry point, including stacks.
 
     Plain rootfs tar archives retain their native path; Proxmox still validates
     every archive. No filename/registry/app-specific exception is involved.
     """
     source = Path(source)
-    is_oci = False
-    if tarfile.is_tarfile(source):
+    is_oci = paths_prepared
+    if not paths_prepared and tarfile.is_tarfile(source):
         with tarfile.open(source) as archive:
             is_oci = any(item.name.removeprefix('./') == 'oci-layout' for item in archive.getmembers())
     if not is_oci:
         yield source
         return
     from oci_runtime import creatable_archive
-    with creatable_archive(source) as prepared:
+    with creatable_archive(source, paths_prepared=paths_prepared) as prepared:
         yield prepared
 
 
 def create(vmid, original, source, options):
     uid, gid = reader_ids(options)
-    with compatible_archive(source) as prepared:
+    with compatible_archive(source, paths_prepared=transaction_prepared(vmid, source)) as prepared:
         reference = original if Path(prepared) == Path(source) else str(prepared)
         with import_archive(prepared, reference, uid, gid) as archive:
             result = subprocess.run(['pct', 'create', vmid, archive, *options],

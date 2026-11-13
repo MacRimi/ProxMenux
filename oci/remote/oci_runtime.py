@@ -203,7 +203,7 @@ def add_user_databases(source: Path, destination: Path) -> list[str]:
 
 
 @contextlib.contextmanager
-def creatable_archive(archive: Path):
+def creatable_archive(archive: Path, *, paths_prepared: bool = False):
     """The archive Proxmox VE can create a container from: the image itself,
     or a temporary copy with the /etc/passwd and /etc/group it lacks, removed
     afterwards. The image and its digest stay as they were downloaded."""
@@ -216,7 +216,7 @@ def creatable_archive(archive: Path):
     try:
         # Local import avoids a module cycle with the streaming tar helpers.
         import oci_layer_paths
-        prepared = oci_layer_paths.prepare(archive, compatible)
+        prepared = None if paths_prepared else oci_layer_paths.prepare(archive, compatible)
         source = compatible if prepared else archive
         if add_user_databases(source, copy):
             copy.chmod(0o644)
