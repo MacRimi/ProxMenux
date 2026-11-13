@@ -387,7 +387,7 @@ def _work_backup_ready(project, ui, vmid):
     return True
 
 
-def _apply_recommended(project, ui, vmid, record):
+def _apply_recommended(project, ui, vmid, record, runner=None):
     """Before an interactive update, offer once the settings the current
     catalog recipe recommends. False only when applying them failed."""
     if getattr(ui, 'unattended', False):
@@ -416,7 +416,7 @@ def _apply_recommended(project, ui, vmid, record):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
         json.dump(proposal, file)
         file.flush()
-        return _run_lifecycle(command + ['--proposal', file.name], translate('Modify OCI'))
+        return (runner or _run_lifecycle)(command + ['--proposal', file.name], translate('Modify OCI'))
 
 
 def _toggle_watchdog(project, ui, vmid, enabled):
@@ -435,7 +435,7 @@ def _toggle_watchdog(project, ui, vmid, enabled):
     return True
 
 
-def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=None):
+def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=None, runner=None):
     """What the menu does with one instance once it is selected. `action`
     skips the choice of operation, as ProxMenux Monitor does; the extra
     `lifecycle_args` are passed to the program that performs it. A `heading`
@@ -451,7 +451,12 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
     if row['reason'] != 'matched':
         ui.message(translate('The selected CT does not match its OCI record. Its configuration will not be modified or deleted.'), translate('OCI management'))
         return False
+    if runner is not None and (row.get('pending') or row.get('stack_pending')):
+        ui.message(translate('Finish or recover pending OCI operations before preparing a batch.'), translate('OCI management'))
+        return False
     if row['stack']:
+        if runner is not None:
+            return _manage_stack(project, ui, row, action, lifecycle_args, runner=runner)
         return _manage_stack(project, ui, row, action, lifecycle_args)
     # Rebuilding as it is exists only for a multi-container application.
     if action == 'recreate':
@@ -506,8 +511,11 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
                 return CANCELLED
             if proposal is None:
                 return False
-        elif not _apply_recommended(project, ui, row['vmid'], record):
-            return False
+        else:
+            recommended = (_apply_recommended(project, ui, row['vmid'], record, runner=runner)
+                           if runner is not None else _apply_recommended(project, ui, row['vmid'], record))
+            if not recommended:
+                return False
         if proposal is None and not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
             return CANCELLED
@@ -529,17 +537,17 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
             os.environ['OCI_RECREATED_MARKER'] = str(marker)
             try:
                 if proposal is None:
-                    completed = _run_lifecycle(command, title)
+                    completed = (runner or _run_lifecycle)(command, title)
                 else:
                     # Saved environment/secrets must never be passed on the command line.
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
                         json.dump(proposal, file)
                         file.flush()
-                        completed = _run_lifecycle(command + ['--proposal', file.name], title)
+                        completed = (runner or _run_lifecycle)(command + ['--proposal', file.name], title)
             finally:
                 os.environ.pop('OCI_RECREATED_MARKER', None)
             recreated = marker.exists()
-        if completed and recreated and not getattr(ui, 'unattended', False):
+        if completed and recreated and runner is None and not getattr(ui, 'unattended', False):
             images.offer_removal(ui, [row['vmid']])
         return completed
     action = ui.choose(translate('Interrupted operation'), [('status', translate('View status')),
@@ -639,13 +647,16 @@ def _remove(project, ui, vmid):
                           translate('Remove OCI'))
 
 
-def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
+def _manage_stack(project, ui, row, action=None, lifecycle_args=(), runner=None):
     sys.path.insert(0, str(project / 'remote'))
     import oci_instances as instances
     record = instances.read(instances.ROOT, row['vmid'])
     primary_id = record.get('stack_member', {}).get('primary_vmid', row['vmid'])
     primary = instances.read(instances.ROOT, primary_id)
     pending = primary.get('pending_stack_transaction')
+    if pending and runner is not None:
+        ui.message(translate('Finish or recover pending OCI operations before preparing a batch.'), translate('OCI management'))
+        return False
     if not pending:
         members = primary.get('stack', {}).get('members', [])
         import oci_stack_adapters
@@ -690,11 +701,11 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                              question=translate('Recreate the whole stack?'), default=False):
                 return CANCELLED
         else:
-            if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
-                                       'If there are new versions, all images are downloaded and verified, the application '
-                                       'is stopped, each container is backed up and replaced with its new image. If the operation '
-                                       'fails after a container was changed, the backups are restored. An operation that stops '
-                                       'halfway is recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
+            if not ui.review(translate('All {count} containers of the application are checked together (main CT: {vmid}). If no images changed, '
+                                       'nothing is stopped or recreated. Otherwise the required images are prepared, the application is stopped '
+                                       'and every container is backed up. Only changed members and any required setup jobs are recreated. If '
+                                       "the operation fails after a container was changed, the whole application's backups are restored. "
+                                       'Interrupted operations can be recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
                     translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
                 return CANCELLED
     else:
@@ -716,8 +727,8 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
         command.append('--acknowledge-external-data')
     title = (translate('Recover OCI stack') if pending else translate('Recreate OCI stack')
              if action == 'recreate' else translate('Update OCI stack'))
-    completed = _run_lifecycle(command, title)
-    if completed and not pending and not getattr(ui, 'unattended', False):
+    completed = (runner or _run_lifecycle)(command, title)
+    if completed and not pending and runner is None and not getattr(ui, 'unattended', False):
         images.offer_removal(ui, [int(member['vmid']) for member in members])
     return completed
 

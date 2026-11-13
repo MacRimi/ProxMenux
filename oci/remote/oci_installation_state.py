@@ -18,6 +18,7 @@ import tempfile
 import uuid
 
 from oci_ui import translate, msg_error, msg_ok
+import oci_native_reads as native_reads
 
 # A registry login saved by ProxMenux lets skopeo read private images.
 REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
@@ -81,6 +82,9 @@ def registry_error(errors):
 
 
 def command(*args):
+    fresh = native_reads.read(args)
+    if fresh is not None:
+        return fresh
     if args[:2] == ('skopeo', 'inspect'):
         # A registry that fails for a moment is asked again before giving up.
         args = args[:2] + ('--retry-times', '3', '--retry-delay', '5s') + args[2:]

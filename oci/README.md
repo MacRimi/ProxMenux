@@ -148,11 +148,18 @@ downloaded and no containers are changed. The menu remains usable during the
 check. Leaving the OCI menu closes its request; the Monitor may finish
 metadata queries already in progress before stopping the remaining checks.
 
-Open **Updates available (N)** to choose applications with Space. Nothing is
-preselected, even when there is only one update. **Select all** at the top
-includes every listed application. After reviewing the selection, each
-application uses the existing update workflow, including its identity checks,
-backup prompts and recovery. Cancelling or failing an update stops the batch.
+Open **Updates available (N)** to choose applications with Space. Nothing is preselected, even when there is only one update. **Select all** at the top includes every listed application. A selection of one application keeps the usual single-application workflow, including the option to remove downloaded images afterwards. For several applications, each application uses the existing update workflow, including its identity checks, backup prompts and recovery. All application reviews, recommended-setting choices and temporary-backup storage choices are collected **before** the first update. A final confirmation starts the prepared batch; no questions or Enter pauses interrupt execution. Keep the terminal open until the final summary.
+
+Updates run sequentially through the existing lifecycle helpers, which retain their registry locks, backups, health checks and rollback. By default, a failed update stops the queue. An upfront option allows continuing after a failure that leaves the application in a valid installed state. Pending recovery, changed application identity/configuration or interruption always stops it. Interrupting terminates the current helper; if it leaves an incomplete transaction, the summary explicitly marks that application as requiring recovery and points to OCI management. An SSH disconnect may prevent displaying the summary; the private report and recovery journal remain available. The baseline for each application is captured after its own review dialogs finish, including any settings accepted during that review. Subsequent identity/configuration changes, including changes while later applications are being reviewed or earlier updates run, stop the queue and require a fresh review. Selecting multiple members of one coordinated application updates that application only once.
+
+The summary shows each application’s outcome and execution time, including
+applications not started. Private reports under
+`/usr/local/share/proxmenux/oci/instances/batch-updates/<id>/report.json`
+record preparation, execution and per-step timings without commands,
+configuration values or credentials. Temporary proposals are removed when the
+batch finishes. Reports are diagnostic records, not resumable queues.
+Cancelling preparation leaves services untouched; already approved external
+configuration adoption or temporary-backup storage choices may still be saved.
 The selection screen has only **Update** and **Cancel** buttons.
 
 Opening the menu reads the Monitor's existing `/etc/proxmenux/apps` results
@@ -202,6 +209,10 @@ An update is a transaction:
 5. The application is checked. When it answers, the record is published with the new digest. When it does not, the previous container is restored from the backup.
 
 Settings changed in Proxmox VE after the installation, such as memory, cores or start with the node, are carried into the new record. An operation interrupted by a closed terminal or a reboot is detected the next time the menu opens, and the previous installation can be recovered. A container restored from a backup on another host is registered again from the copy of the record it carries.
+
+Coordinated updates compare each installed image with its resolved candidate. If all members are unchanged, they finish without stopping or recreating the stack. Otherwise only changed images are recreated (completion jobs are also replayed when the stack changes). Every member is still stopped and backed up coherently: a new application can migrate an unchanged database. A failed update restores the whole recovery point, including members whose LXC configuration did not change. Explicit Recreate continues to rebuild every member.
+
+Temporary data holders use a minimal, networkless, never-started rootfs instead of extracting the application image a second time. This applies to standalone and coordinated image replacement, and to stack recovery. Journals record active phase durations in `phase_seconds`; time while an operation is interrupted is not counted as work by a subsequent recovery process.
 
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
@@ -1243,6 +1254,4 @@ No fixed-version exception or deployment has been introduced.
 
 ## Automatic catalog refresh
 
-OCI Manager opens with its local catalog and checks for new applications and recipes
-in the background. **Refresh catalog** repeats the check manually. See
-[Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility.
+OCI Manager opens with its local catalog and checks for new applications and recipes in the background. **Refresh catalog** repeats the check manually. See [Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility. 

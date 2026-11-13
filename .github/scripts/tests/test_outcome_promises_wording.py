@@ -19,8 +19,16 @@ class OutcomePromises(TestCase):
     def test_a_failure_is_not_promised_to_end_in_a_restore(self):
         texts = oci_menu_texts()
         self.assertEqual([text for text in texts if 'If anything fails' in text], [])
-        previews = [text for text in texts if 'stops halfway is recovered from the OCI management menu' in text]
+        previews = [text for text in texts
+                    if text.startswith('All {count} containers of the application')
+                    and '(main CT: {vmid})' in text]
         self.assertEqual(len(previews), 2)  # Coordinated stack update/recreation previews.
+        for preview in previews:
+            self.assertIn('If the operation fails after a container was changed', preview)
+        selective = next(text for text in previews if 'are checked together' in text)
+        self.assertIn('If no images changed, nothing is stopped or recreated.', selective)
+        self.assertIn('Only changed members and any required setup jobs are recreated.', selective)
+        self.assertIn('Interrupted operations can be recovered', selective)
         update = next(text for text in texts if text.startswith('If a newer application image is available'))
         self.assertIn('attempts to restore the previous installation', update)
         self.assertIn('If the operation remains incomplete', update)
