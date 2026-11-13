@@ -128,6 +128,43 @@ def require_auth_or_ticket(f):
     return decorated_function
 
 
+def require_admin_or_ticket(f):
+    """Like `require_auth_or_ticket`, for downloads that carry secrets, such
+    as the PBS encryption key and host backups: the Bearer token must be
+    `full_admin`. A ticket is accepted as it is, since only `full_admin`
+    tokens can get one."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        config = load_auth_config()
+        if not config.get("enabled", False) or config.get("declined", False):
+            return f(*args, **kwargs)
+
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            parts = auth_header.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer':
+                username, scope = verify_token_full(parts[1])
+                if username and scope == 'full_admin':
+                    return f(*args, **kwargs)
+                if username:
+                    return jsonify({"error": "Insufficient scope",
+                                    "message": f"This download requires a full_admin token (your token: {scope})"}), 403
+
+        try:
+            from flask_terminal_routes import _consume_terminal_ticket
+            if _consume_terminal_ticket(request.args.get('ticket', '')):
+                return f(*args, **kwargs)
+        except ImportError:
+            pass
+
+        return jsonify({
+            "error": "Authentication required",
+            "message": "Provide a full_admin Bearer token in the Authorization header or a fresh ?ticket=... from /api/terminal/ticket"
+        }), 401
+
+    return decorated_function
+
+
 def require_admin_scope(f):
     """Like `require_auth` but ALSO requires the token's `scope == full_admin`.
 
