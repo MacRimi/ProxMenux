@@ -107,7 +107,7 @@ from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
 from notification_templates import health_linked_event  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
+from jwt_middleware import require_auth, require_admin_or_ticket, require_admin_scope  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -18583,7 +18583,7 @@ def api_pbs_encryption_import():
 
 
 @app.route('/api/host-backups/pbs-encryption/download-keyfile', methods=['GET'])
-@require_auth
+@require_admin_or_ticket
 def api_pbs_encryption_download_keyfile():
     """Send the installed PBS keyfile as a downloadable attachment.
     This is how the operator gets an offsite copy without exposing
@@ -21518,7 +21518,7 @@ def api_host_backups_remote_archive_export_status(task_id):
 
 
 @app.route('/api/host-backups/remote-archives/export/<task_id>/download', methods=['GET'])
-@require_auth_or_ticket
+@require_admin_or_ticket
 def api_host_backups_remote_archive_export_download(task_id):
     """Stream the packed export to the browser. Same auth + send_file
     pattern as the local archive download. Cleans up the tarball after
@@ -22318,7 +22318,7 @@ def api_host_backups_archive_prepare_restore(archive_id):
 
 
 @app.route('/api/host-backups/archives/<path:archive_id>/download', methods=['GET'])
-@require_auth_or_ticket
+@require_admin_or_ticket
 def api_host_backups_archive_download(archive_id):
     """Stream the .tar.zst archive back to the operator with a sane
     Content-Disposition. send_file handles range requests + streaming
