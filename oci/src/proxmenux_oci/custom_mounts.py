@@ -39,29 +39,117 @@ def validate_mount(mount, existing):
     return target
 
 
+def ask_custom_mount(ui, existing, storage):
+    """One extra path, with the questions of the installation."""
+    target = ui.ask(translate('Path inside the container (e.g. /media-extra)'))
+    mode = ui.choose(translate('Data location'), [
+        ('managed-volume', translate('Container volume (included in backups)')),
+        ('host-bind', translate('Host directory (not included in Proxmox backups)')),
+    ], 'managed-volume')
+    if mode is None:
+        raise UserCancelled(translate('Custom path cancelled'))
+    mount = {'type': mode, 'container_path': target, 'custom': True,
+             'source': storage, 'size_gb': None, 'backup': mode == 'managed-volume',
+             'read_only': ui.confirm(translate('Mount read-only'), False),
+             'create_if_missing': mode == 'host-bind'}
+    if mode == 'managed-volume':
+        from .installer import ask_storage
+        mount['source'] = ask_storage(ui, translate('Proxmox storage for the volume'), 'rootdir', storage)
+        mount['size_gb'] = int(ui.ask(translate('Volume size in GB'), '8'))
+    else:
+        mount['source'] = ui.ask(translate('Host directory (created if it does not exist)'), '/mnt/oci-shared/custom')
+    mount['container_path'] = validate_mount(mount, existing)
+    return mount
+
+
 def ask_custom_mounts(ui, mounts, storage):
     result = list(mounts)
     while ui.confirm(translate('Add an extra custom path'), False):
-        target = ui.ask(translate('Path inside the container (e.g. /media-extra)'))
-        mode = ui.choose(translate('Data location'), [
-            ('managed-volume', translate('Container volume (included in backups)')),
-            ('host-bind', translate('Host directory (not included in Proxmox backups)')),
-        ], 'managed-volume')
-        if mode is None:
-            raise UserCancelled(translate('Custom path cancelled'))
-        mount = {'type': mode, 'container_path': target, 'custom': True,
-                 'source': storage, 'size_gb': None, 'backup': mode == 'managed-volume',
-                 'read_only': ui.confirm(translate('Mount read-only'), False),
-                 'create_if_missing': mode == 'host-bind'}
-        if mode == 'managed-volume':
-            from .installer import ask_storage
-            mount['source'] = ask_storage(ui, translate('Proxmox storage for the volume'), 'rootdir', storage)
-            mount['size_gb'] = int(ui.ask(translate('Volume size in GB'), '8'))
-        else:
-            mount['source'] = ui.ask(translate('Host directory (created if it does not exist)'), '/mnt/oci-shared/custom')
-        mount['container_path'] = validate_mount(mount, result)
-        result.append(mount)
+        result.append(ask_custom_mount(ui, result, storage))
     return result
+
+
+def describe_path(path):
+    """Where the data of a path lives, as the editor of paths shows it."""
+    if path['type'] == 'host-bind':
+        where = f"{translate('host directory')} {path['source']}"
+    else:
+        size = f" {path['size']}" if path.get('size') else ''
+        where = f"{translate('Container volume')}{size} {translate('on')} {path['source'].split(':', 1)[0]}"
+    return where + (f" · {translate('read-only')}" if path.get('read_only') else '')
+
+
+def edit_paths(ui, paths, storage):
+    """Change the paths of one container: the host directory of any path
+    mounted from the host, and the read-only mode or the removal of the extra
+    paths, which are the only ones that can be removed. New paths are asked as
+    the installation asks them.
+
+    `paths` lists every mount as {container_path, type, source, size,
+    read_only, extra}. The result says what to remove, what to change on an
+    existing path and what to add; nothing is applied here."""
+    paths = [dict(path, added=False) for path in paths]
+    removed, changed, added = [], {}, []
+    selected = 'add'
+    while True:
+        options = [(path['container_path'], f"{path['container_path']}  →  {describe_path(path)}")
+                   for path in paths]
+        options += [('add', translate('Add a path')), ('done', translate('Done'))]
+        selected = ui.choose(translate('Choose a path to change it, or add a new one.'), options, selected,
+                             title=translate('Paths'), show_tags=False)
+        if selected is None:
+            raise UserCancelled(translate('Custom path cancelled'))
+        if selected == 'done':
+            return {'remove': removed, 'change': changed, 'add': [path['mount'] for path in paths if path['added']]}
+        if selected == 'add':
+            mount = ask_custom_mount(ui, [{'container_path': path['container_path']} for path in paths], storage)
+            paths.append({'container_path': mount['container_path'], 'type': mount['type'],
+                          'source': mount['source'], 'read_only': mount['read_only'],
+                          'size': f"{mount['size_gb']} GB" if mount.get('size_gb') else None,
+                          'extra': True, 'added': True, 'mount': mount})
+            selected = mount['container_path']
+            continue
+        path = next(item for item in paths if item['container_path'] == selected)
+        actions = []
+        if path['type'] == 'host-bind':
+            actions.append(('source', translate('Change the host directory')))
+        if path['extra']:
+            actions.append(('read_only', translate('Make it writable') if path['read_only']
+                            else translate('Make it read-only')))
+            actions.append(('remove', translate('Remove this path')))
+        if not actions:
+            ui.message(translate('This path keeps the data of the application on a container volume; '
+                                 'it cannot be changed or removed.'), translate('Paths'))
+            continue
+        action = ui.choose(f"{path['container_path']}  →  {describe_path(path)}",
+                           actions + [('back', translate('Back'))], actions[0][0],
+                           title=translate('Paths'), show_tags=False)
+        if action in (None, 'back'):
+            continue
+        target = path['container_path']
+        if action == 'remove':
+            if path['added']:
+                paths.remove(path)
+            elif path['type'] != 'managed-volume' or ui.confirm(
+                    f"{translate('Removing this path deletes its container volume and the data in it:')} "
+                    f"{target}\n\n{translate('Delete it?')}", False):
+                paths.remove(path)
+                removed.append(target)
+                changed.pop(target, None)
+            selected = 'done'
+            continue
+        if action == 'source':
+            value = valid_path(ui.ask(translate('Host directory (created if it does not exist)'), path['source']))
+            if value == path['source']:
+                continue
+            path['source'] = value
+        else:
+            path['read_only'] = not path['read_only']
+        if path['added']:
+            path['mount'].update(source=path['source'], read_only=path['read_only'])
+        else:
+            changed.setdefault(target, {}).update(
+                {'source': path['source']} if action == 'source' else {'read_only': path['read_only']})
 
 
 def ask_stack_custom_mounts(ui, services, storage):

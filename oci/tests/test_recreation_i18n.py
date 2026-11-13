@@ -125,8 +125,8 @@ class SlovakEditorTests(unittest.TestCase):
         self.assertEqual(candidate['deployment']['mounts'][-1]['source'], '/fixture/nonexistent')
 
     def test_extra_path_cannot_cover_system_directories(self):
-        ui = EditorUI(['host-bind'], ['/etc', '/fixture/host', UserCancelled()],
-                      confirms=[True, False])
+        ui = EditorUI(['add', 'host-bind'], ['/etc', '/fixture/host', UserCancelled()],
+                      confirms=[False])
         self.assertIs(recreation.edit_section(self.original, ui, 'paths'), self.original)
         self.assertIn('Vlastná cesta nemôže skryť systémové adresáre', self.text(ui))
 

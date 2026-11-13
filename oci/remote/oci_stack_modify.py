@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add or remove the extra paths and devices of one member of an installed
+"""Add, change or remove the paths and devices of one member of an installed
 multi-container application, without rebuilding any of its containers."""
 from __future__ import annotations
 
@@ -127,6 +127,15 @@ def validate(vmid, changes):
     for path in changes['remove_devices']:
         if path not in devices:
             raise ValueError(f"{translate('The device to remove is not attached:')} {path}")
+    for path, change in changes.get('change_mounts', {}).items():
+        if path not in mounts or path in changes['remove_mounts']:
+            raise ValueError(f"{translate('The path to change is not mounted:')} {path}")
+        if set(change) - {'source', 'read_only'}:
+            raise ValueError(f"{translate('Unsupported change of a path:')} {path}")
+        if 'source' in change:
+            if not mounts[path][1].split(',', 1)[0].startswith('/'):
+                raise ValueError(f"{translate('Only a path mounted from the host can change its directory:')} {path}")
+            host_mounts.validate_source(host_mounts.valid_path(change['source']), allow_missing=True)
     kept = [path for path in mounts if path not in changes['remove_mounts']]
     for mount in changes['add_mounts']:
         target = host_mounts.valid_path(mount['container_path'])
@@ -152,17 +161,34 @@ def validate(vmid, changes):
         gpu_devices.snapshot(path)
 
 
+def host_directory(path):
+    """A host directory for a path, created for the container user when missing."""
+    source = Path(path)
+    if not source.exists():
+        source.mkdir(parents=True, mode=0o775)
+        os.chown(source, 100000, 100000)
+    return source
+
+
 def apply(vmid, changes):
+    for path, change in changes.get('change_mounts', {}).items():
+        key, value = next((key, value) for key, value in entries(vmid, 'mp').items()
+                          if options(value).get('mp') == path)
+        source, *fields = value.split(',')
+        if 'source' in change:
+            source = str(host_directory(change['source']))
+        if 'read_only' in change:
+            fields = [field for field in fields if not field.startswith('ro=')]
+            if change['read_only']:
+                fields.append('ro=1')
+        run('pct', 'set', str(vmid), '--' + key, ','.join([source, *fields]))
+        msg_ok(f"{translate('Path changed:')} {path}")
     for mount in changes['add_mounts']:
         target = mount['container_path']
         if mount['type'] == 'managed-volume':
             value = f"{mount['source']}:{mount['size_gb']},mp={target},backup=1"
         else:
-            source = Path(mount['source'])
-            if not source.exists():
-                source.mkdir(parents=True, mode=0o775)
-                os.chown(source, 100000, 100000)
-            value = f"{source},mp={target},backup=0"
+            value = f"{host_directory(mount['source'])},mp={target},backup=0"
         if mount.get('read_only'):
             value += ',ro=1'
         run('pct', 'set', str(vmid), '--' + free_key(vmid, 'mp'), value)
@@ -189,7 +215,7 @@ def apply(vmid, changes):
             if unused:
                 run('pct', 'set', str(vmid), '--delete', unused)
         msg_ok(f"{translate('Path removed:')} {path}")
-    if changes['add_mounts'] or changes['remove_mounts']:
+    if changes['add_mounts'] or changes['remove_mounts'] or changes.get('change_mounts'):
         oci_nested_mounts.follow(vmid)
 
 
@@ -324,8 +350,8 @@ def _modify(root, vmid, changes):
     values = settings_values(record, config, changes)
     # Resources apply to a running container; paths, devices and variables
     # take effect on its next start.
-    restart = 'env' in values or any(changes[key] for key in
-                                     ('add_mounts', 'remove_mounts', 'add_devices', 'remove_devices'))
+    restart = 'env' in values or any(changes.get(key) for key in
+                                     ('add_mounts', 'remove_mounts', 'change_mounts', 'add_devices', 'remove_devices'))
     running = is_running(vmid) and restart
     if running:
         msg_info(translate('Stopping the container...'))
@@ -358,7 +384,7 @@ def main():
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
-    changes = {'remove_mounts': [], 'add_mounts': [], 'remove_devices': [], 'add_devices': [],
+    changes = {'remove_mounts': [], 'add_mounts': [], 'change_mounts': {}, 'remove_devices': [], 'add_devices': [],
                'resources': {}, **json.loads(args.changes.read_text())}
     changes['environment'] = {'set': {}, 'unset': [], **changes.get('environment', {})}
     try:

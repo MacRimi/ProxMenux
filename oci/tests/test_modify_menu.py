@@ -147,12 +147,14 @@ class ModifyMenuTests(unittest.TestCase):
         recreation.edit_recreation(record(), ui)
         self.assertNotIn('private-test-secret', json.dumps(ui.events))
 
-    def test_extra_paths_counts_only_paths_added_by_hand(self, _language):
+    def test_paths_counts_every_path_the_editor_shows(self, _language):
         candidate = record()
-        self.assertTrue(dict(recreation.modification_options(candidate))['paths'].rstrip().endswith(' 0'))
+        self.assertTrue(dict(recreation.modification_options(candidate))['paths'].rstrip().endswith(' 1'))
         candidate['deployment']['mounts'].append({'container_path': '/media-extra', 'type': 'host-bind',
                                                   'source': '/mnt/media', 'custom': True})
-        self.assertTrue(dict(recreation.modification_options(candidate))['paths'].rstrip().endswith(' 1'))
+        candidate['deployment']['mounts'].append({'container_path': '/host/proc', 'type': 'host-bind',
+                                                  'source': '/proc/'})
+        self.assertTrue(dict(recreation.modification_options(candidate))['paths'].rstrip().endswith(' 2'))
 
     def test_optional_categories_follow_the_application_profile(self, _language):
         candidate = record()

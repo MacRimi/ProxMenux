@@ -11,10 +11,11 @@ import subprocess
 import sys
 import tempfile
 
-from .custom_mounts import ask_custom_mounts
+from .custom_mounts import edit_paths
 from .extra_devices import ask_extra_devices
 from .i18n import translate
 from .recreation import edit_environment, positive_integer
+from .ui import UserCancelled
 
 APPLICATION_ROLES = ('application', 'server')
 # Variables whose value is never shown: the passwords and keys of a stack.
@@ -76,7 +77,7 @@ def current_state(member):
             source, target = value.split(',', 1)[0], _options(value).get('mp')
             mounts.append({'container_path': target, 'source': source, 'size': _options(value).get('size'),
                            'type': 'host-bind' if source.startswith('/') else 'managed-volume',
-                           'extra': target not in own})
+                           'read_only': _options(value).get('ro') == '1', 'extra': target not in own})
         elif re.fullmatch(r'dev[0-9]+', key):
             path = _device_path(value)
             # The video device of Immich belongs to its acceleration profile.
@@ -86,34 +87,12 @@ def current_state(member):
     return mounts, devices, rootfs, immich
 
 
-def _describe(mount):
-    if mount['type'] == 'host-bind':
-        return f"{translate('host directory')} {mount['source']}"
-    return f"{translate('Container volume')} {mount.get('size') or ''} {translate('on')} {mount['source'].split(':', 1)[0]}"
-
-
 def plan_changes(ui, member):
     """Ask what to remove and what to add. None when nothing changes."""
     mounts, devices, storage, immich = current_state(member)
-    changes = {'remove_mounts': [], 'add_mounts': [], 'remove_devices': [], 'add_devices': []}
-    extra = [mount for mount in mounts if mount['extra']]
-    if extra:
-        kept = ui.checklist(translate('Extra paths to keep (unmark one to remove it)'),
-                            [(mount['container_path'], _describe(mount)) for mount in extra],
-                            [mount['container_path'] for mount in extra])
-        if kept is None:
-            return None
-        for mount in extra:
-            if mount['container_path'] in kept:
-                continue
-            if mount['type'] == 'managed-volume' and not ui.confirm(
-                    f"{translate('Removing this path deletes its container volume and the data in it:')} "
-                    f"{mount['container_path']}\n\n{translate('Delete it?')}", False):
-                continue
-            changes['remove_mounts'].append(mount['container_path'])
-    remaining = [{'type': mount['type'], 'container_path': mount['container_path']} for mount in mounts
-                 if mount['container_path'] not in changes['remove_mounts']]
-    changes['add_mounts'] = [mount for mount in ask_custom_mounts(ui, remaining, storage) if mount.get('custom')]
+    changes = {'remove_mounts': [], 'add_mounts': [], 'change_mounts': {}, 'remove_devices': [], 'add_devices': []}
+    paths = edit_paths(ui, mounts, storage)
+    changes.update(remove_mounts=paths['remove'], add_mounts=paths['add'], change_mounts=paths['change'])
     removable = [device for device in devices if device['removable']]
     if removable:
         kept = ui.checklist(translate('Devices to keep (unmark one to remove it)'),
@@ -143,6 +122,11 @@ def summary(member, changes):
         target = (f"{translate('host directory')} {mount['source']}" if mount['type'] == 'host-bind'
                   else f"{translate('Container volume')} {mount['size_gb']} GB {translate('on')} {mount['source']}")
         lines.append(f"+ {mount['container_path']} → {target}")
+    for path, change in changes.get('change_mounts', {}).items():
+        if 'source' in change:
+            lines.append(f"~ {path} → {translate('host directory')} {change['source']}")
+        if 'read_only' in change:
+            lines.append(f"~ {path} → {translate('read-only') if change['read_only'] else translate('writable')}")
     lines += [f"- {path}" for path in changes['remove_mounts']]
     lines += [f"+ {device['host_path']}" for device in changes['add_devices']]
     lines += [f"- {path}" for path in changes['remove_devices']]
@@ -282,7 +266,7 @@ def modify_stack(project, ui, primary, run_lifecycle, member_vmid=None):
     learning = immich_learning(primary)
     options = [('resources', translate('CPU, RAM and swap')),
                ('variables', translate('Environment variables')),
-               ('paths', translate('Add or remove extra paths and devices'))]
+               ('paths', translate('Paths and devices'))]
     if learning is not None and learning['vmid'] == member['vmid']:
         options.append(('recognition', translate('Change what runs recognition: CPU or GPU')))
     what = ui.choose(f"{translate('What to modify')} · {member_label(member)}", options, 'resources')
@@ -290,7 +274,7 @@ def modify_stack(project, ui, primary, run_lifecycle, member_vmid=None):
         return False
     if what == 'recognition':
         return change_recognition(project, ui, primary, learning, run_lifecycle)
-    changes = {'remove_mounts': [], 'add_mounts': [], 'remove_devices': [], 'add_devices': [],
+    changes = {'remove_mounts': [], 'add_mounts': [], 'change_mounts': {}, 'remove_devices': [], 'add_devices': [],
                'resources': {}, 'environment': {'set': {}, 'unset': []}}
     try:
         if what == 'resources':
@@ -301,11 +285,14 @@ def modify_stack(project, ui, primary, run_lifecycle, member_vmid=None):
             planned = plan_changes(ui, member)
             if planned:
                 changes.update(planned)
+    except UserCancelled:
+        return False
     except ValueError as error:
         ui.message(str(error), translate('Modify OCI stack'))
         return False
     if not (changes['resources'] or changes['environment']['set']
-            or any(changes[key] for key in ('remove_mounts', 'add_mounts', 'remove_devices', 'add_devices'))):
+            or any(changes[key] for key in ('remove_mounts', 'add_mounts', 'change_mounts', 'remove_devices',
+                                            'add_devices'))):
         ui.message(translate('Nothing was changed.'), translate('Modify OCI stack'))
         return False
     if not ui.review(summary(member, changes), translate('Modify OCI stack'),

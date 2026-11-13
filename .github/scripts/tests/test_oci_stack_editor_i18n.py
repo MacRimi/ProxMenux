@@ -76,11 +76,18 @@ class StackEditorSlovakTests(unittest.TestCase):
         self.original = copy.deepcopy(self.primary)
         return self.member
 
-    def open_member(self, choice):
+    def open_member(self, choice, *paths):
         # Modify opened on one container: the menu of what to change answers
-        # `choice`; every other question is left unanswered.
-        self.ui.choose.side_effect = lambda text, options, default=None: (
-            choice if choice in [key for key, label in options] else None)
+        # `choice`, and the editor of paths answers `paths` in order; every
+        # other question is left unanswered.
+        answers = list(paths)
+
+        def choose(text, options, default=None, **kwargs):
+            keys = [key for key, label in options]
+            if 'resources' in keys:
+                return choice if choice in keys else None
+            return answers.pop(0) if answers else None
+        self.ui.choose.side_effect = choose
         return editor.modify_stack(ROOT / 'oci', self.ui, self.primary, self.lifecycle,
                                    member_vmid=self.member['vmid'])
 
@@ -88,18 +95,19 @@ class StackEditorSlovakTests(unittest.TestCase):
         return {'add_mounts': [], 'remove_mounts': [], 'add_devices': [],
                 'remove_devices': [], **values}
 
-    def test_editor_only_offers_extra_paths_and_leaves_database_out(self):
-        self.assertFalse(self.open_member('paths'))
+    def test_editor_lists_every_path_and_never_removes_the_data_of_the_application(self):
+        self.assertFalse(self.open_member('paths', '/opt/recipes/mediafiles', 'done'))
         shown = self.shown()
-        self.assertIn('odznačené sa odstránia po potvrdení', shown)
+        menu = self.ui.choose.call_args_list[1].args[1]
+        self.assertEqual([key for key, label in menu],
+                         ['/opt/recipes/mediafiles', '/extra', '/shared', 'add', 'done'])
+        self.assertIn('nemožno ju zmeniť ani odstrániť', shown)
         self.assertIn('odznačené sa odpoja po potvrdení', shown)
-        options = self.ui.checklist.call_args_list[0].args[1]
-        self.assertEqual([path for path, label in options], ['/extra', '/shared'])
         self.assertNotIn('zásobník', shown)
 
     def test_declining_volume_deletion_keeps_it_and_only_detaches_host_path_in_draft(self):
-        self.ui.checklist.side_effect = [[], ['/dev/ttyACM7']]
-        self.assertFalse(self.open_member('paths'))
+        self.ui.checklist.side_effect = [['/dev/ttyACM7']]
+        self.assertFalse(self.open_member('paths', '/extra', 'remove', '/shared', 'remove', 'done'))
         warning = self.ui.confirm.call_args_list[0].args[0]
         self.assertIn('trvalé úložisko aj všetky údaje v ňom', warning)
         self.assertIn('/extra', warning)
@@ -111,9 +119,9 @@ class StackEditorSlovakTests(unittest.TestCase):
         self.assertIn('konfigurácia ostatných kontajnerov sa nemenia', summary)
 
     def test_declined_review_describes_confirmed_volume_deletion_without_performing_it(self):
-        self.ui.checklist.side_effect = [[], []]
-        self.ui.confirm.side_effect = [True, False, False]
-        self.assertFalse(self.open_member('paths'))
+        self.ui.checklist.side_effect = [[]]
+        self.ui.confirm.side_effect = [True, False]
+        self.assertFalse(self.open_member('paths', '/extra', 'remove', '/shared', 'remove', 'done'))
         self.assertIn('- /extra', self.ui.review.call_args.args[0])
         self.assertIn('vymaže aj s jeho údajmi', self.ui.review.call_args.args[0])
         self.assertEqual(self.ui.review.call_args.kwargs['question'], 'Použiť tieto zmeny?')
@@ -139,7 +147,7 @@ class StackEditorSlovakTests(unittest.TestCase):
         self.immich()
         self.assertFalse(self.open_member(None))
         self.assertIn('Vybrať CPU alebo GPU pre rozpoznávanie', self.shown())
-        self.assertIn('Upraviť pripojené cesty a zariadenia', self.shown())
+        self.assertIn('Cesty a zariadenia', self.shown())
 
     def test_cpu_only_host_explains_why_no_gpu_choice_is_offered(self):
         member = self.immich()

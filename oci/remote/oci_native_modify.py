@@ -345,6 +345,35 @@ def recover(root, journal):
     msg_ok(translate('Previous installation restored'))
 
 
+def removed_volumes(candidate, config):
+    """The container volumes of the paths the modification removes."""
+    wanted = {m['container_path'] for m in candidate['deployment'].get('mounts', [])}
+    return [mount['volume'] for target, mount in transaction.mounts(config).items()
+            if target not in wanted and not mount['volume'].startswith('/')]
+
+
+def delete_removed_volumes(root, vmid, volumes):
+    """Removing a path leaves its volume as a detached disk, which the next
+    update would not carry. The user confirmed its deletion, so it is deleted
+    once the modification is saved, and the record observes the result."""
+    try:
+        for volume in volumes:
+            config = parse_config(instances.command('pct', 'config', str(vmid)))
+            key = next((k for k, v in config.items() if re.fullmatch(r'unused[0-9]+', k) and v == volume), None)
+            if key:
+                transaction.run('pct', 'set', str(vmid), '--delete', key)
+                msg_ok(f"{translate('Container volume deleted:')} {volume}")
+        record = instances.read(root, vmid)
+        observed = record['observed']
+        record['observed'] = instances.observe(vmid, record['installation_id'], observed['archive_path'],
+                                               observed['resolved_registry_digest'], observed['image'])
+        instances.write(instances.location(root, vmid), record)
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+        transaction.log(f'removed volume cleanup: {error}')
+        msg_warn(f"{translate('The volume of the removed path is still a detached disk of the container:')} "
+                 + ', '.join(volumes))
+
+
 def apply(root, record, candidate, config, acknowledge_external_data=False):
     operation = plan(record, candidate, config)
     if not operation:
@@ -430,6 +459,9 @@ def apply(root, record, candidate, config, acknowledge_external_data=False):
             transaction.log('native rollback failed: '+type(error).__name__)
             msg_warn(translate('The settings could not be fully rolled back. Review the container and its saved modification before continuing.'))
         raise
+    removed = removed_volumes(candidate, config)
+    if removed:
+        delete_removed_volumes(root, vmid, removed)
     try:
         import oci_carried_record
         oci_carried_record.carry(root, vmid, mount_stopped=False)

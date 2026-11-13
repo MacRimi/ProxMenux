@@ -1146,6 +1146,29 @@ def restore_description(vmid, state):
     run('pct', 'set', str(vmid), '--description', original_description(state))
 
 
+def delete_removed_volumes(state, candidate):
+    """The volumes of the paths a modification removes stay on the data
+    holder. Once the new container is saved they are deleted, as the user
+    confirmed; any other volume left there keeps the holder."""
+    stage = state.get('stage')
+    if not stage:
+        return
+    wanted = {m['container_path'] for m in candidate['deployment'].get('mounts', [])}
+    recorded = {m['container_path'] for m in state['record']['deployment'].get('mounts', [])
+                if m['type'] == 'managed-volume'}
+    config = owned(stage, 'proxmenux-transaction=' + state['id'])
+    for target, mount in mounts(config).items():
+        if target in wanted or target not in recorded or mount['volume'].startswith('/'):
+            continue
+        run('pct', 'set', str(stage), '--delete', mount['key'])
+        detached = owned(stage, 'proxmenux-transaction=' + state['id'])
+        key = next((k for k, v in parse_config(detached).items()
+                    if re.fullmatch(r'unused[0-9]+', k) and v == mount['volume']), None)
+        if key:
+            run('pct', 'set', str(stage), '--delete', key)
+        log(f'removed path volume deleted: {target} {mount["volume"]}')
+
+
 def release_stage(state, discard=False):
     """After a commit the holder CT only keeps its own rootfs: every parked
     volume went back to the application. After a verified recovery it holds
@@ -1438,6 +1461,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     cleanup_error = None
     freed = 0
     try:
+        delete_removed_volumes(state, candidate)
         release_stage(state)
         if keep_backup and state.get('backup'):
             import oci_keep_backup
