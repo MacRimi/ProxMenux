@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import subprocess
 import types
@@ -98,7 +99,7 @@ class OvsTopology(unittest.TestCase):
                 self.assertEqual(ovs.get_topology(), {})
 
     def api_namespace(self):
-        names = {'get_network_info', 'get_interface_type', '_resolve_bridge_owner'}
+        names = {'get_network_info', 'get_interface_type', '_resolve_bridge_owner', '_ovs_port_detail'}
         tree = ast.parse((SCRIPTS / 'flask_server.py').read_text())
         nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names]
         data = ovs.parse_topology(*fixture())
@@ -106,7 +107,7 @@ class OvsTopology(unittest.TestCase):
         stats = {name: types.SimpleNamespace(isup=True, speed=1000, duplex=2, mtu=1500) for name in names}
         counter = types.SimpleNamespace(bytes_sent=1000, bytes_recv=2000, packets_sent=10, packets_recv=20,
                                         errin=0, errout=0, dropin=0, dropout=0)
-        ns = {'os': os, 'socket': socket,
+        ns = {'os': os, 're': re, 'socket': socket,
               'ovs_topology': types.SimpleNamespace(get_topology=lambda: data),
               'get_proxmox_node_name': lambda: 'pve', 'get_vm_lxc_names': lambda: {},
               'psutil': types.SimpleNamespace(net_if_addrs=lambda: dict.fromkeys(names, []),
@@ -135,6 +136,9 @@ class OvsTopology(unittest.TestCase):
         self.assertIn('uplink', {i['name'] for i in result['interfaces']})
         for guest in result['vm_lxc_interfaces']:
             self.assertEqual(guest['bridge_owner'], 'switch0')
+        # A guest behind the firewall carries the tag of its fwln port.
+        tags = {i['name']: i.get('ovs_tag') for i in result['vm_lxc_interfaces']}
+        self.assertEqual(tags, {'tap103i0': 100, 'tap115i0': 10})
         self.assertEqual(next(i for i in result['interfaces'] if i['name'] == 'vlan100')['ovs_tag'], 100)
         for nic in result['physical_interfaces']:
             self.assertIn('switch0', nic['used_by_bridges'])

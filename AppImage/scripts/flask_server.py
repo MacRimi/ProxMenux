@@ -6239,6 +6239,18 @@ def _resolve_bridge_owner(iface_name):
     return master
 
 
+# The OVS port a guest interface reaches. Behind the Proxmox firewall the
+# guest's veth/tap sits on fwbrNiM, and its VLAN tag and trunks are set on the
+# fwlnNoM port of the OVS bridge.
+def _ovs_port_detail(iface_name, ports):
+    if iface_name in ports:
+        return ports[iface_name]
+    master = _iface_master(iface_name)
+    if master and master.startswith('fwbr'):
+        return ports.get(re.sub(r'i(\d+)$', r'o\1', 'fwln' + master[len('fwbr'):]), {})
+    return {}
+
+
 # ─── ethtool: max link speed per NIC ────────────────────────────
 # Parses "Supported link modes:" — the highest baseT value is the
 # hardware ceiling. Cached per-iface because subprocess + parse runs
@@ -6697,7 +6709,7 @@ def get_network_info():
             master = ovs.get('owners', {}).get(interface_name) or master
             if master:
                 interface_info['bridge_owner'] = master
-            interface_info.update(ovs.get('ports', {}).get(interface_name, {}))
+            interface_info.update(_ovs_port_detail(interface_name, ovs.get('ports', {})))
 
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
