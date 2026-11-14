@@ -28,6 +28,12 @@ class StackReplayDeviceTests(unittest.TestCase):
                          ("none", True, "0664"))
         self.assertEqual((devices[2]["host_path"], devices[2]["uid"]), ("/dev/dri/renderD128", 1000))
 
+    def test_a_device_added_from_the_proxmox_interface_is_translated(self):
+        # Proxmox writes its path without `path=`.
+        devices = oci_stack_replay.translated_devices(projection(
+            "/dev/dri/renderD128,gid=993", "/dev/ttyUSB0"))
+        self.assertEqual([d["host_path"] for d in devices], ["/dev/dri/renderD128", "/dev/ttyUSB0"])
+
     def test_a_member_without_devices_has_none(self):
         self.assertEqual(oci_stack_replay.translated_devices(projection()), [])
 
