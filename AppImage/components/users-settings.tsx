@@ -156,7 +156,7 @@ export function UsersSettings() {
           {users.map(user => {
             const choice = choiceOf(user)
             return (
-              <div key={user.username} className="rounded-lg border border-border bg-card p-3 space-y-3">
+              <div key={user.username} className="rounded-lg border border-border p-3 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="font-medium break-all">{user.username}</span>
@@ -233,7 +233,7 @@ export function UsersSettings() {
             <UserPlus className="h-4 w-4 mr-2" />{t("users.add")}
           </Button>
         ) : (
-          <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+          <div className="space-y-3 rounded-lg border border-border p-4">
             <div className="space-y-2">
               <Label htmlFor="new-user-name">{t("users.username")}</Label>
               <div className="relative">

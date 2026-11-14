@@ -55,7 +55,7 @@ function PveProfileRules({ rules, setRules, directory }: {
       {rules.map((rule, index) => {
         const names = rule.kind === "user" ? directory.users : directory.groups
         return (
-          <div key={index} className="rounded-lg border border-border bg-card p-3 space-y-3">
+          <div key={index} className="rounded-lg border border-border p-3 space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <Select value={rule.kind} onValueChange={kind => update(index, { kind: kind as Rule["kind"], name: "" })}>
                 <SelectTrigger aria-label={t("pveAccounts.ruleKind")} className="w-full text-foreground"><SelectValue /></SelectTrigger>
@@ -203,6 +203,8 @@ export function PveAccountsSettings() {
   const mode = status.access_mode
   // Without a local account the card only offers an action, which confirms on its own.
   const savable = mode === "password" || showRules
+  // Only fields to fill in call for the contrast of edit mode, not a lone toggle.
+  const hasFields = (showRules && enabled) || ((mode === "open" || mode === "read_only") && status.setup_code_required)
 
   return (
     <Card>
@@ -214,7 +216,7 @@ export function PveAccountsSettings() {
         </div>
         <CardDescription>{t("pveAccounts.description")}</CardDescription>
       </CardHeader>
-      <CardContent className={editing ? EDIT_CONTENT_CLASS : undefined}>
+      <CardContent className={editing && hasFields ? EDIT_CONTENT_CLASS : undefined}>
         <EditableArea editing={editing && !busy} className="space-y-4">
         {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
         {notice && <p className="text-sm text-green-500">{notice}</p>}
