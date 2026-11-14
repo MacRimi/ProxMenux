@@ -5515,7 +5515,7 @@ export function VirtualMachines() {
                                     <span>{t("vmLxc.ociUpdates.memberNote", { primary: primaryLabel, count: ociInstance.members.length })}</span>
                                   </div>
                                   <div className="flex flex-wrap justify-end gap-2">
-                                    {!ociInstance.pending && (
+                                    {!ociInstance.pending && capabilities.guests && (
                                       <Button
                                         size="sm"
                                         className={neutralBtnCls}
@@ -5550,7 +5550,7 @@ export function VirtualMachines() {
                                 <div className="text-xs text-amber-400 mt-3 leading-relaxed">{t("vmLxc.ociUpdates.pendingNote")}</div>
                               )}
                               <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
-                                {!ociInstance.pending && (
+                                {!ociInstance.pending && capabilities.guests && (
                                   <Button
                                     size="sm"
                                     className={neutralBtnCls}
@@ -5563,7 +5563,7 @@ export function VirtualMachines() {
                                     {t("vmLxc.ociUpdates.modify")}
                                   </Button>
                                 )}
-                                <Button
+                                {capabilities.update && (<Button
                                   size="sm"
                                   className={updateBtnCls}
                                   onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update", recoverPrevious: !!ociInstance.pending })}
@@ -5572,7 +5572,7 @@ export function VirtualMachines() {
                                     ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                     : <RefreshCw className="h-4 w-4 mr-1.5" />}
                                   {ociInstance.pending ? t("vmLxc.ociUpdates.recover") : t("vmLxc.ociUpdates.update")}
-                                </Button>
+                                </Button>)}
                               </div>
                               </>
                               )}
@@ -5787,7 +5787,7 @@ export function VirtualMachines() {
                           <p className="text-sm text-muted-foreground leading-relaxed">
                             {t(ociRestored ? "vmLxc.updates.ociRestoredBody" : "vmLxc.updates.ociBody")}
                           </p>
-                          {ociRestored && (
+                          {ociRestored && capabilities.update && (
                             <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
                               <Button
                                 size="sm"
@@ -6877,7 +6877,7 @@ export function VirtualMachines() {
                                       )}
                                     </div>
                                     {!bulkEditMode && (
-                                      <button
+                                      capabilities.update && (<button
                                         type="button"
                                         onClick={() => {
                                           if (!bulkConfigured) {
@@ -6892,7 +6892,7 @@ export function VirtualMachines() {
                                         {bulkConfigured
                                           ? t("vmLxc.bulkUpdate.edit")
                                           : t("vmLxc.bulkUpdate.configure")}
-                                      </button>
+                                      </button>)
                                     )}
                                   </div>
 
