@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { OptionSelect } from "./option-select"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import {
@@ -3273,38 +3274,24 @@ ${(report.sections && report.sections.length > 0) ? `
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.direction")}</Label>
-                        <select
-                          value={newRule.direction}
-                          onChange={(e) => setNewRule({...newRule, direction: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="IN">IN ({st("firewall.incomingLower")})</option>
-                          <option value="OUT">OUT ({st("firewall.outgoingLower")})</option>
-                        </select>
+                        <OptionSelect value={newRule.direction} onChange={direction => setNewRule({...newRule, direction})}
+                          ariaLabel={st("firewall.fields.direction")} className="bg-card"
+                          options={[{ value: "IN", label: `IN (${st("firewall.incomingLower")})` },
+                                    { value: "OUT", label: `OUT (${st("firewall.outgoingLower")})` }]} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.action")}</Label>
-                        <select
-                          value={newRule.action}
-                          onChange={(e) => setNewRule({...newRule, action: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="ACCEPT">ACCEPT ({st("firewall.allowLower")})</option>
-                          <option value="DROP">DROP ({st("firewall.blockSilentlyLower")})</option>
-                          <option value="REJECT">REJECT ({st("firewall.blockWithResponseLower")})</option>
-                        </select>
+                        <OptionSelect value={newRule.action} onChange={action => setNewRule({...newRule, action})}
+                          ariaLabel={st("firewall.fields.action")} className="bg-card"
+                          options={[{ value: "ACCEPT", label: `ACCEPT (${st("firewall.allowLower")})` },
+                                    { value: "DROP", label: `DROP (${st("firewall.blockSilentlyLower")})` },
+                                    { value: "REJECT", label: `REJECT (${st("firewall.blockWithResponseLower")})` }]} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.protocol")}</Label>
-                        <select
-                          value={newRule.protocol}
-                          onChange={(e) => setNewRule({...newRule, protocol: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="tcp">TCP</option>
-                          <option value="udp">UDP</option>
-                          <option value="icmp">ICMP (ping)</option>
-                        </select>
+                        <OptionSelect value={newRule.protocol} onChange={protocol => setNewRule({...newRule, protocol})}
+                          ariaLabel={st("firewall.fields.protocol")} className="bg-card"
+                          options={[{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }, { value: "icmp", label: "ICMP (ping)" }]} />
                       </div>
                     </div>
 
@@ -3334,29 +3321,18 @@ ${(report.sections && report.sections.length > 0) ? `
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.interfaceOptional")}</Label>
-                        <select
-                          value={newRule.iface}
-                          onChange={(e) => setNewRule({...newRule, iface: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="">{st("firewall.anyInterface")}</option>
-                          {networkInterfaces.map((iface) => (
-                            <option key={iface.name} value={iface.name}>
-                              {iface.name} ({interfaceTypeLabel(iface.type)}{iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})
-                            </option>
-                          ))}
-                        </select>
+                        <OptionSelect value={newRule.iface} onChange={iface => setNewRule({...newRule, iface})}
+                          ariaLabel={st("firewall.fields.interfaceOptional")} className="bg-card"
+                          options={[{ value: "", label: st("firewall.anyInterface") },
+                                    ...networkInterfaces.map(iface => ({ value: iface.name,
+                                      label: `${iface.name} (${interfaceTypeLabel(iface.type)}${iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})` }))]} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.applyTo")}</Label>
-                        <select
-                          value={newRule.level}
-                          onChange={(e) => setNewRule({...newRule, level: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="host">{st("firewall.hostFirewallThisNode")}</option>
-                          <option value="cluster">{st("firewall.clusterFirewallAllNodes")}</option>
-                        </select>
+                        <OptionSelect value={newRule.level} onChange={level => setNewRule({...newRule, level})}
+                          ariaLabel={st("firewall.fields.applyTo")} className="bg-card"
+                          options={[{ value: "host", label: st("firewall.hostFirewallThisNode") },
+                                    { value: "cluster", label: st("firewall.clusterFirewallAllNodes") }]} />
                       </div>
                     </div>
 
@@ -3485,29 +3461,21 @@ ${(report.sections && report.sections.length > 0) ? `
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.direction")}</Label>
-                                        <select value={editRule.direction} onChange={(e) => setEditRule({ ...editRule, direction: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="IN">IN</option>
-                                          <option value="OUT">OUT</option>
-                                        </select>
+                                        <OptionSelect value={editRule.direction} onChange={direction => setEditRule({ ...editRule, direction })}
+                                          ariaLabel={st("firewall.fields.direction")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} />
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.action")}</Label>
-                                        <select value={editRule.action} onChange={(e) => setEditRule({ ...editRule, action: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="ACCEPT">ACCEPT</option>
-                                          <option value="DROP">DROP</option>
-                                          <option value="REJECT">REJECT</option>
-                                        </select>
+                                        <OptionSelect value={editRule.action} onChange={action => setEditRule({ ...editRule, action })}
+                                          ariaLabel={st("firewall.fields.action")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "ACCEPT", label: "ACCEPT" }, { value: "DROP", label: "DROP" }, { value: "REJECT", label: "REJECT" }]} />
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.protocol")}</Label>
-                                        <select value={editRule.protocol} onChange={(e) => setEditRule({ ...editRule, protocol: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="tcp">TCP</option>
-                                          <option value="udp">UDP</option>
-                                          <option value="icmp">ICMP</option>
-                                        </select>
+                                        <OptionSelect value={editRule.protocol} onChange={protocol => setEditRule({ ...editRule, protocol })}
+                                          ariaLabel={st("firewall.fields.protocol")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }, { value: "icmp", label: "ICMP" }]} />
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.port")}</Label>
@@ -3523,15 +3491,10 @@ ${(report.sections && report.sections.length > 0) ? `
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.interface")}</Label>
-                                        <select value={editRule.iface} onChange={(e) => setEditRule({ ...editRule, iface: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="">{st("firewall.any")}</option>
-                                          {networkInterfaces.map((iface) => (
-                                            <option key={iface.name} value={iface.name}>
-                                              {iface.name} ({interfaceTypeLabel(iface.type)})
-                                            </option>
-                                          ))}
-                                        </select>
+                                        <OptionSelect value={editRule.iface} onChange={iface => setEditRule({ ...editRule, iface })}
+                                          ariaLabel={st("firewall.fields.interface")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "", label: st("firewall.any") },
+                                                    ...networkInterfaces.map(iface => ({ value: iface.name, label: `${iface.name} (${interfaceTypeLabel(iface.type)})` }))]} />
                                       </div>
                                       <div className="col-span-2 sm:col-span-1">
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.comment")}</Label>

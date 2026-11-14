@@ -17,6 +17,7 @@ import { getCategoryLabel } from "../lib/category-label"
 import { ThemeAwareLogo } from "./lxc-app-panel"
 import { CategoryIcon, CategoryTile } from "./category-icons"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
+import { Button } from "./ui/button"
 import { Switch } from "./ui/switch"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 
@@ -548,6 +549,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
   const { capabilities } = useAccess()
   const [detail, setDetail] = useState<CatalogDetail | null>(null)
   const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -557,7 +559,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
       .then(d => { if (active) setDetail(d) })
       .catch(() => { if (active) setFailed(true) })
     return () => { active = false }
-  }, [item.kind, item.id, language])
+  }, [item.kind, item.id, language, attempt])
 
   const d = detail
   const r = d?.resources || {}
@@ -667,7 +669,12 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
           {!d && !failed && (
             <div className="grid place-items-center py-24 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
           )}
-          {failed && <p className="px-6 py-12 text-center text-muted-foreground">{t("catalog.sheet.loadError")}</p>}
+          {failed && (
+            <div className="px-6 py-12 text-center text-muted-foreground space-y-3">
+              <p>{t("catalog.sheet.loadError")}</p>
+              <Button variant="outline" size="sm" onClick={() => setAttempt(n => n + 1)}>{t("actions.retry")}</Button>
+            </div>
+          )}
 
           {d && (
             <div className="grid gap-6 px-5 sm:px-6 pt-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -929,6 +936,7 @@ export function CatalogTab() {
   const [items, setItems] = useState<CatalogItem[] | null>(itemsCache.get(language)?.items || null)
   const [sections, setSections] = useState<Section[]>(itemsCache.get(language)?.sections || [])
   const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [query, setQuery] = useState("")
   const [view, setView] = useState<View | null>(null)
   const [open, setOpen] = useState<CatalogItem | null>(null)
@@ -965,7 +973,7 @@ export function CatalogTab() {
         .catch(() => { if (active && !quiet) setFailed(true) })
     load(false)
     return () => { active = false; timers.forEach(clearTimeout) }
-  }, [language])
+  }, [language, attempt])
 
   useEffect(() => {
     if (!showSettings) return
@@ -1108,7 +1116,12 @@ export function CatalogTab() {
       {!items && !failed && (
         <div className="grid place-items-center py-24 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
       )}
-      {failed && <p className="py-16 text-center text-muted-foreground">{t("catalog.loadError")}</p>}
+      {failed && (
+        <div className="py-16 text-center text-muted-foreground space-y-3">
+          <p>{t("catalog.loadError")}</p>
+          <Button variant="outline" size="sm" onClick={() => setAttempt(n => n + 1)}>{t("actions.retry")}</Button>
+        </div>
+      )}
 
       {items && results && (
         <div className="grid gap-6">

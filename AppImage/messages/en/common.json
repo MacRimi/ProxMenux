@@ -251,6 +251,7 @@
   },
   "actions": {
     "refresh": "Refresh",
+    "retry": "Retry",
     "toggleTheme": "Toggle theme",
     "openUserMenu": "Open user menu",
     "cancel": "Cancel",

@@ -124,6 +124,7 @@
   },
   "actions": {
     "refresh": "Uppdatera",
+    "retry": "Försök igen",
     "toggleTheme": "Växla tema",
     "openUserMenu": "Öppna användarmenyn",
     "cancel": "Avbryt",

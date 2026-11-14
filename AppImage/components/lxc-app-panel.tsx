@@ -39,6 +39,7 @@ import { getCategoryLabel } from "../lib/category-label"
 import { useT } from "@/lib/i18n/provider"
 import { useAccess } from "../lib/access"
 import { localizeAppEditorError } from "../lib/lxc-app-editor-errors"
+import { OptionSelect } from "./option-select"
 
 // installed_via is optional now — an empty value means "register only,
 // no version tracking, no warnings, just a clickable link". Docker
@@ -1805,21 +1806,18 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
               {draft.logo_url && LOCAL_LOGO_CACHE_PATH.test(draft.logo_url) &&
                 <ThemeAwareLogo src={draft.logo_url} className="h-8 w-8 shrink-0 object-contain" />}
               </div>
-                {iconPorts.length > 1 && <select
-                  aria-label={t("vmLxc.appEditor.localLogoPort")}
+                {iconPorts.length > 1 && <OptionSelect
+                  ariaLabel={t("vmLxc.appEditor.localLogoPort")}
                   value={selectedIconPort ? endpointKey(selectedIconPort) : ""}
-                  onChange={event => {
+                  onChange={value => {
                     iconRequest.current += 1
                     iconAbort.current?.abort()
                     setDiscoveringLocalLogo(false)
-                    setIconEndpoint(event.target.value)
+                    setIconEndpoint(value)
                   }}
-                  className="mt-2 rounded border bg-background px-2 py-1 text-xs"
-                >
-                  {iconPorts.map(entry => <option key={endpointKey(entry)} value={endpointKey(entry)}>
-                    {endpointKey(entry)}
-                  </option>)}
-                </select>}
+                  className="mt-2 h-8 w-auto gap-2 bg-background text-xs"
+                  options={iconPorts.map(entry => ({ value: endpointKey(entry), label: endpointKey(entry) }))}
+                />}
               <p className="text-[10px] text-muted-foreground mt-1">{t("vmLxc.appEditor.localLogoHelp")}</p>
             </div>
 

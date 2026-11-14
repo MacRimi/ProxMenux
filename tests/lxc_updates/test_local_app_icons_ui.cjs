@@ -85,8 +85,8 @@ async function main() {
   assert.equal(logo(existing), undefined, 'switching guest must discard the old editor')
   const f = await editor([8080, 8443])
   assert.equal(f.calls.filter(c => c.url.endsWith('/logo-discovery')).length, 0)
-  const select = flatten(f.tree()).find(n => n.props?.['aria-label'] === 'vmLxc.appEditor.localLogoPort')
-  select.props.onChange({target: {value: 'https:8443'}}); f.render(); f.render()
+  const select = flatten(f.tree()).find(n => n.props?.ariaLabel === 'vmLxc.appEditor.localLogoPort')
+  select.props.onChange('https:8443'); f.render(); f.render()
   await f.button('discoverLocalLogo').props.onClick(); f.render(); f.render()
   const request = f.calls.find(c => c.url.endsWith('/logo-discovery'))
   assert.deepEqual(JSON.parse(request.body), {port: 8443, scheme: 'https'})
@@ -113,7 +113,7 @@ async function main() {
       g.render({vmid: 102}); g.render({vmid: 101}); await g.settle()
     }
     if (action === 'endpoint-change') {
-      flatten(g.tree()).find(n => n.props?.['aria-label'] === 'vmLxc.appEditor.localLogoPort').props.onChange({target: {value: 'https:8443'}})
+      flatten(g.tree()).find(n => n.props?.ariaLabel === 'vmLxc.appEditor.localLogoPort').props.onChange('https:8443')
     }
     g.render(); g.render(); g.resolveIcon(); await pending; g.render()
     assert.ok(!String(logo(g)?.props.value || '').includes('/logo-cache/'), action + ' rejects late success')

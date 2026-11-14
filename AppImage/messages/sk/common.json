@@ -123,6 +123,7 @@
   },
   "actions": {
     "refresh": "Obnoviť",
+    "retry": "Skúsiť znova",
     "toggleTheme": "Prepnúť vzhľad",
     "openUserMenu": "Otvoriť používateľské menu",
     "cancel": "Zrušiť",

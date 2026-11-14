@@ -11,6 +11,7 @@ import { Button } from "./ui/button"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
 import { useAccess } from "../lib/access"
+import { OptionSelect } from "./option-select"
 
 // ─── Local subset of /api/vms shape ─────────────────────────────
 // Kept narrow on purpose — this component only needs what feeds a
@@ -425,35 +426,17 @@ export function AppsDashboard() {
         </div>
 
         {/* Category filter */}
-        <select
-          value={currentCat}
-          onChange={(e) => setCurrentCat(e.target.value)}
-          aria-label={t("apps.filterAriaLabel")}
-          className="h-9 pl-3 pr-8 text-sm bg-card border border-border rounded-md text-foreground appearance-none cursor-pointer max-w-[9.5rem] sm:max-w-none truncate focus:border-border/80 focus:outline-none focus:ring-1 focus:ring-ring bg-no-repeat bg-[right_0.6rem_center]"
-          style={{
-            backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>\")",
-          }}
-        >
-          <option value={ALL_CATEGORIES}>{t("apps.filterAll")}</option>
-          {sortedCategoryEntries.map(([cat, n]) => (
-            <option key={cat} value={cat}>{`${getCategoryLabel(t, cat)} · ${n}`}</option>
-          ))}
-        </select>
+        <OptionSelect value={currentCat} onChange={setCurrentCat} ariaLabel={t("apps.filterAriaLabel")}
+          className="w-auto max-w-[9.5rem] sm:max-w-none bg-card border-border text-foreground gap-2"
+          options={[{ value: ALL_CATEGORIES, label: t("apps.filterAll") },
+                    ...sortedCategoryEntries.map(([cat, n]) => ({ value: cat, label: `${getCategoryLabel(t, cat)} · ${n}` }))]} />
 
         {/* Sort */}
-        <select
-          value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortMode)}
-          aria-label={t("apps.sortAriaLabel")}
-          className="h-9 pl-3 pr-8 text-sm bg-card border border-border rounded-md text-foreground appearance-none cursor-pointer max-w-[8rem] sm:max-w-none truncate focus:border-border/80 focus:outline-none focus:ring-1 focus:ring-ring bg-no-repeat bg-[right_0.6rem_center]"
-          style={{
-            backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>\")",
-          }}
-        >
-          <option value="name">{t("apps.sortName")}</option>
-          <option value="ct">{t("apps.sortId")}</option>
-          <option value="category">{t("apps.sortCategory")}</option>
-        </select>
+        <OptionSelect value={sortMode} onChange={value => setSortMode(value as SortMode)} ariaLabel={t("apps.sortAriaLabel")}
+          className="w-auto max-w-[8rem] sm:max-w-none bg-card border-border text-foreground gap-2"
+          options={[{ value: "name", label: t("apps.sortName") },
+                    { value: "ct", label: t("apps.sortId") },
+                    { value: "category", label: t("apps.sortCategory") }]} />
 
         {/* Count — desktop only. Mobile gives the horizontal room to
             the + button instead so everything stays on one line. */}

@@ -277,6 +277,7 @@
   },
   "actions": {
     "refresh": "Recargar",
+    "retry": "Reintentar",
     "toggleTheme": "Alternar tema",
     "openUserMenu": "Abrir menú de usuario",
     "cancel": "Cancelar",
@@ -3758,7 +3759,7 @@
       "noNetworkDetected": "No se detectó ninguna red",
       "noNetworksDetected": "No se detectaron redes.",
       "recommended": "Recomendado",
-      "retry": "Rever",
+      "retry": "Reintentar",
       "errors": {
         "loadWizardFailed": "No se pudo cargar la configuración de Secure Gateway",
         "updateFailed": "No se pudo actualizar Secure Gateway",

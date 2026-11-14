@@ -124,6 +124,7 @@
   },
   "actions": {
     "refresh": "Actualiser",
+    "retry": "Réessayer",
     "toggleTheme": "Changer de thème",
     "openUserMenu": "Ouvrir le menu utilisateur",
     "cancel": "Annuler",
