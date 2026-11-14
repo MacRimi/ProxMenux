@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 
 interface DocHeaderProps {
   title: string
-  description?: string
+  description?: React.ReactNode
   section?: string
   estimatedMinutes?: number
   scriptPath?: string

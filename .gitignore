@@ -41,6 +41,14 @@ Thumbs.db
 /web/.next
 /web/out
 
+# Regenerated on every run: `tsc` writes its incremental cache, and Next
+# rewrites next-env.d.ts differently for `next dev` and `next build`.
+/web/tsconfig.tsbuildinfo
+/web/next-env.d.ts
+
+# Written by `next dev` when it detects an AI coding agent.
+/web/AGENTS.md
+
 # Search index written by `build`: pagefind --site out produces it into
 # public/pagefind/ and the GitHub Pages CI regenerates it on every deploy,
 # so committing it would only bloat the repo and add noise to `git status`.
