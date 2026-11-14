@@ -359,37 +359,5 @@
       "[\"whereNext\",\"items\",4,\"tail\"]": "847391bbf5f471151ac3"
     }
   },
-  "pending": {
-    "de": {
-      "docs/monitor/access-auth.json": [
-        "[\"pveAccounts\",\"intro\"]"
-      ]
-    },
-    "fr": {
-      "docs/monitor/access-auth.json": [
-        "[\"oidc\",\"fieldRows\",2,\"notes\"]"
-      ]
-    },
-    "sk": {
-      "docs/monitor/access-auth.json": [
-        "[\"oidc\",\"fieldRows\",2,\"notes\"]",
-        "[\"oidc\",\"fieldRows\",4,\"notes\"]",
-        "[\"password\",\"survivesBodyUsers\"]",
-        "[\"troubleshoot\",\"forbiddenBody\"]",
-        "[\"users\",\"areasBody\"]"
-      ]
-    },
-    "sv": {
-      "docs/monitor/access-auth.json": [
-        "[\"firstLaunch\",\"codeBody\"]",
-        "[\"oidc\",\"flowBody\"]",
-        "[\"password\",\"survivesBodyUsers\"]",
-        "[\"pveAccounts\",\"items\",0]",
-        "[\"troubleshoot\",\"forbiddenBody\"]",
-        "[\"troubleshoot\",\"noScreenBodyModes\"]",
-        "[\"users\",\"areasBody\"]",
-        "[\"users\",\"enforceBody\"]"
-      ]
-    }
-  }
+  "pending": {}
 }

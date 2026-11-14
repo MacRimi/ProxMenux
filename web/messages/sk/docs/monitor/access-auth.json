@@ -14,7 +14,7 @@
   },
   "introModes": {
     "title": "O prístupe sa rozhoduje pri prvej návšteve",
-    "body": "Nová inštalácia zobrazí pri prvej návšteve jediné dialógové okno a každá voľba v ňom vyžaduje <strong>kód nastavenia</strong> vytlačený v konzole inštalátorom.Možnosti sú lokálne účty, účty Proxmox VE, prístup len na čítanie pre každého, kto dosiahne Monitor, alebo otvorený prístup.S účtami má každý používateľ <strong>profil</strong>, ktorý nastavuje, čo môže vidieť a robiť, a server to vynucuje pri každej požiadavke.Dvojfaktorová autentifikácia (2FA) sa nakonfiguruje neskôr z <strong>karty Zabezpečenie</strong>."
+    "body": "Nová inštalácia zobrazí pri prvej návšteve jediné dialógové okno a každá voľba v ňom vyžaduje <strong>kód nastavenia</strong> vytlačený v konzole inštalátorom. Možnosti sú lokálne účty, účty Proxmox VE, prístup len na čítanie pre každého, kto dosiahne Monitor, alebo otvorený prístup. S účtami má každý používateľ <strong>profil</strong>, ktorý nastavuje, čo môže vidieť a robiť, a server to vynucuje pri každej požiadavke. Dvojfaktorová autentifikácia (2FA) sa nakonfiguruje neskôr z <strong>karty Zabezpečenie</strong>."
   },
   "reaching": {
     "heading": "Prístup k panelu",
@@ -25,7 +25,7 @@
     "heading": "Postup pri prvom spustení",
     "introSetup": "Pri prvej návšteve dashboard zavolá <code>GET /api/auth/status</code>.Aj keď nebol zvolený žiadny režim prístupu, zobrazí sa dialógové okno <em>\"Chrániť svoj informačný panel?\"</em> s nasledujúcimi možnosťami:",
     "imageAlt": "Úvodný dialóg „Chrániť panel?“ s voľbami nastaviť heslo alebo pokračovať bez ochrany",
-    "imageCaptionChoice": "Dialóg pri prvej návšteve.Heslo vytvorí prvý lokálny účet;pokračovanie bez ochrany vedie k režimu len na čítanie a otvorenému režimu.",
+    "imageCaptionChoice": "Dialóg pri prvej návšteve. Heslo vytvorí prvý lokálny účet;pokračovanie bez ochrany vedie k režimu len na čítanie a otvorenému režimu.",
     "headerButton": "Tlačidlo",
     "headerWhat": "Čo sa stane?",
     "headerApi": "Volanie API",
@@ -37,12 +37,12 @@
       },
       {
         "button": "Použite Proxmox VE účty",
-        "what": "Ponúkané pod rovnakým formulárom.Používatelia a sféry Proxmox VE sa prihlasujú bez lokálneho účtu Monitora;pozri <em>Proxmox VE účty</em> nižšie.",
+        "what": "Ponúkané pod rovnakým formulárom. Používatelia a sféry Proxmox VE sa prihlasujú bez lokálneho účtu Monitora;pozri <em>Proxmox VE účty</em> nižšie.",
         "api": "POST /api/auth/mode"
       },
       {
         "button": "Nie, pokračovať bez ochrany → Použiť len na čítanie",
-        "what": "Každý, kto dosiahne Monitor, ho vidí, ale nemôže otvárať terminály, spúšťať skripty ani nič meniť.Čítania, ktoré obsahujú tajomstvá, ako sú príkazové riadky procesu a heslo hosťa v cloude, sú skryté.",
+        "what": "Každý, kto dosiahne Monitor, ho vidí, ale nemôže otvárať terminály, spúšťať skripty ani nič meniť. Čítania, ktoré obsahujú tajomstvá, ako sú príkazové riadky procesu a heslo hosťa v cloude, sú skryté.",
         "api": "POST /api/auth/mode"
       },
       {
@@ -52,19 +52,19 @@
       }
     ],
     "codeTitle": "Inštalačný kód",
-    "codeBody": "Inštalátor novej inštalácie zapíše jednorazový kód do <code>/usr/local/share/proxmenux/monitor-setup-code</code> (režim <code>0600</code>) a vytlačí ho na konci inštalácie.Každý výber dialógu prvej návštevy si to vyžaduje a prvé rozhodnutie to pohltí.<code>menu</code> → <strong>Nastavenia</strong> → <strong>Zobraziť kód nastavenia monitora</strong> zobrazí kód alebo vytvorí nový, ak žiadny neexistuje.Opustenie režimu iba na čítanie si tiež vyžiada kód nastavenia.Aktualizácia existujúcej inštalácie zachováva režim prístupu, ktorý sa už používa, a nevytvára žiadny kód.",
+    "codeBody": "Inštalátor novej inštalácie zapíše jednorazový kód do <code>/usr/local/share/proxmenux/monitor-setup-code</code> (režim <code>0600</code>) a vytlačí ho na konci inštalácie. Každý výber dialógu prvej návštevy si to vyžaduje a prvé rozhodnutie to pohltí.<code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong> zobrazí kód alebo vytvorí nový, ak žiadny neexistuje. Opustenie režimu iba na čítanie si tiež vyžiada kód nastavenia. Aktualizácia existujúcej inštalácie zachováva režim prístupu, ktorý sa už používa, a nevytvára žiadny kód.",
     "modesTitle": "Režimy prístupu",
-    "modesIntro": "<strong>Zabezpečenie</strong> → <strong>Prístup a overenie</strong> zobrazuje používaný režim:",
+    "modesIntro": "<strong>Bezpečnosť</strong> → <strong>Prístup a prihlásenie</strong> zobrazuje používaný režim:",
     "headerMode": "Režim",
     "headerWho": "Kto sa dostane dovnútra a čo môže urobiť",
     "modeRows": [
       {
         "mode": "Miestne účty",
-        "who": "Každý používateľ sa prihlási pomocou používateľského mena, hesla a voliteľného 2FA a získa profil, ktorý mu pridelil správca.Proxmox VE účty a OpenID Connect sa môžu prihlásiť spolu."
+        "who": "Každý používateľ sa prihlási pomocou používateľského mena, hesla a voliteľného 2FA a získa profil, ktorý mu pridelil správca. Proxmox VE účty a OpenID Connect sa môžu prihlásiť spolu."
       },
       {
         "mode": "Proxmox VE účty",
-        "who": "Používatelia Proxmox VE sa prihlasujú pomocou svojej sféry a druhého faktora a neexistuje žiadny lokálny účet.Používateľ Proxmox VE s <code>Sys.Modify</code> na <code>/</code>, ako napríklad <code>root@pam</code>, spravuje monitor."
+        "who": "Používatelia Proxmox VE sa prihlasujú pomocou svojej sféry a druhého faktora a neexistuje žiadny lokálny účet. Používateľ Proxmox VE s <code>Sys.Modify</code> na <code>/</code>, ako napríklad <code>root@pam</code>, spravuje monitor."
       },
       {
         "mode": "Len na čítanie",
@@ -138,7 +138,7 @@
       }
     ],
     "changeTitle": "Zmena režimu prístupu",
-    "changeBody": "<strong>Zabezpečenie</strong> → <strong>Prístup a overenie</strong> → <strong>Upraviť</strong> prepína medzi režimami.Odstránenie hesla odstráni každého lokálneho používateľa a jeho 2FA.API tokeny a zoznam odvolaní sú uchovávané a ďalšie nastavenie účtu prevezme API tokeny hlavného administrátora.Pri opustení režimu len na čítanie sa zobrazí výzva na zadanie kódu nastavenia."
+    "changeBody": "<strong>Bezpečnosť</strong> → <strong>Prístup a prihlásenie</strong> → <strong>Upraviť</strong> prepína medzi režimami. Odstránenie hesla odstráni každého lokálneho používateľa a jeho 2FA.API tokeny a zoznam odvolaní sú uchovávané a ďalšie nastavenie účtu prevezme API tokeny hlavného administrátora. Pri opustení režimu len na čítanie sa zobrazí výzva na zadanie kódu nastavenia."
   },
   "password": {
     "heading": "Overenie hesla",
@@ -196,18 +196,18 @@
     "recoverTitle": "Obnovenie strateného hesla",
     "recoverIntro": "Obnova hesla vyžaduje prístup k shellu hostiteľa. ProxMenux ponúka sprievodcu resetovaním v konfiguračnej ponuke, aby ste nemuseli ručne upravovať <code>auth.json</code>:",
     "survivesTitle": "Čo prežíva reset",
-    "survivesBodyUsers": "Only the sign-in is reset. The <code>jwt_secret</code>, the registered <code>api_tokens</code> and the revocation list are kept, and the next account set up takes over the API tokens of the main administrator, so Home Assistant and other integrations that use them keep working. API tokens of the other users stop working with their users. For a fully clean slate (a new JWT secret and every token invalid), delete <code>auth.json</code>, restart the service and create a setup code with <code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong>.",
+    "survivesBodyUsers": "Obnoví sa len prihlásenie. <code>jwt_secret</code>, zaregistrované <code>api_tokens</code> a zoznam zrušených tokenov zostávajú a ďalší nastavený účet preberie API tokeny hlavného administrátora, takže Home Assistant a ďalšie integrácie, ktoré ich používajú, fungujú ďalej. API tokeny ostatných používateľov prestanú fungovať spolu s ich používateľmi. Pre úplne čistý začiatok (nové tajomstvo JWT a všetky tokeny neplatné) treba odstrániť <code>auth.json</code>, reštartovať službu a vytvoriť kód nastavenia cez <code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong>.",
     "physicalTitle": "Predpoklad fyzického prístupu",
     "physicalBody": "Vyžaduje <strong>shell používateľa root na hostiteľovi</strong>. Kto spustí <code>menu</code> ako root, už ovláda celý systém; reset hesla mu nepridáva práva. Prihlásenie do Monitora preto nechráni pred osobou s prístupom root."
   },
   "users": {
     "heading": "Používatelia a profily",
-    "intro": "S lokálnymi účtami má Monitor niekoľko používateľov.Administrátori ich spravujú v časti <strong>Zabezpečenie</strong> → <strong>Používatelia</strong> → <strong>Upraviť</strong>: pridanie používateľa s heslom a profilom, zmena profilov, nastavenie nového používateľa alebo odstránenie používateľa, odstránenie používateľa, odstránenie používateľaPrvý účet je správca.",
+    "intro": "S lokálnymi účtami má Monitor niekoľko používateľov. Administrátori ich spravujú v časti <strong>Bezpečnosť</strong> → <strong>Používatelia</strong> → <strong>Upraviť</strong>: pridanie používateľa s heslom a profilom, zmena profilov, nastavenie nového používateľa alebo odstránenie používateľa, odstránenie používateľa, odstránenie používateľaPrvý účet je správca.",
     "headerProfile": "Profil",
     "headerAllows": "Čo to umožňuje",
     "profileRows": [
       {
-        "profile": "Správca",
+        "profile": "Administrátor",
         "allows": "Všetko vrátane používateľov a profilov, režimu prístupu a prihlasovacích nastavení, SSL, firewallu, Fail2Ban, upozornení, reštartovania a vypnutia hostiteľa, Audit & Report a načítania, ktoré obsahujú tajomstvá."
       },
       {
@@ -223,32 +223,32 @@
         "allows": "Každá stránka bez akcií."
       },
       {
-        "profile": "Vlastné",
+        "profile": "Vlastný",
         "allows": "Oblasti a akcie vybrané po jednej."
       }
     ],
     "customTitle": "Vlastný profil",
-    "customIntro": "Vlastný profil kombinuje aspoň jednu oblasť s ktoroukoľvek z piatich akcií.Správa nie je súčasťou vlastného profilu.",
+    "customIntro": "Vlastný profil kombinuje aspoň jednu oblasť s ktoroukoľvek z piatich akcií. Správa nie je súčasťou vlastného profilu.",
     "actionItems": [
-      "<strong>Spúšťanie skriptov a nástrojov</strong>: ProxMenux scripts, Lynis, SMART testy, audity a nasadenia aplikácií.",
-      "<strong>Ovládajte virtuálne počítače a LXC</strong>: spúšťajte, zastavujte a upravujte hostí a ich aplikácie.",
-      "<strong>Správa záloh</strong>: úlohy zálohovania hostiteľa a hostí, servery PBS, obnovy a sťahovanie archívov.",
-      "<strong>Aktualizácia</strong>: aktualizácie hostiteľa, ProxMenux, LXC a aplikácií.",
-      "<strong>Otvorené terminály</strong>: terminály hostiteľa, LXC a VM."
+      "<strong>Spúšťať skripty a nástroje</strong>: ProxMenux scripts, Lynis, SMART testy, audity a nasadenia aplikácií.",
+      "<strong>Ovládať VM a LXC</strong>: spúšťajte, zastavujte a upravujte hostí a ich aplikácie.",
+      "<strong>Spravovať zálohy</strong>: úlohy zálohovania hostiteľa a hostí, servery PBS, obnovy a sťahovanie archívov.",
+      "<strong>Aktualizovať</strong>: aktualizácie hostiteľa, ProxMenux, LXC a aplikácií.",
+      "<strong>Otvárať terminály</strong>: terminály hostiteľa, LXC a VM."
     ],
-    "areasBody": "The areas are the tabs of the dashboard: <em>Overview</em>, <em>Apps</em>, <em>Menux</em>, <em>VMs & LXCs</em>, <em>Node</em> (storage, network, hardware), <em>Backup</em> and <em>System Logs</em>. A tab outside the profile is hidden, and the server refuses its data. The header, the health status, the own account and the Security, Settings and About pages are available to every profile; Audit & Report is reserved to administrators.",
+    "areasBody": "Oblasti sú karty panela: <em>Prehľad</em>, <em>Aplikácie</em>, <em>Menux</em>, <em>VM a LXC</em>, <em>Server</em> (úložisko, sieť, hardvér), <em>Záloha</em> a <em>Systémové záznamy</em>. Karta mimo profilu je skrytá a server jej údaje odmietne. Hlavička, stav zdravia, vlastný účet a stránky Bezpečnosť, Nastavenia a O aplikácii sú dostupné pre každý profil; Audit & Report je vyhradený administrátorom.",
     "enforceTitle": "Vynútené serverom",
-    "enforceBody": "Každá cesta API vyžaduje povolenie (<code>AppImage/scripts/permissions.py</code>).Žiadosť bez neho dostane HTTP <code>403</code> s chýbajúcim povolením v poli <code>permission</code> a odmietnutie sa zaznamená do aktivity prístupu.Prístrojová doska skrýva tlačidlá, ktoré profil nemôže použiť.Terminály, spúšťanie skriptov, aktualizácie a sťahovanie sa začína krátkodobým lístkom, ktorý nesie oprávnenia toho, kto o to požiadal.Zmena profilu sa vzťahuje na otvorené relácie naraz.",
+    "enforceBody": "Každá cesta API vyžaduje povolenie (<code>AppImage/scripts/permissions.py</code>). Žiadosť bez neho dostane HTTP <code>403</code> s chýbajúcim povolením v poli <code>permission</code> a odmietnutie sa zaznamená do aktivity prístupu. Prístrojová doska skrýva tlačidlá, ktoré profil nemôže použiť. Terminály, spúšťanie skriptov, aktualizácie a sťahovanie sa začína krátkodobým lístkom, ktorý nesie oprávnenia toho, kto o to požiadal. Zmena profilu sa vzťahuje na otvorené relácie naraz.",
     "accountsTitle": "Heslá, 2FA, deaktivácia a API tokeny",
     "accountItems": [
       "Každý používateľ má svoje vlastné heslo, 2FA, zobrazované meno a avatar a spravuje ich zo svojho účtu.",
-      "Nové heslo nastavené používateľom alebo správcom ukončí ostatné relácie daného používateľa.API tokeny naďalej fungujú.",
-      "Deaktivovaný používateľ si zachová svoje nastavenia, ale nemôže sa prihlásiť a jeho relácie a API tokeny prestanú fungovať, kým ich administrátor znova neaktivuje.Pokus o prihlásenie deaktivovaného používateľa je zodpovedaný ako nesprávne heslo.",
+      "Nové heslo nastavené používateľom alebo správcom ukončí ostatné relácie daného používateľa. API tokeny naďalej fungujú.",
+      "Deaktivovaný používateľ si zachová svoje nastavenia, ale nemôže sa prihlásiť a jeho relácie a API tokeny prestanú fungovať, kým ich administrátor znova neaktivuje. Pokus o prihlásenie deaktivovaného používateľa je zodpovedaný ako nesprávne heslo.",
       "Monitor si ponecháva aspoň jedného aktívneho správcu: posledného nemožno odstrániť, deaktivovať alebo prideliť iný profil a žiadny správca nemôže deaktivovať svoj vlastný účet.",
-      "API tokeny patria používateľovi, ktorý ich vygeneroval, a nikdy nerobia viac ako profil tohto používateľa;token s rozsahom iba na čítanie nerobí viac ako pozorovateľ.Odstránenie používateľa ukončí jeho relácie a tokeny API, a to aj vtedy, ak sa znova vytvorí používateľ s rovnakým menom."
+      "API tokeny patria používateľovi, ktorý ich vygeneroval, a nikdy nerobia viac ako profil tohto používateľa;token s rozsahom iba na čítanie nerobí viac ako pozorovateľ. Odstránenie používateľa ukončí jeho relácie a tokeny API, a to aj vtedy, ak sa znova vytvorí používateľ s rovnakým menom."
     ],
     "scopeTitle": "Čo pokrývajú profily",
-    "scopeBody": "Profily sa vzťahujú na monitor: jeho prístrojovú dosku, jeho API a jeho terminály.Neobmedzujú SSH, webové rozhranie Proxmox VE, Proxmox VE API ani žiadny iný prístup k hostiteľovi.Koreňový shell na hostiteľovi môže zmeniť <code>auth.json</code> a s ním aj každý profil."
+    "scopeBody": "Profily sa vzťahujú na monitor: jeho prístrojovú dosku, jeho API a jeho terminály. Neobmedzujú SSH, webové rozhranie Proxmox VE, Proxmox VE API ani žiadny iný prístup k hostiteľovi. Koreňový shell na hostiteľovi môže zmeniť <code>auth.json</code> a s ním aj každý profil."
   },
   "twofa": {
     "heading": "Dvojfaktorové overenie (TOTP)",
@@ -278,7 +278,7 @@
         "notes": "Šifrovaná synchronizácia medzi zariadeniami. Podpora desktopovej aplikácie sa skončila 19. marca 2024."
       },
       {
-        "name": "Heslá Apple",
+        "name": "Apple Passwords",
         "href": "https://support.apple.com/guide/passwords/welcome/mac",
         "platforms": "iOS, iPadOS, macOS, visionOS, Windows (cez iCloud)",
         "notes": "Súčasť systémov Apple; samostatná aplikácia Passwords od iOS 18 / macOS Sequoia. Ukladá TOTP pri hesle a synchronizuje cez iCloud Kľúčenku."
@@ -290,7 +290,7 @@
         "notes": "Otvorený zdrojový kód. TOTP možno uložiť pri heslách v trezore. Je to pohodlné, ale neoddeľuje to faktory na dve zariadenia."
       },
       {
-        "name": "1Heslo",
+        "name": "1Password",
         "href": "https://1password.com/",
         "platforms": "iOS, Android, desktop, prehliadač",
         "notes": "Podobne ako Bitwarden: TOTP v trezore hesiel. Predplatné."
@@ -391,18 +391,18 @@
   },
   "pveAccounts": {
     "heading": "Proxmox VE účty",
-    "intro": "Používatelia a sféry Proxmox VE sa môžu prihlásiť do Monitora spolu s lokálnymi účtami alebo namiesto nich.<strong>Zabezpečenie</strong> → <strong>Účty Proxmox VE</strong> → <strong>Upraviť</strong> ich zapne.Prihlasovacia obrazovka potom obsahuje kartu <em>Proxmox VE</em> s používateľom, heslom a sférou, za ktorou nasleduje druhý faktor (kód TOTP alebo kľúč na obnovenie), ak ho má účet.",
+    "intro": "Používatelia a sféry Proxmox VE sa môžu prihlásiť do Monitora spolu s lokálnymi účtami alebo namiesto nich.<strong>Bezpečnosť</strong> → <strong>Účty Proxmox VE</strong> → <strong>Upraviť</strong> ich zapne. Prihlasovacia obrazovka potom obsahuje kartu <em>Proxmox VE</em> s používateľom, heslom a sférou, za ktorou nasleduje druhý faktor (kód TOTP alebo kľúč na obnovenie), ak ho má účet.",
     "items": [
-      "Monitor neuchováva žiadnu vlastnú reláciu: prehliadač drží lístok Proxmox VE a Monitor ho porovná s miestnym Proxmox VE API (<code>/access/permissions</code>) maximálne raz za minútu.Platnosť, sféry, 2FA a oprávnenia zostávajú tými Proxmox VE a privilégium, ktoré je tam odstránené, sa dostane na monitor do minúty.",
-      "Účty, ktoré sa prihlasujú pomocou bezpečnostného kľúča (WebAuthn) alebo prostredníctvom OpenID sféry pripojenia Proxmox VE, sa prihláste na webovom rozhraní Proxmox VE.Keď je monitor otvorený cez HTTPS s rovnakým názvom hostiteľa, táto relácia sa tiež prihlási do monitora.",
+      "Monitor neuchováva žiadnu vlastnú reláciu: prehliadač drží lístok Proxmox VE a Monitor ho porovná s miestnym Proxmox VE API (<code>/access/permissions</code>) maximálne raz za minútu. Platnosť, sféry, 2FA a oprávnenia zostávajú tými Proxmox VE a privilégium, ktoré je tam odstránené, sa dostane na monitor do minúty.",
+      "Účty, ktoré sa prihlasujú pomocou bezpečnostného kľúča (WebAuthn) alebo prostredníctvom OpenID Connect pripojenia Proxmox VE, sa prihláste na webovom rozhraní Proxmox VE.Keď je monitor otvorený cez HTTPS s rovnakým názvom hostiteľa, táto relácia sa tiež prihlási do monitora.",
       "Prihlásenie vyžaduje <code>Sys.Audit</code> na <code>/</code>."
     ],
     "profilesTitle": "Profily Proxmox VE účtov",
-    "profilesBody": "Bez pravidla rozhodujú privilégiá pre <code>/</code>: <code>Sys.Modify</code> dáva administrátorovi a samotný <code>Sys.Audit</code> dáva pozorovateľovi.Tá istá karta obsahuje pravidlá, ktoré priraďujú profil používateľovi Proxmox VE (napríklad <code>alice@pve</code>) alebo skupine.Používateľské pravidlo má prednosť;inak platí prvé pravidlo skupiny používateľov, pričom skupiny sa čítajú z <code>/etc/pve/user.cfg</code>.Platí pravidlo podľa výberu bez ohľadu na privilégiá.Pravidlá ukladania, ktoré by odňali správu účtu, sú odmietnuté."
+    "profilesBody": "Bez pravidla rozhodujú privilégiá pre <code>/</code>: <code>Sys.Modify</code> dáva administrátorovi a samotný <code>Sys.Audit</code> dáva pozorovateľovi. Tá istá karta obsahuje pravidlá, ktoré priraďujú profil používateľovi Proxmox VE (napríklad <code>alice@pve</code>) alebo skupine. Používateľské pravidlo má prednosť;inak platí prvé pravidlo skupiny používateľov, pričom skupiny sa čítajú z <code>/etc/pve/user.cfg</code>.Platí pravidlo podľa výberu bez ohľadu na privilégiá. Pravidlá ukladania, ktoré by odňali správu účtu, sú odmietnuté."
   },
   "oidc": {
-    "heading": "OpenID Pripojiť (OIDC)",
-    "intro": "Poskytovateľ pripojenia OpenID môže ľudí prihlásiť do monitora spolu s lokálnymi účtami.<strong>Zabezpečenie</strong> → <strong>OpenID Connect (OIDC)</strong> → <strong>Upraviť</strong> je k dispozícii, keď sa používajú nasledujúce nastavenia: a trvá",
+    "heading": "OpenID Connect (OIDC)",
+    "intro": "Poskytovateľ pripojenia OpenID Connect ľudí prihlásiť do monitora spolu s lokálnymi účtami.<strong>Bezpečnosť</strong> → <strong>OpenID Connect (OIDC)</strong> → <strong>Upraviť</strong> je k dispozícii, keď sa používajú nasledujúce nastavenia: a trvá",
     "headerField": "Nastavenie",
     "headerNotes": "Poznámky",
     "fieldRows": [
@@ -412,24 +412,24 @@
       },
       {
         "field": "URL vydavateľa",
-        "notes": "HTTPS URL poskytovateľa.Keď sú nastavenia uložené, monitor načíta svoju <code>/.well-known/openid-configuration</code>."
+        "notes": "HTTPS URL poskytovateľa. Keď sú nastavenia uložené, monitor načíta svoju <code>/.well-known/openid-configuration</code>."
       },
       {
         "field": "ID klienta a tajný kľúč",
-        "notes": "Of the client registered at the provider. Client authentication: <code>client_secret_basic</code>, <code>client_secret_post</code> or <code>none</code>."
+        "notes": "Klienta zaregistrovaného u poskytovateľa. Overenie klienta: <code>client_secret_basic</code>, <code>client_secret_post</code> alebo <code>none</code>."
       },
       {
         "field": "Verejná adresa URL",
-        "notes": "HTTPS URL, ktorú prehliadač používa na dosiahnutie monitora.Identifikátor URI presmerovania na registráciu u poskytovateľa je <code>&lt;public_url&gt;/api/auth/oidc/callback</code>."
+        "notes": "HTTPS URL, ktorú prehliadač používa na dosiahnutie monitora. Identifikátor URI presmerovania na registráciu u poskytovateľa je <code>&lt;public_url&gt;/api/auth/oidc/callback</code>."
       },
       {
         "field": "Povolené predmety",
-        "notes": "The <code>sub</code> claim of each person allowed in, with a name to recognise it and a profile. A subject without a profile chosen is an Administrator. Anyone else signed in at the provider is refused."
+        "notes": "Nárok <code>sub</code> každej osoby s prístupom, s názvom na jej rozpoznanie a profilom. Subjekt bez zvoleného profilu je administrátor. Ktokoľvek iný prihlásený u poskytovateľa je odmietnutý."
       }
     ],
-    "flowBody": "Prihlásenie používa tok autorizačného kódu s PKCE (<code>S256</code>) a nonce a prijíma tokeny ID podpísané pomocou <code>RS256</code> alebo <code>ES256</code>.Spätné volanie odovzdá prehliadaču jednorazový kód platný 30 sekúnd, ktorý si môže vymeniť za reláciu iba prehliadač, ktorý spustil prihlásenie.Relácia patrí k identite <code>oidc:&lt;sub&gt;</code> a má profil svojho predmetu.Certifikát poskytovateľa sa kontroluje oproti úložisku CA hostiteľa (<code>/etc/ssl/certs/ca-certificates.crt</code>);poskytovateľ s certifikátom od internej CA potrebuje, aby CA pridala <code>update-ca-certificates</code>.",
+    "flowBody": "Prihlásenie používa tok autorizačného kódu s PKCE (<code>S256</code>) a nonce a prijíma tokeny ID podpísané pomocou <code>RS256</code> alebo <code>ES256</code>.Spätné volanie odovzdá prehliadaču jednorazový kód platný 30 sekúnd, ktorý si môže vymeniť za reláciu iba prehliadač, ktorý spustil prihlásenie. Relácia patrí k identite <code>oidc:&lt;sub&gt;</code> a má profil svojho predmetu. Certifikát poskytovateľa sa kontroluje oproti úložisku CA hostiteľa (<code>/etc/ssl/certs/ca-certificates.crt</code>);poskytovateľ s certifikátom od internej CA potrebuje, aby CA pridala <code>update-ca-certificates</code>.",
     "saveTitle": "Uložením nastavení sa ukončia relácie OIDC",
-    "saveBody": "Každé uloženie nastavení OpenID Connect, vrátane zmeny profilu, ukončí všetky otvorené relácie OIDC a nové nastavenia sa použijú od nasledujúceho prihlásenia.Odstránenie subjektu zo zoznamu ukončí jeho prístup."
+    "saveBody": "Každé uloženie nastavení OpenID Connect, vrátane zmeny profilu, ukončí všetky otvorené relácie OIDC a nové nastavenia sa použijú od nasledujúceho prihlásenia. Odstránenie subjektu zo zoznamu ukončí jeho prístup."
   },
   "https": {
     "heading": "HTTPS",
@@ -460,15 +460,15 @@
   },
   "activity": {
     "heading": "Aktivita prístupu",
-    "intro": "<strong>Bezpečnosť</strong> → <strong>Aktivita prístupu</strong> zoznamy, najnovšie ako prvé, kto čo urobil s prístupom k Monitoru, s účtom a adresou klienta.Vidia to iba správcovia.",
+    "intro": "<strong>Bezpečnosť</strong> → <strong>Aktivita prístupu</strong> zoznamy, najnovšie ako prvé, kto čo urobil s prístupom k Monitoru, s účtom a adresou klienta. Vidia to iba správcovia.",
     "items": [
       "Úspešné alebo neúspešné prihlásenia pomocou metódy (miestny účet, Proxmox VE alebo OpenID Connect) a či bol použitý druhý faktor.",
       "Vytvorenie účtu, zmeny režimu prístupu, zmeny hesla a 2FA a vytvorené alebo zrušené API tokeny.",
       "Používatelia pridaní, odstránení, deaktivovaní alebo aktivovaní, zmeny profilu a heslá nastavené administrátorom.",
-      "Zmeny Proxmox VE účtov, ich profilových pravidiel a OpenID nastavení Connect.",
-      "Každú akciu profil odmietol s trasou a chýbajúcim povolením.Opakované odmietnutie rovnakým účtom na tej istej trase sa zaznamenáva raz za minútu."
+      "Zmeny Proxmox VE účtov, ich profilových pravidiel a OpenID Connect Connect.",
+      "Každú akciu profil odmietol s trasou a chýbajúcim povolením. Opakované odmietnutie rovnakým účtom na tej istej trase sa zaznamenáva raz za minútu."
     ],
-    "outro": "Heslá, kódy a tokeny sa nikdy nezaznamenávajú.Udalosti sa uchovávajú 90 dní v <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, režim <code>0600</code>) a administrátorom ich poskytuje <code>GET /api/auth/events</code>."
+    "outro": "Heslá, kódy a tokeny sa nikdy nezaznamenávajú. Udalosti sa uchovávajú 90 dní v <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, režim <code>0600</code>) a administrátorom ich poskytuje <code>GET /api/auth/events</code>."
   },
   "audit": {
     "heading": "Auditný záznam",
@@ -491,15 +491,15 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "noScreenTitle": "Obrazovka prvého spustenia sa nikdy neobjaví",
-    "noScreenBodyModes": "Režim prístupu sa už používa.<code>menu</code> → <strong>Nastavenia</strong> → <strong>Resetovať ProxMenux Monitor heslo</strong> vráti dialógové okno prvej návštevy a vytlačí nový kód nastavenia.Ak chcete začať z prázdnej konfigurácie:",
+    "noScreenBodyModes": "Režim prístupu sa už používa.<code>menu</code> → <strong>Settings</strong> → <strong>Reset ProxMenux Monitor Password</strong> vráti dialógové okno prvej návštevy a vytlačí nový kód nastavenia. Ak chcete začať z prázdnej konfigurácie:",
     "noScreenOutro": "Vymaže stav overenia, tajné kľúče TOTP aj tokeny API. Ak ich chcete zachovať, najprv zálohujte <code>auth.json</code>.",
     "tokenTitle": "HTTP 401 pri každej požiadavke s predtým funkčným tokenom API",
     "tokenBody": "Token vypršal po 365 dňoch alebo je v <code>revoked_tokens</code>. V nastaveniach vytvorte nový a aktualizujte integráciu. Overenie:",
     "tokenOutro": "Neplatné alebo zrušené tokeny vrátia <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Po zapnutí 2FA sa nedá prihlásiť a autentifikátor nie je dostupný",
-    "no2faBodyUsers": "Použite záložný kód v poli TOTP.Administrátor odstráni 2FA iného používateľa v <strong>Zabezpečenie</strong> → <strong>Používatelia</strong> → <strong>Upraviť</strong>.Pre hlavného administrátora upravte <code>/root/.config/proxmenux-monitor/auth.json</code> v hostiteľskom prostredí, nastavte <code>totp_enabled</code> na <code>false</code> a reštartujte službu.",
+    "no2faBodyUsers": "Použite záložný kód v poli TOTP.Administrátor odstráni 2FA iného používateľa v <strong>Bezpečnosť</strong> → <strong>Používatelia</strong> → <strong>Upraviť</strong>.Pre hlavného administrátora upravte <code>/root/.config/proxmenux-monitor/auth.json</code> v hostiteľskom prostredí, nastavte <code>totp_enabled</code> na <code>false</code> a reštartujte službu.",
     "forbiddenTitle": "Akcia odpovedá na HTTP 403",
-    "forbiddenBody": "The profile of the account lacks the permission named in the <code>permission</code> field of the answer, and the refusal appears in the access activity. An administrator changes the profile in <strong>Security</strong> → <strong>Users</strong>, in the rules of the Proxmox VE accounts or in the allowed subjects of OpenID Connect.",
+    "forbiddenBody": "Profilu účtu chýba oprávnenie uvedené v poli <code>permission</code> odpovede a odmietnutie sa zobrazí v aktivite prístupu. Administrátor zmení profil v <strong>Bezpečnosť</strong> → <strong>Používatelia</strong>, v pravidlách účtov Proxmox VE alebo v povolených subjektoch OpenID Connect.",
     "wsTitle": "Reverzný proxy funguje, ale záložka terminálu sa odpojí každú minútu",
     "wsBody": "Časový limit nečinnosti WebSocket v proxy. Zvýšte limit čítania (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> vo vstupnom bode alebo middleware). V Nginx overte <code>proxy_set_header Upgrade $http_upgrade</code> a <code>Connection \"upgrade\"</code>."
   },
