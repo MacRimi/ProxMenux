@@ -1113,10 +1113,12 @@ class EmailChannel(NotificationChannel):
                 stripped = line.strip()
                 if not stripped:
                     continue
-                # Try to split "Label: value" patterns
-                if ':' in stripped:
+                # Try to split "Label: value" patterns. A bullet line of a
+                # digest ("• 14:47  title"), a clock time and a URL are not one.
+                if ':' in stripped and not stripped.startswith('•'):
                     lbl, _, val = stripped.partition(':')
-                    if val.strip() and len(lbl) < 40:
+                    clock = lbl[-1:].isdigit() and val[:2].isdigit()
+                    if val.strip() and len(lbl) < 40 and not clock and not val.startswith('//'):
                         detail_rows.append((html_mod.escape(lbl.strip()), html_mod.escape(val.strip())))
                         continue
                 detail_rows.append(('', html_mod.escape(stripped)))

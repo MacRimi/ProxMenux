@@ -41,6 +41,7 @@ PYTHON_FILES = (
     "tests/storage/test_nvme_status_message.py",
     "tests/test_fastfetch_config_generation.py",
     "tests/test_notification_active_payloads.py",
+    "tests/test_email_digest_rows.py",
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
