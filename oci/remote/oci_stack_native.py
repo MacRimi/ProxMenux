@@ -29,6 +29,7 @@ import oci_zfs_recovery as zfs_recovery
 from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from oci_update_current import resolve_archive
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
+import oci_mount_lock
 
 
 def tcp_target(check):
@@ -157,7 +158,9 @@ class NativeAdapter:
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
                 if not state.get('replacement_intent') and not instances.same_config_except_notes(record, config, ignore_tags=True):
-                    raise ValueError(translate('A member configuration changed during the preparation'))
+                    changed = instances.changed_settings(record, config, ignore_tags=True)
+                    raise ValueError('%s (CT %s: %s)' % (translate('A member configuration changed during the preparation'),
+                                                        vmid, ', '.join(changed) or 'description'))
             else:
                 if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
                     raise ValueError(translate('The Proxmox inventory and the local configurations differ'))
@@ -344,7 +347,7 @@ class NativeAdapter:
             check(Path('/var/lib/lxc') / str(vmid) / 'rootfs', profile['role'], image)
         finally:
             if mounted:
-                member_tx.run('pct', 'unmount', str(vmid))
+                oci_mount_lock.release(vmid, member_tx.run)
             if Path('/etc/pve/lxc/%s.conf' % vmid).exists():
                 member_tx.owned(vmid, marker)
                 member_tx.run('pct', 'destroy', str(vmid))
@@ -712,7 +715,7 @@ class NativeAdapter:
                     if self.is_running(vmid):
                         raise ValueError(translate('An image probe container was started externally'))
                     if os.path.ismount('/var/lib/lxc/%s/rootfs' % vmid):
-                        member_tx.run('pct', 'unmount', str(vmid))
+                        oci_mount_lock.release(vmid, member_tx.run)
                     member_tx.run('pct', 'destroy', str(vmid))
                 descriptor.unlink()
         # Clear the primary last so interrupted cleanup remains discoverable.

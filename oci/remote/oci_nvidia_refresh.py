@@ -11,6 +11,7 @@ import subprocess
 import oci_instances as instances
 import oci_nvidia_runtime as nv
 from oci_ui import translate, msg_info, msg_ok, msg_error
+import oci_mount_lock
 
 
 def destination(root, name):
@@ -86,7 +87,7 @@ def rebuild(root, vmid, same_gpu=False):
     try:
         candidate = prepare(Path(f'/var/lib/lxc/{vmid}/rootfs'), plan)
     finally:
-        instances.command('pct', 'unmount', str(vmid))
+        oci_mount_lock.release(vmid, instances.command)
     Path(f'/etc/pve/lxc/{vmid}.conf').write_bytes(candidate)
     updated = copy.deepcopy(record)
     updated['observed'] = instances.observe(vmid, record['installation_id'],
@@ -129,7 +130,7 @@ def refresh(root, vmid, apply=False):
         try:
             candidate = prepare(Path(f'/var/lib/lxc/{vmid}/rootfs'), plan)
         finally:
-            instances.command('pct', 'unmount', str(vmid))
+            oci_mount_lock.release(vmid, instances.command)
         nv.verify(plan['inventory'])
         if instances.command('pct', 'config', str(vmid)) != config:
             raise ValueError(translate('The configuration changed during the NVIDIA refresh'))

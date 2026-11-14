@@ -33,6 +33,7 @@ import uuid
 import oci_instances as instances
 from oci_installation_state import sha, parse_config
 from oci_ui import translate
+import oci_mount_lock
 
 DIRECTORY = '.proxmenux'
 NAME = 'oci-record.json'
@@ -84,7 +85,7 @@ def container_root(vmid, mount_stopped=True):
     try:
         yield Path(f'/var/lib/lxc/{int(vmid)}/rootfs')
     finally:
-        _run('pct', 'unmount', str(int(vmid)))
+        oci_mount_lock.unmount(vmid, _run)
 
 
 def mapped_root(config):
@@ -463,7 +464,7 @@ def carry_backup(root, vmid, original_record, validated_config_text):
         checked_stopped()
         checked_configuration()
     finally:
-        if _run('pct', 'unmount', str(int(vmid))).returncode:
+        if not oci_mount_lock.unmount(vmid, _run):
             raise ValueError(failure)
     instances.write(instances.location(root, vmid).parent / STAMP,
                     {'digest': digest(value), 'generation': value['generation']})

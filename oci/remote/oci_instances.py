@@ -265,6 +265,28 @@ def same_config_except_notes(record, config, ignore_tags=False):
     return original is not None and original == without_notes(config)
 
 
+def changed_settings(record, config, ignore_tags=False):
+    """The names of the settings that differ between the saved and the current
+    configuration, for an error to say what changed; never their values."""
+    def settings(value):
+        value = value.decode() if isinstance(value, bytes) else value
+        result, section = {}, ''
+        for line in value.splitlines():
+            if line.startswith('['):
+                section = line.strip()
+                continue
+            key, separator, rest = line.partition(':')
+            if not separator or key.startswith('#'):
+                continue
+            if key in ('description', 'digest') or (ignore_tags and key == 'tags'):
+                continue
+            name = f'{section} {key}' if section else key
+            result.setdefault(name, []).append(rest.strip())
+        return result
+    before, after = settings(record['observed']['config']), settings(config)
+    return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
+
+
 def save_assembly(root, primary_id, template, deployment, members):
     path = location(root, primary_id).parent / 'stack-assembly.json'
     if path.exists() or path.is_symlink():

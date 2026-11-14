@@ -151,10 +151,13 @@ oci_create_container() {
   python3 "${SCRIPT_DIR}/oci_native_import.py" "$vmid" "$archive" "$path" "$@" >>"$log" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
-    if mountpoint -q "$rootfs" 2>/dev/null; then
+    # Proxmox unmounts the rootfs when it finishes: nothing here may keep it
+    # open, so the mount is read from mountinfo and the size with one statfs.
+    if awk -v point="$rootfs" '$5 == point { found = 1 } END { exit !found }' /proc/self/mountinfo 2>/dev/null; then
       mounted=1
-      used_mib=$(df -BM --output=used "$rootfs" 2>/dev/null | tail -n 1 | tr -dc '0-9' || true)
-      used_mib=${used_mib:-0}
+      used_mib=$(stat -f -c '%b %f %S' "$rootfs" 2>/dev/null \
+        | awk '{ if ($3 > 0) printf "%d", ($1 - $2) * $3 / 1048576 }' || true)
+      [[ $used_mib =~ ^[0-9]+$ ]] || used_mib=0
       base_mib=${base_mib:-$used_mib}
       extracted_mib=$(( used_mib > base_mib ? used_mib - base_mib : 0 ))
       (( extracted_mib > 0 )) && extracting=1
