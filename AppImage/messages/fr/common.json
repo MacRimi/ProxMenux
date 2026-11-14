@@ -8262,6 +8262,77 @@
     "unauthorized": "Non autorisé : {endpoint}",
     "forbidden": "Votre profil ne permet pas cette action."
   },
+  "accessLog": {
+    "title": "Activité d'accès",
+    "description": "Connexions, modifications des comptes, des profils et des réglages de connexion, et chaque action refusée par un profil, avec son auteur. Les mots de passe, codes et jetons ne sont jamais enregistrés. Conservé 90 jours.",
+    "empty": "Aucune activité enregistrée pour l'instant.",
+    "loadMore": "Charger plus",
+    "refused": "Refusée",
+    "failed": "Échec",
+    "noAccount": "Sans compte",
+    "secondFactor": "second facteur",
+    "missing": "manque : {permission}",
+    "on": "activé",
+    "off": "désactivé",
+    "rules": "règles : {count}",
+    "subjects": "identifiants : {count}",
+    "events": {
+      "login": "Connexion",
+      "account": {
+        "created": "Compte créé"
+      },
+      "access": {
+        "mode": "Mode d'accès modifié",
+        "refused": "Action refusée"
+      },
+      "password": {
+        "changed": "Mot de passe modifié"
+      },
+      "totp": {
+        "enabled": "Authentification à deux facteurs activée",
+        "disabled": "Authentification à deux facteurs désactivée"
+      },
+      "api_token": {
+        "created": "Jeton d'API créé",
+        "revoked": "Jeton d'API révoqué"
+      },
+      "user": {
+        "created": "Utilisateur ajouté",
+        "profile": "Profil modifié",
+        "password": "Mot de passe défini par un administrateur",
+        "totp_reset": "Authentification à deux facteurs retirée",
+        "deleted": "Utilisateur supprimé"
+      },
+      "pve": {
+        "accounts": "Comptes Proxmox VE",
+        "rules": "Règles de profils Proxmox VE"
+      },
+      "oidc": {
+        "config": "Réglages OpenID Connect"
+      }
+    },
+    "methods": {
+      "local": "compte local",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "lecture seule",
+      "open": "ouvert",
+      "proxmox": "comptes Proxmox VE",
+      "password": "mot de passe"
+    },
+    "scopes": {
+      "read_only": "lecture seule",
+      "full_admin": "accès complet"
+    },
+    "permissions": {
+      "admin": "administrer",
+      "view": "voir",
+      "self": "son propre compte",
+      "ticket": "ticket de terminal ou de téléchargement"
+    }
+  },
   "oidc": {
     "title": "OpenID Connect (OIDC)",
     "description": "Connectez-vous avec un fournisseur d'identité externe, tel qu'Authentik, Keycloak ou Pocket ID.",

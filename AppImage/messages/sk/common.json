@@ -8261,6 +8261,77 @@
     "unauthorized": "Chýba platné prihlásenie: {endpoint}",
     "forbidden": "Váš profil túto akciu nepovoľuje."
   },
+  "accessLog": {
+    "title": "Aktivita prístupu",
+    "description": "Prihlásenia, zmeny účtov, profilov a nastavení prihlasovania a každá akcia, ktorú profil odmietol, s tým, kto ju vykonal. Heslá, kódy ani tokeny sa nikdy neukladajú. Uchováva sa 90 dní.",
+    "empty": "Zatiaľ nie je zaznamenaná žiadna aktivita.",
+    "loadMore": "Načítať ďalšie",
+    "refused": "Odmietnuté",
+    "failed": "Neúspešné",
+    "noAccount": "Bez účtu",
+    "secondFactor": "druhý faktor",
+    "missing": "chýba: {permission}",
+    "on": "zapnuté",
+    "off": "vypnuté",
+    "rules": "pravidlá: {count}",
+    "subjects": "identifikátory: {count}",
+    "events": {
+      "login": "Prihlásenie",
+      "account": {
+        "created": "Účet vytvorený"
+      },
+      "access": {
+        "mode": "Režim prístupu zmenený",
+        "refused": "Akcia odmietnutá"
+      },
+      "password": {
+        "changed": "Heslo zmenené"
+      },
+      "totp": {
+        "enabled": "Dvojfaktorové overenie zapnuté",
+        "disabled": "Dvojfaktorové overenie vypnuté"
+      },
+      "api_token": {
+        "created": "API token vytvorený",
+        "revoked": "API token zrušený"
+      },
+      "user": {
+        "created": "Používateľ pridaný",
+        "profile": "Profil zmenený",
+        "password": "Heslo nastavené administrátorom",
+        "totp_reset": "Dvojfaktorové overenie odstránené",
+        "deleted": "Používateľ odstránený"
+      },
+      "pve": {
+        "accounts": "Účty Proxmox VE",
+        "rules": "Pravidlá profilov Proxmox VE"
+      },
+      "oidc": {
+        "config": "Nastavenia OpenID Connect"
+      }
+    },
+    "methods": {
+      "local": "lokálny účet",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "len na čítanie",
+      "open": "otvorený",
+      "proxmox": "účty Proxmox VE",
+      "password": "heslo"
+    },
+    "scopes": {
+      "read_only": "len na čítanie",
+      "full_admin": "úplný prístup"
+    },
+    "permissions": {
+      "admin": "spravovať",
+      "view": "zobraziť",
+      "self": "vlastný účet",
+      "ticket": "lístok terminálu alebo sťahovania"
+    }
+  },
   "oidc": {
     "title": "OpenID Connect (OIDC)",
     "description": "Prihláste sa cez externého poskytovateľa identity, napríklad Authentik, Keycloak alebo Pocket ID.",

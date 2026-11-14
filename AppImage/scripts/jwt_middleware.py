@@ -26,6 +26,13 @@ def _setup_required():
 
 
 def _insufficient(identity, need):
+    # Every refusal is written with the account that tried it.
+    try:
+        import access_log
+        rule = request.url_rule.rule if request.url_rule is not None else request.path
+        access_log.refused((identity or {}).get("username"), request.method, rule, need)
+    except RuntimeError:
+        pass
     if identity and identity["profile"] == "observer":
         message = "This action is not available with read-only access"
     else:

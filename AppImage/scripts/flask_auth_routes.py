@@ -12,6 +12,7 @@ import time
 from collections import defaultdict, deque
 from flask import Blueprint, g, jsonify, request
 import auth_manager
+import access_log
 from jwt_middleware import require_auth, require_admin_scope, permission_error
 import jwt
 import datetime
@@ -141,6 +142,7 @@ def _choose_mode(mode, data):
     if not success:
         return jsonify({"success": False, "message": message}), 500
     auth_manager.consume_setup_code()
+    access_log.record("access.mode", _session_username(), detail={"mode": mode})
     return jsonify({"success": True, "message": message, "access_mode": mode})
 
 
@@ -477,6 +479,7 @@ def auth_login():
         success, token, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
         
         if success:
+            access_log.record("login", username, detail={"method": "local"})
             return jsonify({"success": True, "token": token, "message": message})
         elif requires_totp:
             # First step: password OK, requesting TOTP code (not a failure)
@@ -488,6 +491,8 @@ def auth_login():
                 "authentication failure; rhost=%s user=%s",
                 client_ip, username or "unknown"
             )
+            access_log.record("login", str(username or "")[:80] or None,
+                              detail={"method": "local", "second_factor": bool(totp_token)}, ok=False)
             # If user submitted a TOTP token that was wrong, tell frontend
             # to keep showing the TOTP field (not go back to password step)
             is_totp_failure = totp_token and "2FA" in message
@@ -523,6 +528,7 @@ def auth_setup():
 
         if success:
             auth_manager.consume_setup_code()
+            access_log.record("account.created", username, detail={"profile": "admin"})
             # Generate a token so the user is logged in immediately
             token = auth_manager.generate_token(username)
             return jsonify({"success": True, "token": token, "message": message})
@@ -598,10 +604,13 @@ def auth_change_password():
                 "message": "Invalid 2FA code",
             }), 400
 
-        success, message = auth_manager.change_password(_session_username(), old_password, new_password, totp_code)
+        username = _session_username()
+        success, message = auth_manager.change_password(username, old_password, new_password, totp_code)
 
+        access_log.record("password.changed", username, ok=success)
         if success:
-            return jsonify({"success": True, "message": message})
+            # The other sessions of this user end; this one goes on with a new token.
+            return jsonify({"success": True, "message": message, "token": auth_manager.generate_token(username)})
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
@@ -651,7 +660,11 @@ def pve_login():
     except pve_auth.PVEAuthError as exc:
         auth_logger.warning("authentication failure; rhost=%s user=%s", client_ip,
                             str(data.get("username") or "unknown")[:80])
+        access_log.record("login", str(data.get("username") or "")[:80] or None,
+                          detail={"method": "pve"}, ok=False)
         return jsonify({"success": False, "message": str(exc)}), 401
+    if result.get("ticket"):
+        access_log.record("login", result.get("username"), detail={"method": "pve"})
     return _pve_answer(result)
 
 
@@ -691,7 +704,17 @@ def pve_config():
     if not isinstance(enabled, bool):
         return jsonify({"success": False, "message": "An enabled flag is required"}), 400
     success, message = auth_manager.set_pve_auth(enabled)
+    if success:
+        access_log.record("pve.accounts", _session_username(), detail={"enabled": enabled})
     return jsonify({"success": success, "message": message}), (200 if success else 409)
+
+
+@auth_bp.route('/api/auth/events', methods=['GET'])
+@require_admin_scope
+def access_events():
+    """Who did what with the access to the Monitor, newest first."""
+    return jsonify({"success": True, "events": access_log.events(request.args.get("limit", 100),
+                                                                 request.args.get("before"))})
 
 
 _PVE_RULE_ERRORS = {
@@ -720,7 +743,9 @@ def pve_profiles_save():
     if not success:
         return jsonify({"success": False, "message": message,
                         "error": _PVE_RULE_ERRORS.get(message) or _USER_ERRORS.get(message, "pve_rules_invalid")}), 400
-    return jsonify({"success": True, "message": message, "rules": auth_manager.pve_rules()})
+    rules = auth_manager.pve_rules()
+    access_log.record("pve.rules", _session_username(), detail={"rules": len(rules)})
+    return jsonify({"success": True, "message": message, "rules": rules})
 
 
 @auth_bp.route('/api/auth/mode', methods=['POST'])
@@ -800,6 +825,7 @@ def totp_enable():
         success, message = auth_manager.enable_totp(username, verification_token)
         
         if success:
+            access_log.record("totp.enabled", username)
             return jsonify({"success": True, "message": message})
         else:
             return jsonify({"success": False, "message": message}), 400
@@ -829,6 +855,7 @@ def totp_disable():
         success, message = auth_manager.disable_totp(username, password, totp_code)
         
         if success:
+            access_log.record("totp.disabled", username)
             return jsonify({"success": True, "message": message})
         else:
             return jsonify({"success": False, "message": message}), 400
@@ -901,6 +928,7 @@ def generate_api_token():
             
             # Store token metadata for listing and revocation
             auth_manager.store_api_token_metadata(api_token, token_name, scope=scope, owner=username)
+            access_log.record("api_token.created", username, token_name, {"scope": scope})
             
             return jsonify({
                 "success": True, 
@@ -962,6 +990,8 @@ def revoke_api_token_route(token_id):
             return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
 
         success, message = auth_manager.revoke_api_token(token_id, owner=_tokens_owner(username, scope))
+        if success:
+            access_log.record("api_token.revoked", username, token_id)
 
         if success:
             return jsonify({"success": True, "message": message})
@@ -1139,19 +1169,37 @@ def users_list():
 @require_admin_scope
 def users_create():
     data = request.get_json(silent=True) or {}
-    return _answer(auth_manager.create_user(data.get("username"), data.get("password"),
-                                            data.get("profile"), custom=data.get("custom")))
+    result = auth_manager.create_user(data.get("username"), data.get("password"),
+                                      data.get("profile"), custom=data.get("custom"))
+    if result[0]:
+        access_log.record("user.created", _session_username(), data.get("username"), {"profile": data.get("profile")})
+    return _answer(result)
 
 
 @auth_bp.route('/api/auth/users/<username>', methods=['PUT'])
 @require_admin_scope
 def users_update(username):
     data = request.get_json(silent=True) or {}
-    return _answer(auth_manager.update_user(username, profile=data.get("profile"),
-                                            password=data.get("password"),
-                                            reset_totp=data.get("reset_totp") is True,
-                                            custom=data.get("custom")),
-                   404 if not auth_manager.find_user(username) else 400)
+    result = auth_manager.update_user(username, profile=data.get("profile"),
+                                      password=data.get("password"),
+                                      reset_totp=data.get("reset_totp") is True,
+                                      custom=data.get("custom"))
+    if result[0]:
+        actor = _session_username()
+        if data.get("profile") is not None:
+            access_log.record("user.profile", actor, username, {"profile": data.get("profile")})
+        if data.get("password") is not None:
+            access_log.record("user.password", actor, username)
+        if data.get("reset_totp") is True:
+            access_log.record("user.totp_reset", actor, username)
+    answer = _answer(result, 404 if not auth_manager.find_user(username) else 400)
+    # A new password ends that user's sessions: an administrator who sets
+    # their own goes on with a new token.
+    if data.get("password") is not None and username == _session_username() and not isinstance(answer, tuple):
+        body = answer.get_json()
+        body["token"] = auth_manager.generate_token(username)
+        return jsonify(body)
+    return answer
 
 
 @auth_bp.route('/api/auth/users/<username>', methods=['DELETE'])
@@ -1159,5 +1207,8 @@ def users_update(username):
 def users_delete(username):
     if username == _session_username():
         return _answer((False, "You cannot remove your own account"))
-    return _answer(auth_manager.delete_user(username),
-                   404 if not auth_manager.find_user(username) else 400)
+    missing = not auth_manager.find_user(username)
+    result = auth_manager.delete_user(username)
+    if result[0]:
+        access_log.record("user.deleted", _session_username(), username)
+    return _answer(result, 404 if missing else 400)

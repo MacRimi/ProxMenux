@@ -84,6 +84,7 @@ _READING = {
     "/api/audit/status": "admin",
     "/api/auth/users": "admin",
     "/api/auth/pve/profiles": "admin",
+    "/api/auth/events": "admin",
     "/api/notifications/settings": "admin",
     "/api/notifications/proxmox/read-cfg": "admin",
     "/api/proxmenux/snippets-storage": "admin",

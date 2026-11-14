@@ -8262,6 +8262,77 @@
     "unauthorized": "Non autorizzato: {endpoint}",
     "forbidden": "Il tuo profilo non consente questa azione."
   },
+  "accessLog": {
+    "title": "Attività di accesso",
+    "description": "Accessi, modifiche ad account, profili e impostazioni di accesso, e ogni azione rifiutata da un profilo, con chi l'ha eseguita. Password, codici e token non vengono mai registrati. Conservata per 90 giorni.",
+    "empty": "Nessuna attività registrata finora.",
+    "loadMore": "Carica altro",
+    "refused": "Rifiutata",
+    "failed": "Non riuscito",
+    "noAccount": "Senza account",
+    "secondFactor": "secondo fattore",
+    "missing": "manca: {permission}",
+    "on": "attivo",
+    "off": "disattivo",
+    "rules": "regole: {count}",
+    "subjects": "identificativi: {count}",
+    "events": {
+      "login": "Accesso",
+      "account": {
+        "created": "Account creato"
+      },
+      "access": {
+        "mode": "Modalità di accesso cambiata",
+        "refused": "Azione rifiutata"
+      },
+      "password": {
+        "changed": "Password cambiata"
+      },
+      "totp": {
+        "enabled": "Autenticazione a due fattori attivata",
+        "disabled": "Autenticazione a due fattori disattivata"
+      },
+      "api_token": {
+        "created": "Token API creato",
+        "revoked": "Token API revocato"
+      },
+      "user": {
+        "created": "Utente aggiunto",
+        "profile": "Profilo cambiato",
+        "password": "Password impostata da un amministratore",
+        "totp_reset": "Autenticazione a due fattori rimossa",
+        "deleted": "Utente rimosso"
+      },
+      "pve": {
+        "accounts": "Account Proxmox VE",
+        "rules": "Regole dei profili Proxmox VE"
+      },
+      "oidc": {
+        "config": "Impostazioni OpenID Connect"
+      }
+    },
+    "methods": {
+      "local": "account locale",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "sola lettura",
+      "open": "aperto",
+      "proxmox": "account Proxmox VE",
+      "password": "password"
+    },
+    "scopes": {
+      "read_only": "sola lettura",
+      "full_admin": "accesso completo"
+    },
+    "permissions": {
+      "admin": "amministrare",
+      "view": "vedere",
+      "self": "il proprio account",
+      "ticket": "ticket di terminale o download"
+    }
+  },
   "oidc": {
     "title": "OpenID Connect (OIDC)",
     "description": "Accedi con un provider di identità esterno, come Authentik, Keycloak o Pocket ID.",

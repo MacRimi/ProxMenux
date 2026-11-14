@@ -8262,6 +8262,77 @@
     "unauthorized": "Obehörig: {endpoint}",
     "forbidden": "Din profil tillåter inte den här åtgärden."
   },
+  "accessLog": {
+    "title": "Åtkomstaktivitet",
+    "description": "Inloggningar, ändringar av konton, profiler och inloggningsinställningar samt varje åtgärd som en profil nekade, med vem som gjorde den. Lösenord, koder och token sparas aldrig. Sparas i 90 dagar.",
+    "empty": "Ingen aktivitet registrerad ännu.",
+    "loadMore": "Läs in fler",
+    "refused": "Nekad",
+    "failed": "Misslyckad",
+    "noAccount": "Inget konto",
+    "secondFactor": "andra faktor",
+    "missing": "saknas: {permission}",
+    "on": "på",
+    "off": "av",
+    "rules": "regler: {count}",
+    "subjects": "identifierare: {count}",
+    "events": {
+      "login": "Inloggning",
+      "account": {
+        "created": "Konto skapat"
+      },
+      "access": {
+        "mode": "Åtkomstläge ändrat",
+        "refused": "Åtgärd nekad"
+      },
+      "password": {
+        "changed": "Lösenord ändrat"
+      },
+      "totp": {
+        "enabled": "Tvåfaktorsautentisering aktiverad",
+        "disabled": "Tvåfaktorsautentisering inaktiverad"
+      },
+      "api_token": {
+        "created": "API-token skapad",
+        "revoked": "API-token återkallad"
+      },
+      "user": {
+        "created": "Användare tillagd",
+        "profile": "Profil ändrad",
+        "password": "Lösenord satt av en administratör",
+        "totp_reset": "Tvåfaktorsautentisering borttagen",
+        "deleted": "Användare borttagen"
+      },
+      "pve": {
+        "accounts": "Proxmox VE-konton",
+        "rules": "Profilregler för Proxmox VE"
+      },
+      "oidc": {
+        "config": "Inställningar för OpenID Connect"
+      }
+    },
+    "methods": {
+      "local": "lokalt konto",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "skrivskyddat",
+      "open": "öppet",
+      "proxmox": "Proxmox VE-konton",
+      "password": "lösenord"
+    },
+    "scopes": {
+      "read_only": "skrivskyddat",
+      "full_admin": "full åtkomst"
+    },
+    "permissions": {
+      "admin": "administrera",
+      "view": "visa",
+      "self": "eget konto",
+      "ticket": "terminal- eller nedladdningsbiljett"
+    }
+  },
   "oidc": {
     "title": "OpenID Connect (OIDC)",
     "description": "Logga in med en extern identitetsleverantör, till exempel Authentik, Keycloak eller Pocket ID.",

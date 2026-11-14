@@ -207,6 +207,65 @@ class Users(unittest.TestCase):
         self.add(admin, "maria", "operator")
         self.assertEqual(self.call("GET", "/api/vms/100", token).status_code, 401)
 
+    # ── a new password ends the other sessions ──────────────────────
+    def test_a_new_password_ends_the_other_sessions_but_not_the_api_tokens(self):
+        admin = self.admin()
+        first = self.add(admin, "maria", "operator")
+        second = self.login("maria", OTHER)
+        api = self.call("POST", "/api/auth/generate-api-token", first,
+                        json={"password": OTHER, "token_name": "script", "scope": "full_admin"}).json["token"]
+        changed = self.call("POST", "/api/auth/change-password", first,
+                            json={"old_password": OTHER, "new_password": "Third-Passw0rd!"})
+        self.assertEqual(changed.status_code, 200, changed.json)
+        # This session goes on with its new token; the others end.
+        self.assertEqual(self.call("GET", "/api/vms/100", changed.json["token"]).status_code, 200)
+        self.assertEqual(self.call("GET", "/api/vms/100", first).status_code, 401)
+        self.assertEqual(self.call("GET", "/api/vms/100", second).status_code, 401)
+        self.assertEqual(self.call("GET", "/api/vms/100", api).status_code, 200)  # integrations keep working
+        # A password set by an administrator ends that user's sessions too.
+        third = self.login("maria", "Third-Passw0rd!")
+        self.assertEqual(self.call("PUT", "/api/auth/users/maria", admin, json={"password": "Fourth-Passw0rd!"}).status_code, 200)
+        self.assertEqual(self.call("GET", "/api/vms/100", third).status_code, 401)
+        self.assertEqual(self.call("GET", "/api/vms/100", admin).status_code, 200)  # not the administrator's
+        # An administrator who sets their own goes on with a new token.
+        own = self.call("PUT", "/api/auth/users/admin", admin, json={"password": "Fifth-Passw0rd!"})
+        self.assertEqual(self.call("GET", "/api/vms/100", own.json["token"]).status_code, 200)
+        self.assertEqual(self.call("GET", "/api/vms/100", admin).status_code, 401)
+
+    # ── the access log ──────────────────────────────────────────────
+    def test_the_access_log_names_who_did_what_and_never_a_secret(self):
+        import access_log
+        access_log._last_refusal.clear()
+        admin = self.admin()
+        self.client.post("/api/auth/login", json={"username": "admin", "password": "Wrong-Passw0rd!"})
+        observer = self.add(admin, "maria", "observer")
+        self.call("PUT", "/api/auth/users/maria", admin, json={"profile": "operator"})
+        self.call("PUT", "/api/auth/users/maria", admin, json={"profile": "observer"})
+        for _ in range(3):  # a refusal repeated within a minute is written once
+            self.assertEqual(self.call("POST", "/api/system/power/reboot", observer).status_code, 403)
+        self.call("PUT", "/api/auth/users/maria", admin, json={"password": "Third-Passw0rd!"})
+        self.assertEqual(self.call("DELETE", "/api/auth/users/maria", admin).status_code, 200)
+        # Only an administrator reads it; newest first.
+        self.assertEqual(self.call("GET", "/api/auth/events", observer).status_code, 401)  # its user is gone
+        events = self.call("GET", "/api/auth/events", admin).json["events"]
+        seen = [(e["event"], e["actor"], e["target"], e["ok"]) for e in reversed(events)]
+        self.assertEqual(seen, [
+            ("login", "admin", None, True),
+            ("login", "admin", None, False),
+            ("user.created", "admin", "maria", True),
+            ("login", "maria", None, True),
+            ("user.profile", "admin", "maria", True),
+            ("user.profile", "admin", "maria", True),
+            ("access.refused", "maria", "POST /api/system/power/reboot", False),
+            ("user.password", "admin", "maria", True),
+            ("user.deleted", "admin", "maria", True),
+        ])
+        self.assertEqual(events[2]["detail"], {"permission": "admin"})
+        self.assertEqual(events[-1]["detail"], {"method": "local"})
+        stored = (self.root / "access-log.db").read_bytes()
+        for secret in (PASSWORD.encode(), OTHER.encode(), b"Third-Passw0rd!", b"Wrong-Passw0rd!"):
+            self.assertNotIn(secret, stored)
+
     # ── API tokens ───────────────────────────────────────────────────
     def test_api_tokens_never_do_more_than_their_user(self):
         admin = self.admin()
@@ -231,6 +290,7 @@ class Users(unittest.TestCase):
         changed = self.call("POST", "/api/auth/change-password", observer,
                             json={"old_password": OTHER, "new_password": "Third-Passw0rd!"})
         self.assertEqual(changed.status_code, 200, changed.json)
+        observer = changed.json["token"]  # this session goes on with a new token
         self.login("maria", "Third-Passw0rd!")
         self.login("admin")  # untouched
 

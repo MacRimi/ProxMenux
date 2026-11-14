@@ -2,7 +2,7 @@
 
 import logging
 import os
-from flask import Blueprint, jsonify, request, redirect
+from flask import Blueprint, jsonify, request, redirect, g
 import auth_manager
 import oidc_manager as oidc
 from jwt_middleware import require_admin_scope
@@ -42,6 +42,11 @@ def configuration():
         return jsonify(error="Configure and enable local password authentication first."), 409
     try:
         data = oidc.save_config(request.get_json(silent=True)) if request.method == "PUT" else oidc.public_config()
+        if request.method == "PUT":
+            import access_log
+            identity = getattr(g, "identity", None) or {}
+            access_log.record("oidc.config", identity.get("username"),
+                              detail={"enabled": data.get("enabled"), "subjects": len(data.get("allowed_subjects", []))})
         return _private(jsonify(success=True, **data))
     except oidc.OIDCError as exc:
         return _private(jsonify(error=str(exc))), 400
@@ -72,6 +77,8 @@ def callback():
     except oidc.OIDCError:
         logging.getLogger("proxmenux-auth").warning(
             "OIDC authentication failure; rhost=%s", _client_ip())
+        import access_log
+        access_log.record("login", None, detail={"method": "oidc"}, ok=False)
         config = oidc.load_config()
         response = redirect(config["public_url"] + "/#oidc_error=login_failed", code=303) if config.get("public_url") else jsonify(error="OIDC sign-in failed.")
         response.delete_cookie(oidc.COOKIE, secure=True, httponly=True, samesite="Lax", path="/")

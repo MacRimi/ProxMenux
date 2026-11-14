@@ -327,6 +327,8 @@ def finish_login(state, binding, code):
     response = _request_json("POST", metadata["token_endpoint"], data=data, **options)
     subject = _verify_id_token(response.get("id_token"), config, metadata, flow["nonce"])
     token = auth_manager.generate_token(oidc_identity={"sub": subject, "revision": config["revision"]})
+    import access_log
+    access_log.record("login", auth_manager.OIDC_PREFIX + subject, detail={"method": "oidc"}, ok=bool(token))
     if not token:
         raise OIDCError("Could not create a Monitor session.")
     ticket = secrets.token_urlsafe(32)

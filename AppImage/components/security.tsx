@@ -22,6 +22,7 @@ import { SecureGatewaySetup } from "./secure-gateway-setup"
 import { useI18n } from "../lib/i18n/provider"
 import { useAccess } from "../lib/access"
 import { EDIT_CONTENT_CLASS, EditControls, EditableArea } from "./edit-controls"
+import { AccessLog } from "./access-log"
 
 interface ApiTokenEntry {
   id: string
@@ -2357,6 +2358,8 @@ ${(report.sections && report.sections.length > 0) ? `
       {(capabilities.admin || accessMode === "read_only") && <PveAccountsSettings />}
 
       {capabilities.admin && <OIDCSettings />}
+
+      <AccessLog />
 
       {/* SSL/HTTPS Configuration */}
       <Card>

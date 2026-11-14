@@ -7433,6 +7433,77 @@
     "addSubject": "Añadir identificador",
     "removeSubject": "Eliminar"
   },
+  "accessLog": {
+    "title": "Actividad de acceso",
+    "description": "Inicios de sesión, cambios en cuentas, perfiles y ajustes de inicio de sesión, y cada acción que un perfil rechazó, con quién la hizo. Nunca se guardan contraseñas, códigos ni tokens. Se conserva 90 días.",
+    "empty": "Todavía no hay actividad registrada.",
+    "loadMore": "Cargar más",
+    "refused": "Rechazada",
+    "failed": "Fallido",
+    "noAccount": "Sin cuenta",
+    "secondFactor": "segundo factor",
+    "missing": "falta: {permission}",
+    "on": "activado",
+    "off": "desactivado",
+    "rules": "reglas: {count}",
+    "subjects": "identificadores: {count}",
+    "events": {
+      "login": "Inicio de sesión",
+      "account": {
+        "created": "Cuenta creada"
+      },
+      "access": {
+        "mode": "Modo de acceso cambiado",
+        "refused": "Acción rechazada"
+      },
+      "password": {
+        "changed": "Contraseña cambiada"
+      },
+      "totp": {
+        "enabled": "Segundo factor activado",
+        "disabled": "Segundo factor desactivado"
+      },
+      "api_token": {
+        "created": "Token de API creado",
+        "revoked": "Token de API revocado"
+      },
+      "user": {
+        "created": "Usuario añadido",
+        "profile": "Perfil cambiado",
+        "password": "Contraseña puesta por un administrador",
+        "totp_reset": "Segundo factor quitado",
+        "deleted": "Usuario eliminado"
+      },
+      "pve": {
+        "accounts": "Cuentas de Proxmox VE",
+        "rules": "Reglas de perfiles de Proxmox VE"
+      },
+      "oidc": {
+        "config": "Ajustes de OpenID Connect"
+      }
+    },
+    "methods": {
+      "local": "cuenta local",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "solo lectura",
+      "open": "abierto",
+      "proxmox": "cuentas de Proxmox VE",
+      "password": "contraseña"
+    },
+    "scopes": {
+      "read_only": "solo lectura",
+      "full_admin": "acceso completo"
+    },
+    "permissions": {
+      "admin": "administrar",
+      "view": "ver",
+      "self": "la propia cuenta",
+      "ticket": "ticket de terminal o descarga"
+    }
+  },
   "runtime": {
     "notifications": {
       "cluster": {

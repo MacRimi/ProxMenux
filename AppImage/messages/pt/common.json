@@ -8262,6 +8262,77 @@
     "unauthorized": "Não autorizado: {endpoint}",
     "forbidden": "Seu perfil não permite esta ação."
   },
+  "accessLog": {
+    "title": "Atividade de acesso",
+    "description": "Logins, alterações em contas, perfis e configurações de login, e cada ação que um perfil recusou, com quem a fez. Senhas, códigos e tokens nunca são registrados. Mantido por 90 dias.",
+    "empty": "Ainda não há atividade registrada.",
+    "loadMore": "Carregar mais",
+    "refused": "Recusada",
+    "failed": "Falhou",
+    "noAccount": "Sem conta",
+    "secondFactor": "segundo fator",
+    "missing": "falta: {permission}",
+    "on": "ativado",
+    "off": "desativado",
+    "rules": "regras: {count}",
+    "subjects": "identificadores: {count}",
+    "events": {
+      "login": "Login",
+      "account": {
+        "created": "Conta criada"
+      },
+      "access": {
+        "mode": "Modo de acesso alterado",
+        "refused": "Ação recusada"
+      },
+      "password": {
+        "changed": "Senha alterada"
+      },
+      "totp": {
+        "enabled": "Autenticação de dois fatores ativada",
+        "disabled": "Autenticação de dois fatores desativada"
+      },
+      "api_token": {
+        "created": "Token de API criado",
+        "revoked": "Token de API revogado"
+      },
+      "user": {
+        "created": "Usuário adicionado",
+        "profile": "Perfil alterado",
+        "password": "Senha definida por um administrador",
+        "totp_reset": "Autenticação de dois fatores removida",
+        "deleted": "Usuário removido"
+      },
+      "pve": {
+        "accounts": "Contas do Proxmox VE",
+        "rules": "Regras de perfis do Proxmox VE"
+      },
+      "oidc": {
+        "config": "Configurações do OpenID Connect"
+      }
+    },
+    "methods": {
+      "local": "conta local",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "somente leitura",
+      "open": "aberto",
+      "proxmox": "contas do Proxmox VE",
+      "password": "senha"
+    },
+    "scopes": {
+      "read_only": "somente leitura",
+      "full_admin": "acesso completo"
+    },
+    "permissions": {
+      "admin": "administrar",
+      "view": "ver",
+      "self": "a própria conta",
+      "ticket": "ticket de terminal ou download"
+    }
+  },
   "oidc": {
     "title": "OpenID Connect (OIDC)",
     "description": "Inicie sessão com um fornecedor de identidade externo, como Authentik, Keycloak ou Pocket ID.",

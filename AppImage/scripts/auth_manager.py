@@ -204,6 +204,8 @@ def _normalize_users(config):
     primary = _primary(config)
     changed = False
     if primary and primary.get("username") == top:
+        if config.get("password_hash") != primary.get("password_hash"):
+            primary["session_version"] = int(primary.get("session_version") or 0) + 1
         for field in ("password_hash", "totp_enabled", "totp_secret", "backup_codes"):
             if config.get(field) != primary.get(field):
                 primary[field] = config.get(field)
@@ -294,6 +296,7 @@ def update_user(username, profile=None, password=None, reset_totp=False, custom=
         if pw_err:
             return False, pw_err
         user["password_hash"] = hash_password(password)
+        user["session_version"] = int(user.get("session_version") or 0) + 1
     if reset_totp:
         user.update(totp_enabled=False, totp_secret=None, backup_codes=[])
     if save_auth_config(config):
@@ -755,7 +758,8 @@ def generate_token(username=None, *, oidc_identity=None):
         user = find_user(username)
         if user is None:
             return None
-        payload.update(username=username, uid=user['uid'])
+        # A new password ends the sessions signed in with the previous one.
+        payload.update(username=username, uid=user['uid'], sv=int(user.get('session_version') or 0))
 
     try:
         token = jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
@@ -846,6 +850,12 @@ def verify_token_full(token):
         user = _token_user(payload)
         if user is None:
             _log_auth_failure_throttled("Session rejected: no such user")
+            return None, None
+        # Browser sessions end when the password changes; API tokens (named
+        # when generated) belong to integrations and are revoked on their own.
+        if 'token_name' not in payload and \
+                int(payload.get('sv') or 0) != int(user.get('session_version') or 0):
+            _log_auth_failure_throttled("Session rejected: the password changed")
             return None, None
         return user['username'], payload.get('scope', 'full_admin')
     except jwt.ExpiredSignatureError:
@@ -1240,6 +1250,7 @@ def change_password(username, old_password, new_password, totp_code=None):
         user = find_user(username, config)
 
     user["password_hash"] = hash_password(new_password)
+    user["session_version"] = int(user.get("session_version") or 0) + 1
 
     if save_auth_config(config):
         return True, "Password changed successfully"

@@ -68,7 +68,9 @@ export function UsersSettings() {
     setError("")
     setNotice("")
     try {
-      const data = await fetchApi<{ users: MonitorUser[] }>(url, { method, body: body ? JSON.stringify(body) : undefined })
+      const data = await fetchApi<{ users: MonitorUser[]; token?: string }>(url, { method, body: body ? JSON.stringify(body) : undefined })
+      // A new password of the own account ends its other sessions; this one goes on.
+      if (data.token) localStorage.setItem("proxmenux-auth-token", data.token)
       setUsers(data.users)
       setNotice(done)
       return true
