@@ -18779,8 +18779,7 @@
       "Files & Downloads"
     ],
     "notes": [
-      "The admin password is generated during the installation and saved to /root/openlist.creds inside the container. Change it with `/opt/openlist/openlist --data /opt/openlist_data admin set <password>`.",
-      "Config, database, logs and search index live in /opt/openlist_data, outside the directory an update replaces, so updating never touches them."
+      "The admin password is generated during the installation and saved to /root/openlist.creds inside the container. Change it with `/opt/openlist/openlist --data /opt/openlist_data admin set <password>`."
     ],
     "warnings": [],
     "port": 5244,
@@ -18800,6 +18799,43 @@
       "password": ""
     },
     "os": "debian"
+  },
+  {
+    "name": "OpenList",
+    "slug": "openlist",
+    "desc": "OpenList is a file list program that mounts many storage backends - S3, WebDAV, OneDrive, Google Drive, SFTP, local disks and more - behind one web UI, and serves them again over WebDAV, FTP and S3. It is the community-driven fork of AList.",
+    "script": "ct/openlist.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openlist.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openlist.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "The admin password is generated during the installation and saved to /root/openlist.creds inside the container. Change it with `/opt/openlist/openlist --data /opt/openlist_data admin set <password>`."
+    ],
+    "warnings": [],
+    "port": 5244,
+    "website": "https://oplist.org/",
+    "documentation": "https://doc.oplist.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openlist.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "alpine"
   },
   {
     "name": "OpenObserve",
