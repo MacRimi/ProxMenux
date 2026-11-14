@@ -597,8 +597,14 @@ reset_monitor_password() {
     msg_info "$(translate "Clearing login credentials...")"
     local tmp
     tmp=$(mktemp)
+    # The next account set up takes over the main administrator's uid, so
+    # its API tokens keep working (auth_manager.PREVIOUS_ADMIN).
     if jq '
-            .enabled       = false
+            .previous_admin = ((([.users[]? | select(.legacy == true)] + [.users[]? | select(.profile == "admin")])
+                                | map(select(.uid)) | first
+                                | if . then {uid: .uid, session_version: (.session_version // 0)} else null end)
+                               // .previous_admin)
+          | .enabled       = false
           | .configured    = false
           | .username      = ""
           | .password_hash = ""

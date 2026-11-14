@@ -153,6 +153,11 @@ def load_auth_config():
 # one created afterwards), as they always belonged to the only account.
 USER_FIELDS = ("username", "password_hash", "display_name", "totp_enabled",
                "totp_secret", "backup_codes", "last_totp_counter")
+# Removing the password (here or with the menu's password reset) removes the
+# users and keeps the uid and session version of the main administrator: the
+# next account set up takes that uid, so its API tokens keep working, and a
+# newer session version, so its browser sessions do not.
+PREVIOUS_ADMIN = "previous_admin"
 _NEW_USERNAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$")
 
 
@@ -181,6 +186,16 @@ def _primary(config):
     return next((u for u in admins if u.get("legacy")), admins[0] if admins else None)
 
 
+def _remember_primary(config):
+    """Keep the identity of the main administrator before the users go (see
+    PREVIOUS_ADMIN)."""
+    users = config.get("users")
+    primary = _primary(config) if isinstance(users, list) and users else None
+    if primary and primary.get("uid"):
+        config[PREVIOUS_ADMIN] = {"uid": primary["uid"],
+                                  "session_version": int(primary.get("session_version") or 0)}
+
+
 def _normalize_users(config):
     """Bring `users` in line with the rest of the file; True when they changed.
 
@@ -191,6 +206,7 @@ def _normalize_users(config):
     is the account the Monitor follows."""
     users = config.get("users")
     if not config.get("enabled"):
+        _remember_primary(config)
         config["users"] = []
         return bool(users)
     top, top_hash = config.get("username"), config.get("password_hash")
@@ -552,6 +568,7 @@ def choose_access_mode(mode):
     if mode not in ("read_only", "open"):
         return False, "Unknown access mode"
     config = load_auth_config()
+    _remember_primary(config)
     config.update({
         "enabled": False,
         "declined": mode == "open",
@@ -1135,8 +1152,16 @@ def setup_auth(username, password):
     # It is the account of the Monitor, as the only one was before users
     # existed: API tokens kept from then belong to it.
     # It keeps the display name and avatar the Monitor had without an account.
+    # After the password was removed it takes over the identity of the main
+    # administrator, so its API tokens keep working; its browser sessions
+    # do not (see PREVIOUS_ADMIN).
+    previous = existing.pop(PREVIOUS_ADMIN, None)
+    identity = {}
+    if isinstance(previous, dict) and isinstance(previous.get("uid"), str) and previous["uid"]:
+        identity = {"uid": previous["uid"],
+                    "session_version": int(previous.get("session_version") or 0) + 1}
     existing["users"] = [_new_user(username, hash_password(password), "admin", legacy=True,
-                                   display_name=existing.get("display_name"))]
+                                   display_name=existing.get("display_name"), **identity)]
     existing.update({
         "enabled": True,
         "declined": False,

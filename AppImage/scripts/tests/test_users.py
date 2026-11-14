@@ -74,6 +74,12 @@ class Users(unittest.TestCase):
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         return self.client.open(path, method=method, headers=headers, **kwargs)
 
+    def api_token(self, session, password):
+        answer = self.call("POST", "/api/auth/generate-api-token", session,
+                           json={"password": password, "token_name": "script", "scope": "full_admin"})
+        self.assertEqual(answer.status_code, 200, answer.json)
+        return answer.json["token"]
+
     def admin(self):
         self.assertTrue(auth_manager.setup_auth("admin", PASSWORD)[0])
         return self.login("admin")
@@ -352,6 +358,8 @@ class Users(unittest.TestCase):
     def test_the_menu_reset_and_an_older_version_are_followed(self):
         admin = self.admin()
         self.add(admin, "maria", "operator")
+        api = self.api_token(admin, PASSWORD)
+        maria_api = self.api_token(self.login("maria", OTHER), OTHER)
         # An older version changes the administrator's password at the top level.
         stored = self.config()
         stored["password_hash"] = auth_manager.hash_password(OTHER)
@@ -368,6 +376,25 @@ class Users(unittest.TestCase):
         self.assertEqual(self.call("GET", "/api/vms/100", admin).status_code, 403)  # setup required
         self.assertTrue(auth_manager.setup_auth("new-owner", PASSWORD)[0])
         self.assertEqual(self.call("GET", "/api/vms/100", admin).status_code, 401)
+        # The new account takes over the main administrator's API tokens;
+        # those of the users removed with the reset stay out.
+        self.assertEqual(self.call("GET", "/api/vms/100", api).status_code, 200)
+        self.assertEqual(self.call("GET", "/api/vms/100", maria_api).status_code, 401)
+
+    def test_removing_the_password_keeps_the_administrators_api_tokens(self):
+        admin = self.admin()
+        api = self.api_token(admin, PASSWORD)
+        self.assertTrue(auth_manager.choose_access_mode("read_only")[0])
+        self.assertTrue(auth_manager.choose_access_mode("open")[0])  # no account in between
+        self.assertTrue(auth_manager.setup_auth("someone", PASSWORD)[0])
+        self.assertNotIn(auth_manager.PREVIOUS_ADMIN, self.config())
+        self.assertEqual(self.call("GET", "/api/vms/100", api).status_code, 200)
+        self.assertEqual(self.call("GET", "/api/vms/100", admin).status_code, 401)  # browser sessions end
+        # They are listed as the new account's, which can revoke them.
+        listed = auth_manager.list_api_tokens(owner="someone")
+        self.assertEqual(len(listed), 1)
+        self.assertTrue(auth_manager.revoke_api_token(listed[0]["id"], owner="someone")[0])
+        self.assertEqual(self.call("GET", "/api/vms/100", api).status_code, 401)
 
 
 if __name__ == "__main__":
