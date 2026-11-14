@@ -21,6 +21,7 @@ import { ScriptTerminalModal } from "./script-terminal-modal"
 import { SecureGatewaySetup } from "./secure-gateway-setup"
 import { useI18n } from "../lib/i18n/provider"
 import { useAccess } from "../lib/access"
+import { EDIT_CONTENT_CLASS, EditControls, EditableArea } from "./edit-controls"
 
 interface ApiTokenEntry {
   id: string
@@ -73,6 +74,8 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
 export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
   // Everyone keeps their own account here; the rest follows the profile.
   const { capabilities } = useAccess()
+  // The access card is used only after Edit, as every settings card.
+  const [authEditing, setAuthEditing] = useState(false)
   const { language, t } = useI18n()
   const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
   const interfaceTypeLabel = (type: string) =>
@@ -1921,13 +1924,25 @@ ${(report.sections && report.sections.length > 0) ? `
       {/* Authentication Settings */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" />
-            <CardTitle>{st("auth.title")}</CardTitle>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-blue-500" />
+              <CardTitle>{st("auth.title")}</CardTitle>
+            </div>
+            {/* Every action here confirms on its own: nothing waits for Save. */}
+            <EditControls editing={authEditing} showSave={false} onEdit={() => setAuthEditing(true)}
+              onCancel={() => {
+                setAuthEditing(false)
+                setShowChangePassword(false)
+                setChoosingMode(false)
+                setShowSetupForm(false)
+                setError("")
+              }} />
           </div>
           <CardDescription>{st("auth.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={authEditing ? EDIT_CONTENT_CLASS : undefined}>
+          <EditableArea editing={authEditing} className="space-y-4">
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -2332,6 +2347,7 @@ ${(report.sections && report.sections.length > 0) ? `
               ))}
             </div>
           )}
+          </EditableArea>
         </CardContent>
       </Card>
 

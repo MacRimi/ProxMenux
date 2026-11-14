@@ -11,6 +11,7 @@ import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 import { Plus, Trash2 } from "lucide-react"
 import { ProfilePicker, type ProfileChoice } from "./profile-picker"
+import { EDIT_CONTENT_CLASS, EditControls, EditableArea, SWITCH_CLASS } from "./edit-controls"
 
 interface Configuration {
   enabled: boolean
@@ -37,6 +38,9 @@ const subjectsOf = (data: Configuration): Subject[] => data.allowed_subjects.map
 export function OIDCSettings() {
   const t = useT()
   const [config, setConfig] = useState<Configuration | null>(null)
+  // What was loaded, to go back to when an edit is cancelled.
+  const [saved, setSaved] = useState<Configuration | null>(null)
+  const [editing, setEditing] = useState(false)
   const [secret, setSecret] = useState("")
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [busy, setBusy] = useState(false)
@@ -46,6 +50,7 @@ export function OIDCSettings() {
   useEffect(() => {
     fetchApi<Configuration>("/api/auth/oidc/config").then(data => {
       setConfig(data)
+      setSaved(data)
       setSubjects(subjectsOf(data))
     }).catch(() => setError(t("oidc.localRequired")))
   }, [t])
@@ -69,27 +74,42 @@ export function OIDCSettings() {
         }),
       })
       setConfig(data)
+      setSaved(data)
       setSubjects(subjectsOf(data))
       setSecret("")
+      setEditing(false)
       setMessage(t(data.enabled ? "oidc.saved" : "oidc.disabledSaved"))
     } catch (err) {
       setError(err instanceof Error ? err.message : t("oidc.saveFailed"))
     } finally { setBusy(false) }
   }
 
+  const cancel = () => {
+    if (saved) { setConfig(saved); setSubjects(subjectsOf(saved)) }
+    setSecret("")
+    setError("")
+    setEditing(false)
+  }
+
   return <Card>
     <CardHeader>
-      <CardTitle>{t("oidc.title")}</CardTitle>
+      <div className="flex items-start justify-between gap-2">
+        <CardTitle>{t("oidc.title")}</CardTitle>
+        {config && <EditControls editing={editing} saving={busy} onSave={save} onCancel={cancel}
+          onEdit={() => { setMessage(""); setEditing(true) }}
+          canSave={!(config.enabled && !config.available)} />}
+      </div>
       <CardDescription>{t("oidc.description")}</CardDescription>
     </CardHeader>
-    <CardContent className="space-y-4">
+    <CardContent className={editing ? EDIT_CONTENT_CLASS : undefined}>
+      <EditableArea editing={editing && !busy} className="space-y-4">
       {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
       {message && <p role="status" className="text-sm text-green-500">{message}</p>}
       {config && <>
         {!config.available && <p className="text-sm text-amber-500">{t("oidc.unavailable")}</p>}
         <div className="flex items-center justify-between gap-4">
           <Label htmlFor="oidc-enabled">{t("oidc.enable")}</Label>
-          <Switch id="oidc-enabled" checked={config.enabled} disabled={busy || !config.available}
+          <Switch id="oidc-enabled" checked={config.enabled} disabled={busy || !config.available} className={SWITCH_CLASS}
             onCheckedChange={enabled => setConfig({ ...config, enabled })} />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -165,11 +185,8 @@ export function OIDCSettings() {
           <code className="block break-all text-xs">{config.public_url.replace(/\/$/, "")}/api/auth/oidc/callback</code>
           <p className="text-xs text-muted-foreground">{t("oidc.mfaHelp")}</p>
         </div>
-        <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={save}
-          disabled={busy || (config.enabled && !config.available)}>
-          {busy ? t("oidc.saving") : t(config.enabled ? "oidc.save" : "oidc.saveDisabled")}
-        </Button>
       </>}
+      </EditableArea>
     </CardContent>
   </Card>
 }

@@ -49,8 +49,10 @@ export function CustomChoice({ value, onChange, disabled, idPrefix = "custom" }:
 }
 
 // A profile and, for a custom one, its areas and actions.
-export function ProfilePicker({ value, onChange, disabled, id, idPrefix }: {
+export function ProfilePicker({ value, onChange, disabled, id, idPrefix, showCustom = true }: {
   value: ProfileChoice; onChange: (next: ProfileChoice) => void; disabled: boolean; id?: string; idPrefix?: string
+  // Off to show only the profile, as a card does while it is not edited.
+  showCustom?: boolean
 }) {
   const t = useT()
   return (
@@ -64,7 +66,7 @@ export function ProfilePicker({ value, onChange, disabled, id, idPrefix }: {
           {PROFILES.map(p => <SelectItem key={p} value={p}>{t(`users.profiles.${p}`)}</SelectItem>)}
         </SelectContent>
       </Select>
-      {value.profile === "custom" && (
+      {showCustom && value.profile === "custom" && (
         <CustomChoice value={value.custom ?? EMPTY_CUSTOM} disabled={disabled} idPrefix={idPrefix}
           onChange={custom => onChange({ profile: "custom", custom })} />
       )}
