@@ -7,7 +7,7 @@
 // Everything is shown but used only after Edit: profile changes wait for Save,
 // and the actions on a user confirm on their own.
 import { useCallback, useEffect, useState } from "react"
-import { KeyRound, Lock, ShieldCheck, Trash2, User, UserPlus } from "lucide-react"
+import { Ban, CircleCheck, KeyRound, Lock, ShieldCheck, Trash2, User, UserPlus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -25,6 +25,7 @@ interface MonitorUser {
   profile: string
   custom: Custom | null
   totp_enabled: boolean
+  disabled: boolean
   primary: boolean
 }
 
@@ -168,6 +169,9 @@ export function UsersSettings() {
                   {user.totp_enabled && (
                     <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />2FA</Badge>
                   )}
+                  {user.disabled && (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/40">{t("users.disabledBadge")}</Badge>
+                  )}
                 </div>
                 {editing ? (
                   <ProfilePicker value={choice} disabled={false} idPrefix={`user-${user.username}`}
@@ -189,6 +193,15 @@ export function UsersSettings() {
                     <Button variant="outline" size="sm"
                       onClick={() => send(userUrl(user.username), "PUT", { reset_totp: true }, t("users.totpRemoved"))}>
                       {t("users.removeTotp")}
+                    </Button>
+                  )}
+                  {user.username !== me && (
+                    <Button variant="outline" size="sm"
+                      onClick={() => send(userUrl(user.username), "PUT", { disabled: !user.disabled },
+                        t(user.disabled ? "users.enabledDone" : "users.disabledDone"))}>
+                      {user.disabled
+                        ? <><CircleCheck className="h-4 w-4 mr-1" />{t("users.enable")}</>
+                        : <><Ban className="h-4 w-4 mr-1" />{t("users.disable")}</>}
                     </Button>
                   )}
                   {user.username !== me && (

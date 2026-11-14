@@ -2942,7 +2942,8 @@
       "password_mix": "Le mot de passe doit combiner au moins trois éléments parmi : minuscules, majuscules, chiffres et symboles.",
       "password_common": "Ce mot de passe est trop courant. Choisissez-en un autre.",
       "user_change_failed": "La modification n'a pas pu être enregistrée.",
-      "custom_invalid": "Choisissez au moins une zone."
+      "custom_invalid": "Choisissez au moins une zone.",
+      "disable_self": "Vous ne pouvez pas désactiver votre propre compte."
     },
     "customAreas": "Zones visibles",
     "customActions": "Actions autorisées",
@@ -2964,7 +2965,12 @@
       "backup": "Gérer les sauvegardes",
       "update": "Mettre à jour",
       "terminal": "Ouvrir des terminaux"
-    }
+    },
+    "disable": "Désactiver",
+    "enable": "Activer",
+    "disabledBadge": "Désactivé",
+    "disabledDone": "Utilisateur désactivé : il ne peut plus se connecter, et ses sessions et jetons d'API cessent de fonctionner jusqu'à sa réactivation.",
+    "enabledDone": "Utilisateur activé."
   },
   "pveLogin": {
     "tab": "Proxmox VE",
@@ -8301,7 +8307,9 @@
         "profile": "Profil modifié",
         "password": "Mot de passe défini par un administrateur",
         "totp_reset": "Authentification à deux facteurs retirée",
-        "deleted": "Utilisateur supprimé"
+        "deleted": "Utilisateur supprimé",
+        "disabled": "Utilisateur désactivé",
+        "enabled": "Utilisateur activé"
       },
       "pve": {
         "accounts": "Comptes Proxmox VE",

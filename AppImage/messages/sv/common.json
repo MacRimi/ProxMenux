@@ -2942,7 +2942,8 @@
       "password_mix": "Lösenordet måste blanda minst tre av: små bokstäver, stora bokstäver, siffror och symboler.",
       "password_common": "Lösenordet är för vanligt. Välj ett annat.",
       "user_change_failed": "Ändringen kunde inte sparas.",
-      "custom_invalid": "Välj minst ett område."
+      "custom_invalid": "Välj minst ett område.",
+      "disable_self": "Du kan inte inaktivera ditt eget konto."
     },
     "customAreas": "Synliga områden",
     "customActions": "Tillåtna åtgärder",
@@ -2964,7 +2965,12 @@
       "backup": "Hantera säkerhetskopior",
       "update": "Uppdatera",
       "terminal": "Öppna terminaler"
-    }
+    },
+    "disable": "Inaktivera",
+    "enable": "Aktivera",
+    "disabledBadge": "Inaktiverad",
+    "disabledDone": "Användaren är inaktiverad: den kan inte logga in, och dess sessioner och API-token slutar fungera tills den aktiveras igen.",
+    "enabledDone": "Användaren har aktiverats."
   },
   "pveLogin": {
     "tab": "Proxmox VE",
@@ -8301,7 +8307,9 @@
         "profile": "Profil ändrad",
         "password": "Lösenord satt av en administratör",
         "totp_reset": "Tvåfaktorsautentisering borttagen",
-        "deleted": "Användare borttagen"
+        "deleted": "Användare borttagen",
+        "disabled": "Användare inaktiverad",
+        "enabled": "Användare aktiverad"
       },
       "pve": {
         "accounts": "Proxmox VE-konton",

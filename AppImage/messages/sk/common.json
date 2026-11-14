@@ -2941,7 +2941,8 @@
       "password_mix": "Heslo musí kombinovať aspoň tri z: malé písmená, veľké písmená, číslice a symboly.",
       "password_common": "Toto heslo je príliš bežné. Zvoľte iné.",
       "user_change_failed": "Zmenu sa nepodarilo uložiť.",
-      "custom_invalid": "Zvoľte aspoň jednu oblasť."
+      "custom_invalid": "Zvoľte aspoň jednu oblasť.",
+      "disable_self": "Nemôžete deaktivovať vlastný účet."
     },
     "customAreas": "Viditeľné oblasti",
     "customActions": "Povolené akcie",
@@ -2963,7 +2964,12 @@
       "backup": "Spravovať zálohy",
       "update": "Aktualizovať",
       "terminal": "Otvárať terminály"
-    }
+    },
+    "disable": "Deaktivovať",
+    "enable": "Aktivovať",
+    "disabledBadge": "Deaktivovaný",
+    "disabledDone": "Používateľ bol deaktivovaný: nemôže sa prihlásiť a jeho relácie a API tokeny nefungujú, kým ho znova neaktivujete.",
+    "enabledDone": "Používateľ bol aktivovaný."
   },
   "pveLogin": {
     "tab": "Proxmox VE",
@@ -8300,7 +8306,9 @@
         "profile": "Profil zmenený",
         "password": "Heslo nastavené administrátorom",
         "totp_reset": "Dvojfaktorové overenie odstránené",
-        "deleted": "Používateľ odstránený"
+        "deleted": "Používateľ odstránený",
+        "disabled": "Používateľ deaktivovaný",
+        "enabled": "Používateľ aktivovaný"
       },
       "pve": {
         "accounts": "Účty Proxmox VE",

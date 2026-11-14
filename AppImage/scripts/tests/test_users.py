@@ -207,6 +207,36 @@ class Users(unittest.TestCase):
         self.add(admin, "maria", "operator")
         self.assertEqual(self.call("GET", "/api/vms/100", token).status_code, 401)
 
+    # ── deactivating a user ─────────────────────────────────────────
+    def test_a_deactivated_user_is_kept_but_cannot_get_in(self):
+        admin = self.admin()
+        session = self.add(admin, "maria", "operator")
+        api = self.call("POST", "/api/auth/generate-api-token", session,
+                        json={"password": OTHER, "token_name": "script", "scope": "full_admin"}).json["token"]
+        off = self.call("PUT", "/api/auth/users/maria", admin, json={"disabled": True})
+        self.assertEqual(off.status_code, 200)
+        self.assertTrue(next(u for u in off.json["users"] if u["username"] == "maria")["disabled"])
+        self.assertEqual((self.call("GET", "/api/vms/100", session).status_code,
+                          self.call("GET", "/api/vms/100", api).status_code), (401, 401))
+        refused = self.client.post("/api/auth/login", json={"username": "maria", "password": OTHER})
+        self.assertEqual(refused.status_code, 401)  # read as a wrong password
+        # Active again: the same sessions and tokens work.
+        self.assertEqual(self.call("PUT", "/api/auth/users/maria", admin, json={"disabled": False}).status_code, 200)
+        self.assertEqual((self.call("GET", "/api/vms/100", session).status_code,
+                          self.call("GET", "/api/vms/100", api).status_code), (200, 200))
+        # Nobody deactivates themselves, and one administrator stays active.
+        self.assertEqual(self.call("PUT", "/api/auth/users/admin", admin, json={"disabled": True}).json["error"],
+                         "disable_self")
+        second = self.add(admin, "ana", "admin")
+        self.assertEqual(self.call("PUT", "/api/auth/users/admin", second, json={"disabled": True}).status_code, 200)
+        self.assertEqual(self.call("PUT", "/api/auth/users/ana", second, json={"profile": "observer"}).json["error"],
+                         "last_admin")
+        # A deactivated administrator can still be removed or demoted by the active one.
+        self.assertEqual(self.call("PUT", "/api/auth/users/admin", second, json={"profile": "observer"}).status_code, 200)
+        events = [e["event"] for e in self.call("GET", "/api/auth/events", second).json["events"]]
+        self.assertIn("user.disabled", events)
+        self.assertIn("user.enabled", events)
+
     # ── a new password ends the other sessions ──────────────────────
     def test_a_new_password_ends_the_other_sessions_but_not_the_api_tokens(self):
         admin = self.admin()

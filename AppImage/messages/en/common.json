@@ -3069,7 +3069,8 @@
       "password_mix": "The password must mix at least three of: lowercase, uppercase, digits and symbols.",
       "password_common": "That password is too common. Choose another one.",
       "user_change_failed": "The change could not be saved.",
-      "custom_invalid": "Choose at least one area."
+      "custom_invalid": "Choose at least one area.",
+      "disable_self": "You cannot deactivate your own account."
     },
     "customAreas": "Areas it sees",
     "customActions": "Actions it may take",
@@ -3091,7 +3092,12 @@
       "backup": "Manage backups",
       "update": "Update",
       "terminal": "Open terminals"
-    }
+    },
+    "disable": "Deactivate",
+    "enable": "Activate",
+    "disabledBadge": "Deactivated",
+    "disabledDone": "User deactivated: they cannot sign in, and their sessions and API tokens stop working until activated again.",
+    "enabledDone": "User activated."
   },
   "pveLogin": {
     "tab": "Proxmox VE",
@@ -7446,7 +7452,9 @@
         "profile": "Profile changed",
         "password": "Password set by an administrator",
         "totp_reset": "Two-factor authentication removed",
-        "deleted": "User removed"
+        "deleted": "User removed",
+        "disabled": "User deactivated",
+        "enabled": "User activated"
       },
       "pve": {
         "accounts": "Proxmox VE accounts",

@@ -1140,6 +1140,7 @@ _USER_ERRORS = {
     "The Monitor needs at least one administrator": "last_admin",
     "User not found": "user_not_found",
     "You cannot remove your own account": "remove_self",
+    "You cannot deactivate your own account": "disable_self",
     "Password must be at least 10 characters": "password_short",
     "Password must mix at least 3 of: lowercase, uppercase, digits, symbols": "password_mix",
     "That password is in the common-passwords list — pick something else": "password_common",
@@ -1180,10 +1181,13 @@ def users_create():
 @require_admin_scope
 def users_update(username):
     data = request.get_json(silent=True) or {}
+    disabled = data.get("disabled") if isinstance(data.get("disabled"), bool) else None
+    if disabled and username == _session_username():
+        return _answer((False, "You cannot deactivate your own account"))
     result = auth_manager.update_user(username, profile=data.get("profile"),
                                       password=data.get("password"),
                                       reset_totp=data.get("reset_totp") is True,
-                                      custom=data.get("custom"))
+                                      custom=data.get("custom"), disabled=disabled)
     if result[0]:
         actor = _session_username()
         if data.get("profile") is not None:
@@ -1192,6 +1196,8 @@ def users_update(username):
             access_log.record("user.password", actor, username)
         if data.get("reset_totp") is True:
             access_log.record("user.totp_reset", actor, username)
+        if disabled is not None:
+            access_log.record("user.disabled" if disabled else "user.enabled", actor, username)
     answer = _answer(result, 404 if not auth_manager.find_user(username) else 400)
     # A new password ends that user's sessions: an administrator who sets
     # their own goes on with a new token.

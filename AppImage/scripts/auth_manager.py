@@ -175,8 +175,9 @@ def _user_from_top_level(config):
 
 
 def _primary(config):
-    """The main administrator: the one repeated at the top level."""
-    admins = [u for u in config.get("users") or [] if u.get("profile") == "admin"]
+    """The main administrator: the one repeated at the top level, so an
+    older version signs in with an active administrator."""
+    admins = _admins(config) or [u for u in config.get("users") or [] if u.get("profile") == "admin"]
     return next((u for u in admins if u.get("legacy")), admins[0] if admins else None)
 
 
@@ -222,7 +223,8 @@ def find_user(username, config=None):
 
 
 def _admins(config):
-    return [u for u in config.get("users") or [] if u.get("profile") == "admin"]
+    """The active administrators: the Monitor always keeps one."""
+    return [u for u in config.get("users") or [] if u.get("profile") == "admin" and not u.get("disabled")]
 
 
 def list_users():
@@ -232,6 +234,7 @@ def list_users():
     return [{"username": u.get("username"), "display_name": u.get("display_name"),
              "profile": u.get("profile"), "totp_enabled": bool(u.get("totp_enabled")),
              "custom": u.get("custom") if u.get("profile") == permissions.CUSTOM else None,
+             "disabled": bool(u.get("disabled")),
              "created_at": u.get("created_at"), "primary": u is primary}
             for u in config.get("users") or []]
 
@@ -277,7 +280,7 @@ def create_user(username, password, profile, custom=None):
     return False, "Failed to save configuration"
 
 
-def update_user(username, profile=None, password=None, reset_totp=False, custom=None):
+def update_user(username, profile=None, password=None, reset_totp=False, custom=None, disabled=None):
     """Change another user's profile, set a new password for them, or remove
     their second factor when they lost it. Returns (success, message)."""
     config = load_auth_config()
@@ -288,7 +291,7 @@ def update_user(username, profile=None, password=None, reset_totp=False, custom=
         fields, error = _profile_fields(profile, custom)
         if error:
             return False, error
-        if user.get("profile") == "admin" and profile != "admin" and len(_admins(config)) == 1:
+        if user.get("profile") == "admin" and profile != "admin" and _admins(config) == [user]:
             return False, "The Monitor needs at least one administrator"
         user.update(fields)
     if password is not None:
@@ -299,6 +302,12 @@ def update_user(username, profile=None, password=None, reset_totp=False, custom=
         user["session_version"] = int(user.get("session_version") or 0) + 1
     if reset_totp:
         user.update(totp_enabled=False, totp_secret=None, backup_codes=[])
+    # A deactivated user keeps everything but cannot sign in, and their
+    # sessions and API tokens stop working until they are active again.
+    if disabled is not None:
+        if disabled and _admins(config) == [user]:
+            return False, "The Monitor needs at least one administrator"
+        user["disabled"] = bool(disabled)
     if save_auth_config(config):
         return True, "User updated"
     return False, "Failed to save configuration"
@@ -310,7 +319,7 @@ def delete_user(username):
     user = find_user(username, config)
     if not user:
         return False, "User not found"
-    if user.get("profile") == "admin" and len(_admins(config)) == 1:
+    if _admins(config) == [user]:
         return False, "The Monitor needs at least one administrator"
     owned = [t for t in config.get("api_tokens", []) if _token_owner(t, config) is user]
     config.setdefault("revoked_tokens", [])
@@ -804,12 +813,12 @@ def _invalidate_revoked_cache():
 
 
 def _token_user(payload):
-    """The local user a verified token belongs to, or None (see USER_FIELDS)."""
+    """The active local user a verified token belongs to, or None (see USER_FIELDS)."""
     config = load_auth_config()
     uid = payload.get('uid')
     for user in config.get("users") or []:
         if (user.get("uid") == uid) if uid else user.get("legacy"):
-            return user
+            return None if user.get("disabled") else user
     return None
 
 
@@ -1907,7 +1916,8 @@ def authenticate(username, password, totp_token=None):
         return False, None, False, "Authentication is not enabled"
 
     user = find_user(username, config)
-    if user is None:
+    # A deactivated user reads as a wrong password: nobody learns it exists.
+    if user is None or user.get("disabled"):
         return False, None, False, "Invalid username or password"
 
     if not verify_password(password, user.get("password_hash", "")):

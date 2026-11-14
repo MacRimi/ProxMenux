@@ -3095,7 +3095,8 @@
       "password_mix": "La contraseña debe combinar al menos tres de: minúsculas, mayúsculas, números y símbolos.",
       "password_common": "Esa contraseña es demasiado común. Elige otra.",
       "user_change_failed": "No se ha podido guardar el cambio.",
-      "custom_invalid": "Elige al menos un área."
+      "custom_invalid": "Elige al menos un área.",
+      "disable_self": "No puedes desactivar tu propia cuenta."
     },
     "customAreas": "Áreas que ve",
     "customActions": "Acciones que puede hacer",
@@ -3117,7 +3118,12 @@
       "backup": "Gestionar backups",
       "update": "Actualizar",
       "terminal": "Abrir terminales"
-    }
+    },
+    "disable": "Desactivar",
+    "enable": "Activar",
+    "disabledBadge": "Desactivado",
+    "disabledDone": "Usuario desactivado: no puede iniciar sesión y sus sesiones y tokens de API dejan de funcionar hasta que se active de nuevo.",
+    "enabledDone": "Usuario activado."
   },
   "pveLogin": {
     "tab": "Proxmox VE",
@@ -7472,7 +7478,9 @@
         "profile": "Perfil cambiado",
         "password": "Contraseña puesta por un administrador",
         "totp_reset": "Segundo factor quitado",
-        "deleted": "Usuario eliminado"
+        "deleted": "Usuario eliminado",
+        "disabled": "Usuario desactivado",
+        "enabled": "Usuario activado"
       },
       "pve": {
         "accounts": "Cuentas de Proxmox VE",
