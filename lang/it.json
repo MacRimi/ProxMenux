@@ -8689,6 +8689,7 @@
   "The instance registry is not safe": "Il registro delle istanze non è sicuro",
   "The integrated GPU uses the container's memory: {memory} MB are proposed.": "La GPU integrata usa la memoria del container: vengono proposti {memory} MB.",
   "The interface includes a terminal with passwordless sudo.": "L'interfaccia include un terminale con sudo senza password.",
+  "The interrupted operation had already ended; the container was not changed and can be updated again.": "L'operazione interrotta era già terminata; il container non è stato modificato e può essere aggiornato di nuovo.",
   "The journal belongs to another VMID": "Il registro dell’operazione appartiene a un altro VMID",
   "The journal belongs to another stack": "Il journal appartiene a un altro stack",
   "The journal has an incomplete recovery state": "Il registro dell'operazione indica uno stato di ripristino incompleto",
@@ -10890,6 +10891,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
-  "The interrupted operation had already ended; the container was not changed and can be updated again.": "L'operazione interrotta era già terminata; il container non è stato modificato e può essere aggiornato di nuovo."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
 }

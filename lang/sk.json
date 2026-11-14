@@ -8690,6 +8690,7 @@
   "The instance registry is not safe": "Inštančný register nie je bezpečný",
   "The integrated GPU uses the container's memory: {memory} MB are proposed.": "Integrovaná GPU používa pamäť kontajnera: navrhuje sa {memory} MB.",
   "The interface includes a terminal with passwordless sudo.": "Rozhranie obsahuje terminál s prístupom sudo bez hesla.",
+  "The interrupted operation had already ended; the container was not changed and can be updated again.": "Prerušená operácia už bola dokončená; kontajner sa nezmenil a dá sa znova aktualizovať.",
   "The journal belongs to another VMID": "Záznam operácie patrí inému VMID",
   "The journal belongs to another stack": "Záznam operácie patrí inej aplikácii s viacerými kontajnermi",
   "The journal has an incomplete recovery state": "Záznam operácie obsahuje neúplný stav obnovy",
@@ -10890,6 +10891,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "The interrupted operation had already ended; the container was not changed and can be updated again.": "Prerušená operácia už bola dokončená; kontajner sa nezmenil a dá sa znova aktualizovať."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }

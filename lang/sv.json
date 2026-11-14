@@ -8689,6 +8689,7 @@
   "The instance registry is not safe": "Instansregistret är inte säkert",
   "The integrated GPU uses the container's memory: {memory} MB are proposed.": "Den integrerade GPU:n använder containerns minne: {memory} MB föreslås.",
   "The interface includes a terminal with passwordless sudo.": "Gränssnittet innehåller en terminal med lösenordsfri sudo.",
+  "The interrupted operation had already ended; the container was not changed and can be updated again.": "Den avbrutna åtgärden var redan avslutad; containern ändrades inte och kan uppdateras igen.",
   "The journal belongs to another VMID": "Tidskriften tillhör en annan VMID",
   "The journal belongs to another stack": "Tidskriften tillhör en annan stack",
   "The journal has an incomplete recovery state": "Tidskriften har en ofullständig återhämtning stat",
@@ -10890,6 +10891,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "The interrupted operation had already ended; the container was not changed and can be updated again.": "Den avbrutna åtgärden var redan avslutad; containern ändrades inte och kan uppdateras igen."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }

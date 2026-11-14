@@ -8668,6 +8668,7 @@
   "The instance registry is not safe": "Реестр экземпляров небезопасен",
   "The integrated GPU uses the container's memory: {memory} MB are proposed.": "Встроенный GPU использует память контейнера: предлагается {memory} МБ.",
   "The interface includes a terminal with passwordless sudo.": "Интерфейс включает в себя терминал с sudo без пароля.",
+  "The interrupted operation had already ended; the container was not changed and can be updated again.": "Прерванная операция уже была завершена; контейнер не изменялся, и его снова можно обновлять.",
   "The journal belongs to another VMID": "Журнал относится к другому VMID",
   "The journal belongs to another stack": "Журнал относится к другому стеку",
   "The journal has an incomplete recovery state": "В журнале сохранено неполное состояние восстановления",
@@ -10860,6 +10861,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
-  "The interrupted operation had already ended; the container was not changed and can be updated again.": "Прерванная операция уже была завершена; контейнер не изменялся, и его снова можно обновлять."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
 }

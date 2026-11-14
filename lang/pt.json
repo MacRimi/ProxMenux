@@ -8689,6 +8689,7 @@
   "The instance registry is not safe": "O registro de instância não é seguro",
   "The integrated GPU uses the container's memory: {memory} MB are proposed.": "A GPU integrada usa a memória do contentor: são propostos {memory} MB.",
   "The interface includes a terminal with passwordless sudo.": "A interface inclui um terminal com sudo sem senha.",
+  "The interrupted operation had already ended; the container was not changed and can be updated again.": "A operação interrompida já tinha terminado; o contêiner não foi alterado e pode ser atualizado novamente.",
   "The journal belongs to another VMID": "A revista pertence a outro VMID",
   "The journal belongs to another stack": "O diário pertence a outra pilha",
   "The journal has an incomplete recovery state": "A revista tem um estado de recuperação incompleto",
@@ -10890,6 +10891,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Os dados do disco NÃO serão apagados.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ O disco será desmontado e removido de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ A entrada /etc/fstab será removida.",
-  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado.",
-  "The interrupted operation had already ended; the container was not changed and can be updated again.": "A operação interrompida já tinha terminado; o contêiner não foi alterado e pode ser atualizado novamente."
+  "⚠ The disk will be unmounted.": "⚠ O disco será desmontado."
 }
