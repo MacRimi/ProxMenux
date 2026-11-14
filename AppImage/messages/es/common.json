@@ -2233,7 +2233,7 @@
   },
   "settings": {
     "title": "Ajustes",
-    "description": "Administre las preferencias de su panel de control",
+    "description": "Administra las preferencias de tu panel de control",
     "common": {
       "health": "Salud",
       "alerts": "Alertas"
@@ -2263,7 +2263,7 @@
       "permanentNotice": "Las alertas de {category} permanecerán ocultas permanentemente después del despido.",
       "temperatureSafetyNotice": "Aún aparecen alertas de temperatura crítica de la CPU para proteger el hardware.",
       "longSuppressionNotice": "Largo período de supresión. Las alertas descartadas en esta categoría permanecerán ocultas durante mucho tiempo.",
-      "footerNote": "Esta configuración se aplica cuando descarta una advertencia del Monitor de salud. Las alertas de temperatura crítica de la CPU siempre aparecen para proteger su hardware.",
+      "footerNote": "Esta configuración se aplica al descartar una advertencia del Monitor de salud. Las alertas de temperatura crítica de la CPU siempre aparecen para proteger el hardware.",
       "activeSuppressions": "Supresiones activas",
       "activeSuppressionsDescription": "Alertas que ha ocultado del Health Monitor. Los despidos definitivos sólo podrán revertirse aquí. La edición requiere el Monitor de salud",
       "noActiveSuppressions": "Sin supresiones activas. Las alertas descartadas del Health Monitor aparecerán aquí.",
@@ -2308,7 +2308,7 @@
     },
     "remoteStorage": {
       "title": "Exclusiones de almacenamiento remoto",
-      "description": "Excluya los almacenamientos remotos (PBS, NFS, CIFS, etc.) del seguimiento del estado y las notificaciones. Úselo para almacenamientos que están intencionalmente fuera de línea o que tienen acceso API limitado.",
+      "description": "Excluye los almacenamientos remotos (PBS, NFS, CIFS, etc.) del seguimiento del estado y de las notificaciones. Úsalo para almacenamientos que están fuera de línea a propósito o que tienen un acceso a la API limitado.",
       "emptyTitle": "No se detectaron almacenamientos remotos",
       "emptyDescription": "PBS, NFS, CIFS y otros almacenamientos remotos aparecerán aquí cuando se configuren",
       "storage": "Almacenamiento",
@@ -2338,7 +2338,7 @@
     "lxcUpdateDetection": {
       "title": "Detección de actualización de LXC",
       "descriptionStart": "Comprobar periódicamente los contenedores de Debian/Ubuntu/Alpine LXC en ejecución para ver si hay actualizaciones de paquetes pendientes",
-      "descriptionEnd": "y colocarlos en el tablero. La alternancia de notificación correspondiente en Notificaciones -> Servicios aparece solo cuando la detección está habilitada.",
+      "descriptionEnd": " y mostrarlas en el panel. El interruptor de notificación correspondiente en Notificaciones -> Servicios aparece solo cuando la detección está activada.",
       "enableLabel": "Habilitar la detección de actualizaciones de LXC",
       "loadFailed": "No se pudo cargar la configuración de detección de actualizaciones de LXC.",
       "saveFailed": "No se pudo guardar la configuración de detección de actualizaciones de LXC.",
@@ -2361,7 +2361,7 @@
     "notifications": {
       "title": "Notificaciones",
       "description": "Configura canales de notificación y filtros de eventos. Recibe alertas vía Telegram, Gotify, Discord o Email.",
-      "disabledDescription": "Reciba alertas en tiempo real sobre su entorno Proxmox a través de Telegram, Discord, Gotify o correo electrónico.",
+      "disabledDescription": "Recibe alertas en tiempo real sobre tu entorno Proxmox a través de Telegram, Discord, Gotify o correo electrónico.",
       "enableService": "Habilitar el servicio de notificaciones",
       "enableServiceDescription": "Supervise el estado del sistema, los eventos de VM/CT, los backups, las alertas de seguridad y el estado del clúster. La integración del webhook PVE se configura automáticamente.",
       "enableButton": "Habilitar notificaciones",
@@ -2660,7 +2660,7 @@
           "openai": "Estándar de la industria, preciso y ampliamente utilizado.",
           "anthropic": "Excelente para escribir y traducir; rápido y económico.",
           "gemini": "Hay disponible un nivel gratuito, con una buena relación calidad-precio.",
-          "ollama": "Utiliza modelos en su servidor Ollama. Totalmente local, privado y gratuito.",
+          "ollama": "Usa modelos en tu servidor Ollama. Totalmente local, privado y gratuito.",
           "openrouter": "Acceso a más de 100 modelos a través de una clave API."
         },
         "loadModelsFailed": "No se pudieron cargar los modelos — comprueba la API key o la URL del endpoint."
@@ -2675,7 +2675,7 @@
         "getToken": "Obtén el token del bot",
         "tokenIntro": "Después de crear el bot, BotFather te da un token como este:",
         "tokenPaste": "Copia el token y pégalo en el campo Bot Token.",
-        "getChatId": "Obtenga su ID de chat",
+        "getChatId": "Obtén tu ID de chat",
         "optionA": "Opción A: usar un bot (la más fácil)",
         "chat1": "1. Encuentra",
         "or": "o",
@@ -2683,7 +2683,7 @@
         "optionB": "Opción B: método manual",
         "manual1": "1. Envía un mensaje a tu nuevo bot.",
         "manual2": "2. Abre esta URL en tu navegador y reemplaza YOUR_TOKEN:",
-        "manual3": "3. Encuentre este valor; su número es su ID de chat:",
+        "manual3": "3. Busca este valor; ese número es tu ID de chat:",
         "groups": "Grupos y canales",
         "group1": "1. Añade el bot al grupo o canal como administrador.",
         "group2": "2. Envía un mensaje en el grupo.",
@@ -2691,7 +2691,7 @@
         "group4": "4. Los ID de grupo son números negativos, por ejemplo",
         "summary": "Resumen rápido",
         "summaryToken": "Identifica tu bot (de BotFather)",
-        "summaryChat": "Le dice al bot dónde enviar mensajes (su ID o un ID de grupo)"
+        "summaryChat": "Indica al bot dónde enviar los mensajes (tu ID o el ID de un grupo)"
       },
       "validation": {
         "discordWebhook": "Introduce una URL de webhook de Discord en el formato https://discord.com/api/webhooks/<id>/<token>.",
@@ -2715,16 +2715,16 @@
         "title": "Modo de aviso personalizado",
         "description": "Crea tu propio mensaje de IA para las notificaciones de ProxMenux Monitor",
         "whatTitle": "¿Qué es un aviso personalizado?",
-        "whatDescription": "El mensaje define cómo la IA formatea sus notificaciones. Un mensaje personalizado le permite controlar el estilo, el nivel de detalle y el formato de cada mensaje.",
+        "whatDescription": "El mensaje define cómo formatea la IA tus notificaciones. Un mensaje personalizado te permite controlar el estilo, el nivel de detalle y el formato de cada mensaje.",
         "requirements": "Requisitos importantes",
-        "formatIntro": "Su mensaje debe utilizar este formato de salida:",
+        "formatIntro": "Tu mensaje debe usar este formato de salida:",
         "formatTitleThen": "seguido del título, luego",
         "formatBodyThen": "seguido del mensaje",
         "plainText": "Utiliza solo texto sin formato, sin Markdown, para que el resultado funcione en todos los canales.",
         "rawData": "El mensaje recibe datos sin procesar del evento Proxmox como entrada.",
         "language": "Define el idioma de salida en el mensaje. El selector de idioma solo se aplica al modo predeterminado.",
         "gettingStarted": "Empezando",
-        "gettingStartedDescription": "Un mensaje de ejemplo está listo para ayudarle a comenzar. Puede ajustarlo, exportarlo para compartirlo con otros o importar un mensaje de la comunidad.",
+        "gettingStartedDescription": "Tienes un mensaje de ejemplo listo para empezar. Puedes ajustarlo, exportarlo para compartirlo o importar un mensaje de la comunidad.",
         "loadExample": "Cargar ejemplo",
         "startFromScratch": "Empezar desde el principio"
       }
@@ -2971,7 +2971,7 @@
   "authSetup": {
     "choiceTitle": "Configurar la protección del panel",
     "passwordTitle": "Crear contraseña",
-    "protectTitle": "¿Proteger su tablero?",
+    "protectTitle": "¿Proteger el panel?",
     "protectDescription": "Añade una capa adicional de seguridad para proteger tus datos de Proxmox cuando accedas desde redes no privadas.",
     "setupPassword": "Sí, configurar contraseña",
     "skipProtection": "No, continuar sin protección",
@@ -3256,7 +3256,7 @@
       "readOnlyReloading": "El panel ahora es de solo lectura. Recargando..."
     },
     "confirm": {
-      "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda alcanzar el tablero podrá abrirlo.",
+      "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda llegar al panel podrá abrirlo.",
       "revokeToken": "¿Revocar este token API?",
       "disableHttps": "¿Desactivar HTTPS y volver a HTTP simple?",
       "deleteAuditReport": "¿Eliminar el informe de auditoría y los registros de Lynis?",
@@ -3349,7 +3349,7 @@
       "description": "Crea tokens de larga duración para integraciones y automatización.",
       "aboutTitle": "Acerca de los tokens API",
       "validFor": "Los tokens siguen siendo válidos hasta que los revoques.",
-      "externalServices": "Úselos con herramientas externas en lugar de su contraseña.",
+      "externalServices": "Úsalos con herramientas externas en lugar de tu contraseña.",
       "authorizationHeader": "Envíe el token en el encabezado de Autorización.",
       "seeGuideBefore": "Ver el",
       "integrationsGuide": "guía de integraciones",
@@ -3388,7 +3388,7 @@
     },
     "firewall": {
       "title": "Cortafuegos",
-      "description": "Administre el estado del cortafuegos de Proxmox y reglas de acceso sencillas.",
+      "description": "Administra el estado del cortafuegos de Proxmox y reglas de acceso sencillas.",
       "notDetectedTitle": "No se detectó el cortafuegos de Proxmox",
       "notDetectedDescription": "Las herramientas del cortafuegos no están disponibles en este host.",
       "clusterTitle": "Cortafuegos de clúster",
@@ -3474,7 +3474,7 @@
       "configureProxmox": "Protección de inicio de sesión de Proxmox",
       "configureMonitor": "Supervisar la protección de inicio de sesión",
       "configureGlobal": "Configuración básica de prohibición",
-      "customizeAfterInstall": "Puede ajustar cada protección después de la instalación.",
+      "customizeAfterInstall": "Puedes ajustar cada protección después de la instalación.",
       "installConfigure": "Instalar y configurar",
       "jails": "Protecciones",
       "bannedIps": "IP bloqueadas",
@@ -3747,7 +3747,7 @@
       "enabledTitle": "2FA está habilitado.",
       "enabledDescription": "Guarda los códigos de backup antes de cerrar esta ventana.",
       "saveCodesTitle": "Guarda tus códigos de backup",
-      "saveCodesDescription": "Cada código se puede usar una vez si pierde el acceso a su aplicación de autenticación.",
+      "saveCodesDescription": "Cada código se puede usar una vez si pierdes el acceso a tu aplicación de autenticación.",
       "backupCodes": "Códigos de backup",
       "copyAll": "Copiar todo",
       "finish": "Finalizar"
@@ -3790,11 +3790,11 @@
       },
       "wizard": {
         "introTitle": "Acceso remoto seguro con Tailscale",
-        "introDescription": "Implemente una pequeña puerta de enlace LXC para que sus dispositivos puedan llegar a ProxMenux, Proxmox y redes locales seleccionadas a través de su red trasera Tailscale.",
+        "introDescription": "Despliega una pequeña puerta de enlace LXC para que tus dispositivos lleguen a ProxMenux, a Proxmox y a las redes locales seleccionadas a través de tu red privada de Tailscale.",
         "whatYouGet": "lo que obtienes",
         "benefitMonitorAnywhere": "Abre el Monitor desde cualquier lugar de tu tailnet.",
-        "benefitProxmoxUi": "Acceda a la interfaz de usuario web de Proxmox sin exponer el puerto 8006.",
-        "benefitVmLxc": "Acceda a redes VM y LXC seleccionadas cuando sea necesario.",
+        "benefitProxmoxUi": "Accede a la interfaz web de Proxmox sin exponer el puerto 8006.",
+        "benefitVmLxc": "Accede a las redes de VM y LXC seleccionadas cuando haga falta.",
         "benefitEncryption": "El tráfico permanece cifrado a través de Tailscale.",
         "benefitNoPorts": "No se requiere reenvío de puerto público.",
         "tailscaleAccountBefore": "Necesita una cuenta de Tailscale y una clave de autenticación previa de",
@@ -3907,12 +3907,12 @@
         "stepRoutingMiddle": "y aprobar",
         "accessAfterApproval": "Después de la aprobación, puede abrir",
         "or": "o",
-        "fromAnyDevice": "desde cualquier dispositivo en su tailnet.",
+        "fromAnyDevice": "desde cualquier dispositivo de tu tailnet.",
         "doLater": "haré esto más tarde"
       },
       "notInstalled": {
         "subtitle": "La puerta de enlace Tailscale aún no está implementada.",
-        "description": "Implementarlo para llegar a ProxMenux y Proxmox de forma segura desde su tailnet sin abrir puertos públicos.",
+        "description": "Despliégalo para llegar a ProxMenux y a Proxmox de forma segura desde tu tailnet sin abrir puertos públicos.",
         "deploy": "Implementar Secure Gateway"
       },
       "schema": {
@@ -3933,11 +3933,11 @@
           "options": {
             "host_only": {
               "label": "Sólo Proxmox",
-              "description": "Acceda únicamente a este servidor Proxmox, la interfaz de usuario y el ProxMenux Monitor."
+              "description": "Accede únicamente a este servidor Proxmox, a su interfaz web y a ProxMenux Monitor."
             },
             "proxmox_network": {
               "label": "Red local completa",
-              "description": "Acceda a todos los dispositivos de su red local, como NAS, impresoras, VM y LXC."
+              "description": "Accede a todos los dispositivos de tu red local, como NAS, impresoras, VM y LXC."
             },
             "custom": {
               "label": "Subredes personalizadas",
@@ -3956,7 +3956,7 @@
         },
         "accept_routes": {
           "label": "Aceptar rutas",
-          "description": "Permita que esta puerta de enlace llegue a las redes anunciadas por otros nodos de Tailscale en su tailnet."
+          "description": "Permite que esta puerta de enlace llegue a las redes anunciadas por otros nodos de Tailscale en tu tailnet."
         }
       }
     }
@@ -4599,7 +4599,7 @@
     },
     "recommendations": {
       "intel": "Para obtener información ampliada sobre la monitorización de GPU, instala el paquete intel-gpu-tools o igt-gpu-tools.",
-      "nvidia": "Para las GPU NVIDIA, la monitorización en tiempo real requiere controladores propietarios (paquete de controladores nvidia). Instálelos solo si el host utiliza su GPU directamente.",
+      "nvidia": "Para las GPU NVIDIA, la monitorización en tiempo real requiere los controladores propietarios (paquete de controladores nvidia). Instálalos solo si el host usa la GPU directamente.",
       "amd": "Para obtener información ampliada de monitorización de GPU para GPU AMD, instala amdgpu_top. Puedes descargarlo desde: https://github.com/Umio-Yasuno/amdgpu_top",
       "generic": "Para obtener información ampliada de monitorización de GPU, instala las herramientas de monitorización de GPU apropiadas para tu hardware."
     },
@@ -4921,7 +4921,7 @@
       "generateNewKeyfileDescriptionAfter": "y lo almacena localmente para futuras restauraciones de PBS.",
       "generateNewKeyfileDescriptionBefore": "Monitor crea",
       "importExistingKeyfile": "Importar archivo de claves existente",
-      "importExistingKeyfileDescription": "Cargue un archivo de claves que coincida con los backups cifrados existentes.",
+      "importExistingKeyfileDescription": "Sube un archivo de claves que coincida con los backups cifrados existentes.",
       "importKeyfileHelpAfter": "antes de restaurar los backups cifrados de PBS.",
       "importKeyfileHelpBefore": "Importa el archivo de claves correspondiente a",
       "importManualDescription": "Utiliza un archivo de claves existente de esta máquina.",
@@ -5125,13 +5125,13 @@
       "keyfileLabel": "archivo de claves PBS",
       "notInstalled": "No instalado",
       "orUploadFromMachine": "o cargar uno desde esta máquina.",
-      "orUploadOwn": "o cargue su propio archivo de claves.",
+      "orUploadOwn": "o sube tu propio archivo de claves.",
       "pveKeyDescriptionAfter": "y puede ser reutilizado por Monitor.",
       "pveKeyDescriptionBefore": "Existe una clave PVE en",
       "pveKeyDescriptionMiddle": "Coincide con el cifrado de almacenamiento PVE",
       "pveKeyDetected": "Clave PVE detectada",
       "uploadDialogDescriptionAfter": "Los backups cifrados creados con otra clave seguirán necesitando su clave original.",
-      "uploadDialogDescriptionBefore": "Cargue el archivo de claves usado para los backups cifrados de PBS.",
+      "uploadDialogDescriptionBefore": "Sube el archivo de claves usado para los backups cifrados de PBS.",
       "uploadDialogTitle": "Cargar archivo de claves PBS",
       "uploadFromMachine": "Subir desde esta máquina",
       "uploadTitle": "Cargar archivo de claves",
@@ -5180,7 +5180,7 @@
       "yesUploadDescription": "Monitor almacena una copia de recuperación cifrada en PBS."
     },
     "keyfileRecovery": {
-      "descriptionBefore": "El blob del archivo de claves cifrado se descarga de PBS y se descifra con su frase de contraseña de recuperación. La clave resultante se escribe en",
+      "descriptionBefore": "El blob del archivo de claves cifrado se descarga de PBS y se descifra con tu frase de contraseña de recuperación. La clave resultante se escribe en",
       "passphrase": "Frase de contraseña de recuperación",
       "pickSourceHost": "Elige el host de origen cuya contraseña recuerdes: cada instalación carga su propio depósito en garantía.",
       "snapshot": "Instantánea de recuperación",
@@ -5847,7 +5847,7 @@
       "cancel": "Cancelar",
       "confirm": "confirmar reinicio",
       "blocked": "el reinicio estará disponible una vez que finalice la actualización del host.",
-      "accepted": "Solicitud de reinicio aceptada.Compruebe que el servidor vuelva a estar en línea.",
+      "accepted": "Solicitud de reinicio aceptada. Comprueba que el servidor vuelva a estar en línea.",
       "unconfirmed": "No se pudo verificar la solicitud de reinicio.Verifique el servidor antes de volver a intentarlo."
     },
     "versions": {
@@ -6219,7 +6219,7 @@
     "cancelled": "Operación cancelada.",
     "completedWithError": "Script terminado con el código de error {code}",
     "yes": "Sí",
-    "yourInput": "Su entrada:",
+    "yourInput": "Tu entrada:",
     "submit": "Entregar",
     "ok": "OK"
   },
@@ -8198,14 +8198,14 @@
       "test": {
         "title": "Prueba de ProxMenux",
         "welcome": "¡Bienvenido a ProxMenux Monitor!",
-        "verify": "Este es un mensaje de prueba para verificar que su canal de notificaciones esté funcionando correctamente.",
+        "verify": "Este es un mensaje de prueba para verificar que tu canal de notificaciones funciona correctamente.",
         "configuration": "Configuración del canal:",
         "iconsEnabled": "Iconos: habilitados",
         "iconsDisabled": "Iconos: deshabilitados",
         "aiEnabled": "IA: habilitada ({info})",
         "aiDisabled": "IA: deshabilitada",
         "alerts": "Recibirá alertas sobre eventos del sistema, cambios en el estado de salud e incidentes de seguridad.",
-        "photoCaption": "Puede usar esta imagen como foto de perfil de su bot de notificaciones."
+        "photoCaption": "Puedes usar esta imagen como foto de perfil de tu bot de notificaciones."
       },
       "channels": {
         "discord": {
