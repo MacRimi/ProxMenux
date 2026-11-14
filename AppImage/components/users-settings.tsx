@@ -12,6 +12,7 @@ import { Label } from "./ui/label"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Checkbox } from "./ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { AREAS, useAccess } from "../lib/access"
 import { useT } from "../lib/i18n/provider"
@@ -31,7 +32,6 @@ interface MonitorUser {
   primary: boolean
 }
 
-const selectClass = "h-9 rounded-md border border-input bg-background px-2 text-sm"
 const EMPTY_CUSTOM: Custom = { areas: ["general"], actions: [] }
 
 function CustomChoice({ value, onChange, disabled }: { value: Custom; onChange: (next: Custom) => void; disabled: boolean }) {
@@ -188,11 +188,15 @@ export function UsersSettings() {
                   <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{summary(user.custom)}</p>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <select aria-label={t("users.profile")} className={selectClass} disabled={busy}
-                    value={editing ? "custom" : user.profile}
-                    onChange={e => changeProfile(user, e.target.value)}>
-                    {PROFILES.map(p => <option key={p} value={p}>{t(`users.profiles.${p}`)}</option>)}
-                  </select>
+                  <Select value={editing ? "custom" : user.profile} disabled={busy}
+                    onValueChange={value => changeProfile(user, value)}>
+                    <SelectTrigger aria-label={t("users.profile")} className="h-9 w-full min-w-0 text-foreground sm:w-[14rem]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROFILES.map(p => <SelectItem key={p} value={p}>{t(`users.profiles.${p}`)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   {user.profile === "custom" && !editing && (
                     <Button variant="outline" size="sm" disabled={busy}
                       onClick={() => setCustomizing({ username: user.username, custom: user.custom ?? EMPTY_CUSTOM })}>
@@ -264,7 +268,7 @@ export function UsersSettings() {
         </div>
 
         {!adding ? (
-          <Button variant="outline" onClick={() => { setAdding(true); setError(""); setNotice("") }}>
+          <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => { setAdding(true); setError(""); setNotice("") }}>
             <UserPlus className="h-4 w-4 mr-2" />{t("users.add")}
           </Button>
         ) : (
@@ -296,10 +300,14 @@ export function UsersSettings() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-user-profile">{t("users.profile")}</Label>
-              <select id="new-user-profile" className={`${selectClass} w-full`} value={profile}
-                onChange={e => setProfile(e.target.value)} disabled={busy}>
-                {PROFILES.map(p => <option key={p} value={p}>{t(`users.profiles.${p}`)}</option>)}
-              </select>
+              <Select value={profile} onValueChange={setProfile} disabled={busy}>
+                <SelectTrigger id="new-user-profile" className="w-full text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROFILES.map(p => <SelectItem key={p} value={p}>{t(`users.profiles.${p}`)}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             {profile === "custom" && <CustomChoice value={newCustom} onChange={setNewCustom} disabled={busy} />}
             <div className="flex flex-wrap gap-2">

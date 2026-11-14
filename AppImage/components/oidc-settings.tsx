@@ -7,6 +7,7 @@ import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { Button } from "./ui/button"
 import { Switch } from "./ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 
@@ -87,13 +88,17 @@ export function OIDCSettings() {
             </div>)}
           <div className="space-y-2">
             <Label htmlFor="oidc-auth-method">{t("oidc.authMethod")}</Label>
-            <select id="oidc-auth-method" className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={config.token_auth_method} disabled={busy}
-              onChange={event => setConfig({ ...config, token_auth_method: event.target.value })}>
-              <option value="client_secret_basic">client_secret_basic</option>
-              <option value="client_secret_post">client_secret_post</option>
-              <option value="none">{t("oidc.publicClient")}</option>
-            </select>
+            <Select value={config.token_auth_method} disabled={busy}
+              onValueChange={value => setConfig({ ...config, token_auth_method: value })}>
+              <SelectTrigger id="oidc-auth-method" className="w-full text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client_secret_basic">client_secret_basic</SelectItem>
+                <SelectItem value="client_secret_post">client_secret_post</SelectItem>
+                <SelectItem value="none">{t("oidc.publicClient")}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {config.token_auth_method !== "none" && <div className="space-y-2">
             <Label htmlFor="oidc-secret">{t("oidc.secret")}</Label>
@@ -114,7 +119,8 @@ export function OIDCSettings() {
           <code className="block break-all text-xs">{config.public_url.replace(/\/$/, "")}/api/auth/oidc/callback</code>
           <p className="text-xs text-muted-foreground">{t("oidc.mfaHelp")}</p>
         </div>
-        <Button onClick={save} disabled={busy || (config.enabled && !config.available)}>
+        <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={save}
+          disabled={busy || (config.enabled && !config.available)}>
           {busy ? t("oidc.saving") : t(config.enabled ? "oidc.save" : "oidc.saveDisabled")}
         </Button>
       </>}

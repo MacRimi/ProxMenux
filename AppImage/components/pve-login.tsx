@@ -8,6 +8,7 @@ import { AlertCircle, ExternalLink, KeyRound, Lock, User } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 
@@ -127,12 +128,16 @@ export function PveLogin({ onLogin }: { onLogin: () => void }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="pve-realm">{t("pveLogin.realm")}</Label>
-            <select id="pve-realm" value={realm} onChange={e => setRealm(e.target.value)} disabled={loading}
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
-              {(realms.length ? realms : [{ realm: "pam", type: "pam", comment: "", default: true }]).map(r => (
-                <option key={r.realm} value={r.realm}>{r.comment ? `${r.comment} (${r.realm})` : r.realm}</option>
-              ))}
-            </select>
+            <Select value={realm} onValueChange={setRealm} disabled={loading}>
+              <SelectTrigger id="pve-realm" className="w-full text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(realms.length ? realms : [{ realm: "pam", type: "pam", comment: "", default: true }]).map(r => (
+                  <SelectItem key={r.realm} value={r.realm}>{r.comment ? `${r.comment} (${r.realm})` : r.realm}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </>
       ) : keysOnly ? (

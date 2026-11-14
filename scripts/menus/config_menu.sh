@@ -534,7 +534,8 @@ show_monitor_setup_code() {
 
     code=$(head -n 1 "$MONITOR_SETUP_CODE_FILE")
     server_ip=$(hostname -I | awk '{print $1}')
-    dialog --clear --backtitle "$BACKTITLE" \
+    # whiptail, so the code can be selected and copied from the screen.
+    whiptail --backtitle "$BACKTITLE" \
            --title "$(translate "Show Monitor Setup Code")" \
            --msgbox "\n$(translate "Setup code:")  $code\n\n$(translate "Enter it in ProxMenux Monitor to create its account or choose how it is reached. It can be used once.")\n\nhttp://${server_ip:-<IP>}:8008" 14 74
 }
