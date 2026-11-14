@@ -12,6 +12,10 @@
     "description": "Åtkomst till panelen, första starten och skyddslager: lösenord och TOTP, JWT-sessioner, API-token, HTTPS, omvänd proxy, Secure Gateway och valfri Fail2Ban-jail.",
     "section": "ProxMenux-övervakning"
   },
+  "introModes": {
+    "title": "Tillträde bestäms vid första besöket",
+    "body": "En ny installation visar en enda dialogruta vid första besöket, och varje val i den ber om <strong>inställningskoden</strong> som skrivs ut i konsolen av installationsprogrammet.Alternativen är lokala konton, Proxmox VE konton, skrivskyddad åtkomst för alla som når monitorn, eller öppen åtkomst.Med konton har varje användare en <strong>profil</strong> som anger vad de kan se och göra, och servern tillämpar det på varje begäran.Tvåfaktorsautentisering (2FA) konfigureras senare från <strong>fliken Säkerhet</strong>."
+  },
   "reaching": {
     "heading": "Öppna instrumentpanelen",
     "intro": "ProxMenux Monitor lyssnar på TCP 8008 på alla gränssnitt (<code>::</code>, IPv4 och IPv6). Det finns tre vanliga sätt att nå den:",
@@ -19,10 +23,58 @@
   },
   "firstLaunch": {
     "heading": "Första starten",
+    "introSetup": "Vid första besöket anropar instrumentpanelen <code>GET /api/auth/status</code>.Även om inget åtkomstläge har valts, visas dialogrutan <em>\"Skydda din instrumentpanel?\"</em> med följande alternativ:",
     "imageAlt": "Dialogen ”Skydda instrumentpanelen?” med val att ange lösenord eller fortsätta utan skydd",
+    "imageCaptionChoice": "Dialogrutan för första besöket.Ett lösenord skapar det första lokala kontot;att fortsätta utan skydd leder till läsläge och öppet läge.",
     "headerButton": "Knapp",
     "headerWhat": "Vad händer",
     "headerApi": "API-anrop",
+    "choiceRows": [
+      {
+        "button": "Ja, Setup Password",
+        "what": "Öppnar formuläret som skapar det första lokala kontot, en <strong>Administratör</strong>, med valfritt <em>visningsnamn</em> och <em>avatarbild</em>, och loggar in det.",
+        "api": "POST /api/auth/setup"
+      },
+      {
+        "button": "Använd Proxmox VE konton",
+        "what": "Erbjuds under samma formulär.Användarna och områdena för Proxmox VE loggar in utan ett lokalt konto för monitorn;se <em>Proxmox VE konton</em> nedan.",
+        "api": "POST /api/auth/mode"
+      },
+      {
+        "button": "Nej, fortsätt utan skydd → Använd skrivskyddad",
+        "what": "Alla som når monitorn ser den men kan inte öppna terminaler, köra skript eller ändra någonting.Avläsningar som innehåller hemligheter, såsom processkommandorader och en gästs cloud-init-lösenord, är dolda.",
+        "api": "POST /api/auth/mode"
+      },
+      {
+        "button": "Nej, fortsätt utan skydd → Öppna utan lösenord",
+        "what": "Den som når monitorn får full kontroll över servern, inklusive rotterminal.",
+        "api": "POST /api/auth/mode"
+      }
+    ],
+    "codeTitle": "Inställningskoden",
+    "codeBody": "The installer of a new installation writes a one-time code to <code>/usr/local/share/proxmenux/monitor-setup-code</code> (mode <code>0600</code>) and prints it at the end of the installation. Every choice of the first-visit dialog asks for it, and the first decision consumes it. <code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong> shows the code, or creates a new one when there is none. Leaving read-only mode also asks for a setup code. An update of an existing installation keeps the access mode already in use and creates no code.",
+    "modesTitle": "Åtkomstlägen",
+    "modesIntro": "<strong>Säkerhet</strong> → <strong>Åtkomst och autentisering</strong> visar läget som används:",
+    "headerMode": "Läge",
+    "headerWho": "Vem kommer in och vad de kan göra",
+    "modeRows": [
+      {
+        "mode": "Lokala konton",
+        "who": "Varje användare loggar in med användarnamn, lösenord och valfri 2FA och får den profil som en administratör tilldelas.Proxmox VE-konton och OpenID Connect kan logga in tillsammans."
+      },
+      {
+        "mode": "Proxmox VE konton",
+        "who": "Användare av Proxmox VE loggar in med sin sfär och andra faktor, och det finns inget lokalt konto.En Proxmox VE användare med <code>Sys.Modify</code> på <code>/</code>, såsom <code>root@pam</code>, administrerar monitorn."
+      },
+      {
+        "mode": "Skrivskyddad",
+        "who": "Alla som når monitorn ser den, med observatörsprofilens behörigheter och utan hemligheter."
+      },
+      {
+        "mode": "Öppna",
+        "who": "Alla som når monitorn administrerar den, inklusive rotterminal."
+      }
+    ],
     "twofaCalloutTitle": "2FA är konfigurerad senare, inte här",
     "twofaCalloutBody": "Den första dialogen gäller endast lösenordsskyddet. <strong>Tvåfaktorsautentisering (TOTP)</strong> ställs sedan in på <strong>fliken Säkerhet</strong> efter inloggning med lösenord. Hela anvisningen finns längre ned.",
     "createTitle": "Skapa den första användaren",
@@ -65,7 +117,7 @@
     "headerEpWhat": "Vad det gör",
     "endpointRows": [
       {
-        "endpoint": "GET /api/auth/profile",
+        "endpoint": "HÄMTA /api/auth/profile",
         "what": "Returnerar användarnamn, visningsnamn och avatarstatus (<code>has_avatar</code>, <code>avatar_mtime</code>)."
       },
       {
@@ -73,7 +125,7 @@
         "what": "Uppdaterar visningsnamnet. Begärans innehåll: <code>'{' \"display_name\": \"...\" '}'</code>."
       },
       {
-        "endpoint": "GET /api/auth/profile/avatar",
+        "endpoint": "HÄMTA /api/auth/profile/avatar",
         "what": "Returnerar avatarbilden som PNG / JPEG / WebP / GIF med rätt innehållstyp. Kräver Bearer-headern; frontend hämtar en blob och skapar en lokal objekt-URL för visning."
       },
       {
@@ -84,7 +136,9 @@
         "endpoint": "DELETE /api/auth/profile/avatar",
         "what": "Tar bort avataren. Sidhuvudet visar åter en bokstav i en färgad cirkel."
       }
-    ]
+    ],
+    "changeTitle": "Ändra åtkomstläge",
+    "changeBody": "<strong>Säkerhet</strong> → <strong>Åtkomst och autentisering</strong> → <strong>Redigera</strong> växlar mellan lägen.Att ta bort lösenordet tar bort alla lokala användare och deras 2FA.API tokens och återkallningslistan behålls, och nästa konto som ställs in tar över API tokens för huvudadministratören.Om du lämnar skrivskyddat läge ber du om inställningskoden."
   },
   "password": {
     "heading": "Lösenordsautentisering",
@@ -142,8 +196,59 @@
     "recoverTitle": "Återställa ett förlorat lösenord",
     "recoverIntro": "Lösenordsåterställning kräver skalåtkomst till värden. ProxMenux har en guidad återställning i konfigurationsmenyn så att du slipper redigera <code>auth.json</code> manuellt:",
     "survivesTitle": "Vad överlever återställningen",
+    "survivesBodyUsers": "Only the sign-in is reset. The <code>jwt_secret</code>, the registered <code>api_tokens</code> and the revocation list are kept, and the next account set up takes over the API tokens of the main administrator, so Home Assistant and other integrations that use them keep working. API tokens of the other users stop working with their users. For a fully clean slate (a new JWT secret and every token invalid), delete <code>auth.json</code>, restart the service and create a setup code with <code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong>.",
     "physicalTitle": "Krav på åtkomst till värden",
     "physicalBody": "Kräver ett <strong>root-skal på värden</strong>. Den som kör <code>menu</code> som root styr redan hela maskinen; lösenordsåterställningen ger inga ytterligare rättigheter. Monitor-inloggningen skyddar därför inte mot någon som redan har root-åtkomst."
+  },
+  "users": {
+    "heading": "Användare och profiler",
+    "intro": "Med lokala konton har monitorn flera användare.Administratörer hanterar dem i <strong>Säkerhet</strong> → <strong>Användare</strong> → <strong>Redigera</strong>: lägg till en användare med ett lösenord och en profil, ändra profiler, ställ in ett nytt lösenord för en, ta bort, eller avaktivera användare, eller avaktivera användare.Det första kontot är en administratör.",
+    "headerProfile": "Profil",
+    "headerAllows": "Vad det tillåter",
+    "profileRows": [
+      {
+        "profile": "Administratör",
+        "allows": "Allt, inklusive användare och profiler, åtkomstläge och inloggningsinställningar, SSL, brandvägg, Fail2Ban, aviseringar, omstart och avstängning av värd, granskning och rapportering och avläsningar som innehåller hemligheter."
+      },
+      {
+        "profile": "Operatör med terminal",
+        "allows": "Varje sida och de fem åtgärderna: kör skript och verktyg, kontrollera virtuella datorer och LXC, hantera säkerhetskopior, uppdatera och öppna terminaler."
+      },
+      {
+        "profile": "Operatör utan terminal",
+        "allows": "Varje sida, och samma åtgärder utom terminaler."
+      },
+      {
+        "profile": "Observer",
+        "allows": "Varje sida, utan åtgärder."
+      },
+      {
+        "profile": "Anpassad",
+        "allows": "Områdena och åtgärderna som valts en efter en."
+      }
+    ],
+    "customTitle": "Anpassad profil",
+    "customIntro": "En anpassad profil kombinerar minst ett område med någon av de fem åtgärderna.Administrering är inte en del av en anpassad profil.",
+    "actionItems": [
+      "<strong>Kör skript och verktyg</strong>: ProxMenux scripts, Lynis, SMART-tester, revisionskörningar och app-distributioner.",
+      "<strong>Kontrollera virtuella datorer och LXC</strong>: starta, stoppa och redigera gäster och deras appar.",
+      "<strong>Hantera säkerhetskopior</strong>: säkerhetskopieringsjobb för värden och gästerna, PBS-servrar, återställningar och arkivnedladdningar.",
+      "<strong>Uppdatering</strong>: uppdateringar av värden, av ProxMenux, av LXC och av appar.",
+      "<strong>Öppna terminaler</strong>: terminaler för värden, för LXC och virtuella datorer."
+    ],
+    "areasBody": "The areas are the tabs of the dashboard: <em>Overview</em>, <em>Apps</em>, <em>Menux</em>, <em>VMs & LXCs</em>, <em>Node</em> (storage, network, hardware), <em>Backup</em> and <em>System Logs</em>. A tab outside the profile is hidden, and the server refuses its data. The header, the health status, the own account and the Security, Settings and About pages are available to every profile; Audit & Report is reserved to administrators.",
+    "enforceTitle": "Tillämpas av servern",
+    "enforceBody": "Every API route requires a permission (<code>AppImage/scripts/permissions.py</code>). A request without it receives HTTP <code>403</code> with the missing permission in the <code>permission</code> field, and the refusal is recorded in the access activity. The dashboard hides the buttons a profile cannot use. Terminals, script runs, updates and downloads start with a short-lived ticket that carries the permissions of whoever requested it. A profile change applies to open sessions at once.",
+    "accountsTitle": "Lösenord, 2FA, deaktivering och API tokens",
+    "accountItems": [
+      "Varje användare har sitt eget lösenord, 2FA, visningsnamn och avatar, och hanterar dem från sitt eget konto.",
+      "Ett nytt lösenord, satt av användaren eller av en administratör, avslutar den användarens andra sessioner.API tokens fortsätter att fungera.",
+      "En avaktiverad användare behåller sina inställningar men kan inte logga in, och deras sessioner och API-tokens slutar fungera tills en administratör aktiverar dem igen.Ett inloggningsförsök av en avaktiverad användare besvaras som ett fel lösenord.",
+      "Monitorn behåller minst en aktiv administratör: den sista kan inte tas bort, avaktiveras eller ges en annan profil, och ingen administratör kan avaktivera sitt eget konto.",
+      "API tokens tillhör användaren som genererade dem och gör aldrig mer än användarens profil;en token med det skrivskyddade omfånget gör inte mer än en observatör.Att ta bort en användare avslutar deras sessioner och API tokens, även om en användare med samma namn skapas igen."
+    ],
+    "scopeTitle": "Vad profiler täcker",
+    "scopeBody": "Profiler gäller för monitorn: dess instrumentpanel, dess API och dess terminaler.De begränsar inte SSH, Proxmox VE webbgränssnittet, Proxmox VE API eller någon annan åtkomst till värden.Ett rotskal på värden kan ändra <code>auth.json</code> och med det varje profil."
   },
   "twofa": {
     "heading": "Tvåfaktorsautentisering (TOTP)",
@@ -173,7 +278,7 @@
         "notes": "Krypterad synkronisering mellan enheter. Skrivbordsappen stöds inte längre sedan den 19 mars 2024."
       },
       {
-        "name": "Apple Passwords",
+        "name": "Apple-lösenord",
         "href": "https://support.apple.com/guide/passwords/welcome/mac",
         "platforms": "iOS, iPadOS, macOS, visionOS, Windows (via iCloud)",
         "notes": "Inbyggd i Apples system; separat Passwords-app sedan iOS 18 / macOS Sequoia. Sparar TOTP tillsammans med lösenord och synkroniserar via iCloud-nyckelring."
@@ -284,6 +389,48 @@
     ],
     "outro": "Lagringsråd och exempel: <apiLink>API-referens → Tokenhantering</apiLink> och <intLink>Integrationer</intLink>."
   },
+  "pveAccounts": {
+    "heading": "Proxmox VE konton",
+    "intro": "Användarna och sfärerna av Proxmox VE kan logga in på monitorn, tillsammans med lokala konton eller istället för dem.<strong>Säkerhet</strong> → <strong>Proxmox VE konton</strong> → <strong>Redigera</strong> aktiverar dem.Inloggningsskärmen har sedan en flik <em>Proxmox VE</em> med användare, lösenord och sfär, följt av den andra faktorn (TOTP-kod eller återställningsnyckel) när kontot har en.",
+    "items": [
+      "The Monitor keeps no session of its own: the browser holds a Proxmox VE ticket, and the Monitor checks it against the local Proxmox VE API (<code>/access/permissions</code>) at most once a minute. Expiry, realms, 2FA and permissions remain those of Proxmox VE, and a privilege removed there reaches the Monitor within a minute.",
+      "Konton som loggar in med en säkerhetsnyckel (WebAuthn), eller via en OpenID Connect-sfär av Proxmox VE, loggar in på Proxmox VE webbgränssnittet.Med monitorn öppen över HTTPS vid samma värdnamn loggar den sessionen också in på monitorn.",
+      "För att logga in krävs <code>Sys.Audit</code> på <code>/</code>."
+    ],
+    "profilesTitle": "Profiler för Proxmox VE konton",
+    "profilesBody": "Utan en regel avgör privilegierna på <code>/</code>: <code>Sys.Modify</code> ger administratör och <code>Sys.Audit</code> enbart ger Observer.Samma kort innehåller regler som tilldelar en profil till en Proxmox VE användare (till exempel <code>alice@pve</code>) eller grupp.En användarregel har företräde;annars gäller den första regeln för en grupp av användaren, med grupperna lästa från <code>/etc/pve/user.cfg</code>.En regel gäller som vald, oavsett privilegier.Sparningsregler som skulle ta bort administrationen från kontot som sparar dem vägras."
+  },
+  "oidc": {
+    "heading": "OpenID Anslut (OIDC)",
+    "intro": "En OpenID Connect-leverantör kan logga in personer på monitorn tillsammans med de lokala kontona.<strong>Säkerhet</strong> → <strong>OpenID Anslut (OIDC)</strong> → <strong>Redigera</strong> är tillgänglig när lokala konton används och har följande inställningar:",
+    "headerField": "Inställning",
+    "headerNotes": "Anteckningar",
+    "fieldRows": [
+      {
+        "field": "Leverantörens namn",
+        "notes": "Etiketten för inloggningsknappen."
+      },
+      {
+        "field": "Emittentens URL",
+        "notes": "HTTPS URL för leverantören.Monitorn läser dess <code>/.well-known/openid-configuration</code> när inställningarna sparas."
+      },
+      {
+        "field": "Klient-ID och hemlighet",
+        "notes": "Av klienten registrerad hos leverantören.Klientautentisering: <code>client_secret_basic</code>, <code>client_secret_post</code> eller <code>none</code>."
+      },
+      {
+        "field": "Offentlig URL",
+        "notes": "HTTPS URL som webbläsaren använder för att nå monitorn.Omdirigerings-URI för att registrera hos leverantören är <code>&lt;public_url&gt;/api/auth/oidc/callback</code>."
+      },
+      {
+        "field": "Tillåtna ämnen",
+        "notes": "<code>sub</code>-anspråket för varje person som släpps in, med ett namn för att känna igen det och en profil.Ett ämne utan vald profil är en administratör.Alla andra som är inloggade hos leverantören nekas."
+      }
+    ],
+    "flowBody": "The sign-in uses the authorization code flow with PKCE (<code>S256</code>) and a nonce, and accepts ID tokens signed with <code>RS256</code> or <code>ES256</code>. The callback hands the browser a one-time code, valid for 30 seconds, that only the browser that started the sign-in can exchange for a session. The session belongs to the identity <code>oidc:&lt;sub&gt;</code> and has the profile of its subject. The certificate of the provider is checked against the CA store of the host (<code>/etc/ssl/certs/ca-certificates.crt</code>); a provider with a certificate from an internal CA needs that CA added with <code>update-ca-certificates</code>.",
+    "saveTitle": "Om du sparar inställningarna avslutas OIDC-sessionerna",
+    "saveBody": "Varje lagring av OpenID Connect-inställningarna, en profiländring ingår, avslutar alla öppna OIDC-sessioner och de nya inställningarna gäller från nästa inloggning.Om du tar bort ett ämne från listan avslutas dess åtkomst."
+  },
   "https": {
     "heading": "HTTPS",
     "intro": "Två vägar till TLS:",
@@ -311,6 +458,18 @@
     "subPathTitle": "Avancerat: distribution under en undersökväg",
     "subPathBody": "Frontend saknar en inställd bas för undersökvägar och bygger API-anrop från roten med <code>/api/*</code>. Att ta bort ett prefix som <code>example.com/proxmenux-monitor/</code> hanterar varken anropen eller alla frontendfiler. Använd ett eget värdnamn. Undersökvägar kräver samordnade ändringar och särskild testning."
   },
+  "activity": {
+    "heading": "Åtkomstaktivitet",
+    "intro": "<strong>Säkerhet</strong> → <strong>Åtkomstaktivitet</strong> listor, senaste först, vem som gjorde vad med åtkomsten till monitorn, med kontot och klientadressen.Det är bara administratörer som ser det.",
+    "items": [
+      "Inloggningar, lyckade eller misslyckade, med metoden (lokalt konto, Proxmox VE eller OpenID Connect) och om en andra faktor användes.",
+      "Skapande av konto, ändringar av åtkomstläge, ändringar av lösenord och 2FA och API tokens skapade eller återkallade.",
+      "Användare har lagts till, tagits bort, avaktiverats eller aktiverats, profiländringar och lösenord som har ställts in av en administratör.",
+      "Ändringar av Proxmox VE-kontona, deras profilregler och OpenID Connect-inställningar.",
+      "Varje åtgärd som en profil vägrade, med rutten och den saknade behörigheten.Ett avslag som upprepas av samma konto på samma rutt registreras en gång per minut."
+    ],
+    "outro": "Lösenord, koder och tokens registreras aldrig.Händelserna sparas i 90 dagar i <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, läge <code>0600</code>) och serveras till administratörer av <code>GET /api/auth/events</code>."
+  },
   "audit": {
     "heading": "Granskningslogg",
     "intro": "Misslyckade inloggningar och varningar om begränsning skrivs radvis till <code>/var/log/proxmenux-auth.log</code>. Denna logger registrerar inte lyckade inloggningar:",
@@ -332,11 +491,15 @@
   "troubleshoot": {
     "heading": "Felsökning",
     "noScreenTitle": "Den första lanseringsskärmen visas aldrig",
+    "noScreenBodyModes": "An access mode is already in use. <code>menu</code> → <strong>Settings</strong> → <strong>Reset ProxMenux Monitor Password</strong> brings back the first-visit dialog and prints a new setup code. To start from an empty configuration instead:",
     "noScreenOutro": "Raderar autentisering, TOTP-hemligheter och API-token. Säkerhetskopiera <code>auth.json</code> först om du vill behålla dem.",
     "tokenTitle": "HTTP 401 på varje begäran från en fungerande API token",
     "tokenBody": "Token gick ut (365 d-gräns) eller kom in i <code>revoked_tokens</code>-listan. Skapa en ny i Inställningar och uppdatera integrationen. För att kontrollera:",
     "tokenOutro": "Utgångna eller återkallade tokens returnerar <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Kan inte logga in efter att 2FA aktiverats och appen saknas",
+    "no2faBodyUsers": "Använd en reservkod i TOTP-fältet.En administratör tar bort 2FA för en annan användare i <strong>Säkerhet</strong> → <strong>Användare</strong> → <strong>Redigera</strong>.För huvudadministratören, redigera <code>/root/.config/proxmenux-monitor/auth.json</code> från ett värdskal, ställ in <code>totp_enabled</code> till <code>false</code> och starta om tjänsten.",
+    "forbiddenTitle": "En åtgärd svarar på HTTP 403",
+    "forbiddenBody": "The profile of the account lacks the permission named in the <code>permission</code> field of the answer, and the refusal appears in the access activity. An administrator changes the profile in <strong>Security</strong> → <strong>Users</strong>, in the rules of the Proxmox VE accounts or in the allowed subjects of OpenID Connect.",
     "wsTitle": "Omvänd proxy fungerar men den terminala fliken kopplar bort varje minut",
     "wsBody": "WebSocket-anslutningens tidsgräns för inaktivitet i proxyn. Öka lästiden (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> i ingångspunkt eller middleware). Kontrollera i Nginx att <code>proxy_set_header Upgrade $http_upgrade</code> och <code>Connection \"upgrade\"</code> finns."
   },
