@@ -70,7 +70,19 @@ def public_config():
         ("enabled", False), ("provider_name", "OpenID Connect"),
         ("issuer", ""), ("client_id", ""), ("public_url", ""),
         ("allowed_subjects", []), ("token_auth_method", "client_secret_basic"),
+        ("subject_profiles", {}),
     )}, "has_client_secret": bool(config.get("client_secret")), "available": available()}
+
+
+def subject_choice(subject):
+    """The name and profile ({name, profile, custom}) of an allowed subject:
+    one without a choice is an administrator, as every subject was before
+    subjects had profiles."""
+    config = load_config()
+    if subject not in config.get("allowed_subjects", []):
+        return None
+    choice = (config.get("subject_profiles") or {}).get(subject)
+    return choice if isinstance(choice, dict) else {"name": None, "profile": "admin", "custom": None}
 
 
 # A provider in a homelab often has a certificate from an internal CA. The
@@ -143,7 +155,7 @@ def save_config(data):
     config = {key: data.get(key, previous.get(key, default)) for key, default in (
         ("provider_name", "OpenID Connect"), ("issuer", ""), ("client_id", ""),
         ("public_url", ""), ("allowed_subjects", []), ("client_secret", ""),
-        ("token_auth_method", "client_secret_basic"),
+        ("token_auth_method", "client_secret_basic"), ("subject_profiles", {}),
     )}
     config["enabled"] = data["enabled"]
     config["revision"] = secrets.token_hex(16)
@@ -160,6 +172,25 @@ def save_config(data):
             or any(not isinstance(s, str) or not s.strip() or len(s) > 256 for s in subjects)):
         raise OIDCError("Specify allowed immutable subjects (sub), one per line.")
     config["allowed_subjects"] = list(dict.fromkeys(s.strip() for s in subjects))
+    # Each subject may have a name to recognise it by and a profile.
+    choices = config["subject_profiles"]
+    if not isinstance(choices, dict):
+        raise OIDCError("Invalid subject profiles.")
+    profiles = {}
+    for subject, choice in choices.items():
+        if subject not in config["allowed_subjects"]:
+            continue
+        if not isinstance(choice, dict):
+            raise OIDCError("Invalid subject profiles.")
+        name = choice.get("name")
+        if name is not None and (not isinstance(name, str) or len(name) > 64
+                                 or any(ord(ch) < 0x20 for ch in name)):
+            raise OIDCError("Invalid subject name.")
+        fields, error = auth_manager._profile_fields(choice.get("profile"), choice.get("custom"))
+        if error:
+            raise OIDCError(error)
+        profiles[subject] = {"name": (name or "").strip() or None, **fields}
+    config["subject_profiles"] = profiles
     if config["token_auth_method"] not in ("client_secret_basic", "client_secret_post", "none"):
         raise OIDCError("Invalid client authentication method.")
     if config["token_auth_method"] == "none":
@@ -295,8 +326,7 @@ def finish_login(state, binding, code):
             data["client_secret"] = config["client_secret"]
     response = _request_json("POST", metadata["token_endpoint"], data=data, **options)
     subject = _verify_id_token(response.get("id_token"), config, metadata, flow["nonce"])
-    token = auth_manager.generate_token(auth_manager.load_auth_config()["username"],
-                                        oidc_identity={"sub": subject, "revision": config["revision"]})
+    token = auth_manager.generate_token(oidc_identity={"sub": subject, "revision": config["revision"]})
     if not token:
         raise OIDCError("Could not create a Monitor session.")
     ticket = secrets.token_urlsafe(32)

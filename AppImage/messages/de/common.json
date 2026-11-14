@@ -2872,7 +2872,27 @@
     "onlyWay": "Proxmox VE-Konten dienen als Zugang zum Dashboard. Um diese nicht mehr zu verwenden, legen Sie ein lokales Passwort fest oder wählen Sie oben schreibgeschützten oder offenen Zugriff.",
     "whoGetsIn": "Benutzer mit der Berechtigung Sys.Modify auf / erhalten Vollzugriff; Benutzer mit nur Sys.Audit auf / erhalten Lesezugriff. Andere Benutzer können sich nicht anmelden.",
     "sharedSession": "An der Proxmox VE-Weboberfläche angemeldet? Öffnen Sie das Dashboard über HTTPS unter derselben Adresse, und diese Sitzung meldet Sie auch hier an.",
-    "saveFailed": "Die Änderung konnte nicht gespeichert werden."
+    "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
+    "rulesTitle": "Profile der Proxmox VE-Konten",
+    "rulesHelp": "Die Regel eines Benutzers hat Vorrang, sonst gilt die erste Regel einer seiner Gruppen. Ohne Regel ergibt Sys.Modify auf / das Profil Administrator und Sys.Audit das Profil Beobachter. Eine Regel lässt nie einen Benutzer ohne Berechtigungen auf / herein.",
+    "ruleKind": "Regel für",
+    "ruleName": "Benutzer oder Gruppe",
+    "kindUser": "Benutzer",
+    "kindGroup": "Gruppe",
+    "chooseName": "Auswählen…",
+    "addRule": "Regel hinzufügen",
+    "removeRule": "Entfernen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "saveRules": "Regeln speichern",
+    "rulesSaved": "Regeln gespeichert.",
+    "errors": {
+      "pve_rules_invalid": "Die Regeln konnten nicht gespeichert werden.",
+      "pve_name_invalid": "Wählen Sie einen gültigen Benutzer oder eine gültige Gruppe.",
+      "pve_user_realm": "Geben Sie den Benutzer mit seinem Realm an, z. B. benutzer@pve.",
+      "pve_rule_duplicate": "Jeder Benutzer und jede Gruppe kann nur eine Regel haben.",
+      "pve_rule_self": "Diese Regeln würden Ihnen den Administratorzugriff entziehen."
+    }
   },
   "users": {
     "title": "Benutzer",
@@ -8268,6 +8288,12 @@
     "login": "Mit {provider} fortfahren",
     "loginFailed": "OIDC-Anmeldung fehlgeschlagen oder abgelaufen. Versuchen Sie es erneut, prüfen Sie Ihr zugelassenes Subject oder verwenden Sie Ihre lokalen Zugangsdaten.",
     "disabledSaved": "OIDC-Einstellungen gespeichert. Die externe Anmeldung ist deaktiviert.",
-    "saveDisabled": "Einstellungen speichern"
+    "saveDisabled": "Einstellungen speichern",
+    "allowedSubjects": "Zugelassene Subjects",
+    "allowedSubjectsHelp": "Nur diese unveränderlichen Benutzer-IDs des Anbieters erhalten Zugriff auf den Monitor, jede mit ihrem Profil; eine ohne gewähltes Profil ist Administrator. Verwenden Sie den für diesen Client ausgestellten sub-Wert, keine E-Mail-Adresse und keinen Anzeigenamen.",
+    "subjectId": "Subject (sub)",
+    "subjectName": "Name (optional)",
+    "addSubject": "Subject hinzufügen",
+    "removeSubject": "Entfernen"
   }
 }

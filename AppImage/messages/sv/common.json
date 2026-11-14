@@ -2872,7 +2872,27 @@
     "onlyWay": "Proxmox VE-konton används för att nå instrumentpanelen. Om du vill sluta använda dem lägger du till ett lokalt lösenord eller väljer skrivskyddad eller öppen åtkomst ovan.",
     "whoGetsIn": "Användare med behörigheten Sys.Modify på / får full åtkomst; användare med endast Sys.Audit på / får skrivskyddad åtkomst. Andra användare kan inte logga in.",
     "sharedSession": "Inloggad i Proxmox VE-webbgränssnittet? Öppna instrumentpanelen över HTTPS på samma adress så loggar den sessionen in dig även här.",
-    "saveFailed": "Ändringen kunde inte sparas."
+    "saveFailed": "Ändringen kunde inte sparas.",
+    "rulesTitle": "Profiler för Proxmox VE-konton",
+    "rulesHelp": "En användares regel gäller först; annars gäller den första regeln för en av användarens grupper. Utan regel ger Sys.Modify på / profilen Administratör och Sys.Audit profilen Observatör. En regel släpper aldrig in en användare utan behörigheter på /.",
+    "ruleKind": "Regel för",
+    "ruleName": "Användare eller grupp",
+    "kindUser": "Användare",
+    "kindGroup": "Grupp",
+    "chooseName": "Välj…",
+    "addRule": "Lägg till regel",
+    "removeRule": "Ta bort",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "saveRules": "Spara regler",
+    "rulesSaved": "Reglerna har sparats.",
+    "errors": {
+      "pve_rules_invalid": "Reglerna kunde inte sparas.",
+      "pve_name_invalid": "Välj en giltig användare eller grupp.",
+      "pve_user_realm": "Ange användaren med sin realm, till exempel user@pve.",
+      "pve_rule_duplicate": "Varje användare eller grupp kan bara ha en regel.",
+      "pve_rule_self": "De här reglerna skulle ta bort din administratörsåtkomst."
+    }
   },
   "users": {
     "title": "Användare",
@@ -8268,6 +8288,12 @@
     "login": "Fortsätt med {provider}",
     "loginFailed": "OIDC-inloggningen misslyckades eller upphörde att gälla. Försök igen, kontrollera din tillåtna subjektidentifierare eller använd dina lokala inloggningsuppgifter.",
     "disabledSaved": "OIDC-inställningarna har sparats. Extern inloggning är inaktiverad.",
-    "saveDisabled": "Spara inställningar"
+    "saveDisabled": "Spara inställningar",
+    "allowedSubjects": "Tillåtna identifierare",
+    "allowedSubjectsHelp": "Endast dessa oföränderliga användar-ID:n från leverantören får åtkomst till Monitor, var och en med sin profil; ett ID utan vald profil är administratör. Använd sub-värdet som utfärdats för den här klienten, inte en e-postadress eller ett visningsnamn.",
+    "subjectId": "Identifierare (sub)",
+    "subjectName": "Namn (valfritt)",
+    "addSubject": "Lägg till identifierare",
+    "removeSubject": "Ta bort"
   }
 }

@@ -188,6 +188,57 @@ class PVEAccounts(unittest.TestCase):
         self.assertEqual(auth_manager.access_mode(), "password")
         self.assertTrue(auth_manager.set_pve_auth(False)[0])
 
+    # ── profiles for Proxmox VE users and groups ─────────────────────
+    def test_rules_give_users_and_groups_a_profile(self):
+        self.proxmox_mode()
+        cfg = self.root / "user.cfg"
+        cfg.write_text("user:root@pam:1:0::::::\nuser:auditor@pve:1:0::::::\nuser:tfa@pve:1:0::::::\n"
+                       "group:ops:auditor@pve,tfa@pve::\ngroup:viewers:tfa@pve::\ngroup:admins:root@pam::\n")
+        patch = mock.patch.object(pve_auth, "USER_CFG", str(cfg))
+        patch.start()
+        self.addCleanup(patch.stop)
+        pve_auth._directory["mtime"] = None
+        rules = [{"kind": "group", "name": "viewers", "profile": "observer"},
+                 {"kind": "group", "name": "ops", "profile": "operator"},
+                 {"kind": "user", "name": "auditor@pve", "profile": "custom",
+                  "custom": {"areas": ["backup"], "actions": ["backup"]}}]
+        # Only an administrator reads or changes them.
+        self.assertEqual(self.client.get("/api/auth/pve/profiles", headers=self.as_ticket(AUDITOR)).status_code, 403)
+        saved = self.client.put("/api/auth/pve/profiles", json={"rules": rules}, headers=self.as_ticket(ADMIN))
+        self.assertEqual(saved.status_code, 200, saved.json)
+        listed = self.client.get("/api/auth/pve/profiles", headers=self.as_ticket(ADMIN)).json
+        self.assertEqual((listed["users"], listed["groups"]),
+                         (["auditor@pve", "root@pam", "tfa@pve"], ["admins", "ops", "viewers"]))
+        # The rule of the user wins; then the first rule of one of their groups.
+        # A rule applies whole: Sys.Audit lets the user in, the rule decides the rest.
+        self.assertEqual(auth_manager.profile_for("proxmox", "auditor@pve", "read_only"), "custom:backup:backup")
+        self.assertEqual(auth_manager.profile_for("proxmox", "tfa@pve", "full_admin"), "observer")
+        rules[0], rules[1] = rules[1], rules[0]  # now ops comes first for tfa@pve
+        self.assertTrue(auth_manager.set_pve_rules(rules)[0])
+        self.assertEqual(auth_manager.profile_for("proxmox", "tfa@pve", "read_only"), "operator")
+        # Whoever saves the rules never takes their own administration away.
+        demoted = self.client.put("/api/auth/pve/profiles", headers=self.as_ticket(ADMIN),
+                                  json={"rules": rules + [{"kind": "group", "name": "admins", "profile": "observer"}]})
+        self.assertEqual(demoted.status_code, 400)
+        self.assertEqual(auth_manager.profile_for("proxmox", "root@pam", "full_admin"), "admin")
+        # Without a rule, the privileges decide.
+        self.assertTrue(auth_manager.set_pve_rules([])[0])
+        self.assertEqual(auth_manager.profile_for("proxmox", "root@pam", "full_admin"), "admin")
+        self.assertEqual(auth_manager.profile_for("proxmox", "auditor@pve", "read_only"), "observer")
+        # A rule never lets in a user Proxmox VE gives no privileges on /.
+        self.assertTrue(auth_manager.set_pve_rules([{"kind": "user", "name": "guest@pve", "profile": "admin"}])[0])
+        self.assertEqual(self.client.get("/api/read", headers=self.as_ticket(NOBODY)).status_code, 401)
+
+    def test_rules_are_checked(self):
+        for rules in ([{"kind": "user", "name": "noRealm", "profile": "admin"}],
+                      [{"kind": "group", "name": "a:b", "profile": "admin"}],
+                      [{"kind": "role", "name": "ops", "profile": "admin"}],
+                      [{"kind": "group", "name": "ops", "profile": "observer"}, {"kind": "group", "name": "ops", "profile": "admin"}],
+                      [{"kind": "group", "name": "ops", "profile": "custom", "custom": {"areas": [], "actions": []}}],
+                      "rules"):
+            with self.subTest(rules=rules):
+                self.assertFalse(auth_manager.set_pve_rules(rules)[0])
+
     def test_the_monitor_never_ends_with_no_way_in(self):
         self.proxmox_mode()
         self.assertFalse(auth_manager.set_pve_auth(False)[0])

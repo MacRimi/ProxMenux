@@ -2872,7 +2872,27 @@
     "onlyWay": "Les comptes Proxmox VE permettent d'accéder au tableau de bord. Pour ne plus les utiliser, ajoutez un mot de passe local ou choisissez l'accès en lecture seule ou libre ci-dessus.",
     "whoGetsIn": "Les utilisateurs disposant du privilège Sys.Modify sur / bénéficient d'un accès complet ; ceux disposant uniquement de Sys.Audit sur /, d'un accès en lecture seule. Les autres utilisateurs ne peuvent pas se connecter.",
     "sharedSession": "Connecté à l'interface web de Proxmox VE ? Ouvrez le tableau de bord en HTTPS à la même adresse et cette session vous connectera ici aussi.",
-    "saveFailed": "La modification n'a pas pu être enregistrée."
+    "saveFailed": "La modification n'a pas pu être enregistrée.",
+    "rulesTitle": "Profils des comptes Proxmox VE",
+    "rulesHelp": "La règle d'un utilisateur l'emporte ; sinon, la première règle de l'un de ses groupes s'applique. Sans règle, Sys.Modify sur / donne le profil Administrateur et Sys.Audit le profil Observateur. Une règle ne laisse jamais entrer un utilisateur sans privilèges sur /.",
+    "ruleKind": "Règle pour",
+    "ruleName": "Utilisateur ou groupe",
+    "kindUser": "Utilisateur",
+    "kindGroup": "Groupe",
+    "chooseName": "Choisir…",
+    "addRule": "Ajouter une règle",
+    "removeRule": "Supprimer",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "saveRules": "Enregistrer les règles",
+    "rulesSaved": "Règles enregistrées.",
+    "errors": {
+      "pve_rules_invalid": "Les règles n'ont pas pu être enregistrées.",
+      "pve_name_invalid": "Choisissez un utilisateur ou un groupe valide.",
+      "pve_user_realm": "Indiquez l'utilisateur avec son domaine, par exemple utilisateur@pve.",
+      "pve_rule_duplicate": "Chaque utilisateur ou groupe ne peut avoir qu'une règle.",
+      "pve_rule_self": "Ces règles vous retireraient l'accès administrateur."
+    }
   },
   "users": {
     "title": "Utilisateurs",
@@ -8268,6 +8288,12 @@
     "login": "Continuer avec {provider}",
     "loginFailed": "La connexion OIDC a échoué ou a expiré. Réessayez, vérifiez votre identifiant de sujet autorisé ou utilisez vos identifiants locaux.",
     "disabledSaved": "Paramètres OIDC enregistrés. La connexion externe est désactivée.",
-    "saveDisabled": "Enregistrer les paramètres"
+    "saveDisabled": "Enregistrer les paramètres",
+    "allowedSubjects": "Identifiants autorisés",
+    "allowedSubjectsHelp": "Seuls ces identifiants d'utilisateur immuables du fournisseur accèdent au Monitor, chacun avec son profil ; un identifiant sans profil choisi est administrateur. Utilisez la valeur sub émise pour ce client, pas une adresse e-mail ni un nom affiché.",
+    "subjectId": "Identifiant (sub)",
+    "subjectName": "Nom (facultatif)",
+    "addSubject": "Ajouter un identifiant",
+    "removeSubject": "Supprimer"
   }
 }

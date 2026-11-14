@@ -2872,7 +2872,27 @@
     "onlyWay": "Gli account di Proxmox VE sono il metodo di accesso alla dashboard. Per non usarli più, aggiungi una password locale oppure scegli sopra l'accesso in sola lettura o aperto.",
     "whoGetsIn": "Gli utenti con il privilegio Sys.Modify su / ottengono l'accesso completo; gli utenti con solo Sys.Audit su /, l'accesso in sola lettura. Gli altri utenti non possono accedere.",
     "sharedSession": "Hai effettuato l'accesso all'interfaccia web di Proxmox VE? Apri la dashboard tramite HTTPS allo stesso indirizzo e quella sessione ti farà accedere anche qui.",
-    "saveFailed": "Impossibile salvare la modifica."
+    "saveFailed": "Impossibile salvare la modifica.",
+    "rulesTitle": "Profili degli account Proxmox VE",
+    "rulesHelp": "Prevale la regola di un utente; altrimenti si applica la prima regola di uno dei suoi gruppi. Senza regola, Sys.Modify su / dà il profilo Amministratore e Sys.Audit il profilo Osservatore. Una regola non fa mai entrare un utente senza privilegi su /.",
+    "ruleKind": "Regola per",
+    "ruleName": "Utente o gruppo",
+    "kindUser": "Utente",
+    "kindGroup": "Gruppo",
+    "chooseName": "Scegli…",
+    "addRule": "Aggiungi regola",
+    "removeRule": "Rimuovi",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "saveRules": "Salva regole",
+    "rulesSaved": "Regole salvate.",
+    "errors": {
+      "pve_rules_invalid": "Non è stato possibile salvare le regole.",
+      "pve_name_invalid": "Scegli un utente o un gruppo valido.",
+      "pve_user_realm": "Indica l'utente con il suo realm, ad esempio utente@pve.",
+      "pve_rule_duplicate": "Ogni utente o gruppo può avere una sola regola.",
+      "pve_rule_self": "Queste regole ti toglierebbero l'accesso da amministratore."
+    }
   },
   "users": {
     "title": "Utenti",
@@ -8268,6 +8288,12 @@
     "login": "Continua con {provider}",
     "loginFailed": "Accesso OIDC non riuscito o scaduto. Riprova, controlla il tuo identificatore soggetto autorizzato oppure usa le credenziali locali.",
     "disabledSaved": "Impostazioni OIDC salvate. L'accesso esterno è disabilitato.",
-    "saveDisabled": "Salva impostazioni"
+    "saveDisabled": "Salva impostazioni",
+    "allowedSubjects": "Identificativi consentiti",
+    "allowedSubjectsHelp": "Solo questi identificativi utente immutabili del provider accedono al Monitor, ciascuno con il proprio profilo; uno senza profilo scelto è amministratore. Usa il valore sub emesso per questo client, non un indirizzo e-mail né un nome visualizzato.",
+    "subjectId": "Identificativo (sub)",
+    "subjectName": "Nome (facoltativo)",
+    "addSubject": "Aggiungi identificativo",
+    "removeSubject": "Rimuovi"
   }
 }

@@ -2872,7 +2872,27 @@
     "onlyWay": "As contas do Proxmox VE são a forma de acessar o painel. Para deixar de usá-las, adicione uma senha local ou escolha o acesso somente leitura ou aberto acima.",
     "whoGetsIn": "Usuários com o privilégio Sys.Modify em / obtêm acesso total; usuários apenas com Sys.Audit em /, acesso somente leitura. Outros usuários não podem fazer login.",
     "sharedSession": "Já fez login na interface web do Proxmox VE? Abra o painel via HTTPS no mesmo endereço e essa sessão também conectará você aqui.",
-    "saveFailed": "Não foi possível salvar a alteração."
+    "saveFailed": "Não foi possível salvar a alteração.",
+    "rulesTitle": "Perfis das contas do Proxmox VE",
+    "rulesHelp": "A regra de um usuário prevalece; caso contrário, vale a primeira regra de um dos seus grupos. Sem regra, Sys.Modify em / dá o perfil Administrador e Sys.Audit o perfil Observador. Uma regra nunca deixa entrar um usuário sem privilégios em /.",
+    "ruleKind": "Regra para",
+    "ruleName": "Usuário ou grupo",
+    "kindUser": "Usuário",
+    "kindGroup": "Grupo",
+    "chooseName": "Escolher…",
+    "addRule": "Adicionar regra",
+    "removeRule": "Remover",
+    "moveUp": "Subir",
+    "moveDown": "Descer",
+    "saveRules": "Salvar regras",
+    "rulesSaved": "Regras salvas.",
+    "errors": {
+      "pve_rules_invalid": "Não foi possível salvar as regras.",
+      "pve_name_invalid": "Escolha um usuário ou grupo válido.",
+      "pve_user_realm": "Informe o usuário com o seu realm, como usuario@pve.",
+      "pve_rule_duplicate": "Cada usuário ou grupo pode ter apenas uma regra.",
+      "pve_rule_self": "Essas regras removeriam o seu acesso de administrador."
+    }
   },
   "users": {
     "title": "Usuários",
@@ -8268,6 +8288,12 @@
     "login": "Continuar com {provider}",
     "loginFailed": "O início de sessão OIDC falhou ou expirou. Tente novamente, verifique o seu identificador de sujeito autorizado ou utilize as credenciais locais.",
     "disabledSaved": "Definições OIDC guardadas. O início de sessão externo está desativado.",
-    "saveDisabled": "Guardar definições"
+    "saveDisabled": "Guardar definições",
+    "allowedSubjects": "Identificadores permitidos",
+    "allowedSubjectsHelp": "Somente esses identificadores de usuário imutáveis do provedor acessam o Monitor, cada um com seu perfil; um sem perfil escolhido é administrador. Use o valor sub emitido para este cliente, não um e-mail nem um nome de exibição.",
+    "subjectId": "Identificador (sub)",
+    "subjectName": "Nome (opcional)",
+    "addSubject": "Adicionar identificador",
+    "removeSubject": "Remover"
   }
 }

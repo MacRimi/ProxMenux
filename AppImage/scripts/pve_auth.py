@@ -94,6 +94,50 @@ def validate(ticket):
     return result
 
 
+# The users and groups of Proxmox VE, from the file it keeps them in on this
+# host (pmxcfs); read again when it changes.
+USER_CFG = "/etc/pve/user.cfg"
+_directory = {"mtime": None, "users": [], "groups": {}}
+_directory_lock = threading.Lock()
+
+
+def _read_directory():
+    import os
+    try:
+        mtime = os.stat(USER_CFG).st_mtime
+    except OSError:
+        return [], {}
+    with _directory_lock:
+        if _directory["mtime"] == mtime:
+            return _directory["users"], _directory["groups"]
+    users, groups = [], {}
+    try:
+        with open(USER_CFG, encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                fields = line.rstrip("\n").split(":")
+                if fields[0] == "user" and len(fields) > 1 and fields[1]:
+                    users.append(fields[1])
+                elif fields[0] == "group" and len(fields) > 2 and fields[1]:
+                    groups[fields[1]] = [member for member in fields[2].split(",") if member]
+    except OSError:
+        return [], {}
+    with _directory_lock:
+        _directory.update(mtime=mtime, users=users, groups=groups)
+    return users, groups
+
+
+def groups_of(userid):
+    """The Proxmox VE groups `userid` belongs to."""
+    _users, groups = _read_directory()
+    return {name for name, members in groups.items() if userid in members}
+
+
+def directory():
+    """The users and groups to choose from when giving them a profile."""
+    users, groups = _read_directory()
+    return {"users": sorted(users), "groups": sorted(groups)}
+
+
 def realms():
     """The realms to choose from, as Proxmox VE lists them to its login form."""
     status, data = _request("GET", "/access/domains")

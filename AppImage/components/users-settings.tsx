@@ -11,17 +11,11 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
-import { Checkbox } from "./ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
-import { AREAS, useAccess } from "../lib/access"
+import { useAccess } from "../lib/access"
+import { CustomChoice, EMPTY_CUSTOM, PROFILES, type Custom } from "./profile-picker"
 import { useT } from "../lib/i18n/provider"
-
-export const PROFILES = ["admin", "operator", "operator_no_terminal", "observer", "custom"] as const
-// Administering is not offered: whoever administers can give themselves any profile.
-export const CUSTOM_ACTIONS = ["execute", "guests", "backup", "update", "terminal"] as const
-
-interface Custom { areas: string[]; actions: string[] }
 
 interface MonitorUser {
   username: string
@@ -30,37 +24,6 @@ interface MonitorUser {
   custom: Custom | null
   totp_enabled: boolean
   primary: boolean
-}
-
-const EMPTY_CUSTOM: Custom = { areas: ["general"], actions: [] }
-
-function CustomChoice({ value, onChange, disabled }: { value: Custom; onChange: (next: Custom) => void; disabled: boolean }) {
-  const t = useT()
-  const toggle = (list: string[], item: string, on: boolean) => on ? [...list, item] : list.filter(x => x !== item)
-  const group = (title: string, items: readonly string[], key: "areas" | "actions", label: (item: string) => string) => (
-    <fieldset className="space-y-2 min-w-0">
-      <legend className="text-sm font-medium mb-1">{title}</legend>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {items.map(item => {
-          const id = `custom-${key}-${item}`
-          return (
-            <label key={item} htmlFor={id} className="flex items-center gap-2 text-sm min-w-0">
-              <Checkbox id={id} checked={value[key].includes(item)} disabled={disabled}
-                onCheckedChange={on => onChange({ ...value, [key]: toggle(value[key], item, on === true) })} />
-              <span className="min-w-0 [overflow-wrap:anywhere]">{label(item)}</span>
-            </label>
-          )
-        })}
-      </div>
-    </fieldset>
-  )
-  return (
-    <div className="space-y-4 rounded-md border border-border bg-muted/40 p-3">
-      {group(t("users.customAreas"), AREAS, "areas", item => t(`users.areas.${item}`))}
-      {group(t("users.customActions"), CUSTOM_ACTIONS, "actions", item => t(`users.actions.${item}`))}
-      <p className="text-xs text-muted-foreground">{t("users.customHint")}</p>
-    </div>
-  )
 }
 
 export function UsersSettings() {

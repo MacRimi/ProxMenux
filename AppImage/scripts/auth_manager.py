@@ -398,20 +398,100 @@ def profile_for(mode, username=None, scope=None):
         return "observer"
     if mode not in ("password", "proxmox") or not username:
         return None
+    if username.startswith(OIDC_PREFIX):
+        import oidc_manager
+        return _stored_profile(oidc_manager.subject_choice(username[len(OIDC_PREFIX):]), scope)
     user = find_user(username)
     if user is not None:
-        profile = user.get("profile")
-        if profile == permissions.CUSTOM:
-            custom = user.get("custom") or {}
-            actions = [] if scope == "read_only" else custom.get("actions")
-            return permissions.custom_profile(custom.get("areas"), actions)
-        if profile not in permissions.PROFILES:
-            return None
-        return "observer" if scope == "read_only" else profile
+        return _stored_profile(user, scope)
+    # A Proxmox VE account: a rule of the Monitor, else what its privileges
+    # give. The rule is an administrator's explicit choice and applies whole:
+    # its scope here comes from the privileges, not from a read-only token.
+    rule = pve_rule_for(username)
+    if rule is not None:
+        return _stored_profile(rule)
     if scope == "full_admin":
         return "admin"
     if scope == "read_only":
         return "observer"
+    return None
+
+
+def _stored_profile(choice, scope=None):
+    """The session profile of a stored choice ({profile, custom}): a token
+    with read-only scope never does more than observe."""
+    if not isinstance(choice, dict):
+        return None
+    profile = choice.get("profile")
+    if profile == permissions.CUSTOM:
+        custom = choice.get("custom") or {}
+        actions = [] if scope == "read_only" else custom.get("actions")
+        return permissions.custom_profile(custom.get("areas"), actions)
+    if profile not in permissions.PROFILES:
+        return None
+    return "observer" if scope == "read_only" else profile
+
+
+# ── Profiles of Proxmox VE accounts ───────────────────────────────────
+# An ordered list of rules, user or group → profile: the rule of the user
+# wins, then the first rule of one of their groups. Without one, the
+# privileges on / decide (pve_auth.scope_of).
+_PVE_NAME = re.compile(r"^[^\s:,]{1,128}$")
+
+
+def pve_rules(config=None):
+    config = load_auth_config() if config is None else config
+    rules = config.get("pve_profiles")
+    return rules if isinstance(rules, list) else []
+
+
+def set_pve_rules(rules, keep_admin=None):
+    """Save the rules (see above). `keep_admin` names the Proxmox VE user
+    saving them: rules that would take their administration away are
+    refused, so the Monitor never ends without one. Returns (success, message)."""
+    if not isinstance(rules, list) or len(rules) > 256:
+        return False, "Invalid rules"
+    clean, seen = [], set()
+    for rule in rules:
+        if not isinstance(rule, dict) or rule.get("kind") not in ("user", "group"):
+            return False, "Invalid rules"
+        name = rule.get("name")
+        if not isinstance(name, str) or not _PVE_NAME.match(name.strip()):
+            return False, "Invalid user or group name"
+        name = name.strip()
+        if rule["kind"] == "user" and "@" not in name:
+            return False, "Name the user with its realm, such as user@pve"
+        if (rule["kind"], name) in seen:
+            return False, "Each user or group can have one rule"
+        seen.add((rule["kind"], name))
+        fields, error = _profile_fields(rule.get("profile"), rule.get("custom"))
+        if error:
+            return False, error
+        clean.append({"kind": rule["kind"], "name": name, **fields})
+    config = load_auth_config()
+    config["pve_profiles"] = clean
+    if keep_admin and not keep_admin.startswith(OIDC_PREFIX) and find_user(keep_admin) is None:
+        rule = pve_rule_for(keep_admin, config)
+        if rule is not None and _stored_profile(rule) != "admin":
+            return False, "These rules would remove your administrator access"
+    if save_auth_config(config):
+        return True, "Rules saved"
+    return False, "Failed to save configuration"
+
+
+def pve_rule_for(userid, config=None):
+    """The rule that gives a Proxmox VE user their profile, or None."""
+    rules = pve_rules(config)
+    if not rules:
+        return None
+    for rule in rules:
+        if rule.get("kind") == "user" and rule.get("name") == userid:
+            return rule
+    import pve_auth
+    groups = pve_auth.groups_of(userid)
+    for rule in rules:
+        if rule.get("kind") == "group" and rule.get("name") in groups:
+            return rule
     return None
 
 
@@ -654,25 +734,28 @@ def _maybe_rehash_password(password, current_hash):
     return None
 
 
-def generate_token(username, *, oidc_identity=None):
-    """Generate a JWT token for the given local user"""
+OIDC_PREFIX = "oidc:"
+
+
+def generate_token(username=None, *, oidc_identity=None):
+    """Generate a JWT token for the given local user, or for a subject of
+    the OpenID Connect provider (its own identity, `oidc:<sub>`)."""
     if not JWT_AVAILABLE:
         return None
-    user = find_user(username)
-    if user is None:
-        return None
-
     payload = {
-        'username': username,
-        'uid': user['uid'],
         'exp': datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS),
         'iat': datetime.utcnow(),
         'iss': JWT_ISSUER,
         'aud': JWT_AUDIENCE,
     }
     if oidc_identity is not None:
-        payload.update(auth_method='oidc', oidc_sub=oidc_identity['sub'],
-                       oidc_revision=oidc_identity['revision'])
+        payload.update(username=OIDC_PREFIX + oidc_identity['sub'], auth_method='oidc',
+                       oidc_sub=oidc_identity['sub'], oidc_revision=oidc_identity['revision'])
+    else:
+        user = find_user(username)
+        if user is None:
+            return None
+        payload.update(username=username, uid=user['uid'])
 
     try:
         token = jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
@@ -756,6 +839,10 @@ def verify_token_full(token):
             payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         if not _session_is_current(payload):
             return None, None
+        if payload.get('auth_method') == 'oidc':
+            # Its subject, whatever local account a session from before
+            # subjects had their own profile named.
+            return OIDC_PREFIX + str(payload.get('oidc_sub')), 'full_admin'
         user = _token_user(payload)
         if user is None:
             _log_auth_failure_throttled("Session rejected: no such user")
@@ -1883,10 +1970,14 @@ def get_user_profile(username=None):
     config = load_auth_config()
     user = find_user(username, config)
     avatar_file, type_file = _avatar_paths(user)
-    # A Proxmox VE account has neither: those of the Monitor belong to
-    # whoever reaches it without an account.
+    # An account from outside the Monitor has no avatar here: that of the
+    # Monitor belongs to whoever reaches it without an account. A subject of
+    # the OpenID Connect provider shows the name given to it.
     own = user is not None or username is None
     display_name = ((user or config).get("display_name") or None) if own else None
+    if username and username.startswith(OIDC_PREFIX):
+        import oidc_manager
+        display_name = (oidc_manager.subject_choice(username[len(OIDC_PREFIX):]) or {}).get("name")
 
     has_avatar = own and avatar_file.exists() and avatar_file.stat().st_size > 0
     avatar_mtime = None
@@ -1930,7 +2021,7 @@ def _profile_owner(username):
         return None, None
     user = find_user(username)
     if user is None:
-        return None, "This account is managed in Proxmox VE"
+        return None, "This account is managed outside the Monitor"
     return user, None
 
 

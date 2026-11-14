@@ -2871,7 +2871,27 @@
     "onlyWay": "Účty Proxmox VE sú spôsobom prístupu do dashboardu. Ak ich chcete prestať používať, pridajte lokálne heslo alebo vyššie zvoľte prístup len na čítanie či otvorený prístup.",
     "whoGetsIn": "Používatelia s oprávnením Sys.Modify na / získajú úplný prístup; používatelia s oprávnením iba Sys.Audit na / prístup len na čítanie. Ostatní používatelia sa nemôžu prihlásiť.",
     "sharedSession": "Ste prihlásení do webového rozhrania Proxmox VE? Otvorte dashboard cez HTTPS na rovnakej adrese a táto relácia vás prihlási aj sem.",
-    "saveFailed": "Zmenu sa nepodarilo uložiť."
+    "saveFailed": "Zmenu sa nepodarilo uložiť.",
+    "rulesTitle": "Profily účtov Proxmox VE",
+    "rulesHelp": "Prednosť má pravidlo používateľa; inak platí prvé pravidlo jednej z jeho skupín. Bez pravidla dáva Sys.Modify na / profil Administrátor a Sys.Audit profil Pozorovateľ. Pravidlo nikdy nevpustí používateľa bez oprávnení na /.",
+    "ruleKind": "Pravidlo pre",
+    "ruleName": "Používateľ alebo skupina",
+    "kindUser": "Používateľ",
+    "kindGroup": "Skupina",
+    "chooseName": "Vybrať…",
+    "addRule": "Pridať pravidlo",
+    "removeRule": "Odstrániť",
+    "moveUp": "Posunúť vyššie",
+    "moveDown": "Posunúť nižšie",
+    "saveRules": "Uložiť pravidlá",
+    "rulesSaved": "Pravidlá boli uložené.",
+    "errors": {
+      "pve_rules_invalid": "Pravidlá sa nepodarilo uložiť.",
+      "pve_name_invalid": "Vyberte platného používateľa alebo skupinu.",
+      "pve_user_realm": "Uveďte používateľa s jeho realmom, napríklad user@pve.",
+      "pve_rule_duplicate": "Každý používateľ alebo skupina môže mať len jedno pravidlo.",
+      "pve_rule_self": "Tieto pravidlá by vám odobrali prístup administrátora."
+    }
   },
   "users": {
     "title": "Používatelia",
@@ -8267,6 +8287,12 @@
     "login": "Pokračovať cez {provider}",
     "loginFailed": "Prihlásenie OIDC zlyhalo alebo vypršalo. Skúste to znova, skontrolujte svoj povolený identifikátor subjektu alebo použite miestne prihlasovacie údaje.",
     "disabledSaved": "Nastavenia OIDC boli uložené. Externé prihlásenie je zakázané.",
-    "saveDisabled": "Uložiť nastavenia"
+    "saveDisabled": "Uložiť nastavenia",
+    "allowedSubjects": "Povolené identifikátory",
+    "allowedSubjectsHelp": "Do Monitora majú prístup len tieto nemenné identifikátory používateľov poskytovateľa, každý so svojím profilom; identifikátor bez zvoleného profilu je administrátor. Použite hodnotu sub vydanú pre tohto klienta, nie e-mailovú adresu ani zobrazované meno.",
+    "subjectId": "Identifikátor (sub)",
+    "subjectName": "Meno (voliteľné)",
+    "addSubject": "Pridať identifikátor",
+    "removeSubject": "Odstrániť"
   }
 }

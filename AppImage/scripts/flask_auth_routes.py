@@ -694,6 +694,35 @@ def pve_config():
     return jsonify({"success": success, "message": message}), (200 if success else 409)
 
 
+_PVE_RULE_ERRORS = {
+    "Invalid rules": "pve_rules_invalid",
+    "Invalid user or group name": "pve_name_invalid",
+    "Name the user with its realm, such as user@pve": "pve_user_realm",
+    "Each user or group can have one rule": "pve_rule_duplicate",
+    "These rules would remove your administrator access": "pve_rule_self",
+}
+
+
+@auth_bp.route('/api/auth/pve/profiles', methods=['GET'])
+@require_admin_scope
+def pve_profiles():
+    """The rules that give Proxmox VE users and groups a profile, and the
+    users and groups of this host to choose from."""
+    import pve_auth
+    return jsonify({"success": True, "rules": auth_manager.pve_rules(), **pve_auth.directory()})
+
+
+@auth_bp.route('/api/auth/pve/profiles', methods=['PUT'])
+@require_admin_scope
+def pve_profiles_save():
+    data = request.get_json(silent=True) or {}
+    success, message = auth_manager.set_pve_rules(data.get("rules"), keep_admin=_session_username())
+    if not success:
+        return jsonify({"success": False, "message": message,
+                        "error": _PVE_RULE_ERRORS.get(message) or _USER_ERRORS.get(message, "pve_rules_invalid")}), 400
+    return jsonify({"success": True, "message": message, "rules": auth_manager.pve_rules()})
+
+
 @auth_bp.route('/api/auth/mode', methods=['POST'])
 def auth_mode():
     """Choose how the Monitor is reached without an account: read-only or open."""

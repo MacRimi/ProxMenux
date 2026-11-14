@@ -202,15 +202,16 @@ class OIDCTests(unittest.TestCase):
                 oidc.save_config(self.config)
                 ticket, binding = self.finish()
                 token = oidc.exchange(ticket, binding)
-                self.assertEqual(auth_manager.verify_token(token), "local-admin")
-                self.assertEqual(auth_manager.verify_token_full(token), ("local-admin", "full_admin"))
+                # The subject is its own identity, not the local account.
+                self.assertEqual(auth_manager.verify_token(token), "oidc:subject-1")
+                self.assertEqual(auth_manager.verify_token_full(token), ("oidc:subject-1", "full_admin"))
                 with self.assertRaises(oidc.OIDCError):
                     oidc.exchange(ticket, binding)
 
     def test_ec_provider_signature_is_supported(self):
         self.algorithm = "ES256"
         ticket, binding = self.finish()
-        self.assertEqual(auth_manager.verify_token(oidc.exchange(ticket, binding)), "local-admin")
+        self.assertEqual(auth_manager.verify_token(oidc.exchange(ticket, binding)), "oidc:subject-1")
 
     def test_wrong_signature_is_rejected(self):
         self.signing_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -293,6 +294,29 @@ class OIDCTests(unittest.TestCase):
         self.assertTrue(success)
         self.assertFalse(requires_totp)
 
+    def test_each_subject_has_its_profile_and_never_the_local_account(self):
+        token = oidc.exchange(*self.finish())
+        # Without a choice a subject administers, as every subject did before.
+        self.assertEqual(auth_manager.profile_for("password", "oidc:subject-1", "full_admin"), "admin")
+        oidc.save_config({**self.config, "subject_profiles": {
+            "subject-1": {"name": "Ana", "profile": "custom",
+                          "custom": {"areas": ["general", "backup"], "actions": ["backup"]}},
+            "not-allowed": {"name": "x", "profile": "admin"}}})
+        token = oidc.exchange(*self.finish())  # saving revokes earlier sessions
+        self.assertEqual(auth_manager.profile_for("password", "oidc:subject-1", "full_admin"),
+                         "custom:general,backup:backup")
+        self.assertNotIn("not-allowed", oidc.public_config()["subject_profiles"])
+        profile = auth_manager.get_user_profile("oidc:subject-1")
+        self.assertEqual((profile["display_name"], profile["local"]), ("Ana", False))
+        # Its own account is not the local one.
+        self.assertEqual(auth_manager.set_display_name("Mallory", "oidc:subject-1"),
+                         (False, "This account is managed outside the Monitor"))
+        self.assertIsNone(auth_manager.find_user("oidc:subject-1"))
+        with self.assertRaises(oidc.OIDCError):
+            oidc.save_config({**self.config, "subject_profiles": {"subject-1": {"profile": "custom",
+                              "custom": {"areas": ["general"], "actions": ["admin"]}}}})
+        self.assertTrue(token)
+
     def test_existing_password_totp_still_applies_to_local_login(self):
         secret = pyotp.random_base32()
         auth_manager.save_auth_config({**self.local, "totp_enabled": True, "totp_secret": secret})
@@ -360,7 +384,7 @@ class OIDCTests(unittest.TestCase):
         exchange = self.client.post("/api/auth/oidc/exchange", base_url="https://monitor.test", json={"code": ticket})
         self.assertEqual(exchange.status_code, 200)
         self.assertEqual(exchange.headers["Cache-Control"], "no-store")
-        self.assertEqual(auth_manager.verify_token(exchange.json["token"]), "local-admin")
+        self.assertEqual(auth_manager.verify_token(exchange.json["token"]), "oidc:subject-1")
         self.assertEqual(self.client.post("/api/auth/oidc/exchange", base_url="https://monitor.test",
                                           json={"code": ticket}).status_code, 401)
 

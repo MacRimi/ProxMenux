@@ -3025,7 +3025,27 @@
     "onlyWay": "Las cuentas de Proxmox VE son la forma de entrar al panel. Para dejar de usarlas, añade una contraseña local o elige el acceso de solo lectura o abierto más arriba.",
     "whoGetsIn": "Los usuarios con el privilegio Sys.Modify en / tienen acceso completo; los que solo tienen Sys.Audit en /, acceso de solo lectura. El resto no puede iniciar sesión.",
     "sharedSession": "¿Has iniciado sesión en la interfaz web de Proxmox VE? Abre el panel por HTTPS en la misma dirección y esa sesión también te da acceso aquí.",
-    "saveFailed": "No se ha podido guardar el cambio."
+    "saveFailed": "No se ha podido guardar el cambio.",
+    "rulesTitle": "Perfiles de las cuentas de Proxmox VE",
+    "rulesHelp": "Manda la regla de un usuario; si no hay, la primera regla de uno de sus grupos. Sin regla, Sys.Modify en / da el perfil Administrador y Sys.Audit, el perfil Observador. Una regla nunca deja entrar a un usuario sin privilegios en /.",
+    "ruleKind": "Regla para",
+    "ruleName": "Usuario o grupo",
+    "kindUser": "Usuario",
+    "kindGroup": "Grupo",
+    "chooseName": "Elegir…",
+    "addRule": "Añadir regla",
+    "removeRule": "Eliminar",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "saveRules": "Guardar reglas",
+    "rulesSaved": "Reglas guardadas.",
+    "errors": {
+      "pve_rules_invalid": "No se han podido guardar las reglas.",
+      "pve_name_invalid": "Elige un usuario o grupo válido.",
+      "pve_user_realm": "Indica el usuario con su realm, como usuario@pve.",
+      "pve_rule_duplicate": "Cada usuario o grupo solo puede tener una regla.",
+      "pve_rule_self": "Estas reglas te quitarían el acceso de administrador."
+    }
   },
   "users": {
     "title": "Usuarios",
@@ -7405,7 +7425,13 @@
     "login": "Continuar con {provider}",
     "loginFailed": "El acceso OIDC ha fallado o ha caducado. Reinténtalo, revisa el identificador permitido o utiliza tus credenciales locales.",
     "disabledSaved": "Configuración OIDC guardada. El acceso externo está desactivado.",
-    "saveDisabled": "Guardar configuración"
+    "saveDisabled": "Guardar configuración",
+    "allowedSubjects": "Identificadores permitidos",
+    "allowedSubjectsHelp": "Solo estos identificadores de usuario inmutables pueden acceder al Monitor, cada uno con su perfil; uno sin perfil elegido es administrador. Usa el valor sub emitido para este cliente, no el correo ni el nombre visible.",
+    "subjectId": "Identificador (sub)",
+    "subjectName": "Nombre (opcional)",
+    "addSubject": "Añadir identificador",
+    "removeSubject": "Eliminar"
   },
   "runtime": {
     "notifications": {
