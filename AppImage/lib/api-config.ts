@@ -154,8 +154,11 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
         const ct = response.headers.get("content-type") || ""
         if (ct.includes("application/json")) {
           const body = await response.json()
-          const detail =
-            (body && (body.error || body.message)) || ""
+          // A refusal for the profile of the session (permissions.py)
+          // names the permission it lacks: say so in the user's language.
+          const detail = response.status === 403 && body && body.permission
+            ? await apiFailure("forbidden")
+            : (body && (body.error || body.message)) || ""
           if (detail) {
             const e: Error & { body?: unknown; status?: number } = new Error(detail)
             e.body = body

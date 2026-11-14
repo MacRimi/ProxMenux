@@ -17,6 +17,7 @@ for(const locale of ['en','sk']){
   if(name==='@radix-ui/react-alert-dialog'||name==='./ui/button')return {}
   if(name==='@/lib/i18n/provider')return {useT:()=>t}
   if(name==='@/lib/api-config')return {getAuthToken:()=>null}
+  if(name==='@/lib/access')return {useAccess:()=>({mode:'password',capabilities:{view:true,execute:true,guests:true,backup:true,update:true,terminal:true,admin:true}})}
   if(name==='lucide-react')return require(path.join(app,'node_modules/lucide-react'))
   throw Error('Unexpected boundary '+name)
  },fetch:()=>{effects++;throw Error('Forbidden request')},console})

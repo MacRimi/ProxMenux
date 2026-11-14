@@ -20,6 +20,7 @@ import { UsersSettings } from "./users-settings"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { SecureGatewaySetup } from "./secure-gateway-setup"
 import { useI18n } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface ApiTokenEntry {
   id: string
@@ -70,6 +71,8 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
 }
 
 export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
+  // Everyone keeps their own account here; the rest follows the profile.
+  const { capabilities } = useAccess()
   const { language, t } = useI18n()
   const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
   const interfaceTypeLabel = (type: string) =>
@@ -2306,7 +2309,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               )}
 
-              {!choosingMode ? (
+              {capabilities.admin && (!choosingMode ? (
                 <Button onClick={() => setChoosingMode(true)} variant="destructive" disabled={loading}>
                   {st("auth.disable")}
                 </Button>
@@ -2326,7 +2329,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
                   <p className="text-xs text-muted-foreground">{t("authSetup.openDescription")}</p>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </CardContent>
@@ -2334,9 +2337,10 @@ ${(report.sections && report.sections.length > 0) ? `
 
       <UsersSettings />
 
-      <PveAccountsSettings />
+      {/* Read-only access can still switch to Proxmox VE accounts with the setup code. */}
+      {(capabilities.admin || accessMode === "read_only") && <PveAccountsSettings />}
 
-      <OIDCSettings />
+      {capabilities.admin && <OIDCSettings />}
 
       {/* SSL/HTTPS Configuration */}
       <Card>
@@ -2390,7 +2394,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <p><span className="font-medium text-foreground">{st("ssl.key")}:</span> <code className="text-xs">{sslKeyPath}</code></p>
                   </div>
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <Button
+                    {capabilities.admin && (<Button
                       onClick={handleReloadSsl}
                       variant="outline"
                       size="sm"
@@ -2398,8 +2402,8 @@ ${(report.sections && report.sections.length > 0) ? `
                     >
                       <RefreshCw className={`h-4 w-4 mr-2 ${reloadingSsl ? "animate-spin" : ""}`} />
                       {reloadingSsl ? st("ssl.updatingCertificate") : st("ssl.updateCertificate")}
-                    </Button>
-                    <Button
+                    </Button>)}
+                    {capabilities.admin && (<Button
                       onClick={handleDisableSsl}
                       variant="outline"
                       size="sm"
@@ -2407,7 +2411,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       className="text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
                     >
                       {configuringSsl ? st("ssl.disabling") : sslRestarting ? st("ssl.restarting") : st("ssl.disableHttps")}
-                    </Button>
+                    </Button>)}
                   </div>
                 </div>
               )}
@@ -2440,7 +2444,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     </div>
                   )}
 
-                  <Button
+                  {capabilities.admin && (<Button
                     onClick={() => handleEnableSsl("proxmox")}
                     className="bg-green-600 hover:bg-green-700 text-white"
                     disabled={configuringSsl || sslRestarting}
@@ -2456,7 +2460,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         {st("ssl.useProxmoxCertificate")}
                       </>
                     )}
-                  </Button>
+                  </Button>)}
                 </div>
               )}
 
@@ -2473,13 +2477,13 @@ ${(report.sections && report.sections.length > 0) ? `
               {!sslEnabled && (
                 <div className="space-y-3">
                   {!showCustomCertForm ? (
-                    <Button
+                    capabilities.admin && (<Button
                       onClick={() => setShowCustomCertForm(true)}
                       variant="outline"
                     >
                       <FileKey className="h-4 w-4 mr-2" />
                       {st("ssl.useCustomCertificate")}
-                    </Button>
+                    </Button>)
                   ) : (
                     <div className="space-y-4 border border-border rounded-lg p-4">
                       <h3 className="font-semibold text-sm">{st("ssl.customPaths")}</h3>
@@ -2993,7 +2997,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       </p>
                     </div>
                   </div>
-                  <Button
+                  {capabilities.admin && (<Button
                     variant="outline"
                     size="sm"
                     disabled={firewallAction}
@@ -3008,7 +3012,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     ) : (
                       <><Power className="h-3.5 w-3.5 mr-1" /> {st("values.enable")}</>
                     )}
-                  </Button>
+                  </Button>)}
                 </div>
 
                 {/* Host Firewall */}
@@ -3024,7 +3028,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       </p>
                     </div>
                   </div>
-                  <Button
+                  {capabilities.admin && (<Button
                     variant="outline"
                     size="sm"
                     disabled={firewallAction}
@@ -3039,7 +3043,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     ) : (
                       <><Power className="h-3.5 w-3.5 mr-1" /> {st("values.enable")}</>
                     )}
-                  </Button>
+                  </Button>)}
                 </div>
               </div>
 
@@ -3065,7 +3069,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         <p className="text-xs text-muted-foreground">{st("firewall.port8008")}</p>
                       </div>
                     </div>
-                    <Button
+                    {capabilities.admin && (<Button
                       variant="outline"
                       size="sm"
                       disabled={firewallAction}
@@ -3076,7 +3080,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       }`}
                     >
                       {firewallData.monitor_port_open ? st("values.remove") : st("values.allow")}
-                    </Button>
+                    </Button>)}
                   </div>
 
                   {/* Proxmox Web UI hint */}
@@ -3192,7 +3196,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   <h3 className="text-sm font-semibold text-muted-foreground">
                     {st("firewall.rules", { count: firewallData.rules_count })}
                   </h3>
-                  <Button
+                  {capabilities.admin && (<Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowAddRule(!showAddRule)}
@@ -3200,7 +3204,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     {st("firewall.addRule")}
-                  </Button>
+                  </Button>)}
                 </div>
 
                 {/* Add Rule Form */}
@@ -3581,7 +3585,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                     <div className="flex items-center justify-between pt-2 border-t border-border/50">
                                       <code className="text-[10px] text-muted-foreground/60 font-mono truncate max-w-[50%]">{rule.raw}</code>
                                       <div className="flex items-center gap-2">
-                                        <Button
+                                        {capabilities.admin && (<Button
                                           variant="outline"
                                           size="sm"
                                           onClick={(e) => { e.stopPropagation(); startEditRule(rule) }}
@@ -3589,8 +3593,8 @@ ${(report.sections && report.sections.length > 0) ? `
                                         >
                                           <Pencil className="h-3 w-3 mr-1" />
                                           {t("actions.edit")}
-                                        </Button>
-                                        <Button
+                                        </Button>)}
+                                        {capabilities.admin && (<Button
                                           variant="outline"
                                           size="sm"
                                           onClick={(e) => { e.stopPropagation(); handleDeleteRule(rule.rule_index, rule.source_file) }}
@@ -3603,7 +3607,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                             <Trash2 className="h-3 w-3 mr-1" />
                                           )}
                                           {st("values.delete")}
-                                        </Button>
+                                        </Button>)}
                                       </div>
                                     </div>
                                   </>
@@ -3652,7 +3656,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     {t("actions.refresh")}
                   </Button>
                 )}
-                <Button
+                {capabilities.admin && (<Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowFail2banUninstallConfirm(true)}
@@ -3665,7 +3669,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <Trash2 className="h-4 w-4 mr-2" />
                   )}
                   {st("values.uninstall")}
-                </Button>
+                </Button>)}
               </div>
             )}
           </div>
@@ -3707,13 +3711,13 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               </div>
 
-              <Button
+              {capabilities.execute && (<Button
                 onClick={() => setShowFail2banInstaller(true)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {st("fail2ban.installConfigure")}
-              </Button>
+              </Button>)}
             </div>
           ) : (
             /* --- INSTALLED --- */
@@ -3750,7 +3754,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <p className="text-xs text-muted-foreground mt-0.5">{st("fail2ban.trustedNetworks.description")}</p>
                         </div>
                       </div>
-                      <Button
+                      {capabilities.admin && (<Button
                         variant="outline"
                         size="sm"
                         onClick={() => { setF2bShowTrustedForm(!f2bShowTrustedForm); setF2bTrustedNotice(null) }}
@@ -3758,7 +3762,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       >
                         <Plus className="h-3 w-3 mr-1" />
                         {st("fail2ban.trustedNetworks.addRule")}
-                      </Button>
+                      </Button>)}
                     </div>
 
                     {f2bTrustedNotice && (
@@ -3836,13 +3840,13 @@ ${(report.sections && report.sections.length > 0) ? `
                               <div className="flex gap-2 sm:justify-end shrink-0">
                                 {!entry.protected ? (
                                   <>
-                                  <Button variant="outline" size="sm" onClick={() => { setF2bEditingTrusted(entry.value); setF2bTrustedEditInput(entry.value); setF2bTrustedNotice(null) }} className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent">
+                                  {capabilities.admin && (<Button variant="outline" size="sm" onClick={() => { setF2bEditingTrusted(entry.value); setF2bTrustedEditInput(entry.value); setF2bTrustedNotice(null) }} className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent">
                                     <Pencil className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.edit")}
-                                  </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleRemoveTrustedNetwork(entry.value)} disabled={f2bRemovingTrusted === entry.value} className="h-7 text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent">
+                                  </Button>)}
+                                  {capabilities.admin && (<Button variant="outline" size="sm" onClick={() => handleRemoveTrustedNetwork(entry.value)} disabled={f2bRemovingTrusted === entry.value} className="h-7 text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent">
                                     {f2bRemovingTrusted === entry.value ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />}
                                     {st("fail2ban.trustedNetworks.delete")}
-                                  </Button>
+                                  </Button>)}
                                   </>
                                 ) : (
                                   <span className="inline-flex items-center text-[10px] text-muted-foreground"><Lock className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.required")}</span>
@@ -3902,7 +3906,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               </p>
                             </div>
                           </div>
-                          <Button
+                          {capabilities.admin && (<Button
                             size="sm"
                             disabled={f2bApplyingJails}
                             onClick={handleApplyMissingJails}
@@ -3914,7 +3918,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               <Shield className="h-3.5 w-3.5 mr-1.5" />
                             )}
                             {st("fail2ban.applyMissingJails")}
-                          </Button>
+                          </Button>)}
                         </div>
                       </div>
                     )
@@ -3978,7 +3982,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   {st("fail2ban.window")}: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span>
                                 </span>
                               </div>
-                              <Button
+                              {capabilities.admin && (<Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => f2bEditingJail === jail.name ? setF2bEditingJail(null) : openJailConfig(jail)}
@@ -3986,7 +3990,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                 title={st("fail2ban.configureJailSettings")}
                               >
                                 <Settings className="h-3.5 w-3.5" />
-                              </Button>
+                              </Button>)}
                             </div>
                           </div>
 
@@ -4139,7 +4143,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                           {entry.type === "local" ? "LAN" : entry.type === "external" ? st("values.external") : t("common.unknown")}
                                         </span>
                                       </div>
-                                      <Button
+                                      {capabilities.admin && (<Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleUnbanIp(jail.name, entry.ip)}
@@ -4154,7 +4158,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                             {st("fail2ban.unban")}
                                           </>
                                         )}
-                                      </Button>
+                                      </Button>)}
                                     </div>
                                   ))}
                                 </div>
@@ -4230,7 +4234,7 @@ ${(report.sections && report.sections.length > 0) ? `
               <CardTitle>{st("lynis.title")}</CardTitle>
             </div>
             {lynisInfo?.installed && (
-              <Button
+              capabilities.execute && (<Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowLynisUninstallConfirm(true)}
@@ -4243,7 +4247,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   <Trash2 className="h-4 w-4 mr-2" />
                 )}
                 {st("values.uninstall")}
-              </Button>
+              </Button>)
             )}
           </div>
           <CardDescription>
@@ -4282,13 +4286,13 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               </div>
 
-              <Button
+              {capabilities.execute && (<Button
                 onClick={() => setShowLynisInstaller(true)}
                 className="bg-cyan-600 hover:bg-cyan-700 text-white"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {st("lynis.install")}
-              </Button>
+              </Button>)}
             </div>
           ) : (
             <div className="space-y-4">
@@ -4526,7 +4530,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${lynisShowReport ? "rotate-180" : ""}`} />
                         {/* Delete button separated with divider to prevent accidental clicks */}
                         <div className="hidden sm:block w-px h-5 bg-border mx-1" />
-                        <Button
+                        {capabilities.execute && (<Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -4557,7 +4561,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           title={st("lynis.deleteReport")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button>)}
                       </div>
                     </button>
 
@@ -4838,7 +4842,7 @@ ${(report.sections && report.sections.length > 0) ? `
               )}
 
               {/* Run audit button - at the bottom */}
-              <Button
+              {capabilities.execute && (<Button
                 onClick={handleRunLynisAudit}
                 disabled={lynisAuditRunning}
                 className="bg-cyan-600 hover:bg-cyan-700 text-white"
@@ -4854,7 +4858,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     {st("lynis.runAudit")}
                   </>
                 )}
-              </Button>
+              </Button>)}
             </div>
           )}
         </CardContent>

@@ -22,6 +22,7 @@ import { fetchApi } from "../lib/api-config"
 import { cancelButtonClass } from "../lib/utils"
 import { useT } from "../lib/i18n/provider"
 import { RETENTION, parseRetention, buildRetention } from "../lib/backup-retention"
+import { useAccess } from "../lib/access"
 
 interface VmBackupJob {
   id: string
@@ -83,6 +84,7 @@ async function call(path: string, method: string, body?: unknown) {
 }
 
 export function VmBackupJobs() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data, error, mutate } = useSWR<{ jobs: VmBackupJob[] }>("/api/vm-backup-jobs", fetcher, { refreshInterval: 30000 })
   const { data: options } = useSWR<Options>("/api/vm-backup-jobs/options", fetcher, { refreshInterval: 60000 })
@@ -265,14 +267,14 @@ export function VmBackupJobs() {
             <CardTitle className="text-base font-semibold truncate">{t("backup.vmJobs.title")}</CardTitle>
             <Badge variant="outline" className="ml-1">{jobs.length}</Badge>
           </div>
-          <Button
+          {capabilities.backup && (<Button
             size="sm"
             className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white shrink-0"
             onClick={() => { setFormError(null); setForm({ ...EMPTY_FORM, storage: storages[0]?.id ?? "" }) }}
           >
             <Plus className="h-4 w-4 mr-1" />
             {t("backup.vmJobs.newJob")}
-          </Button>
+          </Button>)}
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">{t("backup.vmJobs.subtitle")}</p>
@@ -430,7 +432,7 @@ export function VmBackupJobs() {
           {viewing && (
             <div className="border-t border-border pt-3 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <Button
+                {capabilities.backup && (<Button
                   size="sm"
                   disabled={busy !== null}
                   className="bg-green-600 hover:bg-green-700 text-white"
@@ -442,8 +444,8 @@ export function VmBackupJobs() {
                     <PlayCircle className="h-3.5 w-3.5 mr-1" />
                   )}
                   {t("backup.actions.runNow")}
-                </Button>
-                <Button
+                </Button>)}
+                {capabilities.backup && (<Button
                   size="sm"
                   variant="outline"
                   disabled={busy !== null}
@@ -452,10 +454,10 @@ export function VmBackupJobs() {
                 >
                   <Pencil className="h-3.5 w-3.5 mr-1" />
                   {t("backup.actions.edit")}
-                </Button>
+                </Button>)}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Button
+                {capabilities.backup && (<Button
                   size="sm"
                   variant="outline"
                   disabled={busy !== null}
@@ -472,8 +474,8 @@ export function VmBackupJobs() {
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                   )}
                   {jobEnabled(viewing) ? t("backup.actions.disable") : t("backup.actions.enable")}
-                </Button>
-                <Button
+                </Button>)}
+                {capabilities.backup && (<Button
                   size="sm"
                   variant="outline"
                   disabled={busy !== null}
@@ -482,7 +484,7 @@ export function VmBackupJobs() {
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
                   {t("backup.actions.delete")}
-                </Button>
+                </Button>)}
               </div>
             </div>
           )}

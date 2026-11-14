@@ -5,6 +5,7 @@ import * as Confirm from "@radix-ui/react-alert-dialog"
 import { Button } from "./ui/button"
 import { getAuthToken } from "@/lib/api-config"
 import { useT } from "@/lib/i18n/provider"
+import { useAccess } from "@/lib/access"
 import { CheckCircle2, AlertTriangle, Info, ChevronRight } from "lucide-react"
 
 function headers() {
@@ -19,6 +20,7 @@ export function RestartAfterUpdate({ getApiUrl, disabled, unavailable = false, l
   getApiUrl: Url; disabled: boolean; unavailable?: boolean; label: string; detail: string; icon: ReactNode
 }) {
   const t = useT()
+  const { capabilities } = useAccess()
   const [open, setOpen] = useState(false)
   const [context, setContext] = useState<Context | null>(null)
   const [submitted, setSubmitted] = useState(false)
@@ -89,8 +91,8 @@ export function RestartAfterUpdate({ getApiUrl, disabled, unavailable = false, l
     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex items-start gap-2 flex-1 min-w-0 text-[10px] sm:text-xs"><span className="shrink-0">{icon}</span>
         <div><span className="font-medium mr-2">{label}</span><span className="text-muted-foreground break-words">{detail}</span></div></div>
-      <Button variant="outline" className={`${compact} self-start sm:shrink-0 border-amber-500/40 text-amber-500`}
-        disabled={disabled || unavailable || !context?.allowed || pending || accepted} onClick={() => setOpen(true)}>{t("healthStatus.restart.button")}</Button>
+      {capabilities.update && <Button variant="outline" className={`${compact} self-start sm:shrink-0 border-amber-500/40 text-amber-500`}
+        disabled={disabled || unavailable || !context?.allowed || pending || accepted} onClick={() => setOpen(true)}>{t("healthStatus.restart.button")}</Button>}
     </div>
     {disabled && <p className="mt-2 text-xs text-muted-foreground">{t("healthStatus.restart.blocked")}</p>}
     {accepted && <p role="status" className="mt-2 text-xs text-blue-500">{t("healthStatus.restart.accepted")}</p>}

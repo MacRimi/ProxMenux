@@ -8215,7 +8215,8 @@
     "unexpectedContentType": "Förväntade ett JSON-svar men fick {contentType}",
     "unknownContentType": "okänd innehållstyp",
     "invalidJson": "Ogiltigt JSON-svar från {endpoint}",
-    "unauthorized": "Obehörig: {endpoint}"
+    "unauthorized": "Obehörig: {endpoint}",
+    "forbidden": "Din profil tillåter inte den här åtgärden."
   },
   "oidc": {
     "title": "OpenID Connect (OIDC)",

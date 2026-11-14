@@ -46,6 +46,7 @@ function fixture(locale='sk',catalog=tools){
   if(name.includes('i18n/provider'))return{SUPPORTED_LANGUAGES:[],useI18n:()=>({t,language,setLanguage:value=>language=value})}
   if(name.includes('use-platform'))return{useIsPbs:()=>false}
   if(name.includes('format-network'))return{getNetworkUnit:()=> 'Bytes'}
+  if(name.includes('lib/access'))return require('./access-fixture.cjs')
   return new Proxy({},{get:(_,key)=>key})
  }}
  vm.runInNewContext(compile(source),context)

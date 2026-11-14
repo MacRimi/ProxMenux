@@ -10,6 +10,7 @@ import {
 } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 /**
  * Declares what is expected of this host.
@@ -70,6 +71,7 @@ function PolicySelect({ value, options, prefix, onChange, inherited, inheritedKe
 }
 
 export function AuditPolicy() {
+  const { capabilities } = useAccess()
   const t = useT()
   const [policy, setPolicy] = useState<Policy>(EMPTY)
   const [vocabulary, setVocabulary] = useState<Vocabulary | null>(null)
@@ -241,7 +243,7 @@ export function AuditPolicy() {
                 </button>
               </div>
             ) : (
-              <button
+              capabilities.admin && (<button
                 type="button"
                 className="ml-auto h-7 px-3 text-xs rounded-md border border-border bg-background
                            hover:bg-muted transition-colors flex items-center gap-1.5"
@@ -250,7 +252,7 @@ export function AuditPolicy() {
               >
                 <Settings2 className="h-3 w-3" />
                 {t("actions.edit")}
-              </button>
+              </button>)
             )}
           </div>
         </CardContent>

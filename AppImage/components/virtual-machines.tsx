@@ -33,6 +33,7 @@ import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import { useAccess } from "../lib/access"
 import { waitForVmControlTask } from "../lib/vm-control"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
 import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
@@ -833,6 +834,8 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 }
 
 export function VirtualMachines() {
+  // The profile of the session decides which actions are offered.
+  const { capabilities } = useAccess()
   const t = useT()
   const { language } = useI18n()
   const {
@@ -4276,7 +4279,7 @@ export function VirtualMachines() {
                                       </Button>
                                     </>
                                   ) : (
-                                    <Button
+                                    capabilities.guests && (<Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => {
@@ -4289,7 +4292,7 @@ export function VirtualMachines() {
                                     >
                                       <Settings2 className="h-3.5 w-3.5 sm:mr-1" />
                                       <span className="hidden sm:inline">{t("actions.edit")}</span>
-                                    </Button>
+                                    </Button>)
                                   )}
                                 </div>
                               </div>
@@ -4557,7 +4560,7 @@ export function VirtualMachines() {
                                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                                       {t("vmLxc.notes")}
                                     </h4>
-                                    {!isEditingNotes && (
+                                    {!isEditingNotes && capabilities.guests && (
                                       <Button
                                         variant="outline"
                                         size="sm"
@@ -5406,7 +5409,7 @@ export function VirtualMachines() {
                                   </span>
                                 </div>
                                 <div>
-                                  <Button
+                                  {capabilities.update && (<Button
                                     size="sm"
                                     onClick={async () => {
                                       try {
@@ -5420,7 +5423,7 @@ export function VirtualMachines() {
                                   >
                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                     {t("vmLxc.updates.updateToVersion", { version: aw?.latest_version || "" })}
-                                  </Button>
+                                  </Button>)}
                                 </div>
                                 {others > 0 && (
                                   <div className="text-[11px] text-muted-foreground">
@@ -5730,14 +5733,14 @@ export function VirtualMachines() {
 
                               <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
                                 {!optionsEditMode ? (
-                                  <button
+                                  capabilities.update && (<button
                                     type="button"
                                     onClick={enterOptionsEdit}
                                     className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                                   >
                                     <Settings2 className="h-3.5 w-3.5" />
                                     {t("vmLxc.options.editButton")}
-                                  </button>
+                                  </button>)
                                 ) : (
                                   <>
                                     <button
@@ -6111,7 +6114,7 @@ export function VirtualMachines() {
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                     <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
-                                    <Button
+                                    {capabilities.update && (<Button
                                       size="sm" variant="outline" className="ml-auto"
                                       disabled={selectedVM.status !== "running" || osCheckingVmid !== null || updatesRefreshing || controlLoading || applyOpen}
                                       title={t("vmLxc.updates.refreshCheckHelp")}
@@ -6119,7 +6122,7 @@ export function VirtualMachines() {
                                     >
                                       <RefreshCw className={`h-4 w-4 mr-1.5 ${osCheckingVmid === selectedVM.vmid ? "animate-spin" : ""}`} />
                                       {t("vmLxc.updates.checkSystemPackages")}
-                                    </Button>
+                                    </Button>)}
                                   </div>
                                   {selectedVM.status !== "running" && (
                                     <p className="text-sm text-muted-foreground mb-3">
@@ -6199,7 +6202,7 @@ export function VirtualMachines() {
                                   )}
                                   {osUpdateStatusKnown && osCheckingVmid !== selectedVM.vmid && <div className="mt-3 flex justify-end">
                                     {hasOsUpdates ? (
-                                    <Button
+                                    capabilities.update && (<Button
                                       size="sm"
                                       disabled={!hasOsUpdates || osCheckingVmid !== null || updatesRefreshing || controlLoading || !!osCheckError}
                                       onClick={() => openApplyTerminal(selectedVM.vmid, "os", { checkedOs: true })}
@@ -6212,7 +6215,7 @@ export function VirtualMachines() {
                                         : osUpdateStatusKnown
                                           ? t("vmLxc.updates.osUpToDate")
                                           : t("vmLxc.updates.checkBeforeUpdate")}
-                                    </Button>
+                                    </Button>)
                                     ) : (
                                       <Button asChild size="sm" className={upToDateBtnCls}>
                                         <span role="status">{t("vmLxc.updates.osUpToDate")}</span>
@@ -6237,7 +6240,7 @@ export function VirtualMachines() {
                                         </h3>
                                       </div>
                                       {!dockerEditing && (
-                                        <button
+                                        capabilities.guests && (<button
                                           type="button"
                                           onClick={() => openCustomCmdEditor(
                                             dockerAppWatch,
@@ -6247,7 +6250,7 @@ export function VirtualMachines() {
                                         >
                                           <Settings2 className="h-3.5 w-3.5" />
                                           {t("vmLxc.updates.editApp")}
-                                        </button>
+                                        </button>)
                                       )}
                                     </div>
                                     {dockerAppWatch.checked_at && !dockerEditing && (
@@ -6331,7 +6334,7 @@ export function VirtualMachines() {
                                           )}
                                         </div>
                                         <div className="mt-3 flex justify-end">
-                                          <Button
+                                          {capabilities.update && (<Button
                                             size="sm"
                                             onClick={() => openApplyTerminal(
                                               selectedVM.vmid,
@@ -6355,7 +6358,7 @@ export function VirtualMachines() {
                                             {dockerEngineUpToDate
                                               ? t("vmLxc.updates.upToDate")
                                               : t("vmLxc.updates.updateDockerEngineOnly")}
-                                          </Button>
+                                          </Button>)}
                                         </div>
                                       </div>
                                     )}
@@ -6488,7 +6491,7 @@ export function VirtualMachines() {
                                                   </span>
                                                 )}
                                                 {image.update_available === true && (image.update_targets || []).map((target) => (
-                                                  <Button
+                                                  capabilities.update && (<Button
                                                     key={`${image.reference}-${target.project}`}
                                                     size="sm"
                                                     onClick={() => openApplyTerminal(selectedVM.vmid, "app", {
@@ -6500,10 +6503,10 @@ export function VirtualMachines() {
                                                   >
                                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                                     {t("vmLxc.updates.updateDockerImage")}
-                                                  </Button>
+                                                  </Button>)
                                                 ))}
                                                 {image.update_available === true && (image.standalone_containers || []).map((container) => (
-                                                  <Button
+                                                  capabilities.update && (<Button
                                                     key={`${image.reference}-${container}`}
                                                     size="sm"
                                                     onClick={() => openApplyTerminal(selectedVM.vmid, "app", {
@@ -6514,7 +6517,7 @@ export function VirtualMachines() {
                                                   >
                                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                                     {t("vmLxc.updates.recreateStandaloneContainer", { container })}
-                                                  </Button>
+                                                  </Button>)
                                                 ))}
                                               </div>
                                             </div>
@@ -6564,7 +6567,7 @@ export function VirtualMachines() {
                                             {helperName || t("vmLxc.updates.applicationDefaultName")}
                                           </h3>
                                         </div>
-                                        <button
+                                        {capabilities.guests && (<button
                                           type="button"
                                           onClick={() => openCustomCmdEditor(
                                             matchApp,
@@ -6575,7 +6578,7 @@ export function VirtualMachines() {
                                           {helperSelected
                                             ? t("vmLxc.updates.editApp")
                                             : t("vmLxc.updates.configureUpdater")}
-                                        </button>
+                                        </button>)}
                                       </div>
                                       {helperTracksVersion && matchApp.checked_at && (
                                         <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
@@ -6651,11 +6654,11 @@ export function VirtualMachines() {
                                         const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
-                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "", targetIds: [`app:${matchApp.id}`] })} className={cls}>
+                                            {capabilities.update && (<Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "", targetIds: [`app:${matchApp.id}`] })} className={cls}>
                                               {hasUpd && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                               {noState && <RefreshCw className="h-4 w-4 mr-1.5" />}
                                               {label}
-                                            </Button>
+                                            </Button>)}
                                           </div>
                                         )
                                       })()}
@@ -6696,7 +6699,7 @@ export function VirtualMachines() {
                                           </h3>
                                         </div>
                                         {!editing && aw.update_via !== "docker" && (
-                                          <button
+                                          capabilities.guests && (<button
                                             type="button"
                                             onClick={() => openCustomCmdEditor(aw)}
                                             className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
@@ -6705,7 +6708,7 @@ export function VirtualMachines() {
                                             {hasCmd || aw.update_method === "helper"
                                               ? t("vmLxc.updates.editApp")
                                               : t("vmLxc.updates.configureUpdater")}
-                                          </button>
+                                          </button>)
                                         )}
                                       </div>
                                       {tracksVersion && aw.checked_at && !editing && (
@@ -6807,7 +6810,7 @@ export function VirtualMachines() {
 
                                           {hasCmd ? (
                                             <div className="mt-3 flex justify-end">
-                                              <Button
+                                              {capabilities.update && (<Button
                                                 size="sm"
                                                 onClick={() => openApplyTerminal(
                                                   selectedVM.vmid,
@@ -6830,7 +6833,7 @@ export function VirtualMachines() {
                                                     : aw.update_method === "helper"
                                                       ? t("vmLxc.updates.runUpdater")
                                                       : t("vmLxc.updates.runCustomCommand")}
-                                              </Button>
+                                              </Button>)}
                                             </div>
                                           ) : (
                                             <p className={`text-xs text-muted-foreground leading-relaxed min-w-0 ${tracksVersion ? "mt-3" : ""}`}>
@@ -6978,7 +6981,7 @@ export function VirtualMachines() {
                                       <div className="flex items-center justify-between gap-2 pt-1">
                                         <div>
                                           {bulkConfigured && (
-                                            <button
+                                            capabilities.update && (<button
                                               type="button"
                                               onClick={() => deleteBulkUpdate(selectedVM.vmid)}
                                               disabled={bulkSaving}
@@ -6986,7 +6989,7 @@ export function VirtualMachines() {
                                             >
                                               <Trash2 className="h-3.5 w-3.5" />
                                               {t("vmLxc.bulkUpdate.delete")}
-                                            </button>
+                                            </button>)
                                           )}
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -7002,7 +7005,7 @@ export function VirtualMachines() {
                                           >
                                             {t("vmLxc.bulkUpdate.cancel")}
                                           </button>
-                                          <button
+                                          {capabilities.update && (<button
                                             type="button"
                                             onClick={() => saveBulkUpdate(selectedVM.vmid)}
                                             disabled={bulkSaving || bulkTargets.length < 2 || staleBulkTargets.length > 0 || pendingDockerBulkTargets.length > 0}
@@ -7012,7 +7015,7 @@ export function VirtualMachines() {
                                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                               : <Check className="h-3.5 w-3.5" />}
                                             {t("vmLxc.bulkUpdate.save")}
-                                          </button>
+                                          </button>)}
                                         </div>
                                       </div>
                                     </div>
@@ -7027,7 +7030,7 @@ export function VirtualMachines() {
                                         </p>
                                       )}
                                       <div className="flex justify-end">
-                                        <Button
+                                        {capabilities.update && (<Button
                                           size="sm"
                                           onClick={() => applyBulkUpdate(selectedVM.vmid)}
                                           disabled={bulkApplying || osCheckingVmid !== null || updatesRefreshing || !osUpdateStatusKnown || bulkAllTargetsUpToDate || (
@@ -7046,7 +7049,7 @@ export function VirtualMachines() {
                                           {bulkAllTargetsUpToDate
                                             ? t("vmLxc.updates.upToDate")
                                             : t("vmLxc.bulkUpdate.apply")}
-                                        </Button>
+                                        </Button>)}
                                       </div>
                                     </div>
                                   ) : (
@@ -7393,14 +7396,14 @@ export function VirtualMachines() {
                                     to the Switch above, not here. */}
                                 <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
                                   {!optionsEditMode ? (
-                                    <button
+                                    capabilities.update && (<button
                                       type="button"
                                       onClick={enterOptionsEdit}
                                       className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                                     >
                                       <Settings2 className="h-3.5 w-3.5" />
                                       {t("vmLxc.options.editButton")}
-                                    </button>
+                                    </button>)
                                   ) : (
                                     <>
                                       <button
@@ -7490,7 +7493,7 @@ export function VirtualMachines() {
                             </div>
                             <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.backups.title")}</h3>
                           </div>
-                          <Button
+                          {capabilities.backup && (<Button
                             size="sm"
                             className="h-7 text-xs bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30 gap-1"
                             onClick={openBackupModal}
@@ -7502,7 +7505,7 @@ export function VirtualMachines() {
                               <Plus className="h-3 w-3" />
                             )}
                             <span>{t("vmLxc.backups.create")}</span>
-                          </Button>
+                          </Button>)}
                         </div>
 
                         {/* Divider */}
@@ -7655,22 +7658,24 @@ export function VirtualMachines() {
                     Previously this stacked as 3 rows on mobile and 2
                     rows on desktop, eating scroll space with each new
                     tab we added. */}
-                {(() => {
-                  const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running"
+                {(capabilities.guests || capabilities.terminal) && (() => {
+                  const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running" && capabilities.terminal
+                  const controls = capabilities.guests
                   const pendingAction = controlAction?.vmid === selectedVM?.vmid ? controlAction?.action : null
                   const controlLabel = (action: string, key: string) => pendingAction === action
                     ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
-                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${!controls ? "grid-cols-1" : hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
                       {hasTerminal && (
                         <Button
-                          className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 col-span-4 lg:col-span-1"
+                          className={`w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 ${controls ? "col-span-4 lg:col-span-1" : ""}`}
                           onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                         >
                           <Terminal className="h-4 w-4 mr-2" />
                           {t("vmLxc.openTerminal")}
                         </Button>
                       )}
+                      {controls && (<>
                       <Button
                         className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
                         disabled={selectedVM?.status === "running" || controlLoading}
@@ -7715,6 +7720,7 @@ export function VirtualMachines() {
                         {pendingAction === "stop" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <StopCircle className="h-4 w-4 sm:mr-2" />}
                         <span className="hidden sm:inline">{controlLabel("stop", "vmLxc.actions.forceStop")}</span>
                       </Button>
+                      </>)}
                     </div>
                   )
                 })()}

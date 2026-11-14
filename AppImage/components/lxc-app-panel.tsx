@@ -37,6 +37,7 @@ import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } fr
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
 import { useT } from "@/lib/i18n/provider"
+import { useAccess } from "../lib/access"
 import { localizeAppEditorError } from "../lib/lxc-app-editor-errors"
 
 // installed_via is optional now — an empty value means "register only,
@@ -557,6 +558,8 @@ function parseArgvInput(value: string): string[] {
 
 export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, cacheRevision = 0 }: Props) {
   const t = useT()
+  // Registering and editing the apps of a guest controls it.
+  const { capabilities } = useAccess()
   const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
   // module. Together those two sources cover every reopen scenario
@@ -2695,7 +2698,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
             <div className="text-xs text-muted-foreground">{t("vmLxc.appEditor.hiddenBadge")}</div>
           </div>
         </div>
-        <Button
+        {capabilities.guests && (<Button
           size="sm"
           variant="outline"
           onClick={() => restoreDetection(d.slug)}
@@ -2703,7 +2706,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
         >
           <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
           {t("vmLxc.appEditor.restoreButton")}
-        </Button>
+        </Button>)}
       </div>
     </div>
   )
@@ -2767,7 +2770,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
             )}
           </div>
         </div>
-        <div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
+        {capabilities.guests && (<div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
           <Button
             size="sm"
             onClick={() => openEditor(undefined, { withTracking: !!d.tracking_suggestion, preset: d })}
@@ -2787,7 +2790,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
             <EyeOff className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t("vmLxc.appEditor.hideButton")}</span>
           </Button>
-        </div>
+        </div>)}
       </div>
     </div>
   )
@@ -2818,7 +2821,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
             </div>
           </div>
         </div>
-        <div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
+        {capabilities.guests && (<div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
           <Button
             size="sm"
             onClick={() => openEditor(undefined, {
@@ -2848,7 +2851,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
             <EyeOff className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t("vmLxc.appEditor.hideButton")}</span>
           </Button>
-        </div>
+        </div>)}
       </div>
     </div>
   )
@@ -2885,7 +2888,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                 {hiddenDetections.map(renderRestoreChip)}
               </div>
             )}
-            <div className="pt-1 flex justify-center">
+            {capabilities.guests && (<div className="pt-1 flex justify-center">
               <Button
                 onClick={() => { setBrowseOpen(false); openEditor() }}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
@@ -2893,7 +2896,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                 <PlusCircle className="h-4 w-4 mr-1.5" />
                 {t("vmLxc.appEditor.registerCustom")}
               </Button>
-            </div>
+            </div>)}
           </CardContent>
         </Card>
       )}
@@ -2949,7 +2952,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                 {visibleWorkloads.map(renderWorkloadChip)}
               </div>
             )}
-            <div className="pt-1 flex flex-wrap justify-center gap-2">
+            {capabilities.guests && (<div className="pt-1 flex flex-wrap justify-center gap-2">
               <Button
                 onClick={isOciInstall ? refreshOciData : searchInstalledApplications}
                 disabled={searchingApplications}
@@ -2978,7 +2981,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                 )}
               </Button>
               )}
-            </div>
+            </div>)}
             {detectionNotice && (
               <p className={`text-xs text-center ${detectionNotice.found ? "text-emerald-400" : "text-muted-foreground"}`}>
                 {detectionNotice.text}
@@ -3327,7 +3330,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
         // DE, 10 chars) so the icon-only Search and Register buttons
         // line up as neat equal squares next to the labelled Edit.
         // Desktop: no min-width — each button auto-sizes to its text.
-        <div className="flex flex-row flex-wrap justify-end items-center gap-2">
+        capabilities.guests && (<div className="flex flex-row flex-wrap justify-end items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -3388,7 +3391,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
               </>
             )}
           </button>
-        </div>
+        </div>)
       )}
 
       {apps.length > 0 && detectionNotice && (

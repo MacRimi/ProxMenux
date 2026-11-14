@@ -22,6 +22,7 @@ import type { LanguageCode } from "../lib/i18n/languages"
 import { NavTabOrderCard } from "./nav-tab-order-card"
 import { StorageDisplayCard } from "./storage-display-card"
 import { optimizationSourceError, optimizationSourceName, type OptimizationSourceError, type OptimizationSourceResponse } from "../lib/optimization-source-errors"
+import { useAccess } from "../lib/access"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -315,6 +316,8 @@ interface NetworkInterface {
 }
 
 export function Settings() {
+  // Personal preferences are for everyone; the Monitor's settings, for administrators.
+  const { capabilities } = useAccess()
   const { language, setLanguage, t } = useI18n()
   const isPbs = useIsPbs()
   const tFallback = (key: string, fallback: string) => {
@@ -1276,13 +1279,13 @@ export function Settings() {
                     </button>
                   </>
                 ) : (
-                  <button
+                  capabilities.admin && (<button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                     onClick={() => setHealthEditMode(true)}
                   >
                     <Settings2 className="h-3 w-3" />
                     {t("actions.edit")}
-                  </button>
+                  </button>)
                 )}
               </div>
             )}
@@ -1571,13 +1574,13 @@ export function Settings() {
                     </button>
                   </>
                 ) : (
-                  <button
+                  capabilities.admin && (<button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                     onClick={() => setStoragesEditMode(true)}
                   >
                     <Settings2 className="h-3 w-3" />
                     {t("actions.edit")}
-                  </button>
+                  </button>)
                 )}
               </div>
             )}
@@ -1755,13 +1758,13 @@ export function Settings() {
                     </button>
                   </>
                 ) : (
-                  <button
+                  capabilities.admin && (<button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                     onClick={() => setInterfacesEditMode(true)}
                   >
                     <Settings2 className="h-3 w-3" />
                     {t("actions.edit")}
-                  </button>
+                  </button>)
                 )}
               </div>
             )}
@@ -1952,7 +1955,7 @@ export function Settings() {
                     </button>
                   </>
                 ) : (
-                  <button
+                  capabilities.admin && (<button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                     onClick={() => {
                       setGithubTokenError("")
@@ -1961,7 +1964,7 @@ export function Settings() {
                   >
                     <Settings2 className="h-3 w-3" />
                     {githubTokenConfigured ? t("actions.edit") : t("settings.githubApi.configure")}
-                  </button>
+                  </button>)
                 )}
               </div>
             )}
@@ -2022,7 +2025,8 @@ export function Settings() {
       </>}
 
       {/* Notification Settings (PVE only for now) */}
-      {!isPbs && <NotificationSettings />}
+      {/* Its settings carry secrets: only administrators read them. */}
+      {!isPbs && capabilities.admin && <NotificationSettings />}
 
       {/* Issue #195: snippets storage selector. Only renders when more
           than one storage advertises content=snippets — on a typical
@@ -2043,7 +2047,7 @@ export function Settings() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <Select value={snippetsStorage || ""} onValueChange={saveSnippetsStorage} disabled={snippetsSaving}>
+              <Select value={snippetsStorage || ""} onValueChange={saveSnippetsStorage} disabled={snippetsSaving || !capabilities.admin}>
                 <SelectTrigger className="w-full md:w-72">
                   <SelectValue placeholder={t("settings.snippets.placeholder")} />
                 </SelectTrigger>
@@ -2101,7 +2105,7 @@ export function Settings() {
                   {/* Sprint 12B: count badge that doubles as the trigger
                       for the multi-select update modal. Only shown when
                       at least one tool has an available update. */}
-                  {updatesAvailableCount > 0 && (
+                  {updatesAvailableCount > 0 && capabilities.update && (
                     <button
                       onClick={() => {
                         // Sprint 12B v2: pre-select every available
@@ -2162,13 +2166,13 @@ export function Settings() {
                             <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
                               v{tool.version || '1.0'} → v{tool.available_version || '?'}
                             </span>
-                            <button
+                            {capabilities.update && (<button
                               onClick={(e) => { e.stopPropagation(); handleSingleToolUpdate(tool) }}
                               className="text-purple-300 hover:text-purple-200 transition-colors"
                               title={t("settings.optimizations.updateToolTitle", { name: optimizationToolName(tool.key, tool.name, t), version: tool.available_version || "?" })}
                             >
                               <ArrowUpCircle className="h-4 w-4" />
-                            </button>
+                            </button>)}
                           </>
                         ) : (
                           <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{tool.version || '1.0'}</span>

@@ -18,6 +18,7 @@ import { PBSProblemMessage } from "./pbs-problem-message"
 import { pbsDiagnostic, pbsResultText, pbsServiceState, pbsTaskType, formatPBSDuration } from "../lib/pbs-messages"
 import { fetchApi } from "../lib/api-config"
 import { useT, useI18n } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface Connection { id: string; name: string; url: string; token_id: string; fingerprint: string; has_token: boolean }
 interface Detected { name: string; url: string; fingerprint: string }
@@ -69,6 +70,7 @@ function jobState(state?: string): keyof typeof badgeTone {
 // `localOnly` is the PBS host's own Monitor: no connection picker, the
 // header Refresh already reloads the page data. Its tabs show one `view` each.
 export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: boolean; view?: "all" | "datastores" | "tasks" } = {}) {
+  const { capabilities } = useAccess()
   const showStores = view !== "tasks"
   const showTasks = view !== "datastores"
   const t = useT()
@@ -149,9 +151,9 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
       <Button variant="outline" size="sm" disabled={isLoading || !selected} onClick={() => mutate()}>
         <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />{t("pbs.refresh")}
       </Button>
-      <Button variant="outline" size="sm" onClick={() => openManage()}>
+      {capabilities.backup && (<Button variant="outline" size="sm" onClick={() => openManage()}>
         <Settings2 className="mr-2 h-4 w-4" />{t("pbs.manage")}
-      </Button>
+      </Button>)}
     </div>}
     {(connectionError || statusError) && <div role="alert" className="text-sm text-red-500">
       <PBSProblemMessage problem={connectionError || statusError} raw={pbsDiagnostic(connectionError || statusError)} />
@@ -167,10 +169,10 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
             <span className="block truncate text-sm font-medium text-foreground">{row.name}</span>
             <span className="block break-all font-mono text-xs text-muted-foreground">{row.url}</span>
           </span>
-          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700"
+          {capabilities.backup && (<Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700"
             onClick={() => openManage({ ...emptyForm, name: row.name, url: row.url, fingerprint: row.fingerprint })}>
             {t("pbs.connect")}
-          </Button>
+          </Button>)}
         </div>)}
       </CardContent>
     </Card>}

@@ -28,6 +28,7 @@ import { AuditEvidence } from "./audit-evidence"
 import { AuditFindingData } from "./audit-finding-data"
 import { affectedDescription, resultBreakdown } from "../lib/audit-presentation"
 import { useI18n } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface Finding {
   check_id: string
@@ -108,6 +109,7 @@ const STALE_AFTER_DAYS = 30
 const SUMMARY_BADGE_CLASS = "h-6 gap-1.5 whitespace-nowrap px-2.5 py-0 text-xs"
 
 export function AuditReport() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { language } = useI18n()
   // Assessment and inventory answer different questions and are
@@ -552,7 +554,7 @@ export function AuditReport() {
             {latest?.error && <p className="text-xs text-amber-500">{latest.error}</p>}
           </div>
 
-          <Button
+          {capabilities.execute && (<Button
             onClick={startRun}
             disabled={running}
             className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
@@ -560,7 +562,7 @@ export function AuditReport() {
             {running
               ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("audit.running")}</>
               : <><Play className="h-4 w-4 mr-2" />{t("audit.run")}</>}
-          </Button>
+          </Button>)}
         </CardHeader>
 
         {latest && (
@@ -795,24 +797,24 @@ export function AuditReport() {
                       accepted one can be returned to the active set. */}
                   {(f.classification === "critical" || f.classification === "warning")
                     && !f.decision && !f.incomplete && (
-                    <Button
+                    capabilities.admin && (<Button
                       variant="outline"
                       size="sm"
                       onClick={() => { setAccepting(f); setReason(""); setExpiryDays(""); setReviewDays("") }}
                     >
                       <ShieldOff className="h-4 w-4 mr-2" />
                       {t("audit.acceptRisk.action")}
-                    </Button>
+                    </Button>)
                   )}
                   {f.decision === "accepted" && (
-                    <Button
+                    capabilities.admin && (<Button
                       variant="outline"
                       size="sm"
                       onClick={() => revokeAcceptance(f.check_id)}
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       {t("audit.acceptRisk.revoke")}
-                    </Button>
+                    </Button>)
                   )}
                 </CardContent>
               )}

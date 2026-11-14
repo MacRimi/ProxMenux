@@ -8215,7 +8215,8 @@
     "unexpectedContentType": "JSON-Antwort erwartet, aber {contentType} erhalten",
     "unknownContentType": "unbekannter Inhaltstyp",
     "invalidJson": "Ungültige JSON-Antwort von {endpoint}",
-    "unauthorized": "Nicht autorisiert: {endpoint}"
+    "unauthorized": "Nicht autorisiert: {endpoint}",
+    "forbidden": "Ihr Profil erlaubt diese Aktion nicht."
   },
   "oidc": {
     "title": "OpenID Connect (OIDC)",

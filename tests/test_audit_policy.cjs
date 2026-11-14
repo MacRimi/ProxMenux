@@ -41,6 +41,7 @@ new Function('require', 'module', 'exports', js)(name => {
   if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
   if (name.endsWith('api-config')) return { fetchApi: api };
   if (name.endsWith('provider')) return { useT: () => t };
+  if (String(name).includes('lib/access')) return require('./access-fixture.cjs');
   return new Proxy({}, { get: (_, name) => String(name) });
 }, mod, mod.exports);
 function render() { cursor = 0; const tree = mod.exports.AuditPolicy(); initialized = true; return tree; }

@@ -41,6 +41,7 @@ import {
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 // ── Shape contracts with the backend ──────────────────────────
 
@@ -568,6 +569,7 @@ const RestoreHistoryModal: React.FC<{ open: boolean; onClose: () => void }> = ({
 // ── Main inline card ──────────────────────────────────────────
 
 export const RestoreProgressCard: React.FC = () => {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data, mutate } = useSWR<{ state: RestoreState | null }>(
     "/api/host-backups/restore/status",
@@ -667,9 +669,9 @@ export const RestoreProgressCard: React.FC = () => {
                 {t("restoreProgress.actions.history")}
               </Button>
               {state.status !== "running" && (
-                <Button size="sm" onClick={dismiss} disabled={dismissing}>
+                capabilities.backup && (<Button size="sm" onClick={dismiss} disabled={dismissing}>
                   {dismissing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("restoreProgress.actions.dismiss")}
-                </Button>
+                </Button>)
               )}
             </div>
           </div>

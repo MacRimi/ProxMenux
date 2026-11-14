@@ -46,6 +46,7 @@ function render(locale, findings, status = 'partial') {
     './audit-evidence': load(path.join(app,'components/audit-evidence.tsx')),
     './audit-finding-data': load(path.join(app,'components/audit-finding-data.tsx')),
     '../lib/audit-presentation': load(path.join(app,'lib/audit-presentation.ts')),
+    '../lib/access': require('./access-fixture.cjs'),
   };
   const module = {exports: {}};
   new Function('require', 'module', 'exports', compiled)(name => imports[name] || appRequire(name), module, module.exports);

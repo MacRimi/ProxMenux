@@ -10,6 +10,7 @@ import { CustomLinkEditor, type CustomLink, type GuestOption } from "./custom-li
 import { Button } from "./ui/button"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
+import { useAccess } from "../lib/access"
 
 // ─── Local subset of /api/vms shape ─────────────────────────────
 // Kept narrow on purpose — this component only needs what feeds a
@@ -136,6 +137,7 @@ const fetcher = async (url: string) => fetchApi(url)
 // ─── Component ───────────────────────────────────────────────────
 
 export function AppsDashboard() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data: vms } = useSWR<VM[]>("/api/vms", fetcher, { refreshInterval: 5000, revalidateOnFocus: false })
   // Custom links persisted in /etc/proxmenux/custom_links.json. Small
@@ -361,14 +363,14 @@ export function AppsDashboard() {
         <div className="text-center text-muted-foreground py-16">
           <div className="text-sm">{t("apps.emptyTitle")}</div>
           <div className="text-xs mt-1 opacity-80">{t("apps.emptyHint")}</div>
-          <Button
+          {capabilities.admin && (<Button
             onClick={openNewLink}
             variant="outline"
             className="mt-4"
           >
             <Plus className="h-4 w-4 mr-1.5" />
             {t("apps.customLinkAdd")}
-          </Button>
+          </Button>)}
         </div>
         <CustomLinkEditor
           open={editorOpen}
@@ -462,7 +464,7 @@ export function AppsDashboard() {
         {/* + Add custom link. Icon-only on mobile (mirrors the search
             icon-toggle pattern) so the toolbar fits in one line even
             in the narrowest viewport. On desktop shows label + icon. */}
-        <Button
+        {capabilities.admin && (<Button
           type="button"
           variant="outline"
           onClick={openNewLink}
@@ -471,14 +473,14 @@ export function AppsDashboard() {
         >
           <Plus className="h-4 w-4 sm:mr-1.5" />
           <span className="hidden sm:inline">{t("apps.customLinkAdd")}</span>
-        </Button>
+        </Button>)}
 
         {/* Edit mode toggle — only shown when at least one custom link
             exists, since it's the only card type that carries per-card
             edit/delete actions. LXC-registered apps are edited in the
             LXC App tab of their guest modal. */}
         {(customLinks && customLinks.length > 0) && (
-          <Button
+          capabilities.admin && (<Button
             type="button"
             variant="outline"
             onClick={() => setEditMode((v) => !v)}
@@ -488,7 +490,7 @@ export function AppsDashboard() {
           >
             {editMode ? <Check className="h-4 w-4 sm:mr-1.5" /> : <Pencil className="h-4 w-4 sm:mr-1.5" />}
             <span className="hidden sm:inline">{editMode ? t("apps.editModeDone") : t("apps.editModeToggle")}</span>
-          </Button>
+          </Button>)
         )}
       </div>
 

@@ -7413,6 +7413,7 @@
     "unexpectedContentType": "Expected JSON response but got {contentType}",
     "unknownContentType": "unknown content type",
     "invalidJson": "Invalid JSON response from {endpoint}",
-    "unauthorized": "Unauthorized: {endpoint}"
+    "unauthorized": "Unauthorized: {endpoint}",
+    "forbidden": "Your profile does not allow this action."
   }
 }

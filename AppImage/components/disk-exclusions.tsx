@@ -7,6 +7,7 @@ import { Badge } from "./ui/badge"
 import { Switch } from "./ui/switch"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface DiskEntry {
   name: string
@@ -39,6 +40,7 @@ function formatSize(bytes: number): string {
 // already left alone automatically; this is for the ones that should never
 // be touched at all, such as a drive handed whole to a VM.
 export function DiskExclusions() {
+  const { capabilities } = useAccess()
   const t = useT()
   const [disks, setDisks] = useState<DiskEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -153,13 +155,13 @@ export function DiskExclusions() {
                   </button>
                 </>
               ) : (
-                <button
+                capabilities.admin && (<button
                   className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                   onClick={() => setEditMode(true)}
                 >
                   <Settings2 className="h-3 w-3" />
                   {t("actions.edit")}
-                </button>
+                </button>)
               )}
             </div>
           )}

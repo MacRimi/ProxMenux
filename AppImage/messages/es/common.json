@@ -8243,6 +8243,7 @@
     "unexpectedContentType": "Se esperaba una respuesta JSON, pero se recibió {contentType}",
     "unknownContentType": "tipo de contenido desconocido",
     "invalidJson": "Respuesta JSON no válida de {endpoint}",
-    "unauthorized": "No autorizado: {endpoint}"
+    "unauthorized": "No autorizado: {endpoint}",
+    "forbidden": "Tu perfil no permite esta acción."
   }
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT, useI18n } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 /**
  * How this assessment differs from an earlier one.
@@ -85,6 +86,7 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
   isBaseline: boolean
   onBaselineSet: () => void
 }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const { language } = useI18n()
   const [comparison, setComparison] = useState<Comparison | null>(null)
@@ -258,7 +260,7 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
       {/* Choosing a reference is what makes every later run comparable,
           so the action lives beside the comparison it enables. */}
       {!isBaseline && (
-        <Button
+        capabilities.admin && (<Button
           variant="outline"
           size="sm"
           onClick={markBaseline}
@@ -269,7 +271,7 @@ export function AuditComparison({ runId, isBaseline, onBaselineSet }: {
             ? <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
             : <Flag className="h-3 w-3 mr-1.5" />}
           {t("audit.comparison.setBaseline")}
-        </Button>
+        </Button>)
       )}
     </div>
   )

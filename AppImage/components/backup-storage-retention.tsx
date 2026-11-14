@@ -13,11 +13,13 @@ import { Label } from "./ui/label"
 import { fetchApi } from "../lib/api-config"
 import { buildRetention, parseRetention, RETENTION } from "../lib/backup-retention"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface StorageRetention { id: string; type: string; prune_backups: string; digest: string }
 const fetcher = (url: string) => fetchApi<{ storages: StorageRetention[] }>(url)
 
 export function BackupStorageRetention() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data, error, mutate, isValidating } = useSWR("/api/vm-backup-storages", fetcher)
   const [editing, setEditing] = useState<StorageRetention | null>(null)
@@ -72,9 +74,9 @@ export function BackupStorageRetention() {
         data.storages.map(storage => <div key={storage.id} className="flex flex-wrap gap-2 items-center border rounded-lg p-3">
           <span className="font-medium text-sm">{storage.id}</span><Badge variant="outline">{storage.type}</Badge>
           <span className="text-xs font-mono text-muted-foreground break-all">{storage.prune_backups || t("backup.storageRetention.default")}</span>
-          <Button variant="outline" size="sm" className="ml-auto gap-1" onClick={() => edit(storage)} disabled={!storage.digest || busy}>
+          {capabilities.backup && (<Button variant="outline" size="sm" className="ml-auto gap-1" onClick={() => edit(storage)} disabled={!storage.digest || busy}>
             <Pencil className="h-3 w-3" />{t("backup.storageRetention.edit")}
-          </Button>
+          </Button>)}
         </div>)}
     </CardContent>
     <Dialog open={!!editing} onOpenChange={open => { if (!open && !busy) setEditing(null) }}>

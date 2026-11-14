@@ -8214,7 +8214,8 @@
     "unexpectedContentType": "Očakávala sa odpoveď JSON, ale prišiel typ {contentType}",
     "unknownContentType": "neznámy typ obsahu",
     "invalidJson": "Odpoveď z {endpoint} obsahuje neplatný JSON",
-    "unauthorized": "Chýba platné prihlásenie: {endpoint}"
+    "unauthorized": "Chýba platné prihlásenie: {endpoint}",
+    "forbidden": "Váš profil túto akciu nepovoľuje."
   },
   "oidc": {
     "title": "OpenID Connect (OIDC)",

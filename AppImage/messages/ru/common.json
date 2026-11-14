@@ -8214,7 +8214,8 @@
     "unexpectedContentType": "Ожидался ответ в формате JSON, но получен {contentType}",
     "unknownContentType": "неизвестный тип содержимого",
     "invalidJson": "Некорректный ответ JSON от {endpoint}",
-    "unauthorized": "Нет авторизации: {endpoint}"
+    "unauthorized": "Нет авторизации: {endpoint}",
+    "forbidden": "Ваш профиль не позволяет выполнить это действие."
   },
   "oidc": {
     "title": "OpenID Connect (OIDC)",

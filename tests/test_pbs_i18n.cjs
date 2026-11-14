@@ -36,6 +36,7 @@ function fixture(locale='sk', options={}) {
     if(name.endsWith('pbs-problem-message'))return load('AppImage/components/pbs-problem-message.tsx');
     if(name.endsWith('pbs-datastore-usage'))return load('AppImage/components/pbs-datastore-usage.tsx');
     if(name.includes('lib/utils'))return {formatStorage:n=>String(n)+' GB'};
+    if(name.includes('lib/access'))return require('./access-fixture.cjs');
     return new Proxy({}, {get:(_,key)=>key});
   }
   function load(path) {if(loaded[path])return loaded[path];const e={};loaded[path]=e;
