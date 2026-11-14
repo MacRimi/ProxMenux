@@ -2884,13 +2884,15 @@
       "admin": "Amministratore",
       "operator": "Operatore con terminale",
       "operator_no_terminal": "Operatore senza terminale",
-      "observer": "Osservatore"
+      "observer": "Osservatore",
+      "custom": "Personalizzato"
     },
     "profileHints": {
       "admin": "tutto, compresi gli utenti, le impostazioni del Monitor e i segreti.",
       "operator": "esegue script e strumenti, controlla VM e LXC, gestisce i backup, aggiorna e apre terminali.",
       "operator_no_terminal": "come un operatore con terminale, senza aprire terminali.",
-      "observer": "vede la dashboard senza segreti; non esegue né modifica nulla."
+      "observer": "vede la dashboard senza segreti; non esegue né modifica nulla.",
+      "custom": "le aree che vede e le azioni che può eseguire, scelte una per una; mai l'amministrazione."
     },
     "add": "Aggiungi utente",
     "username": "Nome utente",
@@ -2919,7 +2921,29 @@
       "password_short": "La password deve avere almeno 10 caratteri.",
       "password_mix": "La password deve combinare almeno tre tra: minuscole, maiuscole, cifre e simboli.",
       "password_common": "Questa password è troppo comune. Scegline un'altra.",
-      "user_change_failed": "Non è stato possibile salvare la modifica."
+      "user_change_failed": "Non è stato possibile salvare la modifica.",
+      "custom_invalid": "Scegli almeno un'area."
+    },
+    "customAreas": "Aree visibili",
+    "customActions": "Azioni consentite",
+    "customHint": "Sicurezza, Impostazioni e il proprio account sono sempre disponibili. L'amministrazione spetta solo al profilo Amministratore.",
+    "customize": "Modifica aree",
+    "noActions": "nessuna azione",
+    "areas": {
+      "general": "Panoramica",
+      "apps": "Applicazioni",
+      "menux": "Menux",
+      "guests": "VM e LXC",
+      "node": "Nodo (storage, rete, hardware)",
+      "backup": "Backup",
+      "logs": "Log di sistema"
+    },
+    "actions": {
+      "execute": "Eseguire script e strumenti",
+      "guests": "Controllare VM e LXC",
+      "backup": "Gestire i backup",
+      "update": "Aggiornare",
+      "terminal": "Aprire terminali"
     }
   },
   "pveLogin": {

@@ -229,11 +229,30 @@ def list_users():
     primary = _primary(config)
     return [{"username": u.get("username"), "display_name": u.get("display_name"),
              "profile": u.get("profile"), "totp_enabled": bool(u.get("totp_enabled")),
+             "custom": u.get("custom") if u.get("profile") == permissions.CUSTOM else None,
              "created_at": u.get("created_at"), "primary": u is primary}
             for u in config.get("users") or []]
 
 
-def create_user(username, password, profile):
+def _profile_fields(profile, custom):
+    """(fields to store, error) for a profile choice: a custom one names its
+    areas and actions."""
+    if profile == permissions.CUSTOM:
+        custom = custom if isinstance(custom, dict) else {}
+        areas, actions = custom.get("areas"), custom.get("actions")
+        if (not isinstance(areas, list) or not isinstance(actions, list)
+                or not permissions.custom_profile(areas, actions)
+                or set(areas) - set(permissions.AREAS) or set(actions) - set(permissions.CUSTOM_ACTIONS)):
+            return None, "Choose at least one area, and only the listed areas and actions"
+        return {"profile": profile, "custom": {
+            "areas": [a for a in permissions.AREAS if a in areas],
+            "actions": [a for a in permissions.CUSTOM_ACTIONS if a in actions]}}, None
+    if profile not in permissions.PROFILES:
+        return None, "Unknown profile"
+    return {"profile": profile, "custom": None}, None
+
+
+def create_user(username, password, profile, custom=None):
     """Add a local user. Returns (success, message)."""
     config = load_auth_config()
     if not config.get("enabled"):
@@ -242,20 +261,21 @@ def create_user(username, password, profile):
         return False, "The username can have up to 32 letters, digits, dots, dashes and underscores"
     if any(u.get("username", "").lower() == username.lower() for u in config["users"]):
         return False, "That username is already in use"
-    if profile not in permissions.PROFILES:
-        return False, "Unknown profile"
+    fields, error = _profile_fields(profile, custom)
+    if error:
+        return False, error
     if not isinstance(password, str):
         return False, "Password is required"
     pw_err = _validate_password_strength(password)
     if pw_err:
         return False, pw_err
-    config["users"].append(_new_user(username, hash_password(password), profile))
+    config["users"].append(_new_user(username, hash_password(password), **fields))
     if save_auth_config(config):
         return True, "User created"
     return False, "Failed to save configuration"
 
 
-def update_user(username, profile=None, password=None, reset_totp=False):
+def update_user(username, profile=None, password=None, reset_totp=False, custom=None):
     """Change another user's profile, set a new password for them, or remove
     their second factor when they lost it. Returns (success, message)."""
     config = load_auth_config()
@@ -263,11 +283,12 @@ def update_user(username, profile=None, password=None, reset_totp=False):
     if not user:
         return False, "User not found"
     if profile is not None:
-        if profile not in permissions.PROFILES:
-            return False, "Unknown profile"
+        fields, error = _profile_fields(profile, custom)
+        if error:
+            return False, error
         if user.get("profile") == "admin" and profile != "admin" and len(_admins(config)) == 1:
             return False, "The Monitor needs at least one administrator"
-        user["profile"] = profile
+        user.update(fields)
     if password is not None:
         pw_err = _validate_password_strength(password) if isinstance(password, str) else "Password is required"
         if pw_err:
@@ -380,6 +401,10 @@ def profile_for(mode, username=None, scope=None):
     user = find_user(username)
     if user is not None:
         profile = user.get("profile")
+        if profile == permissions.CUSTOM:
+            custom = user.get("custom") or {}
+            actions = [] if scope == "read_only" else custom.get("actions")
+            return permissions.custom_profile(custom.get("areas"), actions)
         if profile not in permissions.PROFILES:
             return None
         return "observer" if scope == "read_only" else profile
@@ -396,7 +421,9 @@ def capabilities(mode, scope=None, profile=None):
     if profile is None:
         profile = profile_for(mode, "session" if scope else None, scope)
     granted = permissions.permissions_of(profile)
-    return {name: name in granted for name in permissions.PERMISSIONS}
+    result = {name: name in granted for name in permissions.PERMISSIONS}
+    result["areas"] = {area: "area." + area in granted for area in permissions.AREAS}
+    return result
 
 
 def setup_code_required(config=None):

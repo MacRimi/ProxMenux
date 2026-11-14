@@ -2884,13 +2884,15 @@
       "admin": "Administrator",
       "operator": "Operator mit Terminal",
       "operator_no_terminal": "Operator ohne Terminal",
-      "observer": "Beobachter"
+      "observer": "Beobachter",
+      "custom": "Benutzerdefiniert"
     },
     "profileHints": {
       "admin": "alles, einschließlich Benutzer, Monitor-Einstellungen und Geheimnisse.",
       "operator": "führt Skripte und Werkzeuge aus, steuert VMs und LXC, verwaltet Backups, aktualisiert und öffnet Terminals.",
       "operator_no_terminal": "dasselbe wie ein Operator mit Terminal, ohne Terminals zu öffnen.",
-      "observer": "sieht das Dashboard ohne Geheimnisse; führt nichts aus und ändert nichts."
+      "observer": "sieht das Dashboard ohne Geheimnisse; führt nichts aus und ändert nichts.",
+      "custom": "die sichtbaren Bereiche und erlaubten Aktionen, einzeln gewählt; nie Verwaltung."
     },
     "add": "Benutzer hinzufügen",
     "username": "Benutzername",
@@ -2919,7 +2921,29 @@
       "password_short": "Das Passwort muss mindestens 10 Zeichen haben.",
       "password_mix": "Das Passwort muss mindestens drei der folgenden enthalten: Kleinbuchstaben, Großbuchstaben, Ziffern und Symbole.",
       "password_common": "Dieses Passwort ist zu verbreitet. Wählen Sie ein anderes.",
-      "user_change_failed": "Die Änderung konnte nicht gespeichert werden."
+      "user_change_failed": "Die Änderung konnte nicht gespeichert werden.",
+      "custom_invalid": "Wählen Sie mindestens einen Bereich."
+    },
+    "customAreas": "Sichtbare Bereiche",
+    "customActions": "Erlaubte Aktionen",
+    "customHint": "Sicherheit, Einstellungen und das eigene Konto sind immer verfügbar. Verwalten bleibt dem Profil Administrator vorbehalten.",
+    "customize": "Bereiche ändern",
+    "noActions": "keine Aktionen",
+    "areas": {
+      "general": "Überblick",
+      "apps": "Apps",
+      "menux": "Menux",
+      "guests": "VMs und LXCs",
+      "node": "Knoten (Speicher, Netzwerk, Hardware)",
+      "backup": "Backup",
+      "logs": "Systemprotokolle"
+    },
+    "actions": {
+      "execute": "Skripte und Werkzeuge ausführen",
+      "guests": "VMs und LXC steuern",
+      "backup": "Backups verwalten",
+      "update": "Aktualisieren",
+      "terminal": "Terminals öffnen"
     }
   },
   "pveLogin": {

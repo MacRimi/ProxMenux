@@ -2884,13 +2884,15 @@
       "admin": "Administratör",
       "operator": "Operatör med terminal",
       "operator_no_terminal": "Operatör utan terminal",
-      "observer": "Observatör"
+      "observer": "Observatör",
+      "custom": "Anpassad"
     },
     "profileHints": {
       "admin": "allt, inklusive användare, inställningar för Monitor och hemligheter.",
       "operator": "kör skript och verktyg, styr VM och LXC, hanterar säkerhetskopior, uppdaterar och öppnar terminaler.",
       "operator_no_terminal": "samma som en operatör med terminal, utan att öppna terminaler.",
-      "observer": "ser instrumentpanelen utan hemligheter; kör och ändrar ingenting."
+      "observer": "ser instrumentpanelen utan hemligheter; kör och ändrar ingenting.",
+      "custom": "de områden den ser och de åtgärder den får göra, valda ett och ett; aldrig administration."
     },
     "add": "Lägg till användare",
     "username": "Användarnamn",
@@ -2919,7 +2921,29 @@
       "password_short": "Lösenordet måste ha minst 10 tecken.",
       "password_mix": "Lösenordet måste blanda minst tre av: små bokstäver, stora bokstäver, siffror och symboler.",
       "password_common": "Lösenordet är för vanligt. Välj ett annat.",
-      "user_change_failed": "Ändringen kunde inte sparas."
+      "user_change_failed": "Ändringen kunde inte sparas.",
+      "custom_invalid": "Välj minst ett område."
+    },
+    "customAreas": "Synliga områden",
+    "customActions": "Tillåtna åtgärder",
+    "customHint": "Säkerhet, Inställningar och det egna kontot är alltid tillgängliga. Administration är förbehållen profilen Administratör.",
+    "customize": "Ändra områden",
+    "noActions": "inga åtgärder",
+    "areas": {
+      "general": "Översikt",
+      "apps": "Apps",
+      "menux": "Menux",
+      "guests": "VM och LXC",
+      "node": "Nod (lagring, nätverk, hårdvara)",
+      "backup": "Säkerhetskopiering",
+      "logs": "Systemloggar"
+    },
+    "actions": {
+      "execute": "Köra skript och verktyg",
+      "guests": "Styra VM och LXC",
+      "backup": "Hantera säkerhetskopior",
+      "update": "Uppdatera",
+      "terminal": "Öppna terminaler"
     }
   },
   "pveLogin": {

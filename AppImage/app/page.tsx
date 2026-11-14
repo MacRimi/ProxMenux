@@ -6,7 +6,7 @@ import { Login } from "../components/login"
 import { AuthSetup } from "../components/auth-setup"
 import { getApiUrl } from "../lib/api-config"
 import { completeOIDCLogin } from "../lib/oidc-login"
-import { AccessProvider, FULL_ACCESS, type AccessMode, type Capabilities } from "../lib/access"
+import { AccessProvider, FULL_ACCESS, withAreas, type AccessMode, type Capabilities } from "../lib/access"
 import { adoptPveSession } from "../components/pve-login"
 import { useT } from "../lib/i18n/provider"
 
@@ -133,7 +133,7 @@ export default function Home() {
         authConfigured: data.auth_configured,
         authenticated,
         accessMode: data.access_mode || (data.auth_configured ? "password" : "undecided"),
-        capabilities: data.capabilities || FULL_ACCESS,
+        capabilities: withAreas(data.capabilities),
         setupCodeRequired: !!data.setup_code_required,
         pveAuth: !!data.pve_auth,
         localAccount: data.local_account ?? !!data.auth_enabled,

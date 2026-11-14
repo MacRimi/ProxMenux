@@ -2883,13 +2883,15 @@
       "admin": "Administrátor",
       "operator": "Operátor s terminálom",
       "operator_no_terminal": "Operátor bez terminálu",
-      "observer": "Pozorovateľ"
+      "observer": "Pozorovateľ",
+      "custom": "Vlastný"
     },
     "profileHints": {
       "admin": "všetko vrátane používateľov, nastavení Monitora a tajných údajov.",
       "operator": "spúšťa skripty a nástroje, ovláda VM a LXC, spravuje zálohy, aktualizuje a otvára terminály.",
       "operator_no_terminal": "to isté ako operátor s terminálom, bez otvárania terminálov.",
-      "observer": "vidí dashboard bez tajných údajov; nič nespúšťa ani nemení."
+      "observer": "vidí dashboard bez tajných údajov; nič nespúšťa ani nemení.",
+      "custom": "viditeľné oblasti a povolené akcie zvolené jednotlivo; nikdy nie správa."
     },
     "add": "Pridať používateľa",
     "username": "Používateľské meno",
@@ -2918,7 +2920,29 @@
       "password_short": "Heslo musí mať aspoň 10 znakov.",
       "password_mix": "Heslo musí kombinovať aspoň tri z: malé písmená, veľké písmená, číslice a symboly.",
       "password_common": "Toto heslo je príliš bežné. Zvoľte iné.",
-      "user_change_failed": "Zmenu sa nepodarilo uložiť."
+      "user_change_failed": "Zmenu sa nepodarilo uložiť.",
+      "custom_invalid": "Zvoľte aspoň jednu oblasť."
+    },
+    "customAreas": "Viditeľné oblasti",
+    "customActions": "Povolené akcie",
+    "customHint": "Zabezpečenie, Nastavenia a vlastný účet sú vždy dostupné. Správa patrí len profilu Administrátor.",
+    "customize": "Zmeniť oblasti",
+    "noActions": "žiadne akcie",
+    "areas": {
+      "general": "Prehľad",
+      "apps": "Aplikácie",
+      "menux": "Menux",
+      "guests": "VM a LXC",
+      "node": "Server (úložiská, sieť, hardvér)",
+      "backup": "Záloha",
+      "logs": "Systémové záznamy"
+    },
+    "actions": {
+      "execute": "Spúšťať skripty a nástroje",
+      "guests": "Ovládať VM a LXC",
+      "backup": "Spravovať zálohy",
+      "update": "Aktualizovať",
+      "terminal": "Otvárať terminály"
     }
   },
   "pveLogin": {

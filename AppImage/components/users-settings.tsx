@@ -2,29 +2,66 @@
 
 // Security → Users: an administrator adds local users, chooses their profile,
 // sets a new password for them or removes a second factor they lost. The
-// Monitor always keeps one administrator (see permissions.py).
+// Monitor always keeps one administrator (see permissions.py). A custom
+// profile chooses the areas a user sees and the actions they may take.
 import { useCallback, useEffect, useState } from "react"
-import { KeyRound, Lock, ShieldCheck, Trash2, User, UserPlus } from "lucide-react"
+import { KeyRound, Lock, ShieldCheck, SlidersHorizontal, Trash2, User, UserPlus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
+import { Checkbox } from "./ui/checkbox"
 import { fetchApi } from "../lib/api-config"
-import { useAccess } from "../lib/access"
+import { AREAS, useAccess } from "../lib/access"
 import { useT } from "../lib/i18n/provider"
 
-export const PROFILES = ["admin", "operator", "operator_no_terminal", "observer"] as const
+export const PROFILES = ["admin", "operator", "operator_no_terminal", "observer", "custom"] as const
+// Administering is not offered: whoever administers can give themselves any profile.
+export const CUSTOM_ACTIONS = ["execute", "guests", "backup", "update", "terminal"] as const
+
+interface Custom { areas: string[]; actions: string[] }
 
 interface MonitorUser {
   username: string
   display_name: string | null
   profile: string
+  custom: Custom | null
   totp_enabled: boolean
   primary: boolean
 }
 
 const selectClass = "h-9 rounded-md border border-input bg-background px-2 text-sm"
+const EMPTY_CUSTOM: Custom = { areas: ["general"], actions: [] }
+
+function CustomChoice({ value, onChange, disabled }: { value: Custom; onChange: (next: Custom) => void; disabled: boolean }) {
+  const t = useT()
+  const toggle = (list: string[], item: string, on: boolean) => on ? [...list, item] : list.filter(x => x !== item)
+  const group = (title: string, items: readonly string[], key: "areas" | "actions", label: (item: string) => string) => (
+    <fieldset className="space-y-2 min-w-0">
+      <legend className="text-sm font-medium mb-1">{title}</legend>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {items.map(item => {
+          const id = `custom-${key}-${item}`
+          return (
+            <label key={item} htmlFor={id} className="flex items-center gap-2 text-sm min-w-0">
+              <Checkbox id={id} checked={value[key].includes(item)} disabled={disabled}
+                onCheckedChange={on => onChange({ ...value, [key]: toggle(value[key], item, on === true) })} />
+              <span className="min-w-0 [overflow-wrap:anywhere]">{label(item)}</span>
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+  return (
+    <div className="space-y-4 rounded-md border border-border bg-muted/40 p-3">
+      {group(t("users.customAreas"), AREAS, "areas", item => t(`users.areas.${item}`))}
+      {group(t("users.customActions"), CUSTOM_ACTIONS, "actions", item => t(`users.actions.${item}`))}
+      <p className="text-xs text-muted-foreground">{t("users.customHint")}</p>
+    </div>
+  )
+}
 
 export function UsersSettings() {
   const t = useT()
@@ -39,9 +76,12 @@ export function UsersSettings() {
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [profile, setProfile] = useState<string>("operator_no_terminal")
+  const [newCustom, setNewCustom] = useState<Custom>(EMPTY_CUSTOM)
   const [resetting, setResetting] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [removing, setRemoving] = useState<string | null>(null)
+  // The user whose custom choice is being edited, and that choice.
+  const [customizing, setCustomizing] = useState<{ username: string; custom: Custom } | null>(null)
 
   const visible = mode === "password" && capabilities.admin
 
@@ -75,22 +115,47 @@ export function UsersSettings() {
     }
   }
 
+  const userUrl = (name: string) => `/api/auth/users/${encodeURIComponent(name)}`
+
   const add = async () => {
     if (password !== confirm) { setError(t("users.passwordsDiffer")); return }
-    if (await send("/api/auth/users", "POST", { username: username.trim(), password, profile }, t("users.added"))) {
+    const body = { username: username.trim(), password, profile, ...(profile === "custom" ? { custom: newCustom } : {}) }
+    if (await send("/api/auth/users", "POST", body, t("users.added"))) {
       setAdding(false)
       setUsername("")
       setPassword("")
       setConfirm("")
+      setNewCustom(EMPTY_CUSTOM)
     }
   }
 
+  const changeProfile = (user: MonitorUser, next: string) => {
+    // A custom profile is saved with its choice, from the editor below.
+    if (next === "custom") {
+      setCustomizing({ username: user.username, custom: user.custom ?? EMPTY_CUSTOM })
+      return
+    }
+    setCustomizing(null)
+    send(userUrl(user.username), "PUT", { profile: next }, t("users.profileChanged"))
+  }
+
+  const saveCustom = async () => {
+    if (!customizing) return
+    if (await send(userUrl(customizing.username), "PUT", { profile: "custom", custom: customizing.custom },
+      t("users.profileChanged"))) setCustomizing(null)
+  }
+
   const setNewPasswordFor = async (name: string) => {
-    if (await send(`/api/auth/users/${encodeURIComponent(name)}`, "PUT", { password: newPassword }, t("users.passwordSet"))) {
+    if (await send(userUrl(name), "PUT", { password: newPassword }, t("users.passwordSet"))) {
       setResetting(null)
       setNewPassword("")
     }
   }
+
+  const summary = (custom: Custom) => [
+    custom.areas.map(a => t(`users.areas.${a}`)).join(", "),
+    custom.actions.length ? custom.actions.map(a => t(`users.actions.${a}`)).join(", ") : t("users.noActions"),
+  ].join(" · ")
 
   if (!visible) return null
 
@@ -105,72 +170,97 @@ export function UsersSettings() {
         {notice && <p className="text-sm text-green-500">{notice}</p>}
 
         <div className="space-y-2">
-          {users.map(user => (
-            <div key={user.username} className="rounded-lg border border-border p-3 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="font-medium break-all">{user.username}</span>
-                {user.display_name && <span className="text-sm text-muted-foreground break-all">{user.display_name}</span>}
-                {user.username === me && <Badge variant="outline">{t("users.you")}</Badge>}
-                {user.primary && <Badge variant="outline">{t("users.primary")}</Badge>}
-                {user.totp_enabled && (
-                  <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />2FA</Badge>
+          {users.map(user => {
+            const editing = customizing?.username === user.username
+            return (
+              <div key={user.username} className="rounded-lg border border-border p-3 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="font-medium break-all">{user.username}</span>
+                  {user.display_name && <span className="text-sm text-muted-foreground break-all">{user.display_name}</span>}
+                  {user.username === me && <Badge variant="outline">{t("users.you")}</Badge>}
+                  {user.primary && <Badge variant="outline">{t("users.primary")}</Badge>}
+                  {user.totp_enabled && (
+                    <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />2FA</Badge>
+                  )}
+                </div>
+                {user.profile === "custom" && user.custom && !editing && (
+                  <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{summary(user.custom)}</p>
                 )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <select aria-label={t("users.profile")} className={selectClass} value={user.profile} disabled={busy}
-                  onChange={e => send(`/api/auth/users/${encodeURIComponent(user.username)}`, "PUT",
-                    { profile: e.target.value }, t("users.profileChanged"))}>
-                  {PROFILES.map(p => <option key={p} value={p}>{t(`users.profiles.${p}`)}</option>)}
-                </select>
-                <Button variant="outline" size="sm" disabled={busy}
-                  onClick={() => { setResetting(resetting === user.username ? null : user.username); setNewPassword("") }}>
-                  <KeyRound className="h-4 w-4 mr-1" />{t("users.setPassword")}
-                </Button>
-                {user.totp_enabled && user.username !== me && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <select aria-label={t("users.profile")} className={selectClass} disabled={busy}
+                    value={editing ? "custom" : user.profile}
+                    onChange={e => changeProfile(user, e.target.value)}>
+                    {PROFILES.map(p => <option key={p} value={p}>{t(`users.profiles.${p}`)}</option>)}
+                  </select>
+                  {user.profile === "custom" && !editing && (
+                    <Button variant="outline" size="sm" disabled={busy}
+                      onClick={() => setCustomizing({ username: user.username, custom: user.custom ?? EMPTY_CUSTOM })}>
+                      <SlidersHorizontal className="h-4 w-4 mr-1" />{t("users.customize")}
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" disabled={busy}
-                    onClick={() => send(`/api/auth/users/${encodeURIComponent(user.username)}`, "PUT",
-                      { reset_totp: true }, t("users.totpRemoved"))}>
-                    {t("users.removeTotp")}
+                    onClick={() => { setResetting(resetting === user.username ? null : user.username); setNewPassword("") }}>
+                    <KeyRound className="h-4 w-4 mr-1" />{t("users.setPassword")}
                   </Button>
-                )}
-                {user.username !== me && (
-                  removing === user.username ? (
-                    <>
-                      <Button variant="destructive" size="sm" disabled={busy}
-                        onClick={async () => {
-                          if (await send(`/api/auth/users/${encodeURIComponent(user.username)}`, "DELETE", undefined,
-                            t("users.removed"))) setRemoving(null)
-                        }}>
-                        {t("users.confirmRemove")}
+                  {user.totp_enabled && user.username !== me && (
+                    <Button variant="outline" size="sm" disabled={busy}
+                      onClick={() => send(userUrl(user.username), "PUT", { reset_totp: true }, t("users.totpRemoved"))}>
+                      {t("users.removeTotp")}
+                    </Button>
+                  )}
+                  {user.username !== me && (
+                    removing === user.username ? (
+                      <>
+                        <Button variant="destructive" size="sm" disabled={busy}
+                          onClick={async () => {
+                            if (await send(userUrl(user.username), "DELETE", undefined, t("users.removed"))) setRemoving(null)
+                          }}>
+                          {t("users.confirmRemove")}
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={busy} onClick={() => setRemoving(null)}>
+                          {t("actions.cancel")}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled={busy} onClick={() => setRemoving(user.username)}>
+                        <Trash2 className="h-4 w-4 mr-1" />{t("users.remove")}
                       </Button>
-                      <Button variant="outline" size="sm" disabled={busy} onClick={() => setRemoving(null)}>
+                    )
+                  )}
+                </div>
+                {removing === user.username && <p className="text-xs text-muted-foreground">{t("users.removeHint")}</p>}
+                {editing && customizing && (
+                  <div className="space-y-2">
+                    <CustomChoice value={customizing.custom} disabled={busy}
+                      onChange={custom => setCustomizing({ username: user.username, custom })} />
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" className="bg-blue-500 hover:bg-blue-600" disabled={busy || !customizing.custom.areas.length}
+                        onClick={saveCustom}>
+                        {t("actions.save")}
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => setCustomizing(null)}>
                         {t("actions.cancel")}
                       </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled={busy} onClick={() => setRemoving(user.username)}>
-                      <Trash2 className="h-4 w-4 mr-1" />{t("users.remove")}
+                    </div>
+                  </div>
+                )}
+                {resetting === user.username && (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <Label htmlFor={`new-password-${user.username}`}>{t("users.newPassword")}</Label>
+                      <Input id={`new-password-${user.username}`} type="password" autoComplete="new-password"
+                        value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={busy} />
+                    </div>
+                    <Button size="sm" className="bg-blue-500 hover:bg-blue-600" disabled={busy || !newPassword}
+                      onClick={() => setNewPasswordFor(user.username)}>
+                      {t("actions.save")}
                     </Button>
-                  )
+                  </div>
                 )}
               </div>
-              {removing === user.username && <p className="text-xs text-muted-foreground">{t("users.removeHint")}</p>}
-              {resetting === user.username && (
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <Label htmlFor={`new-password-${user.username}`}>{t("users.newPassword")}</Label>
-                    <Input id={`new-password-${user.username}`} type="password" autoComplete="new-password"
-                      value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={busy} />
-                  </div>
-                  <Button size="sm" className="bg-blue-500 hover:bg-blue-600" disabled={busy || !newPassword}
-                    onClick={() => setNewPasswordFor(user.username)}>
-                    {t("actions.save")}
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {!adding ? (
@@ -211,8 +301,10 @@ export function UsersSettings() {
                 {PROFILES.map(p => <option key={p} value={p}>{t(`users.profiles.${p}`)}</option>)}
               </select>
             </div>
+            {profile === "custom" && <CustomChoice value={newCustom} onChange={setNewCustom} disabled={busy} />}
             <div className="flex flex-wrap gap-2">
-              <Button className="bg-blue-500 hover:bg-blue-600" disabled={busy || !username.trim() || !password} onClick={add}>
+              <Button className="bg-blue-500 hover:bg-blue-600" onClick={add}
+                disabled={busy || !username.trim() || !password || (profile === "custom" && !newCustom.areas.length)}>
                 {t("users.add")}
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => setAdding(false)}>{t("actions.cancel")}</Button>

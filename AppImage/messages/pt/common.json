@@ -2884,13 +2884,15 @@
       "admin": "Administrador",
       "operator": "Operador com terminal",
       "operator_no_terminal": "Operador sem terminal",
-      "observer": "Observador"
+      "observer": "Observador",
+      "custom": "Personalizado"
     },
     "profileHints": {
       "admin": "tudo, incluindo os usuários, as configurações do Monitor e os segredos.",
       "operator": "executa scripts e ferramentas, controla VMs e LXC, gerencia backups, atualiza e abre terminais.",
       "operator_no_terminal": "o mesmo que um operador com terminal, sem abrir terminais.",
-      "observer": "vê o painel sem segredos; não executa nem altera nada."
+      "observer": "vê o painel sem segredos; não executa nem altera nada.",
+      "custom": "as áreas que vê e as ações que pode fazer, escolhidas uma a uma; nunca administra."
     },
     "add": "Adicionar usuário",
     "username": "Nome de usuário",
@@ -2919,7 +2921,29 @@
       "password_short": "A senha deve ter pelo menos 10 caracteres.",
       "password_mix": "A senha deve combinar pelo menos três entre: minúsculas, maiúsculas, números e símbolos.",
       "password_common": "Essa senha é comum demais. Escolha outra.",
-      "user_change_failed": "Não foi possível salvar a alteração."
+      "user_change_failed": "Não foi possível salvar a alteração.",
+      "custom_invalid": "Escolha pelo menos uma área."
+    },
+    "customAreas": "Áreas visíveis",
+    "customActions": "Ações permitidas",
+    "customHint": "Segurança, Configurações e a própria conta estão sempre disponíveis. Administrar é exclusivo do perfil Administrador.",
+    "customize": "Alterar áreas",
+    "noActions": "sem ações",
+    "areas": {
+      "general": "Visão geral",
+      "apps": "Apps",
+      "menux": "Menux",
+      "guests": "VMs e LXCs",
+      "node": "Nó (armazenar, rede, hardware)",
+      "backup": "Backup",
+      "logs": "Registros do sistema"
+    },
+    "actions": {
+      "execute": "Executar scripts e ferramentas",
+      "guests": "Controlar VMs e LXC",
+      "backup": "Gerenciar backups",
+      "update": "Atualizar",
+      "terminal": "Abrir terminais"
     }
   },
   "pveLogin": {

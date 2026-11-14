@@ -131,13 +131,36 @@ const PBS_TABS: TopTab[] = ["overview", "datastores", "pbs-tasks", "terminal", "
 function MonitorDashboard({ product }: { product: Product }) {
   const t = useT()
   const isPbs = product === "pbs"
-  useSWR(isPbs ? null : "/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
-  useSWR(isPbs ? null : "/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
   const { order: userTabOrder } = useTabOrder()
   const { mode: accessMode, capabilities } = useAccess()
-  // A session that cannot open terminals does not get the tab.
-  const tabOrder: TopTab[] = (isPbs ? PBS_TABS : userTabOrder)
-    .filter((tab) => tab !== "terminal" || capabilities.terminal)
+  const areas = capabilities.areas
+  useSWR(isPbs || !areas.apps ? null : "/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  useSWR(isPbs ? null : "/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })
+  // Each tab belongs to an area of the profile (permissions.py); terminals
+  // follow their action and the audit is for administrators. Security,
+  // settings, the profile and About are every session's.
+  const tabVisible = (tab: string): boolean => {
+    switch (tab) {
+      case "overview": return areas.general
+      case "apps":     return areas.apps
+      case "catalog":  return areas.menux
+      case "vms":      return areas.guests
+      case "node": case "storage": case "network": case "hardware": return areas.node
+      case "backup":   return areas.backup
+      case "logs":     return areas.logs
+      case "terminal": return capabilities.terminal
+      case "audit":    return capabilities.admin
+      default:         return true
+    }
+  }
+  const tabOrder: TopTab[] = (isPbs ? PBS_TABS : userTabOrder).filter(tabVisible)
+  // Where a session lands: the first tab of its order it can see.
+  const firstVisibleTab = (): string => {
+    const head = tabOrder[0]
+    if (head === "node") return "storage"
+    if (head === "admin") return areas.logs ? "logs" : "security"
+    return head || "security"
+  }
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -155,13 +178,16 @@ function MonitorDashboard({ product }: { product: Product }) {
   // runs post-hydration; the tiny flash is acceptable and matches the
   // pattern next-themes uses for the same reason.
   useEffect(() => {
-    setActiveTab(isPbs ? "overview" : firstActualTab())
+    const first = isPbs ? "overview" : firstActualTab()
+    setActiveTab(tabVisible(first) ? first : firstVisibleTab())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPbs])
-  // A session without terminals never lands on that tab, whatever the
+  // A session never lands on a tab its profile does not show, whatever the
   // saved order or a link from another part of the dashboard says.
   useEffect(() => {
-    if (activeTab === "terminal" && !capabilities.terminal) setActiveTab("overview")
-  }, [activeTab, capabilities.terminal])
+    if (!tabVisible(activeTab)) setActiveTab(firstVisibleTab())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, capabilities])
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
@@ -694,7 +720,7 @@ function MonitorDashboard({ product }: { product: Product }) {
                 { value: "audit",    label: t("navigation.audit"),      Icon: ClipboardCheck, default: false },
                 { value: "settings", label: t("navigation.settings"),   Icon: SettingsIcon, default: false },
                 { value: "about",    label: t("navigation.about"),      Icon: Info,        default: false },
-              ].filter(item => !isPbs || item.value !== "audit")
+              ].filter(item => (!isPbs || item.value !== "audit") && tabVisible(item.value))
               const activeNodeItem  = NODE_ITEMS.find(i => i.value === activeTab)
               const activeAdminItem = ADMIN_ITEMS.find(i => i.value === activeTab)
               const isNodeActive    = activeNodeItem !== undefined
@@ -866,9 +892,9 @@ function MonitorDashboard({ product }: { product: Product }) {
                           )
                           case "admin": return (
                             <React.Fragment key="admin">
-                              {btn("logs",     ScrollText,  t("navigation.systemLogs"))}
+                              {areas.logs && btn("logs",     ScrollText,  t("navigation.systemLogs"))}
                               {btn("security", ShieldCheck, t("navigation.security"))}
-                              {!isPbs && btn("audit",    ClipboardCheck, t("navigation.audit"))}
+                              {!isPbs && capabilities.admin && btn("audit",    ClipboardCheck, t("navigation.audit"))}
                               {btn("settings", SettingsIcon, t("navigation.settings"))}
                               {btn("about",    Info,         t("navigation.about"))}
                             </React.Fragment>
@@ -901,9 +927,9 @@ function MonitorDashboard({ product }: { product: Product }) {
               cascade to complete each time. With forceMount, the
               5 s / 59 s refresh intervals keep the data fresh in the
               background — reopening the tab is instant. */}
-          <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
+          {areas.general && <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <SystemOverview key={`overview-${componentKey}`} product={product} />
-          </TabsContent>
+          </TabsContent>}
 
           {isPbs && (
             <TabsContent value="datastores" className="space-y-4 md:space-y-6 mt-0">
@@ -940,9 +966,9 @@ function MonitorDashboard({ product }: { product: Product }) {
               visually hidden with data-attribute selector when the tab
               is inactive — mount cost is ~zero (no polling loop that
               other components run). */}
-          <TabsContent value="vms" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
+          {areas.guests && <TabsContent value="vms" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <VirtualMachines key={`vms-${componentKey}`} />
-          </TabsContent>
+          </TabsContent>}
 
           <TabsContent value="hardware" className="space-y-4 md:space-y-6 mt-0">
             <Hardware key={`hardware-${componentKey}`} />

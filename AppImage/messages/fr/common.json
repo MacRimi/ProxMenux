@@ -2884,13 +2884,15 @@
       "admin": "Administrateur",
       "operator": "Opérateur avec terminal",
       "operator_no_terminal": "Opérateur sans terminal",
-      "observer": "Observateur"
+      "observer": "Observateur",
+      "custom": "Personnalisé"
     },
     "profileHints": {
       "admin": "tout, y compris les utilisateurs, les réglages du Monitor et les secrets.",
       "operator": "exécute des scripts et des outils, contrôle les VM et les LXC, gère les sauvegardes, met à jour et ouvre des terminaux.",
       "operator_no_terminal": "comme un opérateur avec terminal, sans ouvrir de terminaux.",
-      "observer": "voit le tableau de bord sans les secrets ; n'exécute et ne modifie rien."
+      "observer": "voit le tableau de bord sans les secrets ; n'exécute et ne modifie rien.",
+      "custom": "les zones qu'il voit et les actions qu'il peut effectuer, choisies une à une ; jamais l'administration."
     },
     "add": "Ajouter un utilisateur",
     "username": "Nom d'utilisateur",
@@ -2919,7 +2921,29 @@
       "password_short": "Le mot de passe doit comporter au moins 10 caractères.",
       "password_mix": "Le mot de passe doit combiner au moins trois éléments parmi : minuscules, majuscules, chiffres et symboles.",
       "password_common": "Ce mot de passe est trop courant. Choisissez-en un autre.",
-      "user_change_failed": "La modification n'a pas pu être enregistrée."
+      "user_change_failed": "La modification n'a pas pu être enregistrée.",
+      "custom_invalid": "Choisissez au moins une zone."
+    },
+    "customAreas": "Zones visibles",
+    "customActions": "Actions autorisées",
+    "customHint": "Sécurité, Paramètres et le compte personnel restent toujours disponibles. L'administration est réservée au profil Administrateur.",
+    "customize": "Modifier les zones",
+    "noActions": "aucune action",
+    "areas": {
+      "general": "Aperçu",
+      "apps": "Applications",
+      "menux": "Menux",
+      "guests": "VM et LXC",
+      "node": "Nœud (stockage, réseau, matériel)",
+      "backup": "Sauvegarde",
+      "logs": "Journaux système"
+    },
+    "actions": {
+      "execute": "Exécuter des scripts et des outils",
+      "guests": "Contrôler les VM et les LXC",
+      "backup": "Gérer les sauvegardes",
+      "update": "Mettre à jour",
+      "terminal": "Ouvrir des terminaux"
     }
   },
   "pveLogin": {

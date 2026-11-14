@@ -3633,7 +3633,8 @@ ${(report.sections && report.sections.length > 0) ? `
       </Card>
 
       {/* Secure Gateway */}
-      <SecureGatewaySetup />
+      {/* Secure Gateway is an app: it belongs to the Apps area. */}
+      {capabilities.areas.apps && <SecureGatewaySetup />}
 
       {/* Fail2Ban */}
       <Card>

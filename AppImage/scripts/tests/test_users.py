@@ -158,6 +158,30 @@ class Users(unittest.TestCase):
             with self.subTest(body=body):
                 self.assertEqual(self.call("POST", "/api/auth/users", admin, json=body).status_code, 400)
 
+    def test_a_custom_profile_chooses_areas_and_actions(self):
+        admin = self.admin()
+        body = {"username": "backups", "password": OTHER, "profile": "custom",
+                "custom": {"areas": ["backup", "general"], "actions": ["backup"]}}
+        self.assertEqual(self.call("POST", "/api/auth/users", admin, json=body).status_code, 200)
+        token = self.login("backups", OTHER)
+        status = self.call("GET", "/api/auth/status", token).json
+        self.assertEqual(status["profile"], "custom")
+        self.assertEqual({a for a, on in status["capabilities"]["areas"].items() if on}, {"general", "backup"})
+        self.assertEqual((status["capabilities"]["backup"], status["capabilities"]["guests"]), (True, False))
+        self.assertEqual(self.reach(token), (403, 403, 403, 200))  # no VMs; the backup action takes a ticket
+        listed = {u["username"]: u for u in self.call("GET", "/api/auth/users", admin).json["users"]}
+        self.assertEqual(listed["backups"]["custom"], {"areas": ["general", "backup"], "actions": ["backup"]})
+        # Administering is not a custom action, and something must be seen.
+        for custom in ({"areas": ["backup"], "actions": ["admin"]}, {"areas": [], "actions": []},
+                       {"areas": ["nowhere"], "actions": []}, None):
+            with self.subTest(custom=custom):
+                answer = self.call("PUT", "/api/auth/users/backups", admin, json={"profile": "custom", "custom": custom})
+                self.assertEqual((answer.status_code, answer.json["error"]), (400, "custom_invalid"))
+        # A fixed profile again drops the choice.
+        self.assertEqual(self.call("PUT", "/api/auth/users/backups", admin, json={"profile": "observer"}).status_code, 200)
+        self.assertIsNone(auth_manager.find_user("backups")["custom"])
+        self.assertEqual(self.reach(token)[0], 200)
+
     # ── always one administrator ─────────────────────────────────────
     def test_the_monitor_always_keeps_an_administrator(self):
         admin = self.admin()

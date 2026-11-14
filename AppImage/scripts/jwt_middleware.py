@@ -88,13 +88,14 @@ def _internal_call():
         return False  # No request context yet: the normal checks apply.
 
 
-def permission_error(need):
-    """The response refusing the current request `need`, or None when it may."""
+def permission_error(need, areas=permissions.BASE):
+    """The response refusing the current request `need`, or None when it may.
+    A reading (`view`) is allowed in `areas`."""
     _mode, identity, error = request_identity()
     if error:
         return error
     g.identity = identity
-    if not permissions.allows(identity["permissions"], need, signed_in=bool(identity["username"])):
+    if not permissions.allows(identity["permissions"], need, signed_in=bool(identity["username"]), areas=areas):
         return _insufficient(identity, need)
     return None
 
@@ -113,9 +114,12 @@ def has_full_access():
     return has_permission("admin")
 
 
+def _rule():
+    return request.url_rule.rule if request.url_rule is not None else request.path
+
+
 def _need(floor_view):
-    rule = request.url_rule.rule if request.url_rule is not None else request.path
-    need = permissions.required(rule, request.method)
+    need = permissions.required(_rule(), request.method)
     # A route marked for more than reading never falls back to it.
     return "admin" if floor_view and need == "view" else need
 
@@ -125,7 +129,11 @@ def _protect(f, floor_view):
     def decorated_function(*args, **kwargs):
         if _internal_call():
             return f(*args, **kwargs)
-        error = permission_error(_need(floor_view))
+        need = _need(floor_view)
+        # A reading not listed is read as before areas existed; a test keeps
+        # every route of the Monitor listed.
+        areas = (permissions.read_areas(_rule()) or permissions.BASE) if need == "view" else permissions.BASE
+        error = permission_error(need, areas)
         return error or f(*args, **kwargs)
     return decorated_function
 

@@ -3011,13 +3011,15 @@
       "admin": "Administrator",
       "operator": "Operator with terminal",
       "operator_no_terminal": "Operator without terminal",
-      "observer": "Observer"
+      "observer": "Observer",
+      "custom": "Custom"
     },
     "profileHints": {
       "admin": "everything, including users, Monitor settings and secrets.",
       "operator": "runs scripts and tools, controls VMs and LXC, manages backups, updates and opens terminals.",
       "operator_no_terminal": "the same as an operator with terminal, without opening terminals.",
-      "observer": "sees the dashboard without secrets; runs and changes nothing."
+      "observer": "sees the dashboard without secrets; runs and changes nothing.",
+      "custom": "the areas it sees and the actions it may take, chosen one by one; never administering."
     },
     "add": "Add user",
     "username": "Username",
@@ -3046,7 +3048,29 @@
       "password_short": "The password must have at least 10 characters.",
       "password_mix": "The password must mix at least three of: lowercase, uppercase, digits and symbols.",
       "password_common": "That password is too common. Choose another one.",
-      "user_change_failed": "The change could not be saved."
+      "user_change_failed": "The change could not be saved.",
+      "custom_invalid": "Choose at least one area."
+    },
+    "customAreas": "Areas it sees",
+    "customActions": "Actions it may take",
+    "customHint": "Security, Settings and the own account are always available. Administering is only for the Administrator profile.",
+    "customize": "Change areas",
+    "noActions": "no actions",
+    "areas": {
+      "general": "Overview",
+      "apps": "Apps",
+      "menux": "Menux",
+      "guests": "VMs & LXCs",
+      "node": "Node (storage, network, hardware)",
+      "backup": "Backup",
+      "logs": "System Logs"
+    },
+    "actions": {
+      "execute": "Run scripts and tools",
+      "guests": "Control VMs and LXC",
+      "backup": "Manage backups",
+      "update": "Update",
+      "terminal": "Open terminals"
     }
   },
   "pveLogin": {

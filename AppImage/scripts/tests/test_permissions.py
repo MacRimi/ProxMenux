@@ -76,10 +76,31 @@ class RouteClassification(unittest.TestCase):
                         and permissions.classify(rule, method) == "view"})
         self.assertEqual(loose, [])
 
+    def test_every_reading_belongs_to_areas(self):
+        unlisted = sorted({rule for rule, method, _ in self.routes
+                           if method == "GET" and permissions.classify(rule, method) == "view"
+                           and permissions.read_areas(rule) is None})
+        self.assertEqual(unlisted, [], "add these readings to _AREA in permissions.py")
+        for areas in permissions._AREA.values():
+            self.assertTrue(set(areas) <= set(permissions.AREAS), areas)
+
+    def test_some_readings_and_their_areas(self):
+        for rule, areas in (("/api/vms", {"general", "guests", "apps"}),
+                            ("/api/vms/<int:vmid>/backups", {"guests"}),
+                            ("/api/host-backups/jobs", {"backup"}),
+                            ("/api/storage/summary", {"general"}),
+                            ("/api/storage/smart/<disk_name>", {"node"}),
+                            ("/api/node/metrics", {"general", "node"}),
+                            ("/api/health/details", set()),
+                            ("/api/auth/profile", set())):
+            with self.subTest(rule=rule):
+                self.assertEqual(set(permissions.read_areas(rule)), areas)
+        self.assertEqual(permissions.required("/api/audit/runs", "GET"), "admin")
+
     def test_every_listed_rule_names_a_route(self):
         rules = {rule for rule, _, _ in self.routes}
         stale = [rule for rule in permissions._READING if rule not in rules]
-        stale += [prefix for prefix in permissions._ACTION
+        stale += [prefix for prefix in (*permissions._ACTION, *permissions._AREA)
                   if not any(rule == prefix or rule.startswith(prefix) for rule in rules)]
         self.assertEqual(stale, [])
 
@@ -107,12 +128,25 @@ class RouteClassification(unittest.TestCase):
 class Profiles(unittest.TestCase):
     def test_the_fixed_profiles(self):
         actions = set(permissions.ACTIONS)
-        self.assertEqual(permissions.permissions_of("admin"), {"view"} | actions)
-        self.assertEqual(permissions.permissions_of("observer"), {"view"})
-        self.assertEqual(permissions.permissions_of("operator"), {"view"} | actions - {"admin"})
+        seen = {"view"} | {"area." + area for area in permissions.AREAS}
+        self.assertEqual(permissions.permissions_of("admin"), seen | actions)
+        self.assertEqual(permissions.permissions_of("observer"), seen)
+        self.assertEqual(permissions.permissions_of("operator"), seen | actions - {"admin"})
         self.assertEqual(permissions.permissions_of("operator_no_terminal"),
-                         {"view"} | actions - {"admin", "terminal"})
+                         seen | actions - {"admin", "terminal"})
         self.assertEqual(permissions.permissions_of("unknown"), set())
+
+    def test_a_custom_profile_is_its_areas_and_actions_never_administering(self):
+        profile = permissions.custom_profile(["backup", "general", "nowhere"], ["backup", "admin", "terminal"])
+        self.assertEqual(profile, "custom:general,backup:backup,terminal")
+        self.assertEqual(permissions.permissions_of(profile),
+                         {"view", "area.general", "area.backup", "backup", "terminal"})
+        self.assertIsNone(permissions.custom_profile([], ["backup"]))  # nothing to see
+        self.assertEqual(permissions.permissions_of("custom:nowhere:"), set())
+        seen = permissions.permissions_of("custom:backup:")
+        self.assertTrue(permissions.allows(seen, "view", areas=("backup", "logs")))
+        self.assertFalse(permissions.allows(seen, "view", areas=("guests",)))
+        self.assertTrue(permissions.allows(seen, "view", areas=permissions.BASE))
 
     def test_special_needs(self):
         operator = permissions.permissions_of("operator_no_terminal")
@@ -158,7 +192,10 @@ class Enforcement(unittest.TestCase):
                 ("/api/system/power/reboot", "POST", require_admin_scope),
                 ("/api/notifications/settings", "GET", require_admin_scope),
                 ("/api/auth/profile", "PUT", require_auth),
-                ("/api/host-backups/pbs-encryption/download-keyfile", "GET", require_admin_or_ticket)):
+                ("/api/host-backups/pbs-encryption/download-keyfile", "GET", require_admin_or_ticket),
+                ("/api/host-backups/jobs", "GET", require_auth),
+                ("/api/health", "GET", require_auth),
+                ("/api/node/metrics", "GET", require_auth)):
             app.add_url_rule(rule, f"{method} {rule}", decorator(ok), methods=[method])
 
         from flask import g
@@ -193,6 +230,20 @@ class Enforcement(unittest.TestCase):
                                   self.call("POST", "/api/system/power/reboot"),
                                   self.call("GET", "/api/notifications/settings"),
                                   self.call("PUT", "/api/auth/profile")), statuses)
+
+    def test_a_custom_profile_reads_only_its_areas(self):
+        with self.as_profile(permissions.custom_profile(["backup", "node"], ["backup"])):
+            self.assertEqual((self.call("GET", "/api/host-backups/jobs"),   # backup
+                              self.call("GET", "/api/node/metrics"),         # general or node
+                              self.call("GET", "/api/health"),               # every page
+                              self.call("GET", "/api/vms/100"),              # guests, apps, menux
+                              self.call("POST", "/api/vms/100/control"),
+                              self.call("PUT", "/api/auth/profile"),         # its own account
+                              self.call("POST", "/api/terminal/ticket")),
+                             (200, 200, 200, 403, 403, 200, 200))
+        with self.as_profile(permissions.custom_profile(["general"], [])):
+            self.assertEqual((self.call("GET", "/api/host-backups/jobs"), self.call("GET", "/api/node/metrics"),
+                              self.call("POST", "/api/terminal/ticket")), (403, 200, 403))
 
     def test_a_ticket_carries_the_permissions_of_whoever_asked(self):
         with self.as_profile("operator_no_terminal"):

@@ -129,14 +129,17 @@ class AccessModes(unittest.TestCase):
                 self.assertEqual(auth_manager.access_mode(config), mode)
 
     def test_capabilities_follow_the_mode_and_the_token(self):
-        everything = dict.fromkeys(("view", "execute", "guests", "backup", "update", "terminal", "admin"), True)
-        view = dict(dict.fromkeys(everything, False), view=True)
+        areas = dict.fromkeys(("general", "apps", "menux", "guests", "node", "backup", "logs"), True)
+        everything = dict(dict.fromkeys(("view", "execute", "guests", "backup", "update", "terminal", "admin"), True),
+                          areas=areas)
+        view = dict(dict.fromkeys(everything, False), view=True, areas=areas)
+        nothing = dict(dict.fromkeys(everything, False), areas=dict.fromkeys(areas, False))
         self.assertEqual(auth_manager.capabilities("open"), everything)
         self.assertEqual(auth_manager.capabilities("password", "full_admin"), everything)
         self.assertEqual(auth_manager.capabilities("password", "read_only"), view)
         self.assertEqual(auth_manager.capabilities("read_only"), view)
-        self.assertFalse(any(auth_manager.capabilities("undecided").values()))
-        self.assertFalse(any(auth_manager.capabilities("password").values()))
+        self.assertEqual(auth_manager.capabilities("undecided"), nothing)
+        self.assertEqual(auth_manager.capabilities("password"), nothing)
 
     # ── undecided ────────────────────────────────────────────────────
     def test_an_undecided_monitor_serves_only_its_first_run_screen(self):
@@ -224,7 +227,8 @@ class AccessModes(unittest.TestCase):
         token = self.account()
         anonymous = self.client.get("/api/auth/status").json
         self.assertIsNone(anonymous["username"])
-        self.assertFalse(any(anonymous["capabilities"].values()))
+        self.assertFalse(any(v for k, v in anonymous["capabilities"].items() if k != "areas"))
+        self.assertFalse(any(anonymous["capabilities"]["areas"].values()))
         signed_in = self.client.get("/api/auth/status", headers={"Authorization": f"Bearer {token}"}).json
         self.assertEqual((signed_in["username"], signed_in["capabilities"]["terminal"]), ("admin", True))
 

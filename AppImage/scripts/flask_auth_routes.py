@@ -174,8 +174,10 @@ def auth_status():
                     status['authenticated'] = True
                     status['username'] = username
                     status['auth_method'] = "pve" if pve_auth.is_ticket(token) else "local"
-                    status['profile'] = auth_manager.profile_for(status["access_mode"], username, scope)
-                    status['capabilities'] = auth_manager.capabilities(status["access_mode"], profile=status['profile'])
+                    profile = auth_manager.profile_for(status["access_mode"], username, scope)
+                    status['capabilities'] = auth_manager.capabilities(status["access_mode"], profile=profile)
+                    # A custom profile names its choices in the capabilities.
+                    status['profile'] = profile.split(":", 1)[0] if profile else None
                     user = auth_manager.find_user(username)
                     status['local_user'] = user is not None
                     status['totp_enabled'] = bool(user and user.get("totp_enabled"))
@@ -1075,6 +1077,7 @@ _USER_ERRORS = {
     "The username can have up to 32 letters, digits, dots, dashes and underscores": "username_invalid",
     "That username is already in use": "username_taken",
     "Unknown profile": "profile_unknown",
+    "Choose at least one area, and only the listed areas and actions": "custom_invalid",
     "The Monitor needs at least one administrator": "last_admin",
     "User not found": "user_not_found",
     "You cannot remove your own account": "remove_self",
@@ -1098,7 +1101,9 @@ def _answer(result, status=400):
 @require_admin_scope
 def users_list():
     return jsonify({"success": True, "users": auth_manager.list_users(),
-                    "profiles": list(auth_manager.permissions.PROFILES)})
+                    "profiles": list(auth_manager.permissions.PROFILES) + [auth_manager.permissions.CUSTOM],
+                    "areas": list(auth_manager.permissions.AREAS),
+                    "custom_actions": list(auth_manager.permissions.CUSTOM_ACTIONS)})
 
 
 @auth_bp.route('/api/auth/users', methods=['POST'])
@@ -1106,7 +1111,7 @@ def users_list():
 def users_create():
     data = request.get_json(silent=True) or {}
     return _answer(auth_manager.create_user(data.get("username"), data.get("password"),
-                                            data.get("profile")))
+                                            data.get("profile"), custom=data.get("custom")))
 
 
 @auth_bp.route('/api/auth/users/<username>', methods=['PUT'])
@@ -1115,7 +1120,8 @@ def users_update(username):
     data = request.get_json(silent=True) or {}
     return _answer(auth_manager.update_user(username, profile=data.get("profile"),
                                             password=data.get("password"),
-                                            reset_totp=data.get("reset_totp") is True),
+                                            reset_totp=data.get("reset_totp") is True,
+                                            custom=data.get("custom")),
                    404 if not auth_manager.find_user(username) else 400)
 
 
