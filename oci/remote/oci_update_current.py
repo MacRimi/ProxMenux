@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Resolve a saved image channel and invoke the native update transaction."""
 import argparse
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 
 import oci_instances as instances
 import oci_native_reads as native_reads
@@ -17,7 +19,7 @@ import oci_instance_transaction as transaction
 import oci_work_backup as work_backup
 import oci_layer_cache as layer_cache
 from oci_installation_state import image_from_archive, same_image
-from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
+from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, msg_progress
 
 # A registry login saved by ProxMenux lets skopeo read private images.
 REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
@@ -32,8 +34,26 @@ def repository(reference):
     return repo
 
 
+# What the next run_quiet shows on screen while it runs: set by showing().
+_shown = None
+
+
+@contextlib.contextmanager
+def showing(show, env=None):
+    """Within it, run_quiet reports the progress of its helper with
+    show(pid, seconds, output_path) every second, with `env` added."""
+    global _shown
+    previous, _shown = _shown, (show, env or {})
+    try:
+        yield
+    finally:
+        _shown = previous
+
+
 def run_quiet(args, error, capture=False):
     """Runs a helper with its output in the private log; error is the message of a failure."""
+    if _shown is not None and not capture:
+        return run_shown(args, error, *_shown)
     transaction.log('$ ' + shlex.join(args))
     process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                env=dict(os.environ, PYTHONPATH=str(Path(__file__).parent)))
@@ -57,6 +77,89 @@ def run_quiet(args, error, capture=False):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
+
+
+def run_shown(args, error, show, env=None):
+    """Like run_quiet, while show(pid, seconds, output_path) reports its
+    progress on screen every second (see showing())."""
+    transaction.log('$ ' + shlex.join(args))
+    with tempfile.NamedTemporaryFile(prefix='.proxmenux-run-', suffix='.log') as output:
+        process = subprocess.Popen(args, stdout=output, stderr=subprocess.STDOUT,
+                                   env=dict(os.environ, PYTHONPATH=str(Path(__file__).parent), **(env or {})))
+        started = time.monotonic()
+        try:
+            while process.poll() is None:
+                show(process.pid, int(time.monotonic() - started), output.name)
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    pass
+            output.seek(0)
+            transaction.log_output(output.read())
+            if process.returncode:
+                transaction.log(f'  exit {process.returncode}')
+                raise RuntimeError(error)
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+
+
+def _bytes_read(pid):
+    """What a process has read so far, network included."""
+    try:
+        with open(f'/proc/{pid}/io', encoding='ascii') as io:
+            for line in io:
+                if line.startswith('rchar:'):
+                    return int(line.split()[1])
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def show_download(candidate):
+    """The download progress of an image, as the installer shows it: MiB of
+    its compressed layers, percentage, layers started and seconds."""
+    total, count = int(candidate.get('size') or 0), len(candidate.get('layers') or [])
+
+    def show(pid, seconds, output_path):
+        done = _bytes_read(pid)
+        if total > 0:
+            done = min(done, total * 99 // 100)
+            try:
+                with open(output_path, encoding='utf-8', errors='replace') as output:
+                    started = output.read().count('Copying blob ')
+            except OSError:
+                started = 0
+            text = (f"{translate('Downloading the image:')} {done >> 20} / {(total + 1048575) >> 20} MiB "
+                    f"({done * 100 // total}%), {translate('layers')} {min(started, count)}/{count}, {seconds}s")
+        else:
+            text = f"{translate('Downloading the image:')} {done >> 20} MiB, {seconds}s"
+        msg_progress(transaction.fit(text))
+    return show
+
+
+def verify_shown(verifier, path, error):
+    """Verifies an archive showing how much of it is checked; the detail of
+    each blob goes to the private log."""
+    msg_info(translate('Verifying the image integrity...'))
+    with tempfile.TemporaryDirectory(prefix='.proxmenux-verify-') as directory:
+        status = Path(directory) / 'status'
+
+        def show(pid, seconds, output_path):
+            try:
+                checked, total = (int(value) for value in status.read_text(encoding='ascii').split()[:2])
+            except (OSError, ValueError):
+                return
+            if total > 0:
+                msg_progress(transaction.fit(f"{translate('Verifying the image integrity:')} {checked >> 20} / "
+                                             f"{(total + 1048575) >> 20} MiB ({checked * 100 // total}%), {seconds}s"))
+        with showing(show, {'OCI_VERIFY_STATUS': str(status)}):
+            run_quiet([sys.executable, str(verifier), str(path)], error)
 
 
 def resolve_archive(desired, config, current=None, check=None, required_digest=None, local_archives=()):
@@ -96,8 +199,7 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
             # read/decompressed in full just to discover it is the old image.
             if not same_image(candidate, image_from_archive(str(path))):
                 return False
-            run_quiet([sys.executable, str(verifier), str(path)],
-                      translate('The image did not pass the integrity check'))
+            verify_shown(verifier, path, translate('The image did not pass the integrity check'))
             # Recheck the contract after verification as well: a candidate
             # must still match before it can be returned to the transaction.
             return same_image(candidate, image_from_archive(str(path)))
@@ -113,7 +215,6 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     for saved in local_archives:
         path = Path(saved) if saved else None
         if path and not path.is_symlink() and path.is_file():
-            msg_info(translate('Verifying the image integrity...'))
             if intact(path):
                 msg_ok(translate('Using the verified image from the cache'))
                 return path, digest
@@ -126,7 +227,6 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     if archive.is_symlink():
         raise ValueError(translate('Unsafe OCI archive path'))
     if archive.exists():
-        msg_info(translate('Verifying the image integrity...'))
         if intact(archive):
             msg_ok(translate('Using the verified image from the cache'))
             return archive, digest
@@ -153,19 +253,20 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
             cached = False
             if layer_cache.enabled():
                 try:
-                    layer_cache.pull(source, architecture, partial, local_archives, candidate,
-                        lambda args: run_quiet(args, translate('Could not download the image')),
-                        available=work_backup.available)
+                    with showing(show_download(candidate)):
+                        layer_cache.pull(source, architecture, partial, local_archives, candidate,
+                            lambda args: run_quiet(args, translate('Could not download the image')),
+                            available=work_backup.available)
                     cached = True
                 except layer_cache.CacheUnavailable as error:
                     transaction.log(f'optional layer cache unavailable: {error}')
                     msg_warn(translate('The shared layer cache is unavailable; downloading the image normally.'))
                     partial.unlink(missing_ok=True)
             if not cached:
-                run_quiet(['skopeo', 'copy', '--override-arch', architecture, source,
-                    'oci-archive:' + str(partial)], translate('Could not download the image'))
+                with showing(show_download(candidate)):
+                    run_quiet(['skopeo', 'copy', '--override-arch', architecture, source,
+                        'oci-archive:' + str(partial)], translate('Could not download the image'))
             msg_ok(translate('Image downloaded'))
-            msg_info(translate('Verifying the image integrity...'))
             if intact(partial):
                 partial.chmod(0o644)
                 os.replace(partial, archive)

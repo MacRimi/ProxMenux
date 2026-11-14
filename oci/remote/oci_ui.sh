@@ -115,6 +115,27 @@ oci_quiet() {
   fi
 }
 
+# Verifies an OCI archive with VERIFY_OCI_ARCHIVE, showing how much of it is
+# already checked; the detail of each blob goes to the private log.
+# Returns the status of the verifier.
+oci_verify_archive() {
+  local path=$1 status_file pid status=0 elapsed=0 checked total
+  status_file=$(mktemp) || return 1
+  msg_info "$(translate "Verifying the image integrity...")"
+  OCI_VERIFY_STATUS=$status_file python3 "$VERIFY_OCI_ARCHIVE" "$path" >>"${OCI_LOG:-/dev/null}" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    read -r checked total _ <"$status_file" 2>/dev/null || continue
+    [[ $checked =~ ^[0-9]+$ && $total =~ ^[0-9]+$ && $total -gt 0 ]] || continue
+    msg_progress "$(translate "Verifying the image integrity:") $((checked / 1048576)) / $(( (total + 1048575) / 1048576 )) MiB ($((checked * 100 / total))%), ${elapsed}s"
+  done
+  wait "$pid" || status=$?
+  rm -f "$status_file" "${status_file}.tmp"
+  return "$status"
+}
+
 # `pct create` of an OCI archive, showing how much of the image is already
 # unpacked into the rootfs. Arguments: VMID ARCHIVE [pct create options...]
 oci_create_container() {

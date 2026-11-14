@@ -9809,6 +9809,7 @@
   "Verifying registry access. Please wait...": "Проверка доступа к реестру. Пожалуйста, подождите...",
   "Verifying the backups...": "Проверка резервных копий...",
   "Verifying the image integrity...": "Проверка целостности образа...",
+  "Verifying the image integrity:": "Проверка целостности образа:",
   "Version": "Версия",
   "Version Change Detected": "Обнаружено изменение версии",
   "Version info not available": "Информация о версии недоступна",

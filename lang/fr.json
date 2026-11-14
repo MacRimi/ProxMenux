@@ -9837,6 +9837,7 @@
   "Verifying registry access. Please wait...": "Vérification de l'accès au registre. S'il vous plaît, attendez…",
   "Verifying the backups...": "Vérifier les sauvegardes…",
   "Verifying the image integrity...": "Vérifier l'intégrité de l'image…",
+  "Verifying the image integrity:": "Vérification de l'intégrité de l'image :",
   "Version": "Version",
   "Version Change Detected": "Changement de version détecté",
   "Version info not available": "Informations sur la version non disponibles",
