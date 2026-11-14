@@ -12,10 +12,6 @@
     "description": "Prístup k panelu, prvé spustenie a ochranné vrstvy: heslo a TOTP, relácie JWT, tokeny API, HTTPS, reverzný proxy, Secure Gateway a voliteľný jail Fail2Ban.",
     "section": "ProxMenux Monitor"
   },
-  "intro": {
-    "title": "Overenie prístupu je voliteľné",
-    "body": "Pri prvom spustení panel zobrazí dialóg <em>„Chrániť panel?“</em> s tlačidlami <strong>Áno, nastaviť heslo</strong> a <strong>Nie, pokračovať bez ochrany</strong>. Druhá možnosť ponechá koncové body API otvorené na TCP 8008: v izolovanej laboratórnej LAN to môže byť prijateľné, inde je to nebezpečné. Dvojfaktorové overenie (2FA) <strong>nie je</strong> súčasťou tejto úvodnej voľby; nastavuje sa až po vytvorení hesla na <strong>karte Zabezpečenie</strong>."
-  },
   "reaching": {
     "heading": "Prístup k panelu",
     "intro": "ProxMenux Monitor počúva na TCP 8008 na všetkých rozhraniach (<code>::</code>, IPv4 aj IPv6). Existujú tri bežné spôsoby, ako ho dosiahnuť:",
@@ -23,24 +19,10 @@
   },
   "firstLaunch": {
     "heading": "Postup pri prvom spustení",
-    "intro": "Pri prvom otvorení panelu frontend zavolá <code>GET /api/auth/status</code>. Ak konfigurácia ešte nebola uložená (<code>configured: false</code>), zobrazí sa dialóg <em>„Chrániť panel?“</em> s dvoma možnosťami:",
     "imageAlt": "Úvodný dialóg „Chrániť panel?“ s voľbami nastaviť heslo alebo pokračovať bez ochrany",
-    "imageCaption": "Úvodná voľba ochrany heslom alebo pokračovania bez nej. Zobrazí sa znova po novej inštalácii alebo vypnutí overenia v nastaveniach.",
     "headerButton": "Tlačidlo",
     "headerWhat": "Čo sa stane?",
     "headerApi": "Volanie API",
-    "rows": [
-      {
-        "button": "Áno, nastaviť heslo",
-        "what": "Otvorí formulár s povinným používateľským menom a heslom, voliteľným <em>zobrazovaným menom</em> a <em>obrázkom avatara</em>. Zapne overenie v <code>auth.json</code> pomocou <code>enabled: true</code> a vráti JWT na prihlásenie. Voliteľné údaje profilu sa uložia následnými volaniami, ako je opísané nižšie.",
-        "api": "POST /api/auth/setup"
-      },
-      {
-        "button": "Nie, pokračovať bez ochrany",
-        "what": "Nastaví <code>declined: true</code> v <code>auth.json</code>. Koncové body API zostanú otvorené, kým v nastaveniach nezapnete ochranu.",
-        "api": "POST /api/auth/skip"
-      }
-    ],
     "twofaCalloutTitle": "2FA je konfigurovaný neskôr, nie tu",
     "twofaCalloutBody": "Dialóg pri prvom spustení pokrýva iba rozhodnutie o hesle. <strong>Dvojfaktorové overenie (TOTP)</strong> sa nastaví neskôr z <strong>karty Zabezpečenie</strong>, keď sa prihlásite pomocou hesla. Úplný návod TOTP je nižšie na tejto stránke.",
     "createTitle": "Vytvorenie prvého užívateľa",
@@ -102,9 +84,7 @@
         "endpoint": "DELETE /api/auth/profile/avatar",
         "what": "Odstráni avatar. Hlavička opäť zobrazí iniciálu vo farebnom kruhu."
       }
-    ],
-    "reversibleTitle": "Ochranu môžete zapnúť neskôr",
-    "reversibleBody": "Po kliknutí na <em>Nie, pokračovať bez ochrany</em> sa už nikdy viac nezobrazí uvítacie dialógové okno. Autentizáciu môžete znova povoliť na <strong>karte Zabezpečenie</strong> na hlavnom paneli alebo úpravou súboru <code>/root/.config/proxmenux-monitor/auth.json</code> a odstránením príznaku <code>declined</code> a reštartovaním služby."
+    ]
   },
   "password": {
     "heading": "Overenie hesla",
@@ -162,7 +142,6 @@
     "recoverTitle": "Obnovenie strateného hesla",
     "recoverIntro": "Obnova hesla vyžaduje prístup k shellu hostiteľa. ProxMenux ponúka sprievodcu resetovaním v konfiguračnej ponuke, aby ste nemuseli ručne upravovať <code>auth.json</code>:",
     "survivesTitle": "Čo prežíva reset",
-    "survivesBody": "Vymaže sa interaktívne prihlásenie, ale <code>jwt_secret</code> a registrované <code>api_tokens</code> zostanú. Home Assistant a ostatné skripty môžu používať pôvodné tokeny. Ak chcete úplný reset s novým kľúčom, odstráňte <code>auth.json</code> a reštartujte službu. Všetky staré tokeny potom prestanú platiť.",
     "physicalTitle": "Predpoklad fyzického prístupu",
     "physicalBody": "Vyžaduje <strong>shell používateľa root na hostiteľovi</strong>. Kto spustí <code>menu</code> ako root, už ovláda celý systém; reset hesla mu nepridáva práva. Prihlásenie do Monitora preto nechráni pred osobou s prístupom root."
   },
@@ -353,13 +332,11 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "noScreenTitle": "Obrazovka prvého spustenia sa nikdy neobjaví",
-    "noScreenBody": "Overenie už bolo nastavené (<code>configured: true</code>) alebo ho niekto preskočil. Ak chcete začať znova:",
     "noScreenOutro": "Vymaže stav overenia, tajné kľúče TOTP aj tokeny API. Ak ich chcete zachovať, najprv zálohujte <code>auth.json</code>.",
     "tokenTitle": "HTTP 401 pri každej požiadavke s predtým funkčným tokenom API",
     "tokenBody": "Token vypršal po 365 dňoch alebo je v <code>revoked_tokens</code>. V nastaveniach vytvorte nový a aktualizujte integráciu. Overenie:",
     "tokenOutro": "Neplatné alebo zrušené tokeny vrátia <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Po zapnutí 2FA sa nedá prihlásiť a autentifikátor nie je dostupný",
-    "no2faBody": "Použite záložný kód v TOTP poli. Ak sú preč, editujte <code>/root/.config/proxmenux-monitor/auth.json</code> z hostiteľa, nastavte <code>totp_enabled</code> na <code>false</code>, reštartujte službu.",
     "wsTitle": "Reverzný proxy funguje, ale záložka terminálu sa odpojí každú minútu",
     "wsBody": "Časový limit nečinnosti WebSocket v proxy. Zvýšte limit čítania (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> vo vstupnom bode alebo middleware). V Nginx overte <code>proxy_set_header Upgrade $http_upgrade</code> a <code>Connection \"upgrade\"</code>."
   },

@@ -12,10 +12,6 @@
     "description": "Accesso alla dashboard, primo avvio e livelli di protezione: password e TOTP, sessioni JWT, token API, HTTPS, proxy inversi, Secure Gateway e jail Fail2Ban facoltativa.",
     "section": "Monitor di ProxMenux"
   },
-  "intro": {
-    "title": "L’autenticazione è facoltativa",
-    "body": "Al primo avvio la dashboard mostra la finestra <em>«Proteggere la dashboard?»</em>, con i pulsanti <strong>Sì, imposta password</strong> e <strong>No, continua senza protezione</strong>. Scegliendo la seconda opzione, gli endpoint dell’API rimangono aperti sulla porta TCP 8008: può andare bene in una LAN di laboratorio isolata, ma è pericoloso in altri ambienti. L’autenticazione a due fattori (2FA) <strong>non</strong> fa parte di questa scelta iniziale; si configura successivamente nella <strong>scheda Sicurezza</strong>, dopo aver impostato una password."
-  },
   "reaching": {
     "heading": "Raggiungere la dashboard",
     "intro": "ProxMenux Monitor è in ascolto sulla porta TCP 8008 su tutte le interfacce (<code>::</code>, IPv4 e IPv6). Ci sono tre modi comuni per raggiungerlo:",
@@ -23,24 +19,10 @@
   },
   "firstLaunch": {
     "heading": "Procedura al primo avvio",
-    "intro": "La prima volta che si apre il cruscotto, il frontend chiama <code>GET /api/auth/status</code>. Se la configurazione auth non è mai stata scritta (<code>configured: false</code>), una singola finestra di dialogo appare intitolato <em>\"Protect Your Dashboard?\"</em> con due scelte:",
     "imageAlt": "Finestra iniziale «Proteggere la dashboard?» con opzioni per impostare una password o continuare senza protezione",
-    "imageCaption": "Scelta iniziale tra protezione con password e nessuna protezione. Ricompare dopo una nuova installazione o dopo aver disattivato l’autenticazione nelle impostazioni.",
     "headerButton": "Pulsante",
     "headerWhat": "Cosa succede?",
     "headerApi": "Chiamata API",
-    "rows": [
-      {
-        "button": "Sì, imposta password",
-        "what": "Apre un modulo con nome utente e password obbligatori, più <em>nome visualizzato</em> e <em>immagine avatar</em> facoltativi. Abilita l’autenticazione in <code>auth.json</code> con <code>enabled: true</code> e restituisce un JWT per accedere. I campi facoltativi del profilo vengono salvati con chiamate successive, descritte sotto.",
-        "api": "POST /api/auth/setup"
-      },
-      {
-        "button": "No, continua senza protezione",
-        "what": "Imposta <code>declined: true</code> in <code>auth.json</code>. Gli endpoint API restano aperti finché non abiliti la protezione nelle impostazioni.",
-        "api": "POST /api/auth/skip"
-      }
-    ],
     "twofaCalloutTitle": "2FA è configurato in seguito, non qui",
     "twofaCalloutBody": "La finestra iniziale riguarda solo la password. L’<strong>autenticazione a due fattori (TOTP)</strong> si configura dopo nella <strong>scheda Sicurezza</strong>, una volta effettuato l’accesso con password. La procedura completa è più avanti.",
     "createTitle": "Creare il primo utente",
@@ -102,9 +84,7 @@
         "endpoint": "DELETE /api/auth/profile/avatar",
         "what": "Rimuove l’avatar. Nell’intestazione ricompare un’iniziale in un cerchio colorato."
       }
-    ],
-    "reversibleTitle": "Puoi attivare la protezione in seguito",
-    "reversibleBody": "Dopo <em>No, continua senza protezione</em>, la finestra iniziale non ricompare. Attiva l’autenticazione dalla <strong>scheda Sicurezza</strong> oppure modifica <code>/root/.config/proxmenux-monitor/auth.json</code>, rimuovi il flag <code>declined</code> e riavvia il servizio."
+    ]
   },
   "password": {
     "heading": "autenticazione password",
@@ -162,7 +142,6 @@
     "recoverTitle": "Recuperare una password persa",
     "recoverIntro": "Il recupero della password richiede accesso alla shell dell’host. ProxMenux offre una reimpostazione guidata nel menu di configurazione, senza modificare manualmente <code>auth.json</code>:",
     "survivesTitle": "Cosa sopravvive al reset",
-    "survivesBody": "Viene cancellato l’accesso interattivo, mentre <code>jwt_secret</code> e gli <code>api_tokens</code> registrati restano. Home Assistant e altri script possono continuare con gli stessi token. Per azzerare tutto con un nuovo segreto, elimina <code>auth.json</code> e riavvia il servizio: tutti i vecchi token diventano invalidi.",
     "physicalTitle": "Prerequisito di accesso fisico",
     "physicalBody": "Richiede una <strong>shell root sull’host</strong>. Chi esegue <code>menu</code> come root controlla già la macchina; reimpostare la password non aumenta i suoi privilegi. L’accesso Monitor non protegge quindi da chi dispone già di accesso root."
   },
@@ -353,13 +332,11 @@
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
     "noScreenTitle": "Lo schermo del primo lancio non appare mai",
-    "noScreenBody": "L’autenticazione è già configurata (<code>configured: true</code>) oppure è stata saltata. Per ricominciare:",
     "noScreenOutro": "Cancella autenticazione, segreti TOTP e token API. Salva prima una copia di <code>auth.json</code> se vuoi conservarli.",
     "tokenTitle": "HTTP 401 su ogni richiesta da un token API funzionante",
     "tokenBody": "Token scaduto (365 d limit) o entrato nell'elenco <code>revoked_tokens</code>. Generare uno nuovo in Impostazioni e aggiornare l'integrazione. Per verificare:",
     "tokenOutro": "Token scaduti o revocati restituiscono <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Non è possibile accedere dopo aver abilitato 2FA, nessun autenticatore a portata di mano",
-    "no2faBody": "Utilizzare un codice di backup nel campo TOTP. Se questi sono andati, modificare <code>/root/.config/proxmenux-monitor/auth.json</code> da una shell host, impostare <code>totp_enabled</code> a <code>false</code>, riavviare il servizio.",
     "wsTitle": "Il proxy inverso funziona ma la scheda terminale si disconnette ogni minuto",
     "wsBody": "Timeout di inattività WebSocket del proxy. Aumenta il limite di lettura (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> nell’entry point o middleware). Per Nginx verifica <code>proxy_set_header Upgrade $http_upgrade</code> e <code>Connection \"upgrade\"</code>."
   },

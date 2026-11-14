@@ -12,10 +12,6 @@
     "description": "Åtkomst till panelen, första starten och skyddslager: lösenord och TOTP, JWT-sessioner, API-token, HTTPS, omvänd proxy, Secure Gateway och valfri Fail2Ban-jail.",
     "section": "ProxMenux-övervakning"
   },
-  "intro": {
-    "title": "Autentisering är valfritt",
-    "body": "Vid första starten visas dialogen <em>”Skydda instrumentpanelen?”</em> med knapparna <strong>Ja, ange lösenord</strong> och <strong>Nej, fortsätt utan skydd</strong>. Det andra alternativet lämnar API-ändpunkterna öppna på TCP 8008. Det kan fungera i ett isolerat labbnätverk men är farligt i andra miljöer. Tvåfaktorsautentisering (2FA) ingår <strong>inte</strong> i det första valet, utan ställs in senare på <strong>fliken Säkerhet</strong> när ett lösenord har angetts."
-  },
   "reaching": {
     "heading": "Öppna instrumentpanelen",
     "intro": "ProxMenux Monitor lyssnar på TCP 8008 på alla gränssnitt (<code>::</code>, IPv4 och IPv6). Det finns tre vanliga sätt att nå den:",
@@ -23,24 +19,10 @@
   },
   "firstLaunch": {
     "heading": "Första starten",
-    "intro": "När panelen öppnas första gången anropar frontend <code>GET /api/auth/status</code>. Om konfigurationen aldrig har sparats (<code>configured: false</code>) visas <em>”Skydda instrumentpanelen?”</em> med två val:",
     "imageAlt": "Dialogen ”Skydda instrumentpanelen?” med val att ange lösenord eller fortsätta utan skydd",
-    "imageCaption": "Första valet mellan lösenordsskydd och inget skydd. Visas igen efter nyinstallation eller avaktiverad autentisering i inställningarna.",
     "headerButton": "Knapp",
     "headerWhat": "Vad händer",
     "headerApi": "API-anrop",
-    "rows": [
-      {
-        "button": "Ja, ange lösenord",
-        "what": "Öppnar ett formulär med obligatoriskt användarnamn och lösenord, samt valfritt <em>visningsnamn</em> och <em>avatarbild</em>. Aktiverar autentisering i <code>auth.json</code> med <code>enabled: true</code> och returnerar ett JWT för inloggning. Valfria profilfält sparas med efterföljande anrop enligt nedan.",
-        "api": "POST /api/auth/setup"
-      },
-      {
-        "button": "Nej, fortsätt utan skydd",
-        "what": "Anger <code>declined: true</code> i <code>auth.json</code>. API-ändpunkterna är öppna tills du aktiverar skyddet i inställningarna.",
-        "api": "POST /api/auth/skip"
-      }
-    ],
     "twofaCalloutTitle": "2FA är konfigurerad senare, inte här",
     "twofaCalloutBody": "Den första dialogen gäller endast lösenordsskyddet. <strong>Tvåfaktorsautentisering (TOTP)</strong> ställs sedan in på <strong>fliken Säkerhet</strong> efter inloggning med lösenord. Hela anvisningen finns längre ned.",
     "createTitle": "Skapa den första användaren",
@@ -102,9 +84,7 @@
         "endpoint": "DELETE /api/auth/profile/avatar",
         "what": "Tar bort avataren. Sidhuvudet visar åter en bokstav i en färgad cirkel."
       }
-    ],
-    "reversibleTitle": "Du kan aktivera skyddet senare",
-    "reversibleBody": "Efter <em>Nej, fortsätt utan skydd</em> visas inte välkomstdialogen igen. Aktivera autentisering på <strong>fliken Säkerhet</strong> eller redigera <code>/root/.config/proxmenux-monitor/auth.json</code>, ta bort flaggan <code>declined</code> och starta om tjänsten."
+    ]
   },
   "password": {
     "heading": "Lösenordsautentisering",
@@ -162,7 +142,6 @@
     "recoverTitle": "Återställa ett förlorat lösenord",
     "recoverIntro": "Lösenordsåterställning kräver skalåtkomst till värden. ProxMenux har en guidad återställning i konfigurationsmenyn så att du slipper redigera <code>auth.json</code> manuellt:",
     "survivesTitle": "Vad överlever återställningen",
-    "survivesBody": "Den interaktiva inloggningen tas bort, men <code>jwt_secret</code> och registrerade <code>api_tokens</code> behålls. Home Assistant och andra skript kan fortsätta med samma token. För att börja om helt med en ny hemlighet, radera <code>auth.json</code> och starta om tjänsten. Alla gamla token blir då ogiltiga.",
     "physicalTitle": "Krav på åtkomst till värden",
     "physicalBody": "Kräver ett <strong>root-skal på värden</strong>. Den som kör <code>menu</code> som root styr redan hela maskinen; lösenordsåterställningen ger inga ytterligare rättigheter. Monitor-inloggningen skyddar därför inte mot någon som redan har root-åtkomst."
   },
@@ -353,13 +332,11 @@
   "troubleshoot": {
     "heading": "Felsökning",
     "noScreenTitle": "Den första lanseringsskärmen visas aldrig",
-    "noScreenBody": "Autentisering är redan inställd (<code>configured: true</code>) eller har hoppats över. För att börja om:",
     "noScreenOutro": "Raderar autentisering, TOTP-hemligheter och API-token. Säkerhetskopiera <code>auth.json</code> först om du vill behålla dem.",
     "tokenTitle": "HTTP 401 på varje begäran från en fungerande API token",
     "tokenBody": "Token gick ut (365 d-gräns) eller kom in i <code>revoked_tokens</code>-listan. Skapa en ny i Inställningar och uppdatera integrationen. För att kontrollera:",
     "tokenOutro": "Utgångna eller återkallade tokens returnerar <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Kan inte logga in efter att 2FA aktiverats och appen saknas",
-    "no2faBody": "Ange en återställningskod i TOTP-fältet. Om ingen finns, redigera <code>/root/.config/proxmenux-monitor/auth.json</code> från värdens skal, sätt <code>totp_enabled</code> till <code>false</code> och starta om tjänsten.",
     "wsTitle": "Omvänd proxy fungerar men den terminala fliken kopplar bort varje minut",
     "wsBody": "WebSocket-anslutningens tidsgräns för inaktivitet i proxyn. Öka lästiden (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> i ingångspunkt eller middleware). Kontrollera i Nginx att <code>proxy_set_header Upgrade $http_upgrade</code> och <code>Connection \"upgrade\"</code> finns."
   },

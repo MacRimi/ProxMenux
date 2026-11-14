@@ -12,10 +12,6 @@
     "description": "Accès au tableau de bord, premier démarrage et couches de protection : mot de passe et TOTP, sessions JWT, jetons API, HTTPS, proxy inverse, Secure Gateway et jail Fail2Ban facultative.",
     "section": "Moniteur ProxMenux"
   },
-  "intro": {
-    "title": "L’authentification est facultative",
-    "body": "Au premier lancement, le tableau de bord affiche la boîte de dialogue <em>« Protéger votre tableau de bord ? »</em>, avec les boutons <strong>Oui, définir un mot de passe</strong> et <strong>Non, continuer sans protection</strong>. La seconde option laisse les points d’accès de l’API ouverts sur TCP 8008 : cela peut convenir à un réseau local de laboratoire isolé, mais reste dangereux ailleurs. L’authentification à deux facteurs (2FA) <strong>ne fait pas</strong> partie de ce choix initial ; elle se configure ensuite dans <strong>l’onglet Sécurité</strong>, après la définition d’un mot de passe."
-  },
   "reaching": {
     "heading": "Atteindre le tableau de bord",
     "intro": "Le ProxMenux Monitor écoute sur le TCP 8008 sur toutes les interfaces (<code>::</code>, IPv4 et IPv6). Il y a trois façons communes d’y accéder :",
@@ -23,24 +19,10 @@
   },
   "firstLaunch": {
     "heading": "Premier démarrage",
-    "intro": "La première fois que vous ouvrez le tableau de bord, le frontend appelle <code>GET /api/auth/status</code>. Si la configuration auth n'a jamais été écrite (<code>configured: false</code>), une boîte de dialogue unique s'affiche intitulée <em>\"Protect Your Dashboard?\"</em> avec deux choix :",
     "imageAlt": "Dialogue initial « Protéger votre tableau de bord ? », avec choix de définir un mot de passe ou de continuer sans protection",
-    "imageCaption": "Choix initial de protection par mot de passe ou non. Réapparaît après une installation neuve ou la désactivation de l’authentification dans les paramètres.",
     "headerButton": "Bouton",
     "headerWhat": "Ce qui se passe",
     "headerApi": "Appel API",
-    "rows": [
-      {
-        "button": "Oui, configurer le mot de passe",
-        "what": "Ouvre un formulaire avec identifiant et mot de passe obligatoires, plus un <em>nom d’affichage</em> et une <em>image d’avatar</em> facultatifs. Active l’authentification dans <code>auth.json</code> avec <code>enabled: true</code> et renvoie un JWT pour vous connecter. Le profil facultatif est enregistré par des appels ultérieurs, décrits ci-dessous.",
-        "api": "POST /api/auth/setup"
-      },
-      {
-        "button": "Non, continuez sans protection",
-        "what": "Définit <code>declined: true</code> dans <code>auth.json</code>. Les points d’accès API restent ouverts jusqu’à l’activation de la protection dans les paramètres.",
-        "api": "POST /api/auth/skip"
-      }
-    ],
     "twofaCalloutTitle": "2FA est configuré plus tard, pas ici",
     "twofaCalloutBody": "Le dialogue initial concerne seulement la protection par mot de passe. L’<strong>authentification à deux facteurs (TOTP)</strong> se configure ensuite dans <strong>l’onglet Sécurité</strong>, une fois connecté par mot de passe. Le guide complet suit plus bas.",
     "createTitle": "Création du premier utilisateur",
@@ -102,9 +84,7 @@
         "endpoint": "DELETE /api/auth/profile/avatar",
         "what": "Supprime l’avatar. L’en-tête affiche à nouveau une initiale dans un cercle coloré."
       }
-    ],
-    "reversibleTitle": "Vous pouvez activer la protection plus tard",
-    "reversibleBody": "Après <em>Non, continuer sans protection</em>, le dialogue ne réapparaît plus. Activez l’authentification dans <strong>l’onglet Sécurité</strong> ou modifiez <code>/root/.config/proxmenux-monitor/auth.json</code>, retirez l’indicateur <code>declined</code> et redémarrez le service."
+    ]
   },
   "password": {
     "heading": "Authentification du mot de passe",
@@ -162,7 +142,6 @@
     "recoverTitle": "Récupération d'un mot de passe perdu",
     "recoverIntro": "Il n'y a pas de flux \"mot de passe oublié\" en ligne — par conception, puisque le tableau de bord fonctionne sur le propre hôte de l'opérateur et le chemin de récupération est l'accès shell à cet hôte. ProxMenux envoie une réinitialisation guidée dans le menu de configuration afin que vous n'ayez pas à éditer manuellement <code>auth.json</code>:",
     "survivesTitle": "Ce qui survit à la réinitialisation",
-    "survivesBody": "La connexion interactive est effacée, mais <code>jwt_secret</code> et les <code>api_tokens</code> enregistrés sont conservés. Home Assistant et les autres scripts gardent leurs jetons. Pour repartir entièrement de zéro avec un nouveau secret, supprimez <code>auth.json</code> et redémarrez le service : tous les anciens jetons deviennent invalides.",
     "physicalTitle": "Préalable d'accès physique",
     "physicalBody": "Cette méthode exige un <strong>shell root sur l’hôte</strong>. Quiconque exécute <code>menu</code> en root contrôle déjà la machine ; la réinitialisation n’ajoute aucun privilège. Le mot de passe Monitor ne protège donc pas l’hôte contre une personne ayant déjà cet accès root."
   },
@@ -353,13 +332,11 @@
   "troubleshoot": {
     "heading": "Dépannage",
     "noScreenTitle": "L'écran du premier lancement n'apparaît jamais",
-    "noScreenBody": "L’authentification est déjà configurée (<code>configured: true</code>) ou a été ignorée. Pour recommencer :",
     "noScreenOutro": "Cela efface l'état d'auth — aussi tous les secrets TOTP et les jetons API. Sauvegardez d'abord <code>auth.json</code> si vous avez des jetons que vous voulez garder.",
     "tokenTitle": "HTTP 401 sur chaque demande d'un jeton API en service",
     "tokenBody": "Les jetons ont expiré (limite 365 d) ou sont entrés dans la liste <code>revoked_tokens</code>. Générer un nouveau dans Paramètres et mettre à jour l'intégration. Pour vérifier :",
     "tokenOutro": "Les jetons périmés ou révoqués retournent <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Impossible de se connecter après avoir activé 2FA, aucun authentificateur à portée de main",
-    "no2faBody": "Utilisez un code de sauvegarde dans le champ TOTP. Si ceux-ci sont partis, modifiez <code>/root/.config/proxmenux-monitor/auth.json</code> à partir d'un shell hôte, définissez <code>totp_enabled</code> à <code>false</code>, redémarrez le service.",
     "wsTitle": "Le proxy inverse fonctionne mais l'onglet terminal se déconnecte chaque minute",
     "wsBody": "Délai d’inactivité WebSocket du proxy. Augmentez le délai de lecture (Nginx : <code>proxy_read_timeout 86400s</code> ; Traefik : <code>idleTimeout</code> du point d’entrée ou middleware). Pour Nginx, vérifiez <code>proxy_set_header Upgrade $http_upgrade</code> et <code>Connection \"upgrade\"</code>."
   },

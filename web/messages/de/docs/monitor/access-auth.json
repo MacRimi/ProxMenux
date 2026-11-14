@@ -12,10 +12,6 @@
     "description": "Dashboard-Zugriff, Ersteinrichtung und Schutzschichten: Passwort und TOTP, JWT-Sitzungen, langlebige API-Tokens, HTTPS, Reverse-Proxys, Secure Gateway und optionale Fail2Ban-Jail.",
     "section": "ProxMenux-Monitor"
   },
-  "intro": {
-    "title": "Authentifizierung ist optional",
-    "body": "Beim ersten Start zeigt das Dashboard den Dialog <em>„Dashboard schützen?“</em> mit den Schaltflächen <strong>Ja, Passwort einrichten</strong> und <strong>Nein, ohne Schutz fortfahren</strong>. Bei der zweiten Option bleiben die API-Endpunkte über TCP 8008 offen. Das kann für ein isoliertes Labor-LAN ausreichen, ist in anderen Umgebungen jedoch gefährlich. Die Zwei-Faktor-Authentifizierung (2FA) ist <strong>nicht</strong> Teil dieser ersten Auswahl; sie wird nach dem Einrichten eines Passworts unter <strong>Sicherheit</strong> konfiguriert."
-  },
   "reaching": {
     "heading": "Dashboard öffnen",
     "intro": "ProxMenux Monitor lauscht auf TCP 8008 auf allen Schnittstellen (<code>::</code>, IPv4 und IPv6). Drei übliche Zugriffswege:",
@@ -23,24 +19,10 @@
   },
   "firstLaunch": {
     "heading": "Ablauf beim ersten Start",
-    "intro": "Beim ersten Öffnen ruft das Frontend <code>GET /api/auth/status</code> auf. Wurde die Authentifizierung noch nie eingerichtet (<code>configured: false</code>), erscheint <em>„Dashboard schützen?“</em> mit zwei Optionen:",
     "imageAlt": "Ersteinrichtungsdialog „Dashboard schützen?“ mit „Ja, Passwort einrichten“ und „Nein, ohne Schutz fortfahren“",
-    "imageCaption": "Authentifizierung beim ersten Start: Passwortschutz einrichten oder überspringen. Erscheint nach einer Neuinstallation oder nach „Authentifizierung deaktivieren“ in den Einstellungen erneut.",
     "headerButton": "Schaltfläche",
     "headerWhat": "Was passiert",
     "headerApi": "API-Aufruf",
-    "rows": [
-      {
-        "button": "Ja, Passwort einrichten",
-        "what": "Öffnet ein Formular mit verpflichtendem Benutzernamen und Passwort sowie optionalem <em>Anzeigenamen</em> und <em>Avatarbild</em>. Aktiviert die Authentifizierung in <code>auth.json</code> mit <code>enabled: true</code> und gibt ein JWT zur Anmeldung zurück. Optionale Profilfelder werden durch weitere Aufrufe gespeichert, wie unten beschrieben.",
-        "api": "POST /api/auth/setup"
-      },
-      {
-        "button": "Nein, fahren Sie ohne Schutz fort",
-        "what": "Markiert <code>declined: true</code> in <code>auth.json</code>. Jeder API-Endpunkt ist öffentlich zugänglich, bis Sie Ihre Meinung über Einstellungen ändern.",
-        "api": "POST /api/auth/skip"
-      }
-    ],
     "twofaCalloutTitle": "2FA wird später konfiguriert, nicht hier",
     "twofaCalloutBody": "Der erste Dialog entscheidet nur über den Passwortschutz. <strong>Zwei-Faktor-Authentifizierung (TOTP)</strong> richten Sie danach unter <strong>Sicherheit</strong> ein, sobald Sie mit Passwort angemeldet sind. Die vollständige Anleitung folgt weiter unten.",
     "createTitle": "Erstellen des ersten Benutzers",
@@ -102,9 +84,7 @@
         "endpoint": "DELETE /api/auth/profile/avatar",
         "what": "Entfernt den Avatar. Im Kopfbereich erscheint wieder eine Initiale in einem farbigen Kreis."
       }
-    ],
-    "reversibleTitle": "Der Verzicht auf Schutz lässt sich später ändern",
-    "reversibleBody": "Nach <em>Nein, ohne Schutz fortfahren</em> erscheint der Dialog nicht erneut. Aktivieren Sie die Authentifizierung unter <strong>Sicherheit</strong> oder bearbeiten Sie <code>/root/.config/proxmenux-monitor/auth.json</code>, entfernen Sie das Flag <code>declined</code> und starten Sie den Dienst neu."
+    ]
   },
   "password": {
     "heading": "Passwort-Authentifizierung",
@@ -162,7 +142,6 @@
     "recoverTitle": "Wiederherstellen eines verlorenen Passworts",
     "recoverIntro": "Es gibt keinen Online-Fluss für \"Passwort vergessen\" - von Grund auf, da das Dashboard auf dem eigenen Host des Betreibers läuft und der Wiederherstellungspfad Shell-Zugriff auf diesen Host ist. ProxMenux liefert einen geführten Reset im Konfigurationsmenü, sodass Sie <code>auth.json</code> nicht von Hand bearbeiten müssen:",
     "survivesTitle": "Was den Reset überlebt",
-    "survivesBody": "Die interaktive Anmeldung wird gelöscht, <code>jwt_secret</code> und registrierte <code>api_tokens</code> bleiben erhalten. Home Assistant und andere Integrationen können ihre Tokens weiterverwenden. Für einen vollständigen Neustart samt neuem Signaturgeheimnis <code>auth.json</code> manuell löschen und den Dienst neu starten. Dann sind alle alten Tokens ungültig.",
     "physicalTitle": "Voraussetzung für den physischen Zugang",
     "physicalBody": "Erfordert eine <strong>Root-Shell auf dem Host</strong>. Wer <code>menu</code> als root ausführen kann, besitzt bereits vollständige Kontrolle; die Passwortzurücksetzung erweitert seine Rechte nicht. Ein Monitor-Passwort schützt den Host daher nicht vor Personen mit unberechtigtem Root-Zugang."
   },
@@ -353,13 +332,11 @@
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "noScreenTitle": "Der erste Launch-Bildschirm erscheint nie",
-    "noScreenBody": "Die Authentifizierung ist bereits eingerichtet (<code>configured: true</code>) oder wurde übersprungen. Für eine neue Einrichtung:",
     "noScreenOutro": "Löscht den Authentifizierungszustand einschließlich TOTP-Geheimnissen und API-Tokens. Zuerst <code>auth.json</code> sichern, falls Sie Tokens behalten möchten.",
     "tokenTitle": "HTTP 401 bei jeder Anfrage von einem funktionierenden API-Token",
     "tokenBody": "Token abgelaufen (365 Tage) oder in <code>revoked_tokens</code> eingetragen. Neues Token in den Einstellungen erstellen und die Integration aktualisieren. Prüfen mit:",
     "tokenOutro": "Abgelaufene oder widerrufene Token geben <code>'{'\"error\":\"Invalid or expired token\"'}'</code> zurück.",
     "no2faTitle": "Kann sich nicht anmelden, nachdem 2FA aktiviert wurde, kein Authentifikator zur Hand",
-    "no2faBody": "Verwenden Sie einen Backup-Code im TOTP-Feld. Wenn diese nicht mehr vorhanden sind, bearbeiten Sie <code>/root/.config/proxmenux-monitor/auth.json</code> von einer Host-Shell, setzen <code>totp_enabled</code> auf <code>false</code>, starten Sie den Dienst neu.",
     "wsTitle": "Reverse Proxy funktioniert, aber der Terminal-Tab trennt sich jede Minute",
     "wsBody": "Möglicher Grund ist das WebSocket-Leerlaufzeitlimit des Proxys. Lesezeitlimit erhöhen (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> im Einstiegspunkt oder der Middleware). In Nginx <code>proxy_set_header Upgrade $http_upgrade</code> und <code>Connection \"upgrade\"</code> prüfen."
   },

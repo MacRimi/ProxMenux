@@ -23,6 +23,10 @@ export async function generateMetadata({
       "proxmox user profile",
       "proxmox dashboard avatar",
       "proxmox api tokens",
+      "proxmox dashboard users",
+      "proxmox dashboard roles",
+      "proxmox dashboard oidc",
+      "proxmox dashboard sso",
       "proxmox reverse proxy",
       "proxmox nginx",
       "proxmox caddy",
@@ -50,6 +54,9 @@ type EndpointRow = { endpoint: string; what: string }
 type CryptoRow = { asset: string; algorithm: string; where: string }
 type AppRow = { name: string; href: string; platforms: string; notes: string }
 type WhereNextItem = { label: string; href: string; tail?: string; tailRich?: string }
+type ModeRow = { mode: string; who: string }
+type ProfileRow = { profile: string; allows: string }
+type SettingRow = { field: string; notes: string }
 
 export default async function MonitorAccessAuthPage({
   params,
@@ -63,7 +70,8 @@ export default async function MonitorAccessAuthPage({
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { monitor: { accessAuth: {
       firstLaunch: {
-        rows: Row2[]
+        choiceRows: Row2[]
+        modeRows: ModeRow[]
         fieldRows: FieldRow[]
         endpointRows: EndpointRow[]
       }
@@ -80,13 +88,24 @@ export default async function MonitorAccessAuthPage({
         rejectedItems: string[]
       }
       apiTokens: { generateSteps: string[]; cheatItems: string[] }
+      users: { profileRows: ProfileRow[]; actionItems: string[]; accountItems: string[] }
+      pveAccounts: { items: string[] }
+      oidc: { fieldRows: SettingRow[] }
+      activity: { items: string[] }
       https: { items: string[] }
       fail2ban: { items: string[] }
       whereNext: { items: WhereNextItem[] }
     } } }
   }
   const aa = messages.docs.monitor.accessAuth
-  const firstLaunchRows = aa.firstLaunch.rows
+  const firstLaunchRows = aa.firstLaunch.choiceRows
+  const modeRows = aa.firstLaunch.modeRows
+  const profileRows = aa.users.profileRows
+  const actionItems = aa.users.actionItems
+  const accountItems = aa.users.accountItems
+  const pveItems = aa.pveAccounts.items
+  const oidcRows = aa.oidc.fieldRows
+  const activityItems = aa.activity.items
   const fieldRows = aa.firstLaunch.fieldRows
   const endpointRows = aa.firstLaunch.endpointRows
   const passwordItems = aa.password.items
@@ -137,11 +156,11 @@ export default async function MonitorAccessAuthPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
-        estimatedMinutes={15}
+        estimatedMinutes={20}
       />
 
-      <Callout variant="info" title={t("intro.title")}>
-        {t.rich("intro.body", { em, strong })}
+      <Callout variant="info" title={t("introModes.title")}>
+        {t.rich("introModes.body", { em, strong })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("reaching.heading")}</h2>
@@ -165,12 +184,12 @@ http://<proxmox-lan-ip>:8008      # works from any device on your tailnet`}
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("firstLaunch.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("firstLaunch.intro", { code, em })}
+        {t.rich("firstLaunch.introSetup", { code, em })}
       </p>
 
       <figure className="my-6">
         <img src="/monitor/auth-setup.png" alt={t("firstLaunch.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("firstLaunch.imageCaption")}</figcaption>
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("firstLaunch.imageCaptionChoice")}</figcaption>
       </figure>
 
       <div className="overflow-x-auto mb-6">
@@ -186,8 +205,32 @@ http://<proxmox-lan-ip>:8008      # works from any device on your tailnet`}
             {firstLaunchRows.map((row, idx) => (
               <tr key={row.button} className={idx < firstLaunchRows.length - 1 ? "border-b border-gray-100" : ""}>
                 <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.button}</strong></td>
-                <td className="px-3 py-2 align-top">{t.rich(`firstLaunch.rows.${idx}.what`, { em, code })}</td>
+                <td className="px-3 py-2 align-top">{t.rich(`firstLaunch.choiceRows.${idx}.what`, { em, code, strong })}</td>
                 <td className="px-3 py-2 align-top font-mono text-xs">{row.api}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="setup-code" className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("firstLaunch.codeTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("firstLaunch.codeBody", { code, strong })}</p>
+
+      <h3 id="access-modes" className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("firstLaunch.modesTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("firstLaunch.modesIntro", { strong })}</p>
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-sm border border-gray-200 rounded-md">
+          <thead className="bg-gray-50 text-gray-900">
+            <tr>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("firstLaunch.headerMode")}</th>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("firstLaunch.headerWho")}</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-800">
+            {modeRows.map((row, idx) => (
+              <tr key={row.mode} className={idx < modeRows.length - 1 ? "border-b border-gray-100" : ""}>
+                <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.mode}</strong></td>
+                <td className="px-3 py-2 align-top">{t.rich(`firstLaunch.modeRows.${idx}.who`, { code })}</td>
               </tr>
             ))}
           </tbody>
@@ -264,8 +307,8 @@ http://<proxmox-lan-ip>:8008      # works from any device on your tailnet`}
         </table>
       </div>
 
-      <Callout variant="warning" title={t("firstLaunch.reversibleTitle")}>
-        {t.rich("firstLaunch.reversibleBody", { em, strong, code })}
+      <Callout variant="info" title={t("firstLaunch.changeTitle")}>
+        {t.rich("firstLaunch.changeBody", { em, strong, code })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("password.heading")}</h2>
@@ -362,21 +405,77 @@ menu
 #    The menu will:
 #     - Back up auth.json to auth.json.bak-<UTC timestamp>
 #     - Stop the proxmenux-monitor service
-#     - Clear username / password_hash / TOTP secret / backup codes
-#     - Keep jwt_secret and api_tokens intact
-#     - Restart the service
+#     - Remove every local user with their password, TOTP secret and
+#       backup codes, and turn off Proxmox VE accounts
+#     - Keep jwt_secret, api_tokens and the revocation list
+#     - Restart the service and print a new setup code
 
 # 3. Open the dashboard at http://<host>:8008
-#    The setup wizard appears — create a new admin account.`}
+#    The first-visit dialog appears: enter the setup code and choose again.`}
         className="my-4"
       />
 
       <Callout variant="info" title={t("password.survivesTitle")}>
-        {t.rich("password.survivesBody", { code })}
+        {t.rich("password.survivesBodyUsers", { code, strong })}
       </Callout>
 
       <Callout variant="warning" title={t("password.physicalTitle")}>
         {t.rich("password.physicalBody", { strong, code })}
+      </Callout>
+
+      <h2 id="users-profiles" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("users.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("users.intro", { strong })}</p>
+
+      <figure className="my-6">
+        <img src="/monitor/security/users-card.png" alt={t("users.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("users.imageCaption")}</figcaption>
+      </figure>
+
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-sm border border-gray-200 rounded-md">
+          <thead className="bg-gray-50 text-gray-900">
+            <tr>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("users.headerProfile")}</th>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("users.headerAllows")}</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-800">
+            {profileRows.map((row, idx) => (
+              <tr key={row.profile} className={idx < profileRows.length - 1 ? "border-b border-gray-100" : ""}>
+                <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.profile}</strong></td>
+                <td className="px-3 py-2 align-top">{row.allows}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("users.customTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t("users.customIntro")}</p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {actionItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`users.actionItems.${idx}`, { strong })}</li>
+        ))}
+      </ul>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("users.areasBody", { em })}</p>
+
+      <figure className="my-6">
+        <img src="/monitor/security/custom-profile.png" alt={t("users.customImageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("users.customImageCaption")}</figcaption>
+      </figure>
+
+      <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("users.enforceTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("users.enforceBody", { code })}</p>
+
+      <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("users.accountsTitle")}</h3>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {accountItems.map((_, idx) => (
+          <li key={idx}>{t(`users.accountItems.${idx}`)}</li>
+        ))}
+      </ul>
+
+      <Callout variant="warning" title={t("users.scopeTitle")}>
+        {t.rich("users.scopeBody", { code })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("twofa.heading")}</h2>
@@ -545,6 +644,53 @@ curl -X DELETE http://<host>:8008/api/auth/api-tokens/<token-id> \\
         {t.rich("apiTokens.outro", { apiLink, intLink })}
       </p>
 
+      <h2 id="proxmox-ve-accounts" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("pveAccounts.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pveAccounts.intro", { strong, em })}</p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {pveItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`pveAccounts.items.${idx}`, { code })}</li>
+        ))}
+      </ul>
+
+      <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("pveAccounts.profilesTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pveAccounts.profilesBody", { code })}</p>
+
+      <figure className="my-6">
+        <img src="/monitor/security/pve-accounts.png" alt={t("pveAccounts.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("pveAccounts.imageCaption")}</figcaption>
+      </figure>
+
+      <h2 id="oidc" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("oidc.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("oidc.intro", { strong })}</p>
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-sm border border-gray-200 rounded-md">
+          <thead className="bg-gray-50 text-gray-900">
+            <tr>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("oidc.headerField")}</th>
+              <th className="text-left px-3 py-2 border-b border-gray-200">{t("oidc.headerNotes")}</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-800">
+            {oidcRows.map((row, idx) => (
+              <tr key={row.field} className={idx < oidcRows.length - 1 ? "border-b border-gray-100" : ""}>
+                <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.field}</strong></td>
+                <td className="px-3 py-2 align-top">{t.rich(`oidc.fieldRows.${idx}.notes`, { code })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("oidc.flowBody", { code })}</p>
+
+      <figure className="my-6">
+        <img src="/monitor/security/oidc-settings.png" alt={t("oidc.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("oidc.imageCaption")}</figcaption>
+      </figure>
+
+      <Callout variant="info" title={t("oidc.saveTitle")}>
+        {t("oidc.saveBody")}
+      </Callout>
+
       <h2 id="https" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("https.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("https.intro")}</p>
       <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
@@ -638,6 +784,20 @@ labels:
         {t.rich("proxy.subPathBody", { code, strong })}
       </Callout>
 
+      <h2 id="access-activity" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("activity.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("activity.intro", { strong })}</p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {activityItems.map((_, idx) => (
+          <li key={idx}>{t(`activity.items.${idx}`)}</li>
+        ))}
+      </ul>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("activity.outro", { code })}</p>
+
+      <figure className="my-6">
+        <img src="/monitor/security/access-activity.png" alt={t("activity.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("activity.imageCaption")}</figcaption>
+      </figure>
+
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("audit.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("audit.intro", { code })}
@@ -673,9 +833,10 @@ labels:
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("troubleshoot.heading")}</h2>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.noScreenTitle")}>
-        {t.rich("troubleshoot.noScreenBody", { code })}
+        {t.rich("troubleshoot.noScreenBodyModes", { code, strong })}
         <pre className="mt-2 rounded-md bg-white border border-slate-200 p-3 overflow-x-auto text-xs font-mono text-gray-800">{`rm /root/.config/proxmenux-monitor/auth.json
-systemctl restart proxmenux-monitor.service`}</pre>
+systemctl restart proxmenux-monitor.service
+menu    # Settings → Show Monitor Setup Code`}</pre>
         {t.rich("troubleshoot.noScreenOutro", { code })}
       </Callout>
 
@@ -687,7 +848,11 @@ systemctl restart proxmenux-monitor.service`}</pre>
       </Callout>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.no2faTitle")}>
-        {t.rich("troubleshoot.no2faBody", { code })}
+        {t.rich("troubleshoot.no2faBodyUsers", { code, strong })}
+      </Callout>
+
+      <Callout variant="troubleshoot" title={t("troubleshoot.forbiddenTitle")}>
+        {t.rich("troubleshoot.forbiddenBody", { code, strong })}
       </Callout>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.wsTitle")}>
