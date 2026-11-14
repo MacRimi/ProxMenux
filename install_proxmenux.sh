@@ -1044,15 +1044,20 @@ install_proxmenux() {
 
     msg_title "ProxMenux has been installed successfully"
 
+    local monitor_lines=0
     if systemctl is-active --quiet proxmenux-monitor.service; then
         local server_ip=$(get_server_ip)
         echo -e "${GN}🌐  ProxMenux Monitor activated${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
-        if [ -n "$MONITOR_SETUP_CODE" ]; then
-            echo -e "${GN}🔑  Setup code for the first visit${CL}: ${YWB}${MONITOR_SETUP_CODE}${CL}"
-            echo -e "    You can see it again with: menu → Settings → Show Monitor Setup Code"
-        fi
-        echo
+        monitor_lines=1
     fi
+    # Shown also when the Monitor did not start now: it asks for the code
+    # on its first visit, whenever that is.
+    if [ -n "$MONITOR_SETUP_CODE" ]; then
+        echo -e "${GN}🔑  Setup code for the first visit${CL}: ${YWB}${MONITOR_SETUP_CODE}${CL}"
+        echo -e "    You can see it again with: menu → Settings → Show Monitor Setup Code"
+        monitor_lines=1
+    fi
+    [ "$monitor_lines" -eq 1 ] && echo
 
     echo -ne "${GN}"
     type_text "To run ProxMenux, simply execute this command in the console or terminal:"

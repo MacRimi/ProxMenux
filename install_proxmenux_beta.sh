@@ -948,15 +948,20 @@ fi
 
 msg_title "ProxMenux Beta installed successfully"
 
+monitor_lines=0
 if systemctl is-active --quiet proxmenux-monitor.service; then
     local_ip=$(get_server_ip)
     echo -e "${GN}🌐  ProxMenux Monitor (beta) is running${CL}: ${BL}http://${local_ip}:${MONITOR_PORT}${CL}"
-    if [ -n "$MONITOR_SETUP_CODE" ]; then
-        echo -e "${GN}🔑  Setup code for the first visit${CL}: ${YWB}${MONITOR_SETUP_CODE}${CL}"
-        echo -e "    You can see it again with: menu → Settings → Show Monitor Setup Code"
-    fi
-    echo
+    monitor_lines=1
 fi
+# Shown also when the Monitor did not start now: it asks for the code on its
+# first visit, whenever that is.
+if [ -n "$MONITOR_SETUP_CODE" ]; then
+    echo -e "${GN}🔑  Setup code for the first visit${CL}: ${YWB}${MONITOR_SETUP_CODE}${CL}"
+    echo -e "    You can see it again with: menu → Settings → Show Monitor Setup Code"
+    monitor_lines=1
+fi
+[ "$monitor_lines" -eq 1 ] && echo
 
 echo -ne "${GN}"
 type_text "To run ProxMenux, execute this command in your terminal:"
