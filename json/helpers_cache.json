@@ -14805,6 +14805,45 @@
     "os": "debian"
   },
   {
+    "name": "Mage",
+    "slug": "mage-ai",
+    "desc": "Mage is an open-source data pipeline tool for building, running and monitoring ETL and ELT pipelines. Pipelines are made of Python, SQL or R blocks edited in a notebook-style UI, and run on schedules, events or API triggers, with data integrations for syncing sources into warehouses.",
+    "script": "ct/mage-ai.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mage-ai.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mage-ai.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Sign in as admin@admin.com with DEFAULT_OWNER_PASSWORD from /opt/mage-ai_data/.env, then change it in the user settings. The value in .env is only used to create the first owner."
+    ],
+    "warnings": [
+      "Every signed-in user can run code and open a terminal as root inside the container. Keep port 6789 on a trusted network."
+    ],
+    "port": 6789,
+    "website": "https://www.mage.ai/",
+    "documentation": "https://docs.mage.ai/",
+    "logo": "https://cdn.jsdelivr.net/gh/mage-ai/mage-ai@master/docs/favicons/m1.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@admin.com",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "MagicMirror Server",
     "slug": "magicmirror",
     "desc": "MagicMirror² is a smart mirror software that allows you to build your own personal smart mirror. It uses modular components that you can customize to display information such as the weather, news, calendar, to-do list, and more. The platform is open source, allowing for community contributions and customization.",
