@@ -203,8 +203,6 @@
   "users": {
     "heading": "Users and profiles",
     "intro": "With local accounts, the Monitor holds several users. Administrators manage them in <strong>Security</strong> → <strong>Users</strong> → <strong>Edit</strong>: add a user with a password and a profile, change profiles, set a new password, remove the 2FA of a user, and deactivate, activate or remove users. The first account is an Administrator.",
-    "imageAlt": "Users card in edit mode, with a row per user showing the profile selector and the actions to set a password, remove 2FA, deactivate and remove",
-    "imageCaption": "Security → Users in edit mode. Profile changes are saved together; the other actions confirm one by one.",
     "headerProfile": "Profile",
     "headerAllows": "What it allows",
     "profileRows": [
@@ -239,8 +237,6 @@
       "<strong>Open terminals</strong>: terminals of the host, of LXC and of VMs."
     ],
     "areasBody": "The areas are the tabs of the dashboard: <em>Overview</em>, <em>Apps</em>, <em>Menux</em>, <em>VMs & LXCs</em>, <em>Node</em> (storage, network, hardware), <em>Backup</em> and <em>System Logs</em>. A tab outside the profile is hidden, and the server refuses its data. The header, the health status, the own account and the Security, Settings and About pages are available to every profile; Audit & Report is reserved to administrators.",
-    "customImageAlt": "Profile selector with the Custom profile open, showing checkboxes for the seven areas and the five actions",
-    "customImageCaption": "A custom profile: areas on one side, actions on the other.",
     "enforceTitle": "Enforced by the server",
     "enforceBody": "Every API route requires a permission (<code>AppImage/scripts/permissions.py</code>). A request without it receives HTTP <code>403</code> with the missing permission in the <code>permission</code> field, and the refusal is recorded in the access activity. The dashboard hides the buttons a profile cannot use. Terminals, script runs, updates and downloads start with a short-lived ticket that carries the permissions of whoever requested it. A profile change applies to open sessions at once.",
     "accountsTitle": "Passwords, 2FA, deactivation and API tokens",
@@ -402,9 +398,7 @@
       "Signing in requires <code>Sys.Audit</code> on <code>/</code>."
     ],
     "profilesTitle": "Profiles of Proxmox VE accounts",
-    "profilesBody": "Without a rule, the privileges on <code>/</code> decide: <code>Sys.Modify</code> gives Administrator and <code>Sys.Audit</code> alone gives Observer. The same card holds rules that assign a profile to a Proxmox VE user (for example <code>alice@pve</code>) or group. A user rule takes precedence; otherwise the first rule of a group of the user applies, with the groups read from <code>/etc/pve/user.cfg</code>. A rule applies as chosen, whatever the privileges. Saving rules that would take the administration away from the account saving them is refused.",
-    "imageAlt": "Proxmox VE accounts card in edit mode, with the toggle and the list of profile rules by user and group",
-    "imageCaption": "Security → Proxmox VE accounts: the toggle and the profile rules by user or group."
+    "profilesBody": "Without a rule, the privileges on <code>/</code> decide: <code>Sys.Modify</code> gives Administrator and <code>Sys.Audit</code> alone gives Observer. The same card holds rules that assign a profile to a Proxmox VE user (for example <code>alice@pve</code>) or group. A user rule takes precedence; otherwise the first rule of a group of the user applies, with the groups read from <code>/etc/pve/user.cfg</code>. A rule applies as chosen, whatever the privileges. Saving rules that would take the administration away from the account saving them is refused."
   },
   "oidc": {
     "heading": "OpenID Connect (OIDC)",
@@ -434,8 +428,6 @@
       }
     ],
     "flowBody": "The sign-in uses the authorization code flow with PKCE (<code>S256</code>) and a nonce, and accepts ID tokens signed with <code>RS256</code> or <code>ES256</code>. The callback hands the browser a one-time code, valid for 30 seconds, that only the browser that started the sign-in can exchange for a session. The session belongs to the identity <code>oidc:&lt;sub&gt;</code> and has the profile of its subject. The certificate of the provider is checked against the CA store of the host (<code>/etc/ssl/certs/ca-certificates.crt</code>); a provider with a certificate from an internal CA needs that CA added with <code>update-ca-certificates</code>.",
-    "imageAlt": "OpenID Connect card in edit mode, with the provider settings and the allowed subjects, each with a name and a profile",
-    "imageCaption": "Security → OpenID Connect (OIDC): provider settings and allowed subjects with their profiles.",
     "saveTitle": "Saving the settings ends the OIDC sessions",
     "saveBody": "Every save of the OpenID Connect settings, a profile change included, ends all open OIDC sessions, and the new settings apply from the next sign-in. Removing a subject from the list ends its access."
   },
@@ -476,9 +468,7 @@
       "Changes to the Proxmox VE accounts, their profile rules and the OpenID Connect settings.",
       "Every action a profile refused, with the route and the missing permission. A refusal repeated by the same account on the same route is recorded once per minute."
     ],
-    "outro": "Passwords, codes and tokens are never recorded. The events are kept for 90 days in <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, mode <code>0600</code>) and served to administrators by <code>GET /api/auth/events</code>.",
-    "imageAlt": "Access activity card listing sign-ins, user changes and refused actions with account, time and address",
-    "imageCaption": "Security → Access activity: each event with its account, details and address."
+    "outro": "Passwords, codes and tokens are never recorded. The events are kept for 90 days in <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, mode <code>0600</code>) and served to administrators by <code>GET /api/auth/events</code>."
   },
   "audit": {
     "heading": "Audit log",

@@ -426,11 +426,6 @@ menu
       <h2 id="users-profiles" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("users.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("users.intro", { strong })}</p>
 
-      <figure className="my-6">
-        <img src="/monitor/security/users-card.png" alt={t("users.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("users.imageCaption")}</figcaption>
-      </figure>
-
       <div className="overflow-x-auto mb-6">
         <table className="w-full text-sm border border-gray-200 rounded-md">
           <thead className="bg-gray-50 text-gray-900">
@@ -458,11 +453,6 @@ menu
         ))}
       </ul>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("users.areasBody", { em })}</p>
-
-      <figure className="my-6">
-        <img src="/monitor/security/custom-profile.png" alt={t("users.customImageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("users.customImageCaption")}</figcaption>
-      </figure>
 
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("users.enforceTitle")}</h3>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("users.enforceBody", { code })}</p>
@@ -655,11 +645,6 @@ curl -X DELETE http://<host>:8008/api/auth/api-tokens/<token-id> \\
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("pveAccounts.profilesTitle")}</h3>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pveAccounts.profilesBody", { code })}</p>
 
-      <figure className="my-6">
-        <img src="/monitor/security/pve-accounts.png" alt={t("pveAccounts.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("pveAccounts.imageCaption")}</figcaption>
-      </figure>
-
       <h2 id="oidc" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("oidc.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("oidc.intro", { strong })}</p>
       <div className="overflow-x-auto mb-6">
@@ -681,11 +666,6 @@ curl -X DELETE http://<host>:8008/api/auth/api-tokens/<token-id> \\
         </table>
       </div>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("oidc.flowBody", { code })}</p>
-
-      <figure className="my-6">
-        <img src="/monitor/security/oidc-settings.png" alt={t("oidc.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("oidc.imageCaption")}</figcaption>
-      </figure>
 
       <Callout variant="info" title={t("oidc.saveTitle")}>
         {t("oidc.saveBody")}
@@ -792,11 +772,6 @@ labels:
         ))}
       </ul>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("activity.outro", { code })}</p>
-
-      <figure className="my-6">
-        <img src="/monitor/security/access-activity.png" alt={t("activity.imageAlt")} className="rounded-lg border border-gray-200 shadow-sm w-full" />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("activity.imageCaption")}</figcaption>
-      </figure>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("audit.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">

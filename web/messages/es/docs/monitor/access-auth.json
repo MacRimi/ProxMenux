@@ -203,8 +203,6 @@
   "users": {
     "heading": "Usuarios y perfiles",
     "intro": "Con cuentas locales, el Monitor admite varios usuarios. Los administradores los gestionan en <strong>Seguridad</strong> → <strong>Usuarios</strong> → <strong>Editar</strong>: añadir un usuario con contraseña y perfil, cambiar perfiles, establecer una contraseña nueva, quitar el 2FA de un usuario, y desactivar, activar o eliminar usuarios. La primera cuenta es Administrador.",
-    "imageAlt": "Tarjeta Usuarios en modo edición, con una fila por usuario que muestra el selector de perfil y las acciones de establecer contraseña, quitar 2FA, desactivar y eliminar",
-    "imageCaption": "Seguridad → Usuarios en modo edición. Los cambios de perfil se guardan juntos; las demás acciones se confirman una a una.",
     "headerProfile": "Perfil",
     "headerAllows": "Qué permite",
     "profileRows": [
@@ -239,8 +237,6 @@
       "<strong>Abrir terminales</strong>: terminales del host, de los LXC y de las VMs."
     ],
     "areasBody": "Las áreas son las pestañas del panel: <em>General</em>, <em>Apps</em>, <em>Menux</em>, <em>VM y LXC</em>, <em>Nodo</em> (almacenamiento, red, hardware), <em>Backup</em> y <em>Registros del sistema</em>. Una pestaña fuera del perfil queda oculta, y el servidor rechaza sus datos. La cabecera, el estado de salud, la cuenta propia y las páginas Seguridad, Ajustes y Acerca de están disponibles para todos los perfiles; Audit & Report queda reservado a los administradores.",
-    "customImageAlt": "Selector de perfil con el perfil Personalizado abierto, con casillas para las siete áreas y las cinco acciones",
-    "customImageCaption": "Un perfil personalizado: las áreas a un lado y las acciones al otro.",
     "enforceTitle": "Aplicado por el servidor",
     "enforceBody": "Cada ruta de la API exige un permiso (<code>AppImage/scripts/permissions.py</code>). Una petición sin él recibe HTTP <code>403</code> con el permiso que falta en el campo <code>permission</code>, y el rechazo queda registrado en la actividad de acceso. El panel oculta los botones que un perfil no puede usar. Las terminales, las ejecuciones de scripts, las actualizaciones y las descargas empiezan con un ticket de corta duración que lleva los permisos de quien lo pidió. Un cambio de perfil se aplica al momento a las sesiones abiertas.",
     "accountsTitle": "Contraseñas, 2FA, desactivación y API tokens",
@@ -402,9 +398,7 @@
       "Para iniciar sesión hace falta <code>Sys.Audit</code> en <code>/</code>."
     ],
     "profilesTitle": "Perfiles de las cuentas de Proxmox VE",
-    "profilesBody": "Sin una regla, deciden los privilegios en <code>/</code>: <code>Sys.Modify</code> da Administrador y <code>Sys.Audit</code> por sí solo da Observador. La misma tarjeta contiene reglas que asignan un perfil a un usuario de Proxmox VE (por ejemplo <code>alice@pve</code>) o a un grupo. La regla de usuario tiene prioridad; si no la hay, se aplica la primera regla de un grupo del usuario, con los grupos leídos de <code>/etc/pve/user.cfg</code>. Una regla se aplica tal como se eligió, sean cuales sean los privilegios. Se rechaza guardar reglas que quitarían la administración a la cuenta que las guarda.",
-    "imageAlt": "Tarjeta Cuentas de Proxmox VE en modo edición, con el interruptor y la lista de reglas de perfil por usuario y grupo",
-    "imageCaption": "Seguridad → Cuentas de Proxmox VE: el interruptor y las reglas de perfil por usuario o grupo."
+    "profilesBody": "Sin una regla, deciden los privilegios en <code>/</code>: <code>Sys.Modify</code> da Administrador y <code>Sys.Audit</code> por sí solo da Observador. La misma tarjeta contiene reglas que asignan un perfil a un usuario de Proxmox VE (por ejemplo <code>alice@pve</code>) o a un grupo. La regla de usuario tiene prioridad; si no la hay, se aplica la primera regla de un grupo del usuario, con los grupos leídos de <code>/etc/pve/user.cfg</code>. Una regla se aplica tal como se eligió, sean cuales sean los privilegios. Se rechaza guardar reglas que quitarían la administración a la cuenta que las guarda."
   },
   "oidc": {
     "heading": "OpenID Connect (OIDC)",
@@ -434,8 +428,6 @@
       }
     ],
     "flowBody": "El inicio de sesión usa el flujo de código de autorización con PKCE (<code>S256</code>) y un nonce, y acepta ID tokens firmados con <code>RS256</code> o <code>ES256</code>. El callback entrega al navegador un código de un solo uso, válido 30 segundos, que solo el navegador que empezó el inicio de sesión puede canjear por una sesión. La sesión pertenece a la identidad <code>oidc:&lt;sub&gt;</code> y tiene el perfil de su sujeto. El certificado del proveedor se comprueba contra el almacén de CA del host (<code>/etc/ssl/certs/ca-certificates.crt</code>); un proveedor con un certificado de una CA interna necesita esa CA añadida con <code>update-ca-certificates</code>.",
-    "imageAlt": "Tarjeta OpenID Connect en modo edición, con los ajustes del proveedor y los sujetos permitidos, cada uno con nombre y perfil",
-    "imageCaption": "Seguridad → OpenID Connect (OIDC): ajustes del proveedor y sujetos permitidos con sus perfiles.",
     "saveTitle": "Guardar los ajustes cierra las sesiones OIDC",
     "saveBody": "Cada vez que se guardan los ajustes de OpenID Connect, incluido un cambio de perfil, se cierran todas las sesiones OIDC abiertas, y los ajustes nuevos se aplican desde el siguiente inicio de sesión. Quitar un sujeto de la lista termina su acceso."
   },
@@ -476,9 +468,7 @@
       "Cambios en las cuentas de Proxmox VE, en sus reglas de perfil y en los ajustes de OpenID Connect.",
       "Cada acción que un perfil rechazó, con la ruta y el permiso que faltaba. Un rechazo repetido por la misma cuenta en la misma ruta se registra una vez por minuto."
     ],
-    "outro": "Las contraseñas, los códigos y los tokens nunca se registran. Los eventos se conservan 90 días en <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, modo <code>0600</code>) y <code>GET /api/auth/events</code> los sirve a los administradores.",
-    "imageAlt": "Tarjeta Actividad de acceso con inicios de sesión, cambios de usuarios y acciones rechazadas, con cuenta, hora y dirección",
-    "imageCaption": "Seguridad → Actividad de acceso: cada evento con su cuenta, sus detalles y su dirección."
+    "outro": "Las contraseñas, los códigos y los tokens nunca se registran. Los eventos se conservan 90 días en <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, modo <code>0600</code>) y <code>GET /api/auth/events</code> los sirve a los administradores."
   },
   "audit": {
     "heading": "Log de auditoría",
