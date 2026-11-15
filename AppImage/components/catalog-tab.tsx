@@ -98,6 +98,9 @@ interface CatalogDetail extends CatalogItem {
   config_path?: string
   version?: string
   installable?: boolean
+  // What the recipe needs of a GPU: "nvidia" to run at all, "optional" when
+  // the installation offers one for acceleration.
+  gpu?: "nvidia" | "optional" | ""
 }
 
 // A view of the tab: a category of applications, every application, or one
@@ -572,6 +575,8 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
 
   const notes: Note[] = [
     ...(item.type === "addon" ? [{ type: "info" as const, text: t("catalog.sheet.addonNote") }] : []),
+    ...(d?.gpu === "nvidia" ? [{ type: "warning" as const, text: t("catalog.sheet.requiresNvidia") }] : []),
+    ...(d?.gpu === "optional" ? [{ type: "info" as const, text: t("catalog.sheet.optionalGpu") }] : []),
     ...(d?.notes || []).map(n => typeof n === "string" ? { type: "info" as const, text: n } : n),
     ...(d?.uses_third_party || []).map(m => ({ type: "warning" as const, text: t("catalog.sheet.usesThirdParty", { name: m.name }), link: m.url })),
   ]

@@ -90,6 +90,8 @@
       "runScript": "Kör skriptet",
       "createVm": "Skapa VM",
       "addonNote": "Installeras i en LXC eller VM som du redan har; skapar ingen ny.",
+      "requiresNvidia": "Kräver en NVIDIA-GPU med drivrutinen installerad på Proxmox-värden; den kan installeras från Hårdvara: GPU:er och Coral-TPU i ProxMenux-menyn. Installationen ger containern åtkomst till GPU:n för CUDA.",
+      "optionalGpu": "Kan använda en GPU för hårdvaruacceleration. Installationen frågar om den ska aktiveras.",
       "proxmenuxDocs": "ProxMenux-dokumentation",
       "releases": "Tillgängliga versioner",
       "suiteApps": "Program att välja",

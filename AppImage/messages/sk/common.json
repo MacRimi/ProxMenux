@@ -90,6 +90,8 @@
       "runScript": "Spustiť skript",
       "createVm": "Vytvoriť VM",
       "addonNote": "Inštaluje sa do existujúceho LXC alebo VM; nový nevytvára.",
+      "requiresNvidia": "Vyžaduje grafickú kartu NVIDIA s ovládačom nainštalovaným na hostiteľovi Proxmox; dá sa nainštalovať cez Hardvér: grafické karty a Coral TPU v menu ProxMenux. Inštalácia sprístupní kontajneru GPU pre CUDA.",
+      "optionalGpu": "Môže použiť GPU na hardvérovú akceleráciu. Inštalácia sa opýta, či ju zapnúť.",
       "proxmenuxDocs": "Dokumentácia ProxMenux",
       "releases": "Dostupné verzie",
       "suiteApps": "Aplikácie na výber",

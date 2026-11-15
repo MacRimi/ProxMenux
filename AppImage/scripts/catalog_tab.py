@@ -282,6 +282,21 @@ def _shot(key: str, name: str = "") -> str:
     return screens[0] if screens else ""
 
 
+def _gpu_need(template: dict) -> str:
+    """What the recipe says about a GPU: "nvidia" when the application
+    cannot run without an NVIDIA GPU, "optional" when the installation offers
+    one for acceleration, or "" when it does not use any."""
+    proxmox = template.get("proxmox") or {}
+    passthrough = str((proxmox.get("deployment_profile") or {}).get("gpu_passthrough") or "")
+    requests = [r for r in (proxmox.get("installer_profile") or {}).get("device_requests") or [] if isinstance(r, dict)]
+    if passthrough == "required-nvidia" or any(r.get("kind") == "nvidia-runtime" and r.get("required_for_runtime")
+                                               for r in requests):
+        return "nvidia"
+    if passthrough == "installer-selection":
+        return "optional"
+    return ""
+
+
 def _oci_detail(app_id: str, language: str = "en") -> dict | None:
     item = next((i for i in _oci_index() if i.get("id") == app_id and not i.get("hidden")), None)
     if not item:
@@ -347,6 +362,7 @@ def _oci_detail(app_id: str, language: str = "en") -> dict | None:
         "credentials": [c.get("label") for c in (template.get("first_run") or {}).get("credentials") or []
                         if isinstance(c, dict) and c.get("label")],
         "installable": bool(item.get("automatic_install_candidate")),
+        "gpu": _gpu_need(template),
     }
     return detail
 

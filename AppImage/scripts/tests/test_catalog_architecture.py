@@ -42,5 +42,22 @@ class CatalogArchitectureTests(unittest.TestCase):
         self.assertEqual(self.listed("amd64"), ["cs:adguard", "cs:plex", "oci:frigate", "oci:jellyfin"])
 
 
+class CatalogGpuTests(unittest.TestCase):
+    """The sheet says what a recipe needs of a GPU, from the recipe itself."""
+
+    def need(self, app_id):
+        import json
+        recipe = SCRIPTS.parents[1] / "oci" / "catalog" / "apps" / f"{app_id}.json"
+        return catalog_tab._gpu_need(json.loads(recipe.read_text(encoding="utf-8")))
+
+    def test_what_each_recipe_needs(self):
+        self.assertEqual(self.need("open-webui-cuda"), "nvidia")
+        self.assertEqual(self.need("plex-official"), "optional")
+        self.assertEqual(self.need("ollama"), "optional")
+        self.assertEqual(self.need("open-webui"), "")
+        self.assertEqual(self.need("jellyfin"), "optional")
+        self.assertEqual(self.need("convertx"), "")
+
+
 if __name__ == "__main__":
     unittest.main()

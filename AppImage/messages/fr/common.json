@@ -90,6 +90,8 @@
       "runScript": "Exécuter le script",
       "createVm": "Créer la VM",
       "addonNote": "S'installe dans un LXC ou une VM que vous avez déjà ; n'en crée pas de nouveau.",
+      "requiresNvidia": "Nécessite un GPU NVIDIA avec son pilote installé sur l'hôte Proxmox ; il peut être installé depuis Matériel : GPU et Coral-TPU dans le menu ProxMenux. L'installation donne au conteneur l'accès au GPU pour CUDA.",
+      "optionalGpu": "Peut utiliser un GPU pour l'accélération matérielle. L'installation demande s'il faut l'activer.",
       "proxmenuxDocs": "Documentation de ProxMenux",
       "releases": "Versions disponibles",
       "suiteApps": "Applications au choix",
