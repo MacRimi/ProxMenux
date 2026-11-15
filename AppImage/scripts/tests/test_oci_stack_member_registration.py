@@ -117,7 +117,7 @@ class StackLogoTests(StackMemberRegistrationTests):
                                           {'id': 'b', 'name': 'Other', 'installed_via': '', 'logo_url': ''}]}
         written = {}
         with patch.object(lxc_apps, '_read_sidecar', return_value=sidecar), \
-                patch.object(lxc_apps, '_write_sidecar', side_effect=lambda vmid, data: written.update(data)):
+                patch.object(lxc_apps, '_write_sidecar', side_effect=lambda vmid, data, **_: written.update(data)):
             self.assertFalse(lxc_apps.ensure_oci_registration(115))
         self.assertEqual(written['apps'][0]['logo_url'], self.ICON)
         self.assertEqual(written['apps'][1]['logo_url'], '')
