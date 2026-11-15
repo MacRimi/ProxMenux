@@ -22,6 +22,7 @@ export function Mermaid({ chart, className }: MermaidProps) {
         mermaid.initialize({
           startOnLoad: false,
           theme: "default",
+          htmlLabels: true,
           securityLevel: "strict",
           themeVariables: {
             fontSize: "18px",
@@ -29,7 +30,6 @@ export function Mermaid({ chart, className }: MermaidProps) {
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
           flowchart: {
-            htmlLabels: true,
             curve: "basis",
             useMaxWidth: false,
             rankSpacing: 36,
