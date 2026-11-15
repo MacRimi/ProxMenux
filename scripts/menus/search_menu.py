@@ -367,6 +367,11 @@ def post_install_entries():
             for category, title, token in post_install_settings()]
 
 
+# On an ARM host only what declares ARM support is found: anything else
+# would fail to install. An amd64 host finds everything.
+ARM = os.uname().machine == 'aarch64'
+
+
 def oci_entries():
     launcher = SCRIPTS / 'oci/oci_manager_apps.sh'
     try:
@@ -381,7 +386,8 @@ def oci_entries():
                  related=str(item.get('category_label') or ''),
                  action=['bash', str(launcher), 'open', item['id']], handoff=False)
             for item in applications
-            if not item.get('hidden') and item.get('automatic_install_candidate')]
+            if not item.get('hidden') and item.get('automatic_install_candidate')
+            and (not ARM or 'arm64' in (item.get('architectures') or []))]
 
 
 def helpers_catalog(refresh=True):
@@ -415,7 +421,7 @@ def helper_entries(refresh=True):
     entries, seen = [], set()
     for item in helpers_catalog(refresh):
         slug = item.get('slug')
-        if not slug or slug in seen or not item.get('name'):
+        if not slug or slug in seen or not item.get('name') or (ARM and not item.get('has_arm')):
             continue
         seen.add(slug)
         entries.append(dict(title=item['name'], source='Community Scripts', kind=str(item.get('type', '')).upper(),

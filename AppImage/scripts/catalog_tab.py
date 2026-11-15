@@ -720,6 +720,16 @@ def _product() -> str:
         return "pve"
 
 
+def _host_architecture() -> str:
+    return {"x86_64": "amd64", "aarch64": "arm64"}.get(os.uname().machine, "amd64")
+
+
+def _for_this_architecture(architectures, architecture: str) -> bool:
+    """On an ARM host only what declares ARM support is offered: anything
+    else would fail to install. An amd64 host keeps every item."""
+    return architecture != "arm64" or "arm64" in (architectures or [])
+
+
 def _runs_here(entry: dict, product: str) -> bool:
     """Whether a Community Scripts script is meant for this host: PVE runs the
     ones for itself and the ones installed in its containers and VMs; a PBS,
@@ -774,7 +784,9 @@ def list_items(language: str = "en") -> dict:
     use, and `refreshing` says a newer one may arrive shortly."""
     language = _language(language)
     product = _product()
+    architecture = _host_architecture()
     scripts = [_script_item(e) for e in _script_entries().values() if _runs_here(e, product)]
+    scripts = [i for i in scripts if _for_this_architecture(i["architectures"], architecture)]
     cs_sections = sorted({i["section"] for i in scripts if i["group"] == "tool" and i["section"]})
     cs = [{"key": key, "kind": "cs", "title": key[len(_CS_SECTION_PREFIX):], "external": []} for key in cs_sections]
     if product != "pve":
@@ -782,7 +794,8 @@ def list_items(language: str = "en") -> dict:
         return {"items": [i for i in scripts if i["group"] == "tool"], "sections": cs}
     table = _translations(language)
     oci = [_oci_item(i, table) for i in _oci_index()
-           if i.get("id") and not i.get("hidden") and i.get("automatic_install_candidate")]
+           if i.get("id") and not i.get("hidden") and i.get("automatic_install_candidate")
+           and _for_this_architecture(i.get("architectures"), architecture)]
     # A VM the menu creates with a Community Scripts installer, or an option
     # that runs one, is already listed as that script.
     sections = _sections(language)

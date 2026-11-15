@@ -283,6 +283,29 @@ class CatalogTests(unittest.TestCase):
         self.assertTrue(language["handoff"])
 
 
+class ArchitectureTests(unittest.TestCase):
+    """On an ARM host the search finds only what declares ARM support."""
+
+    def found(self, arm):
+        search = load()
+        search.ARM = arm
+        return search.oci_entries(), search.helper_entries(refresh=False)
+
+    def test_an_arm_host_finds_only_arm_applications_and_scripts(self):
+        index = json.loads((ROOT / "oci/catalog/index.json").read_text(encoding="utf-8"))["applications"]
+        arm_oci = {item.get("title") or item["id"] for item in index
+                   if not item.get("hidden") and item.get("automatic_install_candidate")
+                   and "arm64" in (item.get("architectures") or [])}
+        cache = json.loads((ROOT / "json/helpers_cache.json").read_text(encoding="utf-8"))
+        arm_cs = {item["name"] for item in cache if item.get("has_arm")}
+        oci, helpers = self.found(arm=True)
+        self.assertEqual({item["title"] for item in oci}, arm_oci)
+        self.assertTrue({item["title"] for item in helpers} <= arm_cs)
+        everything_oci, everything_cs = self.found(arm=False)
+        self.assertGreater(len(everything_oci), len(oci))
+        self.assertGreater(len(everything_cs), len(helpers))
+
+
 class OpenedInPlaceTests(unittest.TestCase):
     def test_an_option_of_the_post_install_comes_selected(self):
         script = (SCRIPTS / "post_install/customizable_post_install.sh").read_text()
