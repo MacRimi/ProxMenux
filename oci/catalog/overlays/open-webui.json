@@ -17,10 +17,10 @@
   },
   "catalog_ui": {
     "tagline": {
-      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline."
+      "en_US": "Open WebUI on its own, for an Ollama server or an OpenAI-compatible API you already have."
     },
     "description": {
-      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline. It connects to local large language models through Ollama and supports OpenAI-compatible APIs for both local and cloud models. The platform provides a unified environment to chat with models, manage AI interactions, and run private AI workflows."
+      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline. It connects to local large language models through Ollama and supports OpenAI-compatible APIs for both local and cloud models. The platform provides a unified environment to chat with models, manage AI interactions, and run private AI workflows. This version installs Open WebUI only: the models run on an Ollama server or an OpenAI-compatible service set up separately."
     },
     "screenshots": [
       "https://cdn.openwebui.com/open-webui-demo.gif"

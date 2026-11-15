@@ -17,10 +17,10 @@
   },
   "catalog_ui": {
     "tagline": {
-      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline."
+      "en_US": "Open WebUI built with CUDA, to make the most of an NVIDIA GPU."
     },
     "description": {
-      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline. It connects to local large language models through Ollama and supports OpenAI-compatible APIs for both local and cloud models. The platform provides a unified environment to chat with models, manage AI interactions, and run private AI workflows."
+      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline. It connects to local large language models through Ollama and supports OpenAI-compatible APIs for both local and cloud models. The platform provides a unified environment to chat with models, manage AI interactions, and run private AI workflows. This version is built with CUDA and uses an NVIDIA GPU to speed up the work Open WebUI does itself, such as the document embeddings for RAG and speech-to-text. It does not include Ollama: it connects to an Ollama server or an OpenAI-compatible API, which can use the same GPU. It needs an NVIDIA GPU with its driver installed on the Proxmox host."
     },
     "screenshots": [
       "https://cdn.openwebui.com/open-webui-demo.gif"
