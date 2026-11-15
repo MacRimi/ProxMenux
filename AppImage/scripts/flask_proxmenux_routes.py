@@ -440,22 +440,9 @@ def get_snippets_storage():
         except Exception:
             return []
 
+    # Reading never changes the storage configuration: a host without any
+    # storage for snippets simply lists none.
     candidates = _list()
-
-    # PVE 9 ships `local` without `snippets` in its content list, so a
-    # fresh install lists zero candidates here. Mirror what the bash
-    # helper does — auto-enable snippets on local — so the Monitor's
-    # selector isn't perpetually empty before the user runs GPU
-    # passthrough for the first time.
-    if not candidates:
-        try:
-            subprocess.run(
-                ['pvesm', 'set', 'local', '--content', 'vztmpl,iso,import,backup,snippets'],
-                capture_output=True, text=True, timeout=10, check=False,
-            )
-            candidates = _list()
-        except Exception:
-            pass
 
     return jsonify({
         'success': True,
