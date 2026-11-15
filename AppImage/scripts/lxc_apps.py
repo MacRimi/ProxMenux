@@ -596,7 +596,9 @@ def helper_update_selected(vmid, slug: str, targets=None) -> bool:
     return any(f"app:{app.get('id')}" in targets for app in matching)
 
 
-def _write_sidecar(vmid, data: dict, copies: bool = True) -> bool:
+def _write_sidecar(vmid, data: dict, copies: bool = False) -> bool:
+    """`copies`: the registrations changed, so the copies that travel with
+    the container are written too. Results of checks never are."""
     _migrate_update_methods(data)
     # The registrations of a container keep one identity wherever they go,
     # so the copy a container carries is recognised after a restore.
@@ -709,7 +711,7 @@ def reconcile_copies(vmid) -> Optional[str]:
         if source:
             sidecar = _adopt_copy(vmid, source, origin, machine)
             copies.forget(vmid)
-            _write_sidecar(vmid, sidecar)
+            _write_sidecar(vmid, sidecar, copies=True)
             return "adopted-" + origin
         if not local or not pid:
             return None
@@ -729,7 +731,7 @@ def reconcile_copies(vmid) -> Optional[str]:
             copies.forget(vmid)
             changed = True
         if changed:
-            _write_sidecar(vmid, local)
+            _write_sidecar(vmid, local, copies=True)
             return "copied"
     return None
 
@@ -3567,7 +3569,7 @@ def set_dismissed_slug(vmid, slug: str, dismissed: bool) -> tuple[bool, Any]:
             current = [s for s in current if s != slug]
         sidecar["dismissed_slugs"] = current
         sidecar["updated_at"] = _now_iso()
-        if not _write_sidecar(vmid, sidecar):
+        if not _write_sidecar(vmid, sidecar, copies=True):
             return False, "could not persist sidecar (permission?)"
     return True, _read_sidecar(vmid)
 
@@ -3597,7 +3599,7 @@ def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
             "created_at": _now_iso(),
         })
         sidecar["updated_at"] = _now_iso()
-        if not _write_sidecar(vmid, sidecar):
+        if not _write_sidecar(vmid, sidecar, copies=True):
             return False, "could not persist sidecar (permission?)"
     # Kick a first check so the UI shows real numbers immediately
     check_app(vmid, new_id, force=True, notify=notify)
@@ -3623,7 +3625,7 @@ def update_app(vmid, app_id: str, payload: dict) -> tuple[bool, Any]:
             "id": app_id, **cfg, "state": state, "created_at": created,
         }
         sidecar["updated_at"] = _now_iso()
-        if not _write_sidecar(vmid, sidecar):
+        if not _write_sidecar(vmid, sidecar, copies=True):
             return False, "could not persist sidecar"
     check_app(vmid, app_id, force=True)
     return True, _read_sidecar(vmid)
@@ -3683,7 +3685,7 @@ def delete_app(vmid, app_id: str) -> bool:
             except OSError:
                 pass
         if before != len(sidecar["apps"]):
-            return _write_sidecar(vmid, sidecar)
+            return _write_sidecar(vmid, sidecar, copies=True)
         return True
 
 
@@ -6052,7 +6054,7 @@ def _register_oci_installation(vmid) -> bool:
             if logo:
                 for app in missing:
                     app["logo_url"] = logo
-                _write_sidecar(vmid, sidecar)
+                _write_sidecar(vmid, sidecar, copies=True)
             return False
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
