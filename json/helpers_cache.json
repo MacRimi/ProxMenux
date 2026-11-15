@@ -705,6 +705,41 @@
     "os": "debian"
   },
   {
+    "name": "Alexandrie",
+    "slug": "alexandrie",
+    "desc": "Alexandrie is a self-hosted knowledge base and note-taking app built around an extended Markdown editor with LaTeX, diagrams and custom containers. Notes are organized in workspaces, categories and nested documents, can be shared with other users and stay available offline as an installable PWA.",
+    "script": "ct/alexandrie.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alexandrie.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alexandrie.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "The URLs in /opt/alexandrie_data/.env use the container IP. Change them when the IP changes or you put Alexandrie behind a domain, then restart alexandrie-backend and alexandrie-frontend."
+    ],
+    "warnings": [
+      "Create your account on the signup page. Signup stays open to anyone who can reach Alexandrie until you set CONFIG_DISABLE_SIGNUP and NUXT_PUBLIC_CONFIG_DISABLE_SIGNUP_PAGE to true in the .env."
+    ],
+    "port": 80,
+    "website": "https://alexandrie-hub.fr/",
+    "documentation": "https://docs.alexandrie-hub.fr/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/alexandrie.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "All Templates",
     "slug": "all-templates",
     "desc": "A script designed to allow for the creation of one of the many free LXC templates. Great for creating system LXCs.\r\nThe script creates a `*.creds` file in the Proxmox root directory with the password of the newly created LXC.\r\nPlease take note that if you plan to use this script for creating TurnKey LXCs, you'll need to modify the hostname after creation.",
@@ -1700,6 +1735,43 @@
     ],
     "config_path": "",
     "os": ""
+  },
+  {
+    "name": "Argilla",
+    "slug": "argilla",
+    "desc": "Argilla is a collaboration tool for AI engineers and domain experts to build high-quality datasets. Teams annotate records in a web UI, collect human feedback on model outputs, and manage datasets through a Python SDK that integrates with the Hugging Face Hub.",
+    "script": "ct/argilla.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/argilla.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/argilla.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Sign in as admin with ADMIN_PASSWORD from /opt/argilla_data/.env. ADMIN_API_KEY there is the key for the Python SDK."
+    ],
+    "warnings": [],
+    "port": 6900,
+    "website": "https://argilla.io/",
+    "documentation": "https://docs.argilla.io/latest/",
+    "logo": "https://cdn.jsdelivr.net/gh/argilla-io/argilla@develop/argilla-frontend/static/images/logo.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
   },
   {
     "name": "Argus",
@@ -3447,6 +3519,41 @@
       "username": "admin",
       "password": "admin123"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Cap",
+    "slug": "cap-captcha",
+    "desc": "Cap is a lightweight, privacy-friendly CAPTCHA alternative to reCAPTCHA and hCaptcha that uses proof-of-work instead of puzzles or tracking. This is its self-hosted server (capd): a dashboard to manage site keys, the challenge endpoints the widget talks to, and a siteverify API your backend uses to check tokens.",
+    "script": "ct/cap-captcha.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cap-captcha.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cap-captcha.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Sign in to the dashboard with the admin key (ADMIN_KEY in /opt/cap-captcha_data/.env)."
+    ],
+    "warnings": [
+      "Stored site key secrets are encrypted with the admin key. After changing ADMIN_KEY, reset each site key's secret."
+    ],
+    "port": 3000,
+    "website": "https://trycap.dev/",
+    "documentation": "https://trycap.dev/guide/capd/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cap-captcha.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7714,6 +7821,44 @@
     "os": "debian"
   },
   {
+    "name": "Faraday",
+    "slug": "faraday",
+    "desc": "Faraday is a vulnerability management platform that collects the output of more than 80 security tools such as Nmap, Nessus, Burp and OpenVAS into shared workspaces. It deduplicates findings, normalizes them across tools and tracks their remediation status through a web UI and a REST API.",
+    "script": "ct/faraday.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/faraday.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/faraday.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Sign in as faraday with FARADAY_PASSWORD from /opt/faraday_data/.env.",
+      "Run faraday-manage as `FARADAY_HOME=/opt/faraday_data /opt/faraday/venv/bin/faraday-manage <command>`, otherwise it does not find the configuration."
+    ],
+    "warnings": [],
+    "port": 5985,
+    "website": "https://faradaysec.com/",
+    "documentation": "https://docs.faradaysec.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/infobyte/faraday@master/docs/images/faraday_logo.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "faraday",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Fedora",
     "slug": "fedora",
     "desc": "Fedora is a cutting-edge Linux distribution sponsored by Red Hat, featuring current open-source technologies.",
@@ -10863,6 +11008,42 @@
     "os": "debian"
   },
   {
+    "name": "HeyForm",
+    "slug": "heyform",
+    "desc": "HeyForm is an open-source form builder for conversational forms, surveys, quizzes and polls. Forms support conditional logic, hidden fields, themes and payments, and the dashboard shows submissions and analytics or forwards them to webhooks and integrations.",
+    "script": "ct/heyform.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/heyform.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/heyform.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "Open https://<IP>, accept the self-signed certificate and sign up. Sign-up asks for no email code until you set SMTP_* and VERIFY_USER_EMAIL=true in /opt/heyform_data/.env."
+    ],
+    "warnings": [
+      "Anyone who can reach the URL can create an account: after signing up, set APP_DISABLE_REGISTRATION=true in /opt/heyform_data/.env and run systemctl restart heyform.",
+      "MongoDB 8 needs a CPU with AVX; set the VM/host CPU type to host (not kvm64) on older Proxmox setups."
+    ],
+    "port": 443,
+    "website": "https://heyform.net/",
+    "documentation": "https://docs.heyform.net/open-source/self-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/heyform.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Hindsight",
     "slug": "hindsight",
     "desc": "Hindsight is an open-source memory server for AI agents. Agents retain conversations and documents into memory banks, then recall facts, entities and their history, or reflect on them, through a REST API, SDKs and an MCP server.",
@@ -13837,7 +14018,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -16088,6 +16269,45 @@
     "default_credentials": {
       "username": "admin",
       "password": "minthcm"
+    },
+    "os": "debian"
+  },
+  {
+    "name": "Mixpost",
+    "slug": "mixpost",
+    "desc": "Mixpost Lite is a self-hosted social media management tool. It lets you create, schedule and publish posts to Facebook pages, X and Mastodon from one place, with a content calendar, a media library and multiple accounts per network.",
+    "script": "ct/mixpost.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mixpost.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mixpost.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "Sign in with ADMIN_EMAIL and ADMIN_PASSWORD from /opt/mixpost_data/.env inside the container."
+    ],
+    "warnings": [
+      "Connecting social accounts needs a public domain: set APP_URL in /opt/mixpost_data/.env, then run `php artisan optimize` in /opt/mixpost. Facebook and X also need your own developer app keys under Services."
+    ],
+    "port": 80,
+    "website": "https://mixpost.app/",
+    "documentation": "https://docs.mixpost.app/lite/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mixpost.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@example.com",
+      "password": ""
     },
     "os": "debian"
   },
@@ -19004,6 +19224,37 @@
     "website": "https://www.openviking.ai/",
     "documentation": "https://docs.openviking.ai/",
     "logo": "https://raw.githubusercontent.com/volcengine/OpenViking/main/web-studio/public/icon-512.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "OpenWA",
+    "slug": "openwa",
+    "desc": "OpenWA is a free, self-hosted WhatsApp API gateway with a built-in dashboard. Pair WhatsApp numbers as sessions by QR code, then send and receive messages over a REST API, webhooks, an MCP server and plugins.",
+    "script": "ct/openwa.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openwa.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openwa.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Sign in to the dashboard with the admin API key (API_MASTER_KEY in /opt/openwa_data/.env)."
+    ],
+    "warnings": [
+      "WhatsApp Web sessions use an unofficial protocol; WhatsApp can ban numbers used for bulk or automated messaging."
+    ],
+    "port": 2785,
+    "website": "https://github.com/rmyndharis/OpenWA",
+    "documentation": "https://github.com/rmyndharis/OpenWA/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openwa.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -25812,6 +26063,41 @@
     "os": "debian"
   },
   {
+    "name": "SuperTokens",
+    "slug": "supertokens",
+    "desc": "SuperTokens is an open-source authentication service and alternative to Auth0, Firebase Auth and Cognito. It handles sessions, email/password, passwordless, social login and multi-factor authentication, while your own backend talks to it through the SuperTokens SDKs.",
+    "script": "ct/supertokens.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/supertokens.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/supertokens.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "There is no web UI: point your backend SDK at http://<IP>:3567 and use the API key from /opt/supertokens_data/.env."
+    ],
+    "warnings": [
+      "Keep port 3567 reachable only from your backend, never from browsers or the internet."
+    ],
+    "port": 3567,
+    "website": "https://supertokens.com/",
+    "documentation": "https://supertokens.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/supertokens/supertokens-logo@master/images/Artboard%201%402x.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Sure",
     "slug": "sure",
     "desc": "The personal finance app for everyone. NOT affiliated with or endorsed by Maybe Finance Inc..",
@@ -28732,6 +29018,43 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "VERT",
+    "slug": "vert",
+    "desc": "VERT is a file converter that runs in the browser. Images, audio and documents are converted locally with WebAssembly, so files never leave the device; videos the browser cannot handle can be sent to a vertd server.",
+    "script": "ct/vert.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/vert.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/vert.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011",
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Files & Downloads",
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Open https://<IP> and accept the self-signed certificate; the converters only work over HTTPS."
+    ],
+    "warnings": [
+      "Videos the browser cannot convert go to VERT's public vertd servers by default. Set your own vertd instance in the settings to keep them local."
+    ],
+    "port": 443,
+    "website": "https://vert.sh/",
+    "documentation": "https://github.com/VERT-sh/VERT/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vert.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
