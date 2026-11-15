@@ -2290,6 +2290,7 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
                 import lxc_apps
                 lxc_apps.clear_schedule_reboot_required(guest_id)
                 _vm_cache_invalidate(guest_id, _vm_schedule_cache)
+                lxc_apps.reconcile_after_start(guest_id)
             except Exception as exc:
                 print(
                     f'[ProxMenux] could not clear scheduled-update reboot state '
@@ -23832,6 +23833,15 @@ if __name__ == '__main__':
             scheduler_thread.start()
     except Exception as e:
         print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
+
+    # App registrations travel with their container: a copy inside it and one
+    # in the cluster, checked every few minutes (lxc_apps.reconcile_copies).
+    try:
+        if pve_host:
+            import lxc_apps
+            lxc_apps.start_copy_reconciler()
+    except Exception as e:
+        print(f"[ProxMenux] App registration copies failed to start: {e}")
 
     # Check for SSL configuration
     ssl_ctx = None

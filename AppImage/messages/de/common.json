@@ -8318,6 +8318,9 @@
       },
       "oidc": {
         "config": "OpenID Connect-Einstellungen"
+      },
+      "app_watch": {
+        "adopted": "App-Registrierungen aus dem Container übernommen"
       }
     },
     "methods": {

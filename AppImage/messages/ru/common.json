@@ -8317,6 +8317,9 @@
       },
       "oidc": {
         "config": "Настройки OpenID Connect"
+      },
+      "app_watch": {
+        "adopted": "Регистрации приложений взяты из контейнера"
       }
     },
     "methods": {

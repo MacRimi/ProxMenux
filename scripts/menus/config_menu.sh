@@ -92,6 +92,16 @@ remove_registry_logins() {
     rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
 }
 
+# The copies of the app registrations the cluster keeps go with the Monitor.
+# /etc/pve is shared by the cluster, so the other nodes lose them too.
+remove_app_watch_copies() {
+    mountpoint -q /etc/pve || return 0
+    [[ -d /etc/pve/priv/proxmenux/apps ]] || return 0
+    pmx_record_execution "Remove the cluster copies of app registrations" "rm -rf /etc/pve/priv/proxmenux/apps"
+    rm -rf /etc/pve/priv/proxmenux/apps
+    rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
+}
+
 remove_usbip_sharing() {
     local manager="$BASE_DIR/scripts/devices/usbip_manager.py"
     local config="/etc/proxmenux/usbip/config.json" id unit
@@ -137,6 +147,7 @@ uninstall_proxmenux_monitor() {
     fi
 
     remove_monitor_notification_target
+    remove_app_watch_copies
 
     # 2. Disable service if enabled
     if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then

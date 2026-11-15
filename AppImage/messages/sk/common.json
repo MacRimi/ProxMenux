@@ -8317,6 +8317,9 @@
       },
       "oidc": {
         "config": "Nastavenia OpenID Connect"
+      },
+      "app_watch": {
+        "adopted": "Registrácie aplikácií prevzaté z kontajnera"
       }
     },
     "methods": {

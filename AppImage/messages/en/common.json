@@ -7463,6 +7463,9 @@
       },
       "oidc": {
         "config": "OpenID Connect settings"
+      },
+      "app_watch": {
+        "adopted": "App registrations taken from the container"
       }
     },
     "methods": {

@@ -45,6 +45,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
 from typing import Any, Optional
 import local_app_icons
 
@@ -595,8 +596,12 @@ def helper_update_selected(vmid, slug: str, targets=None) -> bool:
     return any(f"app:{app.get('id')}" in targets for app in matching)
 
 
-def _write_sidecar(vmid, data: dict) -> bool:
+def _write_sidecar(vmid, data: dict, copies: bool = True) -> bool:
     _migrate_update_methods(data)
+    # The registrations of a container keep one identity wherever they go,
+    # so the copy a container carries is recognised after a restore.
+    if not data.get("watch_id"):
+        data["watch_id"] = uuid.uuid4().hex
     _ensure_dir()
     path = _sidecar_path(vmid)
     tmp = f"{path}.tmp.{os.getpid()}"
@@ -609,6 +614,8 @@ def _write_sidecar(vmid, data: dict) -> bool:
                 os.replace(tmp, path)
                 snapshot = _publish_sidecar_snapshot(path, data, _sidecar_signature(os.stat(path)))
                 data['_revision'] = snapshot['_revision']
+        if copies:
+            _sync_copies(vmid, data)
         return True
     except (OSError, local_app_icons.IconError) as e:
         print(f"[ProxMenux] lxc_apps: could not write sidecar {path}: {e}")
@@ -621,6 +628,167 @@ def _write_sidecar(vmid, data: dict) -> bool:
 
 def _new_app_id() -> str:
     return uuid.uuid4().hex[:12]
+
+
+# ── Copies that travel with the container (app_watch_copies) ─────────
+_APP_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+_COPY_RECONCILE_SECONDS = 300
+
+
+def _sync_copies(vmid, data: dict) -> None:
+    try:
+        import app_watch_copies
+        app_watch_copies.write(vmid, data)
+    except Exception as e:  # The record on the node is what counts.
+        print(f"[ProxMenux] lxc_apps: copies of CT {vmid} not written: {e}")
+
+
+def _remove_copies(vmid) -> None:
+    try:
+        import app_watch_copies
+        app_watch_copies.remove(vmid)
+    except Exception as e:
+        print(f"[ProxMenux] lxc_apps: copies of CT {vmid} not removed: {e}")
+
+
+def _adopt_copy(vmid, source: dict, origin: str, machine) -> dict:
+    """The registrations a container brought, validated as if the user had
+    entered them here. An app that does not validate is left out."""
+    apps = []
+    for app in source.get("apps") or []:
+        if not isinstance(app, dict):
+            continue
+        entered = {k: v for k, v in app.items() if k not in ("id", "state", "created_at", "updated_at")}
+        ok, cfg = validate_config(entered, vmid=vmid)
+        if not ok and "logo_url" in entered:
+            # A logo cached for another VMID is not this container's.
+            entered.pop("logo_url")
+            ok, cfg = validate_config(entered, vmid=vmid)
+        if not ok:
+            print(f"[ProxMenux] lxc_apps: CT {vmid}: an app of its copy was left out: {cfg}")
+            continue
+        app_id = app.get("id") if isinstance(app.get("id"), str) and _APP_ID_RE.match(app["id"]) else _new_app_id()
+        apps.append({"id": app_id, **cfg, "state": _empty_state(),
+                     "created_at": app.get("created_at") if isinstance(app.get("created_at"), str) else _now_iso()})
+    slugs = [s for s in source.get("dismissed_slugs") or [] if isinstance(s, str) and _HELPER_SLUG_RE.match(s)]
+    sidecar = {"vmid": int(vmid), "apps": apps, "created_at": _now_iso(), "updated_at": _now_iso(),
+               "watch_id": source["watch_id"], "identity": {"machine_id": machine} if machine else {},
+               "dismissed_slugs": slugs}
+    try:
+        import access_log
+        access_log.record("app_watch.adopted", None, f"CT {int(vmid)}", {"from": origin, "apps": len(apps)})
+    except Exception:
+        pass
+    return sidecar
+
+
+def reconcile_copies(vmid) -> Optional[str]:
+    """Bring the registrations of a container in line with the copies.
+
+    A running container that carries registrations other than those of its
+    VMID (restored under another VMID or in another order) gets its own
+    back. A container without a record on this node (migrated here) gets
+    the one of the cluster. A container without a copy whose machine ID is
+    not the one recorded is marked: its registrations may belong to another
+    container. Returns what was done, or None."""
+    import app_watch_copies as copies
+    pid = copies.running_pid(vmid)
+    machine = copies.machine_id(vmid, pid) if pid else None
+    with _cache_lock:
+        local = _read_sidecar(vmid)
+        carried = copies.read_container(vmid, pid) if pid else None
+        if carried and (not local or local.get("watch_id") != carried["watch_id"]):
+            source, origin = carried, "container"
+        elif not local and not carried:
+            cluster = copies.read_cluster(vmid)
+            known = (cluster or {}).get("identity", {}).get("machine_id") if isinstance(cluster, dict) else None
+            # Only the same container: a new one with a reused VMID is not.
+            source, origin = (cluster, "cluster") if cluster and machine and known == machine else (None, None)
+        else:
+            source, origin = None, None
+        if source:
+            sidecar = _adopt_copy(vmid, source, origin, machine)
+            copies.forget(vmid)
+            _write_sidecar(vmid, sidecar)
+            return "adopted-" + origin
+        if not local or not pid:
+            return None
+        recorded = (local.get("identity") or {}).get("machine_id")
+        if not carried and recorded and machine and recorded != machine:
+            if not local.get("registration_mismatch"):
+                local["registration_mismatch"] = True
+                _write_sidecar(vmid, local, copies=False)
+            return "mismatch"
+        changed = False
+        if machine and recorded != machine:
+            local["identity"] = {"machine_id": machine}
+            changed = True
+        if local.pop("registration_mismatch", None):
+            changed = True
+        if not carried or copies.digest(copies.payload(vmid, local)) != copies.digest(carried):
+            copies.forget(vmid)
+            changed = True
+        if changed:
+            _write_sidecar(vmid, local)
+            return "copied"
+    return None
+
+
+def _local_containers() -> list:
+    try:
+        names = os.listdir("/etc/pve/local/lxc")
+    except OSError:
+        return []
+    return sorted(int(n[:-5]) for n in names if n.endswith(".conf") and n[:-5].isdigit())
+
+
+def _forget_removed_containers() -> None:
+    """The cluster copy of a VMID that no node has any more."""
+    try:
+        import app_watch_copies as copies
+        if not os.path.ismount("/etc/pve") or not copies.CLUSTER.is_dir():
+            return
+        existing = {p.stem for p in Path("/etc/pve/nodes").glob("*/lxc/*.conf")}
+        for path in copies.CLUSTER.glob("*.json"):
+            if path.stem.isdigit() and path.stem not in existing:
+                copies.remove_cluster(int(path.stem))
+    except Exception as e:
+        print(f"[ProxMenux] lxc_apps: cluster copies not tidied: {e}")
+
+
+def _copy_reconciler_loop() -> None:
+    time.sleep(60)
+    while True:
+        for vmid in _local_containers():
+            try:
+                reconcile_copies(vmid)
+            except Exception as e:
+                print(f"[ProxMenux] lxc_apps: reconcile CT {vmid} failed: {e}")
+        _forget_removed_containers()
+        time.sleep(_COPY_RECONCILE_SECONDS)
+
+
+_copy_reconciler_started = False
+
+
+def reconcile_after_start(vmid, delay: int = 15) -> None:
+    """A container that starts may be one just restored: its own copy is
+    read as soon as it is up, not at the next pass."""
+    def later():
+        time.sleep(delay)
+        try:
+            reconcile_copies(vmid)
+        except Exception as e:
+            print(f"[ProxMenux] lxc_apps: reconcile CT {vmid} after start failed: {e}")
+    threading.Thread(target=later, daemon=True, name=f"app-watch-copies-{int(vmid)}").start()
+
+
+def start_copy_reconciler() -> None:
+    global _copy_reconciler_started
+    if _copy_reconciler_started:
+        return
+    _copy_reconciler_started = True
+    threading.Thread(target=_copy_reconciler_loop, daemon=True, name="app-watch-copies").start()
 
 
 # ── Validation ─────────────────────────────────────────────────────
@@ -3524,6 +3692,7 @@ def forget_guest(vmid) -> None:
     included, so a new guest that reuses the VMID starts with nothing."""
     key = str(int(vmid))
     path = _sidecar_path(vmid)
+    _remove_copies(vmid)
     with _cache_lock:
         try:
             os.unlink(path)
@@ -3566,6 +3735,7 @@ def delete_all(vmid) -> bool:
     sidecar = _read_sidecar(vmid) or {}
     if any(a.get("installed_via") == "oci_image" for a in sidecar.get("apps") or []):
         _dismiss_oci_registration(vmid)
+    _remove_copies(vmid)
     try:
         os.unlink(_sidecar_path(vmid))
         return True
@@ -5021,7 +5191,8 @@ def get_active_apps() -> dict:
         if not apps:
             continue
         out[str(vmid)] = [
-            {**_summarise_app(a), 'state_revision': sidecar.get('_revision')}
+            {**_summarise_app(a), 'state_revision': sidecar.get('_revision'),
+             'registration_mismatch': bool(sidecar.get('registration_mismatch'))}
             for a in apps
         ]
     return out
