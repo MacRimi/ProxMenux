@@ -253,15 +253,20 @@ def same_config_except_notes(record, config, ignore_tags=False):
     if identity(previous) != expected or identity(config) != expected:
         return False
 
-    def without_notes(value):
+    def without_notes(value, recorded=False):
         lines = value.splitlines(keepends=True)
         notes = [line for line in lines if line.startswith(b'description: ')]
         if len(notes) != 1:
             return None
         dropped = (b'description: ', b'tags: ') if ignore_tags else (b'description: ',)
+        # A lock is never part of the configuration: one recorded while the
+        # container was locked for a moment (`pct mount`) is not compared. A
+        # lock on the live container still is: something is under way.
+        if recorded:
+            dropped += (b'lock: ',)
         return b''.join(line for line in lines if not line.startswith(dropped))
 
-    original = without_notes(previous)
+    original = without_notes(previous, recorded=True)
     return original is not None and original == without_notes(config)
 
 
@@ -284,6 +289,7 @@ def changed_settings(record, config, ignore_tags=False):
             result.setdefault(name, []).append(rest.strip())
         return result
     before, after = settings(record['observed']['config']), settings(config)
+    before.pop('lock', None)  # As in same_config_except_notes.
     return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
 
 
