@@ -1,0 +1,11 @@
+[
+  {
+    "template": "debian-13-turnkey-core_19.0.3_amd64.tar.gz",
+    "location": "https://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-13-turnkey-core_19.0.3_amd64.tar.gz",
+    "sha512sum": "47f8cef7d7d7a908397c8dd40b760852ec1767b3c62d3b43d4509d98afc0064422304cfe31023a47bb2d634d0a363c420a3e3be8d83cf3acb2010990e766199d",
+    "architecture": "amd64",
+    "source": "https://releases.turnkeylinux.org/pve",
+    "type": "lxc",
+    "section": "turnkeylinux"
+  }
+]

@@ -931,6 +931,13 @@ show_version_info() {
 # ==========================================================
 uninstall_proxmenu() {
     local FUNC_VERSION="1.0"
+    # Pending native tasks outlive the console. Do not erase their operation
+    # journal or permit reinstall to forget a reservation.
+    if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]] && ! /usr/bin/python3 -I -B \
+        "$BASE_DIR/scripts/lxc/plain_lxc.py" --check-uninstall >/dev/null; then
+        dialog --msgbox "$(translate "Check pending plain LXC operations before uninstalling ProxMenux.")" 10 70
+        return 1
+    fi
     pmx_journal_context "uninstall_proxmenu" "$FUNC_VERSION"
     if ! dialog --clear --backtitle "$BACKTITLE" \
                 --title "Uninstall ProxMenux" \
@@ -947,8 +954,27 @@ uninstall_proxmenu() {
                            "jq" "JSON processor" OFF \
                            3>&1 1>&2 2>&3)
 
+    # Share the CLI's ephemeral lock, outside the tree being removed. Holding
+    # it through the whole uninstall closes the check/delete/new-admission race.
+    local plain_lxc_lock_fd=""
+    if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]]; then
+        install -d -m 0700 /run/proxmenux-plain-lxc || return 1
+        (umask 077; : >> /run/proxmenux-plain-lxc/controller.lock) || return 1
+        exec {plain_lxc_lock_fd}<> /run/proxmenux-plain-lxc/controller.lock || return 1
+        if ! flock -n "$plain_lxc_lock_fd"; then
+            exec {plain_lxc_lock_fd}>&-
+            dialog --msgbox "$(translate "Check pending plain LXC operations before uninstalling ProxMenux.")" 10 70
+            return 1
+        fi
+    fi
+
     # Perform uninstallation with progress bar
     (
+        if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]] && ! /usr/bin/python3 -I -B \
+            "$BASE_DIR/scripts/lxc/plain_lxc.py" --remove-legacy-alias >/dev/null; then
+            echo "100" ; echo "$(translate "Plain LXC state needs review; uninstallation stopped.")"
+            exit 1
+        fi
         echo "10" ; echo "Removing ProxMenu files..."
         sleep 1
 
@@ -1007,6 +1033,13 @@ uninstall_proxmenu() {
     ) | dialog --clear --backtitle "$BACKTITLE" \
                --title "Uninstalling ProxMenux" \
                --gauge "Starting uninstallation..." 10 60 0
+
+    local uninstall_worker_status="${PIPESTATUS[0]}"
+    if [[ "$uninstall_worker_status" != 0 ]]; then
+        [[ -n "$plain_lxc_lock_fd" ]] && exec {plain_lxc_lock_fd}>&-
+        dialog --msgbox "$(translate "Uninstallation stopped. Review pending operations before trying again.")" 10 70
+        return 1
+    fi
     
     # Show completion message
     local final_message="ProxMenux has been uninstalled successfully.\n\n"
