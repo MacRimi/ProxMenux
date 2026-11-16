@@ -257,13 +257,16 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
     if plan.get("deployment_kind"):
         base_vmid = plan.get("base_vmid")
         row(translate("Stack"), plan.get("stack_name", title))
-        row(translate("Base VMID"), base_vmid if base_vmid is not None else translate("next free block"))
+        if not plan.get("service_vmids"):
+            row(translate("Base VMID"), base_vmid if base_vmid is not None else translate("next free block"))
         services = template.get("compose_stack", {}).get("services", [])
         if plan.get("deployment_kind") == "generic-multi-lxc-stack":
             services = [dict(s, vmid_offset=s["offset"]) for s in plan["services"]]
         for service in sorted(services, key=lambda item: item.get("vmid_offset", 0)):
             offset = service.get("vmid_offset", 0)
-            vmid = base_vmid + offset if base_vmid is not None else f"base+{offset}"
+            vmid = plan.get("service_vmids", {}).get(service["name"])
+            if vmid is None:
+                vmid = base_vmid + offset if base_vmid is not None else f"base+{offset}"
             lines.append(f"  - {service['name']}: CT {vmid}")
         lines.append("")
         row("Rootfs", plan.get("rootfs_storage", "-"))

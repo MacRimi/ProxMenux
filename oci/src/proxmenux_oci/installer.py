@@ -467,13 +467,13 @@ def build_deployment(
         from .stack import DefaultsUI
         ui = DefaultsUI(ui)
     if template.get("id") == "image-immich":
-        return _build_immich_deployment(template, ui)
+        return _build_immich_deployment(template, ui, mode)
     if template.get("id") == "image-nextcloud-stack":
-        return _build_nextcloud_stack_deployment(template, ui)
+        return _build_nextcloud_stack_deployment(template, ui, mode)
     if template.get("id") == "image-paperless-ngx":
-        return _build_paperless_stack_deployment(template, ui)
+        return _build_paperless_stack_deployment(template, ui, mode)
     if template.get("id") == "image-tandoor":
-        return _build_tandoor_stack_deployment(template, ui)
+        return _build_tandoor_stack_deployment(template, ui, mode)
     if template.get("id") == "image-rclone":
         return _build_rclone_deployment(template, ui)
     advanced = mode != DEFAULT_MODE
@@ -1202,6 +1202,7 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
 def _build_immich_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1251,7 +1252,10 @@ def _build_immich_deployment(
     (video_acceleration, render_device, vaapi_driver,
      ml_acceleration, ml_render) = _ask_immich_acceleration(ui, rootfs_storage)
     extra_devices = ask_application_extra_devices(ui, ("usb",))
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "immich-four-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1308,6 +1312,7 @@ def _build_immich_deployment(
 def _build_nextcloud_stack_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1375,7 +1380,10 @@ def _build_nextcloud_stack_deployment(
 
     extra_devices = ask_application_extra_devices(ui)
     private = defaults["private_network"]
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "nextcloud-three-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1421,6 +1429,7 @@ def _build_nextcloud_stack_deployment(
 def _build_paperless_stack_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1504,7 +1513,10 @@ def _build_paperless_stack_deployment(
 
     extra_devices = ask_application_extra_devices(ui)
     private = defaults["private_network"]
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "paperless-three-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1552,6 +1564,7 @@ def _build_paperless_stack_deployment(
 def _build_tandoor_stack_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1649,7 +1662,10 @@ def _build_tandoor_stack_deployment(
         )
 
     private = defaults["private_network"]
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "tandoor-two-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1770,7 +1786,7 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
             shutil.copy2(project_root / 'remote' / 'oci_image_mountpoints.py', temporary / 'oci_image_mountpoints.py')
-            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
@@ -1807,7 +1823,7 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')

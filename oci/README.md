@@ -1037,6 +1037,23 @@ recorded back into the local app JSON for future update comparisons.
 
 ## Generic multi-LXC installer
 
+### Choosing container IDs
+
+The Base VMID field still proposes a consecutive block. In **Advanced Mode**,
+the optional **Choose a VMID for each service?** step lets you replace those
+proposals, for example with `210` for the application, `215` for its database
+and `220` for its cache. This is available for generic/custom Compose stacks,
+Immich, Nextcloud, Paperless, Tandoor and the Arr suite. Default installation
+and declining the extra step keep the existing consecutive allocation.
+
+The deployment saves the complete selection in `service_vmids`, keyed by
+service name. The installer rejects missing, duplicate, out-of-range or occupied
+IDs before creating containers, checking both VMs and LXCs throughout the
+cluster. Allocation remains serialized on this node; Proxmox's own creation
+checks handle races with other nodes or tools. Private IP addresses and startup
+order still follow service roles, independently of the chosen IDs. Existing
+update, Modify and recovery operations use the recorded member IDs.
+
 The generic stack compiler now handles an application with official PostgreSQL
 and Redis/Valkey dependencies. It reuses `install_oci.sh` for image verification
 and native OCI import. Docmost and Blinko are the first eligible catalog entries;
@@ -1265,4 +1282,4 @@ No fixed-version exception or deployment has been introduced.
 
 ## Automatic catalog refresh
 
-OCI Manager opens with its local catalog and checks for new applications and recipes in the background. **Refresh catalog** repeats the check manually. See [Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility. 
+OCI Manager opens with its local catalog and checks for new applications and recipes in the background. **Refresh catalog** repeats the check manually. See [Automatic catalog refresh](CATALOG-REFRESH.md) for caching, channels and compatibility.
