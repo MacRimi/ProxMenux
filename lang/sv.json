@@ -2537,6 +2537,7 @@
   "Downloading the catalog files ({done}/{total})...": "Laddar ner katalogfilerna ({done}/{total})...",
   "Downloading the image:": "Ladda ner bilden:",
   "Downloading the latest Fastfetch release...": "Laddar ner den senaste Fastfetch-versionen...",
+  "Downloads": "Nedladdningar",
   "Downstream Proxmox Backup Server build detected (PXVIRT): APT sources left unchanged.": "Härledd version av Proxmox Backup Server upptäckt (PXVIRT): APT-källorna lämnas oförändrade.",
   "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.": "Härledd version av Proxmox VE upptäckt (PXVIRT): APT-källorna lämnas oförändrade.",
   "Downtify is a self-hosted music downloader and player that turns links from Spotify, YouTube Music, Deezer, and SoundCloud into a tagged audio library. It resolves metadata from public web pages without needing Spotify accounts or API keys, matching audio and fetching it via YouTube. The application includes a built-in web player with synchronized lyrics, playlist management, automated playlist monitoring, and multi-user support.": "Downtify är en självhostad musiknedladdare och musikspelare som förvandlar länkar från Spotify, YouTube Music, Deezer och SoundCloud till ett taggat ljudbibliotek. Den hämtar metadata från offentliga webbsidor utan att kräva Spotify-konton eller API-nycklar, matchar ljudet och hämtar det via YouTube. Applikationen har en inbyggd webbspelare med synkroniserad sångtext, spellistehantering, automatisk spellisteövervakning och stöd för flera användare.",

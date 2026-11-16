@@ -54,7 +54,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | AdGuard Home Sync | Adblock & DNS |
 | Alby Hub ✨ | Finance & Budgeting |
 | Alist | Files & Sharing |
-| aMule | Files & Downloads |
+| aMule | Downloads |
 | Authentik | Authentication & Security |
 | ChromeOS Flex | Browsers & Web Desktops |
 | Chromium | Browsers & Web Desktops |
@@ -71,7 +71,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Grafana | Monitoring & Analytics |
 | HAOS One | IoT & Smart Home |
 | Immich | Media |
-| JDownloader | Files & Downloads |
+| JDownloader | Downloads |
 | Jenkins CI/CD | AI / Coding & Dev-Tools |
 | Linkwarden | Documents & Notes |
 | MariaDB | Databases |
@@ -90,9 +90,9 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Proxmox Backup Server | Backup & Recovery |
 | Proxmox Datacenter Manager | Host Management |
 | Proxmox Mail Gateway | Authentication & Security |
-| qBittorrent | Files & Downloads |
+| qBittorrent | Downloads |
 | Rclone WebUI | Backup & Recovery |
-| Real-Debrid Torrent Client | Files & Downloads |
+| Real-Debrid Torrent Client | Downloads |
 | Scanopy | Network & Firewall |
 | ShareCoveX | Files & Sharing |
 | SnapOtter | Media & Streaming |

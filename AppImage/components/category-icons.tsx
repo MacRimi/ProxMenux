@@ -78,6 +78,7 @@ const ICON_BY_CATEGORY: Record<string, string> = {
   "Browsers & Web Desktops": "browser",
   "*Arr Suite": "popcorn",
   "Files & Downloads": "download-simple",
+  "Downloads": "download-simple",
   "IoT & Smart Home": "house-line",
   "Remote Access & VPN": "plugs-connected",
   "Authentication & Security": "shield-check",

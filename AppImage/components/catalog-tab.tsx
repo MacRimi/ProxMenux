@@ -57,6 +57,9 @@ interface CatalogItem {
   // installation creates: one for each service.
   publisher?: { kind: "official" | "linuxserver" | "other"; name: string }
   containers?: number
+  // The same application from every source shares this group, even when
+  // the names differ.
+  same?: string
 }
 
 // A section of the tools: one of the main menu of ProxMenux, with the
@@ -123,6 +126,8 @@ function appKey(name: string) {
   }
   return key
 }
+
+const sameKey = (item: CatalogItem) => item.same || appKey(item.name)
 
 // Several images of one project share its name: the project's own comes
 // first, then the one of LinuxServer.io, then any other publisher's.
@@ -993,7 +998,7 @@ export function CatalogTab() {
   // The applications that are the same one from another source.
   const sameApp = useMemo(() => {
     const groups = new Map<string, CatalogItem[]>()
-    for (const item of apps) groups.set(appKey(item.name), [...(groups.get(appKey(item.name)) || []), item])
+    for (const item of apps) groups.set(sameKey(item), [...(groups.get(sameKey(item)) || []), item])
     for (const list of groups.values()) list.sort((a, b) => SOURCE_ORDER[a.kind] - SOURCE_ORDER[b.kind] || publisherRank(a) - publisherRank(b))
     return groups
   }, [apps])
@@ -1206,7 +1211,7 @@ export function CatalogTab() {
       )}
 
       {open && <Sheet key={open.key} item={open} onClose={() => setOpen(null)} onRun={advanced => { setRun({ item: open, advanced }); setOpen(null) }}
-        related={(sameApp.get(appKey(open.name)) || []).filter(other => other.key !== open.key)} onOpenOther={setOpen} />}
+        related={(sameApp.get(sameKey(open)) || []).filter(other => other.key !== open.key)} onOpenOther={setOpen} />}
 
       {run && (
         <ScriptTerminalModal
