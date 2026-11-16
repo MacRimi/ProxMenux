@@ -253,7 +253,7 @@ def inventory(api, node, vmid=None, *, raw=None):
         raise LxcError('pve_output_invalid')
     context['capabilities'] = {key:min(16,quantity(capabilities.get(key, 0))) for key in ('mount_points','devices')}
     context['devices'] = api.hardware_inventory() if context['capabilities']['devices'] else {}
-    if type(context['devices']) is not dict:
+    if not isinstance(context['devices'], dict):
         raise LxcError('pve_output_invalid')
     context['hardware'] = profiles(context['devices'])
     context['hardware_errors'] = sorted(set(getattr(context['devices'],'errors',[])))

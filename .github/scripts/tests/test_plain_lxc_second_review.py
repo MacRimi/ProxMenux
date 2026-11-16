@@ -68,6 +68,15 @@ class HardwareContractTests(unittest.TestCase):
         profile=next(iter(resources.profiles(self.api.hardware).values()))
         return {'profile':profile['profile'],'selection_id':profile['selection_id']}
 
+    def test_real_inventory_type_keeps_partial_probe_errors_and_usable_devices(self):
+        actual=resources.DeviceInventory();actual['/dev/dri/renderD128']=intel()
+        actual.errors=['usb_inventory_unavailable']
+        with patch.object(self.api,'hardware_inventory',return_value=actual):
+            result=self.call('context')
+        self.assertEqual(result['hardware_errors'],['usb_inventory_unavailable'])
+        self.assertEqual(next(iter(result['hardware'].values()))['devices'][0]['gid'],993)
+        self.assertEqual(self.api.writes,[])
+
     def payload(self,hardware,**flags):
         checked=self.call('plan',spec={**self.spec,'prepare_system':False,'hardware':hardware,**flags})
         return {**checked,'request_id':fixture.REQUEST_ID,'confirmed':True,
