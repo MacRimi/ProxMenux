@@ -971,7 +971,7 @@ uninstall_proxmenu() {
     # Perform uninstallation with progress bar
     (
         if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]] && ! /usr/bin/python3 -I -B \
-            "$BASE_DIR/scripts/lxc/plain_lxc.py" --remove-legacy-alias >/dev/null; then
+            "$BASE_DIR/scripts/lxc/plain_lxc.py" --check-uninstall >/dev/null; then
             echo "100" ; echo "$(translate "Plain LXC state needs review; uninstallation stopped.")"
             exit 1
         fi

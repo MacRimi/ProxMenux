@@ -1481,6 +1481,7 @@ class MenuTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             engine = Path(folder) / "scripts/lxc"
             shutil.copytree(LXC, engine)
+            shutil.copytree(ROOT / 'oci/remote', Path(folder) / 'oci/engine/remote')
             result = subprocess.run(["/usr/bin/python3", "-I", "-B", str(engine / "plain_lxc.py")],
                                     input=b"", capture_output=True)
             self.assertEqual(result.returncode, 1)
@@ -1588,10 +1589,26 @@ sub PVE::LXC::vm_start {
     record_call('START'); die 'native start failure' if $ENV{TEST_START_FAIL};
     record_call('START_FULL_CONFIG') if grep { /\A(?:mp|dev)[0-9]+\z/ } keys %{$_[1]};
 }
+sub PVE::LXC::Config::write_config {
+    die unless $main::locked;
+    record_call('WRITE_HARDWARE');
+}
 sub PVE::Tools::run_command {
     my ($cmd, %options) = @_;
     if ($cmd->[3] =~ m{/plain_lxc_resources.py$}) {
-        die unless $options{timeout} == 10 && $cmd->[4] eq '--check-device' && $cmd->[6] eq '240';
+        if ($cmd->[4] eq '--check-hardware' || $cmd->[4] eq '--prepare-hardware') {
+            die unless $options{timeout} == 180 && $cmd->[5] eq '--json' && $cmd->[6] eq '240';
+            my $input = JSON::PP::decode_json($options{input});
+            die unless ref($input->{hardware}) eq 'ARRAY' && ref($input->{devices}) eq 'ARRAY';
+            record_call($cmd->[4] eq '--prepare-hardware' ? 'PREPARE_HARDWARE' : 'CHECK_HARDWARE');
+            die 'hardware policy conflict' if $ENV{TEST_HARDWARE_FAIL};
+            die 'hardware preparation failed' if $cmd->[4] eq '--prepare-hardware' && $ENV{TEST_HARDWARE_PREPARE_FAIL};
+            my $wanted = JSON::PP::decode_json($ENV{TEST_HARDWARE_LXC} // '[]');
+            die 'unexpected lxc directives' if @{$input->{lxc}} && JSON::PP::encode_json($input->{lxc}) ne JSON::PP::encode_json($wanted);
+            $options{outfunc}->(JSON::PP::encode_json($wanted));
+            return;
+        }
+        die unless $options{timeout} == 180 && $cmd->[4] eq '--check-device' && $cmd->[6] eq '240';
         record_call('CHECK_DEVICE'); die 'device policy conflict' if $ENV{TEST_DEVICE_POLICY_FAIL};
         return;
     }

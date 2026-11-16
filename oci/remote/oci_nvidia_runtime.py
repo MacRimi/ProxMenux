@@ -9,6 +9,7 @@ import subprocess
 
 from oci_gpu_devices import actual_devices, device_fields
 from oci_ui import translate
+from lxc_hardware import nvidia_snapshot
 
 KEY = '_nvidia_runtime'
 QUERY = '--query-gpu=uuid,pci.bus_id,driver_version'
@@ -37,37 +38,7 @@ def digest(path):
 
 
 def snapshot():
-    gpus = sorted(line.strip() for line in command('nvidia-smi', QUERY, '--format=csv,noheader').splitlines() if line.strip())
-    if not gpus:
-        raise ValueError(translate('No working NVIDIA GPU was found'))
-    version = command('nvidia-container-cli', '--version')
-    paths = command('nvidia-container-cli', 'list', '--device', 'all', '--libraries', '--binaries', '--firmwares', '--ipcs')
-    devices, files, links = {}, {}, {}
-    for name in sorted(set(paths.splitlines())):
-        if not name.startswith('/') or str(PurePosixPath(name)) != name or any(c.isspace() or c == ',' for c in name):
-            raise ValueError(translate('Invalid path in the NVIDIA inventory'))
-        path = Path(name)
-        info = path.stat()
-        basic = {'source': str(path.resolve()), 'uid': info.st_uid,
-                 'gid': info.st_gid, 'mode': stat.S_IMODE(info.st_mode)}
-        if stat.S_ISCHR(info.st_mode):
-            if not name.startswith('/dev/nvidia'):
-                raise ValueError(translate('NVIDIA device outside the expected native profile'))
-            devices[name] = dict(basic, major=os.major(info.st_rdev), minor=os.minor(info.st_rdev))
-        elif stat.S_ISREG(info.st_mode):
-            files[name] = dict(basic, size=info.st_size, sha256=digest(path))
-            if name.startswith('/usr/lib/'):
-                for link in path.parent.iterdir():
-                    if link.is_symlink() and str(link.resolve()) == basic['source']:
-                        links[str(link)] = os.readlink(link)
-        # The common installer intentionally does not publish IPC sockets.
-    if not devices or not files:
-        raise ValueError(translate('Incomplete NVIDIA inventory'))
-    versions = [l for l in version.splitlines() if l.startswith(('cli-version:', 'lib-version:'))]
-    if len(versions) != 2:
-        raise ValueError(translate('The NVIDIA Container Toolkit version cannot be identified'))
-    return {'gpus': gpus, 'toolkit_version': versions,
-            'devices': devices, 'files': files, 'links': links}
+    return nvidia_snapshot(command)
 
 
 def verify(value):

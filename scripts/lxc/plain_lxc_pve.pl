@@ -71,10 +71,29 @@ sub check_path_identity {
     die if grep { "$actual{$_}" ne "$expected->{$_}" } keys %actual;
 }
 
+sub hardware_config {
+    my ($config, $resources, $vmid, $prepare) = @_;
+    my $hardware = $resources->{hardware} // [];
+    my $lxc = $config->{lxc} // [];
+    die unless ref($hardware) eq 'ARRAY' && @$hardware <= 16 && ref($lxc) eq 'ARRAY';
+    return [] if !@$hardware && !@$lxc;
+    my @devices = map { my $d=$_; +{ map { $_ => $d->{$_} } qw(path uid gid mode) } } @{$resources->{devices}};
+    require PVE::Tools;
+    my $output = '';
+    PVE::Tools::run_command(['/usr/bin/python3','-I','-B',
+        File::Basename::dirname(__FILE__) . '/plain_lxc_resources.py',
+        $prepare ? '--prepare-hardware' : '--check-hardware', '--json', "$vmid"],
+        input => encode_json({hardware=>$hardware, lxc=>$lxc, devices=>\@devices}),
+        timeout => 180, outfunc => sub { $output .= $_[0]; }, errfunc => sub {});
+    my $entries = decode_json($output);
+    die unless ref($entries) eq 'ARRAY' && @$entries <= 3;
+    return $entries;
+}
+
 sub check_resources {
     my ($config, $resources, $vmid, $created) = @_;
     $resources //= {mounts=>[], devices=>[]};
-    die unless ref($resources) eq 'HASH' && join(',',sort keys %$resources) eq 'devices,mounts';
+    die unless ref($resources) eq 'HASH' && (join(',',sort keys %$resources) eq 'devices,mounts' || join(',',sort keys %$resources) eq 'devices,hardware,mounts');
     die unless ref($resources->{mounts}) eq 'ARRAY' && ref($resources->{devices}) eq 'ARRAY'
         && @{$resources->{mounts}} <= 16 && @{$resources->{devices}} <= 16;
     require PVE::LXC::Config;
@@ -125,7 +144,7 @@ sub check_resources {
         my $item = $resources->{devices}->[$index];
         die unless exists($properties->{$key}) && ref($item) eq 'HASH'
             && join(',',sort keys %$item) eq 'gid,identity,mode,path,uid' && defined($config->{$key})
-            && ($item->{path} // '') =~ m{\A/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)\z}
+            && ($item->{path} // '') =~ m{\A/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|kfd|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)\z}
             && ($item->{mode} // '') =~ /\A0[0-7]{3}\z/;
         for my $id (qw(uid gid)) { die unless ($item->{$id} // '') =~ /\A[0-9]{1,10}\z/ && $item->{$id} <= 2147483647; }
         my $actual = PVE::LXC::Config->parse_device($config->{$key});
@@ -135,12 +154,15 @@ sub check_resources {
         require PVE::Tools;
         # Reuse the shared read-only policy at the final native boundary too.
         # No host driver install, VFIO changes, chmod, guest command or shell.
-        PVE::Tools::run_command(['/usr/bin/python3','-I','-B',
-            File::Basename::dirname(__FILE__) . '/plain_lxc_resources.py', '--check-device', $item->{path}, "$vmid"],
-            timeout => 10, outfunc => sub {}, errfunc => sub {});
+        if (!exists($resources->{hardware})) {
+            PVE::Tools::run_command(['/usr/bin/python3','-I','-B',
+                File::Basename::dirname(__FILE__) . '/plain_lxc_resources.py', '--check-device', $item->{path}, "$vmid"],
+                timeout => 180, outfunc => sub {}, errfunc => sub {});
+        }
         $wanted{$key} = 1;
     }
     die if grep { /\A(?:mp|dev)[0-9]+\z/ && !$wanted{$_} } keys %$config;
+    hardware_config($config,$resources,$vmid,0) if exists($resources->{hardware}) || @{$config->{lxc} // []};
 }
 
 sub storage_inventory {
@@ -361,7 +383,10 @@ sub dispatch {
         # New requests always carry an explicit boolean in their reviewed plan.
         my $prepare_system = exists($expected->{prepare_system}) ? $expected->{prepare_system} : 1;
         die unless "$prepare_system" =~ /\A[01]\z/;
-        die if $action eq 'prepare' && !$prepare_system;
+        my $prepare_hardware = ref($expected->{resources}) eq 'HASH'
+            && ref($expected->{resources}->{hardware}) eq 'ARRAY'
+            && grep { ref($_) eq 'HASH' && ref($_->{runtime}) eq 'HASH' } @{$expected->{resources}->{hardware}};
+        die if $action eq 'prepare' && !$prepare_system && !$prepare_hardware;
         my %identity = %$expected;
         delete @identity{qw(prepare_system resources arch)};
         die if exists($expected->{arch}) && ($expected->{arch} // '') !~ /\A(?:amd64|arm64)\z/;
@@ -389,7 +414,7 @@ sub dispatch {
                     && !$config->{lock} && !$config->{template} && ($config->{unprivileged} // '') eq '1'
                     && !PVE::LXC::check_running($vmid) && !PVE::HA::Config::vm_is_ha_managed($vmid)
                     && !keys %{$config->{pending} // {}}
-                    && (!exists($config->{lxc}) || (ref($config->{lxc}) eq 'ARRAY' && !@{$config->{lxc}}))
+                    && (!exists($config->{lxc}) || (ref($config->{lxc}) eq 'ARRAY' && (!@{$config->{lxc}} || $prepare_hardware)))
                     && !grep { /\A(?:unused[0-9]+|hookscript)\z/ } keys %$config;
                 check_resources($config, $expected->{resources}, $vmid, 1);
                 die "ProxMenux preparation failed: architecture_changed\n"
@@ -421,11 +446,20 @@ sub dispatch {
                     unless $rootfs->{type} eq 'volume' && !$rootfs->{ro} && !$rootfs->{quota}
                     && !$rootfs->{mountoptions} && !$rootfs->{idmap}
                     && $sid eq $expected->{storage} && defined($owner) && $owner == $vmid;
+                if ($prepare_hardware) {
+                    my $entries = hardware_config($config,$expected->{resources},$vmid,1);
+                    if (encode_json($config->{lxc} // []) ne encode_json($entries)) {
+                        $config->{lxc} = $entries;
+                        PVE::LXC::Config->write_config($vmid,$config);
+                    }
+                    hardware_config($config,$expected->{resources},$vmid,0);
+                    print "ProxMenux: hardware preparation completed\n";
+                }
                 if (!$prepare_system) {
                     # Native start with the same identity lock, without mounting
                     # or modifying the guest filesystem at all.
                     $prepared = 1;
-                    PVE::LXC::vm_start($vmid, $config, 0, 0);
+                    PVE::LXC::vm_start($vmid, $config, 0, 0) if $action eq 'start';
                     return;
                 }
                 my $root = "/var/lib/lxc/$vmid/rootfs";
@@ -462,7 +496,7 @@ sub dispatch {
                 PVE::LXC::vm_start($vmid, $config, 0, 0) if $action eq 'start';
             }); };
             if (my $error = $@) {
-                if (!$prepare_system) {
+                if (!$prepare_system && !$prepare_hardware) {
                     $error =~ s/ProxMenux preparation failed:/ProxMenux start validation failed:/g;
                     die $error;
                 }

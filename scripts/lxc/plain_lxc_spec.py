@@ -32,7 +32,7 @@ STORAGE = r"[A-Za-z][A-Za-z0-9_.-]{0,63}"
 ARCHIVE = r"[A-Za-z0-9][A-Za-z0-9_.+-]*\.(?:tar(?:\.(?:gz|xz|zst|bz2|lzma))?|tgz)"
 BRIDGE = r"[A-Za-z0-9_.-]{1,15}"
 REQUEST_ID = r"[a-f0-9]{32}"
-DEVICE_PATH = r'/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)'
+DEVICE_PATH = r'/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|kfd|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)'
 DEFAULTS = {
     "cpu": {"cores": 1},
     "memory": {"ram_mib": 512, "swap_mib": 512},
@@ -224,9 +224,27 @@ def normalize_devices(devices):
     return result
 
 
-def normalize(spec):
+def normalize_hardware(items):
+    if type(items) is not list or len(items) > 16:
+        raise LxcError('invalid_field','hardware')
+    result = []
+    for item in items:
+        fields(item,'profile selection_id',field='hardware')
+        profile = string(item['profile'], r'intel-drm|amd-drm|amd-rocm|nvidia-runtime|coral|npu|usb',32,'hardware.profile')
+        selection = string(item['selection_id'],r'[a-zA-Z0-9_-]+',64,'hardware.selection_id')
+        if any(row['selection_id'] == selection for row in result):
+            raise LxcError('invalid_field','hardware')
+        result.append({'profile':profile,'selection_id':selection})
+    return result
+
+
+def normalize(spec, schema_version=1):
     fields(spec, "node vmid hostname template access rootfs network",
-           "cpu memory dns onboot start_after_create nesting prepare_system mounts devices", "spec")
+           "cpu memory dns onboot start_after_create nesting prepare_system mounts devices hardware", "spec")
+    if schema_version == 2 and "devices" in spec:
+        raise LxcError("invalid_field", "devices")
+    if schema_version == 1 and "hardware" in spec:
+        raise LxcError("unsupported_schema", "hardware")
     template, access, rootfs = spec["template"], spec["access"], spec["rootfs"]
     cpu, memory = spec.get("cpu", {}), spec.get("memory", {})
     fields(template, "volume_id", "architecture", field="template")
@@ -273,7 +291,8 @@ def normalize(spec):
         "nesting": spec.get("nesting", DEFAULTS["nesting"]),
         "prepare_system": spec.get("prepare_system", DEFAULTS["prepare_system"]),
         'mounts': normalize_mounts(spec.get('mounts', [])),
-        'devices': normalize_devices(spec.get('devices', [])),
+        **({'hardware':normalize_hardware(spec.get('hardware',[]))} if schema_version == 2
+           else {'devices':normalize_devices(spec.get('devices',[]))}),
     }
 
 

@@ -12,26 +12,19 @@
 # Last Updated: 15/11/2026
 # ==========================================================
 # Description:
-# Protect the local operation journal and coordinate controllers with
-# migration and uninstall. Explicit offline migration preserves current
-# records using an atomic Linux exchange, with no guest or PVE actions.
+# Protect the installation-owned operation journal and uninstall admission.
 # ==========================================================
-"""Installation-owned state and explicit, reversible offline migration.
-
-No Proxmox calls, guest changes, SQL replay or restored database snapshots.
-"""
+"""Installation-owned journal and fail-closed uninstall checks."""
 from contextlib import contextmanager, closing
 import fcntl
 import os
 from pathlib import Path
 import sqlite3
 import stat
-import ctypes
 
 from plain_lxc_spec import LxcError
 
 STATE = Path('/usr/local/share/proxmenux/state/plain-lxc')
-LEGACY_STATE = Path('/var/lib/proxmenux/plain-lxc')
 RUNTIME = Path('/run/proxmenux-plain-lxc')
 
 
@@ -67,23 +60,12 @@ def lock_file(path, *, exclusive=True):
         os.close(fd)
 
 
-def installed_directory(*, legacy=False):
-    old_present = LEGACY_STATE.exists() or LEGACY_STATE.is_symlink()
-    alias = LEGACY_STATE.is_symlink() and LEGACY_STATE.resolve() == STATE
-    if legacy:
-        if not old_present or alias or STATE.exists():
-            raise LxcError('state_migration_conflict')
-        return LEGACY_STATE
-    if old_present and not alias:
-        raise LxcError('state_migration_required')
-    if alias and not STATE.is_dir():
-        raise LxcError('state_migration_conflict')
+def installed_directory():
     return STATE
 
 
 def assert_quiescent_processes():
-    # Pre-option controllers do not know our locks. Explicit migration also
-    # requires their installed command and wizard to have exited. Do not print
+    # Verify pre-lock controllers and wizards have also exited. Do not print
     # any process arguments (they can belong to unrelated applications).
     for entry in Path('/proc').iterdir():
         if not entry.name.isdecimal() or int(entry.name) == os.getpid():
@@ -93,9 +75,9 @@ def assert_quiescent_processes():
         except FileNotFoundError:
             continue
         except PermissionError:
-            raise LxcError('state_migration_busy') from None
+            raise LxcError('operation_controller_active') from None
         if any(value.endswith((b'/plain_lxc.py', b'/plain_lxc_wizard.py', b'/plain_lxc_pve.pl')) for value in args):
-            raise LxcError('state_migration_busy')
+            raise LxcError('operation_controller_active')
 
 
 def pending_count(directory):
@@ -115,99 +97,13 @@ def pending_count(directory):
         return db.execute('SELECT count(*) FROM operations WHERE pending=1').fetchone()[0]
 
 
-def exchange_directories(source, destination):
-    """Linux RENAME_EXCHANGE (linux/fs.h), no interval with a missing source."""
-    libc = ctypes.CDLL(None, use_errno=True)
-    try:
-        exchange = libc.renameat2
-    except AttributeError:
-        raise LxcError('state_migration_unavailable') from None
-    exchange.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
-    exchange.restype = ctypes.c_int
-    first = os.open(source.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
-    try:
-        second = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
-        try:
-            if exchange(first, os.fsencode(source.name), second, os.fsencode(destination.name), 2):
-                error = ctypes.get_errno()
-                raise OSError(error, os.strerror(error))
-        finally:
-            os.close(second)
-    finally:
-        os.close(first)
-
-
-def migrate_state(source=LEGACY_STATE, destination=STATE, *, rollback=False):
-    """Run explicitly with all controllers closed; retain a fail-closed alias.
-
-    Rename is atomic on one filesystem. Cross-filesystem installs fail intact
-    instead of publishing a copied/stale DB. Old binaries reject the symlink
-    and cannot silently create a second operation store. Rollback moves the
-    current DB back; it never restores an earlier snapshot over newer records.
-    """
-    assert_quiescent_processes()
-    if not source.is_absolute() or not destination.is_absolute():
-        raise LxcError('state_migration_conflict')
-    if rollback:
-        if not source.is_symlink() or source.resolve() != destination.resolve():
-            raise LxcError('state_migration_conflict')
-        active = destination
-    else:
-        if source.is_symlink() or destination.exists() or destination.is_symlink():
-            raise LxcError('state_migration_conflict')
-        active = source
-    private_directory(active)
-    with lock_file(active / '.controllers.lock'):
-        if pending_count(active):
-            raise LxcError('state_operations_pending')
-        db_path = active / 'operations.sqlite3'
-        if db_path.exists():
-            with closing(sqlite3.connect(db_path.as_uri() + '?mode=rw', uri=True, timeout=1)) as db:
-                db.execute('BEGIN EXCLUSIVE')
-                has_operations = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='operations'").fetchone()
-                if has_operations and db.execute('SELECT count(*) FROM operations WHERE pending=1').fetchone()[0]:
-                    raise LxcError('state_operations_pending')
-                assert_quiescent_processes()
-                db.commit()
-        if rollback:
-            exchange_directories(source,destination)
-            destination.unlink()  # the former compatibility alias, never a DB
-        else:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.symlink_to(destination)
-            try:
-                exchange_directories(source,destination)
-            except BaseException:
-                if destination.is_symlink() and os.readlink(destination) == str(destination):
-                    destination.unlink()
-                raise
-    return {'directory': str(source if rollback else destination), 'migrated': True}
-
-
 def check_uninstall():
-    seen = set()
-    for directory in (STATE, LEGACY_STATE):
-        if not directory.exists():
-            if directory.is_symlink():
-                raise LxcError('state_migration_conflict')
-            continue
-        actual = directory.resolve()
-        if actual in seen:
-            continue
-        seen.add(actual)
-        if directory.is_symlink() and not (directory == LEGACY_STATE and actual == STATE):
-            raise LxcError('state_migration_conflict')
-        if pending_count(actual):
-            raise LxcError('state_operations_pending')
-        if directory == LEGACY_STATE and not directory.is_symlink():
-            raise LxcError('state_migration_required')
+    if STATE.is_symlink():
+        raise LxcError('operation_store_unavailable')
+    if STATE.exists():
+        private_directory(STATE)
+        with lock_file(STATE / '.controllers.lock'):
+            if pending_count(STATE):
+                raise LxcError('state_operations_pending')
     assert_quiescent_processes()
     return {'uninstall_safe': True}
-
-
-def remove_legacy_alias():
-    check_uninstall()
-    if LEGACY_STATE.is_symlink():
-        # check_uninstall has verified the exact, owned compatibility alias.
-        LEGACY_STATE.unlink()
-    return {'legacy_alias_removed': True}

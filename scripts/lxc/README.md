@@ -3,7 +3,8 @@
 The installed entry point is `/usr/bin/python3 -I -B /usr/local/share/proxmenux/scripts/lxc/plain_lxc.py`.
 It runs as root on the local Proxmox VE node. The console and any future
 adapter send one UTF-8 JSON object on stdin. Every request has
-`"schema_version": 1` and an `action`. The reply has the same version,
+`schema_version` (1 or 2) and an `action`. The console uses version 2;
+the JSON reply/progress envelope remains version 1 for both request versions,
 `ok`, and either `data` or a stable `error` code with an optional `field`.
 An input or preflight error exits with status 1. Once admitted, a request
 returns its operation state in `data`.
@@ -23,7 +24,7 @@ The following request produces a plan.
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "action": "plan",
   "spec": {
     "node": "pve",
@@ -143,67 +144,78 @@ plan does not guarantee extraction or later writes will fit the physical pool.
 
 ## Optional mount points and hardware
 
-`mounts` and `devices` default to empty lists, each limited to 16 and to the
-native capabilities advertised by this PVE version. They are part of the same
-spec, reviewed plan/hash, create preflight and native start validation.
+The console uses schema version 2 for context, plan and create. `mounts`
+and `hardware` default to empty lists, each bounded by native PVE capacity.
+Choose a profile and selection_id returned by context.hardware, for example:
 
 ```json
-{
-  "mounts": [
-    {"type":"volume","storage":"local-lvm","size_gib":8,"path":"/data","backup":true},
-    {"type":"bind","source":"/mnt/media","path":"/media","read_only":true}
-  ],
-  "devices": [
-    {"path":"/dev/dri/renderD128","uid":0,"gid":0,"mode":"0660"}
-  ]
-}
+{"schema_version":2,"action":"plan","spec":{
+  "node":"pve","vmid":240,"hostname":"debian-13",
+  "template":{"volume_id":"local:vztmpl/debian-13-standard_amd64.tar.zst"},
+  "access":{"mode":"ssh_key","ssh_public_keys":["<public key>"]},
+  "rootfs":{"storage":"local-lvm"},"network":null,
+  "hardware":[{"profile":"intel-drm","selection_id":"<ID from context.hardware>"}]
+}}
 ```
 
-Volume mounts allocate new PVE volumes; existing guest volumes cannot be
-attached through this schema. Bind sources must already be directories, with
-no symlink components or protected host system paths. Targets are absolute,
-non-overlapping data paths. Bind mounts default to read-only, are excluded
-from CT backups and keep host permissions unchanged. Device/inode and native
-volume-owner checks guard against changed sources or another guest's volumes.
+The profiles are intel-drm, amd-drm, amd-rocm, nvidia-runtime, coral, npu and
+usb. The engine resolves them to exact native nodes, UID 0, each host node's
+GID and mode 0660. NVIDIA preserves the host device permissions of its
+existing OCI runtime profile. The wizard never asks for numeric permissions.
+A host GID is a number, not a promise that the system template gives its group
+the same name or that an application user belongs to it.
 
-Hardware selection lists existing supported character nodes for DRM GPUs,
-mapped NVIDIA nodes, Coral/TPU, NPU/accel, USB and USB serial. Native `devN`
-support is required; there is no fallback to arbitrary raw LXC configuration.
-The GPU helper's SR-IOV VF/active-PF/VFIO exclusions also apply here. Accelerator
-nodes without an unambiguous kernel PCI mapping and USB hubs are not offered.
-Host drivers must already be configured. This flow never installs drivers,
-changes VFIO/initramfs/udev rules, reboots, or installs guest software.
+Intel/AMD render nodes are identified by sysfs vendor and PCI identity. AMD
+compute adds /dev/kfd only with a matching KFD render-minor topology. It does
+not install ROCm or import catalog application disk-size limits or overrides.
+USB uses the shared named inventory, tty for serial peripherals, and records
+vendor/product/serial/port/sysfs identity. Reconnection can change paths:
+a changed device requires a fresh reviewed plan. GPU sharing and exclusive
+USB/TPU/NPU ownership guards also cover existing LXC/QEMU assignments.
 
-GPU sharing is explicit. Existing CT assignments block duplicate exclusive
-USB/TPU/NPU use; VM USB host-port/vendor-product assignments are also checked.
-An unresolved VM USB mapping fails closed rather than assuming the device is
-free. USB paths can change after reconnection and are rechecked before action.
-The final native boundary repeats device policy/assignment checks using the
-shared read-only helper. Physical device operation still needs a runtime test.
+NVIDIA requires an already working driver and Container Toolkit. The entire
+existing unprivileged OCI runtime profile covers all host NVIDIA GPUs, native
+devN nodes and the same content-addressed mount hook. Toolkit resolves driver
+libraries at each start. Only the exact declared hook/environment is allowed;
+arbitrary raw LXC settings remain rejected. The hook remains an experimental
+runtime boundary that requires physical-host verification. It does not imply
+GPU workload validation on hardware absent from the test host.
+
+Hardware preparation is separate from optional system preparation and is
+journaled even when prepare_system=false and start_after_create=false.
+Results distinguish hardware_prepared from system_prepared. Failed or unknown
+preparation never starts or replays a missed operation. Persistent NVIDIA
+runtime helpers are outside the replaceable install tree; uninstall must not
+break an existing container's start dependency.
+
+Version 1 without hardware remains supported. New V1 devices requests must
+use a fresh V2 hardware plan; already admitted V1 requests remain observable
+and recoverable with their original request ID. V2 rejects a simultaneous
+devices field, duplicate selections and overlapping device profiles.
+
+Mount volumes and read-only host data directories retain the existing native
+checks, storage budgets, protected-path exclusions and identity rechecks.
+Drivers, host permissions, id maps, VFIO, initramfs and security policy are
+never changed by hardware discovery or planning.
+
+Known OCI cache archive names are excluded from the system-template choices
+and direct CLI plans, using the same predicate as OCI cache management.
+They remain occupied volumes, and no cached files are moved or deleted.
+Official, TurnKey and custom system templates retain their existing checks.
 
 ## Operation journal and upgrades
 
 New state lives in `/usr/local/share/proxmenux/state/plain-lxc`, outside the
 replaceable `scripts` and language directories. It is private to the invoking
 root process. An ephemeral lock under `/run/proxmenux-plain-lxc` coordinates
-mutations, migration and uninstall; it contains no journal or credentials.
+mutations and uninstall; it contains no journal or credentials.
 
-For a legacy `/var/lib/proxmenux/plain-lxc` journal, close all wizards and
-controllers first. Use the installed command with `--legacy-state` for
-`operations`, `status`, `task_log` or confirmed `recover` until no operation
-is pending. Then run the installed command with `--migrate-state` instead
-of JSON stdin. It atomically exchanges the current journal directory with a
-compatibility alias. Existing IDs, actors, results, logs, ownership and permissions
-are retained. Old binaries reject that alias instead of making a second DB.
-Conflicting stores, active controllers, pending records, unsupported atomic
-exchange and cross-filesystem layouts stop migration without copying a DB.
-
-`--rollback-state` atomically moves the current journal back to the legacy
-location while idle; it never restores an old snapshot over newer operations.
-Uninstall checks pending state before removal, holds the shared runtime lock
-exclusively and removes only its verified legacy alias and install-tree state.
-It does not delete containers, templates or their volumes. Failed state checks
-stop uninstall and must not be reported as successful completion.
+The earlier draft's legacy-state migration was never released and has been
+removed. No old directory or alias is deleted automatically. Uninstall checks
+the installed journal before removal and again while holding the runtime lock
+exclusively through removal. Active controllers, pending or unreadable state
+stop uninstall; errors in the progress pipeline must propagate. Containers,
+templates and their volumes are never deleted by this check.
 
 ## Console navigation
 

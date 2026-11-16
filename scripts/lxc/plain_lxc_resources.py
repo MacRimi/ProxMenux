@@ -18,6 +18,10 @@
 # ==========================================================
 """Read-only host resource discovery and identities, never driver configuration."""
 import os
+import hashlib
+import json
+import shutil
+import subprocess
 from pathlib import Path
 import re
 import stat
@@ -26,6 +30,117 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from plain_lxc_spec import DEVICE_PATH, LxcError, mount_path
+BASE = Path(__file__).resolve().parents[2]
+OCI_REMOTE = next((path for path in (BASE/'oci/remote', BASE/'oci/engine/remote')
+                   if (path/'lxc_hardware.py').is_file()), BASE/'oci/remote')
+sys.path.insert(0,str(OCI_REMOTE))
+import lxc_hardware as hardware
+
+HOOK = OCI_REMOTE / 'nvidia_lxc_mount_lab.sh'
+HOOK_DIRECTORY = Path('/usr/local/lib/proxmenux/oci')
+CAPABILITIES = 'compute,utility,video'
+
+
+class DeviceInventory(dict):
+    def __init__(self):
+        super().__init__()
+        self.errors = []
+
+
+def pci_identity(pci):
+    if (pci/'physfn').exists() or (pci/'physfn').is_symlink():
+        raise LxcError('resource_unavailable')
+    if (pci/'sriov_numvfs').exists() and (pci/'sriov_numvfs').read_text().strip() != '0':
+        raise LxcError('resource_unavailable')
+    driver = (pci/'driver').resolve(strict=True).name
+    if driver == 'vfio-pci':
+        raise LxcError('resource_unavailable')
+    return {'pci_path':str(pci.resolve(strict=True)), 'driver':driver}
+
+
+def nvidia_inventory():
+    value = hardware.nvidia_snapshot(hardware.read_command)
+    for row in value['gpus']:
+        parts = [part.strip() for part in row.split(',')]
+        if len(parts) != 3 or not re.fullmatch(r'[0-9A-Fa-f]{4,8}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}\.[0-7]', parts[1]):
+            raise LxcError('resource_unavailable')
+        pci_identity(Path('/sys/bus/pci/devices') / parts[1][-12:].lower())
+    return value
+
+
+def nvidia_runtime(value):
+    if HOOK.is_symlink() or not HOOK.is_file():
+        raise LxcError('resource_unavailable')
+    sha = hashlib.sha256(HOOK.read_bytes()).hexdigest()
+    return {'inventory':value, 'hook_sha256':sha,
+            'hook_path':str(HOOK_DIRECTORY / ('nvidia-mount-' + sha + '.sh')),
+            'capabilities':CAPABILITIES}
+
+
+def profiles(devices):
+    result = {}
+    for path, row in devices.items():
+        kind = row.get('profile')
+        if not kind:
+            continue
+        key = hashlib.sha256((kind + ':' + path).encode()).hexdigest()[:24]
+        item = {'profile':kind, 'selection_id':key, 'name':row['name'],
+                'devices':[{'path':path, 'uid':0, 'gid':row['identity']['gid'], 'mode':'0660'}],
+                'evidence':{path:row}}
+        result[key] = item
+        amd = row.get('gfx_target')
+        if kind == 'amd-drm' and '/dev/kfd' in devices and amd is not None:
+            compute = json.loads(json.dumps(item))
+            compute.update(profile='amd-rocm', selection_id=key+'-rocm', name=row['name']+' (ROCm)',
+                           gfx_target=amd)
+            compute['devices'].append({'path':'/dev/kfd','uid':0,'gid':devices['/dev/kfd']['identity']['gid'],'mode':'0660'})
+            compute['evidence']['/dev/kfd'] = devices['/dev/kfd']
+            result[compute['selection_id']] = compute
+    nvidia = [row for row in devices.values() if row.get('runtime')]
+    if nvidia:
+        runtime = nvidia[0]['runtime']
+        nodes = sorted(runtime['inventory']['devices'])
+        if all(path in devices for path in nodes):
+            result['nvidia-runtime'] = {'profile':'nvidia-runtime','selection_id':'nvidia-runtime',
+                'name':'NVIDIA GPU (all host GPUs)',
+                'devices':[{'path':p,'uid':0,'gid':devices[p]['identity']['gid'],
+                            'mode':format(devices[p]['identity']['mode'], '04o')} for p in nodes],
+                'evidence':{p:{k:v for k,v in devices[p].items() if k != 'runtime'} for p in nodes}, 'runtime':runtime}
+    return result
+
+
+def selected_hardware(selections, available):
+    chosen, paths = [], set()
+    for selection in selections:
+        candidate = available.get(selection['selection_id'])
+        if candidate is None or candidate['profile'] != selection['profile']:
+            raise LxcError('resource_unavailable', 'hardware')
+        nodes = {row['path'] for row in candidate['devices']}
+        if paths & nodes:
+            raise LxcError('invalid_field','hardware')
+        paths.update(nodes)
+        chosen.append(candidate)
+    return chosen
+
+
+def runtime_entries(chosen):
+    runtime = next((item['runtime'] for item in chosen if item.get('runtime')), None)
+    if not runtime:
+        return []
+    return [['lxc.environment','NVIDIA_VISIBLE_DEVICES=all'],
+            ['lxc.environment','NVIDIA_DRIVER_CAPABILITIES='+runtime['capabilities']],
+            ['lxc.hook.mount',runtime['hook_path']]]
+
+
+def verify_selected(chosen, vmid):
+    if type(chosen) is not list or len(chosen) > 16:
+        raise LxcError('resource_unavailable')
+    current = profiles(discover_devices())
+    selections = [{'profile':item['profile'],'selection_id':item['selection_id']} for item in chosen]
+    if selected_hardware(selections, current) != chosen:
+        raise LxcError('resource_unavailable')
+    device_assignments([d['path'] for item in chosen for d in item['devices']], vmid)
+    return runtime_entries(chosen)
 
 
 def path_identity(path, *, device=False):
@@ -56,7 +171,10 @@ def usb_identifiers(path, sysroot=Path('/sys'), identity=None):
         device_class = (usb/'bDeviceClass').read_text().strip().lower()
         if not re.fullmatch(r'[0-9a-f]{4}',vendor) or not re.fullmatch(r'[0-9a-f]{4}',product) or not re.fullmatch(r'[0-9a-f]{2}',device_class) or device_class == '09':
             raise LxcError('resource_unavailable')
-        return {'id':vendor+':'+product,'port':usb.name}
+        serial_file = usb/'serial'
+        serial = serial_file.read_text().strip() if serial_file.exists() else None
+        return {'id':vendor+':'+product,'port':usb.name, 'serial':serial,
+                'sysfs_path':str(kernel)}
     except (OSError,ValueError,RuntimeError):
         raise LxcError('resource_unavailable') from None
 
@@ -69,6 +187,17 @@ def device_policy(path, identity, sysroot=Path('/sys')):
     """
     if path.startswith(('/dev/bus/usb/', '/dev/ttyUSB', '/dev/ttyACM')):
         usb_identifiers(path,sysroot,identity)
+        return
+    if path.startswith('/dev/nvidia'):
+        try:
+            if path not in nvidia_inventory()['devices']:
+                raise LxcError('resource_unavailable')
+            return
+        except (OSError, ValueError, subprocess.SubprocessError):
+            raise LxcError('resource_unavailable') from None
+    if path == '/dev/kfd':
+        if not Path('/sys/class/kfd/kfd/topology/nodes').is_dir() or hardware.amd_gfx_target() is None:
+            raise LxcError('resource_unavailable')
         return
     try:
         number = int(identity['rdev'])
@@ -148,36 +277,69 @@ def device_assignments(paths, vmid, directory=Path('/etc/pve/lxc'),
     # Sharing a GPU is intentional, as in add_gpu_lxc.sh. USB/serial/TPU/NPU
     # ownership must not silently be duplicated in another CT's configuration.
     for path, owners in assigned.items():
-        gpu = path.startswith(('/dev/dri/', '/dev/nvidia'))
+        gpu = path == '/dev/kfd' or path.startswith(('/dev/dri/', '/dev/nvidia'))
         if owners and not gpu:
             raise LxcError('resource_in_use', 'devices.path')
     return assigned
 
 
 def discover_devices():
-    result = {}
-    patterns = (('GPU','/dev/dri/renderD*'), ('GPU','/dev/dri/card[0-9]*'),
-                ('GPU','/dev/nvidia*'), ('TPU','/dev/apex_[0-9]*'),
+    result = DeviceInventory()
+    usb = {}
+    try:
+        listing = hardware.read_command('lsusb') if shutil.which('lsusb') else ''
+        usb = {row['path']:row for row in hardware.usb_devices(lsusb=listing)}
+    except (OSError, ValueError, subprocess.SubprocessError):
+        result.errors.append('usb_inventory_unavailable')
+    nv = None
+    if shutil.which('nvidia-smi') and shutil.which('nvidia-container-cli'):
+        try:
+            nv = nvidia_runtime(nvidia_inventory())
+        except (OSError, ValueError, LxcError, subprocess.SubprocessError):
+            result.errors.append('nvidia_inventory_unavailable')
+    patterns = (('GPU','/dev/dri/renderD*'), ('TPU','/dev/apex_[0-9]*'),
                 ('NPU','/dev/accel/accel[0-9]*'), ('USB','/dev/bus/usb/*/*'),
-                ('USB','/dev/ttyUSB[0-9]*'), ('USB','/dev/ttyACM[0-9]*'))
-    for kind, pattern in patterns:
-        for path in Path('/').glob(pattern.removeprefix('/')):
-            name = str(path)
-            if not re.fullmatch(DEVICE_PATH, name):
-                continue
-            try:
-                identity = path_identity(name, device=True)
-                device_policy(name, identity)
-                label=kind
-                if name.startswith('/dev/bus/usb/'):
-                    usb=usb_identifiers(name,identity=identity)
-                    if usb['id'] in ('18d1:9302','1a6e:089a'):
-                        label='TPU / Coral USB'
-            except LxcError:
-                continue
-            result[name] = {'path':name, 'kind':label, 'identity':identity}
-            if len(result) >= 512:
-                return result
+                ('USB','/dev/ttyUSB[0-9]*'), ('USB','/dev/ttyACM[0-9]*'),
+                ('GPU','/dev/kfd'))
+    candidates = [(kind,str(path)) for kind,pattern in patterns
+                  for path in Path('/').glob(pattern.removeprefix('/'))]
+    if nv:
+        candidates += [('GPU',path) for path in nv['inventory']['devices']]
+    for kind,name in candidates:
+        if not re.fullmatch(DEVICE_PATH,name):
+            continue
+        try:
+            identity = path_identity(name,device=True)
+            device_policy(name,identity)
+            row = {'path':name,'kind':kind,'identity':identity}
+            if name.startswith('/dev/dri/'):
+                gpu = hardware.device_snapshot(name)
+                row.update(vendor=gpu['vendor'], pci_path=gpu['pci_path'],
+                           profile='intel-drm' if gpu['vendor']=='0x8086' else 'amd-drm',
+                           name=('Intel GPU' if gpu['vendor']=='0x8086' else 'AMD GPU')+' · '+Path(gpu['pci_path']).name)
+                if gpu['vendor'] == '0x1002':
+                    row['gfx_target'] = hardware.amd_compute_target(name)
+            elif name.startswith('/dev/nvidia'):
+                row.update(name='NVIDIA GPU')
+                if name == sorted(nv['inventory']['devices'])[0]:
+                    row['runtime'] = nv
+            elif name == '/dev/kfd':
+                row.update(name='AMD compute interface', topology=hardware.amd_gfx_target())
+            elif kind == 'USB':
+                meta = usb_identifiers(name,identity=identity)
+                if name not in usb:
+                    continue
+                row.update(usb=meta,profile='coral' if meta['id'] in ('18d1:9302','1a6e:089a') else 'usb',
+                           name=usb[name]['name']+' · '+(meta['serial'] or meta['port']))
+            else:
+                row.update(profile='coral' if kind=='TPU' else 'npu',
+                           name=('Coral TPU' if kind=='TPU' else 'NPU')+' · '+name,
+                           sysfs_path=hardware.device_snapshot(name)['sysfs_path'])
+            result[name] = row
+        except (LxcError,OSError,ValueError,subprocess.SubprocessError):
+            result.errors.append('device_inventory_unavailable')
+        if len(result) >= 512:
+            break
     return result
 
 
@@ -197,12 +359,52 @@ def checked_identity(identity):
     return identity
 
 
+def check_hardware_request(request, vmid, prepare=False):
+    if type(request) is not dict or set(request) != {'hardware','lxc','devices'} or type(request['lxc']) is not list:
+        raise LxcError('invalid_request')
+    expected_devices = [device for item in request['hardware'] for device in item['devices']]
+    if request['devices'] != expected_devices:
+        raise LxcError('resource_unavailable')
+    entries = verify_selected(request['hardware'], vmid)
+    actual = request['lxc']
+    if actual and actual != entries:
+        raise LxcError('resource_unavailable')
+    if not entries and actual:
+        raise LxcError('resource_unavailable')
+    if prepare and entries:
+        runtime = next(item['runtime'] for item in request['hardware'] if item.get('runtime'))
+        installer = HOOK.with_name('lxc_nvidia_setup.sh')
+        result = subprocess.run(['/bin/bash',str(installer),'--install-hook',str(HOOK),runtime['hook_sha256']],
+                                capture_output=True,text=True,timeout=15,check=False)
+        if result.returncode or result.stdout.strip() != runtime['hook_path']:
+            raise LxcError('resource_unavailable')
+    if actual:
+        runtime = next(item['runtime'] for item in request['hardware'] if item.get('runtime'))
+        hook = Path(runtime['hook_path'])
+        info = hook.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022
+                or not info.st_mode & 0o111 or hashlib.sha256(hook.read_bytes()).hexdigest() != runtime['hook_sha256']):
+            raise LxcError('resource_unavailable')
+    return entries
+
+
 if __name__ == '__main__':
     try:
-        if len(sys.argv) != 4 or sys.argv[1] != '--check-device' or not re.fullmatch(DEVICE_PATH, sys.argv[2]) or not re.fullmatch(r'[1-9][0-9]{2,8}',sys.argv[3]):
+        if len(sys.argv) != 4 or not re.fullmatch(r'[1-9][0-9]{2,8}',sys.argv[3]):
             raise LxcError('invalid_request')
-        path = sys.argv[2]
-        device_policy(path, path_identity(path, device=True))
-        device_assignments([path], int(sys.argv[3]))
-    except LxcError:
+        if sys.argv[1] == '--check-device':
+            if not re.fullmatch(DEVICE_PATH,sys.argv[2]):
+                raise LxcError('invalid_request')
+            device_policy(sys.argv[2],path_identity(sys.argv[2],device=True))
+            device_assignments([sys.argv[2]],int(sys.argv[3]))
+        elif sys.argv[1] in ('--check-hardware','--prepare-hardware') and sys.argv[2] == '--json':
+            from plain_lxc_spec import strict_json, MAX_BODY
+            body = sys.stdin.buffer.read(MAX_BODY+1)
+            if len(body) > MAX_BODY:
+                raise LxcError('body_too_large')
+            entries = check_hardware_request(strict_json(body),int(sys.argv[3]),sys.argv[1]=='--prepare-hardware')
+            print(json.dumps(entries))
+        else:
+            raise LxcError('invalid_request')
+    except (LxcError,OSError,ValueError,KeyError,TypeError,StopIteration,subprocess.SubprocessError):
         sys.exit(1)

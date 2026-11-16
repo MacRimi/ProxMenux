@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from plain_lxc_pve import Proxmox, checked_plan, current_inventory, inventory, local_node, next_id, occupied_ids, storage_for
 from plain_lxc_spec import ARCHIVE, DEFAULTS, LxcError, MAX_BODY, NODE, REQUEST_ID, STORAGE
 from plain_lxc_spec import digest, fields, integer, normalize, pve_params, strict_json, string
-from plain_lxc_state import STATE, installed_directory, private_directory, lock_file, migrate_state, check_uninstall, remove_legacy_alias, runtime_lock
+from plain_lxc_state import STATE, installed_directory, private_directory, lock_file, check_uninstall, runtime_lock
 
 
 TASK_WAIT_SECONDS = 90
@@ -154,7 +154,7 @@ def task_id(raw, node, kind, identity):
 
 def reply(operation, **changes):
     private = {"fingerprint", "sha512", "deadline", "start_after_create", "prepare_expected", "start_expected",
-               "submission", "admitted_at", "recovery_checked_at"}
+               "submission", "admitted_at", "recovery_checked_at", "hardware_preparation"}
     return {key: value for key, value in {**operation, **changes}.items() if key not in private}
 
 
@@ -249,7 +249,12 @@ def observe(api, operation):
                              reason="preparation_not_submitted" if operation.get("prepare_expected") else "start_not_submitted")
         completed = {"created": True} if phase != "download" else {}
         if phase in ("prepare", "start") and operation.get("prepare_expected"):
-            completed["prepared"] = True
+            expected = operation["prepare_expected"]
+            if expected.get('prepare_system',True):
+                completed["prepared"] = True
+                completed["system_prepared"] = True
+            if operation.get('hardware_preparation'):
+                completed["hardware_prepared"] = True
         return reply(operation, status="succeeded", **completed)
     except LxcError:
         return reply(operation, status="unknown", reason="task_status_unavailable")
@@ -390,9 +395,10 @@ def recover(api, store, request_id):
 def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
     fields(request, "schema_version action", "spec plan plan_hash accepted_warnings secret request_id "
            "node catalog_id template_storage confirmed phase offset")
-    if type(request["schema_version"]) is not int or request["schema_version"] != 1:
+    if type(request["schema_version"]) is not int or request["schema_version"] not in (1, 2):
         raise LxcError("unsupported_schema")
     action = request["action"]
+    version = request["schema_version"]
     common = "schema_version action"
     if action == 'operations':
         fields(request, common)
@@ -425,11 +431,13 @@ def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
         return data
     if action == "plan":
         fields(request, common + " spec")
-        spec = normalize(request["spec"])
+        spec = normalize(request["spec"], version)
+        if version == 1 and spec["devices"]:
+            raise LxcError("hardware_requires_v2")
     elif action == "create":
         fields(request, common + " request_id plan plan_hash accepted_warnings confirmed", "secret")
         fields(request["plan"], "spec resources warnings unprivileged nesting", field="plan")
-        spec = normalize(request["plan"]["spec"])
+        spec = normalize(request["plan"]["spec"], version)
         string(request["plan_hash"], r"[a-f0-9]{64}", 64, "plan_hash")
         if digest(request["plan"]) != request["plan_hash"]:
             raise LxcError("plan_changed")
@@ -465,6 +473,8 @@ def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
         if previous is not None:
             return previous
 
+    if action == "create" and version == 1 and spec["devices"]:
+        raise LxcError("hardware_requires_v2")
     if action in ("plan", "create"):
         try:
             context = current_inventory(api, spec["node"], spec["vmid"])
@@ -483,7 +493,10 @@ def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
             raise LxcError("plan_changed")
         phase, kind, identity = "create", "vzcreate", spec["vmid"]
         details = {"vmid": identity, "start_after_create": spec["start_after_create"]}
-        params = pve_params(spec, password, request_id)
+        attachments = plan['resources']['attachments']
+        resolved = {**spec, 'devices':[{key:device[key] for key in ('path','uid','gid','mode')}
+                                     for device in attachments['devices']]}
+        params = pve_params(resolved, password, request_id)
         params['arch'] = plan['resources']['template']['architecture']
         attachments = plan['resources']['attachments']
         if any(attachments.values()):
@@ -496,8 +509,11 @@ def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
             expected['resources'] = attachments
         expected['arch'] = params['arch']
         details["start_expected"] = expected
-        if spec["prepare_system"]:
+        hardware_preparation = any(item.get('runtime') for item in attachments.get('hardware',[]))
+        if spec["prepare_system"] or hardware_preparation:
             details["prepare_expected"] = expected
+        if hardware_preparation:
+            details['hardware_preparation'] = True
     else:
         node = local_node(api)
         if node != request["node"]:
@@ -546,17 +562,11 @@ def main():
         if os.geteuid() != 0:
             raise LxcError("root_required")
         options = sys.argv[1:]
-        if options in (["--migrate-state"], ["--rollback-state"], ["--check-uninstall"], ['--remove-legacy-alias']):
-            if options == ['--check-uninstall']:
-                result = check_uninstall()
-            elif options == ['--remove-legacy-alias']:
-                result = remove_legacy_alias()
-            else:
-                with runtime_lock(exclusive=True):
-                    result = migrate_state(rollback=options == ["--rollback-state"])
+        if options == ['--check-uninstall']:
+            result = check_uninstall()
             print(json.dumps({"schema_version": 1, "ok": True, "data": result}))
             return 0
-        if options not in ([], ["--progress"], ["--legacy-state"]):
+        if options not in ([], ["--progress"]):
             raise LxcError('invalid_request')
         raw = sys.stdin.buffer.read(MAX_BODY + 1)
         if len(raw) > MAX_BODY:
@@ -564,11 +574,9 @@ def main():
         request = strict_json(raw)
         if type(request) is not dict:
             raise LxcError('invalid_request')
-        if options == ['--legacy-state'] and request.get('action') not in ('operations', 'status', 'task_log', 'recover'):
-            raise LxcError('state_migration_required')
         mutating = request.get('action') in ('create', 'download_template', 'recover', 'status')
         with runtime_lock() if mutating else nullcontext():
-            result = execute(request, Proxmox(), Operations(installed_directory(legacy=options == ['--legacy-state']), os.getuid()),
+            result = execute(request, Proxmox(), Operations(installed_directory(), os.getuid()),
                              on_phase=emit_phase if sys.argv[1:] == ["--progress"] else None)
         print(json.dumps({"schema_version": 1, "ok": True, "data": result}, allow_nan=False))
     except LxcError as error:

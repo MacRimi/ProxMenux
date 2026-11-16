@@ -41,6 +41,7 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 ENGINE = SCRIPTS / "lxc" / "plain_lxc.py"
 TITLES = (N_("System"), N_("Access"), N_("Resources"), N_("Network and DNS"), N_("Review"))
 ERRORS = {
+    "hardware_requires_v2": N_("Hardware selection requires a fresh plan from the current wizard."),
     "architecture_unsupported": N_("This node architecture is outside the supported scope."),
     "bridge_unavailable": N_("The chosen bridge or VLAN is unavailable."),
     "catalog_unavailable": N_("Proxmox could not read its local template index."),
@@ -62,8 +63,6 @@ ERRORS = {
     "template_architecture_mismatch": N_("The template architecture does not match this node."),
     "vmid_in_use": N_("This VMID is already in use in the cluster."),
     "operation_controller_active": N_("The original controller is still running. Wait before recovering this operation."),
-    "state_migration_required": N_("Close the wizards and migrate the plain LXC journal with plain_lxc.py --migrate-state. Pending legacy operations can be checked with --legacy-state."),
-    "state_migration_conflict": N_("Conflicting plain LXC journals need administrator review before continuing."),
     'resource_unavailable': N_("The chosen mount source or device is unavailable or changed. Review a fresh plan."),
     'resource_in_use': N_("The selected device is already assigned to another guest."),
     'resource_unsupported': N_("This Proxmox version does not support the selected mount points or device passthrough."),
@@ -228,7 +227,7 @@ def stream_response(command, body, on_phase):
 
 
 def call(action, *, on_phase=None, **payload):
-    body = json.dumps({"schema_version": 1, "action": action, **payload}).encode()
+    body = json.dumps({"schema_version": 2, "action": action, **payload}).encode()
     command = ["/usr/bin/python3", "-I", "-B", str(ENGINE)]
     try:
         if on_phase is None:
@@ -672,8 +671,8 @@ def summary(ui, plan):
         source = f"{mount['storage']} / {mount['size_gib']} GiB" if mount['type'] == 'volume' else mount['source']
         items.append((ui.t(N_('Mount point')) + f' {index+1}',
                       f"{source} → {mount['path']} / {ui.t(N_('Read only'))}: {yes_no[mount['read_only']]} / {ui.t(N_('Backup'))}: {yes_no[mount['backup']]}"))
-    for device in spec['devices']:
-        items.append((N_('Hardware'), f"{device['path']} / UID {device['uid']} / GID {device['gid']} / {device['mode']}"))
+    for device in plan['resources']['attachments'].get('hardware', []):
+        items.append((N_('Hardware'), hardware_label(ui,device)))
     text = "\n".join(f"{ui.t(label)}: {value}" for label, value in items)
     if not plan['nesting']:
         text += '\n\n' + ui.t(NESTING_COMPATIBILITY_NOTICE)
@@ -713,31 +712,49 @@ def mount_fields(ui, spec, context):
         mounts.append(mount)
 
 
+HARDWARE_LABELS = {
+    'intel-drm': N_('Intel GPU'), 'amd-drm': N_('AMD GPU'),
+    'amd-rocm': N_('AMD GPU (ROCm)'), 'nvidia-runtime': N_('NVIDIA GPU (all host NVIDIA GPUs)'),
+    'coral': N_('Coral TPU'), 'npu': N_('NPU'), 'usb': N_('USB or serial device'),
+}
+
+
+def hardware_label(ui, item):
+    label = ui.t(HARDWARE_LABELS[item['profile']])
+    return label if item['profile'] == 'nvidia-runtime' else label+' · '+item['name']
+
+
 def device_fields(ui, spec, context):
-    devices = deepcopy(spec.get('devices', []))
-    available = context['devices']
-    if not devices and not available:
+    selected = deepcopy(spec.get('hardware', []))
+    available = context['hardware']
+    if context.get('hardware_errors'):
+        ui.message(3, ui.t(N_('Some hardware could not be checked. Unverified devices are not offered. Check the host drivers and device access.')))
+    if not selected and not available:
         ui.message(3,ui.t(N_('No supported device nodes are available. Existing host drivers and native Proxmox device support are required.')))
         return []
-    if not devices and not ui.confirm(3,ui.t(N_('Add hardware passthrough?'))):
+    if not selected and not ui.confirm(3,ui.t(N_('Add hardware passthrough?'))):
         return []
     while True:
+        occupied = {device['path'] for selection in selected
+                    for device in available.get(selection['selection_id'],{}).get('devices',[])}
         choices = [('done',ui.t(N_('Continue')))]
-        if len(devices) < context['capabilities']['devices']:
-            choices += [(path,f"{item['kind']} / {path}") for path,item in sorted(available.items())
-                        if path not in [device['path'] for device in devices]]
-        choices += [(f'remove:{index}',ui.t(N_('Remove from plan')) + ' ' + device['path']) for index,device in enumerate(devices)]
+        choices += [(key,hardware_label(ui,item)) for key,item in sorted(available.items())
+                    if not occupied.intersection(d['path'] for d in item['devices'])]
+        choices += [(f'remove:{index}',ui.t(N_('Remove from plan'))+' '+
+                     available.get(item['selection_id'],{}).get('name',item['selection_id']))
+                    for index,item in enumerate(selected)]
         choice = ui.choose(3,N_('Select optional hardware'),choices)
         if choice == 'done':
-            return devices
+            return selected
         if choice.startswith('remove:'):
-            del devices[int(choice.split(':')[1])]
+            del selected[int(choice.split(':')[1])]
             continue
-        device = {'path':choice}
-        device['uid'] = ui.number(3,N_('Device user ID inside the container'),0)
-        device['gid'] = ui.number(3,N_('Device group ID inside the container'),0)
-        device['mode'] = ui.input(3,N_('Device access mode (four octal digits)'), '0660')
-        devices.append(device)
+        item = available[choice]
+        if item['profile'] == 'nvidia-runtime':
+            ui.message(3,ui.t(N_('NVIDIA includes all host GPUs and their driver runtime. The host driver and NVIDIA Container Toolkit must already work.')))
+        if item['profile'] in ('usb','coral') and any('/bus/usb/' in row['path'] for row in item['devices']):
+            ui.message(3,ui.t(N_('USB bus numbers can change after reconnecting or rebooting.')))
+        selected.append({'profile':item['profile'],'selection_id':choice})
 
 
 def suggested_hostname(volume):
@@ -801,7 +818,7 @@ def _edit_group(ui, group, spec, secret, context):
     elif group == 'mounts':
         draft['mounts'] = mount_fields(ui,spec,context)
     elif group == 'devices':
-        draft['devices'] = device_fields(ui,spec,context)
+        draft['hardware'] = device_fields(ui,spec,context)
     elif group == "startup":
         for field, prompt in (("onboot", N_("Start this container when the host boots?")),
                               ("start_after_create", N_("Start this container after creation?")),

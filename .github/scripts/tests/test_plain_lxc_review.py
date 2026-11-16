@@ -230,9 +230,9 @@ class ReviewEngineTests(unittest.TestCase):
         self.assertEqual(self.api.writes, [])
 
     def test_unknown_device_is_rejected_before_admission(self):
-        spec={**self.spec,'devices':[{'path':'/dev/dri/renderD128'}]}
+        spec={**self.spec,'hardware':[{'profile':'intel-drm','selection_id':'missing'}]}
         with self.assertRaisesRegex(fixture.LxcError, '^resource_unavailable$'):
-            self.call('plan',spec=spec)
+            engine.execute({'schema_version':2,'action':'plan','spec':spec},self.api,self.store)
         self.assertEqual(self.api.writes,[])
         self.assertFalse(self.store.path.exists())
 
@@ -255,14 +255,18 @@ class ReviewEngineTests(unittest.TestCase):
                 self.assertEqual(self.api.writes,[])
 
     def test_selected_device_identity_and_bind_source_are_bound_to_plan_and_rechecked(self):
-        identity = {'dev':'10','ino':'12','rdev':'226','uid':0,'gid':0,'mode':0o660}
-        self.api.hardware['/dev/dri/renderD128'] = {'path':'/dev/dri/renderD128','kind':'GPU','identity':identity}
-        spec = {**self.spec,'devices':[{'path':'/dev/dri/renderD128'}]}
-        payload = self.create_body(**spec)
-        self.assertIn('device_passthrough',payload['plan']['warnings'])
+        identity = {'dev':'10','ino':'12','rdev':'226','uid':0,'gid':993,'mode':0o660}
+        self.api.hardware['/dev/dri/renderD128'] = {'path':'/dev/dri/renderD128','kind':'GPU','identity':identity,
+            'profile':'intel-drm','name':'Intel GPU','vendor':'0x8086','pci_path':'/sys/devices/pci0000:00/0000:00:02.0'}
+        selection = next(iter(resources.profiles(self.api.hardware).values()))
+        spec = {**self.spec,'hardware':[{'profile':selection['profile'],'selection_id':selection['selection_id']}]}
+        checked=engine.execute({'schema_version':2,'action':'plan','spec':spec},self.api,self.store)
+        self.assertIn('device_passthrough',checked['plan']['warnings'])
         identity['ino']='13'
         with self.assertRaisesRegex(fixture.LxcError,'^plan_changed$'):
-            self.call('create',**payload)
+            engine.execute({'schema_version':2,'action':'create','request_id':fixture.REQUEST_ID,**checked,
+                            'accepted_warnings':checked['plan']['warnings'],'confirmed':True,
+                            'secret':{'password':fixture.PASSWORD}},self.api,self.store)
         self.assertEqual(self.api.writes,[])
         self.assertFalse(self.store.path.exists())
         for mounts in ([{'type':'bind','source':'/mnt/review-bind','path':'/data'}],):
@@ -276,7 +280,7 @@ class ReviewEngineTests(unittest.TestCase):
         self.api.capabilities['devices']=0
         with patch.object(self.api,'hardware_inventory',side_effect=AssertionError('must not probe hardware')):
             with self.assertRaisesRegex(fixture.LxcError,'^resource_unsupported$'):
-                self.call('plan',spec={**self.spec,'devices':[{'path':'/dev/dri/renderD128'}]})
+                engine.execute({'schema_version':2,'action':'plan','spec':{**self.spec,'hardware':[{'profile':'intel-drm','selection_id':'missing'}]}},self.api,self.store)
         self.assertEqual(self.api.writes,[])
         self.assertFalse(self.store.path.exists())
 
@@ -370,72 +374,49 @@ class StateTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
-        self.old, self.new = self.root/'legacy', self.root/'install/state/plain-lxc'
-        self.store = fixture.Operations(self.old, os.getuid())
+        self.new = self.root/'install/state/plain-lxc'
+        self.store = fixture.Operations(self.new, os.getuid())
         self.original = dict(request_id=fixture.REQUEST_ID, status='succeeded', action='create', vmid=240)
         self.store.admit(self.original, 'vmid:240')
         self.store.save(self.original)
         self.quiet = patch.object(state, 'assert_quiescent_processes')
         self.quiet.start(); self.addCleanup(self.quiet.stop)
 
-    def test_migration_and_reverse_preserve_newer_journal_not_old_snapshot(self):
-        state.migrate_state(self.old, self.new)
-        self.assertTrue(self.old.is_symlink())
-        migrated = fixture.Operations(self.new, os.getuid())
-        self.assertEqual(migrated.get(fixture.REQUEST_ID), self.original)
-        newer = {**self.original, 'request_id': '2'*32}
-        migrated.admit(newer, 'vmid:241'); migrated.save(newer)
-        state.migrate_state(self.old, self.new, rollback=True)
-        self.assertFalse(self.old.is_symlink())
-        self.assertEqual(self.store.get('2'*32), newer)
-        self.assertFalse(self.new.exists())
-
-    def test_pending_live_controller_conflict_and_failed_rename_preserve_source(self):
-        self.store.save({**self.original, 'status': 'unknown'})
-        with self.assertRaisesRegex(fixture.LxcError, '^state_operations_pending$'):
-            state.migrate_state(self.old, self.new)
-        self.store.save(self.original)
-        with self.store.controller(fixture.REQUEST_ID):
-            with self.assertRaisesRegex(fixture.LxcError, '^operation_controller_active$'):
-                state.migrate_state(self.old, self.new)
-        with patch.object(state, 'exchange_directories', side_effect=OSError('cross-filesystem')):
-            with self.assertRaises(OSError): state.migrate_state(self.old, self.new)
-        self.assertEqual(self.store.get(fixture.REQUEST_ID), self.original)
-        self.assertFalse(self.new.exists())
-        self.new.mkdir(mode=0o700)
-        with self.assertRaisesRegex(fixture.LxcError, '^state_migration_conflict$'):
-            state.migrate_state(self.old, self.new)
-        self.assertEqual(self.store.get(fixture.REQUEST_ID), self.original)
+    def test_installation_owned_state_is_the_only_journal(self):
+        with patch.object(state,'STATE',self.new):
+            self.assertEqual(state.installed_directory(),self.new)
+            self.assertEqual(state.check_uninstall(),{'uninstall_safe':True})
+        self.assertFalse(hasattr(state,'LEGACY_STATE'))
 
     def test_uninstall_blocks_pending_without_changing_guest_or_database(self):
         self.store.save({**self.original, 'status': 'unknown'})
         before = self.store.path.read_bytes()
-        with patch.object(state, 'STATE', self.new), patch.object(state, 'LEGACY_STATE', self.old):
+        with patch.object(state, 'STATE', self.new):
             with self.assertRaisesRegex(fixture.LxcError, '^state_operations_pending$'):
                 state.check_uninstall()
         self.assertEqual(self.store.path.read_bytes(), before)
 
-    def test_ephemeral_uninstall_lock_blocks_admission_and_migration(self):
+    def test_ephemeral_uninstall_lock_blocks_admission_and_uninstall(self):
         with patch.object(state,'RUNTIME',self.root/'run'):
             with state.runtime_lock(exclusive=True):
                 with self.assertRaisesRegex(fixture.LxcError,'^operation_controller_active$'):
                     with state.runtime_lock(): self.fail('shared admission passed uninstall')
             with state.runtime_lock(), state.runtime_lock():
                 with self.assertRaisesRegex(fixture.LxcError,'^operation_controller_active$'):
-                    with state.runtime_lock(exclusive=True): self.fail('migration passed active controllers')
+                    with state.runtime_lock(exclusive=True): self.fail('uninstall passed active controllers')
             with state.runtime_lock(exclusive=True): pass
 
-    def test_empty_journal_migration_and_own_alias_cleanup_are_safe(self):
-        self.store.path.unlink()
-        state.migrate_state(self.old,self.new)
-        migrated=fixture.Operations(self.new,os.getuid())
-        migrated.admit(self.original,'vmid:240'); migrated.save(self.original)
-        before=migrated.path.read_bytes()
-        with patch.object(state,'STATE',self.new),patch.object(state,'LEGACY_STATE',self.old):
-            state.remove_legacy_alias()
-            self.assertEqual(state.installed_directory(),self.new)
-        self.assertFalse(self.old.exists()); self.assertFalse(self.old.is_symlink())
-        self.assertEqual(migrated.path.read_bytes(),before)
+    def test_empty_or_corrupt_journal_and_active_controller_uninstall_checks(self):
+        with patch.object(state,'STATE',self.new):
+            self.assertEqual(state.check_uninstall(),{'uninstall_safe':True})
+            with self.store.controller(fixture.REQUEST_ID):
+                with self.assertRaisesRegex(fixture.LxcError,'^operation_controller_active$'):
+                    state.check_uninstall()
+            self.store.path.write_bytes(b'not a SQLite database')
+            with self.assertRaises(Exception):
+                state.check_uninstall()
+            self.store.path.unlink()
+            self.assertEqual(state.check_uninstall(),{'uninstall_safe':True})
 
     def test_symlink_or_hardlinked_database_cannot_be_written(self):
         target=self.root/'unrelated'; target.write_bytes(b'owned by another purpose')
@@ -479,7 +460,7 @@ class DevicePolicyTests(unittest.TestCase):
             for name,value in (('idVendor','18d1'),('idProduct','9302'),('bDeviceClass','00')): (usb/name).write_text(value+'\n')
             node=root/'dev/char/189:2'; node.parent.mkdir(parents=True); node.symlink_to(usb)
             identity={'rdev':str(os.makedev(189,2))}
-            self.assertEqual(resources.usb_identifiers('/dev/bus/usb/001/003',root,identity),{'id':'18d1:9302','port':'1-3.2'})
+            self.assertEqual(resources.usb_identifiers('/dev/bus/usb/001/003',root,identity),{'id':'18d1:9302','port':'1-3.2','serial':None,'sysfs_path':str(usb)})
             resources.device_policy('/dev/bus/usb/001/003',identity,root)
             (usb/'bDeviceClass').write_text('09\n')
             with self.assertRaisesRegex(fixture.LxcError,'^resource_unavailable$'):
@@ -655,10 +636,11 @@ class WizardNavigationTests(unittest.TestCase):
         self.assertNotIn('create',[item['action'] for item in calls])
 
     def test_mount_and_hardware_fields_use_same_plan_and_cancel_has_zero_guest_mutations(self):
+        self_outer=self
         class UI(fixture.ScriptedDialog):
             def __init__(self):
                 super().__init__(False)
-                self.mount_actions=iter(['volume','done']); self.device_actions=iter(['/dev/dri/renderD128','done'])
+                self.mount_actions=iter(['volume','done']); self.device_actions=iter([next(iter(resources.profiles(self_outer.api.hardware))),'done'])
             def choose(self,step,prompt,choices,default=''):
                 if prompt.startswith('Mount points'): return next(self.mount_actions)
                 if prompt=='Select mount point storage': return 'local-lvm'
@@ -672,13 +654,14 @@ class WizardNavigationTests(unittest.TestCase):
                 if prompt=='Device access mode (four octal digits)': return '0660'
                 return super().input(step,prompt,default,hidden)
         self.api.hardware['/dev/dri/renderD128']={'path':'/dev/dri/renderD128','kind':'GPU',
-            'identity':{'dev':'10','ino':'12','rdev':'226','uid':0,'gid':0,'mode':0o660}}
+            'identity':{'dev':'10','ino':'12','rdev':'226','uid':0,'gid':993,'mode':0o660},
+            'profile':'intel-drm','name':'Intel GPU /dev/dri/renderD128','vendor':'0x8086','pci_path':'pci0'}
         ui=UI()
         with self.simulate_engine(self.api,self.store) as calls:
             fixture.wizard.wizard(ui)
         plan=next(item['spec'] for item in calls if item['action']=='plan')
         self.assertEqual(plan['mounts'][0]['path'],'/data')
-        self.assertEqual(plan['devices'][0]['path'],'/dev/dri/renderD128')
+        self.assertEqual(plan['hardware'][0]['profile'],'intel-drm')
         self.assertIn('/data',ui.review); self.assertIn('/dev/dri/renderD128',ui.review)
         self.assertEqual(self.api.writes,[])
         self.assertFalse(self.store.directory.exists())
@@ -726,7 +709,9 @@ class MainAndUninstallTests(unittest.TestCase):
                 runtime=root/'run'; forbidden=root/'forbidden'; events=root/'events'
                 helper.write_text("import fcntl,sys,os\nfrom pathlib import Path\n"
                     +f"phase={phase!r}\n"
-                    +"if sys.argv[1]=='--check-uninstall': sys.exit(1 if phase=='initial' else 0)\n"
+                    +f"counter=Path({str(root/'guard-count')!r})\n"
+                    +"count=int(counter.read_text()) if counter.exists() else 0\ncounter.write_text(str(count+1))\n"
+                    +"if phase=='initial': sys.exit(1)\nif count==0: sys.exit(0)\n"
                     +f"fd=os.open({str(runtime/'controller.lock')!r},os.O_RDWR)\n"
                     +"try: fcntl.flock(fd,fcntl.LOCK_SH|fcntl.LOCK_NB)\n"
                     +f"except BlockingIOError: Path({str(events)!r}).write_text('LOCK_HELD')\n"

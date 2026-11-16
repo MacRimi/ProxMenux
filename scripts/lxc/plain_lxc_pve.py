@@ -25,10 +25,13 @@ import platform
 import re
 import subprocess
 import stat
+import sys
 from urllib.parse import urlsplit
 
 from plain_lxc_spec import ARCHIVE, BRIDGE, GIB, LxcError, MIB, NODE, STORAGE, strict_json
-from plain_lxc_resources import discover_devices, bind_identity, device_assignments, checked_identity
+from plain_lxc_resources import discover_devices, bind_identity, device_assignments, checked_identity, profiles, selected_hardware, OCI_REMOTE
+sys.path.insert(0, str(OCI_REMOTE))
+from oci_image_names import is_oci_archive
 
 
 class Proxmox:
@@ -217,7 +220,7 @@ def inventory(api, node, vmid=None, *, raw=None):
                 raise LxcError("pve_output_invalid")
             volumes.add(volume)
             basename = volume.split("/", 1)[1]
-            if not re.fullmatch(ARCHIVE, basename) or len(volume) > 255:
+            if not re.fullmatch(ARCHIVE, basename) or len(volume) > 255 or is_oci_archive(basename):
                 continue
             if basename in catalog:
                 templates[volume] = {**catalog[basename], "volume_id": volume, "storage": name,
@@ -252,6 +255,8 @@ def inventory(api, node, vmid=None, *, raw=None):
     context['devices'] = api.hardware_inventory() if context['capabilities']['devices'] else {}
     if type(context['devices']) is not dict:
         raise LxcError('pve_output_invalid')
+    context['hardware'] = profiles(context['devices'])
+    context['hardware_errors'] = sorted(set(getattr(context['devices'],'errors',[])))
     if vmid is not None:
         if vmid in occupied_ids(raw.get("guests")):
             raise LxcError("vmid_in_use", "vmid")
@@ -325,8 +330,14 @@ def checked_plan(api, spec, context):
         warnings.append('storage_overcommit')
     if spec["nesting"]:
         warnings.append("nesting_enabled")
+    if spec.get('hardware') and not context['capabilities']['devices']:
+        raise LxcError('resource_unsupported')
+    chosen = selected_hardware(spec['hardware'], context['hardware']) if 'hardware' in spec else []
+    devices = [device for item in chosen for device in item['devices']] if 'hardware' in spec else spec['devices']
     attachments = {'mounts':[], 'devices':[]}
-    if len(spec['mounts']) > context['capabilities']['mount_points'] or len(spec['devices']) > context['capabilities']['devices']:
+    if chosen:
+        attachments['hardware'] = deepcopy(chosen)
+    if len(spec['mounts']) > context['capabilities']['mount_points'] or len(devices) > context['capabilities']['devices']:
         raise LxcError('resource_unsupported')
     allocations = {rootfs['storage']:rootfs['size_gib']}
     for mount in spec['mounts']:
@@ -338,14 +349,14 @@ def checked_plan(api, spec, context):
             attachments['mounts'].append({**mount, 'identity':checked_identity(api.bind_identity(mount['source']))})
             if 'bind_mount' not in warnings:
                 warnings.append('bind_mount')
-    for device in spec['devices']:
+    for device in devices:
         candidate = context['devices'].get(device['path'])
         if type(candidate) is not dict or candidate.get('path') != device['path'] or type(candidate.get('identity')) is not dict:
             raise LxcError('resource_unavailable', 'devices.path')
         attachments['devices'].append({**device, 'identity':deepcopy(checked_identity(candidate['identity']))})
-    if spec['devices']:
+    if devices:
         warnings.append('device_passthrough')
-    assignments = api.device_assignments([item['path'] for item in spec['devices']], spec['vmid'])
+    assignments = api.device_assignments([item['path'] for item in devices], spec['vmid'])
     for name, size in allocations.items():
         target = context['storages'][name]
         overcommit = size*GIB > target['available_bytes']

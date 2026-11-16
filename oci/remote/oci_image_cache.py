@@ -15,10 +15,9 @@ import time
 import oci_instances as instances
 from oci_installation_state import image_from_archive
 from oci_ui import translate
+from oci_image_names import NAME
 
 # Names given by the OCI installers and by updates; other archives are never touched.
-NAME = re.compile(r'(?:proxmenux-update-[a-z0-9]+-[0-9a-f]{64}'
-                  r'|(?:image|linuxserver)-[A-Za-z0-9._-]+_[a-z0-9]+_[0-9a-f]{16})\.tar')
 # The archive an installation downloads: <application>_<architecture>_<digest>.tar
 APP_ARCHIVE = re.compile(r'((?:image|linuxserver)-[A-Za-z0-9._-]+_[a-z0-9]+)_([0-9a-f]{16})\.tar')
 UPDATE_ARCHIVE = re.compile(r'proxmenux-update-([a-z0-9]+)-([0-9a-f]{64})\.tar')

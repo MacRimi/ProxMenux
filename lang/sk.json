@@ -11014,8 +11014,6 @@
   "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
   "An earlier operation needs to be checked.": "Predchádzajúcu operáciu treba overiť.",
   "Check and recover the reservation": "Overiť a uvoľniť rezerváciu",
-  "Close the wizards and migrate the plain LXC journal with plain_lxc.py --migrate-state. Pending legacy operations can be checked with --legacy-state.": "Zatvor sprievodcov a presuň záznamy LXC príkazom plain_lxc.py --migrate-state. Neuzavreté staré operácie možno overiť cez --legacy-state.",
-  "Conflicting plain LXC journals need administrator review before continuing.": "Pred pokračovaním musí správca preveriť rozdielne záznamy operácií LXC.",
   "Continue to the wizard": "Pokračovať do sprievodcu",
   "Prepare the system for its first boot": "Pripraviť systém na prvý štart",
   "Prepare the system for its first boot? This optional step modifies known systemd units inside the container.": "Pripraviť systém na prvý štart? Tento voliteľný krok upraví známe jednotky systemd v kontajneri.",
@@ -11063,5 +11061,15 @@
   "Uninstallation stopped. Review pending operations before trying again.": "Odinštalovanie sa zastavilo. Pred ďalším pokusom over neuzavreté operácie.",
   "Plain LXC state needs review; uninstallation stopped.": "Stav operácií LXC treba preveriť; odinštalovanie sa zastavilo.",
   "VM Hostname": "Názov virtuálneho stroja",
-  "ProxMenux VM Creator": "ProxMenux – vytvorenie virtuálneho stroja"
+  "ProxMenux VM Creator": "ProxMenux – vytvorenie virtuálneho stroja",
+  "Hardware selection requires a fresh plan from the current wizard.": "Výber hardvéru vyžaduje nový plán z aktuálneho sprievodcu.",
+  "NVIDIA includes all host GPUs and their driver runtime. The host driver and NVIDIA Container Toolkit must already work.": "NVIDIA sprístupní všetky GPU NVIDIA hostiteľa aj potrebné knižnice ovládača. Ovládač hostiteľa a NVIDIA Container Toolkit už musia fungovať.",
+  "Some hardware could not be checked. Unverified devices are not offered. Check the host drivers and device access.": "Časť hardvéru sa nepodarilo overiť. Neoverené zariadenia sa neponúkajú. Skontroluj ovládače hostiteľa a prístup k zariadeniam.",
+  "Intel GPU": "Grafická karta Intel",
+  "AMD GPU": "Grafická karta AMD",
+  "AMD GPU (ROCm)": "Grafická karta AMD s rozhraním ROCm",
+  "NVIDIA GPU (all host NVIDIA GPUs)": "NVIDIA (všetky karty NVIDIA hostiteľa)",
+  "Coral TPU": "Akcelerátor Coral TPU",
+  "NPU": "Akcelerátor NPU",
+  "USB or serial device": "USB alebo sériové zariadenie"
 }

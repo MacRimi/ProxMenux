@@ -378,6 +378,15 @@ jobs:
           python3 -m unittest discover -s oci/tests -p test_host_source_identity.py -v
           python3 -m unittest discover -s oci/tests -p test_stack_replay_devices.py -v
           python3 -m unittest discover -s oci/tests -p test_cli_architecture.py -v
+      - name: Run shared native hardware and packaging regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_shared_hardware_packaging.py -v
+          python3 -m unittest discover -s oci/tests -p test_gpu_device_gid.py -v
+          python3 -m unittest discover -s oci/tests -p test_nvidia_dynamic_console_hook.py -v
+          python3 -m unittest discover -s oci/tests -p test_acceleration_profiles_of_the_host.py -v
+          python3 -m unittest discover -s oci/tests -p test_usb_devices.py -v
       - name: Run read-only volume preparation regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'
