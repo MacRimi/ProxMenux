@@ -2818,7 +2818,7 @@
     "updateable": false,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "vm"
     ],
@@ -4241,6 +4241,37 @@
     "os": "debian"
   },
   {
+    "name": "ClamAV",
+    "slug": "clamav",
+    "desc": "ClamAV is an open-source antivirus engine for detecting trojans, viruses, malware and other threats. The clamd daemon serves scan requests over the network, so mail servers, Nextcloud, Paperless-ngx and other apps can use it as their virus scanner, while freshclam keeps the signatures up to date.",
+    "script": "ct/clamav.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/clamav.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/clamav.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.clamav.net/",
+    "documentation": "https://docs.clamav.net/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/clamav.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "PVE LXC Cleaner",
     "slug": "clean-lxcs",
     "desc": "This script provides options to delete logs and cache, and repopulate apt lists for Ubuntu and Debian systems.",
@@ -4483,6 +4514,46 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "CloudPanel",
+    "slug": "cloudpanel",
+    "desc": "CloudPanel is a free server control panel for hosting PHP, Node.js, Python, static sites and reverse proxies. It manages NGINX vhosts, PHP-FPM versions, databases, Let's Encrypt certificates, Varnish page cache, cron jobs, SFTP users and backups from one web interface or the clpctl CLI.",
+    "script": "ct/cloudpanel.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cloudpanel.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cloudpanel.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00021"
+    ],
+    "category_names": [
+      "Webservers & Proxies"
+    ],
+    "notes": [
+      "Sign in at https://IP:8443 with the admin password saved in ~/cloudpanel.creds inside the container."
+    ],
+    "warnings": [
+      "CloudPanel officially supports virtual machines only, not LXC. This script runs its official installer in an unprivileged container; use a VM if you need vendor support.",
+      "Port 8443 is open to everyone by default: limit it to your IPs under Security > Firewall in CloudPanel, or enable Basic Auth with clpctl cloudpanel:enable:basic-auth."
+    ],
+    "port": 8443,
+    "website": "https://www.cloudpanel.io/",
+    "documentation": "https://www.cloudpanel.io/docs/v2/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cloudpanel.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -6025,7 +6096,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -19372,7 +19443,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -19409,7 +19480,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -24926,6 +24997,46 @@
     "os": "debian"
   },
   {
+    "name": "Shopware",
+    "slug": "shopware",
+    "desc": "Shopware is an open-source e-commerce platform built on Symfony and Vue.js. It offers a headless Store API, a Twig storefront, rule-based pricing and promotions, and an extension system for plugins, apps and themes.",
+    "script": "ct/shopware.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/shopware.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/shopware.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "The admin login is saved to ~/shopware.creds inside the container. The Administration is at /admin."
+    ],
+    "warnings": [
+      "Behind an HTTPS reverse proxy (NPM, Traefik, Caddy, Cloudflare Tunnel), run inside the container: shopware-proxy shop.example.com (your public domain). It makes Shopware trust the proxy, sets APP_URL to https and rebuilds the config. Then, in the Administration, add https://shop.example.com to the Storefront sales channel (Sales Channels > Storefront > Domains).",
+      "Major Shopware upgrades (e.g. 6.7 to 6.8) are not applied by the update and must follow the official upgrade guide."
+    ],
+    "port": 80,
+    "website": "https://www.shopware.com/",
+    "documentation": "https://developer.shopware.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shopware.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "SigNoz",
     "slug": "signoz",
     "desc": "SigNoz is an open-source Datadog or New Relic alternative. Get APM, logs, traces, metrics, exceptions, & alerts in a single tool.",
@@ -29659,7 +29770,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -30779,6 +30890,43 @@
     "website": "https://github.com/tenox7/wrp",
     "documentation": "https://github.com/tenox7/wrp#readme",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chromium.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "XWiki",
+    "slug": "xwiki",
+    "desc": "XWiki is a free, open source wiki platform written in Java. It offers structured data, applications inside the wiki, a powerful extension system and fine-grained permissions, and is a common alternative to Confluence.",
+    "script": "ct/xwiki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/xwiki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/xwiki.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "On first start open http://<IP>:8080/xwiki/ and finish the Distribution Wizard: create the admin account and install the XWiki Standard flavor. This takes a few minutes.",
+      "The PostgreSQL database and its random password are created by the Debian package; the connection is stored in /etc/xwiki/hibernate.cfg.xml.",
+      "The Java heap is set to about 60 % of the container RAM in /etc/default/tomcat10. XWiki needs at least 2 GiB, 4 GiB is recommended."
+    ],
+    "warnings": [
+      "Take a snapshot or backup before updating; major XWiki upgrades finish with the Distribution Wizard in the browser."
+    ],
+    "port": 8080,
+    "website": "https://www.xwiki.org/",
+    "documentation": "https://www.xwiki.org/xwiki/bin/view/Documentation/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/xwiki.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
