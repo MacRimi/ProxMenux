@@ -242,6 +242,10 @@ def call(action, *, on_phase=None, **payload):
         raise WizardError("local_operation_error") from None
 
 
+class NamedChoices(list):
+    """Display device names while retaining opaque selection IDs internally."""
+
+
 class Dialog:
     def __init__(self, language):
         self.translations = {}
@@ -388,7 +392,8 @@ class Dialog:
         one_column = any(not label for _, label in choices)
         args = [value for key, label in choices for value in (key, label or key if one_column else label)]
         selected = default if default in dict(choices) else ""
-        code, choice = self.run(step, "--menu", self.t(prompt), "0", *args, default_item=selected, hide_tags=one_column)
+        code, choice = self.run(step, "--menu", self.t(prompt), "0", *args,
+                                default_item=selected, hide_tags=one_column or isinstance(choices, NamedChoices))
         if code or choice not in {key for key, _ in choices}:
             raise Cancelled()
         return choice
@@ -721,7 +726,12 @@ HARDWARE_LABELS = {
 
 def hardware_label(ui, item):
     label = ui.t(HARDWARE_LABELS[item['profile']])
-    return label if item['profile'] == 'nvidia-runtime' else label+' · '+item['name']
+    if item['profile'] == 'nvidia-runtime':
+        return label
+    if item['profile'] in ('intel-drm','amd-drm','amd-rocm'):
+        pci = next(row['pci_path'] for row in item['evidence'].values() if 'pci_path' in row)
+        return label+' · '+Path(pci).name
+    return label+' · '+item['name']
 
 
 def device_fields(ui, spec, context):
@@ -737,7 +747,7 @@ def device_fields(ui, spec, context):
     while True:
         occupied = {device['path'] for selection in selected
                     for device in available.get(selection['selection_id'],{}).get('devices',[])}
-        choices = [('done',ui.t(N_('Continue')))]
+        choices = NamedChoices([('done',ui.t(N_('Continue')))])
         choices += [(key,hardware_label(ui,item)) for key,item in sorted(available.items())
                     if not occupied.intersection(d['path'] for d in item['devices'])]
         choices += [(f'remove:{index}',ui.t(N_('Remove from plan'))+' '+

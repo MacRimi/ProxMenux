@@ -226,6 +226,25 @@ class HardwareContractTests(unittest.TestCase):
 
 
 class SharedInventoryTests(unittest.TestCase):
+    def test_hardware_menu_displays_names_without_opaque_ids_or_permission_questions(self):
+        profiles=resources.profiles({'/dev/dri/renderD128':intel()})
+        identity=next(iter(profiles))
+        class UI(fixture.wizard.Dialog):
+            def __init__(self):
+                super().__init__('en');self.answers=iter([identity,'done']);self.menus=[]
+            def confirm(self,*args,**kwargs):return True
+            def dimensions(self,*args,**kwargs):return ('20','100')
+            def number(self,*args,**kwargs):raise AssertionError('numeric permission question')
+            def input(self,*args,**kwargs):raise AssertionError('manual device field')
+            def run(self,*args,**kwargs):
+                self.menus.append((args,kwargs));return 0,next(self.answers)
+        ui=UI()
+        result=fixture.wizard.device_fields(ui,{}, {'hardware':profiles,'capabilities':{'devices':16}})
+        self.assertEqual(result,[{'profile':'intel-drm','selection_id':identity}])
+        self.assertEqual(len(ui.menus),2)
+        self.assertTrue(all(options['hide_tags'] for _,options in ui.menus))
+        self.assertEqual(fixture.wizard.hardware_label(ui,profiles[identity]),'Intel GPU · 0000:00:02.0')
+
     def test_intentionally_excluded_usb_hub_is_not_an_inventory_failure(self):
         def paths(path,pattern):
             return [Path('/dev/bus/usb/001/001')] if pattern=='dev/bus/usb/*/*' else []

@@ -662,7 +662,8 @@ class WizardNavigationTests(unittest.TestCase):
         plan=next(item['spec'] for item in calls if item['action']=='plan')
         self.assertEqual(plan['mounts'][0]['path'],'/data')
         self.assertEqual(plan['hardware'][0]['profile'],'intel-drm')
-        self.assertIn('/data',ui.review); self.assertIn('/dev/dri/renderD128',ui.review)
+        self.assertIn('/data',ui.review); self.assertIn('Intel GPU',ui.review)
+        self.assertNotIn('UID',ui.review)
         self.assertEqual(self.api.writes,[])
         self.assertFalse(self.store.directory.exists())
 
