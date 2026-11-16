@@ -3557,6 +3557,42 @@
   },
   {
     "name": "Cap",
+    "slug": "cap",
+    "desc": "Cap is an open-source alternative to Loom. Record your screen and camera with the Cap desktop app or the browser, upload to your own server and share each recording by link, with comments, reactions and viewer analytics.",
+    "script": "ct/cap.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cap.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cap.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Sign in with any email address. Without Resend the login code is printed to the log: `journalctl -u cap-web -n 30`."
+    ],
+    "warnings": [
+      "Login only works over HTTPS, so accept the self-signed certificate. The desktop app needs a trusted certificate: put Cap behind your own domain and set var_cap_url (or WEB_URL, NEXTAUTH_URL and S3_PUBLIC_ENDPOINT in the .env).",
+      "Anyone who reaches Cap can create an account; restrict sign-ups with CAP_ALLOWED_SIGNUP_DOMAINS in /opt/cap_data/.env."
+    ],
+    "port": 443,
+    "website": "https://cap.so/",
+    "documentation": "https://cap.so/docs/self-hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/CapSoftware/Cap@main/apps/web/public/cap-icon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Cap",
     "slug": "cap-captcha",
     "desc": "Cap is a lightweight, privacy-friendly CAPTCHA alternative to reCAPTCHA and hCaptcha that uses proof-of-work instead of puzzles or tracking. This is its self-hosted server (capd): a dashboard to manage site keys, the challenge endpoints the widget talks to, and a siteverify API your backend uses to check tokens.",
     "script": "ct/cap-captcha.sh",
@@ -4618,6 +4654,42 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Coder",
+    "slug": "coder",
+    "desc": "Coder provides self-hosted cloud development environments. Admins describe workspaces as Terraform templates on VMs, containers or plain hosts, and developers create them from a web dashboard and connect through browser IDEs, VS Code or SSH.",
+    "script": "ct/coder.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/coder.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/coder.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "The admin login is in /opt/coder_data/.env.",
+      "Workspaces must reach CODER_ACCESS_URL; port forwarding to subdomains needs a real domain with a wildcard (CODER_WILDCARD_ACCESS_URL) in /etc/coder.d/coder.env."
+    ],
+    "warnings": [
+      "Docker is not available in the container, so the Docker starter templates do not work. Use templates that provision Proxmox VMs, cloud machines or existing SSH hosts."
+    ],
+    "port": 3000,
+    "website": "https://coder.com/",
+    "documentation": "https://coder.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/coder.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -23946,6 +24018,36 @@
     "os": "debian"
   },
   {
+    "name": "Roundcube",
+    "slug": "roundcube",
+    "desc": "Roundcube is a browser-based IMAP webmail client with a desktop-like interface. It handles folders, search, threads, HTML compose, attachments and an address book, and can be extended with plugins and skins.",
+    "script": "ct/roundcube.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/roundcube.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/roundcube.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [],
+    "category_names": [],
+    "notes": [
+      "Roundcube is only a mail client: sign in with an account of your existing IMAP server. Without an IMAP host preset, the login page asks for the server.",
+      "Without an SMTP host preset, mail is sent through the IMAP server on port 587. Change imap_host and smtp_host in /opt/roundcube/config/config.inc.php if needed."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://roundcube.net/",
+    "documentation": "https://github.com/roundcube/roundcubemail/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/roundcube.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "RSS-Bridge",
     "slug": "rss-bridge",
     "desc": "RSS-Bridge is a PHP web application that generates web feeds for websites that don't have one, supporting over 400 bridges for various platforms and services.",
@@ -24208,7 +24310,7 @@
       "Open https://<IP>/signup and accept the self-signed certificate; the first account becomes the admin. Then set DISABLE_SIGNUP=true in /opt/rybbit_data/.env and restart rybbit-server."
     ],
     "warnings": [
-      "Visitors' browsers only load the tracking script from a trusted HTTPS address. Put Rybbit behind a reverse proxy with a real certificate and pass that URL as var_base_url at install; it is compiled into the web client.",
+      "Visitors' browsers only load the tracking script from a trusted HTTPS address. Put Rybbit behind a reverse proxy with a real certificate, set that URL as BASE_URL in /opt/rybbit_data/.env and restart rybbit-server.",
       "ClickHouse needs a CPU with AVX2 on x86."
     ],
     "port": 80,
@@ -24517,7 +24619,7 @@
       "Monitoring & Analytics"
     ],
     "notes": [
-      "The container cannot read the disks. Install smartmontools and the scrutiny-collector-metrics binary on the Proxmox host and run `scrutiny-collector-metrics run --api-endpoint http://<container-ip>:8080` from cron (see the upstream manual install guide)."
+      "The container cannot read the disks. Run the Scrutiny Collector tool (tools/pve/scrutiny-collector.sh) on every machine whose disks you want to monitor and give it http://<container-ip>:8080."
     ],
     "warnings": [
       "The web UI has no login. Keep port 8080 inside your LAN or put it behind a reverse proxy with authentication."
@@ -24535,6 +24637,40 @@
     ],
     "config_path": "",
     "os": "debian"
+  },
+  {
+    "name": "Scrutiny Collector",
+    "slug": "scrutiny-collector",
+    "desc": "The Scrutiny collector reads the S.M.A.R.T. data of every physical disk on the host and sends it to a Scrutiny web UI, which keeps the history and warns when a drive starts to fail. It runs on the host because containers cannot see the disks.",
+    "script": "tools/pve/scrutiny-collector.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scrutiny-collector.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/scrutiny-collector.sh",
+    "type": "pve",
+    "type_id": "1uyjfno0fpf5buh",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Run it as root on any Debian or Ubuntu based machine that has the disks (Proxmox VE, Incus host, TrueNAS SCALE, Ubuntu Server ...). It asks for the Scrutiny URL, e.g. http://<container-ip>:8080, and collects every 15 minutes.",
+      "Run it again to update or remove the collector."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://github.com/AnalogJ/scrutiny",
+    "documentation": "https://github.com/AnalogJ/scrutiny/blob/master/docs/INSTALL_MANUAL.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/scrutiny.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": ""
   },
   {
     "name": "Seanime",
