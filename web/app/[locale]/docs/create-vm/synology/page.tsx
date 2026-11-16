@@ -5,7 +5,6 @@ import {
   Wrench,
   Target,
   CheckCircle,
-  Github,
   Server,
   HardDrive,
   Download,
@@ -15,6 +14,7 @@ import {
   Sliders,
   ExternalLink,
 } from "lucide-react"
+import { Github } from "@/components/ui/brand-icons"
 import { useState } from "react"
 import { useTranslations, useMessages } from "next-intl"
 
