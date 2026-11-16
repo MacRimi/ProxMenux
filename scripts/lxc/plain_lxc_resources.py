@@ -308,6 +308,10 @@ def discover_devices():
     for kind,name in candidates:
         if not re.fullmatch(DEVICE_PATH,name):
             continue
+        # The shared USB inventory deliberately excludes hubs/storage and
+        # exposes serial peripherals only by tty. These are not failed probes.
+        if kind == 'USB' and name not in usb:
+            continue
         try:
             identity = path_identity(name,device=True)
             device_policy(name,identity)
@@ -327,8 +331,6 @@ def discover_devices():
                 row.update(name='AMD compute interface', topology=hardware.amd_gfx_target())
             elif kind == 'USB':
                 meta = usb_identifiers(name,identity=identity)
-                if name not in usb:
-                    continue
                 row.update(usb=meta,profile='coral' if meta['id'] in ('18d1:9302','1a6e:089a') else 'usb',
                            name=usb[name]['name']+' · '+(meta['serial'] or meta['port']))
             else:

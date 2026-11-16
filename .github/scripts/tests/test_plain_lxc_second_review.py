@@ -226,6 +226,17 @@ class HardwareContractTests(unittest.TestCase):
 
 
 class SharedInventoryTests(unittest.TestCase):
+    def test_intentionally_excluded_usb_hub_is_not_an_inventory_failure(self):
+        def paths(path,pattern):
+            return [Path('/dev/bus/usb/001/001')] if pattern=='dev/bus/usb/*/*' else []
+        with patch.object(resources.hardware,'usb_devices',return_value=[]), \
+             patch.object(resources.shutil,'which',return_value=None), \
+             patch.object(Path,'glob',paths),patch.object(resources,'path_identity') as identity:
+            result=resources.discover_devices()
+        self.assertEqual(result,{})
+        self.assertEqual(result.errors,[])
+        identity.assert_not_called()
+
     def test_kfd_generation_is_bound_to_selected_render_minor(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)
