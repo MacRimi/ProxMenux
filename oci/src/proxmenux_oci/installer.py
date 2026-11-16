@@ -1653,6 +1653,8 @@ def _build_tandoor_stack_deployment(
         raise InstallError(translate("The administrator email is not valid"))
 
     extra_devices = ask_application_extra_devices(ui)
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     onboot = essential_ui(ui).confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"])
     # The first start creates the administrator, so a default installation does not ask it.
     start_after = ui.confirm(translate("Start when finished"), True)
@@ -1662,8 +1664,6 @@ def _build_tandoor_stack_deployment(
         )
 
     private = defaults["private_network"]
-    from .stack_vmids import ask_service_vmids
-    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
         **selection,
         "deployment_kind": "tandoor-two-lxc-stack",
