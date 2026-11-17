@@ -644,16 +644,8 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
   const renderDiskCardV2 = (disk: DiskInfo) => {
     const type = getDiskTypeBadge(disk.name, disk.rotation_rate)
     // Pick the most relevant wear metric for the device class.
-    // NVMe uses `percentage_used` (0 = fresh, 100 = TBW spent).
-    // SSD may expose `media_wearout_indicator` (decreasing 100→0) or
-    // `ssd_life_left` (decreasing 100→0). Normalise both to a
-    // "percentage spent" so the bar always fills LEFT to RIGHT as the
-    // drive ages — visually consistent across vendors.
-    let wearPct: number | null = null
-    if (typeof disk.percentage_used === "number") wearPct = disk.percentage_used
-    else if (typeof disk.ssd_life_left === "number") wearPct = 100 - disk.ssd_life_left
-    else if (typeof disk.media_wearout_indicator === "number")
-      wearPct = 100 - disk.media_wearout_indicator
+    // Wear values are percentages used, while SSD life is percentage remaining.
+    const wearPct = getWearIndicator(disk)?.value ?? null
     // Wear bar always uses the same blue as the modal's wear visual,
     // even when the wear is high — the colour is the SECTION colour,
     // not a severity signal. The percentage value itself (and the
@@ -2435,7 +2427,7 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                 const wi = getWearIndicator(selectedDisk)
                 if (wi) {
                   wearUsed = wi.value
-                  lifeRemaining = 100 - wearUsed
+                  lifeRemaining = Math.max(0, 100 - wearUsed)
                   estimatedLife = getEstimatedLifeRemaining(selectedDisk) || ''
                   if (selectedDisk.total_lbas_written && selectedDisk.total_lbas_written > 0) {
                     const tb = selectedDisk.total_lbas_written / 1024
@@ -2479,16 +2471,16 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
                   if (lifeRemaining === null) {
                     const ataAttrs = data?.ata_smart_attributes as { table?: Array<{ id: number; name: string; value: number; raw?: { value: number } }> }
                     const table = ataAttrs?.table || []
-                    const wearAttr = table.find(a =>
+                    const wearAttr = table.find(a => a.id !== 230 && (
                       a.name?.toLowerCase().includes('wear_leveling') ||
                       a.name?.toLowerCase().includes('media_wearout') ||
                       a.name?.toLowerCase().includes('ssd_life_left') ||
                       a.id === 177 || a.id === 231
-                    )
+                    ))
                     const nvmeIsPresent = nvmeHealth?.percent_used !== undefined || nvmeHealth?.percentage_used !== undefined
 
                     if (wearAttr) {
-                      lifeRemaining = (wearAttr.id === 230) ? (100 - wearAttr.value) : wearAttr.value
+                      lifeRemaining = wearAttr.value
                     } else if (nvmeIsPresent) {
                       lifeRemaining = 100 - ((nvmeHealth.percent_used ?? nvmeHealth.percentage_used ?? 0) as number)
                     }
@@ -4030,28 +4022,27 @@ ${isNvmeDisk && !hasNvmeWearData ? (() => {
 
 ${!isNvmeDisk && diskType === 'SSD' ? (() => {
   // Try to find SSD wear indicators from SMART attributes
-  const wearAttr = smartAttributes.find(a => 
+  const wearAttr = smartAttributes.find(a => a.id !== 230 && (
     a.name?.toLowerCase().includes('wear_leveling') ||
     a.name?.toLowerCase().includes('media_wearout') ||
     a.name?.toLowerCase().includes('percent_lifetime') ||
     a.name?.toLowerCase().includes('ssd_life_left') ||
     a.id === 177 || a.id === 231 || a.id === 233
-  )
+  ))
   
   const lbasWrittenAttr = smartAttributes.find(a => 
     a.name?.toLowerCase().includes('total_lbas_written') ||
     a.id === 241
   )
   
-  // Also check disk properties — cast to number since SmartAttribute.value is number | string
-  const wearRaw = (wearAttr?.value !== undefined ? Number(wearAttr.value) : undefined) ?? disk.wear_leveling_count ?? disk.ssd_life_left
+  const reportedWear = disk.media_wearout_indicator ?? disk.wear_leveling_count
+  const lifeUsed = reportedWear ?? (disk.ssd_life_left != null
+    ? 100 - disk.ssd_life_left
+    : wearAttr?.value != null ? 100 - Number(wearAttr.value) : null)
 
-  if (wearRaw !== undefined && wearRaw !== null) {
-    // ID 230 (Media_Wearout_Indicator on WD/SanDisk): value = endurance used %
-    // All others (ID 177, 231, etc.): value = life remaining %
-    const lifeRemaining = (wearAttr?.id === 230) ? (100 - wearRaw) : wearRaw
-    const lifeUsed = 100 - lifeRemaining
-    
+  if (lifeUsed !== null && Number.isFinite(lifeUsed)) {
+    const lifeRemaining = Math.max(0, 100 - lifeUsed)
+
     // Calculate data written — detect unit from attribute name
     let dataWrittenTB = 0
     if (lbasWrittenAttr?.raw_value) {
