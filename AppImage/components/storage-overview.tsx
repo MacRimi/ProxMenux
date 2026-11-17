@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { OptionSelect } from "./option-select"
 import { fetchApi } from "../lib/api-config"
 import { formatStorage as sharedFormatStorage } from "../lib/utils"
 import { DiskTemperatureDetailModal } from "./disk-temperature-detail-modal"
@@ -15,6 +16,7 @@ import { getDiskType as resolveDiskType } from "../lib/disk-type"
 import { APP_VERSION } from "../lib/version"
 import { useT } from "@/lib/i18n/provider"
 import { useGroupDisksByController } from "../lib/storage-display"
+import { useAccess } from "../lib/access"
 import {
   useDiskTempThresholds,
   loadDiskTempThresholds,
@@ -4355,6 +4357,7 @@ interface SmartTestStatus {
 }
 
 function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabProps) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [testStatus, setTestStatus] = useState<SmartTestStatus>({ status: 'idle' })
   const [loading, setLoading] = useState(true)
@@ -4534,7 +4537,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             </div>
           </div>
           
-          <Button
+          {capabilities.execute && (<Button
             onClick={installSmartTools}
             disabled={installing}
             className="w-full gap-2 bg-[#4A9BA8] hover:bg-[#3d8591] text-white border-0"
@@ -4545,7 +4548,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               <Download className="h-4 w-4" />
             )}
             {installing ? t("storage.smartTest.installingTools") : t("storage.smartTest.installTools")}
-          </Button>
+          </Button>)}
           
           {testError && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
@@ -4576,7 +4579,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
         </h4>
         
         <div className="flex flex-wrap gap-3">
-          <Button
+          {capabilities.execute && (<Button
             variant="outline"
             size="sm"
             onClick={() => runSmartTest('short')}
@@ -4589,8 +4592,8 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               <Activity className="h-4 w-4" />
             )}
             {t("storage.smartTest.shortTest")}
-          </Button>
-          <Button
+          </Button>)}
+          {capabilities.execute && (<Button
             variant="outline"
             size="sm"
             onClick={() => runSmartTest('long')}
@@ -4603,7 +4606,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               <Activity className="h-4 w-4" />
             )}
             {t("storage.smartTest.extendedTest")}
-          </Button>
+          </Button>)}
         </div>
         <p className="text-xs text-muted-foreground">
           {t("storage.smartTest.testHelp")}
@@ -4764,6 +4767,7 @@ interface SmartHistoryEntry {
 }
 
 function HistoryTab({ disk }: { disk: DiskInfo }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [history, setHistory] = useState<SmartHistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -4930,7 +4934,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
                 >
                   <Download className="h-3.5 w-3.5" />
                 </Button>
-                <Button
+                {capabilities.execute && (<Button
                   variant="ghost" size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
                   onClick={(e: unknown) => { (e as MouseEvent).stopPropagation(); if (confirm(t("storage.historyTab.confirmDelete"))) handleDelete(entry.filename) }}
@@ -4938,7 +4942,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
                   title={t("storage.historyTab.delete")}
                 >
                   {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                </Button>
+                </Button>)}
               </div>
             </div>
           )
@@ -4975,6 +4979,7 @@ interface ScheduleConfig {
 }
 
 function ScheduleTab({ disk }: { disk: DiskInfo }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [config, setConfig] = useState<ScheduleConfig>({ enabled: true, schedules: [] })
   const [loading, setLoading] = useState(true)
@@ -5130,7 +5135,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           <p className="font-medium">{t("storage.scheduleTab.automaticTests")}</p>
           <p className="text-xs text-muted-foreground">{t("storage.scheduleTab.toggleHelp")}</p>
         </div>
-        <Button
+        {capabilities.execute && (<Button
           variant={config.enabled ? "default" : "outline"}
           size="sm"
           onClick={handleToggleGlobal}
@@ -5138,7 +5143,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           className={config.enabled ? "bg-purple-600 hover:bg-purple-700" : ""}
         >
           {config.enabled ? t("storage.scheduleTab.enabled") : t("storage.scheduleTab.disabled")}
-        </Button>
+        </Button>)}
       </div>
 
       {/* Schedules List */}
@@ -5163,7 +5168,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
                     {retentionLabel(schedule.retention)}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                {capabilities.execute && (<div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -5181,7 +5186,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
+                </div>)}
               </div>
             </div>
           ))}
@@ -5202,85 +5207,52 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.testType")}</label>
-              <select
-                value={formData.test_type}
-                onChange={e => setFormData(prev => ({ ...prev, test_type: e.target.value as 'short' | 'long' }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                <option value="short">{t("storage.smartTest.shortTest")}</option>
-                <option value="long">{t("storage.smartTest.longTest")}</option>
-              </select>
+              <OptionSelect value={formData.test_type} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.testType")}
+                onChange={value => setFormData(prev => ({ ...prev, test_type: value as 'short' | 'long' }))}
+                options={[{ value: "short", label: t("storage.smartTest.shortTest") },
+                          { value: "long", label: t("storage.smartTest.longTest") }]} />
             </div>
             
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.frequency")}</label>
-              <select
-                value={formData.frequency}
-                onChange={e => setFormData(prev => ({ ...prev, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                <option value="daily">{t("storage.scheduleTab.daily")}</option>
-                <option value="weekly">{t("storage.scheduleTab.weekly")}</option>
-                <option value="monthly">{t("storage.scheduleTab.monthly")}</option>
-              </select>
+              <OptionSelect value={formData.frequency} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.frequency")}
+                onChange={value => setFormData(prev => ({ ...prev, frequency: value as 'daily' | 'weekly' | 'monthly' }))}
+                options={[{ value: "daily", label: t("storage.scheduleTab.daily") },
+                          { value: "weekly", label: t("storage.scheduleTab.weekly") },
+                          { value: "monthly", label: t("storage.scheduleTab.monthly") }]} />
             </div>
             
             {formData.frequency === 'weekly' && (
               <div>
                 <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.dayOfWeek")}</label>
-                <select
-                  value={formData.day_of_week}
-                  onChange={e => setFormData(prev => ({ ...prev, day_of_week: parseInt(e.target.value) }))}
-                  className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-                >
-                  {dayNames.map((day, i) => (
-                    <option key={day} value={i}>{day}</option>
-                  ))}
-                </select>
+                <OptionSelect value={formData.day_of_week} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.dayOfWeek")}
+                  onChange={value => setFormData(prev => ({ ...prev, day_of_week: parseInt(value) }))}
+                  options={dayNames.map((day, i) => ({ value: i, label: day }))} />
               </div>
             )}
             
             {formData.frequency === 'monthly' && (
               <div>
                 <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.dayOfMonth")}</label>
-                <select
-                  value={formData.day_of_month}
-                  onChange={e => setFormData(prev => ({ ...prev, day_of_month: parseInt(e.target.value) }))}
-                  className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-                >
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
+                <OptionSelect value={formData.day_of_month} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.dayOfMonth")}
+                  onChange={value => setFormData(prev => ({ ...prev, day_of_month: parseInt(value) }))}
+                  options={Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))} />
               </div>
             )}
             
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.timeHour")}</label>
-              <select
-                value={formData.hour}
-                onChange={e => setFormData(prev => ({ ...prev, hour: parseInt(e.target.value) }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{i.toString().padStart(2, '0')}:00</option>
-                ))}
-              </select>
+              <OptionSelect value={formData.hour} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.timeHour")}
+                onChange={value => setFormData(prev => ({ ...prev, hour: parseInt(value) }))}
+                options={Array.from({ length: 24 }, (_, i) => ({ value: i, label: `${i.toString().padStart(2, '0')}:00` }))} />
             </div>
             
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.retention")}</label>
-              <select
-                value={formData.retention}
-                onChange={e => setFormData(prev => ({ ...prev, retention: parseInt(e.target.value) }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                <option value={5}>{t("storage.scheduleTab.lastN", { count: 5 })}</option>
-                <option value={10}>{t("storage.scheduleTab.lastN", { count: 10 })}</option>
-                <option value={20}>{t("storage.scheduleTab.lastN", { count: 20 })}</option>
-                <option value={50}>{t("storage.scheduleTab.lastN", { count: 50 })}</option>
-                <option value={0}>{t("storage.scheduleTab.keepAll")}</option>
-              </select>
+              <OptionSelect value={formData.retention} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.retention")}
+                onChange={value => setFormData(prev => ({ ...prev, retention: parseInt(value) }))}
+                options={[...[5, 10, 20, 50].map(count => ({ value: count, label: t("storage.scheduleTab.lastN", { count }) })),
+                          { value: 0, label: t("storage.scheduleTab.keepAll") }]} />
             </div>
           </div>
           
@@ -5305,14 +5277,14 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           </div>
         </div>
       ) : (
-        <Button
+        capabilities.execute && (<Button
           onClick={() => setShowForm(true)}
           variant="outline"
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("storage.scheduleTab.add")}
-        </Button>
+        </Button>)
       )}
       
       <p className="text-xs text-muted-foreground text-center">

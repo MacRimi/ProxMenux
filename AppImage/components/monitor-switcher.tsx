@@ -16,6 +16,7 @@ import {
 import { fetchApi } from "../lib/api-config"
 import { monitorLinkError } from "../lib/monitor-link-errors"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface MonitorLink {
   key: string
@@ -125,6 +126,8 @@ function ProductIcon({ product, className }: { product: string; className?: stri
 
 export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: string; compact?: boolean }) {
   const t = useT()
+  // Everyone can jump to a known node; only administrators change the list.
+  const { capabilities } = useAccess()
   const [manageOpen, setManageOpen] = useState(false)
   // The backend keeps the list ready, so the menu opens already filled.
   const { data, error, isLoading } = useSWR<MonitorLinks>("/api/monitor-links", fetcher, { revalidateOnFocus: false, refreshInterval: 300000 })
@@ -147,7 +150,7 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
   }
   useEffect(() => {
     // Offered right after arriving, until every node the source links is known here.
-    if (!offered && origin?.fresh && data && candidates.length > 0 && !declined(origin.url)) {
+    if (capabilities.admin && !offered && origin?.fresh && data && candidates.length > 0 && !declined(origin.url)) {
       setOffered(true)
       setSelected(candidates.map(row => row.url))
       setOfferOrigin(true)
@@ -254,10 +257,12 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
             })}
           </div>
         })}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2" onSelect={() => setManageOpen(true)}>
-          <Plus className="h-4 w-4" />{t("monitorLinks.manage")}
-        </DropdownMenuItem>
+        {capabilities.admin && <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="gap-2" onSelect={() => setManageOpen(true)}>
+            <Plus className="h-4 w-4" />{t("monitorLinks.manage")}
+          </DropdownMenuItem>
+        </>}
       </DropdownMenuContent>
     </DropdownMenu>
     {manageOpen && <ManageLinksDialog open={manageOpen} onOpenChange={setManageOpen} />}

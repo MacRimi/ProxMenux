@@ -90,6 +90,8 @@
       "runScript": "Exécuter le script",
       "createVm": "Créer la VM",
       "addonNote": "S'installe dans un LXC ou une VM que vous avez déjà ; n'en crée pas de nouveau.",
+      "requiresNvidia": "Nécessite un GPU NVIDIA avec son pilote installé sur l'hôte Proxmox ; il peut être installé depuis Matériel : GPU et Coral-TPU dans le menu ProxMenux. L'installation donne au conteneur l'accès au GPU pour CUDA.",
+      "optionalGpu": "Peut utiliser un GPU pour l'accélération matérielle. L'installation demande s'il faut l'activer.",
       "proxmenuxDocs": "Documentation de ProxMenux",
       "releases": "Versions disponibles",
       "suiteApps": "Applications au choix",
@@ -124,6 +126,7 @@
   },
   "actions": {
     "refresh": "Actualiser",
+    "retry": "Réessayer",
     "toggleTheme": "Changer de thème",
     "openUserMenu": "Ouvrir le menu utilisateur",
     "cancel": "Annuler",
@@ -2848,7 +2851,147 @@
     "avatarHint": "PNG, JPEG, WebP ou GIF · jusqu'à 2 Mo · recadrez en carré au préalable pour un meilleur résultat.",
     "settingUp": "Configuration…",
     "setupAuthentication": "Configurer l'authentification",
-    "back": "Retour"
+    "back": "Retour",
+    "setupCode": "Code de configuration",
+    "setupCodeHint": "Il a été affiché dans la console lors de l'installation de ProxMenux. Si vous ne l'avez pas, exécutez menu sur le serveur et ouvrez Paramètres → Afficher le code de configuration du Monitor.",
+    "codeInvalid": "Le code de configuration n'est pas valide.",
+    "codeRateLimited": "Trop de tentatives. Attendez quelques minutes puis réessayez.",
+    "noPasswordTitle": "Sans mot de passe",
+    "noPasswordDescription": "Choisissez ce que toute personne accédant à cette adresse peut faire.",
+    "readOnlyTitle": "Lecture seule",
+    "readOnlyDescription": "Toute personne accédant au Monitor peut le consulter, mais ne peut pas ouvrir de terminaux, exécuter de scripts ni modifier quoi que ce soit. Vous pourrez ajouter un mot de passe plus tard.",
+    "openTitle": "Ouvrir, en acceptant les risques",
+    "openDescription": "Toute personne accédant au Monitor obtient le contrôle total de ce serveur, terminal root inclus. Ne choisissez cette option que sur un réseau où vous faites confiance à toutes les personnes pouvant y accéder.",
+    "chooseReadOnly": "Utiliser la lecture seule",
+    "chooseOpen": "Ouvrir sans mot de passe",
+    "pveTitle": "Ou utiliser les comptes de Proxmox VE",
+    "pveDescription": "Connectez-vous avec les utilisateurs et les domaines de Proxmox VE ainsi que leur authentification à deux facteurs, sans compte propre à Monitor.",
+    "choosePve": "Utiliser les comptes Proxmox VE"
+  },
+  "pveAccounts": {
+    "title": "Comptes Proxmox VE",
+    "description": "Connectez-vous avec les utilisateurs et les domaines de Proxmox VE, y compris leur authentification à deux facteurs.",
+    "enable": "Autoriser la connexion avec les comptes Proxmox VE",
+    "onlyWay": "Les comptes Proxmox VE permettent d'accéder au tableau de bord. Pour ne plus les utiliser, ajoutez un mot de passe local ou choisissez l'accès en lecture seule ou libre ci-dessus.",
+    "whoGetsIn": "Les utilisateurs disposant du privilège Sys.Modify sur / bénéficient d'un accès complet ; ceux disposant uniquement de Sys.Audit sur /, d'un accès en lecture seule. Les autres utilisateurs ne peuvent pas se connecter.",
+    "sharedSession": "Connecté à l'interface web de Proxmox VE ? Ouvrez le tableau de bord en HTTPS à la même adresse et cette session vous connectera ici aussi.",
+    "saveFailed": "La modification n'a pas pu être enregistrée.",
+    "rulesTitle": "Profils des comptes Proxmox VE",
+    "rulesHelp": "La règle d'un utilisateur l'emporte ; sinon, la première règle de l'un de ses groupes s'applique. Sans règle, Sys.Modify sur / donne le profil Administrateur et Sys.Audit le profil Observateur. Une règle ne laisse jamais entrer un utilisateur sans privilèges sur /.",
+    "ruleKind": "Règle pour",
+    "ruleName": "Utilisateur ou groupe",
+    "kindUser": "Utilisateur",
+    "kindGroup": "Groupe",
+    "chooseName": "Choisir…",
+    "addRule": "Ajouter une règle",
+    "removeRule": "Supprimer",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "saveRules": "Enregistrer les règles",
+    "rulesSaved": "Règles enregistrées.",
+    "errors": {
+      "pve_rules_invalid": "Les règles n'ont pas pu être enregistrées.",
+      "pve_name_invalid": "Choisissez un utilisateur ou un groupe valide.",
+      "pve_user_realm": "Indiquez l'utilisateur avec son domaine, par exemple utilisateur@pve.",
+      "pve_rule_duplicate": "Chaque utilisateur ou groupe ne peut avoir qu'une règle.",
+      "pve_rule_self": "Ces règles vous retireraient l'accès administrateur."
+    }
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "description": "Utilisateurs locaux du Monitor, chacun avec son mot de passe, son authentification à deux facteurs et son profil.",
+    "you": "Vous",
+    "primary": "Principal",
+    "profile": "Profil",
+    "profiles": {
+      "admin": "Administrateur",
+      "operator": "Opérateur avec terminal",
+      "operator_no_terminal": "Opérateur sans terminal",
+      "observer": "Observateur",
+      "custom": "Personnalisé"
+    },
+    "profileHints": {
+      "admin": "tout, y compris les utilisateurs, les réglages du Monitor et les secrets.",
+      "operator": "exécute des scripts et des outils, contrôle les VM et les LXC, gère les sauvegardes, met à jour et ouvre des terminaux.",
+      "operator_no_terminal": "comme un opérateur avec terminal, sans ouvrir de terminaux.",
+      "observer": "voit le tableau de bord sans les secrets ; n'exécute et ne modifie rien.",
+      "custom": "les zones qu'il voit et les actions qu'il peut effectuer, choisies une à une ; jamais l'administration."
+    },
+    "add": "Ajouter un utilisateur",
+    "username": "Nom d'utilisateur",
+    "usernameHint": "Jusqu'à 32 lettres, chiffres, points, tirets et tirets bas.",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "setPassword": "Définir le mot de passe",
+    "removeTotp": "Retirer la 2FA",
+    "remove": "Supprimer",
+    "confirmRemove": "Supprimer l'utilisateur",
+    "removeHint": "Ses sessions et ses jetons d'API cessent de fonctionner.",
+    "passwordsDiffer": "Les mots de passe ne correspondent pas.",
+    "added": "Utilisateur ajouté.",
+    "passwordSet": "Mot de passe enregistré.",
+    "profileChanged": "Profil enregistré. Il s'applique immédiatement à ses sessions ouvertes.",
+    "totpRemoved": "Authentification à deux facteurs retirée. Elle peut être reconfigurée depuis Sécurité.",
+    "removed": "Utilisateur supprimé.",
+    "errors": {
+      "username_invalid": "Le nom d'utilisateur peut contenir jusqu'à 32 lettres, chiffres, points, tirets et tirets bas.",
+      "username_taken": "Ce nom d'utilisateur est déjà utilisé.",
+      "profile_unknown": "Profil inconnu.",
+      "last_admin": "Le Monitor a besoin d'au moins un administrateur.",
+      "user_not_found": "Cet utilisateur n'existe plus.",
+      "remove_self": "Vous ne pouvez pas supprimer votre propre compte.",
+      "password_short": "Le mot de passe doit comporter au moins 10 caractères.",
+      "password_mix": "Le mot de passe doit combiner au moins trois éléments parmi : minuscules, majuscules, chiffres et symboles.",
+      "password_common": "Ce mot de passe est trop courant. Choisissez-en un autre.",
+      "user_change_failed": "La modification n'a pas pu être enregistrée.",
+      "custom_invalid": "Choisissez au moins une zone.",
+      "disable_self": "Vous ne pouvez pas désactiver votre propre compte."
+    },
+    "customAreas": "Zones visibles",
+    "customActions": "Actions autorisées",
+    "customHint": "Sécurité, Paramètres et le compte personnel restent toujours disponibles. L'administration est réservée au profil Administrateur.",
+    "customize": "Modifier les zones",
+    "noActions": "aucune action",
+    "areas": {
+      "general": "Aperçu",
+      "apps": "Applications",
+      "menux": "Menux",
+      "guests": "VM et LXC",
+      "node": "Nœud (stockage, réseau, matériel)",
+      "backup": "Sauvegarde",
+      "logs": "Journaux système"
+    },
+    "actions": {
+      "execute": "Exécuter des scripts et des outils",
+      "guests": "Contrôler les VM et les LXC",
+      "backup": "Gérer les sauvegardes",
+      "update": "Mettre à jour",
+      "terminal": "Ouvrir des terminaux"
+    },
+    "disable": "Désactiver",
+    "enable": "Activer",
+    "disabledBadge": "Désactivé",
+    "disabledDone": "Utilisateur désactivé : il ne peut plus se connecter, et ses sessions et jetons d'API cessent de fonctionner jusqu'à sa réactivation.",
+    "enabledDone": "Utilisateur activé."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Compte local",
+    "username": "Utilisateur",
+    "password": "Mot de passe",
+    "realm": "Domaine",
+    "code": "Code à deux facteurs",
+    "codeHint": "Le code à six chiffres de votre application d'authentification ou l'une de vos clés de récupération.",
+    "failed": "Échec de la connexion. Vérifiez l'utilisateur, le mot de passe et le domaine.",
+    "fillFields": "Saisissez l'utilisateur et le mot de passe.",
+    "tooManyAttempts": "Trop de tentatives. Attendez quelques minutes et réessayez.",
+    "useWebInterface": "Ce compte se connecte avec une clé de sécurité. Connectez-vous sur l'interface web de Proxmox VE, puis revenez sur cette page.",
+    "webInterface": "Se connecter sur l'interface web de Proxmox VE",
+    "webInterfaceHint": "Lorsque Monitor est ouvert en HTTPS à la même adresse, la session de l'interface web de Proxmox VE vous connecte automatiquement ici à votre retour."
+  },
+  "access": {
+    "readOnlyBanner": "Accès en lecture seule : vous pouvez voir ce serveur, mais vous ne pouvez rien exécuter ni modifier. Pour le gérer, ajoutez un mot de passe dans Sécurité."
   },
   "securityPage": {
     "title": "Sécurité",
@@ -2882,7 +3025,8 @@
       "none": "Aucun",
       "external": "Externe",
       "up": "Actif",
-      "down": "Inactif"
+      "down": "Inactif",
+      "readOnly": "Lecture seule"
     },
     "errors": {
       "deleteReportNoFiles": "Aucun rapport ni journal Lynis à supprimer n’a été trouvé.",
@@ -2958,7 +3102,8 @@
       "sslCertificateReloaded": "Le certificat renouvelé est maintenant actif. Les connexions existantes n’ont pas été interrompues.",
       "sslCertificateUnchanged": "Le certificat actif correspond déjà aux fichiers de certificat actuels.",
       "reportDeleted": "Le rapport d'audit a été supprimé.",
-      "twoFactorEnabled": "L'authentification à deux facteurs est activée."
+      "twoFactorEnabled": "L'authentification à deux facteurs est activée.",
+      "readOnlyReloading": "Le tableau de bord est désormais en lecture seule. Rechargement..."
     },
     "confirm": {
       "disableAuth": "Désactiver l'authentification ? Toute personne pouvant accéder au tableau de bord pourra l’ouvrir.",
@@ -2993,7 +3138,11 @@
       "confirmNewPasswordPlaceholder": "Saisissez à nouveau le nouveau mot de passe",
       "changing": "Modification…",
       "enterYourPassword": "Saisissez votre mot de passe",
-      "disable": "Désactiver l'authentification"
+      "disable": "Désactiver l'authentification",
+      "readOnlyMode": "Le tableau de bord est en lecture seule sans mot de passe : il peut être consulté, mais rien ne peut être exécuté ni modifié.",
+      "useReadOnly": "Passer en lecture seule",
+      "disableChoose": "Sans mot de passe, comment le tableau de bord doit-il être accessible ?",
+      "pveMode": "Le tableau de bord utilise les comptes de Proxmox VE pour la connexion."
     },
     "twoFactor": {
       "title": "Authentification à deux facteurs",
@@ -5972,6 +6121,7 @@
       "databases": "Bases de données",
       "documentsNotes": "Documents et notes",
       "filesDownloads": "Fichiers et téléchargements",
+      "downloads": "Téléchargements",
       "financeBudgeting": "Finances et budget",
       "gamingLeisure": "Jeux et loisirs",
       "hostManagement": "Gestion de l'hôte",
@@ -8119,6 +8269,117 @@
     "unexpectedContentType": "Réponse JSON attendue, mais {contentType} reçu",
     "unknownContentType": "type de contenu inconnu",
     "invalidJson": "Réponse JSON non valide de {endpoint}",
-    "unauthorized": "Non autorisé : {endpoint}"
+    "unauthorized": "Non autorisé : {endpoint}",
+    "forbidden": "Votre profil ne permet pas cette action."
+  },
+  "accessLog": {
+    "title": "Activité d'accès",
+    "description": "Connexions, modifications des comptes, des profils et des réglages de connexion, et chaque action refusée par un profil, avec son auteur. Les mots de passe, codes et jetons ne sont jamais enregistrés. Conservé 90 jours.",
+    "empty": "Aucune activité enregistrée pour l'instant.",
+    "loadMore": "Charger plus",
+    "refused": "Refusée",
+    "failed": "Échec",
+    "noAccount": "Sans compte",
+    "secondFactor": "second facteur",
+    "missing": "manque : {permission}",
+    "on": "activé",
+    "off": "désactivé",
+    "rules": "règles : {count}",
+    "subjects": "identifiants : {count}",
+    "events": {
+      "login": "Connexion",
+      "account": {
+        "created": "Compte créé"
+      },
+      "access": {
+        "mode": "Mode d'accès modifié",
+        "refused": "Action refusée"
+      },
+      "password": {
+        "changed": "Mot de passe modifié"
+      },
+      "totp": {
+        "enabled": "Authentification à deux facteurs activée",
+        "disabled": "Authentification à deux facteurs désactivée"
+      },
+      "api_token": {
+        "created": "Jeton d'API créé",
+        "revoked": "Jeton d'API révoqué"
+      },
+      "user": {
+        "created": "Utilisateur ajouté",
+        "profile": "Profil modifié",
+        "password": "Mot de passe défini par un administrateur",
+        "totp_reset": "Authentification à deux facteurs retirée",
+        "deleted": "Utilisateur supprimé",
+        "disabled": "Utilisateur désactivé",
+        "enabled": "Utilisateur activé"
+      },
+      "pve": {
+        "accounts": "Comptes Proxmox VE",
+        "rules": "Règles de profils Proxmox VE"
+      },
+      "oidc": {
+        "config": "Réglages OpenID Connect"
+      },
+      "app_watch": {
+        "adopted": "Enregistrements d'applications repris du conteneur"
+      }
+    },
+    "methods": {
+      "local": "compte local",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "lecture seule",
+      "open": "ouvert",
+      "proxmox": "comptes Proxmox VE",
+      "password": "mot de passe"
+    },
+    "scopes": {
+      "read_only": "lecture seule",
+      "full_admin": "accès complet"
+    },
+    "permissions": {
+      "admin": "administrer",
+      "view": "voir",
+      "self": "son propre compte",
+      "ticket": "ticket de terminal ou de téléchargement"
+    }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Connectez-vous avec un fournisseur d'identité externe, tel qu'Authentik, Keycloak ou Pocket ID.",
+    "localRequired": "Configurez et activez l'authentification locale par mot de passe avant de configurer OIDC.",
+    "enable": "Activer OpenID Connect",
+    "provider_name": "Nom du fournisseur",
+    "issuer": "URL de l'émetteur (valeur exacte issue de la découverte)",
+    "public_url": "URL HTTPS publique de ce tableau de bord Monitor",
+    "client_id": "Identifiant du client",
+    "secret": "Secret du client",
+    "secretKept": "Le secret enregistré est conservé si le champ reste vide",
+    "authMethod": "Méthode d'authentification du client",
+    "publicClient": "Client public (PKCE, sans secret)",
+    "urlHelp": "Utilisez l'URL exacte de l'émetteur, y compris toute barre oblique finale. L'URL publique doit desservir ce tableau de bord et ses routes /api en HTTPS, y compris tout préfixe de chemin du proxy.",
+    "subjects": "Identifiants de sujet administrateur autorisés (sub), un par ligne",
+    "subjectHelp": "Seuls ces identifiants utilisateur immuables du fournisseur peuvent accéder à Monitor. Chacun reçoit un accès administrateur complet. Utilisez la revendication sub émise pour ce client, et non une adresse e-mail ou un nom d'affichage.",
+    "callback": "Enregistrez exactement cette URI de redirection dans votre fournisseur d'identité :",
+    "mfaHelp": "OIDC utilise la politique MFA du fournisseur d'identité. Le mot de passe local et la 2FA restent disponibles. L'enregistrement des modifications invalide les sessions OIDC existantes.",
+    "unavailable": "Cette version de Monitor n'inclut pas l'environnement d'exécution cryptographique requis par OIDC.",
+    "save": "Enregistrer et vérifier le fournisseur",
+    "saving": "Vérification du fournisseur…",
+    "saved": "Paramètres OIDC enregistrés. La découverte a été vérifiée ; testez une connexion dans un autre navigateur avant de terminer votre session locale.",
+    "saveFailed": "Impossible d'enregistrer les paramètres OIDC.",
+    "login": "Continuer avec {provider}",
+    "loginFailed": "La connexion OIDC a échoué ou a expiré. Réessayez, vérifiez votre identifiant de sujet autorisé ou utilisez vos identifiants locaux.",
+    "disabledSaved": "Paramètres OIDC enregistrés. La connexion externe est désactivée.",
+    "saveDisabled": "Enregistrer les paramètres",
+    "allowedSubjects": "Identifiants autorisés",
+    "allowedSubjectsHelp": "Seuls ces identifiants d'utilisateur immuables du fournisseur accèdent au Monitor, chacun avec son profil ; un identifiant sans profil choisi est administrateur. Utilisez la valeur sub émise pour ce client, pas une adresse e-mail ni un nom affiché.",
+    "subjectId": "Identifiant (sub)",
+    "subjectName": "Nom (facultatif)",
+    "addSubject": "Ajouter un identifiant",
+    "removeSubject": "Supprimer"
   }
 }

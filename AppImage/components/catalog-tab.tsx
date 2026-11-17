@@ -11,11 +11,13 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { ArrowLeft, BadgeCheck, Check, ChevronLeft, Container, Server, ChevronRight, ExternalLink, Loader2, Search, Settings2, X } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useI18n, useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 import { categoryChipStyle, hueForCategory, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
 import { ThemeAwareLogo } from "./lxc-app-panel"
 import { CategoryIcon, CategoryTile } from "./category-icons"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
+import { Button } from "./ui/button"
 import { Switch } from "./ui/switch"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 
@@ -55,6 +57,9 @@ interface CatalogItem {
   // installation creates: one for each service.
   publisher?: { kind: "official" | "linuxserver" | "other"; name: string }
   containers?: number
+  // The same application from every source shares this group, even when
+  // the names differ.
+  same?: string
 }
 
 // A section of the tools: one of the main menu of ProxMenux, with the
@@ -96,6 +101,9 @@ interface CatalogDetail extends CatalogItem {
   config_path?: string
   version?: string
   installable?: boolean
+  // What the recipe needs of a GPU: "nvidia" to run at all, "optional" when
+  // the installation offers one for acceleration.
+  gpu?: "nvidia" | "optional" | ""
 }
 
 // A view of the tab: a category of applications, every application, or one
@@ -118,6 +126,8 @@ function appKey(name: string) {
   }
   return key
 }
+
+const sameKey = (item: CatalogItem) => item.same || appKey(item.name)
 
 // Several images of one project share its name: the project's own comes
 // first, then the one of LinuxServer.io, then any other publisher's.
@@ -542,8 +552,12 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
   const titles = useContext(SectionTitles)
   const { language } = useI18n()
   const isLight = useIsLightTheme()
+  // Installing or running opens a terminal on the host: a session that
+  // cannot run anything reads the sheet without those buttons.
+  const { capabilities } = useAccess()
   const [detail, setDetail] = useState<CatalogDetail | null>(null)
   const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -553,7 +567,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
       .then(d => { if (active) setDetail(d) })
       .catch(() => { if (active) setFailed(true) })
     return () => { active = false }
-  }, [item.kind, item.id, language])
+  }, [item.kind, item.id, language, attempt])
 
   const d = detail
   const r = d?.resources || {}
@@ -566,6 +580,8 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
 
   const notes: Note[] = [
     ...(item.type === "addon" ? [{ type: "info" as const, text: t("catalog.sheet.addonNote") }] : []),
+    ...(d?.gpu === "nvidia" ? [{ type: "warning" as const, text: t("catalog.sheet.requiresNvidia") }] : []),
+    ...(d?.gpu === "optional" ? [{ type: "info" as const, text: t("catalog.sheet.optionalGpu") }] : []),
     ...(d?.notes || []).map(n => typeof n === "string" ? { type: "info" as const, text: n } : n),
     ...(d?.uses_third_party || []).map(m => ({ type: "warning" as const, text: t("catalog.sheet.usesThirdParty", { name: m.name }), link: m.url })),
   ]
@@ -663,7 +679,12 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
           {!d && !failed && (
             <div className="grid place-items-center py-24 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
           )}
-          {failed && <p className="px-6 py-12 text-center text-muted-foreground">{t("catalog.sheet.loadError")}</p>}
+          {failed && (
+            <div className="px-6 py-12 text-center text-muted-foreground space-y-3">
+              <p>{t("catalog.sheet.loadError")}</p>
+              <Button variant="outline" size="sm" onClick={() => setAttempt(n => n + 1)}>{t("actions.retry")}</Button>
+            </div>
+          )}
 
           {d && (
             <div className="grid gap-6 px-5 sm:px-6 pt-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -839,7 +860,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
                   )}
                 </dl>
 
-                <div className="grid gap-2">
+                {capabilities.execute && <div className="grid gap-2">
                   {item.kind === "oci" ? (
                     <>
                       <button type="button" disabled={d.installable === false} onClick={() => onRun(false)}
@@ -858,7 +879,7 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
                         : item.kind === "pmx" && item.type === "vm" ? t("catalog.sheet.createVm") : t("catalog.sheet.open")}
                     </button>
                   )}
-                </div>
+                </div>}
 
                 {links.length > 0 && (
                   <section>
@@ -925,6 +946,7 @@ export function CatalogTab() {
   const [items, setItems] = useState<CatalogItem[] | null>(itemsCache.get(language)?.items || null)
   const [sections, setSections] = useState<Section[]>(itemsCache.get(language)?.sections || [])
   const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [query, setQuery] = useState("")
   const [view, setView] = useState<View | null>(null)
   const [open, setOpen] = useState<CatalogItem | null>(null)
@@ -961,7 +983,7 @@ export function CatalogTab() {
         .catch(() => { if (active && !quiet) setFailed(true) })
     load(false)
     return () => { active = false; timers.forEach(clearTimeout) }
-  }, [language])
+  }, [language, attempt])
 
   useEffect(() => {
     if (!showSettings) return
@@ -976,7 +998,7 @@ export function CatalogTab() {
   // The applications that are the same one from another source.
   const sameApp = useMemo(() => {
     const groups = new Map<string, CatalogItem[]>()
-    for (const item of apps) groups.set(appKey(item.name), [...(groups.get(appKey(item.name)) || []), item])
+    for (const item of apps) groups.set(sameKey(item), [...(groups.get(sameKey(item)) || []), item])
     for (const list of groups.values()) list.sort((a, b) => SOURCE_ORDER[a.kind] - SOURCE_ORDER[b.kind] || publisherRank(a) - publisherRank(b))
     return groups
   }, [apps])
@@ -1104,7 +1126,12 @@ export function CatalogTab() {
       {!items && !failed && (
         <div className="grid place-items-center py-24 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
       )}
-      {failed && <p className="py-16 text-center text-muted-foreground">{t("catalog.loadError")}</p>}
+      {failed && (
+        <div className="py-16 text-center text-muted-foreground space-y-3">
+          <p>{t("catalog.loadError")}</p>
+          <Button variant="outline" size="sm" onClick={() => setAttempt(n => n + 1)}>{t("actions.retry")}</Button>
+        </div>
+      )}
 
       {items && results && (
         <div className="grid gap-6">
@@ -1184,7 +1211,7 @@ export function CatalogTab() {
       )}
 
       {open && <Sheet key={open.key} item={open} onClose={() => setOpen(null)} onRun={advanced => { setRun({ item: open, advanced }); setOpen(null) }}
-        related={(sameApp.get(appKey(open.name)) || []).filter(other => other.key !== open.key)} onOpenOther={setOpen} />}
+        related={(sameApp.get(sameKey(open)) || []).filter(other => other.key !== open.key)} onOpenOther={setOpen} />}
 
       {run && (
         <ScriptTerminalModal

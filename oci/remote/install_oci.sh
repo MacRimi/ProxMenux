@@ -1731,8 +1731,7 @@ download_and_verify_archive() {
   [[ -z ${OCI_LOG:-} ]] || cat "$download_log" >>"$OCI_LOG"
   rm -f "$download_log"
   msg_ok "$(translate "Image downloaded") ($(( ($(stat -c %s "$partial_path") + 1048575) / 1048576 )) MiB)"
-  msg_info "$(translate "Verifying the image integrity...")"
-  if ! oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$partial_path"; then
+  if ! oci_verify_archive "$partial_path"; then
     rm -f "$partial_path"
     return 1
   fi
@@ -1743,8 +1742,7 @@ download_and_verify_archive() {
 
 if [[ -s $ARCHIVE_PATH ]]; then
   oci_log "Verifying the cached image: $ARCHIVE_VOLUME"
-  msg_info "$(translate "Verifying the image integrity...")"
-  if oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$ARCHIVE_PATH"; then
+  if oci_verify_archive "$ARCHIVE_PATH"; then
     msg_ok "$(translate "Using the verified image from the cache")"
   else
     msg_warn "$(translate "The cached image is damaged; it will be downloaded again.")"

@@ -4,6 +4,7 @@ import shutil
 import socket
 import ssl
 import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -12,6 +13,7 @@ from unittest import mock
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "auth_manager.py"
+sys.path.insert(0, str(MODULE_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("auth_manager_ssl_under_test", MODULE_PATH)
 auth_manager = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(auth_manager)

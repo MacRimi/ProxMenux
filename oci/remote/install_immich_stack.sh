@@ -293,10 +293,7 @@ ensure_image() {
   archive_volume="${TEMPLATE_STORAGE}:vztmpl/${archive_name}"
   archive_path=$(pvesm path "$archive_volume")
   mkdir -p "$(dirname "$archive_path")"
-  if [[ -s $archive_path ]]; then
-    msg_info "$(translate "Verifying the image integrity...")"
-  fi
-  if [[ -s $archive_path ]] && oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$archive_path"; then
+  if [[ -s $archive_path ]] && oci_verify_archive "$archive_path"; then
     oci_log "Reusing ${archive_volume}"
   else
     rm -f "$archive_path"
@@ -333,8 +330,7 @@ ensure_image() {
         msg_warn "$(translate "The image download did not complete correctly; downloading it again...")"
         continue
       fi
-      msg_info "$(translate "Verifying the image integrity...")"
-      if ! oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$partial"; then
+      if ! oci_verify_archive "$partial"; then
         rm -f "$partial"
         (( attempt < 2 )) || die "$(translate "The downloaded image is corrupt:") $image"
         msg_warn "$(translate "The image download did not complete correctly; downloading it again...")"

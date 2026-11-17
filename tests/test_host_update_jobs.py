@@ -229,8 +229,10 @@ class Routes(unittest.TestCase):
         self.app = Flask(__name__)
         auth = ModuleType('auth_manager')
         auth.load_auth_config = lambda: {'enabled':True}
+        auth.access_mode = lambda config=None: 'password'
         auth.verify_token = lambda token: 'fixture' if token=='valid' else None
         auth.verify_token_full = lambda token: ('fixture','full_admin') if token=='valid' else ('fixture','read_only') if token=='read-only' else (None,None)
+        auth.profile_for = lambda mode, username=None, scope=None: {'full_admin': 'admin', 'read_only': 'observer'}.get(scope)
         modules = patch.dict(sys.modules, {'auth_manager':auth})
         modules.start()
         self.addCleanup(modules.stop)
@@ -247,6 +249,7 @@ class Routes(unittest.TestCase):
                    request=request,jsonify=jsonify,require_admin_scope=middleware.require_admin_scope,
                    _TERMINAL_TICKETS={},_TICKETS_LOCK=threading.Lock(),_TICKET_TTL=5,
                    _TICKET_MAX_INFLIGHT=256,time=time,secrets=__import__('secrets'),json=json,
+                   permissions=__import__('permissions'),g=__import__('flask').g,
                    _host_update_completed=self.callback)
         names={'_issue_terminal_ticket','_consume_terminal_ticket','_ws_auth_check',
                'issue_terminal_ticket_route','host_update_jobs_status','host_update_result','host_update_viewer'}

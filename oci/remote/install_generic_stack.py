@@ -30,6 +30,7 @@ import oci_instances
 import oci_nested_mounts
 import oci_stack_public_routes
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, stop_spinner, log
+import oci_mount_lock
 
 HERE = Path(__file__).resolve().parent
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
@@ -621,7 +622,7 @@ def attach_mounts(service, temporary):
                     # Nothing was moved; the image keeps its files as before.
                     print(f'Image defaults left in place for {mount["container_path"]}: {error}', file=sys.stderr)
         finally:
-            run('pct','unmount',vmid)
+            oci_mount_lock.release(vmid, run)
         if mount['type']=='managed-volume':
             value=f"{mount['source']}:{mount['size_gb']},mp={mount['container_path']},backup=1"
         else:
@@ -661,7 +662,7 @@ def attach_mounts(service, temporary):
                 if applied:
                     os.chown(target, *declared_owner)
             finally:
-                run('pct','unmount',vmid)
+                oci_mount_lock.release(vmid, run)
 
         if mount.get('read_only'):
             config = run('pct', 'config', vmid)
@@ -750,7 +751,7 @@ def seed_qbittorrent(service):
             config.write(output,space_around_delimiters=False)
         os.chown(target,owner,owner)
     finally:
-        run('pct','unmount',vmid)
+        oci_mount_lock.release(vmid, run)
 
 
 def same_download_path(actual, expected):
@@ -924,7 +925,7 @@ def prepare_suite_config(service):
                 output.write('[misc]\ndownload_dir = /data/downloads/usenet-incomplete\ncomplete_dir = /data/downloads/usenet\n')
             os.chown(target,101000,101000)
     finally:
-        run('pct','unmount',vmid)
+        oci_mount_lock.release(vmid, run)
 
 
 def configure_unpackerr(services, keys):

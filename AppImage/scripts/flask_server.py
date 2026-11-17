@@ -92,6 +92,7 @@ from flask_terminal_routes import (  # noqa: E402
 )
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
+from flask_oidc_routes import oidc_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
 from flask_pbs_routes import pbs_bp  # noqa: E402
 from flask_monitor_links_routes import monitor_links_bp  # noqa: E402
@@ -107,7 +108,7 @@ from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
 from notification_templates import health_linked_event  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth, require_admin_or_ticket, require_admin_scope  # noqa: E402
+from jwt_middleware import require_auth, require_admin_or_ticket, require_admin_scope, has_full_access  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -201,6 +202,7 @@ post_install_versions.scan_at_startup()
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
+app.register_blueprint(oidc_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
 app.register_blueprint(pbs_bp)
@@ -341,6 +343,35 @@ def check_fail2ban_ban():
             "success": False,
             "message": "Access denied. Your IP has been temporarily banned due to too many failed login attempts."
         }), 403
+
+
+# Until someone chooses how to reach the Monitor, only the first-run screen is
+# served: its static files and the routes that take that decision. The
+# internal routes keep their own loopback checks, so the scripts and Proxmox
+# itself reach them as before.
+_UNDECIDED_ROUTES = frozenset({
+    '/api/auth/status', '/api/auth/setup', '/api/auth/mode',
+    '/api/auth/skip', '/api/auth/decline',
+    '/api/notifications/webhook', '/api/updates/post-install/scan',
+})
+
+
+@app.before_request
+def require_access_decision():
+    path = request.path or '/'
+    if not (path.startswith('/api/') or path.startswith('/ws/')):
+        return None
+    if path in _UNDECIDED_ROUTES or path.startswith('/api/internal/'):
+        return None
+    try:
+        from auth_manager import access_mode
+        undecided = access_mode() == 'undecided'
+    except Exception:
+        undecided = True  # An unreadable state never opens the Monitor.
+    if undecided:
+        return jsonify({"error": "setup_required",
+                        "message": "Choose how to access ProxMenux Monitor first"}), 403
+    return None
 
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
@@ -2259,6 +2290,7 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
                 import lxc_apps
                 lxc_apps.clear_schedule_reboot_required(guest_id)
                 _vm_cache_invalidate(guest_id, _vm_schedule_cache)
+                lxc_apps.reconcile_after_start(guest_id)
             except Exception as exc:
                 print(
                     f'[ProxMenux] could not clear scheduled-update reboot state '
@@ -10313,6 +10345,9 @@ def api_processes():
             results.sort(key=lambda r: r['mem'], reverse=True)
             processes = results[:limit]
 
+        if not has_full_access():
+            # A command line can carry a password: read-only access sees the name.
+            processes = [dict(p, cmdline=p.get('command') or '') for p in processes]
         return jsonify({
             'processes': processes,
             'sort': sort,
@@ -10485,6 +10520,8 @@ def api_process_detail(pid):
             info['fd_count'] = None
 
         info['captured_at'] = int(time.time())
+        if not has_full_access():
+            info['cmdline'] = None  # It can carry a password.
         return jsonify(info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -15808,6 +15845,17 @@ def api_vms_modal_cache_all():
 
 
 # The endpoint returns the complete IP information.
+# Guest settings that hold credentials: left out for read-only access.
+_GUEST_SECRET_KEYS = ('cipassword', 'sshkeys')
+
+
+def _guest_details_for_reader(details):
+    if has_full_access() or not isinstance(details.get('config'), dict):
+        return details
+    config = {key: value for key, value in details['config'].items() if key not in _GUEST_SECRET_KEYS}
+    return dict(details, config=config)
+
+
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 @require_auth
 def get_vm_config(vmid):
@@ -15815,7 +15863,7 @@ def get_vm_config(vmid):
     try:
         cached = _vm_conf_cache_get(_vm_details_cache, 'details', vmid, _VM_DETAILS_TTL)
         if cached is not None:
-            return jsonify(_lxc_runtime_details(cached))
+            return jsonify(_guest_details_for_reader(_lxc_runtime_details(cached)))
 
         # Taken before reading the .conf, so an edit during the build is seen next time.
         signature = _vm_conf_signature(vmid)
@@ -15855,7 +15903,7 @@ def get_vm_config(vmid):
             response_data['hardware_info'] = hardware_info
 
         _vm_conf_cache_put(_vm_details_cache, 'details', vmid, response_data, signature)
-        return jsonify(_lxc_runtime_details(response_data))
+        return jsonify(_guest_details_for_reader(_lxc_runtime_details(response_data)))
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -16523,8 +16571,10 @@ def execute_script():
         script_path = os.path.join(BASE_SCRIPTS_DIR, script_relative_path)
 
 
-        script_path = os.path.abspath(script_path)
-        if not script_path.startswith(BASE_SCRIPTS_DIR):
+        # Inside the scripts folder only: a sibling such as `scripts-other`
+        # shares the prefix, and a symlink could point anywhere.
+        script_path = os.path.realpath(script_path)
+        if os.path.commonpath([script_path, os.path.realpath(BASE_SCRIPTS_DIR)]) != os.path.realpath(BASE_SCRIPTS_DIR):
             return jsonify({'error': 'Invalid script path'}), 403
 
         
@@ -23783,6 +23833,15 @@ if __name__ == '__main__':
             scheduler_thread.start()
     except Exception as e:
         print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
+
+    # App registrations travel with their container: a copy inside it and one
+    # in the cluster, checked every few minutes (lxc_apps.reconcile_copies).
+    try:
+        if pve_host:
+            import lxc_apps
+            lxc_apps.start_copy_reconciler()
+    except Exception as e:
+        print(f"[ProxMenux] App registration copies failed to start: {e}")
 
     # Check for SSL configuration
     ssl_ctx = None

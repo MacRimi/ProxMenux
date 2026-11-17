@@ -10,9 +10,10 @@ import subprocess
 import threading
 import time
 from collections import defaultdict, deque
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 import auth_manager
-from jwt_middleware import require_auth, require_admin_scope
+import access_log
+from jwt_middleware import require_auth, require_admin_scope, permission_error
 import jwt
 import datetime
 
@@ -97,6 +98,67 @@ def _get_client_ip():
             return real_ip.strip()
     return request.remote_addr or "unknown"
 
+# Choosing how to reach a Monitor without an account asks for the setup code
+# when there is one: the same limit as signing in, and a wrong code is logged
+# as an authentication failure, so the Fail2Ban jail covers it too.
+_setup_code_limiter = _LoginRateLimiter(max_attempts=5, window_seconds=300)
+
+
+def _setup_code_error(data):
+    """The response refusing a first-run decision without the setup code, or None."""
+    if not auth_manager.setup_code_required():
+        return None
+    client_ip = _get_client_ip()
+    allowed, retry_after = _setup_code_limiter.check_and_record(client_ip)
+    if not allowed:
+        return jsonify({"success": False, "error": "setup_code_rate_limited",
+                        "message": "Too many attempts. Please wait and try again.",
+                        "retry_after": retry_after}), 429
+    if auth_manager.check_setup_code((data or {}).get("setup_code")):
+        return None
+    auth_logger.warning("authentication failure; rhost=%s user=setup-code", client_ip)
+    return jsonify({"success": False, "error": "setup_code_invalid",
+                    "message": "The setup code is not valid"}), 403
+
+
+def _choose_mode(mode, data):
+    """Leave the Monitor read-only or open, or let Proxmox VE accounts sign in:
+    with an account, its full session decides; without one, the setup code
+    when one is required."""
+    if mode not in ("read_only", "open", "proxmox"):
+        return jsonify({"success": False, "message": "Unknown access mode"}), 400
+    if auth_manager.access_mode() in ("password", "proxmox"):
+        error = permission_error("admin")
+        if error:
+            return error
+    else:
+        error = _setup_code_error(data)
+        if error:
+            return error
+    if mode == "proxmox":
+        success, message = auth_manager.set_pve_auth(True)
+    else:
+        success, message = auth_manager.choose_access_mode(mode)
+    if not success:
+        return jsonify({"success": False, "message": message}), 500
+    auth_manager.consume_setup_code()
+    access_log.record("access.mode", _session_username(), detail={"mode": mode})
+    return jsonify({"success": True, "message": message, "access_mode": mode})
+
+
+def _session_username():
+    """The account of the request, as its decorator found it: None without
+    one (an open or read-only Monitor)."""
+    identity = getattr(g, "identity", None)
+    return identity["username"] if identity else None
+
+
+def _tokens_owner(username, scope):
+    """Whose API tokens a session manages: an administrator, every one."""
+    profile = auth_manager.profile_for(auth_manager.access_mode(), username, scope)
+    return None if profile == "admin" else username
+
+
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/api/auth/status', methods=['GET'])
@@ -104,13 +166,24 @@ def auth_status():
     """Get current authentication status"""
     try:
         status = auth_manager.get_auth_status()
-        
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if token:
-            username = auth_manager.verify_token(token)
-            if username:
-                status['authenticated'] = True
-        
+
+        if status["access_mode"] in ("password", "proxmox"):
+            token = request.headers.get('Authorization', '').replace('Bearer ', '')
+            if token:
+                username, scope = auth_manager.verify_token_full(token)
+                if username:
+                    import pve_auth
+                    status['authenticated'] = True
+                    status['username'] = username
+                    status['auth_method'] = "pve" if pve_auth.is_ticket(token) else "local"
+                    profile = auth_manager.profile_for(status["access_mode"], username, scope)
+                    status['capabilities'] = auth_manager.capabilities(status["access_mode"], profile=profile)
+                    # A custom profile names its choices in the capabilities.
+                    status['profile'] = profile.split(":", 1)[0] if profile else None
+                    user = auth_manager.find_user(username)
+                    status['local_user'] = user is not None
+                    status['totp_enabled'] = bool(user and user.get("totp_enabled"))
+
         return jsonify(status)
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
@@ -121,6 +194,7 @@ def auth_status():
 # -------------------------------------------------------------------
 
 @auth_bp.route('/api/ssl/status', methods=['GET'])
+@require_auth
 def ssl_status():
     """Get current SSL configuration status and detect available certificates"""
     try:
@@ -367,17 +441,12 @@ def auth_decline():
     requirement to authenticate. See audit Tier 1 #5.
     """
     try:
-        if auth_manager.load_auth_config().get("configured", False):
+        if auth_manager.access_mode() != "undecided":
             return jsonify({
                 "success": False,
                 "message": "Authentication is already configured; cannot decline."
             }), 403
-        success, message = auth_manager.decline_auth()
-
-        if success:
-            return jsonify({"success": True, "message": message})
-        else:
-            return jsonify({"success": False, "message": message}), 400
+        return _choose_mode("open", request.get_json(silent=True))
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -410,6 +479,7 @@ def auth_login():
         success, token, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
         
         if success:
+            access_log.record("login", username, detail={"method": "local"})
             return jsonify({"success": True, "token": token, "message": message})
         elif requires_totp:
             # First step: password OK, requesting TOTP code (not a failure)
@@ -421,6 +491,8 @@ def auth_login():
                 "authentication failure; rhost=%s user=%s",
                 client_ip, username or "unknown"
             )
+            access_log.record("login", str(username or "")[:80] or None,
+                              detail={"method": "local", "second_factor": bool(totp_token)}, ok=False)
             # If user submitted a TOTP token that was wrong, tell frontend
             # to keep showing the TOTP field (not go back to password step)
             is_totp_failure = totp_token and "2FA" in message
@@ -437,13 +509,26 @@ def auth_login():
 def auth_setup():
     """Set up authentication with username and password (create user + enable auth)"""
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         username = data.get('username')
         password = data.get('password')
+
+        mode = auth_manager.access_mode()
+        if mode == "proxmox":
+            # Proxmox VE accounts sign in here: only an administrator adds a local one.
+            error = permission_error("admin")
+            if error:
+                return error
+        elif mode != "password":
+            error = _setup_code_error(data)
+            if error:
+                return error
 
         success, message = auth_manager.setup_auth(username, password)
 
         if success:
+            auth_manager.consume_setup_code()
+            access_log.record("account.created", username, detail={"profile": "admin"})
             # Generate a token so the user is logged in immediately
             token = auth_manager.generate_token(username)
             return jsonify({"success": True, "token": token, "message": message})
@@ -454,6 +539,7 @@ def auth_setup():
 
 
 @auth_bp.route('/api/auth/enable', methods=['POST'])
+@require_admin_scope
 def auth_enable():
     """Enable authentication (must already be configured)"""
     try:
@@ -477,10 +563,11 @@ def auth_disable():
     validates the token and its full_admin scope before the body runs.
     """
     try:
-        success, message = auth_manager.disable_auth()
+        mode = (request.get_json(silent=True) or {}).get("mode") or "read_only"
+        success, message = auth_manager.disable_auth(mode)
         
         if success:
-            return jsonify({"success": True, "message": message})
+            return jsonify({"success": True, "message": message, "access_mode": mode})
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
@@ -517,12 +604,156 @@ def auth_change_password():
                 "message": "Invalid 2FA code",
             }), 400
 
-        success, message = auth_manager.change_password(old_password, new_password, totp_code)
+        username = _session_username()
+        success, message = auth_manager.change_password(username, old_password, new_password, totp_code)
 
+        access_log.record("password.changed", username, ok=success)
         if success:
-            return jsonify({"success": True, "message": message})
+            # The other sessions of this user end; this one goes on with a new token.
+            return jsonify({"success": True, "message": message, "token": auth_manager.generate_token(username)})
         else:
             return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ── Proxmox VE accounts ──────────────────────────────────────────────
+# The ticket stays the session: these routes only obtain, read or renew it
+# from the local Proxmox VE API. See pve_auth.py.
+
+def _pve_enabled():
+    return bool(auth_manager.load_auth_config().get("pve_auth"))
+
+
+def _pve_answer(result):
+    response = jsonify({"success": True, **result})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@auth_bp.route('/api/auth/pve/realms', methods=['GET'])
+def pve_realms():
+    import pve_auth
+    if not _pve_enabled():
+        return jsonify({"enabled": False, "realms": []})
+    return jsonify({"enabled": True, "realms": pve_auth.realms()})
+
+
+@auth_bp.route('/api/auth/pve/login', methods=['POST'])
+def pve_login():
+    """Sign in with a Proxmox VE account: the user, password and realm, then
+    the second factor when Proxmox VE asks for one."""
+    import pve_auth
+    if not _pve_enabled():
+        return jsonify({"success": False, "message": "Proxmox VE accounts are not enabled"}), 404
+    client_ip = _get_client_ip()
+    allowed, retry_after = _login_limiter.check_and_record(client_ip)
+    if not allowed:
+        return jsonify({"success": False, "message": "Too many login attempts. Please wait and try again.",
+                        "retry_after": retry_after}), 429
+    data = request.get_json(silent=True) or {}
+    try:
+        if data.get("challenge"):
+            result = pve_auth.second_factor(data.get("username"), data.get("challenge"), data.get("code"))
+        else:
+            result = pve_auth.login(data.get("username"), data.get("password"), data.get("realm"))
+    except pve_auth.PVEAuthError as exc:
+        auth_logger.warning("authentication failure; rhost=%s user=%s", client_ip,
+                            str(data.get("username") or "unknown")[:80])
+        access_log.record("login", str(data.get("username") or "")[:80] or None,
+                          detail={"method": "pve"}, ok=False)
+        return jsonify({"success": False, "message": str(exc)}), 401
+    if result.get("ticket"):
+        access_log.record("login", result.get("username"), detail={"method": "pve"})
+    return _pve_answer(result)
+
+
+@auth_bp.route('/api/auth/pve/session', methods=['GET'])
+def pve_session():
+    """The Proxmox VE session of this browser: the cookie the Proxmox VE web
+    interface keeps for this host reaches the Monitor when both are opened over
+    HTTPS by the same name."""
+    import pve_auth
+    ticket = request.cookies.get("PVEAuthCookie", "")
+    if not _pve_enabled() or not ticket:
+        return jsonify({"success": False}), 404
+    username, scope = pve_auth.validate(ticket)
+    if not username:
+        return jsonify({"success": False}), 401
+    return _pve_answer({"ticket": ticket, "username": username, "scope": scope})
+
+
+@auth_bp.route('/api/auth/pve/renew', methods=['POST'])
+def pve_renew():
+    """A fresh ticket for the one in use, before it expires."""
+    import pve_auth
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not _pve_enabled() or not pve_auth.is_ticket(token):
+        return jsonify({"success": False}), 401
+    try:
+        return _pve_answer(pve_auth.renew(token))
+    except pve_auth.PVEAuthError:
+        return jsonify({"success": False}), 401
+
+
+@auth_bp.route('/api/auth/pve/config', methods=['PUT'])
+@require_admin_scope
+def pve_config():
+    """Let Proxmox VE accounts sign in next to the local account, or not."""
+    enabled = (request.get_json(silent=True) or {}).get("enabled")
+    if not isinstance(enabled, bool):
+        return jsonify({"success": False, "message": "An enabled flag is required"}), 400
+    success, message = auth_manager.set_pve_auth(enabled)
+    if success:
+        access_log.record("pve.accounts", _session_username(), detail={"enabled": enabled})
+    return jsonify({"success": success, "message": message}), (200 if success else 409)
+
+
+@auth_bp.route('/api/auth/events', methods=['GET'])
+@require_admin_scope
+def access_events():
+    """Who did what with the access to the Monitor, newest first."""
+    return jsonify({"success": True, "events": access_log.events(request.args.get("limit", 100),
+                                                                 request.args.get("before"))})
+
+
+_PVE_RULE_ERRORS = {
+    "Invalid rules": "pve_rules_invalid",
+    "Invalid user or group name": "pve_name_invalid",
+    "Name the user with its realm, such as user@pve": "pve_user_realm",
+    "Each user or group can have one rule": "pve_rule_duplicate",
+    "These rules would remove your administrator access": "pve_rule_self",
+}
+
+
+@auth_bp.route('/api/auth/pve/profiles', methods=['GET'])
+@require_admin_scope
+def pve_profiles():
+    """The rules that give Proxmox VE users and groups a profile, and the
+    users and groups of this host to choose from."""
+    import pve_auth
+    return jsonify({"success": True, "rules": auth_manager.pve_rules(), **pve_auth.directory()})
+
+
+@auth_bp.route('/api/auth/pve/profiles', methods=['PUT'])
+@require_admin_scope
+def pve_profiles_save():
+    data = request.get_json(silent=True) or {}
+    success, message = auth_manager.set_pve_rules(data.get("rules"), keep_admin=_session_username())
+    if not success:
+        return jsonify({"success": False, "message": message,
+                        "error": _PVE_RULE_ERRORS.get(message) or _USER_ERRORS.get(message, "pve_rules_invalid")}), 400
+    rules = auth_manager.pve_rules()
+    access_log.record("pve.rules", _session_username(), detail={"rules": len(rules)})
+    return jsonify({"success": True, "message": message, "rules": rules})
+
+
+@auth_bp.route('/api/auth/mode', methods=['POST'])
+def auth_mode():
+    """Choose how the Monitor is reached without an account: read-only or open."""
+    try:
+        data = request.get_json(silent=True) or {}
+        return _choose_mode(data.get("mode"), data)
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -535,22 +766,12 @@ def auth_skip():
     locked. See audit Tier 1 #5.
     """
     try:
-        if auth_manager.load_auth_config().get("configured", False):
+        if auth_manager.access_mode() != "undecided":
             return jsonify({
                 "success": False,
                 "message": "Authentication is already configured; cannot skip."
             }), 403
-        success, message = auth_manager.decline_auth()
-
-        if success:
-            # Return success with clear indication that APIs should be accessible
-            return jsonify({
-                "success": True,
-                "message": message,
-                "auth_declined": True  # Add explicit flag for frontend
-            })
-        else:
-            return jsonify({"success": False, "message": message}), 400
+        return _choose_mode("open", request.get_json(silent=True))
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -604,6 +825,7 @@ def totp_enable():
         success, message = auth_manager.enable_totp(username, verification_token)
         
         if success:
+            access_log.record("totp.enabled", username)
             return jsonify({"success": True, "message": message})
         else:
             return jsonify({"success": False, "message": message}), 400
@@ -633,6 +855,7 @@ def totp_disable():
         success, message = auth_manager.disable_totp(username, password, totp_code)
         
         if success:
+            access_log.record("totp.disabled", username)
             return jsonify({"success": True, "message": message})
         else:
             return jsonify({"success": False, "message": message}), 400
@@ -694,6 +917,7 @@ def generate_api_token():
             # iss/aud match the values the verifier expects in Sprint 10E.
             api_token = jwt.encode({
                 'username': username,
+                'uid': auth_manager.find_user(username)['uid'],
                 'token_name': token_name,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
                 'iat': datetime.datetime.utcnow(),
@@ -703,7 +927,8 @@ def generate_api_token():
             }, auth_manager._get_jwt_secret(), algorithm='HS256')
             
             # Store token metadata for listing and revocation
-            auth_manager.store_api_token_metadata(api_token, token_name)
+            auth_manager.store_api_token_metadata(api_token, token_name, scope=scope, owner=username)
+            access_log.record("api_token.created", username, token_name, {"scope": scope})
             
             return jsonify({
                 "success": True, 
@@ -737,10 +962,11 @@ def list_api_tokens():
             return jsonify({"success": True, "tokens": []})
 
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if not token or not auth_manager.verify_token(token):
+        username, scope = auth_manager.verify_token_full(token) if token else (None, None)
+        if not username:
             return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-        tokens = auth_manager.list_api_tokens()
+        tokens = auth_manager.list_api_tokens(owner=_tokens_owner(username, scope))
         return jsonify({"success": True, "tokens": tokens})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
@@ -763,7 +989,9 @@ def revoke_api_token_route(token_id):
         if scope != 'full_admin':
             return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
 
-        success, message = auth_manager.revoke_api_token(token_id)
+        success, message = auth_manager.revoke_api_token(token_id, owner=_tokens_owner(username, scope))
+        if success:
+            access_log.record("api_token.revoked", username, token_id)
 
         if success:
             return jsonify({"success": True, "message": message})
@@ -795,7 +1023,7 @@ def get_profile():
     """Return the active user's profile (username + display name + avatar
     metadata). Falls back to None values when auth isn't configured."""
     try:
-        profile = auth_manager.get_user_profile()
+        profile = auth_manager.get_user_profile(_session_username())
         return jsonify({
             "success": True,
             **profile,
@@ -816,12 +1044,12 @@ def update_profile():
                 "success": False,
                 "message": "Missing 'display_name' field",
             }), 400
-        ok, message = auth_manager.set_display_name(data.get("display_name") or "")
+        ok, message = auth_manager.set_display_name(data.get("display_name") or "", _session_username())
         if not ok:
             return jsonify({"success": False, "message": message}), 400
         # Return the fresh profile so the frontend can update without a
         # second roundtrip.
-        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile(_session_username())})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -832,7 +1060,7 @@ def get_avatar():
     """Serve the stored avatar bytes. Returns 404 if no avatar set."""
     try:
         from flask import Response
-        data, content_type = auth_manager.get_avatar_bytes()
+        data, content_type = auth_manager.get_avatar_bytes(_session_username())
         if data is None:
             return jsonify({"success": False, "message": "No avatar set"}), 404
         return Response(
@@ -877,10 +1105,10 @@ def upload_avatar():
         if not content_bytes:
             return jsonify({"success": False, "message": "No image data received"}), 400
 
-        ok, message = auth_manager.save_avatar(content_bytes, content_type)
+        ok, message = auth_manager.save_avatar(content_bytes, content_type, _session_username())
         if not ok:
             return jsonify({"success": False, "message": message}), 400
-        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile(_session_username())})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -890,9 +1118,103 @@ def upload_avatar():
 def remove_avatar():
     """Remove the stored avatar (no-op if none set)."""
     try:
-        ok, message = auth_manager.delete_avatar()
+        ok, message = auth_manager.delete_avatar(_session_username())
         if not ok:
             return jsonify({"success": False, "message": message}), 400
-        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile(_session_username())})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Local users: an administrator adds them, chooses their profile, sets a new
+# password or removes a lost second factor. The Monitor always keeps one
+# administrator. See auth_manager (local accounts) and permissions.py.
+# ---------------------------------------------------------------------------
+
+_USER_ERRORS = {
+    "The username can have up to 32 letters, digits, dots, dashes and underscores": "username_invalid",
+    "That username is already in use": "username_taken",
+    "Unknown profile": "profile_unknown",
+    "Choose at least one area, and only the listed areas and actions": "custom_invalid",
+    "The Monitor needs at least one administrator": "last_admin",
+    "User not found": "user_not_found",
+    "You cannot remove your own account": "remove_self",
+    "You cannot deactivate your own account": "disable_self",
+    "Password must be at least 10 characters": "password_short",
+    "Password must mix at least 3 of: lowercase, uppercase, digits, symbols": "password_mix",
+    "That password is in the common-passwords list — pick something else": "password_common",
+}
+
+
+def _answer(result, status=400):
+    success, message = result
+    if success:
+        return jsonify({"success": True, "message": message, "users": auth_manager.list_users()})
+    # A known refusal has a code the interface translates; any other, such
+    # as a weak password, is shown as it is.
+    return jsonify({"success": False, "message": message,
+                    "error": _USER_ERRORS.get(message, "user_change_failed")}), status
+
+
+@auth_bp.route('/api/auth/users', methods=['GET'])
+@require_admin_scope
+def users_list():
+    return jsonify({"success": True, "users": auth_manager.list_users(),
+                    "profiles": list(auth_manager.permissions.PROFILES) + [auth_manager.permissions.CUSTOM],
+                    "areas": list(auth_manager.permissions.AREAS),
+                    "custom_actions": list(auth_manager.permissions.CUSTOM_ACTIONS)})
+
+
+@auth_bp.route('/api/auth/users', methods=['POST'])
+@require_admin_scope
+def users_create():
+    data = request.get_json(silent=True) or {}
+    result = auth_manager.create_user(data.get("username"), data.get("password"),
+                                      data.get("profile"), custom=data.get("custom"))
+    if result[0]:
+        access_log.record("user.created", _session_username(), data.get("username"), {"profile": data.get("profile")})
+    return _answer(result)
+
+
+@auth_bp.route('/api/auth/users/<username>', methods=['PUT'])
+@require_admin_scope
+def users_update(username):
+    data = request.get_json(silent=True) or {}
+    disabled = data.get("disabled") if isinstance(data.get("disabled"), bool) else None
+    if disabled and username == _session_username():
+        return _answer((False, "You cannot deactivate your own account"))
+    result = auth_manager.update_user(username, profile=data.get("profile"),
+                                      password=data.get("password"),
+                                      reset_totp=data.get("reset_totp") is True,
+                                      custom=data.get("custom"), disabled=disabled)
+    if result[0]:
+        actor = _session_username()
+        if data.get("profile") is not None:
+            access_log.record("user.profile", actor, username, {"profile": data.get("profile")})
+        if data.get("password") is not None:
+            access_log.record("user.password", actor, username)
+        if data.get("reset_totp") is True:
+            access_log.record("user.totp_reset", actor, username)
+        if disabled is not None:
+            access_log.record("user.disabled" if disabled else "user.enabled", actor, username)
+    answer = _answer(result, 404 if not auth_manager.find_user(username) else 400)
+    # A new password ends that user's sessions: an administrator who sets
+    # their own goes on with a new token.
+    if data.get("password") is not None and username == _session_username() and not isinstance(answer, tuple):
+        body = answer.get_json()
+        body["token"] = auth_manager.generate_token(username)
+        return jsonify(body)
+    return answer
+
+
+@auth_bp.route('/api/auth/users/<username>', methods=['DELETE'])
+@require_admin_scope
+def users_delete(username):
+    if username == _session_username():
+        return _answer((False, "You cannot remove your own account"))
+    missing = not auth_manager.find_user(username)
+    result = auth_manager.delete_user(username)
+    if result[0]:
+        access_log.record("user.deleted", _session_username(), username)
+    return _answer(result, 404 if missing else 400)

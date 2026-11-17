@@ -280,7 +280,7 @@ notification_bp = Blueprint('notifications', __name__)
 
 
 @notification_bp.route('/api/notifications/settings', methods=['GET'])
-@require_auth
+@require_admin_scope
 def get_notification_settings():
     """Get all notification settings for the UI."""
     try:
@@ -1426,7 +1426,7 @@ def cleanup_proxmox_webhook():
 
 
 @notification_bp.route('/api/notifications/proxmox/read-cfg', methods=['GET'])
-@require_auth
+@require_admin_scope
 def read_pve_notification_cfg():
     """Diagnostic: return raw content of PVE notification config files.
     
@@ -1677,9 +1677,18 @@ def internal_shutdown_event():
     
     Only accepts requests from localhost (127.0.0.1) for security.
     """
-    # Security: Only allow localhost
-    remote_addr = request.remote_addr
-    if remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+    # Security: Only allow localhost. The Monitor listens on IPv6, so a
+    # request from 127.0.0.1 arrives as ::ffff:127.0.0.1.
+    remote_addr = request.remote_addr or ''
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(remote_addr.split('%')[0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        is_loopback = addr.is_loopback
+    except (ValueError, TypeError):
+        is_loopback = remote_addr in ('127.0.0.1', '::1', 'localhost')
+    if not is_loopback:
         return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
     
     try:

@@ -57,6 +57,7 @@ function fixture({locale = 'sk', links = [], origin = false, loadError = false, 
       if (name.includes('i18n/provider')) return {useT: () => translate(locale)};
       if (name.includes('monitor-link-errors')) return {monitorLinkError};
       if (name.includes('api-config')) return {fetchApi: async (path, options) => {calls.push({path, ...options}); if (responseError) throw responseError; return {success: true};}};
+      if (name.includes('lib/access')) return require('./access-fixture.cjs');
       return new Proxy({}, {get: (_, key) => key});
     },
   });

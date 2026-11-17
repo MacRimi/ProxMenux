@@ -4,7 +4,7 @@ ProxMenux Terminal WebSocket Routes
 Provides a WebSocket endpoint for interactive terminal sessions
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 from flask_sock import Sock
 import subprocess
 import os
@@ -22,7 +22,8 @@ import json
 import tempfile
 import base64
 
-from jwt_middleware import require_admin_scope
+import permissions
+from jwt_middleware import require_admin_scope, require_auth
 
 # Allowed shape for interaction_id used as a file path component when writing
 # the response file. Bounded length, no separators, no path traversal. See
@@ -43,21 +44,22 @@ _SAFE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 # short (5 s) — the client should issue and use the ticket immediately.
 # See audit Tier 1 #2 + #17d.
 
-_TERMINAL_TICKETS = {}     # ticket (str) -> created_at_ts (float)
+_TERMINAL_TICKETS = {}     # ticket (str) -> (created_at_ts, permissions of its issuer)
 _TICKETS_LOCK = threading.Lock()
 _TICKET_TTL = 5            # seconds
 _TICKET_MAX_INFLIGHT = 256 # sanity cap to keep memory bounded
 
 
-def _issue_terminal_ticket():
-    """Issue a fresh ticket and prune expired entries while holding the lock."""
+def _issue_terminal_ticket(granted=frozenset(permissions.PERMISSIONS)):
+    """Issue a fresh ticket carrying the permissions of whoever asked for it,
+    and prune expired entries while holding the lock."""
     now = time.time()
     cutoff = now - _TICKET_TTL
     ticket = secrets.token_urlsafe(32)
     with _TICKETS_LOCK:
         # Prune expired tickets first.
         if _TERMINAL_TICKETS:
-            for k in [k for k, v in _TERMINAL_TICKETS.items() if v < cutoff]:
+            for k in [k for k, v in _TERMINAL_TICKETS.items() if v[0] < cutoff]:
                 _TERMINAL_TICKETS.pop(k, None)
         # Hard cap as a defense against accidental leaks.
         if len(_TERMINAL_TICKETS) >= _TICKET_MAX_INFLIGHT:
@@ -67,40 +69,44 @@ def _issue_terminal_ticket():
                 _TERMINAL_TICKETS.pop(oldest, None)
             except StopIteration:
                 pass
-        _TERMINAL_TICKETS[ticket] = now
+        _TERMINAL_TICKETS[ticket] = (now, frozenset(granted))
     return ticket
 
 
-def _consume_terminal_ticket(ticket):
-    """Validate and atomically consume a ticket. Returns True iff valid + fresh."""
+def _consume_terminal_ticket(ticket, need):
+    """Validate and atomically consume a ticket. Returns True iff valid, fresh
+    and issued to someone with the permission `need`."""
     if not ticket or not isinstance(ticket, str):
         return False
     now = time.time()
     with _TICKETS_LOCK:
-        ts = _TERMINAL_TICKETS.pop(ticket, None)
-    if ts is None:
+        entry = _TERMINAL_TICKETS.pop(ticket, None)
+    if entry is None:
         return False
-    return (now - ts) <= _TICKET_TTL
+    issued_at, granted = entry
+    return (now - issued_at) <= _TICKET_TTL and need in granted
 
 
-def _ws_auth_check():
+def _ws_auth_check(need):
     """Return True iff the current WebSocket handshake is authorized to proceed.
 
-    When auth is enabled and not declined, require a single-use ticket in the
-    `ticket` query parameter. When auth is disabled (fresh install or user
-    explicitly skipped setup), allow the handshake to proceed unauthenticated
-    — same semantics as the @require_auth decorator on REST routes.
+    Every WebSocket runs something: a root terminal, a script or an update.
+    An open Monitor lets it through, as its owner chose; with an account a
+    single-use ticket in the `ticket` query parameter is required, and a
+    Monitor that is read-only or not yet set up refuses it.
     """
     try:
-        from auth_manager import load_auth_config
-        config = load_auth_config()
-        if not config.get("enabled", False) or config.get("declined", False):
-            return True
+        from auth_manager import access_mode
+        mode = access_mode()
     except Exception:
         # If auth status can't be loaded (DB error / missing module), fail
         # closed — better to refuse a terminal than to grant root unauth.
         return False
-    return _consume_terminal_ticket(request.args.get('ticket', ''))
+    if mode == 'open':
+        return True
+    if mode not in ('password', 'proxmox'):
+        return False
+    return _consume_terminal_ticket(request.args.get('ticket', ''), need)
 
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
@@ -146,7 +152,7 @@ def lxc_update_jobs_status():
 @sock.route('/ws/lxc-update/<run_id>')
 def lxc_update_viewer(ws, run_id):
     """An authenticated viewer, deliberately not the owner of the update."""
-    if not _ws_auth_check():
+    if not _ws_auth_check("update"):
         ws.close(reason=1008, message="Authentication required")
         return
     from lxc_update_jobs import get, start
@@ -234,7 +240,7 @@ def host_update_result(run_id):
 @sock.route('/ws/host-update/<run_id>')
 def host_update_viewer(ws, run_id):
     """New fixed-script contract; existing script/LXC routes stay intact."""
-    if not _ws_auth_check():
+    if not _ws_auth_check("update"):
         ws.close(reason=1008, message="Authentication required")
         return
     from host_update_jobs import get, start
@@ -285,6 +291,7 @@ def host_update_viewer(ws, run_id):
 
 
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
+@require_auth
 def terminal_health():
     """Health check for terminal service"""
     return {'success': True, 'active_sessions': len(active_sessions)}
@@ -301,13 +308,15 @@ def issue_terminal_ticket_route():
     and immediately opens the WS appending `?ticket=<value>`. See audit
     Tier 1 #17d.
     """
+    granted = g.identity["permissions"] if hasattr(g, "identity") else permissions.PERMISSIONS
     return jsonify({
         'success': True,
-        'ticket': _issue_terminal_ticket(),
+        'ticket': _issue_terminal_ticket(granted),
         'ttl_seconds': _TICKET_TTL,
     })
 
 @terminal_bp.route('/api/terminal/search-command', methods=['GET'])
+@require_admin_scope
 def search_command():
     """Proxy endpoint for cheat.sh API to avoid CORS issues"""
     query = request.args.get('q', '')
@@ -408,7 +417,7 @@ def terminal_websocket(ws):
     # If the ticket is missing or invalid (and auth is enabled), refuse the
     # handshake — otherwise this endpoint is a root shell available to anyone
     # who can reach the port. See audit Tier 1 #2.
-    if not _ws_auth_check():
+    if not _ws_auth_check("terminal"):
         try:
             ws.send(json.dumps({"type": "error", "message": "Unauthorized"}))
         except Exception:
@@ -570,7 +579,7 @@ def script_websocket(ws, session_id):
     # Auth gate first — see /ws/terminal for the rationale. Without this an
     # unauth attacker who can craft an `init_data` payload pointing at any
     # bash script gets remote code execution as root. See audit Tier 1 #2.
-    if not _ws_auth_check():
+    if not _ws_auth_check("execute"):
         try:
             ws.send('{"type": "error", "message": "Unauthorized"}\r\n')
         except Exception:

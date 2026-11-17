@@ -26,10 +26,11 @@ if [[ ! ${ITEM:-} =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
 fi
 
 # The item ends where its own flow does instead of going on to other menus
-# (see catalog_env.sh), and the screen is cleared after it, so no menu is left
-# drawn under the result.
+# (utils.sh ends any other menu it reaches), and the screen is cleared after
+# it, so no menu is left drawn under the result. Nothing else is passed down:
+# a variable bash reads on its own, such as BASH_ENV, would also reach `pct`
+# and `qm`, whose taint mode then refuses to run any command.
 export PROXMENUX_CATALOG=1
-export BASH_ENV="$LOCAL_SCRIPTS/catalog/catalog_env.sh"
 
 run() {
     "$@"

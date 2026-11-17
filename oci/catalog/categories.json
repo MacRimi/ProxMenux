@@ -6,7 +6,7 @@
     "productivity": "Productivity & Workflows",
     "network": "Network & Firewall",
     "documents": "Documents & Notes",
-    "downloads": "Files & Downloads",
+    "downloads": "Downloads",
     "sharing": "Files & Sharing",
     "arr": "*Arr Suite",
     "smarthome": "IoT & Smart Home",
@@ -448,5 +448,141 @@
     "chromeos": "desktop",
     "baserow": "productivity",
     "mindwtr": "productivity"
-  }
+  },
+  "same_application": [
+    [
+      "oci:changedetection.io",
+      "cs:changedetection"
+    ],
+    [
+      "oci:clickhouse",
+      "cs:clickhouse"
+    ],
+    [
+      "oci:crafty",
+      "cs:crafty-controller"
+    ],
+    [
+      "oci:ente-photos",
+      "cs:ente"
+    ],
+    [
+      "oci:flowise",
+      "cs:flowiseai"
+    ],
+    [
+      "oci:gitlab-ce",
+      "cs:gitlab"
+    ],
+    [
+      "oci:hermes",
+      "cs:hermesagent"
+    ],
+    [
+      "oci:homeassistant",
+      "oci:homeassistant-official",
+      "cs:homeassistant"
+    ],
+    [
+      "oci:jenkins",
+      "cs:jenkins"
+    ],
+    [
+      "oci:kasm",
+      "cs:kasm"
+    ],
+    [
+      "oci:kiwix-serve",
+      "cs:kiwix"
+    ],
+    [
+      "oci:librespeed",
+      "cs:librespeed-rust"
+    ],
+    [
+      "oci:loki",
+      "cs:loki"
+    ],
+    [
+      "oci:mongodb4",
+      "cs:mongodb"
+    ],
+    [
+      "oci:motioneye",
+      "cs:motioneye"
+    ],
+    [
+      "oci:mumble",
+      "cs:mumble"
+    ],
+    [
+      "oci:netdata",
+      "cs:netdata"
+    ],
+    [
+      "oci:nextcloud",
+      "oci:nextcloud-official",
+      "oci:nextcloud-mariadb",
+      "oci:nextcloud-stack"
+    ],
+    [
+      "oci:onlyoffice",
+      "cs:onlyoffice"
+    ],
+    [
+      "oci:open-webui",
+      "oci:open-webui-cuda",
+      "oci:open-webui-ollama"
+    ],
+    [
+      "oci:proxmox-backup",
+      "cs:proxmox-backup-server"
+    ],
+    [
+      "oci:proxmox-dm",
+      "cs:proxmox-datacenter-manager"
+    ],
+    [
+      "oci:proxmox-mail",
+      "cs:proxmox-mail-gateway"
+    ],
+    [
+      "oci:rclone",
+      "cs:rclone"
+    ],
+    [
+      "oci:semaphore-ui",
+      "cs:semaphore"
+    ],
+    [
+      "oci:siyuan-note",
+      "cs:siyuan"
+    ],
+    [
+      "oci:stalwart",
+      "cs:stalwart"
+    ],
+    [
+      "oci:technitium",
+      "cs:technitiumdns"
+    ],
+    [
+      "oci:trilium",
+      "cs:trilium"
+    ],
+    [
+      "oci:twingate-connector",
+      "cs:twingate-connector"
+    ]
+  ],
+  "community_scripts": {
+    "aria2": "downloads",
+    "bitmagnet": "downloads",
+    "droppedneedle": "downloads",
+    "argus": "monitoring",
+    "vert": "tools"
+  },
+  "distinct_application": [
+    "cs:cap-captcha"
+  ]
 }

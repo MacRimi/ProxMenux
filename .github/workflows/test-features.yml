@@ -368,6 +368,16 @@ jobs:
         run: |
           python3 -m unittest discover -s oci/tests -p 'test_carried*.py' -v
           python3 -m unittest discover -s oci/tests -p test_restore_recovery.py -v
+      - name: Run unmount lock, preflight, stale operation and host source regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_mount_lock.py -v
+          python3 -m unittest discover -s oci/tests -p test_changed_settings.py -v
+          python3 -m unittest discover -s oci/tests -p test_stale_operation.py -v
+          python3 -m unittest discover -s oci/tests -p test_host_source_identity.py -v
+          python3 -m unittest discover -s oci/tests -p test_stack_replay_devices.py -v
+          python3 -m unittest discover -s oci/tests -p test_cli_architecture.py -v
       - name: Run read-only volume preparation regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'

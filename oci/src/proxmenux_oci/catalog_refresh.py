@@ -562,7 +562,12 @@ class CatalogRefresh:
 
     def start(self, force=False):
         if self.active:
-            return False
+            if not force:
+                return False
+            # A manual refresh must not be swallowed by the automatic one,
+            # including a child that exited while its menu was still open.
+            # Keep that worker intact; refresh.lock serializes publication.
+            threading.Thread(target=self.process.wait, daemon=True).start()
         self._finished = False
         self.failed = False
         environment = dict(os.environ, PYTHONPATH=str(self.root / "src"))

@@ -115,6 +115,7 @@ function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = []
       if (name.includes('i18n/provider')) return {useT: () => translate || ((key, values) => key + (values ? JSON.stringify(values) : ''))}
       if (name.includes('category-color')) return {useIsLightTheme: () => false, categoryChipStyle: () => ({})}
       if (name.includes('category-label')) return {getCategoryLabel: value => value}
+      if (name.includes('lib/access')) return require('../access-fixture.cjs')
       return new Proxy({}, {get: (_, key) => key})
     },
   })

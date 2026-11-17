@@ -39,6 +39,7 @@ function fixture(locale) {
     if (name.includes('i18n/provider')) return { useT: () => t };
     if (name.endsWith('host-backup-messages')) return library.exports;
     if (name.endsWith('api-config')) return { fetchApi: async (url, options) => { calls.push({ url, ...options }); if (failure) throw new Error(failure); return { status: 'ok' }; } };
+    if (name.includes('lib/access')) return require('./access-fixture.cjs');
     return new Proxy({}, { get: (_, key) => key });
   };
   const source = read('components/host-backup.tsx') + '\nexports.ExtraPathsSection = ExtraPathsSection;';

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import re
 import sys
 import textwrap
@@ -73,8 +74,16 @@ MULTI_LABEL = r"\Z4MULTI\Zn"
 TESTED_LABEL = r"\Z2✓\Zn"
 
 
+def _host_architecture() -> str:
+    return {"x86_64": "amd64", "aarch64": "arm64"}.get(os.uname().machine, "amd64")
+
+
 def _installable(applications: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [item for item in applications if not item.get("hidden") and item.get("automatic_install_candidate")]
+    # On an ARM host only the applications whose image has ARM are offered:
+    # any other would fail to install. An amd64 host keeps the whole catalog.
+    arm = _host_architecture() == "arm64"
+    return [item for item in applications if not item.get("hidden") and item.get("automatic_install_candidate")
+            and (not arm or "arm64" in (item.get("architectures") or []))]
 
 
 NAME_WIDTH, ARCH_WIDTH, SOURCE_WIDTH = 26, 12, 14

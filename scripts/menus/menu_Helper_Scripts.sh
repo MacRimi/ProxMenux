@@ -71,6 +71,12 @@ if ! echo "$CACHE_JSON" | jq -e 'if type == "array" and length > 0 then true els
   exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 fi
 
+# On an ARM host only the scripts that declare ARM support are listed and
+# found: any other would fail to install.
+if [[ "$(uname -m)" == "aarch64" ]]; then
+  CACHE_JSON=$(echo "$CACHE_JSON" | jq -c '[.[] | select(.has_arm == true)]')
+fi
+
 # Categories that ProxMenux lists inside a wider one, by name. The cache keeps
 # the category Community Scripts gives each script; only this menu groups it.
 FOLDED_CATEGORIES='{"ZigBee, Z-Wave & Matter": "IoT & Smart Home"}'

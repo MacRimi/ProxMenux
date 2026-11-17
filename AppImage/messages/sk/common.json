@@ -90,6 +90,8 @@
       "runScript": "Spustiť skript",
       "createVm": "Vytvoriť VM",
       "addonNote": "Inštaluje sa do existujúceho LXC alebo VM; nový nevytvára.",
+      "requiresNvidia": "Vyžaduje grafickú kartu NVIDIA s ovládačom nainštalovaným na hostiteľovi Proxmox; dá sa nainštalovať cez Hardvér: grafické karty a Coral TPU v menu ProxMenux. Inštalácia sprístupní kontajneru GPU pre CUDA.",
+      "optionalGpu": "Môže použiť GPU na hardvérovú akceleráciu. Inštalácia sa opýta, či ju zapnúť.",
       "proxmenuxDocs": "Dokumentácia ProxMenux",
       "releases": "Dostupné verzie",
       "suiteApps": "Aplikácie na výber",
@@ -123,6 +125,7 @@
   },
   "actions": {
     "refresh": "Obnoviť",
+    "retry": "Skúsiť znova",
     "toggleTheme": "Prepnúť vzhľad",
     "openUserMenu": "Otvoriť používateľské menu",
     "cancel": "Zrušiť",
@@ -2847,7 +2850,147 @@
     "avatarHint": "PNG, JPEG, WebP alebo GIF · najviac 2 MB · najlepšie funguje štvorcový obrázok.",
     "settingUp": "Nastavujem...",
     "setupAuthentication": "Nastaviť prihlásenie",
-    "back": "Späť"
+    "back": "Späť",
+    "setupCode": "Nastavovací kód",
+    "setupCodeHint": "Zobrazil sa v konzole pri inštalácii ProxMenux. Ak ho nemáte, spustite na serveri menu a otvorte Nastavenia → Zobraziť nastavovací kód Monitora.",
+    "codeInvalid": "Nastavovací kód nie je platný.",
+    "codeRateLimited": "Príliš veľa pokusov. Počkajte niekoľko minút a skúste to znova.",
+    "noPasswordTitle": "Bez hesla",
+    "noPasswordDescription": "Vyberte, čo môže robiť každý, kto navštívi túto adresu.",
+    "readOnlyTitle": "Iba na čítanie",
+    "readOnlyDescription": "Každý, kto sa pripojí k Monitoru, ho môže vidieť, ale nemôže otvárať terminály, spúšťať skripty ani nič meniť. Heslo môžete pridať neskôr.",
+    "openTitle": "Otvoriť a prijať riziko",
+    "openDescription": "Každý, kto sa pripojí k Monitoru, získa plnú kontrolu nad týmto serverom vrátane terminálu root. Zvoľte túto možnosť iba v sieti, kde dôverujete každému, kto má k nej prístup.",
+    "chooseReadOnly": "Použiť režim iba na čítanie",
+    "chooseOpen": "Otvoriť bez hesla",
+    "pveTitle": "Alebo použite účty Proxmox VE",
+    "pveDescription": "Prihláste sa pomocou používateľov a realmov Proxmox VE a ich dvojfaktorového overenia, bez vlastného účtu v Monitore.",
+    "choosePve": "Použiť účty Proxmox VE"
+  },
+  "pveAccounts": {
+    "title": "Účty Proxmox VE",
+    "description": "Prihláste sa pomocou používateľov a realmov Proxmox VE, vrátane ich dvojfaktorového overenia.",
+    "enable": "Povoliť prihlasovanie účtom Proxmox VE",
+    "onlyWay": "Účty Proxmox VE sú spôsobom prístupu do dashboardu. Ak ich chcete prestať používať, pridajte lokálne heslo alebo vyššie zvoľte prístup len na čítanie či otvorený prístup.",
+    "whoGetsIn": "Používatelia s oprávnením Sys.Modify na / získajú úplný prístup; používatelia s oprávnením iba Sys.Audit na / prístup len na čítanie. Ostatní používatelia sa nemôžu prihlásiť.",
+    "sharedSession": "Ste prihlásení do webového rozhrania Proxmox VE? Otvorte dashboard cez HTTPS na rovnakej adrese a táto relácia vás prihlási aj sem.",
+    "saveFailed": "Zmenu sa nepodarilo uložiť.",
+    "rulesTitle": "Profily účtov Proxmox VE",
+    "rulesHelp": "Prednosť má pravidlo používateľa; inak platí prvé pravidlo jednej z jeho skupín. Bez pravidla dáva Sys.Modify na / profil Administrátor a Sys.Audit profil Pozorovateľ. Pravidlo nikdy nevpustí používateľa bez oprávnení na /.",
+    "ruleKind": "Pravidlo pre",
+    "ruleName": "Používateľ alebo skupina",
+    "kindUser": "Používateľ",
+    "kindGroup": "Skupina",
+    "chooseName": "Vybrať…",
+    "addRule": "Pridať pravidlo",
+    "removeRule": "Odstrániť",
+    "moveUp": "Posunúť vyššie",
+    "moveDown": "Posunúť nižšie",
+    "saveRules": "Uložiť pravidlá",
+    "rulesSaved": "Pravidlá boli uložené.",
+    "errors": {
+      "pve_rules_invalid": "Pravidlá sa nepodarilo uložiť.",
+      "pve_name_invalid": "Vyberte platného používateľa alebo skupinu.",
+      "pve_user_realm": "Uveďte používateľa s jeho realmom, napríklad user@pve.",
+      "pve_rule_duplicate": "Každý používateľ alebo skupina môže mať len jedno pravidlo.",
+      "pve_rule_self": "Tieto pravidlá by vám odobrali prístup administrátora."
+    }
+  },
+  "users": {
+    "title": "Používatelia",
+    "description": "Lokálni používatelia Monitora, každý s vlastným heslom, vlastným dvojfaktorovým overením a vlastným profilom.",
+    "you": "Vy",
+    "primary": "Hlavný",
+    "profile": "Profil",
+    "profiles": {
+      "admin": "Administrátor",
+      "operator": "Operátor s terminálom",
+      "operator_no_terminal": "Operátor bez terminálu",
+      "observer": "Pozorovateľ",
+      "custom": "Vlastný"
+    },
+    "profileHints": {
+      "admin": "všetko vrátane používateľov, nastavení Monitora a tajných údajov.",
+      "operator": "spúšťa skripty a nástroje, ovláda VM a LXC, spravuje zálohy, aktualizuje a otvára terminály.",
+      "operator_no_terminal": "to isté ako operátor s terminálom, bez otvárania terminálov.",
+      "observer": "vidí dashboard bez tajných údajov; nič nespúšťa ani nemení.",
+      "custom": "viditeľné oblasti a povolené akcie zvolené jednotlivo; nikdy nie správa."
+    },
+    "add": "Pridať používateľa",
+    "username": "Používateľské meno",
+    "usernameHint": "Najviac 32 písmen, číslic, bodiek, pomlčiek a podčiarkovníkov.",
+    "password": "Heslo",
+    "confirmPassword": "Potvrdiť heslo",
+    "newPassword": "Nové heslo",
+    "setPassword": "Nastaviť heslo",
+    "removeTotp": "Odstrániť 2FA",
+    "remove": "Odstrániť",
+    "confirmRemove": "Odstrániť používateľa",
+    "removeHint": "Jeho relácie a API tokeny prestanú fungovať.",
+    "passwordsDiffer": "Heslá sa nezhodujú.",
+    "added": "Používateľ bol pridaný.",
+    "passwordSet": "Heslo bolo uložené.",
+    "profileChanged": "Profil bol uložený. Ihneď platí pre jeho otvorené relácie.",
+    "totpRemoved": "Dvojfaktorové overenie bolo odstránené. Dá sa znova nastaviť v časti Zabezpečenie.",
+    "removed": "Používateľ bol odstránený.",
+    "errors": {
+      "username_invalid": "Používateľské meno môže mať najviac 32 písmen, číslic, bodiek, pomlčiek a podčiarkovníkov.",
+      "username_taken": "Toto používateľské meno sa už používa.",
+      "profile_unknown": "Neznámy profil.",
+      "last_admin": "Monitor potrebuje aspoň jedného administrátora.",
+      "user_not_found": "Tento používateľ už neexistuje.",
+      "remove_self": "Nemôžete odstrániť vlastný účet.",
+      "password_short": "Heslo musí mať aspoň 10 znakov.",
+      "password_mix": "Heslo musí kombinovať aspoň tri z: malé písmená, veľké písmená, číslice a symboly.",
+      "password_common": "Toto heslo je príliš bežné. Zvoľte iné.",
+      "user_change_failed": "Zmenu sa nepodarilo uložiť.",
+      "custom_invalid": "Zvoľte aspoň jednu oblasť.",
+      "disable_self": "Nemôžete deaktivovať vlastný účet."
+    },
+    "customAreas": "Viditeľné oblasti",
+    "customActions": "Povolené akcie",
+    "customHint": "Zabezpečenie, Nastavenia a vlastný účet sú vždy dostupné. Správa patrí len profilu Administrátor.",
+    "customize": "Zmeniť oblasti",
+    "noActions": "žiadne akcie",
+    "areas": {
+      "general": "Prehľad",
+      "apps": "Aplikácie",
+      "menux": "Menux",
+      "guests": "VM a LXC",
+      "node": "Server (úložiská, sieť, hardvér)",
+      "backup": "Záloha",
+      "logs": "Systémové záznamy"
+    },
+    "actions": {
+      "execute": "Spúšťať skripty a nástroje",
+      "guests": "Ovládať VM a LXC",
+      "backup": "Spravovať zálohy",
+      "update": "Aktualizovať",
+      "terminal": "Otvárať terminály"
+    },
+    "disable": "Deaktivovať",
+    "enable": "Aktivovať",
+    "disabledBadge": "Deaktivovaný",
+    "disabledDone": "Používateľ bol deaktivovaný: nemôže sa prihlásiť a jeho relácie a API tokeny nefungujú, kým ho znova neaktivujete.",
+    "enabledDone": "Používateľ bol aktivovaný."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Lokálny účet",
+    "username": "Používateľ",
+    "password": "Heslo",
+    "realm": "Realm",
+    "code": "Dvojfaktorový kód",
+    "codeHint": "Šesťmiestny kód z vašej autentifikačnej aplikácie alebo jeden z vašich obnovovacích kľúčov.",
+    "failed": "Prihlásenie zlyhalo. Skontrolujte používateľa, heslo a realm.",
+    "fillFields": "Zadajte používateľa a heslo.",
+    "tooManyAttempts": "Príliš veľa pokusov. Počkajte niekoľko minút a skúste to znova.",
+    "useWebInterface": "Tento účet sa prihlasuje pomocou bezpečnostného kľúča. Prihláste sa vo webovom rozhraní Proxmox VE a potom sa vráťte na túto stránku.",
+    "webInterface": "Prihlásiť sa vo webovom rozhraní Proxmox VE",
+    "webInterfaceHint": "Ak je Monitor otvorený cez HTTPS na rovnakej adrese, relácia webového rozhrania Proxmox VE vás po návrate prihlási aj sem."
+  },
+  "access": {
+    "readOnlyBanner": "Prístup iba na čítanie: tento server môžete vidieť, ale nemôžete nič spúšťať ani meniť. Ak ho chcete spravovať, pridajte heslo v sekcii Security."
   },
   "securityPage": {
     "title": "Bezpečnosť",
@@ -2881,7 +3024,8 @@
       "none": "Žiadne",
       "external": "Externé",
       "up": "Beží",
-      "down": "Nebeží"
+      "down": "Nebeží",
+      "readOnly": "Iba na čítanie"
     },
     "errors": {
       "deleteReportNoFiles": "Nenašli sa žiadne súbory správy ani logov Lynis na odstránenie.",
@@ -2957,7 +3101,8 @@
       "sslCertificateReloaded": "Obnovený certifikát je teraz aktívny. Existujúce pripojenia neboli prerušené.",
       "sslCertificateUnchanged": "Aktívny certifikát už zodpovedá aktuálnym súborom certifikátu.",
       "reportDeleted": "Správa z auditu bola vymazaná.",
-      "twoFactorEnabled": "Dvojfaktorové overenie je zapnuté."
+      "twoFactorEnabled": "Dvojfaktorové overenie je zapnuté.",
+      "readOnlyReloading": "Ovládací panel je teraz iba na čítanie. Znovu sa načítava..."
     },
     "confirm": {
       "disableAuth": "Vypnúť prihlásenie? Každý, kto sa dostane k dashboardu, ho bude môcť otvoriť.",
@@ -2992,7 +3137,11 @@
       "confirmNewPasswordPlaceholder": "Zadajte nové heslo znova",
       "changing": "Mením...",
       "enterYourPassword": "Zadajte heslo",
-      "disable": "Vypnúť prihlásenie"
+      "disable": "Vypnúť prihlásenie",
+      "readOnlyMode": "Ovládací panel je bez hesla iba na čítanie: je možné si ho prezerať, ale nemožno nič spúšťať ani meniť.",
+      "useReadOnly": "Prepnúť na režim iba na čítanie",
+      "disableChoose": "Ako má byť ovládací panel prístupný bez hesla?",
+      "pveMode": "Dashboard sa prihlasuje pomocou účtov Proxmox VE."
     },
     "twoFactor": {
       "title": "Dvojfaktorové overenie",
@@ -5976,6 +6125,7 @@
       "databases": "Databázy",
       "documentsNotes": "Dokumenty a poznámky",
       "filesDownloads": "Súbory a sťahovanie",
+      "downloads": "Sťahovanie",
       "financeBudgeting": "Financie a rozpočet",
       "gamingLeisure": "Hry a voľný čas",
       "hostManagement": "Správa servera",
@@ -8118,6 +8268,117 @@
     "unexpectedContentType": "Očakávala sa odpoveď JSON, ale prišiel typ {contentType}",
     "unknownContentType": "neznámy typ obsahu",
     "invalidJson": "Odpoveď z {endpoint} obsahuje neplatný JSON",
-    "unauthorized": "Chýba platné prihlásenie: {endpoint}"
+    "unauthorized": "Chýba platné prihlásenie: {endpoint}",
+    "forbidden": "Váš profil túto akciu nepovoľuje."
+  },
+  "accessLog": {
+    "title": "Aktivita prístupu",
+    "description": "Prihlásenia, zmeny účtov, profilov a nastavení prihlasovania a každá akcia, ktorú profil odmietol, s tým, kto ju vykonal. Heslá, kódy ani tokeny sa nikdy neukladajú. Uchováva sa 90 dní.",
+    "empty": "Zatiaľ nie je zaznamenaná žiadna aktivita.",
+    "loadMore": "Načítať ďalšie",
+    "refused": "Odmietnuté",
+    "failed": "Neúspešné",
+    "noAccount": "Bez účtu",
+    "secondFactor": "druhý faktor",
+    "missing": "chýba: {permission}",
+    "on": "zapnuté",
+    "off": "vypnuté",
+    "rules": "pravidlá: {count}",
+    "subjects": "identifikátory: {count}",
+    "events": {
+      "login": "Prihlásenie",
+      "account": {
+        "created": "Účet vytvorený"
+      },
+      "access": {
+        "mode": "Režim prístupu zmenený",
+        "refused": "Akcia odmietnutá"
+      },
+      "password": {
+        "changed": "Heslo zmenené"
+      },
+      "totp": {
+        "enabled": "Dvojfaktorové overenie zapnuté",
+        "disabled": "Dvojfaktorové overenie vypnuté"
+      },
+      "api_token": {
+        "created": "API token vytvorený",
+        "revoked": "API token zrušený"
+      },
+      "user": {
+        "created": "Používateľ pridaný",
+        "profile": "Profil zmenený",
+        "password": "Heslo nastavené administrátorom",
+        "totp_reset": "Dvojfaktorové overenie odstránené",
+        "deleted": "Používateľ odstránený",
+        "disabled": "Používateľ deaktivovaný",
+        "enabled": "Používateľ aktivovaný"
+      },
+      "pve": {
+        "accounts": "Účty Proxmox VE",
+        "rules": "Pravidlá profilov Proxmox VE"
+      },
+      "oidc": {
+        "config": "Nastavenia OpenID Connect"
+      },
+      "app_watch": {
+        "adopted": "Registrácie aplikácií prevzaté z kontajnera"
+      }
+    },
+    "methods": {
+      "local": "lokálny účet",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "len na čítanie",
+      "open": "otvorený",
+      "proxmox": "účty Proxmox VE",
+      "password": "heslo"
+    },
+    "scopes": {
+      "read_only": "len na čítanie",
+      "full_admin": "úplný prístup"
+    },
+    "permissions": {
+      "admin": "spravovať",
+      "view": "zobraziť",
+      "self": "vlastný účet",
+      "ticket": "lístok terminálu alebo sťahovania"
+    }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Prihláste sa cez externého poskytovateľa identity, napríklad Authentik, Keycloak alebo Pocket ID.",
+    "localRequired": "Pred nastavením OIDC nakonfigurujte a povoľte miestne overovanie heslom.",
+    "enable": "Povoliť OpenID Connect",
+    "provider_name": "Názov poskytovateľa",
+    "issuer": "URL vydavateľa (presná hodnota z discovery)",
+    "public_url": "Verejná HTTPS URL tohto panela Monitor",
+    "client_id": "ID klienta",
+    "secret": "Tajný kľúč klienta",
+    "secretKept": "Ak pole zostane prázdne, uložený tajný kľúč sa zachová",
+    "authMethod": "Metóda overenia klienta",
+    "publicClient": "Verejný klient (PKCE, bez tajného kľúča)",
+    "urlHelp": "Použite presnú URL vydavateľa vrátane prípadnej koncovej lomky. Verejná URL musí sprístupňovať tento panel a jeho cesty /api cez HTTPS vrátane prípadnej predpony cesty proxy.",
+    "subjects": "Povolené identifikátory subjektov správcov (sub), jeden na riadok",
+    "subjectHelp": "K Monitoru majú prístup iba tieto nemenné používateľské ID poskytovateľa. Každé získa úplný prístup správcu. Použite atribút sub vydaný pre tohto klienta, nie e-mailovú adresu ani zobrazované meno.",
+    "callback": "Zaregistrujte presne túto URI presmerovania u svojho poskytovateľa identity:",
+    "mfaHelp": "OIDC používa politiku MFA poskytovateľa identity. Miestne heslo a 2FA zostávajú dostupné. Uloženie zmien zneplatní existujúce relácie OIDC.",
+    "unavailable": "Táto verzia Monitora neobsahuje kryptografické prostredie potrebné pre OIDC.",
+    "save": "Uložiť a overiť poskytovateľa",
+    "saving": "Overuje sa poskytovateľ…",
+    "saved": "Nastavenia OIDC boli uložené. Discovery bolo overené; pred ukončením miestnej relácie otestujte prihlásenie v inom prehliadači.",
+    "saveFailed": "Nepodarilo sa uložiť nastavenia OIDC.",
+    "login": "Pokračovať cez {provider}",
+    "loginFailed": "Prihlásenie OIDC zlyhalo alebo vypršalo. Skúste to znova, skontrolujte svoj povolený identifikátor subjektu alebo použite miestne prihlasovacie údaje.",
+    "disabledSaved": "Nastavenia OIDC boli uložené. Externé prihlásenie je zakázané.",
+    "saveDisabled": "Uložiť nastavenia",
+    "allowedSubjects": "Povolené identifikátory",
+    "allowedSubjectsHelp": "Do Monitora majú prístup len tieto nemenné identifikátory používateľov poskytovateľa, každý so svojím profilom; identifikátor bez zvoleného profilu je administrátor. Použite hodnotu sub vydanú pre tohto klienta, nie e-mailovú adresu ani zobrazované meno.",
+    "subjectId": "Identifikátor (sub)",
+    "subjectName": "Meno (voliteľné)",
+    "addSubject": "Pridať identifikátor",
+    "removeSubject": "Odstrániť"
   }
 }

@@ -13,13 +13,18 @@ import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
 import Image from "next/image"
+import { PveLogin } from "./pve-login"
 
 interface LoginProps {
   onLogin: () => void
+  // Proxmox VE accounts may sign in: alone, or next to the local account.
+  pveAuth?: boolean
+  localAccount?: boolean
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function Login({ onLogin, pveAuth = false, localAccount = true }: LoginProps) {
   const t = useT()
+  const [method, setMethod] = useState<"local" | "pve">(localAccount ? "local" : "pve")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [totpCode, setTotpCode] = useState("")
@@ -28,6 +33,7 @@ export function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [oidc, setOidc] = useState<{ provider_name: string; login_url: string } | null>(null)
   const lastAutoSubmittedTotp = useRef("")
 
   useEffect(() => {
@@ -42,6 +48,10 @@ export function Login({ onLogin }: LoginProps) {
     // sees a blank/stuck dashboard.
     try {
       sessionStorage.removeItem("proxmenux-auth-401-handled")
+      if (sessionStorage.getItem("proxmenux-oidc-error")) {
+        setError(t("oidc.loginFailed"))
+        sessionStorage.removeItem("proxmenux-oidc-error")
+      }
     } catch {
       // private browsing — best-effort
     }
@@ -54,6 +64,10 @@ export function Login({ onLogin }: LoginProps) {
       setPassword(savedPassword)
       setRememberMe(true)
     }
+    fetch(getApiUrl("/api/auth/oidc/status"), { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (data?.enabled) setOidc(data) })
+      .catch(() => {})
   }, [])
 
   const submitLogin = async (totpOverride?: string) => {
@@ -173,6 +187,20 @@ export function Login({ onLogin }: LoginProps) {
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-lg">
+          {pveAuth && localAccount && (
+            <div className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1 mb-4">
+              {(["local", "pve"] as const).map(option => (
+                <button key={option} type="button" onClick={() => { setMethod(option); setError("") }}
+                  className={`rounded px-3 py-1.5 text-sm font-medium ${method === option ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
+                  {option === "local" ? t("pveLogin.localAccount") : t("pveLogin.tab")}
+                </button>
+              ))}
+            </div>
+          )}
+          {pveAuth && method === "pve" ? <PveLogin onLogin={onLogin} /> : <>
+          {oidc && !requiresTotp && <Button asChild variant="outline" className="w-full mb-4">
+            <a href={oidc.login_url}>{t("oidc.login", { provider: oidc.provider_name })}</a>
+          </Button>}
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
@@ -300,6 +328,7 @@ export function Login({ onLogin }: LoginProps) {
               {loading ? t("login.signingIn") : requiresTotp ? t("login.verifyCode") : t("login.signIn")}
             </Button>
           </form>
+          </>}
         </div>
 
         <p className="text-center text-sm text-muted-foreground">{`ProxMenux Monitor v${APP_VERSION}`}</p>

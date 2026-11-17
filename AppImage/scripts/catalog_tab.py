@@ -29,7 +29,14 @@ import managed_installs
 # category Community Scripts gives it.
 _CATEGORY_ALIASES = {"Monitoring": "Monitoring & Analytics", "Media": "Media & Streaming",
                      "ZigBee, Z-Wave & Matter": "IoT & Smart Home",
-                     "Messaging & Queues": "Messaging & Notifications"}
+                     "Messaging & Queues": "Messaging & Notifications",
+                     # An OCI catalog not yet refreshed names its download clients so.
+                     "Files & Downloads": "Downloads"}
+# Community Scripts files storage and sharing together with download clients;
+# the tab lists that category as storage and sharing, and its download
+# clients where the OCI image of the same application is, or where the
+# `community_scripts` entries of categories.json put them.
+_CS_CATEGORY_ALIASES = {"Files & Downloads": "Files & Sharing"}
 _SCRIPT_TYPES = {"lxc": "lxc", "vm": "vm", "pve": "host", "addon": "addon", "turnkey": "lxc"}
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
@@ -220,6 +227,103 @@ def _catalog_recipes() -> tuple[dict, dict, dict]:
     return shots, _shots_cache[2], containers
 
 
+_same_lock = threading.Lock()
+_same_cache: tuple[str, dict, dict, dict, dict, dict] = ("", {}, {}, {}, {}, {})
+
+
+def _same_apps() -> tuple[dict, dict, dict, dict, dict]:
+    """Which items are the same application, read once for each version of
+    the catalog. Names compared as `_app_key` does join most of them; the
+    `same_application` groups of categories.json join those whose names
+    differ. Returns the group of each listed item, the group of each name
+    those groups cover, the category of each group that has an OCI image
+    (the one the tab files it under, whatever the other sources say), the
+    OCI images of each group in the order the tab lists them, and the
+    category of each script categories.json files apart from Community
+    Scripts when no OCI image is the same application."""
+    global _same_cache
+    root = lxc_apps.oci_catalog_dir()
+    with _same_lock:
+        if _same_cache[0] == root:
+            return _same_cache[1:]
+    oci = [i for i in _oci_index() if i.get("id") and not i.get("hidden") and i.get("automatic_install_candidate")]
+    titles = {i["id"]: i.get("title") or i["id"] for i in oci}
+    listed: dict = {}
+    names: dict = {}
+    data = _read_json(os.path.join(root, "categories.json")) or {}
+    for group in data.get("same_application") or []:
+        keys = [k for k in group if isinstance(k, str)] if isinstance(group, list) else []
+        if not keys:
+            continue
+        for key in keys:
+            listed.setdefault(key, keys[0])
+            if key.startswith("oci:") and key[4:] in titles:
+                names.setdefault(_app_key(titles[key[4:]]), keys[0])
+    # Applications that share a name with another one and are not the same.
+    for key in data.get("distinct_application") or []:
+        if isinstance(key, str):
+            listed[key] = key
+    rank = {"official": 0, "linuxserver": 1, "other": 2}
+    members: dict = {}
+    for item in oci:
+        key = f"oci:{item['id']}"
+        name = _app_key(titles[item["id"]])
+        group = listed.get(key) or names.get(name) or name
+        members.setdefault(group, []).append(item)
+    categories = {}
+    for group, items in members.items():
+        # The first image a group of categories.json names sets its
+        # category; otherwise the project's own image, as the tab lists them.
+        first = next((i for i in items if f"oci:{i['id']}" == group), None)
+        items.sort(key=lambda i: rank[_publisher(i)["kind"]])
+        categories[group] = _category((first or items[0]).get("category_label"))
+    labels = data.get("labels") if isinstance(data.get("labels"), dict) else {}
+    scripts = data.get("community_scripts") if isinstance(data.get("community_scripts"), dict) else {}
+    filed = {slug: labels[key] for slug, key in scripts.items() if isinstance(key, str) and isinstance(labels.get(key), str)}
+    result = (listed, names, categories, {group: [i["id"] for i in items] for group, items in members.items()}, filed)
+    with _same_lock:
+        _same_cache = (root, *result)
+    return result
+
+
+def _same_group(key: str, name: str) -> str:
+    listed, names, _, _, _ = _same_apps()
+    name_key = _app_key(name)
+    return listed.get(key) or names.get(name_key) or name_key
+
+
+def _as_same_app(item: dict) -> dict:
+    """An application with the group of the same one from other sources and,
+    when an OCI image is among them, the category of that image."""
+    if item.get("group") != "app":
+        return item
+    group = _same_group(item["key"], item["name"])
+    # The OCI image sets the category; without one, the VM the menu creates.
+    category = _same_apps()[2].get(group)
+    if not category and item.get("kind") == "cs":
+        category = _menu_vm_categories().get(group) or _same_apps()[4].get(item["id"])
+    return {**item, "same": group, **({"category": category} if category else {})}
+
+
+_menu_vm_cache: tuple = (None, None, {})
+
+
+def _menu_vm_categories() -> dict:
+    """The category of each VM the menu creates itself, by its group; worked
+    out again only when the options or the catalog change."""
+    global _menu_vm_cache
+    options, root = _options("en"), lxc_apps.oci_catalog_dir()
+    if _menu_vm_cache[0] is options and _menu_vm_cache[1] == root:
+        return _menu_vm_cache[2]
+    result: dict = {}
+    for option in options:
+        if option.get("group") == "app" and option.get("via") != "community-scripts" and option.get("category"):
+            name = option.get("name") or option.get("title") or ""
+            result.setdefault(_same_group(f"pmx:{option['key']}", name), option["category"])
+    _menu_vm_cache = (options, root, result)
+    return result
+
+
 def _catalog_shots() -> tuple[dict, dict]:
     shots, by_name, _ = _catalog_recipes()
     return shots, by_name
@@ -233,7 +337,7 @@ def _oci_screens(app_id: str) -> list:
 def _cs_screens(slug: str, name: str) -> list:
     """The screenshots of a Community Scripts script: those of the same
     application in the OCI catalog."""
-    for app_id in _catalog_shots()[1].get(_app_key(name), []):
+    for app_id in _same_apps()[3].get(_same_group(f"cs:{slug}", name), []):
         screens = _oci_screens(app_id)
         if screens:
             return screens
@@ -280,6 +384,21 @@ def _shot(key: str, name: str = "") -> str:
     kind, _, item_id = key.partition(":")
     screens = _oci_screens(item_id) if kind == "oci" else _cs_screens(item_id, name)
     return screens[0] if screens else ""
+
+
+def _gpu_need(template: dict) -> str:
+    """What the recipe says about a GPU: "nvidia" when the application
+    cannot run without an NVIDIA GPU, "optional" when the installation offers
+    one for acceleration, or "" when it does not use any."""
+    proxmox = template.get("proxmox") or {}
+    passthrough = str((proxmox.get("deployment_profile") or {}).get("gpu_passthrough") or "")
+    requests = [r for r in (proxmox.get("installer_profile") or {}).get("device_requests") or [] if isinstance(r, dict)]
+    if passthrough == "required-nvidia" or any(r.get("kind") == "nvidia-runtime" and r.get("required_for_runtime")
+                                               for r in requests):
+        return "nvidia"
+    if passthrough == "installer-selection":
+        return "optional"
+    return ""
 
 
 def _oci_detail(app_id: str, language: str = "en") -> dict | None:
@@ -347,6 +466,7 @@ def _oci_detail(app_id: str, language: str = "en") -> dict | None:
         "credentials": [c.get("label") for c in (template.get("first_run") or {}).get("credentials") or []
                         if isinstance(c, dict) and c.get("label")],
         "installable": bool(item.get("automatic_install_candidate")),
+        "gpu": _gpu_need(template),
     }
     return detail
 
@@ -461,7 +581,7 @@ def _script_item(entry: dict) -> dict:
         "name": entry.get("name") or entry["slug"],
         "summary": _plain(entry.get("desc")),
         "icon": entry.get("logo") or "",
-        "category": _category(names[0] if names else ""),
+        "category": _category(_CS_CATEGORY_ALIASES.get(names[0], names[0]) if names else ""),
         "architectures": ["amd64", "arm64"] if entry.get("has_arm") else ["amd64"],
         "type": kind,
         "group": "tool" if tool else "app",
@@ -720,6 +840,16 @@ def _product() -> str:
         return "pve"
 
 
+def _host_architecture() -> str:
+    return {"x86_64": "amd64", "aarch64": "arm64"}.get(os.uname().machine, "amd64")
+
+
+def _for_this_architecture(architectures, architecture: str) -> bool:
+    """On an ARM host only what declares ARM support is offered: anything
+    else would fail to install. An amd64 host keeps every item."""
+    return architecture != "arm64" or "arm64" in (architectures or [])
+
+
 def _runs_here(entry: dict, product: str) -> bool:
     """Whether a Community Scripts script is meant for this host: PVE runs the
     ones for itself and the ones installed in its containers and VMs; a PBS,
@@ -774,7 +904,9 @@ def list_items(language: str = "en") -> dict:
     use, and `refreshing` says a newer one may arrive shortly."""
     language = _language(language)
     product = _product()
+    architecture = _host_architecture()
     scripts = [_script_item(e) for e in _script_entries().values() if _runs_here(e, product)]
+    scripts = [i for i in scripts if _for_this_architecture(i["architectures"], architecture)]
     cs_sections = sorted({i["section"] for i in scripts if i["group"] == "tool" and i["section"]})
     cs = [{"key": key, "kind": "cs", "title": key[len(_CS_SECTION_PREFIX):], "external": []} for key in cs_sections]
     if product != "pve":
@@ -782,7 +914,8 @@ def list_items(language: str = "en") -> dict:
         return {"items": [i for i in scripts if i["group"] == "tool"], "sections": cs}
     table = _translations(language)
     oci = [_oci_item(i, table) for i in _oci_index()
-           if i.get("id") and not i.get("hidden") and i.get("automatic_install_candidate")]
+           if i.get("id") and not i.get("hidden") and i.get("automatic_install_candidate")
+           and _for_this_architecture(i.get("architectures"), architecture)]
     # A VM the menu creates with a Community Scripts installer, or an option
     # that runs one, is already listed as that script.
     sections = _sections(language)
@@ -793,7 +926,10 @@ def list_items(language: str = "en") -> dict:
             "external": [key for key in section.get("external") or []
                          if isinstance(key, str) and key.startswith(("cs:", "pmx:"))]}
            for section in sections]
-    return {"items": oci + scripts + options, "sections": pmx + cs,
+    # The same application keeps one category in every source: that of its
+    # OCI image. An installed script keeps the one Community Scripts gives it.
+    items = [_as_same_app(item) for item in oci + scripts + options]
+    return {"items": items, "sections": pmx + cs,
             "catalog": os.path.basename(lxc_apps.oci_catalog_dir()), "refreshing": _refresh_catalog()}
 
 
@@ -801,9 +937,11 @@ def item_detail(kind: str, item_id: str, language: str = "en") -> dict | None:
     if not _SAFE_ID.match(item_id or ""):
         return None
     if kind == "oci":
-        return _oci_detail(item_id, _language(language))
-    if kind == "cs":
-        return _script_detail(item_id)
-    if kind == "pmx":
-        return _option_detail(item_id, _language(language))
-    return None
+        detail = _oci_detail(item_id, _language(language))
+    elif kind == "cs":
+        detail = _script_detail(item_id)
+    elif kind == "pmx":
+        detail = _option_detail(item_id, _language(language))
+    else:
+        return None
+    return _as_same_app(detail) if detail else None

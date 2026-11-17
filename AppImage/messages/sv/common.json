@@ -90,6 +90,8 @@
       "runScript": "Kör skriptet",
       "createVm": "Skapa VM",
       "addonNote": "Installeras i en LXC eller VM som du redan har; skapar ingen ny.",
+      "requiresNvidia": "Kräver en NVIDIA-GPU med drivrutinen installerad på Proxmox-värden; den kan installeras från Hårdvara: GPU:er och Coral-TPU i ProxMenux-menyn. Installationen ger containern åtkomst till GPU:n för CUDA.",
+      "optionalGpu": "Kan använda en GPU för hårdvaruacceleration. Installationen frågar om den ska aktiveras.",
       "proxmenuxDocs": "ProxMenux-dokumentation",
       "releases": "Tillgängliga versioner",
       "suiteApps": "Program att välja",
@@ -124,6 +126,7 @@
   },
   "actions": {
     "refresh": "Uppdatera",
+    "retry": "Försök igen",
     "toggleTheme": "Växla tema",
     "openUserMenu": "Öppna användarmenyn",
     "cancel": "Avbryt",
@@ -2848,7 +2851,147 @@
     "avatarHint": "PNG, JPEG, WebP eller GIF · upp till 2 MB · förbeskär kvadrat för bästa resultat.",
     "settingUp": "Konfigurerar...",
     "setupAuthentication": "Ställ in autentisering",
-    "back": "Tillbaka"
+    "back": "Tillbaka",
+    "setupCode": "Konfigurationskod",
+    "setupCodeHint": "Den visades i konsolen när ProxMenux installerades. Om du inte har den kör du menu på servern och öppnar Inställningar → Visa konfigurationskod för Monitor.",
+    "codeInvalid": "Konfigurationskoden är inte giltig.",
+    "codeRateLimited": "För många försök. Vänta några minuter och försök igen.",
+    "noPasswordTitle": "Utan lösenord",
+    "noPasswordDescription": "Välj vad alla som når denna adress får göra.",
+    "readOnlyTitle": "Endast läsning",
+    "readOnlyDescription": "Alla som når Monitor kan se den, men kan inte öppna terminaler, köra skript eller ändra något. Du kan lägga till ett lösenord senare.",
+    "openTitle": "Öppna, acceptera risken",
+    "openDescription": "Alla som når Monitor får full kontroll över denna server, inklusive root-terminal. Välj detta endast i ett nätverk där du litar på alla som kan nå den.",
+    "chooseReadOnly": "Använd endast läsning",
+    "chooseOpen": "Öppna utan lösenord",
+    "pveTitle": "Eller använd kontona från Proxmox VE",
+    "pveDescription": "Logga in med användare och realms från Proxmox VE samt deras tvåfaktorsautentisering, utan något eget konto i Monitor.",
+    "choosePve": "Använd Proxmox VE-konton"
+  },
+  "pveAccounts": {
+    "title": "Proxmox VE-konton",
+    "description": "Logga in med användare och realms från Proxmox VE, inklusive deras tvåfaktorsautentisering.",
+    "enable": "Tillåt inloggning med Proxmox VE-konton",
+    "onlyWay": "Proxmox VE-konton används för att nå instrumentpanelen. Om du vill sluta använda dem lägger du till ett lokalt lösenord eller väljer skrivskyddad eller öppen åtkomst ovan.",
+    "whoGetsIn": "Användare med behörigheten Sys.Modify på / får full åtkomst; användare med endast Sys.Audit på / får skrivskyddad åtkomst. Andra användare kan inte logga in.",
+    "sharedSession": "Inloggad i Proxmox VE-webbgränssnittet? Öppna instrumentpanelen över HTTPS på samma adress så loggar den sessionen in dig även här.",
+    "saveFailed": "Ändringen kunde inte sparas.",
+    "rulesTitle": "Profiler för Proxmox VE-konton",
+    "rulesHelp": "En användares regel gäller först; annars gäller den första regeln för en av användarens grupper. Utan regel ger Sys.Modify på / profilen Administratör och Sys.Audit profilen Observatör. En regel släpper aldrig in en användare utan behörigheter på /.",
+    "ruleKind": "Regel för",
+    "ruleName": "Användare eller grupp",
+    "kindUser": "Användare",
+    "kindGroup": "Grupp",
+    "chooseName": "Välj…",
+    "addRule": "Lägg till regel",
+    "removeRule": "Ta bort",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "saveRules": "Spara regler",
+    "rulesSaved": "Reglerna har sparats.",
+    "errors": {
+      "pve_rules_invalid": "Reglerna kunde inte sparas.",
+      "pve_name_invalid": "Välj en giltig användare eller grupp.",
+      "pve_user_realm": "Ange användaren med sin realm, till exempel user@pve.",
+      "pve_rule_duplicate": "Varje användare eller grupp kan bara ha en regel.",
+      "pve_rule_self": "De här reglerna skulle ta bort din administratörsåtkomst."
+    }
+  },
+  "users": {
+    "title": "Användare",
+    "description": "Lokala användare i Monitor, var och en med eget lösenord, egen tvåfaktorsautentisering och egen profil.",
+    "you": "Du",
+    "primary": "Huvudkonto",
+    "profile": "Profil",
+    "profiles": {
+      "admin": "Administratör",
+      "operator": "Operatör med terminal",
+      "operator_no_terminal": "Operatör utan terminal",
+      "observer": "Observatör",
+      "custom": "Anpassad"
+    },
+    "profileHints": {
+      "admin": "allt, inklusive användare, inställningar för Monitor och hemligheter.",
+      "operator": "kör skript och verktyg, styr VM och LXC, hanterar säkerhetskopior, uppdaterar och öppnar terminaler.",
+      "operator_no_terminal": "samma som en operatör med terminal, utan att öppna terminaler.",
+      "observer": "ser instrumentpanelen utan hemligheter; kör och ändrar ingenting.",
+      "custom": "de områden den ser och de åtgärder den får göra, valda ett och ett; aldrig administration."
+    },
+    "add": "Lägg till användare",
+    "username": "Användarnamn",
+    "usernameHint": "Upp till 32 bokstäver, siffror, punkter, bindestreck och understreck.",
+    "password": "Lösenord",
+    "confirmPassword": "Bekräfta lösenord",
+    "newPassword": "Nytt lösenord",
+    "setPassword": "Ange lösenord",
+    "removeTotp": "Ta bort 2FA",
+    "remove": "Ta bort",
+    "confirmRemove": "Ta bort användare",
+    "removeHint": "Användarens sessioner och API-token slutar fungera.",
+    "passwordsDiffer": "Lösenorden stämmer inte överens.",
+    "added": "Användaren har lagts till.",
+    "passwordSet": "Lösenordet har sparats.",
+    "profileChanged": "Profilen har sparats. Den gäller direkt för öppna sessioner.",
+    "totpRemoved": "Tvåfaktorsautentiseringen har tagits bort. Den kan ställas in igen under Säkerhet.",
+    "removed": "Användaren har tagits bort.",
+    "errors": {
+      "username_invalid": "Användarnamnet får ha upp till 32 bokstäver, siffror, punkter, bindestreck och understreck.",
+      "username_taken": "Användarnamnet används redan.",
+      "profile_unknown": "Okänd profil.",
+      "last_admin": "Monitor behöver minst en administratör.",
+      "user_not_found": "Användaren finns inte längre.",
+      "remove_self": "Du kan inte ta bort ditt eget konto.",
+      "password_short": "Lösenordet måste ha minst 10 tecken.",
+      "password_mix": "Lösenordet måste blanda minst tre av: små bokstäver, stora bokstäver, siffror och symboler.",
+      "password_common": "Lösenordet är för vanligt. Välj ett annat.",
+      "user_change_failed": "Ändringen kunde inte sparas.",
+      "custom_invalid": "Välj minst ett område.",
+      "disable_self": "Du kan inte inaktivera ditt eget konto."
+    },
+    "customAreas": "Synliga områden",
+    "customActions": "Tillåtna åtgärder",
+    "customHint": "Säkerhet, Inställningar och det egna kontot är alltid tillgängliga. Administration är förbehållen profilen Administratör.",
+    "customize": "Ändra områden",
+    "noActions": "inga åtgärder",
+    "areas": {
+      "general": "Översikt",
+      "apps": "Apps",
+      "menux": "Menux",
+      "guests": "VM och LXC",
+      "node": "Nod (lagring, nätverk, hårdvara)",
+      "backup": "Säkerhetskopiering",
+      "logs": "Systemloggar"
+    },
+    "actions": {
+      "execute": "Köra skript och verktyg",
+      "guests": "Styra VM och LXC",
+      "backup": "Hantera säkerhetskopior",
+      "update": "Uppdatera",
+      "terminal": "Öppna terminaler"
+    },
+    "disable": "Inaktivera",
+    "enable": "Aktivera",
+    "disabledBadge": "Inaktiverad",
+    "disabledDone": "Användaren är inaktiverad: den kan inte logga in, och dess sessioner och API-token slutar fungera tills den aktiveras igen.",
+    "enabledDone": "Användaren har aktiverats."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Lokalt konto",
+    "username": "Användare",
+    "password": "Lösenord",
+    "realm": "Realm",
+    "code": "Tvåfaktorskod",
+    "codeHint": "Den sexsiffriga koden från din autentiseringsapp, eller en av dina återställningsnycklar.",
+    "failed": "Inloggningen misslyckades. Kontrollera användare, lösenord och realm.",
+    "fillFields": "Ange användare och lösenord.",
+    "tooManyAttempts": "För många försök. Vänta några minuter och försök igen.",
+    "useWebInterface": "Det här kontot loggar in med en säkerhetsnyckel. Logga in i Proxmox VE-webbgränssnittet och återvänd sedan till den här sidan.",
+    "webInterface": "Logga in i Proxmox VE-webbgränssnittet",
+    "webInterfaceHint": "Med Monitor öppnad över HTTPS på samma adress loggar sessionen från Proxmox VE-webbgränssnittet in dig här när du kommer tillbaka."
+  },
+  "access": {
+    "readOnlyBanner": "Skrivskyddad åtkomst: du kan se denna server, men inte köra eller ändra något. För att hantera den lägger du till ett lösenord i Säkerhet."
   },
   "securityPage": {
     "title": "Säkerhet",
@@ -2882,7 +3025,8 @@
       "none": "Ingen",
       "external": "Extern",
       "up": "Upp",
-      "down": "Ner"
+      "down": "Ner",
+      "readOnly": "Endast läsning"
     },
     "errors": {
       "deleteReportNoFiles": "Inga Lynis-rapport- eller loggfiler hittades att ta bort.",
@@ -2958,7 +3102,8 @@
       "sslCertificateReloaded": "Det förnyade certifikatet är nu aktivt. Befintliga anslutningar avbröts inte.",
       "sslCertificateUnchanged": "Det aktiva certifikatet motsvarar redan de aktuella certifikatfilerna.",
       "reportDeleted": "Revisionsrapporten togs bort.",
-      "twoFactorEnabled": "Tvåfaktorsautentisering är aktiverad."
+      "twoFactorEnabled": "Tvåfaktorsautentisering är aktiverad.",
+      "readOnlyReloading": "Instrumentpanelen är nu skrivskyddad. Laddar om..."
     },
     "confirm": {
       "disableAuth": "Inaktivera autentisering? Alla som kan nå instrumentpanelen kommer att kunna öppna den.",
@@ -2993,7 +3138,11 @@
       "confirmNewPasswordPlaceholder": "Ange det nya lösenordet igen",
       "changing": "Skiftande...",
       "enterYourPassword": "Ange ditt lösenord",
-      "disable": "Inaktivera autentisering"
+      "disable": "Inaktivera autentisering",
+      "readOnlyMode": "Instrumentpanelen är skrivskyddad utan lösenord: den kan visas, men inget kan köras eller ändras.",
+      "useReadOnly": "Växla till endast läsning",
+      "disableChoose": "Hur ska instrumentpanelen nås utan lösenord?",
+      "pveMode": "Instrumentpanelen loggar in med kontona från Proxmox VE."
     },
     "twoFactor": {
       "title": "Tvåfaktorsautentisering",
@@ -5972,6 +6121,7 @@
       "databases": "Databaser",
       "documentsNotes": "Dokument och anteckningar",
       "filesDownloads": "Filer och nedladdningar",
+      "downloads": "Nedladdningar",
       "financeBudgeting": "Ekonomi och budget",
       "gamingLeisure": "Spel och fritid",
       "hostManagement": "Värdhantering",
@@ -8119,6 +8269,117 @@
     "unexpectedContentType": "Förväntade ett JSON-svar men fick {contentType}",
     "unknownContentType": "okänd innehållstyp",
     "invalidJson": "Ogiltigt JSON-svar från {endpoint}",
-    "unauthorized": "Obehörig: {endpoint}"
+    "unauthorized": "Obehörig: {endpoint}",
+    "forbidden": "Din profil tillåter inte den här åtgärden."
+  },
+  "accessLog": {
+    "title": "Åtkomstaktivitet",
+    "description": "Inloggningar, ändringar av konton, profiler och inloggningsinställningar samt varje åtgärd som en profil nekade, med vem som gjorde den. Lösenord, koder och token sparas aldrig. Sparas i 90 dagar.",
+    "empty": "Ingen aktivitet registrerad ännu.",
+    "loadMore": "Läs in fler",
+    "refused": "Nekad",
+    "failed": "Misslyckad",
+    "noAccount": "Inget konto",
+    "secondFactor": "andra faktor",
+    "missing": "saknas: {permission}",
+    "on": "på",
+    "off": "av",
+    "rules": "regler: {count}",
+    "subjects": "identifierare: {count}",
+    "events": {
+      "login": "Inloggning",
+      "account": {
+        "created": "Konto skapat"
+      },
+      "access": {
+        "mode": "Åtkomstläge ändrat",
+        "refused": "Åtgärd nekad"
+      },
+      "password": {
+        "changed": "Lösenord ändrat"
+      },
+      "totp": {
+        "enabled": "Tvåfaktorsautentisering aktiverad",
+        "disabled": "Tvåfaktorsautentisering inaktiverad"
+      },
+      "api_token": {
+        "created": "API-token skapad",
+        "revoked": "API-token återkallad"
+      },
+      "user": {
+        "created": "Användare tillagd",
+        "profile": "Profil ändrad",
+        "password": "Lösenord satt av en administratör",
+        "totp_reset": "Tvåfaktorsautentisering borttagen",
+        "deleted": "Användare borttagen",
+        "disabled": "Användare inaktiverad",
+        "enabled": "Användare aktiverad"
+      },
+      "pve": {
+        "accounts": "Proxmox VE-konton",
+        "rules": "Profilregler för Proxmox VE"
+      },
+      "oidc": {
+        "config": "Inställningar för OpenID Connect"
+      },
+      "app_watch": {
+        "adopted": "Appregistreringar hämtade från containern"
+      }
+    },
+    "methods": {
+      "local": "lokalt konto",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "skrivskyddat",
+      "open": "öppet",
+      "proxmox": "Proxmox VE-konton",
+      "password": "lösenord"
+    },
+    "scopes": {
+      "read_only": "skrivskyddat",
+      "full_admin": "full åtkomst"
+    },
+    "permissions": {
+      "admin": "administrera",
+      "view": "visa",
+      "self": "eget konto",
+      "ticket": "terminal- eller nedladdningsbiljett"
+    }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Logga in med en extern identitetsleverantör, till exempel Authentik, Keycloak eller Pocket ID.",
+    "localRequired": "Konfigurera och aktivera lokal lösenordsautentisering innan du konfigurerar OIDC.",
+    "enable": "Aktivera OpenID Connect",
+    "provider_name": "Leverantörens namn",
+    "issuer": "Utfärdarens URL (exakt värde från discovery)",
+    "public_url": "Offentlig HTTPS-URL för denna Monitor-panel",
+    "client_id": "Klient-ID",
+    "secret": "Klienthemlighet",
+    "secretKept": "Den sparade hemligheten behålls om fältet lämnas tomt",
+    "authMethod": "Klientens autentiseringsmetod",
+    "publicClient": "Offentlig klient (PKCE, utan hemlighet)",
+    "urlHelp": "Använd utfärdarens exakta URL, inklusive eventuellt avslutande snedstreck. Den offentliga URL:en måste tillhandahålla denna panel och dess /api-rutter via HTTPS, inklusive eventuellt sökvägsprefix för proxyn.",
+    "subjects": "Tillåtna administratörers subjektidentifierare (sub), en per rad",
+    "subjectHelp": "Endast dessa oföränderliga användar-ID:n från leverantören får åtkomst till Monitor. Varje ID får fullständig administratörsåtkomst. Använd sub-attributet som utfärdats för denna klient, inte en e-postadress eller ett visningsnamn.",
+    "callback": "Registrera exakt denna omdirigerings-URI hos din identitetsleverantör:",
+    "mfaHelp": "OIDC använder identitetsleverantörens MFA-policy. Lokalt lösenord och 2FA är fortfarande tillgängliga. Att spara ändringar ogiltigförklarar befintliga OIDC-sessioner.",
+    "unavailable": "Denna version av Monitor innehåller inte den kryptografiska körmiljö som OIDC kräver.",
+    "save": "Spara och verifiera leverantören",
+    "saving": "Verifierar leverantören…",
+    "saved": "OIDC-inställningarna har sparats. Discovery har verifierats; testa en inloggning i en annan webbläsare innan du avslutar din lokala session.",
+    "saveFailed": "Det gick inte att spara OIDC-inställningarna.",
+    "login": "Fortsätt med {provider}",
+    "loginFailed": "OIDC-inloggningen misslyckades eller upphörde att gälla. Försök igen, kontrollera din tillåtna subjektidentifierare eller använd dina lokala inloggningsuppgifter.",
+    "disabledSaved": "OIDC-inställningarna har sparats. Extern inloggning är inaktiverad.",
+    "saveDisabled": "Spara inställningar",
+    "allowedSubjects": "Tillåtna identifierare",
+    "allowedSubjectsHelp": "Endast dessa oföränderliga användar-ID:n från leverantören får åtkomst till Monitor, var och en med sin profil; ett ID utan vald profil är administratör. Använd sub-värdet som utfärdats för den här klienten, inte en e-postadress eller ett visningsnamn.",
+    "subjectId": "Identifierare (sub)",
+    "subjectName": "Namn (valfritt)",
+    "addSubject": "Lägg till identifierare",
+    "removeSubject": "Ta bort"
   }
 }

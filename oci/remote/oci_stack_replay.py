@@ -78,7 +78,7 @@ def immich_record(record):
     cuda = capabilities is not None
     devices = [{'kind': 'nvidia-runtime', 'runtime_mode': 'dynamic'}] if cuda else []
     for item in projection['native_devices']:
-        fields = dict(p.split('=', 1) for p in item['value'].split(',') if '=' in p)
+        fields = oci_gpu_devices.device_fields(item['value'])
         path = fields.get('path')
         if cuda and path and path.startswith('/dev/nvidia'):
             continue
@@ -255,7 +255,7 @@ def translated_devices(projection):
     Anything else has no translation and stops the update before it starts."""
     devices = []
     for item in projection['native_devices']:
-        fields = dict(part.split('=', 1) for part in item['value'].split(',') if '=' in part)
+        fields = oci_gpu_devices.device_fields(item['value'])
         path = fields.get('path')
         if not (oci_gpu_devices.gpu_path(path) or oci_gpu_devices.peripheral_path(path)):
             raise ValueError(translate('The stack contains devices or directives without a translation'))

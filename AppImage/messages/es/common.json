@@ -90,6 +90,8 @@
       "runScript": "Ejecutar script",
       "createVm": "Crear VM",
       "addonNote": "Se instala dentro de un LXC o una VM que ya tengas; no crea uno nuevo.",
+      "requiresNvidia": "Necesita una GPU NVIDIA con su controlador instalado en el host de Proxmox; se puede instalar desde Hardware: GPU y Coral-TPU en el menú de ProxMenux. La instalación da acceso a la GPU al contenedor para usar CUDA.",
+      "optionalGpu": "Puede usar una GPU para la aceleración por hardware. La instalación pregunta si activarla.",
       "proxmenuxDocs": "Documentación de ProxMenux",
       "releases": "Versiones disponibles",
       "suiteApps": "Aplicaciones a elegir",
@@ -277,6 +279,7 @@
   },
   "actions": {
     "refresh": "Recargar",
+    "retry": "Reintentar",
     "toggleTheme": "Alternar tema",
     "openUserMenu": "Abrir menú de usuario",
     "cancel": "Cancelar",
@@ -2233,7 +2236,7 @@
   },
   "settings": {
     "title": "Ajustes",
-    "description": "Administre las preferencias de su panel de control",
+    "description": "Administra las preferencias de tu panel de control",
     "common": {
       "health": "Salud",
       "alerts": "Alertas"
@@ -2263,7 +2266,7 @@
       "permanentNotice": "Las alertas de {category} permanecerán ocultas permanentemente después del despido.",
       "temperatureSafetyNotice": "Aún aparecen alertas de temperatura crítica de la CPU para proteger el hardware.",
       "longSuppressionNotice": "Largo período de supresión. Las alertas descartadas en esta categoría permanecerán ocultas durante mucho tiempo.",
-      "footerNote": "Esta configuración se aplica cuando descarta una advertencia del Monitor de salud. Las alertas de temperatura crítica de la CPU siempre aparecen para proteger su hardware.",
+      "footerNote": "Esta configuración se aplica al descartar una advertencia del Monitor de salud. Las alertas de temperatura crítica de la CPU siempre aparecen para proteger el hardware.",
       "activeSuppressions": "Supresiones activas",
       "activeSuppressionsDescription": "Alertas que ha ocultado del Health Monitor. Los despidos definitivos sólo podrán revertirse aquí. La edición requiere el Monitor de salud",
       "noActiveSuppressions": "Sin supresiones activas. Las alertas descartadas del Health Monitor aparecerán aquí.",
@@ -2308,7 +2311,7 @@
     },
     "remoteStorage": {
       "title": "Exclusiones de almacenamiento remoto",
-      "description": "Excluya los almacenamientos remotos (PBS, NFS, CIFS, etc.) del seguimiento del estado y las notificaciones. Úselo para almacenamientos que están intencionalmente fuera de línea o que tienen acceso API limitado.",
+      "description": "Excluye los almacenamientos remotos (PBS, NFS, CIFS, etc.) del seguimiento del estado y de las notificaciones. Úsalo para almacenamientos que están fuera de línea a propósito o que tienen un acceso a la API limitado.",
       "emptyTitle": "No se detectaron almacenamientos remotos",
       "emptyDescription": "PBS, NFS, CIFS y otros almacenamientos remotos aparecerán aquí cuando se configuren",
       "storage": "Almacenamiento",
@@ -2338,7 +2341,7 @@
     "lxcUpdateDetection": {
       "title": "Detección de actualización de LXC",
       "descriptionStart": "Comprobar periódicamente los contenedores de Debian/Ubuntu/Alpine LXC en ejecución para ver si hay actualizaciones de paquetes pendientes",
-      "descriptionEnd": "y colocarlos en el tablero. La alternancia de notificación correspondiente en Notificaciones -> Servicios aparece solo cuando la detección está habilitada.",
+      "descriptionEnd": " y mostrarlas en el panel. El interruptor de notificación correspondiente en Notificaciones -> Servicios aparece solo cuando la detección está activada.",
       "enableLabel": "Habilitar la detección de actualizaciones de LXC",
       "loadFailed": "No se pudo cargar la configuración de detección de actualizaciones de LXC.",
       "saveFailed": "No se pudo guardar la configuración de detección de actualizaciones de LXC.",
@@ -2361,7 +2364,7 @@
     "notifications": {
       "title": "Notificaciones",
       "description": "Configura canales de notificación y filtros de eventos. Recibe alertas vía Telegram, Gotify, Discord o Email.",
-      "disabledDescription": "Reciba alertas en tiempo real sobre su entorno Proxmox a través de Telegram, Discord, Gotify o correo electrónico.",
+      "disabledDescription": "Recibe alertas en tiempo real sobre tu entorno Proxmox a través de Telegram, Discord, Gotify o correo electrónico.",
       "enableService": "Habilitar el servicio de notificaciones",
       "enableServiceDescription": "Supervise el estado del sistema, los eventos de VM/CT, los backups, las alertas de seguridad y el estado del clúster. La integración del webhook PVE se configura automáticamente.",
       "enableButton": "Habilitar notificaciones",
@@ -2660,7 +2663,7 @@
           "openai": "Estándar de la industria, preciso y ampliamente utilizado.",
           "anthropic": "Excelente para escribir y traducir; rápido y económico.",
           "gemini": "Hay disponible un nivel gratuito, con una buena relación calidad-precio.",
-          "ollama": "Utiliza modelos en su servidor Ollama. Totalmente local, privado y gratuito.",
+          "ollama": "Usa modelos en tu servidor Ollama. Totalmente local, privado y gratuito.",
           "openrouter": "Acceso a más de 100 modelos a través de una clave API."
         },
         "loadModelsFailed": "No se pudieron cargar los modelos — comprueba la API key o la URL del endpoint."
@@ -2675,7 +2678,7 @@
         "getToken": "Obtén el token del bot",
         "tokenIntro": "Después de crear el bot, BotFather te da un token como este:",
         "tokenPaste": "Copia el token y pégalo en el campo Bot Token.",
-        "getChatId": "Obtenga su ID de chat",
+        "getChatId": "Obtén tu ID de chat",
         "optionA": "Opción A: usar un bot (la más fácil)",
         "chat1": "1. Encuentra",
         "or": "o",
@@ -2683,7 +2686,7 @@
         "optionB": "Opción B: método manual",
         "manual1": "1. Envía un mensaje a tu nuevo bot.",
         "manual2": "2. Abre esta URL en tu navegador y reemplaza YOUR_TOKEN:",
-        "manual3": "3. Encuentre este valor; su número es su ID de chat:",
+        "manual3": "3. Busca este valor; ese número es tu ID de chat:",
         "groups": "Grupos y canales",
         "group1": "1. Añade el bot al grupo o canal como administrador.",
         "group2": "2. Envía un mensaje en el grupo.",
@@ -2691,7 +2694,7 @@
         "group4": "4. Los ID de grupo son números negativos, por ejemplo",
         "summary": "Resumen rápido",
         "summaryToken": "Identifica tu bot (de BotFather)",
-        "summaryChat": "Le dice al bot dónde enviar mensajes (su ID o un ID de grupo)"
+        "summaryChat": "Indica al bot dónde enviar los mensajes (tu ID o el ID de un grupo)"
       },
       "validation": {
         "discordWebhook": "Introduce una URL de webhook de Discord en el formato https://discord.com/api/webhooks/<id>/<token>.",
@@ -2715,16 +2718,16 @@
         "title": "Modo de aviso personalizado",
         "description": "Crea tu propio mensaje de IA para las notificaciones de ProxMenux Monitor",
         "whatTitle": "¿Qué es un aviso personalizado?",
-        "whatDescription": "El mensaje define cómo la IA formatea sus notificaciones. Un mensaje personalizado le permite controlar el estilo, el nivel de detalle y el formato de cada mensaje.",
+        "whatDescription": "El mensaje define cómo formatea la IA tus notificaciones. Un mensaje personalizado te permite controlar el estilo, el nivel de detalle y el formato de cada mensaje.",
         "requirements": "Requisitos importantes",
-        "formatIntro": "Su mensaje debe utilizar este formato de salida:",
+        "formatIntro": "Tu mensaje debe usar este formato de salida:",
         "formatTitleThen": "seguido del título, luego",
         "formatBodyThen": "seguido del mensaje",
         "plainText": "Utiliza solo texto sin formato, sin Markdown, para que el resultado funcione en todos los canales.",
         "rawData": "El mensaje recibe datos sin procesar del evento Proxmox como entrada.",
         "language": "Define el idioma de salida en el mensaje. El selector de idioma solo se aplica al modo predeterminado.",
         "gettingStarted": "Empezando",
-        "gettingStartedDescription": "Un mensaje de ejemplo está listo para ayudarle a comenzar. Puede ajustarlo, exportarlo para compartirlo con otros o importar un mensaje de la comunidad.",
+        "gettingStartedDescription": "Tienes un mensaje de ejemplo listo para empezar. Puedes ajustarlo, exportarlo para compartirlo o importar un mensaje de la comunidad.",
         "loadExample": "Cargar ejemplo",
         "startFromScratch": "Empezar desde el principio"
       }
@@ -2971,7 +2974,7 @@
   "authSetup": {
     "choiceTitle": "Configurar la protección del panel",
     "passwordTitle": "Crear contraseña",
-    "protectTitle": "¿Proteger su tablero?",
+    "protectTitle": "¿Proteger el panel?",
     "protectDescription": "Añade una capa adicional de seguridad para proteger tus datos de Proxmox cuando accedas desde redes no privadas.",
     "setupPassword": "Sí, configurar contraseña",
     "skipProtection": "No, continuar sin protección",
@@ -3001,7 +3004,147 @@
     "avatarHint": "PNG, JPEG, WebP o GIF · hasta 2 MB · cuadrado precortado para obtener mejores resultados.",
     "settingUp": "Configurando...",
     "setupAuthentication": "Configurar autenticación",
-    "back": "Atrás"
+    "back": "Atrás",
+    "setupCode": "Código de configuración",
+    "setupCodeHint": "Se mostró en la consola al instalar ProxMenux. Si no lo tienes, ejecuta menu en el servidor y abre Ajustes → Mostrar el código de configuración del Monitor.",
+    "codeInvalid": "El código de configuración no es válido.",
+    "codeRateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "noPasswordTitle": "Sin contraseña",
+    "noPasswordDescription": "Elige qué puede hacer cualquiera que acceda a esta dirección.",
+    "readOnlyTitle": "Solo lectura",
+    "readOnlyDescription": "Cualquiera que acceda al Monitor puede verlo, pero no puede abrir terminales, ejecutar scripts ni cambiar nada. Puedes añadir una contraseña más tarde.",
+    "openTitle": "Abierto, asumiendo el riesgo",
+    "openDescription": "Cualquiera que acceda al Monitor obtiene el control total de este servidor, incluida la terminal de root. Elígelo solo en una red en la que confíes en todos los que puedan acceder a él.",
+    "chooseReadOnly": "Usar solo lectura",
+    "chooseOpen": "Abrir sin contraseña",
+    "pveTitle": "O usa las cuentas de Proxmox VE",
+    "pveDescription": "Inicia sesión con los usuarios y realms de Proxmox VE y su segundo factor, sin una cuenta propia del Monitor.",
+    "choosePve": "Usar las cuentas de Proxmox VE"
+  },
+  "pveAccounts": {
+    "title": "Cuentas de Proxmox VE",
+    "description": "Inicia sesión con los usuarios y realms de Proxmox VE, incluido su segundo factor.",
+    "enable": "Permitir el inicio de sesión con cuentas de Proxmox VE",
+    "onlyWay": "Las cuentas de Proxmox VE son la forma de entrar al panel. Para dejar de usarlas, añade una contraseña local o elige el acceso de solo lectura o abierto más arriba.",
+    "whoGetsIn": "Los usuarios con el privilegio Sys.Modify en / tienen acceso completo; los que solo tienen Sys.Audit en /, acceso de solo lectura. El resto no puede iniciar sesión.",
+    "sharedSession": "¿Has iniciado sesión en la interfaz web de Proxmox VE? Abre el panel por HTTPS en la misma dirección y esa sesión también te da acceso aquí.",
+    "saveFailed": "No se ha podido guardar el cambio.",
+    "rulesTitle": "Perfiles de las cuentas de Proxmox VE",
+    "rulesHelp": "Manda la regla de un usuario; si no hay, la primera regla de uno de sus grupos. Sin regla, Sys.Modify en / da el perfil Administrador y Sys.Audit, el perfil Observador. Una regla nunca deja entrar a un usuario sin privilegios en /.",
+    "ruleKind": "Regla para",
+    "ruleName": "Usuario o grupo",
+    "kindUser": "Usuario",
+    "kindGroup": "Grupo",
+    "chooseName": "Elegir…",
+    "addRule": "Añadir regla",
+    "removeRule": "Eliminar",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "saveRules": "Guardar reglas",
+    "rulesSaved": "Reglas guardadas.",
+    "errors": {
+      "pve_rules_invalid": "No se han podido guardar las reglas.",
+      "pve_name_invalid": "Elige un usuario o grupo válido.",
+      "pve_user_realm": "Indica el usuario con su realm, como usuario@pve.",
+      "pve_rule_duplicate": "Cada usuario o grupo solo puede tener una regla.",
+      "pve_rule_self": "Estas reglas te quitarían el acceso de administrador."
+    }
+  },
+  "users": {
+    "title": "Usuarios",
+    "description": "Usuarios locales del Monitor, cada uno con su contraseña, su segundo factor y su perfil.",
+    "you": "Tú",
+    "primary": "Principal",
+    "profile": "Perfil",
+    "profiles": {
+      "admin": "Administrador",
+      "operator": "Operador con terminal",
+      "operator_no_terminal": "Operador sin terminal",
+      "observer": "Observador",
+      "custom": "Personalizado"
+    },
+    "profileHints": {
+      "admin": "todo, incluidos los usuarios, los ajustes del Monitor y los secretos.",
+      "operator": "ejecuta scripts y herramientas, controla VMs y LXC, gestiona backups, actualiza y abre terminales.",
+      "operator_no_terminal": "lo mismo que un operador con terminal, sin abrir terminales.",
+      "observer": "ve el panel sin secretos; no ejecuta ni cambia nada.",
+      "custom": "las áreas que ve y las acciones que puede hacer, elegidas una a una; nunca administra."
+    },
+    "add": "Añadir usuario",
+    "username": "Usuario",
+    "usernameHint": "Hasta 32 letras, números, puntos, guiones y guiones bajos.",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "newPassword": "Nueva contraseña",
+    "setPassword": "Cambiar contraseña",
+    "removeTotp": "Quitar 2FA",
+    "remove": "Eliminar",
+    "confirmRemove": "Eliminar usuario",
+    "removeHint": "Sus sesiones y tokens de API dejan de funcionar.",
+    "passwordsDiffer": "Las contraseñas no coinciden.",
+    "added": "Usuario añadido.",
+    "passwordSet": "Contraseña guardada.",
+    "profileChanged": "Perfil guardado. Se aplica al momento a sus sesiones abiertas.",
+    "totpRemoved": "Segundo factor quitado. Se puede configurar de nuevo desde Seguridad.",
+    "removed": "Usuario eliminado.",
+    "errors": {
+      "username_invalid": "El nombre de usuario puede tener hasta 32 letras, números, puntos, guiones y guiones bajos.",
+      "username_taken": "Ese nombre de usuario ya existe.",
+      "profile_unknown": "Perfil desconocido.",
+      "last_admin": "El Monitor necesita al menos un administrador.",
+      "user_not_found": "Ese usuario ya no existe.",
+      "remove_self": "No puedes eliminar tu propia cuenta.",
+      "password_short": "La contraseña debe tener al menos 10 caracteres.",
+      "password_mix": "La contraseña debe combinar al menos tres de: minúsculas, mayúsculas, números y símbolos.",
+      "password_common": "Esa contraseña es demasiado común. Elige otra.",
+      "user_change_failed": "No se ha podido guardar el cambio.",
+      "custom_invalid": "Elige al menos un área.",
+      "disable_self": "No puedes desactivar tu propia cuenta."
+    },
+    "customAreas": "Áreas que ve",
+    "customActions": "Acciones que puede hacer",
+    "customHint": "Seguridad, Ajustes y la propia cuenta siempre están disponibles. Administrar es solo del perfil Administrador.",
+    "customize": "Cambiar áreas",
+    "noActions": "sin acciones",
+    "areas": {
+      "general": "General",
+      "apps": "Apps",
+      "menux": "Menux",
+      "guests": "VM y LXC",
+      "node": "Nodo (almacenamiento, red, hardware)",
+      "backup": "Backup",
+      "logs": "Registros del sistema"
+    },
+    "actions": {
+      "execute": "Ejecutar scripts y herramientas",
+      "guests": "Controlar VMs y LXC",
+      "backup": "Gestionar backups",
+      "update": "Actualizar",
+      "terminal": "Abrir terminales"
+    },
+    "disable": "Desactivar",
+    "enable": "Activar",
+    "disabledBadge": "Desactivado",
+    "disabledDone": "Usuario desactivado: no puede iniciar sesión y sus sesiones y tokens de API dejan de funcionar hasta que se active de nuevo.",
+    "enabledDone": "Usuario activado."
+  },
+  "pveLogin": {
+    "tab": "Proxmox VE",
+    "localAccount": "Cuenta local",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "realm": "Realm",
+    "code": "Código del segundo factor",
+    "codeHint": "El código de seis cifras de tu aplicación de autenticación, o una de tus claves de recuperación.",
+    "failed": "No se ha podido iniciar sesión. Comprueba el usuario, la contraseña y el realm.",
+    "fillFields": "Introduce el usuario y la contraseña.",
+    "tooManyAttempts": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "useWebInterface": "Esta cuenta inicia sesión con una llave de seguridad. Inicia sesión en la interfaz web de Proxmox VE y vuelve después a esta página.",
+    "webInterface": "Iniciar sesión en la interfaz web de Proxmox VE",
+    "webInterfaceHint": "Con el Monitor abierto por HTTPS en la misma dirección, la sesión de la interfaz web de Proxmox VE te da acceso aquí al volver."
+  },
+  "access": {
+    "readOnlyBanner": "Acceso de solo lectura: puedes ver este servidor, pero no ejecutar ni cambiar nada. Para administrarlo, añade una contraseña en Seguridad."
   },
   "securityPage": {
     "title": "Seguridad",
@@ -3035,7 +3178,8 @@
       "none": "Ninguno",
       "external": "Externo",
       "up": "Arriba",
-      "down": "Abajo"
+      "down": "Abajo",
+      "readOnly": "Solo lectura"
     },
     "errors": {
       "deleteReportNoFiles": "No se encontraron archivos de informe ni registros de Lynis para eliminar.",
@@ -3111,10 +3255,11 @@
       "sslCertificateReloaded": "El certificado renovado ya está activo. No se ha interrumpido ninguna conexión.",
       "sslCertificateUnchanged": "El certificado activo ya coincide con los archivos actuales.",
       "reportDeleted": "Se eliminó el informe de auditoría.",
-      "twoFactorEnabled": "La autenticación de dos factores está habilitada."
+      "twoFactorEnabled": "La autenticación de dos factores está habilitada.",
+      "readOnlyReloading": "El panel ahora es de solo lectura. Recargando..."
     },
     "confirm": {
-      "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda alcanzar el tablero podrá abrirlo.",
+      "disableAuth": "¿Desactivar la autenticación? Cualquiera que pueda llegar al panel podrá abrirlo.",
       "revokeToken": "¿Revocar este token API?",
       "disableHttps": "¿Desactivar HTTPS y volver a HTTP simple?",
       "deleteAuditReport": "¿Eliminar el informe de auditoría y los registros de Lynis?",
@@ -3146,7 +3291,11 @@
       "confirmNewPasswordPlaceholder": "Introduce la nueva contraseña nuevamente",
       "changing": "Cambio...",
       "enterYourPassword": "Introduce tu contraseña",
-      "disable": "Deshabilitar la autenticación"
+      "disable": "Deshabilitar la autenticación",
+      "readOnlyMode": "El panel es de solo lectura sin contraseña: se puede ver, pero no se puede ejecutar ni cambiar nada.",
+      "useReadOnly": "Cambiar a solo lectura",
+      "disableChoose": "Sin contraseña, ¿cómo se debería acceder al panel?",
+      "pveMode": "El panel inicia sesión con las cuentas de Proxmox VE."
     },
     "twoFactor": {
       "title": "Autenticación de dos factores",
@@ -3203,7 +3352,7 @@
       "description": "Crea tokens de larga duración para integraciones y automatización.",
       "aboutTitle": "Acerca de los tokens API",
       "validFor": "Los tokens siguen siendo válidos hasta que los revoques.",
-      "externalServices": "Úselos con herramientas externas en lugar de su contraseña.",
+      "externalServices": "Úsalos con herramientas externas en lugar de tu contraseña.",
       "authorizationHeader": "Envíe el token en el encabezado de Autorización.",
       "seeGuideBefore": "Ver el",
       "integrationsGuide": "guía de integraciones",
@@ -3242,7 +3391,7 @@
     },
     "firewall": {
       "title": "Cortafuegos",
-      "description": "Administre el estado del cortafuegos de Proxmox y reglas de acceso sencillas.",
+      "description": "Administra el estado del cortafuegos de Proxmox y reglas de acceso sencillas.",
       "notDetectedTitle": "No se detectó el cortafuegos de Proxmox",
       "notDetectedDescription": "Las herramientas del cortafuegos no están disponibles en este host.",
       "clusterTitle": "Cortafuegos de clúster",
@@ -3328,7 +3477,7 @@
       "configureProxmox": "Protección de inicio de sesión de Proxmox",
       "configureMonitor": "Supervisar la protección de inicio de sesión",
       "configureGlobal": "Configuración básica de prohibición",
-      "customizeAfterInstall": "Puede ajustar cada protección después de la instalación.",
+      "customizeAfterInstall": "Puedes ajustar cada protección después de la instalación.",
       "installConfigure": "Instalar y configurar",
       "jails": "Protecciones",
       "bannedIps": "IP bloqueadas",
@@ -3601,7 +3750,7 @@
       "enabledTitle": "2FA está habilitado.",
       "enabledDescription": "Guarda los códigos de backup antes de cerrar esta ventana.",
       "saveCodesTitle": "Guarda tus códigos de backup",
-      "saveCodesDescription": "Cada código se puede usar una vez si pierde el acceso a su aplicación de autenticación.",
+      "saveCodesDescription": "Cada código se puede usar una vez si pierdes el acceso a tu aplicación de autenticación.",
       "backupCodes": "Códigos de backup",
       "copyAll": "Copiar todo",
       "finish": "Finalizar"
@@ -3612,7 +3761,7 @@
       "noNetworkDetected": "No se detectó ninguna red",
       "noNetworksDetected": "No se detectaron redes.",
       "recommended": "Recomendado",
-      "retry": "Rever",
+      "retry": "Reintentar",
       "errors": {
         "loadWizardFailed": "No se pudo cargar la configuración de Secure Gateway",
         "updateFailed": "No se pudo actualizar Secure Gateway",
@@ -3644,11 +3793,11 @@
       },
       "wizard": {
         "introTitle": "Acceso remoto seguro con Tailscale",
-        "introDescription": "Implemente una pequeña puerta de enlace LXC para que sus dispositivos puedan llegar a ProxMenux, Proxmox y redes locales seleccionadas a través de su red trasera Tailscale.",
+        "introDescription": "Despliega una pequeña puerta de enlace LXC para que tus dispositivos lleguen a ProxMenux, a Proxmox y a las redes locales seleccionadas a través de tu red privada de Tailscale.",
         "whatYouGet": "lo que obtienes",
         "benefitMonitorAnywhere": "Abre el Monitor desde cualquier lugar de tu tailnet.",
-        "benefitProxmoxUi": "Acceda a la interfaz de usuario web de Proxmox sin exponer el puerto 8006.",
-        "benefitVmLxc": "Acceda a redes VM y LXC seleccionadas cuando sea necesario.",
+        "benefitProxmoxUi": "Accede a la interfaz web de Proxmox sin exponer el puerto 8006.",
+        "benefitVmLxc": "Accede a las redes de VM y LXC seleccionadas cuando haga falta.",
         "benefitEncryption": "El tráfico permanece cifrado a través de Tailscale.",
         "benefitNoPorts": "No se requiere reenvío de puerto público.",
         "tailscaleAccountBefore": "Necesita una cuenta de Tailscale y una clave de autenticación previa de",
@@ -3761,12 +3910,12 @@
         "stepRoutingMiddle": "y aprobar",
         "accessAfterApproval": "Después de la aprobación, puede abrir",
         "or": "o",
-        "fromAnyDevice": "desde cualquier dispositivo en su tailnet.",
+        "fromAnyDevice": "desde cualquier dispositivo de tu tailnet.",
         "doLater": "haré esto más tarde"
       },
       "notInstalled": {
         "subtitle": "La puerta de enlace Tailscale aún no está implementada.",
-        "description": "Implementarlo para llegar a ProxMenux y Proxmox de forma segura desde su tailnet sin abrir puertos públicos.",
+        "description": "Despliégalo para llegar a ProxMenux y a Proxmox de forma segura desde tu tailnet sin abrir puertos públicos.",
         "deploy": "Implementar Secure Gateway"
       },
       "schema": {
@@ -3787,11 +3936,11 @@
           "options": {
             "host_only": {
               "label": "Sólo Proxmox",
-              "description": "Acceda únicamente a este servidor Proxmox, la interfaz de usuario y el ProxMenux Monitor."
+              "description": "Accede únicamente a este servidor Proxmox, a su interfaz web y a ProxMenux Monitor."
             },
             "proxmox_network": {
               "label": "Red local completa",
-              "description": "Acceda a todos los dispositivos de su red local, como NAS, impresoras, VM y LXC."
+              "description": "Accede a todos los dispositivos de tu red local, como NAS, impresoras, VM y LXC."
             },
             "custom": {
               "label": "Subredes personalizadas",
@@ -3810,7 +3959,7 @@
         },
         "accept_routes": {
           "label": "Aceptar rutas",
-          "description": "Permita que esta puerta de enlace llegue a las redes anunciadas por otros nodos de Tailscale en su tailnet."
+          "description": "Permite que esta puerta de enlace llegue a las redes anunciadas por otros nodos de Tailscale en tu tailnet."
         }
       }
     }
@@ -3972,21 +4121,21 @@
     }
   },
   "onboarding": {
-    "dialogTitle": "Incorporación de ProxMenux",
+    "dialogTitle": "Presentación de ProxMenux",
     "previous": "Anterior",
     "skip": "Saltar",
-    "next": "Próximo",
-    "getStarted": "¡Empieza!",
-    "dontShowAgain": "No vuelvas a mostrar esto",
+    "next": "Siguiente",
+    "getStarted": "Empezar",
+    "dontShowAgain": "No volver a mostrar",
     "goToSlide": "Ir a la diapositiva {number}",
     "slides": {
       "welcome": {
         "title": "¡Bienvenido a ProxMenux Monitor!",
-        "description": "Tu nueva herramienta de seguimiento para Proxmox. Descubra las funciones que le ayudarán a gestionar y supervisar su infraestructura más fácilmente."
+        "description": "Tu nueva herramienta de supervisión para Proxmox. Descubre las funciones que te ayudarán a gestionar y supervisar tu infraestructura más fácilmente."
       },
       "overview": {
-        "title": "Descripción general del sistema",
-        "description": "Supervise su servidor en tiempo real: CPU, memoria, temperatura, carga del sistema y más, todo en un panel claro."
+        "title": "Resumen del sistema",
+        "description": "Supervisa tu servidor en tiempo real: CPU, memoria, temperatura, carga del sistema y más, todo en un panel claro."
       },
       "storage": {
         "title": "Gestión de almacenamiento",
@@ -3994,11 +4143,11 @@
       },
       "network": {
         "title": "Métricas de red",
-        "description": "Supervise el tráfico de la red en tiempo real, incluidas las interfaces activas, las velocidades de transferencia y los gráficos de uso histórico."
+        "description": "Supervisa el tráfico de red en tiempo real, con las interfaces activas, las velocidades de transferencia y los gráficos de uso histórico."
       },
       "virtualMachines": {
         "title": "Máquinas virtuales y contenedores",
-        "description": "Mantén las máquinas virtuales y los contenedores LXC en un solo lugar. Ver estado, recursos asignados, uso actual y controles rápidos."
+        "description": "Ten las máquinas virtuales y los contenedores LXC en un solo lugar: su estado, los recursos asignados, el uso actual y los controles rápidos."
       },
       "hardware": {
         "title": "Información de hardware",
@@ -4453,7 +4602,7 @@
     },
     "recommendations": {
       "intel": "Para obtener información ampliada sobre la monitorización de GPU, instala el paquete intel-gpu-tools o igt-gpu-tools.",
-      "nvidia": "Para las GPU NVIDIA, la monitorización en tiempo real requiere controladores propietarios (paquete de controladores nvidia). Instálelos solo si el host utiliza su GPU directamente.",
+      "nvidia": "Para las GPU NVIDIA, la monitorización en tiempo real requiere los controladores propietarios (paquete de controladores nvidia). Instálalos solo si el host usa la GPU directamente.",
       "amd": "Para obtener información ampliada de monitorización de GPU para GPU AMD, instala amdgpu_top. Puedes descargarlo desde: https://github.com/Umio-Yasuno/amdgpu_top",
       "generic": "Para obtener información ampliada de monitorización de GPU, instala las herramientas de monitorización de GPU apropiadas para tu hardware."
     },
@@ -4775,7 +4924,7 @@
       "generateNewKeyfileDescriptionAfter": "y lo almacena localmente para futuras restauraciones de PBS.",
       "generateNewKeyfileDescriptionBefore": "Monitor crea",
       "importExistingKeyfile": "Importar archivo de claves existente",
-      "importExistingKeyfileDescription": "Cargue un archivo de claves que coincida con los backups cifrados existentes.",
+      "importExistingKeyfileDescription": "Sube un archivo de claves que coincida con los backups cifrados existentes.",
       "importKeyfileHelpAfter": "antes de restaurar los backups cifrados de PBS.",
       "importKeyfileHelpBefore": "Importa el archivo de claves correspondiente a",
       "importManualDescription": "Utiliza un archivo de claves existente de esta máquina.",
@@ -4979,13 +5128,13 @@
       "keyfileLabel": "archivo de claves PBS",
       "notInstalled": "No instalado",
       "orUploadFromMachine": "o cargar uno desde esta máquina.",
-      "orUploadOwn": "o cargue su propio archivo de claves.",
+      "orUploadOwn": "o sube tu propio archivo de claves.",
       "pveKeyDescriptionAfter": "y puede ser reutilizado por Monitor.",
       "pveKeyDescriptionBefore": "Existe una clave PVE en",
       "pveKeyDescriptionMiddle": "Coincide con el cifrado de almacenamiento PVE",
       "pveKeyDetected": "Clave PVE detectada",
       "uploadDialogDescriptionAfter": "Los backups cifrados creados con otra clave seguirán necesitando su clave original.",
-      "uploadDialogDescriptionBefore": "Cargue el archivo de claves usado para los backups cifrados de PBS.",
+      "uploadDialogDescriptionBefore": "Sube el archivo de claves usado para los backups cifrados de PBS.",
       "uploadDialogTitle": "Cargar archivo de claves PBS",
       "uploadFromMachine": "Subir desde esta máquina",
       "uploadTitle": "Cargar archivo de claves",
@@ -5034,7 +5183,7 @@
       "yesUploadDescription": "Monitor almacena una copia de recuperación cifrada en PBS."
     },
     "keyfileRecovery": {
-      "descriptionBefore": "El blob del archivo de claves cifrado se descarga de PBS y se descifra con su frase de contraseña de recuperación. La clave resultante se escribe en",
+      "descriptionBefore": "El blob del archivo de claves cifrado se descarga de PBS y se descifra con tu frase de contraseña de recuperación. La clave resultante se escribe en",
       "passphrase": "Frase de contraseña de recuperación",
       "pickSourceHost": "Elige el host de origen cuya contraseña recuerdes: cada instalación carga su propio depósito en garantía.",
       "snapshot": "Instantánea de recuperación",
@@ -5701,7 +5850,7 @@
       "cancel": "Cancelar",
       "confirm": "confirmar reinicio",
       "blocked": "el reinicio estará disponible una vez que finalice la actualización del host.",
-      "accepted": "Solicitud de reinicio aceptada.Compruebe que el servidor vuelva a estar en línea.",
+      "accepted": "Solicitud de reinicio aceptada. Comprueba que el servidor vuelva a estar en línea.",
       "unconfirmed": "No se pudo verificar la solicitud de reinicio.Verifique el servidor antes de volver a intentarlo."
     },
     "versions": {
@@ -6073,7 +6222,7 @@
     "cancelled": "Operación cancelada.",
     "completedWithError": "Script terminado con el código de error {code}",
     "yes": "Sí",
-    "yourInput": "Su entrada:",
+    "yourInput": "Tu entrada:",
     "submit": "Entregar",
     "ok": "OK"
   },
@@ -6135,6 +6284,7 @@
       "databases": "Bases de datos",
       "documentsNotes": "Documentos y notas",
       "filesDownloads": "Archivos y descargas",
+      "downloads": "Descargas",
       "financeBudgeting": "Finanzas y presupuestos",
       "gamingLeisure": "Juegos y ocio",
       "hostManagement": "Gestión del host",
@@ -7259,6 +7409,116 @@
     },
     "readOnlyNotice": "La evaluación inspecciona la configuración y el estado del host. Puede escribir informes y logs; las comprobaciones del estado de arranque pueden montar temporalmente las particiones de sistema EFI."
   },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Inicia sesión con un proveedor de identidad externo, como Authentik, Keycloak o Pocket ID.",
+    "localRequired": "Configura y activa la autenticación con contraseña local antes de configurar OIDC.",
+    "enable": "Activar OpenID Connect",
+    "provider_name": "Nombre del proveedor",
+    "issuer": "URL del emisor (valor exacto del descubrimiento)",
+    "public_url": "URL HTTPS pública de este panel Monitor",
+    "client_id": "ID del cliente",
+    "secret": "Secreto del cliente",
+    "secretKept": "Si lo dejas vacío, se conserva el secreto guardado",
+    "authMethod": "Método de autenticación del cliente",
+    "publicClient": "Cliente público (PKCE, sin secreto)",
+    "urlHelp": "Usa la URL exacta del emisor, incluida la barra final si la tiene. La URL pública debe servir este panel y sus rutas /api por HTTPS, incluido el prefijo de ruta del proxy.",
+    "subjects": "Identificadores de administrador permitidos (sub), uno por línea",
+    "subjectHelp": "Solo estos identificadores de usuario inmutables pueden acceder a Monitor. Cada uno recibe acceso completo de administrador. Usa el valor sub emitido para este cliente, no el correo ni el nombre visible.",
+    "callback": "Registra esta URI de redirección exacta en tu proveedor de identidad:",
+    "mfaHelp": "OIDC utiliza la política de MFA del proveedor. La contraseña local y el 2FA siguen disponibles. Guardar cambios invalida las sesiones OIDC existentes.",
+    "unavailable": "Esta compilación de Monitor no incluye la librería criptográfica necesaria para OIDC.",
+    "save": "Guardar y verificar proveedor",
+    "saving": "Verificando proveedor…",
+    "saved": "Configuración OIDC guardada y descubrimiento verificado. Prueba el inicio de sesión en otro navegador antes de cerrar tu sesión local.",
+    "saveFailed": "No se pudo guardar la configuración OIDC.",
+    "login": "Continuar con {provider}",
+    "loginFailed": "El acceso OIDC ha fallado o ha caducado. Reinténtalo, revisa el identificador permitido o utiliza tus credenciales locales.",
+    "disabledSaved": "Configuración OIDC guardada. El acceso externo está desactivado.",
+    "saveDisabled": "Guardar configuración",
+    "allowedSubjects": "Identificadores permitidos",
+    "allowedSubjectsHelp": "Solo estos identificadores de usuario inmutables pueden acceder al Monitor, cada uno con su perfil; uno sin perfil elegido es administrador. Usa el valor sub emitido para este cliente, no el correo ni el nombre visible.",
+    "subjectId": "Identificador (sub)",
+    "subjectName": "Nombre (opcional)",
+    "addSubject": "Añadir identificador",
+    "removeSubject": "Eliminar"
+  },
+  "accessLog": {
+    "title": "Actividad de acceso",
+    "description": "Inicios de sesión, cambios en cuentas, perfiles y ajustes de inicio de sesión, y cada acción que un perfil rechazó, con quién la hizo. Nunca se guardan contraseñas, códigos ni tokens. Se conserva 90 días.",
+    "empty": "Todavía no hay actividad registrada.",
+    "loadMore": "Cargar más",
+    "refused": "Rechazada",
+    "failed": "Fallido",
+    "noAccount": "Sin cuenta",
+    "secondFactor": "segundo factor",
+    "missing": "falta: {permission}",
+    "on": "activado",
+    "off": "desactivado",
+    "rules": "reglas: {count}",
+    "subjects": "identificadores: {count}",
+    "events": {
+      "login": "Inicio de sesión",
+      "account": {
+        "created": "Cuenta creada"
+      },
+      "access": {
+        "mode": "Modo de acceso cambiado",
+        "refused": "Acción rechazada"
+      },
+      "password": {
+        "changed": "Contraseña cambiada"
+      },
+      "totp": {
+        "enabled": "Segundo factor activado",
+        "disabled": "Segundo factor desactivado"
+      },
+      "api_token": {
+        "created": "Token de API creado",
+        "revoked": "Token de API revocado"
+      },
+      "user": {
+        "created": "Usuario añadido",
+        "profile": "Perfil cambiado",
+        "password": "Contraseña puesta por un administrador",
+        "totp_reset": "Segundo factor quitado",
+        "deleted": "Usuario eliminado",
+        "disabled": "Usuario desactivado",
+        "enabled": "Usuario activado"
+      },
+      "pve": {
+        "accounts": "Cuentas de Proxmox VE",
+        "rules": "Reglas de perfiles de Proxmox VE"
+      },
+      "oidc": {
+        "config": "Ajustes de OpenID Connect"
+      },
+      "app_watch": {
+        "adopted": "Registro de apps tomado del contenedor"
+      }
+    },
+    "methods": {
+      "local": "cuenta local",
+      "pve": "Proxmox VE",
+      "oidc": "OpenID Connect"
+    },
+    "modes": {
+      "read_only": "solo lectura",
+      "open": "abierto",
+      "proxmox": "cuentas de Proxmox VE",
+      "password": "contraseña"
+    },
+    "scopes": {
+      "read_only": "solo lectura",
+      "full_admin": "acceso completo"
+    },
+    "permissions": {
+      "admin": "administrar",
+      "view": "ver",
+      "self": "la propia cuenta",
+      "ticket": "ticket de terminal o descarga"
+    }
+  },
   "runtime": {
     "notifications": {
       "cluster": {
@@ -7945,14 +8205,14 @@
       "test": {
         "title": "Prueba de ProxMenux",
         "welcome": "¡Bienvenido a ProxMenux Monitor!",
-        "verify": "Este es un mensaje de prueba para verificar que su canal de notificaciones esté funcionando correctamente.",
+        "verify": "Este es un mensaje de prueba para verificar que tu canal de notificaciones funciona correctamente.",
         "configuration": "Configuración del canal:",
         "iconsEnabled": "Iconos: habilitados",
         "iconsDisabled": "Iconos: deshabilitados",
         "aiEnabled": "IA: habilitada ({info})",
         "aiDisabled": "IA: deshabilitada",
         "alerts": "Recibirá alertas sobre eventos del sistema, cambios en el estado de salud e incidentes de seguridad.",
-        "photoCaption": "Puede usar esta imagen como foto de perfil de su bot de notificaciones."
+        "photoCaption": "Puedes usar esta imagen como foto de perfil de tu bot de notificaciones."
       },
       "channels": {
         "discord": {
@@ -8119,6 +8379,7 @@
     "unexpectedContentType": "Se esperaba una respuesta JSON, pero se recibió {contentType}",
     "unknownContentType": "tipo de contenido desconocido",
     "invalidJson": "Respuesta JSON no válida de {endpoint}",
-    "unauthorized": "No autorizado: {endpoint}"
+    "unauthorized": "No autorizado: {endpoint}",
+    "forbidden": "Tu perfil no permite esta acción."
   }
 }

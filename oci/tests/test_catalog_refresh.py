@@ -352,6 +352,33 @@ class CatalogRefreshTests(unittest.TestCase):
         self.assertEqual(status.new_ids(), ["new-app"])
         self.assertEqual(status.label(), "New applications (1)")
 
+    def test_manual_refresh_is_started_even_before_automatic_result_is_consumed(self):
+        for returncode in (None, 0, 1):
+            with self.subTest(automatic_returncode=returncode):
+                status = refresh.CatalogRefresh(self.root, Catalog(self.root))
+                automatic = Mock();automatic.poll.return_value = returncode
+                status.process = automatic
+                status.failed = True
+                manual = Mock();manual.poll.return_value = None
+                with patch.object(refresh.subprocess, 'Popen', return_value=manual) as spawn, \
+                        patch.object(refresh.threading, 'Thread') as reaper:
+                    self.assertTrue(status.start(force=True))
+                self.assertIn('--force', spawn.call_args.args[0])
+                reaper.assert_called_once_with(target=automatic.wait, daemon=True)
+                reaper.return_value.start.assert_called_once_with()
+                self.assertIs(status.process, manual)
+                self.assertFalse(status.failed)
+                self.assertIsNotNone(status.progress())
+                status.wait();manual.wait.assert_called_once_with()
+                automatic.terminate.assert_not_called();automatic.kill.assert_not_called()
+
+    def test_automatic_refresh_still_coalesces_while_its_result_is_unconsumed(self):
+        status = refresh.CatalogRefresh(self.root, Catalog(self.root))
+        status.process = Mock();status.process.poll.return_value = 0
+        with patch.object(refresh.subprocess, 'Popen') as spawn:
+            self.assertFalse(status.start())
+        spawn.assert_not_called()
+
     def test_exit_before_download_finishes_does_not_acknowledge_remote_apps(self):
         status = refresh.CatalogRefresh(self.root, Catalog(self.root))
         status.mark_seen()

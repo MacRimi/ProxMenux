@@ -12,9 +12,9 @@
     "description": "Accesso alla dashboard, primo avvio e livelli di protezione: password e TOTP, sessioni JWT, token API, HTTPS, proxy inversi, Secure Gateway e jail Fail2Ban facoltativa.",
     "section": "Monitor di ProxMenux"
   },
-  "intro": {
-    "title": "L’autenticazione è facoltativa",
-    "body": "Al primo avvio la dashboard mostra la finestra <em>«Proteggere la dashboard?»</em>, con i pulsanti <strong>Sì, imposta password</strong> e <strong>No, continua senza protezione</strong>. Scegliendo la seconda opzione, gli endpoint dell’API rimangono aperti sulla porta TCP 8008: può andare bene in una LAN di laboratorio isolata, ma è pericoloso in altri ambienti. L’autenticazione a due fattori (2FA) <strong>non</strong> fa parte di questa scelta iniziale; si configura successivamente nella <strong>scheda Sicurezza</strong>, dopo aver impostato una password."
+  "introModes": {
+    "title": "L'accesso viene deciso alla prima visita",
+    "body": "Una nuova installazione mostra una singola finestra di dialogo alla prima visita e ogni scelta in essa richiesta richiede il <strong>codice di installazione</strong> stampato nella console dall'installatore. Le scelte sono account locali, account Proxmox VE, accesso di sola lettura per chiunque raggiunga il Monitor o accesso aperto. Con gli account, ogni utente ha un <strong>profilo</strong> che imposta ciò che può vedere e fare e il server lo applica a ogni richiesta. L'autenticazione a due fattori (2FA) viene configurata successivamente dalla <strong>scheda Sicurezza</strong>."
   },
   "reaching": {
     "heading": "Raggiungere la dashboard",
@@ -23,22 +23,56 @@
   },
   "firstLaunch": {
     "heading": "Procedura al primo avvio",
-    "intro": "La prima volta che si apre il cruscotto, il frontend chiama <code>GET /api/auth/status</code>. Se la configurazione auth non è mai stata scritta (<code>configured: false</code>), una singola finestra di dialogo appare intitolato <em>\"Protect Your Dashboard?\"</em> con due scelte:",
+    "introSetup": "Alla prima visita la dashboard chiama <code>GET /api/auth/status</code>.Anche se non è stata scelta alcuna modalità di accesso, viene visualizzata la finestra di dialogo <em>\"Proteggi la tua dashboard?\"</em> con le seguenti scelte:",
     "imageAlt": "Finestra iniziale «Proteggere la dashboard?» con opzioni per impostare una password o continuare senza protezione",
-    "imageCaption": "Scelta iniziale tra protezione con password e nessuna protezione. Ricompare dopo una nuova installazione o dopo aver disattivato l’autenticazione nelle impostazioni.",
+    "imageCaptionChoice": "La finestra di dialogo della prima visita. Una password crea il primo account locale;continuare senza protezione porta alle modalità di sola lettura e aperta.",
     "headerButton": "Pulsante",
     "headerWhat": "Cosa succede?",
     "headerApi": "Chiamata API",
-    "rows": [
+    "choiceRows": [
       {
         "button": "Sì, imposta password",
-        "what": "Apre un modulo con nome utente e password obbligatori, più <em>nome visualizzato</em> e <em>immagine avatar</em> facoltativi. Abilita l’autenticazione in <code>auth.json</code> con <code>enabled: true</code> e restituisce un JWT per accedere. I campi facoltativi del profilo vengono salvati con chiamate successive, descritte sotto.",
+        "what": "Apre il modulo che crea il primo account locale, un <strong>Amministratore</strong>, con <em>nome visualizzato</em> e <em>immagine avatar</em> facoltativi, e accede.",
         "api": "POST /api/auth/setup"
       },
       {
-        "button": "No, continua senza protezione",
-        "what": "Imposta <code>declined: true</code> in <code>auth.json</code>. Gli endpoint API restano aperti finché non abiliti la protezione nelle impostazioni.",
-        "api": "POST /api/auth/skip"
+        "button": "Utilizza gli account Proxmox VE.",
+        "what": "Offerto nella stessa forma. Gli utenti e gli ambiti di Proxmox VE accedono senza un account locale del Monitor;vedere <em>Proxmox VE account</em> di seguito.",
+        "api": "POST /api/auth/mode"
+      },
+      {
+        "button": "No, continua senza protezione → Utilizza sola lettura",
+        "what": "Chiunque raggiunga il Monitor lo vede ma non può aprire terminali, eseguire script o modificare nulla. Le letture che contengono segreti, come le righe di comando del processo e la password cloud-init di un guest, sono nascoste.",
+        "api": "POST /api/auth/mode"
+      },
+      {
+        "button": "No, continua senza protezione → Apri senza password",
+        "what": "Chiunque raggiunga il Monitor ottiene il pieno controllo del server, incluso il terminale root.",
+        "api": "POST /api/auth/mode"
+      }
+    ],
+    "codeTitle": "Il codice di installazione",
+    "codeBody": "L'installatore di una nuova installazione scrive un codice monouso su <code>/usr/local/share/proxmenux/monitor-setup-code</code> (modalità <code>0600</code>) e lo stampa alla fine dell'installazione. Ogni scelta del dialogo della prima visita lo richiede e la prima decisione lo consuma.<code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong> mostra il codice o ne crea uno nuovo quando non ce n'è. Anche l'uscita dalla modalità di sola lettura richiede un codice di configurazione. Un aggiornamento di un'installazione esistente mantiene la modalità di accesso già in uso e non crea codice.",
+    "modesTitle": "Modalità di accesso",
+    "modesIntro": "<strong>Sicurezza</strong> → <strong>Accesso e autenticazione</strong> mostra la modalità in uso:",
+    "headerMode": "Modalità",
+    "headerWho": "Chi entra e cosa può fare",
+    "modeRows": [
+      {
+        "mode": "Account locali",
+        "who": "Ogni utente accede con nome utente, password e 2FA opzionale e ottiene il profilo assegnato da un amministratore. Gli account Proxmox VE e OpenID Connect possono accedere insieme."
+      },
+      {
+        "mode": "Account Proxmox VE",
+        "who": "Gli utenti di Proxmox VE accedono con il proprio regno e il secondo fattore e non esiste un account locale. Un utente Proxmox VE con <code>Sys.Modify</code> su <code>/</code>, come <code>root@pam</code>, amministra il Monitor."
+      },
+      {
+        "mode": "Di sola lettura",
+        "who": "Chiunque raggiunga il Monitor lo vede, con i permessi del profilo Osservatore e senza segreti."
+      },
+      {
+        "mode": "Aperto",
+        "who": "Chiunque raggiunga il Monitor lo amministra, incluso il terminale root."
       }
     ],
     "twofaCalloutTitle": "2FA è configurato in seguito, non qui",
@@ -103,8 +137,8 @@
         "what": "Rimuove l’avatar. Nell’intestazione ricompare un’iniziale in un cerchio colorato."
       }
     ],
-    "reversibleTitle": "Puoi attivare la protezione in seguito",
-    "reversibleBody": "Dopo <em>No, continua senza protezione</em>, la finestra iniziale non ricompare. Attiva l’autenticazione dalla <strong>scheda Sicurezza</strong> oppure modifica <code>/root/.config/proxmenux-monitor/auth.json</code>, rimuovi il flag <code>declined</code> e riavvia il servizio."
+    "changeTitle": "Modifica della modalità di accesso",
+    "changeBody": "<strong>Sicurezza</strong> → <strong>Accesso e autenticazione</strong> → <strong>Modifica</strong> passa da una modalità all'altra. La rimozione della password rimuove ogni utente locale e il relativo 2FA.I token API e l'elenco di revoche vengono conservati e la successiva creazione dell'account prende il posto dei token API dell'amministratore principale. Uscendo dalla modalità di sola lettura viene richiesto il codice di configurazione."
   },
   "password": {
     "heading": "autenticazione password",
@@ -162,9 +196,59 @@
     "recoverTitle": "Recuperare una password persa",
     "recoverIntro": "Il recupero della password richiede accesso alla shell dell’host. ProxMenux offre una reimpostazione guidata nel menu di configurazione, senza modificare manualmente <code>auth.json</code>:",
     "survivesTitle": "Cosa sopravvive al reset",
-    "survivesBody": "Viene cancellato l’accesso interattivo, mentre <code>jwt_secret</code> e gli <code>api_tokens</code> registrati restano. Home Assistant e altri script possono continuare con gli stessi token. Per azzerare tutto con un nuovo segreto, elimina <code>auth.json</code> e riavvia il servizio: tutti i vecchi token diventano invalidi.",
+    "survivesBodyUsers": "Viene reimpostato solo l'accesso. Il <code>jwt_secret</code>, gli <code>api_tokens</code> registrati e l'elenco di revoche vengono conservati e la successiva configurazione dell'account prende il controllo dei token API dell'amministratore principale, quindi Home Assistant e altre integrazioni che li utilizzano continuano a funzionare. API i token degli altri utenti smettono di funzionare con i propri utenti. Per una situazione completamente pulita (un nuovo segreto JWT e ogni token non valido), elimina <code>auth.json</code>, riavvia il servizio e crea un codice di configurazione con <code>menu</code> → <strong>Settings</strong> → <strong>Show Monitor Setup Code</strong>.",
     "physicalTitle": "Prerequisito di accesso fisico",
     "physicalBody": "Richiede una <strong>shell root sull’host</strong>. Chi esegue <code>menu</code> come root controlla già la macchina; reimpostare la password non aumenta i suoi privilegi. L’accesso Monitor non protegge quindi da chi dispone già di accesso root."
+  },
+  "users": {
+    "heading": "Utenti e profili",
+    "intro": "Con gli account locali, il Monitor contiene diversi utenti. Gli amministratori li gestiscono in <strong>Sicurezza</strong> → <strong>Utenti</strong> → <strong>Modifica</strong>: aggiungi un utente con una password e un profilo, modifica i profili, imposta una nuova password, rimuovi il 2FA di un utente e disattiva, attiva o rimuovi utenti. Il primo account è un amministratore.",
+    "headerProfile": "Profilo",
+    "headerAllows": "Cosa consente",
+    "profileRows": [
+      {
+        "profile": "Amministratore",
+        "allows": "Tutto, inclusi utenti e profili, modalità di accesso e impostazioni di accesso, SSL, firewall, Fail2Ban, notifiche, riavvio e arresto dell'host, controllo e report e letture che contengono segreti."
+      },
+      {
+        "profile": "Operatore con terminale",
+        "allows": "Ogni pagina e le cinque azioni: esegui script e strumenti, controlla VM e LXC, gestisci backup, aggiorna e apri terminali."
+      },
+      {
+        "profile": "Operatore senza terminale",
+        "allows": "Ogni pagina e le stesse azioni tranne i terminali."
+      },
+      {
+        "profile": "Osservatore",
+        "allows": "Ogni pagina, senza azioni."
+      },
+      {
+        "profile": "Personalizzato",
+        "allows": "Gli ambiti e le azioni scelte una per una."
+      }
+    ],
+    "customTitle": "Profilo personalizzato",
+    "customIntro": "Un profilo personalizzato combina almeno un'area con una qualsiasi delle cinque azioni. L'amministrazione non fa parte di un profilo personalizzato.",
+    "actionItems": [
+      "<strong>Eseguire script e strumenti</strong>: ProxMenux scripts, Lynis, test SMART, esecuzioni di controllo e distribuzioni di app.",
+      "<strong>Controllare VM e LXC</strong>: avvia, arresta e modifica gli ospiti e le loro app.",
+      "<strong>Gestire i backup</strong>: processi di backup dell'host e degli ospiti, server PBS, ripristini e download di archivi.",
+      "<strong>Aggiornare</strong>: aggiornamenti dell'host, di ProxMenux, di LXC e delle app.",
+      "<strong>Aprire terminali</strong>: terminali dell'host, di LXC e delle VM."
+    ],
+    "areasBody": "Le aree sono le schede della dashboard: <em>Panoramica</em>, <em>Applicazioni</em>, <em>Menux</em>, <em>VM e LXC</em>,<em>Nodo</em> (archiviazione, rete, hardware), <em>Backup</em> e <em>Log di sistema</em>.Una scheda esterna al profilo è nascosta e il server rifiuta i suoi dati. L'intestazione, lo stato di salute, il proprio account e le pagine Sicurezza, Impostazioni e Informazioni sono disponibili per ogni profilo;Audit & Report è riservato agli amministratori.",
+    "enforceTitle": "Applicato dal server",
+    "enforceBody": "Ogni percorso API richiede un'autorizzazione (<code>AppImage/scripts/permissions.py</code>). Una richiesta senza di essa riceve HTTP <code>403</code> con l'autorizzazione mancante nel campo <code>permission</code> e il rifiuto viene registrato nell'attività di accesso. La dashboard nasconde i pulsanti che un profilo non può utilizzare. Terminali, esecuzioni di script, aggiornamenti e download iniziano con un ticket di breve durata che porta le autorizzazioni di chi lo ha richiesto. Una modifica al profilo si applica alle sessioni aperte contemporaneamente.",
+    "accountsTitle": "Password, 2FA, disattivazione e token API",
+    "accountItems": [
+      "Ogni utente ha la propria password, 2FA, nome visualizzato e avatar e li gestisce dal proprio account.",
+      "Una nuova password, impostata dall'utente o da un amministratore, termina le altre sessioni di quell'utente. I token API continuano a funzionare.",
+      "Un utente disattivato mantiene le proprie impostazioni ma non può accedere e le sue sessioni e i token API smettono di funzionare finché un amministratore non li attiva nuovamente. Un tentativo di accesso da parte di un utente disattivato viene risposto con una password errata.",
+      "Il Monitor mantiene almeno un amministratore attivo: l'ultimo non può essere rimosso, disattivato o assegnato ad un altro profilo, e nessun amministratore può disattivare il proprio account.",
+      "I token API appartengono all'utente che li ha generati e non fanno mai altro che il profilo di quell'utente;un token con ambito di sola lettura non fa altro che un osservatore. La rimozione di un utente termina le sue sessioni e i token API, anche se viene creato nuovamente un utente con lo stesso nome."
+    ],
+    "scopeTitle": "Cosa coprono i profili",
+    "scopeBody": "I profili si applicano al Monitor: la sua dashboard, il suo API e i suoi terminali. Non limitano SSH, l'interfaccia web Proxmox VE, il Proxmox VE API o qualsiasi altro accesso all'host. Una shell root sull'host può modificare <code>auth.json</code> e con esso ogni profilo."
   },
   "twofa": {
     "heading": "Autenticazione a due fattori (TOTP)",
@@ -305,6 +389,48 @@
     ],
     "outro": "Indicazioni di archiviazione ed esempi: <apiLink>Riferimento API → Gestione token</apiLink> e <intLink>Integrazioni</intLink>."
   },
+  "pveAccounts": {
+    "heading": "Account Proxmox VE",
+    "intro": "Gli utenti e i reami di Proxmox VE possono accedere al Monitor, insieme agli account locali o al loro posto.<strong>Sicurezza</strong> → <strong>Account Proxmox VE</strong> → <strong>Modifica</strong> li attiva. La schermata di accesso ha quindi una scheda <em>Proxmox VE</em> con utente, password e realm, seguita dal secondo fattore (codice TOTP o chiave di ripristino) quando l'account ne ha uno.",
+    "items": [
+      "Il Monitor non mantiene alcuna sessione propria: il browser conserva un ticket Proxmox VE e il Monitor lo confronta con il Proxmox VE API locale (<code>/access/permissions</code>) al massimo una volta al minuto. Scadenza, ambiti, 2FA e autorizzazioni rimangono quelli di Proxmox VE e un privilegio rimosso raggiunge il Monitor entro un minuto.",
+      "Gli account che accedono con una chiave di sicurezza (WebAuthn) o tramite un dominio OpenID Connect di Proxmox VE, accedono all'interfaccia web Proxmox VE.Con il Monitor aperto su HTTPS con lo stesso nome host, anche quella sessione accede al Monitor.",
+      "L'accesso richiede <code>Sys.Audit</code> su <code>/</code>."
+    ],
+    "profilesTitle": "Profili degli account Proxmox VE.",
+    "profilesBody": "Senza una regola, i privilegi su <code>/</code> decidono: <code>Sys.Modify</code> dà Administrator e <code>Sys.Audit</code> da solo dà Observer. Nella stessa scheda sono presenti le regole che assegnano un profilo ad un utente Proxmox VE (ad esempio <code>alice@pve</code>) o ad un gruppo. Una regola utente ha la precedenza;altrimenti vale la prima regola di un gruppo dell'utente, con i gruppi letti da <code>/etc/pve/user.cfg</code>.Una regola si applica come prescelto, qualunque siano i privilegi. Le regole di salvataggio che allontanerebbero l'amministrazione dall'account vengono rifiutate."
+  },
+  "oidc": {
+    "heading": "OpenID Connect (OIDC)",
+    "intro": "Un provider Connect OpenID Connect far accedere le persone al Monitor insieme agli account locali.<strong>Sicurezza</strong> → <strong>OpenID Connect (OIDC)</strong> → <strong>Modifica</strong> è disponibile mentre gli account locali sono in uso e accetta le seguenti impostazioni:",
+    "headerField": "Impostazione",
+    "headerNotes": "Note",
+    "fieldRows": [
+      {
+        "field": "Nome del fornitore",
+        "notes": "L'etichetta del pulsante di accesso."
+      },
+      {
+        "field": "URL dell'emittente",
+        "notes": "URL HTTPS del provider. Il Monitor legge il suo <code>/.well-known/openid-configuration</code> quando le impostazioni vengono salvate."
+      },
+      {
+        "field": "ID client e segreto",
+        "notes": "Del cliente registrato presso il fornitore. Autenticazione client: <code>client_secret_basic</code>, <code>client_secret_post</code> o <code>none</code>."
+      },
+      {
+        "field": "URL pubblico",
+        "notes": "URL HTTPS utilizzato dal browser per raggiungere il Monitor. L'URI di reindirizzamento per registrarsi presso il provider è <code>&lt;public_url&gt;/api/auth/oidc/callback</code>."
+      },
+      {
+        "field": "Argomenti ammessi",
+        "notes": "La rivendicazione <code>sub</code> di ogni persona ammessa, con un nome per riconoscerla e un profilo. Un soggetto senza profilo scelto è un Amministratore. Chiunque altro abbia effettuato l'accesso presso il provider verrà rifiutato."
+      }
+    ],
+    "flowBody": "L'accesso utilizza il flusso del codice di autorizzazione con PKCE (<code>S256</code>) e un nonce e accetta token ID firmati con <code>RS256</code> o <code>ES256</code>.La richiamata trasmette al browser un codice monouso, valido per 30 secondi, che solo il browser che ha avviato l'accesso può scambiare per una sessione. La sessione appartiene all'identità <code>oidc:&lt;sub&gt;</code> e ha il profilo del suo oggetto. Il certificato del fornitore viene confrontato con l'archivio CA dell'host (<code>/etc/ssl/certs/ca-certificates.crt</code>);un provider con un certificato di una CA interna necessita che la CA venga aggiunta con <code>update-ca-certificates</code>.",
+    "saveTitle": "Il salvataggio delle impostazioni termina le sessioni OIDC",
+    "saveBody": "Ogni salvataggio delle impostazioni di OpenID Connect, inclusa una modifica al profilo, termina tutte le sessioni OIDC aperte e le nuove impostazioni si applicano dall'accesso successivo. La rimozione di un argomento dall'elenco ne termina l'accesso."
+  },
   "https": {
     "heading": "HTTPS",
     "intro": "Due percorsi per TLS:",
@@ -332,6 +458,18 @@
     "subPathTitle": "Avanzato: distribuzione in un sottopercorso",
     "subPathBody": "Il frontend attuale non ha una base per sottopercorsi e costruisce chiamate dalla radice con URL <code>/api/*</code>. Rimuovere un prefisso come <code>example.com/proxmenux-monitor/</code> non gestisce queste chiamate né tutti i file frontend. Usa un nome host dedicato. Un sottopercorso richiede modifiche coordinate e verifiche specifiche."
   },
+  "activity": {
+    "heading": "Accesso all'attività",
+    "intro": "<strong>Sicurezza</strong> → <strong>Attività di accesso</strong> elenca, prima il più recente, chi ha fatto cosa con l'accesso al Monitor, con l'account e l'indirizzo del cliente. Lo vedono solo gli amministratori.",
+    "items": [
+      "Accessi, riusciti o non riusciti, con il metodo (account locale, Proxmox VE o OpenID Connect) e se è stato utilizzato un secondo fattore.",
+      "Creazione dell'account, modifiche alla modalità di accesso, modifiche alla password e alla 2FA e token API creati o revocati.",
+      "Utenti aggiunti, rimossi, disattivati ​​o attivati, modifiche al profilo e password impostate da un amministratore.",
+      "Modifiche agli account Proxmox VE, alle regole del loro profilo e alle impostazioni di connessione OpenID.",
+      "Ogni azione rifiutata da un profilo, con il percorso e l'autorizzazione mancante. Un rifiuto ripetuto dallo stesso account sulla stessa tratta viene registrato una volta al minuto."
+    ],
+    "outro": "Password, codici e token non vengono mai registrati. Gli eventi vengono conservati per 90 giorni in <code>/root/.config/proxmenux-monitor/access-log.db</code> (SQLite, modalità <code>0600</code>) e forniti agli amministratori da <code>GET /api/auth/events</code>."
+  },
   "audit": {
     "heading": "Registro di audit",
     "intro": "Errori di accesso e avvisi sui limiti vengono scritti, una riga per evento, in <code>/var/log/proxmenux-auth.log</code>. Questo logger non registra gli accessi riusciti:",
@@ -353,13 +491,15 @@
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
     "noScreenTitle": "Lo schermo del primo lancio non appare mai",
-    "noScreenBody": "L’autenticazione è già configurata (<code>configured: true</code>) oppure è stata saltata. Per ricominciare:",
+    "noScreenBodyModes": "Una modalità di accesso è già in uso.<code>menu</code> → <strong>Settings</strong> → <strong>Reset ProxMenux Monitor Password</strong> ripristina la finestra di dialogo della prima visita e stampa un nuovo codice di configurazione. Per iniziare invece da una configurazione vuota:",
     "noScreenOutro": "Cancella autenticazione, segreti TOTP e token API. Salva prima una copia di <code>auth.json</code> se vuoi conservarli.",
     "tokenTitle": "HTTP 401 su ogni richiesta da un token API funzionante",
     "tokenBody": "Token scaduto (365 d limit) o entrato nell'elenco <code>revoked_tokens</code>. Generare uno nuovo in Impostazioni e aggiornare l'integrazione. Per verificare:",
     "tokenOutro": "Token scaduti o revocati restituiscono <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
     "no2faTitle": "Non è possibile accedere dopo aver abilitato 2FA, nessun autenticatore a portata di mano",
-    "no2faBody": "Utilizzare un codice di backup nel campo TOTP. Se questi sono andati, modificare <code>/root/.config/proxmenux-monitor/auth.json</code> da una shell host, impostare <code>totp_enabled</code> a <code>false</code>, riavviare il servizio.",
+    "no2faBodyUsers": "Utilizza un codice di backup nel campo TOTP.Un amministratore rimuove la 2FA di un altro utente in <strong>Sicurezza</strong> → <strong>Utenti</strong> → <strong>Modifica</strong>.Per l'amministratore principale, modifica <code>/root/.config/proxmenux-monitor/auth.json</code> da una shell host, imposta <code>totp_enabled</code> su <code>false</code> e riavvia il servizio.",
+    "forbiddenTitle": "Un'azione risponde a HTTP 403",
+    "forbiddenBody": "Il profilo dell'account non dispone del permesso indicato nel campo <code>permission</code> della risposta e il rifiuto appare nell'attività di accesso. Un amministratore modifica il profilo in <strong>Sicurezza</strong> → <strong>Utenti</strong>, nelle regole degli account Proxmox VE o negli argomenti consentiti di OpenID Connect.",
     "wsTitle": "Il proxy inverso funziona ma la scheda terminale si disconnette ogni minuto",
     "wsBody": "Timeout di inattività WebSocket del proxy. Aumenta il limite di lettura (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> nell’entry point o middleware). Per Nginx verifica <code>proxy_set_header Upgrade $http_upgrade</code> e <code>Connection \"upgrade\"</code>."
   },

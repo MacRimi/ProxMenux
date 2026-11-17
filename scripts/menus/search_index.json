@@ -1729,6 +1729,14 @@
     "docs": "settings/proxmenux-monitor"
   },
   {
+    "title": "Show Monitor Setup Code",
+    "menu": "Settings",
+    "script": "menus/config_menu.sh",
+    "keywords": "monitor setup code código configuración",
+    "argument": "show_monitor_setup_code",
+    "docs": "settings/proxmenux-monitor"
+  },
+  {
     "title": "Show Monitor Service Status",
     "menu": "Settings",
     "script": "menus/config_menu.sh",

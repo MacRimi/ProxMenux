@@ -44,6 +44,7 @@ import oci_zfs_recovery as zfs_recovery
 from oci_runtime import creatable_archive, USER_DATABASES
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
+import oci_mount_lock
 
 TERMINAL = {'committed', 'rolled-back'}
 BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'description',
@@ -707,7 +708,21 @@ def refuse_high_availability(vmid):
         ).replace('{vmid}', str(vmid)))
 
 
+def check_runtime(template):
+    """The installer refuses a relative entrypoint or working directory only
+    after the old container is gone; refuse them before anything is touched."""
+    runtime = (template or {}).get('proxmox', {}).get('installer_profile', {}).get('runtime', {}) or {}
+    entrypoint = runtime.get('entrypoint')
+    if entrypoint not in (None, '') and (not isinstance(entrypoint, str) or not entrypoint.startswith('/') or '\n' in entrypoint):
+        raise ValueError(translate('Invalid declarative entrypoint'))
+    directory = runtime.get('working_directory')
+    if directory not in (None, '') and (not isinstance(directory, str) or not directory.startswith('/')
+                                        or any(c.isspace() for c in directory)):
+        raise ValueError(translate('Invalid declarative working directory'))
+
+
 def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
+    check_runtime(candidate.get('template'))
     deployment = record['deployment']
     desired = candidate['deployment']
     standalone = not coordinated and not any(key in record for key in ('stack', 'stack_member', 'native_stack_intent'))
@@ -1575,7 +1590,7 @@ def cleanup_restored_format_dirs(vmid, deployment, installation_id):
     try:
         remove_empty_format_directories(Path('/var/lib/lxc') / str(vmid) / 'rootfs', deployment)
     finally:
-        run('pct', 'unmount', str(vmid))
+        oci_mount_lock.release(vmid, run)
 
 
 def complete_recovery(root, journal, state):
@@ -1648,6 +1663,36 @@ def check_recovery_runtime(config, state):
     else:
         raise error
     gpu_devices.check_recovery_entries(without_public_routes(config, state['vmid']), state)
+
+
+def release_stale_marker(root, vmid, journal):
+    """Free a record whose pending operation can no longer be recovered: its
+    journal is missing, unreadable or already finished. Only when the
+    container is exactly as the record describes it; otherwise the normal
+    recovery runs and explains what is wrong. Returns whether it released."""
+    record = instances.read(root, vmid)
+    if record.get('pending_transaction') != str(journal):
+        return False
+    try:
+        state = json.loads(Path(journal).read_text())
+    except (OSError, ValueError):
+        state = None
+    if isinstance(state, dict):
+        if state.get('coordinated') or state.get('kind') == 'native-modify':
+            return False
+        if state.get('phase') not in TERMINAL and record.get('last_transaction') != state.get('id'):
+            return False
+    config = run('pct', 'config', str(vmid))
+    if not instances.same_config_except_notes(record, config):
+        return False
+    released = copy.deepcopy(record)
+    released.pop('pending_transaction', None)
+    released.pop('transaction_id', None)
+    released['status'] = 'installed'
+    instances.write(instances.location(root, vmid), released)
+    log(f'released the stale marker of {journal}')
+    msg_ok(translate('The interrupted operation had already ended; the container was not changed and can be updated again.'))
+    return True
 
 
 def recover(root, journal):
@@ -1837,6 +1882,8 @@ def main():
                       args.acknowledge_external_data)
             else:
                 path = args.journal or Path(instances.read(args.root, args.vmid)['pending_transaction'])
+                if args.action == 'recover' and release_stale_marker(args.root, args.vmid, path):
+                    return 0
                 state = json.loads(path.read_text())
                 if state['vmid'] != args.vmid:
                     raise ValueError(translate('The journal belongs to another VMID'))

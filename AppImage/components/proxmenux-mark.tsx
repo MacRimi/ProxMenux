@@ -9,9 +9,12 @@ const SHAPES = {
 
 export function ProxMenuxMark({ weight = 600, className = "" }: { weight?: 600 | 700; className?: string }) {
   const shape = SHAPES[weight]
+  // An explicit width from the viewBox: with `auto`, a browser may take the
+  // default width of an SVG while it lays out the line, and break it early.
+  const [, , width, height] = shape.viewBox.split(" ").map(Number)
   return (
     <svg viewBox={shape.viewBox} fill="currentColor" role="img" aria-label="ProxMenux"
-         className={className} style={{ display: "inline", height: "0.727em", width: "auto", overflow: "visible", verticalAlign: "baseline" }}>
+         className={className} style={{ display: "inline", height: "0.727em", width: `${(0.727 * width / height).toFixed(4)}em`, overflow: "visible", verticalAlign: "baseline" }}>
       <path d={shape.d} />
     </svg>
   )

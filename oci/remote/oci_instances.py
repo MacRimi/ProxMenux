@@ -253,16 +253,44 @@ def same_config_except_notes(record, config, ignore_tags=False):
     if identity(previous) != expected or identity(config) != expected:
         return False
 
-    def without_notes(value):
+    def without_notes(value, recorded=False):
         lines = value.splitlines(keepends=True)
         notes = [line for line in lines if line.startswith(b'description: ')]
         if len(notes) != 1:
             return None
         dropped = (b'description: ', b'tags: ') if ignore_tags else (b'description: ',)
+        # A lock is never part of the configuration: one recorded while the
+        # container was locked for a moment (`pct mount`) is not compared. A
+        # lock on the live container still is: something is under way.
+        if recorded:
+            dropped += (b'lock: ',)
         return b''.join(line for line in lines if not line.startswith(dropped))
 
-    original = without_notes(previous)
+    original = without_notes(previous, recorded=True)
     return original is not None and original == without_notes(config)
+
+
+def changed_settings(record, config, ignore_tags=False):
+    """The names of the settings that differ between the saved and the current
+    configuration, for an error to say what changed; never their values."""
+    def settings(value):
+        value = value.decode() if isinstance(value, bytes) else value
+        result, section = {}, ''
+        for line in value.splitlines():
+            if line.startswith('['):
+                section = line.strip()
+                continue
+            key, separator, rest = line.partition(':')
+            if not separator or key.startswith('#'):
+                continue
+            if key in ('description', 'digest') or (ignore_tags and key == 'tags'):
+                continue
+            name = f'{section} {key}' if section else key
+            result.setdefault(name, []).append(rest.strip())
+        return result
+    before, after = settings(record['observed']['config']), settings(config)
+    before.pop('lock', None)  # As in same_config_except_notes.
+    return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
 
 
 def save_assembly(root, primary_id, template, deployment, members):

@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 interface NetworkInfo {
   interface: string
@@ -78,6 +79,7 @@ interface WizardStep {
 }
 
 export function SecureGatewaySetup() {
+  const { capabilities } = useAccess()
   const t = useT()
   const sg = (key: string, params?: Record<string, string | number>) => t(`securityPage.secureGateway.${key}`, params)
   const maybeSg = (key: string, fallback?: string) => {
@@ -1042,7 +1044,7 @@ export function SecureGatewaySetup() {
             {/* Actions */}
             <div className="flex flex-wrap gap-2">
               {isStopped && (
-                <Button
+                capabilities.guests && (<Button
                   size="sm"
                   onClick={() => handleAction("start")}
                   disabled={actionLoading !== null}
@@ -1054,11 +1056,11 @@ export function SecureGatewaySetup() {
                     <Play className="h-4 w-4 mr-1" />
                   )}
                   {sg("actions.start")}
-                </Button>
+                </Button>)
               )}
               {isRunning && (
                 <>
-                  <Button
+                  {capabilities.guests && (<Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleAction("stop")}
@@ -1070,8 +1072,8 @@ export function SecureGatewaySetup() {
                       <Square className="h-4 w-4 mr-1" />
                     )}
                     {sg("actions.stop")}
-                  </Button>
-                  <Button
+                  </Button>)}
+                  {capabilities.guests && (<Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleAction("restart")}
@@ -1083,7 +1085,7 @@ export function SecureGatewaySetup() {
                       <RotateCw className="h-4 w-4 mr-1" />
                     )}
                     {sg("actions.restart")}
-                  </Button>
+                  </Button>)}
                 </>
               )}
               <Button
@@ -1097,7 +1099,7 @@ export function SecureGatewaySetup() {
                 <FileText className="h-4 w-4 mr-1" />
                 {sg("actions.logs")}
               </Button>
-              <Button
+              {capabilities.guests && (<Button
                 size="sm"
                 variant="outline"
                 className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
@@ -1106,7 +1108,7 @@ export function SecureGatewaySetup() {
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 {sg("actions.remove")}
-              </Button>
+              </Button>)}
             </div>
 
             {/* Updates panel — only when we have a probe result. The
@@ -1124,7 +1126,7 @@ export function SecureGatewaySetup() {
                         </span>
                       </div>
                     </div>
-                    <Button
+                    {capabilities.update && (<Button
                       size="sm"
                       onClick={handleApplyUpdate}
                       disabled={updateApplying || actionLoading !== null}
@@ -1138,7 +1140,7 @@ export function SecureGatewaySetup() {
                       {updateApplying
                         ? sg("updates.updating")
                         : sg("updates.updateToVersion", { version: updateInfo.latest_version || "" })}
-                    </Button>
+                    </Button>)}
                     {updateInfo.packages && updateInfo.packages.length > 1 && (
                       <div className="text-[11px] text-muted-foreground">
                         {sg("updates.otherPackagesPending", { count: updateInfo.packages.length - 1 })}
@@ -1172,7 +1174,7 @@ export function SecureGatewaySetup() {
 
             {/* Update Auth Key button */}
             <div className="pt-2 border-t border-border flex items-center justify-between">
-              <Button
+              {capabilities.guests && (<Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowUpdateAuthKey(true)}
@@ -1181,7 +1183,7 @@ export function SecureGatewaySetup() {
               >
                 <Key className="h-3 w-3 mr-1" />
                 {sg("authKey.update")}
-              </Button>
+              </Button>)}
               <a
                 href="https://login.tailscale.com/admin/machines"
                 target="_blank"
@@ -1426,13 +1428,13 @@ export function SecureGatewaySetup() {
             {sg("notInstalled.description")}
           </p>
 
-          <Button
+          {capabilities.execute && (<Button
             onClick={() => setShowWizard(true)}
             className="bg-cyan-600 hover:bg-cyan-700"
           >
             <ShieldCheck className="h-4 w-4 mr-2" />
             {sg("notInstalled.deploy")}
-          </Button>
+          </Button>)}
         </CardContent>
       </Card>
 

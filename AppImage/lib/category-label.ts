@@ -17,6 +17,9 @@ const CATEGORY_KEY_BY_VALUE: Record<string, string> = {
   "Databases": "databases",
   "Documents & Notes": "documentsNotes",
   "Files & Downloads": "filesDownloads",
+  // The OCI catalog files only the download clients here; Community Scripts
+  // still calls its category "Files & Downloads".
+  "Downloads": "downloads",
   "Finance & Budgeting": "financeBudgeting",
   "Gaming & Leisure": "gamingLeisure",
   "Host Management": "hostManagement",
