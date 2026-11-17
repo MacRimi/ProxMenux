@@ -63,7 +63,7 @@
   "A Personal Relationship Management tool to help you document your social life.": "Uno strumento di gestione delle relazioni personali per documentare la tua vita sociale.",
   "A REST backend for restic backups; it has no web interface.": "Un backend REST per i backup di restic, senza interfaccia web.",
   "A TMDB API Read Access Token is required for metadata and discovery. Update BETTER_AUTH_URL to the public HTTPS address when putting the app behind a reverse proxy.": "È richiesto un Read Access Token dell'API di TMDB per i metadati e la scoperta dei contenuti. Aggiorna BETTER_AUTH_URL con l'indirizzo HTTPS pubblico quando posizioni l'app dietro un reverse proxy.",
-  "A USB device of CT {vmid} came back; restarting the container": "È tornato un dispositivo USB di CT {vmid};riavviare il contenitore",
+  "A USB device of CT {vmid} came back; restarting the container": "È tornato un dispositivo USB del CT {vmid}; riavvio del container",
   "A VirtIO ISO already exists. Do you want to overwrite it?": "Esiste già un’immagine ISO VirtIO. Vuoi sovrascriverla?",
   "A ZFS pool with this name already exists.": "Esiste già un pool ZFS con questo nome.",
   "A ZFS pool with this name already exists:": "Esiste già un pool ZFS con questo nome:",
