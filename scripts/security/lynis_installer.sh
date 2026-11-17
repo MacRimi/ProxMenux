@@ -20,14 +20,17 @@
 #   - Wrapper script at /usr/local/bin/lynis that cd's into /opt/lynis
 #     before invoking ./lynis (Lynis requires being run from its own
 #     directory).
-#   - Detection looks at /usr/local/bin/lynis, /opt/lynis/lynis and
-#     /usr/bin/lynis (apt install path) before showing the menu.
+#   - Detection looks at /usr/local/bin/lynis and /opt/lynis/lynis, then
+#     /usr/sbin/lynis (a Lynis installed another way, such as the Debian
+#     package or the CISOfy APT repository).
+#   - A Lynis installed another way is only audited: it is updated and
+#     removed the same way it was installed.
 #   - Update action: 'git pull' inside /opt/lynis. Falls back to a
 #     full reinstall if .git is missing.
 #   - Run-audit action: launches 'lynis audit system --no-colors'
 #     directly from the menu.
 #   - Clean uninstall: removes /opt/lynis and /usr/local/bin/lynis
-#     (does NOT touch an apt-installed Lynis at /usr/bin/lynis).
+#     (does NOT touch a Lynis installed another way).
 #   - Component status tracked in components_status.json.
 # ==========================================================
 # Hybrid script: works from terminal (dialog) and web panel (ScriptTerminalModal)
@@ -61,12 +64,22 @@ initialize_cache
 # ==========================================================
 # Detection
 # ==========================================================
+# The version written in the Lynis script. Running Lynis, even for
+# 'show version', rewrites /var/log/lynis-report.dat and loses the report
+# of the last audit.
+lynis_script_version() {
+  local script="$1"
+  [[ "$script" == /usr/local/bin/lynis ]] && script=/opt/lynis/lynis
+  sed -n 's/^[[:space:]]*PROGRAM_VERSION="\([^"]*\)".*/\1/p' "$script" 2>/dev/null | head -n 1
+}
+
 detect_lynis() {
   LYNIS_INSTALLED=false
+  LYNIS_MANAGED=false
   LYNIS_VERSION=""
   LYNIS_CMD=""
 
-  for path in /usr/local/bin/lynis /opt/lynis/lynis /usr/bin/lynis; do
+  for path in /usr/local/bin/lynis /opt/lynis/lynis /usr/sbin/lynis; do
     if [[ -f "$path" ]] && [[ -x "$path" ]]; then
       LYNIS_CMD="$path"
       break
@@ -75,7 +88,13 @@ detect_lynis() {
 
   if [[ -n "$LYNIS_CMD" ]]; then
     LYNIS_INSTALLED=true
-    LYNIS_VERSION=$("$LYNIS_CMD" show version 2>/dev/null || echo "unknown")
+    LYNIS_VERSION=$(lynis_script_version "$LYNIS_CMD")
+    [[ -n "$LYNIS_VERSION" ]] || LYNIS_VERSION="unknown"
+  fi
+
+  # The copy this script installs: its clone, or the wrapper that runs it.
+  if [[ -d /opt/lynis ]] || grep -qs '/opt/lynis' /usr/local/bin/lynis; then
+    LYNIS_MANAGED=true
   fi
 }
 
@@ -131,9 +150,9 @@ EOF
   fi
 
   # Verify
-  if /usr/local/bin/lynis show version >/dev/null 2>&1; then
-    local version
-    version=$(/usr/local/bin/lynis show version 2>/dev/null)
+  local version
+  version=$(lynis_script_version /usr/local/bin/lynis)
+  if [[ -x /usr/local/bin/lynis && -n "$version" ]]; then
     update_component_status "lynis" "installed" "$version" "security" '{}'
     msg_ok "$(translate "Lynis version:") $version"
     msg_success "$(translate "Lynis is ready to use")"
@@ -166,7 +185,7 @@ update_lynis() {
     pmx_record_execution "update Lynis installation in /opt/lynis" "git pull --quiet"
     if git pull --quiet >/dev/null 2>&1; then
       local version
-      version=$(/usr/local/bin/lynis show version 2>/dev/null)
+      version=$(lynis_script_version /usr/local/bin/lynis)
       update_component_status "lynis" "installed" "$version" "security" '{}'
       msg_ok "$(translate "Lynis updated to version:") $version"
     else
@@ -238,6 +257,25 @@ uninstall_lynis() {
 # ==========================================================
 main() {
   detect_lynis
+
+  if $LYNIS_INSTALLED && ! $LYNIS_MANAGED; then
+    # Installed another way: ProxMenux runs its audit and leaves updating
+    # and removing it to the way it was installed.
+    local outside_text
+    outside_text="\n$(translate 'Lynis is currently installed.')\n"
+    outside_text+="$(translate 'Version:') $LYNIS_VERSION\n\n"
+    outside_text+="$(translate 'This Lynis was not installed by ProxMenux. ProxMenux can run its audit; update or remove it the same way it was installed.')\n\n"
+    outside_text+="$(translate 'What would you like to do?')"
+
+    local OUTSIDE_ACTION
+    OUTSIDE_ACTION=$(hybrid_menu "$(translate 'Lynis Management')" "$outside_text" 20 70 2 \
+      "audit" "$(translate 'Run security audit now')" \
+      "cancel" "$(translate 'Cancel')" \
+    ) || OUTSIDE_ACTION="cancel"
+
+    [[ "$OUTSIDE_ACTION" == "audit" ]] && run_audit
+    exit 0
+  fi
 
   if $LYNIS_INSTALLED; then
     # Already installed - show action menu

@@ -15,6 +15,7 @@ from typing import Any
 from . import console, images
 from .catalog import Catalog
 from .converter import ConversionError
+from .extra_devices import device_label
 from .github_source import SourceError
 from .i18n import N_, diagnostic, source_text, translate
 from .installer import (
@@ -375,7 +376,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
         profile_label = (translate(selected["label"]).split("  ")[0] if selected
                          else plan.get("hardware_profile") or translate("custom"))
         row(translate("Acceleration"),
-            ", ".join([profile_label, *[d.get("host_path") or d.get("kind", "-") for d in devices]]))
+            ", ".join([profile_label, *[device_label(d) for d in devices]]))
     security = plan.get("security")
     if security:
         row(translate("Security"),

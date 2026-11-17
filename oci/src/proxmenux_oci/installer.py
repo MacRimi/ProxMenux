@@ -844,13 +844,17 @@ def build_deployment(
                                if profile["id"] == selected_hardware_profile), []), *completion_notes]
 
     if advanced:
-        from .extra_devices import ask_extra_devices
+        from .extra_devices import ask_extra_devices, by_identity
         reference = template['container_contract']['image']['reference']
         repository = reference.split('@', 1)[0].rsplit(':', 1)[0]
         devices = ask_extra_devices(
             ui, devices, unprivileged,
             allow_coral=repository in ('ghcr.io/blakeblackshear/frigate',
                                         'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+        try:
+            devices = [by_identity(device) for device in devices]
+        except ValueError as error:
+            raise InstallError(str(error)) from None
 
     from .gpu import apply_profile_image
     apply_profile_image(template, selected_hardware_profile)
@@ -1786,7 +1790,7 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
             shutil.copy2(project_root / 'remote' / 'oci_image_mountpoints.py', temporary / 'oci_image_mountpoints.py')
-            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
@@ -1823,7 +1827,7 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')
@@ -2013,7 +2017,8 @@ def detected_detector_devices(installer_profile, root=Path("/")):
 def configure_detector(installer_profile, devices, ui, root=Path("/")):
     """Offer the object detection devices found on the host; ask nothing when
     there are none. Returns the devices and the note that tells how to use it."""
-    attached = {item.get("host_path") for item in devices}
+    from .extra_devices import device_node
+    attached = {device_node(item) for item in devices}
     candidates = [item for item in detected_detector_devices(installer_profile, root)
                   if item["host_path"] not in attached]
     if not candidates or any(item.get("id", "").startswith("detector-") for item in devices):
@@ -2185,9 +2190,9 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
             if not advanced:
                 host_path = item["host_path_default"]
             elif item.get("purpose") in ("serial", "user-selected-device", "ups"):
-                from .extra_devices import choose_usb_device
+                from .extra_devices import choose_usb_device, device_node
                 host_path = choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"],
-                                              {device.get("host_path") for device in devices})
+                                              {device_node(device) for device in devices})
             else:
                 host_path = ui.ask(translate(item["path_prompt"]), item["host_path_default"])
             container_path = (
@@ -2216,7 +2221,11 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
                 if not re.fullmatch(r"[0-9]+", str(uid)) or int(uid) >= 4294967295:
                     raise InstallError(f"{name}: {translate('must contain a valid numeric UID for the GPU')}")
                 device["uid"] = int(uid)
-            devices.append(device)
+            from .extra_devices import by_identity
+            try:
+                devices.append(by_identity(device))
+            except ValueError as error:
+                raise InstallError(str(error)) from None
         for env_item in item.get("environment", []):
             selected = (ui.choose(translate(env_item["prompt"]),
                                   [(value, value) for value in env_item["choices"]],

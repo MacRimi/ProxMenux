@@ -196,7 +196,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
     installed: boolean; active: boolean; version: string; jails: string[]; banned_ips_count: number
   } | null>(null)
   const [lynisInfo, setLynisInfo] = useState<{
-    installed: boolean; version: string; last_scan: string | null; hardening_index: number | null
+    installed: boolean; managed?: boolean; version: string; last_scan: string | null; hardening_index: number | null
   } | null>(null)
   const [showFail2banInstaller, setShowFail2banInstaller] = useState(false)
   const [showLynisInstaller, setShowLynisInstaller] = useState(false)
@@ -411,7 +411,9 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
         loadSecurityTools()
         setLynisReport(null)
       } else {
-        setError(data.outcome === "no_files" ? st("errors.lynisUninstallNoFiles") : data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
+        setError(data.outcome === "no_files" ? st("errors.lynisUninstallNoFiles")
+          : data.outcome === "not_managed" ? st("lynis.installedOutside")
+          : data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
       }
     } catch (err) {
       const body = err instanceof Error && "body" in err ? err.body as { partial?: boolean } | undefined : undefined
@@ -4216,7 +4218,8 @@ ${(report.sections && report.sections.length > 0) ? `
               <Search className="h-5 w-5 text-cyan-500" />
               <CardTitle>{st("lynis.title")}</CardTitle>
             </div>
-            {lynisInfo?.installed && (
+            {/* ProxMenux removes only the copy it installed. */}
+            {lynisInfo?.installed && lynisInfo.managed !== false && (
               capabilities.execute && (<Button
                 variant="outline"
                 size="sm"
@@ -4287,7 +4290,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
                   <div>
                     <p className="font-medium">Lynis {lynisInfo.version}</p>
-                    <p className="text-sm text-muted-foreground">{st("lynis.installedDescription")}</p>
+                    <p className="text-sm text-muted-foreground">{st(lynisInfo.managed === false ? "lynis.installedOutside" : "lynis.installedDescription")}</p>
                   </div>
                 </div>
                 <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 text-green-500">

@@ -35,7 +35,7 @@
       },
       {
         "sourceRich": "<strong>Debian apt</strong>",
-        "path": "/usr/bin/lynis",
+        "path": "/usr/sbin/lynis",
         "update": "apt upgrade",
         "fresh": "Často mesiace / roky pozadu"
       }
@@ -57,7 +57,7 @@
     "items": [
       "<code>/usr/local/bin/lynis</code> Wrapper nainštalovaný ProxMenux",
       "<code>/opt/lynis/lynis</code> — priama cesta, ak bol spúšťací skript odstránený",
-      "<code>/usr/bin/lynis</code> — verzia nainštalovaná cez apt, ak ju používateľ nainštaloval týmto spôsobom"
+      "<code>/usr/sbin/lynis</code> — verzia nainštalovaná cez apt, ak ju používateľ nainštaloval týmto spôsobom"
     ],
     "outro": "Ak sa nájde niektorá z ciest, otvorí sa menu správy. Skript <strong>neodinštaluje</strong> Lynis nainštalovaný cez apt; odstráni iba vlastnú inštaláciu v <code>/opt/lynis</code> a jej spúšťací skript."
   },
@@ -112,7 +112,7 @@
       },
       {
         "actionRich": "<strong>Odstrániť</strong>",
-        "whatRich": "Odstráni <code>/opt/lynis</code> a <code>/usr/local/bin/lynis</code>. Záznamy na <code>/var/log/lynis*</code> sú vedené (sú audit histórie). Apt-inštalovaný Lynis na <code>/usr/bin/lynis</code> zostáva nedotknutý."
+        "whatRich": "Odstráni <code>/opt/lynis</code> a <code>/usr/local/bin/lynis</code>. Záznamy na <code>/var/log/lynis*</code> sú vedené (sú audit histórie). Apt-inštalovaný Lynis na <code>/usr/sbin/lynis</code> zostáva nedotknutý."
       }
     ]
   },

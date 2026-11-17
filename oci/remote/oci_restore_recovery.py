@@ -37,6 +37,7 @@ import oci_compose_jobs as compose_jobs
 import oci_stack_plan
 import oci_instance_transaction as transaction
 import oci_nested_mounts
+import oci_usb_passthrough as usb_passthrough
 import oci_nvidia_refresh
 import oci_nvidia_runtime as nvidia
 import oci_runtime_settings as runtime_settings
@@ -781,6 +782,9 @@ def restore_host_files(entry):
     deployment = entry['copy']['record']['deployment']
     renumber_config(entry)
     public_routes.restore(deployment, vmid, entry.get('installation_id'))
+    # The udev rule that lets the container write to its USB devices lives on
+    # the host, not in the backup.
+    usb_passthrough.write_rules(vmid, deployment)
     for line in entry['config'].splitlines():
         key, _, value = line.partition(': ')
         if key == 'lxc.include':

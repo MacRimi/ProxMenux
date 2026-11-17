@@ -35,7 +35,7 @@
       },
       {
         "sourceRich": "<strong>Debian apt</strong>",
-        "path": "/usr/bin/lynis",
+        "path": "/usr/sbin/lynis",
         "update": "apt upgrade",
         "fresh": "Часто отстаёт на месяцы или годы"
       }
@@ -57,7 +57,7 @@
     "items": [
       "<code>/usr/local/bin/lynis</code> — скрипт-обёртка, установленный с помощью ProxMenux",
       "<code>/opt/lynis/lynis</code> — прямой путь (на случай, если скрипт-обёртка был удалён)",
-      "<code>/usr/bin/lynis</code> — версия, установленная через apt, если пользователь ранее установил её таким способом"
+      "<code>/usr/sbin/lynis</code> — версия, установленная через apt, если пользователь ранее установил её таким способом"
     ],
     "outro": "Если найден любой из этих вариантов, открывается меню управления. Скрипт <strong>не удаляет</strong> Lynis, установленный через apt, — он удаляет только ту версию, которой управляет сам (<code>/opt/lynis</code> и скрипт-обёртку)."
   },
@@ -112,7 +112,7 @@
       },
       {
         "actionRich": "<strong>Удалить</strong>",
-        "whatRich": "Удаляет <code>/opt/lynis</code> и <code>/usr/local/bin/lynis</code>. Журналы в <code>/var/log/lynis*</code> сохраняются, поскольку содержат историю аудита. Установленный через apt экземпляр Lynis в <code>/usr/bin/lynis</code> остаётся нетронутым."
+        "whatRich": "Удаляет <code>/opt/lynis</code> и <code>/usr/local/bin/lynis</code>. Журналы в <code>/var/log/lynis*</code> сохраняются, поскольку содержат историю аудита. Установленный через apt экземпляр Lynis в <code>/usr/sbin/lynis</code> остаётся нетронутым."
       }
     ]
   },
