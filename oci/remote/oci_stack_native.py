@@ -546,7 +546,9 @@ class NativeAdapter:
             config = instances.command('pct', 'config', str(vmid))
             if sha(config) != child.get('staged_config_sha256'):
                 raise ValueError(translate('The configuration of a new member changed after it was created'))
-            member_tx.check_runtime_mounts(config, original['deployment'])
+            # A new member is what its candidate says, with the USB devices it
+            # now gets by identity included.
+            member_tx.check_runtime_mounts(config, child['candidate_contract']['deployment'])
             member_tx.gpu_devices.check(config, child['candidate_contract']['deployment'])
             child['candidate_host_sources'] = member_tx.candidate_host_sources(journal, child)
             child['validated_config_sha256'] = sha(config)

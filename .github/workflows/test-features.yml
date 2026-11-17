@@ -380,6 +380,7 @@ jobs:
           python3 -m unittest discover -s oci/tests -p test_cli_architecture.py -v
           python3 -m unittest discover -s oci/tests -p test_usb_passthrough.py -v
           python3 -m unittest discover -s oci/tests -p test_nut_config.py -v
+          python3 -m unittest discover -s oci/tests -p test_stack_member_usb.py -v
           python3 -m unittest discover -s oci/tests -p test_installer_helpers_packaged.py -v
       - name: Run read-only volume preparation regressions
         env:

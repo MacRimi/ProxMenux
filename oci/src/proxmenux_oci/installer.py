@@ -422,8 +422,11 @@ def ask_application_extra_devices(ui, kinds: tuple[str, ...] = ("gpu", "usb")) -
     multi-container application; asked in an advanced installation only."""
     if _answers_from_recipe(ui):
         return []
-    from .extra_devices import ask_extra_devices
-    return ask_extra_devices(ui, [], True, kinds=kinds)
+    from .extra_devices import ask_extra_devices, by_identity
+    try:
+        return [by_identity(device) for device in ask_extra_devices(ui, [], True, kinds=kinds)]
+    except ValueError as error:
+        raise InstallError(str(error)) from None
 
 
 def ask_application_resources(ui, cores: int, memory_mb: int, swap_mb: int) -> dict[str, int]:

@@ -312,7 +312,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     target += f" · idmap={mount['idmap']}"
                 lines.append(f"  {mount['container_path']} → {target}")
         if plan.get("extra_devices"):
-            row(translate("Devices"), ", ".join(device["host_path"] for device in plan["extra_devices"]))
+            row(translate("Devices"), ", ".join(device_label(device) for device in plan["extra_devices"]))
     else:
         row(translate("Container"), f"CT {plan.get('vmid') or translate('next free')} · {plan.get('hostname', '-')}")
 

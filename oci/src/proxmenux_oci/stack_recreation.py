@@ -12,7 +12,7 @@ import sys
 import tempfile
 
 from .custom_mounts import edit_paths
-from .extra_devices import ask_extra_devices
+from .extra_devices import ask_extra_devices, by_identity, device_label, usb_passthrough
 from .i18n import translate
 from .recreation import edit_environment, positive_integer
 from .ui import UserCancelled
@@ -83,6 +83,11 @@ def current_state(member):
             # The video device of Immich belongs to its acceleration profile.
             removable = bool(PERIPHERAL_NODE.fullmatch(path)) or (not immich and bool(GPU_NODE.fullmatch(path)))
             devices.append({'host_path': path, 'removable': removable})
+    # A USB device passed by its identity lives in the record, not in a devN.
+    for device in member.get('deployment', {}).get('devices', []):
+        if usb_passthrough().recorded(device):
+            devices.append({'host_path': f"usb:{device['id']}", 'label': device_label(device),
+                            'removable': True, 'device': device})
     rootfs = config.get('rootfs', 'local-lvm:').split(':', 1)[0]
     return mounts, devices, rootfs, immich
 
@@ -96,15 +101,16 @@ def plan_changes(ui, member):
     removable = [device for device in devices if device['removable']]
     if removable:
         kept = ui.checklist(translate('Devices to keep (unmark one to remove it)'),
-                            [(device['host_path'], device['host_path']) for device in removable],
+                            [(device['host_path'], device.get('label', device['host_path'])) for device in removable],
                             [device['host_path'] for device in removable])
         if kept is None:
             return None
         changes['remove_devices'] = [device['host_path'] for device in removable if device['host_path'] not in kept]
-    attached = [{'host_path': device['host_path'], 'kind': 'character-device'} for device in devices
-                if device['host_path'] not in changes['remove_devices']]
+    attached = [device.get('device') or {'host_path': device['host_path'], 'kind': 'character-device'}
+                for device in devices if device['host_path'] not in changes['remove_devices']]
     proposed = ask_extra_devices(ui, attached, True, kinds=('usb',) if immich else ('gpu', 'usb'))
-    changes['add_devices'] = proposed[len(attached):]
+    # The USB devices added are recorded by what they are.
+    changes['add_devices'] = [by_identity(device) for device in proposed[len(attached):]]
     return changes if any(changes.values()) else None
 
 
@@ -128,8 +134,10 @@ def summary(member, changes):
         if 'read_only' in change:
             lines.append(f"~ {path} → {translate('read-only') if change['read_only'] else translate('writable')}")
     lines += [f"- {path}" for path in changes['remove_mounts']]
-    lines += [f"+ {device['host_path']}" for device in changes['add_devices']]
-    lines += [f"- {path}" for path in changes['remove_devices']]
+    lines += [f"+ {device_label(device)}" for device in changes['add_devices']]
+    shown = {f"usb:{device['id']}": device_label(device)
+             for device in member.get('deployment', {}).get('devices', []) if 'id' in device}
+    lines += [f"- {shown.get(path, path)}" for path in changes['remove_devices']]
     lines += ['', translate('CPU, RAM and swap apply to the running container. Variables, paths and devices '
                             'restart a running container; a stopped one is left stopped. The data of the '
                             'application and the configuration of the other containers are not changed. A '
