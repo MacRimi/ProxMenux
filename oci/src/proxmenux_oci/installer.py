@@ -207,7 +207,7 @@ def ups_paths(item: dict[str, Any], advanced: bool, ui, attached) -> list[str]:
     if not advanced:
         return [row["path"] for row in found] or [item["host_path_default"]]
     if len(found) > 1:
-        chosen = ui.checklist(translate("UPS the NUT server watches"),
+        chosen = ui.checklist(translate("UPS monitored by the NUT server"),
                               [(row["path"], row["name"]) for row in found], [row["path"] for row in found])
         if not chosen:
             raise UserCancelled(translate("Choose at least one UPS"))

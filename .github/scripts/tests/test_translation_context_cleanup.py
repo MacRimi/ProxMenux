@@ -17,12 +17,16 @@ class ContextCleanupTests(unittest.TestCase):
             "es": "Contexto: Mensaje técnico para Proxmox y TI. Traducir: compilación detectada",
             "sk": "Kontext: Technická správa pre Proxmox a IT. Preložiť: zistená zostava",
             "sv": "Sammanhang: Tekniskt meddelande för Proxmox och IT. Översätt: version upptäckt",
+            # The context alone, with the verb in another form and no label before it.
+            "pt": "Mensagem técnica para Proxmox e TI.Traduzindo: Dois UPS do mesmo modelo",
+            "ru2": "Техническое сообщение для Proxmox и ИТ.Переведем: Два ИБП одной модели",
         }
         for lang, value in returned.items():
             with self.subTest(lang=lang):
                 cleaned = builder.clean_translation(value)
                 self.assertNotIn(":", cleaned.split("(")[0])
                 self.assertNotIn("Proxmox и ИТ", cleaned)
+                self.assertNotIn("Proxmox e TI", cleaned)
 
     def test_leading_capital_follows_the_source(self):
         self.assertEqual(builder.restore_leading_capital("Downstream build", "compilação downstream"),
