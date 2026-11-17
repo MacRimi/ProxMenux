@@ -9075,6 +9075,7 @@
   "They will be saved in oci-compose before continuing.": "Verranno salvate in oci-compose prima di continuare.",
   "This CIFS share is mounted with restrictive permissions.": "Questa condivisione CIFS è montata con autorizzazioni restrittive.",
   "This GPU is considered incompatible with GPU passthrough to a VM in ProxMenux.": "Questa GPU è considerata incompatibile con il passthrough GPU a una VM in ProxMenux.",
+  "This Lynis was not installed by ProxMenux. ProxMenux can run its audit; update or remove it the same way it was installed.": "Questo Lynis non è stato installato da ProxMenux. ProxMenux può eseguire il proprio audit;aggiornarlo o rimuoverlo nello stesso modo in cui è stato installato.",
   "This NFS share is fully restricted — even the host root cannot write to it.": "Questa condivisione NFS è completamente limitata: nemmeno l'utente root dell'host può scrivervi.",
   "This Proxmox Backup Server has no active subscription, switch to the no-subscription repository? The inaccessible Enterprise PBS source will be disabled.": "Questo Proxmox Backup Server non ha un abbonamento attivo. Passare al repository no-subscription? La sorgente Enterprise PBS non accessibile verrà disattivata.",
   "This Proxmox host does not support per-mount ID mapping": "Questo host Proxmox non supporta la mappatura degli ID per punto di montaggio",
