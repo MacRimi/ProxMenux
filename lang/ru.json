@@ -63,6 +63,7 @@
   "A Personal Relationship Management tool to help you document your social life.": "Инструмент управления личными отношениями, помогающий вести записи о Вашей социальной жизни.",
   "A REST backend for restic backups; it has no web interface.": "Серверная часть с REST API для резервного копирования с помощью restic; веб-интерфейса нет.",
   "A TMDB API Read Access Token is required for metadata and discovery. Update BETTER_AUTH_URL to the public HTTPS address when putting the app behind a reverse proxy.": "Для метаданных и поиска требуется TMDB API Read Access Token. Измените BETTER_AUTH_URL на публичный адрес HTTPS при размещении приложения за reverse proxy.",
+  "A USB device of CT {vmid} came back; restarting the container": "USB-устройство CT {vmid} вернулось;перезапуск контейнера",
   "A VirtIO ISO already exists. Do you want to overwrite it?": "ISO-образ VirtIO уже существует. Хотите перезаписать его?",
   "A ZFS pool with this name already exists.": "Пул ZFS с таким именем уже существует.",
   "A ZFS pool with this name already exists:": "Пул ZFS с таким именем уже существует:",
