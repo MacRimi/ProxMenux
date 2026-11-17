@@ -132,6 +132,16 @@ class ConfigurationTests(unittest.TestCase):
                            '--property-match=ID_VENDOR_ID=1cf1'], calls)
             self.assertFalse(usb.rule_path(121).exists())
 
+    def test_a_device_that_comes_back_restarts_its_container(self):
+        rule = usb.rules(122, {'devices': [UPS, ZIGBEE]})
+        run = ('RUN+="/usr/bin/systemd-run --no-block --quiet --collect --unit=proxmenux-usb-reconnect-122 '
+               f'/usr/bin/python3 {usb.ENGINE_SCRIPT} reconnect 122"')
+        self.assertIn('ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0463", '
+                      f'ATTR{{idProduct}}=="ffff", {run}', rule)
+        self.assertIn('ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="1cf1", ATTRS{idProduct}=="0030", '
+                      f'ATTRS{{serial}}=="DE2141544", {run}', rule)
+        self.assertEqual(usb._pairs(rule), {('usb', '0463', 'ffff'), ('tty', '1cf1', '0030')})
+
     def test_the_whole_usb_tree_has_no_rule(self):
         tree = usb.tree_entry('usb')
         self.assertEqual(usb.lines({'devices': [tree]}), [usb.USB_ALLOW, usb.USB_MOUNT])
@@ -180,6 +190,45 @@ class IdentityTests(unittest.TestCase):
         device_dir(self.sys, '3-3', '0463', 'ffff', serial='000000000', devnum=12)
         self.assertEqual(usb.present(UPS), '/dev/bus/usb/003/012')
         self.assertIsNone(usb.present(dict(UPS, usb=dict(UPS['usb'], port='3-4'))))
+
+
+class ReconnectTests(unittest.TestCase):
+    """A device that comes back while its container runs restarts it once;
+    a stopped or busy container is left alone."""
+
+    def setUp(self):
+        import oci_watchdog
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.watchdog = oci_watchdog
+        for patch in (mock.patch.object(usb, 'RUN_DIR', Path(temp.name)),
+                      mock.patch.object(oci_watchdog, 'is_running', return_value=True),
+                      mock.patch.object(oci_watchdog, 'is_busy', return_value=False)):
+            patch.start()
+            self.addCleanup(patch.stop)
+        self.run = mock.patch.object(usb.subprocess, 'run', return_value=mock.Mock(returncode=0)).start()
+        self.addCleanup(mock.patch.stopall)
+
+    def reconnect(self, now=1000.0):
+        return usb.reconnect(122, sleep=lambda seconds: None, now=now)
+
+    def test_a_running_container_is_restarted_once(self):
+        self.assertEqual(self.reconnect(), 'restarted')
+        commands = [call.args[0] for call in self.run.call_args_list]
+        self.assertEqual(commands, [['pct', 'shutdown', '122', '--timeout', '20', '--forceStop', '1'],
+                                    ['systemd-run', '--scope', '--quiet', '--collect', 'pct', 'start', '122']])
+        # Another device of the same moment does not restart it again.
+        stamp = usb.RUN_DIR / 'proxmenux-usb-reconnect-122'
+        os.utime(stamp, (1000.0, 1000.0))
+        self.assertEqual(self.reconnect(now=1010.0), 'recent')
+        self.assertEqual(self.reconnect(now=1000.0 + usb.QUIET_SECONDS + 1), 'restarted')
+
+    def test_a_stopped_or_busy_container_is_left_alone(self):
+        with mock.patch.object(self.watchdog, 'is_running', return_value=False):
+            self.assertEqual(self.reconnect(), 'stopped')
+        with mock.patch.object(self.watchdog, 'is_busy', return_value=True):
+            self.assertEqual(self.reconnect(), 'busy')
+        self.run.assert_not_called()
 
 
 class EngineTests(unittest.TestCase):

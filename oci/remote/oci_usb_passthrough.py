@@ -37,6 +37,14 @@ HEX4 = re.compile(r'[0-9a-f]{4}')
 PORT = re.compile(r'[0-9]+-[0-9]+(?:\.[0-9]+)*')
 SERIAL = re.compile(r'[A-Za-z0-9._-]{1,64}')
 RULES = Path('/etc/udev/rules.d')
+# Where the engine is installed: udev runs the reconnection from there.
+ENGINE_SCRIPT = '/usr/local/share/proxmenux/oci/engine/remote/oci_usb_passthrough.py'
+# A device that comes back within this time of the last restart does not restart the container again.
+QUIET_SECONDS = 30
+# Let udev finish with the device, and with any other plugged at the same time.
+SETTLE_SECONDS = 3
+SHUTDOWN_SECONDS = 20
+RUN_DIR = Path('/run')
 CONF_DIR = Path('/etc/pve/lxc')
 SYS = Path('/sys')
 DEV = Path('/dev')
@@ -244,6 +252,11 @@ def rules(vmid, deployment):
             match.append(f'{attr}{{serial}}=="{usb["serial"]}"')
         head = 'SUBSYSTEM=="tty"' if 'serial_link' in device else 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device"'
         text.append(', '.join([head, *match, 'MODE="0666"']))
+        # The device coming back while the container runs: the application
+        # gets it again with a restart of the container.
+        run = (f'/usr/bin/systemd-run --no-block --quiet --collect --unit=proxmenux-usb-reconnect-{int(vmid)} '
+               f'/usr/bin/python3 {ENGINE_SCRIPT} reconnect {int(vmid)}')
+        text.append(', '.join(['ACTION=="add"', head, *match, f'RUN+="{run}"']))
     return '\n'.join(text) + '\n'
 
 
@@ -256,7 +269,7 @@ def _pairs(text):
     for line in text.splitlines():
         match = PAIR.search(line)
         if match:
-            found.add(('tty' if line.startswith('SUBSYSTEM=="tty"') else 'usb', *match.groups()))
+            found.add(('tty' if 'SUBSYSTEM=="tty"' in line else 'usb', *match.groups()))
     return found
 
 
@@ -326,6 +339,42 @@ def remove(vmid):
         _retrigger(_pairs(old), 'add')
 
 
+def reconnect(vmid, sleep=None, now=None):
+    """A device of the container came back while it runs: restart it so the
+    application opens the device again. Nothing happens when the container is
+    stopped, as at boot, while Proxmox, ProxMenux or a backup works on it, or
+    when another device restarted it a moment ago."""
+    import fcntl
+    import time
+    import oci_watchdog as watchdog
+    (sleep or time.sleep)(SETTLE_SECONDS)
+    stamp = RUN_DIR / f'proxmenux-usb-reconnect-{int(vmid)}'
+    with open(RUN_DIR / f'proxmenux-usb-reconnect-{int(vmid)}.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        moment = time.time() if now is None else now
+        try:
+            if moment - stamp.stat().st_mtime < QUIET_SECONDS:
+                return 'recent'
+        except OSError:
+            pass
+        if not watchdog.is_running(vmid):
+            return 'stopped'
+        if watchdog.is_busy(vmid, moment):
+            return 'busy'
+        stamp.touch()
+        print(translate('A USB device of CT {vmid} came back; restarting the container').format(vmid=int(vmid)), flush=True)
+        # A clean shutdown, bounded: a process that ignores the signal, as an
+        # application running as the first process often does, would make
+        # Proxmox wait its whole timeout.
+        subprocess.run(['pct', 'shutdown', str(int(vmid)), '--timeout', str(SHUTDOWN_SECONDS), '--forceStop', '1'],
+                       capture_output=True, text=True, check=False, timeout=SHUTDOWN_SECONDS + 60)
+        # In a scope of its own, as the watchdog starts containers: what
+        # Proxmox leaves running for the container must outlive this unit.
+        result = subprocess.run(['systemd-run', '--scope', '--quiet', '--collect', 'pct', 'start', str(int(vmid))],
+                                capture_output=True, text=True, check=False, timeout=300)
+        return 'restarted' if result.returncode == 0 else 'failed'
+
+
 def present(device):
     """The current host node of a recorded device, or None when it is not
     plugged in: found by its port, then by its serial number."""
@@ -352,12 +401,15 @@ def present(device):
 def main(argv=None):
     import json
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('apply', 'remove'))
+    parser.add_argument('action', choices=('apply', 'remove', 'reconnect'))
     parser.add_argument('vmid', type=int)
     parser.add_argument('deployment', nargs='?')
     args = parser.parse_args(argv)
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
+    if args.action == 'reconnect':
+        print(reconnect(args.vmid), flush=True)
+        return 0
     if args.action == 'apply':
         if not args.deployment:
             parser.error('the deployment file is required')
