@@ -4177,7 +4177,7 @@
       "IoT & Smart Home"
     ],
     "notes": [
-      "The install asks for the gateway region ID (e.g. eu868, us915_0); unattended installs must set var_region. It must be listed in enabled_regions in /etc/chirpstack/chirpstack.toml."
+      "The install asks for the gateway region ID (e.g. eu868, us915_0); unattended installs must set var_region. It must be listed in here: https://github.com/chirpstack/chirpstack/tree/master/chirpstack/configuration."
     ],
     "warnings": [
       "Change the default admin password after the first login."
@@ -4185,7 +4185,7 @@
     "port": 8080,
     "website": "https://www.chirpstack.io/",
     "documentation": "https://www.chirpstack.io/docs/",
-    "logo": "https://raw.githubusercontent.com/chirpstack/chirpstack-docs/refs/heads/master/theme/favicon.svg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chirpstack.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -9896,7 +9896,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -9930,7 +9930,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -17367,7 +17367,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
