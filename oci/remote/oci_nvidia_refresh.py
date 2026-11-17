@@ -10,6 +10,7 @@ import subprocess
 
 import oci_instances as instances
 import oci_nvidia_runtime as nv
+import oci_usb_passthrough as usb_passthrough
 from oci_ui import translate, msg_info, msg_ok, msg_error
 import oci_mount_lock
 
@@ -48,7 +49,7 @@ def prepare(root, plan):
     # Native LXC cannot mount onto an alias in a usr-merged image.
     lines = []
     for line in plan['config'].decode().splitlines():
-        if line.startswith('lxc.mount.entry: '):
+        if line.startswith('lxc.mount.entry: ') and not usb_passthrough.own(line):
             fields = line.split(': ', 1)[1].split()
             fields[1] = str(files['/' + fields[1]].relative_to(root))
             line = 'lxc.mount.entry: ' + ' '.join(fields)

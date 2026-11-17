@@ -34,6 +34,7 @@ from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
 import oci_mount_idmap as mount_idmap
 import oci_nested_mounts as nested_mounts
+import oci_usb_passthrough as usb_passthrough
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
 import oci_stack_public_routes as public_routes
@@ -549,7 +550,7 @@ def candidate_contract(record, operation, proposal=None):
     if operation == 'update':
         if proposal is not None:
             raise ValueError(translate('An update does not accept configuration changes'))
-        return with_default_healthcheck(copy.deepcopy(record))
+        return with_usb_identity(with_default_healthcheck(copy.deepcopy(record)))
     if not isinstance(proposal, dict) or proposal.get('operation') != 'recreate':
         raise ValueError(translate('Recreating requires a confirmed proposal'))
     if (proposal.get('base_config_sha256') is not None
@@ -572,7 +573,17 @@ def candidate_contract(record, operation, proposal=None):
             result['deployment'][key] = copy.deepcopy(record['deployment'][key])
         else:
             result['deployment'].pop(key, None)
-    return with_default_healthcheck(result)
+    return with_usb_identity(with_default_healthcheck(result))
+
+
+def with_usb_identity(candidate):
+    """A container installed when USB devices were passed by their node gets
+    them by their identity when it is rebuilt, so a reboot that numbers them
+    again does not leave it unable to start."""
+    deployment = candidate['deployment']
+    if deployment.get('devices'):
+        deployment['devices'] = usb_passthrough.migrated(deployment['devices'])
+    return candidate
 
 
 # Proxmox settings the rebuilt container gets back exactly as they are: the
@@ -619,7 +630,7 @@ def drop_backup_snapshot(vmid):
 def settings(config):
     """The settings of a configuration to compare with those saved: without
     that mark, and without the lines that follow the mount points."""
-    return parse_config(nested_mounts.without(without_backup_snapshot(config)))
+    return parse_config(usb_passthrough.without(nested_mounts.without(without_backup_snapshot(config))))
 
 
 def custom_lxc(record, config):
@@ -629,7 +640,7 @@ def custom_lxc(record, config):
     saved = record['deployment'].get('custom_lxc', [])
     lines = config.decode().splitlines()
     return [line for line in lines if line.startswith('lxc.') and ': ' in line
-            and not line.startswith(ENGINE_LXC) and not nested_mounts.own(line)
+            and not line.startswith(ENGINE_LXC) and not nested_mounts.own(line) and not usb_passthrough.own(line)
             and (line in saved or line not in before)]
 
 
@@ -757,7 +768,10 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
     # What shows the content mounted inside a host directory follows the mount
     # points: it is checked against them and is not a setting of its own.
     nested_mounts.check(config)
-    keys = {line.split(': ', 1)[0] for line in nested_mounts.without(config).decode().splitlines() if ': ' in line}
+    # So do the lines of the USB devices passed by their identity.
+    usb_passthrough.check(config, deployment)
+    keys = {line.split(': ', 1)[0] for line in usb_passthrough.without(nested_mounts.without(config)).decode().splitlines()
+            if ': ' in line}
     runtime_keys = {'lxc.mount.entry'} if gpu_devices.nvidia.enabled(deployment) else set()
     if gpu_devices.dynamic_mode(deployment):
         runtime_keys = {'lxc.hook.mount', 'lxc.environment'}
@@ -903,6 +917,7 @@ def check_runtime_mounts(config, deployment):
     public_routes.check(config, deployment, deployment['vmid'])
     runtime_settings.check(without_public_routes(config, deployment['vmid']), deployment, deployment['vmid'])
     nested_mounts.check(config)
+    usb_passthrough.check(config, deployment)
     actual = mounts(config)
     files = runtime_settings.file_binds(config)
     if files != {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}:

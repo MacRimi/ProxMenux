@@ -593,7 +593,7 @@ def parse_lxc_hardware_config(vmid, node):
             devices.append('Coral TPU')
         
         # USB devices detection
-        if 'ttyUSB' in config_content or 'ttyACM' in config_content:
+        if 'ttyUSB' in config_content or 'ttyACM' in config_content or '/dev/serial/by-' in config_content:
             devices.append('USB Serial Devices')
         
         if '/dev/bus/usb' in config_content:

@@ -24,6 +24,7 @@ import oci_stack_public_routes as public_routes
 from oci_installation_state import parse_config
 import oci_console
 import oci_runtime_settings as runtime_settings
+import oci_usb_passthrough as usb_passthrough
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error
 
 # The private networks ProxMenux creates for multi-container applications.
@@ -142,6 +143,7 @@ def remove_host_state(vmid):
     for include in (runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid),
                     runtime_settings.seccomp_path(vmid)):
         _unlink(include)
+    usb_passthrough.remove(vmid)
     hook = SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh'
     if hook.is_file() and not hook.is_symlink():
         unit = f'proxmenux-rclone-publish-{int(vmid)}.service'
@@ -198,7 +200,8 @@ def release_shared_host_files(hookscripts):
 def _leftovers(vmid):
     """Whether anything of the container is still on the host."""
     paths = [runtime_settings.include_path(vmid), runtime_settings.legacy_include_path(vmid),
-             runtime_settings.seccomp_path(vmid), SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh', MONITOR_APPS / f'{int(vmid)}.json',
+             runtime_settings.seccomp_path(vmid), usb_passthrough.rule_path(vmid),
+             SNIPPETS / f'proxmenux-rclone-{int(vmid)}-fuse-hook.sh', MONITOR_APPS / f'{int(vmid)}.json',
              CLUSTER_RECORDS / f'{int(vmid)}.json', public_routes.include_path(vmid), public_routes.contract_path(vmid),
              *oci_console.LOG_DIR.glob(f'{int(vmid)}.console.log*')]
     return any(path.exists() for path in paths)
@@ -213,6 +216,7 @@ def sweep_orphans(root):
     for directory, pattern in ((runtime_settings.include_path(0).parent, r'([0-9]+)\.sysctls'),
                                (runtime_settings.legacy_include_path(0).parent, r'([0-9]+)\.proxmenux-sysctls'),
                                (runtime_settings.seccomp_path(0).parent, r'([0-9]+)\.proxmenux-seccomp'),
+                               (usb_passthrough.RULES, r'99-proxmenux-oci-([0-9]+)\.rules'),
                                (oci_console.LOG_DIR, r'([0-9]+)\.console\.log.*'),
                                (SNIPPETS, r'proxmenux-rclone-([0-9]+)-fuse-hook\.sh'),
                                (CLUSTER_RECORDS, r'([0-9]+)\.json'),

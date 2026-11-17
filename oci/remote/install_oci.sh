@@ -2114,6 +2114,7 @@ RESOLVED_CHARACTER_DEVICES=()
 NVIDIA_RUNTIME_CONFIGURED=0
 NVIDIA_GID_ENV=""
 NVIDIA_DEVICE_COUNT=0
+USB_DEVICE_COUNT=0
 while IFS= read -r DEVICE_ENCODED; do
   [[ -n $DEVICE_ENCODED ]] || continue
   DEVICE=$(printf '%s' "$DEVICE_ENCODED" | base64 -d)
@@ -2127,6 +2128,11 @@ while IFS= read -r DEVICE_ENCODED; do
       configure_nvidia_runtime
       NVIDIA_DEVICE_COUNT=$((DEVICE_INDEX - NVIDIA_FIRST_INDEX))
     fi
+    continue
+  fi
+  if [[ $DEVICE_KIND == usb ]]; then
+    # Found by its identity, not by its node: written after the loop.
+    USB_DEVICE_COUNT=$((USB_DEVICE_COUNT + 1))
     continue
   fi
   HOST_PATH=$(jq -er '.host_path' <<<"$DEVICE")
@@ -2166,8 +2172,12 @@ while IFS= read -r DEVICE_ENCODED; do
     *) die "$(translate "Unsupported device type:") $DEVICE_KIND" ;;
   esac
 done < <(jq -r '.devices[]? | @base64' "$DEPLOYMENT_FILE")
-if (( DEVICE_INDEX > NVIDIA_DEVICE_COUNT )); then
-  msg_ok "$(translate "Devices added to the container:") $((DEVICE_INDEX - NVIDIA_DEVICE_COUNT))"
+if (( USB_DEVICE_COUNT > 0 )); then
+  oci_quiet python3 "${SCRIPT_DIR}/oci_usb_passthrough.py" apply "$VMID" "$DEPLOYMENT_FILE" \
+    || die "$(translate "Could not add the USB devices to the container")"
+fi
+if (( DEVICE_INDEX - NVIDIA_DEVICE_COUNT + USB_DEVICE_COUNT > 0 )); then
+  msg_ok "$(translate "Devices added to the container:") $((DEVICE_INDEX - NVIDIA_DEVICE_COUNT + USB_DEVICE_COUNT))"
 fi
 
 apply_native_device_permissions
