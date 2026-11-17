@@ -1569,18 +1569,55 @@ def _detect_fail2ban():
     return info
 
 
+# The copy ProxMenux installs (a wrapper over its clone in /opt/lynis) comes
+# first; then a Lynis installed another way, such as the Debian package or the
+# CISOfy APT repository, which install it in /usr/sbin.
+_LYNIS_PATHS = ("/usr/local/bin/lynis", "/opt/lynis/lynis", "/usr/sbin/lynis")
+_LYNIS_WRAPPER = "/usr/local/bin/lynis"
+_LYNIS_CLONE = "/opt/lynis"
+
+
 def _find_lynis_cmd():
     """Find the lynis binary path"""
-    for path in ["/usr/local/bin/lynis", "/opt/lynis/lynis", "/usr/bin/lynis"]:
+    for path in _LYNIS_PATHS:
         if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
     return None
+
+
+_LYNIS_VERSION_LINE = re.compile(r'^\s*PROGRAM_VERSION="([^"]+)"', re.M)
+
+
+def _lynis_version(lynis_cmd):
+    """The version written in the Lynis script. Running Lynis, even for
+    `show version`, rewrites /var/log/lynis-report.dat and loses the report
+    of the last audit."""
+    script = os.path.join(_LYNIS_CLONE, "lynis") if lynis_cmd == _LYNIS_WRAPPER else lynis_cmd
+    try:
+        with open(script, encoding="utf-8", errors="replace") as handle:
+            match = _LYNIS_VERSION_LINE.search(handle.read(16384))
+    except OSError:
+        return ""
+    return match.group(1) if match else ""
+
+
+def _lynis_installed_by_proxmenux():
+    """Whether the copy ProxMenux installs is present: its clone, or the
+    wrapper that runs it. ProxMenux only updates and removes that copy."""
+    if os.path.isdir(_LYNIS_CLONE):
+        return True
+    try:
+        with open(_LYNIS_WRAPPER, encoding="utf-8", errors="replace") as wrapper:
+            return _LYNIS_CLONE in wrapper.read(4096)
+    except OSError:
+        return False
 
 
 def _detect_lynis():
     """Detect Lynis installation and status"""
     info = {
         "installed": False,
+        "managed": False,
         "version": "",
         "last_scan": None,
         "hardening_index": None,
@@ -1590,9 +1627,8 @@ def _detect_lynis():
 
     if lynis_cmd:
         info["installed"] = True
-        rc, out, _ = _run_cmd([lynis_cmd, "show", "version"])
-        if rc == 0:
-            info["version"] = out.strip()
+        info["managed"] = _lynis_installed_by_proxmenux()
+        info["version"] = _lynis_version(lynis_cmd)
 
         # Check for last scan report - use full parser for accurate data
         report = parse_lynis_report()
@@ -2580,6 +2616,10 @@ def uninstall_lynis():
     Returns (success, message, partial, outcome). Partial records completed removals only.
     """
     removed = []
+    if (not os.path.exists("/opt/lynis") and not os.path.exists("/usr/local/bin/lynis")
+            and os.path.exists("/usr/sbin/lynis")):
+        # A Lynis installed another way is updated and removed the same way.
+        return False, "Lynis was not installed by ProxMenux", False, "not_managed"
     try:
         import shutil
         

@@ -3431,6 +3431,7 @@
       "featureGithub": "übersichtlicher Bericht, den Sie ausdrucken oder speichern können",
       "install": "Lynis installieren",
       "installedDescription": "Lynis ist installiert und bereit, diesen Host zu prüfen.",
+      "installedOutside": "Lynis ist installiert und bereit, diesen Host zu prüfen. Es wurde nicht von ProxMenux installiert und wird daher auf demselben Weg aktualisiert und entfernt, auf dem es installiert wurde.",
       "lastScan": "Letzter Scan",
       "hardeningIndex": "Härteindex",
       "warnings": "Warnungen",

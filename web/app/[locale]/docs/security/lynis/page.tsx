@@ -150,7 +150,8 @@ export default async function LynisPage({
           <li key={idx}>{t.rich(`detection.items.${idx}`, { code })}</li>
         ))}
       </ol>
-      <p className="mb-6 text-gray-800 leading-relaxed">{t.rich("detection.outro", { code, strong })}</p>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("detection.outro", { code, strong })}</p>
+      <p className="mb-6 text-gray-800 leading-relaxed">{t("detection.outsideNote")}</p>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("audit.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("audit.intro", { strong })}</p>

@@ -45,6 +45,7 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_app_watch_copies.py",
     "AppImage/scripts/tests/test_catalog_architecture.py",
     "AppImage/scripts/tests/test_catalog_same_app.py",
+    "AppImage/scripts/tests/test_lynis_origin.py",
     "AppImage/scripts/tests/test_snippets_storage_readonly.py",
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )

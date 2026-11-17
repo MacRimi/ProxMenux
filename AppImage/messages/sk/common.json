@@ -3430,6 +3430,7 @@
       "featureGithub": "prehľadný report na tlač alebo uloženie",
       "install": "Nainštalovať Lynis",
       "installedDescription": "Lynis je nainštalovaný a pripravený skontrolovať tento server.",
+      "installedOutside": "Lynis je nainštalovaný a pripravený skontrolovať tento server. Nenainštaloval ho ProxMenux, preto sa aktualizuje a odstraňuje rovnakým spôsobom, akým bol nainštalovaný.",
       "lastScan": "Posledná kontrola",
       "hardeningIndex": "Skóre spevnenia",
       "warnings": "Varovania",

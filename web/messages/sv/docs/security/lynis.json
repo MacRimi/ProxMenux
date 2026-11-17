@@ -35,7 +35,7 @@
       },
       {
         "sourceRich": "<strong>Debian apt</strong>",
-        "path": "/usr/bin/lynis",
+        "path": "/usr/sbin/lynis",
         "update": "apt upgrade",
         "fresh": "Ofta månader / år bakom"
       }
@@ -57,7 +57,7 @@
     "items": [
       "<code>/usr/local/bin/lynis</code> Wrapper installerad av ProxMenux",
       "<code>/opt/lynis/lynis</code> - direkt väg (om wrapperen togs bort)",
-      "<code>/usr/bin/lynis</code> apt-installerad version, om användaren installerade den på det sättet tidigare"
+      "<code>/usr/sbin/lynis</code> apt-installerad version, om användaren installerade den på det sättet tidigare"
     ],
     "outro": "Om någon av sökvägarna hittas öppnas hanteringsmenyn. Skriptet avinstallerar <strong>inte</strong> Lynis som installerats via apt, bara den egna installationen i <code>/opt/lynis</code> och dess startskript."
   },
@@ -112,7 +112,7 @@
       },
       {
         "actionRich": "<strong>Ta bort</strong>",
-        "whatRich": "Ta bort <code>/opt/lynis</code> och <code>/usr/local/bin/lynis</code>. Loggar på <code>/var/log/lynis*</code> hålls (de är revisionshistorik). En apt-installerad Lynis på <code>/usr/bin/lynis</code> lämnas orörd."
+        "whatRich": "Ta bort <code>/opt/lynis</code> och <code>/usr/local/bin/lynis</code>. Loggar på <code>/var/log/lynis*</code> hålls (de är revisionshistorik). En apt-installerad Lynis på <code>/usr/sbin/lynis</code> lämnas orörd."
       }
     ]
   },
