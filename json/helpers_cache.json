@@ -18746,6 +18746,46 @@
     "os": "debian"
   },
   {
+    "name": "Obico",
+    "slug": "obico",
+    "desc": "Obico is a self-hosted server for 3D printing monitoring and remote control. It links to OctoPrint or Klipper printers and runs an AI failure-detection model (spaghetti detection) on the webcam stream. Print from anywhere, watch live video, and get notified when a print fails.",
+    "script": "ct/obico.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/obico.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/obico.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00016"
+    ],
+    "category_names": [
+      "IoT & Smart Home"
+    ],
+    "notes": [
+      "Point the Obico plugin (OctoPrint) or moonraker-obico (Klipper) at http://<IP>:3334 to link printers.",
+      "For Bambuddy's AI failure detection, enter http://<IP>:3333 as the Obico ML URL and the ML_API_TOKEN from /opt/obico/.env."
+    ],
+    "warnings": [
+      "Log in at http://<IP>:3334/admin with root@example.com / supersecret and change the password immediately."
+    ],
+    "port": 3334,
+    "website": "https://www.obico.io/",
+    "documentation": "https://www.obico.io/docs/server-guides/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/obico.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root@example.com",
+      "password": "supersecret"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Obsidian LiveSync",
     "slug": "obsidian-livesync",
     "desc": "A CouchDB server configured for synchronising Obsidian vaults with the Self-hosted LiveSync plugin.",
