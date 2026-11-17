@@ -3372,11 +3372,23 @@
   },
   "netalertx": {
     "container_name": "netalertx",
+    "default_ports": [
+      20211
+    ],
+    "file_fallbacks": [
+      {
+        "path": "/root/.netalertx",
+        "regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+        "source": "helper_marker"
+      }
+    ],
     "github_source": "releases",
     "installed_via": "docker_label",
     "label": "org.opencontainers.image.version",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netalertx.webp",
     "repo": "netalertx/NetAlertX",
-    "tag_regex": "v?(\\d+(?:\\.\\d+){1,3})"
+    "tag_regex": "v?(\\d+(?:\\.\\d+){1,3})",
+    "website": "https://netalertx.com/"
   },
   "netbird": {
     "github_source": "releases",
