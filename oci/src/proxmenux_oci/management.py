@@ -66,7 +66,14 @@ def inventory(project, progress=None):
                     f'/nodes/{row["node"]}/lxc/{row["vmid"]}/config', '--output-format', 'json')
         decisions = instances.reconcile(instances.ROOT, resources, configs)
         return [public_row(instances.read(instances.ROOT, d['vmid']), d)
-                for d in decisions if d['action'] == 'keep']
+                for d in decisions if d['action'] == 'keep' and on_this_node(d['vmid'])]
+
+
+def on_this_node(vmid, configs=Path('/etc/pve/lxc')):
+    """A container migrated to another node of the cluster is that node's
+    application; its record stays here as history and shows again if the
+    container comes back."""
+    return (configs / f'{int(vmid)}.conf').is_file()
 
 
 def saved_inventory(project):
@@ -77,7 +84,7 @@ def saved_inventory(project):
         rows = []
         for directory in sorted(instances.ROOT.iterdir(), key=lambda path: path.name.zfill(10)):
             if not (directory.name.isdecimal() and instances.has_contract(instances.ROOT, int(directory.name))
-                    and instances.guest_exists(int(directory.name))):
+                    and on_this_node(int(directory.name))):
                 continue
             record = instances.read(instances.ROOT, int(directory.name))
             row = public_row(record, {'reason': 'not-yet-checked'})

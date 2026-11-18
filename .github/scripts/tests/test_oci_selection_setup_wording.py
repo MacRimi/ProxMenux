@@ -102,7 +102,7 @@ class SelectionSetupWording(TestCase):
             locked=lambda _: Lock(), has_contract=lambda *args: True,
             guest_exists=lambda _: False, read=Mock())
         fn = extracted('saved_inventory', sys=SimpleNamespace(path=[]),
-            instances=fake, public_row=Mock())
+            instances=fake, public_row=Mock(), on_this_node=lambda _: False)
         self.assertEqual(fn(Path('/fixture')), [])
         fake.read.assert_not_called()
 
