@@ -74,6 +74,7 @@ if BASE_DIR not in sys.path:
 
 from smartctl_resolver import (  # noqa: E402
     is_usb_disk as resolver_is_usb_disk,
+    ata_endurance_used,
     probe_smartctl_json,
     resolve_smartctl_probe,
     smartctl_command,
@@ -5340,9 +5341,8 @@ def _get_smart_data_uncached(disk_name):
     smart_data = _smart_default_payload()
     best_smart_data = dict(smart_data)
     best_score = -1
+    best_command = None
 
-
-    
     try:
         probes = smartctl_probe_types(disk_name)
         all_commands = [smartctl_command(disk_name, ('-a', '-j'), probe) for probe in probes]
@@ -5533,13 +5533,11 @@ def _get_smart_data_uncached(disk_name):
 
                                         # --- Wear / Life indicators ---
                                         if attr_id == 230 and ('wearout' in attr_name or 'media' in attr_name):
-                                            # WD/SanDisk Media_Wearout_Indicator: value = endurance used %
-                                            smart_data['media_wearout_indicator'] = normalized_value
-                                            smart_data['ssd_life_left'] = max(0, 100 - normalized_value)
+                                            # Attribute 230 can count either way depending on firmware.
+                                            smart_data['_needs_ata_endurance'] = True
 
                                         elif attr_id == 233 and ('wearout' in attr_name or 'media' in attr_name):
                                             # Intel/Samsung Media_Wearout_Indicator: value = life remaining %
-                                            # Skip if already set by ID 230 (prevents overwrite)
                                             if smart_data.get('media_wearout_indicator') is None:
                                                 smart_data['media_wearout_indicator'] = 100 - normalized_value
 
@@ -5705,9 +5703,7 @@ def _get_smart_data_uncached(disk_name):
                                             nv = int(parts[3]) if len(parts) > 3 else 100
 
                                             if attr_id == '230' and ('wearout' in a_name or 'media' in a_name):
-                                                # WD/SanDisk: value = endurance used %
-                                                smart_data['media_wearout_indicator'] = nv
-                                                smart_data['ssd_life_left'] = max(0, 100 - nv)
+                                                smart_data['_needs_ata_endurance'] = True
 
                                             elif attr_id == '233' and ('wearout' in a_name or 'media' in a_name):
                                                 # Intel/Samsung: value = life remaining %
@@ -5742,10 +5738,12 @@ def _get_smart_data_uncached(disk_name):
                     score = _smart_payload_score(smart_data)
                     if score > best_score:
                         best_score = score
+                        best_command = cmd
                         best_smart_data = dict(smart_data)
 
                     if _smart_probe_complete(disk_name, smart_data):
                         _smart_probe_cache[disk_name] = list(cmd)
+                        best_command = cmd
                         best_smart_data = dict(smart_data)
                         break
                 else:
@@ -5775,6 +5773,11 @@ def _get_smart_data_uncached(disk_name):
                         # print(f"[v0] Error killing process: {kill_err}")
                         pass
         smart_data = best_smart_data
+        if smart_data.pop('_needs_ata_endurance', False) and best_command:
+            used = ata_endurance_used(best_command)
+            if used is not None:
+                smart_data['media_wearout_indicator'] = used
+                smart_data['ssd_life_left'] = max(0, 100 - used)
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':

@@ -54,6 +54,9 @@ on:
       - 'AppImage/scripts/tests/test_proxmox_node_name.py'
       - 'AppImage/scripts/tests/test_pve_notifications_cfg_writes.py'
       - 'tests/test_lvm_disk_read_policy.py'
+      - 'tests/test_ata_ssd_endurance.py'
+      - 'AppImage/scripts/smartctl_resolver.py'
+      - 'AppImage/components/storage-overview.tsx'
       - 'oci/**'
       - 'AppImage/scripts/oci_menu_bridge.py'
       - 'AppImage/scripts/lxc_apps.py'
@@ -120,6 +123,9 @@ on:
       - 'AppImage/scripts/tests/test_proxmox_node_name.py'
       - 'AppImage/scripts/tests/test_pve_notifications_cfg_writes.py'
       - 'tests/test_lvm_disk_read_policy.py'
+      - 'tests/test_ata_ssd_endurance.py'
+      - 'AppImage/scripts/smartctl_resolver.py'
+      - 'AppImage/components/storage-overview.tsx'
       - 'scripts/gpu_tpu/nvidia_installer.sh'
       - 'tests/test_nvidia*.py'
       - 'AppImage/scripts/managed_installs.py'
@@ -325,7 +331,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Test automatic LVM readers with mocked inventory and policy
-        run: python -I -B -m unittest discover -s tests -p test_lvm_disk_read_policy.py -v
+        run: |
+          python -I -B -m unittest discover -s tests -p test_lvm_disk_read_policy.py -v
+          python -I -B -m unittest discover -s tests -p test_ata_ssd_endurance.py -v
       - name: Test backup node ownership and former jobs
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_host_backup_node.py -v
       - name: Test local node lookup without Proxmox API commands
