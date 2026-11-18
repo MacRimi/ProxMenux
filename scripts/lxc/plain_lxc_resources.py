@@ -312,6 +312,10 @@ def discover_devices():
         # exposes serial peripherals only by tty. These are not failed probes.
         if kind == 'USB' and name not in usb:
             continue
+        # NVIDIA also has a render node; its GPU is offered by the runtime profile.
+        if name.startswith('/dev/dri/') and hardware._sysfs(
+                Path('/sys/class/drm') / Path(name).name / 'device/vendor').lower() not in ('0x8086', '0x1002'):
+            continue
         try:
             identity = path_identity(name,device=True)
             device_policy(name,identity)

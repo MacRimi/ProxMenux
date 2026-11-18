@@ -32,7 +32,7 @@ STORAGE = r"[A-Za-z][A-Za-z0-9_.-]{0,63}"
 ARCHIVE = r"[A-Za-z0-9][A-Za-z0-9_.+-]*\.(?:tar(?:\.(?:gz|xz|zst|bz2|lzma))?|tgz)"
 BRIDGE = r"[A-Za-z0-9_.-]{1,15}"
 REQUEST_ID = r"[a-f0-9]{32}"
-DEVICE_PATH = r'/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|kfd|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)'
+DEVICE_PATH = r'/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|kfd|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-modeset|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)'
 DEFAULTS = {
     "cpu": {"cores": 1},
     "memory": {"ram_mib": 512, "swap_mib": 512},

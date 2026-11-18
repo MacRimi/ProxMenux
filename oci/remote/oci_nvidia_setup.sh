@@ -24,7 +24,7 @@ configure_nvidia_runtime() {
     hook_hash=$(sha256sum "${SCRIPT_DIR}/nvidia_lxc_mount_lab.sh" | awk '{print $1}')
     hook_path="/usr/local/lib/proxmenux/oci/nvidia-mount-${hook_hash}.sh"
     hook_path=$(lxc_install_nvidia_hook "${SCRIPT_DIR}/nvidia_lxc_mount_lab.sh" "$hook_hash") \
-      || die "$(translate "The persistent NVIDIA hook does not match the installer:") $hook_path"
+      || die "$(translate "The persistent NVIDIA hook does not match the installer:") /usr/local/lib/proxmenux/oci/nvidia-mount-${hook_hash}.sh"
     printf 'lxc.environment: NVIDIA_VISIBLE_DEVICES=all\nlxc.environment: NVIDIA_DRIVER_CAPABILITIES=%s\nlxc.hook.mount: %s\n' \
       "$capabilities" "$hook_path" >>"$CONF"
   fi

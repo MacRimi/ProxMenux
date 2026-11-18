@@ -38,7 +38,10 @@ def known_path(path):
 
 
 def snapshot(path):
-    return device_snapshot(path)
+    try:
+        return device_snapshot(path)
+    except ValueError as error:
+        raise ValueError(translate(str(error))) from None
 
 
 def planned(deployment):

@@ -144,7 +144,7 @@ sub check_resources {
         my $item = $resources->{devices}->[$index];
         die unless exists($properties->{$key}) && ref($item) eq 'HASH'
             && join(',',sort keys %$item) eq 'gid,identity,mode,path,uid' && defined($config->{$key})
-            && ($item->{path} // '') =~ m{\A/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|kfd|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)\z}
+            && ($item->{path} // '') =~ m{\A/dev/(?:dri/(?:renderD[0-9]+|card[0-9]+)|kfd|apex_[0-9]+|accel/accel[0-9]+|nvidia(?:[0-9]+|ctl|-modeset|-uvm(?:-tools)?)|bus/usb/[0-9]{3}/[0-9]{3}|tty(?:USB|ACM)[0-9]+)\z}
             && ($item->{mode} // '') =~ /\A0[0-7]{3}\z/;
         for my $id (qw(uid gid)) { die unless ($item->{$id} // '') =~ /\A[0-9]{1,10}\z/ && $item->{$id} <= 2147483647; }
         my $actual = PVE::LXC::Config->parse_device($config->{$key});

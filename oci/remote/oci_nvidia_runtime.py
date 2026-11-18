@@ -39,7 +39,10 @@ def digest(path):
 
 
 def snapshot():
-    return nvidia_snapshot(command)
+    try:
+        return nvidia_snapshot(command)
+    except ValueError as error:
+        raise ValueError(translate(str(error))) from None
 
 
 def verify(value):
