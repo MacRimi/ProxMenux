@@ -1034,7 +1034,8 @@ export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } =
   const getWearIndicator = (disk: DiskInfo): { value: number; label: string } | null => {
     const diskType = getDiskType(disk.name, disk.rotation_rate)
 
-    if (diskType === "NVMe" && disk.percentage_used !== undefined && disk.percentage_used !== null) {
+    // An NVMe drive behind a USB bridge is named sdX but still reports its NVMe wear.
+    if (typeof disk.percentage_used === "number") {
       return { value: disk.percentage_used, label: t("storage.wear.percentageUsed") }
     }
 
