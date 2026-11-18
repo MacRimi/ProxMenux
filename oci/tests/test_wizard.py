@@ -16,6 +16,15 @@ from proxmenux_oci.ui import BackRequested, BacktrackUI, DialogUI, RestartWizard
 USB = [{'path': '/dev/ttyACM0', 'name': 'ConBee II', 'kind': 'Communications'}]
 
 
+from proxmenux_oci.extra_devices import usb_passthrough
+
+def by_identity_stub(device):
+    """The adapter as the identity method records it, without a real node."""
+    if device.get('kind') != 'character-device':
+        return device
+    return {'id': device['id'], 'kind': 'usb', 'container_path': device['container_path'], 'major': 166,
+            'serial_link': '/dev/serial/by-id/usb-Z-Stick', 'usb': {'vendor': '0658', 'product': '0200', 'port': '3-8'}}
+
 class SequenceUI:
     def __init__(self, answers):
         self.answers = iter(answers)
@@ -93,9 +102,11 @@ class WizardTests(unittest.TestCase):
              'deployment': {'devices': [], 'security': {'unprivileged': True}}}
             for name in ('database', 'server')
         ]
-        ask_stack_extra_devices(ui, services)
+        with patch.object(usb_passthrough(), 'converted', side_effect=by_identity_stub):
+            ask_stack_extra_devices(ui, services)
         self.assertEqual(services[0]['deployment']['devices'], [])
-        self.assertEqual(services[1]['deployment']['devices'][0]['host_path'], '/dev/ttyACM0')
+        member_device = services[1]['deployment']['devices'][0]
+        self.assertEqual((member_device['kind'], member_device['container_path']), ('usb', '/dev/ttyACM0'))
 
     def test_dialog_back_button_is_only_on_wizard_inputs(self):
         ui = DialogUI(back_enabled=True)

@@ -10,6 +10,7 @@ import os
 import oci_console
 import oci_gpu_devices
 import oci_nested_mounts
+import oci_usb_passthrough
 from oci_ui import translate
 
 
@@ -109,7 +110,7 @@ def immich_record(record):
         if native in runtime:
             translated[target] = runtime[native]
     result = portable_record(record, {'generated_files': projection['generated_files'], 'runtime': translated})
-    result['deployment']['devices'] = devices
+    result['deployment']['devices'] = devices + recorded_usb(record)
     if cuda:
         result['deployment']['environment'] = [e for e in result['deployment']['environment']
                                              if e['name'] != 'NVIDIA_DRIVER_CAPABILITIES']
@@ -263,8 +264,17 @@ def translated_devices(projection):
     return devices
 
 
+def recorded_usb(record):
+    """The USB devices a member passes by its identity: they are not devN
+    lines, so they come from its record, checked against the lines its
+    configuration has for them."""
+    devices = [device for device in record['deployment'].get('devices', []) if oci_usb_passthrough.recorded(device)]
+    oci_usb_passthrough.check(record.get('observed', {}).get('config', '').encode(), {'devices': devices})
+    return copy.deepcopy(devices)
+
+
 def with_devices(record, result):
-    result['deployment']['devices'] = translated_devices(normalize(record))
+    result['deployment']['devices'] = translated_devices(normalize(record)) + recorded_usb(record)
     return result
 
 
@@ -630,6 +640,7 @@ def normalize(record):
                    and line.partition(': ')[0] not in ('lxc.environment.runtime', 'lxc.init.cwd',
                                                        'lxc.signal.halt', 'lxc.console.logfile')
                    and not oci_nested_mounts.own(line)
+                   and not oci_usb_passthrough.own(line)
                    and not oci_console.is_start_mark_hook(line)]
     return {'schema_version': 1, 'deployment': plan, 'runtime': runtime,
             'preserved_native': preserved, 'generated_files': copy.deepcopy(files),

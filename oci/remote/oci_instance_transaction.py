@@ -1622,6 +1622,9 @@ def complete_recovery(root, journal, state):
     cleanup_restored_format_dirs(vmid, state['record']['deployment'], state['record']['installation_id'])
     runtime_settings.restore(state['record']['deployment'], vmid)
     public_routes.restore(state['record']['deployment'], vmid, state['record']['installation_id'])
+    # The udev rule lives on the host: it goes back to the USB devices of the
+    # restored installation, whatever the failed one had written.
+    usb_passthrough.write_rules(vmid, state['record']['deployment'])
     check_runtime_mounts(config, state['record']['deployment'])
     gpu_devices.check(config, state['record']['deployment'])
     if show:

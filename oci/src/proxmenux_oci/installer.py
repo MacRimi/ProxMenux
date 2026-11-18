@@ -193,6 +193,60 @@ def ups_device_request(item: dict[str, Any], advanced: bool) -> dict[str, Any]:
     return item
 
 
+def _nut_config():
+    from .extra_devices import usb_passthrough
+    usb_passthrough()
+    import oci_nut_config
+    return oci_nut_config
+
+
+def ups_paths(item: dict[str, Any], advanced: bool, ui, attached) -> list[str]:
+    """The UPS the NUT server watches: every UPS the host has on USB, and in
+    the advanced installation the ones chosen among them."""
+    found = [row for row in host.usb_devices() if row["kind"] == "UPS" and row["path"] not in attached]
+    if not advanced:
+        return [row["path"] for row in found] or [item["host_path_default"]]
+    if len(found) > 1:
+        chosen = ui.checklist(translate("UPS monitored by the NUT server"),
+                              [(row["path"], row["name"]) for row in found], [row["path"] for row in found])
+        if not chosen:
+            raise UserCancelled(translate("Choose at least one UPS"))
+        return list(chosen)
+    from .extra_devices import choose_usb_device
+    return [choose_usb_device(ui, translate(item["path_prompt"]), item.get("host_path_default") or None, attached)]
+
+
+def ups_driver(device: dict[str, Any], advanced: bool, ui) -> str:
+    """The NUT driver of a UPS: the one its vendor needs, or in the advanced
+    installation the one chosen."""
+    nut = _nut_config()
+    proposed = nut.driver_for(device["usb"])
+    if not advanced:
+        return proposed
+    options = [(driver, driver) for driver in (proposed, *[d for d in nut.KNOWN_DRIVERS if d != proposed])]
+    chosen = ui.choose(f"{translate('NUT driver for the UPS')} {device['usb']['vendor']}:{device['usb']['product']}",
+                       options, proposed)
+    if chosen is None:
+        raise UserCancelled(translate("Device configuration cancelled"))
+    return chosen
+
+
+def ups_environment(devices: list[dict[str, Any]], environment: list[dict[str, Any]], ui) -> list[dict[str, Any]]:
+    """The DRIVER variable shows the driver of the first UPS, and two UPS that
+    NUT could not tell apart are said before installing."""
+    nut = _nut_config()
+    ups = nut.ups_devices({"devices": devices})
+    if not ups:
+        return environment
+    for first, second in nut.ambiguous(ups):
+        ui.message(translate("Two UPS of the same model without a serial number of their own are on USB ports "
+                             "with the same number, so NUT could swap them. Connect one of them to a port "
+                             "with another number.") + f"\n\n{first['usb']['port']} · {second['usb']['port']}")
+    driver = ups[0].get("nut_driver") or nut.driver_for(ups[0]["usb"])
+    return [*[entry for entry in environment if entry["name"] != "DRIVER"],
+            {"name": "DRIVER", "value": driver, "sensitive": False}]
+
+
 def external_services_notice(template: dict[str, Any]) -> str | None:
     """What an application needs already running on the network, as a database
     of its own. Said before its installation asks how to reach it, so it can be
@@ -368,8 +422,11 @@ def ask_application_extra_devices(ui, kinds: tuple[str, ...] = ("gpu", "usb")) -
     multi-container application; asked in an advanced installation only."""
     if _answers_from_recipe(ui):
         return []
-    from .extra_devices import ask_extra_devices
-    return ask_extra_devices(ui, [], True, kinds=kinds)
+    from .extra_devices import ask_extra_devices, by_identity
+    try:
+        return [by_identity(device) for device in ask_extra_devices(ui, [], True, kinds=kinds)]
+    except ValueError as error:
+        raise InstallError(str(error)) from None
 
 
 def ask_application_resources(ui, cores: int, memory_mb: int, swap_mb: int) -> dict[str, int]:
@@ -1790,8 +1847,10 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
             shutil.copy2(project_root / 'remote' / 'oci_image_mountpoints.py', temporary / 'oci_image_mountpoints.py')
-            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_nut_config.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
+            if deployment_kind in stack_installers:
+                shutil.copy2(project_root / "remote" / "oci_stack_vmids.py", temporary / "oci_stack_vmids.py")
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
                 shutil.copy2(project_root / 'remote' / 'install_oci.sh', temporary / 'install_oci.sh')
@@ -1827,8 +1886,10 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_stack_vmids.py', 'oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_nut_config.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
+            if deployment_kind in stack_installers:
+                archive.add(project_root / "remote" / "oci_stack_vmids.py", arcname="oci_stack_vmids.py")
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')
                 archive.add(project_root / 'remote' / 'install_oci.sh', arcname='install_oci.sh')
@@ -2185,47 +2246,53 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
                      if vendor_id in item.get("drm_vendor_ids", []) for node in host.gpus()[vendor]]
             if nodes and item["host_path_default"] not in nodes:
                 item = {**item, "host_path_default": nodes[0]}
+            from .extra_devices import by_identity, choose_usb_device, device_node
+            attached = {device_node(device) for device in devices}
             if item.get("purpose") == "ups":
                 item = ups_device_request(item, advanced)
-            if not advanced:
-                host_path = item["host_path_default"]
-            elif item.get("purpose") in ("serial", "user-selected-device", "ups"):
-                from .extra_devices import choose_usb_device, device_node
-                host_path = choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"],
-                                              {device_node(device) for device in devices})
+                host_paths = ups_paths(item, advanced, ui, attached)
+            elif not advanced:
+                host_paths = [item["host_path_default"]]
+            elif item.get("purpose") in ("serial", "user-selected-device"):
+                host_paths = [choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"], attached)]
             else:
-                host_path = ui.ask(translate(item["path_prompt"]), item["host_path_default"])
-            container_path = (
-                host_path
-                if item.get("container_path_strategy") == "same-as-host"
-                else item.get("container_path", host_path)
-            )
-            device = {
-                "id": item["id"],
-                "kind": kind,
-                "host_path": host_path,
-                "container_path": container_path,
-                "mode": item.get("mode", "0660"),
-                "deny_write": item.get("deny_write", False),
-                "gid_strategy": item.get("gid_strategy", "host-device-gid"),
-            }
-            if item.get("append_host_device_gid_to_environment"):
-                device["append_host_device_gid_to_environment"] = item[
-                    "append_host_device_gid_to_environment"
-                ]
-            if item.get("drm_vendor_ids"):
-                device["drm_vendor_ids"] = item["drm_vendor_ids"]
-            if item.get("uid_from_environment"):
-                name = item["uid_from_environment"]
-                uid = next((entry["value"] for entry in environment if entry["name"] == name), "")
-                if not re.fullmatch(r"[0-9]+", str(uid)) or int(uid) >= 4294967295:
-                    raise InstallError(f"{name}: {translate('must contain a valid numeric UID for the GPU')}")
-                device["uid"] = int(uid)
-            from .extra_devices import by_identity
-            try:
-                devices.append(by_identity(device))
-            except ValueError as error:
-                raise InstallError(str(error)) from None
+                host_paths = [ui.ask(translate(item["path_prompt"]), item["host_path_default"])]
+            for number, host_path in enumerate(host_paths, 1):
+                container_path = (
+                    host_path
+                    if item.get("container_path_strategy") == "same-as-host"
+                    else item.get("container_path", host_path)
+                )
+                device = {
+                    "id": item["id"] if number == 1 else f'{item["id"]}-{number}',
+                    "kind": kind,
+                    "host_path": host_path,
+                    "container_path": container_path,
+                    "mode": item.get("mode", "0660"),
+                    "deny_write": item.get("deny_write", False),
+                    "gid_strategy": item.get("gid_strategy", "host-device-gid"),
+                }
+                if item.get("append_host_device_gid_to_environment"):
+                    device["append_host_device_gid_to_environment"] = item[
+                        "append_host_device_gid_to_environment"
+                    ]
+                if item.get("drm_vendor_ids"):
+                    device["drm_vendor_ids"] = item["drm_vendor_ids"]
+                if item.get("uid_from_environment"):
+                    name = item["uid_from_environment"]
+                    uid = next((entry["value"] for entry in environment if entry["name"] == name), "")
+                    if not re.fullmatch(r"[0-9]+", str(uid)) or int(uid) >= 4294967295:
+                        raise InstallError(f"{name}: {translate('must contain a valid numeric UID for the GPU')}")
+                    device["uid"] = int(uid)
+                try:
+                    device = by_identity(device)
+                except ValueError as error:
+                    raise InstallError(str(error)) from None
+                if item.get("purpose") == "ups" and device.get("kind") == "usb":
+                    device["nut_driver"] = ups_driver(device, advanced, ui)
+                devices.append(device)
+            if item.get("purpose") == "ups":
+                environment = ups_environment(devices, environment, ui)
         for env_item in item.get("environment", []):
             selected = (ui.choose(translate(env_item["prompt"]),
                                   [(value, value) for value in env_item["choices"]],

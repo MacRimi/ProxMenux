@@ -132,14 +132,14 @@ def device_permissions(image, devices, existing=None):
 
 def ask_stack_extra_devices(ui, services):
     """Ask once per device, then select the stack members that need it."""
-    devices = ask_extra_devices(ui, [], True)
+    devices = [by_identity(device) for device in ask_extra_devices(ui, [], True)]
     if not devices:
         return
     options = [(service['name'], service['name']) for service in services]
     for device in devices:
+        label = 'NVIDIA' if device.get('kind') == 'nvidia-runtime' else device_label(device)
         selected = ui.checklist(
-            f"{translate('Containers that will receive this device')}: "
-            f"{device.get('host_path', 'NVIDIA')}", options,
+            f"{translate('Containers that will receive this device')}: {label}", options,
             [service['name'] for service in services if service.get('main')] or [options[-1][0]])
         if not selected or set(selected) - {name for name, _ in options}:
             raise ValueError(translate('Select at least one stack container'))
@@ -148,8 +148,8 @@ def ask_stack_extra_devices(ui, services):
                 continue
             plan = service['deployment']
             existing = plan.setdefault('devices', [])
-            if any(item.get('host_path') == device.get('host_path') if device.get('host_path')
-                   else item.get('kind') == 'nvidia-runtime' for item in existing):
+            if any(item.get('kind') == 'nvidia-runtime' if device.get('kind') == 'nvidia-runtime'
+                   else device_node(item) == device_node(device) for item in existing):
                 raise ValueError(translate('This device is already attached'))
             member_device = copy.deepcopy(device)
             if member_device['kind'] == 'nvidia-runtime':
