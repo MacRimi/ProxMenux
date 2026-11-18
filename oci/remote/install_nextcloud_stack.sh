@@ -161,33 +161,17 @@ esac
 [[ $PRIVATE_BRIDGE =~ ^vmbr[0-9]+$ ]] || die "$(translate "Invalid private bridge")"
 [[ $PRIVATE_SUBNET =~ ^10\.77\.[0-9]{1,3}\.0/24$ ]] || die "$(translate "Invalid private network")"
 
-vmid_block_free() {
-  local candidate=$1 offset
-  for offset in 0 1 2; do
-    pct config "$((candidate + offset))" >/dev/null 2>&1 && return 1
-    qm config "$((candidate + offset))" >/dev/null 2>&1 && return 1
-  done
-  return 0
-}
+# The network offsets stay fixed even when the selected VMIDs are not consecutive.
+STACK_VMIDS=$(python3 "$SCRIPT_DIR/oci_stack_vmids.py" "$DEPLOYMENT_FILE" application cache database) \
+  || die "$(translate "Could not allocate the stack VMIDs")"
+read -r APPLICATION_ID CACHE_ID DATABASE_ID <<< "$STACK_VMIDS"
 
-if [[ -z $BASE_VMID ]]; then
-  BASE_VMID=$(pvesh get /cluster/nextid)
-  while ! vmid_block_free "$BASE_VMID"; do
-    BASE_VMID=$((BASE_VMID + 1))
-  done
-fi
-[[ $BASE_VMID =~ ^[0-9]+$ ]] || die "$(translate "Invalid base VMID")"
-vmid_block_free "$BASE_VMID" || die "$(translate "These VMIDs are not free:") ${BASE_VMID}-$((BASE_VMID + 2))"
-
-APPLICATION_ID=$BASE_VMID
-CACHE_ID=$((BASE_VMID + 1))
-DATABASE_ID=$((BASE_VMID + 2))
 
 oci_log "Stack: $STACK_NAME; VMIDs: Nextcloud=$APPLICATION_ID, Redis=$CACHE_ID, PostgreSQL=$DATABASE_ID"
 oci_log "Private network: $PRIVATE_SUBNET on $PRIVATE_BRIDGE"
 
 if [[ $DRY_RUN == 1 ]]; then
-  msg_info2 "$(translate "Stack:") $STACK_NAME · CT ${APPLICATION_ID}-${DATABASE_ID}"
+  msg_info2 "$(translate "Stack:") $STACK_NAME · CT $STACK_VMIDS"
   msg_info2 "$(translate "Private network:") $PRIVATE_BRIDGE ($PRIVATE_SUBNET)"
   msg_ok "$(translate "Dry run completed; no containers were created.")"
   exit 0

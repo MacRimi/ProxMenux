@@ -134,10 +134,12 @@ def build_suite(template, ui, mode='advanced'):
     if mode != DEFAULT_MODE:
         from .extra_devices import ask_stack_extra_devices
         ask_stack_extra_devices(ui, services)
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(base) if base else None, mode, services)
     onboot = ui.confirm(translate('Start each LXC with Proxmox (no coordinated startup)'), False)
     for service in services:
         service['deployment']['onboot'] = onboot
-    return {'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
+    return {**selection,'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
             'base_vmid':int(base) if base else None,'services':services,'shared_media':shared,'media_player':player,
             'completion_notes':[
                 translate('Independent LXCs: no main container or hookscript. Each one keeps its own Start with Proxmox setting.'),
