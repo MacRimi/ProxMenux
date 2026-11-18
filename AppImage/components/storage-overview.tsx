@@ -4022,14 +4022,16 @@ ${isNvmeDisk && !hasNvmeWearData ? (() => {
 })() : ''}
 
 ${!isNvmeDisk && diskType === 'SSD' ? (() => {
-  // Try to find SSD wear indicators from SMART attributes
+  // Try to find SSD wear indicators from SMART attributes. Matched by name:
+  // the same ID is a write counter on some drives (233 is NAND_GB_Written_TLC on WD).
   const wearAttr = smartAttributes.find(a => a.id !== 230 && (
     a.name?.toLowerCase().includes('wear_leveling') ||
     a.name?.toLowerCase().includes('media_wearout') ||
     a.name?.toLowerCase().includes('percent_lifetime') ||
-    a.name?.toLowerCase().includes('ssd_life_left') ||
-    a.id === 177 || a.id === 231 || a.id === 233
+    a.name?.toLowerCase().includes('ssd_life_left')
   ))
+  // With attribute 230, the backend reports the standard ATA statistic instead.
+  const usesAtaStatistic = disk.media_wearout_indicator != null && smartAttributes.some(a => a.id === 230)
   
   const lbasWrittenAttr = smartAttributes.find(a => 
     a.name?.toLowerCase().includes('total_lbas_written') ||
@@ -4081,7 +4083,7 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
         </div>
       </div>
       <div style="margin-top:12px;font-size:11px;color:#475569;">
-        ${tSmart("labels.source")}: ${wearAttr?.name?.replace(/_/g, ' ') || tSmart("labels.ssdLifeIndicator")}
+        ${tSmart("labels.source")}: ${usesAtaStatistic ? 'Percentage Used Endurance Indicator' : wearAttr?.name?.replace(/_/g, ' ') || tSmart("labels.ssdLifeIndicator")}
       </div>
     </div>
     
