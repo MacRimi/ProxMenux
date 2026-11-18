@@ -1205,13 +1205,15 @@ apply_installer_profile() {
   local entrypoint working_directory halt_signal command_json compose_entrypoint_json user_spec
   local supplemental_groups tls_config cert_path key_path cert_destination key_destination
   local tls_directory valid_days common_name san
-  local generated_created=0 volumes_prepared=0 tls_state=""
+  local generated_created=0 volumes_prepared=0 tls_state="" nut_configuration
 
   generated_count=$(jq '.proxmox.installer_profile.generated_files? // [] | length' "$TEMPLATE_FILE")
   preparation_count=$(jq '.proxmox.installer_profile.volume_preparations? // [] | length' "$TEMPLATE_FILE")
   tls_count=$(jq 'if .proxmox.installer_profile.self_signed_tls? then 1 else 0 end' "$TEMPLATE_FILE")
+  nut_configuration=$(jq -r '.proxmox.installer_profile.nut_configuration // false' "$TEMPLATE_FILE")
   seeded_volumes=${#VOLUME_SEED_TARGETS[@]}
-  if (( generated_count > 0 || preparation_count > 0 || tls_count > 0 || seeded_volumes > 0 )); then
+  if (( generated_count > 0 || preparation_count > 0 || tls_count > 0 || seeded_volumes > 0 )) \
+    || [[ $nut_configuration == true ]]; then
     mount_ct_rootfs
     mounted=1
   fi
@@ -1268,6 +1270,18 @@ apply_installer_profile() {
     oci_log "Generated file created: $path"
     generated_created=$((generated_created + 1))
   done < <(jq -r '.proxmox.installer_profile.generated_files[]? | @base64' "$TEMPLATE_FILE")
+
+  # The NUT server gets the configuration of every UPS passed to it, written
+  # again each time the container is created.
+  if (( failed == 0 )) && [[ $nut_configuration == true ]]; then
+    if oci_quiet python3 "${SCRIPT_DIR}/oci_nut_config.py" write "$rootfs" "$DEPLOYMENT_FILE" \
+        "$HOST_ROOT_UID" "$HOST_ROOT_GID"; then
+      oci_log "NUT configuration written for the UPS of the container"
+    else
+      oci_log "Cannot write the NUT configuration"
+      failed=1
+    fi
+  fi
 
   # For a generic-multi-lxc-stack service (stack_managed: true in
   # DEPLOYMENT_FILE), create_service() invokes this script per-service
@@ -2114,6 +2128,7 @@ RESOLVED_CHARACTER_DEVICES=()
 NVIDIA_RUNTIME_CONFIGURED=0
 NVIDIA_GID_ENV=""
 NVIDIA_DEVICE_COUNT=0
+USB_DEVICE_COUNT=0
 while IFS= read -r DEVICE_ENCODED; do
   [[ -n $DEVICE_ENCODED ]] || continue
   DEVICE=$(printf '%s' "$DEVICE_ENCODED" | base64 -d)
@@ -2127,6 +2142,11 @@ while IFS= read -r DEVICE_ENCODED; do
       configure_nvidia_runtime
       NVIDIA_DEVICE_COUNT=$((DEVICE_INDEX - NVIDIA_FIRST_INDEX))
     fi
+    continue
+  fi
+  if [[ $DEVICE_KIND == usb ]]; then
+    # Found by its identity, not by its node: written after the loop.
+    USB_DEVICE_COUNT=$((USB_DEVICE_COUNT + 1))
     continue
   fi
   HOST_PATH=$(jq -er '.host_path' <<<"$DEVICE")
@@ -2166,8 +2186,12 @@ while IFS= read -r DEVICE_ENCODED; do
     *) die "$(translate "Unsupported device type:") $DEVICE_KIND" ;;
   esac
 done < <(jq -r '.devices[]? | @base64' "$DEPLOYMENT_FILE")
-if (( DEVICE_INDEX > NVIDIA_DEVICE_COUNT )); then
-  msg_ok "$(translate "Devices added to the container:") $((DEVICE_INDEX - NVIDIA_DEVICE_COUNT))"
+if (( USB_DEVICE_COUNT > 0 )); then
+  oci_quiet python3 "${SCRIPT_DIR}/oci_usb_passthrough.py" apply "$VMID" "$DEPLOYMENT_FILE" \
+    || die "$(translate "Could not add the USB devices to the container")"
+fi
+if (( DEVICE_INDEX - NVIDIA_DEVICE_COUNT + USB_DEVICE_COUNT > 0 )); then
+  msg_ok "$(translate "Devices added to the container:") $((DEVICE_INDEX - NVIDIA_DEVICE_COUNT + USB_DEVICE_COUNT))"
 fi
 
 apply_native_device_permissions

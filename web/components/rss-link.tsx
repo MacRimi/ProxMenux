@@ -36,7 +36,7 @@ export default function RSSLink() {
           <p className="text-orange-700 text-sm">{t("body")}</p>
         </div>
 
-        <div className="space-y-2">
+        <div className="stack-y-2">
           <div className="flex items-center gap-2">
             <code className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs flex-1 min-w-0 truncate">
               {rssUrl}

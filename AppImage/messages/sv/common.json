@@ -3431,6 +3431,7 @@
       "featureGithub": "tydlig rapport som du kan skriva ut eller spara",
       "install": "Installera Lynis",
       "installedDescription": "Lynis är installerad och redo att granska denna värd.",
+      "installedOutside": "Lynis är installerad och redo att granska denna värd. Den installerades inte av ProxMenux, så den uppdateras och tas bort på samma sätt som den installerades.",
       "lastScan": "Sista skanningen",
       "hardeningIndex": "Härdningsindex",
       "warnings": "Varningar",

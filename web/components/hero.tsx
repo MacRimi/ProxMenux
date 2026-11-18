@@ -9,12 +9,12 @@ import Image from "next/image"
 export default function Hero() {
   const t = useTranslations("hero")
   return (
-    <div className="bg-gradient-to-b from-gray-900 to-gray-800 text-white">
+    <div className="bg-linear-to-b from-gray-900 to-gray-800 text-white">
       {/* Mobile version (visible only on small screens) */}
       <section className="md:hidden py-20 px-4 sm:px-6 text-center">
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-6">
           {t("title")}{" "}
-          <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 font-bold">
+          <span className="block mt-2 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-purple-500 font-bold">
             {t("tagline")}
           </span>
         </h1>
@@ -57,14 +57,14 @@ export default function Hero() {
             </div>
             <div className="w-0.5 h-40 lg:h-48 xl:h-56 bg-white mx-6 self-center"></div>
             <div className="text-left max-w-md lg:max-w-lg xl:max-w-xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">{t("title")}</h1>
-              <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 font-bold leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight md:leading-none">{t("title")}</h1>
+              <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl mt-2 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-purple-500 font-bold leading-tight md:leading-8 lg:leading-9 xl:leading-10">
                 {t("tagline")}
               </p>
             </div>
           </div>
         </div>
-        <p className="text-base md:text-lg lg:text-xl mb-8 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto text-gray-300 text-center leading-relaxed">
+        <p className="text-base md:text-lg lg:text-xl mb-8 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto text-gray-300 text-center leading-relaxed md:leading-7">
           {t("description")}
         </p>
         <div className="flex gap-3 justify-center items-center">

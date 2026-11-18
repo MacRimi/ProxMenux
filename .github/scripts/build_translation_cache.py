@@ -558,10 +558,10 @@ def clean_translation(value: str) -> str:
     # "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Övers"
     # because Preložiť / Översätt / Översätta were missing.
     translate_labels = (
-        "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
+        "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir|Traduzindo"
         "|Preložiť|Prelož|Preloz"          # sk
         "|Översätta|Översätt"              # sv
-        "|Перевести|Переведите|Перевод"    # ru
+        "|Перевести|Переведите|Перевод|Переведем|Переведём"    # ru
     )
     context_labels = (
         "Context|Contexto|Contexte|Kontext|Contesto"

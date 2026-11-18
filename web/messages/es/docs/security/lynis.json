@@ -35,7 +35,7 @@
       },
       {
         "sourceRich": "<strong>Debian apt</strong>",
-        "path": "/usr/bin/lynis",
+        "path": "/usr/sbin/lynis",
         "update": "apt upgrade",
         "fresh": "A menudo meses / años por detrás"
       }
@@ -57,9 +57,10 @@
     "items": [
       "<code>/usr/local/bin/lynis</code> — wrapper instalado por ProxMenux",
       "<code>/opt/lynis/lynis</code> — ruta directa (por si el wrapper se eliminó)",
-      "<code>/usr/bin/lynis</code> — versión instalada por apt, si el usuario la instaló así anteriormente"
+      "<code>/usr/sbin/lynis</code> — versión instalada por apt, si el usuario la instaló así anteriormente"
     ],
-    "outro": "Si encuentra cualquiera de estas rutas, abre el menú de gestión. El script <strong>no</strong> desinstala Lynis instalado por apt; solo el que gestiona en <code>/opt/lynis</code> y su lanzador."
+    "outro": "Si encuentra cualquiera de estas rutas, abre el menú de gestión. El script <strong>no</strong> desinstala Lynis instalado por apt; solo el que gestiona en <code>/opt/lynis</code> y su lanzador.",
+    "outsideNote": "Un Lynis instalado de otro modo, como el paquete de Debian o el repositorio APT de CISOfy, solo se audita: el menú y el Monitor ejecutan su auditoría, y se actualiza y se elimina del mismo modo que se instaló."
   },
   "audit": {
     "heading": "Ejecutar una auditoría",
@@ -112,7 +113,7 @@
       },
       {
         "actionRich": "<strong>Eliminar</strong>",
-        "whatRich": "Borra <code>/opt/lynis</code> y <code>/usr/local/bin/lynis</code>. Los logs en <code>/var/log/lynis*</code> se mantienen (son historial de auditoría). Un Lynis instalado por apt en <code>/usr/bin/lynis</code> se deja sin tocar."
+        "whatRich": "Borra <code>/opt/lynis</code> y <code>/usr/local/bin/lynis</code>. Los logs en <code>/var/log/lynis*</code> se mantienen (son historial de auditoría). Un Lynis instalado por apt en <code>/usr/sbin/lynis</code> se deja sin tocar."
       }
     ]
   },

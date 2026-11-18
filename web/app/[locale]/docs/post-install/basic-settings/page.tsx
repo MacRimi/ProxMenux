@@ -215,7 +215,7 @@ Acquire::Languages "none";`}
               alt={s.alt}
               width={450}
               height={280}
-              className="rounded shadow border border-gray-200 w-full h-auto"
+              className="rounded shadow-sm border border-gray-200 w-full h-auto"
             />
             <figcaption className="text-xs text-gray-600 mt-1 text-center">
               <code>{s.pkg}</code>

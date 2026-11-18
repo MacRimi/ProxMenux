@@ -18,6 +18,15 @@ EXTRA = "Add an extra custom path"
 SPECIAL = ("nextcloud-stack", "paperless-ngx", "tandoor", "immich")
 
 
+from proxmenux_oci.extra_devices import usb_passthrough
+
+def by_identity_stub(device):
+    """The adapter as the identity method records it, without a real node."""
+    if device.get('kind') != 'character-device':
+        return device
+    return {'id': device['id'], 'kind': 'usb', 'container_path': device['container_path'], 'major': 166,
+            'serial_link': '/dev/serial/by-id/usb-Z-Stick', 'usb': {'vendor': '0658', 'product': '0200', 'port': '3-8'}}
+
 class ExtraPathUI(RecordingUI):
     """Adds one container volume the first time the extra path is offered."""
 
@@ -84,11 +93,13 @@ class StackExtraPathTests(unittest.TestCase):
 
             ui.confirm, ui.choose = confirm, choose
             template = self.catalog.compose(app)
-            with patch("proxmenux_oci.extra_devices.host.usb_devices", return_value=usb):
+            with patch("proxmenux_oci.extra_devices.host.usb_devices", return_value=usb), \
+                    patch.object(usb_passthrough(), "converted", side_effect=by_identity_stub):
                 plan = build_deployment(template, ui, ADVANCED_MODE)
-            self.assertEqual([(d["kind"], d["host_path"], d["gid_strategy"]) for d in plan["extra_devices"]],
-                             [("character-device", "/dev/ttyACM1", "host-device-gid")], app)
-            self.assertIn("/dev/ttyACM1", _deployment_summary_text(template, plan), app)
+            # Recorded by its identity, where the application looks for it.
+            self.assertEqual([(d["kind"], d["container_path"], d["usb"]["port"]) for d in plan["extra_devices"]],
+                             [("usb", "/dev/ttyACM1", "3-8")], app)
+            self.assertIn("/dev/ttyACM1 (USB 0658:0200 · 3-8)", _deployment_summary_text(template, plan), app)
 
     def test_the_default_installation_does_not_ask_it(self, *_):
         for app in SPECIAL:

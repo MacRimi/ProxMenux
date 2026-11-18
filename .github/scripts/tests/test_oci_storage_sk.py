@@ -134,7 +134,7 @@ class StorageWordingTests(StorageFixture):
     def test_shared_selection_error_in_device_flow_also_preserves_members(self):
         services=[{'name':'main','main':True,'deployment':{}}];original=copy.deepcopy(services)
         ui=self.recorder()
-        with patch.object(extra_devices,'ask_extra_devices',return_value=[{'kind':'usb','host_path':'/fiction-only/device'}]), \
+        with patch.object(extra_devices,'ask_extra_devices',return_value=[{'kind':'character-device','host_path':'/fiction-only/device'}]), \
                 patch.object(ui,'checklist',return_value=[]):
             with self.assertRaisesRegex(ValueError,'^Vyberte aspoň jeden kontajner aplikácie$'):
                 extra_devices.ask_stack_extra_devices(ui,services)

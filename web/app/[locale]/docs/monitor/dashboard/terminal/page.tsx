@@ -98,7 +98,7 @@ export default async function TerminalTabPage({
           alt={t("singleAlt")}
           width={1600}
           height={1000}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("singleCaption", { em })}
@@ -138,7 +138,7 @@ export default async function TerminalTabPage({
           alt={t("gridAlt")}
           width={1600}
           height={1000}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("gridCaption", { code })}
@@ -194,7 +194,7 @@ export default async function TerminalTabPage({
           alt={t("lxcAlt")}
           width={1600}
           height={1200}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("lxcCaption", { em })}
@@ -212,7 +212,7 @@ export default async function TerminalTabPage({
           alt={t("search.modalAlt")}
           width={1600}
           height={1200}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("search.modalCaption", { code, em })}

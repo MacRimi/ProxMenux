@@ -114,7 +114,7 @@ export default async function GlossaryPage({
                   ) : null}
                 </dt>
                 <dd
-                  className="text-gray-800 leading-relaxed [&_a]:text-blue-600 [&_a]:hover:underline [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm"
+                  className="text-gray-800 leading-relaxed [&_a]:text-blue-600 hover:[&_a]:underline [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm"
                   dangerouslySetInnerHTML={{ __html: icuQuotesToHtml(entry.def) }}
                 />
               </div>

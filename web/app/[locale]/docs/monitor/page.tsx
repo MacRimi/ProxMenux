@@ -125,7 +125,7 @@ export default async function MonitorOverviewPage({
         <img
           src="/monitor/dashboard-home.png"
           alt={t("hero.alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("hero.caption")}
@@ -206,7 +206,7 @@ https://<your-domain>/proxmenux-monitor/`}
           <img
             src="/monitor/mobile-home.png"
             alt={t("mobile.phoneAlt")}
-            className="rounded-lg border border-gray-200 shadow-sm w-full"
+            className="rounded-lg border border-gray-200 shadow-xs w-full"
           />
           <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
             {t("mobile.phoneCaption")}
@@ -237,7 +237,7 @@ https://<your-domain>/proxmenux-monitor/`}
         <img
           src="/monitor/health-monitor.png"
           alt={t("health.alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("health.caption")}

@@ -91,7 +91,7 @@ export default async function RestoringPage({
 
   const asciiDiagram = (text: string, caption: string) => (
     <figure className="my-6">
-      <pre className="bg-gray-50 border border-gray-200 rounded-md p-4 text-xs sm:text-sm font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed">
+      <pre className="bg-gray-50 border border-gray-200 rounded-md p-4 text-xs sm:text-sm font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed sm:leading-5">
         {text}
       </pre>
       {caption && (
@@ -316,7 +316,7 @@ export default async function RestoringPage({
             alt={t("postbootExample.imageAlt")}
             width={1600}
             height={800}
-            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -373,7 +373,7 @@ export default async function RestoringPage({
             alt={t("liveProgress.imageAlt")}
             width={1600}
             height={1200}
-            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -394,7 +394,7 @@ export default async function RestoringPage({
             alt={t("liveProgress.detailsImageAlt")}
             width={1600}
             height={1200}
-            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">

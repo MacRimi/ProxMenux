@@ -31,6 +31,7 @@ import oci_nested_mounts
 import oci_stack_public_routes
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, stop_spinner, log
 import oci_mount_lock
+import oci_stack_vmids
 
 HERE = Path(__file__).resolve().parent
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
@@ -1012,21 +1013,17 @@ def main():
     msg_info(translate('Reserving a private network...'))
     with open('/run/lock/proxmenux-private-network.lock','w') as lock, tempfile.TemporaryDirectory(prefix='proxmenux-stack-') as tmp:
         fcntl.flock(lock,fcntl.LOCK_EX)
-        base = deployment.get('base_vmid') or int(run('pvesh','get','/cluster/nextid').strip())
-        while any(exists(base+s['offset']) for s in services):
-            if deployment.get('base_vmid'):
-                raise RuntimeError(translate('The requested VMID block is already in use'))
-            base += 1
+        chosen_vmids = oci_stack_vmids.allocate(deployment, services)
         selection = allocate_network(deployment,existing_bridges(),existing_networks())
         if selection is None:
             raise RuntimeError(translate('The private network must be assigned automatically'))
         bridge, subnet = selection
         deployment['network'].update(private_bridge=bridge, private_subnet=str(subnet),
                                      private_host_address=str(subnet.network_address+1)+'/24')
-        primary_id = base
+        primary_id = chosen_vmids[primary['name']] if primary else None
         aliases = []
         for s in services:
-            s['vmid'] = base+s['offset']
+            s['vmid'] = chosen_vmids[s['name']]
             s['ip'] = str(subnet.network_address+30+s['offset'])
             for alias in s['aliases']:
                 if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,252}',alias):
@@ -1036,7 +1033,7 @@ def main():
             lifecycle = Path(f'/etc/pve/priv/proxmenux-stack-{primary_id}.json')
             retire_stale_contract(lifecycle,primary_id)
         try:
-            log(LOG, f"Stack {deployment['stack_name']}: CT {base}-{base+len(services)-1}; network {subnet} on {bridge}")
+            log(LOG, f"Stack {deployment['stack_name']}: CT {', '.join(str(s['vmid']) for s in services)}; network {subnet} on {bridge}")
             run('pvesh','create',f'/nodes/{node}/network','--iface',bridge,'--type','bridge','--autostart','1','--cidr',str(subnet.network_address+1)+'/24')
             bridge_created = True
             run('ip','link','add','name',bridge,'type','bridge')

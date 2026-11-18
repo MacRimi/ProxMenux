@@ -218,12 +218,15 @@ def edit_setting(candidate, ui, setting):
         if notes:
             deployment['completion_notes'] = notes
     elif setting == 'devices':
-        from .extra_devices import ask_extra_devices
+        from .extra_devices import ask_extra_devices, by_identity
         reference = template.get('container_contract', {}).get('image', {}).get('reference', '')
         repository = reference.split('@')[0].rsplit(':', 1)[0]
-        deployment['devices'] = ask_extra_devices(
+        chosen = ask_extra_devices(
             ui, deployment.get('devices', []), deployment.get('security', {}).get('unprivileged', True),
             allow_coral=repository in ('ghcr.io/blakeblackshear/frigate', 'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+        # A USB device already in the container that is unplugged now keeps
+        # its entry; the ones present are recorded by what they are.
+        deployment['devices'] = [by_identity(device, keep_missing=True) for device in chosen]
     elif setting == 'environment':
         edit_environment(deployment, ui)
     elif setting == 'catalog':

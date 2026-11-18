@@ -3431,6 +3431,7 @@
       "featureGithub": "rapport clair que vous pouvez imprimer ou enregistrer",
       "install": "Installer Lynis",
       "installedDescription": "Lynis est installé et prêt à auditer cet hôte.",
+      "installedOutside": "Lynis est installé et prêt à auditer cet hôte. Il n’a pas été installé par ProxMenux : il se met à jour et se supprime de la même manière qu’il a été installé.",
       "lastScan": "Dernière analyse",
       "hardeningIndex": "Indice de durcissement",
       "warnings": "Avertissements",

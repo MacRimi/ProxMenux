@@ -150,7 +150,8 @@ export default async function LynisPage({
           <li key={idx}>{t.rich(`detection.items.${idx}`, { code })}</li>
         ))}
       </ol>
-      <p className="mb-6 text-gray-800 leading-relaxed">{t.rich("detection.outro", { code, strong })}</p>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("detection.outro", { code, strong })}</p>
+      <p className="mb-6 text-gray-800 leading-relaxed">{t("detection.outsideNote")}</p>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("audit.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("audit.intro", { strong })}</p>
@@ -245,7 +246,7 @@ export default async function LynisPage({
           alt={t("sample.imageAlt")}
           width={1414}
           height={2000}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("sample.captionPrefix")}

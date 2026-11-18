@@ -9,6 +9,7 @@ import stat
 import tempfile
 
 import oci_nested_mounts as nested_mounts
+import oci_usb_passthrough as usb_passthrough
 from oci_ui import translate
 
 
@@ -202,7 +203,7 @@ def file_binds(config):
 def filter_config(config, deployment, runtime_config=None):
     """The configuration without the entries of the mounts the deployment
     declares itself: what is left belongs to the acceleration profile."""
-    config = nested_mounts.without(config)
+    config = usb_passthrough.without(nested_mounts.without(config))
     declared = set(tmpfs_lines(deployment, runtime_config if runtime_config is not None else config))
     files = {m['source'] for m in deployment.get('mounts', []) if m.get('type') == 'host-bind'}
 

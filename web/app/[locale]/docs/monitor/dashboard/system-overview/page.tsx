@@ -87,7 +87,7 @@ export default async function SystemOverviewTabPage({
         <img
           src="/monitor/dashboard-home.png"
           alt={t("captureAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("captureCaption")}
@@ -154,7 +154,7 @@ export default async function SystemOverviewTabPage({
         <img
           src="/monitor/system-overview-top-processes.png"
           alt={t("processes.captureListAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("processes.captureListCaption")}
@@ -178,7 +178,7 @@ export default async function SystemOverviewTabPage({
         <img
           src="/monitor/system-overview-process-detail.png"
           alt={t("processes.captureDetailAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("processes.captureDetailCaption")}

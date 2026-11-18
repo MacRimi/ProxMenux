@@ -241,6 +241,20 @@ oci_apply_extra_devices() {
       || die "$(translate "Could not add the device to the container:") $path"
     count=$((count + 1))
   done < <(jq -r '.extra_devices[]? | select(.kind == "character-device") | [.host_path, (.mode // "0660"), (if .deny_write then 1 else 0 end)] | @tsv' "$DEPLOYMENT_FILE")
+  # USB devices recorded by their identity: the lines of the container and
+  # the udev rule that lets it write to them, whatever number they get.
+  local usb_count usb_file
+  usb_count=$(jq '[.extra_devices[]? | select(.kind == "usb")] | length' "$DEPLOYMENT_FILE")
+  if (( usb_count > 0 )); then
+    usb_file=$(mktemp)
+    jq '{devices: [.extra_devices[] | select(.kind == "usb")]}' "$DEPLOYMENT_FILE" >"$usb_file"
+    if ! oci_quiet python3 "${SCRIPT_DIR}/oci_usb_passthrough.py" apply "$vmid" "$usb_file"; then
+      rm -f "$usb_file"
+      die "$(translate "Could not add the USB devices to the container")"
+    fi
+    rm -f "$usb_file"
+    count=$((count + usb_count))
+  fi
   if (( count > 0 )); then
     msg_ok "$(translate "Devices added:") $count"
   fi

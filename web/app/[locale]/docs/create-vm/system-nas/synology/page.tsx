@@ -218,7 +218,7 @@ export default function SynologyPage() {
         <p className="mb-4 text-gray-800 leading-relaxed">{t("step1.intro")}</p>
 
         {activeLoader === "arc" && (
-          <div className="flex flex-col space-y-8">
+          <div className="flex flex-col stack-y-8">
             <p className="text-gray-800 leading-relaxed">{t.rich("step1.arc.webRich", { strong, code })}</p>
             <ImageCaption src="/vm/synology/arc/arc_1_0_1.png" alt={t("step1.arc.webAlt")} caption={t("step1.arc.webCaption")} />
             <p className="text-gray-800 leading-relaxed">{t.rich("step1.arc.termRich", { strong })}</p>
@@ -227,7 +227,7 @@ export default function SynologyPage() {
         )}
 
         {activeLoader === "rr" && (
-          <div className="flex flex-col space-y-8">
+          <div className="flex flex-col stack-y-8">
             <p className="text-gray-800 leading-relaxed">{t.rich("step1.rr.webRich", { strong, code })}</p>
             <ImageCaption src="/vm/synology/rr/rr_2_0_2.png" alt={t("step1.rr.webAlt")} caption={t("step1.rr.webCaption")} />
             <p className="text-gray-800 leading-relaxed">{t.rich("step1.rr.termRich", { strong, code })}</p>
@@ -236,7 +236,7 @@ export default function SynologyPage() {
         )}
 
         {activeLoader === "tinycore" && (
-          <div className="flex flex-col space-y-8">
+          <div className="flex flex-col stack-y-8">
             <p className="text-gray-800 leading-relaxed">{t.rich("step1.tinycore.webRich", { strong, code })}</p>
             <ImageCaption src="/vm/synology/tinycore/tinycore_3_0_1.png" alt={t("step1.tinycore.webAlt")} caption={t("step1.tinycore.webCaption")} />
             <p className="text-gray-800 leading-relaxed">{t.rich("step1.tinycore.termRich", { strong })}</p>
@@ -261,20 +261,20 @@ export default function SynologyPage() {
       <StepSection n={3} title={t("step3.title")} stepLabel={t("stepBadge")}>
         <p className="mb-4 text-gray-800 leading-relaxed">{t("step3.intro")}</p>
         {activeLoader === "arc" && (
-          <div className="flex flex-col space-y-10">
+          <div className="flex flex-col stack-y-10">
             <ImageCaption src="/vm/synology/arc/arc_1_3_1.png" alt={step3Arc[0].alt} caption={step3Arc[0].caption} />
             <ImageCaption src="/vm/synology/arc/arc_1_3_2.png" alt={step3Arc[1].alt} caption={step3Arc[1].caption} />
           </div>
         )}
         {activeLoader === "rr" && (
-          <div className="flex flex-col space-y-10">
+          <div className="flex flex-col stack-y-10">
             <ImageCaption src="/vm/synology/rr/rr_2_3_1.png" alt={step3Rr[0].alt} caption={step3Rr[0].caption} />
             <ImageCaption src="/vm/synology/rr/rr_2_3_2.png" alt={step3Rr[1].alt} caption={step3Rr[1].caption} />
             <ImageCaption src="/vm/synology/rr/rr_2_3_3.png" alt={step3Rr[2].alt} caption={step3Rr[2].caption} />
           </div>
         )}
         {activeLoader === "tinycore" && (
-          <div className="flex flex-col space-y-10">
+          <div className="flex flex-col stack-y-10">
             <ImageCaption src="/vm/synology/tinycore/tinycore_3_3_1.png" alt={step3Tc[0].alt} caption={step3Tc[0].caption} />
             <ImageCaption src="/vm/synology/tinycore/tinycore_3_3_2.png" alt={step3Tc[1].alt} caption={step3Tc[1].caption} />
           </div>
@@ -284,7 +284,7 @@ export default function SynologyPage() {
       <StepSection n={4} title={t("step4.title")} stepLabel={t("stepBadge")}>
         <p className="mb-4 text-gray-800 leading-relaxed">{t("step4.intro")}</p>
         {activeLoader === "arc" && (
-          <div className="flex flex-col space-y-10">
+          <div className="flex flex-col stack-y-10">
             <p className="text-gray-800 leading-relaxed">{t.rich("step4.arc.autoRich", { strong })}</p>
             <ImageCaption src="/vm/synology/arc/arc_1_4_1.png" alt={t("step4.arc.autoAlt")} caption={t("step4.arc.autoCaption")} />
             <p className="text-gray-800 leading-relaxed">{t("step4.arc.manualRich")}</p>
@@ -295,14 +295,14 @@ export default function SynologyPage() {
           </div>
         )}
         {activeLoader === "rr" && (
-          <div className="flex flex-col space-y-10">
+          <div className="flex flex-col stack-y-10">
             <ImageCaption src="/vm/synology/rr/rr_2_4_1.png" alt={step4Rr[0].alt} caption={step4Rr[0].caption} />
             <ImageCaption src="/vm/synology/rr/rr_2_4_2.png" alt={step4Rr[1].alt} caption={step4Rr[1].caption} />
             <ImageCaption src="/vm/synology/rr/rr_2_4_3.png" alt={step4Rr[2].alt} caption={step4Rr[2].caption} />
           </div>
         )}
         {activeLoader === "tinycore" && (
-          <div className="flex flex-col space-y-10">
+          <div className="flex flex-col stack-y-10">
             <ImageCaption src="/vm/synology/tinycore/tinycore_3_4_1.png" alt={step4Tc[0].alt} caption={step4Tc[0].caption} />
             <ImageCaption src="/vm/synology/tinycore/tinycore_3_4_2.png" alt={step4Tc[1].alt} caption={step4Tc[1].caption} />
             <ImageCaption src="/vm/synology/tinycore/tinycore_3_4_3.png" alt={step4Tc[2].alt} caption={step4Tc[2].caption} />
@@ -343,7 +343,7 @@ export default function SynologyPage() {
         <code>https://finds.synology.com</code>
       </pre>
       <p className="mb-6 text-gray-800 leading-relaxed">{t("dsmInstall.afterCode")}</p>
-      <div className="flex flex-col space-y-10">
+      <div className="flex flex-col stack-y-10">
         <ImageCaption src="/vm/synology/install_DSM.png" alt={t("dsmInstall.setupAlt")} caption={t("dsmInstall.setupCaption")} />
         <p className="text-gray-800 leading-relaxed">{t("dsmInstall.patience")}</p>
         <ImageCaption src="/vm/synology/finish_install_DSM.png" alt={t("dsmInstall.finishAlt")} caption={t("dsmInstall.finishCaption")} />

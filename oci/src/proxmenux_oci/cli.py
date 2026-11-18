@@ -15,6 +15,7 @@ from typing import Any
 from . import console, images
 from .catalog import Catalog
 from .converter import ConversionError
+from .extra_devices import device_label
 from .github_source import SourceError
 from .i18n import N_, diagnostic, source_text, translate
 from .installer import (
@@ -257,13 +258,16 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
     if plan.get("deployment_kind"):
         base_vmid = plan.get("base_vmid")
         row(translate("Stack"), plan.get("stack_name", title))
-        row(translate("Base VMID"), base_vmid if base_vmid is not None else translate("next free block"))
+        if not plan.get("service_vmids"):
+            row(translate("Base VMID"), base_vmid if base_vmid is not None else translate("next free block"))
         services = template.get("compose_stack", {}).get("services", [])
         if plan.get("deployment_kind") == "generic-multi-lxc-stack":
             services = [dict(s, vmid_offset=s["offset"]) for s in plan["services"]]
         for service in sorted(services, key=lambda item: item.get("vmid_offset", 0)):
             offset = service.get("vmid_offset", 0)
-            vmid = base_vmid + offset if base_vmid is not None else f"base+{offset}"
+            vmid = plan.get("service_vmids", {}).get(service["name"])
+            if vmid is None:
+                vmid = base_vmid + offset if base_vmid is not None else f"base+{offset}"
             lines.append(f"  - {service['name']}: CT {vmid}")
         lines.append("")
         row("Rootfs", plan.get("rootfs_storage", "-"))
@@ -311,7 +315,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     target += f" · idmap={mount['idmap']}"
                 lines.append(f"  {mount['container_path']} → {target}")
         if plan.get("extra_devices"):
-            row(translate("Devices"), ", ".join(device["host_path"] for device in plan["extra_devices"]))
+            row(translate("Devices"), ", ".join(device_label(device) for device in plan["extra_devices"]))
     else:
         row(translate("Container"), f"CT {plan.get('vmid') or translate('next free')} · {plan.get('hostname', '-')}")
 
@@ -372,7 +376,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
         profile_label = (translate(selected["label"]).split("  ")[0] if selected
                          else plan.get("hardware_profile") or translate("custom"))
         row(translate("Acceleration"),
-            ", ".join([profile_label, *[d.get("host_path") or d.get("kind", "-") for d in devices]]))
+            ", ".join([profile_label, *[device_label(d) for d in devices]]))
     security = plan.get("security")
     if security:
         row(translate("Security"),

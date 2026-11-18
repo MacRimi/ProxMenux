@@ -52,7 +52,7 @@ export default async function LxcSambaGuide({
 
   return (
     <div className="min-h-screen bg-white text-gray-900 pt-16 flex flex-col">
-      <div className="container mx-auto px-4 pt-6 pb-16 flex-grow" style={{ maxWidth: "980px" }}>
+      <div className="container mx-auto px-4 pt-6 pb-16 grow" style={{ maxWidth: "980px" }}>
       <DocHeader
         title={t("header.title")}
         description={t("header.description")}

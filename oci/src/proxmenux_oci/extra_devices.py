@@ -2,6 +2,7 @@
 import copy
 import re
 from pathlib import Path
+import sys
 
 from . import host
 from .i18n import translate
@@ -11,6 +12,49 @@ from .ui import ReadableTags, UserCancelled
 GPU_NODE = re.compile(r'/dev/dri/(?:renderD|card)[0-9]+|/dev/kfd')
 USB_NODE = re.compile(r'/dev/(?:ttyUSB[0-9]+|ttyACM[0-9]+|bus/usb/[0-9]{3}/[0-9]{3})')
 CORAL_NODE = re.compile(r'/dev/apex_[0-9]+')
+
+
+def usb_passthrough():
+    """The module that passes a USB device by its identity, shared with the
+    helpers that apply and check it."""
+    remote = str(Path(__file__).resolve().parents[2] / 'remote')
+    if remote not in sys.path:
+        sys.path.insert(0, remote)
+    import oci_usb_passthrough
+    return oci_usb_passthrough
+
+
+def by_identity(device, keep_missing=False):
+    """A USB device chosen by its current node, recorded by what it is, so the
+    container keeps it when the kernel numbers it again. Any other device is
+    returned as it is, and so is a recorded one that is not plugged in now
+    when ``keep_missing`` is set."""
+    try:
+        return usb_passthrough().converted(device)
+    except OSError:
+        if keep_missing:
+            return device
+        raise ValueError(f"{translate('The USB device is not connected')}: {device.get('host_path')}") from None
+
+
+def device_node(device):
+    """The host node a device has now: its path, or for a USB device recorded
+    by its identity the node it was given this time (None when unplugged)."""
+    if device.get('host_path'):
+        return device['host_path']
+    usb = usb_passthrough()
+    return usb.present(device) if usb.recorded(device) else None
+
+
+def device_label(device):
+    """How a device reads in a summary."""
+    if not usb_passthrough().recorded(device):
+        return device.get('host_path') or device.get('kind', '-')
+    if device.get('tree'):
+        return '/dev/bus/usb'
+    identity = device['usb']
+    name = f"USB {identity['vendor']}:{identity['product']} · {identity['port']}"
+    return f"{device['container_path']} ({name})" if 'serial_link' in device else name
 
 
 def choose_usb_device(ui, title, default=None, attached=()):
@@ -56,14 +100,14 @@ def ask_extra_devices(ui, devices, unprivileged, allow_coral=False, kinds=('gpu'
             valid = GPU_NODE.fullmatch(path)
         elif kind == 'usb':
             path = choose_usb_device(ui, translate('USB device to attach'),
-                                     attached={item.get('host_path') for item in result})
+                                     attached={device_node(item) for item in result})
             valid = USB_NODE.fullmatch(path)
         else:
             path = ui.ask(translate('Host Coral node (e.g. /dev/apex_0)'), '/dev/apex_0')
             valid = CORAL_NODE.fullmatch(path)
         if not valid:
             raise ValueError(translate('Choose a specific supported GPU or USB node'))
-        if any(item.get('host_path') == path for item in result):
+        if any(device_node(item) == path for item in result):
             raise ValueError(translate('This device is already attached'))
         if kind == 'usb' and '/bus/usb/' in path:
             ui.info(translate('USB bus numbers can change after reconnecting or rebooting.'))
@@ -88,14 +132,14 @@ def device_permissions(image, devices, existing=None):
 
 def ask_stack_extra_devices(ui, services):
     """Ask once per device, then select the stack members that need it."""
-    devices = ask_extra_devices(ui, [], True)
+    devices = [by_identity(device) for device in ask_extra_devices(ui, [], True)]
     if not devices:
         return
     options = [(service['name'], service['name']) for service in services]
     for device in devices:
+        label = 'NVIDIA' if device.get('kind') == 'nvidia-runtime' else device_label(device)
         selected = ui.checklist(
-            f"{translate('Containers that will receive this device')}: "
-            f"{device.get('host_path', 'NVIDIA')}", options,
+            f"{translate('Containers that will receive this device')}: {label}", options,
             [service['name'] for service in services if service.get('main')] or [options[-1][0]])
         if not selected or set(selected) - {name for name, _ in options}:
             raise ValueError(translate('Select at least one stack container'))
@@ -104,8 +148,8 @@ def ask_stack_extra_devices(ui, services):
                 continue
             plan = service['deployment']
             existing = plan.setdefault('devices', [])
-            if any(item.get('host_path') == device.get('host_path') if device.get('host_path')
-                   else item.get('kind') == 'nvidia-runtime' for item in existing):
+            if any(item.get('kind') == 'nvidia-runtime' if device.get('kind') == 'nvidia-runtime'
+                   else device_node(item) == device_node(device) for item in existing):
                 raise ValueError(translate('This device is already attached'))
             member_device = copy.deepcopy(device)
             if member_device['kind'] == 'nvidia-runtime':

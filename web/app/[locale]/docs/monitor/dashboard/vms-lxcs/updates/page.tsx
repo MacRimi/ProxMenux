@@ -24,7 +24,7 @@ type ProblemRow = { problem: string; resolution: string }
 function Figure({ src, alt, caption }: { src: string; alt: string; caption: string }) {
   return (
     <figure className="my-6">
-      <img src={src} alt={alt} className="w-full rounded-lg border border-gray-200 shadow-sm" />
+      <img src={src} alt={alt} className="w-full rounded-lg border border-gray-200 shadow-xs" />
       <figcaption className="mt-2 text-center text-sm italic text-gray-500">{caption}</figcaption>
     </figure>
   )

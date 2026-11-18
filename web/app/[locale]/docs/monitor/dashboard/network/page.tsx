@@ -108,7 +108,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-flow-overview.png"
           alt={t("flow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("flow.imageCaption")}
@@ -210,7 +210,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-latency-historical.png"
           alt={t("latency.mode1Alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("latency.mode1Caption")}
@@ -230,7 +230,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-latency-realtime.png"
           alt={t("latency.mode2Alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("latency.mode2Caption", { em })}
@@ -275,7 +275,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-latency-report-preview.png"
           alt={t("latency.reportPreviewAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("latency.reportPreviewCaption")}

@@ -33,7 +33,7 @@ function contributionsUrl(login: string) {
 }
 
 function External({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
-  return <a href={href} target="_blank" rel="noopener noreferrer" className={"rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 " + className}>{children}</a>
+  return <a href={href} target="_blank" rel="noopener noreferrer" className={"rounded focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 " + className}>{children}</a>
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -68,10 +68,10 @@ export default async function ContributorsPage({ params }: { params: Promise<{ l
         <p className={paragraph}>{t("active.intro")}</p>
         <div className="grid gap-4 md:grid-cols-3">
           {activeContributors.map((login) => (
-            <article key={login} className="flex min-w-0 flex-col rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/70 to-white p-5">
+            <article key={login} className="flex min-w-0 flex-col rounded-xl border border-blue-100 bg-linear-to-b from-blue-50/70 to-white p-5">
               <External href={"https://github.com/" + login} className="group flex items-center gap-3">
-                <Image src={"/avatars/contributors/" + login + ".png"} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-full border border-white object-cover shadow-sm" />
-                <h3 className="min-w-0 break-words text-lg font-semibold text-gray-900 group-hover:text-blue-700">{login}<ExternalLink className="ml-1.5 inline h-3.5 w-3.5 text-gray-400" aria-hidden="true" /></h3>
+                <Image src={"/avatars/contributors/" + login + ".png"} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-full border border-white object-cover shadow-xs" />
+                <h3 className="min-w-0 wrap-break-word text-lg font-semibold text-gray-900 group-hover:text-blue-700">{login}<ExternalLink className="ml-1.5 inline h-3.5 w-3.5 text-gray-400" aria-hidden="true" /></h3>
               </External>
               <p className="mb-5 mt-4 flex-1 text-sm leading-6 text-gray-700">{t("active.people." + login)}</p>
               <External href={contributionsUrl(login)} className="inline-flex items-center gap-2 self-start text-sm font-medium text-blue-700 hover:underline">
@@ -90,7 +90,7 @@ export default async function ContributorsPage({ params }: { params: Promise<{ l
             <li key={login} className="flex min-w-0 items-center gap-3 rounded-lg border border-gray-200 p-3">
               <Image src={"/avatars/contributors/" + login + ".png"} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
               <div className="min-w-0">
-                <External href={"https://github.com/" + login} className="break-words text-sm font-semibold text-gray-900 hover:text-blue-700 hover:underline">{login}</External>
+                <External href={"https://github.com/" + login} className="wrap-break-word text-sm font-semibold text-gray-900 hover:text-blue-700 hover:underline">{login}</External>
                 <External href={contributionsUrl(login)} className="block text-xs leading-5 text-blue-700 hover:underline">{t("code.viewWork")}<span className="sr-only">: {login}</span></External>
               </div>
             </li>
@@ -115,7 +115,7 @@ export default async function ContributorsPage({ params }: { params: Promise<{ l
           {earlyContributors.map((person) => (
             <li key={person.name} className="min-w-0 text-center">
               <Image src={"/avatars/" + person.avatar} alt="" width={64} height={64} className="mx-auto h-16 w-16 rounded-full border border-gray-200 object-cover" />
-              <h3 className="mb-0 mt-2 break-words text-sm font-semibold text-gray-900">
+              <h3 className="mb-0 mt-2 wrap-break-word text-sm font-semibold text-gray-900">
                 {person.github ? <External href={"https://github.com/" + person.github} className="hover:text-blue-700 hover:underline">{person.name}</External> : person.name}
               </h3>
               {person.youtube && <External href={person.youtube} className="mt-1 inline-flex items-center gap-1 text-xs text-red-700 hover:underline"><Youtube className="h-3.5 w-3.5" aria-hidden="true" />{t("testers.youtube")}</External>}

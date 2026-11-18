@@ -158,7 +158,7 @@ export default function LinuxResourcesPage() {
           </p>
         </div>
 
-        <div className="space-y-10 mb-16">
+        <div className="stack-y-10 mb-16">
           {resourceCategories.map((category, index) => (
             <div key={index} className="mb-8">
               <div className="flex items-center gap-3 mb-4">

@@ -257,14 +257,14 @@
           "required_for_runtime": true,
           "required_by_compose": true,
           "path_prompt": "USB device of the UPS",
-          "host_path_default": "/dev/bus/usb/001/001",
+          "host_path_default": "",
           "container_path_strategy": "same-as-host",
           "mode": "0666",
           "deny_write": false,
-          "gid_strategy": "host-device-gid",
-          "source_mapping": "/dev/bus/usb/001/001:/dev/bus/usb/001/001"
+          "gid_strategy": "host-device-gid"
         }
       ],
+      "nut_configuration": true,
       "generated_sensitive_environment": {
         "API_PASSWORD": {
           "strategy": "token-hex",

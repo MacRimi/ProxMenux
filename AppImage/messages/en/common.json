@@ -3558,6 +3558,7 @@
       "featureGithub": "clear report you can print or save",
       "install": "Install Lynis",
       "installedDescription": "Lynis is installed and ready to audit this host.",
+      "installedOutside": "Lynis is installed and ready to audit this host. It was not installed by ProxMenux, so it is updated and removed the same way it was installed.",
       "lastScan": "Last scan",
       "hardeningIndex": "Hardening index",
       "warnings": "Warnings",

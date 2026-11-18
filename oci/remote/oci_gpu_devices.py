@@ -8,6 +8,7 @@ import stat
 
 from lxc_hardware import parse_config, device_snapshot
 from oci_ui import translate
+import oci_usb_passthrough as usb_passthrough
 
 
 def gpu_path(path):
@@ -43,6 +44,9 @@ def snapshot(path):
 def planned(deployment):
     result = {}
     for device in deployment.get('devices', []):
+        # A USB device passed by its identity has no node of its own here.
+        if usb_passthrough.recorded(device):
+            continue
         path = device.get('host_path')
         kind = device.get('kind', 'character-device')
         if kind == 'block-device':
@@ -166,6 +170,8 @@ def check(config, deployment):
     if actual.keys() != expected.keys():
         raise ValueError(translate('The container devices do not match the saved record'))
     for device in deployment.get('devices', []):
+        if usb_passthrough.recorded(device):
+            continue
         path = device['host_path']
         fields = actual[path]
         value = expected[path]

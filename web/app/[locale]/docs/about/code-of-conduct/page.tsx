@@ -64,7 +64,9 @@ function wrapCodeBlocksWithCopyable(content: string) {
         const codeElement = domNode.children.find((child: any) => child.name === "code")
         if (codeElement) {
           const codeContent = codeElement.children[0]?.data?.trim() || ""
-          return <CopyableCode code={codeContent} />
+          // mt-4 repeats the block's own top margin: in Tailwind 4 the typography rule that
+          // zeroes the margin after a heading comes later in the CSS than my-4 and would win.
+          return <CopyableCode code={codeContent} className="mt-4" />
         }
       }
     },

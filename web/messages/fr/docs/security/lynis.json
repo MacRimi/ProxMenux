@@ -35,7 +35,7 @@
       },
       {
         "sourceRich": "<strong>Debian apt</strong>",
-        "path": "/usr/bin/lynis",
+        "path": "/usr/sbin/lynis",
         "update": "apt upgrade",
         "fresh": "Souvent mois / années de retard"
       }
@@ -57,7 +57,7 @@
     "items": [
       "<code>/usr/local/bin/lynis</code> — enveloppe installée par ProxMenux",
       "<code>/opt/lynis/lynis</code> — chemin direct (au cas où l'emballage serait enlevé)",
-      "<code>/usr/bin/lynis</code> — version apt-installée, si l'utilisateur l'a installé de cette façon précédemment"
+      "<code>/usr/sbin/lynis</code> — version apt-installée, si l'utilisateur l'a installé de cette façon précédemment"
     ],
     "outro": "Si un de ces chemins existe, le menu de gestion s'ouvre. Le script ne désinstalle <strong>pas</strong> un Lynis installé par apt, uniquement celui qu'il gère dans <code>/opt/lynis</code> et son lanceur."
   },
@@ -112,7 +112,7 @@
       },
       {
         "actionRich": "<strong>Supprimer</strong>",
-        "whatRich": "Supprime <code>/opt/lynis</code> et <code>/usr/local/bin/lynis</code>. Conserve les journaux <code>/var/log/lynis*</code> comme historique des audits. Un Lynis installé par apt dans <code>/usr/bin/lynis</code> reste intact."
+        "whatRich": "Supprime <code>/opt/lynis</code> et <code>/usr/local/bin/lynis</code>. Conserve les journaux <code>/var/log/lynis*</code> comme historique des audits. Un Lynis installé par apt dans <code>/usr/sbin/lynis</code> reste intact."
       }
     ]
   },

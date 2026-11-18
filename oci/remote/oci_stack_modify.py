@@ -21,6 +21,7 @@ import oci_native_modify as native_modify
 import oci_nested_mounts
 import oci_stack_adapters as adapters
 import oci_stack_replay as replay
+import oci_usb_passthrough as usb_passthrough
 from oci_ui import msg_error, msg_info, msg_ok, translate
 
 CONVERTERS = adapters.converters()
@@ -116,15 +117,24 @@ def settings_values(record, config, changes):
     return values
 
 
-def validate(vmid, changes):
+def recorded_usb(record):
+    return [device for device in (record or {}).get('deployment', {}).get('devices', [])
+            if usb_passthrough.recorded(device)]
+
+
+def validate(vmid, changes, record=None):
     """Everything that can be refused is refused before the container stops."""
     validate_settings(changes)
+    usb = {device.get('id'): device for device in recorded_usb(record)}
     mounts = {options(value).get('mp'): (key, value) for key, value in entries(vmid, 'mp').items()}
     devices = {device_path(value): key for key, value in entries(vmid, 'dev').items()}
     for path in changes['remove_mounts']:
         if path not in mounts:
             raise ValueError(f"{translate('The path to remove is not mounted:')} {path}")
     for path in changes['remove_devices']:
+        # A USB device passed by its identity is named by its id.
+        if path.startswith('usb:') and path[4:] in usb:
+            continue
         if path not in devices:
             raise ValueError(f"{translate('The device to remove is not attached:')} {path}")
     for path, change in changes.get('change_mounts', {}).items():
@@ -151,7 +161,17 @@ def validate(vmid, changes):
             host_mounts.validate_source(mount['source'], allow_missing=True)
         else:
             raise ValueError(f"{translate('Unsupported mount type:')} {mount['type']}")
+    usb_kept = [device for device in usb.values() if f"usb:{device.get('id')}" not in changes['remove_devices']]
     for device in changes['add_devices']:
+        if usb_passthrough.recorded(device):
+            identity = (device.get('usb'), device.get('serial_link'), bool(device.get('tree')))
+            if any((other.get('usb'), other.get('serial_link'), bool(other.get('tree'))) == identity
+                   for other in usb_kept):
+                raise ValueError(f"{translate('This device is already attached')}: {device.get('container_path')}")
+            usb_kept.append(device)
+            # Its record must be one the container lines can come from.
+            usb_passthrough.lines({'devices': usb_kept})
+            continue
         path = device.get('host_path')
         if device.get('kind') != 'character-device' or not (
                 gpu_devices.gpu_path(path) or gpu_devices.peripheral_path(path)):
@@ -194,10 +214,14 @@ def apply(vmid, changes):
         run('pct', 'set', str(vmid), '--' + free_key(vmid, 'mp'), value)
         msg_ok(f"{translate('Path added:')} {target}")
     for path in changes['remove_devices']:
+        if path.startswith('usb:'):
+            continue
         key = next(key for key, value in entries(vmid, 'dev').items() if device_path(value) == path)
         run('pct', 'set', str(vmid), '--delete', key)
         msg_ok(f"{translate('Device removed:')} {path}")
     for device in changes['add_devices']:
+        if usb_passthrough.recorded(device):
+            continue
         path = device['host_path']
         value = (f"path={path},mode={device.get('mode', '0660')},"
                  f"deny-write={'1' if device.get('deny_write') else '0'},gid={os.stat(path).st_gid}")
@@ -217,6 +241,39 @@ def apply(vmid, changes):
         msg_ok(f"{translate('Path removed:')} {path}")
     if changes['add_mounts'] or changes['remove_mounts'] or changes.get('change_mounts'):
         oci_nested_mounts.follow(vmid)
+
+
+def usb_name(device):
+    if device.get('serial_link'):
+        return device['serial_link']
+    usb = device.get('usb') or {}
+    return f"USB {usb.get('vendor', '')}:{usb.get('product', '')}" if usb else 'USB'
+
+
+def apply_usb(root, vmid, changes):
+    """The USB devices passed by their identity: their record is where they
+    live, and from it come the lines of the container and its udev rule."""
+    removed = {path[4:] for path in changes['remove_devices'] if path.startswith('usb:')}
+    added = [device for device in changes['add_devices'] if usb_passthrough.recorded(device)]
+    if not removed and not added:
+        return
+    record = instances.read(root, vmid)
+    plan = record['deployment']
+    kept = [device for device in plan.get('devices', [])
+            if not (usb_passthrough.recorded(device) and device.get('id') in removed)]
+    taken = {device.get('id') for device in kept}
+    for device in added:
+        base, number = device['id'], 2
+        while device['id'] in taken:
+            device['id'], number = f'{base}-{number}', number + 1
+        taken.add(device['id'])
+    plan['devices'] = kept + added
+    usb_passthrough.apply(vmid, plan)
+    instances.write(instances.location(root, vmid), record)
+    for device in added:
+        msg_ok(f"{translate('Device added:')} {usb_name(device)}")
+    for device_id in sorted(removed):
+        msg_ok(f"{translate('Device removed:')} {device_id}")
 
 
 def recorded_mounts(vmid):
@@ -332,7 +389,7 @@ def modify(root, vmid, changes):
         raise ValueError(translate('This container is not a member of a multi-container application'))
     if instances.identity(instances.command('pct', 'config', str(vmid))) != record['installation_id']:
         raise ValueError(translate('The container identity does not match'))
-    validate(vmid, changes)
+    validate(vmid, changes, record)
     backup = instances.location(root, vmid).parent / f"config-before-recreate-{time.strftime('%Y%m%d-%H%M%S')}.conf"
     backup.write_text(run('pct', 'config', str(vmid)))
     backup.chmod(0o600)
@@ -366,6 +423,7 @@ def _modify(root, vmid, changes):
                                      instances.command('pct', 'config', str(vmid)), values)
             msg_ok(translate('Resources and variables applied'))
         apply(vmid, changes)
+        apply_usb(root, vmid, changes)
         msg_info(translate('Saving the new configuration of the application...'))
         record_member(root, vmid)
         msg_ok(translate('Configuration saved'))

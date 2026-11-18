@@ -46,6 +46,12 @@ def begin(root, primary, template, deployment, members, adapter):
         if Path(adapter).name == 'install_immich_stack.sh' and name == 'server':
             # An update must know that the server transcodes with NVIDIA.
             plan['video_transcoding'] = copy.deepcopy(deployment.get('video_transcoding', {'acceleration': 'cpu'}))
+        from oci_stack_adapters import ADAPTERS
+        if name == ADAPTERS.get(Path(adapter).name, {}).get('main_role'):
+            # The USB devices passed by their identity have no devN line to be
+            # read back from: the record of the member that gets them keeps them.
+            plan['devices'] = [copy.deepcopy(device) for device in deployment.get('extra_devices', [])
+                               if device.get('kind') == 'usb']
         if Path(adapter).name in oci_stack_replay.FILES:
             plan['replay_profile'] = {'adapter': Path(adapter).name, 'role': name}
             if not oci_stack_replay.FILES[Path(adapter).name][name]:

@@ -220,7 +220,7 @@ export async function DocPage({
         return (
           <div key={index} className="mb-6 overflow-hidden rounded-lg border border-blue-200 bg-white">
             {data.title && <div className="border-b border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-gray-900">{t(`${base}.title`)}</div>}
-            <pre className="whitespace-pre-wrap break-words bg-white p-4 text-sm leading-6 text-gray-800">{t(`${base}.body`)}</pre>
+            <pre className="whitespace-pre-wrap wrap-break-word bg-white p-4 text-sm leading-6 text-gray-800">{t(`${base}.body`)}</pre>
           </div>
         )
 
@@ -257,7 +257,7 @@ export async function DocPage({
               alt={t(`${base}.alt`)}
               width={data.width ?? 1600}
               height={data.height ?? 1000}
-              className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+              className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
             />
             {data.caption && (
               <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{rich(`${base}.caption`)}</figcaption>
@@ -272,7 +272,7 @@ export async function DocPage({
               <span>{t(`${base}.summary`)}</span>
               <code className="text-xs font-normal text-gray-600">{data.pathCode}</code>
             </summary>
-            <pre className="max-h-[42rem] overflow-auto border-t border-blue-200 bg-gray-950 p-5 text-xs leading-6 text-gray-100">
+            <pre className="max-h-168 overflow-auto border-t border-blue-200 bg-gray-950 p-5 text-xs leading-6 text-gray-100">
               <code>{SNIPPETS[data.snippetCode] ?? ""}</code>
             </pre>
           </details>
