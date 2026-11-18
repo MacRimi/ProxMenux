@@ -182,7 +182,7 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
       </Callout>
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/homepage.png" alt={t("homepage.imageAlt")} width={2000} height={1062} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl" />
+        <Image src="/monitor/integrations/homepage.png" alt={t("homepage.imageAlt")} width={2000} height={1062} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("homepage.imageCaption", { code })}</figcaption>
       </figure>
 
@@ -357,7 +357,7 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
       </p>
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} width={2000} height={1200} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl" />
+        <Image src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} width={2000} height={1200} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("homeAssistant.imageCaption")}</figcaption>
       </figure>
 
@@ -860,7 +860,7 @@ cards:
       />
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/home-assistant-view.png" alt={t("homeAssistant.viewImageAlt")} width={2210} height={1606} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-3xl" />
+        <Image src="/monitor/integrations/home-assistant-view.png" alt={t("homeAssistant.viewImageAlt")} width={2210} height={1606} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-3xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("homeAssistant.viewImageCaption", { em })}</figcaption>
       </figure>
 
@@ -971,7 +971,7 @@ cards:
       </p>
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/grafana.png" alt={t("grafana.imageAlt")} width={2000} height={1327} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl" />
+        <Image src="/monitor/integrations/grafana.png" alt={t("grafana.imageAlt")} width={2000} height={1327} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("grafana.imageCaption", { link: promAnchor })}</figcaption>
       </figure>
 

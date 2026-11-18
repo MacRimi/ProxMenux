@@ -1,6 +1,89 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
+
+/* `dark:` follows the `dark` class on <html>, not the system colour scheme. */
+@custom-variant dark (&:is(.dark *));
+
+/* Semantic colours and radii, read from the variables defined below. */
+@theme inline {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@theme {
+  /* Tailwind 4 made the text-* line-heights unitless ratios, so a child with
+     another font size no longer inherits the same height. Keep the Tailwind 3
+     lengths. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+}
+
+/* Centred, with side padding, and capped at 1400px on wide screens only. */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+
+  @media (width >= 40rem) {
+    max-width: none;
+  }
+
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* Tailwind 4 no longer gives buttons a pointer cursor. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 @layer base {
   :root {
@@ -59,87 +142,107 @@
 }
 
 
-.prose pre {
-  background-color: #f3f4f6; 
-  color: #1f2937; 
-  padding: 1rem;
-  border-radius: 0.5rem;
-  overflow-x: auto; 
+/* Tailwind 3's space-y: every child but the first takes the top margin and
+   loses its bottom margin, even when the child has margin classes of its own.
+   Tailwind 4's space-y lets those classes win, which shifts the few layouts
+   that relied on the old behaviour. They use stack-y instead. */
+@utility stack-y-* {
+  & > :not(:first-child) {
+    margin-top: calc(var(--spacing) * --value(number));
+    margin-bottom: 0;
+  }
 }
 
-
-.prose p code,
-.prose li code,
-.prose td code {
-  background-color: #f3f4f6; 
-  color: #1f2937; 
-  padding: 0.2em 0.4em;
-  border-radius: 0.25rem; 
-}
-
-
-.prose code {
-  color: #1f2937;
-}
+/* Tailwind 4 utilities live in a cascade layer and unlayered CSS beats every
+   layer. In the utilities layer these rules keep competing with utility
+   classes by specificity and source order, as they did with Tailwind 3. */
+@layer utilities {
+  .prose pre {
+    background-color: #f3f4f6;
+    color: #1f2937;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
 
 
-/* Long commands and paths in running text wrap instead of widening the page
-   on a phone; tables scroll inside their own box. */
-:not(pre) > code {
-  overflow-wrap: anywhere;
-}
-
-.prose table {
-  display: block;
-  overflow-x: auto;
-}
+  .prose p code,
+  .prose li code,
+  .prose td code {
+    background-color: #f3f4f6;
+    color: #1f2937;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+  }
 
 
-button code {
-  background-color: transparent;
-  color: inherit;
-  padding: 0;
-  font-weight: normal;
-}
+  .prose code {
+    color: #1f2937;
+  }
 
 
-.prose {
-  color: #1f2937; 
-}
+  /* Long commands and paths in running text wrap instead of widening the page
+     on a phone; tables scroll inside their own box. */
+  :not(pre) > code {
+    overflow-wrap: anywhere;
+  }
+
+  .prose table {
+    display: block;
+    overflow-x: auto;
+  }
 
 
-.prose h1,
-.prose h2,
-.prose h3,
-.prose h4,
-.prose h5,
-.prose h6 {
-  color: #111827; 
-}
+  button code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    font-weight: normal;
+  }
 
 
-.prose strong,
-.prose b {
-  color: #111827; 
-  font-weight: 700; 
-}
+  .prose {
+    color: #1f2937;
+  }
 
-.prose code::before,
-.prose code::after {
-  content: "" !important; 
-}
 
-.prose a {
-  color: #0969da; 
-  font-weight: 500;
-  text-decoration: none;
-}
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    color: #111827;
+  }
 
-.prose a:hover {
-  color: #0550ae; 
-  text-decoration: underline;
-}
 
-* {
-  border-color: white;
+  .prose strong,
+  .prose b {
+    color: #111827;
+    font-weight: 700;
+  }
+
+  .prose code::before,
+  .prose code::after {
+    content: "" !important;
+  }
+
+  .prose a {
+    color: #0969da;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .prose a:hover {
+    color: #0550ae;
+    text-decoration: underline;
+  }
+
+  .prose figcaption {
+    color: hsl(var(--muted-foreground));
+  }
+
+  * {
+    border-color: white;
+  }
 }

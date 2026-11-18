@@ -275,7 +275,7 @@ export default function Page() {
             <p className="mb-4">{step.intro}</p>
 
             <div className="mt-6">
-              <div className="flex flex-col space-y-8">
+              <div className="flex flex-col stack-y-8">
                 {media.map((m, idx) => (
                   <div key={idx}>
                     {m.htmlBefore && (
@@ -304,7 +304,7 @@ export default function Page() {
           <code>https://finds.synology.com</code>
         </div>
         <p className="mb-6">{t("dsmInstall.afterCode")}</p>
-        <div className="flex flex-col space-y-8">
+        <div className="flex flex-col stack-y-8">
           <ImageWithCaption
             src="https://macrimi.github.io/ProxMenux/vm/synology/install_DSM.png"
             alt={t("dsmInstall.setupAlt")}

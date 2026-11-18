@@ -178,7 +178,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-graphics-cards-vfio.png"
           alt={t("graphics.vfioImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("graphics.vfioImageCaption", { code })}
@@ -189,7 +189,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-graphics-cards-lxc.png"
           alt={t("graphics.lxcImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("graphics.lxcImageCaption")}
@@ -242,7 +242,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-gpu-nvidia-modal.png"
           alt={t("graphics.nvidiaImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("graphics.nvidiaImageCaption")}
@@ -253,7 +253,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-gpu-intel-modal.png"
           alt={t("graphics.intelImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("graphics.intelImageCaption", { code })}
@@ -264,7 +264,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-gpu-amd-modal.png"
           alt={t("graphics.amdImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("graphics.amdImageCaption", { code })}
@@ -280,7 +280,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-gpu-nvidia-no-driver.png"
           alt={t("graphics.noDriverAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("graphics.noDriverCaption")}
@@ -291,7 +291,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-gpu-nvidia-install-prompt.png"
           alt={t("graphics.promptAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("graphics.promptCaption")}
@@ -302,7 +302,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-gpu-nvidia-install-success.png"
           alt={t("graphics.successAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("graphics.successCaption", { code })}
@@ -331,7 +331,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-coral-tpu-modal.png"
           alt={t("coral.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("coral.imageCaption")}
@@ -357,7 +357,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-storage-summary.png"
           alt={t("storage.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("storage.imageCaption", { em })}
@@ -372,7 +372,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-storage-modal-nvme.png"
           alt={t("storage.nvmeModalAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("storage.nvmeModalCaption")}
@@ -392,7 +392,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-pci-devices.png"
           alt={t("pci.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("pci.imageCaption", { code })}
@@ -412,7 +412,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-usb-devices.png"
           alt={t("usb.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("usb.imageCaption", { code })}
@@ -433,7 +433,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-power-supplies.png"
           alt={t("power.supplyImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("power.supplyImageCaption")}
@@ -444,7 +444,7 @@ export default async function HardwareTabPage({
         <img
           src="/monitor/hardware/hw-cpu-power.png"
           alt={t("power.cpuImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("power.cpuImageCaption")}

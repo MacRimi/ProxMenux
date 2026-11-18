@@ -202,7 +202,7 @@ export default async function CrossKernelPage({
         {t("flowDiagram.intro")}
       </p>
 
-      <pre className="bg-gray-50 border border-gray-200 rounded-md p-4 text-xs sm:text-sm font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed mb-6">
+      <pre className="bg-gray-50 border border-gray-200 rounded-md p-4 text-xs sm:text-sm font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed sm:leading-5 mb-6">
         {t("flowDiagram.diagram")}
       </pre>
 

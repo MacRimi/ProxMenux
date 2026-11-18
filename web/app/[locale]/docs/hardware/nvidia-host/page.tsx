@@ -244,7 +244,7 @@ sh NVIDIA-Linux-x86_64-VERSION.run \\
           alt={t("reinstallUninstall.imageAlt")}
           width={1200}
           height={680}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("reinstallUninstall.imageCaption")}

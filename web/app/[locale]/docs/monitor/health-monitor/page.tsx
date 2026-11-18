@@ -148,7 +148,7 @@ export default async function HealthMonitorPage({
           alt={t("categories.imageAlt")}
           width={1608}
           height={1752}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("categories.imageCaption")}
@@ -257,7 +257,7 @@ export default async function HealthMonitorPage({
           alt={t("dismiss.dropdownImageAlt")}
           width={1540}
           height={1072}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("dismiss.dropdownImageCaption", { em })}
@@ -270,7 +270,7 @@ export default async function HealthMonitorPage({
           alt={t("dismiss.imageAlt")}
           width={2010}
           height={1816}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("dismiss.imageCaption")}

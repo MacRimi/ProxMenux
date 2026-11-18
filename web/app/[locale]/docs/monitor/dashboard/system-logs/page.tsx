@@ -94,7 +94,7 @@ export default async function SystemLogsTabPage({
         <img
           src="/monitor/log-details-modal.png"
           alt={t("subtabs.logDetailsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("subtabs.logDetailsImageCaption")}

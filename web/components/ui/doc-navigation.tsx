@@ -145,7 +145,7 @@ export function DocNavigation({ className }: DocNavigationProps) {
             href={prevPage.href}
             className="flex items-center p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 group w-full sm:w-[calc(50%-0.5rem)] sm:max-w-[calc(50%-0.5rem)]"
           >
-            <ChevronLeft className="h-5 w-5 mr-2 text-gray-500 group-hover:text-blue-500 flex-shrink-0" />
+            <ChevronLeft className="h-5 w-5 mr-2 text-gray-500 group-hover:text-blue-500 shrink-0" />
             <div className="min-w-0 overflow-hidden">
               <div className="text-sm text-gray-500 group-hover:text-blue-600 truncate">
                 {prevPage.section ? `${tItem(prevPage.sectionI18nKey, prevPage.section)}: ` : ""}
@@ -174,7 +174,7 @@ export function DocNavigation({ className }: DocNavigationProps) {
                 {tItem(nextPage.i18nKey, nextPage.title)}
               </div>
             </div>
-            <ChevronRight className="h-5 w-5 ml-2 text-gray-500 group-hover:text-blue-500 flex-shrink-0" />
+            <ChevronRight className="h-5 w-5 ml-2 text-gray-500 group-hover:text-blue-500 shrink-0" />
           </Link>
         ) : (
           <div className="hidden sm:block sm:w-[calc(50%-0.5rem)]"></div>

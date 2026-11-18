@@ -144,13 +144,13 @@ export function SearchDialog() {
 
       {/*
         Render the modal in a portal to document.body so it escapes the Navbar's
-        fixed/z-50 stacking context. Otherwise z-[1000] is bounded by the parent
+        fixed/z-50 stacking context. Otherwise z-1000 is bounded by the parent
         context and the mobile "Documentation" bar (also z-50, later in the DOM)
         paints on top, hiding the close button.
       */}
       {mounted && isOpen && createPortal(
         <div
-          className="fixed inset-0 z-[1000] flex items-start justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-1000 flex items-start justify-center bg-black/60 backdrop-blur-xs"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsOpen(false)
           }}

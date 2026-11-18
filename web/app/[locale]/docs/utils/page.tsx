@@ -70,7 +70,7 @@ function OptionCard({ title, description, Icon, href }: OptionProps) {
       href={href}
       className="group flex items-start gap-3 rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-blue-400 hover:bg-blue-50"
     >
-      <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700">
         <Icon className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">

@@ -96,7 +96,7 @@ export default async function PostInstallUpdatesPage({
           alt={t("pathA.menuAlt")}
           width={1200}
           height={680}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("pathA.menuCaption", { em })}
@@ -113,7 +113,7 @@ export default async function PostInstallUpdatesPage({
           alt={t("pathA.checklistAlt")}
           width={1200}
           height={680}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("pathA.checklistCaption")}
@@ -132,7 +132,7 @@ export default async function PostInstallUpdatesPage({
           alt={t("pathB.imageAlt")}
           width={2000}
           height={1146}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("pathB.imageCaption")}

@@ -84,7 +84,7 @@ function CardLink({ href, title, description, Icon, color, external = true }: Ex
   const Inner = (
     <div className={`block p-6 rounded-lg shadow-md transition-colors h-full ${color}`}>
       <div className="flex items-center gap-3 mb-2">
-        <Icon className="h-6 w-6 text-white flex-shrink-0" />
+        <Icon className="h-6 w-6 text-white shrink-0" />
         <h3 className="text-xl font-semibold text-white m-0">{title}</h3>
       </div>
       <p className="text-gray-200 text-sm m-0">{description}</p>
@@ -132,8 +132,8 @@ export default async function GuidesPage({
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white pt-16 flex flex-col">
-      <div className="flex-grow container mx-auto px-4 pt-6 pb-16">
+    <div className="min-h-screen bg-linear-to-b from-gray-900 to-gray-800 text-white pt-16 flex flex-col">
+      <div className="grow container mx-auto px-4 pt-6 pb-16">
         <div className="mb-10">
           <h1 className="text-4xl font-bold mb-3">{t("header.title")}</h1>
           <p className="text-xl text-gray-200 max-w-3xl">{t("header.tagline")}</p>

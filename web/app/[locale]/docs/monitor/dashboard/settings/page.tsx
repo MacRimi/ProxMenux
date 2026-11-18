@@ -144,7 +144,7 @@ export default async function SettingsTabPage({
           alt={t("networkUnits.imageAlt")}
           width={2000}
           height={374}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("networkUnits.imageCaption")}
@@ -172,7 +172,7 @@ export default async function SettingsTabPage({
           alt={t("health.imageAlt")}
           width={2010}
           height={1816}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("health.imageCaption")}
@@ -304,7 +304,7 @@ export default async function SettingsTabPage({
           alt={t("lxcDetection.imageAlt")}
           width={2000}
           height={620}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("lxcDetection.imageCaption", { code })}
@@ -350,7 +350,7 @@ export default async function SettingsTabPage({
           alt={t("storageExclusions.imageAlt")}
           width={2000}
           height={1120}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("storageExclusions.imageCaption", { em })}
@@ -375,7 +375,7 @@ export default async function SettingsTabPage({
           alt={t("interfaceExclusions.imageAlt")}
           width={2000}
           height={1142}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("interfaceExclusions.imageCaption", { em })}
@@ -418,7 +418,7 @@ export default async function SettingsTabPage({
           alt={t("optimizations.imageAlt")}
           width={2000}
           height={1146}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("optimizations.imageCaption", { em })}
@@ -443,7 +443,7 @@ export default async function SettingsTabPage({
           alt={t("optimizations.detailAlt")}
           width={2000}
           height={1040}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("optimizations.detailCaption", { em, code })}
@@ -465,7 +465,7 @@ export default async function SettingsTabPage({
           alt={t("optimizations.updatesAlt")}
           width={2000}
           height={1146}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("optimizations.updatesCaption", { link: updatesLink })}

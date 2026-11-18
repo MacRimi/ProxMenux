@@ -241,7 +241,7 @@ export default async function PbsDestinationPage({
             alt={t("encryption.blobUploadImageAlt")}
             width={1400}
             height={700}
-            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">

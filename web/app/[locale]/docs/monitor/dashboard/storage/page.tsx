@@ -119,7 +119,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/storage-top-row.png"
           alt={t("topRow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("topRow.imageCaption")}
@@ -216,7 +216,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/disk-modal-overview.png"
           alt={t("drillIn.overviewImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.overviewImageCaption")}
@@ -236,7 +236,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/disk-modal-smart.png"
           alt={t("drillIn.smartImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.smartImageCaption")}
@@ -259,7 +259,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/smart-report-preview.png"
           alt={t("drillIn.pdfPreviewAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.pdfPreviewCaption")}
@@ -293,7 +293,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/disk-modal-history.png"
           alt={t("drillIn.historyImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("drillIn.historyImageCaption", { code })}
@@ -315,7 +315,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/disk-modal-schedule.png"
           alt={t("drillIn.scheduleImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("drillIn.scheduleImageCaption", { code })}
@@ -338,7 +338,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/disk-modal-temperature.png"
           alt={t("drillIn.tempImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.tempImageCaption")}
@@ -381,7 +381,7 @@ export default async function StorageTabPage({
         <img
           src="/monitor/disk-modal-observations.png"
           alt={t("drillIn.obsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("drillIn.obsImageCaption", { strong })}

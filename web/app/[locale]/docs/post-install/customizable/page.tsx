@@ -105,7 +105,7 @@ export default async function CustomizablePage({
             className="group flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-blue-400 hover:bg-blue-50"
           >
             <ArrowRight
-              className="h-4 w-4 mt-0.5 text-gray-400 group-hover:text-blue-600 flex-shrink-0"
+              className="h-4 w-4 mt-0.5 text-gray-400 group-hover:text-blue-600 shrink-0"
               aria-hidden="true"
             />
             <div className="min-w-0 flex-1">

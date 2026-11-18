@@ -33,7 +33,7 @@ export const Prerequisites: React.FC<PrerequisitesProps> = ({
         {items.map((item, idx) => (
           <li key={idx} className="flex items-start gap-2">
             <CheckCircle2
-              className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-1"
+              className="h-4 w-4 text-emerald-600 shrink-0 mt-1"
               aria-hidden="true"
             />
             <div className="flex-1 text-sm text-gray-800">

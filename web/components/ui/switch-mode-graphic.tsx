@@ -37,7 +37,7 @@ export const SwitchModeGraphic: React.FC<SwitchModeGraphicProps> = ({
   return (
     <div
       className={cn(
-        "rounded-xl border border-gray-800 bg-gray-950 p-5 shadow-sm",
+        "rounded-xl border border-gray-800 bg-gray-950 p-5 shadow-xs",
         className,
       )}
     >
@@ -50,7 +50,7 @@ export const SwitchModeGraphic: React.FC<SwitchModeGraphicProps> = ({
         <svg
           viewBox="0 0 240 150"
           xmlns="http://www.w3.org/2000/svg"
-          className="flex-shrink-0"
+          className="shrink-0"
           style={{ width: "150px", height: "auto" }}
           aria-hidden="true"
         >

@@ -33,7 +33,7 @@ function QA({ q, children }: QAProps) {
   return (
     <div className="mb-8">
       <h2 className="text-xl font-semibold mb-3 text-gray-900">{q}</h2>
-      <div className="text-gray-800 leading-relaxed space-y-3">{children}</div>
+      <div className="text-gray-800 leading-relaxed stack-y-3">{children}</div>
     </div>
   )
 }

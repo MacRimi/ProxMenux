@@ -123,7 +123,7 @@ function FeatureCard({
       href={href}
       className="group flex items-start gap-3 rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-blue-400 hover:bg-blue-50"
     >
-      <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700">
         <Icon className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -198,13 +198,13 @@ export default async function IntroductionPage({
         estimatedMinutes={5}
       />
 
-      <div className="my-6 not-prose flex flex-col items-center gap-4 rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-white p-6 sm:flex-row sm:items-start">
+      <div className="my-6 not-prose flex flex-col items-center gap-4 rounded-lg border border-gray-200 bg-linear-to-br from-blue-50 to-white p-6 sm:flex-row sm:items-start">
         <Image
           src="https://macrimi.github.io/ProxMenux/logo.png"
           alt="ProxMenux Logo"
           width={96}
           height={96}
-          className="flex-shrink-0"
+          className="shrink-0"
         />
         <div className="text-center sm:text-left">
           <p className="text-base text-gray-800 leading-relaxed mb-3">
