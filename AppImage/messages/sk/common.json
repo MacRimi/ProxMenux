@@ -1111,7 +1111,42 @@
     "utilization": "využité",
     "idle": "Voľné",
     "listTitle": "Virtuálne stroje a kontajnery",
+    "layout": {
+      "controls": "Ovládanie zoznamu",
+      "settings": "Nastavenie stĺpcov",
+      "expandAll": "Rozbaliť všetky",
+      "collapseAll": "Zbaliť všetky",
+      "expandVisible": "Rozbaliť zobrazené",
+      "collapseVisible": "Zbaliť zobrazené",
+      "visibleColumns": "Viditeľné stĺpce",
+      "keepIdentity": "Ponechajte zobrazený aspoň názov alebo typ a ID.",
+      "expandGuest": "Rozbaliť {name}",
+      "collapseGuest": "Zbaliť {name}",
+      "openGuestInfo": "Zobraziť informácie o stroji {name}",
+      "moveColumn": "Presuňte stĺpec {column} potiahnutím alebo klávesmi Shift a šípka",
+      "resizeColumn": "Zmeniť šírku stĺpca {column}",
+      "sortColumn": "Zoradiť podľa stĺpca {column}",
+      "sortBy": "Zoradiť",
+      "originalOrder": "Pôvodné poradie",
+      "asc": "vzostupne",
+      "desc": "zostupne",
+      "updatesShort": "Akt.",
+      "columns": {
+        "name": "Názov",
+        "type": "Typ · ID",
+        "ip": "IP adresa",
+        "cpu": "CPU",
+        "memory": "Pamäť",
+        "disk": "Disk",
+        "updates": "Aktualizácie"
+      }
+    },
     "empty": "Nenašli sa žiadne virtuálne stroje",
+    "typeFilter": {
+      "ariaLabel": "Filtrovať podľa typu stroja",
+      "all": "Všetky typy",
+      "empty": "Pre vybraný typ sa nenašli žiadne položky"
+    },
     "statusFilter": {
       "ariaLabel": "Filtrovať virtuálne stroje a kontajnery",
       "all": "Všetky",

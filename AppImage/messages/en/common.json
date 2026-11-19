@@ -1239,7 +1239,42 @@
     "utilization": "util",
     "idle": "Idle",
     "listTitle": "Virtual Machines & Containers",
+    "layout": {
+      "controls": "List controls",
+      "settings": "Column settings",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "expandVisible": "Expand visible",
+      "collapseVisible": "Collapse visible",
+      "visibleColumns": "Visible columns",
+      "keepIdentity": "Keep Name or Type · ID visible.",
+      "expandGuest": "Expand {name}",
+      "collapseGuest": "Collapse {name}",
+      "openGuestInfo": "View details for {name}",
+      "moveColumn": "Move {column} by dragging or with Shift and the arrow keys",
+      "resizeColumn": "Resize {column}",
+      "sortColumn": "Sort by {column}",
+      "sortBy": "Sort by",
+      "originalOrder": "Original order",
+      "asc": "ascending",
+      "desc": "descending",
+      "updatesShort": "Upd.",
+      "columns": {
+        "name": "Name",
+        "type": "Type · ID",
+        "ip": "IP address",
+        "cpu": "CPU",
+        "memory": "Memory",
+        "disk": "Disk",
+        "updates": "Updates"
+      }
+    },
     "empty": "No virtual machines found",
+    "typeFilter": {
+      "ariaLabel": "Filter by guest type",
+      "all": "All types",
+      "empty": "No guests of the selected type"
+    },
     "statusFilter": {
       "ariaLabel": "Filter virtual machines and containers",
       "all": "All",
