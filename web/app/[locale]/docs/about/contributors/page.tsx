@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import type { ReactNode } from "react"
 import Image from "next/image"
-import { getTranslations, setRequestLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import { BookOpen, Code2, ExternalLink, FlaskRound, GitPullRequest, Heart, Languages } from "lucide-react"
 import { Youtube } from "@/components/ui/brand-icons"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -50,7 +50,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function ContributorsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.about.contributors" })
   const ways = [
     { key: "code", Icon: Code2 }, { key: "testing", Icon: FlaskRound },

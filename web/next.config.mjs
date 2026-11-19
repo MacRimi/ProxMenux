@@ -31,6 +31,10 @@ const nextConfig = {
     ],
   },
   staticPageGenerationTimeout: 180,
+  experimental: {
+    // app/global-not-found.tsx: the 404 page, now that the root layout is under app/[locale].
+    globalNotFound: true,
+  },
 }
 
 export default withNextIntl(nextConfig)

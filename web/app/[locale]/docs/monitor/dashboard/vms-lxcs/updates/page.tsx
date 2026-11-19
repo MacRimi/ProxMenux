@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import type React from "react"
-import { getMessages, getTranslations, setRequestLocale } from "next-intl/server"
+import { getMessages, getTranslations } from "next-intl/server"
 import { ExternalLink } from "lucide-react"
 import { Link } from "@/i18n/navigation"
 import { Callout } from "@/components/ui/callout"
@@ -36,7 +36,6 @@ export default async function UpdatesTabPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.dashboard.vmsLxcsUpdates" })
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { monitor: { dashboard: { vmsLxcsUpdates: {

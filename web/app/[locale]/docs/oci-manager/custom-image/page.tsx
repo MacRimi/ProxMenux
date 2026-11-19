@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, setRequestLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import { DocPage } from "@/components/docs/DocBlocks"
 
 const NAMESPACE = "docs.ociManager.customImage"
@@ -22,6 +22,5 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
   return <DocPage locale={locale} namespace={NAMESPACE} minutes={7} links={LINKS} />
 }

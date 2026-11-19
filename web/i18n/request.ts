@@ -1,3 +1,4 @@
+import * as rootParams from "next/root-params"
 import { hasLocale } from "next-intl"
 import { getRequestConfig } from "next-intl/server"
 import { routing } from "./routing"
@@ -17,8 +18,9 @@ import { loadMessages } from "./loadMessages"
  * translator hasn't finished a section yet the user sees the English
  * text instead of a broken `MISSING_MESSAGE` placeholder.
  */
-export default getRequestConfig(async ({ requestLocale }) => {
-  const requested = await requestLocale
+export default getRequestConfig(async ({ locale: explicit }) => {
+  // Callers that pass `{ locale }` win; otherwise the [locale] root segment.
+  const requested = explicit ?? (await rootParams.locale())
   const locale = hasLocale(routing.locales, requested)
     ? requested
     : routing.defaultLocale

@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/localize-export.mjs && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind",
+    "build": "next build && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind",
     "start": "next start",
-    "index": "node scripts/localize-export.mjs && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind"
+    "index": "pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.2.1",
@@ -17,7 +17,7 @@
     "lucide-react": "^1.72.0",
     "mermaid": "^12.3.0",
     "next": "16.4.6",
-    "next-intl": "^4.14.9",
+    "next-intl": "^4.15.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "remark": "^15.0.1",

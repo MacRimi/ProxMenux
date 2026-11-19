@@ -5,7 +5,7 @@ import { remark } from "remark"
 import html from "remark-html"
 import * as gfm from "remark-gfm"
 import parse from "html-react-parser"
-import { getTranslations, setRequestLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import Footer from "@/components/footer"
 import RSSLink from "@/components/rss-link"
 import CopyableCode from "@/components/CopyableCode"
@@ -196,7 +196,6 @@ export default async function ChangelogPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "changelog" })
   const changelogContent = await getChangelogContent(locale)
   const cleanedInlineCode = cleanInlineCode(changelogContent)

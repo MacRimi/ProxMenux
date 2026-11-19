@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 
@@ -22,7 +22,6 @@ type RepoItem = { name: string; url: string; description: string; usedIn: string
 
 export default async function ExternalRepositoriesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.externalRepositories" })
 
   const messages = (await getMessages({ locale })) as unknown as {

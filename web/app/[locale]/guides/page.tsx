@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Link } from "@/i18n/navigation"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import {
   Play,
   MessageCircle,
@@ -111,7 +111,6 @@ export default async function GuidesPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "guides" })
 
   const messages = (await getMessages({ locale })) as unknown as {
