@@ -2,9 +2,10 @@
 
 // Security → Access activity: who signed in, who changed accounts, profiles
 // and sign-in settings, and every action a profile refused (access_log.py).
-// For administrators; nothing here can be changed.
+// For administrators; nothing here can be changed. The list opens on demand
+// and is read the first time it is opened.
 import { useCallback, useEffect, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { ChevronDown, Loader2, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -31,6 +32,8 @@ export function AccessLog() {
   const [events, setEvents] = useState<AccessEvent[]>([])
   const [more, setMore] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   const load = useCallback(async (before?: number) => {
     setLoading(true)
@@ -39,13 +42,14 @@ export function AccessLog() {
         `/api/auth/events?limit=${PAGE}${before ? `&before=${before}` : ""}`)
       setEvents(current => before ? [...current, ...data.events] : data.events)
       setMore(data.events.length === PAGE)
+      setLoaded(true)
     } catch {
       // The card stays as it was.
     } finally {
       setLoading(false)
     }
   }, [])
-  useEffect(() => { if (capabilities.admin) load() }, [capabilities.admin, load])
+  useEffect(() => { if (capabilities.admin && open && !loaded) load() }, [capabilities.admin, open, loaded, load])
 
   if (!capabilities.admin) return null
 
@@ -73,17 +77,28 @@ export function AccessLog() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle>{t("accessLog.title")}</CardTitle>
-          <Button variant="outline" size="sm" className="h-7 px-3 text-xs gap-1.5 shrink-0" disabled={loading}
-            onClick={() => load()}>
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />{t("actions.refresh")}
-          </Button>
+        <div className="flex items-start gap-2">
+          <button type="button" className="-m-2 flex flex-1 min-w-0 items-start gap-3 rounded-md p-2 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setOpen(current => !current)} aria-expanded={open}>
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <CardTitle>{t("accessLog.title")}</CardTitle>
+              <CardDescription>{t("accessLog.description")}</CardDescription>
+            </div>
+            <ChevronDown className={`h-4 w-4 mt-1 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+          {open && (
+            <Button variant="outline" size="sm" className="h-7 px-3 text-xs gap-1.5 shrink-0" disabled={loading}
+              onClick={() => load()}>
+              <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />{t("actions.refresh")}
+            </Button>
+          )}
         </div>
-        <CardDescription>{t("accessLog.description")}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {!events.length && !loading && <p className="text-sm text-muted-foreground">{t("accessLog.empty")}</p>}
+      {open && <CardContent className="space-y-2">
+        {!loaded && loading && (
+          <div className="flex justify-center py-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+        )}
+        {!events.length && loaded && !loading && <p className="text-sm text-muted-foreground">{t("accessLog.empty")}</p>}
         {events.map(event => (
           <div key={event.id} className="rounded-lg border border-border p-3 text-sm space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -110,7 +125,7 @@ export function AccessLog() {
             {t("accessLog.loadMore")}
           </Button>
         )}
-      </CardContent>
+      </CardContent>}
     </Card>
   )
 }
