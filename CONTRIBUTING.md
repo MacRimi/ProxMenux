@@ -776,6 +776,8 @@ The Monitor is the web dashboard shipped as a self-contained AppImage. It has a 
 
 - **All user-visible strings go through the i18n hook** — never hard-code labels. Use `useT()` when the component only needs the translation function (`const t = useT()`), or `useI18n()` when it also needs the current language / setter (`const { language, setLanguage, t } = useI18n()`). Both are exported from `lib/i18n/provider.tsx`. Missing keys fall back to English at runtime.
 - **shadcn components** are the baseline (Card, Badge, Select, Switch, Dialog, etc.). Do not roll custom equivalents when a shadcn one exists.
+- **Dropdowns** use `OptionSelect` from `components/option-select.tsx`, the shared wrapper around the shadcn Select. It gives every page the same look and keyboard behaviour, and accepts an empty value for choices such as "any" or "none". Do not use a native `<select>`.
+- **Clickable cards** keep the card surface and the shared highlight: `bg-card` with `hover:bg-white/5` and `border-border` (on phones, `bg-white/5` with `border-white/10`). A page does not add its own hover or selection colour.
 - **Design tokens** live in Tailwind config; use them (`bg-blue-600`, `border-border`) rather than raw hex values.
 - **Dark + light theme** must both work. Use tokens that respond to `data-theme` and `prefers-color-scheme`; don't hard-code palette values.
 
