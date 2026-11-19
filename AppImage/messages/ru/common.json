@@ -2231,6 +2231,52 @@
       "ociImageCurrent": "Версия",
       "refreshData": "Обновить данные",
       "refreshingData": "Обновление…"
+    },
+    "layout": {
+      "columns": {
+        "name": "Имя",
+        "type": "Тип · Идентификатор",
+        "state": "Статус",
+        "tags": "Теги",
+        "ip": "IP-адрес",
+        "uptime": "Время работы",
+        "cpu": "CPU",
+        "memory": "Память",
+        "disk": "Диск",
+        "net": "сетевой ввод-вывод",
+        "io": "Дисковый ввод-вывод",
+        "updates": "Обновления"
+      },
+      "controls": "элементы управления списком",
+      "settings": "настройки столбца",
+      "expandAll": "Развернуть все",
+      "collapseAll": "Свернуть все",
+      "expandVisible": "Развернуть видимый",
+      "collapseVisible": "Свернуть видимым",
+      "visibleColumns": "видимые столбцы",
+      "keepIdentity": "Держите имя или тип · Идентификатор видимым.",
+      "expandGuest": "развернуть {name}",
+      "collapseGuest": "Свернуть {name}",
+      "openGuestInfo": "просмотреть подробную информацию о {name}",
+      "moveColumn": "переместите {column} путем перетаскивания или с помощью Shift и клавиш со стрелками.",
+      "resizeColumn": "изменить размер {column}",
+      "sortColumn": "сортировать по {column}",
+      "sortBy": "Сортировать по",
+      "originalOrder": "Исходный заказ",
+      "asc": "восходящий",
+      "desc": "нисходящий",
+      "updatesShort": "Обновление.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 мин.",
+      "networkTransfer": "получен {first}, отправлен {second} с момента запуска.Бары имеют одинаковый масштаб для всех гостей.",
+      "diskTransfer": "Прочитал {first}, с самого начала написал {second}.Бары имеют одинаковый масштаб для всех гостей."
+    },
+    "typeFilter": {
+      "ariaLabel": "Фильтровать по типу гостя",
+      "all": "Все типы",
+      "empty": "Нет гостей выбранного типа."
     }
   },
   "settings": {

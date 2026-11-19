@@ -2079,6 +2079,52 @@
         "lxc": "contenitore contenitori container",
         "qemu": "vm macchina virtuale macchine virtuali"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Nome",
+        "type": "digita · ID",
+        "state": "Stato",
+        "tags": "tag",
+        "ip": "indirizzo IP",
+        "uptime": "tempi di attività",
+        "cpu": "CPU",
+        "memory": "Memoria",
+        "disk": "disco",
+        "net": "I/O di rete",
+        "io": "I/O del disco",
+        "updates": "Aggiornamenti"
+      },
+      "controls": "elenca i controlli",
+      "settings": "impostazioni della colonna",
+      "expandAll": "espandi tutto",
+      "collapseAll": "comprimi tutto",
+      "expandVisible": "espande visibile",
+      "collapseVisible": "Comprimi visibile",
+      "visibleColumns": "colonne visibili",
+      "keepIdentity": "mantieni visibile il nome o il tipo · l'ID.",
+      "expandGuest": "espandi {name}",
+      "collapseGuest": "Comprimi {name}",
+      "openGuestInfo": "Visualizza i dettagli per {name}",
+      "moveColumn": "sposta {column} trascinando o con Shift e i tasti freccia",
+      "resizeColumn": "ridimensiona {column}",
+      "sortColumn": "ordina per {column}",
+      "sortBy": "Ordina per",
+      "originalOrder": "ordine originale",
+      "asc": "ascendente",
+      "desc": "discendente",
+      "updatesShort": "Aggiorna.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: ricevuto {first}, inviato {second} dall'inizio.I bar condividono la stessa scala tra gli ospiti.",
+      "diskTransfer": "leggi {first}, ha scritto {second} dall'inizio.I bar condividono la stessa scala tra gli ospiti."
+    },
+    "typeFilter": {
+      "ariaLabel": "filtra per tipologia di ospite",
+      "all": "tutti i tipi",
+      "empty": "Nessun ospite del tipo selezionato"
     }
   },
   "settings": {

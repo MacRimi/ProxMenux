@@ -2079,6 +2079,52 @@
         "lxc": "container containrar",
         "qemu": "vm virtuell maskin virtuella maskiner"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Namn",
+        "type": "Skriv · ID",
+        "state": "Status",
+        "tags": "Taggar",
+        "ip": "IP-adress",
+        "uptime": "Drifttid",
+        "cpu": "CPU",
+        "memory": "Minne",
+        "disk": "Disk",
+        "net": "Nätverk I/O",
+        "io": "Disk I/O",
+        "updates": "Uppdateringar"
+      },
+      "controls": "Listkontroller",
+      "settings": "Kolumninställningar",
+      "expandAll": "Utöka alla",
+      "collapseAll": "Komprimera alla",
+      "expandVisible": "Expandera synligt",
+      "collapseVisible": "Kollaps synlig",
+      "visibleColumns": "Synliga kolumner",
+      "keepIdentity": "Håll namn eller typ · ID synligt.",
+      "expandGuest": "Expandera {name}",
+      "collapseGuest": "Komprimera {name}",
+      "openGuestInfo": "Se detaljer för {name}",
+      "moveColumn": "Flytta {column} genom att dra eller med Shift och piltangenterna",
+      "resizeColumn": "Ändra storlek {column}",
+      "sortColumn": "Sortera efter {column}",
+      "sortBy": "Sortera efter",
+      "originalOrder": "Ursprunglig beställning",
+      "asc": "stigande",
+      "desc": "fallande",
+      "updatesShort": "Uppd.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "Mottog {first}, skickade {second} sedan start.Barer delar samma skala mellan gäster.",
+      "diskTransfer": "Läs {first}, skrev {second} sedan starten.Barer delar samma skala mellan gäster."
+    },
+    "typeFilter": {
+      "ariaLabel": "Filtrera efter gästtyp",
+      "all": "Alla typer",
+      "empty": "Inga gäster av den valda typen"
     }
   },
   "settings": {

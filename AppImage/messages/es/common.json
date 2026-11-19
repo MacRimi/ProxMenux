@@ -2232,6 +2232,52 @@
         "lxc": "contenedor contenedores",
         "qemu": "vm máquina virtual máquinas virtuales"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Nombre",
+        "type": "Tipo · ID",
+        "state": "Estado",
+        "tags": "Etiquetas",
+        "ip": "dirección IP",
+        "uptime": "tiempo de actividad",
+        "cpu": "CPU",
+        "memory": "Memoria",
+        "disk": "Disco",
+        "net": "E/S de red",
+        "io": "E/S de disco",
+        "updates": "Actualizaciones"
+      },
+      "controls": "controles de lista",
+      "settings": "configuración de columnas",
+      "expandAll": "Expandir todo",
+      "collapseAll": "Contraer todo",
+      "expandVisible": "Expandir visible",
+      "collapseVisible": "Colapso visible",
+      "visibleColumns": "columnas visibles",
+      "keepIdentity": "mantenga visible el nombre o el tipo · ID.",
+      "expandGuest": "Expandir {name}",
+      "collapseGuest": "Contraer {name}",
+      "openGuestInfo": "Ver detalles de {name}",
+      "moveColumn": "Mueva {column} arrastrando o con Shift y las teclas de flecha",
+      "resizeColumn": "Cambiar el tamaño de {column}",
+      "sortColumn": "Ordenar por {column}",
+      "sortBy": "Ordenar por",
+      "originalOrder": "orden original",
+      "asc": "ascendente",
+      "desc": "descendente",
+      "updatesShort": "Actualización.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "{first} recibido, {second} enviado desde el inicio.Los bares comparten la misma escala entre los huéspedes.",
+      "diskTransfer": "Leer {first}, escribir {second} desde el inicio.Los bares comparten la misma escala entre los huéspedes."
+    },
+    "typeFilter": {
+      "ariaLabel": "Filtrar por tipo de huésped",
+      "all": "Todos los tipos",
+      "empty": "No hay invitados del tipo seleccionado"
     }
   },
   "settings": {

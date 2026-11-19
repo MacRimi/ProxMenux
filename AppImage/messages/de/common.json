@@ -2079,6 +2079,52 @@
         "lxc": "container",
         "qemu": "vm virtuelle Maschine virtuelle Maschinen"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Name",
+        "type": "Typ · ID",
+        "state": "Status",
+        "tags": "Tags",
+        "ip": "IP-Adresse",
+        "uptime": "Betriebszeit",
+        "cpu": "CPU",
+        "memory": "Erinnerung",
+        "disk": "Disk",
+        "net": "Netzwerk-E/A",
+        "io": "Festplatten-E/A",
+        "updates": "Aktualisierungen"
+      },
+      "controls": "List controls",
+      "settings": "Spalteneinstellungen",
+      "expandAll": "Alles erweitern",
+      "collapseAll": "Alles ausblenden",
+      "expandVisible": "Sichtbar erweitern",
+      "collapseVisible": "Reduzieren sichtbar",
+      "visibleColumns": "Sichtbare Spalten",
+      "keepIdentity": "Name oder Typ · ID sichtbar halten.",
+      "expandGuest": "{name} erweitern",
+      "collapseGuest": "{name} reduzieren",
+      "openGuestInfo": "Details für {name} anzeigen",
+      "moveColumn": "Verschieben Sie {column} durch Ziehen oder mit der Umschalttaste und den Pfeiltasten",
+      "resizeColumn": "Größe von {column} ändern",
+      "sortColumn": "Sortieren nach {column}",
+      "sortBy": "Sortieren nach",
+      "originalOrder": "Ursprüngliche Bestellung",
+      "asc": "aufsteigend",
+      "desc": "absteigend",
+      "updatesShort": "Aktualisiert.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 Min",
+      "networkTransfer": "{first} empfangen, {second} seit dem Start gesendet.Bars haben für alle Gäste die gleiche Größe.",
+      "diskTransfer": "{first} gelesen, {second} seit dem Start geschrieben.Bars haben für alle Gäste die gleiche Größe."
+    },
+    "typeFilter": {
+      "ariaLabel": "Nach Gasttyp filtern",
+      "all": "Alle Typen",
+      "empty": "Keine Gäste des ausgewählten Typs"
     }
   },
   "settings": {
