@@ -6045,7 +6045,8 @@ def _register_oci_installation(vmid) -> bool:
         return False
     with _cache_lock:
         sidecar = _read_sidecar(vmid)
-        if sidecar and sidecar.get("apps"):
+        registered = bool(sidecar and sidecar.get("apps"))
+        if registered:
             # An application registered before its logo could be resolved
             # takes it now; nothing else of what is registered is touched.
             missing = [app for app in sidecar["apps"]
@@ -6055,7 +6056,9 @@ def _register_oci_installation(vmid) -> bool:
                 for app in missing:
                     app["logo_url"] = logo
                 _write_sidecar(vmid, sidecar, copies=True)
-            return False
+    if registered:
+        _follow_adguard_setup(vmid)
+        return False
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
         return False
@@ -6070,6 +6073,11 @@ def _register_oci_installation(vmid) -> bool:
         port = meta.get("endpoint_port")
         endpoints = [{"port": port, "scheme": meta.get("endpoint_scheme"), "path": meta.get("endpoint_path"),
                       "description": "", "logo_url": ""}] if isinstance(port, int) else []
+    if meta.get("template_id") == "image-adguard-home" and not secondary:
+        # The same addresses the App tab shows: its interface, and the
+        # first-run setup until it is done (see _follow_adguard_setup).
+        endpoints = [{"port": 80, "scheme": "http", "path": "/", "description": ""},
+                     {"port": 3000, "scheme": "http", "path": "/", "description": "Config"}]
     ports = []
     for endpoint in endpoints:
         entry = {"port": endpoint["port"], "scheme": endpoint.get("scheme") or "http",
@@ -6290,23 +6298,77 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
     }
 
 
+def _guest_ipv4(vmid) -> Optional[str]:
+    """The first IPv4 address of a running container, or None."""
+    try:
+        result = subprocess.run(['lxc-info', '-n', str(int(vmid)), '-iH'],
+                                capture_output=True, text=True, timeout=3, check=True)
+        return next(str(ipaddress.IPv4Address(value.strip()))
+                    for value in result.stdout.splitlines()
+                    if value.strip() and ipaddress.ip_address(value.strip()).version == 4)
+    except (OSError, ValueError, StopIteration, subprocess.SubprocessError):
+        return None
+
+
+def _answers_http(ip: str, port: int) -> bool:
+    try:
+        with socket.create_connection((ip, port), timeout=1) as connection:
+            connection.settimeout(1)
+            connection.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+            return connection.recv(32).startswith(b'HTTP/')
+    except OSError:
+        return False
+
+
 def oci_adguard_setup_available(vmid) -> bool:
     """Probe only this OCI application's setup endpoint, without caching it."""
     meta = _oci_instance_meta(vmid)
     if not meta or meta.get('template_id') != 'image-adguard-home':
         return False
-    try:
-        result = subprocess.run(['lxc-info', '-n', str(int(vmid)), '-iH'],
-                                capture_output=True, text=True, timeout=3, check=True)
-        ip = next(str(ipaddress.IPv4Address(value.strip()))
-                  for value in result.stdout.splitlines()
-                  if value.strip() and ipaddress.ip_address(value.strip()).version == 4)
-        with socket.create_connection((ip, 3000), timeout=1) as connection:
-            connection.settimeout(1)
-            connection.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
-            return connection.recv(32).startswith(b'HTTP/')
-    except (OSError, ValueError, StopIteration, subprocess.SubprocessError):
-        return False
+    ip = _guest_ipv4(vmid)
+    return bool(ip) and _answers_http(ip, 3000)
+
+
+def _follow_adguard_setup(vmid) -> None:
+    """AdGuard Home serves its interface on :80 and, until its first-run setup
+    is done, the setup on :3000, which then goes away. Its automatic
+    registration shows the same as the App tab: :80 always, and :3000 as
+    "Config" only while it still answers. A port the user added is left alone."""
+    if (_oci_instance_meta(vmid) or {}).get('template_id') != 'image-adguard-home':
+        return
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid) or {}
+        apps = [app for app in sidecar.get('apps', []) if app.get('installed_via') == 'oci_image']
+        has_setup = any(port.get('port') == 3000 for app in apps for port in app.get('ports', []))
+        lacks_ui = any(not any(port.get('port') == 80 for port in app.get('ports', [])) for app in apps)
+    if not has_setup and not lacks_ui:
+        return
+    setup_done = False
+    if has_setup:
+        ip = _guest_ipv4(vmid)
+        setup_done = bool(ip) and not _answers_http(ip, 3000) and _answers_http(ip, 80)
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid) or {}
+        changed = False
+        for app in sidecar.get('apps', []):
+            if app.get('installed_via') != 'oci_image':
+                continue
+            ports = app.get('ports', [])
+            moved = list(ports)
+            if not any(port.get('port') == 80 for port in moved):
+                template = next((port for port in moved if port.get('port') == 3000), None)
+                if template is not None:
+                    moved.insert(0, dict(template, port=80, description=''))
+            if setup_done:
+                moved = [port for port in moved if port.get('port') != 3000]
+            else:
+                moved = [dict(port, description='Config') if port.get('port') == 3000
+                         and not port.get('description') else port for port in moved]
+            if moved != ports:
+                app['ports'] = moved
+                changed = True
+        if changed:
+            _write_sidecar(vmid, sidecar, copies=True)
 
 
 _OCI_REMOTE_DIR = "/usr/local/share/proxmenux/oci/engine/remote"
