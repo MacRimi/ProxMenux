@@ -2,6 +2,21 @@
   container: vm-list / inline-size;
 }
 
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar[data-layout="tablet"] > :first-child {
+  flex-basis: 100%;
+}
+
+.toolbar[data-layout="tablet"] > :last-child {
+  margin-inline-start: auto;
+}
+
 .grid {
   display: grid;
   grid-template-columns: var(--vm-list-wide);
@@ -98,6 +113,7 @@
 
 .rows {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 

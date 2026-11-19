@@ -24,8 +24,10 @@ let id = 0
 let buffer = ""
 
 const guests = [
-  { vmid: 100, type: "lxc", name: "demo-container", status: "running", update_check: { available: true, count: 2, packages: [] } },
-  { vmid: 201, type: "qemu", name: "demo-stopped-vm", status: "stopped" },
+  { vmid: 100, type: "lxc", name: "demo-container-with-a-long-name", status: "running", cpu: 0.96, mem: 970, disk: 930,
+    tags: "server;development;analytics;backup;vpn;web;queue;monitoring",
+    update_check: { available: true, count: 2, packages: [] } },
+  { vmid: 201, type: "qemu", name: "demo-cortendesk-windows-builder-test", status: "stopped", tags: "builder" },
   { vmid: 202, type: "qemu", name: "demo-running-vm", status: "running" },
 ].map(guest => ({ cpu: 0, mem: 0, maxmem: 1024, disk: 0, maxdisk: 1024, uptime: 0, ...guest }))
 
@@ -111,6 +113,19 @@ const status = label => groupButton("Filter virtual machines and containers", la
 const click = selector => evaluate(`(${selector}).click()`)
 const visibleRows = () => evaluate("[...document.querySelectorAll('button[aria-expanded][aria-label]')].filter(button=>button.getClientRects().length).map(button=>button.getAttribute('aria-label')).filter(label=>/^(Expand|Collapse) demo-/.test(label)).sort()")
 
+async function tap(selector) {
+  const point = await evaluate(`(() => {
+    const target = (${selector});
+    target.scrollIntoView({block:"center"});
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+    if (!target.contains(document.elementFromPoint(x, y))) throw Error("Tap target is obscured");
+    return {x, y};
+  })()`)
+  await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] })
+  await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
+}
+
 async function openInventory(tabLabel = "VMs & LXCs", filterLabel = "Filter by guest type") {
   const trigger = `[...document.querySelectorAll('[role=tab]')].find(button=>button.textContent.trim()===${JSON.stringify(tabLabel)})`
   await waitFor(`Boolean(${trigger})`)
@@ -137,41 +152,107 @@ async function run() {
   assert.equal(new Set(await evaluate(`[${type("All types")},${type("VM")},${type("LXC")},${status("All")}].map(el=>el.getBoundingClientRect().height)`)).size, 1)
   await click(type("LXC"))
   await click(status("Updates"))
-  assert.deepEqual(await visibleRows(), ["Expand demo-container"])
+  assert.deepEqual(await visibleRows(), ["Expand demo-container-with-a-long-name"])
   await click(type("VM"))
   assert.ok(await evaluate(`(${status("Updates")}).disabled && (${status("Updates")}).getAttribute('aria-pressed') === 'false'`))
   await click(status("Stopped"))
-  assert.deepEqual(await visibleRows(), ["Expand demo-stopped-vm"])
+  assert.deepEqual(await visibleRows(), ["Expand demo-cortendesk-windows-builder-test"])
   await click(labelled("Expand visible"))
-  await waitFor(`Boolean(${labelled("Collapse demo-stopped-vm")})`)
+  await waitFor(`Boolean(${labelled("Collapse demo-cortendesk-windows-builder-test")})`)
 
   await send("Page.reload")
   await openInventory()
   assert.equal(await evaluate(`(${type("VM")}).getAttribute('aria-pressed')`), "true")
-  assert.deepEqual(await visibleRows(), ["Collapse demo-stopped-vm"])
+  assert.deepEqual(await visibleRows(), ["Collapse demo-cortendesk-windows-builder-test"])
   await click(type("All types"))
   await click(status("All"))
-  assert.deepEqual(await visibleRows(), ["Collapse demo-stopped-vm", "Expand demo-container", "Expand demo-running-vm"])
-  const details = `[...document.querySelectorAll('[aria-label="View details for demo-stopped-vm"]')].find(el => el.getClientRects().length)`
+  assert.deepEqual(await visibleRows(), ["Collapse demo-cortendesk-windows-builder-test", "Expand demo-container-with-a-long-name", "Expand demo-running-vm"])
+  const details = `[...document.querySelectorAll('[aria-label="View details for demo-cortendesk-windows-builder-test"]')].find(el => el.getClientRects().length)`
   await click(details)
-  await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-stopped-vm')")
-  assert.ok(await evaluate(`!${labelled("Expand demo-stopped-vm")}`))
+  await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-cortendesk-windows-builder-test')")
+  assert.ok(await evaluate(`!${labelled("Expand demo-cortendesk-windows-builder-test")}`))
 
   await evaluate("localStorage.setItem('proxmenux-ui-language', 'sk')")
   await send("Page.reload")
   await openInventory("VM a LXC", "Filtrovať podľa typu stroja")
-  for (const width of [390, 320]) {
-    await send("Emulation.setDeviceMetricsOverride", { width, height: 960, deviceScaleFactor: 1, mobile: false })
+  await click("[...document.querySelectorAll('button[aria-expanded=false]')].find(button => button.getAttribute('aria-label')?.endsWith('demo-container-with-a-long-name'))")
+  await click("[...document.querySelectorAll('button[aria-expanded=false]')].find(button => button.getAttribute('aria-label')?.endsWith('demo-running-vm'))")
+  for (const [width, tablet] of [[1194, true], [1024, true], [1440, false]]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height: 834, deviceScaleFactor: 1, mobile: false })
+    const types = labelled("Filtrovať podľa typu stroja")
+    await waitFor(`(${types}.parentElement.dataset.layout === 'tablet') === ${tablet}`)
+    const layout = await evaluate(`(() => {
+      const types = ${types};
+      const toolbar = types.parentElement;
+      const search = toolbar.querySelector('input');
+      const status = ${labelled("Filtrovať virtuálne stroje a kontajnery")};
+      const actions = [...toolbar.children].find(element => element !== types && element !== status && element.contains(search) === false);
+      const center = element => { const rect = element.getBoundingClientRect(); return rect.top + rect.height / 2; };
+      return {
+        order: [...types.querySelectorAll('button')].map(button => button.textContent.trim()),
+        leftToRight: types.getBoundingClientRect().right <= status.getBoundingClientRect().left,
+        buttonCenters: [...toolbar.querySelectorAll('[role=group] button')].map(center),
+        searchAbove: search.getBoundingClientRect().bottom <= types.getBoundingClientRect().top,
+        searchFullWidth: search.getBoundingClientRect().width === toolbar.getBoundingClientRect().width,
+        actionsLast: toolbar.lastElementChild === actions,
+        rightEdge: Math.abs(actions.getBoundingClientRect().right - toolbar.getBoundingClientRect().right),
+        searchCenter: center(search)
+      };
+    })()`)
+    assert.deepEqual(layout.order, ["Všetky typy", "LXC", "VM"])
+    assert.ok(layout.leftToRight && layout.buttonCenters.length === 10)
+    const centers = tablet ? layout.buttonCenters : [...layout.buttonCenters, layout.searchCenter]
+    assert.ok(Math.max(...centers) - Math.min(...centers) < 2, `Toolbar wrapped at ${width}: ${JSON.stringify(layout)}`)
+    if (tablet) assert.ok(layout.searchAbove && layout.searchFullWidth && layout.actionsLast && layout.rightEdge < 1)
+    else assert.ok(!layout.searchAbove && !layout.actionsLast)
+  }
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 })
+  for (const width of [402, 390, 320]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height: 812, deviceScaleFactor: 1, mobile: true })
     const controls = await evaluate(`[...document.querySelectorAll('[aria-label="Filtrovať podľa typu stroja"] button, [aria-label="Filtrovať virtuálne stroje a kontajnery"] button')].map(button => {
       const rect = button.getBoundingClientRect();
-      return {height:rect.height, insideViewport:rect.left>=0 && rect.right<=innerWidth};
+      return {label:button.textContent.trim(), height:rect.height, insideViewport:rect.left>=0 && rect.right<=innerWidth};
     })`)
     assert.equal(controls.length, 7)
+    assert.deepEqual(controls.slice(0, 3).map(control => control.label), ["Všetky typy", "LXC", "VM"])
     assert.ok(controls.every(control => control.insideViewport && control.height === controls[0].height))
+    const layout = await evaluate(`(() => {
+      const visible = (e) => e.getClientRects().length > 0;
+      const cards = [...document.querySelectorAll('[data-collapse-guest]')].filter(visible).map((heading) => {
+        const card = heading.parentElement;
+        const metrics = card.querySelector('button[aria-haspopup="dialog"]');
+        const bounds = card.getBoundingClientRect();
+        const list = card.closest('[id]').parentElement.parentElement;
+        const listBounds = list.getBoundingClientRect();
+        const inside = (element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.left >= bounds.left && rect.right <= bounds.right;
+        };
+        const name = heading.querySelector('.truncate');
+        return { name: name.textContent, cardFits: bounds.left >= listBounds.left && bounds.right <= listBounds.right + 1 && listBounds.right <= innerWidth
+            && list.scrollWidth <= list.clientWidth + 1,
+          controlsFit: bounds.width >= 1 && inside(heading) && inside(metrics) && metrics.getBoundingClientRect().height >= 44,
+          nameFits: inside(name) && name.clientWidth >= 16 && getComputedStyle(name).textOverflow === "ellipsis",
+          nameTruncated: name.scrollWidth > name.clientWidth };
+      });
+      return { viewport: innerWidth, scroll: document.documentElement.scrollWidth, cards };
+    })()`)
+    assert.ok(layout.cards.length === guests.length && layout.cards.every(card => card.cardFits && card.controlsFit && card.nameFits)
+      && guests.slice(0, 2).every(guest => layout.cards.some(card => card.name === guest.name && card.nameTruncated))
+      && layout.viewport === width, `Mobile card overflow at ${width}: ${JSON.stringify(layout)}`)
   }
+  await send("Emulation.setDeviceMetricsOverride", { width: 402, height: 812, deviceScaleFactor: 1, mobile: true })
+  const mobileGuest = "[...document.querySelectorAll('[data-collapse-guest]')].find(button => button.getClientRects().length && button.getAttribute('aria-label').endsWith('demo-container-with-a-long-name'))"
+  await tap(`(${mobileGuest}).parentElement.querySelector('button[aria-haspopup=dialog]')`)
+  await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor("!document.querySelector('[role=dialog]')")
+  await new Promise(resolve => setTimeout(resolve, 350))
+  await tap(mobileGuest)
+  await waitFor(`!(${mobileGuest})`)
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])
-  console.log("VM/LXC inventory filters, saved selection, scoped expansion, original details and narrow Slovak controls passed")
+  console.log("VM/LXC filters, saved selection, scoped expansion, original details, tablet toolbar and mobile cards passed")
 }
 
 const deadline = setTimeout(() => {

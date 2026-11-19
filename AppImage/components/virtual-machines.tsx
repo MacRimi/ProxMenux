@@ -24,7 +24,7 @@ import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
-import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow } from "./vm-list-layout"
+import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar } from "./vm-list-layout"
 import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
 import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
@@ -288,7 +288,7 @@ interface VMData {
   modal_cache_revision?: number
 }
 
-const inventoryTypes = ["all", "qemu", "lxc"] as const
+const inventoryTypes = ["all", "lxc", "qemu"] as const
 type InventoryType = (typeof inventoryTypes)[number]
 const inventoryTypeKey = "proxmenux.vmListType"
 const inventoryFilterButton = "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto"
@@ -3426,13 +3426,15 @@ export function VirtualMachines() {
             <Server className="h-6 w-6" />
             {t("vmLxc.listTitle")}
           </CardTitle>
-          <div className="flex w-full flex-wrap items-center gap-2">
-            <div className="flex min-w-0 flex-1 basis-64 flex-wrap items-center gap-2">
-              <VmListActions layout={listLayout} keys={filteredVMs.map(listKey)}
+          <VmListToolbar
+            actions={
+              <VmListActions key="actions" layout={listLayout} keys={filteredVMs.map(listKey)}
                 filtered={typeFilter !== "all" || statusFilter !== "all" || updatesOnly || vmSearchTerms.length > 0}
                 pickerId={columnPickerId} pickerOpen={columnPickerOpen}
                 onTogglePicker={() => setColumnPickerOpen((current) => !current)} />
-              <div className="relative min-w-40 flex-1">
+            }
+            search={
+              <div key="search" className="relative min-w-0 flex-[1_1_10rem] max-sm:basis-24">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
@@ -3454,8 +3456,9 @@ export function VirtualMachines() {
                   </button>
                 )}
               </div>
-            </div>
-            <div role="group" aria-label={t("vmLxc.typeFilter.ariaLabel")}
+            }
+            types={
+            <div key="types" role="group" aria-label={t("vmLxc.typeFilter.ariaLabel")}
               className="grid w-full grid-cols-[auto_1fr_1fr] gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto">
               {inventoryTypes.map((type) => (
                 <button key={type} type="button" aria-pressed={typeFilter === type}
@@ -3465,7 +3468,9 @@ export function VirtualMachines() {
                 </button>
               ))}
             </div>
-               <div
+            }
+            status={
+               <div key="status"
                  role="group"
                  aria-label={t("vmLxc.statusFilter.ariaLabel")}
                  className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto"
@@ -3513,7 +3518,8 @@ export function VirtualMachines() {
                    </span>
                  </button>
                </div>
-          </div>
+            }
+          />
           <VmListColumnPicker id={columnPickerId} open={columnPickerOpen} layout={listLayout} />
             {vmSearchTerms.length > 0 && (
               <span className="text-xs text-muted-foreground">
@@ -3774,7 +3780,7 @@ export function VirtualMachines() {
                     <div className="flex rounded-lg border border-border bg-card sm:hidden">
                       <VmCardTooltip label={collapseButton["aria-label"]}>
                       <button {...collapseButton}
-                        className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-s-lg py-2.5 ps-3 pe-2 text-start transition-colors hover:bg-blue-500/10 focus-visible:bg-blue-500/10">
+                        className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-s-lg py-2.5 ps-2 pe-1.5 text-start transition-colors hover:bg-blue-500/10 focus-visible:bg-blue-500/10 min-[375px]:gap-2 min-[375px]:ps-3 min-[375px]:pe-2">
                         {vm.status === "running" ? (
                           <Play className="h-5 w-5 text-green-500 fill-current flex-shrink-0" />
                         ) : (
@@ -3795,8 +3801,8 @@ export function VirtualMachines() {
                             the desktop card and inside the modal. */}
                         <span className="flex-1 min-w-0">
                           <span className="block truncate font-semibold text-foreground">{vm.name}</span>
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                            <span>ID: {vm.vmid}</span>
+                          <span className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+                            <span className="whitespace-nowrap">ID: {vm.vmid}</span>
                             {parseTags(vm.tags).map((tag) => {
                               const { bg } = tagToColor(tag)
                               return (
@@ -3818,7 +3824,7 @@ export function VirtualMachines() {
 
                         <VmCardTooltip label={infoLabel}>
                         <button type="button"
-                          className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-e-lg py-2.5 ps-2 pe-3 transition-colors min-[375px]:gap-3 ${infoHighlight}`}
+                          className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-e-lg py-2.5 ps-1.5 pe-2 transition-colors min-[375px]:gap-3 min-[375px]:ps-2 min-[375px]:pe-3 ${infoHighlight}`}
                           aria-label={infoLabel}
                           aria-haspopup="dialog"
                           onClick={(event) => handleVMClick(vm, event.currentTarget)}

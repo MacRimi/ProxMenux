@@ -152,6 +152,31 @@ export function sortVmRows<T>(
 type ListLayout = ReturnType<typeof useVmListLayout>
 type DraftWidth = { column: Column; width: number }
 
+export function VmListToolbar({ actions, search, types, status }: {
+  actions: ReactElement
+  search: ReactElement
+  types: ReactElement
+  status: ReactElement
+}) {
+  const toolbar = useRef<HTMLDivElement>(null)
+  const [tablet, setTablet] = useState(false)
+  useEffect(() => {
+    if (!toolbar.current) return
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width
+      setTablet(width >= 872 && width < 1040)
+    })
+    observer.observe(toolbar.current)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={toolbar} className={styles.toolbar} data-layout={tablet ? "tablet" : undefined}>
+      {tablet ? [search, types, status, actions] : [actions, search, types, status]}
+    </div>
+  )
+}
+
 export function VmListActions({ layout, keys, filtered, pickerId, pickerOpen, onTogglePicker }: {
   layout: ListLayout
   keys: string[]
