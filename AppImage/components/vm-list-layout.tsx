@@ -6,21 +6,30 @@ import { ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown, GripVertical, T
 import { useT } from "@/lib/i18n/provider"
 import styles from "./vm-list-layout.module.css"
 
-const columns = ["name", "type", "ip", "cpu", "memory", "disk", "updates"] as const
+const columns = ["name", "type", "state", "tags", "ip", "uptime", "cpu", "memory", "disk", "net", "io", "updates"] as const
 type Column = (typeof columns)[number]
 type SortDirection = "asc" | "desc"
 type ListSort = { column: Column; direction: SortDirection }
 const storageKey = "proxmenux.vmListLayout.v1"
 const identityColumns = ["name", "type"] as const
-const minimumWidth: Record<Column, number> = { name: 80, type: 66, ip: 104, cpu: 44, memory: 52, disk: 42, updates: 38 }
+const optionalColumns: Column[] = ["state", "tags", "uptime", "net", "io"]
+const minimumWidth: Record<Column, number> = {
+  name: 80, type: 66, state: 78, tags: 66, ip: 104, uptime: 94,
+  cpu: 44, memory: 52, disk: 42, net: 144, io: 144, updates: 38,
+}
 const maxWidth = 960
 const tracks: Record<Column, [string, string?, string?]> = {
   name: ["minmax(92px, 1.8fr)", "minmax(84px, 1fr)", "minmax(68px, 1fr)"],
   type: ["88px", "84px", "58px"],
+  state: ["86px", "82px"],
+  tags: ["70px", "66px"],
   ip: ["minmax(118px, 1fr)"],
+  uptime: ["102px", "94px"],
   cpu: ["60px", "59px"],
   memory: ["77px", "71px"],
   disk: ["61px", "61px"],
+  net: ["152px", "144px"],
+  io: ["152px", "144px"],
   updates: ["55px", "53px", "40px"],
 }
 
@@ -32,7 +41,7 @@ type Layout = {
   exceptions: string[]
   sort: ListSort | null
 }
-const initialLayout: Layout = { order: [...columns], hidden: [], widths: {}, expanded: false, exceptions: [], sort: null }
+const initialLayout: Layout = { order: [...columns], hidden: optionalColumns, widths: {}, expanded: false, exceptions: [], sort: null }
 
 function readLayout(): Layout {
   try {
@@ -40,7 +49,10 @@ function readLayout(): Layout {
     if (!raw) return initialLayout
     const saved = JSON.parse(raw) as Partial<Layout> | null
     const order = Array.isArray(saved?.order) ? [...new Set(saved.order.filter((key) => columns.includes(key)))] : []
-    const hidden = columns.filter((key) => Array.isArray(saved?.hidden) && saved.hidden.includes(key))
+    const hidden = columns.filter((key) => (
+      (Array.isArray(saved?.hidden) && saved.hidden.includes(key))
+      || (optionalColumns.includes(key) && !order.includes(key))
+    ))
     const widths: Layout["widths"] = {}
     for (const key of columns) {
       const width = saved?.widths?.[key]
@@ -109,7 +121,7 @@ export function useVmListLayout() {
     }),
     setSort: (sort: ListSort | null) => change((current) => ({ ...current, sort })),
     cycleSort: (column: Column) => change((current) => {
-      const first = column === "name" || column === "type" || column === "ip" ? "asc" : "desc"
+      const first = ["name", "type", "state", "tags", "ip"].includes(column) ? "asc" : "desc"
       const second = first === "asc" ? "desc" : "asc"
       const sort: ListSort | null = current.sort?.column !== column ? { column, direction: first }
         : current.sort.direction === first ? { column, direction: second } : null
@@ -251,7 +263,7 @@ export function VmListColumnPicker({ id, open, layout }: { id: string; open: boo
 
 function visibilityClass(column: Column) {
   if (column === "ip") return styles.ip
-  return column === "cpu" || column === "memory" || column === "disk" ? styles.metric : undefined
+  return tracks[column][2] === undefined ? styles.metric : undefined
 }
 
 export function VmListGrid({ layout, children }: { layout: ListLayout; children: ReactNode }) {
@@ -261,25 +273,29 @@ export function VmListGrid({ layout, children }: { layout: ListLayout; children:
   const dragging = useRef<Column | null>(null)
   const resizing = useRef<{ id: number; x: number; start: number; column: Column } | null>(null)
   const headings = useRef(new Map<Column, HTMLButtonElement>())
-  const grid = useRef<HTMLDivElement>(null)
   const focusAfterMove = useRef<HTMLButtonElement | null>(null)
   useEffect(() => {
     focusAfterMove.current?.focus()
     focusAfterMove.current = null
   }, [layout.order])
   const columnWidth = (column: Column, width: number) =>
-    Math.max(minimumWidth[column], Math.min(maxWidth, (grid.current?.clientWidth ?? maxWidth) - 20, Math.round(width)))
+    Math.max(minimumWidth[column], Math.min(maxWidth, Math.round(width)))
   const resizeBy = (column: Column, event: { currentTarget: HTMLButtonElement }, delta: number) => {
     const start = event.currentTarget.parentElement?.getBoundingClientRect().width
     if (start !== undefined) layout.resizeColumn(column, columnWidth(column, start + delta))
   }
-  const stylesForTracks = ["--vm-list-wide", "--vm-list-medium", "--vm-list-narrow"].map((name, viewport) => [
-    name,
-    layout.visible.map((column) => {
+  const stylesForTracks = ["wide", "medium", "narrow"].flatMap((name, viewport) => {
+    const widths = layout.visible.map((column) => {
       const width = draft?.column === column ? draft.width : layout.widths[column]
-      return viewport === 0 && width !== undefined ? `minmax(${minimumWidth[column]}px, ${width}px)` : tracks[column][viewport]
-    }).filter(Boolean).join(" "),
-  ])
+      return viewport === 0 && width !== undefined ? `${width}px` : tracks[column][viewport]
+    }).filter((width): width is string => width !== undefined)
+    const gap = viewport === 0 ? 8 : 5
+    const minimum = widths.reduce((total, width) => total + Number(width.match(/\d+(?=px)/)?.[0]), 20)
+    return [
+      [`--vm-list-${name}`, widths.join(" ")],
+      [`--vm-list-min-${name}`, `${minimum + Math.max(0, widths.length - 1) * gap}px`],
+    ]
+  })
   const clearDrag = () => {
     dragging.current = null
     setDrop(null)
@@ -300,7 +316,8 @@ export function VmListGrid({ layout, children }: { layout: ListLayout; children:
   }
 
   return (
-    <div className={styles.inventory} style={Object.fromEntries(stylesForTracks) as CSSProperties} ref={grid}>
+    <div className={styles.inventory} role="region" aria-label={t("vmLxc.listTitle")}
+      style={Object.fromEntries(stylesForTracks) as CSSProperties}>
       <div className={`${styles.grid} ${styles.headings}`} role="group" aria-label={t("vmLxc.layout.visibleColumns")}>
         {layout.visible.map((column) => {
           const label = t(`vmLxc.layout.columns.${column}`)
@@ -475,7 +492,7 @@ export function VmListRow({ layout, guestKey, name, status, statusLabel, cells, 
         })}
       </button>}
       <span id={statusId} className="sr-only">{statusLabel}</span>
-      <div ref={cardRef} id={cardId} hidden={!open}>
+      <div className={styles.expandedCard} ref={cardRef} id={cardId} hidden={!open}>
         {open && children({
           type: "button",
           "aria-label": collapseLabel,
@@ -497,5 +514,30 @@ export function VmListMetric({ value, color, fill }: { value: number; color: str
         <span className={fill} style={{ width: `${Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0}%` }} />
       </span>
     </span>
+  )
+}
+
+export function VmListTransfer({ counters, maximum, label, format }: {
+  counters: readonly [number | undefined, number | undefined]
+  maximum: number
+  label: (first: string, second: string) => string
+  format: (value: number) => string
+}) {
+  if (counters.every((value) => value === undefined)) return "—"
+  const display = counters.map((value) => value === undefined ? "—" : format(value))
+  const description = label(display[0], display[1])
+  return (
+    <VmCardTooltip label={description}>
+      <span className={styles.transfer} role="img" aria-label={description}>
+        {counters.map((value, index) => (
+          <span className={styles.reading} key={index} aria-hidden="true">
+            <span className="truncate">{index === 0 ? "↓" : "↑"} {display[index]}</span>
+            <span className={styles.track}>
+              <span className={index === 0 ? "bg-green-500" : "bg-blue-500"} style={{ width: `${100 * (value ?? 0) / maximum}%` }} />
+            </span>
+          </span>
+        ))}
+      </span>
+    </VmCardTooltip>
   )
 }

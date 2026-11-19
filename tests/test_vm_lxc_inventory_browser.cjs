@@ -25,10 +25,10 @@ let buffer = ""
 
 const guests = [
   { vmid: 100, type: "lxc", name: "demo-container-with-a-long-name", status: "running", cpu: 0.96, mem: 970, disk: 930,
-    tags: "server;development;analytics;backup;vpn;web;queue;monitoring",
+    tags: "server;development;analytics;backup;vpn;web;queue;monitoring", ip: "192.0.2.100", uptime: 525600, netin: 36 * 1024 ** 3, netout: 9 * 1024 ** 3, diskread: 64 * 1024 ** 3, diskwrite: 8 * 1024 ** 3,
     update_check: { available: true, count: 2, packages: [] } },
-  { vmid: 201, type: "qemu", name: "demo-cortendesk-windows-builder-test", status: "stopped", tags: "builder" },
-  { vmid: 202, type: "qemu", name: "demo-running-vm", status: "running" },
+  { vmid: 201, type: "qemu", name: "demo-cortendesk-windows-builder-test", status: "stopped", tags: "builder", uptime: 900, netin: 512 * 1024 ** 3 },
+  { vmid: 202, type: "qemu", name: "demo-running-vm", status: "running", uptime: 42, netin: 0, netout: 72 * 1024 ** 3, diskread: null, diskwrite: 5 * 1024 ** 3 },
 ].map(guest => ({ cpu: 0, mem: 0, maxmem: 1024, disk: 0, maxdisk: 1024, uptime: 0, ...guest }))
 
 function send(method, params = {}) {
@@ -148,6 +148,8 @@ async function run() {
   ` })
   await send("Page.navigate", { url: origin + "/" })
   await openInventory()
+  await waitFor("Boolean(localStorage.getItem('proxmenux.vmListLayout.v1'))")
+  const initialSettings = await evaluate("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1'))")
 
   assert.equal(new Set(await evaluate(`[${type("All types")},${type("VM")},${type("LXC")},${status("All")}].map(el=>el.getBoundingClientRect().height)`)).size, 1)
   await click(type("LXC"))
@@ -250,6 +252,154 @@ async function run() {
   await new Promise(resolve => setTimeout(resolve, 350))
   await tap(mobileGuest)
   await waitFor(`!(${mobileGuest})`)
+  await send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
+  const currentLayout = () => evaluate("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1'))")
+  const added = ["state", "tags", "uptime", "net", "io"]
+  assert.ok(added.every(column => (initialSettings.hidden).includes(column)))
+
+  const legacy = { order: ["type","name","cpu","ip","memory","disk","updates"], hidden: ["ip"],
+    widths: { type: 112 }, sort: { column: "cpu", direction: "desc" }, expanded: false, exceptions: ["qemu:201"] }
+  await evaluate(`localStorage.setItem('proxmenux.vmListLayout.v1', ${JSON.stringify(JSON.stringify(legacy))})`)
+  await send("Page.reload")
+  await openInventory("VM a LXC", "Filtrovať podľa typu stroja")
+  await waitFor("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1')).order.length===12")
+  const migrated = await currentLayout()
+  assert.deepEqual(migrated.order, [...legacy.order, ...added])
+  assert.deepEqual(new Set(migrated.hidden), new Set([...legacy.hidden, ...added]))
+  assert.deepEqual(migrated.widths, legacy.widths)
+  assert.deepEqual(migrated.sort, legacy.sort)
+  assert.deepEqual(migrated.exceptions, legacy.exceptions)
+
+  const settings = labelled("Nastavenie stĺpcov")
+  const input = title => `[...document.querySelectorAll('fieldset label')].find(el=>el.textContent.trim()===${JSON.stringify(title)})?.querySelector('input')`
+  const sortButton = column => `document.querySelector('[data-sort-column="${column}"]')`
+  const region = "document.querySelector('[role=region][aria-label=\"Virtuálne stroje a kontajnery\"]')"
+  const headers = () => evaluate("[...document.querySelectorAll('[data-sort-column]')].map(e=>e.dataset.sortColumn)")
+  const compact = name => labelled("Rozbaliť " + name)
+  const collapse = name => labelled("Zbaliť " + name)
+  const listOrder = () => evaluate(`[...(${region}).querySelectorAll('button[aria-expanded=false][aria-label]')].map(el=>el.getAttribute('aria-label')).filter(label=>label.startsWith('Rozbaliť demo-'))`)
+  const cell = (name, column) => `(() => {
+    const heading = ${sortButton(column)};
+    const columnIndex = [...heading.parentElement.parentElement.children].indexOf(heading.parentElement);
+    return [...(${compact(name)}).children].filter(el => el.id)[columnIndex];
+  })()`
+  const readCell = (name, column) => evaluate(`(${cell(name,column)}).textContent`)
+  const testLxc = "demo-container-with-a-long-name"
+  const stoppedVm = "demo-cortendesk-windows-builder-test"
+  const runningVm = "demo-running-vm"
+  await click(collapse(stoppedVm))
+  await click(settings)
+  for (const label of ["Stav", "Značky", "Doba behu", "Sieť I/O", "Disk I/O"]) {
+    assert.ok(await evaluate(`!(${input(label)}).checked`))
+    await click(input(label))
+  }
+  assert.equal((await headers()).length,11)
+  assert.match(await readCell(testLxc,"uptime"), /^6 d 2 h$/)
+  assert.equal(await readCell(stoppedVm,"uptime"), "—")
+  assert.equal(await readCell(runningVm,"uptime"), "< 1 min")
+  assert.equal(await readCell(stoppedVm,"net"), "—")
+  assert.match(await readCell(runningVm,"io"), /↓\s+—.*↑\s+5 GB/)
+  assert.match(await readCell(runningVm,"net"), /↓\s+0 B.*↑\s+72 GB/)
+  assert.match(await readCell(testLxc,"net"), /↓\s+36 GB.*↑\s+9 GB/)
+  const fills=(name,column)=>evaluate(`[...(${cell(name,column)}).querySelectorAll('span[style*="width"]')].map(e=>e.style.width)`)
+  assert.deepEqual(await fills(testLxc,"net"), ["50%", "12.5%"])
+  assert.deepEqual(await fills(testLxc,"io"), ["100%", "12.5%"])
+  await click(groupButton("Filtrovať podľa typu stroja", "LXC"))
+  assert.deepEqual(await fills(testLxc,"net"), ["50%", "12.5%"])
+  await click(groupButton("Filtrovať podľa typu stroja", "Všetky typy"))
+  const setUnit = value => evaluate(`localStorage.setItem('proxmenux-network-unit',${JSON.stringify(value)}); window.dispatchEvent(new Event('networkUnitChanged'))`)
+  await setUnit("Bits")
+  await waitFor(`(${cell(testLxc,"net")}).textContent.includes('309.24 Gb')`)
+  assert.match(await readCell(testLxc,"io"), /64 GB/)
+  await setUnit("Bytes")
+  const dotStyle = clickTarget => evaluate(`[...(${clickTarget}).querySelectorAll('span[style*="background-color"]')].map(e=>getComputedStyle(e).backgroundColor)`)
+  const tagColors = await dotStyle(cell(testLxc,"tags"))
+  assert.equal(tagColors.length, 8)
+  assert.equal(await readCell(testLxc,"tags"), "")
+  assert.equal(await readCell(runningVm,"tags"), "")
+  await click(compact(testLxc))
+  assert.deepEqual(await dotStyle(collapse(testLxc)), tagColors)
+  await click(collapse(testLxc))
+
+  await click(sortButton("net"))
+  assert.deepEqual(await listOrder(), ["Rozbaliť "+runningVm, "Rozbaliť "+testLxc, "Rozbaliť "+stoppedVm])
+  await click(sortButton("uptime"))
+  assert.deepEqual(await listOrder(), ["Rozbaliť "+testLxc, "Rozbaliť "+runningVm, "Rozbaliť "+stoppedVm])
+  const netIndex = (await headers()).indexOf("net")
+  await evaluate(`(${sortButton("net")}).dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', shiftKey:true, bubbles:true, cancelable:true}))`)
+  assert.equal((await headers()).indexOf("net"),netIndex-1)
+  await evaluate(`(${sortButton("net")}).parentElement.querySelector('[aria-keyshortcuts="ArrowLeft ArrowRight"]').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight',bubbles:true,cancelable:true}))`)
+  const resized=await currentLayout()
+  assert.equal(resized.widths.net,160)
+  await click(input("Sieť I/O"))
+  assert.ok(!(await headers()).includes("net"))
+  await click(input("Sieť I/O"))
+  const customized=await currentLayout()
+  await send("Page.reload")
+  await openInventory("VM a LXC", "Filtrovať podľa typu stroja")
+  await waitFor(`Boolean(${sortButton("net")})`)
+  assert.deepEqual(await currentLayout(),customized)
+  assert.equal(await evaluate(`(${sortButton("net")}).parentElement.getBoundingClientRect().width`),160)
+  await click(settings)
+  await click(input("IP adresa"))
+  await click(settings)
+  assert.equal((await headers()).length,12)
+
+  for (const width of [1194,1024,834,768]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height: 834, deviceScaleFactor: 1, mobile: false })
+    await waitFor(`innerWidth===${width}`)
+    const frame = await evaluate(`(() => {
+      const viewport = ${region};
+      const row = ${compact(testLxc)};
+      const heading = ${sortButton("net")};
+      const transfer = ${cell(testLxc,"net")};
+      const edge = viewport.getBoundingClientRect().right;
+      const aligned = Math.abs(heading.parentElement.getBoundingClientRect().x-transfer.getBoundingClientRect().x)<1;
+      return {viewportFits:edge<=innerWidth, canScroll:viewport.scrollWidth>viewport.clientWidth, aligned, height:row.offsetHeight};
+    })()`)
+    assert.ok(frame.viewportFits && frame.canScroll && frame.aligned && frame.height===36,`Tablet layout ${width}: ${JSON.stringify(frame)}`)
+    console.log("Tablet width",width, "the wide list scrolls within its panel")
+  }
+  await evaluate(`(${region}).scrollLeft=(${region}).scrollWidth;`)
+  await click(compact(testLxc))
+  assert.ok(await evaluate(`(() => {
+    const bounds=(${region}).getBoundingClientRect();
+    const card=(${collapse(testLxc)}).parentElement.getBoundingClientRect();
+    return card.left >= bounds.left-1 && card.right<=bounds.right+1;
+  })()`))
+
+  await send("Emulation.setTouchEmulationEnabled", { enabled:true, maxTouchPoints:1 })
+  for (const width of [402,390,320]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height: 812, deviceScaleFactor: 1, mobile: true })
+    await waitFor(`innerWidth===${width}`)
+    const frame = await evaluate(`(() => {
+      const viewport=${region};
+      const row=${compact(stoppedVm)};
+      const card=[...document.querySelectorAll('[data-collapse-guest]')].find(e=>e.getClientRects().length);
+      return {
+        noNestedScroll:viewport.scrollWidth<=viewport.clientWidth+1,
+        rowHeight:row.getBoundingClientRect().height,
+        rowFits:row.getBoundingClientRect().right<=innerWidth,
+        cardFits:card.parentElement.getBoundingClientRect().right<=innerWidth,
+        hiddenNetwork:(${cell(stoppedVm,"net")}).getClientRects().length===0
+      };
+    })()`)
+    assert.deepEqual(frame,{noNestedScroll:true,rowHeight:44,rowFits:true,cardFits:true,hiddenNetwork:true})
+    console.log("Mobile width",width,"fits with all twelve settings selected")
+  }
+  await click(settings)
+  assert.ok(await evaluate(`(() => {
+    const picker=document.getElementById((${settings}).getAttribute('aria-controls'));
+    return !picker.hidden && picker.querySelectorAll('input[type=checkbox]').length===12
+      && picker.scrollWidth<=picker.clientWidth+1 && picker.getBoundingClientRect().right<=innerWidth;
+  })()`))
+  await click(settings)
+  const lxcMobile = "[...document.querySelectorAll('[data-collapse-guest]')].find(e=>e.getClientRects().length && e.getAttribute('aria-label').endsWith('demo-container-with-a-long-name'))"
+  await tap(`(${lxcMobile}).parentElement.querySelector('button[aria-haspopup=dialog]')`)
+  await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
+  assert.match(await evaluate("document.querySelector('[role=dialog]').textContent"), /Sieť I\/O/)
+  console.log("Optional metrics, legacy settings, tag colors, transfer scales, sorting and persisted column settings passed")
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])
   console.log("VM/LXC filters, saved selection, scoped expansion, original details, tablet toolbar and mobile cards passed")

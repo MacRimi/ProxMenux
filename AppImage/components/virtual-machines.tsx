@@ -24,7 +24,7 @@ import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
-import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar } from "./vm-list-layout"
+import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar, VmListTransfer } from "./vm-list-layout"
 import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
 import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
@@ -466,12 +466,24 @@ const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): str
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
-const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string) => {
+const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string, compact = false) => {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
+  if (compact) {
+    const day = days ? t("vmLxc.layout.uptimeDay", { count: days }) : ""
+    const hour = hours ? t("vmLxc.layout.uptimeHour", { count: hours }) : ""
+    const minute = minutes ? t("vmLxc.layout.uptimeMinute", { count: minutes }) : ""
+    return (days ? [day, hour] : [hour, minute]).filter(Boolean).join(" ") || t("vmLxc.layout.uptimeRecent")
+  }
   return t("vmLxc.duration.dhm", { days, hours, minutes })
 }
+
+const inventoryCounter = (value: number | undefined) =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : undefined
+
+const completeTransferTotal = ([first, second]: readonly [number | undefined, number | undefined]) =>
+  first === undefined || second === undefined ? undefined : first + second
 
 const extractIPFromConfig = (config?: VMConfig, lxcIPInfo?: VMDetails["lxc_ip_info"]): string => {
   // Use primary IP from lxc-info if available
@@ -3153,6 +3165,15 @@ export function VirtualMachines() {
     setEditedNotes("")
   }
 
+  // Keep the transfer scale stable across searches and filters.
+  let networkMaximum = 1
+  let diskIoMaximum = 1
+  for (const vm of safeVMData) {
+    if (vm.status !== "running") continue
+    networkMaximum = Math.max(networkMaximum, inventoryCounter(vm.netin) ?? 0, inventoryCounter(vm.netout) ?? 0)
+    diskIoMaximum = Math.max(diskIoMaximum, inventoryCounter(vm.diskread) ?? 0, inventoryCounter(vm.diskwrite) ?? 0)
+  }
+
   const inventoryRows = sortVmRows(filteredVMs.map((vm) => {
     // Both the expanded card and the compact IP column use the current list
     // address first, then the existing configuration and prefetch caches.
@@ -3167,13 +3188,27 @@ export function VirtualMachines() {
     }
     const ip = vm.status === "running" && lxcIP && lxcIP !== "DHCP" && lxcIP !== "N/A" ? lxcIP : undefined
     const count = vm.type === "lxc" ? getAggregateUpdateCheck(vm)?.count : undefined
-    return { vm, lxcIP, values: {
+    const running = vm.status === "running"
+    const tags = parseTags(vm.tags)
+    const net: readonly [number | undefined, number | undefined] = running
+      ? [inventoryCounter(vm.netin), inventoryCounter(vm.netout)] : [undefined, undefined]
+    const diskIo: readonly [number | undefined, number | undefined] = running
+      ? [inventoryCounter(vm.diskread), inventoryCounter(vm.diskwrite)] : [undefined, undefined]
+    const statusLabel = running || vm.status === "stopped"
+      ? t(`vmLxc.statusFilter.${vm.status}`)
+      : getStatusLabel(vm.status, false)
+    return { vm, lxcIP, tags, net, diskIo, statusLabel, values: {
       name: vm.name,
       type: vm.vmid,
+      state: statusLabel,
+      tags: tags.join(", ") || undefined,
       ip,
+      uptime: running ? inventoryCounter(vm.uptime) : undefined,
       cpu: vm.cpu * 100,
       memory: vm.maxmem > 0 ? vm.mem / vm.maxmem * 100 : undefined,
       disk: vm.maxdisk > 0 ? vm.disk / vm.maxdisk * 100 : undefined,
+      net: completeTransferTotal(net),
+      io: completeTransferTotal(diskIo),
       updates: count && count > 0 ? count : undefined,
     } }
   }), listLayout.sort, language, (row, column) => row.values[column])
@@ -3547,7 +3582,7 @@ export function VirtualMachines() {
             </div>
           ) : (
             <VmListGrid layout={listLayout}>
-              {inventoryRows.map(({ vm, lxcIP, values }) => {
+              {inventoryRows.map(({ vm, lxcIP, tags, net, diskIo, statusLabel, values }) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
@@ -3559,9 +3594,6 @@ export function VirtualMachines() {
                 const additionalIpCount = lxcIP
                   ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
                   : 0
-                const statusLabel = vm.status === "running" || vm.status === "stopped"
-                  ? t(`vmLxc.statusFilter.${vm.status}`)
-                  : getStatusLabel(vm.status, false)
                 const infoLabel = t("vmLxc.layout.openGuestInfo", { name: vm.name })
                 const infoHighlight = vm.status === "running"
                   ? "hover:bg-green-500/10 focus-visible:bg-green-500/10"
@@ -3571,18 +3603,33 @@ export function VirtualMachines() {
                 const metric = (value: number) => (
                   <VmListMetric value={value} color={getUsageColor(value)} fill={getMemoryUsageColor(value)} />
                 )
+                const tagDots = (size: string) => tags.map((tag, index) => (
+                  <VmCardTooltip key={`${tag}-${index}`} label={tag}>
+                    <span className={`inline-block shrink-0 rounded-full ${size}`} style={{ backgroundColor: tagToColor(tag).bg }} />
+                  </VmCardTooltip>
+                ))
 
                 return (
                   <VmListRow key={listKey(vm)} guestKey={listKey(vm)} name={vm.name} status={vm.status} statusLabel={statusLabel}
                     layout={listLayout} cells={{
                     name: <span className="font-semibold">{vm.name}</span>,
                     type: <span className={vm.type === "lxc" ? "text-cyan-600 dark:text-cyan-400" : "text-purple-600 dark:text-purple-400"}>{typeBadge.label} · {vm.vmid}</span>,
+                    state: <span className={getStatusColor(vm.status)}>{statusLabel}</span>,
+                    tags: tags.length > 0 ? <span className="flex items-center gap-1.5" role="img" aria-label={values.tags}>{tagDots("size-2")}</span> : null,
                     ip: values.ip
                       ? <VmCardTooltip label={values.ip}><span className="block truncate text-muted-foreground">{values.ip}</span></VmCardTooltip>
                       : "—",
+                    uptime: values.uptime === undefined ? "—"
+                      : <VmCardTooltip label={formatUptime(values.uptime, t)}><span>{formatUptime(values.uptime, t, true)}</span></VmCardTooltip>,
                     cpu: metric(values.cpu),
                     memory: metric(values.memory ?? NaN),
                     disk: metric(values.disk ?? NaN),
+                    net: <VmListTransfer counters={net} maximum={networkMaximum}
+                      label={(first, second) => t("vmLxc.layout.networkTransfer", { first, second })}
+                      format={(value) => formatNetworkTraffic(value, networkUnit)} />,
+                    io: <VmListTransfer counters={diskIo} maximum={diskIoMaximum}
+                      label={(first, second) => t("vmLxc.layout.diskTransfer", { first, second })}
+                      format={(value) => formatNetworkTraffic(value, "Bytes")} />,
                     updates: values.updates
                       ? <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400"><ArrowUpCircle aria-hidden="true" className="size-3 shrink-0" />{values.updates}</span>
                       : "—",
@@ -3620,14 +3667,7 @@ export function VirtualMachines() {
                             matches PVE's own tag palette. Full pills
                             live inside the modal; here only the dot
                             reads at a glance in a dense card. */}
-                        {parseTags(vm.tags).map((tag) => {
-                          const { bg } = tagToColor(tag)
-                          return (
-                            <VmCardTooltip key={`tag-dot-${vm.vmid}-${tag}`} label={tag}>
-                              <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: bg }} />
-                            </VmCardTooltip>
-                          )
-                        })}
+                        {tagDots("size-3")}
                         {vm.type === "lxc" && (
                           <span className="ml-auto shrink-0">
                             {renderLxcUpdateBadge(getAggregateUpdateCheck(vm))}
@@ -3803,14 +3843,7 @@ export function VirtualMachines() {
                           <span className="block truncate font-semibold text-foreground">{vm.name}</span>
                           <span className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
                             <span className="whitespace-nowrap">ID: {vm.vmid}</span>
-                            {parseTags(vm.tags).map((tag) => {
-                              const { bg } = tagToColor(tag)
-                              return (
-                                <VmCardTooltip key={`tag-dot-m-${vm.vmid}-${tag}`} label={tag}>
-                                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: bg }} />
-                                </VmCardTooltip>
-                              )
-                            })}
+                            {tagDots("size-2.5")}
                             {vm.type === "lxc" && (() => {
                               const agg = getAggregateUpdateCheck(vm)
                               return agg?.available && (agg.count ?? 0) > 0 ? (

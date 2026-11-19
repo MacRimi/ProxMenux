@@ -1,5 +1,17 @@
 .inventory {
   container: vm-list / inline-size;
+  overflow-x: auto;
+}
+
+.headings,
+.rows {
+  min-inline-size: var(--vm-list-min-wide);
+}
+
+.expandedCard {
+  position: sticky;
+  inset-inline-start: 0;
+  inline-size: min(100%, 100cqi);
 }
 
 .toolbar {
@@ -171,6 +183,13 @@
   line-height: 16px;
 }
 
+.transfer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 11px;
+}
+
 .track {
   height: 3px;
   overflow: hidden;
@@ -184,6 +203,11 @@
 }
 
 @container vm-list (max-width: 670px) {
+  .headings,
+  .rows {
+    min-inline-size: var(--vm-list-min-medium);
+  }
+
   .grid {
     grid-template-columns: var(--vm-list-medium);
     gap: 5px;
@@ -200,6 +224,10 @@
 }
 
 @container vm-list (max-width: 540px) {
+  .rows {
+    min-inline-size: var(--vm-list-min-narrow);
+  }
+
   .grid {
     grid-template-columns: var(--vm-list-narrow);
   }
