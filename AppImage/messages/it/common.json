@@ -2862,7 +2862,7 @@
     "readOnlyDescription": "Chiunque raggiunga il Monitor può visualizzarlo, ma non può aprire terminali, eseguire script o modificare alcunché. Potrai aggiungere una password in seguito.",
     "openTitle": "Aperto, accettando il rischio",
     "openDescription": "Chiunque raggiunga il Monitor ottiene il pieno controllo di questo server, terminale root incluso. Selezionalo solo su una rete in cui ti fidi di chiunque possa raggiungerlo.",
-    "chooseReadOnly": "Usa sola lettura",
+    "chooseReadOnly": "Usa la sola lettura",
     "chooseOpen": "Apri senza password",
     "pveTitle": "Oppure usa gli account di Proxmox VE",
     "pveDescription": "Accedi con gli utenti e i realm di Proxmox VE e la loro autenticazione a due fattori, senza un account dedicato di Monitor.",
@@ -2892,7 +2892,7 @@
     "errors": {
       "pve_rules_invalid": "Non è stato possibile salvare le regole.",
       "pve_name_invalid": "Scegli un utente o un gruppo valido.",
-      "pve_user_realm": "Indica l'utente con il suo realm, ad esempio utente@pve.",
+      "pve_user_realm": "Indica l'utente con il suo realm, ad esempio user@pve.",
       "pve_rule_duplicate": "Ogni utente o gruppo può avere una sola regola.",
       "pve_rule_self": "Queste regole ti toglierebbero l'accesso da amministratore."
     }
@@ -3142,7 +3142,7 @@
       "readOnlyMode": "La dashboard è in sola lettura senza password: può essere visualizzata, ma non è possibile eseguire né modificare nulla.",
       "useReadOnly": "Passa a sola lettura",
       "disableChoose": "Senza password, come deve essere raggiungibile la dashboard?",
-      "pveMode": "La dashboard accede con gli account di Proxmox VE."
+      "pveMode": "L'accesso alla dashboard avviene con gli account di Proxmox VE."
     },
     "twoFactor": {
       "title": "Autenticazione a due fattori",
@@ -8275,7 +8275,7 @@
   },
   "accessLog": {
     "title": "Attività di accesso",
-    "description": "Accessi, modifiche ad account, profili e impostazioni di accesso, e ogni azione rifiutata da un profilo, con chi l'ha eseguita. Password, codici e token non vengono mai registrati. Conservata per 90 giorni.",
+    "description": "Accessi, modifiche ad account, profili e impostazioni di accesso, e ogni azione rifiutata da un profilo, con l'indicazione dell'autore. Password, codici e token non vengono mai registrati. I dati sono conservati per 90 giorni.",
     "empty": "Nessuna attività registrata finora.",
     "loadMore": "Carica altro",
     "refused": "Rifiutata",
@@ -8373,7 +8373,7 @@
     "saved": "Impostazioni OIDC salvate. La discovery è stata verificata; prova l'accesso in un altro browser prima di terminare la sessione locale.",
     "saveFailed": "Impossibile salvare le impostazioni OIDC.",
     "login": "Continua con {provider}",
-    "loginFailed": "Accesso OIDC non riuscito o scaduto. Riprova, controlla il tuo identificatore soggetto autorizzato oppure usa le credenziali locali.",
+    "loginFailed": "Accesso OIDC non riuscito o scaduto. Riprova, verifica che il tuo identificativo sia tra quelli consentiti oppure usa le credenziali locali.",
     "disabledSaved": "Impostazioni OIDC salvate. L'accesso esterno è disabilitato.",
     "saveDisabled": "Salva impostazioni",
     "allowedSubjects": "Identificativi consentiti",

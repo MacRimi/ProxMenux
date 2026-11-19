@@ -59,7 +59,8 @@
       "<code>/opt/lynis/lynis</code> — percorso diretto (nel caso in cui l'involucro sia stato rimosso)",
       "<code>/usr/sbin/lynis</code> — versione apt-installata, se l'utente l'ha installato in quel modo prima"
     ],
-    "outro": "Se trova uno di questi percorsi apre il menu di gestione. Lo script <strong>non</strong> disinstalla Lynis installato con apt; rimuove solo quello gestito in <code>/opt/lynis</code> e il relativo lanciatore."
+    "outro": "Se trova uno di questi percorsi apre il menu di gestione. Lo script <strong>non</strong> disinstalla Lynis installato con apt; rimuove solo quello gestito in <code>/opt/lynis</code> e il relativo lanciatore.",
+    "outsideNote": "Se Lynis è stato installato in altro modo, ad esempio tramite il pacchetto Debian o il repository APT di CISOfy, il menu e il Monitor di ProxMenux consentono solo di eseguire l'audit. Per aggiornarlo o rimuoverlo, usa lo stesso metodo con cui è stato installato."
   },
   "audit": {
     "heading": "Eseguire un audit",
