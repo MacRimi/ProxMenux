@@ -190,7 +190,9 @@ async function run() {
   await openInventory("VM a LXC", "Filtrovať podľa typu stroja")
   await click(labelled("Rozbaliť všetky"))
   const skOpen = "Zobraziť informácie o stroji "
-  for (const [width, tablet] of [[1194, true], [1024, true], [1440, false]]) {
+  // The page runs the full width of the window: at 1194 px the toolbar has
+  // room for its desktop row, and the tablet layout begins below that.
+  for (const [width, tablet] of [[1194, false], [1024, true], [1440, false]]) {
     await send("Emulation.setDeviceMetricsOverride", { width, height: 834, deviceScaleFactor: 1, mobile: false })
     const types = labelled("Filtrovať podľa typu stroja")
     await waitFor(`(${types}.parentElement.dataset.layout === 'tablet') === ${tablet}`)
