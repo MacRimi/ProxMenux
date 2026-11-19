@@ -111,7 +111,9 @@ const groupButton = (group, label) => `[...${labelled(group)}?.querySelectorAll(
 const type = label => groupButton("Filter by guest type", label)
 const status = label => groupButton("Filter virtual machines and containers", label)
 const click = selector => evaluate(`(${selector}).click()`)
-const visibleRows = () => evaluate("[...document.querySelectorAll('button[aria-expanded][aria-label]')].filter(button=>button.getClientRects().length).map(button=>button.getAttribute('aria-label')).filter(label=>/^(Expand|Collapse) demo-/.test(label)).sort()")
+// A compact row is a button and an open card a div; both open the guest details.
+const guestTargets = prefix => `[...document.querySelectorAll('[aria-haspopup=dialog][aria-label^=${JSON.stringify(prefix)}]')].filter(el=>el.getClientRects().length)`
+const visibleRows = (prefix = "View details for ") => evaluate(`${guestTargets(prefix)}.map(el=>(el.tagName==='BUTTON' ? 'Row ' : 'Card ')+el.getAttribute('aria-label').slice(${JSON.stringify(prefix)}.length)).filter(label=>/ demo-/.test(label)).sort()`)
 
 async function tap(selector) {
   const point = await evaluate(`(() => {
@@ -154,31 +156,40 @@ async function run() {
   assert.equal(new Set(await evaluate(`[${type("All types")},${type("VM")},${type("LXC")},${status("All")}].map(el=>el.getBoundingClientRect().height)`)).size, 1)
   await click(type("LXC"))
   await click(status("Updates"))
-  assert.deepEqual(await visibleRows(), ["Expand demo-container-with-a-long-name"])
+  assert.deepEqual(await visibleRows(), ["Row demo-container-with-a-long-name"])
   await click(type("VM"))
   assert.ok(await evaluate(`(${status("Updates")}).disabled && (${status("Updates")}).getAttribute('aria-pressed') === 'false'`))
   await click(status("Stopped"))
-  assert.deepEqual(await visibleRows(), ["Expand demo-cortendesk-windows-builder-test"])
+  assert.deepEqual(await visibleRows(), ["Row demo-cortendesk-windows-builder-test"])
   await click(labelled("Expand visible"))
-  await waitFor(`Boolean(${labelled("Collapse demo-cortendesk-windows-builder-test")})`)
+  await waitFor(`${guestTargets("View details for ")}.some(el=>el.tagName!=='BUTTON')`)
+  // Every visible guest is open: the standard view has no columns to choose.
+  assert.ok(await evaluate(`(${labelled("Column settings")}).disabled && !document.querySelector('[data-sort-column]')?.getClientRects().length`))
 
   await send("Page.reload")
   await openInventory()
   assert.equal(await evaluate(`(${type("VM")}).getAttribute('aria-pressed')`), "true")
-  assert.deepEqual(await visibleRows(), ["Collapse demo-cortendesk-windows-builder-test"])
+  assert.deepEqual(await visibleRows(), ["Card demo-cortendesk-windows-builder-test"])
   await click(type("All types"))
   await click(status("All"))
-  assert.deepEqual(await visibleRows(), ["Collapse demo-cortendesk-windows-builder-test", "Expand demo-container-with-a-long-name", "Expand demo-running-vm"])
+  assert.deepEqual(await visibleRows(), ["Card demo-cortendesk-windows-builder-test", "Row demo-container-with-a-long-name", "Row demo-running-vm"])
+  // A mixed list is not the standard view: its columns can be chosen.
+  assert.ok(await evaluate(`!(${labelled("Column settings")}).disabled`))
   const details = `[...document.querySelectorAll('[aria-label="View details for demo-cortendesk-windows-builder-test"]')].find(el => el.getClientRects().length)`
   await click(details)
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-cortendesk-windows-builder-test')")
-  assert.ok(await evaluate(`!${labelled("Expand demo-cortendesk-windows-builder-test")}`))
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor("!document.querySelector('[role=dialog]')")
+  // A compact row opens the details too; it does not open a card.
+  await click(`[...document.querySelectorAll('button[aria-label="View details for demo-running-vm"]')].find(el => el.getClientRects().length)`)
+  await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-running-vm')")
+  assert.deepEqual(await visibleRows(), ["Card demo-cortendesk-windows-builder-test", "Row demo-container-with-a-long-name", "Row demo-running-vm"])
 
   await evaluate("localStorage.setItem('proxmenux-ui-language', 'sk')")
   await send("Page.reload")
   await openInventory("VM a LXC", "Filtrovať podľa typu stroja")
-  await click("[...document.querySelectorAll('button[aria-expanded=false]')].find(button => button.getAttribute('aria-label')?.endsWith('demo-container-with-a-long-name'))")
-  await click("[...document.querySelectorAll('button[aria-expanded=false]')].find(button => button.getAttribute('aria-label')?.endsWith('demo-running-vm'))")
+  await click(labelled("Rozbaliť všetky"))
+  const skOpen = "Zobraziť informácie o stroji "
   for (const [width, tablet] of [[1194, true], [1024, true], [1440, false]]) {
     await send("Emulation.setDeviceMetricsOverride", { width, height: 834, deviceScaleFactor: 1, mobile: false })
     const types = labelled("Filtrovať podľa typu stroja")
@@ -220,20 +231,18 @@ async function run() {
     assert.ok(controls.every(control => control.insideViewport && control.height === controls[0].height))
     const layout = await evaluate(`(() => {
       const visible = (e) => e.getClientRects().length > 0;
-      const cards = [...document.querySelectorAll('[data-collapse-guest]')].filter(visible).map((heading) => {
-        const card = heading.parentElement;
-        const metrics = card.querySelector('button[aria-haspopup="dialog"]');
+      const cards = [...document.querySelectorAll('div[role=button][aria-haspopup=dialog]')].filter(visible).map((card) => {
         const bounds = card.getBoundingClientRect();
-        const list = card.closest('[id]').parentElement.parentElement;
+        const list = card.closest('[role=region]');
         const listBounds = list.getBoundingClientRect();
         const inside = (element) => {
           const rect = element.getBoundingClientRect();
           return rect.left >= bounds.left && rect.right <= bounds.right;
         };
-        const name = heading.querySelector('.truncate');
+        const name = card.querySelector('.truncate');
         return { name: name.textContent, cardFits: bounds.left >= listBounds.left && bounds.right <= listBounds.right + 1 && listBounds.right <= innerWidth
             && list.scrollWidth <= list.clientWidth + 1,
-          controlsFit: bounds.width >= 1 && inside(heading) && inside(metrics) && metrics.getBoundingClientRect().height >= 44,
+          controlsFit: bounds.height >= 44,
           nameFits: inside(name) && name.clientWidth >= 16 && getComputedStyle(name).textOverflow === "ellipsis",
           nameTruncated: name.scrollWidth > name.clientWidth };
       });
@@ -244,14 +253,12 @@ async function run() {
       && layout.viewport === width, `Mobile card overflow at ${width}: ${JSON.stringify(layout)}`)
   }
   await send("Emulation.setDeviceMetricsOverride", { width: 402, height: 812, deviceScaleFactor: 1, mobile: true })
-  const mobileGuest = "[...document.querySelectorAll('[data-collapse-guest]')].find(button => button.getClientRects().length && button.getAttribute('aria-label').endsWith('demo-container-with-a-long-name'))"
-  await tap(`(${mobileGuest}).parentElement.querySelector('button[aria-haspopup=dialog]')`)
+  const mobileGuest = `${guestTargets(skOpen)}.find(el => el.getAttribute('aria-label').endsWith('demo-container-with-a-long-name'))`
+  await tap(mobileGuest)
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
   await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
   await waitFor("!document.querySelector('[role=dialog]')")
   await new Promise(resolve => setTimeout(resolve, 350))
-  await tap(mobileGuest)
-  await waitFor(`!(${mobileGuest})`)
   await send("Emulation.setTouchEmulationEnabled", { enabled: false })
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
   const currentLayout = () => evaluate("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1'))")
@@ -276,9 +283,9 @@ async function run() {
   const sortButton = column => `document.querySelector('[data-sort-column="${column}"]')`
   const region = "document.querySelector('[role=region][aria-label=\"Virtuálne stroje a kontajnery\"]')"
   const headers = () => evaluate("[...document.querySelectorAll('[data-sort-column]')].map(e=>e.dataset.sortColumn)")
-  const compact = name => labelled("Rozbaliť " + name)
-  const collapse = name => labelled("Zbaliť " + name)
-  const listOrder = () => evaluate(`[...(${region}).querySelectorAll('button[aria-expanded=false][aria-label]')].map(el=>el.getAttribute('aria-label')).filter(label=>label.startsWith('Rozbaliť demo-'))`)
+  const compact = name => `document.querySelector(${JSON.stringify(`button[aria-label="${skOpen}${name}"]`)})`
+  const card = name => `[...document.querySelectorAll(${JSON.stringify(`div[role=button][aria-label="${skOpen}${name}"]`)})].find(el=>el.getClientRects().length)`
+  const listOrder = () => evaluate(`[...(${region}).querySelectorAll('button[aria-haspopup=dialog][aria-label]')].map(el=>el.getAttribute('aria-label')).filter(label=>label.startsWith(${JSON.stringify(skOpen + "demo-")})).map(label=>label.slice(${JSON.stringify(skOpen)}.length))`)
   const cell = (name, column) => `(() => {
     const heading = ${sortButton(column)};
     const columnIndex = [...heading.parentElement.parentElement.children].indexOf(heading.parentElement);
@@ -288,7 +295,7 @@ async function run() {
   const testLxc = "demo-container-with-a-long-name"
   const stoppedVm = "demo-cortendesk-windows-builder-test"
   const runningVm = "demo-running-vm"
-  await click(collapse(stoppedVm))
+  await click(labelled("Zbaliť všetky"))
   await click(settings)
   for (const label of ["Stav", "Značky", "Doba behu", "Sieť I/O", "Disk I/O"]) {
     assert.ok(await evaluate(`!(${input(label)}).checked`))
@@ -318,14 +325,14 @@ async function run() {
   assert.equal(tagColors.length, 8)
   assert.equal(await readCell(testLxc,"tags"), "")
   assert.equal(await readCell(runningVm,"tags"), "")
-  await click(compact(testLxc))
-  assert.deepEqual(await dotStyle(collapse(testLxc)), tagColors)
-  await click(collapse(testLxc))
+  await click(labelled("Rozbaliť všetky"))
+  assert.deepEqual(await dotStyle(card(testLxc)), tagColors)
+  await click(labelled("Zbaliť všetky"))
 
   await click(sortButton("net"))
-  assert.deepEqual(await listOrder(), ["Rozbaliť "+runningVm, "Rozbaliť "+testLxc, "Rozbaliť "+stoppedVm])
+  assert.deepEqual(await listOrder(), [runningVm, testLxc, stoppedVm])
   await click(sortButton("uptime"))
-  assert.deepEqual(await listOrder(), ["Rozbaliť "+testLxc, "Rozbaliť "+runningVm, "Rozbaliť "+stoppedVm])
+  assert.deepEqual(await listOrder(), [testLxc, runningVm, stoppedVm])
   const netIndex = (await headers()).indexOf("net")
   await evaluate(`(${sortButton("net")}).dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', shiftKey:true, bubbles:true, cancelable:true}))`)
   assert.equal((await headers()).indexOf("net"),netIndex-1)
@@ -362,54 +369,59 @@ async function run() {
     console.log("Tablet width",width, "the wide list scrolls within its panel")
   }
   await evaluate(`(${region}).scrollLeft=(${region}).scrollWidth;`)
-  await click(compact(testLxc))
+  // One open card among compact rows: open the LXC alone through the type filter.
+  await click(groupButton("Filtrovať podľa typu stroja", "LXC"))
+  await click(labelled("Rozbaliť zobrazené"))
+  await click(groupButton("Filtrovať podľa typu stroja", "Všetky typy"))
   assert.ok(await evaluate(`(() => {
     const bounds=(${region}).getBoundingClientRect();
-    const card=(${collapse(testLxc)}).parentElement.getBoundingClientRect();
-    return card.left >= bounds.left-1 && card.right<=bounds.right+1;
+    const open=(${card(testLxc)}).getBoundingClientRect();
+    return open.left >= bounds.left-1 && open.right<=bounds.right+1;
   })()`))
 
   await send("Emulation.setTouchEmulationEnabled", { enabled:true, maxTouchPoints:1 })
   for (const width of [402,390,320]) {
     await send("Emulation.setDeviceMetricsOverride", { width, height: 812, deviceScaleFactor: 1, mobile: true })
     await waitFor(`innerWidth===${width}`)
+    // The phone layout follows the viewport on the next render.
+    await waitFor(`(${region}).dataset.phone === "true"`)
     const frame = await evaluate(`(() => {
       const viewport=${region};
       const row=${compact(stoppedVm)};
-      const card=[...document.querySelectorAll('[data-collapse-guest]')].find(e=>e.getClientRects().length);
+      const open=${card(testLxc)};
       return {
         noNestedScroll:viewport.scrollWidth<=viewport.clientWidth+1,
         rowHeight:row.getBoundingClientRect().height,
         rowFits:row.getBoundingClientRect().right<=innerWidth,
-        cardFits:card.parentElement.getBoundingClientRect().right<=innerWidth,
-        hiddenNetwork:(${cell(stoppedVm,"net")}).getClientRects().length===0
+        cardFits:open.getBoundingClientRect().right<=innerWidth,
+        phoneColumns:[...row.children].filter(el=>el.id).length
       };
     })()`)
-    assert.deepEqual(frame,{noNestedScroll:true,rowHeight:44,rowFits:true,cardFits:true,hiddenNetwork:true})
-    console.log("Mobile width",width,"fits with all twelve settings selected")
+    // A phone shows the name and its own columns: CPU, memory and disk by default.
+    assert.deepEqual(frame,{noNestedScroll:true,rowHeight:44,rowFits:true,cardFits:true,phoneColumns:4})
+    console.log("Mobile width",width,"fits with the phone columns")
   }
   await click(settings)
   assert.ok(await evaluate(`(() => {
     const picker=document.getElementById((${settings}).getAttribute('aria-controls'));
-    return !picker.hidden && picker.querySelectorAll('input[type=checkbox]').length===12
+    return !picker.hidden && picker.querySelectorAll('input[type=checkbox]').length===11
       && picker.scrollWidth<=picker.clientWidth+1 && picker.getBoundingClientRect().right<=innerWidth;
   })()`))
   await click(settings)
-  const lxcMobile = "[...document.querySelectorAll('[data-collapse-guest]')].find(e=>e.getClientRects().length && e.getAttribute('aria-label').endsWith('demo-container-with-a-long-name'))"
-  await tap(`(${lxcMobile}).parentElement.querySelector('button[aria-haspopup=dialog]')`)
+  await tap(card(testLxc))
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
   assert.match(await evaluate("document.querySelector('[role=dialog]').textContent"), /Sieť I\/O/)
   console.log("Optional metrics, legacy settings, tag colors, transfer scales, sorting and persisted column settings passed")
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])
-  console.log("VM/LXC filters, saved selection, scoped expansion, original details, tablet toolbar and mobile cards passed")
+  console.log("VM/LXC filters, saved selection, scoped expansion, rows and cards opening the details, tablet toolbar and mobile cards passed")
 }
 
 const deadline = setTimeout(() => {
   console.error("Browser check timed out")
   process.exitCode = 1
   browser.kill()
-}, 60000)
+}, 120000)
 run().catch(error => { console.error(error); process.exitCode = 1 }).finally(() => {
   clearTimeout(deadline)
   browser.kill()

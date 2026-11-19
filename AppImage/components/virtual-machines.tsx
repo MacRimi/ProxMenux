@@ -2039,6 +2039,8 @@ export function VirtualMachines() {
   const columnPickerId = useId()
   const [columnPickerOpen, setColumnPickerOpen] = useState(false)
   const listKey = (vm: VMData) => `${vm.type === "lxc" ? "lxc" : "qemu"}:${vm.vmid}`
+  // Columns belong to the compact list; the standard cards have none.
+  const standardView = filteredVMs.length > 0 && filteredVMs.every((vm) => listLayout.isExpanded(listKey(vm)))
 
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,
@@ -3555,7 +3557,7 @@ export function VirtualMachines() {
                </div>
             }
           />
-          <VmListColumnPicker id={columnPickerId} open={columnPickerOpen} layout={listLayout} />
+          <VmListColumnPicker id={columnPickerId} open={columnPickerOpen && !standardView} layout={listLayout} />
             {vmSearchTerms.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t("vmLxc.filters.resultCount", {
@@ -3581,7 +3583,7 @@ export function VirtualMachines() {
                    : t("vmLxc.filters.noStopped")}
             </div>
           ) : (
-            <VmListGrid layout={listLayout}>
+            <VmListGrid layout={listLayout} headings={!standardView}>
               {inventoryRows.map(({ vm, lxcIP, tags, net, diskIo, statusLabel, values }) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
@@ -3594,14 +3596,9 @@ export function VirtualMachines() {
                 const additionalIpCount = lxcIP
                   ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
                   : 0
-                const infoLabel = t("vmLxc.layout.openGuestInfo", { name: vm.name })
-                const infoHighlight = vm.status === "running"
-                  ? "hover:bg-green-500/10 focus-visible:bg-green-500/10"
-                  : vm.status === "stopped"
-                    ? "hover:bg-red-500/10 focus-visible:bg-red-500/10"
-                    : "hover:bg-muted focus-visible:bg-muted"
-                const metric = (value: number) => (
-                  <VmListMetric value={value} color={getUsageColor(value)} fill={getMemoryUsageColor(value)} />
+                const metric = (value: number, Icon: typeof Cpu, label: string) => (
+                  <VmListMetric value={value} color={getUsageColor(value)} fill={getMemoryUsageColor(value)}
+                    phone={listLayout.phone} label={label} icon={<Icon aria-hidden="true" className="size-4" />} />
                 )
                 const tagDots = (size: string) => tags.map((tag, index) => (
                   <VmCardTooltip key={`${tag}-${index}`} label={tag}>
@@ -3611,7 +3608,8 @@ export function VirtualMachines() {
 
                 return (
                   <VmListRow key={listKey(vm)} guestKey={listKey(vm)} name={vm.name} status={vm.status} statusLabel={statusLabel}
-                    layout={listLayout} cells={{
+                    updates={values.updates}
+                    layout={listLayout} onOpen={(trigger) => handleVMClick(vm, trigger)} onPreview={() => prefetchVM(vm)} cells={{
                     name: <span className="font-semibold">{vm.name}</span>,
                     type: <span className={vm.type === "lxc" ? "text-cyan-600 dark:text-cyan-400" : "text-purple-600 dark:text-purple-400"}>{typeBadge.label} · {vm.vmid}</span>,
                     state: <span className={getStatusColor(vm.status)}>{statusLabel}</span>,
@@ -3621,9 +3619,9 @@ export function VirtualMachines() {
                       : "—",
                     uptime: values.uptime === undefined ? "—"
                       : <VmCardTooltip label={formatUptime(values.uptime, t)}><span>{formatUptime(values.uptime, t, true)}</span></VmCardTooltip>,
-                    cpu: metric(values.cpu),
-                    memory: metric(values.memory ?? NaN),
-                    disk: metric(values.disk ?? NaN),
+                    cpu: metric(values.cpu, Cpu, t("vmLxc.layout.columns.cpu")),
+                    memory: metric(values.memory ?? NaN, MemoryStick, t("vmLxc.layout.columns.memory")),
+                    disk: metric(values.disk ?? NaN, HardDrive, t("vmLxc.layout.columns.disk")),
                     net: <VmListTransfer counters={net} maximum={networkMaximum}
                       label={(first, second) => t("vmLxc.layout.networkTransfer", { first, second })}
                       format={(value) => formatNetworkTraffic(value, networkUnit)} />,
@@ -3631,12 +3629,19 @@ export function VirtualMachines() {
                       label={(first, second) => t("vmLxc.layout.diskTransfer", { first, second })}
                       format={(value) => formatNetworkTraffic(value, "Bytes")} />,
                     updates: values.updates
-                      ? <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400"><ArrowUpCircle aria-hidden="true" className="size-3 shrink-0" />{values.updates}</span>
+                      ? <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+                          <ArrowUpCircle aria-hidden="true" className={`${listLayout.phone ? "size-4" : "size-3"} shrink-0`} />
+                          {/* On a phone the icon alone says there are updates; the count is in the details. */}
+                          <span className={listLayout.phone ? "sr-only" : undefined}>{values.updates}</span>
+                        </span>
                       : "—",
                   }}>
-                    {(collapseButton) => (
+                    {(card) => (
                     <>
-                    <div className="hidden rounded-lg border border-border bg-card sm:block">
+                    <div
+                      {...card}
+                      className="group hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       {/* Row 1 — identity header. Just badges + name
                           + ID + update badge, no uptime/IP here. On
                           `lg+` (≥1024 px, e.g. iPad landscape and up)
@@ -3649,17 +3654,15 @@ export function VirtualMachines() {
                           Users who need uptime/IP on narrow screens
                           still see them inside the modal's Status
                           tab. */}
-                      <VmCardTooltip label={collapseButton["aria-label"]}>
-                      <button {...collapseButton}
-                        className="flex min-h-[38px] w-full cursor-pointer flex-wrap content-start items-center gap-x-2 gap-y-1 rounded-t-lg px-4 pb-1 pt-2.5 text-start transition-colors hover:bg-blue-500/10 focus-visible:bg-blue-500/10 [@media(pointer:coarse)]:min-h-11">
-                        <span className={cn(badgeVariants({ variant: "outline" }), "shrink-0", getStatusColor(vm.status))}>
+                      <div className="flex items-center gap-x-2 gap-y-1 flex-wrap mb-3">
+                        <Badge variant="outline" className={`flex-shrink-0 ${getStatusColor(vm.status)}`}>
                           {getStatusIcon(vm.status)}
                           {getStatusLabel(vm.status)}
-                        </span>
-                        <span className={cn(badgeVariants({ variant: "outline" }), "shrink-0", typeBadge.color)}>
+                        </Badge>
+                        <Badge variant="outline" className={`flex-shrink-0 ${typeBadge.color}`}>
                           {typeBadge.icon}
                           {typeBadge.label}
-                        </span>
+                        </Badge>
                         <span className="font-semibold text-foreground truncate min-w-0">{vm.name}</span>
                         <span className="text-sm text-muted-foreground whitespace-nowrap flex-shrink-0">ID: {vm.vmid}</span>
                         {/* PVE tag dots — hash-derived colour so the same
@@ -3667,14 +3670,23 @@ export function VirtualMachines() {
                             matches PVE's own tag palette. Full pills
                             live inside the modal; here only the dot
                             reads at a glance in a dense card. */}
-                        {tagDots("size-3")}
+                        {parseTags(vm.tags).map((tag) => {
+                          const { bg } = tagToColor(tag)
+                          return (
+                            <span
+                              key={`tag-dot-${vm.vmid}-${tag}`}
+                              title={tag}
+                              className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: bg }}
+                            />
+                          )
+                        })}
                         {vm.type === "lxc" && (
-                          <span className="ml-auto shrink-0">
+                          <div className="ml-auto flex-shrink-0">
                             {renderLxcUpdateBadge(getAggregateUpdateCheck(vm))}
-                          </span>
+                          </div>
                         )}
-                      </button>
-                      </VmCardTooltip>
+                      </div>
 
                       {/* Row 2 — 2-column layout on wide viewports
                           (`lg+`, ≥1024 px, iPad landscape and up):
@@ -3682,21 +3694,7 @@ export function VirtualMachines() {
                           designed), right slot the 5-column metrics
                           grid. Below `lg` the left slot is hidden
                           and the grid spans the full card width. */}
-                      <VmCardTooltip label={infoLabel}>
-                      <div
-                        className={`flex cursor-pointer flex-row gap-3 rounded-b-lg px-4 pb-4 pt-2 text-start transition-colors lg:gap-4 ${infoHighlight}`}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={infoLabel}
-                        aria-haspopup="dialog"
-                        onMouseEnter={() => prefetchVM(vm)}
-                        onClick={(event) => handleVMClick(vm, event.currentTarget)}
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter" && event.key !== " ") return
-                          event.preventDefault()
-                          handleVMClick(vm, event.currentTarget)
-                        }}
-                      >
+                      <div className="flex flex-row gap-3 lg:gap-4">
                         {/* Left slot is ALWAYS mounted on lg+ so the
                             metrics grid keeps the same column widths
                             whether the guest is running or stopped —
@@ -3715,9 +3713,12 @@ export function VirtualMachines() {
                                   <Network className="h-3 w-3 text-green-500" />
                                   {lxcIP}
                                   {additionalIpCount > 0 && (
-                                    <VmCardTooltip label={(vm.ips || []).join(", ")}>
-                                      <span className="text-xs text-muted-foreground">+{additionalIpCount}</span>
-                                    </VmCardTooltip>
+                                    <span
+                                      className="text-xs text-muted-foreground"
+                                      title={(vm.ips || []).join(", ")}
+                                    >
+                                      +{additionalIpCount}
+                                    </span>
                                   )}
                                 </span>
                               )}
@@ -3740,7 +3741,7 @@ export function VirtualMachines() {
                               </div>
                               <Progress
                                 value={Number.parseFloat(cpuPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(cpuPercent))}`}
                               />
                             </div>
                           </div>
@@ -3760,7 +3761,7 @@ export function VirtualMachines() {
                               </div>
                               <Progress
                                 value={Number.parseFloat(memPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(memPercent))}`}
                               />
                             </div>
                           </div>
@@ -3780,7 +3781,7 @@ export function VirtualMachines() {
                               </div>
                               <Progress
                                 value={Number.parseFloat(diskPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(diskPercent))}`}
                               />
                             </div>
                           </div>
@@ -3814,22 +3815,22 @@ export function VirtualMachines() {
                           </div>
                         </div>
                       </div>
-                      </VmCardTooltip>
                     </div>
 
-                    <div className="flex rounded-lg border border-border bg-card sm:hidden">
-                      <VmCardTooltip label={collapseButton["aria-label"]}>
-                      <button {...collapseButton}
-                        className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-s-lg py-2.5 ps-2 pe-1.5 text-start transition-colors hover:bg-blue-500/10 focus-visible:bg-blue-500/10 min-[375px]:gap-2 min-[375px]:ps-3 min-[375px]:pe-2">
+                    <div
+                      {...card}
+                      className="sm:hidden px-2.5 py-3 min-[375px]:p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <div className="flex items-center gap-1.5 min-[375px]:gap-3">
                         {vm.status === "running" ? (
                           <Play className="h-5 w-5 text-green-500 fill-current flex-shrink-0" />
                         ) : (
                           <Square className="h-5 w-5 text-red-500 fill-current flex-shrink-0" />
                         )}
 
-                        <span className={cn(badgeVariants({ variant: "outline" }), "shrink-0", typeBadge.color)}>
-                          {typeBadge.label}
-                        </span>
+                        <Badge variant="outline" className={`${getTypeBadge(vm.type).color} flex-shrink-0`}>
+                          {getTypeBadge(vm.type).label}
+                        </Badge>
 
                         {/* Name and ID.
                             Update indicator is icon-only (no count, no
@@ -3839,31 +3840,33 @@ export function VirtualMachines() {
                             the name, which was getting truncated to 4-5
                             chars before. The full count still shows on
                             the desktop card and inside the modal. */}
-                        <span className="flex-1 min-w-0">
-                          <span className="block truncate font-semibold text-foreground">{vm.name}</span>
-                          <span className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
-                            <span className="whitespace-nowrap">ID: {vm.vmid}</span>
-                            {tagDots("size-2.5")}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
+                          <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-1">
+                            <span>ID: {vm.vmid}</span>
+                            {parseTags(vm.tags).map((tag) => {
+                              const { bg } = tagToColor(tag)
+                              return (
+                                <span
+                                  key={`tag-dot-m-${vm.vmid}-${tag}`}
+                                  title={tag}
+                                  className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: bg }}
+                                />
+                              )
+                            })}
                             {vm.type === "lxc" && (() => {
                               const agg = getAggregateUpdateCheck(vm)
                               return agg?.available && (agg.count ?? 0) > 0 ? (
                                 <ArrowUpCircle className="h-3 w-3 text-violet-400 flex-shrink-0" />
                               ) : null
                             })()}
-                          </span>
-                        </span>
-                      </button>
-                      </VmCardTooltip>
+                          </div>
+                        </div>
 
-                        <VmCardTooltip label={infoLabel}>
-                        <button type="button"
-                          className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-e-lg py-2.5 ps-1.5 pe-2 transition-colors min-[375px]:gap-3 min-[375px]:ps-2 min-[375px]:pe-3 ${infoHighlight}`}
-                          aria-label={infoLabel}
-                          aria-haspopup="dialog"
-                          onClick={(event) => handleVMClick(vm, event.currentTarget)}
-                        >
+                        <div className="flex items-center gap-1.5 min-[375px]:gap-3 flex-shrink-0">
                           {/* CPU icon with percentage */}
-                          <span className="flex flex-col items-center gap-0.5">
+                          <div className="flex flex-col items-center gap-0.5">
                             {vm.status === "running" && (
                               <span className="text-[10px] font-medium text-muted-foreground">{cpuPercent}%</span>
                             )}
@@ -3872,10 +3875,10 @@ export function VirtualMachines() {
                                 vm.status === "stopped" ? "text-gray-500" : getUsageColor(Number.parseFloat(cpuPercent))
                               }`}
                             />
-                          </span>
+                          </div>
 
                           {/* Memory icon with percentage */}
-                          <span className="flex flex-col items-center gap-0.5">
+                          <div className="flex flex-col items-center gap-0.5">
                             {vm.status === "running" && (
                               <span className="text-[10px] font-medium text-muted-foreground">{memPercent}%</span>
                             )}
@@ -3884,10 +3887,10 @@ export function VirtualMachines() {
                                 vm.status === "stopped" ? "text-gray-500" : getUsageColor(Number.parseFloat(memPercent))
                               }`}
                             />
-                          </span>
+                          </div>
 
                           {/* Disk icon with percentage */}
-                          <span className="flex flex-col items-center gap-0.5">
+                          <div className="flex flex-col items-center gap-0.5">
                             {vm.status === "running" && (
                               <span className="text-[10px] font-medium text-muted-foreground">{diskPercent}%</span>
                             )}
@@ -3898,9 +3901,9 @@ export function VirtualMachines() {
                                   : getUsageColor(Number.parseFloat(diskPercent))
                               }`}
                             />
-                          </span>
-                        </button>
-                        </VmCardTooltip>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     </>
                     )}

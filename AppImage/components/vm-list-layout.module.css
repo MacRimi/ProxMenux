@@ -37,6 +37,10 @@
   padding-inline: 12px 8px;
 }
 
+.headings[hidden] {
+  display: none;
+}
+
 .headings {
   min-height: 32px;
   color: var(--muted-foreground);
@@ -166,6 +170,23 @@
   background: currentColor;
 }
 
+.updateStripe {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 8px;
+  width: 6px;
+}
+
+.updateStripe::before {
+  content: "";
+  position: absolute;
+  inset-block: 7px;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
 .mobileSort {
   display: none;
 }
@@ -237,6 +258,30 @@
     display: none;
   }
 
+}
+
+/* A phone shows the name and the columns chosen for it, each one wide
+   enough for what it holds. */
+.inventory[data-phone] .headings {
+  display: none;
+}
+
+.inventory[data-phone] .rows {
+  min-inline-size: 0;
+}
+
+.inventory[data-phone] .grid {
+  grid-template-columns: var(--vm-list-phone);
+  gap: 5px;
+}
+
+.inventory[data-updates] .row {
+  padding-inline-start: 18px;
+}
+
+.inventory[data-phone] .ip,
+.inventory[data-phone] .metric {
+  display: block;
 }
 
 @media (max-width: 700px) {

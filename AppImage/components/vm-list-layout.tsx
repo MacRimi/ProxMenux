@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type ComponentProps, type CSSProper
 import * as Tooltip from "@radix-ui/react-tooltip"
 import { ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown, GripVertical, TableProperties } from "lucide-react"
 import { useT } from "@/lib/i18n/provider"
+import { OptionSelect } from "./option-select"
 import styles from "./vm-list-layout.module.css"
 
 const columns = ["name", "type", "state", "tags", "ip", "uptime", "cpu", "memory", "disk", "net", "io", "updates"] as const
@@ -18,6 +19,42 @@ const minimumWidth: Record<Column, number> = {
   cpu: 44, memory: 52, disk: 42, net: 144, io: 144, updates: 38,
 }
 const maxWidth = 960
+// On a phone the name takes what is left and the other columns share three
+// spaces; the wider ones take two, so nothing has to be cut short. Updates
+// take no space: they show as a violet line next to the status line.
+const phoneQuery = "(max-width: 639px)"
+const phoneSpaces = 3
+const phoneDefault: Column[] = ["cpu", "memory", "disk", "updates"]
+const phoneCost: Record<Column, number> = {
+  name: 0, type: 2, state: 2, tags: 1, ip: 2, uptime: 1,
+  cpu: 1, memory: 1, disk: 1, net: 2, io: 2, updates: 0,
+}
+const phoneTracks: Record<Column, string> = {
+  name: "minmax(0, 1fr)", type: "84px", state: "92px", tags: "56px", ip: "112px", uptime: "56px",
+  cpu: "52px", memory: "52px", disk: "52px", net: "104px", io: "104px", updates: "44px",
+}
+const phoneUsed = (selection: Column[]) => selection.reduce((total, key) => total + phoneCost[key], 0)
+
+function phoneSelection(value: unknown): Column[] {
+  if (!Array.isArray(value)) return phoneDefault
+  const result: Column[] = []
+  for (const key of columns) {
+    if (key !== "name" && value.includes(key) && phoneUsed([...result, key]) <= phoneSpaces) result.push(key)
+  }
+  return result
+}
+
+function usePhone() {
+  const [phone, setPhone] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia(phoneQuery)
+    const update = () => setPhone(query.matches)
+    update()
+    query.addEventListener("change", update)
+    return () => query.removeEventListener("change", update)
+  }, [])
+  return phone
+}
 const tracks: Record<Column, [string, string?, string?]> = {
   name: ["minmax(92px, 1.8fr)", "minmax(84px, 1fr)", "minmax(68px, 1fr)"],
   type: ["88px", "84px", "58px"],
@@ -40,8 +77,11 @@ type Layout = {
   expanded: boolean
   exceptions: string[]
   sort: ListSort | null
+  phone: Column[]
 }
-const initialLayout: Layout = { order: [...columns], hidden: optionalColumns, widths: {}, expanded: false, exceptions: [], sort: null }
+const initialLayout: Layout = {
+  order: [...columns], hidden: optionalColumns, widths: {}, expanded: false, exceptions: [], sort: null, phone: phoneDefault,
+}
 
 function readLayout(): Layout {
   try {
@@ -71,6 +111,7 @@ function readLayout(): Layout {
         : [],
       sort: sort && columns.includes(sort.column) && !hidden.includes(sort.column) &&
         (sort.direction === "asc" || sort.direction === "desc") ? sort : null,
+      phone: phoneSelection(saved?.phone),
     }
   } catch {
     return initialLayout
@@ -90,6 +131,7 @@ export function useVmListLayout() {
   }, [saved])
 
   const layout = saved ?? initialLayout
+  const phone = usePhone()
   const change = (update: (current: Layout) => Layout) => setSaved((current) => update(current ?? initialLayout))
   const exceptions = new Set(layout.exceptions)
   const isExpanded = (key: string) => layout.expanded !== exceptions.has(key)
@@ -102,9 +144,16 @@ export function useVmListLayout() {
     return { ...current, exceptions: [...next] }
   })
 
+  const visible = phone
+    ? layout.order.filter((key) => key === "name" || (key !== "updates" && layout.phone.includes(key)))
+    : layout.order.filter((key) => !layout.hidden.includes(key))
   return {
     ...layout,
-    visible: layout.order.filter((key) => !layout.hidden.includes(key)),
+    phone,
+    phoneColumns: layout.phone,
+    phoneFree: phoneSpaces - phoneUsed(layout.phone),
+    updateLine: phone && layout.phone.includes("updates"),
+    visible,
     isExpanded,
     toggleRow: (key: string) => setExpanded([key], !isExpanded(key)),
     toggleAll: (keys: string[], expanded: boolean, filtered: boolean) => {
@@ -112,6 +161,15 @@ export function useVmListLayout() {
       else change((current) => ({ ...current, expanded, exceptions: [] }))
     },
     toggleColumn: (column: Column) => change((current) => {
+      if (phone) {
+        if (column === "name") return current
+        const selection = current.phone.includes(column)
+          ? current.phone.filter((key) => key !== column)
+          : phoneSelection([...current.phone, column])
+        if (!selection.includes(column) && !current.phone.includes(column)) return current
+        const sort = current.sort?.column === column && !selection.includes(column) ? null : current.sort
+        return { ...current, phone: selection, sort }
+      }
       const hidden = current.hidden.includes(column)
         ? current.hidden.filter((key) => key !== column)
         : [...current.hidden, column]
@@ -201,12 +259,14 @@ export function VmListActions({ layout, keys, filtered, pickerId, pickerOpen, on
   const expand = t(filtered ? "vmLxc.layout.expandVisible" : "vmLxc.layout.expandAll")
   const collapse = t(filtered ? "vmLxc.layout.collapseVisible" : "vmLxc.layout.collapseAll")
   const settings = t("vmLxc.layout.settings")
+  // In the standard view every card is open and there are no columns to choose.
+  const standard = keys.length > 0 && keys.every(layout.isExpanded)
   const button = "inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 sm:size-9"
 
   return (
     <div role="group" aria-label={t("vmLxc.layout.controls")} className="flex shrink-0 gap-1">
       <button type="button" className={button} title={settings} aria-label={settings}
-        aria-controls={pickerId} aria-expanded={pickerOpen} onClick={onTogglePicker}>
+        aria-controls={pickerId} aria-expanded={pickerOpen && !standard} disabled={standard} onClick={onTogglePicker}>
         <TableProperties aria-hidden="true" className="size-4" />
       </button>
       <button type="button" className={button} title={expand} aria-label={expand}
@@ -227,36 +287,41 @@ export function VmListColumnPicker({ id, open, layout }: { id: string; open: boo
     <fieldset id={id} hidden={!open} className="min-w-0 rounded-md border border-border px-3 pb-2">
       <legend className="px-1 text-sm font-medium">{t("vmLxc.layout.visibleColumns")}</legend>
       <div className="flex flex-wrap gap-x-4">
-        {layout.order.map((key) => {
-          const visible = !layout.hidden.includes(key)
-          const required = (key === "name" || key === "type") && identityColumns.some((item) => layout.hidden.includes(item))
+        {layout.order.filter((key) => !layout.phone || key !== "name").map((key) => {
+          const visible = layout.phone ? layout.phoneColumns.includes(key) : !layout.hidden.includes(key)
+          const required = !layout.phone && (key === "name" || key === "type")
+            && identityColumns.some((item) => layout.hidden.includes(item))
+          const full = layout.phone && !visible && phoneCost[key] > layout.phoneFree
           return (
-            <label key={key} className="flex min-h-11 items-center gap-2 text-sm sm:min-h-9">
-              <input type="checkbox" checked={visible} disabled={visible && required} onChange={() => layout.toggleColumn(key)}
-                className="size-4 accent-primary" />
+            <label key={key} className={`flex min-h-11 items-center gap-2 text-sm sm:min-h-9 ${full ? "text-muted-foreground" : ""}`}>
+              <input type="checkbox" checked={visible} disabled={(visible && required) || full}
+                onChange={() => layout.toggleColumn(key)} className="size-4 accent-primary" />
               {t(`vmLxc.layout.columns.${key}`)}
             </label>
           )
         })}
       </div>
-      <label className={styles.mobileSort}>
-        {t("vmLxc.layout.sortBy")}
-        <select className="min-h-11 rounded-md border border-border bg-card px-2"
+      <div className={styles.mobileSort}>
+        <span aria-hidden="true">{t("vmLxc.layout.sortBy")}</span>
+        <OptionSelect
+          ariaLabel={t("vmLxc.layout.sortBy")}
+          className="min-h-11"
           value={layout.sort ? `${layout.sort.column}:${layout.sort.direction}` : ""}
-          onChange={(event) => {
-            const [name, direction] = event.target.value.split(":")
+          onChange={(value) => {
+            const [name, direction] = value.split(":")
             const column = layout.visible.find((key) => key === name)
             layout.setSort(column && (direction === "asc" || direction === "desc") ? { column, direction } : null)
-          }}>
-          <option value="">{t("vmLxc.layout.originalOrder")}</option>
-          {layout.visible.flatMap((column) => (["asc", "desc"] as const).map((direction) => (
-            <option key={`${column}:${direction}`} value={`${column}:${direction}`}>
-              {t(`vmLxc.layout.columns.${column}`)} · {t(`vmLxc.layout.${direction}`)}
-            </option>
-          )))}
-        </select>
-      </label>
-      <p className="text-xs text-muted-foreground">{t("vmLxc.layout.keepIdentity")}</p>
+          }}
+          options={[
+            { value: "", label: t("vmLxc.layout.originalOrder") },
+            ...layout.visible.flatMap((column) => (["asc", "desc"] as const).map((direction) => ({
+              value: `${column}:${direction}`,
+              label: `${t(`vmLxc.layout.columns.${column}`)} · ${t(`vmLxc.layout.${direction}`)}`,
+            }))),
+          ]}
+        />
+      </div>
+      {!layout.phone && <p className="text-xs text-muted-foreground">{t("vmLxc.layout.keepIdentity")}</p>}
     </fieldset>
   )
 }
@@ -266,7 +331,11 @@ function visibilityClass(column: Column) {
   return tracks[column][2] === undefined ? styles.metric : undefined
 }
 
-export function VmListGrid({ layout, children }: { layout: ListLayout; children: ReactNode }) {
+export function VmListGrid({ layout, headings: showHeadings = true, children }: {
+  layout: ListLayout
+  headings?: boolean
+  children: ReactNode
+}) {
   const t = useT()
   const [draft, setDraft] = useState<DraftWidth | null>(null)
   const [drop, setDrop] = useState<{ column: Column; side: "before" | "after" } | null>(null)
@@ -284,6 +353,7 @@ export function VmListGrid({ layout, children }: { layout: ListLayout; children:
     const start = event.currentTarget.parentElement?.getBoundingClientRect().width
     if (start !== undefined) layout.resizeColumn(column, columnWidth(column, start + delta))
   }
+  const phoneWidths = layout.visible.map((column) => phoneTracks[column])
   const stylesForTracks = ["wide", "medium", "narrow"].flatMap((name, viewport) => {
     const widths = layout.visible.map((column) => {
       const width = draft?.column === column ? draft.width : layout.widths[column]
@@ -316,9 +386,11 @@ export function VmListGrid({ layout, children }: { layout: ListLayout; children:
   }
 
   return (
-    <div className={styles.inventory} role="region" aria-label={t("vmLxc.listTitle")}
-      style={Object.fromEntries(stylesForTracks) as CSSProperties}>
-      <div className={`${styles.grid} ${styles.headings}`} role="group" aria-label={t("vmLxc.layout.visibleColumns")}>
+    <div className={styles.inventory} role="region" aria-label={t("vmLxc.listTitle")} data-phone={layout.phone || undefined}
+      data-updates={layout.updateLine || undefined}
+      style={{ ...Object.fromEntries(stylesForTracks), "--vm-list-phone": phoneWidths.join(" ") } as CSSProperties}>
+      <div className={`${styles.grid} ${styles.headings}`} role="group" aria-label={t("vmLxc.layout.visibleColumns")}
+        hidden={!showHeadings}>
         {layout.visible.map((column) => {
           const label = t(`vmLxc.layout.columns.${column}`)
           const resize = t("vmLxc.layout.resizeColumn", { column: label })
@@ -439,49 +511,42 @@ export function VmCardTooltip({ label, children }: { label: string; children: Re
   )
 }
 
-type CollapseButtonProps = ComponentProps<"button"> & { "aria-label": string; "data-collapse-guest": true }
+type CardProps = ComponentProps<"div"> & { "aria-label": string }
 
-export function VmListRow({ layout, guestKey, name, status, statusLabel, cells, children }: {
+// A guest opens its details from the compact row and from its card alike;
+// the toolbar chooses between the compact and the standard view.
+export function VmListRow({ layout, guestKey, name, status, statusLabel, updates, cells, onOpen, onPreview, children }: {
   layout: ListLayout
   guestKey: string
   name: string
   status: string
   statusLabel: string
+  updates?: number
   cells: Record<Column, ReactNode>
-  children: (collapseButton: CollapseButtonProps) => ReactNode
+  onOpen: (trigger: HTMLElement) => void
+  onPreview?: () => void
+  children: (card: CardProps) => ReactNode
 }) {
   const t = useT()
   const cardId = useId()
   const statusId = `${cardId}-status`
   const open = layout.isExpanded(guestKey)
   const statusColor = status === "running" ? "text-green-500" : status === "stopped" ? "text-red-500" : "text-muted-foreground"
-  const rowRef = useRef<HTMLButtonElement>(null)
-  const cardRef = useRef<HTMLDivElement>(null)
-  const moveFocus = useRef(false)
-  useEffect(() => {
-    if (!moveFocus.current) return
-    moveFocus.current = false
-    const collapseButtons = cardRef.current?.querySelectorAll<HTMLButtonElement>("[data-collapse-guest]")
-    const target = open && collapseButtons
-      ? Array.from(collapseButtons).find((button) => button.getClientRects().length > 0)
-      : rowRef.current
-    target?.focus({ preventScroll: true })
-  }, [open])
-
-  const toggleRow = () => {
-    moveFocus.current = true
-    layout.toggleRow(guestKey)
-  }
-  const collapseLabel = t("vmLxc.layout.collapseGuest", { name })
+  const openLabel = t("vmLxc.layout.openGuestInfo", { name })
   return (
     <div>
-      {!open && <button ref={rowRef} type="button" className={`${styles.grid} ${styles.row}`} aria-expanded={false} aria-controls={cardId}
-        aria-label={t("vmLxc.layout.expandGuest", { name })}
-        aria-describedby={[statusId, ...layout.visible.filter((key) => key !== "name").map((key) => `${cardId}-${key}`)].join(" ")}
-        onClick={toggleRow}>
+      {!open && <button type="button" className={`${styles.grid} ${styles.row}`} aria-haspopup="dialog"
+        aria-label={openLabel}
+        aria-describedby={[statusId, ...(layout.updateLine && updates ? [`${cardId}-updates`] : []),
+          ...layout.visible.filter((key) => key !== "name").map((key) => `${cardId}-${key}`)].join(" ")}
+        onMouseEnter={onPreview}
+        onClick={(event) => onOpen(event.currentTarget)}>
         <VmCardTooltip label={statusLabel}>
           <span aria-hidden="true" className={`${styles.statusStripe} ${statusColor}`} />
         </VmCardTooltip>
+        {layout.updateLine && updates ? (
+          <span aria-hidden="true" className={`${styles.updateStripe} text-violet-500`} />
+        ) : null}
         {layout.visible.map((key) => {
           const cell = (
             <span key={key} id={`${cardId}-${key}`} className={`${styles.cell} ${visibilityClass(key) ?? ""}`}>
@@ -492,24 +557,48 @@ export function VmListRow({ layout, guestKey, name, status, statusLabel, cells, 
         })}
       </button>}
       <span id={statusId} className="sr-only">{statusLabel}</span>
-      <div className={styles.expandedCard} ref={cardRef} id={cardId} hidden={!open}>
+      {layout.updateLine && updates ? (
+        <span id={`${cardId}-updates`} className="sr-only">{`${t("vmLxc.layout.columns.updates")}: ${updates}`}</span>
+      ) : null}
+      <div className={styles.expandedCard} id={cardId} hidden={!open}>
         {open && children({
-          type: "button",
-          "aria-label": collapseLabel,
+          role: "button",
+          tabIndex: 0,
+          "aria-label": openLabel,
           "aria-describedby": statusId,
-          "aria-expanded": true,
-          "data-collapse-guest": true,
-          onClick: toggleRow,
+          "aria-haspopup": "dialog",
+          onMouseEnter: onPreview,
+          onClick: (event) => onOpen(event.currentTarget),
+          onKeyDown: (event) => {
+            if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
+            event.preventDefault()
+            onOpen(event.currentTarget)
+          },
         })}
       </div>
     </div>
   )
 }
 
-export function VmListMetric({ value, color, fill }: { value: number; color: string; fill: string }) {
+// A phone has no column headings, so a reading shows what it measures with an
+// icon and its bar instead of a bare percentage.
+export function VmListMetric({ value, color, fill, icon, label, phone }: {
+  value: number
+  color: string
+  fill: string
+  icon: ReactNode
+  label: string
+  phone: boolean
+}) {
+  const reading = Number.isFinite(value) ? `${value.toFixed(1)}%` : "—"
   return (
     <span className={`${styles.reading} ${color}`}>
-      {Number.isFinite(value) ? `${value.toFixed(1)}%` : "—"}
+      {phone ? (
+        <span className="flex items-center">
+          {icon}
+          <span className="sr-only">{`${label} ${reading}`}</span>
+        </span>
+      ) : reading}
       <span className={styles.track} aria-hidden="true">
         <span className={fill} style={{ width: `${Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0}%` }} />
       </span>
