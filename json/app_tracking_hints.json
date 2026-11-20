@@ -1480,6 +1480,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://ezbookkeeping.mayswind.net"
   },
+  "faraday": {
+    "default_ports": [
+      5985
+    ],
+    "file_path": "/root/.faraday",
+    "file_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/infobyte/faraday@master/docs/images/faraday_logo.svg",
+    "repo": "infobyte/faraday",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://faradaysec.com/"
+  },
   "feishin": {
     "default_ports": [
       9180
