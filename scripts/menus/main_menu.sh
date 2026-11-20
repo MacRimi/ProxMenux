@@ -62,6 +62,7 @@ show_menu() {
         (( rows < 3 )) && rows=3
 
         dialog --clear \
+            --ok-label "$(translate "OK")" --cancel-label "$(translate "Cancel")" \
             --backtitle "ProxMenux" \
             --title "$menu_title" \
             --menu "$(translate "Select an option:")" "$height" 75 "$rows" \
@@ -111,7 +112,7 @@ show_menu() {
             "") ;;
             1) exec bash "$LOCAL_SCRIPTS/menus/menu_post_install.sh" ;;
             2) exec bash "$LOCAL_SCRIPTS/menus/hw_grafics_menu.sh" ;;
-            3) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
+            3) rm -f "$TEMP_FILE"; exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
             4) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;
             5) exec bash "$LOCAL_SCRIPTS/menus/share_menu.sh" ;;
             6) exec bash "$LOCAL_SCRIPTS/menus/menu_Helper_Scripts.sh" ;;

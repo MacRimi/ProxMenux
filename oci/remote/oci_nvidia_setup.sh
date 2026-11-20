@@ -1,5 +1,6 @@
 # Shared NVIDIA runtime setup for native OCI installers.
 # Sourced by the installers: uses their msg_*, translate, oci_log and die.
+source "${SCRIPT_DIR}/lxc_nvidia_setup.sh"
 configure_nvidia_runtime() {
   local inventory path source target runtime_mode hook_hash hook_path capabilities
   local device_count=0 mount_count=0
@@ -22,13 +23,8 @@ configure_nvidia_runtime() {
       || die "$(translate "Unsupported dynamic NVIDIA capabilities:") $capabilities"
     hook_hash=$(sha256sum "${SCRIPT_DIR}/nvidia_lxc_mount_lab.sh" | awk '{print $1}')
     hook_path="/usr/local/lib/proxmenux/oci/nvidia-mount-${hook_hash}.sh"
-    install -d -m 0755 /usr/local/lib/proxmenux/oci
-    if [[ -e $hook_path || -L $hook_path ]]; then
-      [[ ! -L $hook_path && $(sha256sum "$hook_path" | awk '{print $1}') == "$hook_hash" ]] \
-        || die "$(translate "The persistent NVIDIA hook does not match the installer:") $hook_path"
-    else
-      install -m 0755 "${SCRIPT_DIR}/nvidia_lxc_mount_lab.sh" "$hook_path"
-    fi
+    hook_path=$(lxc_install_nvidia_hook "${SCRIPT_DIR}/nvidia_lxc_mount_lab.sh" "$hook_hash") \
+      || die "$(translate "The persistent NVIDIA hook does not match the installer:") /usr/local/lib/proxmenux/oci/nvidia-mount-${hook_hash}.sh"
     printf 'lxc.environment: NVIDIA_VISIBLE_DEVICES=all\nlxc.environment: NVIDIA_DRIVER_CAPABILITIES=%s\nlxc.hook.mount: %s\n' \
       "$capabilities" "$hook_path" >>"$CONF"
   fi
