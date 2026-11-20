@@ -1838,39 +1838,6 @@
     "os": "debian"
   },
   {
-    "name": "ARR-Stack",
-    "slug": "arr-stack",
-    "desc": "Proxmox VE Helper Scripts for setting up a stack of applications for use with Prowlarr, Sonarr, Radarr, Lidarr, Seerr, and qBittorrent.",
-    "script": "ct/arr-stack.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/arr-stack.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/arr-stack.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00012"
-    ],
-    "category_names": [
-      "Documents & Notes"
-    ],
-    "notes": [
-      "This script will prompt you to select the applications you want to install and configure the network settings."
-    ],
-    "warnings": [],
-    "port": 3010,
-    "website": "https://community-scripts.org",
-    "documentation": "community-scripts/DevScripts/blob/main/tools/arr-stack.sh",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ProxmoxVE.webp",
-    "updateable": false,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
     "name": "Asterisk",
     "slug": "asterisk",
     "desc": "Asterisk is an open-source framework for building communications applications, most commonly used as a phone system (PBX). Developed by Digium (now part of Sangoma), it turns a standard computer into a powerful telephony server.",
