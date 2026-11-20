@@ -210,6 +210,15 @@ def service_template(parent, service, main=False):
         {'name': k, 'example': v, 'required': True, 'sensitive': True, 'prompt_user': False}
         for k, v in c['environment'].items()
     ]
+    if main:
+        # The parent contract describes the main service's volumes only.
+        # Dependencies may use the same paths for unrelated data.
+        sizes = {mount['container_path']: mount['managed_volume']['default_size_gb']
+                 for mount in parent['container_contract']['volumes']}
+        for mount in single['container_contract']['volumes']:
+            path = mount['container_path']
+            if path in sizes:
+                mount['managed_volume']['default_size_gb'] = sizes[path]
     # Only the main service reports the credentials of the application.
     single['first_run'] = {'endpoints': [],
                            'credentials': copy.deepcopy(parent.get('first_run', {}).get('credentials', [])) if main else []}

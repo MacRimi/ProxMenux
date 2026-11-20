@@ -305,6 +305,18 @@ def _set_public_value(service, key, value):
     raise RuntimeError(translate('Invalid stack contract'))
 
 
+def apply_frontend_environment(service, config, address):
+    """Keep the post-start LAN value in the runtime configuration and saved plan."""
+    for key, value in service['public_environment'].items():
+        if '\n' in value or '\r' in value:
+            raise RuntimeError(translate('Multi-line variables are not supported'))
+        resolved = value.replace('@STACK_LAN_IP@', address)
+        config = re.sub(r'^lxc\.environment\.runtime: '+re.escape(key)+r'=.*\n','',config,flags=re.M)
+        config += 'lxc.environment.runtime: '+key+'='+resolved+'\n'
+        _set_public_value(service, key, resolved)
+    return config
+
+
 def prepare_public_environment(services):
     """Known static destinations are final before any application's first start."""
     for service, key, binding, target in public_bindings(services):
@@ -1114,13 +1126,7 @@ def main():
                 msg_info(translate('Applying the LAN address to the application URLs...'))
                 run('pct','shutdown',primary_id,'--timeout','180',timeout=200)
                 config=Path(f'/etc/pve/lxc/{primary_id}.conf')
-                text=config.read_text()
-                for key,value in primary['public_environment'].items():
-                    if '\n' in value or '\r' in value:
-                        raise RuntimeError(translate('Multi-line variables are not supported'))
-                    text=re.sub(r'^lxc\.environment\.runtime: '+re.escape(key)+r'=.*\n','',text,flags=re.M)
-                    text+='lxc.environment.runtime: '+key+'='+value.replace('@STACK_LAN_IP@',lan)+'\n'
-                config.write_text(text)
+                config.write_text(apply_frontend_environment(primary, config.read_text(), lan))
                 run('pct','start',primary_id,capture=False,timeout=600)
                 wait_web(primary,url)
                 msg_ok(translate('LAN address applied to the application URLs'))

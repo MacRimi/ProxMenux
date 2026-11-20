@@ -39,7 +39,7 @@ DIGEST = 'sha256:' + 'a' * 64
 
 
 class StaticPublicURLLifecycle(unittest.TestCase):
-    def publish(self, root):
+    def publish(self, root, post_start_hostname=False):
         template = template_from_compose(SOURCE)
         with patch('proxmenux_oci.installer.ask_storage', return_value='local-zfs'), \
              patch('proxmenux_oci.installer.ask_bridge', return_value='vmbr909'), \
@@ -60,6 +60,14 @@ class StaticPublicURLLifecycle(unittest.TestCase):
             runtime.assign_health_address(service)
             identity = str(uuid.uuid4())
             config = f'description: proxmenux-instance={identity}\nrootfs: local-zfs:subvol-{vmid}-disk-0,size=8G\n'
+            if post_start_hostname and service['main']:
+                key = 'SEAFILE_SERVER_HOSTNAME'
+                private = {'name': key, 'value': service['ip'], 'sensitive': False}
+                original[index]['deployment']['environment'].append(copy.deepcopy(private))
+                service['deployment']['environment'].append(private)
+                service['public_environment'] = {key: '@STACK_LAN_IP@'}
+                config += f'lxc.environment.runtime: {key}={service["ip"]}\n'
+                config = runtime.apply_frontend_environment(service, config, '172.30.249.90')
             configs[vmid] = config.encode()
             observed[vmid] = {'config': config, 'archive_path': '/fixture/image.tar',
                               'resolved_registry_digest': DIGEST,
@@ -103,6 +111,26 @@ class StaticPublicURLLifecycle(unittest.TestCase):
             secondary = next(s for s in adapter.services.values() if s['name'] == 'secondary')
             self.assertTrue(secondary['healthcheck']['url'].startswith('http://10.77.5.'))
             self.assertTrue(recovery.valid_contract(contract, set(names.values()) - {4900}))
+
+    def test_post_start_lan_hostname_is_saved_for_native_image_update(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, names = self.publish(root, post_start_hostname=True)
+            records = {vmid: instances.read(root, vmid) for vmid in names.values()}
+            primary = records[names['web']]
+            key = 'SEAFILE_SERVER_HOSTNAME'
+            runtime_config = primary['observed']['config']
+            self.assertIn(f'lxc.environment.runtime: {key}=172.30.249.90\n', runtime_config)
+            self.assertNotIn(f'lxc.environment.runtime: {key}=10.77.5.', runtime_config)
+            plan = plans.build(primary, records, {v: r['installation_id'] for v, r in records.items()}, 'update')
+            candidates = {r['vmid']: transactions.candidate_contract(r, 'update') for r in plan['members']}
+            origins = {
+                name: {item['name']: item['value'] for item in candidates[vmid]['deployment']['environment']}
+                for name, vmid in names.items()
+            }
+            self.assertEqual(origins['web'][key], '172.30.249.90')
+            self.assertNotIn(key, origins['backend'])
+            self.assertNotIn(key, origins['secondary'])
 
     def test_restore_refresh_adopts_storage_without_reinferring_url_or_lan_healthchecks(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -25,6 +25,16 @@ from proxmenux_oci.stack import build_stack, DefaultsUI
 
 
 class StackVolumePreparationsTests(unittest.TestCase):
+    def test_default_volume_size_is_scoped_to_the_main_service(self):
+        template = Catalog(ROOT).compose("peertube")
+        result = build_stack(template, DefaultsUI(), mode="simple")
+        services = {s["name"]: s for s in result["services"]}
+
+        for name, expected in (("peertube", 32), ("redis", 8)):
+            mounts = services[name]["deployment"]["mounts"]
+            data = next(m for m in mounts if m["container_path"] == "/data")
+            self.assertEqual(data["size_gb"], expected)
+
     def test_stack_service_receives_only_its_own_volume_preparation(self):
         """Blinko (2-service stack: blinko + blinko-postgres). The real
         build_stack() output — what create_service() actually writes to
