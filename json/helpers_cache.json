@@ -8135,7 +8135,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -27148,7 +27148,7 @@
     ],
     "notes": [
       "Log in to the provider CLIs (Codex, Claude, Grok, OpenCode, GitHub) inside the container before using them in T3 Code.",
-      "The pairing URL shown after the install expires after an hour. Get a new one with pct exec <CTID> -- t3 pair --base-dir /opt/t3code."
+      "To get the pairing QR Code, excute this inside the Container:\n`env NODE_NO_WARNINGS=1 t3 pair --base-dir /opt/t3code --ttl 1h | grep -v \"127.0.0.1\"`\nThe pairing URL expires after 1 hour. Generate a fresh one from the Proxmox host: `t3 pair --base-dir /opt/t3code`"
     ],
     "warnings": [
       "Agents run as root with Claude's Full access mode allowed, so they can change anything in the container and in writable bind mounts. Keep the container unprivileged and do not mount sensitive host paths."
@@ -27160,7 +27160,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
