@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Wifi, Activity, Network, Router, AlertCircle, Zap, Timer, EthernetPort, ArrowDown, ArrowUp, Box, ChevronRight, Search, X } from 'lucide-react'
+import { Wifi, Activity, Network, Router, AlertCircle, Zap, Timer, EthernetPort, ArrowDown, ArrowUp, Box, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp } from 'lucide-react'
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { NetworkFlow, type NetworkFlowData } from "./network-flow"
@@ -444,12 +444,16 @@ const formatSpeed = (speed: number, unavailable = "N/A"): string => {
 
 // Bridges and the interfaces of VMs and LXCs in one list, laid out like the
 // VM and LXC list: a status stripe, one line per interface, and filters by kind
-// and state. A row opens the same detail as the physical cards.
+// and state. Like that list it can also show every interface as a full card;
+// the choice is kept in the browser. A row or card opens the same detail as the
+// physical cards.
 type VirtualKind = "all" | "bridge" | "guest"
 type VirtualState = "all" | "up" | "down"
 const virtualFilterButton = "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto"
 const virtualFilterActive = "bg-blue-500 text-white shadow-sm"
 const virtualFilterIdle = "text-muted-foreground hover:text-foreground hover:bg-background/60"
+const virtualViewKey = "proxmenux.networkVirtualView.v1"
+const virtualViewButton = "inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 sm:size-9"
 const virtualRowColumns = "lg:grid-cols-[minmax(7rem,1.1fr)_7rem_minmax(8rem,1.3fr)_minmax(8rem,1fr)_5.5rem_5.5rem_5.5rem_3.5rem]"
 
 function VirtualInterfaceList({ bridges, guests, onOpen, t }: {
@@ -461,6 +465,13 @@ function VirtualInterfaceList({ bridges, guests, onOpen, t }: {
   const [kind, setKind] = useState<VirtualKind>("all")
   const [state, setState] = useState<VirtualState>("all")
   const [query, setQuery] = useState("")
+  const [expanded, setExpanded] = useState(() => {
+    try { return typeof window !== "undefined" && window.localStorage.getItem(virtualViewKey) === "expanded" } catch { return false }
+  })
+  const chooseView = (next: boolean) => {
+    setExpanded(next)
+    try { window.localStorage.setItem(virtualViewKey, next ? "expanded" : "compact") } catch { /* the view still changes */ }
+  }
   const all = useMemo(() => [
     ...bridges.map((iface) => ({ iface, kind: "bridge" as const })),
     ...guests.map((iface) => ({ iface, kind: "guest" as const })),
@@ -505,6 +516,16 @@ function VirtualInterfaceList({ bridges, guests, onOpen, t }: {
           </Badge>
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label={t("vmLxc.layout.controls")} className="flex shrink-0 gap-1">
+            <button type="button" className={virtualViewButton} title={t("vmLxc.layout.expandAll")} aria-label={t("vmLxc.layout.expandAll")}
+              disabled={expanded} onClick={() => chooseView(true)}>
+              <ChevronsUpDown aria-hidden="true" className="size-4" />
+            </button>
+            <button type="button" className={virtualViewButton} title={t("vmLxc.layout.collapseAll")} aria-label={t("vmLxc.layout.collapseAll")}
+              disabled={!expanded} onClick={() => chooseView(false)}>
+              <ChevronsDownUp aria-hidden="true" className="size-4" />
+            </button>
+          </div>
           <div className="relative min-w-0 flex-[1_1_14rem]">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input type="text" inputMode="search" value={query} onChange={(event) => setQuery(event.target.value)}
@@ -541,6 +562,14 @@ function VirtualInterfaceList({ bridges, guests, onOpen, t }: {
         </div>
       </CardHeader>
       <CardContent>
+        {expanded ? (
+          <div className="space-y-4">
+            {shown.map(({ iface, kind: k }) => k === "bridge"
+              ? <BridgeInterfaceCard key={`bridge-${iface.name}`} iface={iface} onOpen={onOpen} t={t} />
+              : <GuestInterfaceCard key={`guest-${iface.name}`} iface={iface} onOpen={onOpen} t={t} />)}
+            {shown.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{t("network.virtualList.noMatches")}</p>}
+          </div>
+        ) : <>
         <div className={`hidden lg:grid ${virtualRowColumns} items-center gap-3 px-3 pl-4 pb-1.5 text-xs text-muted-foreground`}>
           <span>{t("network.virtualList.name")}</span>
           <span>{t("network.labels.type")}</span>
@@ -586,8 +615,154 @@ function VirtualInterfaceList({ bridges, guests, onOpen, t }: {
           ))}
           {shown.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{t("network.virtualList.noMatches")}</p>}
         </div>
+        </>}
       </CardContent>
     </Card>
+  )
+}
+
+// The full cards of the expanded view, as the network page showed them before
+// the compact list.
+function BridgeInterfaceCard({ iface, onOpen, t }: { iface: NetworkInterface; onOpen: (iface: NetworkInterface) => void; t: TFunction }) {
+  const typeBadge = getInterfaceTypeBadge(iface.type, t)
+  return (
+    <div
+      className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
+      onClick={() => onOpen(iface)}
+    >
+      <div className="flex items-center gap-3 flex-wrap">
+        <Network className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+          <div className="font-medium text-foreground">{iface.name}</div>
+          <Badge variant="outline" className={typeBadge.color}>
+            {typeBadge.label}
+          </Badge>
+          {iface.bridge_physical_interface && (
+            <div className="text-sm text-blue-500 font-medium flex items-center gap-1 flex-wrap break-all">
+              → {iface.bridge_physical_interface}
+              {iface.bridge_bond_slaves && iface.bridge_bond_slaves.length > 0 && (
+                <span className="text-muted-foreground text-xs break-all">
+                  ({iface.bridge_bond_slaves.join(", ")})
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <Badge
+          variant="outline"
+          className={
+            iface.status === "up"
+              ? "bg-green-500/10 text-green-500 border-green-500/20"
+              : "bg-red-500/10 text-red-500 border-red-500/20"
+          }
+        >
+          {formatInterfaceStatus(iface.status, t)}
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <div className="text-muted-foreground text-xs">{t("network.labels.ipAddress")}</div>
+          <div className="font-medium text-foreground font-mono text-sm truncate">
+            {iface.addresses.length > 0 ? iface.addresses[0].ip : t("common.notAvailable")}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-muted-foreground text-xs">{t("network.labels.speed")}</div>
+          <div className="font-medium text-foreground flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            {formatSpeed(iface.speed, t("common.notAvailable"))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-muted-foreground text-xs">{t("network.labels.duplex")}</div>
+          <div className="font-medium text-foreground text-xs">{formatDuplex(iface.duplex, t)}</div>
+        </div>
+
+        <div>
+          <div className="text-muted-foreground text-xs">MTU</div>
+          <div className="font-medium text-foreground text-xs">{iface.mtu}</div>
+        </div>
+
+        {iface.mac_address && (
+          <div className="col-span-2 md:col-span-4">
+            <div className="text-muted-foreground text-xs">MAC</div>
+            <div className="font-medium text-foreground font-mono text-xs truncate">
+              {iface.mac_address}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GuestInterfaceCard({ iface, onOpen, t }: { iface: NetworkInterface; onOpen: (iface: NetworkInterface) => void; t: TFunction }) {
+  const vmTypeBadge = getVMTypeBadge(iface.vm_type, t)
+  return (
+    <div
+      className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
+      onClick={() => onOpen(iface)}
+    >
+      <div className="flex items-center gap-3 flex-wrap">
+        <EthernetPort className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+          <div className="font-medium text-foreground">{iface.name}</div>
+          <Badge variant="outline" className={vmTypeBadge.color}>
+            {vmTypeBadge.label}
+          </Badge>
+          {iface.vm_name && (
+            <div className="text-sm text-orange-500 truncate">→ {iface.vm_name}</div>
+          )}
+        </div>
+        <Badge
+          variant="outline"
+          className={
+            iface.status === "up"
+              ? "bg-green-500/10 text-green-500 border-green-500/20"
+              : "bg-red-500/10 text-red-500 border-red-500/20"
+          }
+        >
+          {formatInterfaceStatus(iface.status, t)}
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <div className="text-sm text-muted-foreground">VMID</div>
+          <div className="font-medium">{iface.vmid ?? t("common.notAvailable")}</div>
+        </div>
+
+        <div>
+          <div className="text-sm text-muted-foreground">{t("network.labels.speed")}</div>
+          <div className="font-medium text-foreground flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            {formatSpeed(iface.speed, t("common.notAvailable"))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-sm text-muted-foreground">{t("network.labels.duplex")}</div>
+          <div className="font-medium text-foreground text-xs">{formatDuplex(iface.duplex, t)}</div>
+        </div>
+
+        <div>
+          <div className="text-sm text-muted-foreground">MTU</div>
+          <div className="font-medium text-foreground text-xs">{iface.mtu}</div>
+        </div>
+
+        {iface.mac_address && (
+          <div className="col-span-2 md:col-span-4">
+            <div className="text-sm text-muted-foreground">MAC</div>
+            <div className="font-medium text-foreground font-mono text-xs truncate">
+              {iface.mac_address}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
