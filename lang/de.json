@@ -4558,7 +4558,7 @@
   "Keep the generated JWT secret and the /app/data volume persistent; back up the data volume and retain the same secret across restarts.": "Halten Sie das generierte JWT-Secret und das Volume /app/data persistent; sichern Sie das Daten-Volume und verwenden Sie bei Neustarts stets dasselbe Secret.",
   "Keep the generated encryption key with your backups: it is needed to decrypt stored signing keys.": "Bewahren Sie den generierten Verschlüsselungsschlüssel zusammen mit Ihren Backups auf: Er wird benötigt, um gespeicherte Signaturschlüssel zu entschlüsseln.",
   "Keep the node hostname/IP stable after installation because EMQX stores node data using its node name.": "Halten Sie Hostname und IP des Knotens nach der Installation stabil, da EMQX Knotendaten unter Verwendung seines Knotennamens speichert.",
-  "Keep the same LAN address, or update SEAFILE_SERVER_HOSTNAME when the address changes.": "Behalten Sie dieselbe LAN-Adresse bei oder aktualisieren Sie SEAFILE_SERVER_HOSTNAME, wenn sich die Adresse ändert.",
+  "Reserve the container IP in DHCP or assign a static IP so Seafile sync links keep working.": "Reservieren Sie die IP-Adresse des Containers in DHCP oder weisen Sie ihr eine statische IP-Adresse zu, damit die Seafile-Synchronisierungslinks gültig bleiben.",
   "Keeping GPU in source VM config": "GPU in der Quell-VM-Konfiguration belassen",
   "Keeping the settings changed in Proxmox:": "Die Einstellungen in Proxmox ändern:",
   "Kept sharedfiles group (has regular users assigned).": "Sharedfiles-Gruppe beibehalten (mit regulären Benutzern).",
