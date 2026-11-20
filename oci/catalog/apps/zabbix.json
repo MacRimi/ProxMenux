@@ -48,8 +48,8 @@
     "revision": "42c07b79d76ea14bf21f67b8ce57a5b8baaa2a66",
     "image_repository_url": "https://hub.docker.com/r/zabbix/zabbix-web-nginx-pgsql",
     "readme_pushed_at": "",
-    "compose_sha256": "88eb59f444b169b0cb39bc62ca4b4b3a81b747d18480a281172270afc5b694a3",
-    "generated_at": "2026-11-20T17:49:54+00:00"
+    "compose_sha256": "755d8502b9927c6bc8d40d6040a76ff9bb010d2514f2950ad131d8c7f9136609",
+    "generated_at": "2026-11-20T18:08:40+00:00"
   },
   "container_contract": {
     "service_name": "zabbix",
@@ -134,7 +134,7 @@
     ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: zabbix\nservices:\n  db:\n    image: docker.io/library/postgres:17-alpine\n    environment:\n      POSTGRES_DB: zabbix\n      POSTGRES_USER: zabbix\n      POSTGRES_PASSWORD: ${GENERATED_ZABBIX_DB_PASSWORD}\n    volumes:\n    - database:/var/lib/postgresql/data\n    healthcheck:\n      test:\n      - CMD\n      - pg_isready\n      - -h\n      - 127.0.0.1\n      - -U\n      - zabbix\n      - -d\n      - zabbix\n      interval: 5s\n      timeout: 3s\n      retries: 36\n    mem_limit: 1g\n    restart: unless-stopped\n  server:\n    image: docker.io/zabbix/zabbix-server-pgsql:alpine-7.0-latest\n    environment:\n      POSTGRES_DB: zabbix\n      POSTGRES_USER: zabbix\n      POSTGRES_PASSWORD: ${GENERATED_ZABBIX_DB_PASSWORD}\n      DB_SERVER_HOST: db\n    depends_on:\n      db:\n        condition: service_healthy\n    ports:\n    - 10051:10051\n    healthcheck:\n      test:\n      - CMD\n      - /bin/sh\n      - -ec\n      - grep -qsE ':2743[[:space:]]+[^[:space:]]+[[:space:]]+0A[[:space:]]' /proc/net/tcp\n        /proc/net/tcp6\n      interval: 5s\n      timeout: 3s\n      retries: 48\n    mem_limit: 1g\n    restart: unless-stopped\n  zabbix:\n    image: docker.io/zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest\n    environment:\n      POSTGRES_DB: zabbix\n      POSTGRES_USER: zabbix\n      POSTGRES_PASSWORD: ${GENERATED_ZABBIX_DB_PASSWORD}\n      DB_SERVER_HOST: db\n      ZBX_SERVER_HOST: server\n      PHP_TZ: ${TZ}\n    depends_on:\n      db:\n        condition: service_healthy\n      server:\n        condition: service_healthy\n    ports:\n    - 8080:8080\n    mem_limit: 1g\n    restart: unless-stopped\nvolumes:\n  database: {}\n"
+    "original_compose": "name: zabbix\nservices:\n  db:\n    image: docker.io/library/postgres:17-alpine\n    environment:\n      POSTGRES_DB: zabbix\n      POSTGRES_USER: zabbix\n      POSTGRES_PASSWORD: ${GENERATED_ZABBIX_DB_PASSWORD}\n    volumes:\n    - database:/var/lib/postgresql/data\n    healthcheck:\n      test:\n      - CMD\n      - pg_isready\n      - -h\n      - 127.0.0.1\n      - -U\n      - zabbix\n      - -d\n      - zabbix\n      interval: 5s\n      timeout: 3s\n      retries: 36\n    mem_limit: 1g\n    restart: unless-stopped\n  server:\n    image: docker.io/zabbix/zabbix-server-pgsql:alpine-7.0-latest\n    environment:\n      POSTGRES_DB: zabbix\n      POSTGRES_USER: zabbix\n      POSTGRES_PASSWORD: ${GENERATED_ZABBIX_DB_PASSWORD}\n      DB_SERVER_HOST: db\n    depends_on:\n      db:\n        condition: service_healthy\n    ports:\n    - 10051:10051\n    volumes:\n    - server-export:/var/lib/zabbix/export\n    - server-snmptraps:/var/lib/zabbix/snmptraps\n    healthcheck:\n      test:\n      - CMD\n      - /bin/sh\n      - -ec\n      - grep -qsE ':2743[[:space:]]+[^[:space:]]+[[:space:]]+0A[[:space:]]' /proc/net/tcp\n        /proc/net/tcp6\n      interval: 5s\n      timeout: 3s\n      retries: 48\n    mem_limit: 1g\n    restart: unless-stopped\n  zabbix:\n    image: docker.io/zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest\n    environment:\n      POSTGRES_DB: zabbix\n      POSTGRES_USER: zabbix\n      POSTGRES_PASSWORD: ${GENERATED_ZABBIX_DB_PASSWORD}\n      DB_SERVER_HOST: db\n      ZBX_SERVER_HOST: server\n      PHP_TZ: ${TZ}\n    depends_on:\n      db:\n        condition: service_healthy\n      server:\n        condition: service_healthy\n    ports:\n    - 8080:8080\n    mem_limit: 1g\n    restart: unless-stopped\nvolumes:\n  database: {}\n  server-export: {}\n  server-snmptraps: {}\n"
   },
   "compose_stack": {
     "project_name": "zabbix",
@@ -208,6 +208,10 @@
           "ports": [
             "10051:10051"
           ],
+          "volumes": [
+            "server-export:/var/lib/zabbix/export",
+            "server-snmptraps:/var/lib/zabbix/snmptraps"
+          ],
           "healthcheck": {
             "test": [
               "CMD",
@@ -264,7 +268,9 @@
     "top_level": {
       "name": "zabbix",
       "volumes": {
-        "database": {}
+        "database": {},
+        "server-export": {},
+        "server-snmptraps": {}
       }
     },
     "networking": {
@@ -281,6 +287,28 @@
         "id": "db-volume-0",
         "service": "db",
         "container_path": "/var/lib/postgresql/data",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "server-volume-0",
+        "service": "server",
+        "container_path": "/var/lib/zabbix/export",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "server-volume-1",
+        "service": "server",
+        "container_path": "/var/lib/zabbix/snmptraps",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -398,7 +426,19 @@
       "stop_signal": "import-from-oci-image"
     },
     "installer_profile": {
-      "stack_driver": "generic-multi-lxc-stack"
+      "stack_driver": "generic-multi-lxc-stack",
+      "volume_preparations": [
+        {
+          "container_path": "/var/lib/zabbix/export",
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/var/lib/zabbix/snmptraps",
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        }
+      ]
     },
     "adaptations": [
       {
