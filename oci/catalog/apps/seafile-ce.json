@@ -588,12 +588,12 @@
         "validation": "pending-per-application"
       },
       {
-        "id": "rolling-latest-image",
-        "upstream_behavior": "A discovered Compose may pin a release tag or digest.",
-        "native_lxc_behavior": "ProxMenux selects the same image repository with the latest tag for catalog installations.",
-        "reason": "The automatic catalog intentionally offers rolling latest images; pinned versions belong to the future manual installer.",
-        "behavioral_impact": "The installed release can be newer than the discovered Compose revision.",
-        "validation": "pending-per-application"
+        "id": "stable-major-image",
+        "upstream_behavior": "Seafile publishes each supported series under <major>.0-latest; the documented CE setup uses 13.0-latest.",
+        "native_lxc_behavior": "ProxMenux retains the 13.0-latest tag.",
+        "reason": "Stay on the series the upstream manual documents; a new major release needs its upgrade notes.",
+        "behavioral_impact": "Updates stay within Seafile 13.0.",
+        "validation": "upstream-image-metadata-reviewed"
       },
       {
         "id": "dedicated-lxc-network",
