@@ -2856,7 +2856,7 @@
     "backupCodeHint": "Você também pode usar um código de backup (formato: XXXX-XXXX)",
     "backToLogin": "Voltar ao login",
     "verifyCode": "Verifique o código",
-    "subtitle": "Entrar"
+    "subtitle": "Iniciar sessão"
   },
   "account": {
     "signedIn": "Conectado",
@@ -4132,18 +4132,18 @@
     },
     "sections": {
       "physicalInterfaces": "Interfaces Físicas",
-      "virtualInterfaces": "interfaces virtuais"
+      "virtualInterfaces": "Interfaces virtuais"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces totais",
-      "activeCount": "{active}/{total} Ativo"
+      "activeCount": "{active}/{total} ativas"
     },
     "status": {
       "healthy": "Saudável",
       "warning": "Aviso",
       "critical": "Crítico",
-      "up": "Acima",
-      "down": "Abaixo"
+      "up": "Ativa",
+      "down": "Inativa"
     },
     "duplex": {
       "full": "Duplex completo",
@@ -4349,15 +4349,15 @@
       }
     },
     "virtualList": {
-      "all": "Todos",
+      "all": "Todas",
       "name": "Nome",
-      "up": "para cima",
-      "down": "para baixo",
+      "up": "Ativas",
+      "down": "Inativas",
       "guests": "VMs e LXCs",
-      "connectedTo": "Conectado a",
-      "searchPlaceholder": "Pesquise nome, IP ou convidado…",
-      "searchAriaLabel": "Pesquisar interfaces virtuais",
-      "clearSearch": "Limpar pesquisa",
+      "connectedTo": "Ligada a",
+      "searchPlaceholder": "Buscar por nome, IP ou convidado…",
+      "searchAriaLabel": "Buscar interfaces virtuais",
+      "clearSearch": "Limpar busca",
       "kindAriaLabel": "Filtrar por tipo de interface",
       "stateAriaLabel": "Filtrar por estado",
       "noMatches": "Nenhuma interface corresponde aos filtros."
@@ -4615,19 +4615,19 @@
       "switchModeLxc": "LXC (driver nativo)"
     },
     "systemInfo": {
-      "socket": "soquete {count}",
-      "sockets": "soquetes {count}",
+      "socket": "{count} soquete",
+      "sockets": "{count} soquetes",
       "socketsLabel": "Soquetes",
       "coresWord": "núcleos",
-      "threads": "tópicos {count}",
+      "threads": "{count} threads",
       "cache": "Cache",
       "frequency": "Frequência",
-      "board": "Quadro",
-      "biosDate": "data do BIOS",
-      "biosVendor": "fornecedor de BIOS",
+      "board": "Placa",
+      "biosDate": "Data do BIOS",
+      "biosVendor": "Fabricante do BIOS",
       "noBoardData": "Nenhum dado do fabricante",
-      "memoryModules": "módulos de memória {count}",
-      "schematic": "esquema da placa-mãe"
+      "memoryModules": "{count} módulos de memória",
+      "schematic": "Esquema da placa-mãe"
     }
   },
   "backup": {

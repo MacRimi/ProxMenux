@@ -2855,7 +2855,7 @@
     "backupCodeHint": "Môžete použiť aj záložný kód vo formáte XXXX-XXXX",
     "backToLogin": "Späť na prihlásenie",
     "verifyCode": "Overiť kód",
-    "subtitle": "Prihláste sa"
+    "subtitle": "Prihlásenie"
   },
   "account": {
     "signedIn": "Prihlásený",
@@ -4349,16 +4349,16 @@
     },
     "virtualList": {
       "all": "Všetky",
-      "name": "Meno",
-      "up": "Hore",
-      "down": "Dole",
+      "name": "Názov",
+      "up": "Aktívne",
+      "down": "Neaktívne",
       "guests": "VM a LXC",
       "connectedTo": "Pripojené k",
-      "searchPlaceholder": "Vyhľadajte meno, IP alebo hosťa…",
-      "searchAriaLabel": "Vyhľadajte virtuálne rozhrania",
-      "clearSearch": "Vymazať vyhľadávanie",
-      "kindAriaLabel": "Filtrujte podľa druhu rozhrania",
-      "stateAriaLabel": "Filtrujte podľa štátu",
+      "searchPlaceholder": "Hľadať podľa názvu, IP alebo hosťa…",
+      "searchAriaLabel": "Hľadať vo virtuálnych rozhraniach",
+      "clearSearch": "Vymazať hľadanie",
+      "kindAriaLabel": "Filtrovať podľa typu rozhrania",
+      "stateAriaLabel": "Filtrovať podľa stavu",
       "noMatches": "Filtrom nevyhovuje žiadne rozhranie."
     }
   },
@@ -4614,18 +4614,18 @@
       "switchModeLxc": "LXC (natívny ovládač)"
     },
     "systemInfo": {
-      "socket": "{count} zásuvka",
-      "sockets": "{count} zásuvky",
-      "socketsLabel": "Zásuvky",
+      "socket": "{count} socket",
+      "sockets": "Sockety: {count}",
+      "socketsLabel": "Sockety",
       "coresWord": "jadrá",
-      "threads": "{count} vlákna",
+      "threads": "{count} vlákien",
       "cache": "Cache",
       "frequency": "Frekvencia",
       "board": "Doska",
-      "biosDate": "BIOS date",
-      "biosVendor": "Predajca systému BIOS",
+      "biosDate": "Dátum BIOS",
+      "biosVendor": "Výrobca BIOS",
       "noBoardData": "Žiadne údaje od výrobcu",
-      "memoryModules": "Pamäťové moduly {count}",
+      "memoryModules": "Pamäťové moduly: {count}",
       "schematic": "Schéma základnej dosky"
     }
   },

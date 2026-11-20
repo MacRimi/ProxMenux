@@ -2856,7 +2856,7 @@
     "backupCodeHint": "Sie können auch einen Backup-Code verwenden (Format: XXXX-XXXX)",
     "backToLogin": "Zurück zum Login",
     "verifyCode": "Code überprüfen",
-    "subtitle": "Anmelden"
+    "subtitle": "Anmeldung"
   },
   "account": {
     "signedIn": "Angemeldet",
@@ -4351,16 +4351,16 @@
     "virtualList": {
       "all": "Alle",
       "name": "Name",
-      "up": "Nach oben",
-      "down": "Runter",
+      "up": "Aktiv",
+      "down": "Inaktiv",
       "guests": "VMs und LXCs",
       "connectedTo": "Verbunden mit",
-      "searchPlaceholder": "Suchen Sie nach Name, IP oder Gast…",
+      "searchPlaceholder": "Nach Name, IP oder Gast suchen…",
       "searchAriaLabel": "Virtuelle Schnittstellen durchsuchen",
       "clearSearch": "Suche löschen",
       "kindAriaLabel": "Nach Schnittstellentyp filtern",
-      "stateAriaLabel": "Filter by state",
-      "noMatches": "No interface matches the filters."
+      "stateAriaLabel": "Nach Zustand filtern",
+      "noMatches": "Keine Schnittstelle entspricht den Filtern."
     }
   },
   "hardware": {
@@ -4615,19 +4615,19 @@
       "switchModeLxc": "LXC (nativer Treiber)"
     },
     "systemInfo": {
-      "socket": "{count}-Sockel",
-      "sockets": "{count}-Buchsen",
-      "socketsLabel": "Steckdosen",
-      "coresWord": "cores",
+      "socket": "{count} Sockel",
+      "sockets": "{count} Sockel",
+      "socketsLabel": "Sockel",
+      "coresWord": "Kerne",
       "threads": "{count} Threads",
       "cache": "Cache",
-      "frequency": "Häufigkeit",
-      "board": "Board",
+      "frequency": "Frequenz",
+      "board": "Platine",
       "biosDate": "BIOS-Datum",
-      "biosVendor": "BIOS-Anbieter",
+      "biosVendor": "BIOS-Hersteller",
       "noBoardData": "Keine Angaben vom Hersteller",
-      "memoryModules": "{count}-Speichermodule",
-      "schematic": "Mainboard-Schaltplan"
+      "memoryModules": "{count} Speichermodule",
+      "schematic": "Schema der Hauptplatine"
     }
   },
   "backup": {
