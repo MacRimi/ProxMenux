@@ -545,15 +545,11 @@ function MonitorDashboard({ product }: { product: Product }) {
           instead of covering half of it. */}
       <div className="sticky [@media(max-height:500px)]:static top-0 z-50">
       <header
-        // On a phone the header is a band of its own that opens the health
-        // monitor; on a desktop it sits on the page and its status badges do.
+        // The whole header opens the health monitor. On a phone it is a band of
+        // its own; on a desktop it sits on the page.
         className="relative z-[2] border-b border-border bg-card shadow-sm cursor-pointer hover:bg-accent/5 transition-colors
-          lg:border-b-0 lg:bg-background lg:shadow-none lg:cursor-default lg:hover:bg-background"
-        onClick={(event) => {
-          if (window.matchMedia("(min-width: 1024px)").matches
-              && !(event.target as HTMLElement).closest("[data-health-trigger]")) return
-          setShowHealthModal(true)
-        }}
+          lg:border-b-0 lg:bg-background lg:shadow-none lg:hover:bg-accent/5"
+        onClick={() => setShowHealthModal(true)}
       >
         <div className="px-4 md:px-6 lg:px-[clamp(20px,2.2vw,32px)]">
         <div className="py-4 lg:border-b lg:border-border">
@@ -595,12 +591,12 @@ function MonitorDashboard({ product }: { product: Product }) {
               <MonitorSwitcher nodeName={displayServerName} />
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" data-health-trigger className={`${statusColor} cursor-pointer hover:opacity-80`}>
+                <Badge variant="outline" className={`${statusColor} cursor-pointer hover:opacity-80`}>
                   {statusIcon}
                   <span className="ml-1">{t(`status.${systemStatus.status}`)}</span>
                 </Badge>
                 {systemStatus.status === "healthy" && infoCount > 0 && (
-                  <Badge variant="outline" data-health-trigger className="bg-blue-500/10 text-blue-500 border-blue-500/20 cursor-pointer hover:opacity-80">
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 cursor-pointer hover:opacity-80">
                     <Info className="h-4 w-4" />
                     <span className="ml-1">{infoCount} info</span>
                   </Badge>
