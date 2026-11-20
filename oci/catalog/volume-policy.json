@@ -191,11 +191,17 @@
     ],
     "baserow": [
       "/baserow/data"
+    ],
+    "netbootxyz": [
+      "/assets"
     ]
   },
   "sizes": {
     "krusader": {
       "/config": 4
+    },
+    "netbootxyz": {
+      "/config": 1
     },
     "sharecovex": {
       "/config": 1
