@@ -217,8 +217,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
         {/* CPU Chart */}
         <div>
           <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.cpu")}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data} margin={{ bottom: 80 }}>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={data} margin={{ bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -255,8 +255,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
         {/* Memory Chart */}
         <div>
           <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.memory")}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data} margin={{ bottom: 80 }}>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={data} margin={{ bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -293,8 +293,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
         {/* Disk I/O Chart */}
         <div>
           <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.diskIo")}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data} margin={{ bottom: 80 }}>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={data} margin={{ bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -343,8 +343,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
         {/* Network I/O Chart */}
         <div>
           <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.networkIo")}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data} margin={{ bottom: 80 }}>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={data} margin={{ bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
