@@ -47,7 +47,7 @@
     "revision": "b8055f508370eba1bb41ac657816738cd4e0105c",
     "image_repository_url": "https://hub.docker.com/r/chocobozzz/peertube",
     "readme_pushed_at": "",
-    "compose_sha256": "ef9d5abda66347a4dfe21a6f9e0e186926f4b3ca5a42a6af96e2360bfea01ca8",
+    "compose_sha256": "8849ed0ea8c424280363239eaf0b71741f86e1108b2fcc21b1befdcb1de91429",
     "generated_at": "2026-11-20T17:55:21+00:00"
   },
   "container_contract": {
@@ -150,7 +150,7 @@
         "default": "managed-volume",
         "managed_volume": {
           "backup": true,
-          "default_size_gb": 8
+          "default_size_gb": 32
         }
       },
       {
@@ -191,7 +191,7 @@
     ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: peertube\nservices:\n  peertube:\n    command:\n      - if [ -n \"${PEERTUBE_PUBLIC_HOSTNAME:-}\" ]; then export PEERTUBE_WEBSERVER_HOSTNAME=\"$PEERTUBE_PUBLIC_HOSTNAME\";\n        export PEERTUBE_WEBSERVER_HTTPS=true PEERTUBE_WEBSERVER_PORT=443; else PEERTUBE_WEBSERVER_HOSTNAME=$(node\n        -e \"const os = require(\\\"node:os\\\"); let attempts = 0; function findAddress()\n        { const address = os.networkInterfaces().eth1?.find(entry => entry.family\n        === \\\"IPv4\\\"); if (address) { process.stdout.write(address.address); return;\n        } if (++attempts >= 120) { console.error(\\\"PeerTube LAN interface (eth1) has\n        no IPv4 address\\\"); process.exit(1); } setTimeout(findAddress, 1000); } findAddress();\");\n        export PEERTUBE_WEBSERVER_HOSTNAME; export PEERTUBE_WEBSERVER_HTTPS=false\n        PEERTUBE_WEBSERVER_PORT=9000; fi; exec /usr/local/bin/entrypoint.sh node dist/server\n    depends_on:\n      - postgres\n      - redis\n    entrypoint:\n      - /bin/sh\n      - -ec\n    environment:\n      PEERTUBE_ADMIN_EMAIL: root@example.invalid\n      PEERTUBE_DB_HOSTNAME: postgres\n      PEERTUBE_DB_NAME: peertube\n      PEERTUBE_DB_PASSWORD: ${GENERATED_DB_PASSWORD}\n      PEERTUBE_DB_USERNAME: peertube\n      PEERTUBE_PUBLIC_HOSTNAME: ''\n      PEERTUBE_REDIS_AUTH: ${GENERATED_REDIS_PASSWORD}\n      PEERTUBE_REDIS_HOSTNAME: redis\n      PEERTUBE_SECRET: ${GENERATED_PEERTUBE_SECRET}\n      PEERTUBE_TRUST_PROXY: ''\n    image: docker.io/chocobozzz/peertube:production\n    mem_limit: 2g\n    ports:\n      - 9000:9000\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: ./data\n        target: /data\n      - read_only: false\n        source: ./config\n        target: /config\n  postgres:\n    environment:\n      POSTGRES_DB: peertube\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_USER: peertube\n    image: docker.io/library/postgres:17-alpine\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: ./db\n        target: /var/lib/postgresql/data\n  redis:\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    image: docker.io/library/redis:8-alpine\n    restart: unless-stopped\n    volumes:\n      - read_only: false\n        source: ./redis\n        target: /data\n"
+    "original_compose": "name: peertube\nservices:\n  peertube:\n    command:\n    - 'if [ -n \"${PEERTUBE_PUBLIC_HOSTNAME:-}\" ]; then case \"$PEERTUBE_PUBLIC_HOSTNAME\"\n      in *[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-]*|[.-]*|*[-.]|*..*|*-.*|*.-*)\n      echo \"Invalid PeerTube hostname: enter a DNS name without a scheme or port.\"\n      >&2; exit 1;; esac; export PEERTUBE_WEBSERVER_HOSTNAME=\"$PEERTUBE_PUBLIC_HOSTNAME\";\n      export PEERTUBE_WEBSERVER_HTTPS=true PEERTUBE_WEBSERVER_PORT=443; else PEERTUBE_WEBSERVER_HOSTNAME=$(node\n      -e \"const os = require(\\\"node:os\\\"); let attempts = 0; function findAddress()\n      { const address = os.networkInterfaces().eth1?.find(entry => entry.family ===\n      \\\"IPv4\\\"); if (address) { process.stdout.write(address.address); return; } if\n      (++attempts >= 120) { console.error(\\\"PeerTube LAN interface (eth1) has no IPv4\n      address\\\"); process.exit(1); } setTimeout(findAddress, 1000); } findAddress();\");\n      export PEERTUBE_WEBSERVER_HOSTNAME; export PEERTUBE_WEBSERVER_HTTPS=false PEERTUBE_WEBSERVER_PORT=9000;\n      fi; exec /usr/local/bin/entrypoint.sh node dist/server'\n    depends_on:\n    - postgres\n    - redis\n    entrypoint:\n    - /bin/sh\n    - -ec\n    environment:\n      PEERTUBE_ADMIN_EMAIL: root@example.invalid\n      PEERTUBE_DB_HOSTNAME: postgres\n      PEERTUBE_DB_NAME: peertube\n      PEERTUBE_DB_PASSWORD: ${GENERATED_DB_PASSWORD}\n      PEERTUBE_DB_USERNAME: peertube\n      PEERTUBE_PUBLIC_HOSTNAME: ''\n      PEERTUBE_REDIS_AUTH: ${GENERATED_REDIS_PASSWORD}\n      PEERTUBE_REDIS_HOSTNAME: redis\n      PEERTUBE_SECRET: ${GENERATED_PEERTUBE_SECRET}\n      PEERTUBE_TRUST_PROXY: ''\n    image: docker.io/chocobozzz/peertube:production\n    mem_limit: 2g\n    ports:\n    - 9000:9000\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./data\n      target: /data\n    - read_only: false\n      source: ./config\n      target: /config\n  postgres:\n    environment:\n      POSTGRES_DB: peertube\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_USER: peertube\n    image: docker.io/library/postgres:17-alpine\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./db\n      target: /var/lib/postgresql/data\n  redis:\n    environment:\n      REDISCLI_AUTH: ${GENERATED_REDIS_PASSWORD}\n    image: docker.io/library/redis:8-alpine\n    restart: unless-stopped\n    volumes:\n    - read_only: false\n      source: ./redis\n      target: /data\n    command:\n    - redis-server\n    - --requirepass\n    - ${REDISCLI_AUTH}\n"
   },
   "compose_stack": {
     "project_name": "peertube",
@@ -247,6 +247,11 @@
               "target": "/data",
               "read_only": false
             }
+          ],
+          "command": [
+            "redis-server",
+            "--requirepass",
+            "${REDISCLI_AUTH}"
           ]
         }
       },
@@ -264,7 +269,7 @@
         "private_network": true,
         "compose": {
           "command": [
-            "if [ -n \"${PEERTUBE_PUBLIC_HOSTNAME:-}\" ]; then export PEERTUBE_WEBSERVER_HOSTNAME=\"$PEERTUBE_PUBLIC_HOSTNAME\"; export PEERTUBE_WEBSERVER_HTTPS=true PEERTUBE_WEBSERVER_PORT=443; else PEERTUBE_WEBSERVER_HOSTNAME=$(node -e \"const os = require(\\\"node:os\\\"); let attempts = 0; function findAddress() { const address = os.networkInterfaces().eth1?.find(entry => entry.family === \\\"IPv4\\\"); if (address) { process.stdout.write(address.address); return; } if (++attempts >= 120) { console.error(\\\"PeerTube LAN interface (eth1) has no IPv4 address\\\"); process.exit(1); } setTimeout(findAddress, 1000); } findAddress();\"); export PEERTUBE_WEBSERVER_HOSTNAME; export PEERTUBE_WEBSERVER_HTTPS=false PEERTUBE_WEBSERVER_PORT=9000; fi; exec /usr/local/bin/entrypoint.sh node dist/server"
+            "if [ -n \"${PEERTUBE_PUBLIC_HOSTNAME:-}\" ]; then case \"$PEERTUBE_PUBLIC_HOSTNAME\" in *[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-]*|[.-]*|*[-.]|*..*|*-.*|*.-*) echo \"Invalid PeerTube hostname: enter a DNS name without a scheme or port.\" >&2; exit 1;; esac; export PEERTUBE_WEBSERVER_HOSTNAME=\"$PEERTUBE_PUBLIC_HOSTNAME\"; export PEERTUBE_WEBSERVER_HTTPS=true PEERTUBE_WEBSERVER_PORT=443; else PEERTUBE_WEBSERVER_HOSTNAME=$(node -e \"const os = require(\\\"node:os\\\"); let attempts = 0; function findAddress() { const address = os.networkInterfaces().eth1?.find(entry => entry.family === \\\"IPv4\\\"); if (address) { process.stdout.write(address.address); return; } if (++attempts >= 120) { console.error(\\\"PeerTube LAN interface (eth1) has no IPv4 address\\\"); process.exit(1); } setTimeout(findAddress, 1000); } findAddress();\"); export PEERTUBE_WEBSERVER_HOSTNAME; export PEERTUBE_WEBSERVER_HTTPS=false PEERTUBE_WEBSERVER_PORT=9000; fi; exec /usr/local/bin/entrypoint.sh node dist/server"
           ],
           "depends_on": [
             "postgres",
@@ -650,7 +655,13 @@
             "name": "PEERTUBE_PUBLIC_HOSTNAME",
             "label": "Public PeerTube hostname without a scheme or port",
             "sensitive": false
-          },
+          }
+        ]
+      },
+      {
+        "service": "peertube",
+        "label": "Custom PeerTube trusted proxies",
+        "fields": [
           {
             "name": "PEERTUBE_TRUST_PROXY",
             "label": "Trusted reverse proxy addresses as a JSON array",

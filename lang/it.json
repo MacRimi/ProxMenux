@@ -11110,7 +11110,10 @@
   "For a LAN install, reserve the container's IPv4 address so PeerTube keeps the same URL.": "Per un’installazione in LAN, riserva l’indirizzo IPv4 del container in modo che PeerTube mantenga lo stesso URL.",
   "For public access, set the final HTTPS hostname in advanced settings before the first boot and configure your reverse proxy to port 9000.": "Per l’accesso pubblico, imposta il nome host HTTPS definitivo nelle impostazioni avanzate prima del primo avvio e indirizza il proxy inverso alla porta 9000.",
   "Configure your SMTP server before using email notifications or password resets.": "Configura il server SMTP prima di usare le notifiche e-mail o la reimpostazione delle password.",
+  "Custom PeerTube trusted proxies": "Proxy attendibili personalizzati per PeerTube",
   "PeerTube HTTPS reverse proxy": "Proxy inverso HTTPS per PeerTube",
   "Public PeerTube hostname without a scheme or port": "Nome host pubblico di PeerTube senza protocollo né porta",
-  "Trusted reverse proxy addresses as a JSON array": "Indirizzi dei proxy inversi attendibili come array JSON"
+  "Trusted reverse proxy addresses as a JSON array": "Indirizzi dei proxy inversi attendibili come array JSON",
+  "Read the initial password for the root account from the local PeerTube log and change it after signing in.": "Leggi la password iniziale dell’account root nel registro locale di PeerTube e cambiala dopo l’accesso.",
+  "pct exec {main_vmid} -- grep -m1 'User password:' /data/logs/peertube.log": "pct exec {main_vmid} -- grep -m1 'User password:' /data/logs/peertube.log"
 }
