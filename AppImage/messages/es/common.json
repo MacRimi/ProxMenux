@@ -2232,6 +2232,52 @@
         "lxc": "contenedor contenedores",
         "qemu": "vm máquina virtual máquinas virtuales"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Nombre",
+        "type": "Tipo · ID",
+        "state": "Estado",
+        "tags": "Etiquetas",
+        "ip": "Dirección IP",
+        "uptime": "Tiempo encendido",
+        "cpu": "CPU",
+        "memory": "Memoria",
+        "disk": "Disco",
+        "net": "E/S de red",
+        "io": "E/S de disco",
+        "updates": "Actualizaciones"
+      },
+      "controls": "Controles de la lista",
+      "settings": "Columnas",
+      "expandAll": "Expandir todo",
+      "collapseAll": "Contraer todo",
+      "expandVisible": "Expandir las visibles",
+      "collapseVisible": "Contraer las visibles",
+      "visibleColumns": "Columnas visibles",
+      "keepIdentity": "Deja visible el nombre o el tipo · ID.",
+      "expandGuest": "Expandir {name}",
+      "collapseGuest": "Contraer {name}",
+      "openGuestInfo": "Ver detalles de {name}",
+      "moveColumn": "Mueve {column} arrastrándola o con Mayús y las flechas",
+      "resizeColumn": "Cambiar el tamaño de {column}",
+      "sortColumn": "Ordenar por {column}",
+      "sortBy": "Ordenar por",
+      "originalOrder": "Orden original",
+      "asc": "ascendente",
+      "desc": "descendente",
+      "updatesShort": "Actualiz.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "Recibido {first}, enviado {second} desde el arranque. Las barras usan la misma escala en todas las VM y LXC.",
+      "diskTransfer": "Leído {first}, escrito {second} desde el arranque. Las barras usan la misma escala en todas las VM y LXC."
+    },
+    "typeFilter": {
+      "ariaLabel": "Filtrar por tipo",
+      "all": "Todos los tipos",
+      "empty": "No hay máquinas virtuales ni contenedores de ese tipo"
     }
   },
   "settings": {
@@ -2944,7 +2990,7 @@
     }
   },
   "login": {
-    "subtitle": "Inicia sesión para acceder a tu panel de control",
+    "subtitle": "Inicio de sesión",
     "username": "Nombre de usuario",
     "password": "Contraseña",
     "usernamePlaceholder": "Introduce tu nombre de usuario",
@@ -4239,19 +4285,32 @@
     },
     "sections": {
       "physicalInterfaces": "Interfaces físicas",
-      "bridgeInterfaces": "Interfaces de puente",
-      "vmLxcInterfaces": "Interfaces de red VM y LXC"
+      "virtualInterfaces": "Interfaces virtuales"
+    },
+    "virtualList": {
+      "all": "Todas",
+      "name": "Nombre",
+      "up": "Activas",
+      "down": "Inactivas",
+      "guests": "VM y LXC",
+      "connectedTo": "Conectada a",
+      "searchPlaceholder": "Buscar por nombre, IP o VM…",
+      "searchAriaLabel": "Buscar interfaces virtuales",
+      "clearSearch": "Borrar búsqueda",
+      "kindAriaLabel": "Filtrar por tipo de interfaz",
+      "stateAriaLabel": "Filtrar por estado",
+      "noMatches": "Ninguna interfaz coincide con los filtros."
     },
     "summary": {
       "totalInterfaces": "{count} interfaces totales",
-      "activeCount": "{active}/{total} Activo"
+      "activeCount": "{active}/{total} activas"
     },
     "status": {
       "healthy": "OK",
       "warning": "Advertencia",
       "critical": "Crítico",
-      "up": "Arriba",
-      "down": "Abajo"
+      "up": "Activa",
+      "down": "Inactiva"
     },
     "duplex": {
       "full": "Dúplex completo",
@@ -4288,7 +4347,7 @@
       "errorsOut": "Errores de envío",
       "hostname": "Nombre de host",
       "interfaceName": "Nombre de la interfaz",
-      "ipAddress": "dirección IP",
+      "ipAddress": "Dirección IP",
       "latency": "Estado latente",
       "macAddress": "dirección MAC",
       "max": "máx.",
@@ -4485,6 +4544,21 @@
       "storageSummary": "Resumen de almacenamiento",
       "interfaceInformation": "Información de la interfaz",
       "usbDevices": "Dispositivos USB"
+    },
+    "systemInfo": {
+      "socket": "{count} socket",
+      "sockets": "{count} sockets",
+      "socketsLabel": "Sockets",
+      "coresWord": "núcleos",
+      "threads": "{count} hilos",
+      "cache": "Caché",
+      "frequency": "Frecuencia",
+      "board": "Placa",
+      "biosDate": "Fecha de la BIOS",
+      "biosVendor": "Fabricante de la BIOS",
+      "noBoardData": "Sin datos del fabricante",
+      "memoryModules": "{count} módulos de memoria",
+      "schematic": "Esquema de la placa base"
     },
     "counts": {
       "installed": "{count} instalado",

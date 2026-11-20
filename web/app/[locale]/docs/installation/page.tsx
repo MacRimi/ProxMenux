@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Image from "next/image"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { Terminal, FileCode, ShieldCheck, ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -26,7 +26,6 @@ type DuringRow = { package: string; purpose: string }
 
 export default async function InstallationPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.installation" })
 
   const messages = (await getMessages({ locale })) as unknown as {

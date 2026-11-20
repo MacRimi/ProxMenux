@@ -1239,7 +1239,53 @@
     "utilization": "util",
     "idle": "Idle",
     "listTitle": "Virtual Machines & Containers",
+    "layout": {
+      "controls": "List controls",
+      "settings": "Column settings",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "expandVisible": "Expand visible",
+      "collapseVisible": "Collapse visible",
+      "visibleColumns": "Visible columns",
+      "keepIdentity": "Keep Name or Type · ID visible.",
+      "expandGuest": "Expand {name}",
+      "collapseGuest": "Collapse {name}",
+      "openGuestInfo": "View details for {name}",
+      "moveColumn": "Move {column} by dragging or with Shift and the arrow keys",
+      "resizeColumn": "Resize {column}",
+      "sortColumn": "Sort by {column}",
+      "sortBy": "Sort by",
+      "originalOrder": "Original order",
+      "asc": "ascending",
+      "desc": "descending",
+      "updatesShort": "Upd.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "Received {first}, sent {second} since start. Bars share the same scale across guests.",
+      "diskTransfer": "Read {first}, wrote {second} since start. Bars share the same scale across guests.",
+      "columns": {
+        "name": "Name",
+        "type": "Type · ID",
+        "state": "Status",
+        "tags": "Tags",
+        "ip": "IP address",
+        "uptime": "Uptime",
+        "cpu": "CPU",
+        "memory": "Memory",
+        "disk": "Disk",
+        "net": "Network I/O",
+        "io": "Disk I/O",
+        "updates": "Updates"
+      }
+    },
     "empty": "No virtual machines found",
+    "typeFilter": {
+      "ariaLabel": "Filter by guest type",
+      "all": "All types",
+      "empty": "No guests of the selected type"
+    },
     "statusFilter": {
       "ariaLabel": "Filter virtual machines and containers",
       "all": "All",
@@ -2918,7 +2964,7 @@
     }
   },
   "login": {
-    "subtitle": "Sign in to access your dashboard",
+    "subtitle": "Sign in",
     "username": "Username",
     "password": "Password",
     "usernamePlaceholder": "Enter your username",
@@ -4213,8 +4259,21 @@
     },
     "sections": {
       "physicalInterfaces": "Physical Interfaces",
-      "bridgeInterfaces": "Bridge Interfaces",
-      "vmLxcInterfaces": "VM & LXC Network Interfaces"
+      "virtualInterfaces": "Virtual interfaces"
+    },
+    "virtualList": {
+      "all": "All",
+      "name": "Name",
+      "up": "Up",
+      "down": "Down",
+      "guests": "VMs & LXCs",
+      "connectedTo": "Connected to",
+      "searchPlaceholder": "Search name, IP or guest…",
+      "searchAriaLabel": "Search virtual interfaces",
+      "clearSearch": "Clear search",
+      "kindAriaLabel": "Filter by interface kind",
+      "stateAriaLabel": "Filter by state",
+      "noMatches": "No interface matches the filters."
     },
     "summary": {
       "totalInterfaces": "{count} total interfaces",
@@ -4459,6 +4518,21 @@
       "storageSummary": "Storage Summary",
       "interfaceInformation": "Interface Information",
       "usbDevices": "USB Devices"
+    },
+    "systemInfo": {
+      "socket": "{count} socket",
+      "sockets": "{count} sockets",
+      "socketsLabel": "Sockets",
+      "coresWord": "cores",
+      "threads": "{count} threads",
+      "cache": "Cache",
+      "frequency": "Frequency",
+      "board": "Board",
+      "biosDate": "BIOS date",
+      "biosVendor": "BIOS vendor",
+      "noBoardData": "No data from the manufacturer",
+      "memoryModules": "{count} memory modules",
+      "schematic": "Mainboard schematic"
     },
     "counts": {
       "installed": "{count} installed",

@@ -2079,6 +2079,52 @@
         "lxc": "contenitore contenitori container",
         "qemu": "vm macchina virtuale macchine virtuali"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Nome",
+        "type": "digita · ID",
+        "state": "Stato",
+        "tags": "tag",
+        "ip": "indirizzo IP",
+        "uptime": "tempi di attività",
+        "cpu": "CPU",
+        "memory": "Memoria",
+        "disk": "disco",
+        "net": "I/O di rete",
+        "io": "I/O del disco",
+        "updates": "Aggiornamenti"
+      },
+      "controls": "elenca i controlli",
+      "settings": "impostazioni della colonna",
+      "expandAll": "espandi tutto",
+      "collapseAll": "comprimi tutto",
+      "expandVisible": "espande visibile",
+      "collapseVisible": "Comprimi visibile",
+      "visibleColumns": "colonne visibili",
+      "keepIdentity": "mantieni visibile il nome o il tipo · l'ID.",
+      "expandGuest": "espandi {name}",
+      "collapseGuest": "Comprimi {name}",
+      "openGuestInfo": "Visualizza i dettagli per {name}",
+      "moveColumn": "sposta {column} trascinando o con Shift e i tasti freccia",
+      "resizeColumn": "ridimensiona {column}",
+      "sortColumn": "ordina per {column}",
+      "sortBy": "Ordina per",
+      "originalOrder": "ordine originale",
+      "asc": "ascendente",
+      "desc": "discendente",
+      "updatesShort": "Aggiorna.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: ricevuto {first}, inviato {second} dall'inizio.I bar condividono la stessa scala tra gli ospiti.",
+      "diskTransfer": "leggi {first}, ha scritto {second} dall'inizio.I bar condividono la stessa scala tra gli ospiti."
+    },
+    "typeFilter": {
+      "ariaLabel": "filtra per tipologia di ospite",
+      "all": "tutti i tipi",
+      "empty": "Nessun ospite del tipo selezionato"
     }
   },
   "settings": {
@@ -2791,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Accedi alla dashboard",
     "username": "Nome utente",
     "password": "Password",
     "usernamePlaceholder": "Inserisci nome utente",
@@ -2810,7 +2855,8 @@
     "authenticationCode": "Codice autenticazione",
     "backupCodeHint": "Puoi usare anche un codice di backup (formato: XXXX-XXXX)",
     "backToLogin": "Torna all’accesso",
-    "verifyCode": "Verifica codice"
+    "verifyCode": "Verifica codice",
+    "subtitle": "Accesso"
   },
   "account": {
     "signedIn": "Accesso effettuato",
@@ -2862,7 +2908,7 @@
     "readOnlyDescription": "Chiunque raggiunga il Monitor può visualizzarlo, ma non può aprire terminali, eseguire script o modificare alcunché. Potrai aggiungere una password in seguito.",
     "openTitle": "Aperto, accettando il rischio",
     "openDescription": "Chiunque raggiunga il Monitor ottiene il pieno controllo di questo server, terminale root incluso. Selezionalo solo su una rete in cui ti fidi di chiunque possa raggiungerlo.",
-    "chooseReadOnly": "Usa sola lettura",
+    "chooseReadOnly": "Usa la sola lettura",
     "chooseOpen": "Apri senza password",
     "pveTitle": "Oppure usa gli account di Proxmox VE",
     "pveDescription": "Accedi con gli utenti e i realm di Proxmox VE e la loro autenticazione a due fattori, senza un account dedicato di Monitor.",
@@ -2892,7 +2938,7 @@
     "errors": {
       "pve_rules_invalid": "Non è stato possibile salvare le regole.",
       "pve_name_invalid": "Scegli un utente o un gruppo valido.",
-      "pve_user_realm": "Indica l'utente con il suo realm, ad esempio utente@pve.",
+      "pve_user_realm": "Indica l'utente con il suo realm, ad esempio user@pve.",
       "pve_rule_duplicate": "Ogni utente o gruppo può avere una sola regola.",
       "pve_rule_self": "Queste regole ti toglierebbero l'accesso da amministratore."
     }
@@ -3142,7 +3188,7 @@
       "readOnlyMode": "La dashboard è in sola lettura senza password: può essere visualizzata, ma non è possibile eseguire né modificare nulla.",
       "useReadOnly": "Passa a sola lettura",
       "disableChoose": "Senza password, come deve essere raggiungibile la dashboard?",
-      "pveMode": "La dashboard accede con gli account di Proxmox VE."
+      "pveMode": "L'accesso alla dashboard avviene con gli account di Proxmox VE."
     },
     "twoFactor": {
       "title": "Autenticazione a due fattori",
@@ -4086,8 +4132,7 @@
     },
     "sections": {
       "physicalInterfaces": "Interfacce fisiche",
-      "bridgeInterfaces": "Interfacce bridge",
-      "vmLxcInterfaces": "Interfacce rete VM e LXC"
+      "virtualInterfaces": "Interfacce virtuali"
     },
     "summary": {
       "totalInterfaces": "{count} interfacce totali",
@@ -4302,6 +4347,20 @@
         "generated": "Generato",
         "reportId": "ID report"
       }
+    },
+    "virtualList": {
+      "all": "Tutte",
+      "name": "Nome",
+      "up": "Attive",
+      "down": "Non attive",
+      "guests": "VM e LXC",
+      "connectedTo": "Collegata a",
+      "searchPlaceholder": "Cerca per nome, IP o guest…",
+      "searchAriaLabel": "Cerca interfacce virtuali",
+      "clearSearch": "Cancella ricerca",
+      "kindAriaLabel": "Filtra per tipo di interfaccia",
+      "stateAriaLabel": "Filtra per stato",
+      "noMatches": "Nessuna interfaccia corrisponde ai filtri."
     }
   },
   "hardware": {
@@ -4554,6 +4613,21 @@
       "switchModeDescription": "Passaggio GPU {slot} alla modalità {mode}...",
       "switchModeVm": "VM (passthrough VFIO)",
       "switchModeLxc": "LXC (driver nativo)"
+    },
+    "systemInfo": {
+      "socket": "{count} socket",
+      "sockets": "{count} socket",
+      "socketsLabel": "Socket",
+      "coresWord": "core",
+      "threads": "{count} thread",
+      "cache": "Cache",
+      "frequency": "Frequenza",
+      "board": "Scheda",
+      "biosDate": "Data del BIOS",
+      "biosVendor": "Produttore del BIOS",
+      "noBoardData": "Nessun dato dal produttore",
+      "memoryModules": "{count} moduli di memoria",
+      "schematic": "Schema della scheda madre"
     }
   },
   "backup": {
@@ -8275,7 +8349,7 @@
   },
   "accessLog": {
     "title": "Attività di accesso",
-    "description": "Accessi, modifiche ad account, profili e impostazioni di accesso, e ogni azione rifiutata da un profilo, con chi l'ha eseguita. Password, codici e token non vengono mai registrati. Conservata per 90 giorni.",
+    "description": "Accessi, modifiche ad account, profili e impostazioni di accesso, e ogni azione rifiutata da un profilo, con l'indicazione dell'autore. Password, codici e token non vengono mai registrati. I dati sono conservati per 90 giorni.",
     "empty": "Nessuna attività registrata finora.",
     "loadMore": "Carica altro",
     "refused": "Rifiutata",
@@ -8373,7 +8447,7 @@
     "saved": "Impostazioni OIDC salvate. La discovery è stata verificata; prova l'accesso in un altro browser prima di terminare la sessione locale.",
     "saveFailed": "Impossibile salvare le impostazioni OIDC.",
     "login": "Continua con {provider}",
-    "loginFailed": "Accesso OIDC non riuscito o scaduto. Riprova, controlla il tuo identificatore soggetto autorizzato oppure usa le credenziali locali.",
+    "loginFailed": "Accesso OIDC non riuscito o scaduto. Riprova, verifica che il tuo identificativo sia tra quelli consentiti oppure usa le credenziali locali.",
     "disabledSaved": "Impostazioni OIDC salvate. L'accesso esterno è disabilitato.",
     "saveDisabled": "Salva impostazioni",
     "allowedSubjects": "Identificativi consentiti",

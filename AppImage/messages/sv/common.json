@@ -2079,6 +2079,52 @@
         "lxc": "container containrar",
         "qemu": "vm virtuell maskin virtuella maskiner"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Namn",
+        "type": "Skriv · ID",
+        "state": "Status",
+        "tags": "Taggar",
+        "ip": "IP-adress",
+        "uptime": "Drifttid",
+        "cpu": "CPU",
+        "memory": "Minne",
+        "disk": "Disk",
+        "net": "Nätverk I/O",
+        "io": "Disk I/O",
+        "updates": "Uppdateringar"
+      },
+      "controls": "Listkontroller",
+      "settings": "Kolumninställningar",
+      "expandAll": "Utöka alla",
+      "collapseAll": "Komprimera alla",
+      "expandVisible": "Expandera synligt",
+      "collapseVisible": "Kollaps synlig",
+      "visibleColumns": "Synliga kolumner",
+      "keepIdentity": "Håll namn eller typ · ID synligt.",
+      "expandGuest": "Expandera {name}",
+      "collapseGuest": "Komprimera {name}",
+      "openGuestInfo": "Se detaljer för {name}",
+      "moveColumn": "Flytta {column} genom att dra eller med Shift och piltangenterna",
+      "resizeColumn": "Ändra storlek {column}",
+      "sortColumn": "Sortera efter {column}",
+      "sortBy": "Sortera efter",
+      "originalOrder": "Ursprunglig beställning",
+      "asc": "stigande",
+      "desc": "fallande",
+      "updatesShort": "Uppd.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "Mottog {first}, skickade {second} sedan start.Barer delar samma skala mellan gäster.",
+      "diskTransfer": "Läs {first}, skrev {second} sedan starten.Barer delar samma skala mellan gäster."
+    },
+    "typeFilter": {
+      "ariaLabel": "Filtrera efter gästtyp",
+      "all": "Alla typer",
+      "empty": "Inga gäster av den valda typen"
     }
   },
   "settings": {
@@ -2791,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Logga in för att komma åt din instrumentpanel",
     "username": "Användarnamn",
     "password": "Lösenord",
     "usernamePlaceholder": "Ange ditt användarnamn",
@@ -2810,7 +2855,8 @@
     "authenticationCode": "Autentiseringskod",
     "backupCodeHint": "Du kan också använda en reservkod (format: XXXX-XXXX)",
     "backToLogin": "Tillbaka till inloggning",
-    "verifyCode": "Verifiera koden"
+    "verifyCode": "Verifiera koden",
+    "subtitle": "Inloggning"
   },
   "account": {
     "signedIn": "Inloggad",
@@ -4086,8 +4132,7 @@
     },
     "sections": {
       "physicalInterfaces": "Fysiska gränssnitt",
-      "bridgeInterfaces": "Bridge-gränssnitt",
-      "vmLxcInterfaces": "VM & LXC nätverksgränssnitt"
+      "virtualInterfaces": "Virtuella gränssnitt"
     },
     "summary": {
       "totalInterfaces": "{count} totalt gränssnitt",
@@ -4302,6 +4347,20 @@
         "reportId": "Rapport-ID",
         "icmpEchoRequest": "ICMP Echo Request (Ping)"
       }
+    },
+    "virtualList": {
+      "all": "Alla",
+      "name": "Namn",
+      "up": "Upp",
+      "down": "Ner",
+      "guests": "VM och LXC",
+      "connectedTo": "Ansluten till",
+      "searchPlaceholder": "Sök på namn, IP eller gäst…",
+      "searchAriaLabel": "Sök i virtuella gränssnitt",
+      "clearSearch": "Rensa sökning",
+      "kindAriaLabel": "Filtrera efter gränssnittstyp",
+      "stateAriaLabel": "Filtrera efter tillstånd",
+      "noMatches": "Inget gränssnitt matchar filtren."
     }
   },
   "hardware": {
@@ -4554,6 +4613,21 @@
       "switchModeDescription": "Byter GPU {slot} till {mode} läge...",
       "switchModeVm": "VM (VFIO passthrough)",
       "switchModeLxc": "LXC (native drivrutin)"
+    },
+    "systemInfo": {
+      "socket": "{count} uttag",
+      "sockets": "{count} socklar",
+      "socketsLabel": "Socklar",
+      "coresWord": "kärnor",
+      "threads": "{count} trådar",
+      "cache": "Cache",
+      "frequency": "Frekvens",
+      "board": "Moderkort",
+      "biosDate": "BIOS-datum",
+      "biosVendor": "BIOS-tillverkare",
+      "noBoardData": "Inga data från tillverkaren",
+      "memoryModules": "{count} minnesmoduler",
+      "schematic": "Schema över moderkortet"
     }
   },
   "backup": {

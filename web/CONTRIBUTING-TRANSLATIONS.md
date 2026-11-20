@@ -248,13 +248,12 @@ This is the more involved path. Use the pilot
    `routing.locales` in `i18n/routing.ts`).
 3. If the page exports `metadata`, replace it with `generateMetadata()`
    that reads from `getTranslations({ namespace: '<page>.meta' })`.
-4. Call `setRequestLocale(locale)` near the top of the component body.
-5. Call `await getTranslations({ locale, namespace: 'docs.<section>.<page>' })`
+4. Call `await getTranslations({ locale, namespace: 'docs.<section>.<page>' })`
    and rename it to `t`.
-6. Replace every English string in JSX with `t('key')` (plain text) or
+5. Replace every English string in JSX with `t('key')` (plain text) or
    `t.rich('key', { code, strong, em, link, ... })` for strings with
    inline tags.
-7. For lists / tables of structured items (e.g. table rows, nav items),
+6. For lists / tables of structured items (e.g. table rows, nav items),
    pull the array from `getMessages()` and iterate.
 
 ### JSON file structure

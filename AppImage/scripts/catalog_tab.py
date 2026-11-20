@@ -561,9 +561,10 @@ def _script_entries() -> dict:
     return entries
 
 
-# Tools of Community Scripts: the scripts run on the host. Each category of
-# Community Scripts is a section of its own in the tab; a host script they
-# have not filed yet joins their host tools.
+# Tools of Community Scripts: the scripts that manage the host itself, the ones
+# Community Scripts files under Host Management or has not filed yet. A host
+# script filed under another category, such as a monitoring collector, is an
+# application of that category.
 _CS_SECTION_PREFIX = "cs:"
 _CS_UNFILED_TOOLS = "Host Management"
 
@@ -571,9 +572,9 @@ _CS_UNFILED_TOOLS = "Host Management"
 def _script_item(entry: dict) -> dict:
     names = entry.get("category_names") or []
     kind = _SCRIPT_TYPES.get(str(entry.get("type") or ""), "lxc")
-    # A script run on the host is a tool, in the section of its category; any
-    # other script, an add-on included, is an application.
-    tool = kind == "host"
+    # A host management script is a tool; any other script, an add-on or a
+    # host script filed under another category included, is an application.
+    tool = kind == "host" and (not names or names[0] == _CS_UNFILED_TOOLS)
     return {
         "key": f"cs:{entry['slug']}",
         "kind": "cs",

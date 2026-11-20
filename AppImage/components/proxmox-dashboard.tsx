@@ -128,6 +128,19 @@ type TopTab = TabId | "datastores" | "pbs-tasks"
 // same header, health and administration with its own top-level sections.
 const PBS_TABS: TopTab[] = ["overview", "datastores", "pbs-tasks", "terminal", "admin"]
 
+
+// What the header reads from the update status and the health snapshot.
+interface UpdateStatusResponse {
+  success?: boolean
+  update_available?: { stable?: boolean; beta?: boolean }
+}
+
+interface HealthSnapshotResponse {
+  health?: { details?: Record<string, { status?: string } | undefined> }
+  custom_suppressions?: { category: string }[]
+  dismissed?: { category: string }[]
+}
+
 function MonitorDashboard({ product }: { product: Product }) {
   const t = useT()
   const isPbs = product === "pbs"
@@ -191,7 +204,6 @@ function MonitorDashboard({ product }: { product: Product }) {
   const [infoCount, setInfoCount] = useState(0)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [showNavigation, setShowNavigation] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const { showReleaseNotes, setShowReleaseNotes } = useVersionCheck()
   const displayServerName = systemStatus.serverName === "Loading..." ? t("app.loading") : systemStatus.serverName
@@ -214,10 +226,10 @@ function MonitorDashboard({ product }: { product: Product }) {
   // Fetch ProxMenux update status
   const fetchUpdateStatus = useCallback(async () => {
     try {
-      const response = await fetchApi("/api/proxmenux/update-status")
+      const response = await fetchApi<UpdateStatusResponse>("/api/proxmenux/update-status")
       if (response?.success && response?.update_available) {
         const { stable, beta } = response.update_available
-        setUpdateAvailable(stable || beta)
+        setUpdateAvailable(Boolean(stable || beta))
       }
     } catch (error) {
       // Silently fail - updateAvailable will remain false
@@ -233,12 +245,14 @@ function MonitorDashboard({ product }: { product: Product }) {
     healthRequest.current = controller
     const timeout = cachedOnly ? setTimeout(() => controller.abort(), 10000) : undefined
     try {
-      const response = await fetchApi(cachedOnly ? "/api/health/full?cached=1" : "/api/health/full", { signal: controller.signal })
+      const response = await fetchApi<HealthSnapshotResponse>(
+        cachedOnly ? "/api/health/full?cached=1" : "/api/health/full", { signal: controller.signal })
       if (healthRequest.current !== controller) return
-      if (!response?.health?.details) throw new Error("Invalid health snapshot")
+      const details = response?.health?.details
+      if (!details) throw new Error("Invalid health snapshot")
       let calculatedInfoCount = 0
       
-      if (response && response.health?.details) {
+      {
         // Get categories that have dismissed items (these become INFO)
         const customCats = new Set((response.custom_suppressions || []).map((cs: { category: string }) => cs.category))
         const filteredDismissed = (response.dismissed || []).filter((item: { category: string }) => !customCats.has(item.category))
@@ -252,7 +266,7 @@ function MonitorDashboard({ product }: { product: Product }) {
         
         // Count effective INFO categories (original INFO + OK categories with dismissed)
         HEALTH_CATEGORY_KEYS.forEach(({ key }) => {
-          const cat = response.health.details[key as keyof typeof response.health.details]
+          const cat = details[key]
           if (cat) {
             const originalStatus = cat.status?.toUpperCase()
             // Count as INFO if: originally INFO OR (originally OK and has dismissed items)
@@ -419,32 +433,30 @@ function MonitorDashboard({ product }: { product: Product }) {
     }
   }, [systemStatus.serverName, t])
 
+  // The tab bar hides behind the header after a clear scroll down and comes
+  // back after a clear scroll up; small movements of a finger or a wheel
+  // change nothing. Near the top of the page it always shows.
   useEffect(() => {
-    let hideTimeout: ReturnType<typeof setTimeout> | null = null
     let lastPosition = window.scrollY
+    let travel = 0
 
     const handleScroll = () => {
-      const currentScrollY = window.scrollY
-      const delta = currentScrollY - lastPosition
-
-      if (currentScrollY < 50) {
+      const position = window.scrollY
+      const delta = position - lastPosition
+      lastPosition = position
+      if (position < 80) {
+        travel = 0
         setShowNavigation(true)
-      } else if (delta > 2) {
-        if (hideTimeout) clearTimeout(hideTimeout)
-        hideTimeout = setTimeout(() => setShowNavigation(false), 20)
-      } else if (delta < -2) {
-        if (hideTimeout) clearTimeout(hideTimeout)
-        setShowNavigation(true)
+        return
       }
-
-      lastPosition = currentScrollY
+      if (Math.sign(delta) !== Math.sign(travel)) travel = 0
+      travel += delta
+      if (travel > 32) setShowNavigation(false)
+      else if (travel < -16) setShowNavigation(true)
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-      if (hideTimeout) clearTimeout(hideTimeout)
-    }
+    return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const refreshData = async () => {
@@ -508,8 +520,8 @@ function MonitorDashboard({ product }: { product: Product }) {
       {!isPbs && <ReleaseNotesModal open={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />}
 
       {!isServerConnected && (
-        <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
-          <div className="container mx-auto">
+        <div className="bg-red-500/10 border-b border-red-500/20 px-4 md:px-6 lg:px-[clamp(20px,2.2vw,32px)] py-3">
+          <div>
             <div className="flex items-center space-x-2 text-red-500 mb-2">
               <XCircle className="h-5 w-5" />
               <span className="font-medium">{t("status.connectionFailed")}</span>
@@ -528,13 +540,19 @@ function MonitorDashboard({ product }: { product: Product }) {
         </div>
       )}
 
+      {/* The header and the tab bar are one block that stays at the top. On a
+          short screen (a phone turned sideways) it scrolls with the page
+          instead of covering half of it. */}
+      <div className="sticky [@media(max-height:500px)]:static top-0 z-50">
       <header
-        // On a short screen (a phone turned sideways) the header and the bar below
-        // scroll with the page instead of covering half of it.
-        className="border-b border-border bg-card sticky [@media(max-height:500px)]:static top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
+        // The whole header opens the health monitor. On a phone it is a band of
+        // its own; on a desktop it sits on the page.
+        className="relative z-[2] border-b border-border bg-card shadow-sm cursor-pointer hover:bg-accent/5 transition-colors
+          lg:border-b-0 lg:bg-background lg:shadow-none lg:hover:bg-accent/5"
         onClick={() => setShowHealthModal(true)}
       >
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
+        <div className="px-4 md:px-6 lg:px-[clamp(20px,2.2vw,32px)]">
+        <div className="py-4 lg:border-b lg:border-border">
           {/* Logo and Title */}
           <div className="flex items-start justify-between gap-3">
             {/* Logo and Title */}
@@ -573,12 +591,12 @@ function MonitorDashboard({ product }: { product: Product }) {
               <MonitorSwitcher nodeName={displayServerName} />
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={statusColor}>
+                <Badge variant="outline" className={`${statusColor} cursor-pointer hover:opacity-80`}>
                   {statusIcon}
                   <span className="ml-1">{t(`status.${systemStatus.status}`)}</span>
                 </Badge>
                 {systemStatus.status === "healthy" && infoCount > 0 && (
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 cursor-pointer hover:opacity-80">
                     <Info className="h-4 w-4" />
                     <span className="ml-1">{infoCount} info</span>
                   </Badge>
@@ -674,24 +692,16 @@ function MonitorDashboard({ product }: { product: Product }) {
             <MonitorSwitcher nodeName={displayServerName} compact />
           </div>
         </div>
+        </div>
       </header>
 
-      {accessMode === "read_only" && (
-        <div className="border-b border-blue-500/20 bg-blue-500/10">
-          <div className="container mx-auto px-4 lg:px-6 py-2 text-sm text-blue-600 dark:text-blue-300">
-            {t("access.readOnlyBanner")}
-          </div>
-        </div>
-      )}
-
       <div
-        className={`sticky [@media(max-height:500px)]:static z-40 bg-background
-          top-[120px] lg:top-[76px]
-          transition-all duration-700 ease-in-out
-          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0 pointer-events-none"}
-        `}
+        // Hidden, the bar slides behind the header, whose background is solid.
+        className={`relative z-[1] bg-background transition-transform duration-200 ease-out
+          ${showNavigation ? "translate-y-0" : "-translate-y-full pointer-events-none"}`}
       >
-        <div className="container mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
+        {/* On a phone the bar runs edge to edge; on a desktop it keeps the margins. */}
+        <div className="lg:px-[clamp(20px,2.2vw,32px)] lg:py-3">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
             {/* Sprint 13D nav redesign — 6 top-level slots in usage order:
                 Overview · VMs & LXCs · Node ⌄ · Backup · Terminal · Admin ⌄
@@ -819,10 +829,8 @@ function MonitorDashboard({ product }: { product: Product }) {
               <div className="lg:hidden">
                 <SheetTrigger asChild>
                   <Button
-                    variant="outline"
-                    className={`w-full justify-between border-border ${
-                      activeTab ? "bg-blue-500/10 text-blue-500" : "bg-card"
-                    }`}
+                    variant="ghost"
+                    className="w-full h-12 justify-between rounded-none border-b border-border bg-card px-4 md:px-6 font-semibold text-blue-500 hover:bg-card hover:text-blue-500"
                   >
                     {activeTab === "catalog" ? <MenuxMark /> : <span>{getActiveTabLabel()}</span>}
                     <Menu className="h-4 w-4" />
@@ -909,8 +917,18 @@ function MonitorDashboard({ product }: { product: Product }) {
           </Tabs>
         </div>
       </div>
+      </div>
 
-      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
+      {accessMode === "read_only" && (
+        <div className="border-b border-blue-500/20 bg-blue-500/10">
+          <div className="px-4 md:px-6 lg:px-[clamp(20px,2.2vw,32px)] py-2 text-sm text-blue-600 dark:text-blue-300">
+            {t("access.readOnlyBanner")}
+          </div>
+        </div>
+      )}
+
+      {/* On a desktop the tab bar already leaves its own space above the content. */}
+      <div className="px-4 md:px-6 lg:px-[clamp(20px,2.2vw,32px)] py-4 md:py-6 lg:pt-0">
         {/* No `space-y-*` here: only one TabsContent is visible at a
             time, but Overview stays force-mounted (hidden) as the
             first child, so every OTHER active tab used to inherit an

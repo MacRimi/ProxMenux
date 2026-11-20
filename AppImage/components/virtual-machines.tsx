@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useId } from "react"
 import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached, syncLxcAppsState } from "../lib/lxc-apps-cache"
 import { getUpdateActionButtonClass } from "../lib/update-action-style"
 import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Badge } from "./ui/badge"
+import { Badge, badgeVariants } from "./ui/badge"
+import { cn } from "@/lib/utils"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
@@ -23,6 +24,7 @@ import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
+import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar, VmListTransfer } from "./vm-list-layout"
 import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
 import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
@@ -286,6 +288,13 @@ interface VMData {
   modal_cache_revision?: number
 }
 
+const inventoryTypes = ["all", "lxc", "qemu"] as const
+type InventoryType = (typeof inventoryTypes)[number]
+const inventoryTypeKey = "proxmenux.vmListType"
+const inventoryFilterButton = "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto"
+const inventoryFilterActive = "bg-blue-500 text-white shadow-sm"
+const inventoryFilterIdle = "text-muted-foreground hover:text-foreground hover:bg-background/60"
+
 function hasLxcPendingUpdates(vm: VMData): boolean {
   if (vm.type !== "lxc") return false
   const osUpdates = vm.update_check?.count ?? 0
@@ -457,12 +466,24 @@ const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): str
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
-const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string) => {
+const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string, compact = false) => {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
+  if (compact) {
+    const day = days ? t("vmLxc.layout.uptimeDay", { count: days }) : ""
+    const hour = hours ? t("vmLxc.layout.uptimeHour", { count: hours }) : ""
+    const minute = minutes ? t("vmLxc.layout.uptimeMinute", { count: minutes }) : ""
+    return (days ? [day, hour] : [hour, minute]).filter(Boolean).join(" ") || t("vmLxc.layout.uptimeRecent")
+  }
   return t("vmLxc.duration.dhm", { days, hours, minutes })
 }
+
+const inventoryCounter = (value: number | undefined) =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : undefined
+
+const completeTransferTotal = ([first, second]: readonly [number | undefined, number | undefined]) =>
+  first === undefined || second === undefined ? undefined : first + second
 
 const extractIPFromConfig = (config?: VMConfig, lxcIPInfo?: VMDetails["lxc_ip_info"]): string => {
   // Use primary IP from lxc-info if available
@@ -960,6 +981,7 @@ export function VirtualMachines() {
   const [editedNotes, setEditedNotes] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
+  const infoTriggerRef = useRef<HTMLElement | null>(null)
   const [ipsLoaded, setIpsLoaded] = useState(false)
   const [loadingIPs, setLoadingIPs] = useState(false)
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
@@ -1303,7 +1325,8 @@ export function VirtualMachines() {
     return () => clearTimeout(t)
   }, [updatesResult])
 
-  const handleVMClick = async (vm: VMData) => {
+  const handleVMClick = async (vm: VMData, trigger?: HTMLElement) => {
+    infoTriggerRef.current = trigger ?? null
     setSelectedVM(vm)
     setOsCheckError(null)
     setBulkLoaded(null)
@@ -1940,6 +1963,22 @@ export function VirtualMachines() {
   // Ensure vmData is always an array (backend may return object on error)
   const safeVMData = Array.isArray(vmData) ? vmData : []
 
+  const [typeFilter, setTypeFilter] = useState<InventoryType>(() => {
+    try {
+      const saved = window.localStorage.getItem(inventoryTypeKey)
+      return saved === "qemu" || saved === "lxc" ? saved : "all"
+    } catch {
+      return "all"
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(inventoryTypeKey, typeFilter)
+    } catch {
+      // The current selection still works when browser storage is unavailable.
+    }
+  }, [typeFilter])
+
   // Status filter for the "Virtual Machines & Containers" list. Persisted
   // to localStorage so a reload keeps the operator's last view.
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "stopped">(() => {
@@ -1953,7 +1992,7 @@ export function VirtualMachines() {
     }
   }, [statusFilter])
   const [updatesOnly, setUpdatesOnly] = useState(() => {
-    if (typeof window === "undefined") return false
+    if (typeof window === "undefined" || typeFilter === "qemu") return false
     return window.localStorage.getItem("proxmenux.vmListUpdatesOnly") === "true"
   })
   useEffect(() => {
@@ -1962,18 +2001,25 @@ export function VirtualMachines() {
     }
   }, [updatesOnly])
   const [vmSearchQuery, setVmSearchQuery] = useState("")
+  const selectInventoryType = (type: InventoryType) => {
+    setTypeFilter(type)
+    if (type === "qemu") setUpdatesOnly(false)
+  }
 
   const vmSearchTerms = useMemo(
     () => normalizeVmSearchValue(vmSearchQuery).trim().split(/\s+/).filter(Boolean),
     [vmSearchQuery],
   )
 
+  const typeMatchedVMs = useMemo(() => typeFilter === "all"
+    ? safeVMData
+    : safeVMData.filter((vm) => vm.type === typeFilter), [safeVMData, typeFilter])
   const statusCounts = useMemo(() => ({
-    all: safeVMData.length,
-    running: safeVMData.filter((vm) => vm.status === "running").length,
-    stopped: safeVMData.filter((vm) => vm.status === "stopped").length,
-    updates: safeVMData.filter(hasLxcPendingUpdates).length,
-  }), [safeVMData])
+    all: typeMatchedVMs.length,
+    running: typeMatchedVMs.filter((vm) => vm.status === "running").length,
+    stopped: typeMatchedVMs.filter((vm) => vm.status === "stopped").length,
+    updates: typeMatchedVMs.filter(hasLxcPendingUpdates).length,
+  }), [typeMatchedVMs])
 
   const vmTypeSynonyms = useMemo(() => ({
     lxc: t("vmLxc.filters.typeSynonyms.lxc"),
@@ -1982,13 +2028,19 @@ export function VirtualMachines() {
 
   const filteredVMs = useMemo(() => {
     const statusMatched = statusFilter === "all"
-      ? safeVMData
-      : safeVMData.filter((vm) => vm.status === statusFilter)
+      ? typeMatchedVMs
+      : typeMatchedVMs.filter((vm) => vm.status === statusFilter)
     return statusMatched.filter((vm) => (
       (!updatesOnly || hasLxcPendingUpdates(vm))
       && matchesVmSearch(vm, vmSearchTerms, vmTypeSynonyms)
     ))
-  }, [safeVMData, statusFilter, updatesOnly, vmSearchTerms, vmTypeSynonyms])
+  }, [typeMatchedVMs, statusFilter, updatesOnly, vmSearchTerms, vmTypeSynonyms])
+  const listLayout = useVmListLayout()
+  const columnPickerId = useId()
+  const [columnPickerOpen, setColumnPickerOpen] = useState(false)
+  const listKey = (vm: VMData) => `${vm.type === "lxc" ? "lxc" : "qemu"}:${vm.vmid}`
+  // Columns belong to the compact list; the standard cards have none.
+  const standardView = filteredVMs.length > 0 && filteredVMs.every((vm) => listLayout.isExpanded(listKey(vm)))
 
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,
@@ -2899,15 +2951,9 @@ export function VirtualMachines() {
     const clickable = onClick
       ? "cursor-pointer hover:bg-violet-500/20 transition-colors focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
       : ""
-    return (
-      <Badge
-        variant="outline"
-        className={`bg-violet-500/10 text-violet-400 border-violet-500/30 flex items-center flex-shrink-0 ${sizing} ${clickable}`}
-        title={tooltip}
-        onClick={onClick}
-        role={onClick ? "button" : undefined}
-        tabIndex={onClick ? 0 : undefined}
-      >
+    const className = `bg-violet-500/10 text-violet-400 border-violet-500/30 flex items-center flex-shrink-0 ${sizing} ${clickable}`
+    const content = (
+      <>
         {/* Icon-only badge: `↑` (ArrowUpCircle, same glyph as the
             Apply update buttons) + count. Dropped the "N updates" /
             "N update" text so we don't need to translate the label
@@ -2922,7 +2968,16 @@ export function VirtualMachines() {
             implying interactivity where there isn't any (the whole
             row is the click target there). */}
         {onClick && <ChevronRight className={`${iconSize} -mr-0.5 opacity-80`} />}
+      </>
+    )
+    return onClick ? (
+      <Badge variant="outline" className={className} title={tooltip} onClick={onClick} role="button" tabIndex={0}>
+        {content}
       </Badge>
+    ) : (
+      <VmCardTooltip label={tooltip}>
+        <span className={cn(badgeVariants({ variant: "outline" }), className)}>{content}</span>
+      </VmCardTooltip>
     )
   }
 
@@ -3111,6 +3166,54 @@ export function VirtualMachines() {
     setIsEditingNotes(false)
     setEditedNotes("")
   }
+
+  // Keep the transfer scale stable across searches and filters.
+  let networkMaximum = 1
+  let diskIoMaximum = 1
+  for (const vm of safeVMData) {
+    if (vm.status !== "running") continue
+    networkMaximum = Math.max(networkMaximum, inventoryCounter(vm.netin) ?? 0, inventoryCounter(vm.netout) ?? 0)
+    diskIoMaximum = Math.max(diskIoMaximum, inventoryCounter(vm.diskread) ?? 0, inventoryCounter(vm.diskwrite) ?? 0)
+  }
+
+  const inventoryRows = sortVmRows(filteredVMs.map((vm) => {
+    // Both the expanded card and the compact IP column use the current list
+    // address first, then the existing configuration and prefetch caches.
+    let lxcIP: string | null | undefined = null
+    if (vm.type === "lxc") {
+      lxcIP = vm.ip || vmConfigs[vm.vmid]
+      if (!lxcIP) {
+        const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
+        lxcIP = cached?.lxc_ip_info?.primary_ip
+          || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
+      }
+    }
+    const ip = vm.status === "running" && lxcIP && lxcIP !== "DHCP" && lxcIP !== "N/A" ? lxcIP : undefined
+    const count = vm.type === "lxc" ? getAggregateUpdateCheck(vm)?.count : undefined
+    const running = vm.status === "running"
+    const tags = parseTags(vm.tags)
+    const net: readonly [number | undefined, number | undefined] = running
+      ? [inventoryCounter(vm.netin), inventoryCounter(vm.netout)] : [undefined, undefined]
+    const diskIo: readonly [number | undefined, number | undefined] = running
+      ? [inventoryCounter(vm.diskread), inventoryCounter(vm.diskwrite)] : [undefined, undefined]
+    const statusLabel = running || vm.status === "stopped"
+      ? t(`vmLxc.statusFilter.${vm.status}`)
+      : getStatusLabel(vm.status, false)
+    return { vm, lxcIP, tags, net, diskIo, statusLabel, values: {
+      name: vm.name,
+      type: vm.vmid,
+      state: statusLabel,
+      tags: tags.join(", ") || undefined,
+      ip,
+      uptime: running ? inventoryCounter(vm.uptime) : undefined,
+      cpu: vm.cpu * 100,
+      memory: vm.maxmem > 0 ? vm.mem / vm.maxmem * 100 : undefined,
+      disk: vm.maxdisk > 0 ? vm.disk / vm.maxdisk * 100 : undefined,
+      net: completeTransferTotal(net),
+      io: completeTransferTotal(diskIo),
+      updates: count && count > 0 ? count : undefined,
+    } }
+  }), listLayout.sort, language, (row, column) => row.values[column])
 
   return (
     <div className="space-y-6">
@@ -3355,14 +3458,20 @@ export function VirtualMachines() {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <CardHeader className="flex flex-col gap-3">
           <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
             <Server className="h-6 w-6" />
             {t("vmLxc.listTitle")}
           </CardTitle>
-          <div className="flex w-full flex-col gap-2 xl:w-auto xl:items-end">
-            <div className="flex w-full flex-col gap-2 md:flex-row md:flex-wrap md:items-center xl:flex-nowrap">
-              <div className="relative w-full md:w-72">
+          <VmListToolbar
+            actions={
+              <VmListActions key="actions" layout={listLayout} keys={filteredVMs.map(listKey)}
+                filtered={typeFilter !== "all" || statusFilter !== "all" || updatesOnly || vmSearchTerms.length > 0}
+                pickerId={columnPickerId} pickerOpen={columnPickerOpen}
+                onTogglePicker={() => setColumnPickerOpen((current) => !current)} />
+            }
+            search={
+              <div key="search" className="relative min-w-0 flex-[1_1_10rem] max-sm:basis-24">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
@@ -3384,7 +3493,21 @@ export function VirtualMachines() {
                   </button>
                 )}
               </div>
-               <div
+            }
+            types={
+            <div key="types" role="group" aria-label={t("vmLxc.typeFilter.ariaLabel")}
+              className="grid w-full grid-cols-[auto_1fr_1fr] gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto">
+              {inventoryTypes.map((type) => (
+                <button key={type} type="button" aria-pressed={typeFilter === type}
+                  onClick={() => selectInventoryType(type)}
+                  className={`${inventoryFilterButton} whitespace-nowrap ${typeFilter === type ? inventoryFilterActive : inventoryFilterIdle}`}>
+                  {type === "all" ? t("vmLxc.typeFilter.all") : type === "qemu" ? "VM" : "LXC"}
+                </button>
+              ))}
+            </div>
+            }
+            status={
+               <div key="status"
                  role="group"
                  aria-label={t("vmLxc.statusFilter.ariaLabel")}
                  className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto"
@@ -3407,11 +3530,7 @@ export function VirtualMachines() {
                       type="button"
                        aria-pressed={active}
                        onClick={() => setStatusFilter(key)}
-                      className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
-                        active
-                          ? "bg-blue-500 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                      }`}
+                       className={`${inventoryFilterButton} ${active ? inventoryFilterActive : inventoryFilterIdle}`}
                     >
                       {key === "running" && <Play className={iconClass} />}
                       {key === "stopped" && <Square className={iconClass} />}
@@ -3425,12 +3544,9 @@ export function VirtualMachines() {
                  <button
                    type="button"
                    aria-pressed={updatesOnly}
+                   disabled={typeFilter === "qemu"}
                    onClick={() => setUpdatesOnly((current) => !current)}
-                   className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
-                     updatesOnly
-                       ? "bg-violet-500/80 text-white shadow-sm"
-                       : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                   }`}
+                   className={`${inventoryFilterButton} disabled:pointer-events-none disabled:opacity-50 ${updatesOnly ? "bg-violet-500/80 text-white shadow-sm" : inventoryFilterIdle}`}
                  >
                    <ArrowUpCircle className="h-3.5 w-3.5" />
                    <span>{t("vmLxc.filters.updates")}</span>
@@ -3439,20 +3555,23 @@ export function VirtualMachines() {
                    </span>
                  </button>
                </div>
-             </div>
+            }
+          />
+          <VmListColumnPicker id={columnPickerId} open={columnPickerOpen && !standardView} layout={listLayout} />
             {vmSearchTerms.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t("vmLxc.filters.resultCount", {
                   shown: filteredVMs.length,
-                  total: safeVMData.length,
+                  total: typeMatchedVMs.length,
                 })}
               </span>
              )}
-          </div>
         </CardHeader>
         <CardContent>
           {safeVMData.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
+          ) : typeMatchedVMs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">{t("vmLxc.typeFilter.empty")}</div>
           ) : filteredVMs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
                {vmSearchTerms.length > 0
@@ -3464,8 +3583,8 @@ export function VirtualMachines() {
                    : t("vmLxc.filters.noStopped")}
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredVMs.map((vm) => {
+            <VmListGrid layout={listLayout} headings={!standardView}>
+              {inventoryRows.map(({ vm, lxcIP, tags, net, diskIo, statusLabel, values }) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
@@ -3474,37 +3593,54 @@ export function VirtualMachines() {
                 const diskGB = (vm.disk / 1024 ** 3).toFixed(1)
                 const maxDiskGB = (vm.maxdisk / 1024 ** 3).toFixed(1)
                 const typeBadge = getTypeBadge(vm.type)
-                // IP resolution — try both sources so a card never
-                // ends up with an empty slot while one path is still
-                // in flight:
-                //   1) `vmConfigs` — populated by the dedicated
-                //      LXC-IP-fetch effect (batches of 5, gated by
-                //      `ipsLoaded` so it only runs once per mount).
-                //   2) `vmModalCacheRef.details` — populated by the
-                //      background prefetcher that warms every guest's
-                //      /api/vms/<vmid> payload. Contains the same
-                //      `lxc_ip_info.primary_ip` the effect uses; if
-                //      the prefetch landed first, we surface the IP
-                //      immediately without waiting for the batch.
-                let lxcIP: string | null | undefined = null
-                if (vm.type === "lxc") {
-                  lxcIP = vm.ip || vmConfigs[vm.vmid]
-                  if (!lxcIP) {
-                    const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
-                    lxcIP = cached?.lxc_ip_info?.primary_ip
-                      || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
-                  }
-                }
                 const additionalIpCount = lxcIP
                   ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
                   : 0
+                const metric = (value: number, Icon: typeof Cpu, label: string) => (
+                  <VmListMetric value={value} color={getUsageColor(value)} fill={getMemoryUsageColor(value)}
+                    phone={listLayout.phone} label={label} icon={<Icon aria-hidden="true" className="size-4" />} />
+                )
+                const tagDots = (size: string) => tags.map((tag, index) => (
+                  <VmCardTooltip key={`${tag}-${index}`} label={tag}>
+                    <span className={`inline-block shrink-0 rounded-full ${size}`} style={{ backgroundColor: tagToColor(tag).bg }} />
+                  </VmCardTooltip>
+                ))
 
                 return (
-                  <div key={vm.vmid}>
+                  <VmListRow key={listKey(vm)} guestKey={listKey(vm)} name={vm.name} status={vm.status} statusLabel={statusLabel}
+                    updates={values.updates}
+                    layout={listLayout} onOpen={(trigger) => handleVMClick(vm, trigger)} onPreview={() => prefetchVM(vm)} cells={{
+                    name: <span className="font-semibold">{vm.name}</span>,
+                    type: <span className={vm.type === "lxc" ? "text-cyan-600 dark:text-cyan-400" : "text-purple-600 dark:text-purple-400"}>{typeBadge.label} · {vm.vmid}</span>,
+                    state: <span className={getStatusColor(vm.status)}>{statusLabel}</span>,
+                    tags: tags.length > 0 ? <span className="flex items-center gap-1.5" role="img" aria-label={values.tags}>{tagDots("size-2")}</span> : null,
+                    ip: values.ip
+                      ? <VmCardTooltip label={values.ip}><span className="block truncate text-muted-foreground">{values.ip}</span></VmCardTooltip>
+                      : "—",
+                    uptime: values.uptime === undefined ? "—"
+                      : <VmCardTooltip label={formatUptime(values.uptime, t)}><span>{formatUptime(values.uptime, t, true)}</span></VmCardTooltip>,
+                    cpu: metric(values.cpu, Cpu, t("vmLxc.layout.columns.cpu")),
+                    memory: metric(values.memory ?? NaN, MemoryStick, t("vmLxc.layout.columns.memory")),
+                    disk: metric(values.disk ?? NaN, HardDrive, t("vmLxc.layout.columns.disk")),
+                    net: <VmListTransfer counters={net} maximum={networkMaximum}
+                      label={(first, second) => t("vmLxc.layout.networkTransfer", { first, second })}
+                      format={(value) => formatNetworkTraffic(value, networkUnit)} />,
+                    io: <VmListTransfer counters={diskIo} maximum={diskIoMaximum}
+                      label={(first, second) => t("vmLxc.layout.diskTransfer", { first, second })}
+                      format={(value) => formatNetworkTraffic(value, "Bytes")} />,
+                    updates: values.updates
+                      ? <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+                          <ArrowUpCircle aria-hidden="true" className={`${listLayout.phone ? "size-4" : "size-3"} shrink-0`} />
+                          {/* On a phone the icon alone says there are updates; the count is in the details. */}
+                          <span className={listLayout.phone ? "sr-only" : undefined}>{values.updates}</span>
+                        </span>
+                      : "—",
+                  }}>
+                    {(card) => (
+                    <>
                     <div
-                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => handleVMClick(vm)}
-                      onMouseEnter={() => prefetchVM(vm)}
+                      {...card}
+                      className="group hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {/* Row 1 — identity header. Just badges + name
                           + ID + update badge, no uptime/IP here. On
@@ -3605,7 +3741,7 @@ export function VirtualMachines() {
                               </div>
                               <Progress
                                 value={Number.parseFloat(cpuPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(cpuPercent))}`}
                               />
                             </div>
                           </div>
@@ -3625,7 +3761,7 @@ export function VirtualMachines() {
                               </div>
                               <Progress
                                 value={Number.parseFloat(memPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(memPercent))}`}
                               />
                             </div>
                           </div>
@@ -3645,7 +3781,7 @@ export function VirtualMachines() {
                               </div>
                               <Progress
                                 value={Number.parseFloat(diskPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(diskPercent))}`}
                               />
                             </div>
                           </div>
@@ -3682,10 +3818,10 @@ export function VirtualMachines() {
                     </div>
 
                     <div
-                      className="sm:hidden p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => handleVMClick(vm)}
+                      {...card}
+                      className="sm:hidden px-2.5 py-3 min-[375px]:p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 min-[375px]:gap-3">
                         {vm.status === "running" ? (
                           <Play className="h-5 w-5 text-green-500 fill-current flex-shrink-0" />
                         ) : (
@@ -3706,7 +3842,7 @@ export function VirtualMachines() {
                             the desktop card and inside the modal. */}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-foreground truncate">{vm.name}</div>
-                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-1">
                             <span>ID: {vm.vmid}</span>
                             {parseTags(vm.tags).map((tag) => {
                               const { bg } = tagToColor(tag)
@@ -3728,7 +3864,7 @@ export function VirtualMachines() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 min-[375px]:gap-3 flex-shrink-0">
                           {/* CPU icon with percentage */}
                           <div className="flex flex-col items-center gap-0.5">
                             {vm.status === "running" && (
@@ -3769,10 +3905,12 @@ export function VirtualMachines() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                    </>
+                    )}
+                  </VmListRow>
                 )
               })}
-            </div>
+            </VmListGrid>
           )}
         </CardContent>
       </Card>
@@ -3803,6 +3941,14 @@ export function VirtualMachines() {
         }}
       >
         <DialogContent
+          onCloseAutoFocus={(event) => {
+            const trigger = infoTriggerRef.current
+            infoTriggerRef.current = null
+            if (trigger?.isConnected && trigger.getClientRects().length > 0) {
+              event.preventDefault()
+              trigger.focus({ preventScroll: true })
+            }
+          }}
           className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
             isStandalone
               ? "h-[95vh] sm:h-[90vh]"

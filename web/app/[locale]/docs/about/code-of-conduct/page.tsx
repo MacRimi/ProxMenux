@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, setRequestLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import fs from "fs"
 import path from "path"
 import { remark } from "remark"
@@ -75,7 +75,6 @@ function wrapCodeBlocksWithCopyable(content: string) {
 
 export default async function CodeOfConductPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.about.codeOfConduct" })
   const translatedMarkdown = t.has("contentMarkdown") ? t.raw("contentMarkdown") : undefined
   const codeOfConductContent = await getCodeOfConductContent(

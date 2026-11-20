@@ -9,6 +9,15 @@ from __future__ import annotations
 
 import oci_stack_replay as replay
 
+# A web application that answers at all is running. Any answer below 500 counts,
+# as for single containers: settings a user added, such as the hosts it allows,
+# may turn the plain request of this probe away with a 4xx, and that is theirs.
+ANSWERS = ('import sys, urllib.error, urllib.request\n'
+           'try:\n'
+           '    urllib.request.urlopen("{url}", timeout=10).read(1)\n'
+           'except urllib.error.HTTPError as error:\n'
+           '    sys.exit(0 if error.code < 500 else 1)\n')
+
 ADAPTERS = {
     'install_nextcloud_stack.sh': {
         'name': 'nextcloud', 'label': 'Nextcloud', 'record': replay.nextcloud_record,
@@ -26,8 +35,7 @@ ADAPTERS = {
     'install_paperless_stack.sh': {
         'name': 'paperless', 'label': 'Paperless', 'record': replay.paperless_record,
         'main_role': 'application', 'dependencies': ('database', 'broker'),
-        'healthcheck': ['python3', '-c',
-                        'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/", timeout=10).read(1)'],
+        'healthcheck': ['python3', '-c', ANSWERS.format(url='http://127.0.0.1:8000/')],
         'menu_ready': replay.paperless_menu_ready, 'prerequisites': replay.paperless_prerequisites,
         'application_paths': ('/usr/src/paperless/data', '/usr/src/paperless/media',
                               '/usr/src/paperless/consume', '/usr/src/paperless/export'),
@@ -35,8 +43,7 @@ ADAPTERS = {
     'install_tandoor_stack.sh': {
         'name': 'tandoor', 'label': 'Tandoor', 'record': replay.tandoor_record,
         'main_role': 'application', 'dependencies': ('database',),
-        'healthcheck': ['python3', '-c',
-                        'import urllib.request; urllib.request.urlopen("http://127.0.0.1/", timeout=10).read(1)'],
+        'healthcheck': ['python3', '-c', ANSWERS.format(url='http://127.0.0.1/')],
         'menu_ready': replay.tandoor_menu_ready, 'prerequisites': replay.tandoor_prerequisites,
         'application_paths': ('/opt/recipes/mediafiles', '/opt/recipes/staticfiles'),
     },

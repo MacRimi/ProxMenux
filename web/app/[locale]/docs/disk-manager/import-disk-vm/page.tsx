@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -43,7 +43,6 @@ export default async function ImportDiskVMPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.diskManager.importDiskVm" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -63,7 +62,7 @@ export default async function ImportDiskVMPage({
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
   const em = (chunks: React.ReactNode) => <em>{chunks}</em>
   const winLink = (chunks: React.ReactNode) => (
-    <a href="/docs/create-vm/system-windows" className="text-blue-600 hover:underline">{chunks}</a>
+    <Link href="/docs/create-vm/system-windows" className="text-blue-600 hover:underline">{chunks}</Link>
   )
 
   return (

@@ -2079,6 +2079,52 @@
         "lxc": "contêiner contêineres contentor contentores",
         "qemu": "vm máquina virtual máquinas virtuais"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Nome",
+        "type": "Tipo · ID",
+        "state": "Status",
+        "tags": "Etiquetas",
+        "ip": "endereço IP",
+        "uptime": "tempo de atividade",
+        "cpu": "CPU",
+        "memory": "Memória",
+        "disk": "Disco",
+        "net": "E/S de rede",
+        "io": "E/S de disco",
+        "updates": "Atualizações"
+      },
+      "controls": "listar controles",
+      "settings": "configurações de coluna",
+      "expandAll": "Expandir tudo",
+      "collapseAll": "Recolher tudo",
+      "expandVisible": "Expandir visível",
+      "collapseVisible": "Recolher visível",
+      "visibleColumns": "colunas visíveis",
+      "keepIdentity": "Mantenha o Nome ou Tipo · ID visível.",
+      "expandGuest": "Expandir {name}",
+      "collapseGuest": "Recolher {name}",
+      "openGuestInfo": "Ver detalhes do {name}",
+      "moveColumn": "Mova {column} arrastando ou com Shift e as teclas de seta",
+      "resizeColumn": "Redimensionar {column}",
+      "sortColumn": "Classificar por {column}",
+      "sortBy": "Classificar por",
+      "originalOrder": "pedido original",
+      "asc": "ascendente",
+      "desc": "descendente",
+      "updatesShort": "Atualizado.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "{first} recebido, enviado {second} desde o início.Os bares compartilham a mesma escala entre os hóspedes.",
+      "diskTransfer": "Leia {first}, escrevi {second} desde o início.Os bares compartilham a mesma escala entre os hóspedes."
+    },
+    "typeFilter": {
+      "ariaLabel": "Filtrar por tipo de convidado",
+      "all": "Todos os tipos",
+      "empty": "Nenhum convidado do tipo selecionado"
     }
   },
   "settings": {
@@ -2791,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Faça login para acessar seu painel",
     "username": "Nome de utilizador",
     "password": "Palavra-passe",
     "usernamePlaceholder": "Digite seu nome de usuário",
@@ -2810,7 +2855,8 @@
     "authenticationCode": "Código de autenticação",
     "backupCodeHint": "Você também pode usar um código de backup (formato: XXXX-XXXX)",
     "backToLogin": "Voltar ao login",
-    "verifyCode": "Verifique o código"
+    "verifyCode": "Verifique o código",
+    "subtitle": "Iniciar sessão"
   },
   "account": {
     "signedIn": "Conectado",
@@ -4086,19 +4132,18 @@
     },
     "sections": {
       "physicalInterfaces": "Interfaces Físicas",
-      "bridgeInterfaces": "Interfaces de ponte",
-      "vmLxcInterfaces": "Interfaces de rede VM e LXC"
+      "virtualInterfaces": "Interfaces virtuais"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces totais",
-      "activeCount": "{active}/{total} Ativo"
+      "activeCount": "{active}/{total} ativas"
     },
     "status": {
       "healthy": "Saudável",
       "warning": "Aviso",
       "critical": "Crítico",
-      "up": "Acima",
-      "down": "Abaixo"
+      "up": "Ativa",
+      "down": "Inativa"
     },
     "duplex": {
       "full": "Duplex completo",
@@ -4302,6 +4347,20 @@
         "generated": "Gerado",
         "reportId": "ID do relatório"
       }
+    },
+    "virtualList": {
+      "all": "Todas",
+      "name": "Nome",
+      "up": "Ativas",
+      "down": "Inativas",
+      "guests": "VMs e LXCs",
+      "connectedTo": "Ligada a",
+      "searchPlaceholder": "Buscar por nome, IP ou convidado…",
+      "searchAriaLabel": "Buscar interfaces virtuais",
+      "clearSearch": "Limpar busca",
+      "kindAriaLabel": "Filtrar por tipo de interface",
+      "stateAriaLabel": "Filtrar por estado",
+      "noMatches": "Nenhuma interface corresponde aos filtros."
     }
   },
   "hardware": {
@@ -4554,6 +4613,21 @@
       "switchModeDescription": "Mudando a GPU {slot} para o modo {mode}...",
       "switchModeVm": "VM (passagem VFIO)",
       "switchModeLxc": "LXC (driver nativo)"
+    },
+    "systemInfo": {
+      "socket": "{count} soquete",
+      "sockets": "{count} soquetes",
+      "socketsLabel": "Soquetes",
+      "coresWord": "núcleos",
+      "threads": "{count} threads",
+      "cache": "Cache",
+      "frequency": "Frequência",
+      "board": "Placa",
+      "biosDate": "Data do BIOS",
+      "biosVendor": "Fabricante do BIOS",
+      "noBoardData": "Nenhum dado do fabricante",
+      "memoryModules": "{count} módulos de memória",
+      "schematic": "Esquema da placa-mãe"
     }
   },
   "backup": {

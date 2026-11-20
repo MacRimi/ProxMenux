@@ -2231,6 +2231,52 @@
       "ociImageCurrent": "Версия",
       "refreshData": "Обновить данные",
       "refreshingData": "Обновление…"
+    },
+    "layout": {
+      "columns": {
+        "name": "Имя",
+        "type": "Тип · Идентификатор",
+        "state": "Статус",
+        "tags": "Теги",
+        "ip": "IP-адрес",
+        "uptime": "Время работы",
+        "cpu": "CPU",
+        "memory": "Память",
+        "disk": "Диск",
+        "net": "сетевой ввод-вывод",
+        "io": "Дисковый ввод-вывод",
+        "updates": "Обновления"
+      },
+      "controls": "элементы управления списком",
+      "settings": "настройки столбца",
+      "expandAll": "Развернуть все",
+      "collapseAll": "Свернуть все",
+      "expandVisible": "Развернуть видимый",
+      "collapseVisible": "Свернуть видимым",
+      "visibleColumns": "видимые столбцы",
+      "keepIdentity": "Держите имя или тип · Идентификатор видимым.",
+      "expandGuest": "развернуть {name}",
+      "collapseGuest": "Свернуть {name}",
+      "openGuestInfo": "просмотреть подробную информацию о {name}",
+      "moveColumn": "переместите {column} путем перетаскивания или с помощью Shift и клавиш со стрелками.",
+      "resizeColumn": "изменить размер {column}",
+      "sortColumn": "сортировать по {column}",
+      "sortBy": "Сортировать по",
+      "originalOrder": "Исходный заказ",
+      "asc": "восходящий",
+      "desc": "нисходящий",
+      "updatesShort": "Обновление.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 мин.",
+      "networkTransfer": "получен {first}, отправлен {second} с момента запуска.Бары имеют одинаковый масштаб для всех гостей.",
+      "diskTransfer": "Прочитал {first}, с самого начала написал {second}.Бары имеют одинаковый масштаб для всех гостей."
+    },
+    "typeFilter": {
+      "ariaLabel": "Фильтровать по типу гостя",
+      "all": "Все типы",
+      "empty": "Нет гостей выбранного типа."
     }
   },
   "settings": {
@@ -2943,7 +2989,6 @@
     }
   },
   "login": {
-    "subtitle": "Войдите, чтобы открыть панель мониторинга",
     "username": "Имя пользователя",
     "password": "Пароль",
     "usernamePlaceholder": "Введите имя пользователя",
@@ -2962,7 +3007,8 @@
     "authenticationCode": "Код аутентификации",
     "backupCodeHint": "Вы также можете использовать резервный код (формат: XXXX-XXXX)",
     "backToLogin": "Вернуться к входу",
-    "verifyCode": "Проверить код"
+    "verifyCode": "Проверить код",
+    "subtitle": "Вход"
   },
   "account": {
     "signedIn": "Вход выполнен",
@@ -4238,8 +4284,7 @@
     },
     "sections": {
       "physicalInterfaces": "Физические интерфейсы",
-      "bridgeInterfaces": "Мостовые интерфейсы",
-      "vmLxcInterfaces": "Сетевые интерфейсы ВМ и LXC"
+      "virtualInterfaces": "Виртуальные интерфейсы"
     },
     "summary": {
       "totalInterfaces": "Всего интерфейсов: {count}",
@@ -4454,6 +4499,20 @@
         "generated": "Сформировано",
         "reportId": "Идентификатор отчёта"
       }
+    },
+    "virtualList": {
+      "all": "Все",
+      "name": "Имя",
+      "up": "Работают",
+      "down": "Не работают",
+      "guests": "ВМ и LXC",
+      "connectedTo": "Подключено к",
+      "searchPlaceholder": "Поиск по имени, IP или гостю…",
+      "searchAriaLabel": "Поиск виртуальных интерфейсов",
+      "clearSearch": "Очистить поиск",
+      "kindAriaLabel": "Фильтр по типу интерфейса",
+      "stateAriaLabel": "Фильтр по состоянию",
+      "noMatches": "Ни один интерфейс не соответствует фильтрам."
     }
   },
   "hardware": {
@@ -4706,6 +4765,21 @@
       "switchModeDescription": "Переключение GPU {slot} в режим {mode}...",
       "switchModeVm": "ВМ (проброс через VFIO)",
       "switchModeLxc": "LXC (нативный драйвер)"
+    },
+    "systemInfo": {
+      "socket": "Сокетов: {count}",
+      "sockets": "Сокетов: {count}",
+      "socketsLabel": "Сокеты",
+      "coresWord": "ядра",
+      "threads": "Потоков: {count}",
+      "cache": "Кэш",
+      "frequency": "Частота",
+      "board": "Плата",
+      "biosDate": "Дата BIOS",
+      "biosVendor": "Производитель BIOS",
+      "noBoardData": "Нет данных от производителя",
+      "memoryModules": "Модулей памяти: {count}",
+      "schematic": "Схема материнской платы"
     }
   },
   "backup": {

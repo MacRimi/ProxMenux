@@ -2079,6 +2079,52 @@
         "lxc": "conteneur conteneurs",
         "qemu": "vm machine virtuelle machines virtuelles"
       }
+    },
+    "layout": {
+      "columns": {
+        "name": "Nom",
+        "type": "Type · ID",
+        "state": "Statut",
+        "tags": "balises",
+        "ip": "adresse IP",
+        "uptime": "Disponibilité",
+        "cpu": "CPU",
+        "memory": "Mémoire",
+        "disk": "Disque",
+        "net": "E/S réseau",
+        "io": "E/S de disque",
+        "updates": "mises à jour"
+      },
+      "controls": "List controls",
+      "settings": "paramètres de colonne",
+      "expandAll": "Tout développer",
+      "collapseAll": "Tout réduire",
+      "expandVisible": "Agrandir le visible",
+      "collapseVisible": "Réduire visible",
+      "visibleColumns": "colonnes visibles",
+      "keepIdentity": "Keep Name or Type · ID visible.",
+      "expandGuest": "Développer {name}",
+      "collapseGuest": "Réduire {name}",
+      "openGuestInfo": "Afficher les détails pour {name}",
+      "moveColumn": "Déplacez {column} en faisant glisser ou avec Shift et les touches fléchées",
+      "resizeColumn": "Redimensionner {column}",
+      "sortColumn": "Trier par {column}",
+      "sortBy": "Trier par",
+      "originalOrder": "Commande originale",
+      "asc": "ascendant",
+      "desc": "décroissant",
+      "updatesShort": "Mise à jour.",
+      "uptimeDay": "{count}d",
+      "uptimeHour": "{count}h",
+      "uptimeMinute": "{count}m",
+      "uptimeRecent": "< 1 min",
+      "networkTransfer": "{first} reçu, {second} envoyé depuis le début.Les bars partagent la même échelle pour tous les clients.",
+      "diskTransfer": "Lire {first}, écrit {second} depuis le début.Les bars partagent la même échelle pour tous les clients."
+    },
+    "typeFilter": {
+      "ariaLabel": "filtrer par type d'invité",
+      "all": "Tous types",
+      "empty": "Aucun invité du type sélectionné"
     }
   },
   "settings": {
@@ -2791,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Connectez-vous pour accéder à votre tableau de bord",
     "username": "Nom d'utilisateur",
     "password": "Mot de passe",
     "usernamePlaceholder": "Saisissez votre nom d'utilisateur",
@@ -2810,7 +2855,8 @@
     "authenticationCode": "Code d'authentification",
     "backupCodeHint": "Vous pouvez également utiliser un code de récupération (format : XXXX-XXXX)",
     "backToLogin": "Retour à la connexion",
-    "verifyCode": "Vérifier le code"
+    "verifyCode": "Vérifier le code",
+    "subtitle": "Connexion"
   },
   "account": {
     "signedIn": "Connecté",
@@ -4086,8 +4132,7 @@
     },
     "sections": {
       "physicalInterfaces": "Interfaces physiques",
-      "bridgeInterfaces": "Interfaces bridge",
-      "vmLxcInterfaces": "Interfaces réseau VM et LXC"
+      "virtualInterfaces": "Interfaces virtuelles"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces au total",
@@ -4302,6 +4347,20 @@
         "generated": "Généré le",
         "reportId": "ID du rapport"
       }
+    },
+    "virtualList": {
+      "all": "Toutes",
+      "name": "Nom",
+      "up": "Actives",
+      "down": "Inactives",
+      "guests": "VM et LXC",
+      "connectedTo": "Connectée à",
+      "searchPlaceholder": "Rechercher par nom, IP ou invité…",
+      "searchAriaLabel": "Rechercher des interfaces virtuelles",
+      "clearSearch": "Effacer la recherche",
+      "kindAriaLabel": "Filtrer par type d'interface",
+      "stateAriaLabel": "Filtrer par état",
+      "noMatches": "Aucune interface ne correspond aux filtres."
     }
   },
   "hardware": {
@@ -4554,6 +4613,21 @@
       "switchModeDescription": "Passage du GPU {slot} au mode {mode}…",
       "switchModeVm": "VM (passthrough VFIO)",
       "switchModeLxc": "LXC (pilote natif)"
+    },
+    "systemInfo": {
+      "socket": "{count} socket",
+      "sockets": "{count} sockets",
+      "socketsLabel": "Sockets",
+      "coresWord": "cœurs",
+      "threads": "{count} threads",
+      "cache": "Cache",
+      "frequency": "Fréquence",
+      "board": "Carte",
+      "biosDate": "Date du BIOS",
+      "biosVendor": "Fabricant du BIOS",
+      "noBoardData": "Aucune donnée du fabricant",
+      "memoryModules": "{count} modules de mémoire",
+      "schematic": "Schéma de la carte mère"
     }
   },
   "backup": {

@@ -1,0 +1,40 @@
+name: VM and LXC inventory browser check
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-vm-lxc-inventory.yml'
+      - 'tests/test_vm_lxc_inventory_browser.cjs'
+      - 'AppImage/components/virtual-machines.tsx'
+      - 'AppImage/components/vm-list-layout.tsx'
+      - 'AppImage/components/vm-list-layout.module.css'
+      - 'AppImage/components/option-select.tsx'
+      - 'AppImage/messages/en/common.json'
+      - 'AppImage/messages/sk/common.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vm-lxc-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the Monitor web export
+        working-directory: AppImage
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm run export
+      - name: Check the VM and LXC page in a headless browser
+        env:
+          CHROMIUM_NO_SANDBOX: '1'
+        run: CHROMIUM_BIN="$(command -v google-chrome || command -v chromium)" node tests/test_vm_lxc_inventory_browser.cjs

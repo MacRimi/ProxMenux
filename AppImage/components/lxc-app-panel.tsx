@@ -3161,15 +3161,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                                  ↗ http://IP:PORT
                   Logo is optional (per-port `logo_url`); when absent
                   the row indents naturally to align with the text.
-                  If we can't resolve an IP for the CT we hide the row. */}
-              {(isOciAdguard ? true : !!app.ports?.length) && (
+                  If we can't resolve an IP for the CT we hide the row.
+                  The registration is the one source of these links, the
+                  same one the Apps page reads. */}
+              {!!app.ports?.length && (
                 <div className="mb-3 space-y-4">
-                  {(isOciAdguard
-                    ? [
-                        { port: 80, description: app.name, scheme: "http" as const },
-                        ...(adguardSetupAvailable ? [{ port: 3000, description: "Config", scheme: "http" as const }] : []),
-                      ]
-                    : app.ports).map((p) => {
+                  {app.ports.map((p) => {
                     const url = buildWebUrl(ctIp, p.port, p.scheme, p.custom_url)
                     if (!url) return null
                     const label = p.description || app.name
