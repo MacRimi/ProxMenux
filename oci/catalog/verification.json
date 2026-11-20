@@ -230,6 +230,14 @@
     "scanopy": {
       "status": "laboratory-validated"
     },
+    "seafile-ce": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-20",
+        "digest": "fe1f111e93f81e673eeec2d0365fe2462d41de2d44cddc652ee4a1145f2f3938",
+        "scenario": "PVE 9.2 amd64/ZFS: default/advanced; active Go file server, browser/API and byte-exact transfers; managed/host storage, restart/Modify; 13.0.29 to 13.0.30 and no-op; backup/restore of all three CTs into Manage; cleanup and PBS check. Host bind stored separately."
+      }
+    },
     "semaphore-ui": {
       "community_tested": {
         "by": "jcastro",
