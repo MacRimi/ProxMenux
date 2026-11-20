@@ -180,6 +180,14 @@
     "paperless-ngx": {
       "status": "laboratory-validated"
     },
+    "peertube": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-20",
+        "digest": "8baefef245dabdc82c7fb3ee970d5aba82931ac1f4229bf7ffa3de561c1f64ab",
+        "scenario": "PVE 9.2.32 amd64/ZFS; advanced install, 32 GiB data, Redis 8 auth and rejected invalid hostnames; HTTPS via Caddy with verified local CA and default proxy trust; admin login, private upload/HLS; cold backup and Manage restore to new IDs, same HTTPS origin, login, media and Redis auth."
+      }
+    },
     "phpmyadmin": {
       "status": "laboratory-validated"
     },
