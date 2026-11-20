@@ -2910,19 +2910,19 @@
     "openDescription": "Alla som når Monitor får full kontroll över denna server, inklusive root-terminal. Välj detta endast i ett nätverk där du litar på alla som kan nå den.",
     "chooseReadOnly": "Använd endast läsning",
     "chooseOpen": "Öppna utan lösenord",
-    "pveTitle": "Eller använd kontona från Proxmox VE",
-    "pveDescription": "Logga in med användare och realms från Proxmox VE samt deras tvåfaktorsautentisering, utan något eget konto i Monitor.",
-    "choosePve": "Använd Proxmox VE-konton"
+    "pveTitle": "Eller använd kontona från {product}",
+    "pveDescription": "Logga in med användare och realms från {product} samt deras tvåfaktorsautentisering, utan något eget konto i Monitor.",
+    "choosePve": "Använd {product}-konton"
   },
   "pveAccounts": {
-    "title": "Proxmox VE-konton",
-    "description": "Logga in med användare och realms från Proxmox VE, inklusive deras tvåfaktorsautentisering.",
-    "enable": "Tillåt inloggning med Proxmox VE-konton",
-    "onlyWay": "Proxmox VE-konton används för att nå instrumentpanelen. Om du vill sluta använda dem lägger du till ett lokalt lösenord eller väljer skrivskyddad eller öppen åtkomst ovan.",
+    "title": "{product}-konton",
+    "description": "Logga in med användare och realms från {product}, inklusive deras tvåfaktorsautentisering.",
+    "enable": "Tillåt inloggning med {product}-konton",
+    "onlyWay": "{product}-konton används för att nå instrumentpanelen. Om du vill sluta använda dem lägger du till ett lokalt lösenord eller väljer skrivskyddad eller öppen åtkomst ovan.",
     "whoGetsIn": "Användare med behörigheten Sys.Modify på / får full åtkomst; användare med endast Sys.Audit på / får skrivskyddad åtkomst. Andra användare kan inte logga in.",
-    "sharedSession": "Inloggad i Proxmox VE-webbgränssnittet? Öppna instrumentpanelen över HTTPS på samma adress så loggar den sessionen in dig även här.",
+    "sharedSession": "Inloggad i {product}-webbgränssnittet? Öppna instrumentpanelen över HTTPS på samma adress så loggar den sessionen in dig även här.",
     "saveFailed": "Ändringen kunde inte sparas.",
-    "rulesTitle": "Profiler för Proxmox VE-konton",
+    "rulesTitle": "Profiler för {product}-konton",
     "rulesHelp": "En användares regel gäller först; annars gäller den första regeln för en av användarens grupper. Utan regel ger Sys.Modify på / profilen Administratör och Sys.Audit profilen Observatör. En regel släpper aldrig in en användare utan behörigheter på /.",
     "ruleKind": "Regel för",
     "ruleName": "Användare eller grupp",
@@ -3022,7 +3022,7 @@
     "enabledDone": "Användaren har aktiverats."
   },
   "pveLogin": {
-    "tab": "Proxmox VE",
+    "tab": "{product}",
     "localAccount": "Lokalt konto",
     "username": "Användare",
     "password": "Lösenord",
@@ -3032,9 +3032,9 @@
     "failed": "Inloggningen misslyckades. Kontrollera användare, lösenord och realm.",
     "fillFields": "Ange användare och lösenord.",
     "tooManyAttempts": "För många försök. Vänta några minuter och försök igen.",
-    "useWebInterface": "Det här kontot loggar in med en säkerhetsnyckel. Logga in i Proxmox VE-webbgränssnittet och återvänd sedan till den här sidan.",
-    "webInterface": "Logga in i Proxmox VE-webbgränssnittet",
-    "webInterfaceHint": "Med Monitor öppnad över HTTPS på samma adress loggar sessionen från Proxmox VE-webbgränssnittet in dig här när du kommer tillbaka."
+    "useWebInterface": "Det här kontot loggar in med en säkerhetsnyckel. Logga in i {product}-webbgränssnittet och återvänd sedan till den här sidan.",
+    "webInterface": "Logga in i {product}-webbgränssnittet",
+    "webInterfaceHint": "Med Monitor öppnad över HTTPS på samma adress loggar sessionen från {product}-webbgränssnittet in dig här när du kommer tillbaka."
   },
   "access": {
     "readOnlyBanner": "Skrivskyddad åtkomst: du kan se denna server, men inte köra eller ändra något. För att hantera den lägger du till ett lösenord i Säkerhet."
@@ -8391,8 +8391,8 @@
         "enabled": "Användare aktiverad"
       },
       "pve": {
-        "accounts": "Proxmox VE-konton",
-        "rules": "Profilregler för Proxmox VE"
+        "accounts": "{product}-konton",
+        "rules": "Profilregler för {product}"
       },
       "oidc": {
         "config": "Inställningar för OpenID Connect"
@@ -8403,13 +8403,13 @@
     },
     "methods": {
       "local": "lokalt konto",
-      "pve": "Proxmox VE",
+      "pve": "{product}",
       "oidc": "OpenID Connect"
     },
     "modes": {
       "read_only": "skrivskyddat",
       "open": "öppet",
-      "proxmox": "Proxmox VE-konton",
+      "proxmox": "{product}-konton",
       "password": "lösenord"
     },
     "scopes": {

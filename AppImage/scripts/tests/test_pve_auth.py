@@ -26,6 +26,7 @@ ADMIN = f"PVE:root@pam:6AF78F9D::{SIG}"
 AUDITOR = f"PVE:auditor@pve:6AF78F9D::{SIG}"
 NOBODY = f"PVE:guest@pve:6AF78F9D::{SIG}"
 TFA_USER = f"PVE:tfa@pve:6AF78F9D::{SIG}"
+PBS_AUDITOR = f"PBS:auditor@pbs:6AF78F9D::{SIG}"
 PRIVILEGES = {ADMIN: {"Sys.Modify": 1, "Sys.Audit": 1, "Sys.Console": 1},
               AUDITOR: {"Sys.Audit": 1}, NOBODY: {"VM.Audit": 1}, TFA_USER: {"Sys.Modify": 1}}
 # As Proxmox VE writes it: the colons of the JSON are percent-encoded.
@@ -148,6 +149,18 @@ class PVEAccounts(unittest.TestCase):
         self.client.set_cookie("PVEAuthCookie", NOBODY)
         self.assertEqual(self.client.get("/api/auth/pve/session").status_code, 401)
 
+    def test_on_a_backup_server_its_own_web_session_is_shared(self):
+        self.proxmox_mode()
+        with mock.patch.object(pve_auth, "_product", return_value=pve_auth.PRODUCTS["pbs"]):
+            PRIVILEGES[PBS_AUDITOR] = {"Sys.Audit": 1}
+            self.addCleanup(PRIVILEGES.pop, PBS_AUDITOR, None)
+            pve_auth._cache.clear()
+            self.client.set_cookie("PVEAuthCookie", AUDITOR)
+            self.assertEqual(self.client.get("/api/auth/pve/session").status_code, 404)
+            self.client.set_cookie("PBSAuthCookie", PBS_AUDITOR)
+            shared = self.client.get("/api/auth/pve/session").json
+            self.assertEqual((shared["ticket"], shared["scope"]), (PBS_AUDITOR, "read_only"))
+
     # ── what a ticket can do in the Monitor ──────────────────────────
     def test_tickets_follow_the_privileges_and_status_names_the_account(self):
         self.proxmox_mode()
@@ -194,7 +207,7 @@ class PVEAccounts(unittest.TestCase):
         cfg = self.root / "user.cfg"
         cfg.write_text("user:root@pam:1:0::::::\nuser:auditor@pve:1:0::::::\nuser:tfa@pve:1:0::::::\n"
                        "group:ops:auditor@pve,tfa@pve::\ngroup:viewers:tfa@pve::\ngroup:admins:root@pam::\n")
-        patch = mock.patch.object(pve_auth, "USER_CFG", str(cfg))
+        patch = mock.patch.dict(pve_auth.PRODUCTS["pve"], {"users": str(cfg)})
         patch.start()
         self.addCleanup(patch.stop)
         pve_auth._directory["mtime"] = None
@@ -246,6 +259,66 @@ class PVEAccounts(unittest.TestCase):
         chosen = self.client.post("/api/auth/mode", json={"mode": "read_only"}, headers=self.as_ticket(ADMIN))
         self.assertEqual((chosen.status_code, auth_manager.access_mode()), (200, "read_only"))
         self.assertFalse(json.loads((self.root / "auth.json").read_text())["pve_auth"])
+
+
+class BackupServerAccounts(unittest.TestCase):
+    """On a Proxmox Backup Server the same accounts are those of its own API:
+    port 8007, `PBS:` tickets, the PBSAuthCookie of its web interface and the
+    sections of /etc/proxmox-backup/user.cfg, which has no groups."""
+
+    def setUp(self):
+        patch = mock.patch.object(pve_auth, "_product", return_value=pve_auth.PRODUCTS["pbs"])
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_only_tickets_of_this_product_are_tickets(self):
+        self.assertTrue(pve_auth.is_ticket(PBS_AUDITOR))
+        self.assertFalse(pve_auth.is_ticket(AUDITOR))
+        self.assertEqual(pve_auth.cookie_name(), "PBSAuthCookie")
+
+    def test_requests_go_to_the_backup_server_api(self):
+        seen = {}
+
+        class Answer:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, *args):
+                return b'{"data": []}'
+
+        def fake_urlopen(request, **kwargs):
+            seen["url"], seen["cookie"] = request.full_url, request.get_header("Cookie")
+            return Answer()
+
+        with mock.patch.object(pve_auth.urllib.request, "urlopen", fake_urlopen):
+            self.assertEqual(pve_auth._request("GET", "/access/domains", ticket=PBS_AUDITOR), (200, []))
+        self.assertTrue(seen["url"].startswith("https://127.0.0.1:8007/api2/json/access/domains"))
+        self.assertTrue(seen["cookie"].startswith("PBSAuthCookie=PBS%3Aauditor%40pbs"))
+
+    def test_users_come_from_the_backup_server_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cfg = Path(directory) / "user.cfg"
+            cfg.write_text("user: root@pam\n\temail root@localhost\n\n"
+                           "token: root@pam!monitor\n\n"
+                           "user: auditor@pbs\n\tcomment Read only\n")
+            with mock.patch.dict(pve_auth.PRODUCTS["pbs"], {"users": str(cfg)}):
+                pve_auth._directory["mtime"] = None
+                self.assertEqual(pve_auth.directory(), {"users": ["auditor@pbs", "root@pam"], "groups": []})
+                self.assertEqual(pve_auth.groups_of("auditor@pbs"), set())
+
+    def test_the_second_factor_answers_a_challenge_of_this_product(self):
+        with mock.patch.object(pve_auth, "_request", return_value=(401, None)) as request:
+            with self.assertRaises(pve_auth.PVEAuthError):
+                pve_auth.second_factor("auditor@pbs", CHALLENGE, "123456")
+            request.assert_not_called()
+            with self.assertRaises(pve_auth.PVEAuthError):
+                pve_auth.second_factor("auditor@pbs", CHALLENGE.replace("PVE:", "PBS:", 1), "123456")
+            request.assert_called_once()
 
 
 if __name__ == "__main__":

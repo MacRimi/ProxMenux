@@ -1188,7 +1188,7 @@ def set_pve_auth(enabled):
             config["access_mode"] = "proxmox"
     _invalidate_revoked_cache()
     if save_auth_config(config):
-        return True, "Proxmox VE accounts saved"
+        return True, "Proxmox accounts saved"
     return False, "Failed to save configuration"
 
 

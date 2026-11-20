@@ -12,6 +12,7 @@ import { Badge } from "./ui/badge"
 import { fetchApi } from "../lib/api-config"
 import { useAccess } from "../lib/access"
 import { useI18n } from "../lib/i18n/provider"
+import { proxmoxProduct, useIsPbs } from "../lib/use-platform"
 
 interface AccessEvent {
   id: number
@@ -28,6 +29,7 @@ const PAGE = 50
 
 export function AccessLog() {
   const { t, language } = useI18n()
+  const pbs = useIsPbs()
   const { capabilities } = useAccess()
   const [events, setEvents] = useState<AccessEvent[]>([])
   const [more, setMore] = useState(false)
@@ -53,8 +55,9 @@ export function AccessLog() {
 
   if (!capabilities.admin) return null
 
+  // Labels about Proxmox accounts name the product of this host.
   const label = (key: string, fallback: string) => {
-    const text = t(key)
+    const text = t(key, { product: proxmoxProduct(pbs) })
     return text === key ? fallback : text
   }
   const permission = (name: string) => name === "admin" || name === "view" || name === "self" || name === "ticket"

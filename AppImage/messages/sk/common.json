@@ -2909,19 +2909,19 @@
     "openDescription": "Každý, kto sa pripojí k Monitoru, získa plnú kontrolu nad týmto serverom vrátane terminálu root. Zvoľte túto možnosť iba v sieti, kde dôverujete každému, kto má k nej prístup.",
     "chooseReadOnly": "Použiť režim iba na čítanie",
     "chooseOpen": "Otvoriť bez hesla",
-    "pveTitle": "Alebo použite účty Proxmox VE",
-    "pveDescription": "Prihláste sa pomocou používateľov a realmov Proxmox VE a ich dvojfaktorového overenia, bez vlastného účtu v Monitore.",
-    "choosePve": "Použiť účty Proxmox VE"
+    "pveTitle": "Alebo použite účty {product}",
+    "pveDescription": "Prihláste sa pomocou používateľov a realmov {product} a ich dvojfaktorového overenia, bez vlastného účtu v Monitore.",
+    "choosePve": "Použiť účty {product}"
   },
   "pveAccounts": {
-    "title": "Účty Proxmox VE",
-    "description": "Prihláste sa pomocou používateľov a realmov Proxmox VE, vrátane ich dvojfaktorového overenia.",
-    "enable": "Povoliť prihlasovanie účtom Proxmox VE",
-    "onlyWay": "Účty Proxmox VE sú spôsobom prístupu do dashboardu. Ak ich chcete prestať používať, pridajte lokálne heslo alebo vyššie zvoľte prístup len na čítanie či otvorený prístup.",
+    "title": "Účty {product}",
+    "description": "Prihláste sa pomocou používateľov a realmov {product}, vrátane ich dvojfaktorového overenia.",
+    "enable": "Povoliť prihlasovanie účtom {product}",
+    "onlyWay": "Účty {product} sú spôsobom prístupu do dashboardu. Ak ich chcete prestať používať, pridajte lokálne heslo alebo vyššie zvoľte prístup len na čítanie či otvorený prístup.",
     "whoGetsIn": "Používatelia s oprávnením Sys.Modify na / získajú úplný prístup; používatelia s oprávnením iba Sys.Audit na / prístup len na čítanie. Ostatní používatelia sa nemôžu prihlásiť.",
-    "sharedSession": "Ste prihlásení do webového rozhrania Proxmox VE? Otvorte dashboard cez HTTPS na rovnakej adrese a táto relácia vás prihlási aj sem.",
+    "sharedSession": "Ste prihlásení do webového rozhrania {product}? Otvorte dashboard cez HTTPS na rovnakej adrese a táto relácia vás prihlási aj sem.",
     "saveFailed": "Zmenu sa nepodarilo uložiť.",
-    "rulesTitle": "Profily účtov Proxmox VE",
+    "rulesTitle": "Profily účtov {product}",
     "rulesHelp": "Prednosť má pravidlo používateľa; inak platí prvé pravidlo jednej z jeho skupín. Bez pravidla dáva Sys.Modify na / profil Administrátor a Sys.Audit profil Pozorovateľ. Pravidlo nikdy nevpustí používateľa bez oprávnení na /.",
     "ruleKind": "Pravidlo pre",
     "ruleName": "Používateľ alebo skupina",
@@ -3021,7 +3021,7 @@
     "enabledDone": "Používateľ bol aktivovaný."
   },
   "pveLogin": {
-    "tab": "Proxmox VE",
+    "tab": "{product}",
     "localAccount": "Lokálny účet",
     "username": "Používateľ",
     "password": "Heslo",
@@ -3031,9 +3031,9 @@
     "failed": "Prihlásenie zlyhalo. Skontrolujte používateľa, heslo a realm.",
     "fillFields": "Zadajte používateľa a heslo.",
     "tooManyAttempts": "Príliš veľa pokusov. Počkajte niekoľko minút a skúste to znova.",
-    "useWebInterface": "Tento účet sa prihlasuje pomocou bezpečnostného kľúča. Prihláste sa vo webovom rozhraní Proxmox VE a potom sa vráťte na túto stránku.",
-    "webInterface": "Prihlásiť sa vo webovom rozhraní Proxmox VE",
-    "webInterfaceHint": "Ak je Monitor otvorený cez HTTPS na rovnakej adrese, relácia webového rozhrania Proxmox VE vás po návrate prihlási aj sem."
+    "useWebInterface": "Tento účet sa prihlasuje pomocou bezpečnostného kľúča. Prihláste sa vo webovom rozhraní {product} a potom sa vráťte na túto stránku.",
+    "webInterface": "Prihlásiť sa vo webovom rozhraní {product}",
+    "webInterfaceHint": "Ak je Monitor otvorený cez HTTPS na rovnakej adrese, relácia webového rozhrania {product} vás po návrate prihlási aj sem."
   },
   "access": {
     "readOnlyBanner": "Prístup iba na čítanie: tento server môžete vidieť, ale nemôžete nič spúšťať ani meniť. Ak ho chcete spravovať, pridajte heslo v sekcii Security."
@@ -8390,8 +8390,8 @@
         "enabled": "Používateľ aktivovaný"
       },
       "pve": {
-        "accounts": "Účty Proxmox VE",
-        "rules": "Pravidlá profilov Proxmox VE"
+        "accounts": "Účty {product}",
+        "rules": "Pravidlá profilov {product}"
       },
       "oidc": {
         "config": "Nastavenia OpenID Connect"
@@ -8402,13 +8402,13 @@
     },
     "methods": {
       "local": "lokálny účet",
-      "pve": "Proxmox VE",
+      "pve": "{product}",
       "oidc": "OpenID Connect"
     },
     "modes": {
       "read_only": "len na čítanie",
       "open": "otvorený",
-      "proxmox": "účty Proxmox VE",
+      "proxmox": "účty {product}",
       "password": "heslo"
     },
     "scopes": {

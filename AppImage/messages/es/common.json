@@ -3063,19 +3063,19 @@
     "openDescription": "Cualquiera que acceda al Monitor obtiene el control total de este servidor, incluida la terminal de root. Elígelo solo en una red en la que confíes en todos los que puedan acceder a él.",
     "chooseReadOnly": "Usar solo lectura",
     "chooseOpen": "Abrir sin contraseña",
-    "pveTitle": "O usa las cuentas de Proxmox VE",
-    "pveDescription": "Inicia sesión con los usuarios y realms de Proxmox VE y su segundo factor, sin una cuenta propia del Monitor.",
-    "choosePve": "Usar las cuentas de Proxmox VE"
+    "pveTitle": "O usa las cuentas de {product}",
+    "pveDescription": "Inicia sesión con los usuarios y realms de {product} y su segundo factor, sin una cuenta propia del Monitor.",
+    "choosePve": "Usar las cuentas de {product}"
   },
   "pveAccounts": {
-    "title": "Cuentas de Proxmox VE",
-    "description": "Inicia sesión con los usuarios y realms de Proxmox VE, incluido su segundo factor.",
-    "enable": "Permitir el inicio de sesión con cuentas de Proxmox VE",
-    "onlyWay": "Las cuentas de Proxmox VE son la forma de entrar al panel. Para dejar de usarlas, añade una contraseña local o elige el acceso de solo lectura o abierto más arriba.",
+    "title": "Cuentas de {product}",
+    "description": "Inicia sesión con los usuarios y realms de {product}, incluido su segundo factor.",
+    "enable": "Permitir el inicio de sesión con cuentas de {product}",
+    "onlyWay": "Las cuentas de {product} son la forma de entrar al panel. Para dejar de usarlas, añade una contraseña local o elige el acceso de solo lectura o abierto más arriba.",
     "whoGetsIn": "Los usuarios con el privilegio Sys.Modify en / tienen acceso completo; los que solo tienen Sys.Audit en /, acceso de solo lectura. El resto no puede iniciar sesión.",
-    "sharedSession": "¿Has iniciado sesión en la interfaz web de Proxmox VE? Abre el panel por HTTPS en la misma dirección y esa sesión también te da acceso aquí.",
+    "sharedSession": "¿Has iniciado sesión en la interfaz web de {product}? Abre el panel por HTTPS en la misma dirección y esa sesión también te da acceso aquí.",
     "saveFailed": "No se ha podido guardar el cambio.",
-    "rulesTitle": "Perfiles de las cuentas de Proxmox VE",
+    "rulesTitle": "Perfiles de las cuentas de {product}",
     "rulesHelp": "Manda la regla de un usuario; si no hay, la primera regla de uno de sus grupos. Sin regla, Sys.Modify en / da el perfil Administrador y Sys.Audit, el perfil Observador. Una regla nunca deja entrar a un usuario sin privilegios en /.",
     "ruleKind": "Regla para",
     "ruleName": "Usuario o grupo",
@@ -3175,7 +3175,7 @@
     "enabledDone": "Usuario activado."
   },
   "pveLogin": {
-    "tab": "Proxmox VE",
+    "tab": "{product}",
     "localAccount": "Cuenta local",
     "username": "Usuario",
     "password": "Contraseña",
@@ -3185,9 +3185,9 @@
     "failed": "No se ha podido iniciar sesión. Comprueba el usuario, la contraseña y el realm.",
     "fillFields": "Introduce el usuario y la contraseña.",
     "tooManyAttempts": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
-    "useWebInterface": "Esta cuenta inicia sesión con una llave de seguridad. Inicia sesión en la interfaz web de Proxmox VE y vuelve después a esta página.",
-    "webInterface": "Iniciar sesión en la interfaz web de Proxmox VE",
-    "webInterfaceHint": "Con el Monitor abierto por HTTPS en la misma dirección, la sesión de la interfaz web de Proxmox VE te da acceso aquí al volver."
+    "useWebInterface": "Esta cuenta inicia sesión con una llave de seguridad. Inicia sesión en la interfaz web de {product} y vuelve después a esta página.",
+    "webInterface": "Iniciar sesión en la interfaz web de {product}",
+    "webInterfaceHint": "Con el Monitor abierto por HTTPS en la misma dirección, la sesión de la interfaz web de {product} te da acceso aquí al volver."
   },
   "access": {
     "readOnlyBanner": "Acceso de solo lectura: puedes ver este servidor, pero no ejecutar ni cambiar nada. Para administrarlo, añade una contraseña en Seguridad."
@@ -7562,8 +7562,8 @@
         "enabled": "Usuario activado"
       },
       "pve": {
-        "accounts": "Cuentas de Proxmox VE",
-        "rules": "Reglas de perfiles de Proxmox VE"
+        "accounts": "Cuentas de {product}",
+        "rules": "Reglas de perfiles de {product}"
       },
       "oidc": {
         "config": "Ajustes de OpenID Connect"
@@ -7574,13 +7574,13 @@
     },
     "methods": {
       "local": "cuenta local",
-      "pve": "Proxmox VE",
+      "pve": "{product}",
       "oidc": "OpenID Connect"
     },
     "modes": {
       "read_only": "solo lectura",
       "open": "abierto",
-      "proxmox": "cuentas de Proxmox VE",
+      "proxmox": "cuentas de {product}",
       "password": "contraseña"
     },
     "scopes": {

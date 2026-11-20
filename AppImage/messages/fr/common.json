@@ -2910,19 +2910,19 @@
     "openDescription": "Toute personne accédant au Monitor obtient le contrôle total de ce serveur, terminal root inclus. Ne choisissez cette option que sur un réseau où vous faites confiance à toutes les personnes pouvant y accéder.",
     "chooseReadOnly": "Utiliser la lecture seule",
     "chooseOpen": "Ouvrir sans mot de passe",
-    "pveTitle": "Ou utiliser les comptes de Proxmox VE",
-    "pveDescription": "Connectez-vous avec les utilisateurs et les domaines de Proxmox VE ainsi que leur authentification à deux facteurs, sans compte propre à Monitor.",
-    "choosePve": "Utiliser les comptes Proxmox VE"
+    "pveTitle": "Ou utiliser les comptes de {product}",
+    "pveDescription": "Connectez-vous avec les utilisateurs et les domaines de {product} ainsi que leur authentification à deux facteurs, sans compte propre à Monitor.",
+    "choosePve": "Utiliser les comptes {product}"
   },
   "pveAccounts": {
-    "title": "Comptes Proxmox VE",
-    "description": "Connectez-vous avec les utilisateurs et les domaines de Proxmox VE, y compris leur authentification à deux facteurs.",
-    "enable": "Autoriser la connexion avec les comptes Proxmox VE",
-    "onlyWay": "Les comptes Proxmox VE permettent d'accéder au tableau de bord. Pour ne plus les utiliser, ajoutez un mot de passe local ou choisissez l'accès en lecture seule ou libre ci-dessus.",
+    "title": "Comptes {product}",
+    "description": "Connectez-vous avec les utilisateurs et les domaines de {product}, y compris leur authentification à deux facteurs.",
+    "enable": "Autoriser la connexion avec les comptes {product}",
+    "onlyWay": "Les comptes {product} permettent d'accéder au tableau de bord. Pour ne plus les utiliser, ajoutez un mot de passe local ou choisissez l'accès en lecture seule ou libre ci-dessus.",
     "whoGetsIn": "Les utilisateurs disposant du privilège Sys.Modify sur / bénéficient d'un accès complet ; ceux disposant uniquement de Sys.Audit sur /, d'un accès en lecture seule. Les autres utilisateurs ne peuvent pas se connecter.",
-    "sharedSession": "Connecté à l'interface web de Proxmox VE ? Ouvrez le tableau de bord en HTTPS à la même adresse et cette session vous connectera ici aussi.",
+    "sharedSession": "Connecté à l'interface web de {product} ? Ouvrez le tableau de bord en HTTPS à la même adresse et cette session vous connectera ici aussi.",
     "saveFailed": "La modification n'a pas pu être enregistrée.",
-    "rulesTitle": "Profils des comptes Proxmox VE",
+    "rulesTitle": "Profils des comptes {product}",
     "rulesHelp": "La règle d'un utilisateur l'emporte ; sinon, la première règle de l'un de ses groupes s'applique. Sans règle, Sys.Modify sur / donne le profil Administrateur et Sys.Audit le profil Observateur. Une règle ne laisse jamais entrer un utilisateur sans privilèges sur /.",
     "ruleKind": "Règle pour",
     "ruleName": "Utilisateur ou groupe",
@@ -3022,7 +3022,7 @@
     "enabledDone": "Utilisateur activé."
   },
   "pveLogin": {
-    "tab": "Proxmox VE",
+    "tab": "{product}",
     "localAccount": "Compte local",
     "username": "Utilisateur",
     "password": "Mot de passe",
@@ -3032,9 +3032,9 @@
     "failed": "Échec de la connexion. Vérifiez l'utilisateur, le mot de passe et le domaine.",
     "fillFields": "Saisissez l'utilisateur et le mot de passe.",
     "tooManyAttempts": "Trop de tentatives. Attendez quelques minutes et réessayez.",
-    "useWebInterface": "Ce compte se connecte avec une clé de sécurité. Connectez-vous sur l'interface web de Proxmox VE, puis revenez sur cette page.",
-    "webInterface": "Se connecter sur l'interface web de Proxmox VE",
-    "webInterfaceHint": "Lorsque Monitor est ouvert en HTTPS à la même adresse, la session de l'interface web de Proxmox VE vous connecte automatiquement ici à votre retour."
+    "useWebInterface": "Ce compte se connecte avec une clé de sécurité. Connectez-vous sur l'interface web de {product}, puis revenez sur cette page.",
+    "webInterface": "Se connecter sur l'interface web de {product}",
+    "webInterfaceHint": "Lorsque Monitor est ouvert en HTTPS à la même adresse, la session de l'interface web de {product} vous connecte automatiquement ici à votre retour."
   },
   "access": {
     "readOnlyBanner": "Accès en lecture seule : vous pouvez voir ce serveur, mais vous ne pouvez rien exécuter ni modifier. Pour le gérer, ajoutez un mot de passe dans Sécurité."
@@ -8391,8 +8391,8 @@
         "enabled": "Utilisateur activé"
       },
       "pve": {
-        "accounts": "Comptes Proxmox VE",
-        "rules": "Règles de profils Proxmox VE"
+        "accounts": "Comptes {product}",
+        "rules": "Règles de profils {product}"
       },
       "oidc": {
         "config": "Réglages OpenID Connect"
@@ -8403,13 +8403,13 @@
     },
     "methods": {
       "local": "compte local",
-      "pve": "Proxmox VE",
+      "pve": "{product}",
       "oidc": "OpenID Connect"
     },
     "modes": {
       "read_only": "lecture seule",
       "open": "ouvert",
-      "proxmox": "comptes Proxmox VE",
+      "proxmox": "comptes {product}",
       "password": "mot de passe"
     },
     "scopes": {

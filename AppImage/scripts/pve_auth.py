@@ -1,9 +1,12 @@
-"""Proxmox VE accounts in the Monitor.
+"""Proxmox accounts in the Monitor: those of Proxmox VE, or of Proxmox Backup
+Server when the Monitor runs on one.
 
-The Monitor keeps no session of its own for them: the browser holds a Proxmox
-VE ticket, and every check asks the local Proxmox VE API what that ticket can
-do, so its expiry, realms, second factor and permissions stay those of
-Proxmox VE. What a user can do follows their privileges on `/`:
+The Monitor keeps no session of its own for them: the browser holds a ticket of
+the local Proxmox API, and every check asks that API what the ticket can do, so
+its expiry, realms, second factor and permissions stay those of the product.
+Both APIs answer the same calls; they differ in their port, the prefix of their
+tickets, the cookie of their web interface and the file of their users. What a
+user can do follows their privileges on `/`:
 
   Sys.Modify  full access
   Sys.Audit   read-only
@@ -20,38 +23,62 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# The local API of this host. Proxmox VE's certificate names the node, not the
-# loopback address, and nothing between the Monitor and pveproxy can be
+# The local API of this host. Its certificate names the node, not the loopback
+# address, and nothing between the Monitor and the Proxmox proxy can be
 # intercepted on loopback: the connection is not checked against a CA.
-PVE_API = "https://127.0.0.1:8006/api2/json"
+PRODUCTS = {
+    "pve": {"api": "https://127.0.0.1:8006/api2/json", "prefix": "PVE", "cookie": "PVEAuthCookie",
+            "users": "/etc/pve/user.cfg"},
+    "pbs": {"api": "https://127.0.0.1:8007/api2/json", "prefix": "PBS", "cookie": "PBSAuthCookie",
+            "users": "/etc/proxmox-backup/user.cfg"},
+}
+
+
+def _product():
+    """The Proxmox product of this host, as the rest of the Monitor reads it."""
+    try:
+        from pbs_manager import is_pbs_host
+        return PRODUCTS["pbs"] if is_pbs_host() else PRODUCTS["pve"]
+    except Exception:
+        return PRODUCTS["pve"]
+
+
+def cookie_name():
+    """The cookie the web interface of this host keeps its session in."""
+    return _product()["cookie"]
+
+
 _CONTEXT = ssl.create_default_context()
 _CONTEXT.check_hostname = False
 _CONTEXT.verify_mode = ssl.CERT_NONE
 
 # A checked ticket is trusted for a minute: a permission removed or a ticket
-# expired in Proxmox VE reaches the Monitor within that time.
+# expired in Proxmox reaches the Monitor within that time.
 CHECK_TTL = 60
 _cache = {}
 _cache_lock = threading.Lock()
 
-_TICKET = re.compile(r"^PVE:[^:!\s]+@[^:\s]+:[0-9A-F]{8}::[A-Za-z0-9+/=]+$")
+_TICKET = re.compile(r"^(PVE|PBS):[^:!\s]+@[^:\s]+:[0-9A-F]{8}::[A-Za-z0-9+/=]+$")
 _USERNAME = re.compile(r"^[^\s:@/]{1,64}$")
 _REALM = re.compile(r"^[A-Za-z][A-Za-z0-9.\-_]{1,31}$")
 
 
 class PVEAuthError(Exception):
-    """A refusal to show as it is: never carries Proxmox VE's reply."""
+    """A refusal to show as it is: never carries the reply of Proxmox."""
 
 
 def is_ticket(token):
-    return isinstance(token, str) and bool(_TICKET.match(token))
+    """A ticket of the Proxmox product of this host."""
+    return (isinstance(token, str) and bool(_TICKET.match(token))
+            and token.startswith(_product()["prefix"] + ":"))
 
 
 def _request(method, path, data=None, ticket=None):
     body = urllib.parse.urlencode(data).encode() if data is not None else None
-    request = urllib.request.Request(PVE_API + path, data=body, method=method)
+    product = _product()
+    request = urllib.request.Request(product["api"] + path, data=body, method=method)
     if ticket:
-        request.add_header("Cookie", "PVEAuthCookie=" + urllib.parse.quote(ticket, safe=""))
+        request.add_header("Cookie", product["cookie"] + "=" + urllib.parse.quote(ticket, safe=""))
     try:
         with urllib.request.urlopen(request, context=_CONTEXT, timeout=10) as response:
             return response.status, json.loads(response.read(1024 * 1024) or b"{}").get("data")
@@ -94,27 +121,35 @@ def validate(ticket):
     return result
 
 
-# The users and groups of Proxmox VE, from the file it keeps them in on this
-# host (pmxcfs); read again when it changes.
-USER_CFG = "/etc/pve/user.cfg"
-_directory = {"mtime": None, "users": [], "groups": {}}
+# The users and groups of the product, from the file it keeps them in on this
+# host; read again when it changes. Proxmox VE writes `user:<id>:...` and
+# `group:<name>:<members>:...` lines; Proxmox Backup Server writes sections
+# such as `user: <id>` and has no groups.
+_directory = {"path": None, "mtime": None, "users": [], "groups": {}}
 _directory_lock = threading.Lock()
 
 
 def _read_directory():
     import os
+    path = _product()["users"]
     try:
-        mtime = os.stat(USER_CFG).st_mtime
+        mtime = os.stat(path).st_mtime
     except OSError:
         return [], {}
     with _directory_lock:
-        if _directory["mtime"] == mtime:
+        if _directory["path"] == path and _directory["mtime"] == mtime:
             return _directory["users"], _directory["groups"]
     users, groups = [], {}
     try:
-        with open(USER_CFG, encoding="utf-8", errors="replace") as handle:
+        with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
-                fields = line.rstrip("\n").split(":")
+                line = line.rstrip("\n")
+                if line.startswith("user: "):
+                    userid = line[len("user: "):].strip()
+                    if userid:
+                        users.append(userid)
+                    continue
+                fields = line.split(":")
                 if fields[0] == "user" and len(fields) > 1 and fields[1]:
                     users.append(fields[1])
                 elif fields[0] == "group" and len(fields) > 2 and fields[1]:
@@ -122,12 +157,12 @@ def _read_directory():
     except OSError:
         return [], {}
     with _directory_lock:
-        _directory.update(mtime=mtime, users=users, groups=groups)
+        _directory.update(path=path, mtime=mtime, users=users, groups=groups)
     return users, groups
 
 
 def groups_of(userid):
-    """The Proxmox VE groups `userid` belongs to."""
+    """The Proxmox groups `userid` belongs to."""
     _users, groups = _read_directory()
     return {name for name, members in groups.items() if userid in members}
 
@@ -139,7 +174,7 @@ def directory():
 
 
 def realms():
-    """The realms to choose from, as Proxmox VE lists them to its login form."""
+    """The realms to choose from, as Proxmox lists them to its login form."""
     status, data = _request("GET", "/access/domains")
     if status != 200 or not isinstance(data, list):
         return []
@@ -153,12 +188,12 @@ def _granted(data):
     ticket = data.get("ticket") if isinstance(data, dict) else None
     username, scope = validate(ticket)
     if not username:
-        raise PVEAuthError("This Proxmox VE account has no access to the Monitor.")
+        raise PVEAuthError("This Proxmox account has no access to the Monitor.")
     return {"ticket": ticket, "username": username, "scope": scope}
 
 
 def login(username, password, realm):
-    """First step: a ticket, or the second factor Proxmox VE asks for."""
+    """First step: a ticket, or the second factor Proxmox asks for."""
     if not isinstance(username, str) or not isinstance(password, str) or not password:
         raise PVEAuthError("Enter the user and password.")
     if "@" in username:
@@ -171,7 +206,7 @@ def login(username, password, realm):
         raise PVEAuthError("Login failed.")
     if data.get("NeedTFA"):
         challenge = data.get("ticket") or ""
-        # PVE:!tfa!<methods as JSON, its colons as %3A>:<time>::<signature>
+        # PVE:!tfa!<methods as JSON, its colons as %3A>:<time>::<signature> (PBS: alike)
         try:
             offered = json.loads(urllib.parse.unquote(challenge.split("!tfa!", 1)[1].split(":", 1)[0]))
             methods = sorted(offered.keys())
@@ -185,7 +220,7 @@ def login(username, password, realm):
 def second_factor(username, challenge, code):
     """Second step: a TOTP code (six digits) or a recovery key."""
     if (not isinstance(username, str) or not isinstance(challenge, str)
-            or not challenge.startswith("PVE:!tfa!") or not isinstance(code, str)):
+            or not challenge.startswith(_product()["prefix"] + ":!tfa!") or not isinstance(code, str)):
         raise PVEAuthError("Login failed.")
     code = code.strip().replace(" ", "")
     if not code or len(code) > 64:
@@ -199,7 +234,7 @@ def second_factor(username, challenge, code):
 
 
 def renew(ticket):
-    """A fresh ticket for a valid one, as the Proxmox VE web interface renews it."""
+    """A fresh ticket for a valid one, as the Proxmox web interface renews it."""
     if not is_ticket(ticket):
         raise PVEAuthError("Login failed.")
     status, data = _request("POST", "/access/ticket",

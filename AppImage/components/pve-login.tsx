@@ -1,7 +1,8 @@
 "use client"
 
-// Sign in with a Proxmox VE account. The Monitor keeps the Proxmox VE ticket
-// as its session, and the local Proxmox VE API decides what it can do.
+// Sign in with a Proxmox account of this host (VE, or Backup Server when the
+// Monitor runs on one). The Monitor keeps its ticket as its session, and the
+// local Proxmox API decides what it can do.
 import type React from "react"
 import { useEffect, useState } from "react"
 import { AlertCircle, ExternalLink, KeyRound, Lock, User } from "lucide-react"
@@ -11,6 +12,7 @@ import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { proxmoxProduct, proxmoxWebPort } from "../lib/use-platform"
 
 interface Realm { realm: string; type: string; comment: string; default: boolean }
 
@@ -29,8 +31,9 @@ export async function adoptPveSession(): Promise<boolean> {
   }
 }
 
-export function PveLogin({ onLogin }: { onLogin: () => void }) {
+export function PveLogin({ onLogin, pbs = false }: { onLogin: () => void; pbs?: boolean }) {
   const t = useT()
+  const product = { product: proxmoxProduct(pbs) }
   const [realms, setRealms] = useState<Realm[]>([])
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -97,7 +100,7 @@ export function PveLogin({ onLogin }: { onLogin: () => void }) {
 
   // Only security keys are configured: those work in the Proxmox VE web interface.
   const keysOnly = !!challenge && !challenge.methods.some(m => m === "totp" || m === "recovery")
-  const webInterface = typeof window !== "undefined" ? `https://${window.location.hostname}:8006/` : ""
+  const webInterface = typeof window !== "undefined" ? `https://${window.location.hostname}:${proxmoxWebPort(pbs)}/` : ""
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -141,7 +144,7 @@ export function PveLogin({ onLogin }: { onLogin: () => void }) {
           </div>
         </>
       ) : keysOnly ? (
-        <p className="text-sm text-muted-foreground">{t("pveLogin.useWebInterface")}</p>
+        <p className="text-sm text-muted-foreground">{t("pveLogin.useWebInterface", product)}</p>
       ) : (
         <div className="space-y-2">
           <Label htmlFor="pve-code">{t("pveLogin.code")}</Label>
@@ -169,9 +172,9 @@ export function PveLogin({ onLogin }: { onLogin: () => void }) {
       <div className="pt-2 border-t border-border/60 space-y-1">
         <a href={webInterface} target="_blank" rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm text-blue-500 hover:underline">
-          {t("pveLogin.webInterface")} <ExternalLink className="h-3.5 w-3.5" />
+          {t("pveLogin.webInterface", product)} <ExternalLink className="h-3.5 w-3.5" />
         </a>
-        <p className="text-xs text-muted-foreground">{t("pveLogin.webInterfaceHint")}</p>
+        <p className="text-xs text-muted-foreground">{t("pveLogin.webInterfaceHint", product)}</p>
       </div>
     </form>
   )

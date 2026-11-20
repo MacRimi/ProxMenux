@@ -8,18 +8,22 @@ import { Label } from "./ui/label"
 import { Shield, Lock, User, AlertCircle, Eye, EyeOff, Upload, Trash2, KeyRound, ShieldAlert } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { proxmoxProduct } from "../lib/use-platform"
 
 interface AuthSetupProps {
   onComplete: () => void
   // A new installation asks for the code the installer showed in the console.
   setupCodeRequired?: boolean
+  // The Monitor runs on a Proxmox Backup Server: its accounts are those.
+  pbs?: boolean
 }
 
 // The first-run screen: nothing else of the Monitor is served until it is
 // answered. With a password, an account is created; without one, the owner
 // chooses read-only or open.
-export function AuthSetup({ onComplete, setupCodeRequired = false }: AuthSetupProps) {
+export function AuthSetup({ onComplete, setupCodeRequired = false, pbs = false }: AuthSetupProps) {
   const t = useT()
+  const product = { product: proxmoxProduct(pbs) }
   const [step, setStep] = useState<"choice" | "setup" | "mode">("choice")
   const [setupCode, setSetupCode] = useState("")
   const [username, setUsername] = useState("")
@@ -489,10 +493,10 @@ export function AuthSetup({ onComplete, setupCodeRequired = false }: AuthSetupPr
               </Button>
               {/* The accounts of Proxmox VE instead of one of the Monitor's own. */}
               <div className="rounded-lg border border-border bg-accent/40 p-3 space-y-2">
-                <p className="text-sm font-medium">{t("authSetup.pveTitle")}</p>
-                <p className="text-xs text-muted-foreground">{t("authSetup.pveDescription")}</p>
+                <p className="text-sm font-medium">{t("authSetup.pveTitle", product)}</p>
+                <p className="text-xs text-muted-foreground">{t("authSetup.pveDescription", product)}</p>
                 <Button onClick={() => handleChooseMode("proxmox")} variant="outline" className="w-full" disabled={loading}>
-                  {t("authSetup.choosePve")}
+                  {t("authSetup.choosePve", product)}
                 </Button>
               </div>
               <Button onClick={() => { setError(""); setStep("choice") }} variant="ghost" className="w-full" disabled={loading}>
