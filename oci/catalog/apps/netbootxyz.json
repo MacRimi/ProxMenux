@@ -33,9 +33,9 @@
     "documentation": "https://netboot.xyz/docs/docker/",
     "repository": "https://github.com/netbootxyz/docker-netbootxyz",
     "tips": [
-      "Configure your existing DHCP server to point PXE clients to this container's IP address and the right BIOS or UEFI boot file.",
+      "PXE needs your existing DHCP server: set next-server (option 66) to this container's IP address and the boot file name (option 67) to netboot.xyz.kpxe for BIOS, netboot.xyz.efi for UEFI or netboot.xyz-arm64.efi for ARM64.",
       "The management interface listens on port 3000, assets on port 80 and TFTP on UDP port 69.",
-      "Use a static address or a DHCP reservation. Keep these services on a trusted network."
+      "The management interface on port 3000 has no login: anyone who can reach it can change what computers boot. Use a static address or a DHCP reservation and keep the container on a trusted network."
     ],
     "mini_changelog": [],
     "display_version": null,
