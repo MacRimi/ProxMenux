@@ -2856,7 +2856,7 @@
     "backupCodeHint": "Puoi usare anche un codice di backup (formato: XXXX-XXXX)",
     "backToLogin": "Torna all’accesso",
     "verifyCode": "Verifica codice",
-    "subtitle": "accedi"
+    "subtitle": "Accesso"
   },
   "account": {
     "signedIn": "Accesso effettuato",
@@ -4349,18 +4349,18 @@
       }
     },
     "virtualList": {
-      "all": "tutto",
+      "all": "Tutte",
       "name": "Nome",
-      "up": "Su",
-      "down": "Giù",
+      "up": "Attive",
+      "down": "Non attive",
       "guests": "VM e LXC",
-      "connectedTo": "Connesso a",
-      "searchPlaceholder": "cerca nome, IP o ospite...",
-      "searchAriaLabel": "cerca interfacce virtuali",
-      "clearSearch": "cancella la ricerca",
-      "kindAriaLabel": "filtra per tipo di interfaccia",
-      "stateAriaLabel": "filtra per stato",
-      "noMatches": "nessuna interfaccia corrisponde ai filtri."
+      "connectedTo": "Collegata a",
+      "searchPlaceholder": "Cerca per nome, IP o guest…",
+      "searchAriaLabel": "Cerca interfacce virtuali",
+      "clearSearch": "Cancella ricerca",
+      "kindAriaLabel": "Filtra per tipo di interfaccia",
+      "stateAriaLabel": "Filtra per stato",
+      "noMatches": "Nessuna interfaccia corrisponde ai filtri."
     }
   },
   "hardware": {
@@ -4615,19 +4615,19 @@
       "switchModeLxc": "LXC (driver nativo)"
     },
     "systemInfo": {
-      "socket": "presa {count}",
-      "sockets": "prese {count}",
-      "socketsLabel": "Prese",
-      "coresWord": "nuclei",
-      "threads": "thread {count}",
-      "cache": "cache",
+      "socket": "{count} socket",
+      "sockets": "{count} socket",
+      "socketsLabel": "Socket",
+      "coresWord": "core",
+      "threads": "{count} thread",
+      "cache": "Cache",
       "frequency": "Frequenza",
-      "board": "Consiglio",
-      "biosDate": "data del BIOS",
-      "biosVendor": "fornitore del BIOS",
+      "board": "Scheda",
+      "biosDate": "Data del BIOS",
+      "biosVendor": "Produttore del BIOS",
       "noBoardData": "Nessun dato dal produttore",
-      "memoryModules": "moduli di memoria {count}",
-      "schematic": "schema della scheda madre"
+      "memoryModules": "{count} moduli di memoria",
+      "schematic": "Schema della scheda madre"
     }
   },
   "backup": {

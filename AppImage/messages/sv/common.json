@@ -2856,7 +2856,7 @@
     "backupCodeHint": "Du kan också använda en reservkod (format: XXXX-XXXX)",
     "backToLogin": "Tillbaka till inloggning",
     "verifyCode": "Verifiera koden",
-    "subtitle": "Sign in"
+    "subtitle": "Inloggning"
   },
   "account": {
     "signedIn": "Inloggad",
@@ -4353,11 +4353,11 @@
       "name": "Namn",
       "up": "Upp",
       "down": "Ner",
-      "guests": "virtuella datorer och LXC:er",
+      "guests": "VM och LXC",
       "connectedTo": "Ansluten till",
-      "searchPlaceholder": "Sök namn, IP eller gäst...",
+      "searchPlaceholder": "Sök på namn, IP eller gäst…",
       "searchAriaLabel": "Sök i virtuella gränssnitt",
-      "clearSearch": "Clear search",
+      "clearSearch": "Rensa sökning",
       "kindAriaLabel": "Filtrera efter gränssnittstyp",
       "stateAriaLabel": "Filtrera efter tillstånd",
       "noMatches": "Inget gränssnitt matchar filtren."
@@ -4616,18 +4616,18 @@
     },
     "systemInfo": {
       "socket": "{count} uttag",
-      "sockets": "{count} uttag",
-      "socketsLabel": "Sockets",
+      "sockets": "{count} socklar",
+      "socketsLabel": "Socklar",
       "coresWord": "kärnor",
       "threads": "{count} trådar",
       "cache": "Cache",
       "frequency": "Frekvens",
-      "board": "Styrelse",
+      "board": "Moderkort",
       "biosDate": "BIOS-datum",
-      "biosVendor": "BIOS-leverantör",
+      "biosVendor": "BIOS-tillverkare",
       "noBoardData": "Inga data från tillverkaren",
-      "memoryModules": "{count} memory modules",
-      "schematic": "Schematisk moderkort"
+      "memoryModules": "{count} minnesmoduler",
+      "schematic": "Schema över moderkortet"
     }
   },
   "backup": {

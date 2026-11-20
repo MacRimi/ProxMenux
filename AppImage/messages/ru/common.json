@@ -3008,7 +3008,7 @@
     "backupCodeHint": "Вы также можете использовать резервный код (формат: XXXX-XXXX)",
     "backToLogin": "Вернуться к входу",
     "verifyCode": "Проверить код",
-    "subtitle": "Войти"
+    "subtitle": "Вход"
   },
   "account": {
     "signedIn": "Вход выполнен",
@@ -4284,7 +4284,7 @@
     },
     "sections": {
       "physicalInterfaces": "Физические интерфейсы",
-      "virtualInterfaces": "виртуальные интерфейсы"
+      "virtualInterfaces": "Виртуальные интерфейсы"
     },
     "summary": {
       "totalInterfaces": "Всего интерфейсов: {count}",
@@ -4503,15 +4503,15 @@
     "virtualList": {
       "all": "Все",
       "name": "Имя",
-      "up": "Вверх",
-      "down": "Вниз",
-      "guests": "виртуальные машины и LXC",
+      "up": "Работают",
+      "down": "Не работают",
+      "guests": "ВМ и LXC",
       "connectedTo": "Подключено к",
-      "searchPlaceholder": "поиск по имени, IP-адресу или гостю…",
-      "searchAriaLabel": "поиск виртуальных интерфейсов",
+      "searchPlaceholder": "Поиск по имени, IP или гостю…",
+      "searchAriaLabel": "Поиск виртуальных интерфейсов",
       "clearSearch": "Очистить поиск",
-      "kindAriaLabel": "фильтровать по типу интерфейса",
-      "stateAriaLabel": "Фильтровать по штату",
+      "kindAriaLabel": "Фильтр по типу интерфейса",
+      "stateAriaLabel": "Фильтр по состоянию",
       "noMatches": "Ни один интерфейс не соответствует фильтрам."
     }
   },
@@ -4767,18 +4767,18 @@
       "switchModeLxc": "LXC (нативный драйвер)"
     },
     "systemInfo": {
-      "socket": "сокет {count}",
-      "sockets": "сокеты {count}",
+      "socket": "Сокетов: {count}",
+      "sockets": "Сокетов: {count}",
       "socketsLabel": "Сокеты",
       "coresWord": "ядра",
-      "threads": "темы {count}",
+      "threads": "Потоков: {count}",
       "cache": "Кэш",
       "frequency": "Частота",
-      "board": "Совет",
+      "board": "Плата",
       "biosDate": "Дата BIOS",
-      "biosVendor": "Поставщик BIOS",
+      "biosVendor": "Производитель BIOS",
       "noBoardData": "Нет данных от производителя",
-      "memoryModules": "{count} memory modules",
+      "memoryModules": "Модулей памяти: {count}",
       "schematic": "Схема материнской платы"
     }
   },

@@ -2856,7 +2856,7 @@
     "backupCodeHint": "Vous pouvez également utiliser un code de récupération (format : XXXX-XXXX)",
     "backToLogin": "Retour à la connexion",
     "verifyCode": "Vérifier le code",
-    "subtitle": "Connectez-vous"
+    "subtitle": "Connexion"
   },
   "account": {
     "signedIn": "Connecté",
@@ -4349,13 +4349,13 @@
       }
     },
     "virtualList": {
-      "all": "Tous",
+      "all": "Toutes",
       "name": "Nom",
-      "up": "Vers le haut",
-      "down": "Vers le bas",
+      "up": "Actives",
+      "down": "Inactives",
       "guests": "VM et LXC",
-      "connectedTo": "Connecté à",
-      "searchPlaceholder": "Rechercher un nom, une adresse IP ou un invité…",
+      "connectedTo": "Connectée à",
+      "searchPlaceholder": "Rechercher par nom, IP ou invité…",
       "searchAriaLabel": "Rechercher des interfaces virtuelles",
       "clearSearch": "Effacer la recherche",
       "kindAriaLabel": "Filtrer par type d'interface",
@@ -4615,18 +4615,18 @@
       "switchModeLxc": "LXC (pilote natif)"
     },
     "systemInfo": {
-      "socket": "prise {count}",
-      "sockets": "prises {count}",
-      "socketsLabel": "Prises",
-      "coresWord": "noyaux",
-      "threads": "threads {count}",
+      "socket": "{count} socket",
+      "sockets": "{count} sockets",
+      "socketsLabel": "Sockets",
+      "coresWord": "cœurs",
+      "threads": "{count} threads",
       "cache": "Cache",
       "frequency": "Fréquence",
-      "board": "Conseil",
-      "biosDate": "date du BIOS",
-      "biosVendor": "fournisseur de BIOS",
+      "board": "Carte",
+      "biosDate": "Date du BIOS",
+      "biosVendor": "Fabricant du BIOS",
       "noBoardData": "Aucune donnée du fabricant",
-      "memoryModules": "modules de mémoire {count}",
+      "memoryModules": "{count} modules de mémoire",
       "schematic": "Schéma de la carte mère"
     }
   },
