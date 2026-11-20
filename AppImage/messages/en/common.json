@@ -4519,6 +4519,21 @@
       "interfaceInformation": "Interface Information",
       "usbDevices": "USB Devices"
     },
+    "systemInfo": {
+      "socket": "{count} socket",
+      "sockets": "{count} sockets",
+      "socketsLabel": "Sockets",
+      "coresWord": "cores",
+      "threads": "{count} threads",
+      "cache": "Cache",
+      "frequency": "Frequency",
+      "board": "Board",
+      "biosDate": "BIOS date",
+      "biosVendor": "BIOS vendor",
+      "noBoardData": "No data from the manufacturer",
+      "memoryModules": "{count} memory modules",
+      "schematic": "Mainboard schematic"
+    },
     "counts": {
       "installed": "{count} installed",
       "sensors": "{count} sensors",

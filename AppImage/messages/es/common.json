@@ -4545,6 +4545,21 @@
       "interfaceInformation": "Información de la interfaz",
       "usbDevices": "Dispositivos USB"
     },
+    "systemInfo": {
+      "socket": "{count} socket",
+      "sockets": "{count} sockets",
+      "socketsLabel": "Sockets",
+      "coresWord": "núcleos",
+      "threads": "{count} hilos",
+      "cache": "Caché",
+      "frequency": "Frecuencia",
+      "board": "Placa",
+      "biosDate": "Fecha de la BIOS",
+      "biosVendor": "Fabricante de la BIOS",
+      "noBoardData": "Sin datos del fabricante",
+      "memoryModules": "{count} módulos de memoria",
+      "schematic": "Esquema de la placa base"
+    },
     "counts": {
       "installed": "{count} instalado",
       "sensors": "{count} sensores",

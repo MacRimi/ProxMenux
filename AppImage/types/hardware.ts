@@ -259,8 +259,13 @@ export interface HardwareData {
     cores_per_socket?: number
     sockets?: number
     total_threads?: number
+    l1d_cache?: string
+    l1i_cache?: string
+    l2_cache?: string
     l3_cache?: string
     virtualization?: string
+    min_mhz?: number
+    max_mhz?: number
   }
   motherboard?: {
     manufacturer?: string
