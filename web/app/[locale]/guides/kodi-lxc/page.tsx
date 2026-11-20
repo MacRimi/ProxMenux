@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
+import { Link } from "@/i18n/navigation"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -47,12 +48,12 @@ export default async function KodiLxcGuide({
   const code = (chunks: React.ReactNode) => <code>{chunks}</code>
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
   const gpuLink = (chunks: React.ReactNode) => (
-    <a
+    <Link
       href="/docs/hardware/igpu-acceleration-lxc"
       className="text-blue-700 hover:underline"
     >
       {chunks}
-    </a>
+    </Link>
   )
   const authorLink = (chunks: React.ReactNode) => (
     <a

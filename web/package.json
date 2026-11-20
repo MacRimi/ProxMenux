@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind",
+    "build": "next build && pagefind --site out --glob \"??/**/*.html\" --output-path public/pagefind && cp -r public/pagefind out/pagefind",
     "start": "next start",
-    "index": "pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind"
+    "index": "pagefind --site out --glob \"??/**/*.html\" --output-path public/pagefind && cp -r public/pagefind out/pagefind"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.2.1",

@@ -71,7 +71,7 @@ export default async function SystemLinuxPage({
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
   const em = (chunks: React.ReactNode) => <em>{chunks}</em>
   const gpuLink = (chunks: React.ReactNode) => (
-    <a href="/docs/hardware/gpu-vm-passthrough" className="text-blue-600 hover:underline">{chunks}</a>
+    <Link href="/docs/hardware/gpu-vm-passthrough" className="text-blue-600 hover:underline">{chunks}</Link>
   )
 
   return (

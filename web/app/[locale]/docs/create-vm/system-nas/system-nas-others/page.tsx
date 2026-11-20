@@ -94,9 +94,9 @@ export default async function OtherNASSystemsPage({
   const em = (chunks: React.ReactNode) => <em>{chunks}</em>
   const note = (chunks: React.ReactNode) => <span className="text-xs text-gray-500">{chunks}</span>
   const gpuLink = (chunks: React.ReactNode) => (
-    <a href="/docs/hardware/gpu-vm-passthrough" className="text-blue-600 hover:underline">
+    <Link href="/docs/hardware/gpu-vm-passthrough" className="text-blue-600 hover:underline">
       {chunks}
-    </a>
+    </Link>
   )
 
   return (

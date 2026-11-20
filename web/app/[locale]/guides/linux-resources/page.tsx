@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import { Link } from "@/i18n/navigation"
 import { BookOpen, ExternalLink, Shield, Activity, Database, FileCode, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Footer from "@/components/footer"

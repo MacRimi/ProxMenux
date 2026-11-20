@@ -62,7 +62,7 @@ export default async function ImportDiskVMPage({
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
   const em = (chunks: React.ReactNode) => <em>{chunks}</em>
   const winLink = (chunks: React.ReactNode) => (
-    <a href="/docs/create-vm/system-windows" className="text-blue-600 hover:underline">{chunks}</a>
+    <Link href="/docs/create-vm/system-windows" className="text-blue-600 hover:underline">{chunks}</Link>
   )
 
   return (

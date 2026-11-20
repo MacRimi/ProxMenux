@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next"
 import fs from "fs"
 import path from "path"
+import { routing } from "@/i18n/routing"
 
 export const dynamic = "force-static"
 
@@ -17,7 +18,7 @@ function walkDocsRoutes(dir: string, baseRoute: string): string[] {
     if (entry.isDirectory()) {
       routes.push(...walkDocsRoutes(full, `${baseRoute}/${entry.name}`))
     } else if (entry.name === "page.tsx" || entry.name === "page.mdx") {
-      routes.push(baseRoute || "/")
+      routes.push(baseRoute)
     }
   }
 
@@ -25,18 +26,17 @@ function walkDocsRoutes(dir: string, baseRoute: string): string[] {
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const appDir = path.join(process.cwd(), "app")
-  const discovered = walkDocsRoutes(appDir, "")
-    .filter((r) => !r.includes("/api/"))
-    .map((r) => (r === "" ? "/" : r))
-
-  const unique = Array.from(new Set(discovered))
+  // Every page lives under app/[locale] and is exported once per locale.
+  const routes = Array.from(new Set(walkDocsRoutes(path.join(process.cwd(), "app", "[locale]"), "")))
   const now = new Date()
 
-  return unique.map((route) => ({
-    url: `${SITE_URL}${route}`,
-    lastModified: now,
-    changeFrequency: route.startsWith("/docs") ? "weekly" : "monthly",
-    priority: route === "/" ? 1.0 : route.startsWith("/docs") ? 0.8 : 0.6,
-  }))
+  return routing.locales.flatMap((locale) =>
+    routes.map((route) => ({
+      // Trailing slash: the export serves each page as <route>/index.html.
+      url: `${SITE_URL}/${locale}${route}/`,
+      lastModified: now,
+      changeFrequency: route.startsWith("/docs") ? ("weekly" as const) : ("monthly" as const),
+      priority: route === "" ? 1.0 : route.startsWith("/docs") ? 0.8 : 0.6,
+    })),
+  )
 }
