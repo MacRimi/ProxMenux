@@ -97,7 +97,6 @@ export function SecureGatewaySetup() {
   // State
   const [loading, setLoading] = useState(true)
   const [runtimeAvailable, setRuntimeAvailable] = useState(false)
-  const [runtimeInfo, setRuntimeInfo] = useState<{ runtime: string; version: string } | null>(null)
   // Surface initial-data load failures. Wizard rendering depends on
   // wizardSteps being populated; if loadInitialData throws, we previously
   // ended up with `loading=false` and an empty wizard, which read as a
@@ -185,14 +184,15 @@ export function SecureGatewaySetup() {
       // So we don't require PVE 9.1+ - it works on any Proxmox version
       setRuntimeAvailable(true)
       
-      // Still load runtime info for reference
-      const runtimeRes = await fetchApi("/api/oci/runtime")
-      if (runtimeRes.success) {
-        setRuntimeInfo({ runtime: runtimeRes.runtime || "proxmox-lxc", version: runtimeRes.version || "unknown" })
-      }
+      // The definition, the status, the networks and the storages do not
+      // depend on each other: ask for them at once and apply them in order.
+      const [catalogRes, , networksRes, storagesRes] = await Promise.all([
+        fetchApi<any>("/api/oci/catalog/secure-gateway"),
+        loadStatus(),
+        fetchApi<any>("/api/oci/networks"),
+        fetchApi<any>("/api/oci/storages"),
+      ])
 
-      // Load app definition
-      const catalogRes = await fetchApi("/api/oci/catalog/secure-gateway")
       if (catalogRes.success && catalogRes.app) {
         setConfigSchema(catalogRes.app.config_schema || {})
         setWizardSteps(catalogRes.app.ui?.wizard_steps || [])
@@ -207,11 +207,6 @@ export function SecureGatewaySetup() {
         setConfig(defaults)
       }
 
-      // Load status
-      await loadStatus()
-
-      // Load networks
-      const networksRes = await fetchApi("/api/oci/networks")
       if (networksRes.success) {
         setNetworks(networksRes.networks || [])
         // Get host IP for "Host Only" mode
@@ -225,8 +220,6 @@ export function SecureGatewaySetup() {
         }
       }
 
-      // Load available storages
-      const storagesRes = await fetchApi("/api/oci/storages")
       if (storagesRes.success && storagesRes.storages?.length > 0) {
         setStorages(storagesRes.storages)
         // Set default storage (first recommended one)
