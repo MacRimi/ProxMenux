@@ -7,9 +7,13 @@ import json
 import os
 import re
 import shutil
+import sys
 import subprocess
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'remote'))
+import lxc_hardware as _hardware
 
 
 def _pvesh(path: str, *arguments: str) -> list[dict[str, Any]]:
@@ -193,57 +197,21 @@ def address_answers(address: str, bridge: str) -> bool:
         return False
     return " lladdr " in f" {result.stdout} "
 
-# USB classes as the Monitor labels them.
-_USB_CLASSES = {
-    "01": "Audio", "02": "Communications", "03": "HID", "06": "Imaging", "07": "Printer",
-    "0a": "CDC Data", "0b": "Smart Card", "0e": "Video", "10": "Audio/Video",
-    "e0": "Wireless Controller", "ef": "Miscellaneous", "fe": "Application Specific",
-    "ff": "Vendor Specific",
-}
-# UPS makers, whose devices report the HID class.
-_USB_UPS_VENDORS = {"0463", "051d", "0764", "0d9f", "06da", "09ae", "047c", "075d", "10af", "0665"}
-_USB_LEFT_OUT = {"08", "09"}  # storage and hubs are not handed to an LXC as a device node
-_SERIAL_NODE = re.compile(r"tty(?:ACM|USB)[0-9]+")
-_LSUSB_LINE = re.compile(r"Bus\s+(\d+)\s+Device\s+(\d+):\s+ID\s+[0-9a-f]{4}:[0-9a-f]{4}\s*(.*)", re.IGNORECASE)
-
-
-def _sysfs(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="replace").strip()
-    except OSError:
-        return ""
+# Shared read-only hardware inventory; keep the public OCI call signatures.
+_sysfs = _hardware._sysfs
+_USB_CLASSES = _hardware._USB_CLASSES
+_USB_UPS_VENDORS = _hardware._USB_UPS_VENDORS
+_USB_LEFT_OUT = _hardware._USB_LEFT_OUT
+_SERIAL_NODE = _hardware._SERIAL_NODE
+_LSUSB_LINE = _hardware._LSUSB_LINE
 
 
 def gpus(root: Path = Path("/")) -> dict[str, Any]:
-    """The GPUs an installation can use: the render nodes of each Intel and
-    AMD GPU, and whether NVIDIA is usable on the host."""
-    vendors = {"0x8086": "intel", "0x1002": "amd"}
-    found: dict[str, Any] = {"intel": [], "amd": [], "nvidia": False, "amd_gfx_target": None}
-    for node in sorted((root / "sys/class/drm").glob("renderD*")):
-        vendor = vendors.get(_sysfs(node / "device/vendor").lower())
-        if vendor:
-            found[vendor].append(f"/dev/dri/{node.name}")
-    # NVIDIA is usable when its driver answers and the Container Toolkit is installed.
-    if shutil.which("nvidia-smi") and shutil.which("nvidia-container-cli"):
-        try:
-            found["nvidia"] = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True,
-                                             timeout=15, check=False).returncode == 0
-        except (OSError, subprocess.TimeoutExpired):
-            found["nvidia"] = False
-    found["amd_gfx_target"] = amd_gfx_target(root)
-    return found
+    return _hardware.gpus(root)
 
 
 def amd_gfx_target(root: Path = Path("/")) -> int | None:
-    """The generation of the AMD GPU as its compute driver reports it: 90012
-    for gfx90c (Vega integrated graphics), 100300 for gfx1030 (RDNA2). None
-    when the driver exposes no compute device."""
-    best = None
-    for path in sorted((root / "sys/class/kfd/kfd/topology/nodes").glob("*/properties")):
-        match = re.search(r"^gfx_target_version (\d+)$", _sysfs(path), re.MULTILINE)
-        if match and int(match[1]) > 0:
-            best = max(best or 0, int(match[1]))
-    return best
+    return _hardware.amd_gfx_target(root)
 
 
 # The GPU generations the ROCm images of the catalog carry kernels for: RDNA2
@@ -322,46 +290,4 @@ def rocm_blocker(storage: str | None, needed_gb: int = 40) -> str | None:
 
 
 def usb_devices(root: Path = Path("/"), lsusb: str | None = None) -> list[dict[str, str]]:
-    """USB peripherals of this node an LXC can receive, named as the Monitor
-    names them: a serial adapter by its tty node, any other device by its bus
-    node."""
-    if lsusb is None:
-        try:
-            lsusb = subprocess.run(["lsusb"], capture_output=True, text=True, timeout=5,
-                                   check=False).stdout
-        except (OSError, subprocess.TimeoutExpired):
-            lsusb = ""
-    names = {}
-    for line in lsusb.splitlines():
-        match = _LSUSB_LINE.match(line)
-        if match:
-            names[(int(match[1]), int(match[2]))] = match[3].strip()
-    serial: dict[str, list[str]] = {}
-    for tty in sorted((root / "sys/class/tty").glob("tty*")):
-        if not _SERIAL_NODE.fullmatch(tty.name):
-            continue
-        device = (tty / "device").resolve()
-        while device != device.parent and not (device / "idVendor").exists():
-            device = device.parent
-        if (device / "idVendor").exists():
-            serial.setdefault(device.name, []).append(tty.name)
-    rows = []
-    for device in sorted((root / "sys/bus/usb/devices").glob("*")):
-        vendor = _sysfs(device / "idVendor").lower()
-        if ":" in device.name or not vendor or vendor == "1d6b":
-            continue
-        device_class = _sysfs(device / "bDeviceClass").lower() or "00"
-        if device_class == "00":
-            device_class = _sysfs(device / f"{device.name}:1.0" / "bInterfaceClass").lower()
-        if device_class in _USB_LEFT_OUT:
-            continue
-        kind = "UPS" if device_class == "03" and vendor in _USB_UPS_VENDORS else _USB_CLASSES.get(device_class, "USB")
-        try:
-            bus, number = int(_sysfs(device / "busnum")), int(_sysfs(device / "devnum"))
-        except ValueError:
-            continue
-        name = (_sysfs(device / "product") or names.get((bus, number))
-                or f"{vendor}:{_sysfs(device / 'idProduct').lower()}")
-        for node in serial.get(device.name) or [f"bus/usb/{bus:03d}/{number:03d}"]:
-            rows.append({"path": f"/dev/{node}", "name": name, "kind": kind})
-    return rows
+    return _hardware.usb_devices(root, lsusb)

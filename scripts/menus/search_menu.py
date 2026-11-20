@@ -158,14 +158,20 @@ SUBMENUS = {
 
 
 def main_sections():
-    """The sections of the main menu, in its order: (name, script)."""
+    """The main menu's existing Catalog sections, in order: (name, script)."""
     try:
         text = (SCRIPTS / 'menus/main_menu.sh').read_text()
     except OSError:
         return []
     names = re.findall(r'^\s*([0-9a-z])\s+"\$\(translate "([^"]+)"\)"', text, re.M)
-    scripts = dict(re.findall(r'^\s*([0-9a-z])\) (?:exec )?bash "\$LOCAL_SCRIPTS/([^"]+)"', text, re.M))
-    return [(name, scripts[key]) for key, name in names if key in scripts]
+    scripts = dict(re.findall(r'^\s*([0-9a-z])\) (?:rm -f "\$TEMP_FILE";\s*)?(?:exec )?bash "\$LOCAL_SCRIPTS/([^"]+)"', text, re.M))
+    sections = []
+    for key, name in names:
+        if key not in scripts:
+            continue
+        script = scripts[key]
+        sections.append((name, script))
+    return sections
 
 
 def section_externals(script):

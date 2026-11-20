@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import stat
 
-from oci_installation_state import parse_config
+from lxc_hardware import parse_config, device_snapshot
 from oci_ui import translate
 import oci_usb_passthrough as usb_passthrough
 
@@ -38,31 +38,10 @@ def known_path(path):
 
 
 def snapshot(path):
-    if not known_path(path):
-        raise ValueError(translate('Device node outside the supported profiles'))
-    info = Path(path).stat()
-    if block_path(path):
-        if not stat.S_ISBLK(info.st_mode):
-            raise ValueError(translate('The selected device is not a block device'))
-    elif not stat.S_ISCHR(info.st_mode):
-        raise ValueError(translate('The selected device is not a character device'))
-    value = {'path': str(Path(path).resolve()), 'major': os.major(info.st_rdev),
-             'minor': os.minor(info.st_rdev), 'uid': info.st_uid, 'gid': info.st_gid,
-             'mode': stat.S_IMODE(info.st_mode)}
-    if peripheral_path(path):
-        sysfs = Path('/sys/dev/char') / f'{value["major"]}:{value["minor"]}'
-        value['sysfs_path'] = str(sysfs.resolve(strict=True))
-        if '/bus/usb/' in path:
-            for name in ('idVendor', 'idProduct', 'serial'):
-                field = sysfs / name
-                if field.is_file():
-                    value[name] = field.read_text().strip()
-    elif gpu_path(path) and path != '/dev/kfd':
-        sysfs = Path('/sys/class/drm') / Path(path).name / 'device'
-        value.update(vendor=(sysfs / 'vendor').read_text().strip(), pci_path=str(sysfs.resolve()))
-        if value['vendor'] not in ('0x1002', '0x8086'):
-            raise ValueError(translate('The DRM node is not an Intel or AMD GPU; NVIDIA requires its library profile'))
-    return value
+    try:
+        return device_snapshot(path)
+    except ValueError as error:
+        raise ValueError(translate(str(error))) from None
 
 
 def planned(deployment):
