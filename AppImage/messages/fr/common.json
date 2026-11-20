@@ -2855,7 +2855,8 @@
     "authenticationCode": "Code d'authentification",
     "backupCodeHint": "Vous pouvez également utiliser un code de récupération (format : XXXX-XXXX)",
     "backToLogin": "Retour à la connexion",
-    "verifyCode": "Vérifier le code"
+    "verifyCode": "Vérifier le code",
+    "subtitle": "Connectez-vous"
   },
   "account": {
     "signedIn": "Connecté",
@@ -4130,7 +4131,8 @@
       "latency": "Latence réseau"
     },
     "sections": {
-      "physicalInterfaces": "Interfaces physiques"
+      "physicalInterfaces": "Interfaces physiques",
+      "virtualInterfaces": "Interfaces virtuelles"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces au total",
@@ -4345,6 +4347,20 @@
         "generated": "Généré le",
         "reportId": "ID du rapport"
       }
+    },
+    "virtualList": {
+      "all": "Tous",
+      "name": "Nom",
+      "up": "Vers le haut",
+      "down": "Vers le bas",
+      "guests": "VM et LXC",
+      "connectedTo": "Connecté à",
+      "searchPlaceholder": "Rechercher un nom, une adresse IP ou un invité…",
+      "searchAriaLabel": "Rechercher des interfaces virtuelles",
+      "clearSearch": "Effacer la recherche",
+      "kindAriaLabel": "Filtrer par type d'interface",
+      "stateAriaLabel": "Filtrer par état",
+      "noMatches": "Aucune interface ne correspond aux filtres."
     }
   },
   "hardware": {
@@ -4597,6 +4613,21 @@
       "switchModeDescription": "Passage du GPU {slot} au mode {mode}…",
       "switchModeVm": "VM (passthrough VFIO)",
       "switchModeLxc": "LXC (pilote natif)"
+    },
+    "systemInfo": {
+      "socket": "prise {count}",
+      "sockets": "prises {count}",
+      "socketsLabel": "Prises",
+      "coresWord": "noyaux",
+      "threads": "threads {count}",
+      "cache": "Cache",
+      "frequency": "Fréquence",
+      "board": "Conseil",
+      "biosDate": "date du BIOS",
+      "biosVendor": "fournisseur de BIOS",
+      "noBoardData": "Aucune donnée du fabricant",
+      "memoryModules": "modules de mémoire {count}",
+      "schematic": "Schéma de la carte mère"
     }
   },
   "backup": {

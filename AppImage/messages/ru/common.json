@@ -3007,7 +3007,8 @@
     "authenticationCode": "Код аутентификации",
     "backupCodeHint": "Вы также можете использовать резервный код (формат: XXXX-XXXX)",
     "backToLogin": "Вернуться к входу",
-    "verifyCode": "Проверить код"
+    "verifyCode": "Проверить код",
+    "subtitle": "Войти"
   },
   "account": {
     "signedIn": "Вход выполнен",
@@ -4282,7 +4283,8 @@
       "latency": "Сетевая задержка"
     },
     "sections": {
-      "physicalInterfaces": "Физические интерфейсы"
+      "physicalInterfaces": "Физические интерфейсы",
+      "virtualInterfaces": "виртуальные интерфейсы"
     },
     "summary": {
       "totalInterfaces": "Всего интерфейсов: {count}",
@@ -4497,6 +4499,20 @@
         "generated": "Сформировано",
         "reportId": "Идентификатор отчёта"
       }
+    },
+    "virtualList": {
+      "all": "Все",
+      "name": "Имя",
+      "up": "Вверх",
+      "down": "Вниз",
+      "guests": "виртуальные машины и LXC",
+      "connectedTo": "Подключено к",
+      "searchPlaceholder": "поиск по имени, IP-адресу или гостю…",
+      "searchAriaLabel": "поиск виртуальных интерфейсов",
+      "clearSearch": "Очистить поиск",
+      "kindAriaLabel": "фильтровать по типу интерфейса",
+      "stateAriaLabel": "Фильтровать по штату",
+      "noMatches": "Ни один интерфейс не соответствует фильтрам."
     }
   },
   "hardware": {
@@ -4749,6 +4765,21 @@
       "switchModeDescription": "Переключение GPU {slot} в режим {mode}...",
       "switchModeVm": "ВМ (проброс через VFIO)",
       "switchModeLxc": "LXC (нативный драйвер)"
+    },
+    "systemInfo": {
+      "socket": "сокет {count}",
+      "sockets": "сокеты {count}",
+      "socketsLabel": "Сокеты",
+      "coresWord": "ядра",
+      "threads": "темы {count}",
+      "cache": "Кэш",
+      "frequency": "Частота",
+      "board": "Совет",
+      "biosDate": "Дата BIOS",
+      "biosVendor": "Поставщик BIOS",
+      "noBoardData": "Нет данных от производителя",
+      "memoryModules": "{count} memory modules",
+      "schematic": "Схема материнской платы"
     }
   },
   "backup": {

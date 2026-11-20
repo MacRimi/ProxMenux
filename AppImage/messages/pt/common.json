@@ -2855,7 +2855,8 @@
     "authenticationCode": "Código de autenticação",
     "backupCodeHint": "Você também pode usar um código de backup (formato: XXXX-XXXX)",
     "backToLogin": "Voltar ao login",
-    "verifyCode": "Verifique o código"
+    "verifyCode": "Verifique o código",
+    "subtitle": "Entrar"
   },
   "account": {
     "signedIn": "Conectado",
@@ -4130,7 +4131,8 @@
       "latency": "Latência de rede"
     },
     "sections": {
-      "physicalInterfaces": "Interfaces Físicas"
+      "physicalInterfaces": "Interfaces Físicas",
+      "virtualInterfaces": "interfaces virtuais"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces totais",
@@ -4345,6 +4347,20 @@
         "generated": "Gerado",
         "reportId": "ID do relatório"
       }
+    },
+    "virtualList": {
+      "all": "Todos",
+      "name": "Nome",
+      "up": "para cima",
+      "down": "para baixo",
+      "guests": "VMs e LXCs",
+      "connectedTo": "Conectado a",
+      "searchPlaceholder": "Pesquise nome, IP ou convidado…",
+      "searchAriaLabel": "Pesquisar interfaces virtuais",
+      "clearSearch": "Limpar pesquisa",
+      "kindAriaLabel": "Filtrar por tipo de interface",
+      "stateAriaLabel": "Filtrar por estado",
+      "noMatches": "Nenhuma interface corresponde aos filtros."
     }
   },
   "hardware": {
@@ -4597,6 +4613,21 @@
       "switchModeDescription": "Mudando a GPU {slot} para o modo {mode}...",
       "switchModeVm": "VM (passagem VFIO)",
       "switchModeLxc": "LXC (driver nativo)"
+    },
+    "systemInfo": {
+      "socket": "soquete {count}",
+      "sockets": "soquetes {count}",
+      "socketsLabel": "Soquetes",
+      "coresWord": "núcleos",
+      "threads": "tópicos {count}",
+      "cache": "Cache",
+      "frequency": "Frequência",
+      "board": "Quadro",
+      "biosDate": "data do BIOS",
+      "biosVendor": "fornecedor de BIOS",
+      "noBoardData": "Nenhum dado do fabricante",
+      "memoryModules": "módulos de memória {count}",
+      "schematic": "esquema da placa-mãe"
     }
   },
   "backup": {

@@ -2855,7 +2855,8 @@
     "authenticationCode": "Authentifizierungscode",
     "backupCodeHint": "Sie können auch einen Backup-Code verwenden (Format: XXXX-XXXX)",
     "backToLogin": "Zurück zum Login",
-    "verifyCode": "Code überprüfen"
+    "verifyCode": "Code überprüfen",
+    "subtitle": "Anmelden"
   },
   "account": {
     "signedIn": "Angemeldet",
@@ -4130,7 +4131,8 @@
       "latency": "Netzwerklatenz"
     },
     "sections": {
-      "physicalInterfaces": "Physikalische Schnittstellen"
+      "physicalInterfaces": "Physikalische Schnittstellen",
+      "virtualInterfaces": "Virtuelle Schnittstellen"
     },
     "summary": {
       "totalInterfaces": "{count} Schnittstellen insgesamt",
@@ -4345,6 +4347,20 @@
         "generated": "Generiert",
         "reportId": "Berichts-ID"
       }
+    },
+    "virtualList": {
+      "all": "Alle",
+      "name": "Name",
+      "up": "Nach oben",
+      "down": "Runter",
+      "guests": "VMs und LXCs",
+      "connectedTo": "Verbunden mit",
+      "searchPlaceholder": "Suchen Sie nach Name, IP oder Gast…",
+      "searchAriaLabel": "Virtuelle Schnittstellen durchsuchen",
+      "clearSearch": "Suche löschen",
+      "kindAriaLabel": "Nach Schnittstellentyp filtern",
+      "stateAriaLabel": "Filter by state",
+      "noMatches": "No interface matches the filters."
     }
   },
   "hardware": {
@@ -4597,6 +4613,21 @@
       "switchModeDescription": "GPU {slot} wird in den {mode}-Modus umgeschaltet...",
       "switchModeVm": "VM (VFIO-Passthrough)",
       "switchModeLxc": "LXC (nativer Treiber)"
+    },
+    "systemInfo": {
+      "socket": "{count}-Sockel",
+      "sockets": "{count}-Buchsen",
+      "socketsLabel": "Steckdosen",
+      "coresWord": "cores",
+      "threads": "{count} Threads",
+      "cache": "Cache",
+      "frequency": "Häufigkeit",
+      "board": "Board",
+      "biosDate": "BIOS-Datum",
+      "biosVendor": "BIOS-Anbieter",
+      "noBoardData": "Keine Angaben vom Hersteller",
+      "memoryModules": "{count}-Speichermodule",
+      "schematic": "Mainboard-Schaltplan"
     }
   },
   "backup": {

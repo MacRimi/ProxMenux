@@ -2855,7 +2855,8 @@
     "authenticationCode": "Codice autenticazione",
     "backupCodeHint": "Puoi usare anche un codice di backup (formato: XXXX-XXXX)",
     "backToLogin": "Torna all’accesso",
-    "verifyCode": "Verifica codice"
+    "verifyCode": "Verifica codice",
+    "subtitle": "accedi"
   },
   "account": {
     "signedIn": "Accesso effettuato",
@@ -4130,7 +4131,8 @@
       "latency": "Latenza rete"
     },
     "sections": {
-      "physicalInterfaces": "Interfacce fisiche"
+      "physicalInterfaces": "Interfacce fisiche",
+      "virtualInterfaces": "Interfacce virtuali"
     },
     "summary": {
       "totalInterfaces": "{count} interfacce totali",
@@ -4345,6 +4347,20 @@
         "generated": "Generato",
         "reportId": "ID report"
       }
+    },
+    "virtualList": {
+      "all": "tutto",
+      "name": "Nome",
+      "up": "Su",
+      "down": "Giù",
+      "guests": "VM e LXC",
+      "connectedTo": "Connesso a",
+      "searchPlaceholder": "cerca nome, IP o ospite...",
+      "searchAriaLabel": "cerca interfacce virtuali",
+      "clearSearch": "cancella la ricerca",
+      "kindAriaLabel": "filtra per tipo di interfaccia",
+      "stateAriaLabel": "filtra per stato",
+      "noMatches": "nessuna interfaccia corrisponde ai filtri."
     }
   },
   "hardware": {
@@ -4597,6 +4613,21 @@
       "switchModeDescription": "Passaggio GPU {slot} alla modalità {mode}...",
       "switchModeVm": "VM (passthrough VFIO)",
       "switchModeLxc": "LXC (driver nativo)"
+    },
+    "systemInfo": {
+      "socket": "presa {count}",
+      "sockets": "prese {count}",
+      "socketsLabel": "Prese",
+      "coresWord": "nuclei",
+      "threads": "thread {count}",
+      "cache": "cache",
+      "frequency": "Frequenza",
+      "board": "Consiglio",
+      "biosDate": "data del BIOS",
+      "biosVendor": "fornitore del BIOS",
+      "noBoardData": "Nessun dato dal produttore",
+      "memoryModules": "moduli di memoria {count}",
+      "schematic": "schema della scheda madre"
     }
   },
   "backup": {

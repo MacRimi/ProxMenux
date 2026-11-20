@@ -2854,7 +2854,8 @@
     "authenticationCode": "Overovací kód",
     "backupCodeHint": "Môžete použiť aj záložný kód vo formáte XXXX-XXXX",
     "backToLogin": "Späť na prihlásenie",
-    "verifyCode": "Overiť kód"
+    "verifyCode": "Overiť kód",
+    "subtitle": "Prihláste sa"
   },
   "account": {
     "signedIn": "Prihlásený",
@@ -4129,7 +4130,8 @@
       "latency": "Odozva siete"
     },
     "sections": {
-      "physicalInterfaces": "Fyzické rozhrania"
+      "physicalInterfaces": "Fyzické rozhrania",
+      "virtualInterfaces": "Virtuálne rozhrania"
     },
     "summary": {
       "totalInterfaces": "Rozhraní spolu: {count}",
@@ -4344,6 +4346,20 @@
         "generated": "Vytvorené",
         "reportId": "ID správy"
       }
+    },
+    "virtualList": {
+      "all": "Všetky",
+      "name": "Meno",
+      "up": "Hore",
+      "down": "Dole",
+      "guests": "VM a LXC",
+      "connectedTo": "Pripojené k",
+      "searchPlaceholder": "Vyhľadajte meno, IP alebo hosťa…",
+      "searchAriaLabel": "Vyhľadajte virtuálne rozhrania",
+      "clearSearch": "Vymazať vyhľadávanie",
+      "kindAriaLabel": "Filtrujte podľa druhu rozhrania",
+      "stateAriaLabel": "Filtrujte podľa štátu",
+      "noMatches": "Filtrom nevyhovuje žiadne rozhranie."
     }
   },
   "hardware": {
@@ -4596,6 +4612,21 @@
       "switchModeDescription": "Prepínam GPU {slot} do režimu {mode}...",
       "switchModeVm": "VM (priechod VFIO)",
       "switchModeLxc": "LXC (natívny ovládač)"
+    },
+    "systemInfo": {
+      "socket": "{count} zásuvka",
+      "sockets": "{count} zásuvky",
+      "socketsLabel": "Zásuvky",
+      "coresWord": "jadrá",
+      "threads": "{count} vlákna",
+      "cache": "Cache",
+      "frequency": "Frekvencia",
+      "board": "Doska",
+      "biosDate": "BIOS date",
+      "biosVendor": "Predajca systému BIOS",
+      "noBoardData": "Žiadne údaje od výrobcu",
+      "memoryModules": "Pamäťové moduly {count}",
+      "schematic": "Schéma základnej dosky"
     }
   },
   "backup": {
