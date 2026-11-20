@@ -11107,5 +11107,16 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Host your own video platform.": "Betreiben Sie Ihre eigene Videoplattform.",
+  "Upload and share videos on a self-hosted platform that can federate with other PeerTube servers.": "Laden Sie Videos auf einer selbst gehosteten Plattform hoch und teilen Sie sie. Die Plattform kann sich mit anderen PeerTube-Servern verbinden.",
+  "For a LAN install, reserve the container's IPv4 address so PeerTube keeps the same URL.": "Reservieren Sie bei einer LAN-Installation die IPv4-Adresse des Containers, damit die URL von PeerTube gleich bleibt.",
+  "For public access, set the final HTTPS hostname in advanced settings before the first boot and configure your reverse proxy to port 9000.": "Legen Sie für den öffentlichen Zugriff vor dem ersten Start den endgültigen HTTPS-Hostnamen in den erweiterten Einstellungen fest und leiten Sie den Reverse-Proxy an Port 9000 weiter.",
+  "Configure your SMTP server before using email notifications or password resets.": "Richten Sie Ihren SMTP-Server ein, bevor Sie E-Mail-Benachrichtigungen oder das Zurücksetzen von Passwörtern verwenden.",
+  "Custom PeerTube trusted proxies": "Benutzerdefinierte vertrauenswürdige Proxys für PeerTube",
+  "PeerTube HTTPS reverse proxy": "HTTPS-Reverse-Proxy für PeerTube",
+  "Public PeerTube hostname without a scheme or port": "Öffentlicher PeerTube-Hostname ohne Schema oder Port",
+  "Trusted reverse proxy addresses as a JSON array": "Adressen vertrauenswürdiger Reverse-Proxys als JSON-Array",
+  "Read the initial password for the root account from the local PeerTube log and change it after signing in.": "Lesen Sie das erste Passwort für das Konto root im lokalen PeerTube-Protokoll nach und ändern Sie es nach der Anmeldung.",
+  "pct exec {main_vmid} -- grep -m1 'User password:' /data/logs/peertube.log": "pct exec {main_vmid} -- grep -m1 'User password:' /data/logs/peertube.log"
 }

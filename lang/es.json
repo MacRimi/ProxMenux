@@ -11082,5 +11082,16 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
+  "Host your own video platform.": "Aloja tu propia plataforma de vídeo.",
+  "Upload and share videos on a self-hosted platform that can federate with other PeerTube servers.": "Sube y comparte vídeos en una plataforma autohospedada que puede federarse con otros servidores PeerTube.",
+  "For a LAN install, reserve the container's IPv4 address so PeerTube keeps the same URL.": "Si lo instalas en la red local, reserva la dirección IPv4 del contenedor para que PeerTube conserve la misma URL.",
+  "For public access, set the final HTTPS hostname in advanced settings before the first boot and configure your reverse proxy to port 9000.": "Para el acceso público, introduce el nombre de host HTTPS definitivo en la configuración avanzada antes del primer arranque y dirige tu proxy inverso al puerto 9000.",
+  "Configure your SMTP server before using email notifications or password resets.": "Configura el servidor SMTP antes de usar las notificaciones por correo o el restablecimiento de contraseñas.",
+  "Custom PeerTube trusted proxies": "Proxies de confianza personalizados para PeerTube",
+  "PeerTube HTTPS reverse proxy": "Proxy inverso HTTPS para PeerTube",
+  "Public PeerTube hostname without a scheme or port": "Nombre de host público de PeerTube sin protocolo ni puerto",
+  "Trusted reverse proxy addresses as a JSON array": "Direcciones de los proxies inversos de confianza en formato de lista JSON",
+  "Read the initial password for the root account from the local PeerTube log and change it after signing in.": "Consulta la contraseña inicial de la cuenta root en el registro local de PeerTube y cámbiala después de iniciar sesión.",
+  "pct exec {main_vmid} -- grep -m1 'User password:' /data/logs/peertube.log": "pct exec {main_vmid} -- grep -m1 'User password:' /data/logs/peertube.log"
 }
