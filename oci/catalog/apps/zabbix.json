@@ -2,18 +2,16 @@
   "schema_version": "0.5.0",
   "kind": "proxmenux.oci-template",
   "id": "image-zabbix",
-  "status": "generated-review-required",
+  "status": "generated-unvalidated",
   "catalog_ui": {
     "title": {
-      "en_US": "Zabbix",
-      "es_ES": "Zabbix"
+      "en_US": "Zabbix"
     },
     "tagline": {
       "en_US": "Monitor servers, services and network devices."
     },
     "description": {
-      "en_US": "Zabbix 7.0 LTS with the Nginx web interface and PostgreSQL. Monitor servers, network devices and applications from a single dashboard.",
-      "es_ES": "Zabbix 7.0 LTS con interfaz web Nginx y PostgreSQL. Supervisa servidores, dispositivos de red y aplicaciones desde un solo panel."
+      "en_US": "Zabbix 7.0 LTS with the Nginx web interface and PostgreSQL. Monitor servers, network devices and applications from a single dashboard."
     },
     "category": "monitoring",
     "category_label": "Monitoring & Analytics",
@@ -636,6 +634,12 @@
       "image_created": null
     },
     "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
-    "automatic_unattended_updates": false
+    "automatic_unattended_updates": false,
+    "dependency_lifecycle": {
+      "implementation": "proxmox-hookscript",
+      "trigger": "main-lxc-pre-start",
+      "waits_for_dependency_healthchecks": true,
+      "stops_dependencies_with_main": false
+    }
   }
 }

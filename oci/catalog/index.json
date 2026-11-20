@@ -19403,7 +19403,7 @@
       "curated_path": "catalog/curated/zabbix.json",
       "template_id": "image-zabbix",
       "template": "apps/zabbix.json",
-      "template_status": "generated-review-required",
+      "template_status": "generated-unvalidated",
       "hidden": false,
       "requires_privileged_lxc": false,
       "optional_privileged_lxc": false,
