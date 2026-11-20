@@ -2990,7 +2990,7 @@
     }
   },
   "login": {
-    "subtitle": "Inicia sesión para acceder a tu panel de control",
+    "subtitle": "Inicio de sesión",
     "username": "Nombre de usuario",
     "password": "Contraseña",
     "usernamePlaceholder": "Introduce tu nombre de usuario",
@@ -4285,19 +4285,32 @@
     },
     "sections": {
       "physicalInterfaces": "Interfaces físicas",
-      "bridgeInterfaces": "Interfaces de puente",
-      "vmLxcInterfaces": "Interfaces de red VM y LXC"
+      "virtualInterfaces": "Interfaces virtuales"
+    },
+    "virtualList": {
+      "all": "Todas",
+      "name": "Nombre",
+      "up": "Activas",
+      "down": "Inactivas",
+      "guests": "VM y LXC",
+      "connectedTo": "Conectada a",
+      "searchPlaceholder": "Buscar por nombre, IP o VM…",
+      "searchAriaLabel": "Buscar interfaces virtuales",
+      "clearSearch": "Borrar búsqueda",
+      "kindAriaLabel": "Filtrar por tipo de interfaz",
+      "stateAriaLabel": "Filtrar por estado",
+      "noMatches": "Ninguna interfaz coincide con los filtros."
     },
     "summary": {
       "totalInterfaces": "{count} interfaces totales",
-      "activeCount": "{active}/{total} Activo"
+      "activeCount": "{active}/{total} activas"
     },
     "status": {
       "healthy": "OK",
       "warning": "Advertencia",
       "critical": "Crítico",
-      "up": "Arriba",
-      "down": "Abajo"
+      "up": "Activa",
+      "down": "Inactiva"
     },
     "duplex": {
       "full": "Dúplex completo",
@@ -4334,7 +4347,7 @@
       "errorsOut": "Errores de envío",
       "hostname": "Nombre de host",
       "interfaceName": "Nombre de la interfaz",
-      "ipAddress": "dirección IP",
+      "ipAddress": "Dirección IP",
       "latency": "Estado latente",
       "macAddress": "dirección MAC",
       "max": "máx.",

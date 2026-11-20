@@ -2989,7 +2989,6 @@
     }
   },
   "login": {
-    "subtitle": "Войдите, чтобы открыть панель мониторинга",
     "username": "Имя пользователя",
     "password": "Пароль",
     "usernamePlaceholder": "Введите имя пользователя",
@@ -4283,9 +4282,7 @@
       "latency": "Сетевая задержка"
     },
     "sections": {
-      "physicalInterfaces": "Физические интерфейсы",
-      "bridgeInterfaces": "Мостовые интерфейсы",
-      "vmLxcInterfaces": "Сетевые интерфейсы ВМ и LXC"
+      "physicalInterfaces": "Физические интерфейсы"
     },
     "summary": {
       "totalInterfaces": "Всего интерфейсов: {count}",

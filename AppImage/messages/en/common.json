@@ -2964,7 +2964,7 @@
     }
   },
   "login": {
-    "subtitle": "Sign in to access your dashboard",
+    "subtitle": "Sign in",
     "username": "Username",
     "password": "Password",
     "usernamePlaceholder": "Enter your username",
@@ -4259,8 +4259,21 @@
     },
     "sections": {
       "physicalInterfaces": "Physical Interfaces",
-      "bridgeInterfaces": "Bridge Interfaces",
-      "vmLxcInterfaces": "VM & LXC Network Interfaces"
+      "virtualInterfaces": "Virtual interfaces"
+    },
+    "virtualList": {
+      "all": "All",
+      "name": "Name",
+      "up": "Up",
+      "down": "Down",
+      "guests": "VMs & LXCs",
+      "connectedTo": "Connected to",
+      "searchPlaceholder": "Search name, IP or guest…",
+      "searchAriaLabel": "Search virtual interfaces",
+      "clearSearch": "Clear search",
+      "kindAriaLabel": "Filter by interface kind",
+      "stateAriaLabel": "Filter by state",
+      "noMatches": "No interface matches the filters."
     },
     "summary": {
       "totalInterfaces": "{count} total interfaces",

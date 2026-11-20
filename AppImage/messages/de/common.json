@@ -2837,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Melden Sie sich an, um auf Ihr Dashboard zuzugreifen",
     "username": "Benutzername",
     "password": "Passwort",
     "usernamePlaceholder": "Geben Sie Ihren Benutzernamen ein",
@@ -4131,9 +4130,7 @@
       "latency": "Netzwerklatenz"
     },
     "sections": {
-      "physicalInterfaces": "Physikalische Schnittstellen",
-      "bridgeInterfaces": "Bridge-Schnittstellen",
-      "vmLxcInterfaces": "VM- und LXC-Netzwerkschnittstellen"
+      "physicalInterfaces": "Physikalische Schnittstellen"
     },
     "summary": {
       "totalInterfaces": "{count} Schnittstellen insgesamt",

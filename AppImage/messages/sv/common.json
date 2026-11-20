@@ -2837,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Logga in för att komma åt din instrumentpanel",
     "username": "Användarnamn",
     "password": "Lösenord",
     "usernamePlaceholder": "Ange ditt användarnamn",
@@ -4131,9 +4130,7 @@
       "latency": "Nätverkslatens"
     },
     "sections": {
-      "physicalInterfaces": "Fysiska gränssnitt",
-      "bridgeInterfaces": "Bridge-gränssnitt",
-      "vmLxcInterfaces": "VM & LXC nätverksgränssnitt"
+      "physicalInterfaces": "Fysiska gränssnitt"
     },
     "summary": {
       "totalInterfaces": "{count} totalt gränssnitt",

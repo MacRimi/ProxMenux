@@ -2837,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Connectez-vous pour accéder à votre tableau de bord",
     "username": "Nom d'utilisateur",
     "password": "Mot de passe",
     "usernamePlaceholder": "Saisissez votre nom d'utilisateur",
@@ -4131,9 +4130,7 @@
       "latency": "Latence réseau"
     },
     "sections": {
-      "physicalInterfaces": "Interfaces physiques",
-      "bridgeInterfaces": "Interfaces bridge",
-      "vmLxcInterfaces": "Interfaces réseau VM et LXC"
+      "physicalInterfaces": "Interfaces physiques"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces au total",

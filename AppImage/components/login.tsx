@@ -188,10 +188,10 @@ export function Login({ onLogin, pveAuth = false, localAccount = true }: LoginPr
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-lg">
           {pveAuth && localAccount && (
-            <div className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1 mb-4">
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 mb-4">
               {(["local", "pve"] as const).map(option => (
-                <button key={option} type="button" onClick={() => { setMethod(option); setError("") }}
-                  className={`rounded px-3 py-1.5 text-sm font-medium ${method === option ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
+                <button key={option} type="button" aria-pressed={method === option} onClick={() => { setMethod(option); setError("") }}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${method === option ? "bg-blue-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-background/60"}`}>
                   {option === "local" ? t("pveLogin.localAccount") : t("pveLogin.tab")}
                 </button>
               ))}

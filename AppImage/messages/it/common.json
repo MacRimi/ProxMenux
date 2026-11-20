@@ -2837,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Accedi alla dashboard",
     "username": "Nome utente",
     "password": "Password",
     "usernamePlaceholder": "Inserisci nome utente",
@@ -4131,9 +4130,7 @@
       "latency": "Latenza rete"
     },
     "sections": {
-      "physicalInterfaces": "Interfacce fisiche",
-      "bridgeInterfaces": "Interfacce bridge",
-      "vmLxcInterfaces": "Interfacce rete VM e LXC"
+      "physicalInterfaces": "Interfacce fisiche"
     },
     "summary": {
       "totalInterfaces": "{count} interfacce totali",

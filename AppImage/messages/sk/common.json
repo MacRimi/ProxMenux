@@ -2836,7 +2836,6 @@
     }
   },
   "login": {
-    "subtitle": "Prihláste sa do dashboardu",
     "username": "Používateľské meno",
     "password": "Heslo",
     "usernamePlaceholder": "Zadajte používateľské meno",
@@ -4130,9 +4129,7 @@
       "latency": "Odozva siete"
     },
     "sections": {
-      "physicalInterfaces": "Fyzické rozhrania",
-      "bridgeInterfaces": "Sieťové mosty (bridge)",
-      "vmLxcInterfaces": "Sieťové rozhrania VM a LXC"
+      "physicalInterfaces": "Fyzické rozhrania"
     },
     "summary": {
       "totalInterfaces": "Rozhraní spolu: {count}",
