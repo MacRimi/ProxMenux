@@ -650,7 +650,7 @@ def summary(ui, plan):
     rootfs, network = spec["rootfs"], spec["network"]
     yes_no = {True: ui.t(N_("Yes")), False: ui.t(N_("No"))}
     items = [
-        (N_("Node"), spec["node"]), ("VMID", spec["vmid"]), (N_("Hostname"), spec["hostname"]),
+        (N_("Node"), spec["node"]), ("VMID", spec["vmid"]), (N_("Container hostname"), spec["hostname"]),
         (N_("Template"), spec["template"]["volume_id"]),
         (N_("Template architecture"), plan['resources']['template']['architecture']),
         (N_("Access"), ui.t(ACCESS[spec["access"]["mode"]])),
