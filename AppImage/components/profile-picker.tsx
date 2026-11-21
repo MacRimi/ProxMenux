@@ -2,25 +2,43 @@
 
 // The profile of an account: one of the fixed profiles, or a custom choice
 // of areas and actions (see permissions.py). Shared by local users, the
-// subjects of the OpenID Connect provider and Proxmox VE users and groups.
+// subjects of the OpenID Connect provider and Proxmox users and groups.
+import useSWR from "swr"
 import { Checkbox } from "./ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { AREAS } from "../lib/access"
+import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 
 export const PROFILES = ["admin", "operator", "operator_no_terminal", "observer", "custom"] as const
-// Administering is not offered: whoever administers can give themselves any profile.
-export const CUSTOM_ACTIONS = ["execute", "guests", "backup", "update", "terminal"] as const
 
 export interface Custom { areas: string[]; actions: string[] }
 export interface ProfileChoice { profile: string; custom: Custom | null }
 
 export const EMPTY_CUSTOM: Custom = { areas: ["general"], actions: [] }
 
+type Translate = (key: string, params?: Record<string, string | number>) => string
+
+// The name of an area: the pages of a Proxmox Backup Server use the names of
+// their tabs.
+export function areaLabel(t: Translate, area: string): string {
+  if (area === "datastores") return t("pbs.datastores")
+  if (area === "tasks") return t("pbs.tasksTab")
+  return t(`users.areas.${area}`)
+}
+
+// The areas and actions a custom profile offers come from the server, which
+// knows the product: a Proxmox Backup Server has no apps, catalog or guests.
+function useCustomChoices() {
+  const { data } = useSWR<{ areas?: string[]; custom_actions?: string[] }>(
+    "/api/auth/users", (url: string) => fetchApi(url), { revalidateOnFocus: false })
+  return { areas: data?.areas ?? [], actions: data?.custom_actions ?? [] }
+}
+
 export function CustomChoice({ value, onChange, disabled, idPrefix = "custom" }: {
   value: Custom; onChange: (next: Custom) => void; disabled: boolean; idPrefix?: string
 }) {
   const t = useT()
+  const choices = useCustomChoices()
   const toggle = (list: string[], item: string, on: boolean) => on ? [...list, item] : list.filter(x => x !== item)
   const group = (title: string, items: readonly string[], key: "areas" | "actions", label: (item: string) => string) => (
     <fieldset className="space-y-2 min-w-0">
@@ -41,8 +59,8 @@ export function CustomChoice({ value, onChange, disabled, idPrefix = "custom" }:
   )
   return (
     <div className="space-y-4 rounded-md border border-border bg-muted/40 p-3">
-      {group(t("users.customAreas"), AREAS, "areas", item => t(`users.areas.${item}`))}
-      {group(t("users.customActions"), CUSTOM_ACTIONS, "actions", item => t(`users.actions.${item}`))}
+      {group(t("users.customAreas"), choices.areas, "areas", item => areaLabel(t, item))}
+      {group(t("users.customActions"), choices.actions, "actions", item => t(`users.actions.${item}`))}
       <p className="text-xs text-muted-foreground">{t("users.customHint")}</p>
     </div>
   )

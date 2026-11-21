@@ -18,7 +18,20 @@ Anything else is found in _ACTION by the longest matching prefix; a route
 that matches none needs `admin`, and a test keeps every route listed.
 """
 
-AREAS = ("general", "apps", "menux", "guests", "node", "backup", "logs")
+AREAS = ("general", "apps", "menux", "guests", "node", "backup", "logs", "datastores", "tasks")
+# What a custom profile chooses from on a Proxmox Backup Server, which has no
+# apps, catalog or guests: its own pages, and the actions that do something
+# there (SMART tests, host updates, terminals). The other areas are Proxmox VE's.
+PBS_AREAS = ("general", "datastores", "tasks", "logs")
+PBS_ACTIONS = ("execute", "update", "terminal")
+PVE_AREAS = ("general", "apps", "menux", "guests", "node", "backup", "logs")
+
+
+def custom_choices(pbs):
+    """The areas and actions a custom profile offers on this product."""
+    if pbs:
+        return list(PBS_AREAS), list(PBS_ACTIONS)
+    return list(PVE_AREAS), list(CUSTOM_ACTIONS)
 ACTIONS = ("execute", "guests", "backup", "update", "terminal", "admin")
 PERMISSIONS = ("view",) + ACTIONS
 _ALL_AREAS = frozenset("area." + area for area in AREAS)
@@ -132,7 +145,7 @@ _AREA = {
     "/api/node/metrics": ("general", "node"),
     "/api/network/<interface_name>/metrics": ("general", "node"),
     "/api/proxmox-storage": ("general", "node"),
-    "/api/pbs/status": ("general", "backup"),
+    "/api/pbs/status": ("general", "backup", "datastores", "tasks"),
     "/api/vms": ("general", "guests", "apps"),
     # Apps and the Menux catalog.
     "/api/apps/": ("apps", "guests", "menux"),
@@ -146,19 +159,20 @@ _AREA = {
     "/api/vms/<int:vmid>/": ("guests",),
     "/api/lxc/": ("guests",),
     "/api/backup-storages": ("guests", "backup"),
-    # Node: storage, network and hardware.
-    "/api/storage": ("node",),
+    # Node: storage, network and hardware. On a Proxmox Backup Server the
+    # Datastores page shows the disks and pools.
+    "/api/storage": ("node", "datastores"),
     "/api/network": ("node",),
     "/api/hardware": ("node",),
     "/api/gpu/": ("node",),
-    "/api/disk/": ("node",),
-    "/api/mounts": ("node",),
+    "/api/disk/": ("node", "datastores"),
+    "/api/mounts": ("node", "datastores"),
     "/api/managed-installs": ("node",),
     # Backups.
     "/api/host-backups/": ("backup",),
     "/api/vm-backup-jobs": ("backup",),
     "/api/vm-backup-storages": ("backup",),
-    "/api/pbs/servers": ("backup",),
+    "/api/pbs/servers": ("backup", "datastores", "tasks"),
     "/api/backups": ("backup", "logs"),
     # Logs.
     "/api/logs": ("logs",),

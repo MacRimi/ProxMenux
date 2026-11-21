@@ -161,6 +161,8 @@ function MonitorDashboard({ product }: { product: Product }) {
       case "node": case "storage": case "network": case "hardware": return areas.node
       case "backup":   return areas.backup
       case "logs":     return areas.logs
+      case "datastores": return areas.datastores
+      case "pbs-tasks":  return areas.tasks
       case "terminal": return capabilities.terminal
       case "audit":    return capabilities.admin
       default:         return true
