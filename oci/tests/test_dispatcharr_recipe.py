@@ -42,6 +42,7 @@ class DispatcharrRecipeTest(unittest.TestCase):
             uwsgi.write_text(
                 "attach-daemon = redis-server --timeout 300\n"
                 "attach-daemon = daphne -b 0.0.0.0 -p 8001 example\n"
+                "http = 0.0.0.0:5656\n"
             )
             script = generated["content"].replace("/app/docker/entrypoint.sh", str(entrypoint))
             script = script.replace("/app/docker/uwsgi.ini", str(uwsgi))
@@ -54,6 +55,8 @@ class DispatcharrRecipeTest(unittest.TestCase):
                 self.assertIn("listen_addresses=127.0.0.1", entrypoint.read_text())
                 self.assertIn("redis-server --bind 127.0.0.1", uwsgi.read_text())
                 self.assertIn("daphne -b 127.0.0.1", uwsgi.read_text())
+                self.assertIn("http = 127.0.0.1:5656", uwsgi.read_text())
+                self.assertNotIn("0.0.0.0", uwsgi.read_text())
 
             uwsgi.write_text("daphne config changed upstream\n")
             refused = subprocess.run(command, capture_output=True, text=True, timeout=5)

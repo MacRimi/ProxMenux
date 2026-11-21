@@ -8,12 +8,10 @@
       "en_US": "Dispatcharr"
     },
     "tagline": {
-      "en_US": "Manage IPTV streams, channels and programme guides.",
-      "es_ES": "Gestiona emisiones IPTV, canales y guías de programación."
+      "en_US": "Manage IPTV streams, channels and programme guides."
     },
     "description": {
-      "en_US": "Collect IPTV playlists and guide data, organise channels and deliver streams to media clients.",
-      "es_ES": "Reúne listas IPTV y guías de programación, organiza canales y envía emisiones a tus reproductores."
+      "en_US": "Collect IPTV playlists and guide data, organise channels and deliver streams to media clients."
     },
     "category": "media",
     "category_label": "Media & Streaming",
@@ -34,7 +32,10 @@
     "website": "https://dispatcharr.github.io/Dispatcharr-Docs/",
     "documentation": "https://dispatcharr.github.io/Dispatcharr-Docs/installation/",
     "repository": "https://github.com/Dispatcharr/Dispatcharr",
-    "tips": [],
+    "tips": [
+      "Create the administrator account right after installation; until then anyone on the local network can create it.",
+      "Hardware transcoding is not configured; this profile does not pass a GPU to the LXC."
+    ],
     "mini_changelog": [],
     "display_version": null,
     "updated_at": null
@@ -397,8 +398,8 @@
       },
       {
         "id": "dispatcharr-aio-loopback",
-        "upstream_behavior": "Docker publishes the Dispatcharr proxy port while the bundled database, cache and Daphne service use the container network.",
-        "native_lxc_behavior": "Bind the bundled PostgreSQL, Redis, and Daphne services to loopback.",
+        "upstream_behavior": "Docker publishes the Dispatcharr proxy port while the bundled database, cache, Daphne service and uWSGI HTTP listener use the container network.",
+        "native_lxc_behavior": "Bind the bundled PostgreSQL, Redis, Daphne and the uWSGI HTTP listener to loopback.",
         "reason": "Docker port publication does not apply to a native LXC address.",
         "behavioral_impact": "Only the front-end listener is reachable from the LAN.",
         "validation": "pending-per-application"
@@ -434,7 +435,7 @@
           "container_path": "/usr/local/bin/proxmenux-dispatcharr-start",
           "mode": "0755",
           "owner": "mapped-root",
-          "content": "#!/usr/bin/env python3\n\"\"\"Keep AIO dependencies on loopback for the native LXC network.\"\"\"\n\nimport os\nimport sys\nfrom pathlib import Path\n\n\nentrypoint = Path('/app/docker/entrypoint.sh')\nuwsgi = Path('/app/docker/uwsgi.ini')\nreplacements = {\n    entrypoint: [\n        (\"-o '-c port=${POSTGRES_PORT}'\",\n         \"-o '-c port=${POSTGRES_PORT} -c listen_addresses=127.0.0.1'\"),\n    ],\n    uwsgi: [\n        ('attach-daemon = redis-server --timeout ',\n         'attach-daemon = redis-server --bind 127.0.0.1 --timeout '),\n        ('attach-daemon = daphne -b 0.0.0.0 -p 8001 ',\n         'attach-daemon = daphne -b 127.0.0.1 -p 8001 '),\n    ],\n}\n\nfor path, rules in replacements.items():\n    content = path.read_text()\n    safely_configured = content\n    for current, replacement in rules:\n        restricted_count = safely_configured.count(replacement)\n        unrestricted_count = safely_configured.count(current)\n        if restricted_count == 1 and unrestricted_count == 0:\n            continue\n        if restricted_count or unrestricted_count != 1:\n            raise SystemExit(f'Dispatcharr startup no longer matches the loopback profile: {path}')\n        safely_configured = safely_configured.replace(current, replacement)\n    if safely_configured != content:\n        path.write_text(safely_configured)\n\nos.execv(entrypoint, [str(entrypoint), *sys.argv[1:]])\n"
+          "content": "#!/usr/bin/env python3\n\"\"\"Keep AIO dependencies on loopback for the native LXC network.\"\"\"\n\nimport os\nimport sys\nfrom pathlib import Path\n\n\nentrypoint = Path('/app/docker/entrypoint.sh')\nuwsgi = Path('/app/docker/uwsgi.ini')\nreplacements = {\n    entrypoint: [\n        (\"-o '-c port=${POSTGRES_PORT}'\",\n         \"-o '-c port=${POSTGRES_PORT} -c listen_addresses=127.0.0.1'\"),\n    ],\n    uwsgi: [\n        ('attach-daemon = redis-server --timeout ',\n         'attach-daemon = redis-server --bind 127.0.0.1 --timeout '),\n        ('attach-daemon = daphne -b 0.0.0.0 -p 8001 ',\n         'attach-daemon = daphne -b 127.0.0.1 -p 8001 '),\n        ('http = 0.0.0.0:5656', 'http = 127.0.0.1:5656'),\n    ],\n}\n\nfor path, rules in replacements.items():\n    content = path.read_text()\n    safely_configured = content\n    for current, replacement in rules:\n        restricted_count = safely_configured.count(replacement)\n        unrestricted_count = safely_configured.count(current)\n        if restricted_count == 1 and unrestricted_count == 0:\n            continue\n        if restricted_count or unrestricted_count != 1:\n            raise SystemExit(f'Dispatcharr startup no longer matches the loopback profile: {path}')\n        safely_configured = safely_configured.replace(current, replacement)\n    if safely_configured != content:\n        path.write_text(safely_configured)\n\nos.execv(entrypoint, [str(entrypoint), *sys.argv[1:]])\n"
         }
       ],
       "runtime": {
