@@ -299,7 +299,7 @@
             "items": [
               "A Compose file can declare it under <code>tmpfs:</code> or as a volume with <code>type: tmpfs</code>. The first form accepts <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> and <code>noexec</code>. The volume form accepts <code>size</code> and <code>mode</code>, plus <code>read_only</code>. Every tmpfs is mounted with <code>nosuid</code> and <code>nodev</code>.",
               "It can go in <code>/tmp</code>, <code>/run</code> or <code>/dev/shm</code>, or under <code>/tmp/</code>, <code>/run/</code> and <code>/var/cache/</code>.",
-              "A tmpfs that overlaps another tmpfs, a persistent path or the <code>/dev/shm</code> that <code>shm_size</code> creates, or that uses an option not listed above, is not installed: the review shows <code>tmpfs-format-options-or-overlap</code> under <strong>What cannot be translated</strong>.",
+              "A tmpfs that overlaps another tmpfs, a persistent path or the <code>/dev/shm</code> that <code>shm_size</code> creates, or that uses an option not listed above, is not installed: the review shows <strong>a path in memory (tmpfs) uses an option that cannot be applied or overlaps another path</strong> under <strong>What cannot be translated</strong>.",
               "An update or a recreation keeps each tmpfs with its size and owner. <strong>Catalog options</strong>, in Modify, adds the ones a newer version of the application declares."
             ]
           }

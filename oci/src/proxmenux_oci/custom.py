@@ -674,6 +674,29 @@ BLOCKER_TEXTS = {
     'ulimits-format-or-resource': N_('the resource limits it asks for cannot be applied'),
     'mem-limit-format-or-below-proxmox-minimum': N_('the memory limit it asks for cannot be applied'),
     'mem-limit-deploy-consistency-review': N_('it asks for two different memory limits'),
+    'tmpfs-format-options-or-overlap': N_('a path in memory (tmpfs) uses an option that cannot be applied or overlaps another path'),
+    'extra-hosts-format': N_('its extra host names are not written in a way that can be read'),
+    'cpu-shares-format': N_('its CPU shares are not written in a way that can be read'),
+    'user-format': N_('the user it runs as is not written in a way that can be read'),
+    'entrypoint-format': N_('its entrypoint is not written in a way that can be read'),
+    'working-dir-format': N_('its working directory is not written in a way that can be read'),
+    'logging-driver': N_('it uses a logging driver that has no equivalent here'),
+    'mac-address-format': N_('its MAC address is not written in a way that can be read'),
+    'stop-signal-format': N_('its stop signal is not written in a way that can be read'),
+    'cap-add-format': N_('the capabilities it adds are not written in a way that can be read'),
+    'sysctls-format-or-nonnamespaced': N_('it changes kernel settings that a container cannot change'),
+    'security-options-value': N_('it asks for security options that cannot be applied'),
+    'group-add-format': N_('the extra groups it asks for are not written in a way that can be read'),
+    'top-level-networks': N_('it declares its own networks, which have no equivalent here'),
+    'top-level-named-volumes': N_('it declares named volumes that have to be reviewed first'),
+}
+
+# Codes that carry the value they refer to after a colon.
+BLOCKER_VALUE_TEXTS = {
+    'runtime-value': N_('it asks for a runtime that cannot be used:'),
+    'ipc-value': N_('it asks for an IPC mode that cannot be used:'),
+    'network-mode-value': N_('it asks for a network mode that cannot be used:'),
+    'capability-host-global': N_('it asks for a capability that affects the whole host:'),
 }
 
 
@@ -686,6 +709,9 @@ def blocker_text(code: str) -> str:
         return f"{translate('it uses the Compose option')} {code.split(':', 1)[1]}"
     if code.startswith('device-mapping:'):
         return f"{translate('a device it asks for cannot be translated:')} {code.split(':', 1)[1]}"
+    prefix, _, value = code.partition(':')
+    if value and prefix in BLOCKER_VALUE_TEXTS:
+        return f"{translate(BLOCKER_VALUE_TEXTS[prefix])} {value}"
     if code.endswith(':missing-image'):
         return translate('one of its services declares no image')
     if code.endswith(':invalid-definition'):

@@ -299,7 +299,7 @@
             "items": [
               "Súbor Compose ho môže deklarovať v <code>tmpfs:</code> alebo ako zväzok s <code>type: tmpfs</code>. Prvá forma prijíma <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> a <code>noexec</code>. Forma zväzku prijíma <code>size</code> a <code>mode</code>, ako aj <code>read_only</code>. Každý tmpfs sa pripája s <code>nosuid</code> a <code>nodev</code>.",
               "Môže byť v <code>/tmp</code>, <code>/run</code> alebo <code>/dev/shm</code>, alebo pod <code>/tmp/</code>, <code>/run/</code> a <code>/var/cache/</code>.",
-              "tmpfs, ktorý sa prekrýva s iným tmpfs, trvalou cestou alebo s <code>/dev/shm</code> vytvoreným cez <code>shm_size</code>, alebo používa voľbu, ktorá nie je uvedená vyššie, sa nenainštaluje: kontrola zobrazí <code>tmpfs-format-options-or-overlap</code> v časti <strong>Voľby bez ekvivalentu</strong>.",
+              "tmpfs, ktorý sa prekrýva s iným tmpfs, trvalou cestou alebo s <code>/dev/shm</code> vytvoreným cez <code>shm_size</code>, alebo používa voľbu, ktorá nie je uvedená vyššie, sa nenainštaluje: kontrola zobrazí <strong>cesta v pamäti (tmpfs) používa možnosť, ktorú nemožno uplatniť, alebo sa prekrýva s inou cestou</strong> v časti <strong>Voľby bez ekvivalentu</strong>.",
               "Aktualizácia alebo opätovné vytvorenie zachová každý tmpfs s jeho veľkosťou a vlastníkom. <strong>Možnosti katalógu</strong> v režime Upraviť pridajú tie, ktoré deklaruje novšia verzia aplikácie."
             ]
           }

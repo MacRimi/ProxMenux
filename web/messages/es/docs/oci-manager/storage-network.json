@@ -299,7 +299,7 @@
             "items": [
               "Un archivo Compose puede declararlo en <code>tmpfs:</code> o como un volumen con <code>type: tmpfs</code>. La primera forma acepta <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> y <code>noexec</code>. La forma de volumen acepta <code>size</code> y <code>mode</code>, además de <code>read_only</code>. Todo tmpfs se monta con <code>nosuid</code> y <code>nodev</code>.",
               "Puede ubicarse en <code>/tmp</code>, <code>/run</code> o <code>/dev/shm</code>, o bajo <code>/tmp/</code>, <code>/run/</code> y <code>/var/cache/</code>.",
-              "Un tmpfs que se solape con otro tmpfs, con una ruta persistente o con el <code>/dev/shm</code> que crea <code>shm_size</code>, o que use una opción no incluida en la lista anterior, no se instala: la revisión muestra <code>tmpfs-format-options-or-overlap</code> en <strong>Opciones sin equivalente</strong>.",
+              "Un tmpfs que se solape con otro tmpfs, con una ruta persistente o con el <code>/dev/shm</code> que crea <code>shm_size</code>, o que use una opción no incluida en la lista anterior, no se instala: la revisión muestra <strong>una ruta en memoria (tmpfs) usa una opción que no se puede aplicar o se solapa con otra ruta</strong> en <strong>Opciones sin equivalente</strong>.",
               "Una actualización o una recreación conserva cada tmpfs con su tamaño y su propietario. <strong>Opciones del catálogo</strong>, en Modify, añade los que declare una versión más reciente de la aplicación."
             ]
           }

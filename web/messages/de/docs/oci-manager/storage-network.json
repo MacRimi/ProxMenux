@@ -299,7 +299,7 @@
             "items": [
               "Eine Compose-Datei kann es unter <code>tmpfs:</code> oder als Volume mit <code>type: tmpfs</code> deklarieren. Die erste Form akzeptiert <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> und <code>noexec</code>. Die Volume-Form akzeptiert <code>size</code> und <code>mode</code> sowie <code>read_only</code>. Jedes tmpfs wird mit <code>nosuid</code> und <code>nodev</code> eingehängt.",
               "Es kann in <code>/tmp</code>, <code>/run</code> oder <code>/dev/shm</code> liegen oder unter <code>/tmp/</code>, <code>/run/</code> und <code>/var/cache/</code>.",
-              "Ein tmpfs, das ein anderes tmpfs, einen persistenten Pfad oder das von <code>shm_size</code> erzeugte <code>/dev/shm</code> überlappt oder eine oben nicht genannte Option verwendet, wird nicht installiert: Die Prüfung zeigt <code>tmpfs-format-options-or-overlap</code> unter <strong>Nicht umsetzbare Optionen</strong>.",
+              "Ein tmpfs, das ein anderes tmpfs, einen persistenten Pfad oder das von <code>shm_size</code> erzeugte <code>/dev/shm</code> überlappt oder eine oben nicht genannte Option verwendet, wird nicht installiert: Die Prüfung zeigt <strong>ein Pfad im Arbeitsspeicher (tmpfs) verwendet eine nicht anwendbare Option oder überschneidet sich mit einem anderen Pfad</strong> unter <strong>Nicht umsetzbare Optionen</strong>.",
               "Eine Aktualisierung oder Neuerstellung behält jedes tmpfs mit Größe und Eigentümer. <strong>Katalogoptionen</strong> in Ändern ergänzt die, die eine neuere Version der Anwendung deklariert."
             ]
           }

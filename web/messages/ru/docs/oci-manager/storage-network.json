@@ -299,7 +299,7 @@
             "items": [
               "Файл Compose может объявить его в <code>tmpfs:</code> или как том с <code>type: tmpfs</code>. Первая форма принимает <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> и <code>noexec</code>. Форма тома принимает <code>size</code> и <code>mode</code>, а также <code>read_only</code>. Каждый tmpfs монтируется с <code>nosuid</code> и <code>nodev</code>.",
               "Он может находиться в <code>/tmp</code>, <code>/run</code> или <code>/dev/shm</code>, а также в <code>/tmp/</code>, <code>/run/</code> и <code>/var/cache/</code>.",
-              "tmpfs, который пересекается с другим tmpfs, постоянным путём или <code>/dev/shm</code>, создаваемым <code>shm_size</code>, либо использует не перечисленный выше параметр, не устанавливается: в проверке отображается <code>tmpfs-format-options-or-overlap</code> в разделе <strong>Что невозможно преобразовать</strong>.",
+              "tmpfs, который пересекается с другим tmpfs, постоянным путём или <code>/dev/shm</code>, создаваемым <code>shm_size</code>, либо использует не перечисленный выше параметр, не устанавливается: в проверке отображается <strong>путь в памяти (tmpfs) использует неприменимый параметр или пересекается с другим путём</strong> в разделе <strong>Что невозможно преобразовать</strong>.",
               "Обновление или пересоздание сохраняет каждый tmpfs с его размером и владельцем. <strong>Параметры каталога</strong> в режиме «Изменить» добавляют те, которые объявляет более новая версия приложения."
             ]
           }

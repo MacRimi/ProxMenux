@@ -299,7 +299,7 @@
             "items": [
               "En Compose-fil kan deklarera den under <code>tmpfs:</code> eller som en volym med <code>type: tmpfs</code>. Den första formen godtar <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> och <code>noexec</code>. Volymformen godtar <code>size</code> och <code>mode</code>, samt <code>read_only</code>. Varje tmpfs monteras med <code>nosuid</code> och <code>nodev</code>.",
               "Den kan ligga i <code>/tmp</code>, <code>/run</code> eller <code>/dev/shm</code>, eller under <code>/tmp/</code>, <code>/run/</code> och <code>/var/cache/</code>.",
-              "En tmpfs som överlappar en annan tmpfs, en beständig sökväg eller den <code>/dev/shm</code> som <code>shm_size</code> skapar, eller som använder ett alternativ som inte nämns ovan, installeras inte: granskningen visar <code>tmpfs-format-options-or-overlap</code> under <strong>Alternativ utan motsvarighet</strong>.",
+              "En tmpfs som överlappar en annan tmpfs, en beständig sökväg eller den <code>/dev/shm</code> som <code>shm_size</code> skapar, eller som använder ett alternativ som inte nämns ovan, installeras inte: granskningen visar <strong>en sökväg i minnet (tmpfs) använder ett alternativ som inte kan tillämpas eller överlappar en annan sökväg</strong> under <strong>Alternativ utan motsvarighet</strong>.",
               "En uppdatering eller ett återskapande behåller varje tmpfs med sin storlek och ägare. <strong>Katalogalternativ</strong> i Ändra lägger till de som en nyare version av programmet deklarerar."
             ]
           }

@@ -299,7 +299,7 @@
             "items": [
               "Un fichier Compose peut le déclarer sous <code>tmpfs:</code> ou comme volume avec <code>type: tmpfs</code>. La première forme accepte <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> et <code>noexec</code>. La forme volume accepte <code>size</code> et <code>mode</code>, plus <code>read_only</code>. Chaque tmpfs est monté avec <code>nosuid</code> et <code>nodev</code>.",
               "Il peut se placer dans <code>/tmp</code>, <code>/run</code> ou <code>/dev/shm</code>, ou sous <code>/tmp/</code>, <code>/run/</code> et <code>/var/cache/</code>.",
-              "Un tmpfs qui chevauche un autre tmpfs, un chemin persistant ou le <code>/dev/shm</code> que crée <code>shm_size</code>, ou qui utilise une option non listée ci-dessus, n’est pas installé : la révision affiche <code>tmpfs-format-options-or-overlap</code> sous <strong>Options sans équivalent</strong>.",
+              "Un tmpfs qui chevauche un autre tmpfs, un chemin persistant ou le <code>/dev/shm</code> que crée <code>shm_size</code>, ou qui utilise une option non listée ci-dessus, n’est pas installé : la révision affiche <strong>un chemin en mémoire (tmpfs) utilise une option qui ne peut pas être appliquée ou chevauche un autre chemin</strong> sous <strong>Options sans équivalent</strong>.",
               "Une mise à jour ou une recréation conserve chaque tmpfs avec sa taille et son propriétaire. <strong>Options du catalogue</strong>, dans Modifier, ajoute celles qu’une version plus récente de l’application déclare."
             ]
           }

@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Rich messages, categories and per-channel filtering",
     "intro": "Below the channel form every channel exposes the same three controls: a <em>Rich messages</em> toggle at the top (highlighted with the arrow in the screenshot), the collapsible <em>Notification Categories</em> with per-event toggles, and a <em>Send Test</em> button at the bottom.",
-    "imageAlt": "Notification Categories panel with Rich messages master toggle highlighted at top, collapsible sections for VM/CT, Backups, Resources, Storage, Network, Security, Cluster, Services, Health Monitor, Updates each with toggle and event count, and a Send Test button",
+    "imageAlt": "Notification Categories panel with the Rich messages toggle highlighted at the top, collapsible sections for VM / CT, Backups, Resources, Storage, Network, Security, Cluster, Services, Health Monitor, Updates, Hardware and System, each with a toggle and event count, Hardware expanded with its per-event toggles, Quiet hours and Daily digest below, and a Send Test button",
     "imageCaption": "Top arrow — the per-channel <em>Rich messages</em> toggle. Below — the collapsible categories with per-event toggles. <em>Send Test</em> sits at the bottom of the channel.",
     "richTitle": "Rich messages",
     "richIntro": "With <em>Rich messages</em> on, every event header is prefixed with a category emoji and the body is rendered using the channel's native formatting (Telegram HTML, Discord embed with severity colour). With it off, the Monitor sends a plain-text version with the same information minus the visual cues. Same content, different presentation:",

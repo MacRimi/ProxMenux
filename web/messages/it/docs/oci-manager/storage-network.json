@@ -299,7 +299,7 @@
             "items": [
               "Un file Compose può dichiararlo sotto <code>tmpfs:</code> o come volume con <code>type: tmpfs</code>. La prima forma accetta <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> e <code>noexec</code>. La forma volume accetta <code>size</code> e <code>mode</code>, più <code>read_only</code>. Ogni tmpfs viene montato con <code>nosuid</code> e <code>nodev</code>.",
               "Può stare in <code>/tmp</code>, <code>/run</code> o <code>/dev/shm</code>, oppure sotto <code>/tmp/</code>, <code>/run/</code> e <code>/var/cache/</code>.",
-              "Un tmpfs che si sovrappone a un altro tmpfs, a un percorso persistente o al <code>/dev/shm</code> creato da <code>shm_size</code>, o che usa un’opzione non elencata sopra, non viene installato: la revisione mostra <code>tmpfs-format-options-or-overlap</code> sotto <strong>Opzioni senza equivalente</strong>.",
+              "Un tmpfs che si sovrappone a un altro tmpfs, a un percorso persistente o al <code>/dev/shm</code> creato da <code>shm_size</code>, o che usa un’opzione non elencata sopra, non viene installato: la revisione mostra <strong>un percorso in memoria (tmpfs) usa un’opzione non applicabile o si sovrappone a un altro percorso</strong> sotto <strong>Opzioni senza equivalente</strong>.",
               "Un aggiornamento o una ricreazione mantiene ogni tmpfs con la sua dimensione e il suo proprietario. <strong>Opzioni del catalogo</strong>, in Modifica, aggiunge quelle che una versione più recente dell’applicazione dichiara."
             ]
           }
