@@ -200,6 +200,9 @@
     ],
     "jellystat": [
       "/app/backend/backup-data"
+    ],
+    "plik": [
+      "/data"
     ]
   },
   "sizes": {
