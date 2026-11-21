@@ -62,6 +62,9 @@
     "/workspace/TurboDiffusion/outputs"
   ],
   "applications": {
+    "kutt": [
+      "/kutt/custom"
+    ],
     "crafty": [
       "/crafty/import"
     ],

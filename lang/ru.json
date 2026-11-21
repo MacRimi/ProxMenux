@@ -11093,5 +11093,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Create and manage short links with your own domain and click statistics.": "Создавайте короткие ссылки на собственном домене, управляйте ими и просматривайте статистику переходов."
 }

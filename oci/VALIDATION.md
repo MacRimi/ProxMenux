@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-79 of 585 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 23 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+80 of 586 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 24 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -30,6 +30,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | GitLab CE | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `60fc37e470ac` | PVE 9.2 amd64/ZFS; default/advanced managed storage; browser/root login; restart; CPU/RAM/timezone Modify; cached recreation; native failed-candidate recovery; backup/restore/Manage; Remove/PBS audit. Host-bind not offered. CLI trigger and cross-release upgrades not E2E-tested. | — |
 | Glances | [@Vaso73](https://github.com/Vaso73) | 2026-09-27 | — | — | [Report](https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868) |
 | HolyArrs | [@jcastro](https://github.com/jcastro) | 2026-11-11 | `112c3f03d8ce` | PVE 9.2 amd64/ZFS; default/advanced/PUID/PGID, managed/host media; owner login, Chrome setup/Explore/movie details and metadata; restart/Modify; 1.0.18 to 1.0.19/no-op; backup/restore/Manage and readiness rollback. Fresh install validates automatic DNS files. Downloads/playback/ARM not tested. | — |
+| Kutt | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `0ddd5ee76e21` | PVE 9.2.32 amd64/ZFS; default and advanced, Chrome admin and URL redirect, managed SQLite and host custom CSS, restart, CPU/RAM Modify, unchanged-digest cache check, cold restore/Manage and 3.2.5 to 3.2.6 update kept login, link, CSS, resource and network settings. | — |
 | Lastboard | [@jcastro](https://github.com/jcastro) | 2026-11-06 | `33501ce2e281` | PVE 9.2/amd64/ZFS: default/advanced OCI-compose install; browser login; managed/host data, PUID/PGID, restart, Modify, 1.10.1 to 1.10.2 update, failed-health rollback, managed backup/restore to new VMID/Manage, removal. ARM64 manifest only; optional integrations untested. | — |
 | listmonk | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `7fb5a41120ab` | PVE 9.2 amd64/ZFS; default/advanced; generated login, lists/media; managed/host data; restart/Modify; 6.1 to 6.2 and controlled rollback using verified official cached images; full-group backup/restore/Manage; Remove/PBS cleanup. | — |
 | macOS | [@jcastro](https://github.com/jcastro) | 2026-11-08 | `08d1bcaac74a` | PVE 9.2 Intel amd64/ZFS; Sequoia Recovery, KVM/browser, guest HTTPS and APFS file; default/advanced, managed/host storage; restart/CPU-RAM Modify; 3.11 to 3.12, backup/restore/Manage and readiness rollback. Full desktop installation/login, AMD and GPU not tested. | — |
