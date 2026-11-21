@@ -224,11 +224,14 @@
           }
         },
         {
+          "p": "Die Zugangsschnittstelle kann ein VLAN-Tag tragen. Die erweiterte Installation fragt danach neben der Adresse, und Ändern setzt oder entfernt es bei einer einzelnen Anwendung. Ein in Proxmox gesetztes Tag bleibt erhalten. Mit einem Tag prüft ProxMenux die Anwendung von innen, aus ihrem Container, sodass der Host keinen Zugriff auf dieses VLAN benötigt."
+        },
+        {
           "flow": {
             "nodes": [
               {
                 "label": "LAN",
-                "detail": "Erreichbare Adresse\nnur für den Hauptdienst"
+                "detail": "erreichbare Adresse\nHauptdienst und Mitglieder,\ndie Ports veröffentlichen"
               },
               {
                 "label": "Haupt-LXC",
@@ -239,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nfeste Adressen"
               }
             ],
-            "caption": "Abhängigkeiten kommunizieren über das private Netzwerk und haben keine Adresse im LAN."
+            "caption": "Ein Mitglied ohne LAN-Adresse ist nur über das private Netzwerk erreichbar."
           }
         },
         {
@@ -257,6 +260,47 @@
               "Neue Verzeichnisse werden mit der UID und GID angelegt, auf die der unprivilegierte LXC abgebildet wird.",
               "Bei vorhandenen Verzeichnissen wird der Eigentümer nicht rekursiv geändert.",
               "Sockets, Systemdateien und sensible Pfade werden nicht als allgemeine Host-Verzeichnisse angeboten."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tmpfs",
+      "title": "Pfade im Arbeitsspeicher (tmpfs)",
+      "intro": "Manche Anwendungen wollen ein schnelles temporäres Verzeichnis, das einen Neustart nicht überstehen muss, etwa den Cache von Frigate. ProxMenux hängt es als natives tmpfs des LXC ein: Es liegt im Arbeitsspeicher, ist bei jedem Start des LXC leer und gehört zu keinem Backup.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Woher es kommt",
+              "Größe",
+              "Abfrage",
+              "Eigentümer"
+            ],
+            "rows": [
+              [
+                "Eine Anwendung des Katalogs",
+                "Die Größe, die ihr Profil vorschlägt, mit einem Minimum. Frigate schlägt zum Beispiel 1024 MB für <code>/tmp/cache</code> vor und akzeptiert nicht weniger als 256 MB.",
+                "In der erweiterten Installation, sofern das Profil die Größe nicht festlegt",
+                "Der vom Profil festgelegte, wenn die Anwendung einen benötigt"
+              ],
+              [
+                "<code>tmpfs:</code> in einer Compose-Datei",
+                "Der Wert von <code>size</code>. Ohne Angabe die Hälfte des Arbeitsspeichers des LXC, mindestens 1 MiB.",
+                "Nein",
+                "<code>uid</code> und <code>gid</code> aus den Optionen, sonst root des Containers. Modus <code>1777</code>, sofern nicht <code>mode</code> einen anderen festlegt"
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Eine Compose-Datei kann es unter <code>tmpfs:</code> oder als Volume mit <code>type: tmpfs</code> deklarieren. Die erste Form akzeptiert <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> und <code>noexec</code>. Die Volume-Form akzeptiert <code>size</code> und <code>mode</code> sowie <code>read_only</code>. Jedes tmpfs wird mit <code>nosuid</code> und <code>nodev</code> eingehängt.",
+              "Es kann in <code>/tmp</code>, <code>/run</code> oder <code>/dev/shm</code> liegen oder unter <code>/tmp/</code>, <code>/run/</code> und <code>/var/cache/</code>.",
+              "Ein tmpfs, das ein anderes tmpfs, einen persistenten Pfad oder das von <code>shm_size</code> erzeugte <code>/dev/shm</code> überlappt oder eine oben nicht genannte Option verwendet, wird nicht installiert: Die Prüfung zeigt <code>tmpfs-format-options-or-overlap</code> unter <strong>Nicht umsetzbare Optionen</strong>.",
+              "Eine Aktualisierung oder Neuerstellung behält jedes tmpfs mit Größe und Eigentümer. <strong>Katalogoptionen</strong> in Ändern ergänzt die, die eine neuere Version der Anwendung deklariert."
             ]
           }
         }

@@ -231,7 +231,7 @@
             "nodes": [
               {
                 "label": "LAN",
-                "detail": "Dostupná adresa\niba pre hlavnú službu"
+                "detail": "dostupná adresa\nhlavná služba a členovia,\nktorí zverejňujú porty"
               },
               {
                 "label": "Hlavný LXC",
@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\npevné adresy"
               }
             ],
-            "caption": "Závislé služby komunikujú cez súkromnú sieť a nemajú adresu v LAN."
+            "caption": "Člen bez adresy LAN je dostupný len cez súkromnú sieť."
           }
         },
         {
@@ -260,6 +260,47 @@
               "Nové adresáre sa vytvárajú s UID a GID, na ktoré sa mapuje neprivilegovaný LXC.",
               "Vlastníctvo existujúcich adresárov sa nemení rekurzívne.",
               "Sockety, systémové súbory a citlivé cesty sa neponúkajú ako bežné adresáre hostiteľa."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tmpfs",
+      "title": "Cesty v pamäti (tmpfs)",
+      "intro": "Niektoré aplikácie potrebujú rýchly dočasný adresár, ktorý nemusí prežiť reštart, napríklad vyrovnávaciu pamäť Frigate. ProxMenux ho pripojí ako natívny tmpfs kontajnera LXC: je v pamäti, pri každom spustení LXC je prázdny a nie je súčasťou žiadnej zálohy.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Odkiaľ pochádza",
+              "Veľkosť",
+              "Pýta sa",
+              "Vlastník"
+            ],
+            "rows": [
+              [
+                "Aplikácia z katalógu",
+                "Veľkosť, ktorú navrhuje jej profil, s minimom. Frigate napríklad navrhuje 1024 MB pre <code>/tmp/cache</code> a neprijme menej ako 256 MB.",
+                "V rozšírenej inštalácii, ak profil veľkosť nepredpisuje pevne",
+                "Ten, ktorý určí profil, ak ho aplikácia potrebuje"
+              ],
+              [
+                "<code>tmpfs:</code> v súbore Compose",
+                "Jeho <code>size</code>. Bez neho polovica pamäte LXC, najmenej 1 MiB.",
+                "Nie",
+                "<code>uid</code> a <code>gid</code> z jeho volieb, alebo root kontajnera, ak nie sú zadané. Režim <code>1777</code>, ak <code>mode</code> nenastaví iný"
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Súbor Compose ho môže deklarovať v <code>tmpfs:</code> alebo ako zväzok s <code>type: tmpfs</code>. Prvá forma prijíma <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> a <code>noexec</code>. Forma zväzku prijíma <code>size</code> a <code>mode</code>, ako aj <code>read_only</code>. Každý tmpfs sa pripája s <code>nosuid</code> a <code>nodev</code>.",
+              "Môže byť v <code>/tmp</code>, <code>/run</code> alebo <code>/dev/shm</code>, alebo pod <code>/tmp/</code>, <code>/run/</code> a <code>/var/cache/</code>.",
+              "tmpfs, ktorý sa prekrýva s iným tmpfs, trvalou cestou alebo s <code>/dev/shm</code> vytvoreným cez <code>shm_size</code>, alebo používa voľbu, ktorá nie je uvedená vyššie, sa nenainštaluje: kontrola zobrazí <code>tmpfs-format-options-or-overlap</code> v časti <strong>Voľby bez ekvivalentu</strong>.",
+              "Aktualizácia alebo opätovné vytvorenie zachová každý tmpfs s jeho veľkosťou a vlastníkom. <strong>Možnosti katalógu</strong> v režime Upraviť pridajú tie, ktoré deklaruje novšia verzia aplikácie."
             ]
           }
         }

@@ -190,8 +190,12 @@
                 "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
               },
               {
-                "title": "Un dispositivo USB concreto",
-                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+                "title": "Un dispositivo USB",
+                "code": "lxc.cgroup2.devices.allow: c 189:* rwm\nlxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir"
+              },
+              {
+                "title": "Un adaptador serie USB",
+                "code": "lxc.cgroup2.devices.allow: c 166:* rwm\nlxc.mount.entry: /dev/serial/by-id/usb-VENDOR_PRODUCT_SERIAL-if00 dev/ttyACM0 none bind,optional,create=file"
               },
               {
                 "title": "OpenCL AMD",
@@ -332,13 +336,16 @@
       "title": "USB, serie y Coral USB",
       "blocks": [
         {
-          "calloutWarning": {
-            "title": "La numeración USB puede cambiar",
-            "body": "Una ruta como <code>/dev/bus/usb/003/004</code> puede cambiar al reconectar el dispositivo o reiniciar el host. El perfil registra fabricante, producto y número de serie cuando están disponibles, pero una nueva dirección de bus no se reasigna automáticamente."
+          "calloutInfo": {
+            "title": "Un dispositivo USB se registra por lo que es",
+            "body": "El kernel numera un dispositivo USB cada vez que lo encuentra, así que tras un reinicio o una reconexión <code>/dev/bus/usb/003/004</code> o <code>/dev/ttyUSB0</code> pueden nombrar otro dispositivo, o ninguno. ProxMenux registra el dispositivo por su fabricante, producto, número de serie y puerto físico. Un dispositivo USB recibe el árbol USB del host y una regla udev que permite al contenedor escribir solo en ese dispositivo. Un adaptador serie USB recibe su enlace estable de <code>/dev/serial</code> montado en la ruta que espera la aplicación. Cuando el dispositivo vuelve mientras el contenedor se está ejecutando, el contenedor se reinicia para que la aplicación lo abra de nuevo."
           }
         },
         {
-          "p": "Un periférico se indica por su nodo concreto: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> o <code>/dev/bus/usb/BBB/DDD</code>. No se admite entregar todo <code>/dev</code>. Coral solo se ofrece a las aplicaciones cuyo perfil lo declara."
+          "p": "Un periférico se elige entre los dispositivos USB del host o por su nodo actual: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> o <code>/dev/bus/usb/BBB/DDD</code>. El nodo solo sirve para encontrar el dispositivo; lo que se guarda es su identidad. No se acepta pasar todo <code>/dev</code>. Coral solo se ofrece a las aplicaciones cuyo perfil lo declara."
+        },
+        {
+          "p": "Zigbee2MQTT es un ejemplo. Su perfil ofrece el adaptador Zigbee como dispositivo opcional, desactivado por defecto, así que una instalación predeterminada no lo pasa. En la instalación avanzada, <strong>Pasar un dispositivo del host al LXC</strong> lista los dispositivos USB del host, con <strong>Otro nodo, escrito a mano</strong> al final, y propone <code>/dev/ttyACM0</code>. El adaptador conserva la misma ruta dentro del contenedor y debe estar conectado durante la instalación."
         }
       ]
     },

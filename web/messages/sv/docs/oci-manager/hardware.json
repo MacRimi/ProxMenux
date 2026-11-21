@@ -190,8 +190,12 @@
                 "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
               },
               {
-                "title": "En specifik USB-enhet",
-                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+                "title": "En USB-enhet",
+                "code": "lxc.cgroup2.devices.allow: c 189:* rwm\nlxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir"
+              },
+              {
+                "title": "En USB-seriell adapter",
+                "code": "lxc.cgroup2.devices.allow: c 166:* rwm\nlxc.mount.entry: /dev/serial/by-id/usb-VENDOR_PRODUCT_SERIAL-if00 dev/ttyACM0 none bind,optional,create=file"
               },
               {
                 "title": "AMD OpenCL",
@@ -332,13 +336,16 @@
       "title": "USB, seriell och USB Coral",
       "blocks": [
         {
-          "calloutWarning": {
-            "title": "USB-nummer kan ändra",
-            "body": "En väg som <code>/dev/bus/usb/003/004</code> kan ändras när enheten är återansluten eller värden startar om. Profilen registrerar tillverkaren, produkten och serienumret när de är tillgängliga, men en ny bussadress mappas om inte automatiskt."
+          "calloutInfo": {
+            "title": "En USB-enhet registreras utifrån vad den är",
+            "body": "Kärnan numrerar en USB-enhet varje gång den hittar den, så efter en omstart eller en ny anslutning kan <code>/dev/bus/usb/003/004</code> eller <code>/dev/ttyUSB0</code> peka på en annan enhet, eller på ingen. ProxMenux registrerar enheten utifrån tillverkare, produkt, serienummer och fysisk port. En USB-enhet får värdens USB-träd och en udev-regel som låter containern skriva enbart till den enheten. En USB-seriell adapter får sin stabila länk under <code>/dev/serial</code> monterad på den sökväg som programmet förväntar sig. När enheten kommer tillbaka medan containern körs startas containern om så att programmet öppnar den igen."
           }
         },
         {
-          "p": "En kringutrustning anges med sin specifika nod: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> eller <code>/dev/bus/usb/BBB/DDD</code>. Att passera hela <code>/dev</code> accepteras inte. Coral erbjuds endast program vars profil anger det."
+          "p": "En kringutrustning väljs bland värdens USB-enheter eller via sin aktuella nod: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> eller <code>/dev/bus/usb/BBB/DDD</code>. Noden används bara för att hitta enheten; det som sparas är dess identitet. Att skicka in hela <code>/dev</code> godtas inte. Coral erbjuds bara program vars profil deklarerar det."
+        },
+        {
+          "p": "Zigbee2MQTT är ett exempel. Dess profil erbjuder Zigbee-adaptern som en valfri enhet, avstängd som standard, så en standardinstallation skickar inte in den. I den avancerade installationen listar <strong>Passera en värdenhet till LXC</strong> värdens USB-enheter, med <strong>En annan nod, maskinskriven för hand</strong> sist, och föreslår <code>/dev/ttyACM0</code>. Adaptern behåller samma sökväg i containern och måste vara ansluten under installationen."
         }
       ]
     },
