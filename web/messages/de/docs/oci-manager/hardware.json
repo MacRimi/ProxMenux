@@ -190,8 +190,12 @@
                 "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
               },
               {
-                "title": "Ein spezifisches USB-Gerät",
-                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+                "title": "Ein USB-Gerät",
+                "code": "lxc.cgroup2.devices.allow: c 189:* rwm\nlxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir"
+              },
+              {
+                "title": "Ein USB-Seriell-Adapter",
+                "code": "lxc.cgroup2.devices.allow: c 166:* rwm\nlxc.mount.entry: /dev/serial/by-id/usb-VENDOR_PRODUCT_SERIAL-if00 dev/ttyACM0 none bind,optional,create=file"
               },
               {
                 "title": "AMD OpenCL",
@@ -332,13 +336,16 @@
       "title": "USB, serielle und USB Coral",
       "blocks": [
         {
-          "calloutWarning": {
-            "title": "USB-Nummerierung kann sich ändern",
-            "body": "Ein Pfad wie <code>/dev/bus/usb/003/004</code> kann sich ändern, wenn das Gerät wieder angeschlossen wird oder der Host neu gestartet wird. Das Profil zeichnet Anbieter, Produkt und Seriennummer auf, wenn sie verfügbar sind, aber eine neue Busadresse wird nicht automatisch neu zugeordnet."
+          "calloutInfo": {
+            "title": "Ein USB-Gerät wird anhand dessen erfasst, was es ist",
+            "body": "Der Kernel nummeriert ein USB-Gerät bei jeder Erkennung neu. Nach einem Neustart oder einem erneuten Anschließen kann <code>/dev/bus/usb/003/004</code> oder <code>/dev/ttyUSB0</code> daher ein anderes Gerät bezeichnen oder keines. ProxMenux erfasst das Gerät über Hersteller, Produkt, Seriennummer und physischen Port. Ein USB-Gerät erhält den USB-Baum des Hosts und eine udev-Regel, die dem Container nur auf dieses Gerät Schreibzugriff gibt. Ein USB-Seriell-Adapter erhält seinen stabilen Link unter <code>/dev/serial</code>, eingehängt an dem Pfad, den die Anwendung erwartet. Kommt das Gerät zurück, während der Container läuft, wird der Container neu gestartet, damit die Anwendung es erneut öffnet."
           }
         },
         {
-          "p": "Ein Peripheriegerät wird durch seinen konkreten Knoten angegeben: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> oder <code>/dev/bus/usb/BBB/DDD</code>. Die Weitergabe des gesamten <code>/dev</code> wird nicht akzeptiert. Coral wird nur Anwendungen angeboten, deren Profil es deklariert."
+          "p": "Ein Peripheriegerät wird aus den USB-Geräten des Hosts oder über seinen aktuellen Node gewählt: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> oder <code>/dev/bus/usb/BBB/DDD</code>. Der Node dient nur dazu, das Gerät zu finden; gespeichert wird seine Identität. Das Durchreichen von ganz <code>/dev</code> wird nicht akzeptiert. Coral wird nur Anwendungen angeboten, deren Profil es deklariert."
+        },
+        {
+          "p": "Zigbee2MQTT ist ein Beispiel. Sein Profil bietet den Zigbee-Adapter als optionales Gerät an, standardmäßig aus, sodass eine Standardinstallation ihn nicht durchreicht. In der erweiterten Installation listet <strong>Übergeben Sie ein Host-Gerät an den LXC</strong> die USB-Geräte des Hosts auf, mit <strong>Ein weiterer Knoten, von Hand eingegeben</strong> am Ende, und schlägt <code>/dev/ttyACM0</code> vor. Der Adapter behält im Container denselben Pfad und muss während der Installation angeschlossen sein."
         }
       ]
     },

@@ -60,7 +60,7 @@
               ],
               [
                 "Rete",
-                "Ponte privato, subnet, indirizzo fisso per servizio e accesso LAN per il membro principale",
+                "Bridge privato, subnet, un indirizzo fisso per servizio e accesso alla LAN per i membri che ne hanno bisogno",
                 "Nessuna collisione con ponti o sottorete esistenti e nessun indirizzo ripetuto"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Rete privata",
-                "body": "Viene creato un ponte e una subnet e ogni membro riceve il suo indirizzo fisso; solo il membro principale riceve anche l'interfaccia LAN."
+                "body": "Vengono creati un bridge e una subnet e ogni membro riceve il suo indirizzo fisso. Il membro principale riceve anche l’interfaccia LAN, come ogni altro membro che pubblica una porta o che la ricetta dell’applicazione richiede."
               },
               {
                 "title": "Persistenza",

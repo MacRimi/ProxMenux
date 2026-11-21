@@ -60,7 +60,7 @@
               ],
               [
                 "Sieť",
-                "Súkromný most, podsieť, pevná adresa pre každú službu a prístup LAN pre hlavný kontajner",
+                "Súkromný most, podsieť, pevná adresa pre každú službu a prístup LAN pre členov, ktorí ho potrebujú",
                 "Žiadna zrážka s existujúcimi mostmi alebo podsietami a žiadna opakovaná adresa"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Súkromná sieť",
-                "body": "Vytvorí sa sieťový most a podsieť. Každý kontajner dostane pevnú adresu; iba hlavný kontajner navyše dostane rozhranie LAN."
+                "body": "Vytvorí sa most a podsieť a každý člen dostane svoju pevnú adresu. Hlavný člen dostane aj rozhranie LAN, rovnako ako každý ďalší člen, ktorý zverejňuje port alebo ktorého o to žiada recept aplikácie."
               },
               {
                 "title": "Perzistencia",

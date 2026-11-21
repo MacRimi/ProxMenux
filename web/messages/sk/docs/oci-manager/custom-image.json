@@ -215,6 +215,111 @@
       ]
     },
     {
+      "id": "compose-stacks",
+      "title": "Súbory Compose s viacerými službami",
+      "intro": "Súbor Compose s viacerými službami sa nainštaluje ako stack: jeden natívny LXC pre každú službu, spojené súkromným mostom a spúšťané v poradí svojich závislostí. <stacksLink>Aplikácie s viacerými kontajnermi</stacksLink> opisuje, ako sa stack vytvára, overuje a aktualizuje. Táto časť sa venuje tomu, čo určuje súbor Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Služba",
+              "Ako sa rozpozná",
+              "Kedy je pripravená"
+            ],
+            "rows": [
+              [
+                "Hlavná",
+                "Tá, ktorá je uvedená v <code>x-casaos.main</code>. Bez nej prvá služba, ktorá zverejňuje port, inak prvá v súbore.",
+                "Jej zverejnený webový port odpovedá cez HTTP alebo prejde jej vlastný <code>healthcheck</code>. Potrebuje zverejnený port TCP."
+              ],
+              [
+                "Databáza alebo vyrovnávacia pamäť",
+                "Jej obraz je PostgreSQL, MariaDB, MongoDB, Redis, Valkey alebo Meilisearch.",
+                "Kontrola, ktorú ProxMenux pre daný server má, napríklad <code>pg_isready</code>, ak služba nedeklaruje vlastný <code>healthcheck</code>."
+              ],
+              [
+                "Pracovná služba",
+                "Každá ďalšia služba, ktorá zostáva spustená.",
+                "Jej vlastný <code>healthcheck</code>. Bez neho HTTP na porte, ktorý zverejňuje, TCP na porte, ktorý len uvádza v <code>expose</code>, inak len overenie, že LXC beží."
+              ],
+              [
+                "Jednorazová úloha",
+                "Služba, na ktorú iná čaká cez <code>condition: service_completed_successfully</code>.",
+                "Skončí s kódom 0 do 300 sekúnd."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "<code>healthcheck</code> sa spúšťa vnútri LXC svojej služby ako <code>CMD</code> alebo <code>CMD-SHELL</code>. Kontrola <code>CMD-SHELL</code> nemôže používať premenné ako <code>$PORT</code>, pretože sa nespúšťa v prostredí aplikácie: namiesto premennej treba zapísať hodnotu.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> a <code>retries</code> určujú, ako dlho sa na kontrolu čaká, najviac 3600 sekúnd spolu.",
+              "Služba, na ktorú iná čaká cez <code>condition: service_healthy</code>, potrebuje vlastný <code>healthcheck</code>, ak nejde o databázu alebo vyrovnávaciu pamäť z tabuľky."
+            ]
+          }
+        },
+        {
+          "p": "Jednorazová úloha pripraví niečo, čo ostatné služby potrebujú, napríklad migráciu databázy, a skončí."
+        },
+        {
+          "list": {
+            "items": [
+              "Jej <code>restart</code> musí byť <code>no</code> alebo chýbať. Hlavná služba a služba, na ktorú iné čakajú cez <code>service_healthy</code>, nemôžu byť úlohami.",
+              "Spustí sa pred službami, ktoré na ňu čakajú. Úspešný beh sa zaznamená a ďalšie štarty ju spustia znova, len keď sa zmení jej obraz alebo konfigurácia (prostredie, pripojenia, zariadenia). Zmena CPU, pamäte alebo veľkosti disku ju znova nespustí.",
+              "Proxmox ju pri štarte nespúšťa a watchdog ju nesleduje."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Zväzok alebo cesta hostiteľa, ktoré pripája viac služieb, sa stane jedným adresárom hostiteľa pripojeným v každej z nich a inštalácia sa pýta, kam sa umiestni. Každá služba, ktorá ho pripája, musí mať rovnaké <code>PUID</code> a <code>PGID</code> (1000, ak nie sú nastavené).",
+              "Každá služba, ktorá zverejňuje port TCP, dostane okrem súkromnej aj adresu v LAN a inštalácia sa pýta na adresu pre každú z nich."
+            ]
+          }
+        },
+        {
+          "p": "Aplikácie často čítajú svoju verejnú adresu z premennej ako <code>APP_PUBLIC_URL</code> a vnútri stacku je <code>localhost</code> LXC samotnej služby. Premenná, v ktorej názve je slovo <code>PUBLIC</code> alebo <code>EXTERNAL</code>, končiaca na <code>_URL</code>, <code>_URI</code> alebo <code>_ORIGIN</code>, ktorej hodnota ukazuje na <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> alebo <code>::1</code>, sa prepíše na adresu LAN služby, ktorá tento port zverejňuje, s portom jej kontajnera. Táto služba potrebuje statickú adresu."
+        },
+        {
+          "code": {
+            "title": "Prepísaná verejná URL",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL v LXC worker (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "Ak sa URL nedá prepísať, stack sa nenainštaluje a dôvod uvedie jedna z týchto správ:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Správa",
+              "Príčina"
+            ],
+            "rows": [
+              [
+                "<strong>Lokálna verejná URL je nejednoznačná; zadajte explicitnú URL</strong>",
+                "Tento port zverejňuje viac ako jedna služba."
+              ],
+              [
+                "<strong>Lokálnej verejnej URL nezodpovedá žiadny zverejnený port; zadajte explicitnú URL</strong>",
+                "Tento port nezverejňuje žiadna služba."
+              ],
+              [
+                "<strong>Automatické verejné URL vyžadujú statické adresy frontendov alebo explicitné URL</strong>",
+                "Služba, na ktorú URL ukazuje, má adresu DHCP."
+              ],
+              [
+                "<strong>Neplatné URL služby</strong>",
+                "URL má nesprávny tvar alebo jej port nie je platný."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "private-registries",
       "title": "Obrazy v súkromných registroch",
       "intro": "Obraz zo súkromného registra, napríklad súkromný balík GitHub alebo repozitár Docker Hub, sa načíta pomocou účtu uloženého v ProxMenux.",
@@ -265,7 +370,8 @@
           "list": {
             "items": [
               "Dockerfile bez publikovaného obrazu: obraz sa musí najprv zostaviť a zverejniť v registri OCI.",
-              "Súbory Compose s viacerými službami používajú samostatný natívny LXC pre každú službu. Každá webová aplikácia potrebuje vlastnú zverejnenú adresu služby; zväzky s rovnakým zdrojom môžu zdieľať jeden adresár hostiteľa. Nepodporované voľby, externé siete a služby bez podporovanej kontroly stavu naďalej blokujú inštaláciu.",
+              "Súbor Compose s viacerými službami sa nainštaluje tak, ako opisuje časť <sectionLink>Súbory Compose s viacerými službami</sectionLink>, okrem prípadu, keď deklaruje viac ako jednu sieť, externú sieť, voľby pri zväzkoch najvyššej úrovne, voliteľné závislosti (<code>required: false</code>) alebo služby závislé od hlavnej.",
+              "V stacku sa služba, ktorá používa <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> alebo <code>extra_hosts</code>, označí ako vyžaduje kontrolu zostavy a stack sa nenainštaluje.",
               "<code>configs</code>, externé tajné údaje alebo formáty zariadení, ktoré nemožno jednoznačne prispôsobiť.",
               "Nahradenia shellu, napríklad <code>$(command)</code>: namiesto nich treba zapísať výslednú hodnotu.",
               "Nerozpoznané voľby <code>docker run</code> a <code>--env-file</code>: namiesto nich použite súbor Compose s výslovne uvedenými hodnotami."

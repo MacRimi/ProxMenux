@@ -215,6 +215,111 @@
       ]
     },
     {
+      "id": "compose-stacks",
+      "title": "Archivos Compose con varios servicios",
+      "intro": "Un archivo Compose con varios servicios se instala como una pila: un LXC nativo por servicio, unidos por un puente privado y arrancados en el orden de sus dependencias. <stacksLink>Aplicaciones con varios contenedores</stacksLink> describe cómo se crea, se comprueba y se actualiza una pila. Esta sección trata de lo que decide el archivo Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Servicio",
+              "Cómo se reconoce",
+              "Cuándo está listo"
+            ],
+            "rows": [
+              [
+                "Principal",
+                "El indicado en <code>x-casaos.main</code>. Sin él, el primer servicio que publique un puerto o, si no, el primero del archivo.",
+                "Su puerto web publicado responde por HTTP o supera su propio <code>healthcheck</code>. Necesita un puerto TCP publicado."
+              ],
+              [
+                "Base de datos o caché",
+                "Su imagen es PostgreSQL, MariaDB, MongoDB, Redis, Valkey o Meilisearch.",
+                "La comprobación que ProxMenux tiene para ese servidor, como <code>pg_isready</code>, salvo que el servicio declare su propio <code>healthcheck</code>."
+              ],
+              [
+                "Worker",
+                "Cualquier otro servicio que sigue en ejecución.",
+                "Su propio <code>healthcheck</code>. Sin él, HTTP en el puerto que publica, TCP en un puerto que solo figura en <code>expose</code> o, si no, solo que el LXC esté en ejecución."
+              ],
+              [
+                "Tarea de una sola ejecución",
+                "Un servicio que otro espera con <code>condition: service_completed_successfully</code>.",
+                "Termina con código 0 en 300 segundos."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un <code>healthcheck</code> se ejecuta dentro del LXC de su servicio, como <code>CMD</code> o <code>CMD-SHELL</code>. Una comprobación <code>CMD-SHELL</code> no puede usar variables como <code>$PORT</code>, porque no se ejecuta con el entorno de la aplicación: hay que escribir el valor.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> y <code>retries</code> fijan cuánto se espera a la comprobación, 3600 segundos como máximo en total.",
+              "Un servicio que otro espera con <code>condition: service_healthy</code> necesita un <code>healthcheck</code> propio, salvo que sea una base de datos o una caché de la tabla."
+            ]
+          }
+        },
+        {
+          "p": "Una tarea de una sola ejecución prepara algo que necesitan los demás servicios, como una migración de base de datos, y termina."
+        },
+        {
+          "list": {
+            "items": [
+              "Su <code>restart</code> debe ser <code>no</code> o estar ausente. El servicio principal y un servicio que otros esperan con <code>service_healthy</code> no pueden ser tareas.",
+              "Se ejecuta antes que los servicios que la esperan. Una ejecución correcta queda registrada y los arranques posteriores solo la repiten cuando cambia su imagen o su configuración (entorno, montajes, dispositivos). Un cambio de CPU, memoria o tamaño de disco no la repite.",
+              "Proxmox no la inicia con el arranque y el watchdog no la vigila."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un volumen o una ruta del host que montan varios servicios se convierte en un único directorio del host montado en cada uno de ellos, y la instalación pregunta dónde ubicarlo. Todos los servicios que lo montan deben tener los mismos <code>PUID</code> y <code>PGID</code> (1000 si no se indican).",
+              "Cada servicio que publica un puerto TCP recibe una dirección en la LAN además de la privada, y la instalación pregunta una dirección para cada uno."
+            ]
+          }
+        },
+        {
+          "p": "Las aplicaciones suelen leer su dirección pública de una variable como <code>APP_PUBLIC_URL</code>, y dentro de una pila <code>localhost</code> es el LXC del propio servicio. Una variable con <code>PUBLIC</code> o <code>EXTERNAL</code> entre las palabras de su nombre, que termine en <code>_URL</code>, <code>_URI</code> o <code>_ORIGIN</code> y cuyo valor apunte a <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> o <code>::1</code>, se reescribe con la dirección en la LAN del servicio que publica ese puerto, con el puerto de su contenedor. Ese servicio necesita una dirección estática."
+        },
+        {
+          "code": {
+            "title": "Una URL pública reescrita",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL en el LXC del worker (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "Cuando la URL no se puede reescribir, la pila no se instala y uno de estos mensajes indica el motivo:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Mensaje",
+              "Causa"
+            ],
+            "rows": [
+              [
+                "<strong>La URL pública local es ambigua; indica una URL explícita</strong>",
+                "Más de un servicio publica ese puerto."
+              ],
+              [
+                "<strong>La URL pública local no coincide con ningún puerto publicado; indica una URL explícita</strong>",
+                "Ningún servicio publica ese puerto."
+              ],
+              [
+                "<strong>Las URL públicas automáticas requieren direcciones estáticas para los servicios web o URL explícitas</strong>",
+                "El servicio al que apunta la URL tiene una dirección DHCP."
+              ],
+              [
+                "<strong>Registro de servicio inválido URL</strong>",
+                "La URL está mal formada o su puerto no es válido."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "private-registries",
       "title": "Imágenes de registros privados",
       "intro": "Las imágenes de registros privados, como un paquete privado de GitHub o un repositorio privado de Docker Hub, se consultan con una cuenta guardada en ProxMenux.",
@@ -265,7 +370,8 @@
           "list": {
             "items": [
               "Un Dockerfile sin imagen publicada: primero hay que construir la imagen y publicarla en un registro OCI.",
-              "Los archivos Compose con varios servicios usan un LXC nativo por servicio. Cada aplicación web necesita su propio puerto publicado; los volúmenes con el mismo origen pueden compartir un directorio del host. Las opciones no compatibles, las redes externas y los servicios sin una comprobación de salud compatible siguen bloqueando la instalación.",
+              "Un archivo Compose con varios servicios se instala como se describe en <sectionLink>Archivos Compose con varios servicios</sectionLink>, salvo que declare más de una red, una red externa, opciones en los volúmenes de nivel superior, dependencias opcionales (<code>required: false</code>) o servicios que dependan del principal.",
+              "En una pila, un servicio que use <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> o <code>extra_hosts</code> se marca con «necesita revisión de pila», y la pila no se instala.",
               "<code>configs</code>, secretos externos o formatos de dispositivo que no puedan adaptarse de forma inequívoca.",
               "Sustituciones de shell como <code>$(command)</code>: hay que escribir directamente el valor resultante.",
               "Opciones de <code>docker run</code> no reconocidas y <code>--env-file</code>: utiliza un archivo Compose con los valores explícitos."

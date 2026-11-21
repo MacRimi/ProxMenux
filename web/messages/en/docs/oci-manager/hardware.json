@@ -190,8 +190,12 @@
                 "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
               },
               {
-                "title": "A specific USB device",
-                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+                "title": "A USB device",
+                "code": "lxc.cgroup2.devices.allow: c 189:* rwm\nlxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir"
+              },
+              {
+                "title": "A USB serial adapter",
+                "code": "lxc.cgroup2.devices.allow: c 166:* rwm\nlxc.mount.entry: /dev/serial/by-id/usb-VENDOR_PRODUCT_SERIAL-if00 dev/ttyACM0 none bind,optional,create=file"
               },
               {
                 "title": "AMD OpenCL",
@@ -332,13 +336,16 @@
       "title": "USB, serial and USB Coral",
       "blocks": [
         {
-          "calloutWarning": {
-            "title": "USB numbering can change",
-            "body": "A path such as <code>/dev/bus/usb/003/004</code> can change when the device is reconnected or the host restarts. The profile records vendor, product and serial when they are available, but a new bus address is not remapped automatically."
+          "calloutInfo": {
+            "title": "A USB device is recorded by what it is",
+            "body": "The kernel numbers a USB device each time it finds it, so after a reboot or a reconnection <code>/dev/bus/usb/003/004</code> or <code>/dev/ttyUSB0</code> can name another device, or none. ProxMenux records the device by its vendor, product, serial number and physical port. A USB device gets the USB tree of the host and a udev rule that lets the container write to that device only. A USB serial adapter gets its stable link under <code>/dev/serial</code> mounted at the path the application expects. When the device comes back while the container runs, the container is restarted so the application opens it again."
           }
         },
         {
-          "p": "A peripheral is given by its concrete node: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> or <code>/dev/bus/usb/BBB/DDD</code>. Passing the whole of <code>/dev</code> is not accepted. Coral is offered only to applications whose profile declares it."
+          "p": "A peripheral is chosen from the USB devices of the host or by its current node: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> or <code>/dev/bus/usb/BBB/DDD</code>. The node is used only to find the device; what is saved is its identity. Passing the whole of <code>/dev</code> is not accepted. Coral is offered only to applications whose profile declares it."
+        },
+        {
+          "p": "Zigbee2MQTT is an example. Its profile offers the Zigbee adapter as an optional device, off by default, so a default installation does not pass it. In the advanced installation, <strong>Pass a host device to the LXC</strong> lists the USB devices of the host, with <strong>Another node, typed by hand</strong> at the end, and proposes <code>/dev/ttyACM0</code>. The adapter keeps the same path inside the container, and it has to be plugged in during the installation."
         }
       ]
     },
