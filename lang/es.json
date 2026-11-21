@@ -11098,5 +11098,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ Los datos del disco NO se borrarán.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ El disco se desmontará y se eliminará de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Se eliminará la entrada /etc/fstab.",
-  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará."
+  "⚠ The disk will be unmounted.": "⚠ El disco se desmontará.",
+  "Joplin administrator": "Administrador de Joplin",
+  "Sync notes and notebooks from Joplin clients with a private PostgreSQL database.": "Sincroniza notas y cuadernos de los clientes Joplin con una base de datos PostgreSQL privada.",
+  "Create short links with your own domain and track their visits through the REST API.": "Crea enlaces cortos con tu propio dominio y consulta sus visitas mediante la API REST.",
+  "Shlink API key": "Clave API de Shlink",
+  "REST API": "API REST"
 }

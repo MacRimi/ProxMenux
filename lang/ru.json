@@ -11093,5 +11093,10 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Joplin administrator": "Администратор Joplin",
+  "Sync notes and notebooks from Joplin clients with a private PostgreSQL database.": "Синхронизируйте заметки и блокноты из клиентов Joplin с закрытой базой данных PostgreSQL.",
+  "Create short links with your own domain and track their visits through the REST API.": "Создавайте короткие ссылки на своём домене и отслеживайте переходы через REST API.",
+  "Shlink API key": "Ключ API Shlink",
+  "REST API": "REST API"
 }
