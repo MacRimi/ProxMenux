@@ -35,6 +35,19 @@
     },
     "description": {
       "en_US": "Double Commander is an open source file manager featuring two panels side by side, inspired by Total Commander. It provides dual-pane navigation to organize, browse, and manipulate files and directories efficiently. It is useful for managing everyday file operations and handling compressed archive formats."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

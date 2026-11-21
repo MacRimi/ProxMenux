@@ -18,6 +18,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 6,
+      "memory_mb": 8192
     }
   },
   "catalog_ui": {
@@ -29,6 +33,19 @@
     },
     "screenshots": [
       "https://code.blender.org/wp-content/uploads/2018/12/springrg.jpg"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

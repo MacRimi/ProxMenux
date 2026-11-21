@@ -17,6 +17,19 @@
     },
     "description": {
       "en_US": "Telegram is a cloud-based mobile and desktop messaging application. It allows users to communicate and exchange messages across devices from a single account."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

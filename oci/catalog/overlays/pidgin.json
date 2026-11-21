@@ -26,6 +26,19 @@
     },
     "description": {
       "en_US": "Pidgin is a multi-protocol instant messaging client that allows connecting to multiple chat networks simultaneously. It enables chatting with contacts across various services such as XMPP and IRC at the same time from a single interface. The application supports standard messaging protocols along with a wide range of network plugins."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

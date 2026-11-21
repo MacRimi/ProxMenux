@@ -20,6 +20,19 @@
     },
     "screenshots": [
       "https://studio.blender.org/files/public/thumbnail/ff/46/ff46e9dffd41c9d16fb0d0994668e0df_s.webp"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

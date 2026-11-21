@@ -2,7 +2,8 @@
   "catalog_ui": {
     "tips": [
       "The managed /config volume is prepared with the configured PUID/PGID before LinuxServer starts.",
-      "The installer verifies the HTTPS WebUI on port 3001 before reporting success."
+      "The installer verifies the HTTPS WebUI on port 3001 before reporting success.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ],
     "title": {
       "en_US": "HandBrake"
@@ -37,6 +38,20 @@
         "stability_seconds": 4,
         "verify_tls": false
       }
+    },
+    "defaults": {
+      "cores": 6,
+      "memory_mb": 8192
     }
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

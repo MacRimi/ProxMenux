@@ -29,7 +29,18 @@
     },
     "tips": [
       "Keep the default library location as the path for books during the initial setup wizard.",
-      "The built-in webserver is disabled by default and can be enabled in Preferences under Sharing over the net."
+      "The built-in webserver is disabled by default and can be enabled in Preferences under Sharing over the net.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 8181 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

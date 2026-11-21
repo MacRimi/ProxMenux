@@ -23,6 +23,19 @@
       "https://www.thunderbird.net/media/img/thunderbird/new/screens/calendar-screen.png",
       "https://www.thunderbird.net/media/img/thunderbird/new/testimonials/unified-inbox.png",
       "https://www.thunderbird.net/media/img/thunderbird/base/home/exploding-phone.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

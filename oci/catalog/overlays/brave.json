@@ -21,6 +21,19 @@
     "screenshots": [
       "https://brave.com/home-assets/images/desktop-brave-allrecipes.png",
       "https://brave.com/home-assets/images/mobile-brave-allrecipes.jpg"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

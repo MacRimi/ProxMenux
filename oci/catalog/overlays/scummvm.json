@@ -20,6 +20,19 @@
     },
     "description": {
       "en_US": "ScummVM is a program that runs supported classic graphical adventure and role-playing games on modern systems. Rather than emulating hardware, it acts as a complete rewrite of the original game executables to maintain compatibility. Users must provide their own original game data files to play."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

@@ -9,6 +9,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 4096
     }
   },
   "catalog_ui": {
@@ -20,6 +24,19 @@
     },
     "description": {
       "en_US": "Orca Slicer is an open source slicer for FDM 3D printers. It is a fork of Bambu Studio, previously known as BambuStudio-SoftFever, which traces its lineage back to PrusaSlicer and Slic3r. The software prepares 3D models for additive manufacturing by converting digital designs into printer instructions."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

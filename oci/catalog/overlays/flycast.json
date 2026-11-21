@@ -17,6 +17,19 @@
     },
     "description": {
       "en_US": "Flycast is a multi-platform emulator derived from reicast. It emulates Sega Dreamcast, Naomi, Naomi 2, and Atomiswave arcade and console systems, allowing users to play compatible games within their environment."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

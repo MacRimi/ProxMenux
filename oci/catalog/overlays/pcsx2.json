@@ -23,7 +23,18 @@
     },
     "tips": [
       "Set the proper graphics settings manually, as Automatic will not work and OpenGL is the most compatible.",
-      "By default there is no authentication configured."
+      "By default there is no authentication configured.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

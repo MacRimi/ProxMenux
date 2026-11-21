@@ -18,6 +18,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 6144
     }
   },
   "catalog_ui": {
@@ -29,6 +33,19 @@
     },
     "description": {
       "en_US": "GIMP is an open-source raster graphics editor designed for image manipulation and photo retouching. It provides comprehensive tools for free-form drawing, digital painting, and transcoding between various image file formats. The software is scriptable and can be customized or extended through plugins for specialized editing tasks."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

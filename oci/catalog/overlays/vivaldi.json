@@ -23,6 +23,19 @@
       "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/personal_1.png?v=3",
       "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/personal_2.png?v=3",
       "https://vivaldi.com/wp-content/themes/vivaldicom-theme/img/8-0/personal_3.png?v=3"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

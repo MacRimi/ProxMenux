@@ -26,6 +26,19 @@
     },
     "description": {
       "en_US": "Pelorus is an AI navigator designed for streamed Linux desktop environments. It provides an interface that allows large language model agents to control mouse and keyboard actions, capture screenshots, and manage windows. Users can interact through a split-screen view featuring an AI chat panel alongside the live desktop session."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

@@ -9,6 +9,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 6144
     }
   },
   "catalog_ui": {
@@ -22,7 +26,18 @@
       "en_US": "digiKam is an open-source photo management application designed for professional and advanced digital photography workflows. It provides tools to import, organize, edit, and export large collections of digital photos. Users can process raw images, catalog their media, and manage extensive photography libraries."
     },
     "tips": [
-      "When using MySQL internal mode for the database, click the \"Find\" button for all required binaries (mysql_install_db, mysqladmin, mysqld), select each binary file, and press Open."
+      "When using MySQL internal mode for the database, click the \"Find\" button for all required binaries (mysql_install_db, mysqladmin, mysqld), select each binary file, and press Open.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

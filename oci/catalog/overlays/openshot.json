@@ -18,6 +18,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 6,
+      "memory_mb": 8192
     }
   },
   "catalog_ui": {
@@ -35,6 +39,19 @@
       "https://cdn.openshot.org/images/gallery/effects-lens-flare-720.webp",
       "https://cdn.openshot.org/images/gallery/keyframe-editing-720.webp",
       "https://cdn.openshot.org/images/gallery/2-track-timeline-720.webp"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

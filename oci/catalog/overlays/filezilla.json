@@ -29,6 +29,19 @@
     },
     "description": {
       "en_US": "FileZilla Client is a graphical file transfer application designed for managing files across network connections. It supports FTP, FTPS, and SFTP protocols to enable secure and standard file transfers. Users can browse remote directories, transfer files between local storage and remote servers, and manage saved connections."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

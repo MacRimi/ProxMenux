@@ -21,7 +21,18 @@
     "tips": [
       "By default there is no authentication.",
       "For mouse and keyboard input, use Gaming Mode via the crosshair icon in the top right of the sidebar; hold Escape for 3 seconds to exit.",
-      "To use a gamepad, force Proton in Properties>Compatibility; Steam Input cannot be used."
+      "To use a gamepad, force Proton in Properties>Compatibility; Steam Input cannot be used.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

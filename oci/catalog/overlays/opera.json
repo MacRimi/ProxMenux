@@ -26,6 +26,19 @@
     },
     "description": {
       "en_US": "Opera is a multi-platform web browser based on the Chromium engine. It distinguishes itself from other Chromium-based browsers through its customized user interface and integrated features. It provides tools for navigating websites, managing online tasks, and accessing web applications."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

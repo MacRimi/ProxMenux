@@ -12,6 +12,7 @@
       "This is the native Linux application streamed by Selkies, not the WebAssembly build. Processing and documents stay in the LXC and its mounted directories.",
       "The image is maintained by junkerderprovinz; ArtCraft publishes the application packages. It is not an official ArtCraft container image.",
       "Use a trusted HTTPS reverse proxy for browser access. Port 3001 uses the upstream self-signed certificate; port 3000 is for an HTTP reverse-proxy backend.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP.",
       "The upstream default has no login. Optional CUSTOM_USER and PASSWORD variables enable HTTP basic authentication; do not expose an unauthenticated desktop to untrusted networks.",
       "/config holds settings and desktop state and is included in Proxmox backups. /storage holds documents and supports a managed volume or an explicitly selected host directory; host directories require separate backups.",
       "The default installation draws on the CPU. The advanced installation can assign an Intel or AMD GPU, which the desktop, the application and the video stream then use; NVIDIA is offered when the host has its driver and the NVIDIA Container Toolkit.",
@@ -23,6 +24,22 @@
     },
     "description": {
       "en_US": "PdfCraft is a PDF reader and editor from the ArtCraft application suite. It enables users to view documents, annotate text, fill out forms, and apply digital signatures. The application also provides capabilities for organizing document pages, redacting sensitive content, and running optical character recognition."
+    }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ],
+  "proxmox": {
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 3072
     }
   }
 }

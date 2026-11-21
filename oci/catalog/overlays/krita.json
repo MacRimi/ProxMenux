@@ -18,6 +18,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 6144
     }
   },
   "catalog_ui": {
@@ -26,6 +30,19 @@
     },
     "description": {
       "en_US": "Krita is a professional open source digital painting application designed by artists. It provides tools for digital illustration, concept art, comic creation, and sketching. The software aims to make versatile, high-grade creative tools accessible to everyone."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
     }
-  }
+  ]
 }

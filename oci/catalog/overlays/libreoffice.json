@@ -18,6 +18,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 2,
+      "memory_mb": 3072
     }
   },
   "catalog_ui": {
@@ -35,6 +39,19 @@
       "https://www.libreoffice.org/media/screenshot_impress.png",
       "https://www.libreoffice.org/media/screenshot_writer.png",
       "https://www.libreoffice.org/media/screenshot_calc.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
     ]
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }
