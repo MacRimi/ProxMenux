@@ -112,14 +112,6 @@
     "jenkins": {
       "status": "laboratory-validated"
     },
-    "joplin-server": {
-      "community_tested": {
-        "by": "jcastro",
-        "date": "2026-11-21",
-        "digest": "e99c6fe49c78cbe9cb0c8f545ae4ffc19c7660f19e2b02d4cdc4ec254425708a",
-        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome admin login, API and profile edit, private PostgreSQL. Dependency-first restart and cold two-CT restore/Manage kept access and profile. CPU/RAM Modify and stock same-digest Update kept both native configs; Remove/PBS checked."
-      }
-    },
     "lastboard": {
       "community_tested": {
         "by": "jcastro",
@@ -273,14 +265,6 @@
     "sharecovex": {
       "status": "laboratory-validated"
     },
-    "shlink": {
-      "community_tested": {
-        "by": "jcastro",
-        "date": "2026-11-21",
-        "digest": "248d38c8d7fdba90d9e0c3c7ea9e73ef73ec9f54f7f46faf8f369153cc889aab",
-        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, private PostgreSQL 18, generated key and real link/redirect. Reboot, cold two-CT restore/Manage, writable restored DB, CPU/RAM Modify and stock same-digest Update passed. Remove/disks/PBS checked."
-      }
-    },
     "snapotter": {
       "status": "laboratory-validated"
     },
@@ -365,6 +349,30 @@
         "date": "2026-11-08",
         "digest": "9332aa8ad286b84b66e8a7ec6d1a17f136d5c330cbe5e72a04dd9495746960ca",
         "scenario": "PVE 9.2 amd64/ZFS; UniFi dry-run authentication/health; default/advanced, managed data, restart/Modify, 0.1.29 to 0.1.30, rollback, backup/restore/Manage and removal. No router writes or arm64 runtime test."
+      }
+    },
+    "openproject": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "2d9a77fd8b7781ee3fea84ac232dd449c21ac4f84720b2e3019e8b1a0003684e",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, admin reset, project/task and host-bind attachment, loopback-only internal ports. Restart, CPU/RAM Modify, stock same-digest Update and cold restore/Manage preserved project/attachment and restarted PostgreSQL with corrected permissions."
+      }
+    },
+    "joplin-server": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "e99c6fe49c78cbe9cb0c8f545ae4ffc19c7660f19e2b02d4cdc4ec254425708a",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome admin login, API and profile edit, private PostgreSQL. Dependency-first restart and cold two-CT restore/Manage kept access and profile. CPU/RAM Modify and stock same-digest Update kept both native configs; Remove/PBS checked."
+      }
+    },
+    "shlink": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "248d38c8d7fdba90d9e0c3c7ea9e73ef73ec9f54f7f46faf8f369153cc889aab",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, private PostgreSQL 18, generated key and real link/redirect. Reboot, cold two-CT restore/Manage, writable restored DB, CPU/RAM Modify and stock same-digest Update passed. Remove/disks/PBS checked."
       }
     }
   }

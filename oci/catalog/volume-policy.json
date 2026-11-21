@@ -194,6 +194,9 @@
     ],
     "netbootxyz": [
       "/assets"
+    ],
+    "openproject": [
+      "/var/openproject/assets"
     ]
   },
   "sizes": {
