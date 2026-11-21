@@ -201,6 +201,9 @@
     "jellystat": [
       "/app/backend/backup-data"
     ],
+    "plik": [
+      "/data"
+    ],
     "kutt": [
       "/kutt/custom"
     ]

@@ -399,6 +399,22 @@
         "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, private PostgreSQL 18, generated key and real link/redirect. Reboot, cold two-CT restore/Manage, writable restored DB, CPU/RAM Modify and stock same-digest Update passed. Remove/disks/PBS checked."
       }
     },
+    "plik": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "7b450ff320b3a3f6444ca6fa94c8fde2f5e6eb82d6b9d50bf813ad93e7858f01",
+        "scenario": "PVE amd64/ZFS; native install, Chrome, anonymous upload/download confirmed, managed and host volumes, restart, CPU/RAM Modify and same-image no-op. Verified-cache upgrade kept data and settings; cold restore adopted in OCI Manage and served the same upload."
+      }
+    },
+    "roundcube": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "47f63977a1a1bfe11909cdbe3fa20a0fbdb119dd63eb0b72590c02509f6b7399",
+        "scenario": "PVE amd64/ZFS; default setup asked for IMAP/SMTP ports and applied SSL 993/465. Real 1.7.5 to 1.7.6 update retained the generated DES key and endpoints. Earlier browser mail login/read/send, SQLite and restore verified with the disposable mail fixture."
+      }
+    },
     "kutt": {
       "community_tested": {
         "by": "jcastro",
