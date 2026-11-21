@@ -711,7 +711,7 @@
       "rallly": [
         "/bin/sh",
         "-ec",
-        "export SUPPORT_EMAIL=\"${SUPPORT_EMAIL:-${NOREPLY_EMAIL:-admin@example.invalid}}\"; app_pid=\"\"; terminate() { trap \"\" TERM INT; if [ -n \"$app_pid\" ]; then kill -TERM \"-$app_pid\" 2>/dev/null || kill -TERM \"$app_pid\" 2>/dev/null || true; wait \"$app_pid\" || true; fi; exit 0; }; trap terminate TERM INT; setsid ./docker-start.sh & app_pid=$!; wait \"$app_pid\""
+        "rallly_boolean() { case \"$2\" in \"\"|true|false) ;; [Tt][Rr][Uu][Ee]) export \"$1=true\" ;; [Ff][Aa][Ll][Ss][Ee]) export \"$1=false\" ;; *) echo \"$1 must be true or false\" >&2; exit 1 ;; esac; }; rallly_boolean REGISTRATION_ENABLED \"${REGISTRATION_ENABLED-}\"; rallly_boolean SMTP_SECURE \"${SMTP_SECURE-}\"; export SUPPORT_EMAIL=\"${SUPPORT_EMAIL:-${NOREPLY_EMAIL:-admin@example.invalid}}\"; app_pid=\"\"; terminate() { trap \"\" TERM INT; if [ -n \"$app_pid\" ]; then kill -TERM \"-$app_pid\" 2>/dev/null || kill -TERM \"$app_pid\" 2>/dev/null || true; wait \"$app_pid\" || true; fi; exit 0; }; trap terminate TERM INT; setsid ./docker-start.sh & app_pid=$!; wait \"$app_pid\""
       ]
     },
     "stack_completion_notes": [
