@@ -1167,10 +1167,16 @@ def _answer(result, status=400):
 @auth_bp.route('/api/auth/users', methods=['GET'])
 @require_admin_scope
 def users_list():
+    # A custom profile offers the areas and actions of this product.
+    try:
+        from pbs_manager import is_pbs_host
+        pbs = is_pbs_host()
+    except Exception:
+        pbs = False
+    areas, actions = auth_manager.permissions.custom_choices(pbs)
     return jsonify({"success": True, "users": auth_manager.list_users(),
                     "profiles": list(auth_manager.permissions.PROFILES) + [auth_manager.permissions.CUSTOM],
-                    "areas": list(auth_manager.permissions.AREAS),
-                    "custom_actions": list(auth_manager.permissions.CUSTOM_ACTIONS)})
+                    "areas": areas, "custom_actions": actions})
 
 
 @auth_bp.route('/api/auth/users', methods=['POST'])
