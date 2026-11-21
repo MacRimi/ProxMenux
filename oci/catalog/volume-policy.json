@@ -203,6 +203,9 @@
     ],
     "plik": [
       "/data"
+    ],
+    "kutt": [
+      "/kutt/custom"
     ]
   },
   "sizes": {

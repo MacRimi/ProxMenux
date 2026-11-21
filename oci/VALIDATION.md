@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-87 of 594 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 31 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+88 of 595 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 32 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -33,6 +33,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | HolyArrs | [@jcastro](https://github.com/jcastro) | 2026-11-11 | `112c3f03d8ce` | PVE 9.2 amd64/ZFS; default/advanced/PUID/PGID, managed/host media; owner login, Chrome setup/Explore/movie details and metadata; restart/Modify; 1.0.18 to 1.0.19/no-op; backup/restore/Manage and readiness rollback. Fresh install validates automatic DNS files. Downloads/playback/ARM not tested. | — |
 | Jellystat | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `e61c759ec706` | PVE 9.2.32 amd64/ZFS; default/advanced, private PostgreSQL, Chrome and login. Reboot, CPU/RAM Modify, host-bind app backup, native backup/restore of both CTs into OCI Manage and same-digest stack Update passed. Changed digest and rollback were not exercised. | — |
 | Joplin Server | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `e99c6fe49c78` | PVE 9.2.32 amd64/ZFS; default/advanced, Chrome admin login, API and profile edit, private PostgreSQL. Dependency-first restart and cold two-CT restore/Manage kept access and profile. CPU/RAM Modify and stock same-digest Update kept both native configs; Remove/PBS checked. | — |
+| Kutt | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `0ddd5ee76e21` | PVE 9.2.32 amd64/ZFS. Default/advanced, SQLite and host CSS, Chrome login via HTTPS; direct HTTP rejects Secure cookie. Link redirect, restart, CPU/RAM Modify, cold restore in Manage and image update 3.2.5 to 3.2.6 preserved login and data. | — |
 | Lastboard | [@jcastro](https://github.com/jcastro) | 2026-11-06 | `33501ce2e281` | PVE 9.2/amd64/ZFS: default/advanced OCI-compose install; browser login; managed/host data, PUID/PGID, restart, Modify, 1.10.1 to 1.10.2 update, failed-health rollback, managed backup/restore to new VMID/Manage, removal. ARM64 manifest only; optional integrations untested. | — |
 | listmonk | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `7fb5a41120ab` | PVE 9.2 amd64/ZFS; default/advanced; generated login, lists/media; managed/host data; restart/Modify; 6.1 to 6.2 and controlled rollback using verified official cached images; full-group backup/restore/Manage; Remove/PBS cleanup. | — |
 | macOS | [@jcastro](https://github.com/jcastro) | 2026-11-08 | `08d1bcaac74a` | PVE 9.2 Intel amd64/ZFS; Sequoia Recovery, KVM/browser, guest HTTPS and APFS file; default/advanced, managed/host storage; restart/CPU-RAM Modify; 3.11 to 3.12, backup/restore/Manage and readiness rollback. Full desktop installation/login, AMD and GPU not tested. | — |
