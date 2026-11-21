@@ -215,6 +215,111 @@
       ]
     },
     {
+      "id": "compose-stacks",
+      "title": "Compose-filer med flera tjänster",
+      "intro": "En Compose-fil med flera tjänster installeras som en stack: en inbyggd LXC-container per tjänst, förenade av en privat bro och startade i ordningen för sina beroenden. <stacksLink>Program med flera containrar</stacksLink> beskriver hur en stack skapas, kontrolleras och uppdateras. Det här avsnittet gäller vad Compose-filen bestämmer.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tjänst",
+              "Hur den känns igen",
+              "När den är redo"
+            ],
+            "rows": [
+              [
+                "Huvud",
+                "Den som anges i <code>x-casaos.main</code>. Utan den första tjänsten som publicerar en port, annars den första i filen.",
+                "Dess publicerade webbport svarar över HTTP, eller dess egen <code>healthcheck</code> godkänns. Den behöver en publicerad TCP-port."
+              ],
+              [
+                "Databas eller cache",
+                "Dess avbildning är PostgreSQL, MariaDB, MongoDB, Redis, Valkey eller Meilisearch.",
+                "Kontrollen som ProxMenux har för den servern, till exempel <code>pg_isready</code>, om inte tjänsten deklarerar en egen <code>healthcheck</code>."
+              ],
+              [
+                "Worker",
+                "Varje annan tjänst som fortsätter köra.",
+                "Dess egen <code>healthcheck</code>. Utan en HTTP på porten den publicerar, TCP på en port den bara listar under <code>expose</code>, annars bara att LXC-containern körs."
+              ],
+              [
+                "Engångsjobb",
+                "En tjänst som en annan väntar på med <code>condition: service_completed_successfully</code>.",
+                "Det avslutas med kod 0 inom 300 sekunder."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "En <code>healthcheck</code> körs i tjänstens LXC-container, som <code>CMD</code> eller <code>CMD-SHELL</code>. En <code>CMD-SHELL</code>-kontroll kan inte använda variabler som <code>$PORT</code>, eftersom den inte körs med programmets miljö: värdet måste skrivas ut i stället.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> och <code>retries</code> bestämmer hur länge kontrollen avvaktas, högst 3600 sekunder sammanlagt.",
+              "En tjänst som en annan väntar på med <code>condition: service_healthy</code> behöver en egen <code>healthcheck</code>, om den inte är en databas eller cache i tabellen."
+            ]
+          }
+        },
+        {
+          "p": "Ett engångsjobb förbereder något som de andra tjänsterna behöver, till exempel en databasmigrering, och avslutas."
+        },
+        {
+          "list": {
+            "items": [
+              "Dess <code>restart</code> måste vara <code>no</code> eller saknas. Huvudtjänsten, och en tjänst som andra väntar på med <code>service_healthy</code>, kan inte vara jobb.",
+              "Det körs före de tjänster som väntar på det. En lyckad körning registreras, och senare starter kör det på nytt bara när dess avbildning eller konfiguration ändras (miljö, monteringar, enheter). En ändring av CPU, minne eller disk storlek kör det inte på nytt.",
+              "Proxmox startar det inte vid uppstart, och watchdog övervakar det inte."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "En volym eller sökväg på värden som flera tjänster monterar blir en katalog på värden som monteras i var och en av dem, och installationen frågar var den ska ligga. Varje tjänst som monterar den måste ha samma <code>PUID</code> och <code>PGID</code> (1000 när de inte anges).",
+              "Varje tjänst som publicerar en TCP-port får en adress på LAN utöver sin privata, och installationen frågar efter en adress för var och en av dem."
+            ]
+          }
+        },
+        {
+          "p": "Program läser ofta sin publika adress från en variabel som <code>APP_PUBLIC_URL</code>, och i en stack är <code>localhost</code> tjänstens egen LXC-container. En variabel med <code>PUBLIC</code> eller <code>EXTERNAL</code> bland orden i namnet, som slutar på <code>_URL</code>, <code>_URI</code> eller <code>_ORIGIN</code> och vars värde pekar på <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> eller <code>::1</code>, skrivs om till LAN-adressen för den tjänst som publicerar den porten, med containerns port. Den tjänsten behöver en statisk adress."
+        },
+        {
+          "code": {
+            "title": "En publik URL som skrivs om",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL i worker-LXC-containern (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "När URL:en inte kan skrivas om installeras inte stacken, och ett av dessa meddelanden anger varför:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Meddelande",
+              "Orsak"
+            ],
+            "rows": [
+              [
+                "<strong>Den lokala publika URL:en är tvetydig; ange en uttrycklig URL</strong>",
+                "Mer än en tjänst publicerar den porten."
+              ],
+              [
+                "<strong>Den lokala publika URL:en matchar ingen publicerad port; ange en uttrycklig URL</strong>",
+                "Ingen tjänst publicerar den porten."
+              ],
+              [
+                "<strong>Automatiska publika URL:er kräver statiska frontendadresser eller uttryckliga URL:er</strong>",
+                "Tjänsten som URL:en pekar på har en DHCP-adress."
+              ],
+              [
+                "<strong>Ogiltig service check URL</strong>",
+                "URL:en är felaktig eller dess port är ogiltig."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "private-registries",
       "title": "Avbildningar i privata register",
       "intro": "En avbildning i ett privat register, till exempel ett privat GitHub-paket eller ett privat Docker Hub-arkiv, läses med ett konto som sparats i ProxMenux.",
@@ -265,7 +370,8 @@
           "list": {
             "items": [
               "En Dockerfile utan publicerad avbildning: avbildningen måste först byggas och publiceras i ett OCI-register.",
-              "En Compose-fil med flera tjänster blockeras eftersom det här alternativet installerar en tjänst i en container, även om flera tjänster använder samma avbildning.",
+              "En Compose-fil med flera tjänster installeras som beskrivs i <sectionLink>Compose-filer med flera tjänster</sectionLink>, utom när den deklarerar mer än ett nätverk, ett externt nätverk, alternativ på volymer på toppnivå, valfria beroenden (<code>required: false</code>) eller tjänster som är beroende av huvudtjänsten.",
+              "I en stack markeras en tjänst som använder <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> eller <code>extra_hosts</code> med ”behov stack review”, och stacken installeras inte.",
               "<code>configs</code>, externa hemligheter eller enhetsformat som inte kan anpassas entydigt.",
               "Skalsubstitutioner som <code>$(command)</code>: ange det resulterande värdet direkt i stället.",
               "Okända <code>docker run</code>-alternativ och <code>--env-file</code>: använd en Compose-fil med uttryckliga värden i stället."

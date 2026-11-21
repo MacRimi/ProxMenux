@@ -215,6 +215,111 @@
       ]
     },
     {
+      "id": "compose-stacks",
+      "title": "Compose-Dateien mit mehreren Diensten",
+      "intro": "Eine Compose-Datei mit mehreren Diensten wird als Stack installiert: ein nativer LXC pro Dienst, verbunden durch eine private Bridge und gestartet in der Reihenfolge ihrer Abhängigkeiten. <stacksLink>Anwendungen mit mehreren Containern</stacksLink> beschreibt, wie ein Stack erstellt, geprüft und aktualisiert wird. Dieser Abschnitt behandelt, was die Compose-Datei festlegt.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Dienst",
+              "Wie er erkannt wird",
+              "Wann er bereit ist"
+            ],
+            "rows": [
+              [
+                "Haupt",
+                "Der in <code>x-casaos.main</code> genannte. Ohne Angabe der erste Dienst, der einen Port veröffentlicht, sonst der erste in der Datei.",
+                "Sein veröffentlichter Webport antwortet über HTTP, oder sein eigener <code>healthcheck</code> besteht. Er braucht einen veröffentlichten TCP-Port."
+              ],
+              [
+                "Datenbank oder Cache",
+                "Sein Image ist PostgreSQL, MariaDB, MongoDB, Redis, Valkey oder Meilisearch.",
+                "Die Prüfung, die ProxMenux für diesen Server hat, etwa <code>pg_isready</code>, es sei denn, der Dienst deklariert einen eigenen <code>healthcheck</code>."
+              ],
+              [
+                "Worker",
+                "Jeder andere Dienst, der weiterläuft.",
+                "Sein eigener <code>healthcheck</code>. Ohne einen HTTP auf dem Port, den er veröffentlicht, TCP auf einem Port, den er nur unter <code>expose</code> aufführt, sonst nur, dass der LXC läuft."
+              ],
+              [
+                "Einmaliger Job",
+                "Ein Dienst, auf den ein anderer mit <code>condition: service_completed_successfully</code> wartet.",
+                "Er endet mit Code 0 innerhalb von 300 Sekunden."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Ein <code>healthcheck</code> läuft im LXC seines Dienstes, als <code>CMD</code> oder <code>CMD-SHELL</code>. Eine <code>CMD-SHELL</code>-Prüfung kann keine Variablen wie <code>$PORT</code> verwenden, weil sie nicht mit der Umgebung der Anwendung läuft: Stattdessen muss der Wert geschrieben werden.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> und <code>retries</code> legen fest, wie lange auf die Prüfung gewartet wird, insgesamt höchstens 3600 Sekunden.",
+              "Ein Dienst, auf den ein anderer mit <code>condition: service_healthy</code> wartet, braucht einen eigenen <code>healthcheck</code>, es sei denn, er ist eine Datenbank oder ein Cache der Tabelle."
+            ]
+          }
+        },
+        {
+          "p": "Ein einmaliger Job bereitet etwas vor, das die anderen Dienste brauchen, etwa eine Datenbankmigration, und endet."
+        },
+        {
+          "list": {
+            "items": [
+              "Sein <code>restart</code> muss <code>no</code> sein oder fehlen. Der Hauptdienst und ein Dienst, auf den andere mit <code>service_healthy</code> warten, können keine Jobs sein.",
+              "Er läuft vor den Diensten, die auf ihn warten. Ein erfolgreicher Lauf wird aufgezeichnet, und spätere Starts führen ihn nur erneut aus, wenn sich sein Image oder seine Konfiguration ändert (Umgebung, Mounts, Geräte). Eine Änderung von CPU, Arbeitsspeicher oder Plattengröße führt ihn nicht erneut aus.",
+              "Proxmox startet ihn nicht beim Booten, und der Watchdog überwacht ihn nicht."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Ein Volume oder Host-Pfad, den mehrere Dienste einhängen, wird zu einem Host-Verzeichnis, das in jedem von ihnen eingehängt ist, und die Installation fragt, wo es liegt. Jeder Dienst, der es einhängt, muss dieselben <code>PUID</code> und <code>PGID</code> haben (1000, wenn nicht gesetzt).",
+              "Jeder Dienst, der einen TCP-Port veröffentlicht, erhält neben seiner privaten Adresse eine Adresse im LAN, und die Installation fragt für jeden von ihnen nach einer Adresse."
+            ]
+          }
+        },
+        {
+          "p": "Anwendungen lesen ihre öffentliche Adresse oft aus einer Variable wie <code>APP_PUBLIC_URL</code>, und in einem Stack ist <code>localhost</code> der LXC des Dienstes selbst. Eine Variable mit <code>PUBLIC</code> oder <code>EXTERNAL</code> unter den Wörtern ihres Namens, die auf <code>_URL</code>, <code>_URI</code> oder <code>_ORIGIN</code> endet und deren Wert auf <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> oder <code>::1</code> zeigt, wird auf die LAN-Adresse des Dienstes umgeschrieben, der diesen Port veröffentlicht, mit dem Port seines Containers. Dieser Dienst braucht eine statische Adresse."
+        },
+        {
+          "code": {
+            "title": "Eine umgeschriebene öffentliche URL",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL im Worker-LXC (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "Lässt sich die URL nicht umschreiben, wird der Stack nicht installiert, und eine dieser Meldungen nennt den Grund:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Meldung",
+              "Ursache"
+            ],
+            "rows": [
+              [
+                "<strong>Die lokale öffentliche URL ist mehrdeutig; gib eine eindeutige URL an</strong>",
+                "Mehr als ein Dienst veröffentlicht diesen Port."
+              ],
+              [
+                "<strong>Für die lokale öffentliche URL gibt es keinen passenden veröffentlichten Port; gib eine eindeutige URL an</strong>",
+                "Kein Dienst veröffentlicht diesen Port."
+              ],
+              [
+                "<strong>Automatische öffentliche URLs erfordern statische Frontend-Adressen oder explizite URLs</strong>",
+                "Der Dienst, auf den die URL zeigt, hat eine DHCP-Adresse."
+              ],
+              [
+                "<strong>URL-Prüfung für ungültige Dienste</strong>",
+                "Die URL ist fehlerhaft oder ihr Port ist ungültig."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "private-registries",
       "title": "Images aus privaten Registries",
       "intro": "Ein Image aus einer privaten Registry, etwa ein privates GitHub-Paket oder ein privates Docker-Hub-Repository, wird mit einem in ProxMenux gespeicherten Konto gelesen.",
@@ -265,7 +370,8 @@
           "list": {
             "items": [
               "Ein Dockerfile ohne veröffentlichtes Image: Das Image muss zuerst gebaut und in einer OCI-Registry veröffentlicht werden.",
-              "Compose-Dateien mit mehreren Diensten verwenden einen nativen LXC pro Dienst. Jede Webanwendung benötigt einen eigenen veröffentlichten Port; Volumes mit derselben Quelle können ein Hostverzeichnis gemeinsam nutzen. Nicht unterstützte Optionen, externe Netzwerke und Dienste ohne unterstützte Zustandsprüfung verhindern weiterhin die Installation.",
+              "Eine Compose-Datei mit mehreren Diensten wird wie in <sectionLink>Compose-Dateien mit mehreren Diensten</sectionLink> beschrieben installiert, außer sie deklariert mehr als ein Netzwerk, ein externes Netzwerk, Optionen auf Top-Level-Volumes, optionale Abhängigkeiten (<code>required: false</code>) oder Dienste, die vom Hauptdienst abhängen.",
+              "In einem Stack wird ein Dienst, der <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> oder <code>extra_hosts</code> verwendet, als „Needs Stack Überprüfung“ markiert, und der Stack wird nicht installiert.",
               "<code>configs</code>, externe Geheimnisse oder Geräteformate, die sich nicht eindeutig umsetzen lassen.",
               "Shell-Ersetzungen wie <code>$(command)</code>: Stattdessen muss der resultierende Wert angegeben werden.",
               "Nicht erkannte <code>docker run</code>-Optionen und <code>--env-file</code>: Verwenden Sie stattdessen eine Compose-Datei mit expliziten Werten."

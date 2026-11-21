@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Mensagens formatadas, categorias e filtros por canal",
     "intro": "Cada canal oferece <em>Mensagens formatadas</em>, as <em>Categorias de notificação</em> expansíveis com opções por evento e <em>Enviar teste</em> no fim.",
-    "imageAlt": "Categorias de notificação com formatação, grupos VM/CT, cópias de segurança, recursos, armazenamento, rede, segurança, cluster, serviços, Health Monitor e atualizações, contadores e botão de teste",
+    "imageAlt": "Categorias de notificação com formatação, grupos VM/CT, cópias de segurança, recursos, armazenamento, rede, segurança, cluster, serviços, monitor de saúde, atualizações, hardware e sistema, contadores, Hardware expandido com seus eventos, horário de silêncio e resumo diário abaixo, e botão de teste",
     "imageCaption": "A seta indica <em>Mensagens formatadas</em> do canal. Abaixo ficam as categorias com opções por evento e <em>Enviar teste</em>.",
     "richTitle": "Mensagens formatadas",
     "richIntro": "Com <em>Mensagens formatadas</em>, o título inclui o emoji da categoria e o texto usa a formatação do canal, como HTML Telegram ou bloco Discord com cor da gravidade. Ao desativar envia o mesmo conteúdo em texto simples.",

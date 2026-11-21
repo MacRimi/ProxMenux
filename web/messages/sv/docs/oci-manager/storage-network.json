@@ -224,11 +224,14 @@
           }
         },
         {
+          "p": "Åtkomstgränssnittet kan ha en VLAN-tagg. Den avancerade installationen frågar efter den vid sidan av adressen, och Ändra ändrar eller tar bort den för ett enskilt program. En tagg som satts i Proxmox bevaras. Med en tagg kontrollerar ProxMenux programmet inifrån dess container, så värden behöver ingen åtkomst till det VLAN:et."
+        },
+        {
           "flow": {
             "nodes": [
               {
                 "label": "LAN",
-                "detail": "Nåbar adress\nbara huvudtjänsten"
+                "detail": "nåbar adress\nhuvudtjänst och medlemmar\nsom publicerar portar"
               },
               {
                 "label": "Huvud-LXC",
@@ -239,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nfasta adresser"
               }
             ],
-            "caption": "Beroenden kommunicerar över det privata nätverket och har ingen adress på LAN:et."
+            "caption": "En medlem utan LAN-adress nås bara via det privata nätverket."
           }
         },
         {
@@ -257,6 +260,47 @@
               "Nya kataloger skapas med de UID och GID som den oprivilegierade LXC-containern mappas till.",
               "Ägarskapet för befintliga kataloger ändras inte rekursivt.",
               "Socklar, systemfiler och känsliga sökvägar erbjuds inte som vanliga kataloger på värden."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tmpfs",
+      "title": "Sökvägar i minnet (tmpfs)",
+      "intro": "Vissa program vill ha en snabb tillfällig katalog som inte behöver överleva en omstart, till exempel cachen i Frigate. ProxMenux monterar den som en inbyggd tmpfs i LXC-containern: den finns i minnet, är tom varje gång LXC-containern startar och ingår inte i någon säkerhetskopia.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Varifrån den kommer",
+              "Storlek",
+              "Frågas efter",
+              "Ägare"
+            ],
+            "rows": [
+              [
+                "Ett program i katalogen",
+                "Storleken som profilen föreslår, med ett minimum. Frigate föreslår till exempel 1024 MB för <code>/tmp/cache</code> och godtar inte mindre än 256 MB.",
+                "I den avancerade installationen, om inte profilen fastställer storleken",
+                "Den som profilen anger, när programmet behöver en"
+              ],
+              [
+                "<code>tmpfs:</code> i en Compose-fil",
+                "Värdet på <code>size</code>. Utan det hälften av LXC-containerns minne, minst 1 MiB.",
+                "Nej",
+                "<code>uid</code> och <code>gid</code> bland alternativen, annars containerns root. Läge <code>1777</code> om inte <code>mode</code> anger ett annat"
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "En Compose-fil kan deklarera den under <code>tmpfs:</code> eller som en volym med <code>type: tmpfs</code>. Den första formen godtar <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> och <code>noexec</code>. Volymformen godtar <code>size</code> och <code>mode</code>, samt <code>read_only</code>. Varje tmpfs monteras med <code>nosuid</code> och <code>nodev</code>.",
+              "Den kan ligga i <code>/tmp</code>, <code>/run</code> eller <code>/dev/shm</code>, eller under <code>/tmp/</code>, <code>/run/</code> och <code>/var/cache/</code>.",
+              "En tmpfs som överlappar en annan tmpfs, en beständig sökväg eller den <code>/dev/shm</code> som <code>shm_size</code> skapar, eller som använder ett alternativ som inte nämns ovan, installeras inte: granskningen visar <strong>en sökväg i minnet (tmpfs) använder ett alternativ som inte kan tillämpas eller överlappar en annan sökväg</strong> under <strong>Alternativ utan motsvarighet</strong>.",
+              "En uppdatering eller ett återskapande behåller varje tmpfs med sin storlek och ägare. <strong>Katalogalternativ</strong> i Ändra lägger till de som en nyare version av programmet deklarerar."
             ]
           }
         }

@@ -231,7 +231,7 @@
             "nodes": [
               {
                 "label": "LAN",
-                "detail": "Indirizzo raggiungibile\nsolo per il servizio principale"
+                "detail": "indirizzo raggiungibile\nservizio principale e membri\nche pubblicano porte"
               },
               {
                 "label": "LXC principale",
@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nindirizzi fissi"
               }
             ],
-            "caption": "Le dipendenze comunicano sulla rete privata e non hanno un indirizzo sulla LAN."
+            "caption": "Un membro senza indirizzo LAN è raggiungibile solo tramite la rete privata."
           }
         },
         {
@@ -260,6 +260,47 @@
               "Le nuove directory vengono create con UID e GID a cui viene mappato l’LXC non privilegiato.",
               "Il proprietario delle directory esistenti non viene modificato ricorsivamente.",
               "Socket, file di sistema e percorsi sensibili non vengono proposti come directory generiche dell’host."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tmpfs",
+      "title": "Percorsi in memoria (tmpfs)",
+      "intro": "Alcune applicazioni vogliono una directory temporanea veloce che non deve sopravvivere a un riavvio, come la cache di Frigate. ProxMenux la monta come tmpfs nativo dell’LXC: vive in memoria, è vuota a ogni avvio dell’LXC e non fa parte di alcun backup.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Da dove viene",
+              "Dimensione",
+              "Richiesto",
+              "Proprietario"
+            ],
+            "rows": [
+              [
+                "Un’applicazione del catalogo",
+                "La dimensione che il suo profilo propone, con un minimo. Frigate, ad esempio, propone 1024 MB per <code>/tmp/cache</code> e non accetta meno di 256 MB.",
+                "Nell’installazione avanzata, a meno che il profilo fissi la dimensione",
+                "Quello che imposta il profilo, quando l’applicazione ne richiede uno"
+              ],
+              [
+                "<code>tmpfs:</code> in un file Compose",
+                "Il suo <code>size</code>. Senza, metà della memoria dell’LXC, almeno 1 MiB.",
+                "No",
+                "Il <code>uid</code> e il <code>gid</code> delle sue opzioni, oppure root del container se non sono indicati. Modalità <code>1777</code> a meno che <code>mode</code> ne imposti un’altra"
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un file Compose può dichiararlo sotto <code>tmpfs:</code> o come volume con <code>type: tmpfs</code>. La prima forma accetta <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> e <code>noexec</code>. La forma volume accetta <code>size</code> e <code>mode</code>, più <code>read_only</code>. Ogni tmpfs viene montato con <code>nosuid</code> e <code>nodev</code>.",
+              "Può stare in <code>/tmp</code>, <code>/run</code> o <code>/dev/shm</code>, oppure sotto <code>/tmp/</code>, <code>/run/</code> e <code>/var/cache/</code>.",
+              "Un tmpfs che si sovrappone a un altro tmpfs, a un percorso persistente o al <code>/dev/shm</code> creato da <code>shm_size</code>, o che usa un’opzione non elencata sopra, non viene installato: la revisione mostra <strong>un percorso in memoria (tmpfs) usa un’opzione non applicabile o si sovrappone a un altro percorso</strong> sotto <strong>Opzioni senza equivalente</strong>.",
+              "Un aggiornamento o una ricreazione mantiene ogni tmpfs con la sua dimensione e il suo proprietario. <strong>Opzioni del catalogo</strong>, in Modifica, aggiunge quelle che una versione più recente dell’applicazione dichiara."
             ]
           }
         }

@@ -60,7 +60,7 @@
               ],
               [
                 "Nätverk",
-                "Privat bro, subnet, en fast adress per tjänst och LAN-åtkomst för huvudmedlemmen",
+                "Privat bro, undernät, en fast adress per tjänst och LAN-åtkomst för de medlemmar som behöver det",
                 "Ingen kollision med befintliga broar eller undernät och ingen upprepad adress"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Privat nätverk",
-                "body": "En bro och undernät skapas och varje medlem får sin fasta adress; endast huvudmedlemmen får också LAN-gränssnittet."
+                "body": "En bro och ett undernät skapas och varje medlem får sin fasta adress. Huvudmedlemmen får också LAN-gränssnittet, liksom varje annan medlem som publicerar en port eller som programmets recept kräver."
               },
               {
                 "title": "Persistens",

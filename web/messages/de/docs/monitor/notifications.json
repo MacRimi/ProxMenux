@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Formatierte Meldungen, Kategorien und Kanalfilter",
     "intro": "Jeder Kanal hat drei Steuerelemente: <em>Formatierte Meldungen</em> oben, aufklappbare <em>Benachrichtigungskategorien</em> mit Ereignisschaltern und <em>Test senden</em> unten.",
-    "imageAlt": "Benachrichtigungskategorien-Panel mit Rich-Nachrichten-Master-Schalter oben hervorgehoben, zusammenklappbare Abschnitte für VM/CT, Backups, Ressourcen, Speicher, Netzwerk, Sicherheit, Cluster, Dienste, Gesundheitsmonitor, Updates jeweils mit Umschalt- und Ereignisanzahl und eine Send-Test-Schaltfläche",
+    "imageAlt": "Benachrichtigungskategorien-Panel mit hervorgehobenem Rich-Nachrichten-Schalter oben, zusammenklappbaren Abschnitten für VM / CT, Sicherungen, Ressourcen, Speicher, Netzwerk, Sicherheit, Cluster, Dienste, Gesundheitsmonitor, Aktualisierungen, Hardware und System, jeweils mit Schalter und Ereignisanzahl, aufgeklappter Hardware-Abschnitt mit seinen Ereignissen, darunter Ruhezeiten und tägliche Zusammenfassung sowie eine Send-Test-Schaltfläche",
     "imageCaption": "Der Pfeil markiert <em>Formatierte Meldungen</em>. Darunter liegen die Kategorien mit Ereignisschaltern; <em>Test senden</em> steht unten.",
     "richTitle": "Formatierte Meldungen",
     "richIntro": "Mit <em>Formatierten Meldungen</em> erscheint ein Kategorie-Emoji und das native Kanalformat, etwa Telegram-HTML oder farbige Discord-Einbettungen. Ohne diese Option wird derselbe Inhalt als einfacher Text gesendet:",

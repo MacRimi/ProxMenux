@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Formaterade meddelanden, kategorier och filter per kanal",
     "intro": "Varje kanal har tre kontroller under formuläret: <em>Formaterade meddelanden</em> överst, utfällbara <em>Aviseringskategorier</em> med val per händelse och <em>Skicka test</em> längst ned.",
-    "imageAlt": "Aviseringskategorier med markerad formateringsinställning överst, utfällbara delar för VM/CT, säkerhetskopiering, resurser, lagring, nätverk, säkerhet, kluster, tjänster, Health Monitor och uppdateringar samt antal händelser och testknapp",
+    "imageAlt": "Aviseringskategorier med markerad formateringsinställning överst, utfällbara delar för VM / CT, säkerhetskopiering, resurser, lagring, nätverk, säkerhet, kluster, tjänster, Health Monitor, uppdateringar, hårdvara och system samt antal händelser, Hårdvara utfälld med sina händelser, tysta timmar och daglig sammanfattning nedanför, och testknapp",
     "imageCaption": "Pilen visar <em>Formaterade meddelanden</em> för kanalen. Nedanför finns kategorierna med val per händelse. <em>Skicka test</em> finns längst ned.",
     "richTitle": "Formaterade meddelanden",
     "richIntro": "Med <em>Formaterade meddelanden</em> får rubriken en kategoriemoji och texten kanalens formatering, såsom Telegram-HTML eller Discord-kort med färg efter allvarlighetsgrad. Avstängt skickas samma information som enkel text:",

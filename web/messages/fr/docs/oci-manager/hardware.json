@@ -190,8 +190,12 @@
                 "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
               },
               {
-                "title": "Un périphérique USB spécifique",
-                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+                "title": "Un appareil USB",
+                "code": "lxc.cgroup2.devices.allow: c 189:* rwm\nlxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir"
+              },
+              {
+                "title": "Un adaptateur série USB",
+                "code": "lxc.cgroup2.devices.allow: c 166:* rwm\nlxc.mount.entry: /dev/serial/by-id/usb-VENDOR_PRODUCT_SERIAL-if00 dev/ttyACM0 none bind,optional,create=file"
               },
               {
                 "title": "AMD OpenCL",
@@ -332,13 +336,16 @@
       "title": "Coral USB, série et USB",
       "blocks": [
         {
-          "calloutWarning": {
-            "title": "La numérotation USB peut changer",
-            "body": "Un chemin tel que <code>/dev/bus/usb/003/004</code> peut changer lorsque le périphérique est reconnecté ou que l'hôte redémarre. Le profil enregistre le fournisseur, le produit et la série lorsqu'ils sont disponibles, mais une nouvelle adresse de bus n'est pas automatiquement réaffectée."
+          "calloutInfo": {
+            "title": "Un appareil USB est enregistré par ce qu’il est",
+            "body": "Le noyau numérote un appareil USB chaque fois qu’il le détecte : après un redémarrage ou une reconnexion, <code>/dev/bus/usb/003/004</code> ou <code>/dev/ttyUSB0</code> peut donc désigner un autre appareil, ou aucun. ProxMenux enregistre l’appareil par son fournisseur, son produit, son numéro de série et son port physique. Un appareil USB reçoit l’arborescence USB de l’hôte et une règle udev qui autorise le conteneur à écrire sur cet appareil seulement. Un adaptateur série USB reçoit son lien stable sous <code>/dev/serial</code>, monté au chemin que l’application attend. Quand l’appareil revient pendant que le conteneur tourne, le conteneur est redémarré pour que l’application l’ouvre de nouveau."
           }
         },
         {
-          "p": "Un périphérique est donné par son nœud concret : <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. Passer l'intégralité de <code>/dev</code> n'est pas accepté. Coral est proposé uniquement aux applications dont le profil le déclare."
+          "p": "Un périphérique se choisit parmi les appareils USB de l’hôte ou par son nœud actuel : <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. Le nœud ne sert qu’à trouver l’appareil ; ce qui est enregistré, c’est son identité. Passer tout <code>/dev</code> n’est pas accepté. Coral n’est proposé qu’aux applications dont le profil le déclare."
+        },
+        {
+          "p": "Zigbee2MQTT en est un exemple. Son profil propose l’adaptateur Zigbee comme appareil optionnel, désactivé par défaut, donc une installation par défaut ne le passe pas. Dans l’installation avancée, <strong>Passer un appareil hôte au LXC</strong> liste les appareils USB de l’hôte, avec <strong>Un autre nœud, tapé à la main</strong> à la fin, et propose <code>/dev/ttyACM0</code>. L’adaptateur garde le même chemin dans le conteneur, et il doit être branché pendant l’installation."
         }
       ]
     },
