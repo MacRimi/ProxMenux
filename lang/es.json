@@ -7495,6 +7495,7 @@
   "Select a category or search for applications:": "Selecciona una categoría o busca aplicaciones:",
   "Select a category or search for scripts:": "Selecciona una categoría o busca scripts:",
   "Select a custom ISO to use:": "Selecciona una ISO personalizada para usar:",
+  "Select a host folder with your music library for /media. It is mounted read-only.": "Selecciona para /media una carpeta del host que contenga tu biblioteca de música. Se monta en solo lectura.",
   "Select a job to view/edit, or create a new one:": "Selecciona un trabajo para verlo o editarlo, o crea uno nuevo:",
   "Select a job:": "Selecciona un trabajo:",
   "Select a network management option:": "Selecciona una opción de gestión de red:",

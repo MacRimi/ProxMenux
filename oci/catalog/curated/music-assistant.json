@@ -33,7 +33,8 @@
     "documentation": "https://www.music-assistant.io/installation/",
     "repository": "https://github.com/music-assistant/server",
     "tips": [
-      "For automatic player discovery, connect this LXC to the same LAN and VLAN as your speakers."
+      "For automatic player discovery, connect this LXC to the same LAN and VLAN as your speakers.",
+      "Select a host folder with your music library for /media. It is mounted read-only."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -45,7 +46,7 @@
     "revision": "85136fcbd630036f1e2231507236e52516a707b0",
     "image_repository_url": "https://github.com/music-assistant/server/pkgs/container/server",
     "readme_pushed_at": "",
-    "compose_sha256": "7ae303937b6b01e9b23e0529c7061559ec07f89fefb10e6b1870e5d8b6c30040",
+    "compose_sha256": "b6b6a1658b6ed4860faeb14e90f183e71a7ca75a3562170e1c00a0f231e0c5db",
     "generated_at": "2026-11-20T15:47:26+00:00"
   },
   "container_contract": {
@@ -66,6 +67,22 @@
         "container_path": "/data",
         "compose_source_example": "./data",
         "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/media",
+        "compose_source_example": "./music",
+        "read_only": true,
         "required": true,
         "installation_choice": [
           "managed-volume",
@@ -97,7 +114,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: music-assistant\nservices:\n  music-assistant:\n    image: ghcr.io/music-assistant/server:latest\n    ports:\n    - 8095:8095\n    - 8097:8097\n    volumes:\n    - ./data:/data\n    restart: unless-stopped\n"
+    "original_compose": "name: music-assistant\nservices:\n  music-assistant:\n    image: ghcr.io/music-assistant/server:latest\n    ports:\n    - 8095:8095\n    - 8097:8097\n    volumes:\n    - ./data:/data\n    - ./music:/media:ro\n    restart: unless-stopped\n"
   },
   "compose_stack": {
     "project_name": "music-assistant",
@@ -122,7 +139,8 @@
             "8097:8097"
           ],
           "volumes": [
-            "./data:/data"
+            "./data:/data",
+            "./music:/media:ro"
           ],
           "restart": "unless-stopped"
         }
@@ -147,6 +165,17 @@
         "container_path": "/data",
         "mode": "managed-volume",
         "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "music-assistant-volume-1",
+        "service": "music-assistant",
+        "container_path": "/media",
+        "mode": "user-selectable",
+        "user_selectable": true,
         "backup": true,
         "shared_with_other_lxc": false,
         "source_path": null,

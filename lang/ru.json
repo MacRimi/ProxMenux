@@ -7490,6 +7490,7 @@
   "Select a category or search for applications:": "Выберите категорию или найдите приложения:",
   "Select a category or search for scripts:": "Выберите категорию или найдите скрипты:",
   "Select a custom ISO to use:": "Выберите собственный ISO-образ для использования:",
+  "Select a host folder with your music library for /media. It is mounted read-only.": "Выберите для /media папку хоста с вашей музыкальной библиотекой. Она монтируется только для чтения.",
   "Select a job to view/edit, or create a new one:": "Выберите задание для просмотра или редактирования либо создайте новое:",
   "Select a job:": "Выберите задание:",
   "Select a network management option:": "Выберите действие для управления сетью:",
