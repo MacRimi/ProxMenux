@@ -214,9 +214,9 @@
   },
   "rich": {
     "heading": "Rich messages, categories and per-channel filtering",
-    "intro": "Below the channel form every channel exposes the same three controls: a <em>Rich messages</em> toggle at the top (highlighted with the arrow in the screenshot), eleven collapsible <em>Notification Categories</em> with per-event toggles, and a <em>Send Test</em> button at the bottom.",
-    "imageAlt": "Notification Categories panel with Rich messages master toggle highlighted at top, collapsible sections for VM/CT, Backups, Resources, Storage, Network, Security, Cluster, Services, Health Monitor, Updates each with toggle and event count, and a Send Test button",
-    "imageCaption": "Top arrow — the per-channel <em>Rich messages</em> toggle. Below — the eleven collapsible categories with per-event toggles. <em>Send Test</em> sits at the bottom of the channel.",
+    "intro": "Below the channel form every channel exposes the same three controls: a <em>Rich messages</em> toggle at the top (highlighted with the arrow in the screenshot), the collapsible <em>Notification Categories</em> with per-event toggles, and a <em>Send Test</em> button at the bottom.",
+    "imageAlt": "Notification Categories panel with the Rich messages toggle highlighted at the top, collapsible sections for VM / CT, Backups, Resources, Storage, Network, Security, Cluster, Services, Health Monitor, Updates, Hardware and System, each with a toggle and event count, Hardware expanded with its per-event toggles, Quiet hours and Daily digest below, and a Send Test button",
+    "imageCaption": "Top arrow — the per-channel <em>Rich messages</em> toggle. Below — the collapsible categories with per-event toggles. <em>Send Test</em> sits at the bottom of the channel.",
     "richTitle": "Rich messages",
     "richIntro": "With <em>Rich messages</em> on, every event header is prefixed with a category emoji and the body is rendered using the channel's native formatting (Telegram HTML, Discord embed with severity colour). With it off, the Monitor sends a plain-text version with the same information minus the visual cues. Same content, different presentation:",
     "plainHeader": "Plain — Rich messages off",
@@ -351,17 +351,17 @@
   },
   "catalogue": {
     "heading": "Event catalogue",
-    "intro": "Around seventy event types are grouped into eleven UI categories. The Notifications panel renders one collapsible section per group with a toggle for every event inside it. Each event is on by default unless explicitly marked otherwise.",
+    "intro": "Events are grouped into the categories of the Notifications panel, which renders one collapsible section per group with a toggle for every event inside it. Each event is on by default unless marked (off by default). On a Proxmox Backup Server host the panel hides the VM / CT, Backups and Cluster groups, and ProxMenux does not set up the Proxmox VE webhook.",
     "headerGroup": "Group",
     "headerEvents": "Events",
     "rows": [
       {
         "group": "VM / CT",
-        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus the <code>ct_*</code> equivalents, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code> (off by default), <code>vm_shutdown</code> (off by default), <code>vm_fail</code>, <code>vm_restart</code> (off by default), <code>ct_start</code>, <code>ct_start_warning</code>, <code>ct_stop</code> (off by default), <code>ct_shutdown</code> (off by default), <code>ct_fail</code>, <code>ct_restart</code> (off by default), <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code> (off by default), <code>replication_fail</code>, <code>lxc_updates_available</code> (off by default), <code>lxc_update_applied</code>, <code>oci_update_completed</code>, <code>oci_update_failed</code>, <code>oci_recreate_completed</code>, <code>oci_recreate_failed</code>, <code>oci_modify_completed</code>, <code>oci_modify_failed</code>, <code>oci_watchdog_restarted</code>, <code>oci_watchdog_failed</code>."
       },
       {
         "group": "Backups",
-        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+        "events": "<code>backup_start</code> (off by default), <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code> (off by default), <code>snapshot_fail</code>, <code>host_backup_start</code> (off by default), <code>host_backup_complete</code>, <code>host_backup_fail</code>."
       },
       {
         "group": "Resources",
@@ -369,11 +369,11 @@
       },
       {
         "group": "Storage",
-        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>, <code>mount_stale</code>, <code>mount_readonly</code>, <code>lxc_disk_low</code>, <code>vm_disk_low</code>, <code>lxc_mount_low</code>, <code>pve_storage_full</code>, <code>zfs_pool_full</code>."
       },
       {
         "group": "Network",
-        "events": "<code>network_down</code>, <code>network_latency</code>."
+        "events": "<code>network_down</code>, <code>network_latency</code> (off by default)."
       },
       {
         "group": "Security",
@@ -385,19 +385,23 @@
       },
       {
         "group": "Services",
-        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>, <code>system_restore_completed</code>, <code>kernel_warning</code>, <code>cron_output</code> (off by default)."
       },
       {
         "group": "Health Monitor",
-        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>state_change</code> (off by default)."
       },
       {
         "group": "Updates",
-        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+        "events": "<code>update_summary</code>, <code>pve_update</code>, <code>update_complete</code> (off by default), <code>proxmenux_update</code>, <code>app_update_available</code>, <code>docker_stack_update_available</code>, <code>apt_listchanges</code>, <code>post_install_update</code>, <code>secure_gateway_update_available</code>, <code>nvidia_driver_update_available</code>, <code>coral_driver_update_available</code>."
       },
       {
-        "group": "Hardware / GPU",
-        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+        "group": "Hardware",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "group": "System",
+        "events": "<code>custom</code>, <code>ai_model_migrated</code>."
       }
     ],
     "burstNote": "A handful of <code>burst_*</code> aggregation types (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) exist only in the dispatcher — they replace bursts of individual events with a single summary message and are not exposed as toggles in the UI. They inherit the on/off state of their parent event type.",

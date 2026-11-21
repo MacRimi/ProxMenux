@@ -214,9 +214,9 @@
   },
   "rich": {
     "heading": "Formaterade meddelanden, kategorier och filter per kanal",
-    "intro": "Varje kanal har tre kontroller under formuläret: <em>Formaterade meddelanden</em> överst, elva utfällbara <em>Aviseringskategorier</em> med val per händelse och <em>Skicka test</em> längst ned.",
-    "imageAlt": "Aviseringskategorier med markerad formateringsinställning överst, utfällbara delar för VM/CT, säkerhetskopiering, resurser, lagring, nätverk, säkerhet, kluster, tjänster, Health Monitor och uppdateringar samt antal händelser och testknapp",
-    "imageCaption": "Pilen visar <em>Formaterade meddelanden</em> för kanalen. Nedanför finns elva kategorier med val per händelse. <em>Skicka test</em> finns längst ned.",
+    "intro": "Varje kanal har tre kontroller under formuläret: <em>Formaterade meddelanden</em> överst, utfällbara <em>Aviseringskategorier</em> med val per händelse och <em>Skicka test</em> längst ned.",
+    "imageAlt": "Aviseringskategorier med markerad formateringsinställning överst, utfällbara delar för VM / CT, säkerhetskopiering, resurser, lagring, nätverk, säkerhet, kluster, tjänster, Health Monitor, uppdateringar, hårdvara och system samt antal händelser, Hårdvara utfälld med sina händelser, tysta timmar och daglig sammanfattning nedanför, och testknapp",
+    "imageCaption": "Pilen visar <em>Formaterade meddelanden</em> för kanalen. Nedanför finns kategorierna med val per händelse. <em>Skicka test</em> finns längst ned.",
     "richTitle": "Formaterade meddelanden",
     "richIntro": "Med <em>Formaterade meddelanden</em> får rubriken en kategoriemoji och texten kanalens formatering, såsom Telegram-HTML eller Discord-kort med färg efter allvarlighetsgrad. Avstängt skickas samma information som enkel text:",
     "plainHeader": "Enkel text — formatering av",
@@ -351,17 +351,17 @@
   },
   "catalogue": {
     "heading": "Händelsekatalog",
-    "intro": "Cirka sjuttio händelsetyper är indelade i elva kategorier. Aviseringspanelen visar en utfällbar del per kategori med val för varje händelse. Alla är aktiverade som standard om inget annat anges.",
+    "intro": "Händelsetyperna är indelade i aviseringspanelens kategorier. Panelen visar en utfällbar del per kategori med val för varje händelse. Alla är aktiverade som standard utom de som är märkta (inaktiverad som standard). På en Proxmox Backup Server-värd döljer panelen grupperna VM / CT, Säkerhetskopieringar och Kluster, och ProxMenux konfigurerar inte Proxmox VE-webhooken.",
     "headerGroup": "Grupp",
     "headerEvents": "Händelser",
     "rows": [
       {
         "group": "VM / CT",
-        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus <code>ct_*</code>-ekvivalenter, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code> (inaktiverad som standard), <code>vm_shutdown</code> (inaktiverad som standard), <code>vm_fail</code>, <code>vm_restart</code> (inaktiverad som standard), <code>ct_start</code>, <code>ct_start_warning</code>, <code>ct_stop</code> (inaktiverad som standard), <code>ct_shutdown</code> (inaktiverad som standard), <code>ct_fail</code>, <code>ct_restart</code> (inaktiverad som standard), <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code> (inaktiverad som standard), <code>replication_fail</code>, <code>lxc_updates_available</code> (inaktiverad som standard), <code>lxc_update_applied</code>, <code>oci_update_completed</code>, <code>oci_update_failed</code>, <code>oci_recreate_completed</code>, <code>oci_recreate_failed</code>, <code>oci_modify_completed</code>, <code>oci_modify_failed</code>, <code>oci_watchdog_restarted</code>, <code>oci_watchdog_failed</code>."
       },
       {
         "group": "Säkerhetskopieringar",
-        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+        "events": "<code>backup_start</code> (inaktiverad som standard), <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code> (inaktiverad som standard), <code>snapshot_fail</code>, <code>host_backup_start</code> (inaktiverad som standard), <code>host_backup_complete</code>, <code>host_backup_fail</code>."
       },
       {
         "group": "Resurser",
@@ -369,11 +369,11 @@
       },
       {
         "group": "Lagring",
-        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>, <code>mount_stale</code>, <code>mount_readonly</code>, <code>lxc_disk_low</code>, <code>vm_disk_low</code>, <code>lxc_mount_low</code>, <code>pve_storage_full</code>, <code>zfs_pool_full</code>."
       },
       {
         "group": "Nätverk",
-        "events": "<code>network_down</code>, <code>network_latency</code>."
+        "events": "<code>network_down</code>, <code>network_latency</code> (inaktiverad som standard)."
       },
       {
         "group": "Säkerhet",
@@ -385,19 +385,23 @@
       },
       {
         "group": "Tjänster",
-        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>, <code>system_restore_completed</code>, <code>kernel_warning</code>, <code>cron_output</code> (inaktiverad som standard)."
       },
       {
         "group": "Health Monitor",
-        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>state_change</code> (inaktiverad som standard)."
       },
       {
         "group": "Uppdateringar",
-        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+        "events": "<code>update_summary</code>, <code>pve_update</code>, <code>update_complete</code> (inaktiverad som standard), <code>proxmenux_update</code>, <code>app_update_available</code>, <code>docker_stack_update_available</code>, <code>apt_listchanges</code>, <code>post_install_update</code>, <code>secure_gateway_update_available</code>, <code>nvidia_driver_update_available</code>, <code>coral_driver_update_available</code>."
       },
       {
-        "group": "Maskinvara / GPU",
-        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+        "group": "Hårdvara",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "group": "System",
+        "events": "<code>custom</code>, <code>ai_model_migrated</code>."
       }
     ],
     "burstNote": "Några <code>burst_*</code>-typer (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code> med flera) finns bara i sändningshanteraren. De ersätter många enskilda händelser med en sammanfattning och har inga egna val i gränssnittet. De ärver inställningen från sin ursprungliga händelsetyp.",

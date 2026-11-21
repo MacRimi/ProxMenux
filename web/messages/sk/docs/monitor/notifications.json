@@ -214,9 +214,9 @@
   },
   "rich": {
     "heading": "Rozšírené správy, kategórie a filtre kanálov",
-    "intro": "Každý kanál má <em>Rozšírené správy</em>, jedenásť rozbaľovacích <em>Kategórií oznámení</em> s prepínačmi udalostí a tlačidlo <em>Odoslať test</em>.",
-    "imageAlt": "Panel kategórií s rozšírenými správami, skupinami VM/CT, záloh, zdrojov, úložiska, siete, bezpečnosti, klastra, služieb, zdravia a aktualizácií, počtami a tlačidlom testu",
-    "imageCaption": "Šípka označuje <em>Rozšírené správy</em>. Pod nimi je jedenásť kategórií s udalosťami; <em>Odoslať test</em> je dole.",
+    "intro": "Každý kanál má <em>Rozšírené správy</em>, rozbaľovacie <em>Kategórie oznámení</em> s prepínačmi udalostí a tlačidlo <em>Odoslať test</em>.",
+    "imageAlt": "Panel kategórií s rozšírenými správami, skupinami VM / CT, záloh, zdrojov, úložiska, siete, zabezpečenia, klastra, služieb, monitora zdravia, aktualizácií, hardvéru a systému, počtami, rozbalenou skupinou Hardvér s jej udalosťami, tichými hodinami a denným súhrnom pod nimi a tlačidlom testu",
+    "imageCaption": "Šípka označuje <em>Rozšírené správy</em>. Pod nimi sú kategórie s udalosťami; <em>Odoslať test</em> je dole.",
     "richTitle": "Rozšírené správy",
     "richIntro": "So zapnutými <em>Rozšírenými správami</em> sa pridá ikona kategórie a formát kanála, napríklad HTML Telegram alebo farebné karty Discord. Pri vypnutí príde rovnaký obsah ako obyčajný text:",
     "plainHeader": "Obyčajný text — rozšírené správy vypnuté",
@@ -351,17 +351,17 @@
   },
   "catalogue": {
     "heading": "Katalóg udalostí",
-    "intro": "Približne sedemdesiat typov je v jedenástich kategóriách. Každá rozbaľovacia skupina ponúka prepínače udalostí. Predvolene sú zapnuté, pokiaľ nie je uvedené inak.",
+    "intro": "Typy udalostí sú rozdelené do kategórií panela oznámení. Každá rozbaľovacia skupina ponúka prepínače udalostí. Predvolene sú zapnuté, okrem udalostí označených (predvolene vypnuté). Na hostiteľovi Proxmox Backup Server panel skryje skupiny VM / CT, Zálohy a Klaster a ProxMenux nenastaví webhook Proxmox VE.",
     "headerGroup": "Skupina",
     "headerEvents": "Udalosti",
     "rows": [
       {
         "group": "VM / CT",
-        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus ekvivalenty <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code> (predvolene vypnuté), <code>vm_shutdown</code> (predvolene vypnuté), <code>vm_fail</code>, <code>vm_restart</code> (predvolene vypnuté), <code>ct_start</code>, <code>ct_start_warning</code>, <code>ct_stop</code> (predvolene vypnuté), <code>ct_shutdown</code> (predvolene vypnuté), <code>ct_fail</code>, <code>ct_restart</code> (predvolene vypnuté), <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code> (predvolene vypnuté), <code>replication_fail</code>, <code>lxc_updates_available</code> (predvolene vypnuté), <code>lxc_update_applied</code>, <code>oci_update_completed</code>, <code>oci_update_failed</code>, <code>oci_recreate_completed</code>, <code>oci_recreate_failed</code>, <code>oci_modify_completed</code>, <code>oci_modify_failed</code>, <code>oci_watchdog_restarted</code>, <code>oci_watchdog_failed</code>."
       },
       {
         "group": "Zálohy",
-        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+        "events": "<code>backup_start</code> (predvolene vypnuté), <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code> (predvolene vypnuté), <code>snapshot_fail</code>, <code>host_backup_start</code> (predvolene vypnuté), <code>host_backup_complete</code>, <code>host_backup_fail</code>."
       },
       {
         "group": "Zdroje",
@@ -369,11 +369,11 @@
       },
       {
         "group": "Úložisko",
-        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>, <code>mount_stale</code>, <code>mount_readonly</code>, <code>lxc_disk_low</code>, <code>vm_disk_low</code>, <code>lxc_mount_low</code>, <code>pve_storage_full</code>, <code>zfs_pool_full</code>."
       },
       {
         "group": "Sieť",
-        "events": "<code>network_down</code>, <code>network_latency</code>."
+        "events": "<code>network_down</code>, <code>network_latency</code> (predvolene vypnuté)."
       },
       {
         "group": "Zabezpečenie",
@@ -385,19 +385,23 @@
       },
       {
         "group": "Služby",
-        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>, <code>system_restore_completed</code>, <code>kernel_warning</code>, <code>cron_output</code> (predvolene vypnuté)."
       },
       {
         "group": "Monitor zdravia",
-        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>state_change</code> (predvolene vypnuté)."
       },
       {
         "group": "Aktualizácie",
-        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+        "events": "<code>update_summary</code>, <code>pve_update</code>, <code>update_complete</code> (predvolene vypnuté), <code>proxmenux_update</code>, <code>app_update_available</code>, <code>docker_stack_update_available</code>, <code>apt_listchanges</code>, <code>post_install_update</code>, <code>secure_gateway_update_available</code>, <code>nvidia_driver_update_available</code>, <code>coral_driver_update_available</code>."
       },
       {
-        "group": "Hardvér / GPU",
-        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+        "group": "Hardvér",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "group": "Systém",
+        "events": "<code>custom</code>, <code>ai_model_migrated</code>."
       }
     ],
     "burstNote": "Typy <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, atď.) nahrádzajú nárazové udalosti súhrnom. Nemajú vlastné prepínače v rozhraní a dedia stav zdrojovej udalosti.",

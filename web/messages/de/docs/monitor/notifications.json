@@ -214,9 +214,9 @@
   },
   "rich": {
     "heading": "Formatierte Meldungen, Kategorien und Kanalfilter",
-    "intro": "Jeder Kanal hat drei Steuerelemente: <em>Formatierte Meldungen</em> oben, elf aufklappbare <em>Benachrichtigungskategorien</em> mit Ereignisschaltern und <em>Test senden</em> unten.",
-    "imageAlt": "Benachrichtigungskategorien-Panel mit Rich-Nachrichten-Master-Schalter oben hervorgehoben, zusammenklappbare Abschnitte für VM/CT, Backups, Ressourcen, Speicher, Netzwerk, Sicherheit, Cluster, Dienste, Gesundheitsmonitor, Updates jeweils mit Umschalt- und Ereignisanzahl und eine Send-Test-Schaltfläche",
-    "imageCaption": "Der Pfeil markiert <em>Formatierte Meldungen</em>. Darunter liegen elf Kategorien mit Ereignisschaltern; <em>Test senden</em> steht unten.",
+    "intro": "Jeder Kanal hat drei Steuerelemente: <em>Formatierte Meldungen</em> oben, aufklappbare <em>Benachrichtigungskategorien</em> mit Ereignisschaltern und <em>Test senden</em> unten.",
+    "imageAlt": "Benachrichtigungskategorien-Panel mit hervorgehobenem Rich-Nachrichten-Schalter oben, zusammenklappbaren Abschnitten für VM / CT, Sicherungen, Ressourcen, Speicher, Netzwerk, Sicherheit, Cluster, Dienste, Gesundheitsmonitor, Aktualisierungen, Hardware und System, jeweils mit Schalter und Ereignisanzahl, aufgeklappter Hardware-Abschnitt mit seinen Ereignissen, darunter Ruhezeiten und tägliche Zusammenfassung sowie eine Send-Test-Schaltfläche",
+    "imageCaption": "Der Pfeil markiert <em>Formatierte Meldungen</em>. Darunter liegen die Kategorien mit Ereignisschaltern; <em>Test senden</em> steht unten.",
     "richTitle": "Formatierte Meldungen",
     "richIntro": "Mit <em>Formatierten Meldungen</em> erscheint ein Kategorie-Emoji und das native Kanalformat, etwa Telegram-HTML oder farbige Discord-Einbettungen. Ohne diese Option wird derselbe Inhalt als einfacher Text gesendet:",
     "plainHeader": "Einfacher Text — Formatierung aus",
@@ -351,17 +351,17 @@
   },
   "catalogue": {
     "heading": "Ereigniskatalog",
-    "intro": "Rund siebzig Ereignistypen sind in elf UI-Kategorien unterteilt. Das Benachrichtigungsfeld macht einen zusammenklappbaren Abschnitt pro Gruppe mit einem Umschalter für jedes Ereignis darin. Jedes Ereignis ist standardmäßig aktiviert, sofern nicht ausdrücklich anders gekennzeichnet.",
+    "intro": "Die Ereignistypen sind in die Kategorien des Benachrichtigungsfelds unterteilt. Es zeigt einen zusammenklappbaren Abschnitt pro Gruppe mit einem Umschalter für jedes Ereignis darin. Jedes Ereignis ist standardmäßig aktiviert, sofern es nicht als (standardmäßig deaktiviert) gekennzeichnet ist. Auf einem Proxmox Backup Server blendet das Feld die Gruppen VM / CT, Sicherungen und Cluster aus, und ProxMenux richtet den Proxmox-VE-Webhook nicht ein.",
     "headerGroup": "Gruppe",
     "headerEvents": "Ereignisse",
     "rows": [
       {
         "group": "VM / CT",
-        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus die <code>ct_*</code> Äquivalente, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code> (standardmäßig deaktiviert), <code>vm_shutdown</code> (standardmäßig deaktiviert), <code>vm_fail</code>, <code>vm_restart</code> (standardmäßig deaktiviert), <code>ct_start</code>, <code>ct_start_warning</code>, <code>ct_stop</code> (standardmäßig deaktiviert), <code>ct_shutdown</code> (standardmäßig deaktiviert), <code>ct_fail</code>, <code>ct_restart</code> (standardmäßig deaktiviert), <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code> (standardmäßig deaktiviert), <code>replication_fail</code>, <code>lxc_updates_available</code> (standardmäßig deaktiviert), <code>lxc_update_applied</code>, <code>oci_update_completed</code>, <code>oci_update_failed</code>, <code>oci_recreate_completed</code>, <code>oci_recreate_failed</code>, <code>oci_modify_completed</code>, <code>oci_modify_failed</code>, <code>oci_watchdog_restarted</code>, <code>oci_watchdog_failed</code>."
       },
       {
         "group": "Sicherungen",
-        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+        "events": "<code>backup_start</code> (standardmäßig deaktiviert), <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code> (standardmäßig deaktiviert), <code>snapshot_fail</code>, <code>host_backup_start</code> (standardmäßig deaktiviert), <code>host_backup_complete</code>, <code>host_backup_fail</code>."
       },
       {
         "group": "Ressourcen",
@@ -369,11 +369,11 @@
       },
       {
         "group": "Speicher",
-        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>, <code>mount_stale</code>, <code>mount_readonly</code>, <code>lxc_disk_low</code>, <code>vm_disk_low</code>, <code>lxc_mount_low</code>, <code>pve_storage_full</code>, <code>zfs_pool_full</code>."
       },
       {
         "group": "Netzwerk",
-        "events": "<code>network_down</code>, <code>network_latency</code>."
+        "events": "<code>network_down</code>, <code>network_latency</code> (standardmäßig deaktiviert)."
       },
       {
         "group": "Sicherheit",
@@ -385,19 +385,23 @@
       },
       {
         "group": "Dienste",
-        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>, <code>system_restore_completed</code>, <code>kernel_warning</code>, <code>cron_output</code> (standardmäßig deaktiviert)."
       },
       {
         "group": "Gesundheitsmonitor",
-        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>state_change</code> (standardmäßig deaktiviert)."
       },
       {
         "group": "Aktualisierungen",
-        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+        "events": "<code>update_summary</code>, <code>pve_update</code>, <code>update_complete</code> (standardmäßig deaktiviert), <code>proxmenux_update</code>, <code>app_update_available</code>, <code>docker_stack_update_available</code>, <code>apt_listchanges</code>, <code>post_install_update</code>, <code>secure_gateway_update_available</code>, <code>nvidia_driver_update_available</code>, <code>coral_driver_update_available</code>."
       },
       {
-        "group": "Hardware / GPU",
-        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+        "group": "Hardware",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "group": "System",
+        "events": "<code>custom</code>, <code>ai_model_migrated</code>."
       }
     ],
     "burstNote": "Eine Handvoll <code>burst_*</code>-Aggregationstypen (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code> usw.) gibt es nur im Dispatcher — sie ersetzen einzelne Ereignisse durch eine einzige Zusammenfassungsnachricht und werden nicht als Umschaltungen in der Benutzeroberfläche angezeigt. Sie erben den Ein/Aus-Zustand ihres übergeordneten Ereignistyps.",

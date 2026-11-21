@@ -60,7 +60,7 @@
               ],
               [
                 "Red",
-                "Bridge privado, subred, una dirección fija por servicio y acceso LAN para el miembro principal",
+                "Puente privado, subred, una dirección fija por servicio y acceso a la LAN para los miembros que lo necesitan",
                 "Sin colisión con bridges o subredes existentes y sin direcciones repetidas"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Red privada",
-                "body": "Se crean un bridge y una subred y cada miembro recibe su dirección fija; solo el miembro principal recibe además la interfaz de la LAN."
+                "body": "Se crean un puente y una subred, y cada miembro recibe su dirección fija. El miembro principal recibe además la interfaz de la LAN, igual que cualquier otro miembro que publique un puerto o que la receta de la aplicación solicite."
               },
               {
                 "title": "Persistencia",

@@ -190,8 +190,12 @@
                 "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
               },
               {
-                "title": "Špecifické USB zariadenie",
-                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+                "title": "USB zariadenie",
+                "code": "lxc.cgroup2.devices.allow: c 189:* rwm\nlxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir"
+              },
+              {
+                "title": "USB sériový adaptér",
+                "code": "lxc.cgroup2.devices.allow: c 166:* rwm\nlxc.mount.entry: /dev/serial/by-id/usb-VENDOR_PRODUCT_SERIAL-if00 dev/ttyACM0 none bind,optional,create=file"
               },
               {
                 "title": "AMD OpenCL",
@@ -332,13 +336,16 @@
       "title": "USB, sériové a USB Coral",
       "blocks": [
         {
-          "calloutWarning": {
-            "title": "Číslovanie USB sa môže zmeniť",
-            "body": "Cesta ako <code>/dev/bus/usb/003/004</code> sa môže zmeniť po opätovnom pripojení zariadenia alebo reštarte hostiteľa. Profil zaznamená výrobcu, produkt a sériové číslo, ak sú dostupné, ale nová adresa zbernice sa automaticky nepremapuje."
+          "calloutInfo": {
+            "title": "USB zariadenie sa zaznamenáva podľa toho, čím je",
+            "body": "Jadro čísluje USB zariadenie pri každom nájdení, takže po reštarte alebo opätovnom pripojení môže <code>/dev/bus/usb/003/004</code> alebo <code>/dev/ttyUSB0</code> označovať iné zariadenie, alebo žiadne. ProxMenux zaznamená zariadenie podľa výrobcu, produktu, sériového čísla a fyzického portu. USB zariadenie dostane strom USB hostiteľa a pravidlo udev, ktoré kontajneru umožní zapisovať len do tohto zariadenia. USB sériový adaptér dostane svoj stabilný odkaz v <code>/dev/serial</code> pripojený na ceste, ktorú aplikácia očakáva. Keď sa zariadenie vráti počas behu kontajnera, kontajner sa reštartuje, aby ho aplikácia otvorila znova."
           }
         },
         {
-          "p": "Periférne zariadenie je daný jeho konkrétnym uzlom: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> alebo <code>/dev/bus/usb/BBB/DDD</code>. Sprístupnenie celého <code>/dev</code> nie je akceptovaný. Coral je ponúkaný len pre aplikácie, ktorých profil deklaruje."
+          "p": "Periférne zariadenie sa vyberie zo zariadení USB hostiteľa alebo podľa jeho aktuálneho uzla: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> alebo <code>/dev/bus/usb/BBB/DDD</code>. Uzol slúži len na nájdenie zariadenia, uloží sa jeho identita. Odovzdanie celého <code>/dev</code> sa neprijme. Coral sa ponúka len aplikáciám, ktorých profil ho deklaruje."
+        },
+        {
+          "p": "Príkladom je Zigbee2MQTT. Jeho profil ponúka adaptér Zigbee ako voliteľné zariadenie, predvolene vypnuté, takže predvolená inštalácia ho nesprístupní. V rozšírenej inštalácii <strong>Sprístupniť zariadenie hostiteľa kontajneru LXC</strong> vypíše zariadenia USB hostiteľa, na konci s <strong>Ďalší uzol, zadaný ručne</strong>, a navrhne <code>/dev/ttyACM0</code>. Adaptér si v kontajneri zachová rovnakú cestu a počas inštalácie musí byť pripojený."
         }
       ]
     },

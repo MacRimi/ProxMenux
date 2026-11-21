@@ -224,11 +224,14 @@
           }
         },
         {
+          "p": "A interface de acesso pode ter uma etiqueta VLAN. A instalação avançada pergunta-a junto do endereço, e Modify altera-a ou remove-a numa única aplicação. Uma etiqueta definida no Proxmox é preservada. Com etiqueta, o ProxMenux verifica a aplicação a partir do interior do seu contentor, pelo que o host não precisa de acesso a essa VLAN."
+        },
+        {
           "flow": {
             "nodes": [
               {
                 "label": "LAN",
-                "detail": "Endereço acessível\napenas para o serviço principal"
+                "detail": "endereço acessível\nserviço principal e membros\nque publicam portas"
               },
               {
                 "label": "LXC principal",
@@ -239,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nendereços fixos"
               }
             ],
-            "caption": "As dependências comunicam pela rede privada e não têm um endereço na LAN."
+            "caption": "Um membro sem endereço na LAN só é alcançado pela rede privada."
           }
         },
         {
@@ -257,6 +260,47 @@
               "Os novos diretórios são criados com o UID e o GID para os quais é mapeado o LXC sem privilégios.",
               "O proprietário dos diretórios existentes não é alterado de forma recursiva.",
               "Sockets, ficheiros de sistema e caminhos sensíveis não são propostos como diretórios genéricos do host."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tmpfs",
+      "title": "Caminhos em memória (tmpfs)",
+      "intro": "Algumas aplicações querem um diretório temporário rápido que não tem de sobreviver a um reinício, como a cache do Frigate. O ProxMenux monta-o como um tmpfs nativo do LXC: vive em memória, está vazio sempre que o LXC arranca e não faz parte de nenhuma cópia de segurança.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Origem",
+              "Tamanho",
+              "Perguntado",
+              "Proprietário"
+            ],
+            "rows": [
+              [
+                "Uma aplicação do catálogo",
+                "O tamanho que o seu perfil propõe, com um mínimo. O Frigate, por exemplo, propõe 1024 MB para <code>/tmp/cache</code> e não aceita menos de 256 MB.",
+                "Na instalação avançada, a menos que o perfil fixe o tamanho",
+                "O que o perfil define, quando a aplicação precisa de um"
+              ],
+              [
+                "<code>tmpfs:</code> num ficheiro Compose",
+                "O seu <code>size</code>. Sem ele, metade da memória do LXC, com um mínimo de 1 MiB.",
+                "Não",
+                "O <code>uid</code> e o <code>gid</code> das suas opções, ou o root do contentor quando não são indicados. Modo <code>1777</code>, a menos que <code>mode</code> defina outro"
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Um ficheiro Compose pode declará-lo em <code>tmpfs:</code> ou como um volume com <code>type: tmpfs</code>. A primeira forma aceita <code>size</code>, <code>mode</code>, <code>uid</code>, <code>gid</code>, <code>rw</code>, <code>ro</code>, <code>nosuid</code>, <code>nodev</code> e <code>noexec</code>. A forma de volume aceita <code>size</code> e <code>mode</code>, além de <code>read_only</code>. Todo o tmpfs é montado com <code>nosuid</code> e <code>nodev</code>.",
+              "Pode ficar em <code>/tmp</code>, <code>/run</code> ou <code>/dev/shm</code>, ou sob <code>/tmp/</code>, <code>/run/</code> e <code>/var/cache/</code>.",
+              "Um tmpfs que se sobreponha a outro tmpfs, a um caminho persistente ou ao <code>/dev/shm</code> que o <code>shm_size</code> cria, ou que use uma opção não listada acima, não é instalado: a revisão mostra <strong>um caminho em memória (tmpfs) usa uma opção que não pode ser aplicada ou se sobrepõe a outro caminho</strong> em <strong>Opções sem equivalente</strong>.",
+              "Uma atualização ou uma recriação preserva cada tmpfs com o seu tamanho e o seu proprietário. <strong>Opções do catálogo</strong>, em Modify, acrescenta os que uma versão mais recente da aplicação declare."
             ]
           }
         }

@@ -1733,7 +1733,7 @@ El proyecto Helper Scripts es un recurso extraordinario para la comunidad Proxmo
 
 ### Nueva versión v1.1.6
 
-![Shared Resources Menu](https://macrimi.github.io/ProxMenux/share/main-menu.png)
+![Shared Resources Menu](https://macrimi.github.io/ProxMenux/share/storage-share-menu.png)
 
 
 ### Añadido
