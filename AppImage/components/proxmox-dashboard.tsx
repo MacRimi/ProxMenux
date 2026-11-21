@@ -122,11 +122,11 @@ function PBSDashboard() {
 }
 
 type Product = "pve" | "pbs"
-type TopTab = TabId | "datastores" | "pbs-tasks"
+type TopTab = TabId | "datastores" | "pbs-tasks" | "network" | "hardware"
 
 // Proxmox Backup Server has no guests, apps or PVE storage: it keeps the
 // same header, health and administration with its own top-level sections.
-const PBS_TABS: TopTab[] = ["overview", "datastores", "pbs-tasks", "terminal", "admin"]
+const PBS_TABS: TopTab[] = ["overview", "datastores", "pbs-tasks", "network", "hardware", "terminal", "admin"]
 
 
 // What the header reads from the update status and the health snapshot.
@@ -803,6 +803,10 @@ function MonitorDashboard({ product }: { product: Product }) {
                   case "overview": return renderDirect("overview", LayoutDashboard, t("navigation.overview"))
                   case "datastores": return renderDirect("datastores", Database, t("pbs.datastores"))
                   case "pbs-tasks": return renderDirect("pbs-tasks", ListChecks, t("pbs.tasksTab"))
+                  // A Proxmox Backup Server shows them as tabs of their own: its
+                  // storage lives in Datastores, so it has no Node menu.
+                  case "network":  return renderDirect("network",  NetworkIcon, t("navigation.network"))
+                  case "hardware": return renderDirect("hardware", Cpu,         t("navigation.hardware"))
                   case "apps":     return renderDirect("apps",     Grid3x3,         t("navigation.apps"))
                   case "catalog":  return (
                     <TabsTrigger key="catalog" value="catalog" className={triggerActiveClass}>
@@ -882,6 +886,8 @@ function MonitorDashboard({ product }: { product: Product }) {
                           case "overview": return btn("overview", LayoutDashboard, t("navigation.overview"))
                           case "datastores": return btn("datastores", Database, t("pbs.datastores"))
                           case "pbs-tasks": return btn("pbs-tasks", ListChecks, t("pbs.tasksTab"))
+                          case "network":  return btn("network",  NetworkIcon, t("navigation.network"))
+                          case "hardware": return btn("hardware", Cpu,         t("navigation.hardware"))
                           case "apps":     return btn("apps",     Grid3x3,         t("navigation.apps"))
                           case "catalog":  return (
                             <Button key="catalog" variant="ghost" onClick={() => select("catalog")}
@@ -962,6 +968,14 @@ function MonitorDashboard({ product }: { product: Product }) {
               <PBSPanel key={`pbs-tasks-${componentKey}`} localOnly view="tasks" />
             </TabsContent>
           )}
+          {isPbs && <>
+            <TabsContent value="network" className="space-y-4 md:space-y-6 mt-0">
+              <NetworkMetrics key={`network-${componentKey}`} />
+            </TabsContent>
+            <TabsContent value="hardware" className="space-y-4 md:space-y-6 mt-0">
+              <Hardware key={`hardware-${componentKey}`} />
+            </TabsContent>
+          </>}
 
           {!isPbs && <>
           <TabsContent value="apps" className="space-y-4 md:space-y-6 mt-0">

@@ -3005,6 +3005,7 @@
       "menux": "Menux",
       "guests": "VMs und LXCs",
       "node": "Knoten (Speicher, Netzwerk, Hardware)",
+      "nodePbs": "Netzwerk und Hardware",
       "backup": "Backup",
       "logs": "Systemprotokolle"
     },

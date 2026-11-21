@@ -7,6 +7,7 @@ import useSWR from "swr"
 import { Checkbox } from "./ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
+import { useIsPbs } from "../lib/use-platform"
 import { useT } from "../lib/i18n/provider"
 
 export const PROFILES = ["admin", "operator", "operator_no_terminal", "observer", "custom"] as const
@@ -19,10 +20,11 @@ export const EMPTY_CUSTOM: Custom = { areas: ["general"], actions: [] }
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
 // The name of an area: the pages of a Proxmox Backup Server use the names of
-// their tabs.
-export function areaLabel(t: Translate, area: string): string {
+// their tabs, and its Node area is its network and hardware.
+export function areaLabel(t: Translate, area: string, pbs = false): string {
   if (area === "datastores") return t("pbs.datastores")
   if (area === "tasks") return t("pbs.tasksTab")
+  if (area === "node" && pbs) return t("users.areas.nodePbs")
   return t(`users.areas.${area}`)
 }
 
@@ -39,6 +41,7 @@ export function CustomChoice({ value, onChange, disabled, idPrefix = "custom" }:
 }) {
   const t = useT()
   const choices = useCustomChoices()
+  const pbs = useIsPbs()
   const toggle = (list: string[], item: string, on: boolean) => on ? [...list, item] : list.filter(x => x !== item)
   const group = (title: string, items: readonly string[], key: "areas" | "actions", label: (item: string) => string) => (
     <fieldset className="space-y-2 min-w-0">
@@ -59,7 +62,7 @@ export function CustomChoice({ value, onChange, disabled, idPrefix = "custom" }:
   )
   return (
     <div className="space-y-4 rounded-md border border-border bg-muted/40 p-3">
-      {group(t("users.customAreas"), choices.areas, "areas", item => areaLabel(t, item))}
+      {group(t("users.customAreas"), choices.areas, "areas", item => areaLabel(t, item, pbs))}
       {group(t("users.customActions"), choices.actions, "actions", item => t(`users.actions.${item}`))}
       <p className="text-xs text-muted-foreground">{t("users.customHint")}</p>
     </div>

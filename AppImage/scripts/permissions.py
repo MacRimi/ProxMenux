@@ -20,9 +20,10 @@ that matches none needs `admin`, and a test keeps every route listed.
 
 AREAS = ("general", "apps", "menux", "guests", "node", "backup", "logs", "datastores", "tasks")
 # What a custom profile chooses from on a Proxmox Backup Server, which has no
-# apps, catalog or guests: its own pages, and the actions that do something
-# there (SMART tests, host updates, terminals). The other areas are Proxmox VE's.
-PBS_AREAS = ("general", "datastores", "tasks", "logs")
+# apps, catalog or guests: its own pages (Node is its network and hardware;
+# its storage is in Datastores), and the actions that do something there
+# (SMART tests, host updates, terminals). The other areas are Proxmox VE's.
+PBS_AREAS = ("general", "datastores", "tasks", "node", "logs")
 PBS_ACTIONS = ("execute", "update", "terminal")
 PVE_AREAS = ("general", "apps", "menux", "guests", "node", "backup", "logs")
 

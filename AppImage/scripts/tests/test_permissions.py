@@ -101,7 +101,7 @@ class RouteClassification(unittest.TestCase):
         # A custom profile on a Proxmox Backup Server chooses among its pages
         # and the actions that do something there; Proxmox VE keeps its own.
         self.assertEqual(permissions.custom_choices(True),
-                         (["general", "datastores", "tasks", "logs"], ["execute", "update", "terminal"]))
+                         (["general", "datastores", "tasks", "node", "logs"], ["execute", "update", "terminal"]))
         areas, actions = permissions.custom_choices(False)
         self.assertNotIn("datastores", areas)
         self.assertNotIn("tasks", areas)

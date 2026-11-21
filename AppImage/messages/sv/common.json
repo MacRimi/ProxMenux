@@ -3005,6 +3005,7 @@
       "menux": "Menux",
       "guests": "VM och LXC",
       "node": "Nod (lagring, nätverk, hårdvara)",
+      "nodePbs": "Nätverk och hårdvara",
       "backup": "Säkerhetskopiering",
       "logs": "Systemloggar"
     },
