@@ -46,7 +46,7 @@
     "revision": "029da42b2459693681886665589fd9512d6b473c",
     "image_repository_url": "https://hub.docker.com/r/kutt/kutt",
     "readme_pushed_at": "",
-    "compose_sha256": "7e4cfc13aaac25f67dca99054c76e2ca4ea505eb735b238081c6e8596a459fab",
+    "compose_sha256": "b9e9ebcc78d5ade8f072d35a120f2ecf6ac7e0dcda3d1b3f8551440b52bc7520",
     "generated_at": "2026-11-21T12:05:49+00:00",
     "readme_raw_url": "https://raw.githubusercontent.com/thedevs-network/kutt/029da42b2459693681886665589fd9512d6b473c/README.md"
   },
@@ -96,7 +96,7 @@
       },
       {
         "name": "TRUST_PROXY",
-        "example": "false",
+        "example": "true",
         "required": true,
         "sensitive": false,
         "source": "docker-compose",
@@ -149,7 +149,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: kutt\nservices:\n  kutt:\n    image: docker.io/kutt/kutt:latest\n    ports:\n    - 3000:3000\n    volumes:\n    - ./database:/var/lib/kutt\n    - ./custom:/kutt/custom\n    environment:\n      DB_FILENAME: /var/lib/kutt/data.sqlite\n      DEFAULT_DOMAIN: localhost:3000\n      JWT_SECRET: ${GENERATED_JWT_SECRET}\n      DISALLOW_ANONYMOUS_LINKS: 'true'\n      TRUST_PROXY: 'false'\n    restart: unless-stopped\n"
+    "original_compose": "name: kutt\nservices:\n  kutt:\n    image: docker.io/kutt/kutt:latest\n    ports:\n    - 3000:3000\n    volumes:\n    - ./database:/var/lib/kutt\n    - ./custom:/kutt/custom\n    environment:\n      DB_FILENAME: /var/lib/kutt/data.sqlite\n      DEFAULT_DOMAIN: localhost:3000\n      JWT_SECRET: ${GENERATED_JWT_SECRET}\n      DISALLOW_ANONYMOUS_LINKS: 'true'\n      TRUST_PROXY: 'true'\n    restart: unless-stopped\n"
   },
   "compose_stack": {
     "project_name": "kutt",
@@ -181,7 +181,7 @@
             "DEFAULT_DOMAIN": "localhost:3000",
             "JWT_SECRET": "${GENERATED_JWT_SECRET}",
             "DISALLOW_ANONYMOUS_LINKS": "true",
-            "TRUST_PROXY": "false"
+            "TRUST_PROXY": "true"
           },
           "restart": "unless-stopped"
         }
