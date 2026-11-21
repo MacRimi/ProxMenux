@@ -8,26 +8,10 @@
       "en_US": "OpenProject"
     },
     "tagline": {
-      "en_US": "Project planning with tasks, boards and Gantt charts, using the official all-in-one image.",
-      "es_ES": "Planificación de proyectos con tareas, tableros y diagramas de Gantt mediante la imagen oficial todo en uno.",
-      "fr_FR": "Planification de projets avec tâches, tableaux et diagrammes de Gantt, dans l’image officielle tout-en-un.",
-      "de_DE": "Projektplanung mit Aufgaben, Boards und Gantt-Diagrammen im offiziellen Komplett-Image.",
-      "it_IT": "Pianificazione di progetti con attività, bacheche e diagrammi di Gantt nell’immagine ufficiale tutto in uno.",
-      "pt_PT": "Planeamento de projetos com tarefas, quadros e diagramas de Gantt na imagem oficial tudo em um.",
-      "ru_RU": "Планирование проектов с задачами, досками и диаграммами Ганта в официальном образе со всеми компонентами.",
-      "sk_SK": "Plánovanie projektov s úlohami, nástenkami a Ganttovými diagramami v oficiálnom obraze so všetkými súčasťami.",
-      "sv_SE": "Projektplanering med uppgifter, tavlor och Gantt-scheman i den officiella allt-i-ett-avbildningen."
+      "en_US": "Project planning with tasks, boards and Gantt charts, using the official all-in-one image."
     },
     "description": {
-      "en_US": "Project planning with tasks, boards and Gantt charts, using the official all-in-one image.",
-      "es_ES": "Planificación de proyectos con tareas, tableros y diagramas de Gantt mediante la imagen oficial todo en uno.",
-      "fr_FR": "Planification de projets avec tâches, tableaux et diagrammes de Gantt, dans l’image officielle tout-en-un.",
-      "de_DE": "Projektplanung mit Aufgaben, Boards und Gantt-Diagrammen im offiziellen Komplett-Image.",
-      "it_IT": "Pianificazione di progetti con attività, bacheche e diagrammi di Gantt nell’immagine ufficiale tutto in uno.",
-      "pt_PT": "Planeamento de projetos com tarefas, quadros e diagramas de Gantt na imagem oficial tudo em um.",
-      "ru_RU": "Планирование проектов с задачами, досками и диаграммами Ганта в официальном образе со всеми компонентами.",
-      "sk_SK": "Plánovanie projektov s úlohami, nástenkami a Ganttovými diagramami v oficiálnom obraze so všetkými súčasťami.",
-      "sv_SE": "Projektplanering med uppgifter, tavlor och Gantt-scheman i den officiella allt-i-ett-avbildningen."
+      "en_US": "Project planning with tasks, boards and Gantt charts, using the official all-in-one image."
     },
     "category": "productivity",
     "category_label": "Productivity",
@@ -49,7 +33,9 @@
     "documentation": "https://www.openproject.org/docs/installation-and-operations/installation/docker/",
     "repository": "https://github.com/opf/openproject",
     "tips": [
-      "Use the administrator credentials shown after setup. Set a fixed guest address or configure the external hostname and HTTPS for a reverse proxy."
+      "Sign in as admin with the password shown after setup; OpenProject asks you to change it at first login.",
+      "OPENPROJECT_HOST__NAME is set to the container's address and OpenProject rejects requests made to any other address or name: give the container a fixed address or a DHCP reservation, and change the variable in Modify to use a host name or a reverse proxy (set OPENPROJECT_HTTPS=true behind HTTPS).",
+      "The image follows OpenProject 17 with its bundled PostgreSQL; moving to a later major release is a manual step — back up first."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -169,7 +155,7 @@
     "services": [
       {
         "name": "openproject",
-        "image": "docker.io/openproject/openproject:latest",
+        "image": "docker.io/openproject/openproject:17",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -177,7 +163,7 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "docker.io/openproject/openproject:latest",
+          "image": "docker.io/openproject/openproject:17",
           "restart": "unless-stopped",
           "ports": [
             "80:80"
@@ -470,7 +456,7 @@
       {
         "id": "openproject-local-backends",
         "upstream_behavior": "Docker only exposes the Apache port of the all-in-one image.",
-        "native_lxc_behavior": "Bind PostgreSQL, Puma, Memcached and the collaboration backend to the guest loopback address before starting the original entrypoint.",
+        "native_lxc_behavior": "Bind PostgreSQL, Puma, Memcached, the collaboration backend and Postfix to the guest loopback address before starting the original entrypoint.",
         "reason": "The LXC has a dedicated LAN address, so any wildcard listener is reachable directly.",
         "behavioral_impact": "Web traffic reaches Apache while the internal backends remain local.",
         "validation": "requires-per-application-runtime-check"
@@ -494,8 +480,8 @@
       "startup_healthcheck": {
         "scheme": "http",
         "port": 80,
-        "path": "/login",
-        "timeout_seconds": 480,
+        "path": "/health_check",
+        "timeout_seconds": 900,
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": true
@@ -520,7 +506,7 @@
           "container_path": "/usr/local/bin/proxmenux-openproject-start",
           "mode": "0755",
           "owner": "mapped-root",
-          "content": "#!/bin/sh\nset -eu\n\n# Only Apache is published by the upstream all-in-one Docker recipe.\n# The LXC has its own LAN IP, so bind the internal services to loopback.\ncd /app\nsupervisor=docker/prod/supervisord\nsupervisor_config=docker/prod/supervisord.conf.erb\ncollaboration=/opt/hocuspocus/src/index.ts\n\nsed -i \"s/listen_addresses='0\\.0\\.0\\.0'/listen_addresses='127.0.0.1'/\" \"$supervisor\"\ngrep -Fq \"listen_addresses='127.0.0.1'\" \"$supervisor\"\nsed -i 's@^command=/usr/bin/memcached$@command=/usr/bin/memcached -l 127.0.0.1 -U 0@' \"$supervisor_config\"\ngrep -Fq 'command=/usr/bin/memcached -l 127.0.0.1 -U 0' \"$supervisor_config\"\nif ! grep -Fq 'address: \"127.0.0.1\",' \"$collaboration\"; then\n    sed -i 's/^\\( *\\)port: 1234,$/\\1address: \"127.0.0.1\",\\n\\1port: 1234,/' \"$collaboration\"\nfi\ngrep -Fq 'address: \"127.0.0.1\",' \"$collaboration\"\n# A restored Proxmox mount can have mode 0755 even when PGDATA was 0700.\n# Only an existing cluster needs this repair before PostgreSQL checks it.\npgdata=/var/openproject/pgdata\nif [ -f \"$pgdata/PG_VERSION\" ]; then\n    chmod 0700 \"$pgdata\"\nfi\nexport BIND=127.0.0.1\nexec ./docker/prod/entrypoint.sh ./docker/prod/supervisord\n"
+          "content": "#!/bin/sh\nset -eu\n\n# Only Apache is published by the upstream all-in-one Docker recipe.\n# The LXC has its own LAN IP, so bind the internal services to loopback.\ncd /app\nsupervisor=docker/prod/supervisord\nsupervisor_config=docker/prod/supervisord.conf.erb\ncollaboration=/opt/hocuspocus/src/index.ts\n\nsed -i \"s/listen_addresses='0\\.0\\.0\\.0'/listen_addresses='127.0.0.1'/\" \"$supervisor\"\ngrep -Fq \"listen_addresses='127.0.0.1'\" \"$supervisor\"\nsed -i 's@^command=/usr/bin/memcached$@command=/usr/bin/memcached -l 127.0.0.1 -U 0@' \"$supervisor_config\"\ngrep -Fq 'command=/usr/bin/memcached -l 127.0.0.1 -U 0' \"$supervisor_config\"\nif ! grep -Fq 'address: \"127.0.0.1\",' \"$collaboration\"; then\n    sed -i 's/^\\( *\\)port: 1234,$/\\1address: \"127.0.0.1\",\\n\\1port: 1234,/' \"$collaboration\"\nfi\ngrep -Fq 'address: \"127.0.0.1\",' \"$collaboration\"\n# Postfix is started by supervisord for outgoing mail and only needs loopback.\npostconf -e 'inet_interfaces = loopback-only'\n[ \"$(postconf -h inet_interfaces)\" = loopback-only ]\n# A restored Proxmox mount can have mode 0755 even when PGDATA was 0700.\n# Only an existing cluster needs this repair before PostgreSQL checks it.\npgdata=/var/openproject/pgdata\nif [ -f \"$pgdata/PG_VERSION\" ]; then\n    chmod 0700 \"$pgdata\"\nfi\nexport BIND=127.0.0.1\nexec ./docker/prod/entrypoint.sh ./docker/prod/supervisord\n"
         }
       ]
     }
