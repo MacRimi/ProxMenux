@@ -93,6 +93,18 @@ def _plain(value) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
+def _web_link(value) -> str:
+    """A link of Community Scripts as an absolute web address. Some entries
+    write a GitHub path without its host; anything else that is not a web
+    address is left out, since the sheet would open it inside the Monitor."""
+    url = str(value or "").strip()
+    if url.startswith(("https://", "http://")):
+        return url
+    if re.fullmatch(r"[\w.-]+/[\w.-]+/(?:blob|tree)/\S+", url):
+        return f"https://github.com/{url}"
+    return ""
+
+
 def _read_json(path: str):
     try:
         with open(path, encoding="utf-8") as handle:
@@ -634,9 +646,9 @@ def _script_detail(slug: str) -> dict | None:
         **dict(zip(("screenshots", "screenshot_credits"), _screens(_cs_screens(slug, entry.get("name") or slug)))),
         "links": {
             "community": f"https://community-scripts.org/scripts/{urllib.parse.quote(slug)}",
-            "website": entry.get("website") or record.get("website") or "",
-            "documentation": entry.get("documentation") or record.get("documentation") or "",
-            "repository": record.get("repository") or "",
+            "website": _web_link(entry.get("website") or record.get("website")),
+            "documentation": _web_link(entry.get("documentation") or record.get("documentation")),
+            "repository": _web_link(record.get("repository")),
             "script": f"https://github.com/community-scripts/ProxmoxVE/blob/main/{script}" if script else "",
         },
         "ports": [{"port": entry.get("port"), "protocol": "tcp"}] if entry.get("port") else [],

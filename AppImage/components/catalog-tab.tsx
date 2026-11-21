@@ -888,8 +888,11 @@ function Sheet({ item, onClose, onRun, related, onOpenOther }: {
                       {links.map(([label, url]) => (
                         <a key={url} href={url} target="_blank" rel="noopener noreferrer"
                           className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-sm no-underline text-foreground hover:bg-muted">
-                          <span>{label}</span>
-                          <span className="flex items-center gap-1 text-muted-foreground truncate">{host(url)} <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" /></span>
+                          <span className="flex-shrink-0">{label}</span>
+                          <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+                            <span className="truncate" title={url}>{host(url)}</span>
+                            <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                          </span>
                         </a>
                       ))}
                     </div>
