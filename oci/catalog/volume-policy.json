@@ -197,6 +197,9 @@
     ],
     "openproject": [
       "/var/openproject/assets"
+    ],
+    "jellystat": [
+      "/app/backend/backup-data"
     ]
   },
   "sizes": {
