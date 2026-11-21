@@ -3004,6 +3004,7 @@
       "menux": "Menux",
       "guests": "VM a LXC",
       "node": "Server (úložiská, sieť, hardvér)",
+      "nodePbs": "Sieť a hardvér",
       "backup": "Záloha",
       "logs": "Systémové záznamy"
     },
