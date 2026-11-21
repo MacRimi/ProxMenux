@@ -11123,5 +11123,20 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Schedule meetings with shared date polls and collect availability without a calendar account.": "Planera möten med datumomröstningar och samla in tillgänglighet utan ett kalenderkonto.",
+  "Rallly SMTP settings": "SMTP-inställningar för Rallly",
+  "Rallly SMTP authentication": "SMTP-autentisering för Rallly",
+  "Rallly external object storage": "Extern objektlagring för Rallly",
+  "SMTP secure (true or false)": "Implicit TLS för SMTP (true eller false)",
+  "S3 endpoint": "S3-slutpunkt",
+  "S3 bucket name": "Namn på S3-bucket",
+  "S3 region": "S3-region",
+  "S3 access key ID": "ID för S3-åtkomstnyckeln",
+  "S3 secret access key": "Hemlig åtkomstnyckel för S3",
+  "SMTP host": "SMTP-server",
+  "SMTP port": "SMTP-port",
+  "SMTP user": "SMTP-användare",
+  "SMTP password": "SMTP-lösenord",
+  "SMTP sender email address": "SMTP-avsändarens e-postadress"
 }

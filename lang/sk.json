@@ -11123,5 +11123,20 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Schedule meetings with shared date polls and collect availability without a calendar account.": "Plánujte stretnutia pomocou hlasovaní o termínoch a zbierajte údaje o dostupnosti bez účtu kalendára.",
+  "Rallly SMTP settings": "Nastavenia SMTP pre Rallly",
+  "Rallly SMTP authentication": "Overenie SMTP pre Rallly",
+  "Rallly external object storage": "Externé objektové úložisko pre Rallly",
+  "SMTP secure (true or false)": "Implicitné TLS pre SMTP (true alebo false)",
+  "S3 endpoint": "Koncový bod S3",
+  "S3 bucket name": "Názov kontajnera S3",
+  "S3 region": "Región S3",
+  "S3 access key ID": "ID prístupového kľúča S3",
+  "S3 secret access key": "Tajný prístupový kľúč S3",
+  "SMTP host": "Server SMTP",
+  "SMTP port": "Port SMTP",
+  "SMTP user": "Používateľ SMTP",
+  "SMTP password": "Heslo SMTP",
+  "SMTP sender email address": "E-mailová adresa odosielateľa SMTP"
 }

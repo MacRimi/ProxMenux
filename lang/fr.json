@@ -11122,5 +11122,20 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "Schedule meetings with shared date polls and collect availability without a calendar account.": "Planifiez vos réunions à l’aide de sondages de dates et recueillez les disponibilités sans compte de calendrier.",
+  "Rallly SMTP settings": "Paramètres SMTP de Rallly",
+  "Rallly SMTP authentication": "Authentification SMTP de Rallly",
+  "Rallly external object storage": "Stockage d’objets externe de Rallly",
+  "SMTP secure (true or false)": "TLS implicite pour SMTP (true ou false)",
+  "S3 endpoint": "Point de terminaison S3",
+  "S3 bucket name": "Nom du compartiment S3",
+  "S3 region": "Région S3",
+  "S3 access key ID": "ID de la clé d’accès S3",
+  "S3 secret access key": "Clé d’accès secrète S3",
+  "SMTP host": "Serveur SMTP",
+  "SMTP port": "Port SMTP",
+  "SMTP user": "Utilisateur SMTP",
+  "SMTP password": "Mot de passe SMTP",
+  "SMTP sender email address": "Adresse d’expédition SMTP"
 }

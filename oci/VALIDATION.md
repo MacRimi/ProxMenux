@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-79 of 585 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 23 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+80 of 586 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 24 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -37,6 +37,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | netboot.xyz | [@jcastro](https://github.com/jcastro) | 2026-11-20 | `a3af92f8447d` | PVE 9.2.32 amd64/ZFS; unprivileged LXC, host-bind config/assets; isolated bridge with separate DHCP; diskless SeaBIOS VM loaded official iPXE via TFTP, netboot.xyz 3.0.3 menu, local Debian 13 kernel/initrd via HTTP and installer language screen; restart, same-digest update and Remove. | — |
 | PeerTube | [@jcastro](https://github.com/jcastro) | 2026-11-20 | `8baefef245da` | PVE 9.2.32 amd64/ZFS; advanced install, 32 GiB data, Redis 8 auth and rejected invalid hostnames; HTTPS via Caddy with verified local CA and default proxy trust; admin login, private upload/HLS; cold backup and Manage restore to new IDs, same HTTPS origin, login, media and Redis auth. | — |
 | PocketBase | [@Vaso73](https://github.com/Vaso73) | 2026-09-27 | — | — | [Report](https://github.com/MacRimi/ProxMenux/discussions/392#discussioncomment-18623868) |
+| Rallly | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `2c35b8ec567a` | PVE 9.2.32 amd64/ZFS; clean DHCP stack with private PostgreSQL, real email OTP sign-in in Chrome and poll creation. Graceful restart, cold restore/OCI Manage, CPU/RAM Modify and same-digest stack Update kept access, network and the saved poll. | — |
 | Recyclarr | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `1a8370c4e830` | PVE 9.2/amd64/ZFS: default/advanced OCI-compose; cron/CLI and sync to temporary Radarr; managed/host persistence, UID 1000, restart, Modify; 8.7.3 to 8.8.1 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. Internet required. ARM64 manifest only. | — |
 | Restreamer | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `9bced1da8a42` | PVE 9.2/amd64/ZFS: default/advanced; browser/API login; config/media persistence, restart, Modify; 2.11.0 to 2.12.0 update (served JS changed), no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; GPU/publishing untested. | — |
 | Seafile CE | [@jcastro](https://github.com/jcastro) | 2026-11-20 | `fe1f111e93f8` | PVE 9.2 amd64/ZFS: default/advanced; active Go file server, browser/API and byte-exact transfers; managed/host storage, restart/Modify; 13.0.29 to 13.0.30 and no-op; backup/restore of all three CTs into Manage; cleanup and PBS check. Host bind stored separately. | — |
