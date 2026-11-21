@@ -447,6 +447,17 @@
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": true
+      },
+      "generated_files": [
+        {
+          "container_path": "/usr/local/bin/proxmenux-netbootxyz-start",
+          "mode": "0755",
+          "owner": "mapped-root",
+          "content": "#!/bin/sh\n# Native LXC starts the image before host-managed DHCP and DNS are ready.\nif [ ! -s /config/menus/remote/menu.ipxe ]; then\n    version=${MENU_VERSION:-}\n    if [ -z \"$version\" ] && [ -s /config/menuversion.txt ]; then\n        version=$(cat /config/menuversion.txt)\n    fi\n\n    printf '%s\\n' '[netbootxyz] Waiting for GitHub before initializing the boot menus.'\n    for attempt in $(seq 1 12); do\n        if [ -z \"$version\" ]; then\n            version=$(curl -fsSL --connect-timeout 3 --max-time 5 \\\n                https://api.github.com/repos/netbootxyz/netboot.xyz/releases/latest | jq -er '.tag_name | strings | select(length > 0)')\n        fi\n        case \"$version\" in\n            ''|*[!a-zA-Z0-9._-]*) ;;\n            *)\n                if curl -fsSLI --connect-timeout 3 --max-time 5 -o /dev/null \\\n                    \"https://github.com/netbootxyz/netboot.xyz/releases/download/$version/menus.tar.gz\"; then\n                    export MENU_VERSION=\"$version\"\n                    exec /start.sh \"$@\"\n                fi\n                ;;\n        esac\n        [ \"$attempt\" -eq 12 ] || sleep 2\n    done\n    printf '%s\\n' '[netbootxyz] Could not reach the GitHub menu release. Check DNS, network access and MENU_VERSION.' >&2\n    exit 1\nfi\n\nexec /start.sh \"$@\"\n"
+        }
+      ],
+      "runtime": {
+        "entrypoint": "/usr/local/bin/proxmenux-netbootxyz-start"
       }
     }
   },
