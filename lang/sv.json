@@ -11123,5 +11123,9 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
+  "Share files through expiring upload and download links.": "Dela filer med tidsbegränsade länkar för upp- och nedladdning.",
+  "Browser-based webmail for your existing IMAP and SMTP mail servers.": "Webbmejl för dina befintliga IMAP- och SMTP-servrar.",
+  "IMAP server hostname (use ssl:// or tls:// for encrypted connections)": "IMAP-serverns värdnamn (använd ssl:// eller tls:// för krypterade anslutningar)",
+  "SMTP server hostname (use ssl:// or tls:// for encrypted connections)": "SMTP-serverns värdnamn (använd ssl:// eller tls:// för krypterade anslutningar)"
 }

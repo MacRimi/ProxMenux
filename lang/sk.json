@@ -11123,5 +11123,9 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Share files through expiring upload and download links.": "Zdieľajte súbory pomocou časovo obmedzených odkazov na nahrávanie a sťahovanie.",
+  "Browser-based webmail for your existing IMAP and SMTP mail servers.": "Webová pošta pre vaše servery IMAP a SMTP.",
+  "IMAP server hostname (use ssl:// or tls:// for encrypted connections)": "Názov servera IMAP (pre šifrované pripojenia použite ssl:// alebo tls://)",
+  "SMTP server hostname (use ssl:// or tls:// for encrypted connections)": "Názov servera SMTP (pre šifrované pripojenia použite ssl:// alebo tls://)"
 }

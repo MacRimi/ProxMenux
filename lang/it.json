@@ -11123,5 +11123,9 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Share files through expiring upload and download links.": "Condividi file con link di caricamento e download che scadono.",
+  "Browser-based webmail for your existing IMAP and SMTP mail servers.": "Webmail per i tuoi server di posta IMAP e SMTP.",
+  "IMAP server hostname (use ssl:// or tls:// for encrypted connections)": "Nome host del server IMAP (usa ssl:// o tls:// per le connessioni cifrate)",
+  "SMTP server hostname (use ssl:// or tls:// for encrypted connections)": "Nome host del server SMTP (usa ssl:// o tls:// per le connessioni cifrate)"
 }

@@ -11093,5 +11093,9 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Share files through expiring upload and download links.": "Делитесь файлами через ссылки для загрузки и скачивания с ограниченным сроком действия.",
+  "Browser-based webmail for your existing IMAP and SMTP mail servers.": "Веб-почта для ваших серверов IMAP и SMTP.",
+  "IMAP server hostname (use ssl:// or tls:// for encrypted connections)": "Имя сервера IMAP (используйте ssl:// или tls:// для зашифрованных подключений)",
+  "SMTP server hostname (use ssl:// or tls:// for encrypted connections)": "Имя сервера SMTP (используйте ssl:// или tls:// для зашифрованных подключений)"
 }
