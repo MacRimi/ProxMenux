@@ -62,9 +62,6 @@
     "/workspace/TurboDiffusion/outputs"
   ],
   "applications": {
-    "jellystat": [
-      "/app/backend/backup-data"
-    ],
     "crafty": [
       "/crafty/import"
     ],
@@ -197,6 +194,9 @@
     ],
     "netbootxyz": [
       "/assets"
+    ],
+    "jellystat": [
+      "/app/backend/backup-data"
     ]
   },
   "sizes": {

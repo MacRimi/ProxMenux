@@ -8,12 +8,10 @@
       "en_US": "Jellystat"
     },
     "tagline": {
-      "en_US": "Track Jellyfin playback and library activity.",
-      "es_ES": "Consulta la actividad y el historial de reproducción de Jellyfin."
+      "en_US": "Track Jellyfin playback and library activity."
     },
     "description": {
-      "en_US": "See what users watch, follow viewing trends, and review activity across your Jellyfin libraries.",
-      "es_ES": "Descubre qué ven los usuarios, consulta tendencias y revisa la actividad de tus bibliotecas de Jellyfin."
+      "en_US": "See what users watch, follow viewing trends, and review activity across your Jellyfin libraries."
     },
     "category": "media",
     "category_label": "Media & Streaming",
@@ -34,7 +32,9 @@
     "website": "https://github.com/CyferShepard/Jellystat",
     "documentation": "https://github.com/CyferShepard/Jellystat#launching-jellystat-using-docker",
     "repository": "https://github.com/CyferShepard/Jellystat",
-    "tips": [],
+    "tips": [
+      "Create the administrator account right after installation; the first visitor to the web interface becomes the administrator."
+    ],
     "mini_changelog": [],
     "display_version": null,
     "updated_at": null
@@ -505,7 +505,7 @@
         "upstream_behavior": "The image uses a shell entry script that launches the backend through npm.",
         "native_lxc_behavior": "Start the same server.js process in its backend directory and forward the LXC stop signal.",
         "reason": "The image shell and npm launch did not propagate a graceful shutdown signal to the application.",
-        "behavioral_impact": "The recipe supplies generated secrets in the environment.",
+        "behavioral_impact": "The image's FILE__ secret loading is skipped; the recipe passes its generated secrets directly in the environment.",
         "validation": "pending-per-application"
       }
     ],

@@ -8,12 +8,10 @@
       "en_US": "Tunarr"
     },
     "tagline": {
-      "en_US": "Turn your media library into scheduled TV channels.",
-      "es_ES": "Convierte tu biblioteca multimedia en canales de televisión."
+      "en_US": "Turn your media library into scheduled TV channels."
     },
     "description": {
-      "en_US": "Create television channels from your own media and watch them through an IPTV player or your media server.",
-      "es_ES": "Crea canales de televisión con tu contenido y reprodúcelos desde un reproductor IPTV o tu servidor multimedia."
+      "en_US": "Create television channels from your own media and watch them through an IPTV player or your media server."
     },
     "category": "media",
     "category_label": "Media & Streaming",
