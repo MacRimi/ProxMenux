@@ -954,7 +954,7 @@ function MonitorDashboard({ product }: { product: Product }) {
               5 s / 59 s refresh intervals keep the data fresh in the
               background — reopening the tab is instant. */}
           {areas.general && <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
-            <SystemOverview key={`overview-${componentKey}`} product={product} />
+            <SystemOverview key={`overview-${componentKey}`} product={product} active={activeTab === "overview"} />
           </TabsContent>}
 
           {isPbs && (

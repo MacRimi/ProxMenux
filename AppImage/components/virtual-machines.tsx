@@ -859,20 +859,22 @@ export function VirtualMachines() {
   const { capabilities } = useAccess()
   const t = useT()
   const { language } = useI18n()
+  const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
+  // The list follows the refresh of the Proxmox status daemon; an open guest
+  // keeps the faster poll its modal waits on after actions and updates.
   const {
     data: vmData,
     error,
     isLoading,
     mutate,
   } = useSWR<VMData[]>("/api/vms", fetcher, {
-    refreshInterval: 2500,
+    refreshInterval: selectedVM ? 2500 : 10000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     dedupingInterval: 1000,
     errorRetryCount: 2,
   })
 
-  const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
   const [vmDetails, setVMDetails] = useState<VMDetails | null>(null)
   // Cross-open cache: last-known payloads keyed by vmid, persisted
   // across modal open/close for the lifetime of this component. When

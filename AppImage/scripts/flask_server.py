@@ -10073,29 +10073,87 @@ def _get_hardware_info_uncached():
         return {}
 
 
+_LIVE_CPU_MIN_WINDOW = 0.5
+_LIVE_CPU_MAX_WINDOW = 10
+_live_cpu_lock = threading.Lock()
+_live_cpu_state = {'times': None, 'at': 0.0, 'usage': None}
+
+
+def _live_cpu_usage():
+    """CPU use since the previous call, from the /proc/stat counters.
+
+    psutil.cpu_times() keeps no baseline of its own, so this never disturbs
+    the vital-signs sampler's psutil.cpu_percent. Calls closer together than
+    the minimum window share the last result. Returns None when there is no
+    recent snapshot to compare with; the caller then uses the sampler.
+    """
+    now = time.monotonic()
+    with _live_cpu_lock:
+        state = _live_cpu_state
+        age = now - state['at']
+        if state['times'] is not None and age < _LIVE_CPU_MIN_WINDOW:
+            return state['usage']
+        times = psutil.cpu_times()
+        previous = state['times']
+        state['times'], state['at'], state['usage'] = times, now, None
+        if previous is None or age > _LIVE_CPU_MAX_WINDOW:
+            return None
+
+        def field(sample, name):
+            return getattr(sample, name, 0) or 0
+
+        def total(sample):
+            # guest time is already counted in user and nice
+            return sum(sample) - field(sample, 'guest') - field(sample, 'guest_nice')
+
+        elapsed = total(times) - total(previous)
+        if elapsed <= 0:
+            return None
+
+        def share(*names):
+            spent = sum(field(times, n) - field(previous, n) for n in names)
+            return round(min(100.0, max(0.0, spent * 100.0 / elapsed)), 1)
+
+        idle = share('idle', 'iowait')
+        state['usage'] = {
+            'value': round(100.0 - idle, 1),
+            'user': share('user', 'nice'),
+            'system': share('system', 'irq', 'softirq'),
+        }
+        return state['usage']
+
+
 @app.route('/api/system', methods=['GET'])
 @require_auth
 def api_system():
     """Get system information including CPU, memory, and temperature"""
     try:
-        # Read from the vital-signs sampler cache. The sampler is the *only*
-        # consumer of psutil.cpu_percent under gevent, so the API handler never
-        # races against it (calling psutil.cpu_percent here under monkey-patched
-        # gevent would return 0% whenever a concurrent greenlet had primed the
-        # baseline less than one /proc/stat tick ago — typical for the dashboard's
-        # parallel system+vms+storage+network requests every 5s).
+        # CPU comes from a /proc/stat delta since the previous request, so a
+        # page polling every few seconds sees that interval. Without a recent
+        # request, fall back to the vital-signs sampler cache: the sampler is
+        # the only consumer of psutil.cpu_percent, because concurrent calls to
+        # it under gevent return 0%.
         try:
-            from health_monitor import health_monitor
-            _hist = health_monitor.state_history.get('cpu_usage') or []
-            if _hist:
-                _last = _hist[-1]
-                cpu_usage = _last['value']
-                cpu_user_pct = _last.get('user', 0)
-                cpu_system_pct = _last.get('system', 0)
+            live = _live_cpu_usage()
+        except Exception:
+            live = None
+        try:
+            if live:
+                cpu_usage = live['value']
+                cpu_user_pct = live['user']
+                cpu_system_pct = live['system']
             else:
-                cpu_usage = psutil.cpu_percent(interval=0.1)
-                cpu_user_pct = 0
-                cpu_system_pct = 0
+                from health_monitor import health_monitor
+                _hist = health_monitor.state_history.get('cpu_usage') or []
+                if _hist:
+                    _last = _hist[-1]
+                    cpu_usage = _last['value']
+                    cpu_user_pct = _last.get('user', 0)
+                    cpu_system_pct = _last.get('system', 0)
+                else:
+                    cpu_usage = psutil.cpu_percent(interval=0.1)
+                    cpu_user_pct = 0
+                    cpu_system_pct = 0
         except Exception:
             cpu_usage = psutil.cpu_percent(interval=0.1)
             cpu_user_pct = 0

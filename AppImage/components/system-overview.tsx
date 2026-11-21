@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
@@ -195,7 +195,7 @@ interface PBSOverviewStatus {
   error_details?: Record<string, { code: string }>
 }
 
-export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } = {}) {
+export function SystemOverview({ product = "pve", active = true }: { product?: "pve" | "pbs"; active?: boolean } = {}) {
   const t = useT()
   const { language } = useI18n()
   const isPbs = product === "pbs"
@@ -249,37 +249,14 @@ export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } 
       setStorageData(storageResults[0])
       setProxmoxStorageData(storageResults[1])
       setNetworkData(networkResult)
-
-      setTimeout(async () => {
-        const refreshedSystemData = await fetchSystemData()
-        if (refreshedSystemData) {
-          setSystemData(refreshedSystemData)
-        }
-      }, 2000)
     }
 
     fetchAllData()
-
-    const systemInterval = setInterval(async () => {
-      const data = await fetchSystemData()
-      if (data) setSystemData(data)
-    }, 5000)
-
-    const vmInterval = setInterval(async () => {
-      if (isPbs) return
-      const data = await fetchVMData()
-      setVmData(data)
-    }, 59000)
 
     const storageInterval = setInterval(async () => {
       const [storage, proxmoxStorage] = await Promise.all([fetchStorageData(), isPbs ? Promise.resolve(null) : fetchProxmoxStorageData()])
       if (storage) setStorageData(storage)
       if (proxmoxStorage) setProxmoxStorageData(proxmoxStorage)
-    }, 59000)
-
-    const networkInterval = setInterval(async () => {
-      const data = await fetchNetworkData()
-      if (data) setNetworkData(data)
     }, 59000)
 
     setNetworkUnit(getNetworkUnit()) // Load initial setting
@@ -291,13 +268,47 @@ export function SystemOverview({ product = "pve" }: { product?: "pve" | "pbs" } 
     window.addEventListener("networkUnitChanged" as any, handleUnitChange)
 
     return () => {
-      clearInterval(systemInterval)
-      clearInterval(vmInterval)
       clearInterval(storageInterval)
-      clearInterval(networkInterval)
       window.removeEventListener("networkUnitChanged" as any, handleUnitChange)
     }
   }, [t, isPbs])
+
+  // Live figures poll only while the Overview is the open tab and the page is
+  // visible. Node metrics follow the host closely; guest and network lists
+  // follow the refresh of the Proxmox status daemon.
+  const resumed = useRef(false)
+  useEffect(() => {
+    if (!active) return
+    let systemBusy = false, listsBusy = false
+    const refreshSystem = async () => {
+      if (systemBusy || document.visibilityState !== "visible") return
+      systemBusy = true
+      try {
+        const data = await fetchSystemData()
+        if (data) setSystemData(data)
+      } finally { systemBusy = false }
+    }
+    const refreshLists = async () => {
+      if (listsBusy || document.visibilityState !== "visible") return
+      listsBusy = true
+      try {
+        const [vms, network] = await Promise.all([isPbs ? Promise.resolve(null) : fetchVMData(), fetchNetworkData()])
+        if (vms) setVmData(vms)
+        if (network) setNetworkData(network)
+      } finally { listsBusy = false }
+    }
+    const refreshAll = () => { void refreshSystem(); void refreshLists() }
+    if (resumed.current) refreshAll()
+    resumed.current = true
+    const systemInterval = setInterval(refreshSystem, 2000)
+    const listsInterval = setInterval(refreshLists, 10000)
+    document.addEventListener("visibilitychange", refreshAll)
+    return () => {
+      clearInterval(systemInterval)
+      clearInterval(listsInterval)
+      document.removeEventListener("visibilitychange", refreshAll)
+    }
+  }, [active, isPbs])
 
   if (!hasAttemptedLoad || loadingStates.system) {
     return (
