@@ -18,5 +18,5 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <DocPage locale={locale} namespace={NAMESPACE} minutes={8} />
+  return <DocPage locale={locale} namespace={NAMESPACE} minutes={9} />
 }
