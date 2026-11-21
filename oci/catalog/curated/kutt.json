@@ -5,19 +5,16 @@
   "status": "generated-unvalidated",
   "catalog_ui": {
     "title": {
-      "en_US": "Kutt",
-      "es_ES": "Kutt"
+      "en_US": "Kutt"
     },
     "tagline": {
-      "en_US": "Create and manage short links with your own domain and click statistics.",
-      "es_ES": "Crea y gestiona enlaces cortos con tu propio dominio y estadísticas de clics."
+      "en_US": "Create and manage short links with your own domain and click statistics."
     },
     "description": {
-      "en_US": "Create and manage short links with your own domain and click statistics.",
-      "es_ES": "Crea y gestiona enlaces cortos con tu propio dominio y estadísticas de clics."
+      "en_US": "Create and manage short links with your own domain and click statistics."
     },
-    "category": "web",
-    "category_label": "Webservers & Proxies",
+    "category": "tools",
+    "category_label": "Tools",
     "author": "thedevs-network",
     "developer": "thedevs-network",
     "icon": "https://raw.githubusercontent.com/thedevs-network/kutt/029da42b2459693681886665589fd9512d6b473c/static/images/favicon-196x196.png",
@@ -32,10 +29,13 @@
       "port": 3000,
       "path": "/"
     },
-    "website": "https://kutt.it/",
+    "website": "https://kutt.to/",
     "documentation": "https://github.com/thedevs-network/kutt/blob/029da42b2459693681886665589fd9512d6b473c/README.md",
     "repository": "https://github.com/thedevs-network/kutt",
-    "tips": [],
+    "tips": [
+      "Kutt requires HTTPS for browser login. Set DEFAULT_DOMAIN to your reverse proxy hostname in advanced installation, then open the HTTPS URL.",
+      "After creating the Kutt administrator, sign in again at /login."
+    ],
     "mini_changelog": [],
     "display_version": null,
     "updated_at": null
@@ -76,7 +76,8 @@
         "required": true,
         "sensitive": false,
         "source": "docker-compose",
-        "container_address": "@CONTAINER_ADDRESS@:3000"
+        "container_address": "@CONTAINER_ADDRESS@:3000",
+        "prompt": "Kutt hostname without a URL scheme (DEFAULT_DOMAIN)"
       },
       {
         "name": "JWT_SECRET",
@@ -268,7 +269,7 @@
   "first_run": {
     "endpoints": [
       {
-        "label": "Web UI",
+        "label": "HTTP backend",
         "scheme": "http",
         "port": 3000,
         "path": "/",

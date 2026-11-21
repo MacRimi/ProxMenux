@@ -496,6 +496,7 @@
   "Affected LXC containers": "Dotknuté LXC kontajnery",
   "After completing GPU setup, start the VM manually when the host is ready.": "Po dokončení nastavenia GPU spustite VM ručne, keď bude server pripravený.",
   "After confirming, you will be asked to choose the NVIDIA driver version to install.": "Po potvrdení si vyberiete verziu ovládača NVIDIA, ktorú chcete nainštalovať.",
+  "After creating the Kutt administrator, sign in again at /login.": "Po vytvorení účtu správcu Kutt sa znova prihláste na stránke /login.",
   "After detailed analysis, no changes are needed.": "Po podrobnej analýze nie sú potrebné žiadne zmeny.",
   "After detailed analysis, no cleanup is needed.": "Po podrobnej analýze nie je potrebné žiadne čistenie.",
   "After formatting, exit Disk Utility and choose Reinstall macOS, selecting the newly created disk.": "Po naformátovaní ukončite Disk Utility a zvoľte Reinstall macOS, pričom vyberte novovytvorený disk.",
@@ -1989,6 +1990,7 @@
   "Create and manage a website with Bludit, a flat-file content management system. Pages, uploads and site data live in the persistent content directory.": "Vytvárajte a spravujte webové stránky pomocou redakčného systému Bludit typu flat-file. Stránky, nahrané súbory a údaje webu sú uložené v perzistentnom adresári content.",
   "Create and manage databases through a spreadsheet-style web interface. This single-image profile uses NocoDB’s SQLite quickstart mode.": "Vytvárajte a spravujte databázy prostredníctvom tabuľkového webového rozhrania. Tento profil s jedným kontajnerom využíva režim rýchleho spustenia NocoDB so SQLite.",
   "Create and manage short links from a small web interface. Chhoto URL stores its link database in SQLite and supports password-protected administration without a separate database service.": "Vytvárajte a spravujte skrátené odkazy z jednoduchého webového rozhrania. Chhoto URL ukladá svoju databázu odkazov v SQLite a podporuje heslom chránenú správu bez samostatnej databázovej služby.",
+  "Create and manage short links with your own domain and click statistics.": "Vytvárajte a spravujte krátke odkazy s vlastnou doménou a štatistikami kliknutí.",
   "Create and run collaborative Elixir notebooks in a browser. The official image includes the runtime; notebook files can be persisted in the mounted /data directory.": "Vytvárajte a spúšťajte kolaboratívne zošity Elixir priamo v prehliadači. Oficiálny obraz obsahuje runtime; súbory zošitov možno trvalo ukladať v pripojenom adresári /data.",
   "Create and share text snippets and uploaded files from a private web interface.": "Vytvárajte a zdieľajte textové úryvky a nahrané súbory zo súkromného webového rozhrania.",
   "Create and stream custom live TV channels from your media library.": "Vytvárajte vlastné živé TV kanály a streamujte ich zo svojej knižnice médií.",
@@ -3619,6 +3621,7 @@
   "HTML5 Network Speed Test Server.": "Server na testovanie rýchlosti siete cez HTML5.",
   "HTTP CONNECT proxy: use the same IP address and port 8118. These addresses are proxy settings, not web links.": "Proxy HTTP CONNECT: použite rovnakú IP adresu a port 8118. Tieto adresy sú nastavenia proxy, nie webové odkazy.",
   "HTTP access via unencrypted connections is disabled by default.": "Prístup cez HTTP cez nešifrované pripojenia je predvolene zakázaný.",
+  "HTTP backend": "Interný server HTTP",
   "HTTP is on port 9308 and the MySQL protocol is on 9306. Port 9312 is for binary protocol/cluster traffic; this profile is a single instance.": "HTTP beží na porte 9308 a protokol MySQL na porte 9306. Port 9312 je určený pre binárny protokol / clusterovú prevádzku; tento profil predstavuje samostatnú inštanciu.",
   "HTTP request and response testing service.": "Služba na testovanie HTTP požiadaviek a odpovedí.",
   "HTTP service check without a saved URL": "Kontrola služby HTTP bez uloženého URL",
@@ -4614,6 +4617,8 @@
   "Krusader Web UI": "Webové rozhranie Krusaderu",
   "Krusader can read, change and delete files in the directory mounted at /storage. Mount only the directory you intend to manage; the rest of the Proxmox host is not exposed.": "Krusader môže čítať, meniť a mazať súbory v adresári pripojenom do /storage. Pripojte iba adresár, ktorý chcete spravovať; zvyšok hostiteľa Proxmox nie je sprístupnený.",
   "Krusader is an advanced, twin-panel commander-style file manager for Unix-like systems. It provides extensive file management capabilities, including support for local and remote filesystems, archive handling, and advanced search. Users can also perform directory synchronization, compare file contents, and execute batch file renaming.": "Krusader je pokročilý dvojpanelový správca súborov v štýle commander pre unixové systémy. Poskytuje rozsiahle možnosti správy súborov vrátane podpory lokálnych a vzdialených súborových systémov, práce s archívmi a pokročilého vyhľadávania. Používatelia môžu tiež vykonávať synchronizáciu adresárov, porovnávať obsah súborov a vykonávať dávkové premenovávanie súborov.",
+  "Kutt hostname without a URL scheme (DEFAULT_DOMAIN)": "Názov hostiteľa Kutt bez schémy URL (DEFAULT_DOMAIN)",
+  "Kutt requires HTTPS for browser login. Set DEFAULT_DOMAIN to your reverse proxy hostname in advanced installation, then open the HTTPS URL.": "Kutt vyžaduje na prihlásenie v prehliadači HTTPS. Pri pokročilej inštalácii zadajte do DEFAULT_DOMAIN názov hostiteľa reverzného proxy a otvorte adresu HTTPS.",
   "LAN access to the kept containers (stack configuration incomplete):": "Prístup z LAN k ponechaným kontajnerom (nastavenie zostavy nie je dokončené):",
   "LAN address applied to the application URLs": "LAN adresa použitá na URL aplikácie",
   "LLDAP": "LLDAP",
@@ -11132,6 +11137,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "Create and manage short links with your own domain and click statistics.": "Vytvárajte a spravujte krátke odkazy s vlastnou doménou a štatistikami kliknutí."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }

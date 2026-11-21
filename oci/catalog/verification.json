@@ -364,7 +364,7 @@
         "by": "jcastro",
         "date": "2026-11-21",
         "digest": "0ddd5ee76e211c4e95f5cb8858157dd282a351a8aa1b7222eb20226ce68eae05",
-        "scenario": "PVE 9.2.32 amd64/ZFS; default and advanced, Chrome admin and URL redirect, managed SQLite and host custom CSS, restart, CPU/RAM Modify, unchanged-digest cache check, cold restore/Manage and 3.2.5 to 3.2.6 update kept login, link, CSS, resource and network settings."
+        "scenario": "PVE 9.2.32 amd64/ZFS. Default/advanced, SQLite and host CSS, Chrome login via HTTPS; direct HTTP rejects Secure cookie. Link redirect, restart, CPU/RAM Modify, cold restore in Manage and image update 3.2.5 to 3.2.6 preserved login and data."
       }
     }
   }

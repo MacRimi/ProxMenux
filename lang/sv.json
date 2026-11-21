@@ -496,6 +496,7 @@
   "Affected LXC containers": "Berörda LXC-behållare",
   "After completing GPU setup, start the VM manually when the host is ready.": "När du har slutfört GPU-installationen startar du den virtuella datorn manuellt när värden är klar.",
   "After confirming, you will be asked to choose the NVIDIA driver version to install.": "Efter bekräftelse kommer du att bli ombedd att välja NVIDIA-drivrutinsversionen att installera.",
+  "After creating the Kutt administrator, sign in again at /login.": "Logga in igen på /login efter att du har skapat administratörskontot för Kutt.",
   "After detailed analysis, no changes are needed.": "Efter detaljerad analys behövs inga ändringar.",
   "After detailed analysis, no cleanup is needed.": "Efter detaljerad analys behövs ingen rengöring.",
   "After formatting, exit Disk Utility and choose Reinstall macOS, selecting the newly created disk.": "Efter formateringen avslutar du Skivverktyg och väljer Installera om macOS, och markerar den nyligen skapade disken.",
@@ -1989,6 +1990,7 @@
   "Create and manage a website with Bludit, a flat-file content management system. Pages, uploads and site data live in the persistent content directory.": "Skapa och hantera en webbplats med Bludit, ett filbaserat innehållshanteringssystem (flat-file CMS). Sidor, uppladdningar och webbplatsdata sparas i den beständiga content-katalogen.",
   "Create and manage databases through a spreadsheet-style web interface. This single-image profile uses NocoDB’s SQLite quickstart mode.": "Skapa och hantera databaser via ett kalkylbladsliknande webbgränssnitt. Denna enbildsprofil använder NocoDB:s SQLite-snabbstartsläge.",
   "Create and manage short links from a small web interface. Chhoto URL stores its link database in SQLite and supports password-protected administration without a separate database service.": "Skapa och hantera kortlänkar från ett smidigt webbgränssnitt. Chhoto URL lagrar sin länkdatabas i SQLite och stöder lösenordsskyddad administration utan en separat databastjänst.",
+  "Create and manage short links with your own domain and click statistics.": "Skapa och hantera kortlänkar med din egen domän och klickstatistik.",
   "Create and run collaborative Elixir notebooks in a browser. The official image includes the runtime; notebook files can be persisted in the mounted /data directory.": "Skapa och kör samarbetsinriktade Elixir-anteckningsböcker i en webbläsare. Den officiella avbildningen inkluderar körmiljön; anteckningsboksfiler kan sparas i den monterade katalogen /data.",
   "Create and share text snippets and uploaded files from a private web interface.": "Skapa och dela textavsnitt (snippets) och uppladdade filer från ett privat webbgränssnitt.",
   "Create and stream custom live TV channels from your media library.": "Skapa och strömma egna direktsända TV-kanaler från ditt mediebibliotek.",
@@ -3620,6 +3622,7 @@
   "HTML5 Network Speed Test Server.": "HTML5 Network Speed Test Server.",
   "HTTP CONNECT proxy: use the same IP address and port 8118. These addresses are proxy settings, not web links.": "HTTP CONNECT-proxy: använd samma IP-adress och port 8118. Dessa adresser är proxyinställningar, inte webblänkar.",
   "HTTP access via unencrypted connections is disabled by default.": "HTTP-åtkomst via okrypterade anslutningar är inaktiverad som standard.",
+  "HTTP backend": "Intern HTTP-server",
   "HTTP is on port 9308 and the MySQL protocol is on 9306. Port 9312 is for binary protocol/cluster traffic; this profile is a single instance.": "HTTP körs på port 9308 och MySQL-protokollet på 9306. Port 9312 är avsedd för binärprotokoll/klustertrafik; denna profil är en enskild instans.",
   "HTTP request and response testing service.": "Tjänst för att testa HTTP-förfrågningar och svar.",
   "HTTP service check without a saved URL": "HTTP service check utan sparad URL",
@@ -4614,6 +4617,8 @@
   "Krusader Web UI": "Krusaders webbgränssnitt",
   "Krusader can read, change and delete files in the directory mounted at /storage. Mount only the directory you intend to manage; the rest of the Proxmox host is not exposed.": "Krusader kan läsa, ändra och ta bort filer i katalogen som är monterad vid /storage. Montera endast den katalog du avser att hantera; resten av Proxmox-värden exponeras inte.",
   "Krusader is an advanced, twin-panel commander-style file manager for Unix-like systems. It provides extensive file management capabilities, including support for local and remote filesystems, archive handling, and advanced search. Users can also perform directory synchronization, compare file contents, and execute batch file renaming.": "Krusader är en avancerad filhanterare med dubbla paneler i commander-stil för Unix-liknande system. Den erbjuder omfattande filhanteringsfunktioner, inklusive stöd för lokala och fjärranslutna filsystem, arkivhantering och avancerad sökning. Användare kan även synkronisera kataloger, jämföra filinnehåll och utföra massomdöpning av filer.",
+  "Kutt hostname without a URL scheme (DEFAULT_DOMAIN)": "Värdnamn för Kutt utan URL-schema (DEFAULT_DOMAIN)",
+  "Kutt requires HTTPS for browser login. Set DEFAULT_DOMAIN to your reverse proxy hostname in advanced installation, then open the HTTPS URL.": "Kutt kräver HTTPS för inloggning i webbläsaren. Ange värdnamnet för din omvända proxy i DEFAULT_DOMAIN vid avancerad installation och öppna sedan HTTPS-adressen.",
   "LAN access to the kept containers (stack configuration incomplete):": "LAN tillgång till de bevarade behållarna (stack konfiguration ofullständig):",
   "LAN address applied to the application URLs": "LAN-adress tillämpad på ansökningsadresserna",
   "LLDAP": "LLDAP",
@@ -11132,6 +11137,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "Create and manage short links with your own domain and click statistics.": "Skapa och hantera kortlänkar med din egen domän och klickstatistik."
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }
