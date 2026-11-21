@@ -60,7 +60,7 @@
               ],
               [
                 "Netzwerk",
-                "Private Bridge, Subnetz, eine feste Adresse pro Dienst und LAN-Zugang für das Hauptmitglied",
+                "Private Bridge, Subnetz, eine feste Adresse pro Dienst und LAN-Zugang für die Mitglieder, die ihn brauchen",
                 "Keine Kollision mit vorhandenen Brücken oder Subnetzen und keine wiederholte Adresse"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Privates Netzwerk",
-                "body": "Eine Brücke und ein Subnetz werden erstellt und jedes Mitglied erhält seine feste Adresse; nur das Hauptmitglied erhält auch die LAN-Schnittstelle."
+                "body": "Eine Bridge und ein Subnetz werden erstellt und jedes Mitglied erhält seine feste Adresse. Das Hauptmitglied erhält zusätzlich die LAN-Schnittstelle, ebenso jedes weitere Mitglied, das einen Port veröffentlicht oder das das Rezept der Anwendung verlangt."
               },
               {
                 "title": "Persistenz",

@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Rozšírené správy, kategórie a filtre kanálov",
     "intro": "Každý kanál má <em>Rozšírené správy</em>, rozbaľovacie <em>Kategórie oznámení</em> s prepínačmi udalostí a tlačidlo <em>Odoslať test</em>.",
-    "imageAlt": "Panel kategórií s rozšírenými správami, skupinami VM/CT, záloh, zdrojov, úložiska, siete, bezpečnosti, klastra, služieb, zdravia a aktualizácií, počtami a tlačidlom testu",
+    "imageAlt": "Panel kategórií s rozšírenými správami, skupinami VM / CT, záloh, zdrojov, úložiska, siete, zabezpečenia, klastra, služieb, monitora zdravia, aktualizácií, hardvéru a systému, počtami, rozbalenou skupinou Hardvér s jej udalosťami, tichými hodinami a denným súhrnom pod nimi a tlačidlom testu",
     "imageCaption": "Šípka označuje <em>Rozšírené správy</em>. Pod nimi sú kategórie s udalosťami; <em>Odoslať test</em> je dole.",
     "richTitle": "Rozšírené správy",
     "richIntro": "So zapnutými <em>Rozšírenými správami</em> sa pridá ikona kategórie a formát kanála, napríklad HTML Telegram alebo farebné karty Discord. Pri vypnutí príde rovnaký obsah ako obyčajný text:",

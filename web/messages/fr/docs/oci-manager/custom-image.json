@@ -215,6 +215,111 @@
       ]
     },
     {
+      "id": "compose-stacks",
+      "title": "Fichiers Compose avec plusieurs services",
+      "intro": "Un fichier Compose avec plusieurs services est installé comme une stack : un LXC natif par service, reliés par un pont privé et démarrés dans l’ordre de leurs dépendances. <stacksLink>Applications à plusieurs conteneurs</stacksLink> décrit comment une stack est créée, vérifiée et mise à jour. Cette section couvre ce que décide le fichier Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Service",
+              "Comment il est reconnu",
+              "Quand il est prêt"
+            ],
+            "rows": [
+              [
+                "Principal",
+                "Celui nommé dans <code>x-casaos.main</code>. Sans lui, le premier service qui publie un port, ou sinon le premier du fichier.",
+                "Son port web publié répond en HTTP, ou son propre <code>healthcheck</code> réussit. Il lui faut un port TCP publié."
+              ],
+              [
+                "Base de données ou cache",
+                "Son image est PostgreSQL, MariaDB, MongoDB, Redis, Valkey ou Meilisearch.",
+                "La vérification que ProxMenux a pour ce serveur, comme <code>pg_isready</code>, sauf si le service déclare son propre <code>healthcheck</code>."
+              ],
+              [
+                "Worker",
+                "Tout autre service qui reste en cours d’exécution.",
+                "Son propre <code>healthcheck</code>. Sans lui, HTTP sur le port qu’il publie, TCP sur un port qu’il ne liste que sous <code>expose</code>, ou sinon seulement que le LXC est en cours d’exécution."
+              ],
+              [
+                "Tâche ponctuelle",
+                "Un service qu’un autre attend avec <code>condition: service_completed_successfully</code>.",
+                "Il se termine avec le code 0 en moins de 300 secondes."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un <code>healthcheck</code> s’exécute à l’intérieur du LXC de son service, comme <code>CMD</code> ou <code>CMD-SHELL</code>. Une vérification <code>CMD-SHELL</code> ne peut pas utiliser de variables comme <code>$PORT</code>, car elle ne s’exécute pas avec l’environnement de l’application : il faut écrire la valeur à la place.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> et <code>retries</code> fixent combien de temps la vérification est attendue, 3600 secondes au plus au total.",
+              "Un service qu’un autre attend avec <code>condition: service_healthy</code> a besoin de son propre <code>healthcheck</code>, sauf s’il s’agit d’une base de données ou d’un cache du tableau."
+            ]
+          }
+        },
+        {
+          "p": "Une tâche ponctuelle prépare quelque chose dont les autres services ont besoin, comme une migration de base de données, puis se termine."
+        },
+        {
+          "list": {
+            "items": [
+              "Son <code>restart</code> doit valoir <code>no</code> ou être absent. Le service principal, et un service que d’autres attendent avec <code>service_healthy</code>, ne peuvent pas être des tâches.",
+              "Elle s’exécute avant les services qui l’attendent. Une exécution réussie est enregistrée, et les démarrages suivants ne la relancent que si son image ou sa configuration change (environnement, montages, appareils). Un changement de CPU, de mémoire ou de taille de disque ne la relance pas.",
+              "Proxmox ne la démarre pas au boot, et le watchdog ne la surveille pas."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un volume ou un chemin de l’hôte que plusieurs services montent devient un seul répertoire hôte monté dans chacun d’eux, et l’installation demande où le placer. Chaque service qui le monte doit avoir les mêmes <code>PUID</code> et <code>PGID</code> (1000 s’ils ne sont pas définis).",
+              "Chaque service qui publie un port TCP reçoit une adresse sur le réseau local en plus de son adresse privée, et l’installation demande une adresse pour chacun."
+            ]
+          }
+        },
+        {
+          "p": "Les applications lisent souvent leur adresse publique dans une variable comme <code>APP_PUBLIC_URL</code>, et dans une stack <code>localhost</code> est le LXC du service lui-même. Une variable dont le nom contient <code>PUBLIC</code> ou <code>EXTERNAL</code> parmi ses mots, se termine par <code>_URL</code>, <code>_URI</code> ou <code>_ORIGIN</code> et dont la valeur pointe vers <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> ou <code>::1</code>, est réécrite avec l’adresse du réseau local du service qui publie ce port, avec le port de son conteneur. Ce service a besoin d’une adresse statique."
+        },
+        {
+          "code": {
+            "title": "Une URL publique réécrite",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL dans le LXC du worker (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "Quand l’URL ne peut pas être réécrite, la stack n’est pas installée et l’un de ces messages en donne la raison :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Message",
+              "Cause"
+            ],
+            "rows": [
+              [
+                "<strong>L’URL publique locale est ambiguë ; indiquez une URL explicite</strong>",
+                "Plus d’un service publie ce port."
+              ],
+              [
+                "<strong>Aucun port publié ne correspond à l’URL publique locale ; indiquez une URL explicite</strong>",
+                "Aucun service ne publie ce port."
+              ],
+              [
+                "<strong>Les URL publiques automatiques nécessitent des adresses statiques pour les interfaces web ou des URL explicites</strong>",
+                "Le service vers lequel pointe l’URL a une adresse DHCP."
+              ],
+              [
+                "<strong>URL de vérification de service non valide</strong>",
+                "L’URL est mal formée ou son port n’est pas valide."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "private-registries",
       "title": "Images de registres privés",
       "intro": "Une image d’un registre privé, comme un paquet privé GitHub ou un dépôt privé Docker Hub, est lue avec un compte enregistré dans ProxMenux.",
@@ -265,7 +370,8 @@
           "list": {
             "items": [
               "Un Dockerfile sans image publiée : l’image doit d’abord être construite et publiée dans un registre OCI.",
-              "Les fichiers Compose à plusieurs services utilisent un LXC natif par service. Chaque application web doit publier son propre port ; les volumes de même source peuvent partager un répertoire de l’hôte. Les options non prises en charge, les réseaux externes et les services sans contrôle de santé compatible bloquent toujours l’installation.",
+              "Un fichier Compose avec plusieurs services est installé comme décrit dans <sectionLink>Fichiers Compose avec plusieurs services</sectionLink>, sauf s’il déclare plus d’un réseau, un réseau externe, des options sur des volumes de premier niveau, des dépendances optionnelles (<code>required: false</code>) ou des services qui dépendent du principal.",
+              "Dans une stack, un service qui utilise <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> ou <code>extra_hosts</code> est marqué « révision de la stack requise », et la stack n’est pas installée.",
               "<code>configs</code>, secrets externes ou formats de périphériques impossibles à adapter sans ambiguïté.",
               "Substitutions shell comme <code>$(command)</code> : il faut saisir directement la valeur résultante.",
               "Options <code>docker run</code> non reconnues et <code>--env-file</code> : utilisez plutôt un fichier Compose aux valeurs explicites."

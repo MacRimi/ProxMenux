@@ -60,7 +60,7 @@
               ],
               [
                 "Rede",
-                "Ponte privada, sub-rede, endereço fixo por serviço e acesso LAN para o membro principal",
+                "Ponte privada, sub-rede, um endereço fixo por serviço e acesso à LAN para os membros que dele precisam",
                 "Sem colisão com pontes ou subredes existentes e sem endereço repetido"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Rede privada",
-                "body": "Uma ponte e uma sub-rede são criadas e cada membro recebe seu endereço fixo; apenas o membro principal também recebe a interface LAN."
+                "body": "São criadas uma ponte e uma sub-rede, e cada membro recebe o seu endereço fixo. O membro principal recebe ainda a interface da LAN, tal como qualquer outro membro que publique uma porta ou que a receita da aplicação peça."
               },
               {
                 "title": "Persistência",

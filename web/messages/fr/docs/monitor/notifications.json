@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Messages riches, catégories et filtrage par canal",
     "intro": "Trois contrôles par canal : <em>Messages enrichis</em>, les <em>Catégories de notification</em> repliables avec interrupteurs d’événements, puis <em>Envoyer un test</em>.",
-    "imageAlt": "Catégories avec Messages enrichis en haut, sections VM/CT, sauvegardes, ressources, stockage, réseau, sécurité, cluster, services, santé et mises à jour, compteurs et bouton de test",
+    "imageAlt": "Catégories avec Messages enrichis en haut, sections VM/CT, sauvegardes, ressources, stockage, réseau, sécurité, cluster, services, moniteur de santé, mises à jour, matériel et système, compteurs, section Matériel dépliée avec ses événements, heures calmes et résumé quotidien en dessous, et bouton de test",
     "imageCaption": "La flèche indique <em>Messages enrichis</em>. Dessous : les catégories et leurs événements. <em>Envoyer un test</em> est en bas.",
     "richTitle": "Messages enrichis",
     "richIntro": "Avec <em>Messages enrichis</em>, chaque événement reçoit un emoji de catégorie et le format natif du canal, tel HTML Telegram ou carte Discord colorée. Sans cela, le même contenu part en texte simple :",

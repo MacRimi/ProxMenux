@@ -60,7 +60,7 @@
               ],
               [
                 "Réseau",
-                "Pont privé, sous-net, une adresse fixe par service et accès au réseau local pour le membre principal",
+                "Pont privé, sous-réseau, une adresse fixe par service et accès au réseau local pour les membres qui en ont besoin",
                 "Aucune collision avec des ponts ou sous-réseaux existants et aucune adresse répétée"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Réseau privé",
-                "body": "Un bridge et un sous-net sont créés et chaque membre obtient son adresse fixe; seul le membre principal obtient également l'interface LAN."
+                "body": "Un pont et un sous-réseau sont créés et chaque membre reçoit son adresse fixe. Le membre principal reçoit aussi l’interface du réseau local, tout comme chaque autre membre qui publie un port ou que la recette de l’application demande."
               },
               {
                 "title": "Persistance",
