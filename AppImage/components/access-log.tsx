@@ -12,6 +12,7 @@ import { Badge } from "./ui/badge"
 import { fetchApi } from "../lib/api-config"
 import { useAccess } from "../lib/access"
 import { useI18n } from "../lib/i18n/provider"
+import { proxmoxProduct, useIsPbs } from "../lib/use-platform"
 
 interface AccessEvent {
   id: number
@@ -28,6 +29,7 @@ const PAGE = 50
 
 export function AccessLog() {
   const { t, language } = useI18n()
+  const pbs = useIsPbs()
   const { capabilities } = useAccess()
   const [events, setEvents] = useState<AccessEvent[]>([])
   const [more, setMore] = useState(false)
@@ -53,8 +55,9 @@ export function AccessLog() {
 
   if (!capabilities.admin) return null
 
+  // Labels about Proxmox accounts name the product of this host.
   const label = (key: string, fallback: string) => {
-    const text = t(key)
+    const text = t(key, { product: proxmoxProduct(pbs) })
     return text === key ? fallback : text
   }
   const permission = (name: string) => name === "admin" || name === "view" || name === "self" || name === "ticket"
@@ -75,10 +78,11 @@ export function AccessLog() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start gap-2">
-          <button type="button" className="-m-2 flex flex-1 min-w-0 items-start gap-3 rounded-md p-2 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <Card className="overflow-hidden">
+      {/* The whole header, edge to edge, folds and unfolds the list. */}
+      <CardHeader className="p-0">
+        <div className="flex items-start">
+          <button type="button" className="flex flex-1 min-w-0 items-start gap-3 p-6 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             onClick={() => setOpen(current => !current)} aria-expanded={open}>
             <div className="flex-1 min-w-0 space-y-1.5">
               <CardTitle>{t("accessLog.title")}</CardTitle>
@@ -87,7 +91,7 @@ export function AccessLog() {
             <ChevronDown className={`h-4 w-4 mt-1 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
           </button>
           {open && (
-            <Button variant="outline" size="sm" className="h-7 px-3 text-xs gap-1.5 shrink-0" disabled={loading}
+            <Button variant="outline" size="sm" className="h-7 px-3 text-xs gap-1.5 shrink-0 mt-6 mr-6" disabled={loading}
               onClick={() => load()}>
               <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />{t("actions.refresh")}
             </Button>

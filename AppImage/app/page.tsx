@@ -22,6 +22,7 @@ export default function Home() {
     setupCodeRequired: boolean
     pveAuth: boolean
     localAccount: boolean
+    pbs: boolean
   }>({
     loading: true,
     authEnabled: false,
@@ -32,6 +33,7 @@ export default function Home() {
     setupCodeRequired: false,
     pveAuth: false,
     localAccount: true,
+    pbs: false,
   })
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export default function Home() {
           setupCodeRequired: false,
           pveAuth: false,
           localAccount: true,
+          pbs: false,
         })
         return
       }
@@ -104,7 +107,7 @@ export default function Home() {
 
       const data = await response.json()
 
-      // Signed in to the Proxmox VE web interface of this host: that session
+      // Signed in to the Proxmox web interface of this host: that session
       // signs in here too.
       if (data.pve_auth && data.auth_enabled && !data.authenticated && !retried && await adoptPveSession()) {
         return checkAuthStatus(true)
@@ -137,6 +140,7 @@ export default function Home() {
         setupCodeRequired: !!data.setup_code_required,
         pveAuth: !!data.pve_auth,
         localAccount: data.local_account ?? !!data.auth_enabled,
+        pbs: data.product === "pbs",
       })
     } catch {
       // API not available - assume no auth configured (silent fail, no console error)
@@ -150,6 +154,7 @@ export default function Home() {
         setupCodeRequired: false,
         pveAuth: false,
         localAccount: true,
+        pbs: false,
       })
     }
   }
@@ -182,13 +187,13 @@ export default function Home() {
   if (authStatus.accessMode === "undecided") {
     return (
       <div className="min-h-screen bg-background">
-        <AuthSetup onComplete={handleAuthComplete} setupCodeRequired={authStatus.setupCodeRequired} />
+        <AuthSetup onComplete={handleAuthComplete} setupCodeRequired={authStatus.setupCodeRequired} pbs={authStatus.pbs} />
       </div>
     )
   }
 
   if (authStatus.authEnabled && !authStatus.authenticated) {
-    return <Login onLogin={handleLoginSuccess} pveAuth={authStatus.pveAuth} localAccount={authStatus.localAccount} />
+    return <Login onLogin={handleLoginSuccess} pveAuth={authStatus.pveAuth} localAccount={authStatus.localAccount} pbs={authStatus.pbs} />
   }
 
   return (

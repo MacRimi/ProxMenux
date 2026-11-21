@@ -3,6 +3,7 @@ or a Helper-Script by its name or by related words, and opens it where it
 lives: the scripts it launches are the ones the menus launch."""
 
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -338,6 +339,83 @@ class CatalogTabTests(unittest.TestCase):
         keys = [self.search.option_key(item["id"]) for item in self.own]
         self.assertEqual(len(keys), len(set(keys)))
         self.assertTrue(all(re.fullmatch(r"[0-9a-f]{16}", key) for key in keys))
+
+    def test_create_route_with_cleanup_preserves_the_whole_vm_catalog_without_execution(self):
+        main = SCRIPTS / "menus/main_menu.sh"
+        current = main.read_text()
+        legacy = current.replace('3) rm -f "$TEMP_FILE"; exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh"',
+                                '3) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh"')
+        self.assertNotEqual(current, legacy)
+        original_read = Path.read_text
+
+        def snapshot(menu):
+            def read(path, *args, **kwargs):
+                return menu if path == main else original_read(path, *args, **kwargs)
+            with unittest.mock.patch.object(Path, "read_text", read):
+                placed = self.placed()
+                public = {}
+                for option in ("--sections", "--list"):
+                    output = io.StringIO()
+                    with unittest.mock.patch("sys.argv", ["search_menu.py", option]), \
+                         unittest.mock.patch("sys.stdout", output):
+                        self.search.main()
+                    public[option] = json.loads(output.getvalue())
+                return self.search.catalog_sections(placed), placed, public
+
+        with unittest.mock.patch.object(self.search.subprocess, "run") as run, \
+             unittest.mock.patch.object(self.search.subprocess, "Popen") as popen, \
+             unittest.mock.patch.object(self.search.os, "execvp") as execute, \
+             unittest.mock.patch.object(self.search.urllib.request, "urlopen") as download:
+            expected = snapshot(legacy)
+            actual = snapshot(current)
+            self.assertEqual(actual, expected)
+            vm = [item for item in actual[1] if item["section"] == "Create VM from template or script" and item["browse"]]
+            self.assertEqual(len(vm), 5)
+            self.assertTrue(all(item["action"][1].endswith("/menus/create_vm_menu.sh") for item in vm))
+            self.assertFalse(any("plain_lxc" in str(item["action"]) for item in actual[1]))
+            for effect in (run, popen, execute, download):
+                effect.assert_not_called()
+
+    def test_catalog_vm_run_keeps_the_original_target_and_preset(self):
+        class ProcessReplaced(Exception):
+            pass
+
+        entry = next(item for item in self.placed()
+                     if item["english"] == "Create VM System NAS")
+        self.assertEqual(entry["section"], "Create VM from template or script")
+        self.assertTrue(entry["browse"])
+        with unittest.mock.patch.dict(os.environ), \
+             unittest.mock.patch("sys.argv", ["search_menu.py", "--run", self.search.option_key(entry["id"])]), \
+             unittest.mock.patch.object(self.search.os, "execvp", side_effect=ProcessReplaced) as execute:
+            with self.assertRaises(ProcessReplaced):
+                self.search.main()
+            execute.assert_called_once_with(entry["action"][0], entry["action"])
+            self.assertEqual(os.environ["PROXMENUX_CATALOG_TARGET"], entry["action"][1])
+        self.assertTrue(entry["action"][1].endswith("/menus/create_vm_menu.sh"))
+
+    def test_section_reader_accepts_only_the_known_cleanup_and_never_executes_it(self):
+        text = '\n'.join([
+            '3 "$(translate "Create VM from template or script")"',
+            '4 "$(translate "Disk Manager")"',
+            '9 "$(translate "Unrecognized composite command")"',
+            '3) rm -f "$TEMP_FILE"; exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;',
+            '4) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;',
+            '9) touch /unexpected; exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;',
+        ])
+        with unittest.mock.patch.object(Path, "read_text", return_value=text), \
+             unittest.mock.patch.object(self.search.subprocess, "run") as run, \
+             unittest.mock.patch.object(self.search.os, "execvp") as execute:
+            self.assertEqual(self.search.main_sections(), [
+                ("Create VM from template or script", "menus/create_vm_menu.sh"),
+                ("Disk Manager", "menus/storage_menu.sh"),
+            ])
+            run.assert_not_called()
+            execute.assert_not_called()
+        for error in (FileNotFoundError(), PermissionError()):
+            with unittest.mock.patch.object(Path, "read_text", side_effect=error):
+                self.assertEqual(self.search.main_sections(), [])
+        with unittest.mock.patch.object(Path, "read_text", return_value=""):
+            self.assertEqual(self.search.main_sections(), [])
 
     def test_the_page_every_option_links_to_is_in_the_docs_file(self):
         docs = json.loads((SCRIPTS / "menus/option_docs.json").read_text(encoding="utf-8"))

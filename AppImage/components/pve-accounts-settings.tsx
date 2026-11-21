@@ -1,7 +1,8 @@
 "use client"
 
-// Security → Proxmox VE accounts: let the users and realms of Proxmox VE sign
-// in, next to the local account or instead of it.
+// Security → Proxmox accounts: let the users and realms of Proxmox VE (or of
+// Proxmox Backup Server, when the Monitor runs on one) sign in, next to the
+// local account or instead of it.
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
@@ -13,6 +14,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { useAccess } from "../lib/access"
 import { useT } from "../lib/i18n/provider"
+import { proxmoxProduct, useIsPbs } from "../lib/use-platform"
 import { ProfilePicker, type ProfileChoice } from "./profile-picker"
 import { EDIT_CONTENT_CLASS, EditControls, EditableArea, SWITCH_CLASS } from "./edit-controls"
 
@@ -38,6 +40,8 @@ function PveProfileRules({ rules, setRules, directory }: {
   rules: Rule[]; setRules: (next: Rule[]) => void; directory: Directory
 }) {
   const t = useT()
+  const pbs = useIsPbs()
+  const product = { product: proxmoxProduct(pbs) }
   const update = (index: number, next: Partial<Rule>) => setRules(rules.map((r, i) => i === index ? { ...r, ...next } : r))
   const move = (index: number, step: number) => {
     const next = [...rules]
@@ -49,7 +53,7 @@ function PveProfileRules({ rules, setRules, directory }: {
   return (
     <div className="space-y-3 border-t border-border pt-4">
       <div>
-        <h3 className="font-semibold">{t("pveAccounts.rulesTitle")}</h3>
+        <h3 className="font-semibold">{t("pveAccounts.rulesTitle", product)}</h3>
         <p className="text-sm text-muted-foreground">{t("pveAccounts.rulesHelp")}</p>
       </div>
       {rules.map((rule, index) => {
@@ -61,7 +65,8 @@ function PveProfileRules({ rules, setRules, directory }: {
                 <SelectTrigger aria-label={t("pveAccounts.ruleKind")} className="w-full text-foreground"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">{t("pveAccounts.kindUser")}</SelectItem>
-                  <SelectItem value="group">{t("pveAccounts.kindGroup")}</SelectItem>
+                  {/* Proxmox Backup Server has no groups: its rules name users. */}
+                  {(!pbs || rule.kind === "group") && <SelectItem value="group">{t("pveAccounts.kindGroup")}</SelectItem>}
                 </SelectContent>
               </Select>
               {names.length ? (
@@ -104,6 +109,7 @@ function PveProfileRules({ rules, setRules, directory }: {
 
 export function PveAccountsSettings() {
   const t = useT()
+  const product = { product: proxmoxProduct(useIsPbs()) }
   const { capabilities } = useAccess()
   const [status, setStatus] = useState<Status | null>(null)
   const [setupCode, setSetupCode] = useState("")
@@ -210,11 +216,11 @@ export function PveAccountsSettings() {
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle>{t("pveAccounts.title")}</CardTitle>
+          <CardTitle>{t("pveAccounts.title", product)}</CardTitle>
           <EditControls editing={editing} saving={busy} onSave={save} onCancel={cancel} showSave={savable}
             onEdit={() => { setNotice(""); setEditing(true) }} canSave={!rules.some(r => !r.name.trim())} />
         </div>
-        <CardDescription>{t("pveAccounts.description")}</CardDescription>
+        <CardDescription>{t("pveAccounts.description", product)}</CardDescription>
       </CardHeader>
       <CardContent className={editing && hasFields ? EDIT_CONTENT_CLASS : undefined}>
         <EditableArea editing={editing && !busy} className="space-y-4">
@@ -223,13 +229,13 @@ export function PveAccountsSettings() {
 
         {mode === "password" && (
           <div className="flex items-center justify-between gap-4">
-            <Label htmlFor="pve-accounts-enabled">{t("pveAccounts.enable")}</Label>
+            <Label htmlFor="pve-accounts-enabled">{t("pveAccounts.enable", product)}</Label>
             <Switch id="pve-accounts-enabled" checked={enabled} className={SWITCH_CLASS}
               onCheckedChange={setEnabled} />
           </div>
         )}
 
-        {mode === "proxmox" && <p className="text-sm">{t("pveAccounts.onlyWay")}</p>}
+        {mode === "proxmox" && <p className="text-sm">{t("pveAccounts.onlyWay", product)}</p>}
 
         {(mode === "open" || mode === "read_only") && (
           <div className="space-y-3">
@@ -243,14 +249,14 @@ export function PveAccountsSettings() {
               </div>
             )}
             <Button onClick={choose} className="bg-blue-500 hover:bg-blue-600 text-white">
-              {t("authSetup.choosePve")}
+              {t("authSetup.choosePve", product)}
             </Button>
           </div>
         )}
 
         <div className="rounded-md bg-card border border-border p-3 text-sm space-y-2">
           <p>{t("pveAccounts.whoGetsIn")}</p>
-          <p className="text-xs text-muted-foreground">{t("pveAccounts.sharedSession")}</p>
+          <p className="text-xs text-muted-foreground">{t("pveAccounts.sharedSession", product)}</p>
         </div>
 
         {showRules && enabled && <PveProfileRules rules={rules} setRules={setRules} directory={directory} />}

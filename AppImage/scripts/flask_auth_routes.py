@@ -166,6 +166,13 @@ def auth_status():
     """Get current authentication status"""
     try:
         status = auth_manager.get_auth_status()
+        # The sign-in page names the Proxmox accounts of this host before anyone
+        # is signed in, so it reads the product here rather than /api/platform.
+        try:
+            from pbs_manager import is_pbs_host
+            status['product'] = "pbs" if is_pbs_host() else "pve"
+        except Exception:
+            status['product'] = "pve"
 
         if status["access_mode"] in ("password", "proxmox"):
             token = request.headers.get('Authorization', '').replace('Bearer ', '')
@@ -645,7 +652,7 @@ def pve_login():
     the second factor when Proxmox VE asks for one."""
     import pve_auth
     if not _pve_enabled():
-        return jsonify({"success": False, "message": "Proxmox VE accounts are not enabled"}), 404
+        return jsonify({"success": False, "message": "Proxmox accounts are not enabled"}), 404
     client_ip = _get_client_ip()
     allowed, retry_after = _login_limiter.check_and_record(client_ip)
     if not allowed:
@@ -670,11 +677,11 @@ def pve_login():
 
 @auth_bp.route('/api/auth/pve/session', methods=['GET'])
 def pve_session():
-    """The Proxmox VE session of this browser: the cookie the Proxmox VE web
-    interface keeps for this host reaches the Monitor when both are opened over
-    HTTPS by the same name."""
+    """The Proxmox session of this browser: the cookie the Proxmox web
+    interface of this host (VE or Backup Server) keeps reaches the Monitor
+    when both are opened over HTTPS by the same name."""
     import pve_auth
-    ticket = request.cookies.get("PVEAuthCookie", "")
+    ticket = request.cookies.get(pve_auth.cookie_name(), "")
     if not _pve_enabled() or not ticket:
         return jsonify({"success": False}), 404
     username, scope = pve_auth.validate(ticket)

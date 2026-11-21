@@ -23,6 +23,7 @@ import {
 import { fetchApi } from "@/lib/api-config"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { GpuSwitchModeIndicator } from "./gpu-switch-mode-indicator"
+import { SystemInformation } from "./system-information"
 import { Settings2, CheckCircle2 } from "lucide-react"
 import { useT } from "../lib/i18n/provider"
 import { cn } from "@/lib/utils"
@@ -660,103 +661,7 @@ export default function Hardware() {
   return (
     <div className="space-y-6">
       {/* System Information - CPU & Motherboard */}
-      {(hardwareData?.cpu || hardwareData?.motherboard) && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">{t("hardware.sections.systemInformation")}</h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* CPU Info */}
-            {hardwareData?.cpu && Object.keys(hardwareData.cpu).length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <CpuIcon className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">CPU</h3>
-                </div>
-                <div className="space-y-2">
-                  {hardwareData.cpu.model && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.model")}</span>
-                      <span className="font-medium text-right">{hardwareData.cpu.model}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.cores_per_socket && hardwareData.cpu.sockets && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.cores")}</span>
-                      <span className="font-medium">
-                        {hardwareData.cpu.sockets} × {hardwareData.cpu.cores_per_socket} ={" "}
-                        {t("hardware.values.cores", { count: hardwareData.cpu.sockets * hardwareData.cpu.cores_per_socket })}
-                      </span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.total_threads && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.threads")}</span>
-                      <span className="font-medium">{hardwareData.cpu.total_threads}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.l3_cache && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.l3Cache")}</span>
-                      <span className="font-medium">{hardwareData.cpu.l3_cache}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.virtualization && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.virtualization")}</span>
-                      <span className="font-medium">{hardwareData.cpu.virtualization}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Motherboard Info */}
-            {hardwareData?.motherboard && Object.keys(hardwareData.motherboard).length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">{t("hardware.sections.motherboard")}</h3>
-                </div>
-                <div className="space-y-2">
-                  {hardwareData.motherboard.manufacturer && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.manufacturer")}</span>
-                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.manufacturer, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.model && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.model")}</span>
-                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.model, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.bios?.vendor && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">BIOS</span>
-                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.bios.vendor, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.bios?.version && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.version")}</span>
-                      <span className="font-medium">{formatHardwareValue(hardwareData.motherboard.bios.version, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.bios?.date && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.date")}</span>
-                      <span className="font-medium">{hardwareData.motherboard.bios.date}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
+      {hardwareData && <SystemInformation data={hardwareData} />}
 
       {/* Memory Modules */}
       {hardwareData?.memory_modules && hardwareData.memory_modules.length > 0 && (

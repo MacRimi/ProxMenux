@@ -2837,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Melden Sie sich an, um auf Ihr Dashboard zuzugreifen",
     "username": "Benutzername",
     "password": "Passwort",
     "usernamePlaceholder": "Geben Sie Ihren Benutzernamen ein",
@@ -2856,7 +2855,8 @@
     "authenticationCode": "Authentifizierungscode",
     "backupCodeHint": "Sie können auch einen Backup-Code verwenden (Format: XXXX-XXXX)",
     "backToLogin": "Zurück zum Login",
-    "verifyCode": "Code überprüfen"
+    "verifyCode": "Code überprüfen",
+    "subtitle": "Anmeldung"
   },
   "account": {
     "signedIn": "Angemeldet",
@@ -2910,19 +2910,19 @@
     "openDescription": "Jeder, der den Monitor aufruft, erhält die vollständige Kontrolle über diesen Server, einschließlich Root-Terminal. Wählen Sie dies nur in einem Netzwerk, in dem Sie allen vertrauen, die darauf zugreifen können.",
     "chooseReadOnly": "Schreibgeschützt verwenden",
     "chooseOpen": "Ohne Passwort öffnen",
-    "pveTitle": "Oder Konten von Proxmox VE verwenden",
-    "pveDescription": "Melden Sie sich mit den Benutzern und Realms von Proxmox VE und deren Zwei-Faktor-Authentifizierung an, ohne ein eigenes Konto für den Monitor zu benötigen.",
-    "choosePve": "Proxmox VE-Konten verwenden"
+    "pveTitle": "Oder Konten von {product} verwenden",
+    "pveDescription": "Melden Sie sich mit den Benutzern und Realms von {product} und deren Zwei-Faktor-Authentifizierung an, ohne ein eigenes Konto für den Monitor zu benötigen.",
+    "choosePve": "{product}-Konten verwenden"
   },
   "pveAccounts": {
-    "title": "Proxmox VE-Konten",
-    "description": "Melden Sie sich mit den Benutzern und Realms von Proxmox VE an, einschließlich deren Zwei-Faktor-Authentifizierung.",
-    "enable": "Anmeldung über Proxmox VE-Konten zulassen",
-    "onlyWay": "Proxmox VE-Konten dienen als Zugang zum Dashboard. Um diese nicht mehr zu verwenden, legen Sie ein lokales Passwort fest oder wählen Sie oben schreibgeschützten oder offenen Zugriff.",
+    "title": "{product}-Konten",
+    "description": "Melden Sie sich mit den Benutzern und Realms von {product} an, einschließlich deren Zwei-Faktor-Authentifizierung.",
+    "enable": "Anmeldung über {product}-Konten zulassen",
+    "onlyWay": "{product}-Konten dienen als Zugang zum Dashboard. Um diese nicht mehr zu verwenden, legen Sie ein lokales Passwort fest oder wählen Sie oben schreibgeschützten oder offenen Zugriff.",
     "whoGetsIn": "Benutzer mit der Berechtigung Sys.Modify auf / erhalten Vollzugriff; Benutzer mit nur Sys.Audit auf / erhalten Lesezugriff. Andere Benutzer können sich nicht anmelden.",
-    "sharedSession": "An der Proxmox VE-Weboberfläche angemeldet? Öffnen Sie das Dashboard über HTTPS unter derselben Adresse, und diese Sitzung meldet Sie auch hier an.",
+    "sharedSession": "An der {product}-Weboberfläche angemeldet? Öffnen Sie das Dashboard über HTTPS unter derselben Adresse, und diese Sitzung meldet Sie auch hier an.",
     "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
-    "rulesTitle": "Profile der Proxmox VE-Konten",
+    "rulesTitle": "Profile der {product}-Konten",
     "rulesHelp": "Die Regel eines Benutzers hat Vorrang, sonst gilt die erste Regel einer seiner Gruppen. Ohne Regel ergibt Sys.Modify auf / das Profil Administrator und Sys.Audit das Profil Beobachter. Eine Regel lässt nie einen Benutzer ohne Berechtigungen auf / herein.",
     "ruleKind": "Regel für",
     "ruleName": "Benutzer oder Gruppe",
@@ -3022,7 +3022,7 @@
     "enabledDone": "Benutzer aktiviert."
   },
   "pveLogin": {
-    "tab": "Proxmox VE",
+    "tab": "{product}",
     "localAccount": "Lokales Konto",
     "username": "Benutzer",
     "password": "Passwort",
@@ -3032,9 +3032,9 @@
     "failed": "Anmeldung fehlgeschlagen. Überprüfen Sie Benutzer, Passwort und Realm.",
     "fillFields": "Geben Sie Benutzer und Passwort ein.",
     "tooManyAttempts": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut.",
-    "useWebInterface": "Dieses Konto meldet sich mit einem Sicherheitsschlüssel an. Melden Sie sich auf der Proxmox VE-Weboberfläche an und kehren Sie dann zu dieser Seite zurück.",
-    "webInterface": "Auf der Proxmox VE-Weboberfläche anmelden",
-    "webInterfaceHint": "Wenn der Monitor über HTTPS unter derselben Adresse geöffnet ist, meldet Sie die Sitzung der Proxmox VE-Weboberfläche hier an, sobald Sie zurückkehren."
+    "useWebInterface": "Dieses Konto meldet sich mit einem Sicherheitsschlüssel an. Melden Sie sich auf der {product}-Weboberfläche an und kehren Sie dann zu dieser Seite zurück.",
+    "webInterface": "Auf der {product}-Weboberfläche anmelden",
+    "webInterfaceHint": "Wenn der Monitor über HTTPS unter derselben Adresse geöffnet ist, meldet Sie die Sitzung der {product}-Weboberfläche hier an, sobald Sie zurückkehren."
   },
   "access": {
     "readOnlyBanner": "Schreibgeschützter Zugriff: Sie können diesen Server sehen, aber nichts ausführen oder ändern. Um ihn zu verwalten, fügen Sie unter Security ein Passwort hinzu."
@@ -4132,8 +4132,7 @@
     },
     "sections": {
       "physicalInterfaces": "Physikalische Schnittstellen",
-      "bridgeInterfaces": "Bridge-Schnittstellen",
-      "vmLxcInterfaces": "VM- und LXC-Netzwerkschnittstellen"
+      "virtualInterfaces": "Virtuelle Schnittstellen"
     },
     "summary": {
       "totalInterfaces": "{count} Schnittstellen insgesamt",
@@ -4348,6 +4347,20 @@
         "generated": "Generiert",
         "reportId": "Berichts-ID"
       }
+    },
+    "virtualList": {
+      "all": "Alle",
+      "name": "Name",
+      "up": "Aktiv",
+      "down": "Inaktiv",
+      "guests": "VMs und LXCs",
+      "connectedTo": "Verbunden mit",
+      "searchPlaceholder": "Nach Name, IP oder Gast suchen…",
+      "searchAriaLabel": "Virtuelle Schnittstellen durchsuchen",
+      "clearSearch": "Suche löschen",
+      "kindAriaLabel": "Nach Schnittstellentyp filtern",
+      "stateAriaLabel": "Nach Zustand filtern",
+      "noMatches": "Keine Schnittstelle entspricht den Filtern."
     }
   },
   "hardware": {
@@ -4600,6 +4613,21 @@
       "switchModeDescription": "GPU {slot} wird in den {mode}-Modus umgeschaltet...",
       "switchModeVm": "VM (VFIO-Passthrough)",
       "switchModeLxc": "LXC (nativer Treiber)"
+    },
+    "systemInfo": {
+      "socket": "{count} Sockel",
+      "sockets": "{count} Sockel",
+      "socketsLabel": "Sockel",
+      "coresWord": "Kerne",
+      "threads": "{count} Threads",
+      "cache": "Cache",
+      "frequency": "Frequenz",
+      "board": "Platine",
+      "biosDate": "BIOS-Datum",
+      "biosVendor": "BIOS-Hersteller",
+      "noBoardData": "Keine Angaben vom Hersteller",
+      "memoryModules": "{count} Speichermodule",
+      "schematic": "Schema der Hauptplatine"
     }
   },
   "backup": {
@@ -8363,8 +8391,8 @@
         "enabled": "Benutzer aktiviert"
       },
       "pve": {
-        "accounts": "Proxmox VE-Konten",
-        "rules": "Profilregeln für Proxmox VE"
+        "accounts": "{product}-Konten",
+        "rules": "Profilregeln für {product}"
       },
       "oidc": {
         "config": "OpenID Connect-Einstellungen"
@@ -8375,13 +8403,13 @@
     },
     "methods": {
       "local": "lokales Konto",
-      "pve": "Proxmox VE",
+      "pve": "{product}",
       "oidc": "OpenID Connect"
     },
     "modes": {
       "read_only": "schreibgeschützt",
       "open": "offen",
-      "proxmox": "Proxmox VE-Konten",
+      "proxmox": "{product}-Konten",
       "password": "Passwort"
     },
     "scopes": {

@@ -2837,7 +2837,6 @@
     }
   },
   "login": {
-    "subtitle": "Faça login para acessar seu painel",
     "username": "Nome de utilizador",
     "password": "Palavra-passe",
     "usernamePlaceholder": "Digite seu nome de usuário",
@@ -2856,7 +2855,8 @@
     "authenticationCode": "Código de autenticação",
     "backupCodeHint": "Você também pode usar um código de backup (formato: XXXX-XXXX)",
     "backToLogin": "Voltar ao login",
-    "verifyCode": "Verifique o código"
+    "verifyCode": "Verifique o código",
+    "subtitle": "Iniciar sessão"
   },
   "account": {
     "signedIn": "Conectado",
@@ -2910,19 +2910,19 @@
     "openDescription": "Qualquer pessoa que acessar o Monitor terá controle total deste servidor, incluindo terminal root. Escolha isso apenas em uma rede onde você confia em todos que possam acessá-la.",
     "chooseReadOnly": "Usar somente leitura",
     "chooseOpen": "Abrir sem senha",
-    "pveTitle": "Ou use as contas do Proxmox VE",
-    "pveDescription": "Faça login com os usuários e realms do Proxmox VE e a autenticação de dois fatores deles, sem precisar de uma conta própria do Monitor.",
-    "choosePve": "Usar contas do Proxmox VE"
+    "pveTitle": "Ou use as contas do {product}",
+    "pveDescription": "Faça login com os usuários e realms do {product} e a autenticação de dois fatores deles, sem precisar de uma conta própria do Monitor.",
+    "choosePve": "Usar contas do {product}"
   },
   "pveAccounts": {
-    "title": "Contas do Proxmox VE",
-    "description": "Faça login com os usuários e realms do Proxmox VE, incluindo a autenticação de dois fatores deles.",
-    "enable": "Permitir login com contas do Proxmox VE",
-    "onlyWay": "As contas do Proxmox VE são a forma de acessar o painel. Para deixar de usá-las, adicione uma senha local ou escolha o acesso somente leitura ou aberto acima.",
+    "title": "Contas do {product}",
+    "description": "Faça login com os usuários e realms do {product}, incluindo a autenticação de dois fatores deles.",
+    "enable": "Permitir login com contas do {product}",
+    "onlyWay": "As contas do {product} são a forma de acessar o painel. Para deixar de usá-las, adicione uma senha local ou escolha o acesso somente leitura ou aberto acima.",
     "whoGetsIn": "Usuários com o privilégio Sys.Modify em / obtêm acesso total; usuários apenas com Sys.Audit em /, acesso somente leitura. Outros usuários não podem fazer login.",
-    "sharedSession": "Já fez login na interface web do Proxmox VE? Abra o painel via HTTPS no mesmo endereço e essa sessão também conectará você aqui.",
+    "sharedSession": "Já fez login na interface web do {product}? Abra o painel via HTTPS no mesmo endereço e essa sessão também conectará você aqui.",
     "saveFailed": "Não foi possível salvar a alteração.",
-    "rulesTitle": "Perfis das contas do Proxmox VE",
+    "rulesTitle": "Perfis das contas do {product}",
     "rulesHelp": "A regra de um usuário prevalece; caso contrário, vale a primeira regra de um dos seus grupos. Sem regra, Sys.Modify em / dá o perfil Administrador e Sys.Audit o perfil Observador. Uma regra nunca deixa entrar um usuário sem privilégios em /.",
     "ruleKind": "Regra para",
     "ruleName": "Usuário ou grupo",
@@ -3022,7 +3022,7 @@
     "enabledDone": "Usuário ativado."
   },
   "pveLogin": {
-    "tab": "Proxmox VE",
+    "tab": "{product}",
     "localAccount": "Conta local",
     "username": "Usuário",
     "password": "Senha",
@@ -3032,9 +3032,9 @@
     "failed": "Falha no login. Verifique o usuário, senha e realm.",
     "fillFields": "Insira o usuário e a senha.",
     "tooManyAttempts": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
-    "useWebInterface": "Esta conta faz login com uma chave de segurança. Entre na interface web do Proxmox VE e depois volte para esta página.",
-    "webInterface": "Entrar na interface web do Proxmox VE",
-    "webInterfaceHint": "Com o Monitor aberto via HTTPS no mesmo endereço, a sessão da interface web do Proxmox VE conecta você aqui ao retornar."
+    "useWebInterface": "Esta conta faz login com uma chave de segurança. Entre na interface web do {product} e depois volte para esta página.",
+    "webInterface": "Entrar na interface web do {product}",
+    "webInterfaceHint": "Com o Monitor aberto via HTTPS no mesmo endereço, a sessão da interface web do {product} conecta você aqui ao retornar."
   },
   "access": {
     "readOnlyBanner": "Acesso somente leitura: você pode visualizar este servidor, mas não executar nem alterar nada. Para gerenciá-lo, adicione uma senha em Security."
@@ -4132,19 +4132,18 @@
     },
     "sections": {
       "physicalInterfaces": "Interfaces Físicas",
-      "bridgeInterfaces": "Interfaces de ponte",
-      "vmLxcInterfaces": "Interfaces de rede VM e LXC"
+      "virtualInterfaces": "Interfaces virtuais"
     },
     "summary": {
       "totalInterfaces": "{count} interfaces totais",
-      "activeCount": "{active}/{total} Ativo"
+      "activeCount": "{active}/{total} ativas"
     },
     "status": {
       "healthy": "Saudável",
       "warning": "Aviso",
       "critical": "Crítico",
-      "up": "Acima",
-      "down": "Abaixo"
+      "up": "Ativa",
+      "down": "Inativa"
     },
     "duplex": {
       "full": "Duplex completo",
@@ -4348,6 +4347,20 @@
         "generated": "Gerado",
         "reportId": "ID do relatório"
       }
+    },
+    "virtualList": {
+      "all": "Todas",
+      "name": "Nome",
+      "up": "Ativas",
+      "down": "Inativas",
+      "guests": "VMs e LXCs",
+      "connectedTo": "Ligada a",
+      "searchPlaceholder": "Buscar por nome, IP ou convidado…",
+      "searchAriaLabel": "Buscar interfaces virtuais",
+      "clearSearch": "Limpar busca",
+      "kindAriaLabel": "Filtrar por tipo de interface",
+      "stateAriaLabel": "Filtrar por estado",
+      "noMatches": "Nenhuma interface corresponde aos filtros."
     }
   },
   "hardware": {
@@ -4600,6 +4613,21 @@
       "switchModeDescription": "Mudando a GPU {slot} para o modo {mode}...",
       "switchModeVm": "VM (passagem VFIO)",
       "switchModeLxc": "LXC (driver nativo)"
+    },
+    "systemInfo": {
+      "socket": "{count} soquete",
+      "sockets": "{count} soquetes",
+      "socketsLabel": "Soquetes",
+      "coresWord": "núcleos",
+      "threads": "{count} threads",
+      "cache": "Cache",
+      "frequency": "Frequência",
+      "board": "Placa",
+      "biosDate": "Data do BIOS",
+      "biosVendor": "Fabricante do BIOS",
+      "noBoardData": "Nenhum dado do fabricante",
+      "memoryModules": "{count} módulos de memória",
+      "schematic": "Esquema da placa-mãe"
     }
   },
   "backup": {
@@ -8363,8 +8391,8 @@
         "enabled": "Usuário ativado"
       },
       "pve": {
-        "accounts": "Contas do Proxmox VE",
-        "rules": "Regras de perfis do Proxmox VE"
+        "accounts": "Contas do {product}",
+        "rules": "Regras de perfis do {product}"
       },
       "oidc": {
         "config": "Configurações do OpenID Connect"
@@ -8375,13 +8403,13 @@
     },
     "methods": {
       "local": "conta local",
-      "pve": "Proxmox VE",
+      "pve": "{product}",
       "oidc": "OpenID Connect"
     },
     "modes": {
       "read_only": "somente leitura",
       "open": "aberto",
-      "proxmox": "contas do Proxmox VE",
+      "proxmox": "contas do {product}",
       "password": "senha"
     },
     "scopes": {

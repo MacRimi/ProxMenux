@@ -61,7 +61,7 @@ initialize_cache
 function header_info() {
   clear
   show_proxmenux_logo
-  msg_title "ProxMenux VM Creator"
+  msg_title "$(translate "ProxMenux VM Creator")"
 }
 
 VM_WIZARD_CAPTURE_FILE=""
@@ -110,12 +110,12 @@ function has_usable_gpu_for_vm_passthrough() {
 
 function start_vm_configuration() {
 
-  if (whiptail --title "ProxMenux" --yesno "$(translate "Use Default Settings?")" --no-button "$(translate "Advanced")" 10 60); then
+  if (whiptail --title "ProxMenux" --yes-button "$(translate "Yes")" --yesno "$(translate "Use Default Settings?")" --no-button "$(translate "Advanced")" 10 60); then
     #header_info
     #load_default_vm_config "$OS_TYPE"
 
     if [[ -z "$HN" ]]; then
-      HN=$(whiptail --inputbox "$(translate "Enter a name for the new virtual machine:")" 10 60 --title "VM Hostname" 3>&1 1>&2 2>&3)
+      HN=$(whiptail --ok-button "$(translate "OK")" --cancel-button "$(translate "Cancel")" --inputbox "$(translate "Enter a name for the new virtual machine:")" 10 60 --title "$(translate "VM Hostname")" 3>&1 1>&2 2>&3)
       [[ -z "$HN" ]] && HN="custom-vm"
     fi
     header_info
@@ -148,30 +148,43 @@ while true; do
   WIZARD_CONFLICT_POLICY=""
   WIZARD_CONFLICT_SCOPE=""
   export WIZARD_CONFLICT_POLICY WIZARD_CONFLICT_SCOPE
-  if [[ "$PRESELECTED_OPTION" =~ ^[1-5]$ ]]; then
+  if [[ "$PRESELECTED_OPTION" =~ ^[1-5]$ || "$PRESELECTED_OPTION" == "plain-lxc" ]]; then
     OS_TYPE="$PRESELECTED_OPTION"
     PRESELECTED_OPTION=""
   else
     VM_PRESET=""
     OS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
+      --ok-label "$(translate "OK")" --cancel-label "$(translate "Cancel")" \
       --title "$(translate "Select System Type")" \
       --menu "\n$(translate "Choose the type of virtual system to install:")" 20 70 10 \
       1 "$(translate "Create VM System NAS")" \
       2 "$(translate "Create VM System Windows")" \
       3 "$(translate "Create VM System Linux")" \
+      4 "$(translate "Create a plain LXC")" \
       ""          "" \
       ""  "\Z4───────────────── $(translate "External Scripts") ─────────────────\Zn" \
       ""          "" \
-      4 "$(translate "Create VM System macOS (OSX-PROXMOX)")" \
-      5 "$(translate "Create VM System Others (based Linux)")" \
+      5 "$(translate "Create VM System macOS (OSX-PROXMOX)")" \
+      6 "$(translate "Create VM System Others (based Linux)")" \
       ""          "" \
-      6 "$(translate "Return to Main Menu")" \
+      7 "$(translate "Return to Main Menu")" \
       3>&1 1>&2 2>&3)
 
-    [[ $? -ne 0 || "$OS_TYPE" == "6" ]] && exec bash "$MENU_REPO/main_menu.sh"
+    [[ $? -ne 0 || "$OS_TYPE" == "7" ]] && exec bash "$MENU_REPO/main_menu.sh"
+    # Visible menu numbering is independent of the established Search/Catalog
+    # arguments: legacy argument 4 remains macOS and 5 remains Others.
+    case "$OS_TYPE" in
+      4) OS_TYPE="plain-lxc" ;;
+      5) OS_TYPE=4 ;;
+      6) OS_TYPE=5 ;;
+    esac
   fi
 
   case "$OS_TYPE" in
+    plain-lxc)
+      /usr/bin/python3 -I -B "$MENU_REPO/plain_lxc_wizard.py" "$LANGUAGE"
+      continue
+      ;;
     1)
       source "$ISO_REPO/select_nas_iso.sh" && select_nas_iso || continue
       ;;
@@ -182,7 +195,7 @@ while true; do
       source "$ISO_REPO/select_linux_iso.sh" && select_linux_iso || continue
       ;;
     4)
-      whiptail --title "OSX-PROXMOX" --yesno "$(translate "This is an external script that creates a macOS VM in Proxmox VE in just a few steps, whether you are using AMD or Intel hardware.")\n\n$(translate "The script clones the osx-proxmox.com repository and once the setup is complete, the server will automatically reboot.")\n\n$(translate "Make sure there are no critical services running as they will be interrupted. Ensure your server can be safely rebooted.")\n\n$(translate  "Visit https://osx-proxmox.com for more information.")\n\n$(translate "Do you want to run the script now?")" 24 70
+      whiptail --title "OSX-PROXMOX" --yes-button "$(translate "Yes")" --no-button "$(translate "No")" --yesno "$(translate "This is an external script that creates a macOS VM in Proxmox VE in just a few steps, whether you are using AMD or Intel hardware.")\n\n$(translate "The script clones the osx-proxmox.com repository and once the setup is complete, the server will automatically reboot.")\n\n$(translate "Make sure there are no critical services running as they will be interrupted. Ensure your server can be safely rebooted.")\n\n$(translate  "Visit https://osx-proxmox.com for more information.")\n\n$(translate "Do you want to run the script now?")" 24 70
       if [[ $? -eq 0 ]]; then
         bash -c "$(curl -fsSL https://install.osx-proxmox.com)"
       fi
@@ -216,6 +229,7 @@ while true; do
   WIZARD_ADD_GPU="no"
   if has_usable_gpu_for_vm_passthrough; then
     if whiptail --backtitle "ProxMenux" --title "$(translate "Optional GPU Passthrough")" \
+      --yes-button "$(translate "Yes")" --no-button "$(translate "No")" \
       --yesno "$(translate "Do you want to configure GPU passthrough for this VM now?")\n\n$(translate "This will launch the GPU assistant after VM creation and may require a host reboot.")" 12 78 --defaultno; then
       WIZARD_ADD_GPU="yes"
     fi

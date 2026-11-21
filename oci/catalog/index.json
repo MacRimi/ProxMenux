@@ -10914,6 +10914,39 @@
       "template_id": "image-netbird"
     },
     {
+      "id": "netbootxyz",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "netboot.xyz",
+      "repository": "https://github.com/netbootxyz/docker-netbootxyz",
+      "description": "Boot computers over the network to install operating systems or run rescue tools from one menu.",
+      "website": "https://netboot.xyz/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@afa3000eb84dbb22e3518cc4db54b546f71bc648/svg/netboot-xyz.svg",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/netbootxyz/netbootxyz:latest",
+      "category": "network",
+      "category_label": "Network & Firewall",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/netbootxyz.json",
+      "template_id": "image-netbootxyz",
+      "template": "apps/netbootxyz.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": []
+    },
+    {
       "id": "netbox",
       "provider": "linuxserver.io",
       "title": "NetBox",
@@ -12759,6 +12792,39 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "image-peanut"
+    },
+    {
+      "id": "peertube",
+      "provider": "PeerTube",
+      "template_family": "curated-profile",
+      "title": "PeerTube",
+      "repository": "https://github.com/Chocobozzz/PeerTube",
+      "description": "Upload and share videos on a self-hosted platform that can federate with other PeerTube servers.",
+      "website": "https://joinpeertube.org/",
+      "icon": "https://raw.githubusercontent.com/Chocobozzz/PeerTube/b8055f508370eba1bb41ac657816738cd4e0105c/client/src/assets/images/logo.svg",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/chocobozzz/peertube:production",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/peertube.json",
+      "template_id": "image-peertube",
+      "template": "apps/peertube.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": []
     },
     {
       "id": "pelorus",
@@ -15239,6 +15305,39 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "linuxserver-scummvm"
+    },
+    {
+      "id": "seafile-ce",
+      "provider": "Seafile Ltd.",
+      "template_family": "curated-profile",
+      "title": "Seafile CE",
+      "repository": "https://github.com/haiwen/seafile-docker",
+      "description": "Seafile Community Edition with MariaDB and Redis. Store files in libraries, share them, and sync them across devices.",
+      "website": "https://www.seafile.com/",
+      "icon": "https://raw.githubusercontent.com/selfhst/icons/6ff8eee3050daa4cf1e474333ed6f66b30e13061/webp/seafile.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "seafileltd/seafile-mc:13.0-latest",
+      "category": "sharing",
+      "category_label": "Files & Sharing",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/seafile-ce.json",
+      "template_id": "image-seafile-ce",
+      "template": "apps/seafile-ce.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "multi_container": true
     },
     {
       "id": "sealskin",
@@ -19416,6 +19515,39 @@
       "multi_container": true
     },
     {
+      "id": "zabbix",
+      "provider": "zabbix",
+      "template_family": "curated-profile",
+      "title": "Zabbix",
+      "repository": "https://github.com/zabbix/zabbix-docker",
+      "description": "Zabbix 7.0 LTS with the Nginx web interface and PostgreSQL. Monitor servers, network devices and applications from a single dashboard.",
+      "website": "https://www.zabbix.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@98aaa039a5e30b6c5b0b3d9d96565044f6f5099b/webp/zabbix.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest",
+      "category": "monitoring",
+      "category_label": "Monitoring & Analytics",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/zabbix.json",
+      "template_id": "image-zabbix",
+      "template": "apps/zabbix.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": []
+    },
+    {
       "id": "zen",
       "provider": "linuxserver.io",
       "title": "Zen",
@@ -20694,7 +20826,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 38
+      "included_count": 39
     }
   }
 }
