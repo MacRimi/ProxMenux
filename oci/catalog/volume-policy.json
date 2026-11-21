@@ -198,6 +198,9 @@
     "openproject": [
       "/var/openproject/assets"
     ],
+    "jellystat": [
+      "/app/backend/backup-data"
+    ],
     "kutt": [
       "/kutt/custom"
     ]
