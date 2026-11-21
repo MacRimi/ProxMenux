@@ -9,7 +9,8 @@ import { createContext, useContext } from "react"
 export type AccessMode = "undecided" | "password" | "proxmox" | "read_only" | "open"
 
 // The areas of the dashboard a profile sees; a custom profile chooses them.
-export const AREAS = ["general", "apps", "menux", "guests", "node", "backup", "logs"] as const
+// Datastores and tasks are the pages of a Proxmox Backup Server.
+export const AREAS = ["general", "apps", "menux", "guests", "node", "backup", "logs", "datastores", "tasks"] as const
 export type Area = typeof AREAS[number]
 
 export interface Capabilities {
@@ -25,7 +26,7 @@ export interface Capabilities {
 
 export const FULL_ACCESS: Capabilities = {
   view: true, execute: true, guests: true, backup: true, update: true, terminal: true, admin: true,
-  areas: { general: true, apps: true, menux: true, guests: true, node: true, backup: true, logs: true },
+  areas: { general: true, apps: true, menux: true, guests: true, node: true, backup: true, logs: true, datastores: true, tasks: true },
 }
 
 // A reply from a Monitor without areas sees them all, as it did then.

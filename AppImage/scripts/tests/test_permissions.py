@@ -89,13 +89,38 @@ class RouteClassification(unittest.TestCase):
                             ("/api/vms/<int:vmid>/backups", {"guests"}),
                             ("/api/host-backups/jobs", {"backup"}),
                             ("/api/storage/summary", {"general"}),
-                            ("/api/storage/smart/<disk_name>", {"node"}),
+                            ("/api/storage/smart/<disk_name>", {"node", "datastores"}),
                             ("/api/node/metrics", {"general", "node"}),
                             ("/api/health/details", set()),
                             ("/api/auth/profile", set())):
             with self.subTest(rule=rule):
                 self.assertEqual(set(permissions.read_areas(rule)), areas)
         self.assertEqual(permissions.required("/api/audit/runs", "GET"), "admin")
+
+    def test_a_backup_server_offers_only_its_own_pages(self):
+        # A custom profile on a Proxmox Backup Server chooses among its pages
+        # and the actions that do something there; Proxmox VE keeps its own.
+        self.assertEqual(permissions.custom_choices(True),
+                         (["general", "datastores", "tasks", "node", "logs"], ["execute", "update", "terminal"]))
+        areas, actions = permissions.custom_choices(False)
+        self.assertNotIn("datastores", areas)
+        self.assertNotIn("tasks", areas)
+        self.assertIn("guests", areas)
+        self.assertIn("guests", actions)
+
+    def test_backup_server_pages_follow_their_areas(self):
+        # Datastores reads the status of the server and its disks; Tasks only
+        # the status. A profile with one of them reads only what it shows.
+        tasks_only = {"view", "area.tasks"}
+        for rule, needed in (("/api/pbs/status", {"general", "backup", "datastores", "tasks"}),
+                             ("/api/pbs/servers", {"backup", "datastores", "tasks"}),
+                             ("/api/storage", {"node", "datastores"}),
+                             ("/api/disk/<disk_name>/observations", {"node", "datastores"}),
+                             ("/api/mounts", {"node", "datastores"})):
+            with self.subTest(rule=rule):
+                self.assertEqual(set(permissions.read_areas(rule)), needed)
+        self.assertTrue(permissions.allows(tasks_only, "view", areas=permissions.read_areas("/api/pbs/status")))
+        self.assertFalse(permissions.allows(tasks_only, "view", areas=permissions.read_areas("/api/storage")))
 
     def test_every_listed_rule_names_a_route(self):
         rules = {rule for rule, _, _ in self.routes}
