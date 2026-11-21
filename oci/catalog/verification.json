@@ -40,6 +40,14 @@
     "ddclient": {
       "status": "laboratory-validated"
     },
+    "dispatcharr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "3716ebb0aba133fe8b3d311505dc49966b7fddff742d9ab710ccd19d04658195",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome login, channel group/reboot, in-place Modify, cold restore/Manage, same-digest no-op and 0.34.0 to 0.34.1 update preserved data, resources, MAC/IP and storage. PostgreSQL, Redis and Daphne remained on loopback."
+      }
+    },
     "duplicati": {
       "status": "laboratory-validated"
     },
@@ -109,6 +117,14 @@
     "jdownloader": {
       "status": "laboratory-validated"
     },
+    "jellystat": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "e61c759ec706da378bc8374e797da1dfd298ab30f804cefd82d192c301a888c7",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, private PostgreSQL, Chrome and login. Reboot, CPU/RAM Modify, host-bind app backup, native backup/restore of both CTs into OCI Manage and same-digest stack Update passed. Changed digest and rollback were not exercised."
+      }
+    },
     "jenkins": {
       "status": "laboratory-validated"
     },
@@ -168,9 +184,9 @@
     "netbootxyz": {
       "community_tested": {
         "by": "jcastro",
-        "date": "2026-11-20",
+        "date": "2026-11-21",
         "digest": "a3af92f8447d4df33e7d18607c968db792a6b2da0db9c2255ceb7f45e01897bd",
-        "scenario": "PVE 9.2.32 amd64/ZFS; unprivileged LXC, host-bind config/assets; isolated bridge with separate DHCP; diskless SeaBIOS VM loaded official iPXE via TFTP, netboot.xyz 3.0.3 menu, local Debian 13 kernel/initrd via HTTP and installer language screen; restart, same-digest update and Remove."
+        "scenario": "PVE 9.2.32 amd64/ZFS; clean DHCP install retried DNS and downloaded menus once. HTTP 200 and TFTP worked after reboot with identical files and timestamps. Prior isolated SeaBIOS PXE reached Debian 13 installer; host-bind, same-digest update and Remove passed."
       }
     },
     "nextcloud": {
@@ -296,6 +312,14 @@
     "trilium": {
       "status": "laboratory-validated"
     },
+    "tunarr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "50919e89db8c60f7fe9f3561f84ef77fb5710ccaac5db5599e9b9993c519dea9",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome and FFmpeg. The managed SQLite DB and a real channel survived reboot, CPU/RAM Modify, same-digest Update, a 2026.11.1→2026.11.2 image upgrade and cold backup/restore to another VMID in OCI Manage."
+      }
+    },
     "unmanic": {
       "community_tested": {
         "by": "jcastro",
@@ -364,7 +388,7 @@
         "by": "jcastro",
         "date": "2026-11-21",
         "digest": "2c35b8ec567a403207b4681f037be967f1efd04f06f75d9801841f25b7504e45",
-        "scenario": "PVE 9.2.32 amd64/ZFS; clean DHCP stack with private PostgreSQL, real email OTP sign-in in Chrome and poll creation. Graceful restart, cold restore/OCI Manage, CPU/RAM Modify and same-digest stack Update kept access, network and the saved poll."
+        "scenario": "PVE amd64/ZFS; private PostgreSQL 18, SMTP OTP in Chrome, allowlist rejected a nonmatching email, initial admin claimed the role, support email configured. Prior poll persisted through restart, in-place Modify, cold restore and same-image update."
       }
     }
   }

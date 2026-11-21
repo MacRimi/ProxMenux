@@ -8,26 +8,10 @@
       "en_US": "Rallly"
     },
     "tagline": {
-      "en_US": "Schedule meetings with shared date polls and collect availability without a calendar account.",
-      "es_ES": "Organiza reuniones con encuestas de fechas y consulta la disponibilidad sin una cuenta de calendario.",
-      "fr_FR": "Planifiez vos r\u00e9unions \u00e0 l\u2019aide de sondages de dates et recueillez les disponibilit\u00e9s sans compte de calendrier.",
-      "de_DE": "Planen Sie Termine mit gemeinsamen Umfragen und erfassen Sie Verf\u00fcgbarkeiten ohne Kalenderkonto.",
-      "it_IT": "Organizza riunioni con sondaggi sulle date e raccogli le disponibilit\u00e0 senza un account di calendario.",
-      "pt_PT": "Agende reuni\u00f5es com vota\u00e7\u00f5es de datas e recolha disponibilidades sem uma conta de calend\u00e1rio.",
-      "ru_RU": "\u041f\u043b\u0430\u043d\u0438\u0440\u0443\u0439\u0442\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0438 \u0441 \u043f\u043e\u043c\u043e\u0449\u044c\u044e \u043e\u043f\u0440\u043e\u0441\u043e\u0432 \u043e \u0434\u0430\u0442\u0430\u0445 \u0438 \u0443\u0437\u043d\u0430\u0439\u0442\u0435, \u043a\u0442\u043e \u043a\u043e\u0433\u0434\u0430 \u0441\u0432\u043e\u0431\u043e\u0434\u0435\u043d, \u0431\u0435\u0437 \u0443\u0447\u0451\u0442\u043d\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f.",
-      "sk_SK": "Pl\u00e1nujte stretnutia pomocou hlasovan\u00ed o term\u00ednoch a zbierajte \u00fadaje o dostupnosti bez \u00fa\u010dtu kalend\u00e1ra.",
-      "sv_SE": "Planera m\u00f6ten med datumomr\u00f6stningar och samla in tillg\u00e4nglighet utan ett kalenderkonto."
+      "en_US": "Schedule meetings with shared date polls and collect availability without a calendar account."
     },
     "description": {
-      "en_US": "Schedule meetings with shared date polls and collect availability without a calendar account.",
-      "es_ES": "Organiza reuniones con encuestas de fechas y consulta la disponibilidad sin una cuenta de calendario.",
-      "fr_FR": "Planifiez vos r\u00e9unions \u00e0 l\u2019aide de sondages de dates et recueillez les disponibilit\u00e9s sans compte de calendrier.",
-      "de_DE": "Planen Sie Termine mit gemeinsamen Umfragen und erfassen Sie Verf\u00fcgbarkeiten ohne Kalenderkonto.",
-      "it_IT": "Organizza riunioni con sondaggi sulle date e raccogli le disponibilit\u00e0 senza un account di calendario.",
-      "pt_PT": "Agende reuni\u00f5es com vota\u00e7\u00f5es de datas e recolha disponibilidades sem uma conta de calend\u00e1rio.",
-      "ru_RU": "\u041f\u043b\u0430\u043d\u0438\u0440\u0443\u0439\u0442\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0438 \u0441 \u043f\u043e\u043c\u043e\u0449\u044c\u044e \u043e\u043f\u0440\u043e\u0441\u043e\u0432 \u043e \u0434\u0430\u0442\u0430\u0445 \u0438 \u0443\u0437\u043d\u0430\u0439\u0442\u0435, \u043a\u0442\u043e \u043a\u043e\u0433\u0434\u0430 \u0441\u0432\u043e\u0431\u043e\u0434\u0435\u043d, \u0431\u0435\u0437 \u0443\u0447\u0451\u0442\u043d\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u044f.",
-      "sk_SK": "Pl\u00e1nujte stretnutia pomocou hlasovan\u00ed o term\u00ednoch a zbierajte \u00fadaje o dostupnosti bez \u00fa\u010dtu kalend\u00e1ra.",
-      "sv_SE": "Planera m\u00f6ten med datumomr\u00f6stningar och samla in tillg\u00e4nglighet utan ett kalenderkonto."
+      "en_US": "Schedule meetings with shared date polls and collect availability without a calendar account."
     },
     "category": "productivity",
     "category_label": "Productivity",
@@ -49,7 +33,8 @@
     "documentation": "https://support.rallly.co/self-hosting",
     "repository": "https://github.com/lukevella/rallly-selfhosted",
     "tips": [
-      "Configure SMTP in advanced settings for sign-in by email. For file uploads, connect an external S3-compatible bucket."
+      "Email sign-in requires SMTP. Set the initial admin email in advanced settings, then claim the role in the control panel.",
+      "Reserve the container IP or set a stable URL. For optional S3 storage, enter the credentials from your provider."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -61,7 +46,7 @@
     "revision": "26927f4703b8b72f7df2947756e6a04ea9360f9b",
     "image_repository_url": "https://hub.docker.com/r/lukevella/rallly",
     "readme_pushed_at": "",
-    "compose_sha256": "721ddb30f158c691642d1f4d379e77d9f7e1fbffcf33352a160829a84d6a8de7",
+    "compose_sha256": "5d890f63ff23c3541c7cab8280a9b964578a6b118788de533d14583b365b764d",
     "generated_at": "2026-11-21T10:00:00+00:00"
   },
   "container_contract": {
@@ -178,19 +163,44 @@
         "prompt": "SMTP user"
       },
       {
-        "name": "SUPPORT_EMAIL",
-        "example": "admin@example.invalid",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
         "name": "NOREPLY_EMAIL",
         "example": null,
         "required": false,
         "sensitive": false,
         "source": "upstream-documentation",
         "prompt": "SMTP sender email address"
+      },
+      {
+        "name": "SUPPORT_EMAIL",
+        "example": null,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Rallly support email"
+      },
+      {
+        "name": "INITIAL_ADMIN_EMAIL",
+        "example": null,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Rallly initial administrator email"
+      },
+      {
+        "name": "ALLOWED_EMAILS",
+        "example": null,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Allowed email addresses or patterns"
+      },
+      {
+        "name": "REGISTRATION_ENABLED",
+        "example": null,
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Registration enabled (true or false)"
       }
     ],
     "volumes": [],
@@ -211,7 +221,7 @@
     ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: rallly\nservices:\n  rallly:\n    image: docker.io/lukevella/rallly:4\n    restart: unless-stopped\n    ports:\n    - 3000:3000\n    environment:\n      NEXT_PUBLIC_BASE_URL: http://localhost:3000\n      DATABASE_URL: postgresql://rallly:${GENERATED_DATABASE_PASSWORD}@db:5432/rallly\n      SECRET_PASSWORD: ${GENERATED_SESSION_PASSWORD}\n      SUPPORT_EMAIL: admin@example.invalid\n      NOREPLY_EMAIL: ''\n      SMTP_HOST: ''\n      SMTP_PORT: ''\n      SMTP_USER: ''\n      SMTP_PWD: ''\n      SMTP_SECURE: ''\n      S3_ENDPOINT: ''\n      S3_BUCKET_NAME: ''\n      S3_REGION: ''\n      S3_ACCESS_KEY_ID: ''\n      S3_SECRET_ACCESS_KEY: ''\n    depends_on:\n      db:\n        condition: service_healthy\n    mem_limit: 1536m\n  db:\n    image: docker.io/library/postgres:18-alpine\n    restart: unless-stopped\n    environment:\n      POSTGRES_DB: rallly\n      POSTGRES_USER: rallly\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n    volumes:\n    - ./postgres:/var/lib/postgresql\n    mem_limit: 1g\n    healthcheck:\n      test:\n      - CMD-SHELL\n      - pg_isready -U rallly -d rallly\n      interval: 5s\n      timeout: 5s\n      retries: 20\n"
+    "original_compose": "name: rallly\nservices:\n  rallly:\n    image: docker.io/lukevella/rallly:4\n    restart: unless-stopped\n    ports:\n    - 3000:3000\n    environment:\n      NEXT_PUBLIC_BASE_URL: http://localhost:3000\n      DATABASE_URL: postgresql://rallly:${GENERATED_DATABASE_PASSWORD}@db:5432/rallly\n      SECRET_PASSWORD: ${GENERATED_SESSION_PASSWORD}\n      SUPPORT_EMAIL: ''\n      NOREPLY_EMAIL: ''\n      SMTP_HOST: ''\n      SMTP_PORT: ''\n      SMTP_USER: ''\n      SMTP_PWD: ''\n      SMTP_SECURE: ''\n      S3_ENDPOINT: ''\n      S3_BUCKET_NAME: ''\n      S3_REGION: ''\n      S3_ACCESS_KEY_ID: ''\n      S3_SECRET_ACCESS_KEY: ''\n      INITIAL_ADMIN_EMAIL: ''\n      ALLOWED_EMAILS: ''\n      REGISTRATION_ENABLED: ''\n    depends_on:\n      db:\n        condition: service_healthy\n    mem_limit: 1536m\n  db:\n    image: docker.io/library/postgres:18-alpine\n    restart: unless-stopped\n    environment:\n      POSTGRES_DB: rallly\n      POSTGRES_USER: rallly\n      POSTGRES_PASSWORD: ${GENERATED_DATABASE_PASSWORD}\n    volumes:\n    - ./postgres:/var/lib/postgresql\n    mem_limit: 1g\n    healthcheck:\n      test:\n      - CMD-SHELL\n      - pg_isready -U rallly -d rallly\n      interval: 5s\n      timeout: 5s\n      retries: 20\n"
   },
   "compose_stack": {
     "project_name": "rallly",
@@ -277,7 +287,7 @@
             "NEXT_PUBLIC_BASE_URL": "http://localhost:3000",
             "DATABASE_URL": "postgresql://rallly:${GENERATED_DATABASE_PASSWORD}@db:5432/rallly",
             "SECRET_PASSWORD": "${GENERATED_SESSION_PASSWORD}",
-            "SUPPORT_EMAIL": "admin@example.invalid",
+            "SUPPORT_EMAIL": "",
             "SMTP_HOST": "",
             "SMTP_PORT": "",
             "SMTP_USER": "",
@@ -288,7 +298,10 @@
             "S3_REGION": "",
             "S3_ACCESS_KEY_ID": "",
             "S3_SECRET_ACCESS_KEY": "",
-            "NOREPLY_EMAIL": ""
+            "NOREPLY_EMAIL": "",
+            "INITIAL_ADMIN_EMAIL": "",
+            "ALLOWED_EMAILS": "",
+            "REGISTRATION_ENABLED": ""
           },
           "image": "docker.io/lukevella/rallly:4",
           "mem_limit": "1536m",
@@ -374,26 +387,6 @@
             {
               "service": "rallly",
               "environment_variable": "SECRET_PASSWORD"
-            }
-          ]
-        },
-        {
-          "id": "s3-access-key-id",
-          "strategy": "generate-cryptographically-random-at-install",
-          "bindings": [
-            {
-              "service": "rallly",
-              "environment_variable": "S3_ACCESS_KEY_ID"
-            }
-          ]
-        },
-        {
-          "id": "s3-secret-access-key",
-          "strategy": "generate-cryptographically-random-at-install",
-          "bindings": [
-            {
-              "service": "rallly",
-              "environment_variable": "S3_SECRET_ACCESS_KEY"
             }
           ]
         }
@@ -598,6 +591,50 @@
     "stack_optional_environment": [
       {
         "service": "rallly",
+        "label": "Rallly support email",
+        "fields": [
+          {
+            "name": "SUPPORT_EMAIL",
+            "label": "Rallly support email",
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "service": "rallly",
+        "label": "Rallly initial administrator email",
+        "fields": [
+          {
+            "name": "INITIAL_ADMIN_EMAIL",
+            "label": "Rallly initial administrator email",
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "service": "rallly",
+        "label": "Allowed email addresses or patterns",
+        "fields": [
+          {
+            "name": "ALLOWED_EMAILS",
+            "label": "Allowed email addresses or patterns",
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "service": "rallly",
+        "label": "Registration enabled (true or false)",
+        "fields": [
+          {
+            "name": "REGISTRATION_ENABLED",
+            "label": "Registration enabled (true or false)",
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "service": "rallly",
         "label": "Rallly SMTP settings",
         "fields": [
           {
@@ -674,9 +711,13 @@
       "rallly": [
         "/bin/sh",
         "-ec",
-        "app_pid=\"\"; terminate() { trap \"\" TERM INT; if [ -n \"$app_pid\" ]; then kill -TERM \"-$app_pid\" 2>/dev/null || kill -TERM \"$app_pid\" 2>/dev/null || true; wait \"$app_pid\" || true; fi; exit 0; }; trap terminate TERM INT; setsid ./docker-start.sh & app_pid=$!; wait \"$app_pid\""
+        "export SUPPORT_EMAIL=\"${SUPPORT_EMAIL:-${NOREPLY_EMAIL:-admin@example.invalid}}\"; app_pid=\"\"; terminate() { trap \"\" TERM INT; if [ -n \"$app_pid\" ]; then kill -TERM \"-$app_pid\" 2>/dev/null || kill -TERM \"$app_pid\" 2>/dev/null || true; wait \"$app_pid\" || true; fi; exit 0; }; trap terminate TERM INT; setsid ./docker-start.sh & app_pid=$!; wait \"$app_pid\""
       ]
-    }
+    },
+    "stack_completion_notes": [
+      "Email sign-in requires SMTP. Set the initial admin email in advanced settings, then claim the role in the control panel.",
+      "Reserve the container IP or set a stable URL. For optional S3 storage, enter the credentials from your provider."
+    ]
   },
   "compatibility": {
     "automatic_install_candidate": true,

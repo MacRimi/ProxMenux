@@ -15,9 +15,10 @@ import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { fetchApi } from "../lib/api-config"
 import { useAccess } from "../lib/access"
-import { PROFILES, ProfilePicker, type Custom, type ProfileChoice } from "./profile-picker"
+import { PROFILES, ProfilePicker, areaLabel, type Custom, type ProfileChoice } from "./profile-picker"
 import { EDIT_CONTENT_CLASS, EditControls, EditableArea } from "./edit-controls"
 import { useT } from "../lib/i18n/provider"
+import { useIsPbs } from "../lib/use-platform"
 
 interface MonitorUser {
   username: string
@@ -31,6 +32,7 @@ interface MonitorUser {
 
 export function UsersSettings() {
   const t = useT()
+  const pbs = useIsPbs()
   const { mode, capabilities } = useAccess()
   const [users, setUsers] = useState<MonitorUser[]>([])
   const [me, setMe] = useState<string | null>(null)
@@ -132,7 +134,7 @@ export function UsersSettings() {
   }
 
   const summary = (custom: Custom) => [
-    custom.areas.map(a => t(`users.areas.${a}`)).join(", "),
+    custom.areas.map(a => areaLabel(t, a, pbs)).join(", "),
     custom.actions.length ? custom.actions.map(a => t(`users.actions.${a}`)).join(", ") : t("users.noActions"),
   ].join(" · ")
 
