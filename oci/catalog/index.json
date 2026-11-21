@@ -3217,6 +3217,39 @@
       "template_id": "linuxserver-diskover"
     },
     {
+      "id": "dispatcharr",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "Dispatcharr",
+      "repository": "https://github.com/Dispatcharr/Dispatcharr",
+      "description": "Collect IPTV playlists and guide data, organise channels and deliver streams to media clients.",
+      "website": "https://dispatcharr.github.io/Dispatcharr-Docs/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@990e1511012a215420ae589a5c3904c74e10d942/png/dispatcharr.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/dispatcharr/dispatcharr:latest",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/dispatcharr.json",
+      "template_id": "image-dispatcharr",
+      "template": "apps/dispatcharr.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "dnsmasq",
       "provider": "dockurr",
       "template_family": "curated-profile",
@@ -20793,7 +20826,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 39
+      "included_count": 40
     }
   }
 }

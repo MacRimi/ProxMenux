@@ -11123,5 +11123,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Manage IPTV streams, channels and programme guides.": "Verwalten Sie IPTV-Streams, Sender und Programmführer."
 }

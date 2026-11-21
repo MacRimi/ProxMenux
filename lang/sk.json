@@ -11123,5 +11123,6 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Manage IPTV streams, channels and programme guides.": "Spravujte streamy IPTV, kanály a televízne programy."
 }

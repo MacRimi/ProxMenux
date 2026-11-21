@@ -40,6 +40,14 @@
     "ddclient": {
       "status": "laboratory-validated"
     },
+    "dispatcharr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "3716ebb0aba133fe8b3d311505dc49966b7fddff742d9ab710ccd19d04658195",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome login, channel group/reboot, in-place Modify, cold restore/Manage, same-digest no-op and 0.34.0 to 0.34.1 update preserved data, resources, MAC/IP and storage. PostgreSQL, Redis and Daphne remained on loopback."
+      }
+    },
     "duplicati": {
       "status": "laboratory-validated"
     },
