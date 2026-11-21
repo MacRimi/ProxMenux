@@ -62,6 +62,9 @@
     "/workspace/TurboDiffusion/outputs"
   ],
   "applications": {
+    "openproject": [
+      "/var/openproject/assets"
+    ],
     "crafty": [
       "/crafty/import"
     ],

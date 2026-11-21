@@ -11122,5 +11122,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Les données du disque ne seront PAS effacées.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Le disque sera démonté et supprimé de /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ L'entrée /etc/fstab sera supprimée.",
-  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté."
+  "⚠ The disk will be unmounted.": "⚠ Le disque sera démonté.",
+  "OpenProject": "OpenProject",
+  "Project planning with tasks, boards and Gantt charts, using the official all-in-one image.": "Planification de projets avec tâches, tableaux et diagrammes de Gantt, dans l’image officielle tout-en-un."
 }

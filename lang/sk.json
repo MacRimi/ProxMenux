@@ -11123,5 +11123,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "OpenProject": "OpenProject",
+  "Project planning with tasks, boards and Gantt charts, using the official all-in-one image.": "Plánovanie projektov s úlohami, nástenkami a Ganttovými diagramami v oficiálnom obraze so všetkými súčasťami."
 }
