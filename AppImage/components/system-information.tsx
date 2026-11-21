@@ -44,18 +44,17 @@ const biosAge = (date: string | undefined, language: string): string => {
   }
 }
 
-function CacheBars({ levels }: { levels: { level: string; kib: number; color: string }[] }) {
-  const largest = Math.max(...levels.map((item) => item.kib), 2)
-  // Logarithmic: an L1 of a few hundred KiB stays visible next to an L3 of hundreds of MiB.
+// The size of each cache level, in its own tile: sizes are fixed, so a bar
+// would read as how full the cache is.
+function CacheTiles({ levels, fill = false }: { levels: { level: string; kib: number; color: string }[]; fill?: boolean }) {
+  // One square per level in equal columns, at every width: they fill the room
+  // the chips leave and stretch to their height.
   return (
-    <div className="space-y-1.5">
+    <div className={`grid grid-cols-3 gap-2 sm:gap-3 ${fill ? "h-full" : ""}`}>
       {levels.map((item) => (
-        <div key={item.level} className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-2.5 text-xs">
-          <span className="font-mono text-muted-foreground">{item.level}</span>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div className={`h-full rounded-full ${item.color}`} style={{ width: `${Math.max(3, Math.log2(item.kib) / Math.log2(largest) * 100)}%` }} />
-          </div>
-          <span className="font-mono font-medium">{formatKiB(item.kib)}</span>
+        <div key={item.level} className="flex min-h-[4.5rem] min-w-0 flex-col justify-between gap-2 rounded-lg border border-border/60 bg-muted/40 p-2.5 sm:min-h-[5.5rem] sm:p-3">
+          <span className={`w-fit rounded px-1.5 py-0.5 font-mono text-xs font-semibold ${item.color}`}>{item.level}</span>
+          <span className="whitespace-nowrap text-sm font-medium">{formatKiB(item.kib)}</span>
         </div>
       ))}
     </div>
@@ -135,9 +134,9 @@ export function SystemInformation({ data }: { data: HardwareData }) {
   const cores = perSocket * sockets
   const threads = cpu?.total_threads || 0
   const caches = [
-    { level: "L1", kib: toKiB(cpu?.l1d_cache) + toKiB(cpu?.l1i_cache), color: "bg-cyan-500" },
-    { level: "L2", kib: toKiB(cpu?.l2_cache), color: "bg-blue-500" },
-    { level: "L3", kib: toKiB(cpu?.l3_cache), color: "bg-purple-500" },
+    { level: "L1", kib: toKiB(cpu?.l1d_cache) + toKiB(cpu?.l1i_cache), color: "bg-cyan-500/15 text-cyan-500" },
+    { level: "L2", kib: toKiB(cpu?.l2_cache), color: "bg-blue-500/15 text-blue-500" },
+    { level: "L3", kib: toKiB(cpu?.l3_cache), color: "bg-purple-500/15 text-purple-500" },
   ].filter((item) => item.kib > 0)
   const minMHz = cpu?.min_mhz || 0
   const maxMHz = cpu?.max_mhz || 0
@@ -188,18 +187,18 @@ export function SystemInformation({ data }: { data: HardwareData }) {
             </div>
 
             {/* Desktop: one chip per socket with its cores and threads, the caches beside it. */}
-            <div className="hidden flex-wrap items-center gap-4 sm:flex">
+            <div className="hidden flex-wrap items-stretch gap-4 sm:flex">
               {perSocket > 0 && (
-                <div className="flex gap-2.5">
+                <div className="flex items-center gap-2.5">
                   {Array.from({ length: sockets }, (_, index) => (
                     <CpuChip key={index} cores={perSocket} threads={Math.round(threads / sockets)} t={t} />
                   ))}
                 </div>
               )}
               {caches.length > 0 && (
-                <div className="min-w-[12rem] flex-1">
+                <div className="flex min-w-[18rem] flex-1 flex-col">
                   <div className="mb-2 text-xs text-muted-foreground">{t("hardware.systemInfo.cache")}</div>
-                  <CacheBars levels={caches} />
+                  <div className="flex-1"><CacheTiles levels={caches} fill /></div>
                 </div>
               )}
             </div>
@@ -221,7 +220,7 @@ export function SystemInformation({ data }: { data: HardwareData }) {
               {caches.length > 0 && (
                 <div>
                   <div className="mb-2 text-xs text-muted-foreground">{t("hardware.systemInfo.cache")}</div>
-                  <CacheBars levels={caches} />
+                  <CacheTiles levels={caches} />
                 </div>
               )}
             </div>
