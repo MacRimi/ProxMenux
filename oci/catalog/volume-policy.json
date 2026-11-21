@@ -62,6 +62,9 @@
     "/workspace/TurboDiffusion/outputs"
   ],
   "applications": {
+    "jellystat": [
+      "/app/backend/backup-data"
+    ],
     "crafty": [
       "/crafty/import"
     ],

@@ -11123,5 +11123,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Track Jellyfin playback and library activity.": "Sledujte prehrávanie a aktivitu knižníc Jellyfin.",
+  "Turn your media library into scheduled TV channels.": "Vytvorte zo svojej knižnice médií televízne kanály s programom."
 }

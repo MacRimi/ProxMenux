@@ -7467,6 +7467,39 @@
       "template_id": "image-jellyseerr"
     },
     {
+      "id": "jellystat",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "Jellystat",
+      "repository": "https://github.com/CyferShepard/Jellystat",
+      "description": "See what users watch, follow viewing trends, and review activity across your Jellyfin libraries.",
+      "website": "https://github.com/CyferShepard/Jellystat",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@990e1511012a215420ae589a5c3904c74e10d942/png/jellystat.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/cyfershepard/jellystat:latest",
+      "category": "media",
+      "category_label": "Media",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/jellystat.json",
+      "template_id": "image-jellystat",
+      "template": "apps/jellystat.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": true
+    },
+    {
       "id": "jelu",
       "provider": "bayang",
       "template_family": "curated-profile",
@@ -17629,6 +17662,38 @@
       "multi_container": false
     },
     {
+      "id": "tunarr",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "Tunarr",
+      "repository": "https://github.com/chrisbenincasa/tunarr",
+      "description": "Create television channels from your own media and watch them through an IPTV player or your media server.",
+      "website": "https://tunarr.com/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@990e1511012a215420ae589a5c3904c74e10d942/png/tunarr.png",
+      "architectures": [
+        "amd64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/chrisbenincasa/tunarr:latest",
+      "category": "media",
+      "category_label": "Media & Streaming",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/tunarr.json",
+      "template_id": "image-tunarr",
+      "template": "apps/tunarr.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "turbodiffusion-nvidia",
       "source_app_id": "turbodiffusion-nvidia",
       "provider": "icewhaletech",
@@ -20793,7 +20858,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 39
+      "included_count": 41
     }
   }
 }

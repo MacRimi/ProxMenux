@@ -11093,5 +11093,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Данные на диске НЕ будут удалены.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Диск будет отмонтирован и удалён из /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Запись в /etc/fstab будет удалена.",
-  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован."
+  "⚠ The disk will be unmounted.": "⚠ Диск будет отмонтирован.",
+  "Track Jellyfin playback and library activity.": "Отслеживайте воспроизведение и активность медиатек Jellyfin.",
+  "Turn your media library into scheduled TV channels.": "Создавайте телеканалы с расписанием передач из своей медиатеки."
 }

@@ -11123,5 +11123,7 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
+  "Track Jellyfin playback and library activity.": "Verfolgen Sie die Wiedergabe und Bibliotheksaktivität in Jellyfin.",
+  "Turn your media library into scheduled TV channels.": "Erstellen Sie aus Ihrer Medienbibliothek Fernsehsender mit festem Programm."
 }

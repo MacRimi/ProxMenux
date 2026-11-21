@@ -109,6 +109,14 @@
     "jdownloader": {
       "status": "laboratory-validated"
     },
+    "jellystat": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "e61c759ec706da378bc8374e797da1dfd298ab30f804cefd82d192c301a888c7",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, private PostgreSQL, Chrome and login. Reboot, CPU/RAM Modify, host-bind app backup, native backup/restore of both CTs into OCI Manage and same-digest stack Update passed. Changed digest and rollback were not exercised."
+      }
+    },
     "jenkins": {
       "status": "laboratory-validated"
     },
@@ -295,6 +303,14 @@
     },
     "trilium": {
       "status": "laboratory-validated"
+    },
+    "tunarr": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "50919e89db8c60f7fe9f3561f84ef77fb5710ccaac5db5599e9b9993c519dea9",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome and FFmpeg. The managed SQLite DB and a real channel survived reboot, CPU/RAM Modify, same-digest Update, a 2026.11.1\u21922026.11.2 image upgrade and cold backup/restore to another VMID in OCI Manage."
+      }
     },
     "unmanic": {
       "community_tested": {
