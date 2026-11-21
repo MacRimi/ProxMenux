@@ -214,9 +214,9 @@
   },
   "rich": {
     "heading": "Messaggi formattati, categorie e filtri per canale",
-    "intro": "Ogni canale offre <em>Messaggi formattati</em>, undici <em>Categorie di notifica</em> espandibili con interruttori per evento e <em>Invia prova</em> in fondo.",
+    "intro": "Ogni canale offre <em>Messaggi formattati</em>, le <em>Categorie di notifica</em> espandibili con interruttori per evento e <em>Invia prova</em> in fondo.",
     "imageAlt": "Categorie di notifica con formattazione, gruppi VM/CT, backup, risorse, archiviazione, rete, sicurezza, cluster, servizi, Health Monitor e aggiornamenti, contatori e pulsante di prova",
-    "imageCaption": "La freccia indica <em>Messaggi formattati</em> del canale. Sotto ci sono undici categorie con opzioni per evento e <em>Invia prova</em>.",
+    "imageCaption": "La freccia indica <em>Messaggi formattati</em> del canale. Sotto ci sono le categorie con opzioni per evento e <em>Invia prova</em>.",
     "richTitle": "Messaggi formattati",
     "richIntro": "Con <em>Messaggi formattati</em>, il titolo include l’emoji della categoria e il testo usa la formattazione del canale, come HTML Telegram o riquadro Discord con colore di gravità. Disattivandolo si invia lo stesso contenuto come testo semplice.",
     "plainHeader": "Testo semplice: formattazione disattivata",
@@ -351,17 +351,17 @@
   },
   "catalogue": {
     "heading": "Catalogo eventi",
-    "intro": "Circa settanta tipi di eventi sono raggruppati in undici categorie UI. Il pannello Notifiche rende una sezione pieghevole per gruppo con una toggle per ogni evento al suo interno. Ogni evento è attivato per impostazione predefinita se non esplicitamente contrassegnato altrimenti.",
+    "intro": "I tipi di eventi sono raggruppati nelle categorie del pannello Notifiche, che rende una sezione pieghevole per gruppo con una toggle per ogni evento al suo interno. Ogni evento è attivato per impostazione predefinita, salvo quelli contrassegnati (disattivato per impostazione predefinita). Su un host Proxmox Backup Server il pannello nasconde i gruppi VM/CT, Backup e Cluster, e ProxMenux non configura il webhook di Proxmox VE.",
     "headerGroup": "Gruppo",
     "headerEvents": "Eventi",
     "rows": [
       {
         "group": "VM/CT",
-        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, oltre agli equivalenti <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code> (disattivato per impostazione predefinita), <code>vm_shutdown</code> (disattivato per impostazione predefinita), <code>vm_fail</code>, <code>vm_restart</code> (disattivato per impostazione predefinita), <code>ct_start</code>, <code>ct_start_warning</code>, <code>ct_stop</code> (disattivato per impostazione predefinita), <code>ct_shutdown</code> (disattivato per impostazione predefinita), <code>ct_fail</code>, <code>ct_restart</code> (disattivato per impostazione predefinita), <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code> (disattivato per impostazione predefinita), <code>replication_fail</code>, <code>lxc_updates_available</code> (disattivato per impostazione predefinita), <code>lxc_update_applied</code>, <code>oci_update_completed</code>, <code>oci_update_failed</code>, <code>oci_recreate_completed</code>, <code>oci_recreate_failed</code>, <code>oci_modify_completed</code>, <code>oci_modify_failed</code>, <code>oci_watchdog_restarted</code>, <code>oci_watchdog_failed</code>."
       },
       {
         "group": "Backup",
-        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+        "events": "<code>backup_start</code> (disattivato per impostazione predefinita), <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code> (disattivato per impostazione predefinita), <code>snapshot_fail</code>, <code>host_backup_start</code> (disattivato per impostazione predefinita), <code>host_backup_complete</code>, <code>host_backup_fail</code>."
       },
       {
         "group": "Risorse",
@@ -369,11 +369,11 @@
       },
       {
         "group": "Archiviazione",
-        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>, <code>mount_stale</code>, <code>mount_readonly</code>, <code>lxc_disk_low</code>, <code>vm_disk_low</code>, <code>lxc_mount_low</code>, <code>pve_storage_full</code>, <code>zfs_pool_full</code>."
       },
       {
         "group": "Rete",
-        "events": "<code>network_down</code>, <code>network_latency</code>."
+        "events": "<code>network_down</code>, <code>network_latency</code> (disattivato per impostazione predefinita)."
       },
       {
         "group": "Sicurezza",
@@ -385,19 +385,23 @@
       },
       {
         "group": "Servizi",
-        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>, <code>system_restore_completed</code>, <code>kernel_warning</code>, <code>cron_output</code> (disattivato per impostazione predefinita)."
       },
       {
         "group": "Monitoraggio integrità",
-        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>state_change</code> (disattivato per impostazione predefinita)."
       },
       {
         "group": "Aggiornamenti",
-        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+        "events": "<code>update_summary</code>, <code>pve_update</code>, <code>update_complete</code> (disattivato per impostazione predefinita), <code>proxmenux_update</code>, <code>app_update_available</code>, <code>docker_stack_update_available</code>, <code>apt_listchanges</code>, <code>post_install_update</code>, <code>secure_gateway_update_available</code>, <code>nvidia_driver_update_available</code>, <code>coral_driver_update_available</code>."
       },
       {
-        "group": "Hardware / GPU",
-        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+        "group": "Hardware",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "group": "Sistema",
+        "events": "<code>custom</code>, <code>ai_model_migrated</code>."
       }
     ],
     "burstNote": "Gli eventi aggregati <code>burst_*</code>, come <code>burst_auth_fail</code>, <code>burst_ip_block</code> e <code>burst_disk_io</code>, sostituiscono più eventi con un riepilogo. Non hanno interruttori propri: ereditano lo stato dell’evento di origine.",
