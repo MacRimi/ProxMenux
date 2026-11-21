@@ -112,6 +112,14 @@
     "jenkins": {
       "status": "laboratory-validated"
     },
+    "joplin-server": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "e99c6fe49c78cbe9cb0c8f545ae4ffc19c7660f19e2b02d4cdc4ec254425708a",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome admin login, API and profile edit, private PostgreSQL. Dependency-first restart and cold two-CT restore/Manage kept access and profile. CPU/RAM Modify and stock same-digest Update kept both native configs; Remove/PBS checked."
+      }
+    },
     "lastboard": {
       "community_tested": {
         "by": "jcastro",
@@ -357,14 +365,6 @@
         "date": "2026-11-08",
         "digest": "9332aa8ad286b84b66e8a7ec6d1a17f136d5c330cbe5e72a04dd9495746960ca",
         "scenario": "PVE 9.2 amd64/ZFS; UniFi dry-run authentication/health; default/advanced, managed data, restart/Modify, 0.1.29 to 0.1.30, rollback, backup/restore/Manage and removal. No router writes or arm64 runtime test."
-      }
-    },
-    "joplin-server": {
-      "community_tested": {
-        "by": "jcastro",
-        "date": "2026-11-21",
-        "digest": "e99c6fe49c78cbe9cb0c8f545ae4ffc19c7660f19e2b02d4cdc4ec254425708a",
-        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, Chrome admin login, API and profile edit, private PostgreSQL. Dependency-first restart and cold two-CT restore/Manage kept access and profile. CPU/RAM Modify and stock same-digest Update kept both native configs; Remove/PBS checked."
       }
     }
   }

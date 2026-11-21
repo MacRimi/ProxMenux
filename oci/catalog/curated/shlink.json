@@ -45,7 +45,7 @@
     "revision": "bd1f25469ad19b1ee36a6bec1e3ec7622e33d0b1",
     "image_repository_url": "https://github.com/shlinkio/shlink/pkgs/container/shlink",
     "readme_pushed_at": "",
-    "compose_sha256": "bdb65a7a9ee7a3975dbb7b5adeee6392321097eeacfaf41c8db5a7b3c24fd59c",
+    "compose_sha256": "053861bc61451b305f9217eeb9c217d8aed7bd966cdba4df7650a9f2b0aed158",
     "generated_at": "2026-11-21T12:25:08+00:00",
     "readme_raw_url": "https://raw.githubusercontent.com/shlinkio/shlink/bd1f25469ad19b1ee36a6bec1e3ec7622e33d0b1/docker/README.md"
   },
@@ -103,11 +103,10 @@
       },
       {
         "name": "DEFAULT_DOMAIN",
-        "example": "localhost:8080",
+        "example": "@STACK_LAN_IP@:8080",
         "required": true,
         "sensitive": false,
-        "source": "docker-compose",
-        "container_address": "@CONTAINER_ADDRESS@:8080"
+        "source": "docker-compose"
       },
       {
         "name": "INITIAL_API_KEY",
@@ -142,7 +141,7 @@
     ],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: shlink\nservices:\n  db:\n    environment:\n      POSTGRES_DB: shlink\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_USER: shlink\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n        - CMD\n        - pg_isready\n        - -U\n        - shlink\n        - -d\n        - shlink\n      timeout: 4s\n    image: docker.io/library/postgres:18\n    restart: unless-stopped\n    shm_size: 128m\n    volumes:\n      - read_only: false\n        source: database\n        target: /var/lib/postgresql\n  shlink:\n    depends_on:\n      db:\n        condition: service_healthy\n    environment:\n      DB_DRIVER: postgres\n      DB_HOST: db\n      DB_NAME: shlink\n      DB_PASSWORD: ${GENERATED_DB_PASSWORD}\n      DB_USER: shlink\n      DEFAULT_DOMAIN: localhost:8080\n      INITIAL_API_KEY: ${GENERATED_SHLINK_SECRET}\n      IS_HTTPS_ENABLED: 'false'\n    image: ghcr.io/shlinkio/shlink:stable\n    ports:\n      - 8080:8080\n    restart: unless-stopped\n    volumes: []\nvolumes:\n  database: {}\n"
+    "original_compose": "name: shlink\nservices:\n  db:\n    environment:\n      POSTGRES_DB: shlink\n      POSTGRES_PASSWORD: ${GENERATED_DB_PASSWORD}\n      POSTGRES_USER: shlink\n    healthcheck:\n      interval: 5s\n      retries: 30\n      test:\n        - CMD\n        - pg_isready\n        - -U\n        - shlink\n        - -d\n        - shlink\n      timeout: 4s\n    image: docker.io/library/postgres:18\n    restart: unless-stopped\n    shm_size: 128m\n    volumes:\n      - read_only: false\n        source: database\n        target: /var/lib/postgresql\n  shlink:\n    depends_on:\n      db:\n        condition: service_healthy\n    environment:\n      DB_DRIVER: postgres\n      DB_HOST: db\n      DB_NAME: shlink\n      DB_PASSWORD: ${GENERATED_DB_PASSWORD}\n      DB_USER: shlink\n      DEFAULT_DOMAIN: '@STACK_LAN_IP@:8080'\n      INITIAL_API_KEY: ${GENERATED_SHLINK_SECRET}\n      IS_HTTPS_ENABLED: 'false'\n    image: ghcr.io/shlinkio/shlink:stable\n    ports:\n      - 8080:8080\n    restart: unless-stopped\n    volumes: []\nvolumes:\n  database: {}\n"
   },
   "compose_stack": {
     "project_name": "shlink",
@@ -209,7 +208,7 @@
             }
           },
           "environment": {
-            "DEFAULT_DOMAIN": "localhost:8080",
+            "DEFAULT_DOMAIN": "@STACK_LAN_IP@:8080",
             "IS_HTTPS_ENABLED": "false",
             "DB_DRIVER": "postgres",
             "DB_HOST": "db",
@@ -328,7 +327,7 @@
       {
         "label": "Shlink API key",
         "type": "runtime-generated",
-        "username": "X-Api-Key",
+        "username": "Not applicable",
         "password": null,
         "password_environment": "INITIAL_API_KEY",
         "change_required": false,
@@ -510,16 +509,7 @@
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
         }
-      ],
-      "startup_healthcheck": {
-        "scheme": "http",
-        "port": 8080,
-        "path": "/rest/health",
-        "timeout_seconds": 120,
-        "request_timeout_seconds": 5,
-        "stability_seconds": 3,
-        "verify_tls": false
-      }
+      ]
     }
   },
   "compatibility": {

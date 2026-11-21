@@ -5,16 +5,13 @@
   "status": "generated-unvalidated",
   "catalog_ui": {
     "title": {
-      "en_US": "Joplin Server",
-      "es_ES": "Joplin Server"
+      "en_US": "Joplin Server"
     },
     "tagline": {
-      "en_US": "Sync notes and notebooks from Joplin clients with a private PostgreSQL database.",
-      "es_ES": "Sincroniza notas y cuadernos de los clientes Joplin con una base de datos PostgreSQL privada."
+      "en_US": "Sync notes and notebooks from Joplin clients with a private PostgreSQL database."
     },
     "description": {
-      "en_US": "Sync notes and notebooks from Joplin clients with a private PostgreSQL database.",
-      "es_ES": "Sincroniza notas y cuadernos de los clientes Joplin con una base de datos PostgreSQL privada."
+      "en_US": "Sync notes and notebooks from Joplin clients with a private PostgreSQL database."
     },
     "category": "documents",
     "category_label": "Documents & Notes",
@@ -35,7 +32,9 @@
     "website": "https://joplinapp.org/",
     "documentation": "https://github.com/laurent22/joplin/blob/268fd6f1e9769a072567754295b30f98be739c63/docker-compose.server.yml",
     "repository": "https://github.com/laurent22/joplin",
-    "tips": [],
+    "tips": [
+      "Sign in as admin@localhost with the password admin and change both right away."
+    ],
     "mini_changelog": [],
     "display_version": null,
     "updated_at": null
