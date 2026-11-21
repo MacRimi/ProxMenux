@@ -33,7 +33,12 @@
     },
     "tips": [
       "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
-    ]
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 3001,
+      "path": "/"
+    }
   },
   "environment_additions": [
     {
@@ -44,5 +49,16 @@
       "prompt_user": false,
       "source": "proxmenux-overlay"
     }
-  ]
+  ],
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "https",
+        "port": 3001,
+        "path": "/",
+        "source": "linuxserver-readme-application-setup"
+      }
+    ]
+  }
 }
