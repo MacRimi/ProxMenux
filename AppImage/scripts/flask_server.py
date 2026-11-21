@@ -14621,7 +14621,7 @@ def api_catalog_items():
     """Every item of the Catalog tab: OCI applications and Community Scripts."""
     try:
         import catalog_tab
-        return jsonify(catalog_tab.list_items(request.args.get('lang', 'en')))
+        return jsonify(catalog_tab.list_items(request.args.get('lang', 'en'), request.args.get('known')))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

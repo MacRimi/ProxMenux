@@ -5740,7 +5740,7 @@ _OCI_INSTANCE_ROOT = "/usr/local/share/proxmenux/oci/instances"
 _OCI_CATALOG_INDEX = "/usr/local/share/proxmenux/oci/engine/catalog/index.json"
 _OCI_ENGINE_DIR = "/usr/local/share/proxmenux/oci/engine"
 _oci_catalog_cache: tuple[float, dict, dict] | None = None
-_oci_catalog_dir_cache: tuple[float, str, str] | None = None
+_oci_catalog_dir_cache: tuple[float, tuple[str, float], str] | None = None
 
 
 def oci_catalog_dir() -> str:
@@ -5755,7 +5755,16 @@ def oci_catalog_dir() -> str:
     global _oci_catalog_dir_cache
     shipped = os.path.dirname(_OCI_CATALOG_INDEX)
     now = time.time()
-    if (_oci_catalog_dir_cache and _oci_catalog_dir_cache[1] == shipped
+    # A refresh from the OCI menu rewrites the channel pointer: a changed
+    # pointer is read again at once instead of after the cache expires.
+    try:
+        pointers = os.path.join(os.path.dirname(_OCI_ENGINE_DIR), "catalog-cache")
+        stamp = max((os.stat(os.path.join(pointers, name)).st_mtime
+                     for name in os.listdir(pointers) if name.endswith("-current.json")), default=0.0)
+    except OSError:
+        stamp = 0.0
+    shipped_key = (shipped, stamp)
+    if (_oci_catalog_dir_cache and _oci_catalog_dir_cache[1] == shipped_key
             and now - _oci_catalog_dir_cache[0] < 60):
         return _oci_catalog_dir_cache[2]
     active = shipped
@@ -5772,7 +5781,7 @@ def oci_catalog_dir() -> str:
                 active = answer
         except (OSError, subprocess.SubprocessError):
             pass
-    _oci_catalog_dir_cache = (now, shipped, active)
+    _oci_catalog_dir_cache = (now, shipped_key, active)
     return active
 
 

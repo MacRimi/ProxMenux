@@ -911,12 +911,15 @@ def _refresh_catalog() -> bool:
     return True
 
 
-def list_items(language: str = "en") -> dict:
+def list_items(language: str = "en", known: str | None = None) -> dict:
     """Every item of the tab and the sections of its tools, with what the
     search, the cards and the tiles need. `catalog` names the OCI catalog in
-    use, and `refreshing` says a newer one may arrive shortly."""
+    use, and `refreshing` says a newer one may arrive shortly. A page that
+    already shows the catalog `known` only learns that nothing changed."""
     language = _language(language)
     product = _product()
+    if known and product == "pve" and known == os.path.basename(lxc_apps.oci_catalog_dir()):
+        return {"catalog": known, "unchanged": True, "refreshing": _refresh_catalog()}
     architecture = _host_architecture()
     scripts = [_script_item(e) for e in _script_entries().values() if _runs_here(e, product)]
     scripts = [i for i in scripts if _for_this_architecture(i["architectures"], architecture)]

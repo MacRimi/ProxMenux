@@ -963,15 +963,18 @@ export function CatalogTab() {
 
   useEffect(() => {
     const cached = itemsCache.get(language)
-    if (cached) { setItems(cached.items); setSections(cached.sections); return }
-    setItems(null)
+    if (cached) { setItems(cached.items); setSections(cached.sections) } else { setItems(null) }
     setFailed(false)
     let active = true
     const timers: ReturnType<typeof setTimeout>[] = []
-    const load = (quiet: boolean) =>
-      fetchApi<{ items: CatalogItem[]; sections?: Section[]; catalog?: string; refreshing?: boolean }>(`/api/catalog/items?lang=${language}`)
+    const load = (quiet: boolean) => {
+      // A quiet check names the catalog already shown, so an unchanged one
+      // answers in a few bytes instead of the whole list.
+      const known = quiet ? itemsCache.get(language)?.catalog : undefined
+      const query = known ? `&known=${encodeURIComponent(known)}` : ""
+      return fetchApi<{ items?: CatalogItem[]; sections?: Section[]; catalog?: string; refreshing?: boolean; unchanged?: boolean }>(`/api/catalog/items?lang=${language}${query}`)
         .then(data => {
-          if (!active) return
+          if (!active || data.unchanged) return
           const previous = itemsCache.get(language)
           // A quiet reload only replaces the cards when a newer catalog arrived.
           if (quiet && previous?.catalog === data.catalog) return
@@ -984,8 +987,13 @@ export function CatalogTab() {
           if (!quiet && data.refreshing) timers.push(setTimeout(() => load(true), 45000), setTimeout(() => load(true), 120000))
         })
         .catch(() => { if (active && !quiet) setFailed(true) })
-    load(false)
-    return () => { active = false; timers.forEach(clearTimeout) }
+    }
+    // Shown at once from memory, the list is still checked quietly: the
+    // catalog may have been refreshed from the OCI menu since it was loaded.
+    load(Boolean(cached))
+    const onVisible = () => { if (document.visibilityState === "visible") load(true) }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => { active = false; timers.forEach(clearTimeout); document.removeEventListener("visibilitychange", onVisible) }
   }, [language, attempt])
 
   useEffect(() => {
