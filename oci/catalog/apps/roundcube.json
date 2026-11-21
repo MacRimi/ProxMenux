@@ -459,10 +459,7 @@
           "bytes": 12,
           "prompt": false
         }
-      },
-      "completion_notes": [
-        "Enter the ports from your mail provider. Common choices are IMAP 993 and SMTP 465 with ssl://, or IMAP 143 and SMTP 587 with tls://."
-      ]
+      }
     }
   },
   "compatibility": {
