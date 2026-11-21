@@ -62,9 +62,6 @@
     "/workspace/TurboDiffusion/outputs"
   ],
   "applications": {
-    "kutt": [
-      "/kutt/custom"
-    ],
     "crafty": [
       "/crafty/import"
     ],
@@ -197,6 +194,12 @@
     ],
     "netbootxyz": [
       "/assets"
+    ],
+    "openproject": [
+      "/var/openproject/assets"
+    ],
+    "kutt": [
+      "/kutt/custom"
     ]
   },
   "sizes": {
