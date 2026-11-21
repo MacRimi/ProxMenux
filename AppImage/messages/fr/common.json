@@ -3005,6 +3005,7 @@
       "menux": "Menux",
       "guests": "VM et LXC",
       "node": "Nœud (stockage, réseau, matériel)",
+      "nodePbs": "Réseau et matériel",
       "backup": "Sauvegarde",
       "logs": "Journaux système"
     },
