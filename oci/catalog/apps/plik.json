@@ -5,19 +5,16 @@
   "status": "generated-unvalidated",
   "catalog_ui": {
     "title": {
-      "en_US": "Plik",
-      "es_ES": "Plik"
+      "en_US": "Plik"
     },
     "tagline": {
-      "en_US": "Share files through expiring upload and download links.",
-      "es_ES": "Comparte archivos con enlaces de subida y descarga que caducan."
+      "en_US": "Share files through expiring upload and download links."
     },
     "description": {
-      "en_US": "Share files through expiring upload and download links.",
-      "es_ES": "Comparte archivos con enlaces de subida y descarga que caducan."
+      "en_US": "Share files through expiring upload and download links."
     },
-    "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category": "sharing",
+    "category_label": "Files & Sharing",
     "author": "root-gg",
     "developer": "root-gg",
     "icon": "https://raw.githubusercontent.com/root-gg/plik/48ca619f4cfbf32e22e625f1fdd0e998dc82949e/webapp/public/favicon.ico",
@@ -35,7 +32,9 @@
     "website": "https://github.com/root-gg/plik",
     "documentation": "https://github.com/root-gg/plik/blob/48ca619f4cfbf32e22e625f1fdd0e998dc82949e/docs/guide/configuration.md",
     "repository": "https://github.com/root-gg/plik",
-    "tips": [],
+    "tips": [
+      "Plik allows anonymous uploads by default. Enable authentication before exposing it outside a trusted network."
+    ],
     "mini_changelog": [],
     "display_version": null,
     "updated_at": null
@@ -401,7 +400,10 @@
       "volume_owner": {
         "uid": 1000,
         "gid": 1000
-      }
+      },
+      "completion_notes": [
+        "Plik allows anonymous uploads by default. Enable authentication before exposing it outside a trusted network."
+      ]
     }
   },
   "compatibility": {

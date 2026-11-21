@@ -8,26 +8,10 @@
       "en_US": "Roundcube"
     },
     "tagline": {
-      "en_US": "Browser-based webmail for your existing IMAP and SMTP mail servers.",
-      "es_ES": "Correo web para tus servidores de correo IMAP y SMTP.",
-      "fr_FR": "Webmail pour vos serveurs de messagerie IMAP et SMTP.",
-      "de_DE": "Webmail f\u00fcr Ihre vorhandenen IMAP- und SMTP-Mailserver.",
-      "it_IT": "Webmail per i tuoi server di posta IMAP e SMTP.",
-      "pt_PT": "Webmail para os seus servidores de correio IMAP e SMTP.",
-      "ru_RU": "\u0412\u0435\u0431-\u043f\u043e\u0447\u0442\u0430 \u0434\u043b\u044f \u0432\u0430\u0448\u0438\u0445 \u0441\u0435\u0440\u0432\u0435\u0440\u043e\u0432 IMAP \u0438 SMTP.",
-      "sk_SK": "Webov\u00e1 po\u0161ta pre va\u0161e servery IMAP a SMTP.",
-      "sv_SE": "Webbmejl f\u00f6r dina befintliga IMAP- och SMTP-servrar."
+      "en_US": "Browser-based webmail for your existing IMAP and SMTP mail servers."
     },
     "description": {
-      "en_US": "Browser-based webmail for your existing IMAP and SMTP mail servers.",
-      "es_ES": "Correo web para tus servidores de correo IMAP y SMTP.",
-      "fr_FR": "Webmail pour vos serveurs de messagerie IMAP et SMTP.",
-      "de_DE": "Webmail f\u00fcr Ihre vorhandenen IMAP- und SMTP-Mailserver.",
-      "it_IT": "Webmail per i tuoi server di posta IMAP e SMTP.",
-      "pt_PT": "Webmail para os seus servidores de correio IMAP e SMTP.",
-      "ru_RU": "\u0412\u0435\u0431-\u043f\u043e\u0447\u0442\u0430 \u0434\u043b\u044f \u0432\u0430\u0448\u0438\u0445 \u0441\u0435\u0440\u0432\u0435\u0440\u043e\u0432 IMAP \u0438 SMTP.",
-      "sk_SK": "Webov\u00e1 po\u0161ta pre va\u0161e servery IMAP a SMTP.",
-      "sv_SE": "Webbmejl f\u00f6r dina befintliga IMAP- och SMTP-servrar."
+      "en_US": "Browser-based webmail for your existing IMAP and SMTP mail servers."
     },
     "category": "communication",
     "category_label": "Communication",
@@ -49,7 +33,7 @@
     "documentation": "https://github.com/roundcube/roundcubemail-docker#configuration",
     "repository": "https://github.com/roundcube/roundcubemail-docker",
     "tips": [
-      "Use your mail server settings. For encrypted IMAP or SMTP, prefix the host with ssl:// or tls:// and select the matching port."
+      "Enter the ports from your mail provider. Common choices are IMAP 993 and SMTP 465 with ssl://, or IMAP 143 and SMTP 587 with tls://."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -61,7 +45,7 @@
     "revision": "0f748dc00153d70ffaf999c5ee219480e2d5b809",
     "image_repository_url": "https://hub.docker.com/r/roundcube/roundcubemail",
     "readme_pushed_at": "",
-    "compose_sha256": "f3d7ea822bd86c0731e808f2a2c5a4268b44a4a7a455b5ecaa0e63e53ee2c60c",
+    "compose_sha256": "a0df2b063f82de1669fea3b82242f7f1144f3037e4a8474047cac99d26560a2a",
     "generated_at": "2026-11-21T10:00:00+00:00"
   },
   "container_contract": {
@@ -86,10 +70,11 @@
       },
       {
         "name": "ROUNDCUBEMAIL_DEFAULT_PORT",
-        "example": "143",
+        "example": null,
         "required": true,
         "sensitive": false,
-        "source": "docker-compose"
+        "source": "docker-compose",
+        "prompt": "IMAP port"
       },
       {
         "name": "ROUNDCUBEMAIL_SMTP_SERVER",
@@ -101,10 +86,11 @@
       },
       {
         "name": "ROUNDCUBEMAIL_SMTP_PORT",
-        "example": "587",
+        "example": null,
         "required": true,
         "sensitive": false,
-        "source": "docker-compose"
+        "source": "docker-compose",
+        "prompt": "SMTP port"
       },
       {
         "name": "ROUNDCUBEMAIL_DB_TYPE",
@@ -129,6 +115,13 @@
         "sensitive": false,
         "prompt_user": false,
         "source": "proxmenux-catalog"
+      },
+      {
+        "name": "ROUNDCUBEMAIL_DES_KEY",
+        "example": null,
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose"
       }
     ],
     "volumes": [
@@ -160,7 +153,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: roundcube\nservices:\n  roundcube:\n    image: docker.io/roundcube/roundcubemail:latest-apache\n    restart: unless-stopped\n    ports:\n    - 80:80\n    environment:\n      ROUNDCUBEMAIL_DEFAULT_HOST: null\n      ROUNDCUBEMAIL_DEFAULT_PORT: '143'\n      ROUNDCUBEMAIL_SMTP_SERVER: null\n      ROUNDCUBEMAIL_SMTP_PORT: '587'\n      ROUNDCUBEMAIL_DB_TYPE: sqlite\n      COMPOSER_ALLOW_SUPERUSER: '1'\n      COMPOSER_NO_INTERACTION: '1'\n    volumes:\n    - ./database:/var/roundcube/db\n"
+    "original_compose": "name: roundcube\nservices:\n  roundcube:\n    image: docker.io/roundcube/roundcubemail:latest-apache\n    restart: unless-stopped\n    ports:\n    - 80:80\n    environment:\n      ROUNDCUBEMAIL_DEFAULT_HOST: null\n      ROUNDCUBEMAIL_DEFAULT_PORT: null\n      ROUNDCUBEMAIL_SMTP_SERVER: null\n      ROUNDCUBEMAIL_SMTP_PORT: null\n      ROUNDCUBEMAIL_DB_TYPE: sqlite\n      COMPOSER_ALLOW_SUPERUSER: '1'\n      COMPOSER_NO_INTERACTION: '1'\n      ROUNDCUBEMAIL_DES_KEY: null\n    volumes:\n    - ./database:/var/roundcube/db\n"
   },
   "compose_stack": {
     "project_name": "roundcube",
@@ -171,7 +164,7 @@
     "services": [
       {
         "name": "roundcube",
-        "image": "docker.io/roundcube/roundcubemail:latest",
+        "image": "docker.io/roundcube/roundcubemail:latest-apache",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -179,19 +172,20 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "docker.io/roundcube/roundcubemail:latest",
+          "image": "docker.io/roundcube/roundcubemail:latest-apache",
           "restart": "unless-stopped",
           "ports": [
             "80:80"
           ],
           "environment": {
             "ROUNDCUBEMAIL_DEFAULT_HOST": null,
-            "ROUNDCUBEMAIL_DEFAULT_PORT": "143",
+            "ROUNDCUBEMAIL_DEFAULT_PORT": null,
             "ROUNDCUBEMAIL_SMTP_SERVER": null,
-            "ROUNDCUBEMAIL_SMTP_PORT": "587",
+            "ROUNDCUBEMAIL_SMTP_PORT": null,
             "ROUNDCUBEMAIL_DB_TYPE": "sqlite",
             "COMPOSER_ALLOW_SUPERUSER": "1",
-            "COMPOSER_NO_INTERACTION": "1"
+            "COMPOSER_NO_INTERACTION": "1",
+            "ROUNDCUBEMAIL_DES_KEY": null
           },
           "volumes": [
             "./database:/var/roundcube/db"
@@ -431,7 +425,7 @@
       {
         "id": "roundcube-unattended-composer",
         "upstream_behavior": "On an existing application tree the official entrypoint can invoke Composer indirectly through the installation script.",
-        "native_lxc_behavior": "Allow the image\u2019s root startup to run Composer in noninteractive mode, including when starting a restored rootfs.",
+        "native_lxc_behavior": "Allow the image’s root startup to run Composer in noninteractive mode, including when starting a restored rootfs.",
         "reason": "OCI lifecycle operations have no operator at the container console.",
         "behavioral_impact": "Startup cannot block waiting for Composer root confirmation.",
         "validation": "requires-per-application-runtime-check"
@@ -458,7 +452,17 @@
       "volume_owner": {
         "uid": 33,
         "gid": 33
-      }
+      },
+      "generated_sensitive_environment": {
+        "ROUNDCUBEMAIL_DES_KEY": {
+          "strategy": "token-hex",
+          "bytes": 12,
+          "prompt": false
+        }
+      },
+      "completion_notes": [
+        "Enter the ports from your mail provider. Common choices are IMAP 993 and SMTP 465 with ssl://, or IMAP 143 and SMTP 587 with tls://."
+      ]
     }
   },
   "compatibility": {

@@ -214,9 +214,9 @@
   },
   "rich": {
     "heading": "Mensajes enriquecidos, categorías y filtros por canal",
-    "intro": "Cada canal tiene tres controles: <em>Mensajes enriquecidos</em> arriba, once secciones de <em>Categorías de notificación</em> con interruptores por evento y <em>Enviar prueba</em> abajo.",
+    "intro": "Cada canal tiene tres controles: <em>Mensajes enriquecidos</em> arriba, las secciones de <em>Categorías de notificación</em> con interruptores por evento y <em>Enviar prueba</em> abajo.",
     "imageAlt": "Categorías con Mensajes enriquecidos destacado, secciones de VM/CT, backups, recursos, almacenamiento, red, seguridad, clúster, servicios, salud y actualizaciones, con interruptores y contadores, y botón Enviar prueba",
-    "imageCaption": "La flecha señala <em>Mensajes enriquecidos</em>. Debajo están las once categorías desplegables con controles por evento. <em>Enviar prueba</em> está al final.",
+    "imageCaption": "La flecha señala <em>Mensajes enriquecidos</em>. Debajo están las categorías desplegables con controles por evento. <em>Enviar prueba</em> está al final.",
     "richTitle": "Mensajes enriquecidos",
     "richIntro": "Con <em>Mensajes enriquecidos</em>, cada aviso lleva un emoji de categoría y formato nativo del canal, como HTML en Telegram o tarjetas coloreadas en Discord. Desactivado, se envía el mismo contenido en texto simple:",
     "plainHeader": "Texto simple: formato enriquecido desactivado",
@@ -351,17 +351,17 @@
   },
   "catalogue": {
     "heading": "Catálogo de eventos",
-    "intro": "Unos setenta tipos se agrupan en once categorías. Cada sección desplegable permite activar eventos. Están activos por defecto salvo indicación contraria.",
+    "intro": "Los tipos de evento se agrupan en las categorías del panel de notificaciones. Cada sección desplegable permite activar eventos. Están activos por defecto salvo los marcados (desactivado por defecto). En un host Proxmox Backup Server el panel oculta VM / CT, Backups y Clúster, y ProxMenux no configura el webhook de Proxmox VE.",
     "headerGroup": "Grupo",
     "headerEvents": "Eventos",
     "rows": [
       {
         "group": "VM / CT",
-        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, más los equivalentes <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code> (desactivado por defecto), <code>vm_shutdown</code> (desactivado por defecto), <code>vm_fail</code>, <code>vm_restart</code> (desactivado por defecto), <code>ct_start</code>, <code>ct_start_warning</code>, <code>ct_stop</code> (desactivado por defecto), <code>ct_shutdown</code> (desactivado por defecto), <code>ct_fail</code>, <code>ct_restart</code> (desactivado por defecto), <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code> (desactivado por defecto), <code>replication_fail</code>, <code>lxc_updates_available</code> (desactivado por defecto), <code>lxc_update_applied</code>, <code>oci_update_completed</code>, <code>oci_update_failed</code>, <code>oci_recreate_completed</code>, <code>oci_recreate_failed</code>, <code>oci_modify_completed</code>, <code>oci_modify_failed</code>, <code>oci_watchdog_restarted</code>, <code>oci_watchdog_failed</code>."
       },
       {
         "group": "Backups",
-        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+        "events": "<code>backup_start</code> (desactivado por defecto), <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code> (desactivado por defecto), <code>snapshot_fail</code>, <code>host_backup_start</code> (desactivado por defecto), <code>host_backup_complete</code>, <code>host_backup_fail</code>."
       },
       {
         "group": "Recursos",
@@ -369,11 +369,11 @@
       },
       {
         "group": "Almacenamiento",
-        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>, <code>mount_stale</code>, <code>mount_readonly</code>, <code>lxc_disk_low</code>, <code>vm_disk_low</code>, <code>lxc_mount_low</code>, <code>pve_storage_full</code>, <code>zfs_pool_full</code>."
       },
       {
         "group": "Red",
-        "events": "<code>network_down</code>, <code>network_latency</code>."
+        "events": "<code>network_down</code>, <code>network_latency</code> (desactivado por defecto)."
       },
       {
         "group": "Seguridad",
@@ -385,19 +385,23 @@
       },
       {
         "group": "Servicios",
-        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>, <code>system_restore_completed</code>, <code>kernel_warning</code>, <code>cron_output</code> (desactivado por defecto)."
       },
       {
         "group": "Monitor de salud",
-        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>state_change</code> (desactivado por defecto)."
       },
       {
         "group": "Actualizaciones",
-        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+        "events": "<code>update_summary</code>, <code>pve_update</code>, <code>update_complete</code> (desactivado por defecto), <code>proxmenux_update</code>, <code>app_update_available</code>, <code>docker_stack_update_available</code>, <code>apt_listchanges</code>, <code>post_install_update</code>, <code>secure_gateway_update_available</code>, <code>nvidia_driver_update_available</code>, <code>coral_driver_update_available</code>."
       },
       {
-        "group": "Hardware / GPU",
-        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+        "group": "Hardware",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "group": "Sistema",
+        "events": "<code>custom</code>, <code>ai_model_migrated</code>."
       }
     ],
     "burstNote": "Los tipos agrupados <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) sustituyen ráfagas por un resumen. No tienen controles propios en la interfaz y heredan los del evento de origen.",
