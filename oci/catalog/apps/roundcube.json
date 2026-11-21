@@ -247,7 +247,18 @@
         "generated_secrets",
         "dependency_start_and_stop_order"
       ],
-      "generated_secrets": []
+      "generated_secrets": [
+        {
+          "id": "generated-roundcube-des-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "roundcube",
+              "environment_variable": "ROUNDCUBEMAIL_DES_KEY"
+            }
+          ]
+        }
+      ]
     }
   },
   "first_run": {
