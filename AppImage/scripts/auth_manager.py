@@ -2015,17 +2015,21 @@ def get_user_profile(username=None):
     """
     config = load_auth_config()
     user = find_user(username, config)
-    avatar_file, type_file = _avatar_paths(user)
-    # An account from outside the Monitor has no avatar here: that of the
-    # Monitor belongs to whoever reaches it without an account. A subject of
-    # the OpenID Connect provider shows the name given to it.
-    own = user is not None or username is None
-    display_name = ((user or config).get("display_name") or None) if own else None
-    if username and username.startswith(OIDC_PREFIX):
+    external = username is not None and user is None
+    # An account from outside the Monitor has its own decorations, kept by
+    # its sign-in; that of the Monitor belongs to whoever reaches it without
+    # an account. A subject of the OpenID Connect provider shows the name
+    # given to it until it sets one.
+    avatar_file, type_file = _avatar_paths({"external": username} if external else user)
+    if external:
+        display_name = ((config.get("external_profiles") or {}).get(username) or {}).get("display_name") or None
+    else:
+        display_name = (user or config).get("display_name") or None
+    if external and not display_name and username.startswith(OIDC_PREFIX):
         import oidc_manager
         display_name = (oidc_manager.subject_choice(username[len(OIDC_PREFIX):]) or {}).get("name")
 
-    has_avatar = own and avatar_file.exists() and avatar_file.stat().st_size > 0
+    has_avatar = avatar_file.exists() and avatar_file.stat().st_size > 0
     avatar_mtime = None
     avatar_content_type = None
     if has_avatar:
@@ -2057,18 +2061,23 @@ def _avatar_paths(user):
     if user is None or user.get("legacy"):
         return AVATAR_FILE, AVATAR_CONTENT_TYPE_FILE
     folder = CONFIG_DIR / "avatars"
+    if user.get("external"):
+        # A Proxmox or OpenID Connect account is named by its sign-in, which
+        # may hold characters a file name should not.
+        key = hashlib.sha256(user["external"].encode("utf-8")).hexdigest()[:24]
+        return folder / f"ext-{key}.bin", folder / f"ext-{key}.type"
     return folder / f"{user['uid']}.bin", folder / f"{user['uid']}.type"
 
 
 def _profile_owner(username):
-    """(user, error) for changing the profile decorations of `username`: a
-    Proxmox VE account keeps them in Proxmox VE."""
+    """(user, error) for the profile decorations of `username`. An account
+    signed in from outside the Monitor (Proxmox, OpenID Connect) keeps its
+    display name and avatar here too, by its sign-in: they only decorate the
+    header, its identity and permissions still come from where it signs in."""
     if username is None:
         return None, None
     user = find_user(username)
-    if user is None:
-        return None, "This account is managed outside the Monitor"
-    return user, None
+    return (user if user is not None else {"external": username}), None
 
 
 def set_display_name(display_name, username=None):
@@ -2091,7 +2100,10 @@ def set_display_name(display_name, username=None):
     if error:
         return False, error
     config = load_auth_config()
-    target = find_user(username, config) if owner else config
+    if owner and owner.get("external"):
+        target = config.setdefault("external_profiles", {}).setdefault(username, {})
+    else:
+        target = find_user(username, config) if owner else config
     target["display_name"] = cleaned or None
     if not save_auth_config(config):
         return False, "Failed to save profile"
@@ -2177,9 +2189,7 @@ def get_avatar_bytes(username=None):
     """Return (bytes, content_type) for the avatar of `username`, or
     (None, None) if no avatar is set or the file is unreadable. The caller is
     responsible for the HTTP response; this only handles the I/O."""
-    user = find_user(username)
-    if username is not None and user is None:
-        return None, None  # A Proxmox VE account has no avatar here.
+    user, _ = _profile_owner(username)
     avatar_file, type_file = _avatar_paths(user)
     if not avatar_file.exists():
         return None, None

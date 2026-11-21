@@ -308,9 +308,12 @@ class OIDCTests(unittest.TestCase):
         self.assertNotIn("not-allowed", oidc.public_config()["subject_profiles"])
         profile = auth_manager.get_user_profile("oidc:subject-1")
         self.assertEqual((profile["display_name"], profile["local"]), ("Ana", False))
-        # Its own account is not the local one.
+        # Its own decorations are kept apart and never touch the local account.
+        local_before = auth_manager.get_user_profile("local-admin")["display_name"]
         self.assertEqual(auth_manager.set_display_name("Mallory", "oidc:subject-1"),
-                         (False, "This account is managed outside the Monitor"))
+                         (True, "Display name updated"))
+        self.assertEqual(auth_manager.get_user_profile("oidc:subject-1")["display_name"], "Mallory")
+        self.assertEqual(auth_manager.get_user_profile("local-admin")["display_name"], local_before)
         self.assertIsNone(auth_manager.find_user("oidc:subject-1"))
         with self.assertRaises(oidc.OIDCError):
             oidc.save_config({**self.config, "subject_profiles": {"subject-1": {"profile": "custom",
