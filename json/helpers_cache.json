@@ -16999,6 +16999,41 @@
     "os": "debian"
   },
   {
+    "name": "MusicGrabber",
+    "slug": "musicgrabber",
+    "desc": "MusicGrabber is a self-hosted music downloader for grabbing one song or a whole album at a time. It searches YouTube, SoundCloud, Monochrome and Soulseek, files tagged tracks into your library, and keeps it current with watched playlists from nine platforms, watched MusicBrainz artists and automatic quality upgrades.",
+    "script": "ct/musicgrabber.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/musicgrabber.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/musicgrabber.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Downloads go to /opt/musicgrabber_data/music. To use your own library, mount it into the container, set MUSIC_DIR in /opt/musicgrabber_data/.env and restart musicgrabber."
+    ],
+    "warnings": [
+      "There is no login until a second account exists: anyone who can reach port 8080 has full access. Add accounts under Settings, System, User Management to turn on sign-in."
+    ],
+    "port": 8080,
+    "website": "https://gitlab.com/g33kphr33k/musicgrabber",
+    "documentation": "https://gitlab.com/g33kphr33k/musicgrabber/-/blob/main/guide/README.md",
+    "logo": "https://gitlab.com/g33kphr33k/musicgrabber/-/raw/main/static/MusicGrabberIcon.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "MyIP",
     "slug": "myip",
     "desc": "The best IP Toolbox. Easy to check what's your IPs, IP geolocation, check for DNS leaks, examine WebRTC connections, speed test, ping test, MTR test, check website availability, whois search and more!",
@@ -21381,9 +21416,9 @@
     "os": ""
   },
   {
-    "name": "Pinchflat",
+    "name": "Pinchflat NGX",
     "slug": "pinchflat",
-    "desc": "Pinchflat is a self-hosted YouTube media manager built with yt-dlp for automatically downloading and organizing content from channels and playlists.",
+    "desc": "Pinchflat NGX is a self-hosted YouTube media manager built with yt-dlp for automatically downloading and organizing content from channels and playlists. The Tool is original based on Pinchflat, but Pinchflat is unmaintained since months.",
     "script": "ct/pinchflat.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pinchflat.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pinchflat.sh",
@@ -21403,8 +21438,8 @@
       "For large media libraries, increase disk space or mount external storage at `/opt/pinchflat/downloads` before downloading media to avoid filling the LXC disk."
     ],
     "port": 8945,
-    "website": "https://github.com/kieraneglin/pinchflat",
-    "documentation": "https://github.com/kieraneglin/pinchflat/wiki",
+    "website": "https://github.com/TheBadFella/Pinchflat-NGX",
+    "documentation": "",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pinchflat.webp",
     "updateable": true,
     "privileged": false,
