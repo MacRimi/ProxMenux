@@ -11161,5 +11161,12 @@
   "⚠ Disk data will NOT be erased.": "⚠ I dati del disco NON verranno cancellati.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Il disco verrà smontato e rimosso da /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ La voce /etc/fstab verrà rimossa.",
-  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato."
+  "⚠ The disk will be unmounted.": "⚠ Il disco verrà smontato.",
+  "Connect a Shlink web client to the server URL using the API key shown after installation.": "Collega un client web Shlink all’URL del server con la chiave API mostrata dopo l’installazione.",
+  "Create short links with your own domain and track their visits through the REST API.": "Crea link brevi con il tuo dominio e monitora le visite tramite l’API REST.",
+  "Joplin administrator": "Amministratore di Joplin",
+  "REST API": "API REST",
+  "Shlink API key": "Chiave API Shlink",
+  "Sign in as admin@localhost with the password admin and change both right away.": "Accedi come admin@localhost con la password admin e cambia subito entrambi.",
+  "Sync notes and notebooks from Joplin clients with a private PostgreSQL database.": "Sincronizza note e taccuini dei client Joplin con un database PostgreSQL privato."
 }

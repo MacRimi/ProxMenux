@@ -11161,5 +11161,12 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
+  "Connect a Shlink web client to the server URL using the API key shown after installation.": "Pripojte webového klienta Shlink k URL servera pomocou kľúča API zobrazeného po inštalácii.",
+  "Create short links with your own domain and track their visits through the REST API.": "Vytvárajte krátke odkazy s vlastnou doménou a sledujte ich návštevy cez REST API.",
+  "Joplin administrator": "Správca Joplinu",
+  "REST API": "REST API",
+  "Shlink API key": "Kľúč API Shlink",
+  "Sign in as admin@localhost with the password admin and change both right away.": "Prihláste sa ako admin@localhost s heslom admin a hneď zmeňte e-mail aj heslo.",
+  "Sync notes and notebooks from Joplin clients with a private PostgreSQL database.": "Synchronizujte poznámky a zápisníky z klientov Joplin so súkromnou databázou PostgreSQL."
 }
