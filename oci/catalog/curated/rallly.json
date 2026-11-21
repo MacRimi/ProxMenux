@@ -34,7 +34,7 @@
     "repository": "https://github.com/lukevella/rallly-selfhosted",
     "tips": [
       "Email sign-in requires SMTP. Set the initial admin email in advanced settings, then claim the role in the control panel.",
-      "Reserve the container IP or set a stable URL. For optional S3 storage, enter the credentials from your provider."
+      "Reserve the container's IPv4 address so Rallly keeps the same URL. For optional S3 storage, enter the credentials from your provider."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -152,7 +152,7 @@
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "SMTP secure (true or false)"
+        "prompt": "SMTP implicit TLS, true for port 465 (true or false)"
       },
       {
         "name": "SMTP_USER",
@@ -649,7 +649,7 @@
           },
           {
             "name": "SMTP_SECURE",
-            "label": "SMTP secure (true or false)",
+            "label": "SMTP implicit TLS, true for port 465 (true or false)",
             "sensitive": false
           },
           {
@@ -716,7 +716,8 @@
     },
     "stack_completion_notes": [
       "Email sign-in requires SMTP. Set the initial admin email in advanced settings, then claim the role in the control panel.",
-      "Reserve the container IP or set a stable URL. For optional S3 storage, enter the credentials from your provider."
+      "Reserve the container's IPv4 address so Rallly keeps the same URL. For optional S3 storage, enter the credentials from your provider.",
+      "Anyone can register unless allowed emails are set or registration is disabled. Rallly's free self-hosted license covers one user."
     ]
   },
   "compatibility": {
