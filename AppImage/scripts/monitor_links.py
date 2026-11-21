@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pbs_manager
+import pve_mirror
 
 LINKS_FILE = Path(os.environ.get("PROXMENUX_MONITOR_LINKS", "/usr/local/share/proxmenux/monitor_links.json"))
 SSL_CONFIG_FILE = Path(os.environ.get("PROXMENUX_SSL_CONFIG", "/etc/proxmenux/ssl_config.json"))
@@ -137,12 +138,16 @@ def _is_this_host(host):
 
 
 def _cluster_nodes():
-    try:
-        result = subprocess.run(["pvesh", "get", "/cluster/status", "--output-format", "json"],
-                                capture_output=True, text=True, timeout=8)
-        rows = json.loads(result.stdout) if result.returncode == 0 else []
-    except (OSError, subprocess.SubprocessError, ValueError):
-        return []
+    members = pve_mirror.cluster_nodes()
+    if members is not None:
+        rows = [{"type": "node", "local": 0, **row} for row in members]
+    else:
+        try:
+            result = subprocess.run(["pvesh", "get", "/cluster/status", "--output-format", "json"],
+                                    capture_output=True, text=True, timeout=8)
+            rows = json.loads(result.stdout) if result.returncode == 0 else []
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return []
     nodes = []
     for row in rows if isinstance(rows, list) else []:
         if isinstance(row, dict) and row.get("type") == "node" and not row.get("local") and row.get("name") and row.get("ip"):

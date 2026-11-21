@@ -29,6 +29,8 @@ class MonitorLinksTests(unittest.TestCase):
             mock.patch.object(links.socket, "getaddrinfo", side_effect=self.fixture_addresses),
             mock.patch.object(links.pbs_manager, "get_platform", return_value={"product": "pve", "hostname": "amd"}),
             mock.patch.object(links.pbs_manager, "public_servers", return_value=[]),
+            # The pvesh path below; the /etc/pve path has its own test.
+            mock.patch.object(links.pve_mirror, "cluster_nodes", return_value=None),
         ]
         for patch in patches:
             patch.start()
@@ -70,6 +72,15 @@ class MonitorLinksTests(unittest.TestCase):
         self.assertEqual(by_key["pbs:pbs.example.com"]["status"], "unknown")
         self.assertEqual(by_key["pbs:pbs.example.com"]["native_url"], "https://pbs.example.com:8443")
         self.assertFalse(any("example.com" in url for url in probed))
+
+    def test_cluster_nodes_come_from_the_members_file_without_pvesh(self):
+        members = [{"name": "constructor", "ip": "10.0.0.50", "online": 1},
+                   {"name": "spare", "ip": None, "online": 0}]
+        with mock.patch.object(links.pve_mirror, "cluster_nodes", return_value=members):
+            nodes = links._cluster_nodes()
+        self.assertEqual(nodes, [{"key": "cluster:constructor", "name": "constructor", "product": "pve",
+                                  "group": "cluster", "host": "10.0.0.50"}])
+        self.links_run_not_called()
 
     def test_pbs_installed_on_this_host_opens_its_own_interface_and_is_never_probed(self):
         links.STORAGE_CFG.write_text("pbs: PBS\n\tdatastore PBS\n\tserver localhost\n\n"

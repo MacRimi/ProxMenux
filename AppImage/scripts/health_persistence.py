@@ -34,6 +34,17 @@ from pathlib import Path
 import re as _re_disk_base
 
 
+def _local_guest_state(vmid):
+    """`qm status` / `pct status` for a guest of this node, read from
+    /etc/pve and /proc. None when that can't answer, so callers run the
+    commands as before."""
+    try:
+        import pve_mirror
+        return pve_mirror.local_guest_status(vmid)
+    except Exception:
+        return None
+
+
 def disk_base_name(name):
     """Strip a partition suffix from a block device name, namespace-aware.
 
@@ -1426,14 +1437,21 @@ class HealthPersistence:
                                 vm_exists = False
                                 ct_exists = False
 
-                                result_vm = subprocess.run(
-                                    ['qm', 'status', vmid],
-                                    capture_output=True, text=True, timeout=2)
-                                if result_vm.returncode == 0:
-                                    vm_exists = True
-                                    vm_running = 'running' in result_vm.stdout.lower()
+                                state = _local_guest_state(vmid)
+                                if state is not None:
+                                    vm_exists = state.get('type') == 'qemu'
+                                    ct_exists = state.get('type') == 'lxc'
+                                    vm_running = vm_exists and state.get('status') == 'running'
+                                    ct_running = ct_exists and state.get('status') == 'running'
+                                else:
+                                    result_vm = subprocess.run(
+                                        ['qm', 'status', vmid],
+                                        capture_output=True, text=True, timeout=2)
+                                    if result_vm.returncode == 0:
+                                        vm_exists = True
+                                        vm_running = 'running' in result_vm.stdout.lower()
 
-                                if not vm_exists:
+                                if not vm_exists and state is None:
                                     result_ct = subprocess.run(
                                         ['pct', 'status', vmid],
                                         capture_output=True, text=True, timeout=2)
@@ -1955,7 +1973,11 @@ class HealthPersistence:
         but fail if the VM/CT doesn't exist.
         """
         import subprocess
-        
+
+        state = _local_guest_state(vmid)
+        if state is not None:
+            return bool(state)
+
         try:
             # Try VM first
             result = subprocess.run(
@@ -2008,23 +2030,30 @@ class HealthPersistence:
             ct_exists = False
             is_running = False
             vm_type = None
-            
-            # Check qm status for VMs
-            result_vm = subprocess.run(
-                ['qm', 'status', vm_id],
-                capture_output=True,
-                text=True,
-                timeout=2
-            )
-            
-            if result_vm.returncode == 0:
-                vm_exists = True
-                vm_type = 'vm'
-                if 'running' in result_vm.stdout.lower():
-                    is_running = True
-            
+
+            state = _local_guest_state(vm_id)
+            if state is not None:
+                vm_exists = state.get('type') == 'qemu'
+                ct_exists = state.get('type') == 'lxc'
+                vm_type = 'vm' if vm_exists else ('ct' if ct_exists else None)
+                is_running = bool(state) and state.get('status') == 'running'
+            else:
+                # Check qm status for VMs
+                result_vm = subprocess.run(
+                    ['qm', 'status', vm_id],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+
+                if result_vm.returncode == 0:
+                    vm_exists = True
+                    vm_type = 'vm'
+                    if 'running' in result_vm.stdout.lower():
+                        is_running = True
+
             # Check pct status for containers
-            if not vm_exists:
+            if not vm_exists and state is None:
                 result_ct = subprocess.run(
                     ['pct', 'status', vm_id],
                     capture_output=True,

@@ -3466,6 +3466,13 @@ class HealthMonitor:
         """Check if a VM or CT is currently running."""
         import subprocess
         try:
+            import pve_mirror
+            state = pve_mirror.local_guest_status(vmid)
+        except Exception:
+            state = None
+        if state is not None:
+            return state.get('status') == 'running'
+        try:
             # Check VM status
             result = subprocess.run(
                 ['qm', 'status', vmid],

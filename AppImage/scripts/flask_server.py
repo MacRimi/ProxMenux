@@ -67,10 +67,17 @@ import psutil
 from flask import Flask, jsonify, request, send_file, send_from_directory, Response, after_this_request
 from flask_cors import CORS
 
+# AppRun runs this file as __main__. Modules that `import flask_server`
+# must get this module, not a second copy with its own caches and threads.
+if __name__ == '__main__':
+    sys.modules.setdefault('flask_server', sys.modules[__name__])
+
 # Ensure local imports work even if working directory changes
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+
+import pve_mirror  # noqa: E402
 
 from smartctl_resolver import (  # noqa: E402
     is_usb_disk as resolver_is_usb_disk,
@@ -1828,10 +1835,11 @@ _HARDWARE_CACHE_TTL = 300  # 5 minutes - hardware doesn't change
 # expensive dedup / filesystem-type filtering runs at most once per
 # refresh cycle per VM.
 _vm_disk_cache = {}           # vmid -> (fetched_at, (used, total) or None)
-_VM_DISK_REFRESH_PERIOD = 60  # seconds between full refresh cycles
-_VM_DISK_STALE_AFTER = 300    # readers ignore entries older than this
-_VM_DISK_GA_TIMEOUT = 3       # per-VM `qm guest cmd` timeout (seconds)
-_VM_DISK_REFRESH_WORKERS = 6  # parallelism cap for the fsinfo pass
+_VM_DISK_REFRESH_PERIOD = 300  # seconds between full refresh cycles
+_VM_DISK_STALE_AFTER = 900     # readers ignore entries older than this
+_VM_DISK_GA_TIMEOUT = 3        # per-VM `qm guest cmd` timeout (seconds)
+_VM_DISK_REFRESH_WORKERS = 6   # parallelism cap for the fsinfo pass
+_VM_DISK_PROBE_SPACING = 2.0   # seconds between two probe starts
 
 # ── Per-VM modal caches ────────────────────────────────────────────
 # The VM/LXC modal fires several pvesh-backed calls the moment a user
@@ -2447,6 +2455,19 @@ def get_cached_vm_disk(vmid):
     return value
 
 
+def _vm_guest_agent_enabled(vmid, node):
+    """Whether the VM's config enables the QEMU guest agent. A config
+    that can't be read keeps the probe, which then reports the error."""
+    try:
+        text = pve_mirror.read_guest_config(node, 'qemu', vmid)
+    except (OSError, ValueError):
+        return True
+    if text is None:
+        return True
+    value = pve_mirror.config_properties(text, ('agent',)).get('agent')
+    return pve_mirror.agent_enabled(value)
+
+
 def _vm_disk_refresh_one(vmid):
     """Refresh a single VMID's cache entry. Runs in a worker thread of
     the refresher pool — never on the request path."""
@@ -2492,16 +2513,26 @@ def _vm_disk_refresher_loop():
                 if vmid is None:
                     continue
                 live_vmids.add(vmid)
+                # Without the agent enabled `qm guest cmd` can only fail.
+                if not _vm_guest_agent_enabled(vmid, local_node):
+                    _vm_disk_cache[vmid] = (time.time(), None)
+                    continue
                 targets.append(vmid)
 
             if targets:
                 # Bounded parallelism — fsinfo calls per VM are IO-bound
                 # (waiting on the guest agent), so a small pool wins big
                 # over serial execution but doesn't stampede the host.
+                # Starts are spaced so the Perl processes don't all run
+                # in the same second.
                 try:
                     from concurrent.futures import ThreadPoolExecutor, wait
                     with ThreadPoolExecutor(max_workers=_VM_DISK_REFRESH_WORKERS) as ex:
-                        futures = [ex.submit(_vm_disk_refresh_one, v) for v in targets]
+                        futures = []
+                        for index, v in enumerate(targets):
+                            if index:
+                                time.sleep(_VM_DISK_PROBE_SPACING)
+                            futures.append(ex.submit(_vm_disk_refresh_one, v))
                         wait(futures, timeout=_VM_DISK_GA_TIMEOUT * 2)
                 except Exception:
                     # Fallback to serial if the executor itself fails
@@ -2817,6 +2848,14 @@ def get_cached_pvesh_cluster_resources_vm():
            now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
             return _pvesh_cache['cluster_resources_vm']
 
+        # pvestatd's own status in /etc/pve answers this without a Perl
+        # process; pvesh stays for hosts where that data is unavailable.
+        data = pve_mirror.cluster_resources_vm()
+        if data is not None:
+            _pvesh_cache['cluster_resources_vm'] = data
+            _pvesh_cache['cluster_resources_vm_time'] = now
+            return data
+
         try:
             result = subprocess.run(
                 ['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
@@ -2844,8 +2883,9 @@ _PVESH_STORAGE_LIST_TTL = 30
 
 def get_cached_pvesh_storage_list():
     """Get the cluster-wide list of configured storages with 30s cache.
-    Returns the raw `pvesh get /storage` JSON (a list of dicts with
-    storage, type, content, etc.). Returns [] if pvesh is unavailable
+    Returns the `pvesh get /storage` rows (a list of dicts with storage,
+    type, content, etc.), read from storage.cfg when that answers them
+    exactly. Returns [] if pvesh is unavailable
     rather than raising — callers iterate the list and tolerate empty.
     """
     global _pvesh_cache
@@ -2854,6 +2894,12 @@ def get_cached_pvesh_storage_list():
     if _pvesh_cache['storage_list'] is not None and \
        now - _pvesh_cache['storage_list_time'] < _PVESH_STORAGE_LIST_TTL:
         return _pvesh_cache['storage_list']
+
+    data = pve_mirror.storage_list()
+    if data is not None:
+        _pvesh_cache['storage_list'] = data
+        _pvesh_cache['storage_list_time'] = now
+        return data
 
     try:
         result = subprocess.run(
@@ -5880,11 +5926,15 @@ def _get_proxmox_storage_uncached():
     try:
         # local_node = socket.gethostname()
         local_node = get_proxmox_node_name()
-        
-        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'], 
-                              capture_output=True, text=True, timeout=10)
-        
-        if result.returncode != 0:
+
+        resources = pve_mirror.cluster_resources_storage()
+        if resources is None:
+            result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'],
+                                    capture_output=True, text=True, timeout=10)
+        else:
+            result = None
+
+        if result is not None and result.returncode != 0:
             # print(f"[v0] pvesh command failed with return code {result.returncode}")
             pass
             # print(f"[v0] stderr: {result.stderr}")
@@ -5895,8 +5945,9 @@ def _get_proxmox_storage_uncached():
             }
         
         storage_list = []
-        resources = json.loads(result.stdout)
-        
+        if result is not None:
+            resources = json.loads(result.stdout)
+
         for resource in resources:
             node = resource.get('node', '')
             
@@ -9163,6 +9214,10 @@ def _sriov_pci_render_node(bdf):
 
 def _sriov_guest_running(guest_type, gid):
     """Best-effort status check. Returns True if running, False otherwise."""
+    state = pve_mirror.local_guest_status(gid)
+    if state is not None:
+        wanted = 'qemu' if guest_type == 'vm' else 'lxc'
+        return state.get('type') == wanted and state.get('status') == 'running'
     try:
         cmd = ['qm' if guest_type == 'vm' else 'pct', 'status', str(gid)]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
@@ -12435,6 +12490,10 @@ _NODE_METRICS_LOCKS = {
     timeframe: threading.Lock()
     for timeframe in ('hour', 'day', 'week', 'month', 'year')
 }
+# After its first pass the prewarmer only runs while the dashboard has
+# asked for metrics recently; an unattended host queries no RRD data.
+_NODE_METRICS_ACTIVE_WINDOW = 600.0
+_NODE_METRICS_LAST_REQUEST = {'ts': None}
 
 
 class _NodeMetricsError(Exception):
@@ -12662,11 +12721,16 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
 def _node_metrics_prewarmer_loop():
     """Prewarm the Overview's default range using the same single-flight cache."""
     time.sleep(3)
+    first_pass = True
     while True:
-        try:
-            _get_node_metrics_payload('day', max_age=90.0)
-        except _NodeMetricsError:
-            pass  # The shared fetch path already records the failure.
+        last_request = _NODE_METRICS_LAST_REQUEST['ts']
+        if first_pass or (last_request is not None
+                          and time.monotonic() - last_request < _NODE_METRICS_ACTIVE_WINDOW):
+            try:
+                _get_node_metrics_payload('day', max_age=90.0)
+            except _NodeMetricsError:
+                pass  # The shared fetch path already records the failure.
+        first_pass = False
         time.sleep(90)
 
 
@@ -12778,6 +12842,7 @@ def api_node_metrics():
     timeframe = request.args.get('timeframe', 'week')
     if timeframe not in _NODE_METRICS_LOCKS:
         return jsonify({'error': 'Invalid timeframe. Must be one of: hour, day, week, month, year'}), 400
+    _NODE_METRICS_LAST_REQUEST['ts'] = time.monotonic()
     try:
         return jsonify(_get_node_metrics_payload(timeframe))
     except _NodeMetricsError as exc:
@@ -23778,7 +23843,7 @@ if __name__ == '__main__':
     try:
         metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
         metrics_thread.start()
-        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
+        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval while the dashboard is in use)")
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
 
