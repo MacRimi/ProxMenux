@@ -468,7 +468,10 @@
           "bytes": 32,
           "prompt": false
         }
-      }
+      },
+      "completion_notes": [
+        "Kutt requires HTTPS for browser login. Set DEFAULT_DOMAIN to your reverse proxy hostname in advanced installation, then open the HTTPS URL."
+      ]
     }
   },
   "compatibility": {
