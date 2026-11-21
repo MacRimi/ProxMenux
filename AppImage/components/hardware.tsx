@@ -28,6 +28,7 @@ import { Settings2, CheckCircle2 } from "lucide-react"
 import { useT } from "../lib/i18n/provider"
 import { cn } from "@/lib/utils"
 import { useAccess } from "../lib/access"
+import { useIsPbs } from "../lib/use-platform"
 
 type TFunction = (key: string, params?: Record<string, string | number>) => string
 
@@ -345,6 +346,11 @@ const StorageTemperatureGroup = ({ title, temperatures }: { title: string; tempe
 export default function Hardware() {
   // Installing drivers and switching GPU modes run scripts on the host.
   const { capabilities } = useAccess()
+  // The driver installers and the GPU switch mode are tools of a Proxmox VE
+  // host (passing a GPU to VMs and LXC); a Proxmox Backup Server shows its
+  // hardware without them.
+  const pbs = useIsPbs()
+  const canRunTools = capabilities.execute && !pbs
   const t = useT()
 
   // Static data - loaded once on mount. Static fields (CPU, motherboard, memory
@@ -1023,7 +1029,7 @@ return (
                     )}
 
 {/* GPU Switch Mode Indicator */}
-  {getGpuSwitchMode(gpu) !== "unknown" && (
+  {!pbs && getGpuSwitchMode(gpu) !== "unknown" && (
   <div className="mt-3 pt-3 border-t border-border/30">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -1057,7 +1063,7 @@ return (
                               </button>
                             </>
                           ) : (
-                            capabilities.execute && (<button
+                            canRunTools && (<button
                               className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1558,7 +1564,9 @@ return (
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : pbs ? null : (
+                  // Extended monitoring asks for GPU tools a Proxmox Backup
+                  // Server has no use for: it is offered on Proxmox VE only.
                   <div className="rounded-lg bg-blue-500/10 p-4 border border-blue-500/20">
                     <div className="flex gap-3">
                       <div className="flex-shrink-0">
@@ -1576,7 +1584,7 @@ return (
                           {getMonitoringToolRecommendation(selectedGPU.vendor, t)}
                         </p>
                         {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
-                          capabilities.execute && (<Button
+                          canRunTools && (<Button
                             onClick={handleInstallNvidiaDriver}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
@@ -1587,7 +1595,7 @@ return (
                           </Button>)
                         )}
                         {(selectedGPU.vendor.toLowerCase().includes("amd") || selectedGPU.vendor.toLowerCase().includes("ati")) && (
-                          capabilities.execute && (<Button
+                          canRunTools && (<Button
                             onClick={handleInstallAmdTools}
                             className="w-full bg-red-600 hover:bg-red-700 text-white"
                           >
@@ -1598,7 +1606,7 @@ return (
                           </Button>)
                         )}
                         {selectedGPU.vendor.toLowerCase().includes("intel") && (
-                          capabilities.execute && (<Button
+                          canRunTools && (<Button
                             onClick={handleInstallIntelTools}
                             className="w-full bg-sky-600 hover:bg-sky-700 text-white"
                           >
@@ -1695,7 +1703,7 @@ return (
                   </p>
                 </div>
               </div>
-              {capabilities.execute && (<Button
+              {canRunTools && (<Button
                 onClick={() => setShowCoralInstaller(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
               >
@@ -1876,7 +1884,7 @@ return (
               )}
 
               {!selectedCoral.drivers_ready && (
-                capabilities.execute && (<Button
+                canRunTools && (<Button
                   onClick={() => {
                     setSelectedCoral(null)
                     setShowCoralInstaller(true)

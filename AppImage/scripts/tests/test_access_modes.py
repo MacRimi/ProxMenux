@@ -129,7 +129,7 @@ class AccessModes(unittest.TestCase):
                 self.assertEqual(auth_manager.access_mode(config), mode)
 
     def test_capabilities_follow_the_mode_and_the_token(self):
-        areas = dict.fromkeys(("general", "apps", "menux", "guests", "node", "backup", "logs"), True)
+        areas = dict.fromkeys(auth_manager.permissions.AREAS, True)
         everything = dict(dict.fromkeys(("view", "execute", "guests", "backup", "update", "terminal", "admin"), True),
                           areas=areas)
         view = dict(dict.fromkeys(everything, False), view=True, areas=areas)

@@ -14,6 +14,7 @@ import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { LatencyDetailModal } from "./latency-detail-modal"
 import { AreaChart, Area, LineChart, Line, ResponsiveContainer, YAxis } from "recharts"
 import { useT } from "../lib/i18n/provider"
+import { useIsPbs } from "../lib/use-platform"
 
 type TFunction = (key: string, params?: Record<string, string | number>) => string
 
@@ -773,6 +774,7 @@ const fetcher = async (url: string): Promise<NetworkData> => {
 
 export function NetworkMetrics() {
   const t = useT()
+  const pbs = useIsPbs()
   const {
     data: networkData,
     error,
@@ -1187,8 +1189,9 @@ export function NetworkMetrics() {
 
       {/* Network Flow — proof of concept. Lives next to Network Traffic
           while the design is validated on a real host. Once approved,
-          this card replaces (or pairs with) the chart above. */}
-      {(() => {
+          this card replaces (or pairs with) the chart above. It draws how
+          traffic reaches VMs and LXC, which a Proxmox Backup Server has none of. */}
+      {!pbs && (() => {
         const toMBps = (bps?: number) => (bps || 0) / (1024 * 1024)
         const allIfaces = [
           ...(networkData.physical_interfaces || []),

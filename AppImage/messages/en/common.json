@@ -3132,6 +3132,7 @@
       "menux": "Menux",
       "guests": "VMs & LXCs",
       "node": "Node (storage, network, hardware)",
+      "nodePbs": "Network and hardware",
       "backup": "Backup",
       "logs": "System Logs"
     },
