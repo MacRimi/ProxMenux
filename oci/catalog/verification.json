@@ -351,6 +351,14 @@
         "scenario": "PVE 9.2 amd64/ZFS; UniFi dry-run authentication/health; default/advanced, managed data, restart/Modify, 0.1.29 to 0.1.30, rollback, backup/restore/Manage and removal. No router writes or arm64 runtime test."
       }
     },
+    "openproject": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-21",
+        "digest": "2d9a77fd8b7781ee3fea84ac232dd449c21ac4f84720b2e3019e8b1a0003684e",
+        "scenario": "PVE 9.2.32 amd64/ZFS; default/advanced, admin reset, project/task and host-bind attachment, loopback-only internal ports. Restart, CPU/RAM Modify, stock same-digest Update and cold restore/Manage preserved project/attachment and restarted PostgreSQL with corrected permissions."
+      }
+    },
     "plik": {
       "community_tested": {
         "by": "jcastro",
