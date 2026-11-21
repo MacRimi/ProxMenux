@@ -292,7 +292,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                   <Button
                     size="sm"
                     onClick={handleSaveDisplayName}
-                    disabled={savingDisplay || !hasDisplayChanges}
+                    disabled={savingDisplay}
                     className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
                   >
                     {savingDisplay ? (
