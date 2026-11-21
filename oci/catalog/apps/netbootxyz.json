@@ -447,6 +447,17 @@
         "request_timeout_seconds": 10,
         "stability_seconds": 4,
         "verify_tls": true
+      },
+      "generated_files": [
+        {
+          "container_path": "/usr/local/bin/proxmenux-netbootxyz-start",
+          "mode": "0755",
+          "owner": "mapped-root",
+          "content": "#!/bin/sh\n# Native LXC starts the image before host-managed DHCP and DNS are ready.\nif [ ! -s /config/menus/remote/menu.ipxe ]; then\n    pinned=${MENU_VERSION:-}\n    version=$pinned\n    if [ -z \"$version\" ] && [ -s /config/menuversion.txt ]; then\n        version=$(cat /config/menuversion.txt)\n        [ \"$version\" != null ] || version=\n    fi\n\n    printf '%s\\n' '[netbootxyz] Waiting for GitHub before initializing the boot menus.'\n    deadline=$(( $(date +%s) + 120 ))\n    while [ \"$(date +%s)\" -lt \"$deadline\" ]; do\n        if [ -z \"$version\" ]; then\n            version=$(curl -fsSL --connect-timeout 3 --max-time 5 \\\n                https://api.github.com/repos/netbootxyz/netboot.xyz/releases/latest | jq -er '.tag_name | strings | select(length > 0)')\n        fi\n        case \"$version\" in\n            '') ;;\n            *[!a-zA-Z0-9._-]*)\n                [ -n \"$pinned\" ] || version=\n                ;;\n            *)\n                curl -fsSLI --connect-timeout 3 --max-time 5 -o /dev/null \\\n                    \"https://github.com/netbootxyz/netboot.xyz/releases/download/$version/menus.tar.gz\"\n                status=$?\n                if [ \"$status\" -eq 0 ]; then\n                    export MENU_VERSION=\"$version\"\n                    exec /start.sh \"$@\"\n                fi\n                # HTTP error: a saved version without a release falls back to the latest one.\n                [ \"$status\" -ne 22 ] || [ -n \"$pinned\" ] || version=\n                ;;\n        esac\n        sleep 2\n    done\n    printf '%s\\n' '[netbootxyz] Could not reach the GitHub menu release. Starting without new menus; the next start retries. Check DNS, network access and MENU_VERSION.' >&2\nfi\n\nexec /start.sh \"$@\"\n"
+        }
+      ],
+      "runtime": {
+        "entrypoint": "/usr/local/bin/proxmenux-netbootxyz-start"
       }
     }
   },
