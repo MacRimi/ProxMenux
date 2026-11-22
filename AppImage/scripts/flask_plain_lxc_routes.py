@@ -12,6 +12,7 @@ from itsdangerous import BadData, URLSafeTimedSerializer
 
 from auth_manager import _get_jwt_secret
 from jwt_middleware import require_admin_scope
+from pbs_manager import is_pbs_host
 
 
 plain_lxc_bp = Blueprint("plain_lxc", __name__, url_prefix="/api/plain-lxc/v1")
@@ -42,12 +43,16 @@ def _error(code, status, field=None):
     return jsonify(error=code, field=field), status
 
 
-def _signed_in_admin(view):
+def _admin(view):
+    # Tickets and receipts belong to the account that asked for them; an
+    # open Monitor has no account, so its requests share one owner.
     @wraps(view)
     def protected(*args, **kwargs):
         identity = getattr(g, "identity", None)
-        if not identity or not identity["username"] or "admin" not in identity["permissions"]:
-            return _error("signed_in_admin_required", 403)
+        if not identity or "admin" not in identity["permissions"]:
+            return _error("admin_required", 403)
+        if is_pbs_host():
+            return _error("pve_required", 404)
         return view(identity["username"], *args, **kwargs)
     return protected
 
@@ -113,7 +118,7 @@ def _no_store(response):
 
 @plain_lxc_bp.get("/context")
 @require_admin_scope
-@_signed_in_admin
+@_admin
 def context(_actor):
     try:
         data = _engine("context")
@@ -139,7 +144,7 @@ def context(_actor):
 
 @plain_lxc_bp.post("/plan")
 @require_admin_scope
-@_signed_in_admin
+@_admin
 def plan(actor):
     body = request.get_json(silent=True)
     spec = body.get("spec") if type(body) is dict and set(body) == {"spec"} else None
@@ -198,7 +203,7 @@ def _operation_status(result, operation):
 
 @plain_lxc_bp.post("/download/plan")
 @require_admin_scope
-@_signed_in_admin
+@_admin
 def plan_download(actor):
     body = request.get_json(silent=True)
     fields = ("node", "catalog_id", "template_storage")
@@ -221,7 +226,7 @@ def plan_download(actor):
 
 @plain_lxc_bp.post("/download")
 @require_admin_scope
-@_signed_in_admin
+@_admin
 def download(actor):
     body = request.get_json(silent=True)
     if type(body) is not dict or set(body) != {"check", "confirmed"} or body["confirmed"] is not True:
@@ -249,7 +254,7 @@ def download(actor):
 
 @plain_lxc_bp.post("/create")
 @require_admin_scope
-@_signed_in_admin
+@_admin
 def create(actor):
     body = request.get_json(silent=True)
     if (type(body) is not dict or set(body) - {"check", "confirmed", "accepted_warnings", "password"}
@@ -282,7 +287,7 @@ def create(actor):
 
 @plain_lxc_bp.get("/status")
 @require_admin_scope
-@_signed_in_admin
+@_admin
 def status(actor):
     try:
         operation, issued = _decode("operation", request.headers.get("X-ProxMenux-LXC-Receipt"),

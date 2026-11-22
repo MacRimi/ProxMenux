@@ -29,6 +29,7 @@ let lxcCreateStatus = "not_submitted"
 let lxcDownloaded = false
 let accessMode = "password"
 let isAdmin = true
+let product = "pve"
 let sessionId
 let id = 0
 let buffer = ""
@@ -111,6 +112,7 @@ async function respond({ requestId, request }) {
     "/api/system": { hostname: "fixture", platform: "pve", cpu_cores: 8, memory_total: 32, memory_used: 5, memory_usage: 16, load_average: [0, 0, 0] },
     "/api/system-info": { hostname: "fixture", uptime: "1d", product: "pve" },
     "/api/vms": guests,
+    "/api/platform": { product },
     "/api/backups/storages": [],
   }[url.pathname] ?? (guest && { ...guest, config: {} })
   if (url.pathname.startsWith("/api/")) return reply(data ? 200 : 404, JSON.stringify(data ?? {}), "application/json")
@@ -312,12 +314,21 @@ async function verifyPlainLxcWizard() {
   accessMode = "open"
   await send("Page.reload")
   await openInventory()
+  assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), true)
+  product = "pbs"
+  await send("Page.reload")
+  await openInventory()
   assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), false)
+  product = "pve"
   accessMode = "proxmox"
   await send("Page.reload")
   await openInventory()
   assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), true)
   isAdmin = false
+  await send("Page.reload")
+  await openInventory()
+  assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), false)
+  accessMode = "read_only"
   await send("Page.reload")
   await openInventory()
   assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), false)

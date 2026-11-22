@@ -41,6 +41,8 @@ class PlainLxcMonitorTests(unittest.TestCase):
         self.enterContext(patch.object(jwt_middleware, "verify_token_full", side_effect=self.token))
         self.enterContext(patch.object(jwt_middleware, "profile_for", side_effect=self.profile))
         self.enterContext(patch.object(routes, "_get_jwt_secret", return_value="fixture-only-signing-key"))
+        self.pbs = False
+        self.enterContext(patch.object(routes, "is_pbs_host", side_effect=lambda: self.pbs))
         self.enterContext(patch.object(routes, "subprocess", SimpleNamespace(
             run=self.run_engine, PIPE=subprocess.PIPE, DEVNULL=subprocess.DEVNULL,
             TimeoutExpired=subprocess.TimeoutExpired,
@@ -91,17 +93,36 @@ class PlainLxcMonitorTests(unittest.TestCase):
         return {"check": checked["check"], "confirmed": True, "password": PASSWORD,
                 "accepted_warnings": checked["warnings"], **changes}
 
+    ROUTES = [("context", None), ("plan", {}), ("create", {}), ("status", None),
+              ("download/plan", {}), ("download", {})]
+
     def test_every_route_rejects_unsigned_or_observer_before_running_the_engine(self):
-        calls = [("context", None), ("plan", {}), ("create", {}), ("status", None),
-                 ("download/plan", {}), ("download", {})]
-        for mode, token, expected in [("open", None, 403), ("open", "admin-fixture", 403),
-                                      ("read_only", None, 403), ("password", None, 401),
+        for mode, token, expected in [("read_only", None, 403), ("password", None, 401),
                                       ("proxmox", None, 401), ("password", "observer-fixture", 403)]:
             self.mode = mode
             with self.subTest(mode=mode, token=token):
-                for endpoint, data in calls:
+                for endpoint, data in self.ROUTES:
                     self.assertEqual(self.request(endpoint, data=data, token=token).status_code, expected)
         self.assertEqual(self.calls, [])
+
+    def test_a_backup_server_offers_no_route_before_running_the_engine(self):
+        self.pbs = True
+        for endpoint, data in self.ROUTES:
+            self.assertEqual(self.request(endpoint, data=data).status_code, 404)
+        self.mode = "password"
+        self.assertEqual(self.request("context", token="observer-fixture").status_code, 403)
+        self.assertEqual(self.calls, [])
+
+    def test_an_open_monitor_creates_and_its_receipts_stay_with_open_access(self):
+        self.mode = "open"
+        self.assertEqual(self.request("context", token=None).status_code, 200)
+        checked = self.request("plan", data={"spec": self.spec}, token=None).json
+        created = self.request("create", data=self.confirm(checked), token=None)
+        self.assertEqual((created.status_code, created.json["status"]), (200, "succeeded"))
+        self.assertEqual(self.request("status", receipt=checked["receipt"], token=None).json, created.json)
+        self.mode = "password"
+        self.assertEqual(self.request("status", receipt=checked["receipt"]).status_code, 403)
+        self.assertEqual([action for action, _ in self.api.writes], ["create"])
 
     def test_context_and_planning_admit_only_downloaded_official_system_templates(self):
         response = self.request("context")

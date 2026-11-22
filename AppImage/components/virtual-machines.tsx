@@ -37,6 +37,7 @@ import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { useAccess } from "../lib/access"
+import { useIsPbs } from "../lib/use-platform"
 import { waitForVmControlTask } from "../lib/vm-control"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
 import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
@@ -857,7 +858,8 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 
 export function VirtualMachines() {
   // The profile of the session decides which actions are offered.
-  const { mode, capabilities } = useAccess()
+  const { capabilities } = useAccess()
+  const isPbs = useIsPbs()
   const t = useT()
   const { language } = useI18n()
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
@@ -3467,8 +3469,7 @@ export function VirtualMachines() {
               <Server className="h-6 w-6" />
               {t("vmLxc.listTitle")}
             </CardTitle>
-            {capabilities.admin && (mode === "password" || mode === "proxmox") &&
-              <PlainLxcCreate onCreated={() => void mutate()} />}
+            {capabilities.admin && !isPbs && <PlainLxcCreate onCreated={() => void mutate()} />}
           </div>
           <VmListToolbar
             actions={
