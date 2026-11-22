@@ -8577,15 +8577,27 @@
     "downloadStatus": {
       "running": "Téléchargement du modèle…",
       "succeeded": "modèle téléchargé.",
-      "partial": "Le téléchargement n'a pas pu être vérifié."
+      "partial": "Le téléchargement n'a pas pu être vérifié.",
+      "awaiting": "Envoi de la demande à Proxmox…",
+      "unknown": "Le résultat n’est pas encore connu.Vérification de la tâche dans Proxmox…",
+      "failed": "Le modèle n'a pas pu être téléchargé.",
+      "not_submitted": "La demande n'a pas atteint Proxmox."
     },
     "status": {
-      "succeeded": "Conteneur créé."
+      "succeeded": "Conteneur créé.",
+      "awaiting": "Envoi de la demande à Proxmox…",
+      "running": "Création du conteneur…",
+      "unknown": "Le résultat n’est pas encore connu.Vérification de la tâche dans Proxmox…",
+      "failed": "Le conteneur n'a pas pu être créé.",
+      "partial": "Le conteneur a été créé, mais toutes les étapes ne sont pas terminées.",
+      "not_submitted": "La demande n'a pas atteint Proxmox."
     },
     "warning": {
       "no_network": "Le conteneur n’aura pas d’interface réseau.",
       "nesting_enabled": "L'imbrication permet d'exécuter des conteneurs à l'intérieur de ce LXC et réduit l'isolement.",
-      "storage_overcommit": "La taille du disque logique dépasse le stockage actuellement disponible."
+      "storage_overcommit": "La taille du disque logique dépasse le stockage actuellement disponible.",
+      "bind_mount": "Les montages de liaison exposent les données de l'hôte et ne sont pas inclus dans les sauvegardes de conteneur.Les autorisations restent inchangées ;un conteneur non privilégié peut nécessiter des autorisations UID/GID existantes.",
+      "device_passthrough": "le relais de périphérique utilise les pilotes hôtes existants et partage les nœuds de périphérique sélectionnés.Les logiciels requis à l'intérieur du conteneur ne sont pas installés automatiquement."
     },
     "error": {
       "unavailable": "Le nœud n’a pas pu terminer la demande.Si vous avez confirmé une opération, son statut d'origine sera vérifié.",
@@ -8603,7 +8615,10 @@
       "bridge_unavailable": "Le pont ou le VLAN sélectionné n'est pas disponible.",
       "storage_unavailable_browser": "Le navigateur n'a pas pu enregistrer l'opération pour le suivi.",
       "receipt_invalid": "Cet enregistrement d'opération a expiré ou appartient à un autre compte.",
-      "target_operation_pending": "une opération est déjà en cours pour ce conteneur ou ce modèle."
+      "target_operation_pending": "une opération est déjà en cours pour ce conteneur ou ce modèle.",
+      "resource_unavailable": "un appareil ou un répertoire sélectionné n'est plus disponible.Vérifiez-le sur l'hôte et réessayez.",
+      "resource_unsupported": "Ce nœud ne prend pas en charge autant de points de montage ou de périphériques pour un conteneur.",
+      "resource_in_use": "un appareil sélectionné est déjà affecté à un autre conteneur ou VM."
     },
     "create": "Créer LXC",
     "description": "Créez un conteneur Linux non privilégié à partir d'un modèle Proxmox officiel.",
@@ -8669,6 +8684,45 @@
     "newDraft": "Nouveau conteneur",
     "loading": "Chargement des modèles et des ressources de nœuds…",
     "partialHelp": "Vérifiez le conteneur et sa tâche dans Proxmox avant de réessayer.",
-    "taskWarnings": "La tâche Proxmox s'est terminée avec des avertissements."
+    "taskWarnings": "La tâche Proxmox s'est terminée avec des avertissements.",
+    "phase": {
+      "submit": "envoyer la demande à Proxmox",
+      "create": "Créer le conteneur",
+      "prepare": "Préparer le conteneur pour son premier démarrage",
+      "start": "démarrer le conteneur",
+      "prepareStart": "Préparer et démarrer le conteneur",
+      "download": "Téléchargez le modèle"
+    },
+    "reason": {
+      "create_failed": "Proxmox n'a pas pu créer le conteneur.",
+      "start_failed": "Le conteneur a été créé, mais il n’a pas démarré.",
+      "preparation_failed": "Le conteneur a été créé, mais sa préparation a échoué.",
+      "start_not_submitted": "Le conteneur a été créé, mais son démarrage n'a pas été envoyé à Proxmox.",
+      "preparation_not_submitted": "Le conteneur a été créé, mais sa préparation n'a pas été envoyée à Proxmox.",
+      "download_failed": "Proxmox n'a pas pu télécharger le modèle.",
+      "template_checksum_mismatch": "Le modèle téléchargé ne correspond pas à sa somme de contrôle officielle."
+    },
+    "mounts": "Points de montage",
+    "addMount": "Ajouter un point de montage",
+    "mountType": "Type",
+    "mountVolume": "Nouveau volume de stockage",
+    "mountBind": "Répertoire hôte existant",
+    "mountStorage": "Stockage de volume",
+    "mountSize": "Taille (Gio)",
+    "mountSource": "répertoire hôte (chemin absolu, pas de liens symboliques)",
+    "mountPath": "Chemin à l’intérieur du conteneur",
+    "readOnly": "Lecture seule",
+    "backupVolume": "Inclure dans les sauvegardes de conteneur",
+    "remove": "Supprimer",
+    "add": "Ajouter",
+    "hardware": "Matériel",
+    "noHardware": "aucun périphérique pris en charge n'est disponible sur ce nœud.Les pilotes hôtes et la prise en charge native des périphériques Proxmox sont requis.",
+    "hardwareErrors": "Certains matériels n'ont pas pu être vérifiés.Les appareils non vérifiés ne sont pas proposés.",
+    "nvidiaNote": "NVIDIA inclut tous les GPU hôtes et leur environnement d'exécution de pilote.Le pilote hôte et NVIDIA Container Toolkit doivent déjà fonctionner.",
+    "usbNote": "Les périphériques USB sont transmis par leur identité : le conteneur les conserve après un redémarrage, et redémarre lorsqu'on se reconnecte.",
+    "openTerminal": "Ouvrir le terminal",
+    "showLog": "Afficher le journal",
+    "hideLog": "Masquer le journal",
+    "logUnavailable": "Le journal n'est pas encore disponible."
   }
 }

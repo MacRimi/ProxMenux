@@ -8577,15 +8577,27 @@
     "downloadStatus": {
       "running": "Vorlage wird heruntergeladen…",
       "succeeded": "Vorlage heruntergeladen.",
-      "partial": "Der Download konnte nicht überprüft werden."
+      "partial": "Der Download konnte nicht überprüft werden.",
+      "awaiting": "Die Anfrage wird an Proxmox gesendet…",
+      "unknown": "Das Ergebnis ist noch nicht bekannt.Überprüfung der Aufgabe in Proxmox…",
+      "failed": "Die Vorlage konnte nicht heruntergeladen werden.",
+      "not_submitted": "Die Anfrage hat Proxmox nicht erreicht."
     },
     "status": {
-      "succeeded": "Container erstellt."
+      "succeeded": "Container erstellt.",
+      "awaiting": "Die Anfrage wird an Proxmox gesendet…",
+      "running": "Den Container erstellen…",
+      "unknown": "Das Ergebnis ist noch nicht bekannt.Überprüfung der Aufgabe in Proxmox…",
+      "failed": "Der Container konnte nicht erstellt werden.",
+      "partial": "Der Container wurde erstellt, aber nicht jeder Schritt abgeschlossen.",
+      "not_submitted": "Die Anfrage hat Proxmox nicht erreicht."
     },
     "warning": {
       "no_network": "Der Container verfügt über keine Netzwerkschnittstelle.",
       "nesting_enabled": "Die Verschachtelung ermöglicht die Ausführung von Containern innerhalb dieses LXC und reduziert die Isolation.",
-      "storage_overcommit": "Die Größe des logischen Datenträgers überschreitet den derzeit verfügbaren Speicher."
+      "storage_overcommit": "Die Größe des logischen Datenträgers überschreitet den derzeit verfügbaren Speicher.",
+      "bind_mount": "Bind-Mounts legen Hostdaten offen und sind nicht in Container-Backups enthalten.Die Berechtigungen bleiben unverändert;Ein nicht privilegierter Container benötigt möglicherweise vorhandene UID/GID-Berechtigungen.",
+      "device_passthrough": "Geräte-Passthrough nutzt die vorhandenen Host-Treiber und teilt die ausgewählten Geräteknoten.Erforderliche Software im Container wird nicht automatisch installiert."
     },
     "error": {
       "unavailable": "Der Knoten konnte die Anfrage nicht abschließen.Wenn Sie einen Vorgang bestätigt haben, wird dessen ursprünglicher Status überprüft.",
@@ -8603,7 +8615,10 @@
       "bridge_unavailable": "Die ausgewählte Bridge oder das ausgewählte VLAN ist nicht verfügbar.",
       "storage_unavailable_browser": "Der Browser konnte den Vorgang nicht zur Nachverfolgung speichern.",
       "receipt_invalid": "Dieser Vorgangsdatensatz ist abgelaufen oder gehört zu einem anderen Konto.",
-      "target_operation_pending": "Für diesen Container oder diese Vorlage wird bereits ein Vorgang ausgeführt."
+      "target_operation_pending": "Für diesen Container oder diese Vorlage wird bereits ein Vorgang ausgeführt.",
+      "resource_unavailable": "Ein ausgewähltes Gerät oder Verzeichnis ist nicht mehr verfügbar.Überprüfen Sie es auf dem Host und versuchen Sie es erneut.",
+      "resource_unsupported": "Dieser Knoten unterstützt nicht so viele Mountpunkte oder Geräte für einen Container.",
+      "resource_in_use": "Ein ausgewähltes Gerät ist bereits einem anderen Container oder VM zugewiesen."
     },
     "create": "LXC erstellen",
     "description": "Erstellen Sie einen unprivilegierten Linux-Container aus einer offiziellen Proxmox-Vorlage.",
@@ -8669,6 +8684,45 @@
     "newDraft": "Neuer Container",
     "loading": "Vorlagen und Knotenressourcen werden geladen…",
     "partialHelp": "Überprüfen Sie den Container und seine Aufgabe in Proxmox, bevor Sie es erneut versuchen.",
-    "taskWarnings": "Die Proxmox-Aufgabe wurde mit Warnungen beendet."
+    "taskWarnings": "Die Proxmox-Aufgabe wurde mit Warnungen beendet.",
+    "phase": {
+      "submit": "Senden Sie die Anfrage an Proxmox",
+      "create": "Erstellen Sie den Container",
+      "prepare": "Bereiten Sie den Container für seinen ersten Start vor",
+      "start": "Starten Sie den Container",
+      "prepareStart": "Bereiten Sie den Container vor und starten Sie ihn",
+      "download": "Laden Sie die Vorlage herunter"
+    },
+    "reason": {
+      "create_failed": "Proxmox konnte den Container nicht erstellen.",
+      "start_failed": "Der Container wurde erstellt, aber nicht gestartet.",
+      "preparation_failed": "Der Container wurde erstellt, seine Vorbereitung ist jedoch fehlgeschlagen.",
+      "start_not_submitted": "Der Container wurde erstellt, aber sein Start wurde nicht an Proxmox gesendet.",
+      "preparation_not_submitted": "Der Container wurde erstellt, seine Vorbereitung wurde jedoch nicht an Proxmox gesendet.",
+      "download_failed": "Proxmox konnte die Vorlage nicht herunterladen.",
+      "template_checksum_mismatch": "Die heruntergeladene Vorlage stimmt nicht mit ihrer offiziellen Prüfsumme überein."
+    },
+    "mounts": "Mount-Punkte",
+    "addMount": "Mountpunkt hinzufügen",
+    "mountType": "Geben Sie ein",
+    "mountVolume": "Neues Speichervolumen",
+    "mountBind": "Vorhandenes Hostverzeichnis",
+    "mountStorage": "Volumenspeicher",
+    "mountSize": "Größe (GiB)",
+    "mountSource": "Hostverzeichnis (absoluter Pfad, keine symbolischen Links)",
+    "mountPath": "Pfad innerhalb des Containers",
+    "readOnly": "Nur lesen",
+    "backupVolume": "In Container-Backups einbeziehen",
+    "remove": "Entfernen",
+    "add": "Hinzufügen",
+    "hardware": "Hardware",
+    "noHardware": "Auf diesem Knoten sind keine unterstützten Geräte verfügbar.Die Host-Treiber und die native Proxmox-Geräteunterstützung sind erforderlich.",
+    "hardwareErrors": "Einige Hardware konnte nicht überprüft werden.Nicht verifizierte Geräte werden nicht angeboten.",
+    "nvidiaNote": "NVIDIA umfasst alle Host-GPUs und ihre Treiberlaufzeit.Der Host-Treiber und das NVIDIA Container Toolkit müssen bereits funktionieren.",
+    "usbNote": "USB-Geräte werden anhand ihrer Identität übergeben: Der Container behält sie nach einem Neustart und startet neu, wenn eines wieder angeschlossen wird.",
+    "openTerminal": "Terminal öffnen",
+    "showLog": "Protokoll anzeigen",
+    "hideLog": "Protokoll ausblenden",
+    "logUnavailable": "Das Protokoll ist noch nicht verfügbar."
   }
 }

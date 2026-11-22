@@ -8577,15 +8577,27 @@
     "downloadStatus": {
       "running": "Laddar ned mallen...",
       "succeeded": "Mallen har laddats ner.",
-      "partial": "Nedladdningen kunde inte verifieras."
+      "partial": "Nedladdningen kunde inte verifieras.",
+      "awaiting": "Skickar begäran till Proxmox...",
+      "unknown": "Resultatet är inte känt ännu.Kontrollerar uppgiften i Proxmox...",
+      "failed": "Mallen kunde inte laddas ned.",
+      "not_submitted": "Förfrågan nådde inte Proxmox."
     },
     "status": {
-      "succeeded": "Behållare skapad."
+      "succeeded": "Behållare skapad.",
+      "awaiting": "Skickar begäran till Proxmox...",
+      "running": "Skapar behållaren...",
+      "unknown": "Resultatet är inte känt ännu.Kontrollerar uppgiften i Proxmox...",
+      "failed": "Behållaren kunde inte skapas.",
+      "partial": "Behållaren skapades, men inte alla steg avslutades.",
+      "not_submitted": "Förfrågan nådde inte Proxmox."
     },
     "warning": {
       "no_network": "Behållaren kommer inte att ha något nätverksgränssnitt.",
       "nesting_enabled": "Nesting tillåter körning av behållare inuti denna LXC och minskar isoleringen.",
-      "storage_overcommit": "Den logiska diskstorleken överstiger det för närvarande tillgängliga lagringsutrymmet."
+      "storage_overcommit": "Den logiska diskstorleken överstiger det för närvarande tillgängliga lagringsutrymmet.",
+      "bind_mount": "Bind-montering exponerar värddata och ingår inte i behållarsäkerhetskopiorna.Behörigheterna hålls oförändrade;en oprivilegierad behållare kan behöva befintliga UID/GID-behörigheter.",
+      "device_passthrough": "Device passthrough använder de befintliga värddrivrutinerna och delar de valda enhetsnoderna.Nödvändig programvara inuti behållaren installeras inte automatiskt."
     },
     "error": {
       "unavailable": "Noden kunde inte slutföra begäran.Om du har bekräftat en operation kommer dess ursprungliga status att kontrolleras.",
@@ -8603,7 +8615,10 @@
       "bridge_unavailable": "Den valda bryggan eller VLAN är inte tillgänglig.",
       "storage_unavailable_browser": "Webbläsaren kunde inte spara åtgärden för spårning.",
       "receipt_invalid": "Denna operationspost har löpt ut eller tillhör ett annat konto.",
-      "target_operation_pending": "En åtgärd pågår redan för den här behållaren eller mallen."
+      "target_operation_pending": "En åtgärd pågår redan för den här behållaren eller mallen.",
+      "resource_unavailable": "En vald enhet eller katalog är inte längre tillgänglig.Kontrollera det på värden och försök igen.",
+      "resource_unsupported": "Den här noden stöder inte så många monteringspunkter eller enheter för en container.",
+      "resource_in_use": "En vald enhet är redan tilldelad en annan behållare eller VM."
     },
     "create": "Skapa LXC",
     "description": "Skapa en oprivilegierad Linux-behållare från en officiell Proxmox-mall.",
@@ -8669,6 +8684,45 @@
     "newDraft": "Ny container",
     "loading": "Laddar mallar och nodresurser...",
     "partialHelp": "Kontrollera behållaren och dess uppgift i Proxmox innan du försöker igen.",
-    "taskWarnings": "Proxmox-uppgiften avslutades med varningar."
+    "taskWarnings": "Proxmox-uppgiften avslutades med varningar.",
+    "phase": {
+      "submit": "Skicka förfrågan till Proxmox",
+      "create": "Skapa behållaren",
+      "prepare": "Förbered behållaren för dess första start",
+      "start": "Starta behållaren",
+      "prepareStart": "Förbered och starta behållaren",
+      "download": "Ladda ner mallen"
+    },
+    "reason": {
+      "create_failed": "Proxmox kunde inte skapa behållaren.",
+      "start_failed": "Behållaren skapades, men den startade inte.",
+      "preparation_failed": "Behållaren skapades, men förberedelsen misslyckades.",
+      "start_not_submitted": "Behållaren skapades, men dess start skickades inte till Proxmox.",
+      "preparation_not_submitted": "Behållaren skapades, men dess förberedelse skickades inte till Proxmox.",
+      "download_failed": "Proxmox kunde inte ladda ner mallen.",
+      "template_checksum_mismatch": "Den nedladdade mallen matchar inte dess officiella kontrollsumma."
+    },
+    "mounts": "Montera punkter",
+    "addMount": "Lägg till monteringspunkt",
+    "mountType": "Typ",
+    "mountVolume": "Ny lagringsvolym",
+    "mountBind": "Befintlig värdkatalog",
+    "mountStorage": "Volymlagring",
+    "mountSize": "Storlek (GiB)",
+    "mountSource": "Värdkatalog (absolut sökväg, inga symboliska länkar)",
+    "mountPath": "Bana inuti behållaren",
+    "readOnly": "Endast läs",
+    "backupVolume": "Inkludera säkerhetskopior av behållare",
+    "remove": "Ta bort",
+    "add": "Lägg till",
+    "hardware": "Hårdvara",
+    "noHardware": "Inga enheter som stöds är tillgängliga på den här noden.Värddrivrutinerna och inbyggt Proxmox-enhetsstöd krävs.",
+    "hardwareErrors": "Viss hårdvara kunde inte kontrolleras.Overifierade enheter erbjuds inte.",
+    "nvidiaNote": "NVIDIA inkluderar alla värd-GPU:er och deras körtid för drivrutiner.Värddrivrutinen och NVIDIA Container Toolkit måste redan fungera.",
+    "usbNote": "USB-enheter skickas av sin identitet: behållaren behåller dem efter en omstart och startar om när en återansluts.",
+    "openTerminal": "Öppna terminalen",
+    "showLog": "Visa logg",
+    "hideLog": "Dölj logg",
+    "logUnavailable": "Loggen är inte tillgänglig ännu."
   }
 }
