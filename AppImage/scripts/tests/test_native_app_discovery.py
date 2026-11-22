@@ -308,6 +308,61 @@ class DiscoveryFixtures(unittest.TestCase):
                     (self.oci / '101' / 'oci-compose.json').unlink()
                     (self.oci / '101').rmdir()
 
+    def test_reused_vmid_can_scan_with_retired_oci_history(self):
+        instance = self.oci / '101'
+        journal = instance / 'transactions' / 'previous-update' / 'transaction.json'
+        journal.parent.mkdir(parents=True)
+        journal.write_text(json.dumps({'schema_version': 1, 'phase': 'committed'}))
+        (instance / 'retired-bentopdf.json').write_text('{}')
+        (instance / 'carried-config.json').write_text('{}')
+        stack = instance / 'stack-transactions' / 'previous-stack' / 'transaction.json'
+        stack.parent.mkdir(parents=True)
+        stack.write_text(json.dumps({'schema_version': 1, 'phase': 'rolled-back'}))
+
+        result = native.scan(101, self.runner(service(name='native-app')))
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual([item['name'] for item in result['candidates']], ['native-app'])
+        self.assertTrue(any(call[1] == 'exec' for call in self.calls))
+
+    def test_current_oci_markers_block_without_a_registry_record(self):
+        for hint in ('# proxmenux-instance=ca126dc7-09ca-47ff-bac7-3e23396b7a15',
+                     '# proxmenux-instance=damaged',
+                     'lxc.environment.runtime: oci'):
+            with self.subTest(hint=hint):
+                (self.config / '101.conf').write_text(f'{hint}\nostype: debian\n')
+                with self.assertRaises(native.ProbeError):
+                    native.scan(101, self.runner())
+                self.assertEqual(self.calls, [])
+
+    def test_open_and_unreadable_oci_journals_prevent_any_guest_probe(self):
+        instance = self.oci / '101'
+        journal = instance / 'transactions' / 'pending' / 'transaction.json'
+        journal.parent.mkdir(parents=True)
+        for text, reason in (('{"schema_version": 1, "phase": "recovering"}', 'guest_busy'),
+                             ('malformed', 'oci_unknown')):
+            with self.subTest(journal=text):
+                journal.write_text(text)
+                with self.assertRaisesRegex(native.ProbeError, reason):
+                    native.scan(101, self.runner())
+                self.assertEqual(self.calls, [])
+        journal.unlink()
+        with self.assertRaisesRegex(native.ProbeError, 'oci_unknown'):
+            native.scan(101, self.runner())
+        self.assertEqual(self.calls, [])
+
+    def test_current_oci_state_is_checked_again_before_publishing(self):
+        run = self.runner()
+
+        def record_created(argv, deadline):
+            if argv[1] == 'exec':
+                instance = self.oci / '101'
+                instance.mkdir(exist_ok=True)
+                (instance / 'oci-compose.json').write_text('{"status": "installing"}')
+            return run(argv, deadline)
+
+        with self.assertRaisesRegex(native.ProbeError, 'oci_unknown'):
+            native.scan(101, record_created)
+
     def test_failure_and_partial_output_are_not_successful_empty_results(self):
         for text in ('', 'malformed\nEND\n', 'S\tpartial', 'LIMIT\n'):
             result = native.scan(101, self.runner(services=text))

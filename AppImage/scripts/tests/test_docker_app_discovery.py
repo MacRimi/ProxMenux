@@ -152,11 +152,18 @@ class Scan(unittest.TestCase):
         (root/'101.conf').unlink()
         with self.assertRaisesRegex(native.ProbeError, 'not_local_lxc'):
             self.scan()
-        (root/'101.conf').write_text('ostype: unmanaged\n')
-        (root/'oci'/'101').mkdir(parents=True)
+        (root/'101.conf').write_text(
+            '# proxmenux-instance=ca126dc7-09ca-47ff-bac7-3e23396b7a15\nostype: debian\n')
         with self.assertRaisesRegex(native.ProbeError, 'managed_oci'):
             self.scan()
         self.assertEqual(self.calls, [])
+
+    def test_retired_oci_history_allows_docker_detection_on_reused_vmid(self):
+        history = Path(self.temp.name) / 'oci' / '101'
+        history.mkdir(parents=True)
+        (history / 'retired-bentopdf.json').write_text('{}')
+        self.assertEqual(self.scan()['status'], 'complete')
+        self.assertTrue(self.calls)
 
     def test_guest_stopping_during_scan_never_publishes_results(self):
         states = iter(['status: running', 'status: stopped'])

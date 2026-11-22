@@ -31,9 +31,13 @@ import subprocess
 import threading
 import time
 
+from oci_instance_info import installation_marker
+
 TOTAL_SECONDS = 20
 PROBE_SECONDS = 3
 OUTPUT_BYTES = 64 * 1024
+OCI_JOURNAL_BYTES = 2 * 1024 * 1024
+MAX_OCI_JOURNALS = 256
 MAX_RECORDS = 256
 MAX_CANDIDATES = 50
 CACHE_SECONDS = 300
@@ -489,20 +493,71 @@ def candidate(vmid, record, footprint):
                                     if version else None)}
 
 
+def _check_oci(vmid, config, deadline):
+    if installation_marker(config):
+        raise ProbeError('managed_oci')
+    if re.search(r'^#.*proxmenux-instance=|^\s*lxc\.environment\.runtime:', config, re.M):
+        raise ProbeError('oci_unknown')
+
+    instance = OCI_ROOT / str(vmid)
+    try:
+        instance_mode = instance.lstat().st_mode
+    except FileNotFoundError:
+        return
+    except OSError:
+        raise ProbeError('oci_unknown') from None
+    if not stat.S_ISDIR(instance_mode):
+        raise ProbeError('oci_unknown')
+    try:
+        for name in ('oci-compose.json', 'stack-assembly.json'):
+            try:
+                (instance / name).lstat()
+            except FileNotFoundError:
+                continue
+            # An active record without a live marker needs review. This also
+            # rejects incomplete installations and broken records or symlinks.
+            raise ProbeError('oci_unknown')
+
+        # OCI keeps journals after successful work and rollback. Only these
+        # terminal phases prove that the directory contains history.
+        checked = 0
+        for name in ('transactions', 'stack-transactions'):
+            directory = instance / name
+            try:
+                mode = directory.lstat().st_mode
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISDIR(mode):
+                raise ProbeError('oci_unknown')
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    checked += 1
+                    if checked > MAX_OCI_JOURNALS or time.monotonic() >= deadline:
+                        raise ProbeError('oci_unknown')
+                    if not entry.is_dir(follow_symlinks=False):
+                        raise ProbeError('oci_unknown')
+                    journal = Path(entry.path) / 'transaction.json'
+                    fd = os.open(journal, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                    with os.fdopen(fd, 'rb') as handle:
+                        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                            raise ProbeError('oci_unknown')
+                        raw = handle.read(OCI_JOURNAL_BYTES + 1)
+                    if len(raw) > OCI_JOURNAL_BYTES:
+                        raise ProbeError('oci_unknown')
+                    state = json.loads(raw)
+                    if not isinstance(state, dict) or state.get('schema_version') != 1:
+                        raise ProbeError('oci_unknown')
+                    if state.get('phase') not in ('committed', 'rolled-back'):
+                        raise ProbeError('guest_busy')
+    except (OSError, ValueError, RecursionError):
+        raise ProbeError('oci_unknown') from None
+
+
 def _guard(vmid, deadline, run):
     # The local node path rejects QEMU, missing and remote CTs before pct exec.
     path = LOCAL_CONFIG / f'{vmid}.conf'
     if not path.is_file():
         raise ProbeError('not_local_lxc')
-    # Presence, including a damaged/in-progress record, excludes generic probes.
-    try:
-        os.lstat(OCI_ROOT / str(vmid))
-    except FileNotFoundError:
-        pass
-    except OSError:
-        raise ProbeError('oci_unknown') from None
-    else:
-        raise ProbeError('managed_oci')
     try:
         with path.open('rb') as handle:
             raw = handle.read(OUTPUT_BYTES + 1)
@@ -511,6 +566,8 @@ def _guard(vmid, deadline, run):
         config = raw.decode('utf-8')
     except (OSError, UnicodeError):
         raise ProbeError('config_unavailable') from None
+    config = config.split('\n[', 1)[0]
+    _check_oci(vmid, config, deadline)
     if re.search(r'^lock:', config, re.M):
         raise ProbeError('guest_busy')
     update_lock = UPDATE_LOCK_ROOT / f'proxmenux-lxc-update-{vmid}.lock'
