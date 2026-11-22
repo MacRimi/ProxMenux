@@ -40,7 +40,7 @@
     "updated_at": null
   },
   "source": {
-    "provider": "github",
+    "provider": "official",
     "repository": "https://github.com/datarhei/restreamer",
     "revision": "fd12aee2a289e9be4fbf45fc1dfa50838cfb149f",
     "image_repository_url": "https://hub.docker.com/r/datarhei/restreamer",

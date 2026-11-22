@@ -3218,7 +3218,7 @@
     },
     {
       "id": "dispatcharr",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "Dispatcharr",
       "repository": "https://github.com/Dispatcharr/Dispatcharr",
@@ -7501,7 +7501,7 @@
     },
     {
       "id": "jellystat",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "Jellystat",
       "repository": "https://github.com/CyferShepard/Jellystat",
@@ -10244,7 +10244,7 @@
     },
     {
       "id": "miniserve",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "miniserve",
       "repository": "https://github.com/svenstaro/miniserve",
@@ -11047,7 +11047,7 @@
     },
     {
       "id": "netbootxyz",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "netboot.xyz",
       "repository": "https://github.com/netbootxyz/docker-netbootxyz",
@@ -11876,7 +11876,7 @@
     },
     {
       "id": "omni-tools",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "OmniTools",
       "repository": "https://github.com/iib0011/omni-tools",
@@ -15048,7 +15048,7 @@
     },
     {
       "id": "restreamer",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "Restreamer",
       "repository": "https://github.com/datarhei/restreamer",
@@ -15924,7 +15924,7 @@
     },
     {
       "id": "shlink",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "Shlink",
       "repository": "https://github.com/shlinkio/shlink",
@@ -17991,7 +17991,7 @@
     },
     {
       "id": "tunarr",
-      "provider": "github",
+      "provider": "official",
       "template_family": "curated-profile",
       "title": "Tunarr",
       "repository": "https://github.com/chrisbenincasa/tunarr",

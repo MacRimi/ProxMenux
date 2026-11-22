@@ -39,7 +39,7 @@
     "updated_at": null
   },
   "source": {
-    "provider": "github",
+    "provider": "official",
     "repository": "https://github.com/chrisbenincasa/tunarr",
     "revision": "dd8bbb30a28c648a6a7f36b4e01bba1015390785",
     "image_repository_url": "https://ghcr.io/chrisbenincasa/tunarr",

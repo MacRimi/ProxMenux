@@ -40,7 +40,7 @@
     "updated_at": null
   },
   "source": {
-    "provider": "github",
+    "provider": "official",
     "repository": "https://github.com/svenstaro/miniserve",
     "revision": "68b6f063cd633578e6be329757f27432f53b0de3",
     "image_repository_url": "https://hub.docker.com/r/svenstaro/miniserve",
