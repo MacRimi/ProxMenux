@@ -141,6 +141,7 @@ cd "$SCRIPT_DIR"
 # Copy Flask server
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/flask_plain_lxc_routes.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/ovs_topology.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/zram_metrics.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_auth_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_auth_routes.py not found"

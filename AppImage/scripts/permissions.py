@@ -108,6 +108,8 @@ _READING = {
     "/api/lxc-update-jobs": "update",
     "/api/health/reboot-after-update/status": "update",
     "/api/health/reboot-context": "update",
+    "/api/plain-lxc/v1/context": "admin",
+    "/api/plain-lxc/v1/status": "admin",
     "/api/vms/<int:vmid>/backups/delete-status": "backup",
     "/api/host-backups/archives/<path:archive_id>/download": "backup",
     "/api/host-backups/pbs-encryption/download-keyfile": "backup",
@@ -201,6 +203,7 @@ _ACTION = {
     "/api/audit/run": "execute",
     "/api/proxmenux/snippets-storage": "admin",
     "/api/system/power/": "admin",
+    "/api/plain-lxc/v1/": "admin",
     # Scripts and tools.
     "/api/scripts/": "execute",
     "/api/storage/smart/": "execute",

@@ -22,6 +22,7 @@ import { Label } from "./ui/label"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
+import { PlainLxcCreate } from "./plain-lxc-wizard"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
 import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar, VmListTransfer } from "./vm-list-layout"
@@ -856,7 +857,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 
 export function VirtualMachines() {
   // The profile of the session decides which actions are offered.
-  const { capabilities } = useAccess()
+  const { mode, capabilities } = useAccess()
   const t = useT()
   const { language } = useI18n()
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
@@ -3461,10 +3462,14 @@ export function VirtualMachines() {
 
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-col gap-3">
-          <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
-            <Server className="h-6 w-6" />
-            {t("vmLxc.listTitle")}
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
+              <Server className="h-6 w-6" />
+              {t("vmLxc.listTitle")}
+            </CardTitle>
+            {capabilities.admin && (mode === "password" || mode === "proxmox") &&
+              <PlainLxcCreate onCreated={() => void mutate()} />}
+          </div>
           <VmListToolbar
             actions={
               <VmListActions key="actions" layout={listLayout} keys={filteredVMs.map(listKey)}
