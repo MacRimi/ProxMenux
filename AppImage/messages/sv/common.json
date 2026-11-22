@@ -3666,7 +3666,9 @@
         "ociRequiresPve": "Secure Gateway använder standard LXC och bör fungera på denna Proxmox-värd. Om detta fortsätter att hända, kontrollera backend-loggarna.",
         "authKeyRequired": "Ange en Tailscale auth-nyckel.",
         "updateAuthKeyFailed": "Det gick inte att uppdatera autentiseringsnyckeln",
-        "couldNotLoadSetupData": "Det gick inte att ladda inställningsdata."
+        "couldNotLoadSetupData": "Det gick inte att ladda inställningsdata.",
+        "packageInstallFailed": "Tailscale kunde inte installeras i gateway-behållaren: {detail}.Behållaren togs bort.Detta betyder vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga;kontrollera det och försök igen.",
+        "packageInstallFailedKept": "Tailscale kunde inte installeras i gateway-behållaren: {detail}.Ta bort behållaren {vmid} innan du försöker igen.Detta innebär vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga."
       },
       "messages": {
         "updateApplied": "Uppdatering tillämpades.",

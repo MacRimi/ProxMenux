@@ -3666,7 +3666,9 @@
         "ociRequiresPve": "Secure Gateway utilise un LXC standard et devrait fonctionner sur cet hôte Proxmox. Si le problème persiste, consultez les journaux du backend.",
         "authKeyRequired": "Saisissez une clé d'authentification Tailscale.",
         "updateAuthKeyFailed": "Échec de la mise à jour de la clé d'authentification",
-        "couldNotLoadSetupData": "Impossible de charger les données de configuration."
+        "couldNotLoadSetupData": "Impossible de charger les données de configuration.",
+        "packageInstallFailed": "Tailscale n'a pas pu être installé dans le conteneur de passerelle : {detail}.Le conteneur a été retiré.Cela signifie généralement qu'il n'a pas d'adresse ni d'accès Internet sur son pont ;vérifiez cela et réessayez.",
+        "packageInstallFailedKept": "Tailscale n'a pas pu être installé dans le conteneur de passerelle : {detail}.Supprimez le conteneur {vmid} avant de réessayer.Cela signifie généralement qu'il n'a ni adresse ni accès Internet sur son pont."
       },
       "messages": {
         "updateApplied": "La mise à jour a été appliquée.",

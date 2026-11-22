@@ -3817,7 +3817,9 @@
         "ociRequiresPve": "Secure Gateway používa štandardný LXC a mal by fungovať na tomto serveri Proxmox. Ak sa to bude opakovať, skontrolujte protokoly backendu.",
         "authKeyRequired": "Zadajte Tailscale auth key.",
         "updateAuthKeyFailed": "Nepodarilo sa aktualizovať auth key",
-        "couldNotLoadSetupData": "Nepodarilo sa načítať údaje nastavenia."
+        "couldNotLoadSetupData": "Nepodarilo sa načítať údaje nastavenia.",
+        "packageInstallFailed": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}.Nádoba bola odstránená.Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet;skontrolujte to a skúste to znova.",
+        "packageInstallFailedKept": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}.Pred opätovným pokusom odstráňte kontajner {vmid}.Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet."
       },
       "messages": {
         "updateApplied": "Aktualizácia bola použitá.",
