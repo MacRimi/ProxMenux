@@ -51,6 +51,7 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_snippets_storage_readonly.py",
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
     "AppImage/scripts/tests/test_monitor_plain_lxc.py",
+    "AppImage/scripts/tests/test_lxc_remove.py",
 )
 NODE_FILES = (
     "tests/test_host_update_ui.cjs",
@@ -59,6 +60,7 @@ NODE_FILES = (
     "tests/test_reboot_recovery.cjs",
     "tests/test_proxmenux_version_row.cjs",
     "tests/test_lxc_update_jobs.cjs",
+    "tests/lxc_updates/test_lxc_remove_ui.cjs",
     "tests/test_api_import_boundaries.cjs",
     "tests/test_api_errors.cjs",
     "tests/test_optimization_labels.cjs",

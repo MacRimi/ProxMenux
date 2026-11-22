@@ -131,6 +131,7 @@ def check_control_task(vmid, handle=None):
         if (not isinstance(task, str)
                 or not re.fullmatch(r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
                                     r'[0-9A-Fa-f]+:(?:vz(?:start|stop|shutdown|reboot)'
+                                    r'|vzdestroy'
                                     r'|ha(?:start|stop)):'
                                     r'[0-9]+:[\w.@!-]+:', task)
                 or task.split(':')[1] != node or task.split(':')[6] != str(vmid)):

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
@@ -22,6 +23,7 @@ import { Label } from "./ui/label"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
+import { LxcRemoveDialog } from "./lxc-remove-dialog"
 import { PlainLxcCreate } from "./plain-lxc-wizard"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
@@ -923,6 +925,7 @@ export function VirtualMachines() {
   const [controlLoading, setControlLoading] = useState(false)
   const controlRequestRef = useRef(false)
   const [controlAction, setControlAction] = useState<{ vmid: number; action: string } | null>(null)
+  const [removeLxcOpen, setRemoveLxcOpen] = useState(false)
   // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
   // shutdown sequence and can corrupt running guests; gate them behind a
   // typed-VMID match prompt to prevent misclicks. See audit Tier 2 #17.
@@ -3937,7 +3940,7 @@ export function VirtualMachines() {
           // user tapped the terminal's Close button and got kicked
           // all the way back to the guest list.
           if (open) return
-          if (applyOpen || terminalOpen || ociAction) return
+          if (applyOpen || terminalOpen || ociAction || removeLxcOpen) return
           setSelectedVM(null)
           setVMDetails(null)
           setCurrentView("main")
@@ -7816,11 +7819,12 @@ export function VirtualMachines() {
                 {(capabilities.guests || capabilities.terminal) && (() => {
                   const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running" && capabilities.terminal
                   const controls = capabilities.guests
+                  const hasAdditionalActions = capabilities.admin && selectedVM?.type === "lxc"
                   const pendingAction = controlAction?.vmid === selectedVM?.vmid ? controlAction?.action : null
                   const controlLabel = (action: string, key: string) => pendingAction === action
                     ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
-                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${!controls ? "grid-cols-1" : hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${!controls ? "grid-cols-1" : hasTerminal ? hasAdditionalActions ? "grid-cols-4 lg:grid-cols-6" : "grid-cols-4 lg:grid-cols-5" : hasAdditionalActions ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
                       {hasTerminal && (
                         <Button
                           className={`w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 ${controls ? "col-span-4 lg:col-span-1" : ""}`}
@@ -7876,6 +7880,28 @@ export function VirtualMachines() {
                         <span className="hidden sm:inline">{controlLabel("stop", "vmLxc.actions.forceStop")}</span>
                       </Button>
                       </>)}
+                      {hasAdditionalActions && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              title={t("vmLxc.remove.moreActions")}
+                              aria-label={t("vmLxc.remove.moreActions")}
+                            >
+                              <ChevronDown className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">{t("vmLxc.remove.moreActions")}</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem variant="destructive" onSelect={() => setRemoveLxcOpen(true)}>
+                              <Trash2 className="h-4 w-4" />
+                              {t("vmLxc.remove.action")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   )
                 })()}
@@ -7893,6 +7919,26 @@ export function VirtualMachines() {
           )}
         </DialogContent>
       </Dialog>
+
+      <LxcRemoveDialog
+        target={selectedVM?.type === "lxc" ? selectedVM : null}
+        open={removeLxcOpen}
+        onOpenChange={setRemoveLxcOpen}
+        onCreateBackup={() => {
+          setRemoveLxcOpen(false)
+          openBackupModal()
+        }}
+        onRemoved={(vmid) => {
+          vmModalCacheRef.current.details.delete(vmid)
+          vmModalCacheRef.current.backups.delete(vmid)
+          vmModalCacheRef.current.schedule.delete(vmid)
+          vmModalCacheRef.current.mountPoints.delete(vmid)
+          vmModalCacheRef.current.firewall.delete(vmid)
+          void mutate(current => current?.filter(vm => vm.vmid !== vmid), { revalidate: true })
+          setSelectedVM(current => current?.vmid === vmid ? null : current)
+          setVMDetails(current => current?.vmid === vmid ? null : current)
+        }}
+      />
 
       {/* Destructive control confirmation (Force Stop / Reboot) */}
       <Dialog
