@@ -575,7 +575,7 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
                 {index < 4 && <Button type="button" size="sm" variant="ghost"
                   onClick={() => { invalidate(); setStep(index) }}>{t("edit")}</Button>}
               </div>
-              {values.filter(Boolean).map((value, valueIndex) => <p className="break-all text-sm text-muted-foreground" key={valueIndex}>{value}</p>)}
+              {values.filter(Boolean).map((value, valueIndex) => <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]" key={valueIndex}>{value}</p>)}
             </section>)}
             {plan.warnings.map(warning => <label key={warning} className="flex items-start gap-2 rounded-md border p-2 text-sm">
               <input type="checkbox" className="mt-1" checked={accepted.includes(warning)}
